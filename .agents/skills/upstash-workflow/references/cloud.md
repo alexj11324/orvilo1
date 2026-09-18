@@ -1,6 +1,6 @@
 # Cloud Project Workflow Configuration
 
-Cloud-specific workflow configurations and patterns for the lobehub-cloud project.
+Cloud-specific workflow configurations and patterns for the orvilo-cloud project.
 
 ## Table of Contents
 
@@ -11,26 +11,26 @@ Cloud-specific workflow configurations and patterns for the lobehub-cloud projec
 5. [Workflow Class Location](#workflow-class-location) — cloud-only vs shared
 6. [Environment Variables](#environment-variables)
 7. [Best Practices](#best-practices) — decide cloud vs OSS, re-export rules, naming
-8. [Migration Guide](#migration-guide) — moving workflows from cloud to lobehub
+8. [Migration Guide](#migration-guide) — moving workflows from cloud to orvilo
 9. [Examples](#examples) — `welcome-placeholder`, `agent-eval-run`
 10. [Troubleshooting](#troubleshooting) — circular imports, 404s, type errors
 11. [Related Documentation](#related-documentation)
 
 ## Overview
 
-The lobehub-cloud project extends the open-source lobehub codebase with cloud-specific features. Workflows can be implemented in either:
+The orvilo-cloud project extends the open-source orvilo codebase with cloud-specific features. Workflows can be implemented in either:
 
-1. **Lobehub (open-source)** - Available to all users
-2. **Lobehub-cloud (proprietary)** - Cloud-specific business logic
+1. **Orvilo (open-source)** - Available to all users
+2. **Orvilo-cloud (proprietary)** - Cloud-specific business logic
 
 ---
 
 ## Directory Structure
 
-### Lobehub Submodule (Open-source)
+### Orvilo Submodule (Open-source)
 
 ```text
-lobehub/
+aspectlylabs/
 └── src/
     ├── app/(backend)/api/workflows/
     │   ├── memory-user-memory/       # Memory extraction workflows
@@ -40,20 +40,20 @@ lobehub/
         └── ...
 ```
 
-### Lobehub-cloud (Proprietary)
+### Orvilo-cloud (Proprietary)
 
 ```text
-lobehub-cloud/
+orvilo-cloud/
 └── src/
     ├── app/(backend)/api/workflows/
     │   ├── welcome-placeholder/       # Cloud-only: AI placeholder generation
     │   ├── agent-welcome/            # Cloud-only: Agent welcome messages
-    │   ├── agent-eval-run/           # Re-export from lobehub
-    │   └── memory-user-memory/       # Re-export from lobehub
+    │   ├── agent-eval-run/           # Re-export from orvilo
+    │   └── memory-user-memory/       # Re-export from orvilo
     └── server/workflows/
         ├── welcomePlaceholder/
         ├── agentWelcome/
-        └── agentEvalRun/             # Re-export from lobehub
+        └── agentEvalRun/             # Re-export from orvilo
 ```
 
 ---
@@ -68,14 +68,14 @@ lobehub-cloud/
 
 **Implementation**:
 
-- Implement directly in `lobehub-cloud/src/app/(backend)/api/workflows/`
+- Implement directly in `orvilo-cloud/src/app/(backend)/api/workflows/`
 - No need for re-exports
 - Can use cloud-specific packages and services
 
 **Structure**:
 
 ```text
-lobehub-cloud/src/
+orvilo-cloud/src/
 ├── app/(backend)/api/workflows/
 │   └── feature-name/
 │       ├── process-items/route.ts
@@ -88,7 +88,7 @@ lobehub-cloud/src/
 
 ---
 
-### Pattern 2: Re-export from Lobehub
+### Pattern 2: Re-export from Orvilo
 
 **Use Case**: Workflows implemented in open-source but also used in cloud
 
@@ -97,15 +97,15 @@ lobehub-cloud/src/
 **Why Re-export?**
 
 - Cloud deployment needs to serve these endpoints
-- Lobehub submodule code is not directly accessible in cloud routes
+- Orvilo submodule code is not directly accessible in cloud routes
 - Allows cloud-specific overrides if needed in the future
 
 #### Re-export Implementation
 
-**Step 1**: Implement workflow in lobehub submodule
+**Step 1**: Implement workflow in orvilo submodule
 
 ```typescript
-// lobehub/src/app/(backend)/api/workflows/feature/layer/route.ts
+// aspectlylabs/src/app/(backend)/api/workflows/feature/layer/route.ts
 import { serve } from '@upstash/workflow/nextjs';
 
 export const { POST } = serve<Payload>(
@@ -116,46 +116,46 @@ export const { POST } = serve<Payload>(
 );
 ```
 
-**Step 2**: Create re-export in lobehub-cloud
+**Step 2**: Create re-export in orvilo-cloud
 
 ```typescript
-// lobehub-cloud/src/app/(backend)/api/workflows/feature/layer/route.ts
-export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature/layer/route';
+// orvilo-cloud/src/app/(backend)/api/workflows/feature/layer/route.ts
+export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature/layer/route';
 ```
 
-**Important**: Use `lobehub/src/...` path, NOT `@/...` to avoid circular imports.
+**Important**: Use `aspectlylabs/src/...` path, NOT `@/...` to avoid circular imports.
 
 #### Re-export Directory Structure
 
 ```bash
 # Create directories
-mkdir -p lobehub-cloud/src/app/(backend)/api/workflows/feature-name/layer-1
-mkdir -p lobehub-cloud/src/app/(backend)/api/workflows/feature-name/layer-2
-mkdir -p lobehub-cloud/src/app/(backend)/api/workflows/feature-name/layer-3
+mkdir -p orvilo-cloud/src/app/(backend)/api/workflows/feature-name/layer-1
+mkdir -p orvilo-cloud/src/app/(backend)/api/workflows/feature-name/layer-2
+mkdir -p orvilo-cloud/src/app/(backend)/api/workflows/feature-name/layer-3
 
 # Create re-export files
-echo "export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature-name/layer-1/route';" > \
-  lobehub-cloud/src/app/(backend)/api/workflows/feature-name/layer-1/route.ts
+echo "export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature-name/layer-1/route';" > \
+  orvilo-cloud/src/app/(backend)/api/workflows/feature-name/layer-1/route.ts
 
-echo "export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature-name/layer-2/route';" > \
-  lobehub-cloud/src/app/(backend)/api/workflows/feature-name/layer-2/route.ts
+echo "export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature-name/layer-2/route';" > \
+  orvilo-cloud/src/app/(backend)/api/workflows/feature-name/layer-2/route.ts
 
-echo "export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature-name/layer-3/route';" > \
-  lobehub-cloud/src/app/(backend)/api/workflows/feature-name/layer-3/route.ts
+echo "export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature-name/layer-3/route';" > \
+  orvilo-cloud/src/app/(backend)/api/workflows/feature-name/layer-3/route.ts
 ```
 
 ---
 
 ## TypeScript Path Mappings
 
-The cloud project uses tsconfig path mappings to override lobehub code:
+The cloud project uses tsconfig path mappings to override orvilo code:
 
 ```json
-// lobehub-cloud/tsconfig.json
+// orvilo-cloud/tsconfig.json
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*", "./lobehub/src/*"]
+      "@/*": ["./src/*", "./orvilo/src/*"]
     }
   }
 }
@@ -164,9 +164,9 @@ The cloud project uses tsconfig path mappings to override lobehub code:
 **Resolution Order**:
 
 1. `./src/*` (cloud code) - checked first
-2. `./lobehub/src/*` (open-source) - fallback
+2. `./orvilo/src/*` (open-source) - fallback
 
-This allows cloud to override specific modules while using lobehub defaults.
+This allows cloud to override specific modules while using orvilo defaults.
 
 ---
 
@@ -177,22 +177,22 @@ This allows cloud to override specific modules while using lobehub defaults.
 Place workflow class in cloud:
 
 ```text
-lobehub-cloud/apps/server/src/workflows/featureName/index.ts
+orvilo-cloud/apps/server/src/workflows/featureName/index.ts
 ```
 
 ### Shared Workflows
 
-Place workflow class in lobehub, re-export in cloud if needed:
+Place workflow class in orvilo, re-export in cloud if needed:
 
 ```text
-lobehub/apps/server/src/workflows/featureName/index.ts
+aspectlylabs/apps/server/src/workflows/featureName/index.ts
 ```
 
 ---
 
 ## Environment Variables
 
-Both lobehub and cloud workflows require:
+Both orvilo and cloud workflows require:
 
 ```bash
 # Required for all workflows
@@ -219,9 +219,9 @@ REDIS_URL=redis://...
 
 ### 1. Decide: Cloud or Open-Source?
 
-**Implement in Lobehub if**:
+**Implement in Orvilo if**:
 
-- Feature is useful for all LobeHub users
+- Feature is useful for all Orvilo users
 - No proprietary business logic
 - Can be open-sourced
 
@@ -237,7 +237,7 @@ REDIS_URL=redis://...
 
 ```typescript
 // Simple re-export
-export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature/route';
+export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature/route';
 ```
 
 ❌ **Don't**:
@@ -247,55 +247,55 @@ export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature/route';
 export { POST } from '@/app/(backend)/api/workflows/feature/route'; // ❌
 ```
 
-### 3. Keep Workflow Logic in Lobehub
+### 3. Keep Workflow Logic in Orvilo
 
 For shared features:
 
-- Implement core logic in `lobehub/` (open-source)
+- Implement core logic in `aspectlylabs/` (open-source)
 - Only override if cloud needs different behavior
 - Use re-exports for cloud deployment
 
 ### 4. Directory Naming
 
-Follow consistent naming across lobehub and cloud:
+Follow consistent naming across orvilo and cloud:
 
 ```text
 # Both should use same structure
-lobehub/src/app/(backend)/api/workflows/feature-name/
-lobehub-cloud/src/app/(backend)/api/workflows/feature-name/
+aspectlylabs/src/app/(backend)/api/workflows/feature-name/
+orvilo-cloud/src/app/(backend)/api/workflows/feature-name/
 ```
 
 ---
 
 ## Migration Guide
 
-### Moving Workflow from Cloud to Lobehub
+### Moving Workflow from Cloud to Orvilo
 
-**Step 1**: Copy workflow to lobehub
+**Step 1**: Copy workflow to orvilo
 
 ```bash
-cp -r lobehub-cloud/src/app/(backend)/api/workflows/feature \
-      lobehub/src/app/(backend)/api/workflows/
+cp -r orvilo-cloud/src/app/(backend)/api/workflows/feature \
+      aspectlylabs/src/app/(backend)/api/workflows/
 ```
 
 **Step 2**: Remove cloud-specific dependencies
 
 - Replace cloud services with generic interfaces
 - Remove proprietary business logic
-- Update imports to use lobehub paths
+- Update imports to use orvilo paths
 
 **Step 3**: Create re-exports in cloud
 
 ```typescript
-// lobehub-cloud/src/app/(backend)/api/workflows/feature/*/route.ts
-export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature/*/route';
+// orvilo-cloud/src/app/(backend)/api/workflows/feature/*/route.ts
+export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature/*/route';
 ```
 
-**Step 4**: Move workflow class to lobehub
+**Step 4**: Move workflow class to orvilo
 
 ```bash
-mv lobehub-cloud/apps/server/src/workflows/feature \
-  lobehub/apps/server/src/workflows/
+mv orvilo-cloud/apps/server/src/workflows/feature \
+  aspectlylabs/apps/server/src/workflows/
 ```
 
 **Step 5**: Update cloud imports
@@ -305,7 +305,7 @@ mv lobehub-cloud/apps/server/src/workflows/feature \
 import { Workflow } from '@/server/workflows/feature';
 
 // To
-import { Workflow } from 'lobehub/apps/server/src/workflows/feature';
+import { Workflow } from 'aspectlylabs/apps/server/src/workflows/feature';
 ```
 
 ---
@@ -314,14 +314,14 @@ import { Workflow } from 'lobehub/apps/server/src/workflows/feature';
 
 ### Cloud-Only Workflow: welcome-placeholder
 
-**Location**: `lobehub-cloud/src/app/(backend)/api/workflows/welcome-placeholder/`
+**Location**: `orvilo-cloud/src/app/(backend)/api/workflows/welcome-placeholder/`
 
 **Why Cloud-Only**: Uses proprietary AI generation service and Redis caching
 
 **Structure**:
 
 ```text
-lobehub-cloud/
+orvilo-cloud/
 ├── src/app/(backend)/api/workflows/welcome-placeholder/
 │   ├── process-users/route.ts
 │   ├── paginate-users/route.ts
@@ -334,19 +334,19 @@ lobehub-cloud/
 
 **Location**:
 
-- Implementation: `lobehub/src/app/(backend)/api/workflows/agent-eval-run/`
-- Re-export: `lobehub-cloud/src/app/(backend)/api/workflows/agent-eval-run/`
+- Implementation: `aspectlylabs/src/app/(backend)/api/workflows/agent-eval-run/`
+- Re-export: `orvilo-cloud/src/app/(backend)/api/workflows/agent-eval-run/`
 
 **Why Re-export**: Core feature available in open-source, also used by cloud
 
 **Cloud Re-export Files**:
 
 ```typescript
-// lobehub-cloud/src/app/(backend)/api/workflows/agent-eval-run/run-benchmark/route.ts
-export { POST } from 'lobehub/src/app/(backend)/api/workflows/agent-eval-run/run-benchmark/route';
+// orvilo-cloud/src/app/(backend)/api/workflows/agent-eval-run/run-benchmark/route.ts
+export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/agent-eval-run/run-benchmark/route';
 
-// lobehub-cloud/src/app/(backend)/api/workflows/agent-eval-run/paginate-test-cases/route.ts
-export { POST } from 'lobehub/src/app/(backend)/api/workflows/agent-eval-run/paginate-test-cases/route';
+// orvilo-cloud/src/app/(backend)/api/workflows/agent-eval-run/paginate-test-cases/route.ts
+export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/agent-eval-run/paginate-test-cases/route';
 
 // ... (all layers)
 ```
@@ -361,14 +361,14 @@ export { POST } from 'lobehub/src/app/(backend)/api/workflows/agent-eval-run/pag
 
 **Cause**: Using `@/` path in re-export within cloud codebase
 
-**Solution**: Use `lobehub/src/` path instead
+**Solution**: Use `aspectlylabs/src/` path instead
 
 ```typescript
 // ❌ Wrong
 export { POST } from '@/app/(backend)/api/workflows/feature/route';
 
 // ✅ Correct
-export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature/route';
+export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature/route';
 ```
 
 ### Workflow Not Found (404)
@@ -379,22 +379,22 @@ export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature/route';
 
 ```bash
 # Check if re-export exists
-ls lobehub-cloud/src/app/\(backend\)/api/workflows/feature-name/
+ls orvilo-cloud/src/app/\(backend\)/api/workflows/feature-name/
 
 # If missing, create re-exports
-mkdir -p lobehub-cloud/src/app/\(backend\)/api/workflows/feature-name/layer
-echo "export { POST } from 'lobehub/src/app/(backend)/api/workflows/feature-name/layer/route';" > lobehub-cloud/src/app/\(backend\)/api/workflows/feature-name/layer/route.ts
+mkdir -p orvilo-cloud/src/app/\(backend\)/api/workflows/feature-name/layer
+echo "export { POST } from 'aspectlylabs/src/app/(backend)/api/workflows/feature-name/layer/route';" > orvilo-cloud/src/app/\(backend\)/api/workflows/feature-name/layer/route.ts
 ```
 
-### Type Errors After Moving to Lobehub
+### Type Errors After Moving to Orvilo
 
-**Cause**: Cloud-specific types or services used in lobehub code
+**Cause**: Cloud-specific types or services used in orvilo code
 
 **Solution**:
 
 1. Extract cloud-specific logic to cloud-only wrapper
 2. Use dependency injection for services
-3. Define generic interfaces in lobehub
+3. Define generic interfaces in orvilo
 
 ---
 

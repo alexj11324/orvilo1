@@ -6,11 +6,11 @@ user-invocable: false
 
 # Upstash Workflow Implementation Guide
 
-Standard patterns for implementing Upstash Workflow + QStash async workflows in the LobeHub codebase.
+Standard patterns for implementing Upstash Workflow + QStash async workflows in the Orvilo codebase.
 
 ## 🎯 The Three Core Patterns
 
-Every workflow in LobeHub combines these three patterns. They exist because the platform constrains you in three ways: rate limits make blind fan-out dangerous, step limits cap a single workflow's size, and idempotency demands that retries don't double-process.
+Every workflow in Orvilo combines these three patterns. They exist because the platform constrains you in three ways: rate limits make blind fan-out dangerous, step limits cap a single workflow's size, and idempotency demands that retries don't double-process.
 
 1. **🔍 Dry-Run Mode** — get statistics without triggering actual execution
 2. **🌟 Fan-Out Pattern** — split large batches into smaller chunks for parallel processing
@@ -128,12 +128,12 @@ src/
 
 Pick the reference that matches what you're doing:
 
-| You want to...                                       | Read                                                             |
-| ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Write the Workflow class + 3 routes from scratch     | [`references/implementation.md`](./references/implementation.md) |
-| Tune flowControl, error handling, logging, testing   | [`references/best-practices.md`](./references/best-practices.md) |
-| See two real workflows end-to-end                    | [`references/examples.md`](./references/examples.md)             |
-| Deploy on lobehub-cloud (re-exports, cloud-only ops) | [`references/cloud.md`](./references/cloud.md)                   |
+| You want to...                                      | Read                                                             |
+| --------------------------------------------------- | ---------------------------------------------------------------- |
+| Write the Workflow class + 3 routes from scratch    | [`references/implementation.md`](./references/implementation.md) |
+| Tune flowControl, error handling, logging, testing  | [`references/best-practices.md`](./references/best-practices.md) |
+| See two real workflows end-to-end                   | [`references/examples.md`](./references/examples.md)             |
+| Deploy on orvilo-cloud (re-exports, cloud-only ops) | [`references/cloud.md`](./references/cloud.md)                   |
 
 ---
 
@@ -174,7 +174,7 @@ QSTASH_URL=https://custom-qstash.com
 ### Quality & Deployment
 
 - [ ] Return consistent response shapes
-- [ ] Configure cloud deployment ([`references/cloud.md`](./references/cloud.md) if on lobehub-cloud)
+- [ ] Configure cloud deployment ([`references/cloud.md`](./references/cloud.md) if on orvilo-cloud)
 - [ ] Write integration tests (`dryRun` path + full path)
 - [ ] Smoke-test with dry-run first
 - [ ] Test with a small batch before full rollout

@@ -1,5 +1,5 @@
 {
-  "name": "@lobehub/sdk",
+  "name": "@orvilo/sdk",
   "version": "1.0.0",
   "private": true,
   "description": "Official TypeScript SDK for the Orvilo REST API, generated from the OpenAPI spec",

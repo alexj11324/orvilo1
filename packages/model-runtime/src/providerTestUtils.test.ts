@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { ILobeAgentRuntimeErrorType } from '@orvilo/types';
+import type { IOrviloAgentRuntimeErrorType } from '@orvilo/types';
 import { describe } from 'vitest';
 
 import { createOpenAICompatibleRuntime } from './core/openaiCompatibleFactory';
@@ -7,8 +7,8 @@ import { testProvider } from './providerTestUtils';
 
 // Provider plumbing compares error codes as strings; this suite intentionally
 // uses non-canonical codes to prove pass-through, which the factory's narrow
-// ILobeAgentRuntimeErrorType cannot express.
-const customErrorType = (value: string) => value as ILobeAgentRuntimeErrorType;
+// IOrviloAgentRuntimeErrorType cannot express.
+const customErrorType = (value: string) => value as IOrviloAgentRuntimeErrorType;
 
 // testProvider registers its own suites, so it must be called at suite-definition
 // time. Build the runtime with the real factory so the generated tests exercise

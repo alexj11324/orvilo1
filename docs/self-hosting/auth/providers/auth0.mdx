@@ -1,12 +1,12 @@
 ---
-title: Configuring Auth0 Authentication for LobeHub
+title: Configuring Auth0 Authentication for Orvilo
 description: >-
-  Learn how to configure Auth0 SSO for LobeHub, including creating applications,
+  Learn how to configure Auth0 SSO for Orvilo, including creating applications,
   adding users, and setting up environment variables.
 tags:
   - Auth0
   - Authentication
-  - LobeHub
+  - Orvilo
   - Single Sign-On
 ---
 
@@ -18,19 +18,13 @@ tags:
   1. Go to [Auth0 Dashboard](https://manage.auth0.com/dashboard)
   2. Click **Applications** > **Create Application**
 
-  <Image alt="Create Auth0 Application S1" inStep src="https://github.com/lobehub/lobehub/assets/30863298/f068190f-0027-4d3b-8667-d632e43d5a86" />
-
   3. Fill in the application name
   4. Select **Regular Web Applications** as the application type
   5. Click **Create**
 
-  <Image alt="Create Auth0 Application S2" inStep src="https://github.com/lobehub/lobehub/assets/30863298/3e0082df-9b6f-46f3-b67f-bdc79e1eb2cc" />
-
   ### Configure Application Settings
 
   After creation, go to the **Settings** tab:
-
-  <Image alt="Create Auth0 Application S3" inStep src="https://github.com/lobehub/lobehub/assets/30863298/df4cea85-616a-46f5-b2de-42725d9b82a6" />
 
   Note down:
 
@@ -49,13 +43,9 @@ tags:
     - Production: `https://your-domain.com/api/auth/callback/auth0`
   </Callout>
 
-  <Image alt="Create Auth0 Application S4" inStep src="https://github.com/lobehub/lobehub/assets/30863298/62fbd09f-a69a-4460-949b-0f6285fa65b9" />
-
   ### Add Users (Optional)
 
   Click **User Management** to create users for your organization.
-
-  <Image alt="Add Users" inStep src="https://github.com/lobehub/lobehub/assets/30863298/0beda150-d0b6-43cf-a9f1-fce928b83a96" />
 
   ### Configure Environment Variables
 
@@ -75,7 +65,7 @@ tags:
 
 <Callout type={'info'}>
   After successful deployment, users will be able to authenticate with Auth0 and
-  use LobeHub.
+  use Orvilo.
 </Callout>
 
 ## Advanced Configuration
@@ -86,13 +76,9 @@ If your organization has existing identity infrastructure, connect to SSO servic
 
 Auth0 supports Azure AD, Slack, Google Workspace, Office 365, Zoom, and more. See [Auth0 SSO Integrations](https://marketplace.auth0.com/features/sso-integrations).
 
-<Image alt="Connecting to Existing SSO Service" src="https://github.com/lobehub/lobehub/assets/30863298/9891347e-a338-4aa9-8714-f16c8dbcfcec" />
-
 ### Configure Social Login
 
 Configure social login in **Authentication** > **Social**.
-
-<Image alt="Configuring Social Login" src="https://github.com/lobehub/lobehub/assets/30863298/880749a6-5ba4-4e20-a968-b583a54de7fa" />
 
 <Callout type={'warning'}>
   Social login by default allows anyone to authenticate. Configure blocking
@@ -100,9 +86,9 @@ Configure social login in **Authentication** > **Social**.
 </Callout>
 
 <Callout type={'warning'}>
-  When creating a GitHub connection, make sure to enable the **Email Address** permission in the **Attributes** section. LobeHub requires user email for authentication.
+  When creating a GitHub connection, make sure to enable the **Email Address** permission in the **Attributes** section. Orvilo requires user email for authentication.
 
-  <Image alt="GitHub Connection Email Permission" src="https://hub-apac-1.lobeobjects.space/docs/afdf22891dda3e5e44c690db184c548e.png" />
+  <Image alt="GitHub Connection Email Permission" src="https://hub-apac-1.objects.aspectlylabs.com/docs/afdf22891dda3e5e44c690db184c548e.png" />
 </Callout>
 
 ## Related Resources

@@ -1,5 +1,5 @@
 /**
- * @deprecated `lobe-notebook` is no longer registered with the LLM tools
+ * @deprecated `orvilo-notebook` is no longer registered with the LLM tools
  * engine. This render and its types are retained only to keep legacy tool-call
  * messages displaying. Plan to delete this folder ~3 months after 2026-05-04.
  */

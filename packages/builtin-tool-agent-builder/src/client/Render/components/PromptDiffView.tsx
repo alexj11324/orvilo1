@@ -92,10 +92,10 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
   const isUnchanged = previousPrompt !== undefined && previousPrompt === newPrompt;
 
   const statusKey = isUnchanged
-    ? 'builtins.lobe-agent-builder.render.updatePrompt.unchanged'
+    ? 'builtins.orvilo-agent-builder.render.updatePrompt.unchanged'
     : newPrompt
-      ? 'builtins.lobe-agent-builder.render.updatePrompt.updated'
-      : 'builtins.lobe-agent-builder.render.updatePrompt.cleared';
+      ? 'builtins.orvilo-agent-builder.render.updatePrompt.updated'
+      : 'builtins.orvilo-agent-builder.render.updatePrompt.cleared';
 
   return (
     <Flexbox className={styles.container} gap={8}>
@@ -123,7 +123,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
           <Flexbox horizontal align={'center'} gap={6}>
             <FileText className={styles.fileIcon} size={14} />
             <span className={styles.promptLabel}>
-              {t('builtins.lobe-agent-builder.render.updatePrompt.newPrompt', {
+              {t('builtins.orvilo-agent-builder.render.updatePrompt.newPrompt', {
                 count: newPrompt.length,
               })}
             </span>

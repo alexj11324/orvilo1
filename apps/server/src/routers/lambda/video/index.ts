@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 import { BRANDING_PROVIDER } from '@orvilo/business-const';
-import { isLobeHubModelAvailable } from '@orvilo/business-model-bank/model-config';
+import { isOrviloModelAvailable } from '@orvilo/business-model-bank/model-config';
 import {
   buildMappedBusinessModelFields,
   resolveBusinessModelMapping,
@@ -40,7 +40,7 @@ import { AsyncTaskStatus, AsyncTaskType } from '@/types/asyncTask';
 
 import { createVideoTaskSubmitError } from './error';
 
-const log = debug('lobe-video:lambda');
+const log = debug('orvilo-video:lambda');
 
 const videoProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -87,19 +87,19 @@ export const videoRouter = router({
 
       const { resolvedModelId } = await resolveBusinessModelMapping(provider, model);
 
-      // Reject lobehub model ids that are no longer in the model bank so callers get a
+      // Reject orvilo model ids that are no longer in the model bank so callers get a
       // clear error instead of an opaque downstream failure when the resolved channel
       // model is no longer in the model bank.
       if (
         provider === BRANDING_PROVIDER &&
-        !(await isLobeHubModelAvailable(resolvedModelId, 'video', {
+        !(await isOrviloModelAvailable(resolvedModelId, 'video', {
           getUserEmail: async () => (await UserModel.findById(serverDB, userId))?.email,
         }))
       ) {
         throw new TRPCError({
           cause: { data: { modelType: 'video', requestedModel: model } },
           code: 'BAD_REQUEST',
-          message: ChatErrorType.LobeHubModelDeprecated,
+          message: ChatErrorType.OrviloModelDeprecated,
         });
       }
 

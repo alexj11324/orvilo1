@@ -1,4 +1,4 @@
-import { LOBE_DEFAULT_MODEL_LIST, ModelProvider } from 'model-bank';
+import { ModelProvider, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import urlJoin from 'url-join';
 
 import { createRouterRuntime } from '../../core/RouterRuntime';
@@ -98,7 +98,7 @@ export const params = {
     return [
       {
         apiType: 'anthropic',
-        models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+        models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
           (id) => detectModelProvider(id) === 'anthropic',
         ),
         options: {
@@ -108,7 +108,7 @@ export const params = {
       },
       {
         apiType: 'google',
-        models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+        models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
           (id) => detectModelProvider(id) === 'google',
         ),
         options: {
@@ -127,4 +127,4 @@ export const params = {
   },
 } satisfies CreateRouterRuntimeOptions;
 
-export const LobeZenMuxAI = createRouterRuntime(params);
+export const OrviloZenMuxAI = createRouterRuntime(params);

@@ -43,11 +43,11 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
   };
 });
 
-vi.mock('@/components/Analytics/LobeAnalyticsProviderWrapper', async () => {
+vi.mock('@/components/Analytics/OrviloAnalyticsProviderWrapper', async () => {
   const React = await import('react');
 
   return {
-    LobeAnalyticsProviderWrapper: ({ children }: { children?: ReactNode }) =>
+    OrviloAnalyticsProviderWrapper: ({ children }: { children?: ReactNode }) =>
       React.createElement(React.Fragment, null, children),
   };
 });

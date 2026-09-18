@@ -17,7 +17,7 @@ const {
   mockGenerationTopicFindById,
   mockFindUserById,
   mockInsertValues,
-  mockIsLobeHubModelAvailable,
+  mockIsOrviloModelAvailable,
   mockResolveBusinessModelMapping,
 } = vi.hoisted(() => ({
   mockServerDB: {
@@ -32,7 +32,7 @@ const {
   mockGenerationTopicFindById: vi.fn(),
   mockFindUserById: vi.fn(),
   mockInsertValues: [] as unknown[],
-  mockIsLobeHubModelAvailable: vi.fn(),
+  mockIsOrviloModelAvailable: vi.fn(),
   mockResolveBusinessModelMapping: vi.fn(),
 }));
 
@@ -102,13 +102,13 @@ vi.mock('@orvilo/business-model-runtime', async (importOriginal) => ({
 }));
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
-  isLobeHubModelAvailable: (
+  isOrviloModelAvailable: (
     ...args: [
       string,
       string,
       { getUserEmail?: () => Promise<string | null | undefined>; userEmail?: string | null }?,
     ]
-  ) => mockIsLobeHubModelAvailable(...args),
+  ) => mockIsOrviloModelAvailable(...args),
 }));
 
 // Mock async caller
@@ -131,6 +131,14 @@ vi.mock('@/database/schemas', () => ({
   asyncTasks: { id: 'asyncTasks.id', userId: 'asyncTasks.userId' },
   generationBatches: { id: 'generationBatches.id' },
   generations: { id: 'generations.id', userId: 'generations.userId' },
+}));
+
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam. Mocked without importOriginal so the
+// workspace model's transitive schema imports stay out of this partial
+// schemas mock.
+vi.mock('@/database/models/workspace', () => ({
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 
 // Mock seed generator
@@ -176,7 +184,7 @@ describe('imageRouter', () => {
     mockGetKeyFromFullUrl.mockResolvedValue(null);
     mockGetFullFileUrl.mockResolvedValue(null);
     mockFindUserById.mockResolvedValue({ email: 'user@example.com' });
-    mockIsLobeHubModelAvailable.mockResolvedValue(true);
+    mockIsOrviloModelAvailable.mockResolvedValue(true);
     mockGenerationTopicFindById.mockResolvedValue({ id: 'topic-1' });
 
     // Setup default transaction mock
@@ -270,10 +278,10 @@ describe('imageRouter', () => {
         BRANDING_PROVIDER,
         'onboarding-image',
       );
-      expect(mockIsLobeHubModelAvailable).toHaveBeenCalledWith('gpt-image-1', 'image', {
+      expect(mockIsOrviloModelAvailable).toHaveBeenCalledWith('gpt-image-1', 'image', {
         getUserEmail: expect.any(Function),
       });
-      const availabilityOptions = mockIsLobeHubModelAvailable.mock.calls.at(-1)?.[2];
+      const availabilityOptions = mockIsOrviloModelAvailable.mock.calls.at(-1)?.[2];
       expect(mockFindUserById).not.toHaveBeenCalled();
       await expect(availabilityOptions!.getUserEmail!()).resolves.toBe('user@example.com');
       expect(mockFindUserById).toHaveBeenCalledWith(mockServerDB, mockUserId);
@@ -296,7 +304,7 @@ describe('imageRouter', () => {
     });
 
     it('should reject unavailable branding-provider image models before creating async tasks', async () => {
-      mockIsLobeHubModelAvailable.mockResolvedValue(false);
+      mockIsOrviloModelAvailable.mockResolvedValue(false);
 
       const ctx = createMockCtx();
       const input = createDefaultInput({
@@ -308,7 +316,7 @@ describe('imageRouter', () => {
 
       await expect(caller.createImage(input)).rejects.toMatchObject({
         code: 'BAD_REQUEST',
-        message: 'LobeHubModelDeprecated',
+        message: 'OrviloModelDeprecated',
       });
 
       expect(mockServerDB.transaction).not.toHaveBeenCalled();

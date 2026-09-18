@@ -17,9 +17,9 @@ const isDesktop = process.env.NEXT_PUBLIC_IS_DESKTOP_APP === '1';
 const isServerDB = !!process.env.DATABASE_URL;
 
 const AUTH_SECRET_DOC_URL =
-  'https://lobehub.com/docs/self-hosting/environment-variables/auth#auth-secret';
+  'https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/auth#auth-secret';
 const KEY_VAULTS_SECRET_DOC_URL =
-  'https://lobehub.com/docs/self-hosting/environment-variables/basic#key-vaults-secret';
+  'https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/basic#key-vaults-secret';
 
 function checkRequiredEnvVars(): void {
   if (isDesktop || !isServerDB) return;

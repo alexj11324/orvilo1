@@ -45,7 +45,7 @@ describe('ElectronAppActionImpl', () => {
             desktop: '/home/u/Desktop',
             documents: '/home/u/Documents',
             home: '/home/u',
-            userData: '/home/u/.config/lobehub',
+            userData: '/home/u/.config/orvilo',
           },
         });
       });

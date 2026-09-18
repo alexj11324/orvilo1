@@ -1,17 +1,17 @@
-import type { LobeTool } from '@orvilo/types';
+import type { OrviloTool } from '@orvilo/types';
 import { and, desc, eq } from 'drizzle-orm';
 
 import type { InstalledPluginItem, NewInstalledPlugin } from '../schemas';
 import { userInstalledPlugins } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 export class PluginModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -67,7 +67,7 @@ export class PluginModel {
       .where(this.ownership())
       .orderBy(desc(userInstalledPlugins.createdAt));
 
-    return data.map<LobeTool>((item) => ({
+    return data.map<OrviloTool>((item) => ({
       ...item,
       runtimeType: item.manifest?.type || 'default',
     }));

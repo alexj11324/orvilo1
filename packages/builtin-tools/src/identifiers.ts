@@ -1,5 +1,5 @@
 import { AcceptanceEvidenceManifest } from '@orvilo/builtin-tool-acceptance-evidence';
-import { LobeActivatorManifest } from '@orvilo/builtin-tool-activator';
+import { OrviloActivatorManifest } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderManifest } from '@orvilo/builtin-tool-agent-builder';
 import { AgentDocumentsManifest } from '@orvilo/builtin-tool-agent-documents';
 import { AgentManagementManifest } from '@orvilo/builtin-tool-agent-management';
@@ -19,10 +19,10 @@ import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-buil
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
 import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
-import { LobeAgentManifest } from '@orvilo/builtin-tool-lobe-agent';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
 import { NotebookManifest } from '@orvilo/builtin-tool-notebook';
+import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
 import { SkillStoreManifest } from '@orvilo/builtin-tool-skill-store';
@@ -61,10 +61,10 @@ export const builtinToolIdentifiers: string[] = [
   SkillsManifest.identifier,
   SkillStoreManifest.identifier,
   TopicReferenceManifest.identifier,
-  LobeActivatorManifest.identifier,
+  OrviloActivatorManifest.identifier,
   WebBrowsingManifest.identifier,
   UserInteractionManifest.identifier,
-  LobeAgentManifest.identifier,
+  OrviloAgentManifest.identifier,
   WebOnboardingManifest.identifier,
   VerifyToolManifest.identifier,
 ];

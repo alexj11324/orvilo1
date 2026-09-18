@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as openAIContextBuilders from '../../core/contextBuilders/openai';
 import { isResponsesAPIModel } from '../openai/modelId';
-import { LobeGithubCopilotAI } from './index';
+import { OrviloGithubCopilotAI } from './index';
 
 // Mock console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -12,7 +12,7 @@ vi.spyOn(console, 'error').mockImplementation(() => {});
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('LobeGithubCopilotAI', () => {
+describe('OrviloGithubCopilotAI', () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -26,7 +26,7 @@ describe('LobeGithubCopilotAI', () => {
         .mockRejectedValue({ status: 400 });
 
       const futureTime = Date.now() + 600_000;
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -54,7 +54,7 @@ describe('LobeGithubCopilotAI', () => {
         .mockRejectedValue({ status: 400 });
 
       const futureTime = Date.now() + 600_000;
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -82,7 +82,7 @@ describe('LobeGithubCopilotAI', () => {
       const futureTime = Date.now() + 600_000;
 
       for (const oauthAccessToken of ['ghu_account_a', 'ghu_account_b']) {
-        const instance = new LobeGithubCopilotAI({
+        const instance = new OrviloGithubCopilotAI({
           bearerToken: 'cached-bearer-token',
           bearerTokenExpiresAt: futureTime,
           oauthAccessToken,
@@ -109,22 +109,22 @@ describe('LobeGithubCopilotAI', () => {
 
   describe('constructor', () => {
     it('should throw error if no token is provided', () => {
-      expect(() => new LobeGithubCopilotAI({})).toThrow();
+      expect(() => new OrviloGithubCopilotAI({})).toThrow();
     });
 
     it('should accept apiKey as PAT', () => {
-      const instance = new LobeGithubCopilotAI({ apiKey: 'ghp_test_pat' });
+      const instance = new OrviloGithubCopilotAI({ apiKey: 'ghp_test_pat' });
       expect(instance.baseURL).toBe('https://api.githubcopilot.com');
     });
 
     it('should accept oauthAccessToken', () => {
-      const instance = new LobeGithubCopilotAI({ oauthAccessToken: 'ghu_test_oauth' });
+      const instance = new OrviloGithubCopilotAI({ oauthAccessToken: 'ghu_test_oauth' });
       expect(instance.baseURL).toBe('https://api.githubcopilot.com');
     });
 
     it('should use cached bearer token if still valid', () => {
       const futureTime = Date.now() + 600_000; // 10 minutes from now
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_test_oauth',
@@ -134,7 +134,7 @@ describe('LobeGithubCopilotAI', () => {
 
     it('should not use cached bearer token if expired', () => {
       const pastTime = Date.now() - 600_000; // 10 minutes ago
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         apiKey: 'ghp_fallback',
         bearerToken: 'expired-bearer-token',
         bearerTokenExpiresAt: pastTime,
@@ -143,7 +143,7 @@ describe('LobeGithubCopilotAI', () => {
     });
 
     it('should prefer oauthAccessToken over apiKey', () => {
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         apiKey: 'ghp_pat',
         oauthAccessToken: 'ghu_oauth',
       });
@@ -177,7 +177,7 @@ describe('LobeGithubCopilotAI', () => {
         status: 200,
       });
 
-      const instance = new LobeGithubCopilotAI({ apiKey: 'ghp_test' });
+      const instance = new OrviloGithubCopilotAI({ apiKey: 'ghp_test' });
       const models = await instance.models();
 
       expect(models).toHaveLength(2);
@@ -208,7 +208,7 @@ describe('LobeGithubCopilotAI', () => {
         status: 200,
       });
 
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -248,7 +248,7 @@ describe('LobeGithubCopilotAI', () => {
         status: 200,
       });
 
-      const instance = new LobeGithubCopilotAI({ apiKey: 'ghp_test' });
+      const instance = new OrviloGithubCopilotAI({ apiKey: 'ghp_test' });
       const models = await instance.models();
 
       expect(models).toEqual([]);
@@ -261,7 +261,7 @@ describe('LobeGithubCopilotAI', () => {
         status: 403,
       });
 
-      const instance = new LobeGithubCopilotAI({
+      const instance = new OrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: Date.now() + 60 * 60 * 1000,
       });
@@ -284,7 +284,7 @@ describe('LobeGithubCopilotAI', () => {
         status: 403,
       });
 
-      const instance = new LobeGithubCopilotAI({ apiKey: 'ghp_models_denied' });
+      const instance = new OrviloGithubCopilotAI({ apiKey: 'ghp_models_denied' });
 
       try {
         await instance.models();
@@ -301,7 +301,7 @@ describe('LobeGithubCopilotAI', () => {
   describe('error handling in constructor', () => {
     it('should throw runtime payload when no credentials provided', () => {
       try {
-        new LobeGithubCopilotAI({});
+        new OrviloGithubCopilotAI({});
         expect.fail('Should have thrown');
       } catch (error: any) {
         expect(error).toEqual({
@@ -314,7 +314,7 @@ describe('LobeGithubCopilotAI', () => {
 
   describe('baseURL', () => {
     it('should have correct base URL', () => {
-      const instance = new LobeGithubCopilotAI({ apiKey: 'test' });
+      const instance = new OrviloGithubCopilotAI({ apiKey: 'test' });
       expect(instance.baseURL).toBe('https://api.githubcopilot.com');
     });
   });
@@ -329,7 +329,7 @@ describe('LobeGithubCopilotAI', () => {
     });
 
     it('should convert chat completion tool to responses tool', () => {
-      const instance = new LobeGithubCopilotAI({ apiKey: 'ghp_test' });
+      const instance = new OrviloGithubCopilotAI({ apiKey: 'ghp_test' });
       const chatTool = {
         function: {
           description: 'Get weather',
@@ -374,10 +374,10 @@ describe('LobeGithubCopilotAI', () => {
         };
       });
 
-      const { LobeGithubCopilotAI: ReloadedLobeGithubCopilotAI } = await import('./index');
+      const { OrviloGithubCopilotAI: ReloadedOrviloGithubCopilotAI } = await import('./index');
 
       const futureTime = Date.now() + 600_000;
-      const instance = new ReloadedLobeGithubCopilotAI({
+      const instance = new ReloadedOrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -426,10 +426,10 @@ describe('LobeGithubCopilotAI', () => {
       process.env.DEBUG_GITHUBCOPILOT_CHAT_COMPLETION = '1';
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const { LobeGithubCopilotAI: ReloadedLobeGithubCopilotAI } = await import('./index');
+      const { OrviloGithubCopilotAI: ReloadedOrviloGithubCopilotAI } = await import('./index');
 
       const futureTime = Date.now() + 600_000;
-      const instance = new ReloadedLobeGithubCopilotAI({
+      const instance = new ReloadedOrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -473,10 +473,10 @@ describe('LobeGithubCopilotAI', () => {
       process.env.DEBUG_GITHUBCOPILOT_RESPONSES = '1';
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const { LobeGithubCopilotAI: ReloadedLobeGithubCopilotAI } = await import('./index');
+      const { OrviloGithubCopilotAI: ReloadedOrviloGithubCopilotAI } = await import('./index');
 
       const futureTime = Date.now() + 600_000;
-      const instance = new ReloadedLobeGithubCopilotAI({
+      const instance = new ReloadedOrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -536,10 +536,10 @@ describe('LobeGithubCopilotAI', () => {
         };
       });
 
-      const { LobeGithubCopilotAI: ReloadedLobeGithubCopilotAI } = await import('./index');
+      const { OrviloGithubCopilotAI: ReloadedOrviloGithubCopilotAI } = await import('./index');
 
       const futureTime = Date.now() + 600_000;
-      const instance = new ReloadedLobeGithubCopilotAI({
+      const instance = new ReloadedOrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',
@@ -586,10 +586,10 @@ describe('LobeGithubCopilotAI', () => {
         };
       });
 
-      const { LobeGithubCopilotAI: ReloadedLobeGithubCopilotAI } = await import('./index');
+      const { OrviloGithubCopilotAI: ReloadedOrviloGithubCopilotAI } = await import('./index');
 
       const futureTime = Date.now() + 600_000;
-      const instance = new ReloadedLobeGithubCopilotAI({
+      const instance = new ReloadedOrviloGithubCopilotAI({
         bearerToken: 'cached-bearer-token',
         bearerTokenExpiresAt: futureTime,
         oauthAccessToken: 'ghu_oauth',

@@ -1,15 +1,15 @@
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 
 import { agentEvalDatasets, agentEvalRuns, type NewAgentEvalRun } from '../../schemas';
-import { type LobeChatDatabase } from '../../type';
+import { type OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 export class AgentEvalRunModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

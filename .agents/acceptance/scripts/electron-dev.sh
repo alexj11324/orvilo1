@@ -17,9 +17,9 @@
 #
 # Each pool instance <id> gets, all env-driven so instances never collide:
 #   CDP port   = CDP_BASE + id   (9222 + id)
-#   Vite port  = VITE_BASE + id  (5173 + id)   → needs LOBE_DESKTOP_VITE_PORT support
+#   Vite port  = VITE_BASE + id  (5173 + id)   → needs ORVILO_DESKTOP_VITE_PORT support
 #   userData   = $POOL_DIR/ud-<id> (login state seeded from the saved snapshot)
-#   IPC id     = lobehub-desktop-dev-<id>       → needs LOBE_IPC_ID support
+#   IPC id     = orvilo-desktop-dev-<id>       → needs ORVILO_IPC_ID support
 # Drive each with a DISTINCT agent-browser session, else the daemon reuses one
 # connection across ports:  agent-browser --session s<port> --cdp <port> ...
 #
@@ -40,11 +40,11 @@
 #   ELECTRON_LOG      — (legacy only) log file path (default: /tmp/electron-dev.log)
 #   CDP_BASE          — pool CDP base (default: 9222 → instance id adds on top)
 #   VITE_BASE         — pool Vite base (default: 5173)
-#   POOL_DIR          — pool state dir (default: /tmp/lobe-electron-pool)
-#   LOBE_LOGIN_STATE_DIR — persistent login snapshot, survives /tmp cleanup
-#                       (default: ~/.lobehub/agent-testing/electron-login)
-#   LOBE_GOLDEN_PROFILE — userData to seed from when no snapshot exists yet
-#                       (default: ~/Library/Application Support/lobehub-desktop-dev)
+#   POOL_DIR          — pool state dir (default: /tmp/orvilo-electron-pool)
+#   ORVILO_LOGIN_STATE_DIR — persistent login snapshot, survives /tmp cleanup
+#                       (default: ~/.orvilo/agent-testing/electron-login)
+#   ORVILO_GOLDEN_PROFILE — userData to seed from when no snapshot exists yet
+#                       (default: ~/Library/Application Support/orvilo-desktop-dev)
 #   KEEP_DATA=1       — on `stop <id>`, keep the instance's userData dir
 #   SKIP_LOGIN_SAVE=1 — on `stop <id>`, do not snapshot the login state
 #   ELECTRON_WAIT_S   — max seconds to wait for CDP (default: 90)
@@ -65,10 +65,10 @@ ELECTRON_WAIT_S="${ELECTRON_WAIT_S:-90}"
 RENDERER_WAIT_S="${RENDERER_WAIT_S:-60}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-POOL_DIR="${POOL_DIR:-/tmp/lobe-electron-pool}"
-GOLDEN_PROFILE="${LOBE_GOLDEN_PROFILE:-$HOME/Library/Application Support/lobehub-desktop-dev}"
+POOL_DIR="${POOL_DIR:-/tmp/orvilo-electron-pool}"
+GOLDEN_PROFILE="${ORVILO_GOLDEN_PROFILE:-$HOME/Library/Application Support/orvilo-desktop-dev}"
 # Persistent across runs AND across /tmp cleanup — the pool dir is not.
-LOGIN_STATE_DIR="${LOBE_LOGIN_STATE_DIR:-$HOME/.lobehub/agent-testing/electron-login}"
+LOGIN_STATE_DIR="${ORVILO_LOGIN_STATE_DIR:-$HOME/.orvilo/agent-testing/electron-login}"
 
 # Project-scoped electron path prefix used for pgrep matching in LEGACY mode only
 # (pool mode never uses it — it would cross instances). Any Electron binary from
@@ -104,7 +104,7 @@ derive_instance() {
     CDP_PORT=$((CDP_BASE + id))
     VITE_PORT=$((VITE_BASE + id))
     USER_DATA_DIR="$POOL_DIR/ud-$id"
-    IPC_ID="lobehub-desktop-dev-$id"
+    IPC_ID="orvilo-desktop-dev-$id"
     ELECTRON_LOG="$POOL_DIR/instance-$id.log"
     PIDFILE="$POOL_DIR/instance-$id.pid"
   fi
@@ -208,11 +208,11 @@ wait_for_renderer() {
 # ── Login state ──────────────────────────────────────────────────────
 #
 # The login-bearing subset of a userData dir (skips the multi-GB caches). The
-# OAuth tokens themselves live in lobehub-settings.json → encryptedTokens.
+# OAuth tokens themselves live in orvilo-settings.json → encryptedTokens.
 LOGIN_ITEMS=(
-  "lobehub-settings.json" "Local State" "Preferences"
+  "orvilo-settings.json" "Local State" "Preferences"
   "Cookies" "Cookies-journal" "Local Storage" "IndexedDB"
-  "Session Storage" "Network Persistent State" "lobehub-storage"
+  "Session Storage" "Network Persistent State" "orvilo-storage"
 )
 
 copy_login_items() {
@@ -223,7 +223,7 @@ copy_login_items() {
   done
 }
 
-# Reads lobehub-settings.json → encryptedTokens and prints
+# Reads orvilo-settings.json → encryptedTokens and prints
 #   "<hasRefreshToken:0|1> <msUntilAccessTokenExpiry|?>"
 #
 # `expiresAt` is `Date.now() + data.expires_in * 1000` (RemoteServerConfigCtr.saveTokens),
@@ -233,7 +233,7 @@ copy_login_items() {
 # (clearTokens) the moment a refresh fails non-retryably (`invalid_grant` &co), and
 # keeps it on transient failures. So a present refreshToken means "can still re-auth".
 read_token_state() {
-  python3 - "$1/lobehub-settings.json" 2>/dev/null <<'PY' || echo "0 ?"
+  python3 - "$1/orvilo-settings.json" 2>/dev/null <<'PY' || echo "0 ?"
 import json, pathlib, sys, time
 
 path = pathlib.Path(sys.argv[1])
@@ -298,7 +298,7 @@ probe_renderer_authed() {
   fi
   local out
   out=$(agent-browser --session "edev$CDP_PORT" --cdp "$CDP_PORT" eval \
-    '(function(){try{var u=window.__LOBE_STORES.user();return (u.user&&u.user.id)?"AUTHED":"ANON";}catch(e){return "ERR";}})()' \
+    '(function(){try{var u=window.__ORVILO_STORES.user();return (u.user&&u.user.id)?"AUTHED":"ANON";}catch(e){return "ERR";}})()' \
     2>/dev/null | tail -1 || true)
   case "$out" in
     *AUTHED*) echo 1 ;;
@@ -487,7 +487,7 @@ do_start() {
   if [ "$POOL_MODE" = "1" ]; then
     mkdir -p "$POOL_DIR"
     seed_userdata "$USER_DATA_DIR"
-    env_assignments="LOBE_DESKTOP_USER_DATA_DIR='$USER_DATA_DIR' LOBE_DESKTOP_VITE_PORT=$VITE_PORT LOBE_IPC_ID='$IPC_ID'"
+    env_assignments="ORVILO_DESKTOP_USER_DATA_DIR='$USER_DATA_DIR' ORVILO_DESKTOP_VITE_PORT=$VITE_PORT ORVILO_IPC_ID='$IPC_ID'"
   fi
 
   echo "[electron-dev] Starting Electron dev..."
@@ -503,7 +503,7 @@ do_start() {
 
   local launch_cmd="
     cd '$PROJECT_ROOT/apps/desktop'
-    exec env $env_assignments LOBE_DESKTOP_CDP_PORT=$CDP_PORT pnpm dev
+    exec env $env_assignments ORVILO_DESKTOP_CDP_PORT=$CDP_PORT pnpm dev
   "
   if command -v setsid >/dev/null 2>&1; then
     setsid bash -c "$launch_cmd" >>"$ELECTRON_LOG" 2>&1 </dev/null &

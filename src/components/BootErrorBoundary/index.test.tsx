@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import BootErrorBoundary from './index';
 
-const BOOT_RELOAD_SESSION_KEY = 'lobe:boot:hard-reload-attempts';
+const BOOT_RELOAD_SESSION_KEY = 'orvilo:boot:hard-reload-attempts';
 
 const ThrowDuringRender = () => {
   throw new Error('initial boot failure');

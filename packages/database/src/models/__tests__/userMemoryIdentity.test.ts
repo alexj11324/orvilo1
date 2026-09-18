@@ -8,13 +8,13 @@ import { idGenerator } from '@/database/utils/idGenerator';
 
 import { getTestDB } from '../../core/getTestDB';
 import { userMemoriesIdentities, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { UserMemoryIdentityModel } from '../userMemory/identity';
 
 // Helper to generate unique identity IDs
 const genIdentityId = () => `mem_${nanoid(12)}`;
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = idGenerator('user');
 const userId2 = idGenerator('user');

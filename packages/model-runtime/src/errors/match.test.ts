@@ -234,7 +234,7 @@ describe('numericId contract', () => {
     for (const code of [
       ChatErrorType.FreePlanLimit,
       ChatErrorType.InsufficientBudgetForModel,
-      ChatErrorType.LobeHubModelDeprecated,
+      ChatErrorType.OrviloModelDeprecated,
     ]) {
       const spec = ERROR_CODE_SPECS[code];
       expect(spec, code).toBeDefined();
@@ -509,7 +509,7 @@ describe('matchErrorPattern — gateway user/upstream residues by category', () 
 describe('2026-09 triage harvest (production residue)', () => {
   // Real messages sampled from `agent_operations` rows that landed in the
   // UpstreamHttpError / bare-500 / bare-403 residue over 30 days. Every pattern
-  // here was audited to match zero `provider = 'lobehub'` rows first — first-party
+  // here was audited to match zero `provider = 'orvilo'` rows first — first-party
   // provider errors are our own bugs and must stay visible.
   const cases: [string, string][] = [
     ['Sorry, your account balance is insufficient', AgentRuntimeErrorType.InsufficientQuota],
@@ -556,9 +556,9 @@ describe('2026-09 triage harvest (production residue)', () => {
     expect(isUserSideError(undefined, message)).toBe(true);
   });
 
-  it('keeps first-party lobehub failures unclassified so they stay visible', () => {
-    // The bare `Forbidden` body behind 2.4k lobehub-provider rows must NOT be
+  it('keeps first-party orvilo failures unclassified so they stay visible', () => {
+    // The bare `Forbidden` body behind 2.4k orvilo-provider rows must NOT be
     // swept into a user-side code by any pattern added here.
-    expect(matchErrorPattern({ message: 'Forbidden', provider: 'lobehub' })).toBeUndefined();
+    expect(matchErrorPattern({ message: 'Forbidden', provider: 'orvilo' })).toBeUndefined();
   });
 });

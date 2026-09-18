@@ -24,10 +24,10 @@ describe('downloadPreviewImage', () => {
   });
 
   it('downloads other sources as a blob under the file name', async () => {
-    await downloadPreviewImage('https://cdn.lobehub.com/images/cat%20photo.png');
+    await downloadPreviewImage('https://cdn.aspectlylabs.com/images/cat%20photo.png');
 
     expect(downloadFile).toHaveBeenCalledWith(
-      'https://cdn.lobehub.com/images/cat%20photo.png',
+      'https://cdn.aspectlylabs.com/images/cat%20photo.png',
       'cat photo.png',
     );
     expect(window.open).not.toHaveBeenCalled();

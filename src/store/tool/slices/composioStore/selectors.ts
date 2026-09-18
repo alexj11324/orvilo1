@@ -45,7 +45,7 @@ export const composioStoreSelectors = {
     return s.composioExecutingToolIds?.has(toolId) || false;
   },
 
-  composioAsLobeTools: (s: ToolStore) => {
+  composioAsOrviloTools: (s: ToolStore) => {
     const servers = s.composioServers || [];
     const tools: any[] = [];
 

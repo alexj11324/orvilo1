@@ -10,14 +10,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { asyncTasks, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   AsyncTaskModel,
   initHourlyUserMemoryExtractionMetadata,
   initUserMemoryExtractionMetadata,
 } from '../asyncTask';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'async-task-model-test-user-id';
 const asyncTaskModel = new AsyncTaskModel(serverDB, userId);

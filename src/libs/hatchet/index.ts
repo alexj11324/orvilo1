@@ -4,7 +4,7 @@ import {
   type InputType,
   Priority,
   type RunOpts,
-} from '@hatchet-dev/typescript-sdk/v1';
+} from '@hatchet-dev/typescript-sdk/v1/index.js';
 
 const HATCHET_RUN_PREFIX = 'hatchet-run:';
 const HATCHET_SCHEDULE_PREFIX = 'hatchet-schedule:';

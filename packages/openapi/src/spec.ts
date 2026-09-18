@@ -749,12 +749,12 @@ export const buildSpecDocument = async (app: GenerateSpecsApp) => {
       },
       info: {
         description:
-          'LobeHub platform REST API. Generated from `packages/openapi` routes — do not edit openapi.yml by hand; run `bun generate:openapi` instead.',
-        title: 'LobeHub API',
+          'Orvilo platform REST API. Generated from `packages/openapi` routes — do not edit openapi.yml by hand; run `bun generate:openapi` instead.',
+        title: 'Orvilo API',
         version: '1.0.0',
       },
       security: [{ bearerAuth: [] }],
-      servers: [{ description: 'LobeHub Cloud', url: 'https://orvilo.aspectlylabs.com' }],
+      servers: [{ description: 'Orvilo Cloud', url: 'https://orvilo.aspectlylabs.com' }],
     },
   });
 

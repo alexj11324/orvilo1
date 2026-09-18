@@ -47,7 +47,7 @@ const DOCUMENT_SKILL_PROVIDER_CONFIGS = {
  * - Managed skill documents use `skills/bundle` parent rows and `skills/index` SKILL.md child rows.
  *
  * Returns:
- * - Skill VFS nodes whose paths use the target unified `./lobe/skills/...` layout.
+ * - Skill VFS nodes whose paths use the target unified `./orvilo/skills/...` layout.
  */
 export class ProviderSkillsAgentDocument implements WritableSkillMountProvider {
   private readonly config: ProviderSkillsAgentDocumentConfig;

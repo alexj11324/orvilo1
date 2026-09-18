@@ -2,7 +2,7 @@ import { CREDITS_PER_DOLLAR, USD_TO_CNY } from '@orvilo/const/currency';
 import debug from 'debug';
 import type { FixedPricingUnit, LookupPricingUnit, Pricing } from 'model-bank';
 
-const log = debug('lobe-cost:computeVideoCost');
+const log = debug('orvilo-cost:computeVideoCost');
 
 export interface VideoGenerationParams {
   [key: string]: unknown;

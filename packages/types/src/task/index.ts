@@ -372,6 +372,15 @@ export interface WorkspaceDocNode {
   pinnedBy: string;
   sourceTaskId: string;
   sourceTaskIdentifier: string | null;
+  /**
+   * The run that produced this document, when one exists — its `works` row's
+   * origin topic. Absent for a document pinned by hand, which no run produced.
+   * Read from the Work rather than from a second association: `works` already
+   * records the origin topic for the documents it registers.
+   */
+  sourceTopicId?: string | null;
+  /** Display title of {@link sourceTopicId}; null when the topic was deleted. */
+  sourceTopicTitle?: string | null;
   title: string;
   updatedAt: string | null;
 }
@@ -739,6 +748,13 @@ export interface TaskDetailWorkspaceNode {
   size?: number | null;
   sourceTaskId?: string;
   sourceTaskIdentifier?: string | null;
+  /**
+   * The run that produced this artifact, and its title — see
+   * {@link WorkspaceDocNode.sourceTopicId}. Undefined when the artifact was
+   * pinned by hand rather than produced by a run.
+   */
+  sourceTopicId?: string | null;
+  sourceTopicTitle?: string | null;
   title?: string;
 }
 

@@ -43,7 +43,7 @@ describe('MetaHoverCard', () => {
               number: 17_392,
               state: 'open',
               title: 'keep the hydration gate up',
-              url: 'https://github.com/lobehub/lobehub/pull/17392',
+              url: 'https://github.com/alexj11324/orvilo1/pull/17392',
             },
             pullRequestStatus: 'ok',
           },
@@ -103,7 +103,7 @@ describe('MetaHoverCard', () => {
               number: 16_951,
               state: 'closed',
               title: 'perf(swr): persist activeScopeKey',
-              url: 'https://github.com/lobehub/lobehub/pull/16951',
+              url: 'https://github.com/alexj11324/orvilo1/pull/16951',
             },
           },
         },
@@ -115,7 +115,7 @@ describe('MetaHoverCard', () => {
     render(<MetaHoverCard metadata={metadata} title="Topic" />);
 
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', 'https://github.com/lobehub/lobehub/pull/16951');
+    expect(link).toHaveAttribute('href', 'https://github.com/alexj11324/orvilo1/pull/16951');
     expect(link).toHaveTextContent('metaCard.pr.merged · #16951 perf(swr): persist activeScopeKey');
     expect(screen.getByTitle('#16951 perf(swr): persist activeScopeKey')).toBeInTheDocument();
   });

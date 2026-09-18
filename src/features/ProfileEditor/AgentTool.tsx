@@ -17,10 +17,10 @@ import ComposioServerItem from '@/features/ChatInput/ActionBar/Tools/ComposioSer
 import ComposioSkillIcon, {
   SKILL_ICON_SIZE,
 } from '@/features/ChatInput/ActionBar/Tools/ComposioSkillIcon';
-import LobehubSkillIcon from '@/features/ChatInput/ActionBar/Tools/LobehubSkillIcon';
-import LobehubSkillServerItem from '@/features/ChatInput/ActionBar/Tools/LobehubSkillServerItem';
 import MarketAgentSkillPopoverContent from '@/features/ChatInput/ActionBar/Tools/MarketAgentSkillPopoverContent';
 import MarketSkillIcon from '@/features/ChatInput/ActionBar/Tools/MarketSkillIcon';
+import OrviloSkillIcon from '@/features/ChatInput/ActionBar/Tools/OrviloSkillIcon';
+import OrviloSkillServerItem from '@/features/ChatInput/ActionBar/Tools/OrviloSkillServerItem';
 import ToolItem from '@/features/ChatInput/ActionBar/Tools/ToolItem';
 import ToolItemDetailPopover from '@/features/ChatInput/ActionBar/Tools/ToolItemDetailPopover';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
@@ -38,7 +38,7 @@ import {
   composioStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
-import type { LobeToolMetaWithAvailability } from '@/store/tool/slices/builtin/selectors';
+import type { OrviloToolMetaWithAvailability } from '@/store/tool/slices/builtin/selectors';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
 import PluginTag from './PluginTag';
@@ -146,8 +146,8 @@ const AgentTool = memo<AgentToolProps>(
     const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
     const isComposioEnabledInEnv = useServerConfigStore(serverConfigSelectors.enableComposio);
 
-    // LobeHub Skill-related state
-    const isLobehubSkillEnabled = useServerConfigStore(serverConfigSelectors.enableLobehubSkill);
+    // Orvilo Skill-related state
+    const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
     // Agent Skills-related state
     const installedBuiltinSkills = useToolStore(
@@ -163,12 +163,12 @@ const AgentTool = memo<AgentToolProps>(
     // Fetch plugins
     const [
       useFetchUserComposioConnections,
-      useFetchLobehubSkillConnections,
+      useFetchOrviloSkillConnections,
       useFetchUninstalledBuiltinTools,
       useFetchAgentSkills,
     ] = useToolStore((s) => [
       s.useFetchUserComposioConnections,
-      s.useFetchLobehubSkillConnections,
+      s.useFetchOrviloSkillConnections,
       s.useFetchUninstalledBuiltinTools,
       s.useFetchAgentSkills,
     ]);
@@ -180,8 +180,8 @@ const AgentTool = memo<AgentToolProps>(
     // Load user's Composio integrations via SWR (from database)
     useFetchUserComposioConnections(isComposioEnabledInEnv);
 
-    // Load user's LobeHub Skill connections via SWR
-    useFetchLobehubSkillConnections(isLobehubSkillEnabled);
+    // Load user's Orvilo Skill connections via SWR
+    useFetchOrviloSkillConnections(isOrviloSkillEnabled);
 
     // Custom connectors (user-added OAuth MCP servers) from the connector store
     const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
@@ -244,15 +244,15 @@ const AgentTool = memo<AgentToolProps>(
       () =>
         getConnectorCatalog({
           composio: isComposioEnabledInEnv,
-          lobehub: isLobehubSkillEnabled,
+          orvilo: isOrviloSkillEnabled,
         }),
-      [isComposioEnabledInEnv, isLobehubSkillEnabled],
+      [isComposioEnabledInEnv, isOrviloSkillEnabled],
     );
     const connectorIdentifiers = useMemo(
       () =>
         new Set(
           connectorCatalog.map((item) =>
-            item.type === 'lobehub' ? item.provider.id : item.serverType.identifier,
+            item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
           ),
         ),
       [connectorCatalog],
@@ -264,9 +264,9 @@ const AgentTool = memo<AgentToolProps>(
           .map(({ serverType }) => serverType),
       [connectorCatalog],
     );
-    const lobehubConnectorProviders = useMemo(
+    const orviloConnectorProviders = useMemo(
       () =>
-        connectorCatalog.filter((item) => item.type === 'lobehub').map(({ provider }) => provider),
+        connectorCatalog.filter((item) => item.type === 'orvilo').map(({ provider }) => provider),
       [connectorCatalog],
     );
 
@@ -282,13 +282,13 @@ const AgentTool = memo<AgentToolProps>(
     // Filter out Composio tools and skills from profileBuiltinList (they are displayed separately)
     // Optionally filter out tools with availableInWeb: false based on config (e.g., LocalSystem is desktop-only)
     const filteredBuiltinList = useMemo(() => {
-      // Cast to LobeToolMetaWithAvailability for type safety when filterAvailableInWeb is used
+      // Cast to OrviloToolMetaWithAvailability for type safety when filterAvailableInWeb is used
       type ListType = typeof profileBuiltinList;
       let list: ListType = profileBuiltinList;
 
       // Filter by availableInWeb if requested (only makes sense when using allMetaList)
       if (filterAvailableInWeb && useAllMetaList) {
-        list = (list as LobeToolMetaWithAvailability[]).filter(
+        list = (list as OrviloToolMetaWithAvailability[]).filter(
           (item) => item.availableInWeb,
         ) as ListType;
       }
@@ -344,13 +344,13 @@ const AgentTool = memo<AgentToolProps>(
       [isComposioEnabledInEnv, composioConnectorTypes, allComposioServers, effectiveAgentId, t],
     );
 
-    // LobeHub Skill Provider list items
-    const lobehubSkillItems = useMemo(
+    // Orvilo Skill Provider list items
+    const orviloSkillItems = useMemo(
       () =>
-        isLobehubSkillEnabled
-          ? lobehubConnectorProviders.map((provider) => ({
+        isOrviloSkillEnabled
+          ? orviloConnectorProviders.map((provider) => ({
               icon: (
-                <LobehubSkillIcon
+                <OrviloSkillIcon
                   icon={provider.icon}
                   label={provider.label}
                   size={SKILL_ICON_SIZE}
@@ -358,7 +358,7 @@ const AgentTool = memo<AgentToolProps>(
               ),
               key: provider.id, // Use provider.id as key, consistent with pluginId
               label: (
-                <LobehubSkillServerItem
+                <OrviloSkillServerItem
                   agentId={effectiveAgentId}
                   label={provider.label}
                   provider={provider.id}
@@ -366,18 +366,18 @@ const AgentTool = memo<AgentToolProps>(
               ),
               popoverContent: (
                 <ToolItemDetailPopover
-                  icon={<LobehubSkillIcon icon={provider.icon} label={provider.label} size={36} />}
+                  icon={<OrviloSkillIcon icon={provider.icon} label={provider.label} size={36} />}
                   identifier={provider.id}
                   sourceLabel={provider.author}
                   title={provider.label}
-                  description={t(`tools.lobehubSkill.providers.${provider.id}.description` as any, {
+                  description={t(`tools.orviloSkill.providers.${provider.id}.description` as any, {
                     defaultValue: provider.description,
                   })}
                 />
               ),
             }))
           : [],
-      [isLobehubSkillEnabled, lobehubConnectorProviders, effectiveAgentId, t],
+      [isOrviloSkillEnabled, orviloConnectorProviders, effectiveAgentId, t],
     );
 
     // Handle plugin remove via Tag close - use byId actions
@@ -394,7 +394,7 @@ const AgentTool = memo<AgentToolProps>(
         await togglePlugin(identifier, false);
       };
 
-    // Builtin Agent Skills list items (grouped under LobeHub)
+    // Builtin Agent Skills list items (grouped under Orvilo)
     const builtinAgentSkillItems = useMemo(
       () =>
         installedBuiltinSkills.map((skill) => ({
@@ -419,7 +419,7 @@ const AgentTool = memo<AgentToolProps>(
           popoverContent: (
             <ToolItemDetailPopover
               identifier={skill.identifier}
-              sourceLabel={t('skillStore.tabs.lobehub')}
+              sourceLabel={t('skillStore.tabs.orvilo')}
               description={t(`tools.builtins.${skill.identifier}.description` as any, {
                 defaultValue: skill.description,
               })}
@@ -510,7 +510,7 @@ const AgentTool = memo<AgentToolProps>(
       [userAgentSkills, isToolEnabled, handleToggleTool, t],
     );
 
-    // Merge Builtin Agent Skills, builtin tools, LobeHub Skill Providers, and Composio servers
+    // Merge Builtin Agent Skills, builtin tools, Orvilo Skill Providers, and Composio servers
     const builtinItems = useMemo(
       () => [
         // 1. Builtin Agent Skills
@@ -540,7 +540,7 @@ const AgentTool = memo<AgentToolProps>(
           popoverContent: (
             <ToolItemDetailPopover
               identifier={item.identifier}
-              sourceLabel={t('skillStore.tabs.lobehub')}
+              sourceLabel={t('skillStore.tabs.orvilo')}
               description={t(`tools.builtins.${item.identifier}.description` as any, {
                 defaultValue: item.meta?.description || '',
               })}
@@ -557,8 +557,8 @@ const AgentTool = memo<AgentToolProps>(
             />
           ),
         })),
-        // 3. LobeHub Skill Providers
-        ...lobehubSkillItems,
+        // 3. Orvilo Skill Providers
+        ...orviloSkillItems,
         // 4. Composio servers
         ...composioServerItems,
       ],
@@ -566,7 +566,7 @@ const AgentTool = memo<AgentToolProps>(
         builtinAgentSkillItems,
         filteredBuiltinList,
         composioServerItems,
-        lobehubSkillItems,
+        orviloSkillItems,
         isToolEnabled,
         handleToggleTool,
         t,
@@ -689,13 +689,13 @@ const AgentTool = memo<AgentToolProps>(
     // All tab items (marketplace tab)
     const allTabItems: ItemType[] = useMemo(
       () => [
-        // LobeHub group
+        // Orvilo group
         ...(builtinItems.length > 0
           ? [
               {
                 children: builtinItems,
-                key: 'lobehub',
-                label: t('skillStore.tabs.lobehub'),
+                key: 'orvilo',
+                label: t('skillStore.tabs.orvilo'),
                 type: 'group' as const,
               },
             ]
@@ -755,7 +755,7 @@ const AgentTool = memo<AgentToolProps>(
       // 3. Canonical connector identifiers
       for (const connector of connectorCatalog) {
         all.add(
-          connector.type === 'lobehub' ? connector.provider.id : connector.serverType.identifier,
+          connector.type === 'orvilo' ? connector.provider.id : connector.serverType.identifier,
         );
       }
 

@@ -27,18 +27,18 @@ export interface PickedElementPayload {
   viewport?: { height: number; width: number };
 }
 
-const PICKER_HOST_ID = '__lobe-element-picker';
+const PICKER_HOST_ID = '__orvilo-element-picker';
 
 /** Keep the payload bounded — it becomes chat context, not an archive. */
 const TEXT_MAX_CHARS = 6000;
 const HTML_MAX_CHARS = 2000;
 
 export const ELEMENT_PICKER_CANCEL_SCRIPT = `(() => {
-  if (window.__lobeElementPicker) window.__lobeElementPicker.cancel();
+  if (window.__orviloElementPicker) window.__orviloElementPicker.cancel();
 })()`;
 
 export const elementPickerScript = (labels: ElementPickerLabels) => `((labels) => {
-  if (window.__lobeElementPicker) window.__lobeElementPicker.cancel();
+  if (window.__orviloElementPicker) window.__orviloElementPicker.cancel();
 
   return new Promise((resolve) => {
     const host = document.createElement('div');
@@ -118,7 +118,7 @@ export const elementPickerScript = (labels: ElementPickerLabels) => `((labels) =
     const finish = (payload) => {
       for (const [name, fn] of listeners) document.removeEventListener(name, fn, true);
       host.remove();
-      delete window.__lobeElementPicker;
+      delete window.__orviloElementPicker;
       resolve(JSON.stringify(payload));
     };
 
@@ -156,6 +156,6 @@ export const elementPickerScript = (labels: ElementPickerLabels) => `((labels) =
     );
     for (const [name, fn] of listeners) document.addEventListener(name, fn, true);
 
-    window.__lobeElementPicker = { cancel: () => finish({ cancelled: true }) };
+    window.__orviloElementPicker = { cancel: () => finish({ cancelled: true }) };
   });
 })(${JSON.stringify(labels)})`;

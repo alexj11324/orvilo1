@@ -22,7 +22,7 @@ import {
   type OperationState,
 } from './types';
 
-const log = debug('lobe-render:features:Conversation');
+const log = debug('orvilo-render:features:Conversation');
 
 interface ConversationContextPrefetcherProps {
   context: ConversationContext;

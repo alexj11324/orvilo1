@@ -3,8 +3,8 @@
 Status: **implemented + empirically validated 2026-07-01.** Multiple isolated dev
 Electron instances run concurrently, each with its own userData dir, Vite dev
 port, and IPC socket, each signed in from a copied login state, with independent
-renderer state. Three env-gated product knobs (`LOBE_DESKTOP_USER_DATA_DIR`,
-`LOBE_IPC_ID`, `LOBE_DESKTOP_VITE_PORT`) plus an `electron-dev.sh` instance pool.
+renderer state. Three env-gated product knobs (`ORVILO_DESKTOP_USER_DATA_DIR`,
+`ORVILO_IPC_ID`, `ORVILO_DESKTOP_VITE_PORT`) plus an `electron-dev.sh` instance pool.
 Details, collision matrix, and two validation transcripts below.
 
 Use case driving this: **N git worktrees under one project, each doing different
@@ -23,7 +23,7 @@ sink an `electron-dev.sh start <id>` on a fresh worktree before it will even mou
   `@lobehub/ui ^5.19.0`, but the symlinked main checkout had `5.18.0` → the renderer
   crashed at load (`Uncaught SyntaxError: … does not provide an export named
 'FloatingPanel'`) and the app hung on the loading screen (`#root` empty,
-  `__LOBE_STORES` undefined) **even though raw-CDP screenshots still showed a painted
+  `__ORVILO_STORES` undefined) **even though raw-CDP screenshots still showed a painted
   frame** from before the crash. Fix: real `pnpm install` in the worktree **root** _and_
   `apps/desktop` (standalone install, per Step 2.1) before `start`. (`type-check` warns
   of the same skew: cross-root `packages/*` dual-identity errors when `node_modules` is
@@ -34,7 +34,7 @@ sink an `electron-dev.sh start <id>` on a fresh worktree before it will even mou
 http://127.0.0.1:<port>/src/… [read ECONNRESET]`, the SPA hangs on the loading screen,
   `#root` stays at 0 children. **Not a code error** — a clean `electron-dev.sh stop <id>
 && start <id>` once the install/CPU storm is over mounts cleanly (0 ECONNRESET,
-  `__LOBE_STORES` becomes an object, `#root` fills).
+  `__ORVILO_STORES` becomes an object, `#root` fills).
 
 > "Screenshot shows the app but `eval` sees an empty `#root`" → the app never mounted
 > (loading-screen shell), not a target mismatch. Confirm with `eval
@@ -53,11 +53,11 @@ app sessions are dev-build singletons. Validated verdicts:
 | ---------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Electron single-instance lock            | `App.ts:227`                                                     | ✅ **keyed by userData** — distinct userData dirs each get their own lock; all instances run. No code change needed. |
 | Chromium `SingletonLock`                 | per userData dir                                                 | ✅ one per userData dir automatically (observed distinct PIDs per dir).                                              |
-| userData dir `lobehub-desktop-dev`       | `pre-app-init.ts:12`                                             | ✅ fixed — now env-overridable via `LOBE_DESKTOP_USER_DATA_DIR`.                                                     |
-| Vite dev server `strictPort:true` 5173   | `apps/desktop/vite.shared.ts`                                    | ✅ fixed — now env-overridable via `LOBE_DESKTOP_VITE_PORT` (Model B: one Vite per worktree).                        |
-| `electron-server-ipc` unix socket        | `App.ts` → `packages/electron-server-ipc/src/ipcServer.ts:23-31` | ✅ fixed — id now env-overridable via `LOBE_IPC_ID`; distinct sockets, no more hijack (was last-writer-wins).        |
+| userData dir `orvilo-desktop-dev`        | `pre-app-init.ts:12`                                             | ✅ fixed — now env-overridable via `ORVILO_DESKTOP_USER_DATA_DIR`.                                                   |
+| Vite dev server `strictPort:true` 5173   | `apps/desktop/vite.shared.ts`                                    | ✅ fixed — now env-overridable via `ORVILO_DESKTOP_VITE_PORT` (Model B: one Vite per worktree).                      |
+| `electron-server-ipc` unix socket        | `App.ts` → `packages/electron-server-ipc/src/ipcServer.ts:23-31` | ✅ fixed — id now env-overridable via `ORVILO_IPC_ID`; distinct sockets, no more hijack (was last-writer-wins).      |
 | safeStorage / Chromium cookie encryption | OS keychain, keyed by **app name**                               | 🔑 requires **app name constant** to decrypt a copied login state.                                                   |
-| Global shortcuts / `lobehub://` protocol | OS-global                                                        | first/last wins; harmless for headless automation.                                                                   |
+| Global shortcuts / `orvilo://` protocol  | OS-global                                                        | first/last wins; harmless for headless automation.                                                                   |
 | Static file server / iMessage bridge     | `getPort()` dynamic                                              | ✅ auto-allocated, safe.                                                                                             |
 
 ## The key tension (and its resolution)
@@ -65,7 +65,7 @@ app sessions are dev-build singletons. Validated verdicts:
 Two requirements pull opposite ways:
 
 - **Login-state reuse** needs the **app name constant** — `safeStorage` (OIDC
-  tokens in `lobehub-settings.json`) and Chromium cookie encryption (better-auth
+  tokens in `orvilo-settings.json`) and Chromium cookie encryption (better-auth
   session in `Cookies`) derive their key from an OS-keychain entry named after
   the app. Change the app name → copied secrets no longer decrypt.
 - **IPC-socket uniqueness** wants a **per-instance appId** (the socket path is
@@ -74,10 +74,10 @@ Two requirements pull opposite ways:
 Naively "give each instance a different app name" (a tempting first instinct)
 **breaks login reuse** — the exact thing this use case needs. Resolution:
 
-> **Keep `app.setName('lobehub-desktop-dev')` constant for every instance. Vary
+> **Keep `app.setName('orvilo-desktop-dev')` constant for every instance. Vary
 > only the userData dir.** That satisfies the single-instance lock (keyed by
 > userData) AND keeps the keychain key valid so copied tokens/cookies decrypt.
-> The IPC socket is decoupled from the app name via its own `LOBE_IPC_ID` knob
+> The IPC socket is decoupled from the app name via its own `ORVILO_IPC_ID` knob
 > (not the app name), so each instance still gets a distinct socket.
 
 ## Product changes (all env-gated, all validated)
@@ -89,11 +89,11 @@ branch ships all three:
    fixed (so copied login state still decrypts):
 
    ```ts
-   app.setName('lobehub-desktop-dev');
-   const userDataOverride = process.env.LOBE_DESKTOP_USER_DATA_DIR;
+   app.setName('orvilo-desktop-dev');
+   const userDataOverride = process.env.ORVILO_DESKTOP_USER_DATA_DIR;
    app.setPath(
      'userData',
-     userDataOverride || path.join(app.getPath('appData'), 'lobehub-desktop-dev'),
+     userDataOverride || path.join(app.getPath('appData'), 'orvilo-desktop-dev'),
    );
    ```
 
@@ -101,7 +101,7 @@ branch ships all three:
    `electron-server-ipc` socket path stops colliding (no more "last one wins"):
 
    ```ts
-   const ipcId = process.env.LOBE_IPC_ID || name;
+   const ipcId = process.env.ORVILO_IPC_ID || name;
    this.ipcServer = new ElectronIPCServer(ipcId, ipcServerEvents);
    ```
 
@@ -109,7 +109,7 @@ branch ships all three:
    (Model B: one Vite per worktree), kept `strictPort` so HMR clientPort matches:
 
    ```ts
-   const DEV_VITE_PORT = Number(process.env.LOBE_DESKTOP_VITE_PORT) || 5173;
+   const DEV_VITE_PORT = Number(process.env.ORVILO_DESKTOP_VITE_PORT) || 5173;
    // ...used for both server.port and server.hmr.clientPort
    ```
 
@@ -118,23 +118,23 @@ All three verified live via the `electron-dev.sh` pool (transcript below).
 ## Login-state reuse across userData dirs (validated)
 
 To make a fresh userData dir come up **already logged in**, copy from the golden
-profile (`~/Library/Application Support/lobehub-desktop-dev/`) — only the
+profile (`~/Library/Application Support/orvilo-desktop-dev/`) — only the
 login-bearing items, NOT the multi-GB caches:
 
 ```bash
-SRC="$HOME/Library/Application Support/lobehub-desktop-dev"
-DST="/tmp/lobe-ud-<id>"
-for f in lobehub-settings.json "Local State" Preferences \
+SRC="$HOME/Library/Application Support/orvilo-desktop-dev"
+DST="/tmp/orvilo-ud-<id>"
+for f in orvilo-settings.json "Local State" Preferences \
   Cookies Cookies-journal "Local Storage" IndexedDB \
-  "Session Storage" "Network Persistent State" lobehub-storage; do
+  "Session Storage" "Network Persistent State" orvilo-storage; do
   [ -e "$SRC/$f" ] && cp -R "$SRC/$f" "$DST/"
 done # ~27 MB vs the 1.7 GB full profile (Cache/Code Cache/GPUCache skipped)
 ```
 
-- `lobehub-settings.json` → `encryptedTokens` (OIDC access/refresh, safeStorage).
+- `orvilo-settings.json` → `encryptedTokens` (OIDC access/refresh, safeStorage).
 - `Cookies` + `Local Storage` + `IndexedDB` → better-auth renderer session.
 - Decryption works because app name is unchanged on the same machine (keychain
-  entry `lobehub-desktop-dev Safe Storage` is reused). **Same machine only** —
+  entry `orvilo-desktop-dev Safe Storage` is reused). **Same machine only** —
   a copy to another machine won't decrypt.
 - **Stale-token caveat:** if the copied access token's `exp` has passed you'll
   see `Authentication failed: "exp" claim timestamp check failed` — this actually
@@ -181,19 +181,19 @@ Raw `curl http://localhost:<port>/json/list` always shows a port's true target
 ### Model A — one Vite, many electron processes (what the validation used)
 
 One dev orchestrator (`pnpm dev` in `apps/desktop`) owns Vite 5173 + the built
-`dist/main`; extra instances are raw electrons sharing the renderer via
+`dist/main`; extra instances are raw electrons sharing the renderer
 `ELECTRON_RENDERER_URL`:
 
 ```bash
 # instance 1: owns Vite 5173 + is itself CDP 9223
 cd apps/desktop
-LOBE_DESKTOP_USER_DATA_DIR=/tmp/lobe-ud-1 \
+ORVILO_DESKTOP_USER_DATA_DIR=/tmp/orvilo-ud-1 \
   pnpm dev -- --remote-debugging-port=9223
 
 # instances 2,3: reuse Vite 5173 + built main, isolate userData + CDP
-LOBE_DESKTOP_USER_DATA_DIR=/tmp/lobe-ud-2 ELECTRON_RENDERER_URL=http://127.0.0.1:5173 \
+ORVILO_DESKTOP_USER_DATA_DIR=/tmp/orvilo-ud-2 ELECTRON_RENDERER_URL=http://127.0.0.1:5173 \
   npx electron . --remote-debugging-port=9224
-LOBE_DESKTOP_USER_DATA_DIR=/tmp/lobe-ud-3 ELECTRON_RENDERER_URL=http://127.0.0.1:5173 \
+ORVILO_DESKTOP_USER_DATA_DIR=/tmp/orvilo-ud-3 ELECTRON_RENDERER_URL=http://127.0.0.1:5173 \
   npx electron . --remote-debugging-port=9225
 ```
 
@@ -202,11 +202,11 @@ Lightest; all share one build/renderer. Extra instances get no HMR re-launch.
 ### Model B — one Vite per worktree (the N-worktree use case)
 
 Each worktree runs its own dev orchestrator (own code, own build, own HMR).
-The `LOBE_DESKTOP_VITE_PORT` knob makes this work — otherwise the 2nd worktree
+The `ORVILO_DESKTOP_VITE_PORT` knob makes this work — otherwise the 2nd worktree
 fails on `strictPort` 5173. Just use the pool (below), or by hand per worktree:
 
 ```bash
-LOBE_DESKTOP_VITE_PORT=51xx LOBE_DESKTOP_USER_DATA_DIR=… LOBE_IPC_ID=… \
+ORVILO_DESKTOP_VITE_PORT=51xx ORVILO_DESKTOP_USER_DATA_DIR=… ORVILO_IPC_ID=… \
   pnpm dev -- --remote-debugging-port=92xx
 ```
 
@@ -232,9 +232,9 @@ electron-dev.sh stop --all # stop every instance
 ```
 
 - Derives `CDP=9222+id`, `Vite=5173+id`, `userData=$POOL_DIR/ud-<id>`,
-  `IPC id=lobehub-desktop-dev-<id>`, per-id log + pidfile.
+  `IPC id=orvilo-desktop-dev-<id>`, per-id log + pidfile.
 - `start <id>` seeds a fresh userData with the login-item set from the golden
-  profile (override via `LOBE_GOLDEN_PROFILE`); `stop <id>` wipes it unless
+  profile (override via `ORVILO_GOLDEN_PROFILE`); `stop <id>` wipes it unless
   `KEEP_DATA=1`.
 - `stop <id>` matches by **pidfile session-leader tree + CDP/Vite port holders**,
   never the broad project path → never kills a sibling.
@@ -244,7 +244,7 @@ electron-dev.sh stop --all # stop every instance
 
 ### Round 1 — concurrency, login reuse, isolation (Model A)
 
-Golden profile `lobehub-desktop-dev` (logged in, user\_2gmT…); 3 userData copies
+Golden profile `orvilo-desktop-dev` (logged in, user\_2gmT…); 3 userData copies
 (27 MB each), app name constant. inst1 = `electron-vite dev` (CDP 9223, Vite
 5173\), inst2/inst3 = raw electron (CDP 9224/9225) sharing Vite.
 
@@ -255,7 +255,7 @@ Golden profile `lobehub-desktop-dev` (logged in, user\_2gmT…); 3 userData copi
   "all same route" seen mid-test was the agent-browser daemon session-reuse
   artifact, fixed by per-instance `--session`.
 - ⚠️ **IPC socket hijack** (pre-fix) — last-started instance owned the socket;
-  non-fatal, renderers unaffected. → motivated the `LOBE_IPC_ID` fix below.
+  non-fatal, renderers unaffected. → motivated the `ORVILO_IPC_ID` fix below.
 
 ### Round 2 — the three product knobs + the pool (Model B)
 
@@ -263,7 +263,7 @@ Golden profile `lobehub-desktop-dev` (logged in, user\_2gmT…); 3 userData copi
 
 - ✅ **Vite port override** — 5174 **and** 5175 bound concurrently (two
   `electron-vite dev`, `strictPort` no longer collides).
-- ✅ **IPC decouple** — two **distinct** sockets `lobehub-desktop-dev-1-…sock` +
+- ✅ **IPC decouple** — two **distinct** sockets `orvilo-desktop-dev-1-…sock` +
   `…-2-…sock`; no hijack.
 - ✅ **userData isolation** — ud-1 / ud-2 with distinct `SingletonLock` PIDs; both
   CDP ports reachable; `list` shows both UP.

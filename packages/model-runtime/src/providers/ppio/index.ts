@@ -4,18 +4,18 @@ import { ModelProvider } from 'model-bank';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import type { PPIOModelCard } from './type';
 
-export const LobePPIOAI = createOpenAICompatibleRuntime({
+export const OrviloPPIOAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.ppinfra.com/v3/openai',
   constructorOptions: {
     defaultHeaders: {
-      'X-API-Source': 'lobechat',
+      'X-API-Source': 'orvilo',
     },
   },
   debug: {
     chatCompletion: () => process.env.DEBUG_PPIO_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const reasoningKeywords = ['deepseek-r1'];
 
@@ -24,7 +24,7 @@ export const LobePPIOAI = createOpenAICompatibleRuntime({
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 

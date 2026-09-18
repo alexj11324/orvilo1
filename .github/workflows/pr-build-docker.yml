@@ -13,9 +13,11 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write
+  packages: write
 
 env:
-  REGISTRY_IMAGE: lobehub/lobehub
+  # GHCR：本仓库自有的 registry。上游 Docker Hub secret 在本仓库不存在。
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
   PR_TAG_PREFIX: pr-
 
 jobs:
@@ -66,8 +68,9 @@ jobs:
       - name: Docker login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_REGISTRY_USER }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and export
         id: build
@@ -103,8 +106,12 @@ jobs:
     # 只为非 fork 的 PR 发布(fork 的 PR 没有写权限)
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - name: Checkout PR branch
+      # 只 checkout base 提交：本 job 持有 packages:write token 并 require
+      # .github/scripts 里的文件，绝不能跑 PR 工作区里的代码。
+      - name: Checkout base revision
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
 
       - name: Download digests
         uses: actions/download-artifact@v7
@@ -116,14 +123,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 为 merge job 添加 PR metadata 生成
+      # 为 merge job 添加 PR metadata 生成。tag 里的 sha 必须是被构建的
+      # merge ref（github.sha），而不是刚 checkout 的 base 提交。
       - name: Generate PR metadata
         id: pr_meta
         env:
           BRANCH_NAME: ${{ github.head_ref }}
         run: |
           sanitized_branch=$(echo "${BRANCH_NAME}" | sed -E 's/[^a-zA-Z0-9_.-]+/-/g')
-          commit_sha=$(git rev-parse --short HEAD)
+          commit_sha=$(echo '${{ github.sha }}' | cut -c1-7)
           echo "pr_tag=${sanitized_branch}-${commit_sha}" >> $GITHUB_OUTPUT
           echo "commit_sha=${commit_sha}" >> $GITHUB_OUTPUT
 
@@ -138,8 +146,9 @@ jobs:
       - name: Docker login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_REGISTRY_USER }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
@@ -163,7 +172,7 @@ jobs:
               dockerMetaJson: ${{ toJSON(steps.meta.outputs.json) }},
               image: "${{ env.REGISTRY_IMAGE }}",
               version: "${{ steps.meta.outputs.version }}",
-              dockerhubUrl: "https://hub.docker.com/r/${{ env.REGISTRY_IMAGE }}/tags",
+              dockerhubUrl: "https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }}",
               platforms: "linux/amd64, linux/arm64",
             });
             core.info(`Status: ${result.updated ? 'Updated' : 'Created'}, ID: ${result.id}`);

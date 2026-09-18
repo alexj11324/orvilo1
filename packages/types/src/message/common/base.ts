@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { ILobeAgentRuntimeErrorType } from '../../agentRuntime';
+import type { IOrviloAgentRuntimeErrorType } from '../../agentRuntime';
 import type { ErrorType } from '../../fetch';
 import type { IToolErrorType } from '../../tool/error';
 
@@ -68,7 +68,7 @@ export interface ChatMessageError {
   /** Transport-level retryability hint. */
   retryable?: boolean;
   severity?: ChatMessageErrorSeverity;
-  type: ErrorType | IToolErrorType | ILobeAgentRuntimeErrorType;
+  type: ErrorType | IToolErrorType | IOrviloAgentRuntimeErrorType;
 }
 
 export const ChatMessageErrorSchema = z.object({

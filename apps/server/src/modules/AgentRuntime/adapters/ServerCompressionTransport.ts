@@ -11,7 +11,7 @@ import type {
 } from '@orvilo/agent-runtime';
 import { chainCompressContext } from '@orvilo/prompts';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { MessageService } from '@/server/services/message';
 
 /**
@@ -20,7 +20,7 @@ import { MessageService } from '@/server/services/message';
  */
 export class ServerCompressionTransport implements CompressionTransport {
   constructor(
-    private readonly serverDB: LobeChatDatabase,
+    private readonly serverDB: OrviloDatabase,
     private readonly userId: string,
     private readonly defaultWorkspaceId?: string,
   ) {}

@@ -1,4 +1,4 @@
-export interface LobeGlobalAgentContext {
+export interface OrviloGlobalAgentContext {
   /** CPU architecture reported by the desktop main process (e.g. 'arm64', 'x64'). */
   arch?: string;
 
@@ -25,14 +25,14 @@ export interface LobeGlobalAgentContext {
 // Augment the Window interface to include our global context
 declare global {
   interface Window {
-    __LOBE_GLOBAL_AGENT_CONTEXT__?: LobeGlobalAgentContext;
+    __ORVILO_GLOBAL_AGENT_CONTEXT__?: OrviloGlobalAgentContext;
   }
 }
 
-const CONTEXT_KEY = '__LOBE_GLOBAL_AGENT_CONTEXT__';
+const CONTEXT_KEY = '__ORVILO_GLOBAL_AGENT_CONTEXT__';
 
 class GlobalAgentContextManager {
-  private get context(): LobeGlobalAgentContext {
+  private get context(): OrviloGlobalAgentContext {
     if (typeof window === 'undefined') return {};
     if (!window[CONTEXT_KEY]) {
       window[CONTEXT_KEY] = {};
@@ -40,7 +40,7 @@ class GlobalAgentContextManager {
     return window[CONTEXT_KEY]!;
   }
 
-  private set context(value: LobeGlobalAgentContext) {
+  private set context(value: OrviloGlobalAgentContext) {
     if (typeof window === 'undefined') return;
     window[CONTEXT_KEY] = value;
   }
@@ -48,7 +48,7 @@ class GlobalAgentContextManager {
   /**
    * Retrieves the current global agent context.
    */
-  public getContext(): LobeGlobalAgentContext {
+  public getContext(): OrviloGlobalAgentContext {
     return this.context;
   }
 
@@ -57,7 +57,7 @@ class GlobalAgentContextManager {
    * This is typically called by the Electron store initializer.
    * @param updates - Partial context updates to merge.
    */
-  public updateContext(updates: Partial<LobeGlobalAgentContext>): void {
+  public updateContext(updates: Partial<OrviloGlobalAgentContext>): void {
     this.context = { ...this.context, ...updates };
   }
 
@@ -65,7 +65,7 @@ class GlobalAgentContextManager {
    * Sets the entire global agent context, replacing the existing one.
    * @param context - The new context object.
    */
-  public setContext(context: LobeGlobalAgentContext): void {
+  public setContext(context: OrviloGlobalAgentContext): void {
     this.context = context;
   }
 
@@ -81,7 +81,7 @@ class GlobalAgentContextManager {
 
     // Updated to use replaceAll for potentially multiple occurrences
     return template.replaceAll(/\{\{([^}]+)\}\}/g, (match, key) => {
-      const trimmedKey = key.trim() as keyof LobeGlobalAgentContext;
+      const trimmedKey = key.trim() as keyof OrviloGlobalAgentContext;
       return ctx[trimmedKey] !== undefined ? String(ctx[trimmedKey]) : '[N/A]';
     });
   }

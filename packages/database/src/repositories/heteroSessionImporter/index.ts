@@ -9,7 +9,7 @@ import { and, count, eq, inArray, isNotNull, like, or, sql } from 'drizzle-orm';
 import { clampToolIdentifier } from '@/utils/clampToolIdentifier';
 
 import { agents, messagePlugins, messages, threads, topics } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { idGenerator } from '../../utils/idGenerator';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
@@ -41,10 +41,10 @@ const BATCH_SIZE = 100;
  */
 export class HeteroSessionImporterRepo {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -331,12 +331,12 @@ export class HeteroSessionImporterRepo {
    * - `imported`: a topic whose clientId follows the `<source>-session-<id>` convention
    *   (re-import = incremental sync)
    * - `linked`: a topic carries a sessionId in `metadata.heteroSessionId` but was NOT
-   *   imported — the session originated from a LobeHub live run and importing it
+   *   imported — the session originated from a Orvilo live run and importing it
    *   would duplicate the conversation
    *
    * Takes no input on purpose: a machine can hold thousands of local transcripts, and
    * passing them all in would blow the tRPC query input limit (`maxURLLength` 2083 —
-   * about 16 sessions). The result is bounded by what the user already has in LobeHub,
+   * about 16 sessions). The result is bounded by what the user already has in Orvilo,
    * and the picker matches its local digests against it client-side.
    */
   getImportStatus = async (): Promise<HeteroSessionImportStatus> => {

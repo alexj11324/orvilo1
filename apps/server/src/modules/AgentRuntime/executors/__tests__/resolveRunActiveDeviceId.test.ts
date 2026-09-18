@@ -13,7 +13,7 @@ describe('resolveRunActiveDeviceId', () => {
   });
 
   // Mid-run device activation: the model selects a device via the
-  // lobe-remote-device tool while the run-start plan still says unrouted —
+  // orvilo-remote-device tool while the run-start plan still says unrouted —
   // the folded-back id must survive the gate.
   it('passes a mid-run activated id through under a device-unrouted plan', () => {
     expect(

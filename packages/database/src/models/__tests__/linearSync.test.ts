@@ -21,12 +21,12 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { LinearSyncModel, sanitizeLinearSyncError } from '../linearSync';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'linear-sync-model-user';
 const workspaceId = 'linear-sync-model-workspace';
 const otherWorkspaceId = 'linear-sync-model-other-workspace';

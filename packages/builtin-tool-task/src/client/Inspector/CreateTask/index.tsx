@@ -76,7 +76,7 @@ export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, 
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-task.apiName.createTask')}
+            {t('builtins.orvilo-task.apiName.createTask')}
           </span>
         </div>
       );
@@ -85,7 +85,7 @@ export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, 
     return (
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-task.apiName.createTask')}
+          {t('builtins.orvilo-task.apiName.createTask')}
         </span>
         {identifier && (
           <span className={styles.identifierChip} style={{ marginInlineStart: 6 }}>
@@ -98,7 +98,7 @@ export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, 
           </span>
         )}
         {parentIdentifier && (
-          <Tooltip title={t('builtins.lobe-task.create.subtaskOf', { parent: parentIdentifier })}>
+          <Tooltip title={t('builtins.orvilo-task.create.subtaskOf', { parent: parentIdentifier })}>
             <span className={styles.subtaskTag}>
               <Icon icon={CornerDownRight} size={11} />
               {parentIdentifier}

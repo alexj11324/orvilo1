@@ -1,7 +1,7 @@
 import * as builtinAgents from '@orvilo/builtin-agents';
 import { GroupManagementIdentifier } from '@orvilo/builtin-tool-group-management';
-import { LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
 import { NotebookIdentifier } from '@orvilo/builtin-tool-notebook';
+import { OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { TaskIdentifier } from '@orvilo/builtin-tool-task';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -677,23 +677,23 @@ describe('resolveAgentConfig', () => {
         vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(() => 'inbox');
       });
 
-      it('should include lobe-agent and Notebook tools in plugins', () => {
+      it('should include orvilo-agent and Notebook tools in plugins', () => {
         vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
-          plugins: [LobeAgentIdentifier, NotebookIdentifier],
+          plugins: [OrviloAgentIdentifier, NotebookIdentifier],
           systemRole: 'Inbox system role',
         });
 
         const result = resolveAgentConfig({ agentId: 'inbox-agent' });
 
-        expect(result.plugins).toContain(LobeAgentIdentifier);
+        expect(result.plugins).toContain(OrviloAgentIdentifier);
         expect(result.plugins).toContain(NotebookIdentifier);
         expect(result.isBuiltinAgent).toBe(true);
         expect(result.slug).toBe('inbox');
       });
 
-      it('should preserve user plugins while including lobe-agent and Notebook', () => {
+      it('should preserve user plugins while including orvilo-agent and Notebook', () => {
         vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
-          plugins: [LobeAgentIdentifier, NotebookIdentifier, 'user-plugin'],
+          plugins: [OrviloAgentIdentifier, NotebookIdentifier, 'user-plugin'],
           systemRole: 'Inbox system role',
         });
 
@@ -702,7 +702,7 @@ describe('resolveAgentConfig', () => {
           plugins: ['user-plugin'],
         });
 
-        expect(result.plugins).toContain(LobeAgentIdentifier);
+        expect(result.plugins).toContain(OrviloAgentIdentifier);
         expect(result.plugins).toContain(NotebookIdentifier);
         expect(result.plugins).toContain('user-plugin');
       });
@@ -725,8 +725,8 @@ describe('resolveAgentConfig', () => {
         const getAgentRuntimeConfigSpy = vi
           .spyOn(builtinAgents, 'getAgentRuntimeConfig')
           .mockImplementation((slug, ctx) => ({
-            // This simulates the actual INBOX runtime: [LobeAgentIdentifier, NotebookIdentifier, ...(ctx.plugins || [])]
-            plugins: [LobeAgentIdentifier, NotebookIdentifier, ...(ctx.plugins || [])],
+            // This simulates the actual INBOX runtime: [OrviloAgentIdentifier, NotebookIdentifier, ...(ctx.plugins || [])]
+            plugins: [OrviloAgentIdentifier, NotebookIdentifier, ...(ctx.plugins || [])],
             systemRole: 'Inbox system role',
           }));
 
@@ -742,7 +742,7 @@ describe('resolveAgentConfig', () => {
         );
 
         // Verify final plugins include both builtin tools AND user-configured plugins
-        expect(result.plugins).toContain(LobeAgentIdentifier);
+        expect(result.plugins).toContain(OrviloAgentIdentifier);
         expect(result.plugins).toContain(NotebookIdentifier);
         expect(result.plugins).toContain('web-search');
         expect(result.plugins).toContain('memory');
@@ -1068,7 +1068,7 @@ describe('resolveAgentConfig', () => {
 
         vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
           chatConfig: { enableHistoryCount: false },
-          plugins: [GroupManagementIdentifier, LobeAgentIdentifier],
+          plugins: [GroupManagementIdentifier, OrviloAgentIdentifier],
           systemRole: 'You are a group supervisor...',
         });
 
@@ -1103,7 +1103,7 @@ describe('resolveAgentConfig', () => {
       // Mock: getAgentRuntimeConfig for supervisor agent
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
         chatConfig: { enableHistoryCount: false },
-        plugins: [GroupManagementIdentifier, LobeAgentIdentifier],
+        plugins: [GroupManagementIdentifier, OrviloAgentIdentifier],
         systemRole: 'You are a group supervisor...',
       });
 
@@ -1116,7 +1116,7 @@ describe('resolveAgentConfig', () => {
       expect(result.isBuiltinAgent).toBe(true);
       expect(result.slug).toBe('group-supervisor');
       expect(result.plugins).toContain(GroupManagementIdentifier);
-      expect(result.plugins).toContain(LobeAgentIdentifier);
+      expect(result.plugins).toContain(OrviloAgentIdentifier);
     });
 
     it('should pass groupSupervisorContext to getAgentRuntimeConfig', () => {
@@ -1237,7 +1237,7 @@ describe('resolveAgentConfig', () => {
 
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
         chatConfig: { enableHistoryCount: false },
-        plugins: [GroupManagementIdentifier, LobeAgentIdentifier],
+        plugins: [GroupManagementIdentifier, OrviloAgentIdentifier],
         systemRole: 'Supervisor system role',
       });
 
@@ -1257,22 +1257,22 @@ describe('resolveAgentConfig', () => {
     });
   });
 
-  // lobe-agent's sub-agent / group trimming moved into resolveLobeAgentManifest
+  // orvilo-agent's sub-agent / group trimming moved into resolveOrviloAgentManifest
   // (manifest resolver, applied at tools-engine build time). resolveAgentConfig no
-  // longer drops lobe-agent from the plugins list based on isSubAgent — it stays so
+  // longer drops orvilo-agent from the plugins list based on isSubAgent — it stays so
   // its plan / todo / visual-media APIs remain available; only callSubAgent is hidden
   // downstream (covered by resolveManifest.test.ts).
-  describe('isSubAgent keeps lobe-agent in plugins (trimming moved to manifest resolver)', () => {
+  describe('isSubAgent keeps orvilo-agent in plugins (trimming moved to manifest resolver)', () => {
     beforeEach(() => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(() => undefined);
     });
 
-    it('keeps lobe-agent when isSubAgent is true for regular agent', () => {
+    it('keeps orvilo-agent when isSubAgent is true for regular agent', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
         () =>
           ({
             ...mockAgentConfig,
-            plugins: ['lobe-agent', 'plugin-a', 'plugin-b'],
+            plugins: ['orvilo-agent', 'plugin-a', 'plugin-b'],
           }) as any,
       );
 
@@ -1281,15 +1281,15 @@ describe('resolveAgentConfig', () => {
         isSubAgent: true,
       });
 
-      expect(result.plugins).toEqual(['lobe-agent', 'plugin-a', 'plugin-b']);
+      expect(result.plugins).toEqual(['orvilo-agent', 'plugin-a', 'plugin-b']);
     });
 
-    it('should keep lobe-agent when isSubAgent is false', () => {
+    it('should keep orvilo-agent when isSubAgent is false', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
         () =>
           ({
             ...mockAgentConfig,
-            plugins: ['lobe-agent', 'plugin-a', 'plugin-b'],
+            plugins: ['orvilo-agent', 'plugin-a', 'plugin-b'],
           }) as any,
       );
 
@@ -1298,30 +1298,30 @@ describe('resolveAgentConfig', () => {
         isSubAgent: false,
       });
 
-      expect(result.plugins).toContain('lobe-agent');
-      expect(result.plugins).toEqual(['lobe-agent', 'plugin-a', 'plugin-b']);
+      expect(result.plugins).toContain('orvilo-agent');
+      expect(result.plugins).toEqual(['orvilo-agent', 'plugin-a', 'plugin-b']);
     });
 
-    it('should keep lobe-agent when isSubAgent is undefined', () => {
+    it('should keep orvilo-agent when isSubAgent is undefined', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
         () =>
           ({
             ...mockAgentConfig,
-            plugins: ['lobe-agent', 'plugin-a'],
+            plugins: ['orvilo-agent', 'plugin-a'],
           }) as any,
       );
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.plugins).toContain('lobe-agent');
+      expect(result.plugins).toContain('orvilo-agent');
     });
 
-    it('keeps lobe-agent in page scope when isSubAgent is true (and still injects page-agent)', () => {
+    it('keeps orvilo-agent in page scope when isSubAgent is true (and still injects page-agent)', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
         () =>
           ({
             ...mockAgentConfig,
-            plugins: ['lobe-agent', 'plugin-a'],
+            plugins: ['orvilo-agent', 'plugin-a'],
           }) as any,
       );
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
@@ -1334,16 +1334,16 @@ describe('resolveAgentConfig', () => {
         isSubAgent: true,
       });
 
-      expect(result.plugins).toContain('lobe-agent');
+      expect(result.plugins).toContain('orvilo-agent');
       expect(result.plugins).toContain(PageAgentIdentifier);
     });
 
-    it('keeps lobe-agent for builtin agent when isSubAgent is true', () => {
+    it('keeps orvilo-agent for builtin agent when isSubAgent is true', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
         () => 'agent-builder',
       );
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
-        plugins: ['lobe-agent', 'runtime-plugin'],
+        plugins: ['orvilo-agent', 'runtime-plugin'],
         systemRole: 'Runtime system role',
       });
 
@@ -1352,16 +1352,16 @@ describe('resolveAgentConfig', () => {
         isSubAgent: true,
       });
 
-      expect(result.plugins).toContain('lobe-agent');
+      expect(result.plugins).toContain('orvilo-agent');
       expect(result.plugins).toContain('runtime-plugin');
     });
 
-    it('should keep lobe-agent for builtin agent when isSubAgent is false', () => {
+    it('should keep orvilo-agent for builtin agent when isSubAgent is false', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
         () => 'agent-builder',
       );
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
-        plugins: ['lobe-agent', 'runtime-plugin'],
+        plugins: ['orvilo-agent', 'runtime-plugin'],
         systemRole: 'Runtime system role',
       });
 
@@ -1370,7 +1370,7 @@ describe('resolveAgentConfig', () => {
         isSubAgent: false,
       });
 
-      expect(result.plugins).toContain('lobe-agent');
+      expect(result.plugins).toContain('orvilo-agent');
     });
   });
 
@@ -1384,7 +1384,7 @@ describe('resolveAgentConfig', () => {
         () =>
           ({
             ...mockAgentConfig,
-            plugins: ['plugin-a', 'plugin-b', 'lobe-agent'],
+            plugins: ['plugin-a', 'plugin-b', 'orvilo-agent'],
           }) as any,
       );
 
@@ -1450,7 +1450,7 @@ describe('resolveAgentConfig', () => {
         () =>
           ({
             ...mockAgentConfig,
-            plugins: ['lobe-agent', 'plugin-a'],
+            plugins: ['orvilo-agent', 'plugin-a'],
           }) as any,
       );
 

@@ -74,16 +74,16 @@ const SkillItem = memo<SkillItemProps>(({ skill }) => {
         {skill.version && (
           <Tag
             size={'small'}
-          >{`${t('builtins.lobe-skill-store.render.version')}: ${skill.version}`}</Tag>
+          >{`${t('builtins.orvilo-skill-store.render.version')}: ${skill.version}`}</Tag>
         )}
         <Tag
           size={'small'}
-        >{`${t('builtins.lobe-skill-store.render.installs')}: ${skill.installCount}`}</Tag>
+        >{`${t('builtins.orvilo-skill-store.render.installs')}: ${skill.installCount}`}</Tag>
         {skill.category && <Tag size={'small'}>{skill.category}</Tag>}
       </Flexbox>
       {skill.repository && (
         <Text ellipsis className={styles.meta}>
-          {`${t('builtins.lobe-skill-store.render.repository')}: ${skill.repository}`}
+          {`${t('builtins.orvilo-skill-store.render.repository')}: ${skill.repository}`}
         </Text>
       )}
     </Flexbox>
@@ -101,7 +101,7 @@ const SearchSkill = memo<BuiltinRenderProps<SearchSkillParams, SearchSkillState>
     if (items.length === 0) {
       return (
         <div className={styles.container}>
-          <div className={styles.empty}>{t('builtins.lobe-skill-store.inspector.noResults')}</div>
+          <div className={styles.empty}>{t('builtins.orvilo-skill-store.inspector.noResults')}</div>
         </div>
       );
     }

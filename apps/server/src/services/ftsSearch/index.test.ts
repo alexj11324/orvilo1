@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { FtsSearchAgentResult, FtsSearchBackend } from '@/database/repositories/ftsSearch';
@@ -11,7 +11,7 @@ import {
   resolveFtsSearchProvider,
 } from './index';
 
-const db = {} as LobeChatDatabase;
+const db = {} as OrviloDatabase;
 
 const agentResult: FtsSearchAgentResult = {
   avatar: null,
@@ -72,7 +72,7 @@ describe('full-text search provider selection', () => {
     const createElasticsearchClient = vi.fn(() => ({ search }));
     const config = {
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub-dev',
+      indexNamespace: 'orvilo-dev',
       url: 'https://search.example.com',
     };
     const repo = await createFtsSearchRepo(
@@ -86,7 +86,7 @@ describe('full-text search provider selection', () => {
 
     await expect(repo.search({ query: 'candidate', type: 'agent' })).resolves.toEqual([]);
     expect(createElasticsearchClient).toHaveBeenCalledWith(config, 'unified_search');
-    expect(search).toHaveBeenCalledWith(expect.objectContaining({ index: 'lobehub-dev-agents' }));
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ index: 'orvilo-dev-agents' }));
   });
 
   it('routes unified memory search to Elasticsearch when configured', async () => {
@@ -103,7 +103,7 @@ describe('full-text search provider selection', () => {
         createPgSearchBackend,
         loadElasticsearchConfig: () => ({
           apiKey: 'test-api-key',
-          indexNamespace: 'lobehub-dev',
+          indexNamespace: 'orvilo-dev',
           url: 'https://search.example.com',
         }),
         loadFtsSearchProvider: () => FTS_SEARCH_PROVIDERS.elasticsearch,
@@ -131,7 +131,7 @@ describe('full-text search provider selection', () => {
         createPgSearchBackend: () => ({ key: 'pg_search', search: pgSearch }),
         loadElasticsearchConfig: () => ({
           apiKey: 'test-api-key',
-          indexNamespace: 'lobehub-dev',
+          indexNamespace: 'orvilo-dev',
           url: 'https://search.example.com',
         }),
         loadFtsSearchProvider: () => FTS_SEARCH_PROVIDERS.elasticsearch,

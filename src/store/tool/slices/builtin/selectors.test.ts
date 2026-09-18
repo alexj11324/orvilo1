@@ -32,12 +32,12 @@ describe('builtinToolSelectors', () => {
       const result = builtinToolSelectors.metaList(state);
       expect(result).toEqual([
         {
-          author: 'LobeHub',
+          author: 'Orvilo',
           identifier: 'test-skill',
           meta: { avatar: '🧪', description: 'A test skill', title: 'Test Skill' },
           type: 'builtin',
         },
-        { author: 'LobeHub', identifier: 'tool-1', meta: { title: 'Tool 1' }, type: 'builtin' },
+        { author: 'Orvilo', identifier: 'tool-1', meta: { title: 'Tool 1' }, type: 'builtin' },
       ]);
     });
 
@@ -58,7 +58,7 @@ describe('builtinToolSelectors', () => {
       // Should only contain skill, hidden tool is filtered out
       expect(result).toEqual([
         {
-          author: 'LobeHub',
+          author: 'Orvilo',
           identifier: 'test-skill',
           meta: { avatar: '🧪', description: 'A test skill', title: 'Test Skill' },
           type: 'builtin',
@@ -84,10 +84,10 @@ describe('builtinToolSelectors', () => {
         builtinTools: [
           {
             hidden: true,
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
             manifest: {
               api: [],
-              identifier: 'lobe-task',
+              identifier: 'orvilo-task',
               meta: { title: 'Task Tools' },
               systemRole: '',
             },
@@ -106,7 +106,7 @@ describe('builtinToolSelectors', () => {
       const result = builtinToolSelectors.metaListIncludingHidden(state);
 
       expect(result.map((item) => item.identifier)).toContain('tool-1');
-      expect(result.map((item) => item.identifier)).toContain('lobe-task');
+      expect(result.map((item) => item.identifier)).toContain('orvilo-task');
     });
   });
 
@@ -116,11 +116,11 @@ describe('builtinToolSelectors', () => {
       builtinTools: [
         {
           hidden: true,
-          identifier: 'lobe-agent',
+          identifier: 'orvilo-agent',
           manifest: {
             api: [],
-            identifier: 'lobe-agent',
-            meta: { avatar: '🤖', title: 'Lobe Agent' },
+            identifier: 'orvilo-agent',
+            meta: { avatar: '🤖', title: 'Orvilo Agent' },
             systemRole: '',
           },
           type: 'builtin',
@@ -128,14 +128,14 @@ describe('builtinToolSelectors', () => {
         {
           discoverable: false,
           hidden: true,
-          identifier: 'lobe-activator',
-          manifest: { api: [], identifier: 'lobe-activator', meta: {}, systemRole: '' },
+          identifier: 'orvilo-activator',
+          manifest: { api: [], identifier: 'orvilo-activator', meta: {}, systemRole: '' },
           type: 'builtin',
         },
         {
           hidden: true,
-          identifier: 'lobe-skill-store',
-          manifest: { api: [], identifier: 'lobe-skill-store', meta: {}, systemRole: '' },
+          identifier: 'orvilo-skill-store',
+          manifest: { api: [], identifier: 'orvilo-skill-store', meta: {}, systemRole: '' },
           type: 'builtin',
         },
         {
@@ -148,14 +148,14 @@ describe('builtinToolSelectors', () => {
       uninstalledBuiltinTools: [],
     } as ToolStoreState;
 
-    it('should surface app-fixed tools (e.g. lobe-agent) even though they are hidden', () => {
+    it('should surface app-fixed tools (e.g. orvilo-agent) even though they are hidden', () => {
       const result = builtinToolSelectors.fixedDisplayMetaList()(fixedState);
 
-      // Only fixed-display ids are returned; lobe-agent leads the list, unrelated tools excluded.
-      expect(result.map((item) => item.identifier)).toContain('lobe-agent');
-      expect(result.map((item) => item.identifier)).not.toContain('lobe-activator');
+      // Only fixed-display ids are returned; orvilo-agent leads the list, unrelated tools excluded.
+      expect(result.map((item) => item.identifier)).toContain('orvilo-agent');
+      expect(result.map((item) => item.identifier)).not.toContain('orvilo-activator');
       expect(result.map((item) => item.identifier)).not.toContain('tool-1');
-      expect(result[0].identifier).toBe('lobe-agent');
+      expect(result[0].identifier).toBe('orvilo-agent');
     });
 
     it('should drop manual-mode-excluded discovery tools in manual mode', () => {
@@ -163,10 +163,10 @@ describe('builtinToolSelectors', () => {
       const ids = result.map((item) => item.identifier);
 
       // activator + skill-store are stripped from defaults in manual mode, so they aren't on.
-      expect(ids).not.toContain('lobe-activator');
-      expect(ids).not.toContain('lobe-skill-store');
-      // lobe-agent stays on in manual mode.
-      expect(ids).toContain('lobe-agent');
+      expect(ids).not.toContain('orvilo-activator');
+      expect(ids).not.toContain('orvilo-skill-store');
+      // orvilo-agent stays on in manual mode.
+      expect(ids).toContain('orvilo-agent');
     });
 
     it('should skip fixed ids that are not registered in builtinTools', () => {
@@ -186,10 +186,10 @@ describe('builtinToolSelectors', () => {
         builtinTools: [
           {
             hidden: true,
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
             manifest: {
               api: [],
-              identifier: 'lobe-task',
+              identifier: 'orvilo-task',
               meta: { title: 'Task Tools' },
               systemRole: '',
             },
@@ -207,7 +207,7 @@ describe('builtinToolSelectors', () => {
 
       const result = builtinToolSelectors.installedAllMetaList(state);
 
-      expect(result.map((item) => item.identifier)).toEqual(['lobe-task', 'tool-1']);
+      expect(result.map((item) => item.identifier)).toEqual(['orvilo-task', 'tool-1']);
     });
   });
 
@@ -218,10 +218,10 @@ describe('builtinToolSelectors', () => {
         builtinTools: [
           {
             hidden: true,
-            identifier: 'lobe-web-browsing',
+            identifier: 'orvilo-web-browsing',
             manifest: {
               api: [],
-              identifier: 'lobe-web-browsing',
+              identifier: 'orvilo-web-browsing',
               meta: { title: 'Web Browsing' },
               systemRole: '',
             },
@@ -230,10 +230,10 @@ describe('builtinToolSelectors', () => {
           {
             discoverable: false,
             hidden: true,
-            identifier: 'lobe-verify',
+            identifier: 'orvilo-verify',
             manifest: {
               api: [],
-              identifier: 'lobe-verify',
+              identifier: 'orvilo-verify',
               meta: { title: 'Verifier' },
               systemRole: '',
             },
@@ -241,10 +241,10 @@ describe('builtinToolSelectors', () => {
           },
           {
             hidden: true,
-            identifier: 'lobe-skill-store',
+            identifier: 'orvilo-skill-store',
             manifest: {
               api: [],
-              identifier: 'lobe-skill-store',
+              identifier: 'orvilo-skill-store',
               meta: { title: 'Skill Store' },
               systemRole: '',
             },
@@ -252,10 +252,10 @@ describe('builtinToolSelectors', () => {
           },
           {
             hidden: true,
-            identifier: 'lobe-agent-management',
+            identifier: 'orvilo-agent-management',
             manifest: {
               api: [],
-              identifier: 'lobe-agent-management',
+              identifier: 'orvilo-agent-management',
               meta: { title: 'Agent Management' },
               systemRole: '',
             },
@@ -299,20 +299,22 @@ describe('builtinToolSelectors', () => {
       })(state);
 
       expect(autoVisible.map((item) => item.identifier)).toEqual([
-        'lobe-agent-management',
+        'orvilo-agent-management',
         'profile-tool',
       ]);
       expect(autoExcluded).toEqual(
-        expect.arrayContaining(['lobe-web-browsing', 'lobe-verify', 'lobe-skill-store']),
+        expect.arrayContaining(['orvilo-web-browsing', 'orvilo-verify', 'orvilo-skill-store']),
       );
       expect(manualVisible.map((item) => item.identifier)).toEqual([
-        'lobe-skill-store',
-        'lobe-agent-management',
+        'orvilo-skill-store',
+        'orvilo-agent-management',
         'profile-tool',
       ]);
-      expect(manualExcluded).toEqual(expect.arrayContaining(['lobe-web-browsing', 'lobe-verify']));
-      expect(manualExcluded).not.toContain('lobe-skill-store');
-      expect(manualExcluded).not.toContain('lobe-agent-management');
+      expect(manualExcluded).toEqual(
+        expect.arrayContaining(['orvilo-web-browsing', 'orvilo-verify']),
+      );
+      expect(manualExcluded).not.toContain('orvilo-skill-store');
+      expect(manualExcluded).not.toContain('orvilo-agent-management');
     });
   });
 });

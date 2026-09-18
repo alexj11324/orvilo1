@@ -119,7 +119,7 @@ describe('NotificationCtr', () => {
 
       controller.afterAppReady();
 
-      expect(app.setAppUserModelId).toHaveBeenCalledWith('com.lobehub.chat');
+      expect(app.setAppUserModelId).toHaveBeenCalledWith('com.aspectlylabs.orvilo');
 
       vi.mocked(windows).mockReturnValue(false);
     });

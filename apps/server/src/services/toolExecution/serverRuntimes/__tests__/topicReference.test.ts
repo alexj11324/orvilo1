@@ -10,6 +10,7 @@ const mockMessageModelQuery = vi.fn();
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       findOwnTopicById: (...args: any[]) => mockTopicModelFindOwnTopicById(...args),
     };
   }),
@@ -31,7 +32,7 @@ const { topicReferenceRuntime } = await import('../topicReference');
 describe('topicReferenceRuntime', () => {
   it('should have the correct identifier', () => {
     expect(topicReferenceRuntime.identifier).toBe(TopicReferenceIdentifier);
-    expect(topicReferenceRuntime.identifier).toBe('lobe-topic-reference');
+    expect(topicReferenceRuntime.identifier).toBe('orvilo-topic-reference');
   });
 
   describe('factory', () => {

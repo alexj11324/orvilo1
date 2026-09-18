@@ -3,7 +3,7 @@ import debug from 'debug';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
@@ -33,7 +33,7 @@ export interface TaskWatchdogResult {
  * without an owner filter; user/API callers pass their own creator scope.
  */
 export async function runTaskWatchdog(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: TaskWatchdogOptions = {},
 ): Promise<TaskWatchdogResult> {
   const stuckTasks = await TaskModel.findStuckTasks(db, options);

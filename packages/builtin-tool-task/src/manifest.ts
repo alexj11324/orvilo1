@@ -5,7 +5,7 @@ import { DEFAULT_LIST_TASK_LIMIT } from './listTasks';
 import { systemPrompt } from './systemRole';
 import { TaskApiName } from './types';
 
-export const TaskIdentifier = 'lobe-task';
+export const TaskIdentifier = 'orvilo-task';
 
 export const TaskManifest: BuiltinToolManifest = {
   api: [

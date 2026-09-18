@@ -23,7 +23,7 @@ export const ListWorkspaceMembersInspector = memo<
         (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
       )}
     >
-      <span>{t('builtins.lobe-task.apiName.listWorkspaceMembers')}</span>
+      <span>{t('builtins.orvilo-task.apiName.listWorkspaceMembers')}</span>
       {typeof count === 'number' && (
         <Text code as={'span'} color={cssVar.colorTextSecondary} fontSize={12}>
           {count}

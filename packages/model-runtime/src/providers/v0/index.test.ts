@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeV0AI, params } from './index';
+import { OrviloV0AI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -12,7 +12,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 }));
 
 testProvider({
-  Runtime: LobeV0AI,
+  Runtime: OrviloV0AI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_V0_CHAT_COMPLETION',
   chatModel: 'gpt-4o',
@@ -25,11 +25,11 @@ testProvider({
   },
 });
 
-describe('LobeV0AI - custom features', () => {
-  let instance: InstanceType<typeof LobeV0AI>;
+describe('OrviloV0AI - custom features', () => {
+  let instance: InstanceType<typeof OrviloV0AI>;
 
   beforeEach(() => {
-    instance = new LobeV0AI({ apiKey: 'test_api_key' });
+    instance = new OrviloV0AI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

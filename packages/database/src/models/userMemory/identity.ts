@@ -6,17 +6,17 @@ import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { FtsSearchCandidateSource } from '../../repositories/ftsSearch';
 import type { NewUserMemoryIdentity, UserMemoryIdentity } from '../../schemas';
 import { userMemories, userMemoriesIdentities } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { normalizeBm25MatchQuery, SAFE_BM25_QUERY_OPTIONS } from '../../utils/bm25';
 import { inJsonStringArray } from '../../utils/inJsonStringArray';
 
 export class UserMemoryIdentityModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,
   ) {

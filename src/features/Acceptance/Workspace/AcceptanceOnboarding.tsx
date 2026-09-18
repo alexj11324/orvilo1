@@ -9,9 +9,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import CommandLine from '@/components/CommandLine';
-import { CLI_INSTALL_COMMAND } from '@/features/Apps/const';
 
 import { acceptanceHomePath } from '../Viewer/routes';
+
+const CLI_INSTALL_COMMAND = 'npm install -g @lobehub/cli';
 
 const styles = createStaticStyles(({ css }) => ({
   description: css`

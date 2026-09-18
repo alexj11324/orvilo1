@@ -80,8 +80,8 @@ describe('useQueryStates', () => {
       { wrapper },
     );
 
-    act(() => result.current.state[1]({ q: 'lobe' }));
-    expect(result.current.search).toBe('?q=lobe');
+    act(() => result.current.state[1]({ q: 'orvilo' }));
+    expect(result.current.search).toBe('?q=orvilo');
 
     act(() => result.current.state[1]({ q: null }));
     expect(result.current.search).toBe('');

@@ -12,7 +12,7 @@ import {
 } from '@orvilo/types';
 
 import { AgentModel } from '@/database/models/agent';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 export interface VerifyModelConfig {
   model: string;
@@ -62,7 +62,7 @@ const isUsableVerifyModelConfig = (
   Boolean(config?.model && config?.provider && !isHeterogeneousVerifyProvider(config.provider));
 
 /**
- * The fallback model used by Verify's LobeHub LLM calls when neither a pinned
+ * The fallback model used by Verify's Orvilo LLM calls when neither a pinned
  * verifier agent nor the builtin verify agent provides a runnable config —
  * and the floor under the whole resolution chain.
  *
@@ -81,7 +81,7 @@ export const VERIFY_FALLBACK_MODEL_CONFIG: VerifyModelConfig = {
 };
 
 /**
- * Pick the model used by Verify's LobeHub LLM calls. Heterogeneous parent runs
+ * Pick the model used by Verify's Orvilo LLM calls. Heterogeneous parent runs
  * expose CLI/runtime identifiers (e.g. `claude-code`) that are not valid model
  * runtime providers, so Verify must resolve its own runnable provider/model.
  *
@@ -93,7 +93,7 @@ export const VERIFY_FALLBACK_MODEL_CONFIG: VerifyModelConfig = {
  * inherited at all).
  */
 export const resolveVerifyModelConfig = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: ResolveVerifyModelConfigParams,
   workspaceId?: string,

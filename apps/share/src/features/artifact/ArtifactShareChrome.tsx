@@ -68,7 +68,7 @@ export const ArtifactShareChrome = ({ title }: ArtifactShareChromeProps) => {
           {t('sharePage.artifact.share')}
         </Button>
         <Button href={'/'} size={'small'} type={'primary'}>
-          {t('sharePage.menu.goToLobeHub')}
+          {t('sharePage.menu.goToOrvilo')}
         </Button>
       </Flexbox>
     </Flexbox>

@@ -1,7 +1,7 @@
 import { getWorkspaceRolePermissionCodes, PERSONAL_DEFAULT_PERMISSIONS } from '@orvilo/const/rbac';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import type { RoleItem } from '../schemas/rbac';
 import { permissions, rolePermissions, roles, userRoles } from '../schemas/rbac';
@@ -45,9 +45,9 @@ const normalizeScope = (arg: string | RbacScopeOptions | undefined): RbacScopeOp
 
 export class RbacModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.userId = userId;
     this.db = db;
   }
@@ -59,7 +59,7 @@ export class RbacModel {
     userIds,
     workspaceId,
   }: {
-    db: LobeChatDatabase;
+    db: OrviloDatabase;
     requireMembership?: boolean;
     userIds: string[];
     workspaceId: string;
@@ -81,6 +81,7 @@ export class RbacModel {
             eq(workspaceMembers.workspaceId, workspaceId),
             inArray(workspaceMembers.userId, uniqueUserIds),
             isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
           ),
         ),
       db
@@ -150,6 +151,7 @@ export class RbacModel {
           eq(workspaceMembers.workspaceId, workspaceId),
           eq(workspaceMembers.userId, userId),
           isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
         ),
       )
       .limit(1);

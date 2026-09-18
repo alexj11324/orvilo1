@@ -79,7 +79,7 @@ export class OnboardingSyntheticStateInjector extends BaseProcessor {
         {
           function: {
             arguments: '{}',
-            name: 'lobe-web-onboarding____getOnboardingState',
+            name: 'orvilo-web-onboarding____getOnboardingState',
           },
           id: toolCallId,
           type: 'function',

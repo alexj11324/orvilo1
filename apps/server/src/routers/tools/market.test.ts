@@ -31,6 +31,12 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
     return opts.next({ ctx: opts.ctx });
   }),
 }));
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
 
 vi.mock('@/libs/trpc/lambda/middleware/marketSDK', () => ({
   marketSDK: vi.fn(function (opts: any) {
@@ -79,7 +85,7 @@ describe('tools marketRouter', () => {
     } as any);
     mockPreprocessLhCommand.mockResolvedValue({
       command:
-        'lh() { LOBEHUB_WORKSPACE_ID=\'workspace-1\' npx -y @lobehub/cli "$@"; }\nlh agent view agt_1',
+        'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent view agt_1',
       isLhCommand: true,
       skipSkillLookup: true,
     });
@@ -98,7 +104,7 @@ describe('tools marketRouter', () => {
     );
     expect(mockSandboxCallTool).toHaveBeenCalledWith('runCommand', {
       command:
-        'lh() { LOBEHUB_WORKSPACE_ID=\'workspace-1\' npx -y @lobehub/cli "$@"; }\nlh agent view agt_1',
+        'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent view agt_1',
     });
   });
 

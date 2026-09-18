@@ -274,7 +274,7 @@ describe('CreateTaskInlineEntry', () => {
     // The second reading is the normal path: it rewrites the brief with the
     // answers folded in, so the confirmed task carries no Q&A appendix.
     synthesizeInstructionMock.mockResolvedValue({
-      instruction: 'Write the Q3 plan for lobe-chat.',
+      instruction: 'Write the Q3 plan for orvilo.',
       title: 'Write the Q3 project plan',
     });
     navigateMock.mockReset();
@@ -371,7 +371,7 @@ describe('CreateTaskInlineEntry', () => {
 
     await waitFor(() => {
       const draft = JSON.parse(
-        localStorage.getItem('lobehub:task-create-draft:workspace-1:agent-locked') || '{}',
+        localStorage.getItem('orvilo:task-create-draft:workspace-1:agent-locked') || '{}',
       );
       expect(draft).toMatchObject({ assigneeUserId: 'user-1' });
     });
@@ -384,7 +384,7 @@ describe('CreateTaskInlineEntry', () => {
     fireEvent.click(screen.getByTestId('select-member'));
     await waitFor(() => {
       const draft = JSON.parse(
-        localStorage.getItem('lobehub:task-create-draft:workspace-1:all') || '{}',
+        localStorage.getItem('orvilo:task-create-draft:workspace-1:all') || '{}',
       );
       expect(draft).toMatchObject({ assigneeUserId: 'user-1' });
     });
@@ -399,7 +399,7 @@ describe('CreateTaskInlineEntry', () => {
     );
     await waitFor(() => {
       const draft = JSON.parse(
-        localStorage.getItem('lobehub:task-create-draft:workspace-2:all') || '{}',
+        localStorage.getItem('orvilo:task-create-draft:workspace-2:all') || '{}',
       );
       expect(draft.assigneeUserId).toBeUndefined();
     });
@@ -407,7 +407,7 @@ describe('CreateTaskInlineEntry', () => {
 
   it('drops an incompatible restored member when the assigned agent is private', async () => {
     localStorage.setItem(
-      'lobehub:task-create-draft:workspace-1:all',
+      'orvilo:task-create-draft:workspace-1:all',
       JSON.stringify({
         assigneeAgentId: 'agent-private',
         assigneeUserId: 'user-1',
@@ -434,7 +434,7 @@ describe('CreateTaskInlineEntry', () => {
   it('drops a restored member who is no longer assignable in the workspace', async () => {
     workspaceMembersMock.members = [{ role: 'viewer', userId: 'user-1' }];
     localStorage.setItem(
-      'lobehub:task-create-draft:workspace-1:all',
+      'orvilo:task-create-draft:workspace-1:all',
       JSON.stringify({
         assigneeUserId: 'user-1',
         markdown: 'Coordinate a workspace task',
@@ -478,7 +478,7 @@ describe('CreateTaskInlineEntry', () => {
     createTaskMock.mockResolvedValue({ identifier: 'TASK-9', name: 'Write the Q3 project plan' });
     analyzeIntentMock.mockResolvedValue({
       ...clearReading,
-      clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+      clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
       confidence: 'medium',
     });
 
@@ -486,7 +486,7 @@ describe('CreateTaskInlineEntry', () => {
     fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
     await screen.findByText('taskIntent.reviewStep');
-    fireEvent.click(screen.getByText('lobe-chat'));
+    fireEvent.click(screen.getByText('orvilo'));
     fireEvent.click(await screen.findByText('taskIntent.create'));
 
     // The toast lives in the one place every path funnels through, so the
@@ -528,7 +528,7 @@ describe('CreateTaskInlineEntry', () => {
     it('holds a draft with an open question and folds the answer into the brief', async () => {
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
-        clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
         confidence: 'medium',
       });
 
@@ -541,13 +541,15 @@ describe('CreateTaskInlineEntry', () => {
       // Answering the last question lands on the confirm step, and the primary
       // button says so — it reads "create task" on no step any more, which is
       // what left users unsure whether pressing it was the end of the flow.
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
       fireEvent.click(await screen.findByText('taskIntent.create'));
 
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
       // The answer reaches the task through the rewritten brief, not as a list
       // bolted underneath one written before the answer existed.
-      expect(createTaskMock.mock.calls[0][0].instruction).toBe('Write the Q3 plan for lobe-chat.');
+      expect(createTaskMock.mock.calls[0][0].instruction).toBe(
+        'Write the Q3 plan for orvilo.',
+      );
       expect(createTaskMock.mock.calls[0][0].instruction).not.toContain(
         'taskIntent.answersHeading',
       );
@@ -558,7 +560,7 @@ describe('CreateTaskInlineEntry', () => {
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
         clarifications: [
-          { options: ['lobe-chat'], question: 'Which repo?' },
+          { options: ['orvilo'], question: 'Which repo?' },
           { options: ['PDF'], question: 'Which format?' },
         ],
         confidence: 'medium',
@@ -570,7 +572,7 @@ describe('CreateTaskInlineEntry', () => {
       await screen.findByText('taskIntent.reviewStep');
       // Answering is not what triggers the rewrite — there is no step between
       // the last answer and the task, so pressing generate is.
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
       fireEvent.click(await screen.findByText('PDF'));
       expect(synthesizeInstructionMock).not.toHaveBeenCalled();
 
@@ -578,7 +580,7 @@ describe('CreateTaskInlineEntry', () => {
 
       await waitFor(() => expect(synthesizeInstructionMock).toHaveBeenCalledTimes(1));
       expect(synthesizeInstructionMock.mock.calls[0][0].answers).toEqual([
-        { answer: 'lobe-chat', question: 'Which repo?' },
+        { answer: 'orvilo', question: 'Which repo?' },
         { answer: 'PDF', question: 'Which format?' },
       ]);
       // One press: the rewrite and the create, with no page in between.
@@ -588,7 +590,7 @@ describe('CreateTaskInlineEntry', () => {
     it('names the last step "create", answered or not', async () => {
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
-        clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
         confidence: 'medium',
       });
 
@@ -601,7 +603,7 @@ describe('CreateTaskInlineEntry', () => {
       await screen.findByText('taskIntent.reviewStep');
       expect(screen.getByText('taskIntent.create')).toBeDefined();
 
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
 
       expect(screen.getByText('taskIntent.create')).toBeDefined();
     });
@@ -609,7 +611,7 @@ describe('CreateTaskInlineEntry', () => {
     it('has no confirmation step between the last answer and the task', async () => {
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
-        clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
         confidence: 'medium',
       });
 
@@ -617,7 +619,7 @@ describe('CreateTaskInlineEntry', () => {
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
 
       // No confirm tab, no answers recap, no second instruction editor: the
       // question the user is on is the last thing standing between them and
@@ -633,7 +635,7 @@ describe('CreateTaskInlineEntry', () => {
       synthesizeInstructionMock.mockRejectedValue(new Error('offline'));
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
-        clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
         confidence: 'medium',
       });
 
@@ -641,12 +643,12 @@ describe('CreateTaskInlineEntry', () => {
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
       fireEvent.click(await screen.findByText('taskIntent.create'));
 
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
       expect(createTaskMock.mock.calls[0][0].instruction).toContain(
-        '## taskIntent.answersHeading\n- Which repo? lobe-chat',
+        '## taskIntent.answersHeading\n- Which repo? orvilo',
       );
     });
 
@@ -666,7 +668,7 @@ describe('CreateTaskInlineEntry', () => {
       };
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
-        clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
         confidence: 'medium',
       });
 
@@ -674,13 +676,13 @@ describe('CreateTaskInlineEntry', () => {
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
       fireEvent.click(await screen.findByText('taskIntent.create'));
 
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
       const { editorData, instruction } = createTaskMock.mock.calls[0][0];
 
-      expect(instruction).toBe('Write the Q3 plan for lobe-chat.');
+      expect(instruction).toBe('Write the Q3 plan for orvilo.');
       expect(editorData).toBeUndefined();
     });
 
@@ -689,7 +691,7 @@ describe('CreateTaskInlineEntry', () => {
       synthesizeInstructionMock.mockRejectedValue(new Error('offline'));
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,
-        clarifications: [{ options: ['lobe-chat'], question: 'Which repo?' }],
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
         confidence: 'medium',
       });
 
@@ -697,12 +699,12 @@ describe('CreateTaskInlineEntry', () => {
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
 
       await screen.findByText('taskIntent.reviewStep');
-      fireEvent.click(screen.getByText('lobe-chat'));
+      fireEvent.click(screen.getByText('orvilo'));
       fireEvent.click(await screen.findByText('taskIntent.create'));
 
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
       expect(createTaskMock.mock.calls[0][0].instruction).toContain(
-        '## taskIntent.answersHeading\n- Which repo? lobe-chat',
+        '## taskIntent.answersHeading\n- Which repo? orvilo',
       );
     });
 
@@ -732,7 +734,7 @@ describe('CreateTaskInlineEntry', () => {
   });
 
   describe('persisted draft across a create', () => {
-    const DRAFT_KEY = 'lobehub:task-create-draft:workspace-1:all';
+    const DRAFT_KEY = 'orvilo:task-create-draft:workspace-1:all';
 
     beforeEach(() => {
       localStorage.clear();

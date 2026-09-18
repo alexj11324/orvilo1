@@ -3,7 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { isRecord } from '@orvilo/utils';
 
 import { linearBindingReadEnabled, LinearSyncModel } from '@/database/models/linearSync';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 const DEFAULT_WEBHOOK_MAX_AGE_MS = 60_000;
 
@@ -126,7 +126,7 @@ export interface CaptureLinearWebhookResult {
 export class LinearSyncService {
   private readonly model: LinearSyncModel;
 
-  constructor(db: LobeChatDatabase, workspaceId: string) {
+  constructor(db: OrviloDatabase, workspaceId: string) {
     this.model = new LinearSyncModel(db, workspaceId);
   }
 

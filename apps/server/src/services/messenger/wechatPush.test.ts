@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   consumeSendCredits,
   enqueuePendingPush,
@@ -141,8 +141,8 @@ class FakeRedis implements WechatWindowRedis {
 
 const APP = 'bot@im.wechat';
 const WECHAT_USER = 'alice@im.wechat';
-const LOBE_USER = 'user-1';
-const serverDB = { kind: 'db' } as unknown as LobeChatDatabase;
+const ORVILO_USER = 'user-1';
+const serverDB = { kind: 'db' } as unknown as OrviloDatabase;
 
 const safeLink = { applicationId: APP, id: 'link-1' };
 const decryptedLink = {
@@ -170,7 +170,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'hello',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ remaining: WECHAT_WINDOW_MAX_SENDS - 1, status: 'sent' });
@@ -191,7 +191,7 @@ describe('sendProactiveWechatMessage', () => {
       ],
       content: 'here is the video',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result.status).toBe('sent');
@@ -222,7 +222,7 @@ describe('sendProactiveWechatMessage', () => {
       ],
       content: 'here is the video',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result.status).toBe('sent');
@@ -249,7 +249,7 @@ describe('sendProactiveWechatMessage', () => {
       ],
       content: 'text plus attachment',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'quota_exhausted', status: 'queued' });
@@ -266,7 +266,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'fresh push',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result.status).toBe('sent');
@@ -287,7 +287,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'fresh push',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'quota_exhausted', status: 'queued' });
@@ -310,7 +310,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'fresh push',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'delivery_in_progress', status: 'queued' });
@@ -325,12 +325,12 @@ describe('sendProactiveWechatMessage', () => {
     const finalSend = await sendProactiveWechatMessage({
       content: 'final available send',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
     const queued = await sendProactiveWechatMessage({
       content: 'wait for next window',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(finalSend).toEqual({ remaining: 0, status: 'sent' });
@@ -342,7 +342,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'hello',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'window_closed', status: 'queued' });
@@ -357,7 +357,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'hello',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'window_closed', status: 'queued' });
@@ -371,7 +371,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'hello',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'send_failed', status: 'queued' });
@@ -395,7 +395,7 @@ describe('sendProactiveWechatMessage', () => {
       ],
       content: 'here is the video',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'send_failed', status: 'queued' });
@@ -425,7 +425,7 @@ describe('sendProactiveWechatMessage', () => {
       ],
       content: 'here you go',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'send_failed', status: 'queued' });
@@ -448,7 +448,7 @@ describe('sendProactiveWechatMessage', () => {
       ],
       content: 'here you go',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ reason: 'send_failed', status: 'queued' });
@@ -464,7 +464,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'hello',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ status: 'unlinked' });
@@ -476,7 +476,7 @@ describe('sendProactiveWechatMessage', () => {
     const result = await sendProactiveWechatMessage({
       content: 'hello',
       serverDB,
-      userId: LOBE_USER,
+      userId: ORVILO_USER,
     });
 
     expect(result).toEqual({ status: 'unavailable' });
@@ -487,7 +487,7 @@ describe('getWechatPushWindowStatus', () => {
   it('reports unlinked users with a closed window', async () => {
     mockFindByPlatform.mockResolvedValueOnce(undefined);
 
-    const status = await getWechatPushWindowStatus({ serverDB, userId: LOBE_USER });
+    const status = await getWechatPushWindowStatus({ serverDB, userId: ORVILO_USER });
 
     expect(status).toMatchObject({ linked: false, queued: 0, remaining: 0, windowOpen: false });
   });
@@ -498,7 +498,7 @@ describe('getWechatPushWindowStatus', () => {
       platformUserId: WECHAT_USER,
     });
 
-    const status = await getWechatPushWindowStatus({ serverDB, userId: LOBE_USER });
+    const status = await getWechatPushWindowStatus({ serverDB, userId: ORVILO_USER });
 
     expect(status).toMatchObject({
       expiresInSeconds: null,
@@ -517,7 +517,7 @@ describe('getWechatPushWindowStatus', () => {
     await consumeSendCredits(redis, APP, WECHAT_USER, 3);
     await enqueuePendingPush(redis, APP, WECHAT_USER, { content: 'later', enqueuedAt: 1 });
 
-    const status = await getWechatPushWindowStatus({ serverDB, userId: LOBE_USER });
+    const status = await getWechatPushWindowStatus({ serverDB, userId: ORVILO_USER });
 
     expect(status).toMatchObject({
       expiresInSeconds: 86_400,

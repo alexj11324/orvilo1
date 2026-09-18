@@ -1,4 +1,4 @@
-export const AuvIdentifier = 'lobe-computer-use';
+export const AuvIdentifier = 'orvilo-computer-use';
 
 export const AuvApiName = {
   runCommand: 'runCommand',

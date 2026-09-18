@@ -1,12 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 
 import { agents, chatGroupsAgents } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertCanPerformResourceAction } from '@/server/services/resourcePermission';
 
 interface WorkspaceAgentGuardParams {
   agentId?: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   groupId?: string | null;
   slug?: string;
   userId: string;
@@ -19,7 +19,7 @@ export const getWorkspaceAgentParentGroupIds = async ({
   workspaceId,
 }: {
   agentId: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   workspaceId: string;
 }): Promise<string[]> => {
   const linkedGroups = await db
@@ -47,7 +47,7 @@ export const getWorkspaceGroupVirtualAgentIds = async ({
   groupId,
   workspaceId,
 }: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   groupId: string;
   workspaceId: string;
 }): Promise<string[]> => {

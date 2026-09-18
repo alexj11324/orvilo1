@@ -35,7 +35,7 @@ describe('OpenAIResponsesStream', () => {
               type: 'function',
               description:
                 'a search service. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results',
-              name: 'lobe-web-browsing____search',
+              name: 'orvilo-web-browsing____search',
               parameters: {
                 properties: {
                   query: { description: 'The search query', type: 'string' },
@@ -89,7 +89,7 @@ describe('OpenAIResponsesStream', () => {
               type: 'function',
               description:
                 'A crawler can visit page content. Output is a JSON object of title, content, url and website',
-              name: 'lobe-web-browsing____crawlSinglePage',
+              name: 'orvilo-web-browsing____crawlSinglePage',
               parameters: {
                 properties: { url: { description: 'The url need to be crawled', type: 'string' } },
                 required: ['url'],
@@ -101,7 +101,7 @@ describe('OpenAIResponsesStream', () => {
               type: 'function',
               description:
                 'A crawler can visit multi pages. If need to visit multi website, use this one. Output is an array of JSON object of title, content, url and website',
-              name: 'lobe-web-browsing____crawlMultiPages',
+              name: 'orvilo-web-browsing____crawlMultiPages',
               parameters: {
                 properties: {
                   urls: {
@@ -148,7 +148,7 @@ describe('OpenAIResponsesStream', () => {
               type: 'function',
               description:
                 'a search service. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results',
-              name: 'lobe-web-browsing____search',
+              name: 'orvilo-web-browsing____search',
               parameters: {
                 properties: {
                   query: { description: 'The search query', type: 'string' },
@@ -202,7 +202,7 @@ describe('OpenAIResponsesStream', () => {
               type: 'function',
               description:
                 'A crawler can visit page content. Output is a JSON object of title, content, url and website',
-              name: 'lobe-web-browsing____crawlSinglePage',
+              name: 'orvilo-web-browsing____crawlSinglePage',
               parameters: {
                 properties: { url: { description: 'The url need to be crawled', type: 'string' } },
                 required: ['url'],
@@ -214,7 +214,7 @@ describe('OpenAIResponsesStream', () => {
               type: 'function',
               description:
                 'A crawler can visit multi pages. If need to visit multi website, use this one. Output is an array of JSON object of title, content, url and website',
-              name: 'lobe-web-browsing____crawlMultiPages',
+              name: 'orvilo-web-browsing____crawlMultiPages',
               parameters: {
                 properties: {
                   urls: {
@@ -1070,7 +1070,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'a search service. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results',
-                name: 'lobe-web-browsing____search',
+                name: 'orvilo-web-browsing____search',
                 parameters: {
                   properties: {
                     query: { description: 'The search query', type: 'string' },
@@ -1124,7 +1124,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'A crawler can visit page content. Output is a JSON object of title, content, url and website',
-                name: 'lobe-web-browsing____crawlSinglePage',
+                name: 'orvilo-web-browsing____crawlSinglePage',
                 parameters: {
                   properties: {
                     url: { description: 'The url need to be crawled', type: 'string' },
@@ -1138,7 +1138,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'A crawler can visit multi pages. If need to visit multi website, use this one. Output is an array of JSON object of title, content, url and website',
-                name: 'lobe-web-browsing____crawlMultiPages',
+                name: 'orvilo-web-browsing____crawlMultiPages',
                 parameters: {
                   properties: {
                     urls: {
@@ -1185,7 +1185,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'a search service. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results',
-                name: 'lobe-web-browsing____search',
+                name: 'orvilo-web-browsing____search',
                 parameters: {
                   properties: {
                     query: { description: 'The search query', type: 'string' },
@@ -1239,7 +1239,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'A crawler can visit page content. Output is a JSON object of title, content, url and website',
-                name: 'lobe-web-browsing____crawlSinglePage',
+                name: 'orvilo-web-browsing____crawlSinglePage',
                 parameters: {
                   properties: {
                     url: { description: 'The url need to be crawled', type: 'string' },
@@ -1253,7 +1253,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'A crawler can visit multi pages. If need to visit multi website, use this one. Output is an array of JSON object of title, content, url and website',
-                name: 'lobe-web-browsing____crawlMultiPages',
+                name: 'orvilo-web-browsing____crawlMultiPages',
                 parameters: {
                   properties: {
                     urls: {
@@ -1457,7 +1457,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'a search service. Useful for when you need to answer questions about current events. Input should be a search query. Output is a JSON array of the query results',
-                name: 'lobe-web-browsing____search',
+                name: 'orvilo-web-browsing____search',
                 parameters: {
                   properties: {
                     query: { description: 'The search query', type: 'string' },
@@ -1511,7 +1511,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'A crawler can visit page content. Output is a JSON object of title, content, url and website',
-                name: 'lobe-web-browsing____crawlSinglePage',
+                name: 'orvilo-web-browsing____crawlSinglePage',
                 parameters: {
                   properties: {
                     url: { description: 'The url need to be crawled', type: 'string' },
@@ -1525,7 +1525,7 @@ describe('OpenAIResponsesStream', () => {
                 type: 'function',
                 description:
                   'A crawler can visit multi pages. If need to visit multi website, use this one. Output is an array of JSON object of title, content, url and website',
-                name: 'lobe-web-browsing____crawlMultiPages',
+                name: 'orvilo-web-browsing____crawlMultiPages',
                 parameters: {
                   properties: {
                     urls: {

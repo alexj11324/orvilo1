@@ -3,7 +3,7 @@ import type { MessengerOversizeImageStrategy } from '@orvilo/const';
 import debug from 'debug';
 
 import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import type { AttachmentDegradation } from '@/server/services/bot/platforms/attachmentBudget';
@@ -29,7 +29,7 @@ import {
 import type { WechatOutboundAttachment } from '@/server/services/bot/platforms/wechat/sendAttachments';
 import { sendWechatAttachments } from '@/server/services/bot/platforms/wechat/sendAttachments';
 
-const log = debug('lobe-server:messenger:wechat-push');
+const log = debug('orvilo-server:messenger:wechat-push');
 
 /**
  * Credits kept in reserve when replaying queued pushes on an inbound message:
@@ -85,7 +85,7 @@ interface ResolvedWechatTarget {
 }
 
 const resolveWechatTarget = async (
-  serverDB: LobeChatDatabase,
+  serverDB: OrviloDatabase,
   userId: string,
 ): Promise<ResolvedWechatTarget | null> => {
   const linkModel = new MessengerAccountLinkModel(serverDB, userId);
@@ -313,7 +313,7 @@ const CLOSED_WINDOW: Omit<WechatPushWindowStatus, 'linked' | 'queued'> = {
  * safe link projection only; no credential decryption happens here.
  */
 export const getWechatPushWindowStatus = async (params: {
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
 }): Promise<WechatPushWindowStatus> => {
   const linkModel = new MessengerAccountLinkModel(params.serverDB, params.userId);
@@ -345,7 +345,7 @@ export const getWechatPushWindowStatus = async (params: {
 };
 
 /**
- * Proactively push a message to a LobeHub user's linked WeChat account.
+ * Proactively push a message to a Orvilo user's linked WeChat account.
  *
  * WeChat iLink offers no bot-initiated conversation API, so delivery is only
  * possible inside the current send window (a `context_token` from a recent
@@ -357,7 +357,7 @@ export const sendProactiveWechatMessage = async (params: {
   attachments?: WechatOutboundAttachment[];
   content?: string;
   oversizeImageStrategy?: MessengerOversizeImageStrategy;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   userId: string;
 }): Promise<WechatPushResult> => {
   const { serverDB, userId, content, attachments, oversizeImageStrategy } = params;

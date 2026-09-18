@@ -19,7 +19,7 @@ export type LarkDocKind =
   'base' | 'doc' | 'docx' | 'file' | 'minutes' | 'sheets' | 'slides' | 'wiki';
 
 export interface LarkDocLink {
-  /** Host the link points at, e.g. `lobe-hub.feishu.cn`. */
+  /** Host the link points at, e.g. `orvilo-hub.feishu.cn`. */
   host: string;
   kind: LarkDocKind;
   /** Document / node token, e.g. `doxcnXXXX` for docx or the wiki node token. */

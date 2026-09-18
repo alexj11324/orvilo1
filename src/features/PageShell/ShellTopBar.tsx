@@ -1,15 +1,24 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { DropdownMenu, Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { ArrowLeft, ChevronsUpDownIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { ArrowLeft, ChevronsUpDownIcon, User, UserPlus } from 'lucide-react';
+import { memo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
+import { useSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
+import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
 import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
+import {
+  PresenceAvatarStack,
+  usePresenceEnabled,
+  useRoomConnection,
+} from '@/features/Collaboration';
+import { openInviteTeammateModal, useTeammatesEnabled } from '@/features/Teammates';
 import UserAvatar from '@/features/User/UserAvatar';
 
 /**
@@ -91,17 +100,98 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 6px;
     border-radius: ${cssVar.borderRadius};
   `,
+  scopePillButton: css`
+    cursor: pointer;
+
+    border: none;
+
+    font: inherit;
+    color: inherit;
+
+    background: transparent;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 1px;
+    }
+  `,
 }));
 
+/**
+ * Workspace-scope presence for the top bar: joins `workspace:{id}` for as
+ * long as the bar is mounted, then renders the deduplicated avatar stack.
+ * The room connection is refcounted — a project board holding its own room
+ * never pays for a second socket here.
+ */
+const WorkspacePresence = memo<{ workspaceId: string }>(({ workspaceId }) => {
+  const room = { id: workspaceId, scope: 'workspace' as const };
+  // Same `collaboration.presence` flag the cursor channel reads — the stack
+  // must not hold a socket when presence is switched off server-side.
+  const enabled = usePresenceEnabled();
+  useRoomConnection(room, enabled);
+  return enabled ? <PresenceAvatarStack room={room} /> : null;
+});
+
+WorkspacePresence.displayName = 'WorkspacePresence';
+
 const ShellTopBar = ({ actions, onBack, title, titleExtra }: ShellTopBarProps) => {
+  const { t } = useTranslation('setting');
   const workspace = useActiveWorkspace();
   const workspaces = useWorkspaces();
+  const capabilities = useWorkspaceCapabilities();
+  const teammatesEnabled = useTeammatesEnabled();
+  const { switchToPersonal, switchWorkspace } = useSwitchWorkspace();
 
   // The pill is a SCOPE SWITCHER, not an identity label. Personal scope has no
   // scope to switch to, so the bar is the product, the collection, and you.
-  const switchable = workspaces.length > 1;
+  // Inside a workspace the menu is always offered — even with a single
+  // workspace — because "Personal" is then a distinct scope to return to.
+  const switchable = workspaces.length > 1 || Boolean(workspace);
   const scopeName = workspace?.name;
   const scopeAvatar = workspace?.avatar || scopeName;
+
+  const scopeMenu = switchable
+    ? [
+        {
+          icon: <Icon icon={User} size={14} />,
+          key: '__personal__',
+          label: t('workspaceSetting.members.personalScope'),
+          onClick: () => {
+            if (workspace) void switchToPersonal();
+          },
+        },
+        ...workspaces.map((item) => ({
+          icon: <Avatar avatar={item.avatar || item.name} shape={'square'} size={18} />,
+          key: item.id,
+          label: item.name,
+          onClick: () => {
+            if (item.id !== workspace?.id) void switchWorkspace(item.id);
+          },
+        })),
+      ]
+    : [];
+
+  const scopePill = scopeName ? (
+    <Flexbox
+      horizontal
+      align={'center'}
+      {...(switchable
+        ? { 'aria-haspopup': 'menu' as const, as: 'button' as const, type: 'button' as const }
+        : {})}
+      className={switchable ? `${styles.scopePill} ${styles.scopePillButton}` : styles.scopePill}
+      gap={6}
+    >
+      <Avatar avatar={scopeAvatar} shape={'square'} size={20} />
+      <Text fontSize={13} weight={600}>
+        {scopeName}
+      </Text>
+      {switchable && <ChevronsUpDownIcon color={cssVar.colorTextQuaternary} size={12} />}
+    </Flexbox>
+  ) : null;
 
   return (
     <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
@@ -126,18 +216,23 @@ const ShellTopBar = ({ actions, onBack, title, titleExtra }: ShellTopBarProps) =
       )}
       {titleExtra}
 
-      {scopeName && (
-        <Flexbox horizontal align={'center'} className={styles.scopePill} gap={6}>
-          <Avatar avatar={scopeAvatar} shape={'square'} size={20} />
-          <Text fontSize={13} weight={600}>
-            {scopeName}
-          </Text>
-          {switchable && <ChevronsUpDownIcon color={cssVar.colorTextQuaternary} size={12} />}
-        </Flexbox>
-      )}
+      {scopePill &&
+        (switchable ? <DropdownMenu items={scopeMenu}>{scopePill}</DropdownMenu> : scopePill)}
 
       <Flexbox flex={1} />
+      {workspace && <WorkspacePresence workspaceId={workspace.id} />}
       {actions}
+      {workspace && teammatesEnabled && capabilities.canInvite && (
+        <Tooltip title={t('workspaceSetting.members.inviteButton')}>
+          <Button
+            aria-label={t('workspaceSetting.members.inviteButton')}
+            icon={<Icon icon={UserPlus} size={15} />}
+            size="small"
+            type="text"
+            onClick={() => openInviteTeammateModal()}
+          />
+        </Tooltip>
+      )}
       <UserAvatar clickable size={26} />
     </Flexbox>
   );

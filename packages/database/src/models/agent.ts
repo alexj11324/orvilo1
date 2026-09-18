@@ -1,6 +1,6 @@
 import { BUILTIN_AGENT_SLUGS, getAgentPersistConfig } from '@orvilo/builtin-agents';
 import { INBOX_SESSION_ID, isHeterogeneousAgentModelId } from '@orvilo/const';
-import type { AgentRankItem, AgentTopicShareSubject, LobeAgentAgencyConfig } from '@orvilo/types';
+import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
   pruneWorkingDirByDeviceDeletes,
@@ -62,7 +62,7 @@ import {
   topicDocuments,
   topics,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import {
   collectBoundDeviceIds,
   sanitizeAgencyConfigsForWorkspace,
@@ -109,7 +109,7 @@ import {
  * systemRole, etc. are rendered from i18n / the static systemRoleTemplate at runtime, never
  * from this row.
  *
- * Before PR #16420, `lobe-agent-management`'s self-management prompt could make the builder
+ * Before PR #16420, `orvilo-agent-management`'s self-management prompt could make the builder
  * mistake an ambiguous "update this" request for editing itself instead of the target agent.
  * Depending on caller (browser client tool executor vs. gateway server runtime in
  * `apps/server/src/services/toolExecution/serverRuntimes/agentBuilder.ts`), these fields can
@@ -242,10 +242,10 @@ export class AgentOwnedByGroupError extends Error {
 
 export class AgentModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -256,8 +256,8 @@ export class AgentModel {
    * on the intentionally different legacy fallbacks for missing values.
    */
   private withWorkspaceSelectionPolicyDefaults = (
-    agencyConfig: LobeAgentAgencyConfig | null | undefined,
-  ): LobeAgentAgencyConfig | null | undefined => {
+    agencyConfig: OrviloAgentAgencyConfig | null | undefined,
+  ): OrviloAgentAgencyConfig | null | undefined => {
     if (!this.workspaceId) return agencyConfig;
 
     return {
@@ -339,7 +339,7 @@ export class AgentModel {
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, agentsToSessions);
 
   private collectBoundDeviceIds = (
-    agencyConfig: PartialDeep<LobeAgentAgencyConfig> | null | undefined,
+    agencyConfig: PartialDeep<OrviloAgentAgencyConfig> | null | undefined,
   ): string[] => collectBoundDeviceIds(agencyConfig);
 
   /**
@@ -347,11 +347,11 @@ export class AgentModel {
    * `sanitizeAgencyConfigsForWorkspace` in `utils/agencyConfigDevices`.
    */
   private sanitizeAgencyConfigForWorkspace = (
-    db: LobeChatDatabase | Transaction,
+    db: OrviloDatabase | Transaction,
     targetWorkspaceId: string,
-    agencyConfigs: Array<LobeAgentAgencyConfig | null | undefined>,
+    agencyConfigs: Array<OrviloAgentAgencyConfig | null | undefined>,
     options?: { viewerUserId?: string },
-  ): Promise<Array<LobeAgentAgencyConfig | null>> =>
+  ): Promise<Array<OrviloAgentAgencyConfig | null>> =>
     sanitizeAgencyConfigsForWorkspace(db, targetWorkspaceId, agencyConfigs, options);
 
   /**
@@ -372,8 +372,8 @@ export class AgentModel {
    */
   private assertWorkspaceDeviceBinding = async (
     agentWorkspaceId: string | null,
-    agencyConfig: PartialDeep<LobeAgentAgencyConfig> | null | undefined,
-    storedConfig?: LobeAgentAgencyConfig | null,
+    agencyConfig: PartialDeep<OrviloAgentAgencyConfig> | null | undefined,
+    storedConfig?: OrviloAgentAgencyConfig | null,
   ): Promise<void> => {
     if (!agentWorkspaceId) return;
     const existing = new Set(this.collectBoundDeviceIds(storedConfig));
@@ -406,7 +406,7 @@ export class AgentModel {
    */
   private assertFixedExecutionTarget = async (
     agentWorkspaceId: string | null,
-    agencyConfig: LobeAgentAgencyConfig | null | undefined,
+    agencyConfig: OrviloAgentAgencyConfig | null | undefined,
   ): Promise<void> => {
     if (!agentWorkspaceId || agencyConfig?.executionTargetSelectionPolicy !== 'fixed') return;
 
@@ -653,7 +653,7 @@ export class AgentModel {
 
   /**
    * Get minimal agent info (avatar, title, backgroundColor) by IDs.
-   * For inbox agent (slug='inbox'), falls back to LobeAI defaults when avatar/title are missing.
+   * For inbox agent (slug='inbox'), falls back to OrviloAI defaults when avatar/title are missing.
    */
   getAgentAvatarsByIds = async (ids: string[]) => {
     if (ids.length === 0) return [];
@@ -681,7 +681,7 @@ export class AgentModel {
    * Returns `name` and `title` separately — resolving them into one label is the
    * caller's job (see `agentDisplayName`), since only the caller knows whether it
    * can render an i18n fallback. `title` is still normalized here for the inbox
-   * (LobeAI default) and falls back to `options.fallbackTitle` when blank
+   * (OrviloAI default) and falls back to `options.fallbackTitle` when blank
    * (default `null`, so a client caller can supply its own i18n default).
    */
   listMessengerBindableAgents = async (options?: {
@@ -1451,7 +1451,7 @@ export class AgentModel {
 
     mergedValue.agencyConfig = sanitizeAgentApiConfig(mergedValue.agencyConfig) ?? null;
 
-    // The inbox is LobeHub's built-in default cloud agent; it must never be
+    // The inbox is Orvilo's built-in default cloud agent; it must never be
     // turned into a heterogeneous (external-CLI) agent. Two independent inputs can
     // flip it — a stray `agencyConfig.heterogeneousProvider`, and a legacy hetero
     // `model` id, which AiAgentService still treats as heterogeneous on its own even
@@ -1966,7 +1966,7 @@ export class AgentModel {
    * which is why `groupTitle` is nullable.
    */
   private queryGroupMemberships = async (
-    executor: Transaction | LobeChatDatabase,
+    executor: Transaction | OrviloDatabase,
     agentIds: string[],
   ): Promise<{ blocked: AgentGroupMembershipRef[]; leaving: AgentGroupMembershipRef[] }> => {
     if (agentIds.length === 0) return { blocked: [], leaving: [] };
@@ -2020,7 +2020,7 @@ export class AgentModel {
   };
 
   private findOwnedGroupMemberships = async (
-    executor: Transaction | LobeChatDatabase,
+    executor: Transaction | OrviloDatabase,
     agentIds: string[],
   ): Promise<AgentGroupMembershipRef[]> =>
     (await this.queryGroupMemberships(executor, agentIds)).blocked;
@@ -2219,7 +2219,7 @@ export class AgentModel {
       // reference a device only the previous owner can reach. Moving to a
       // personal scope (`targetWorkspaceId === null`) keeps existing bindings.
       // Device rows for the whole batch are fetched with one query.
-      const resolvedAgencyConfigs = new Map<string, LobeAgentAgencyConfig | null>();
+      const resolvedAgencyConfigs = new Map<string, OrviloAgentAgencyConfig | null>();
       if (targetWorkspaceId) {
         const cleanedConfigs = await this.sanitizeAgencyConfigForWorkspace(
           trx,

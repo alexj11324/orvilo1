@@ -11,12 +11,12 @@ The Page Agent is a specialized AI agent that helps users create, read, update, 
 ### 1. **Page Agent Definition** (`index.ts`)
 
 - **Model**: Claude Sonnet 4.5
-- **Plugin**: `lobe-page-agent` (Document manipulation tools)
+- **Plugin**: `orvilo-page-agent` (Document manipulation tools)
 - **System Role**: Document editing assistant
 
 ### 2. **Document Tools** (`src/tools/document/`)
 
-- **Identifier**: `lobe-page-agent`
+- **Identifier**: `orvilo-page-agent`
 - **Type**: Built-in tool
 - **Capabilities**:
   - `initPage` - Initialize document from Markdown

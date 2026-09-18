@@ -207,6 +207,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   brief: rw('chat:read', 'chat:write'),
   changelog: 'open',
   chunk: rw('knowledge:read', 'knowledge:write'),
+  // room tickets/snapshots stay inside the caller's verified membership —
+  // the ticket itself grants nothing beyond it
+  collaboration: { any: 'workspace:read' },
   comfyui: rw('model:read', 'model:write'),
   // third-party integrations hold external credentials
   composio: 'blocked',
@@ -232,6 +235,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // whole-account backup import can overwrite credential-bearing settings,
   // provider/model config and agents
   importer: 'blocked',
+  // invitation accept/resend/revoke grants or revokes membership — same class
+  // as workspace_member management, an interactive human decision
+  invitation: 'blocked',
   klavis: 'blocked',
   knowledge: rw('knowledge:read', 'knowledge:write'),
   knowledgeBase: rw('knowledge:read', 'knowledge:write'),
@@ -253,6 +259,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   pageShare: rw('chat:read', 'chat:write'),
   plugin: rw('agent:read', 'agent:write'),
   project: rw('agent:read', 'agent:write'),
+  // membership listing is readable; grant/revoke mutations stay off-limits to
+  // restricted keys, like workspaceMember
+  projectMember: rw('workspace:read', null),
   pushToken: 'blocked',
   ragEval: 'blocked',
   recent: rw('chat:read', null),
@@ -291,6 +300,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),
   workspace: rw('workspace:read', 'workspace:write'),
+  // Agent roster is a read-only listing inside the caller's membership
+  workspaceAgent: rw('workspace:read', null),
   workspaceAuditLog: rw('workspace:read', null),
   workspaceCredits: 'blocked',
   workspaceCreds: 'blocked',
@@ -391,9 +402,6 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'user.retryOnboardingUnderstandingSource': ['model:invoke'],
   'user.reviseOnboardingUnderstanding': ['model:invoke'],
   'user.startOnboardingUnderstanding': ['model:invoke'],
-  // schedules the full memory-extraction workflow (embeddings + per-layer
-  // `generateObject`), unlike the accepted search/re-embed embedding tradeoff
-  'userMemory.requestMemoryFromChatTopic': ['model:invoke'],
   // persists crawled pages as `documents` rows — a knowledge write
   'webBrowsing.upsertCrawledDocument': ['knowledge:write'],
 };
@@ -409,7 +417,7 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   // non-API-key auth and would bypass the scope guard entirely
   'aiAgent.issueGatewayUserToken',
   'aiAgent.refreshGatewayToken',
-  // sandbox execution mints a full LOBEHUB_JWT for `lh` commands
+  // sandbox execution mints a full ORVILO_JWT for `lh` commands
   // (`preprocessLhCommand`), which would bypass the key's scopes entirely
   'market.callCodeInterpreterTool',
   'market.execInSandbox',

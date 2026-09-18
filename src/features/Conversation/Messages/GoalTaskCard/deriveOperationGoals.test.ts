@@ -21,7 +21,7 @@ describe('deriveOperationGoals', () => {
             name: 'San Francisco night fog',
           }),
           id: 'call-1',
-          identifier: 'lobe-goal',
+          identifier: 'orvilo-goal',
           result: {
             content: 'started',
             id: 'tool-1',
@@ -50,14 +50,14 @@ describe('deriveOperationGoals', () => {
             apiName: 'createGoal',
             arguments: '{}',
             id: 'pending',
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
             type: 'builtin',
           },
           {
             apiName: 'createGoal',
             arguments: '{}',
             id: 'failed',
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
             result: {
               content: 'failed',
               error: { message: 'boom' },
@@ -70,7 +70,7 @@ describe('deriveOperationGoals', () => {
             apiName: 'createTask',
             arguments: '{}',
             id: 'task',
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
             result: {
               content: 'created',
               id: 'tool-task',

@@ -5,11 +5,11 @@ import {
   type ActivateSkillParams,
   type ActivateToolsParams,
   ActivatorApiName,
-  LobeActivatorIdentifier,
+  OrviloActivatorIdentifier,
 } from '../types';
 
 class ActivatorExecutor extends BaseExecutor<typeof ActivatorApiName> {
-  readonly identifier = LobeActivatorIdentifier;
+  readonly identifier = OrviloActivatorIdentifier;
   protected readonly apiEnum = ActivatorApiName;
 
   private runtime: ActivatorExecutionRuntime;

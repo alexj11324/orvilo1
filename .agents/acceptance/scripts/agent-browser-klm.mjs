@@ -21,7 +21,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SCHEMA = 'lobehub.agentBrowserKlmTrace@1';
+const SCHEMA = 'orvilo.agentBrowserKlmTrace@1';
 const DEFAULT_TRACE = '.records/interaction-trace.jsonl';
 
 // Enough to carry an agent-browser diagnostic; keeps one JSONL atom on one line.

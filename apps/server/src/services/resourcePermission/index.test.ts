@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   getWorkspaceScopedPermissionMatches,
   isWorkspacePrimaryOwner,
@@ -39,7 +39,7 @@ const resolveGrantsMock = vi.mocked(resolveWorkspaceGrantedPermissions);
 const emptyQueryDb = (rows: unknown[] = []) =>
   ({
     select: () => ({ from: () => ({ where: () => ({ limit: async () => rows }) }) }),
-  }) as unknown as LobeChatDatabase;
+  }) as unknown as OrviloDatabase;
 const db = emptyQueryDb();
 // `slug: null` = an ordinary agent, stated explicitly so the evaluator has no
 // reason to resolve it from the database.
@@ -475,7 +475,7 @@ describe('canPerformResourceAction', () => {
             }),
           }),
         }),
-      } as unknown as LobeChatDatabase;
+      } as unknown as OrviloDatabase;
 
       await expect(
         canPerformResourceAction({
@@ -539,7 +539,7 @@ describe('canPerformResourceAction', () => {
         select: () => {
           throw new Error('should not query when the markers are explicit');
         },
-      } as unknown as LobeChatDatabase;
+      } as unknown as OrviloDatabase;
 
       await expect(
         canPerformResourceAction({

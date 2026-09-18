@@ -26,7 +26,6 @@ export const FeatureFlagsSchema = z.object({
    */
   agent_share: FeatureFlagValue.optional(),
 
-  ai_image: FeatureFlagValue.optional(),
   speech_to_text: FeatureFlagValue.optional(),
   voice_dictation: FeatureFlagValue.optional(),
   token_counter: FeatureFlagValue.optional(),
@@ -90,8 +89,6 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   // gate, so setting this env-side does not enable the feature there.
   agent_share: false,
 
-  ai_image: true,
-
   check_updates: true,
   welcome_suggest: true,
   token_counter: true,
@@ -134,8 +131,6 @@ export const mapFeatureFlagsEnvToState = (
     showOpenAIProxyUrl: evaluateFeatureFlag(config.openai_proxy_url, userId),
 
     showApiKeyManage: evaluateFeatureFlag(config.api_key_manage, userId),
-
-    showAiImage: evaluateFeatureFlag(config.ai_image, userId),
     showChangelog: evaluateFeatureFlag(config.changelog, userId),
 
     enableCheckUpdates: evaluateFeatureFlag(config.check_updates, userId),

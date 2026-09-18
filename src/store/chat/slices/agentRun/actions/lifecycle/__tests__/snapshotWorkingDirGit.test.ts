@@ -1,4 +1,4 @@
-import type * as LobechatConstModule from '@orvilo/const';
+import type * as OrvilochatConstModule from '@orvilo/const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { snapshotTopicWorkingDirGit } from '../snapshotWorkingDirGit';
@@ -6,7 +6,7 @@ import { snapshotTopicWorkingDirGit } from '../snapshotWorkingDirGit';
 const mockConstEnv = vi.hoisted(() => ({ isDesktop: true }));
 
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = await importOriginal<typeof LobechatConstModule>();
+  const actual = await importOriginal<typeof OrvilochatConstModule>();
   return {
     ...actual,
     get isDesktop() {
@@ -82,7 +82,7 @@ const PR = {
   number: 123,
   state: 'OPEN',
   title: 'Improve worktree handling',
-  url: 'https://github.com/lobehub/lobehub/pull/123',
+  url: 'https://github.com/alexj11324/orvilo1/pull/123',
 };
 
 const githubTopic = {

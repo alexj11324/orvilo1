@@ -144,7 +144,7 @@
   "cmdk.askAIHeadingEmpty": "Bir yapay zeka özelliği seçin",
   "cmdk.askAgentHeading": "Ajana Sor",
   "cmdk.askAgentPlaceholder": "{{agent}} hakkında bir şey sor...",
-  "cmdk.askLobeAI": "Orvilo AI'ye Sor",
+  "cmdk.askOrviloAI": "Orvilo AI'ye Sor",
   "cmdk.community": "Topluluk",
   "cmdk.communitySupport": "Topluluk Desteği",
   "cmdk.contactUs": "Bize Ulaşın",

@@ -23,8 +23,8 @@ node scripts/buildRendererManifest.mjs --gen-key > /tmp/ota-keys.pem
 
 ```bash
 npm run build:renderer
-rm -rf /tmp/lobehub-ota-r0
-cp -R dist/renderer /tmp/lobehub-ota-r0
+rm -rf /tmp/orvilo-ota-r0
+cp -R dist/renderer /tmp/orvilo-ota-r0
 ```
 
 ## 2. 以「生产形态」启动 dev 应用
@@ -51,7 +51,7 @@ npm run build:renderer
 RENDERER_OTA_PRIVATE_KEY="$(cat /tmp/ota-priv.pem)" \
   node scripts/buildRendererManifest.mjs \
   --renderer=dist/renderer --out=/tmp/ota-feed --channel=stable --version=r1 \
-  --from-dir=/tmp/lobehub-ota-r0 --from-version=r0
+  --from-dir=/tmp/orvilo-ota-r0 --from-version=r0
 node scripts/renderer-ota-test/serveOta.mjs /tmp/ota-feed 8787
 ```
 

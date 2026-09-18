@@ -1,4 +1,4 @@
-export const SCROLL_SNAPSHOT_KEY_PREFIX = 'LOBEHUB_SCROLL';
+export const SCROLL_SNAPSHOT_KEY_PREFIX = 'ORVILO_SCROLL';
 export const SCROLL_SNAPSHOT_MAX_ENTRIES = 500;
 // A scroll snapshot is only meant to survive a quick back-and-forth between
 // topics. Beyond this window we intentionally drop it so revisiting a topic

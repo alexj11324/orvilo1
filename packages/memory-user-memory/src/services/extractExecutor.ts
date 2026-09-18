@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { ModelRuntime } from '@orvilo/model-runtime';
 import { SpanStatusCode } from '@orvilo/observability-otel/api';
 import {
@@ -57,7 +57,7 @@ export interface MemoryExtractionRuntimeOptions {
 export interface MemoryExtractionServiceOptions {
   callbacks?: ExtractorOptions['callbacks'];
   config: MemoryExtractionLLMConfig;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   language?: string;
   runtimes: MemoryExtractionRuntimeOptions;
 }

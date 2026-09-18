@@ -1,5 +1,5 @@
 {
-  "name": "@lobehub/desktop-ipc-typings",
+  "name": "@orvilo/desktop-ipc-typings",
   "version": "1.0.0",
   "private": true,
   "exports": {

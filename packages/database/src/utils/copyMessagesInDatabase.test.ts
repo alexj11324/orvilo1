@@ -19,13 +19,13 @@ import {
 import { chunks } from '../schemas/rag';
 import { topics } from '../schemas/topic';
 import { users } from '../schemas/user';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { copyMessagesInDatabase, type IdPair } from './copyMessagesInDatabase';
 
 const userId = 'copy-msg-test-user';
 const targetUserId = 'copy-msg-target-user';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const sourceAgentId = 'copy-msg-src-agent';
 const newAgentId = 'copy-msg-new-agent';

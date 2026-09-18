@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { pushLiveActivities, pushTokens, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   deletePushTokenByExpoTokenAndDevice,
   deletePushTokensByExpoTokens,
@@ -12,7 +12,7 @@ import {
   PushTokenModel,
 } from '../pushToken';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'push-token-model-test-user-id';
 const otherUserId = 'push-token-model-test-other-user';

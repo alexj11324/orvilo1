@@ -12,9 +12,9 @@ For where files live and how registries work, see [architecture.md](architecture
 | Thing                   | Convention                                                     | Example                                                      |
 | ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
 | Package directory       | `packages/builtin-tool-<kebab>/`                               | `builtin-tool-task`                                          |
-| npm name                | `@orvilo/builtin-tool-<kebab>`                               | `@orvilo/builtin-tool-task`                                |
-| Tool `identifier`       | `lobe-<kebab-domain>` — **persisted in message history**       | `lobe-task`, `lobe-calculator`, `lobe-knowledge-base`        |
-| Identifier const        | `<Name>Identifier` exported from `manifest.ts` (or `types.ts`) | `export const TaskIdentifier = 'lobe-task'`                  |
+| npm name                | `@orvilo/builtin-tool-<kebab>`                                 | `@orvilo/builtin-tool-task`                                  |
+| Tool `identifier`       | `orvilo-<kebab-domain>` — **persisted in message history**     | `orvilo-task`, `orvilo-calculator`, `orvilo-knowledge-base`  |
+| Identifier const        | `<Name>Identifier` exported from `manifest.ts` (or `types.ts`) | `export const TaskIdentifier = 'orvilo-task'`                |
 | API name const          | `<Name>ApiName` — `as const` object, **camelCase verbs**       | `createTask`, `listTasks`, `runTask`                         |
 | Executor class          | `<Name>Executor extends BaseExecutor<typeof <Name>ApiName>`    | `TaskExecutor`                                               |
 | Executor singleton      | `<name>Executor` (camelCase)                                   | `export const taskExecutor = new TaskExecutor()`             |
@@ -23,8 +23,8 @@ For where files live and how registries work, see [architecture.md](architecture
 
 ### Identifier rules
 
-- **`lobe-` prefix is mandatory** — many switches in the codebase key off it.
-- Pick a **domain noun**, not a verb (`lobe-task`, not `lobe-task-manager`).
+- **`orvilo-` prefix is mandatory** — many switches in the codebase key off it.
+- Pick a **domain noun**, not a verb (`orvilo-task`, not `orvilo-task-manager`).
 - The identifier is **persisted in message history** — renaming after release means the `@deprecated` alias trick (register the legacy identifier as a second key in `inspectors.ts` / `renders.ts` pointing at the new module). Get it right the first time.
 
 ### ApiName rules
@@ -41,7 +41,7 @@ For where files live and how registries work, see [architecture.md](architecture
 Define `<Name>ApiName` as `as const` so it doubles as a runtime enum (used by `BaseExecutor`) and a literal type. Then declare `Params` and `State` per API.
 
 ```ts
-export const TaskIdentifier = 'lobe-task';
+export const TaskIdentifier = 'orvilo-task';
 
 export const TaskApiName = {
   createTask: 'createTask',
@@ -140,7 +140,7 @@ export const TaskManifest: BuiltinToolManifest = {
 
 - **Every API in `<Name>ApiName` has exactly one entry in `api[]`.** Easy to drift after a refactor.
 - **`description` on each API is the model's only docs.** Make it long enough for the LLM to pick the right tool. Mention edge cases ("If you provide any filter, omitted filters are not applied implicitly"), defaults, and the relationship to sibling APIs ("To START a task, use runTask — updateTaskStatus only flips a flag").
-- **`parameters` is JSON Schema** (`LobeChatPluginApi`). Use `enum`, `required`, `items`, `oneOf`, `additionalProperties: false` etc. — these survive into the LLM's tool spec.
+- **`parameters` is JSON Schema** (`OrviloPluginApi`). Use `enum`, `required`, `items`, `oneOf`, `additionalProperties: false` etc. — these survive into the LLM's tool spec.
 - **Use `additionalProperties: false`** on parameter objects so the model can't sneak unknown fields past validation.
 - **Number parameters with semantic values** (`priority: 0=none, 1=urgent, …`) should describe the mapping in the description. Don't rely on `enum` alone for numbers — the model often fills the wrong one.
 - **`enum` arrays for known string sets** (statuses, categories, engines). Spread from a constants module (`enum: [...TASK_STATUSES]`) so the manifest stays in sync.
@@ -308,7 +308,7 @@ import { getTaskStoreState } from '@/store/task';
 import { TaskIdentifier } from '../../manifest';
 import { TaskApiName, type CreateTaskParams } from '../../types';
 
-const log = debug('lobe-task:executor');
+const log = debug('orvilo-task:executor');
 
 class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
   readonly identifier = TaskIdentifier;
@@ -358,7 +358,7 @@ export const taskExecutor = new TaskExecutor();
 2. **`identifier` and `apiEnum` are `readonly` instance fields**, not getters — `BaseExecutor.hasApi/getApiNames` reads them synchronously at registration time.
 3. **Default missing params from `ctx`**, but never silently override explicit values. Use `params.foo ?? ctx?.foo`, not `ctx?.foo ?? params.foo`.
 4. **One funnel for all returns.** Either always return through `toResult(runtime.x())` (when delegating) or through `errorResult(…)` for the catch arm. Never inline `{ success: false, content: '' }` — `content: ''` collapses the Debug pane to blank.
-5. **`debug('lobe-<name>:executor')`.** Match the namespace to the identifier minus `lobe-` when convenient.
+5. **`debug('orvilo-<name>:executor')`.** Match the namespace to the identifier minus `orvilo-` when convenient.
 6. **Singleton export.** `export const <name>Executor = new <Name>Executor()` — the registry imports the instance, not the class.
 
 ### When the executor delegates to ExecutionRuntime

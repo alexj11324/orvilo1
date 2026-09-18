@@ -13,7 +13,7 @@ const capturedAt = Date.parse('2026-07-18T08:00:00Z');
 
 const account = {
   displayName: 'Arvin',
-  email: 'lobehubbot@gmail.com',
+  email: 'orvilobot@gmail.com',
   externalAccountId: '48bfd5c6',
   planTier: 'max',
   rateLimitTier: 'default_claude_max_20x',
@@ -88,7 +88,7 @@ describe('buildClaudePanelSnapshot — persisted readings', () => {
   it('carries the account identity for the switcher', () => {
     const snap = buildClaudePanelSnapshot(account, readings, null, now);
     expect(snap.identity).toMatchObject({
-      email: 'lobehubbot@gmail.com',
+      email: 'orvilobot@gmail.com',
       externalAccountId: '48bfd5c6',
       planTier: 'max',
     });

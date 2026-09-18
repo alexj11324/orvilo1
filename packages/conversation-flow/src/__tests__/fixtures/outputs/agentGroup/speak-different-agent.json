@@ -56,7 +56,7 @@
                 "name": "speak"
               },
               "id": "call_speak_1",
-              "identifier": "lobe-group-management",
+              "identifier": "orvilo-group-management",
               "result": {
                 "content": "Triggered agent \"agent-backend\" to respond.",
                 "id": "msg-speak-tool-1"
@@ -103,7 +103,7 @@
             "name": "speak",
             "arguments": "{\"agentId\": \"agent-backend\", \"instruction\": \"Please explain the API design.\"}"
           },
-          "identifier": "lobe-group-management",
+          "identifier": "orvilo-group-management",
           "apiName": "speak"
         }
       ],

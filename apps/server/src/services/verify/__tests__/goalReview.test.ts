@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import type * as AcceptanceServiceModule from '../acceptanceService';
 import { reviewGoalDelivery } from '../goalReview';
@@ -46,7 +46,7 @@ vi.mock('../reviewPredictor', () => ({
     return { predict: mocks.predict };
   }),
 }));
-const db = {} as LobeChatDatabase;
+const db = {} as OrviloDatabase;
 const check = {
   id: 'c1',
   title: 'Document contents',

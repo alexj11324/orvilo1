@@ -1,9 +1,9 @@
 import { Flexbox, Hotkey, Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
-import { LOBE_CHAT_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
+import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import type { ItemType } from 'antd/es/menu/interface';
-import { BrainCircuit, Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
+import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -75,19 +75,6 @@ export const useMenu = () => {
         </WorkspaceLink>
       ),
     },
-    ...(userPanel.showMemory
-      ? [
-          {
-            icon: <Icon icon={BrainCircuit} />,
-            key: 'memory',
-            label: (
-              <WorkspaceLink escape to="/memory">
-                {t('tab.memory')}
-              </WorkspaceLink>
-            ),
-          },
-        ]
-      : []),
   ];
 
   const helps: MenuProps['items'] = [
@@ -100,7 +87,7 @@ export const useMenu = () => {
           rel="noopener noreferrer"
           target="_blank"
         >
-          {t('userPanel.cloud', { name: LOBE_CHAT_CLOUD })}
+          {t('userPanel.cloud', { name: ORVILO_CLOUD })}
         </a>
       ),
     },
@@ -110,11 +97,7 @@ export const useMenu = () => {
     {
       icon: <Icon icon={Download} />,
       key: 'get-app',
-      label: (
-        <WorkspaceLink escape to="/apps">
-          {t('getApp')}
-        </WorkspaceLink>
-      ),
+      label: <WorkspaceLink to="/settings/about">{t('getApp')}</WorkspaceLink>,
     },
   ];
 

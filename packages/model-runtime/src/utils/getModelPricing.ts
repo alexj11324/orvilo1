@@ -1,11 +1,11 @@
-import type { LobeDefaultAiModelListItem, Pricing } from 'model-bank';
+import type { OrviloDefaultAiModelListItem, Pricing } from 'model-bank';
 
 import type { ModelPricingContext } from '../types';
 
 interface BusinessModelConfigModule {
   loadModels: (options?: {
     pricingContext?: ModelPricingContext;
-  }) => Promise<LobeDefaultAiModelListItem[]>;
+  }) => Promise<OrviloDefaultAiModelListItem[]>;
 }
 
 /**

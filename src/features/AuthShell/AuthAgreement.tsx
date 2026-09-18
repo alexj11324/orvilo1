@@ -11,7 +11,7 @@ import { PRIVACY_URL, TERMS_URL } from '@/const/url';
  * Remembers that the user already accepted the terms & privacy policy on this
  * browser, so returning users are not asked to confirm again on every sign-in.
  */
-const AGREEMENT_ACCEPTED_KEY = 'lobehub:auth:agreement-accepted:v1';
+const AGREEMENT_ACCEPTED_KEY = 'orvilo:auth:agreement-accepted:v1';
 
 const readStoredAgreement = () => {
   try {

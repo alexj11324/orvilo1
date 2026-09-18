@@ -2,7 +2,7 @@
 
 ## Global Search (`lh search`)
 
-Search across all LobeHub resource types.
+Search across all Orvilo resource types.
 
 **Source**: `apps/cli/src/commands/search.ts`
 
@@ -81,11 +81,11 @@ deployment these procedures answer empty or `NOT_IMPLEMENTED`.
 | `lh workspace use <id\|slug>` | Persist the scope for subsequent commands              |
 | `lh workspace use --personal` | Drop back to personal content                          |
 
-Resolution order is `--workspace` → `LOBEHUB_WORKSPACE_ID` → the persisted scope
-→ personal. Setting the persisted scope while `LOBEHUB_WORKSPACE_ID` is exported
+Resolution order is `--workspace` → `ORVILO_WORKSPACE_ID` → the persisted scope
+→ personal. Setting the persisted scope while `ORVILO_WORKSPACE_ID` is exported
 prints a warning, because the env var still wins.
 
-The persisted scope lives in `~/.lobehub/active-workspace` together with the
+The persisted scope lives in `~/.orvilo/active-workspace` together with the
 account (`sub` claim) and server URL it was chosen under. Switching account or
 server invalidates it; `lh logout` deletes it. API-key auth has no local account
 identity, so `workspace use` refuses to save under it — use the env var.

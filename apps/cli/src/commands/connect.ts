@@ -113,9 +113,9 @@ export function registerConnectCommand(program: Command) {
         return handleDaemonStart(options);
       }
 
-      const isServiceChild = options.serviceChild || process.env.LOBEHUB_CONNECT_SERVICE === '1';
+      const isServiceChild = options.serviceChild || process.env.ORVILO_CONNECT_SERVICE === '1';
       const isDaemonChild =
-        options.daemonChild || isServiceChild || process.env.LOBEHUB_DAEMON === '1';
+        options.daemonChild || isServiceChild || process.env.ORVILO_DAEMON === '1';
 
       await runConnect(options, isDaemonChild);
     });
@@ -374,9 +374,9 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
     return connectToken;
   };
 
-  // Freeform channel label (`cli` by default); `LOBEHUB_CLI_CHANNEL` lets a
+  // Freeform channel label (`cli` by default); `ORVILO_CLI_CHANNEL` lets a
   // dev build tag itself `cli-dev` so the gateway can prioritise / display it.
-  const channel = process.env.LOBEHUB_CLI_CHANNEL || 'cli';
+  const channel = process.env.ORVILO_CLI_CHANNEL || 'cli';
 
   const client = new GatewayClient({
     channel,

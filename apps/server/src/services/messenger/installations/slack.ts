@@ -11,7 +11,7 @@ import { refreshToken as refreshSlackToken } from '@/server/services/messenger/o
 
 import type { InstallationCredentials, MessengerInstallationStore } from './types';
 
-const log = debug('lobe-server:messenger:install-store:slack');
+const log = debug('orvilo-server:messenger:install-store:slack');
 
 /** Refresh proactively when within this many ms of `tokenExpiresAt`. */
 const REFRESH_BUFFER_MS = 120_000;

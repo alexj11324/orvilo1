@@ -28,7 +28,7 @@ describe('agent intervention identity', () => {
         userId: 'user-1',
         workspaceId: 'workspace-1',
       }),
-    ).toBe('4369e854-719f-5301-bfa4-1f0742eec6ac');
+    ).toBe('0cd189c6-dfae-53ed-ba32-cea5b6deaccb');
   });
 
   it('separates personal and workspace activity identities', () => {
@@ -49,17 +49,17 @@ describe('agent intervention identity', () => {
       workspaceId: 'workspace-1',
     };
     expect(deriveAgentInterventionContinuationOperationId(identity)).toBe(
-      'op_intervention_51a814d5e7e4ad0ecfb33c23accbe0a8',
+      'op_intervention_1cac751de0377a4f3d980fc777dc5f6b',
     );
     expect(deriveAgentInterventionContinuationMessageId(identity)).toBe(
-      'msg_intervention_d923f5edbc2c59f46743dca97689eb73',
+      'msg_intervention_32198ba0061ad14ecb7723ec22a5058f',
     );
     expect(
       deriveAgentInterventionQueueDeduplicationId(
-        'op_intervention_51a814d5e7e4ad0ecfb33c23accbe0a8',
+        'op_intervention_1cac751de0377a4f3d980fc777dc5f6b',
         0,
       ),
-    ).toBe('agent-intervention:op_intervention_51a814d5e7e4ad0ecfb33c23accbe0a8:0');
+    ).toBe('agent-intervention:op_intervention_1cac751de0377a4f3d980fc777dc5f6b:0');
     expect(
       deriveAgentInterventionContinuationOperationId({ ...identity, userId: 'user-2' }),
     ).not.toBe(deriveAgentInterventionContinuationOperationId(identity));

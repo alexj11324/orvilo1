@@ -14,7 +14,7 @@ import { runStep } from '@/server/workflows/step';
 const CHUNK_SIZE = 20; // Max items to process directly
 const PAGE_SIZE = 50; // Items per page
 
-const log = debug('lobe-server:workflows:paginate-test-cases');
+const log = debug('orvilo-server:workflows:paginate-test-cases');
 
 /**
  * Paginate test cases workflow - handles pagination, filtering, and fanout

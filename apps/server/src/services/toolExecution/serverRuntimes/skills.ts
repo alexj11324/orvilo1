@@ -27,7 +27,7 @@ import { AgentModel } from '@/database/models/agent';
 import { AgentSkillModel } from '@/database/models/agentSkill';
 import { FileModel } from '@/database/models/file';
 import { UserModel } from '@/database/models/user';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { filterBuiltinSkills } from '@/helpers/skillFilters';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
 import { deviceGateway } from '@/server/services/deviceGateway';
@@ -46,7 +46,7 @@ import {
 import { resolveContentWorkspaceId, resolveRunWorkspaceId } from './resolveWorkspaceScope';
 import { type ServerRuntimeRegistration } from './types';
 
-const log = debug('lobe-server:skills-runtime');
+const log = debug('orvilo-server:skills-runtime');
 
 interface UserSettingsWithMarketToken {
   market?: {
@@ -99,7 +99,7 @@ const LEGACY_DEVICE_CLIENT = Symbol('legacy-device-client');
  * run on the user's device.
  */
 const LEGACY_FALLBACK_NOTE =
-  "Note: the user's device client is outdated and does not support on-device skill execution, so this command ran in the cloud sandbox instead. Tell the user to update their LobeHub app to run skills on their device.";
+  "Note: the user's device client is outdated and does not support on-device skill execution, so this command ran in the cloud sandbox instead. Tell the user to update their Orvilo app to run skills on their device.";
 
 class SkillServerRuntimeService implements SkillRuntimeService {
   private agentId?: string;
@@ -108,7 +108,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
   private marketService: MarketService;
   private fileService: FileService;
   private fileModel: FileModel;
-  private serverDB: LobeChatDatabase;
+  private serverDB: OrviloDatabase;
   private topicId?: string;
   private userId: string;
   private workspaceId?: string;
@@ -129,7 +129,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
     fileService: FileService;
     marketService: MarketService;
     resourceService: SkillResourceService;
-    serverDB: LobeChatDatabase;
+    serverDB: OrviloDatabase;
     skillModel: AgentSkillModel;
     topicId?: string;
     userId: string;
@@ -184,7 +184,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
   ): Promise<{ command: string; error?: string }> => {
     const workspaceId =
       this.workspaceId ?? (isLhCommand(command) ? await this.resolveWorkspaceId() : undefined);
-    // No `shareVisitorBlocked` guard needed here: `lobe-skills` is absent from
+    // No `shareVisitorBlocked` guard needed here: `orvilo-skills` is absent from
     // `AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS`, so this runtime is never
     // constructed for an Agent Share visitor's run in the first place.
     const result = await preprocessLhCommand(command, this.userId, workspaceId);
@@ -210,7 +210,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
         exitCode: 1,
         output: '',
         stderr:
-          'runCommand targets the cloud sandbox and is unavailable while a local device is routed. Use execScript for skill scripts, or lobe-local-system runCommand for other shell commands on the device.',
+          'runCommand targets the cloud sandbox and is unavailable while a local device is routed. Use execScript for skill scripts, or orvilo-local-system runCommand for other shell commands on the device.',
         success: false,
       };
     }
@@ -410,7 +410,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
 
           return fail(
             `Failed to prepare skill "${archive.name}" on the user's device: ${prepared.error ?? 'unknown error'}. ` +
-              'Do not retry elsewhere — report this to the user (their LobeHub app may need an update).',
+              'Do not retry elsewhere — report this to the user (their Orvilo app may need an update).',
           );
         }
         runDir = prepared.extractedDir;
@@ -701,7 +701,7 @@ export const skillsRuntime: ServerRuntimeRegistration = {
     /**
      * `workspaceId` decides which sandbox session this runtime reaches: the
      * session is keyed by the acting account, so a token without it acts as the
-     * personal account while `lobe-creds` and `lobe-cloud-sandbox` — which do
+     * personal account while `orvilo-creds` and `orvilo-cloud-sandbox` — which do
      * pass it — act as the workspace. Omitting it split one workspace topic
      * across two sandboxes, leaving injected credentials invisible here.
      */

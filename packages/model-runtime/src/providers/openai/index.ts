@@ -137,4 +137,4 @@ export const params = {
   },
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeOpenAI = createOpenAICompatibleRuntime(params);
+export const OrviloOpenAI = createOpenAICompatibleRuntime(params);

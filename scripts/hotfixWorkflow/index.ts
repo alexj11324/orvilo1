@@ -200,7 +200,7 @@ function extractVersionFromBranch(branchName: string): string | null {
 }
 
 async function main(): Promise<void> {
-  consola.info('🩹 LobeChat Hotfix Script\n');
+  consola.info('🩹 Orvilo Hotfix Script\n');
 
   checkGitRepo();
 

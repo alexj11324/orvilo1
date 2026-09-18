@@ -31,7 +31,7 @@
   color: var(--brand-text-color);
 }
 
-.brand :global(.lobe-brand-loading) {
+.brand :global(.orvilo-brand-loading) {
   display: block;
   color: inherit;
 }

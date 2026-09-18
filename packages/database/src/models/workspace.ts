@@ -7,11 +7,11 @@ import {
   workspaceMembers,
   workspaces,
 } from '../schemas/workspace';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
 
 export const getActiveWorkspaceMembershipRole = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<string | null> => {
   const [row] = await db
@@ -23,6 +23,7 @@ export const getActiveWorkspaceMembershipRole = async (
         eq(workspaceMembers.workspaceId, params.workspaceId),
         eq(workspaceMembers.userId, params.userId),
         isNull(workspaceMembers.deletedAt),
+        isNull(workspaceMembers.suspendedAt),
       ),
     )
     .limit(1);
@@ -40,7 +41,7 @@ export const getActiveWorkspaceMembershipRole = async (
  * and lambda TRPC surfaces.
  */
 export const hasWorkspaceOwnerAccess = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<boolean> => {
   return (await getActiveWorkspaceMembershipRole(db, params)) === 'owner';
@@ -51,7 +52,7 @@ export const hasWorkspaceOwnerAccess = async (
  * and Admin pass; Member and Viewer do not.
  */
 export const hasWorkspaceAdminAccess = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<boolean> => {
   const role = await getActiveWorkspaceMembershipRole(db, params);
@@ -59,7 +60,7 @@ export const hasWorkspaceAdminAccess = async (
 };
 
 export const hasActiveWorkspaceMembership = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { userId: string; workspaceId: string },
 ): Promise<boolean> => {
   return (await getActiveWorkspaceMembershipRole(db, params)) !== null;
@@ -79,10 +80,10 @@ export const getWorkspaceApiKeyMemberCreation = (
 };
 
 export class WorkspaceModel {
-  protected readonly db: LobeChatDatabase;
+  protected readonly db: OrviloDatabase;
   protected readonly userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -177,13 +178,23 @@ export class WorkspaceModel {
     const result = await this.db
       .select({ count: count() })
       .from(workspaceMembers)
-      .where(and(eq(workspaceMembers.userId, this.userId), isNull(workspaceMembers.deletedAt)));
+      .where(
+        and(
+          eq(workspaceMembers.userId, this.userId),
+          isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
+        ),
+      );
     return result[0]?.count ?? 0;
   };
 
   listUserWorkspaces = async () => {
     const memberships = await this.db.query.workspaceMembers.findMany({
-      where: and(eq(workspaceMembers.userId, this.userId), isNull(workspaceMembers.deletedAt)),
+      where: and(
+        eq(workspaceMembers.userId, this.userId),
+        isNull(workspaceMembers.deletedAt),
+        isNull(workspaceMembers.suspendedAt),
+      ),
     });
 
     if (memberships.length === 0) return [];
@@ -257,6 +268,7 @@ export class WorkspaceModel {
           eq(workspaceMembers.workspaceId, id),
           eq(workspaceMembers.userId, newPrimaryOwnerUserId),
           isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
         ),
       });
       if (!targetMembership)
@@ -280,11 +292,19 @@ export class WorkspaceModel {
 
       await tx
         .update(workspaceMembers)
-        .set({ role: 'admin' })
+        .set({
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+          role: 'admin',
+          updatedAt: new Date(),
+        })
         .where(and(eq(workspaceMembers.workspaceId, id), eq(workspaceMembers.userId, this.userId)));
       await tx
         .update(workspaceMembers)
-        .set({ role: 'owner' })
+        .set({
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+          role: 'owner',
+          updatedAt: new Date(),
+        })
         .where(
           and(
             eq(workspaceMembers.workspaceId, id),

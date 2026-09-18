@@ -136,12 +136,13 @@ export abstract class BaseMemoryExtractor<
             attributes: {
               [ATTR_GEN_AI_OPERATION_NAME]: 'generate_content',
               [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
-              'lobe-chat.memory.extractor.context': options?.retrievedContexts,
-              'lobe-chat.memory.extractor.identities_context': options?.retrievedIdentitiesContext,
-              'lobe-chat.memory.extractor.language': options?.language,
-              'lobe-chat.memory.extractor.source_id': options?.sourceId,
-              'lobe-chat.memory.extractor.top_k': options?.topK,
-              'lobe-chat.memory.extractor.user_id': options?.userId,
+              'orvilo.memory.extractor.context': options?.retrievedContexts,
+              'orvilo.memory.extractor.identities_context':
+                options?.retrievedIdentitiesContext,
+              'orvilo.memory.extractor.language': options?.language,
+              'orvilo.memory.extractor.source_id': options?.sourceId,
+              'orvilo.memory.extractor.top_k': options?.topK,
+              'orvilo.memory.extractor.user_id': options?.userId,
             },
           },
           async (span) => {

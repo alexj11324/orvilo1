@@ -2,7 +2,7 @@ import type { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { type AgentSignalOperationMarker, RequestTrigger, ThreadType } from '@orvilo/types';
 
 import { ThreadModel } from '@/database/models/thread';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /** The builtin self-iteration agent slugs an execAgent run can dispatch to. */
 export type SelfIterationSlug =
@@ -14,7 +14,7 @@ export type SelfIterationSlug =
 export interface EnqueueSelfIterationRunInput {
   /** The user agent being reviewed — owns the run, marker, and isolated thread. */
   agentId: string;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /**
    * Run-scoped marker (kind / sourceId / review window / anchors). Stamped onto
    * the operation so the S2 completion path can project receipts/briefs from

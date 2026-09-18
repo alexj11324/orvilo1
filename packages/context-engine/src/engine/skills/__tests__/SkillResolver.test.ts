@@ -20,9 +20,9 @@ describe('SkillResolver', () => {
       name: 'Agent Browser',
     },
     {
-      description: 'LobeHub management',
-      identifier: 'lobehub-cli',
-      name: 'LobeHub CLI',
+      description: 'Orvilo management',
+      identifier: 'orvilo-cli',
+      name: 'Orvilo CLI',
     },
   ];
 
@@ -76,12 +76,12 @@ describe('SkillResolver', () => {
       skills: baseSkills,
     };
     const accumulated: ActivatedStepSkill[] = [
-      { activatedAtStep: 1, content: 'accumulated content', identifier: 'lobehub-cli' },
+      { activatedAtStep: 1, content: 'accumulated content', identifier: 'orvilo-cli' },
     ];
 
     const resolved = resolver.resolve(operationSkillSet, emptyDelta, accumulated);
 
-    const cli = resolved.enabledSkills.find((s) => s.identifier === 'lobehub-cli');
+    const cli = resolved.enabledSkills.find((s) => s.identifier === 'orvilo-cli');
     expect(cli?.activated).toBe(true);
     expect(cli?.content).toBe('accumulated content');
   });
@@ -94,11 +94,11 @@ describe('SkillResolver', () => {
     const delta: StepSkillDelta = {
       activatedSkills: [{ identifier: 'agent-browser' }],
     };
-    const accumulated: ActivatedStepSkill[] = [{ activatedAtStep: 0, identifier: 'lobehub-cli' }];
+    const accumulated: ActivatedStepSkill[] = [{ activatedAtStep: 0, identifier: 'orvilo-cli' }];
 
     const resolved = resolver.resolve(operationSkillSet, delta, accumulated);
 
-    // `lobehub-cli` has no content anywhere (neither its own base definition
+    // `orvilo-cli` has no content anywhere (neither its own base definition
     // nor the accumulated activation) — see the dedicated content-guard
     // tests below for why it's correctly excluded here rather than being
     // force-activated with nothing to show.

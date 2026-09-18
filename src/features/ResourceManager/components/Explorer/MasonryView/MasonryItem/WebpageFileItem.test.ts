@@ -4,13 +4,13 @@ import { displayTitle } from './WebpageFileItem';
 
 describe('displayTitle', () => {
   it('keeps a real page title unchanged', () => {
-    expect(displayTitle('Agent Skills Marketplace | LobeHub')).toBe(
-      'Agent Skills Marketplace | LobeHub',
+    expect(displayTitle('Agent Skills Marketplace | Orvilo')).toBe(
+      'Agent Skills Marketplace | Orvilo',
     );
   });
 
   it('falls back to the last path segment for URL-only titles', () => {
-    expect(displayTitle('https://raw.githubusercontent.com/lobehub/lobehub/main/SKILL.md')).toBe(
+    expect(displayTitle('https://raw.githubusercontent.com/alexj11324/orvilo1/main/SKILL.md')).toBe(
       'SKILL.md',
     );
   });

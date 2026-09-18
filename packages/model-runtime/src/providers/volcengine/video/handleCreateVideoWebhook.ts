@@ -5,7 +5,7 @@ import type {
   HandleCreateVideoWebhookResult,
 } from '../../../types/video';
 
-const log = createDebug('lobe-video:volcengine:webhook');
+const log = createDebug('orvilo-video:volcengine:webhook');
 
 interface VolcengineVideoWebhookBody {
   content?: {

@@ -173,16 +173,16 @@ describe('ToolNameResolver', () => {
 
   describe('generate - real-world examples', () => {
     it('should handle builtin tools correctly', () => {
-      const result = resolver.generate('lobe-image-designer', 'text2image', 'builtin');
-      expect(result).toBe('lobe-image-designer____text2image');
+      const result = resolver.generate('orvilo-image-designer', 'text2image', 'builtin');
+      expect(result).toBe('orvilo-image-designer____text2image');
     });
 
     it('should handle web browsing tools correctly', () => {
-      const result = resolver.generate('lobe-web-browsing', 'search', 'builtin');
-      expect(result).toBe('lobe-web-browsing____search');
+      const result = resolver.generate('orvilo-web-browsing', 'search', 'builtin');
+      expect(result).toBe('orvilo-web-browsing____search');
 
-      const result2 = resolver.generate('lobe-web-browsing', 'crawlSinglePage', 'builtin');
-      expect(result2).toBe('lobe-web-browsing____crawlSinglePage');
+      const result2 = resolver.generate('orvilo-web-browsing', 'crawlSinglePage', 'builtin');
+      expect(result2).toBe('orvilo-web-browsing____crawlSinglePage');
     });
 
     it('should handle plugin tools correctly', () => {
@@ -320,16 +320,16 @@ describe('ToolNameResolver', () => {
     it('should recover tool type from manifest if model strips the suffix (e.g. GLM-4)', () => {
       const toolCalls = [
         {
-          function: { arguments: '{}', name: 'lobe-notebook____createDocument' },
+          function: { arguments: '{}', name: 'orvilo-notebook____createDocument' },
           id: 'call_1',
           type: 'function',
         },
       ];
 
       const manifests = {
-        'lobe-notebook': {
+        'orvilo-notebook': {
           api: [{ description: '', name: 'createDocument', parameters: {} }],
-          identifier: 'lobe-notebook',
+          identifier: 'orvilo-notebook',
           meta: {},
           type: 'builtin' as const,
         },
@@ -338,7 +338,7 @@ describe('ToolNameResolver', () => {
       const result = resolver.resolve(toolCalls, manifests);
 
       expect(result).toHaveLength(1);
-      expect(result[0].identifier).toBe('lobe-notebook');
+      expect(result[0].identifier).toBe('orvilo-notebook');
       expect(result[0].apiName).toBe('createDocument');
       expect(result[0].type).toBe('builtin'); // Recovered from manifest!
     });
@@ -730,15 +730,15 @@ describe('ToolNameResolver', () => {
         ];
 
         const manifests = {
-          'lobe-activator': {
+          'orvilo-activator': {
             api: [{ description: 'Activate tools', name: 'activateTools', parameters: {} }],
-            identifier: 'lobe-activator',
+            identifier: 'orvilo-activator',
             meta: {},
             type: 'builtin' as const,
           },
-          'lobe-skills': {
+          'orvilo-skills': {
             api: [{ description: 'Activate skill', name: 'activateSkill', parameters: {} }],
-            identifier: 'lobe-skills',
+            identifier: 'orvilo-skills',
             meta: {},
             type: 'builtin' as const,
           },
@@ -751,7 +751,7 @@ describe('ToolNameResolver', () => {
           apiName: 'activateTools',
           arguments: '{"toolIds": ["foo"]}',
           id: 'call_1',
-          identifier: 'lobe-activator',
+          identifier: 'orvilo-activator',
           type: 'builtin',
         });
       });
@@ -766,9 +766,9 @@ describe('ToolNameResolver', () => {
         ];
 
         const manifests = {
-          'lobe-activator': {
+          'orvilo-activator': {
             api: [{ description: '', name: 'activateTools', parameters: {} }],
-            identifier: 'lobe-activator',
+            identifier: 'orvilo-activator',
             meta: {},
             type: 'builtin' as const,
           },
@@ -789,15 +789,15 @@ describe('ToolNameResolver', () => {
         ];
 
         const manifests = {
-          'lobe-agent-documents': {
+          'orvilo-agent-documents': {
             api: [{ description: '', name: 'createDocument', parameters: {} }],
-            identifier: 'lobe-agent-documents',
+            identifier: 'orvilo-agent-documents',
             meta: {},
             type: 'builtin' as const,
           },
-          'lobe-notebook': {
+          'orvilo-notebook': {
             api: [{ description: '', name: 'createDocument', parameters: {} }],
-            identifier: 'lobe-notebook',
+            identifier: 'orvilo-notebook',
             meta: {},
             type: 'builtin' as const,
           },
@@ -851,25 +851,27 @@ describe('ToolNameResolver', () => {
         ];
 
         const manifests = {
-          'lobe-activator': {
+          'orvilo-activator': {
             api: [{ description: '', name: 'activateTools', parameters: {} }],
-            identifier: 'lobe-activator',
+            identifier: 'orvilo-activator',
             meta: {},
             type: 'builtin' as const,
           },
           // Disabled this turn — must not be reachable via fallback
-          'lobe-activator-deprecated': {
+          'orvilo-activator-deprecated': {
             api: [{ description: '', name: 'activateTools', parameters: {} }],
-            identifier: 'lobe-activator-deprecated',
+            identifier: 'orvilo-activator-deprecated',
             meta: {},
             type: 'builtin' as const,
           },
         };
 
-        const result = resolver.resolve(toolCalls, manifests, ['lobe-activator____activateTools']);
+        const result = resolver.resolve(toolCalls, manifests, [
+          'orvilo-activator____activateTools',
+        ]);
 
         expect(result).toHaveLength(1);
-        expect(result[0].identifier).toBe('lobe-activator');
+        expect(result[0].identifier).toBe('orvilo-activator');
         expect(result[0].apiName).toBe('activateTools');
       });
 
@@ -883,16 +885,16 @@ describe('ToolNameResolver', () => {
         ];
 
         const manifests = {
-          'lobe-activator': {
+          'orvilo-activator': {
             api: [{ description: '', name: 'activateTools', parameters: {} }],
-            identifier: 'lobe-activator',
+            identifier: 'orvilo-activator',
             meta: {},
             type: 'builtin' as const,
           },
         };
 
         // Manifest exists but the tool was not sent to the LLM this turn.
-        const result = resolver.resolve(toolCalls, manifests, ['lobe-skills____activateSkill']);
+        const result = resolver.resolve(toolCalls, manifests, ['orvilo-skills____activateSkill']);
 
         expect(result).toEqual([]);
       });
@@ -900,29 +902,29 @@ describe('ToolNameResolver', () => {
       it('should drop an explicitly namespaced API missing from its manifest', () => {
         const toolCalls = [
           {
-            function: { arguments: '{}', name: 'lobe-local-system____submitEvidence' },
+            function: { arguments: '{}', name: 'orvilo-local-system____submitEvidence' },
             id: 'call_1',
             type: 'function',
           },
         ];
 
         const manifests = {
-          'lobe-acceptance-evidence': {
+          'orvilo-acceptance-evidence': {
             api: [{ description: '', name: 'submitEvidence', parameters: {} }],
-            identifier: 'lobe-acceptance-evidence',
+            identifier: 'orvilo-acceptance-evidence',
             meta: {},
             type: 'builtin' as const,
           },
-          'lobe-local-system': {
+          'orvilo-local-system': {
             api: [{ description: '', name: 'runCommand', parameters: {} }],
-            identifier: 'lobe-local-system',
+            identifier: 'orvilo-local-system',
             meta: {},
             type: 'builtin' as const,
           },
         };
 
         const result = resolver.resolve(toolCalls, manifests, [
-          'lobe-acceptance-evidence____submitEvidence',
+          'orvilo-acceptance-evidence____submitEvidence',
         ]);
 
         expect(result).toEqual([]);
@@ -931,35 +933,37 @@ describe('ToolNameResolver', () => {
       it('should preserve a manifest-backed stale dynamic tool for downstream scope rejection', () => {
         const toolCalls = [
           {
-            function: { arguments: '{}', name: 'lobe-remote-device____listOnlineDevices' },
+            function: { arguments: '{}', name: 'orvilo-remote-device____listOnlineDevices' },
             id: 'call_1',
             type: 'function',
           },
         ];
 
         const manifests = {
-          'lobe-activator': {
+          'orvilo-activator': {
             api: [{ description: '', name: 'activateTools', parameters: {} }],
-            identifier: 'lobe-activator',
+            identifier: 'orvilo-activator',
             meta: {},
             type: 'builtin' as const,
           },
-          'lobe-remote-device': {
+          'orvilo-remote-device': {
             api: [{ description: '', name: 'listOnlineDevices', parameters: {} }],
-            identifier: 'lobe-remote-device',
+            identifier: 'orvilo-remote-device',
             meta: {},
             type: 'builtin' as const,
           },
         };
 
-        const result = resolver.resolve(toolCalls, manifests, ['lobe-activator____activateTools']);
+        const result = resolver.resolve(toolCalls, manifests, [
+          'orvilo-activator____activateTools',
+        ]);
 
         expect(result).toEqual([
           {
             apiName: 'listOnlineDevices',
             arguments: '{}',
             id: 'call_1',
-            identifier: 'lobe-remote-device',
+            identifier: 'orvilo-remote-device',
             type: 'builtin',
           },
         ]);
@@ -996,28 +1000,28 @@ describe('ToolNameResolver', () => {
 
         const manifests = {
           // Only this manifest's createDocument is offered this turn.
-          'lobe-agent-documents': {
+          'orvilo-agent-documents': {
             api: [{ description: '', name: 'createDocument', parameters: {} }],
-            identifier: 'lobe-agent-documents',
+            identifier: 'orvilo-agent-documents',
             meta: {},
             type: 'builtin' as const,
           },
           // Installed but not offered — without the offered-list restriction
           // this would make the fallback ambiguous and drop the valid call.
-          'lobe-notebook': {
+          'orvilo-notebook': {
             api: [{ description: '', name: 'createDocument', parameters: {} }],
-            identifier: 'lobe-notebook',
+            identifier: 'orvilo-notebook',
             meta: {},
             type: 'builtin' as const,
           },
         };
 
         const result = resolver.resolve(toolCalls, manifests, [
-          'lobe-agent-documents____createDocument',
+          'orvilo-agent-documents____createDocument',
         ]);
 
         expect(result).toHaveLength(1);
-        expect(result[0].identifier).toBe('lobe-agent-documents');
+        expect(result[0].identifier).toBe('orvilo-agent-documents');
       });
 
       it('should respect hashed offered names when matching', () => {
@@ -1102,12 +1106,12 @@ describe('ToolNameResolver', () => {
 
   describe('resolve - malformed separator repair', () => {
     const localSystem = {
-      'lobe-local-system': {
+      'orvilo-local-system': {
         api: [
           { description: 'Run a shell command', name: 'runCommand', parameters: {} },
           { description: 'Read a file', name: 'readFile', parameters: {} },
         ],
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         meta: {},
         type: 'builtin' as const,
       },
@@ -1120,13 +1124,13 @@ describe('ToolNameResolver', () => {
       const result = resolver.resolve(
         [
           {
-            function: { arguments: '{"command":"ls"}', name: 'lobe-local-system~~__runCommand' },
+            function: { arguments: '{"command":"ls"}', name: 'orvilo-local-system~~__runCommand' },
             id: 'call_1',
             type: 'function',
           },
         ],
         localSystem,
-        ['lobe-local-system____runCommand', 'lobe-local-system____readFile'],
+        ['orvilo-local-system____runCommand', 'orvilo-local-system____readFile'],
       );
 
       expect(result).toEqual([
@@ -1134,7 +1138,7 @@ describe('ToolNameResolver', () => {
           apiName: 'runCommand',
           arguments: '{"command":"ls"}',
           id: 'call_1',
-          identifier: 'lobe-local-system',
+          identifier: 'orvilo-local-system',
           type: 'builtin',
         },
       ]);
@@ -1144,7 +1148,7 @@ describe('ToolNameResolver', () => {
       const result = resolver.resolve(
         [
           {
-            function: { arguments: '{}', name: 'lobe-local-system..readFile' },
+            function: { arguments: '{}', name: 'orvilo-local-system..readFile' },
             id: 'call_1',
             type: 'function',
           },
@@ -1153,7 +1157,7 @@ describe('ToolNameResolver', () => {
       );
 
       expect(result).toHaveLength(1);
-      expect(result[0].identifier).toBe('lobe-local-system');
+      expect(result[0].identifier).toBe('orvilo-local-system');
       expect(result[0].apiName).toBe('readFile');
     });
 
@@ -1161,13 +1165,13 @@ describe('ToolNameResolver', () => {
       const result = resolver.resolve(
         [
           {
-            function: { arguments: '{}', name: 'lobe-local-system____readFile' },
+            function: { arguments: '{}', name: 'orvilo-local-system____readFile' },
             id: 'call_1',
             type: 'function',
           },
         ],
         localSystem,
-        ['lobe-local-system____readFile'],
+        ['orvilo-local-system____readFile'],
       );
 
       expect(result[0].apiName).toBe('readFile');
@@ -1214,7 +1218,7 @@ describe('ToolNameResolver', () => {
           },
         ],
         localSystem,
-        ['lobe-local-system____runCommand'],
+        ['orvilo-local-system____runCommand'],
       );
 
       expect(result).toEqual([]);
@@ -1223,7 +1227,7 @@ describe('ToolNameResolver', () => {
 
   describe('resolve - real-world integration', () => {
     it('should handle complete generate-resolve roundtrip', () => {
-      const identifier = 'lobe-image-designer';
+      const identifier = 'orvilo-image-designer';
       const apiName = 'text2image';
       const type = 'builtin' as const;
 

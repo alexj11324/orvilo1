@@ -92,7 +92,7 @@ export const localSystemRuntime: ServerRuntimeRegistration = {
       proxy[api.name] = async (args: any) => {
         // Inject the device-bound cwd/scope when the model didn't supply one
         // or explicitly passed `.` (a relative reference that resolves to
-        // process.cwd() on the device side — the LobeHub install directory on
+        // process.cwd() on the device side — the Orvilo install directory on
         // packaged desktop instead of the user's actual workspace).
         //
         // `cwd` and `scope` differ in how much the model is trusted:

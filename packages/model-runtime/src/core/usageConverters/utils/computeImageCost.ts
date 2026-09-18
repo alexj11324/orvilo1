@@ -2,7 +2,7 @@ import { CREDITS_PER_DOLLAR } from '@orvilo/const/currency';
 import debug from 'debug';
 import type { FixedPricingUnit, LookupPricingUnit, Pricing } from 'model-bank';
 
-const log = debug('lobe-cost:computeImagePricing');
+const log = debug('orvilo-cost:computeImagePricing');
 
 export interface ImageGenerationParams {
   // Other possible parameters for future extensions

@@ -1,4 +1,4 @@
-# LobeHub Store Data Structures
+# Orvilo Store Data Structures
 
 How to structure data in Zustand stores for fast list rendering, multi-detail caching, and ergonomic optimistic updates.
 
@@ -271,7 +271,7 @@ When designing store state structure:
 ❌ **DON'T extend Detail in List:**
 
 ```typescript
-// Wrong — pulls heavy fields back in
+// Wrong — pulls heavy fields back
 export interface BenchmarkListItem extends Benchmark {
   testCaseCount?: number;
 }

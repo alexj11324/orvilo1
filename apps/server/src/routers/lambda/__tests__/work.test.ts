@@ -41,6 +41,12 @@ vi.mock('@/database/models/work', () => ({
     };
   }),
 }));
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
 
 // Imported after the mocks above are registered.
 const { workRouter } = await import('../work');
@@ -58,7 +64,7 @@ describe('workRouter — per-procedure write permission gates', () => {
       createCaller().registerDocument({
         changeType: 'created',
         documentId: 'doc-1',
-        toolIdentifier: 'lobe-agent-documents',
+        toolIdentifier: 'orvilo-agent-documents',
         toolName: 'tool',
       }),
     ).rejects.toThrow('GATE:document:update');
@@ -70,7 +76,7 @@ describe('workRouter — per-procedure write permission gates', () => {
     await expect(
       createCaller().registerTask({
         changeType: 'created',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         toolName: 'tool',
       }),
     ).rejects.toThrow('GATE:agent:update');

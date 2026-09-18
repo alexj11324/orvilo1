@@ -96,13 +96,13 @@ export const uvBinary: BinarySpec = defineCommandBinary('uv', {
 });
 
 /**
- * LobeHub CLI
- * Tries lobehub, lobe, lh in order; validates via --help output containing "LobeHub"
+ * Orvilo CLI
+ * Tries orvilo, lh in order; validates via --help output containing "Orvilo"
  */
-export const lobehubBinary: BinarySpec = {
-  description: 'LobeHub CLI - manage and connect to LobeHub services',
+export const orviloBinary: BinarySpec = {
+  description: 'Orvilo CLI - manage and connect to Orvilo services',
   async detect(): Promise<BinaryStatus> {
-    const commands = ['lobehub', 'lobe', 'lh'];
+    const commands = ['orvilo', 'lh'];
     const whichCmd = platform() === 'win32' ? 'where' : 'which';
 
     for (const cmd of commands) {
@@ -110,9 +110,9 @@ export const lobehubBinary: BinarySpec = {
         const { stdout: pathOut } = await execPromise(`${whichCmd} ${cmd}`, { timeout: 3000 });
         const toolPath = pathOut.trim().split('\n')[0];
 
-        // Validate it's actually LobeHub CLI by checking help output
+        // Validate it's actually Orvilo CLI by checking help output
         const { stdout: helpOut } = await execPromise(`${cmd} --help`, { timeout: 3000 });
-        if (!helpOut.includes('LobeHub')) continue;
+        if (!helpOut.includes('Orvilo')) continue;
 
         const { stdout: versionOut } = await execPromise(`${cmd} --version`, { timeout: 3000 });
         const version = versionOut.trim().split('\n')[0];
@@ -125,7 +125,7 @@ export const lobehubBinary: BinarySpec = {
 
     return { available: false };
   },
-  name: 'lobehub',
+  name: 'orvilo',
   priority: 0,
 };
 
@@ -133,7 +133,7 @@ export const lobehubBinary: BinarySpec = {
  * All runtime environment binaries
  */
 export const runtimeEnvironmentBinaries: BinarySpec[] = [
-  lobehubBinary,
+  orviloBinary,
   nodeBinary,
   npmBinary,
   pythonBinary,

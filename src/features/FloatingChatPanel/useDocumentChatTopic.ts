@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useClientDataSWR } from '@/libs/swr';
 import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocument';
 
-const log = debug('lobe-chat:useDocumentChatTopic');
+const log = debug('orvilo:useDocumentChatTopic');
 
 /**
  * Resolve the doc-anchored chat topic for an `(agentId, documentId)` pair.

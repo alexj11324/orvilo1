@@ -117,23 +117,23 @@ describe('gatherWorkspaceHtmlArtifact', () => {
     const readPaths: string[] = [];
     const result = await gatherWorkspaceHtmlArtifact({
       htmlContent: '<html><link rel="stylesheet" href="./app.css"><img src="./dot.svg"></html>',
-      htmlFilePath: '/private/tmp/lobe-html-publish-fixture/index.html',
+      htmlFilePath: '/private/tmp/orvilo-html-publish-fixture/index.html',
       readAsset: async (absolutePath) => {
         readPaths.push(absolutePath);
-        if (absolutePath === '/private/tmp/lobe-html-publish-fixture/app.css') {
+        if (absolutePath === '/private/tmp/orvilo-html-publish-fixture/app.css') {
           return textAsset('body{}', 'text/css');
         }
-        if (absolutePath === '/private/tmp/lobe-html-publish-fixture/dot.svg') {
+        if (absolutePath === '/private/tmp/orvilo-html-publish-fixture/dot.svg') {
           return textAsset('<svg></svg>', 'image/svg+xml');
         }
         return { ok: false, reason: 'missing' };
       },
-      workingDirectory: '/tmp/lobe-html-publish-fixture',
+      workingDirectory: '/tmp/orvilo-html-publish-fixture',
     });
 
     expect(readPaths.sort()).toEqual([
-      '/private/tmp/lobe-html-publish-fixture/app.css',
-      '/private/tmp/lobe-html-publish-fixture/dot.svg',
+      '/private/tmp/orvilo-html-publish-fixture/app.css',
+      '/private/tmp/orvilo-html-publish-fixture/dot.svg',
     ]);
     expect(result.files.map((file) => file.path).sort()).toEqual([
       'app.css',

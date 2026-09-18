@@ -6,16 +6,8 @@ import { useSocialConnect } from './useSocialConnect';
 const connectGetStatusQueryMock = vi.hoisted(() => vi.fn());
 const connectGetAuthorizeUrlQueryMock = vi.hoisted(() => vi.fn());
 const connectRevokeMutateMock = vi.hoisted(() => vi.fn());
-const scanClaimableResourcesQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/libs/trpc/client', () => ({
-  lambdaClient: {
-    market: {
-      socialProfile: {
-        scanClaimableResources: { query: scanClaimableResourcesQueryMock },
-      },
-    },
-  },
   toolsClient: {
     market: {
       connectGetAuthorizeUrl: { query: connectGetAuthorizeUrlQueryMock },
@@ -29,7 +21,6 @@ describe('useSocialConnect', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    scanClaimableResourcesQueryMock.mockResolvedValue({ plugins: [], skills: [] });
   });
 
   afterEach(() => {
@@ -83,7 +74,6 @@ describe('useSocialConnect', () => {
       username: 'octocat',
     });
     expect(connectGetStatusQueryMock).toHaveBeenCalledTimes(2);
-    expect(scanClaimableResourcesQueryMock).toHaveBeenCalledTimes(1);
     expect(result.current.isConnected).toBe(true);
     expect(result.current.isConnecting).toBe(false);
   });

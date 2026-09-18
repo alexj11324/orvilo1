@@ -16,7 +16,7 @@ import { vi } from 'vitest';
 export const app = {
   getAppPath: vi.fn(() => '/mock/app'),
   getLocale: vi.fn(() => 'en-US'),
-  getName: vi.fn(() => 'LobeHub'),
+  getName: vi.fn(() => 'Orvilo'),
   getPath: vi.fn((name: string) => `/mock/${name}`),
   getPreferredSystemLanguages: vi.fn(() => ['en-US']),
   getVersion: vi.fn(() => '0.0.0-test'),

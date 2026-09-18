@@ -3,7 +3,7 @@ import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import {
   type CheckMcpInstallResult,
   type CustomPluginMetadata,
-  type LobeChatPluginApi,
+  type OrviloPluginApi,
   type ToolManifest,
   type ToolManifestSettings,
 } from '@orvilo/types';
@@ -25,7 +25,7 @@ import { type ProcessContentBlocksFn } from './contentProcessor';
 import { contentBlocksToString } from './contentProcessor';
 import { mcpSystemDepsCheckService } from './deps';
 
-const log = debug('lobe-mcp:service');
+const log = debug('orvilo-mcp:service');
 
 /**
  * MCP Tool call raw result type
@@ -91,7 +91,7 @@ export class MCPService {
   // --- MCP Interaction ---
 
   // listTools now accepts MCPClientParams
-  async listTools(params: MCPClientParams): Promise<LobeChatPluginApi[]> {
+  async listTools(params: MCPClientParams): Promise<OrviloPluginApi[]> {
     const loggableParams = this.sanitizeForLogging(params);
 
     return retry(
@@ -108,7 +108,7 @@ export class MCPService {
             loggableParams,
             result.length,
           );
-          return result.map<LobeChatPluginApi>((item) => ({
+          return result.map<OrviloPluginApi>((item) => ({
             // Assuming identifier is the unique name/id
             description: item.description,
             name: item.name,
@@ -407,7 +407,7 @@ export class MCPService {
     const identifier = params.name;
 
     return {
-      api: manifest.tools ? this.transformMCPToolToLobeAPI(manifest.tools) : [],
+      api: manifest.tools ? this.transformMCPToolToOrviloAPI(manifest.tools) : [],
       identifier,
       meta: {
         avatar: metadata?.avatar || 'MCP_AVATAR',
@@ -486,8 +486,8 @@ export class MCPService {
     }
   }
 
-  private transformMCPToolToLobeAPI = (data: McpTool[]) => {
-    return data.map<LobeChatPluginApi>((item) => ({
+  private transformMCPToolToOrviloAPI = (data: McpTool[]) => {
+    return data.map<OrviloPluginApi>((item) => ({
       // Assuming identifier is the unique name/id
       description: item.description,
       name: item.name,

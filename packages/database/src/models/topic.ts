@@ -48,7 +48,7 @@ import {
   topicDocuments,
   topics,
 } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { sanitizeBm25Query } from '../utils/bm25';
 import { COPIED_TOPIC_USAGE_RESET } from '../utils/copiedTranscript';
 import { markCopiedMessageMetadata } from '../utils/copyMessagesInDatabase';
@@ -390,7 +390,7 @@ export interface TopicModelOptions {
 
 export class TopicModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
   private workspaceId?: string;
   /**
@@ -405,7 +405,7 @@ export class TopicModel {
   private includeShareVisitor: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,
@@ -2236,7 +2236,7 @@ export class TopicModel {
    * proven live and must not keep an already-stuck topic stuck.
    */
   isRunningOperationAlive = async (
-    tx: Pick<LobeChatDatabase, 'select'>,
+    tx: Pick<OrviloDatabase, 'select'>,
     runningOperation: NonNullable<ChatTopicMetadata['runningOperation']>,
   ): Promise<boolean> => {
     const [operation] = await tx
@@ -2646,32 +2646,6 @@ export class TopicModel {
     return result[0]?.total ?? 0;
   };
 
-  /**
-   * Resets the memory-extraction state of all the caller's topics back to
-   * `pending`, clearing any previous run summary. Used by "purge all
-   * memories": after memories are deleted, topics keep `userMemoryExtractStatus =
-   * 'completed'`, so `isTopicExtracted()` skips them forever and nothing can
-   * ever be re-extracted. Resetting to `pending` makes the next memory
-   * analysis re-process them. Fixes #18498.
-   *
-   * Scoped by `userId` only (not `mine()`): `deleteAll` removes every memory
-   * belonging to the caller regardless of workspace scope, so the reset must
-   * cover topics across personal and all workspace scopes alike, otherwise
-   * topics in the other scope keep `completed` and stay stuck behind the
-   * extraction skip gate.
-   */
-  resetMemoryExtractStatus = async () => {
-    return this.db
-      .update(topics)
-      .set({
-        metadata: sql`jsonb_set(
-          jsonb_set(${topics.metadata}, '{userMemoryExtractStatus}', to_jsonb('pending'::text), true),
-          '{userMemoryExtractRunState}', '{}'::jsonb, true
-        )`,
-      })
-      .where(eq(topics.userId, this.userId));
-  };
-
   // **************** Scheduled run (backend cron) *************** //
 
   /**
@@ -2693,7 +2667,7 @@ export class TopicModel {
    * payload the dispatcher then reads.
    */
   static async getDueScheduledTopics(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     now: Date = new Date(),
   ): Promise<TopicItem[]> {
     const nowIso = now.toISOString();
@@ -2738,7 +2712,7 @@ export class TopicModel {
    * lease. Returns `true` when this caller won the claim.
    */
   static async claimScheduledTopic(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     claim: { claimedAt: string; expiresAt: string; id: string },
     now: Date = new Date(),
@@ -2778,7 +2752,7 @@ export class TopicModel {
    * a continuation is successfully dispatched/executed and when it is cancelled.
    */
   static async clearScheduledRun(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     nextStatus: ChatTopicStatus = 'active',
     expectedClaimId?: string,
@@ -2816,7 +2790,7 @@ export class TopicModel {
    * schedule was cleared or the claim no longer matches.
    */
   static async repointScheduledRunFailedMessage(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
     failedAssistantMessageId: string,
     expectedClaimId: string,

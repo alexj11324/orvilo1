@@ -71,16 +71,16 @@ interface TaskCommentInspectorProps extends BuiltinInspectorProps<
 const selectLabelKey = (apiName: string) => {
   switch (apiName) {
     case TaskApiName.addTaskComment: {
-      return 'builtins.lobe-task.apiName.addTaskComment';
+      return 'builtins.orvilo-task.apiName.addTaskComment';
     }
     case TaskApiName.updateTaskComment: {
-      return 'builtins.lobe-task.apiName.updateTaskComment';
+      return 'builtins.orvilo-task.apiName.updateTaskComment';
     }
     case TaskApiName.deleteTaskComment: {
-      return 'builtins.lobe-task.apiName.deleteTaskComment';
+      return 'builtins.orvilo-task.apiName.deleteTaskComment';
     }
     default: {
-      return 'builtins.lobe-task.apiName.addTaskComment';
+      return 'builtins.orvilo-task.apiName.addTaskComment';
     }
   }
 };

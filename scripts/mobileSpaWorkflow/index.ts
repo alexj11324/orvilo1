@@ -29,7 +29,7 @@ async function main() {
     '',
   );
 
-  // VITE_CDN_BASE = domain + optional key prefix, e.g. https://web-assets.lobehub.com/mobile/20260226-153012/
+  // VITE_CDN_BASE = domain + optional key prefix, e.g. https://web-assets.aspectlylabs.com/mobile/20260226-153012/
   const cdnBase = `${publicDomain.replace(/\/+$/, '')}/${keyPrefix}/`;
 
   // Step 1: Build mobile SPA with CDN base

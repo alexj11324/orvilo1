@@ -1,4 +1,4 @@
-import { LOBE_DEFAULT_MODEL_LIST, ModelProvider } from 'model-bank';
+import { ModelProvider, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 
 import { createRouterRuntime } from '../../core/RouterRuntime';
 import type { CreateRouterRuntimeOptions } from '../../core/RouterRuntime/createRuntime';
@@ -9,12 +9,12 @@ import { resolveProviderRouteModels } from '../utils/resolveProviderRouteModels'
 const ZEN_BASE_URL = 'https://opencode.ai/zen/v1';
 
 // Claude models use @ai-sdk/anthropic via Zen Gateway
-const claudeModels = LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+const claudeModels = ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
   (id) => detectModelProvider(id) === 'anthropic',
 );
 
 // GPT-5.x models use @ai-sdk/openai (Responses API) via Zen Gateway
-const gptModels = LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+const gptModels = ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
   (id) => detectModelProvider(id) === 'openai',
 );
 
@@ -60,7 +60,7 @@ export const params = {
         apiType: 'deepseek',
         models: resolveProviderRouteModels(
           'deepseek',
-          LOBE_DEFAULT_MODEL_LIST,
+          ORVILO_DEFAULT_MODEL_LIST,
           runtimeContext?.model,
         ),
         options: {
@@ -81,4 +81,4 @@ export const params = {
   },
 } satisfies CreateRouterRuntimeOptions;
 
-export const LobeOpenCodeZenAI = createRouterRuntime(params);
+export const OrviloOpenCodeZenAI = createRouterRuntime(params);

@@ -37,7 +37,7 @@ describe('WorkModel · document', () => {
       rootOperationId: 'op-doc-create',
       toolName: 'createDocument',
       toolCallId: 'tool-call-doc-create',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       topicId,
     });
 
@@ -47,7 +47,7 @@ describe('WorkModel · document', () => {
       description: 'Research notes',
       resourceId: doc.documentId,
       resourceType: 'document',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       title: 'Research Notes',
       type: 'document',
       visibility: 'public',
@@ -109,7 +109,7 @@ describe('WorkModel · document', () => {
       changeType: 'created',
       rootOperationId: 'op-doc-empty-description',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-empty-description',
       topicId,
     });
@@ -151,7 +151,7 @@ describe('WorkModel · document', () => {
       changeType: 'created',
       rootOperationId: 'op-doc-long-description',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-long-description',
       topicId,
     });
@@ -175,7 +175,7 @@ describe('WorkModel · document', () => {
       changeType: 'created',
       rootOperationId: 'op-doc-create',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-create',
       topicId,
     });
@@ -189,7 +189,7 @@ describe('WorkModel · document', () => {
       changeType: 'updated',
       rootOperationId: 'op-doc-rename',
       toolName: 'renameDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-rename',
       topicId,
     });
@@ -201,7 +201,7 @@ describe('WorkModel · document', () => {
       changeType: 'updated',
       rootOperationId: 'op-doc-rename',
       toolName: 'renameDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-rename',
       topicId,
     });
@@ -237,7 +237,7 @@ describe('WorkModel · document', () => {
       documentId: doc.documentId,
       changeType: 'created',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-delete',
     });
 
@@ -269,7 +269,7 @@ describe('WorkModel · document', () => {
       documentId: doc.documentId,
       changeType: 'created',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-other-doc-user',
       topicId,
     });
@@ -316,7 +316,7 @@ describe('WorkModel · workspace document visibility', () => {
       changeType: 'created',
       rootOperationId: 'op-doc-visibility',
       toolName: 'createDocument',
-      toolIdentifier: 'lobe-agent-documents',
+      toolIdentifier: 'orvilo-agent-documents',
       toolCallId: 'tool-call-doc-visibility',
       topicId,
     });

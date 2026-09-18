@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * Manual E2E coverage for `lh agent space fs` against a real backend.
  *
  * Run when:
- * - A local or remote LobeHub backend is reachable by the CLI
+ * - A local or remote Orvilo backend is reachable by the CLI
  * - `AGENT_FS_E2E_AGENT_ID` points at an agent with document access
  *
  * Expects:
@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
  * - This suite is skipped unless `AGENT_FS_E2E_AGENT_ID` is set
  */
 const AGENT_ID = process.env.AGENT_FS_E2E_AGENT_ID;
-const CLI = process.env.LH_CLI_PATH || 'LOBEHUB_CLI_HOME=.lobehub-dev bun src/index.ts';
+const CLI = process.env.LH_CLI_PATH || 'ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts';
 const TIMEOUT = 30_000;
 
 function run(args: string): string {
@@ -30,9 +30,9 @@ describe.skipIf(!AGENT_ID)('lh agent space fs unified VFS - manual E2E', () => {
 
   it('exercises root, mounted namespaces, writes, copy, move, trash, and cleanup', () => {
     const root = run(`agent space fs ls --agent-id ${AGENT_ID} agent:/`);
-    expect(root).toContain('lobe/');
+    expect(root).toContain('orvilo/');
 
-    const mountedRoot = run(`agent space fs ls --agent-id ${AGENT_ID} agent:/lobe/skills`);
+    const mountedRoot = run(`agent space fs ls --agent-id ${AGENT_ID} agent:/orvilo/skills`);
     expect(mountedRoot).toContain('builtin/');
     expect(mountedRoot).toContain('agent/');
 

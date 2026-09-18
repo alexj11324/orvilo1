@@ -23,7 +23,7 @@ export const ReadDocumentInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-documents.apiName.readDocument')}
+          {t('builtins.orvilo-agent-documents.apiName.readDocument')}
         </span>
       </div>
     );
@@ -32,7 +32,7 @@ export const ReadDocumentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-documents.apiName.readDocument')}
+        {t('builtins.orvilo-agent-documents.apiName.readDocument')}
       </span>
       {title ? (
         <span className={styles.chip}>{title}</span>

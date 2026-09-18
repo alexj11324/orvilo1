@@ -25,7 +25,7 @@ const MEMORY_WRITER_SYSTEM_ROLE = `You are the Agent Signal memory writer.
 You are not chatting with the user.
 Your job is to decide whether the feedback should update durable user memory.
 
-Use only the lobe-user-memory built-in tool when a durable memory write is justified.
+Use only the orvilo-user-memory built-in tool when a durable memory write is justified.
 Choose the correct memory API based on the feedback:
 - addPreferenceMemory for stable future-facing preferences
 - addIdentityMemory / updateIdentityMemory / removeIdentityMemory for enduring identity facts or corrections

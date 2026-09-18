@@ -178,7 +178,7 @@ export const DesktopNotificationSettings = () => {
                         value={settings.notificationSound}
                         options={[
                           { label: t('completionSound.banner.system'), value: 'system' },
-                          { label: t('completionSound.banner.lobehub'), value: 'lobehub' },
+                          { label: t('completionSound.banner.orvilo'), value: 'orvilo' },
                         ]}
                         onChange={(notificationSound) =>
                           run(() => completionSoundService.setSettings({ notificationSound }))

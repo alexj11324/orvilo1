@@ -8,23 +8,23 @@ describe('createProjectCoordinatorAgentConfig', () => {
       createProjectCoordinatorAgentConfig({
         avatar: 'avatar.png',
         description: 'Ship the next release',
-        identifier: 'LOBE',
-        name: 'LobeHub',
+        identifier: 'ORVILO',
+        name: 'Orvilo',
       }),
     ).toEqual({
       avatar: 'avatar.png',
-      description: 'Coordinates the LobeHub project',
+      description: 'Coordinates the Orvilo project',
       systemRole: [
-        'You are the coordinator for the project "LobeHub" (LOBE).',
+        'You are the coordinator for the project "Orvilo" (ORVILO).',
         'Project description: Ship the next release',
         'Help the user resume work, turn intent into concrete tasks and goals, use project resources, and coordinate project agents.',
       ].join('\n'),
-      title: 'LobeHub Coordinator',
+      title: 'Orvilo Coordinator',
     });
   });
 
   it('omits the project description line when no description is provided', () => {
-    const config = createProjectCoordinatorAgentConfig({ identifier: 'LOBE', name: 'LobeHub' });
+    const config = createProjectCoordinatorAgentConfig({ identifier: 'ORVILO', name: 'Orvilo' });
 
     expect(config.systemRole).not.toContain('Project description:');
   });

@@ -3,7 +3,7 @@ import pMap from 'p-map';
 
 import { FileUploadModel } from '@/database/models/fileUpload';
 import type { FileUploadItem } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { FileS3 } from '@/server/modules/S3';
 
 export const FILE_UPLOAD_SESSION_TTL = 2 * 60 * 60 * 1000;
@@ -38,7 +38,7 @@ export class FileUploadService {
   private storage?: UploadStorage;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     storage?: UploadStorage,
@@ -99,7 +99,7 @@ export class FileUploadService {
 }
 
 export const sweepFileUploads = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   options: {
     batchSize?: number;
     now?: Date;

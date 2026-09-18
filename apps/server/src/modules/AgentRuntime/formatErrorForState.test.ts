@@ -30,7 +30,7 @@ describe('formatErrorForState', () => {
         budget,
         error: { message: 'Budget exceeded' },
         errorType: ChatErrorType.FreePlanLimit,
-        provider: 'lobehub',
+        provider: 'orvilo',
       });
 
       expect(result).toMatchObject({
@@ -38,7 +38,7 @@ describe('formatErrorForState', () => {
         body: {
           budget,
           message: 'Budget exceeded',
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         category: 'quota',
         httpStatus: 402,
@@ -165,7 +165,7 @@ describe('formatErrorForState', () => {
           attempt: 1,
           finishReason: 'refusal',
           model: 'fable',
-          provider: 'lobehub',
+          provider: 'orvilo',
         }),
       );
 
@@ -176,7 +176,7 @@ describe('formatErrorForState', () => {
             attempt: 1,
             finishReason: 'refusal',
             model: 'fable',
-            provider: 'lobehub',
+            provider: 'orvilo',
           },
         },
         category: 'provider',
@@ -330,7 +330,7 @@ describe('formatErrorForState', () => {
 
     it('keeps payload.error available when _responseBody is present', () => {
       const result = formatErrorForState({
-        _responseBody: { provider: 'lobehub' },
+        _responseBody: { provider: 'orvilo' },
         error: { status: 402 },
         errorType: AgentRuntimeErrorType.ProviderBizError,
         message: 'opaque upstream message',
@@ -340,7 +340,7 @@ describe('formatErrorForState', () => {
         body: {
           error: { status: 402 },
           message: 'opaque upstream message',
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         category: 'quota',
         type: AgentRuntimeErrorType.InsufficientQuota,
@@ -349,7 +349,7 @@ describe('formatErrorForState', () => {
 
     it('merges payload status into an existing _responseBody error object', () => {
       const result = formatErrorForState({
-        _responseBody: { error: { message: 'Payment required' }, provider: 'lobehub' },
+        _responseBody: { error: { message: 'Payment required' }, provider: 'orvilo' },
         error: { status: 402 },
         errorType: AgentRuntimeErrorType.ProviderBizError,
         message: 'opaque upstream message',
@@ -358,7 +358,7 @@ describe('formatErrorForState', () => {
       expect(result).toMatchObject({
         body: {
           error: { message: 'Payment required', status: 402 },
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         category: 'quota',
         type: AgentRuntimeErrorType.InsufficientQuota,
@@ -449,7 +449,7 @@ describe('readErrorBudgetContext', () => {
       },
       error: { message: 'Workspace budget exceeded' },
       errorType: ChatErrorType.InsufficientBudgetForModel,
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
 
     expect(readErrorBudgetContext(formatted)).toEqual({

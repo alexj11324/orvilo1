@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { agents, messages, sessions, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { AgentMigrationRepo } from '../index';
 
 const userId = 'agent-migration-user';
 const userId2 = 'agent-migration-user-2';
 const sessionId = 'agent-migration-session';
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const agentMigrationRepo = new AgentMigrationRepo(serverDB, userId);
 
 describe('AgentMigrationRepo', () => {

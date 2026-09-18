@@ -1,4 +1,4 @@
-import { LOBE_DEFAULT_MODEL_LIST, ModelProvider } from 'model-bank';
+import { ModelProvider, ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import urlJoin from 'url-join';
 
 import { createRouterRuntime } from '../../core/RouterRuntime';
@@ -76,7 +76,7 @@ export const params = {
     chatCompletion: () => process.env.DEBUG_NEWAPI_CHAT_COMPLETION === '1',
   },
   defaultHeaders: {
-    'X-Client': 'LobeHub',
+    'X-Client': 'Orvilo',
   },
   id: ModelProvider.NewAPI,
   models: async ({ client: openAIClient, options }) => {
@@ -117,7 +117,7 @@ export const params = {
           // Assumption: model_price is the price per 1,000 tokens (i.e., $/1K tokens).
           // To convert to price per 1,000,000 tokens ($/1M tokens), multiply by 1,000,000 / 1,000 = 1,000.
           // Since the base price is $0.002/1K tokens, multiplying by 2 gives $2/1M tokens.
-          // Therefore, inputPrice = model_price * 2 converts the price to $/1M tokens for LobeChat.
+          // Therefore, inputPrice = model_price * 2 converts the price to $/1M tokens for Orvilo.
           inputPrice = pricing.model_price * 2;
         } else if (pricing.model_ratio) {
           // model_ratio × $0.002/1K = model_ratio × $2/1M
@@ -163,7 +163,7 @@ export const params = {
         // - model_price: directly specified price (takes priority)
         // - completion_ratio: output price multiplier relative to input price
         //
-        // LobeChat required format: USD per million tokens
+        // Orvilo required format: USD per million tokens
 
         const pricingData = calculatePricing(pricing);
         if (pricingData) {
@@ -195,7 +195,7 @@ export const params = {
     return [
       {
         apiType: 'anthropic',
-        models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+        models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
           (id) => detectModelProvider(id) === 'anthropic',
         ),
         options: {
@@ -205,7 +205,7 @@ export const params = {
       },
       {
         apiType: 'google',
-        models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+        models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
           (id) => detectModelProvider(id) === 'google',
         ),
         options: {
@@ -215,7 +215,7 @@ export const params = {
       },
       {
         apiType: 'xai',
-        models: LOBE_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
+        models: ORVILO_DEFAULT_MODEL_LIST.map((m) => m.id).filter(
           (id) => detectModelProvider(id) === 'xai',
         ),
         options: {
@@ -227,7 +227,7 @@ export const params = {
         apiType: 'deepseek',
         models: resolveProviderRouteModels(
           'deepseek',
-          LOBE_DEFAULT_MODEL_LIST,
+          ORVILO_DEFAULT_MODEL_LIST,
           runtimeContext?.model,
         ),
         options: {
@@ -250,4 +250,4 @@ export const params = {
   },
 } satisfies CreateRouterRuntimeOptions;
 
-export const LobeNewAPIAI = createRouterRuntime(params);
+export const OrviloNewAPIAI = createRouterRuntime(params);

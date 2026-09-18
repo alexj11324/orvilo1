@@ -2,12 +2,12 @@
 import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeHunyuanAI, params } from './index';
+import { OrviloHunyuanAI, params } from './index';
 
 testProvider({
-  Runtime: LobeHunyuanAI,
+  Runtime: OrviloHunyuanAI,
   provider: ModelProvider.Hunyuan,
   defaultBaseURL: 'https://tokenhub.tencentmaas.com/v1',
   chatDebugEnv: 'DEBUG_HUNYUAN_CHAT_COMPLETION',
@@ -17,10 +17,10 @@ testProvider({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeHunyuanAI({ apiKey: 'test' });
+  instance = new OrviloHunyuanAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -28,7 +28,7 @@ beforeEach(() => {
   );
 });
 
-describe('LobeHunyuanAI', () => {
+describe('OrviloHunyuanAI', () => {
   describe('chat', () => {
     it('should return a StreamingTextResponse on a Hunyuan chat call', async () => {
       const mockStream = new ReadableStream();
@@ -45,7 +45,7 @@ describe('LobeHunyuanAI', () => {
   });
 });
 
-describe('LobeHunyuanAI - custom features', () => {
+describe('OrviloHunyuanAI - custom features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_HUNYUAN_CHAT_COMPLETION;

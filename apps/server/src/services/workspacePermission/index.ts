@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { RbacModel } from '@/database/models/rbac';
 import { workspaceMembers, workspaces } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getScopePermissions } from '@/utils/rbac';
 
 /**
@@ -17,7 +17,7 @@ export const isWorkspacePrimaryOwner = async ({
   userId,
   workspaceId,
 }: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   userId: string;
   workspaceId: string;
 }): Promise<boolean> => {
@@ -32,7 +32,7 @@ export const isWorkspacePrimaryOwner = async ({
 
 export interface WorkspaceScopedPermissionOptions {
   action: keyof typeof PERMISSION_ACTIONS;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   requireMembership?: boolean;
   scopes?: PermissionScope[];
   userId: string;
@@ -60,7 +60,7 @@ export const resolveWorkspaceGrantedPermissions = async ({
   userId,
   workspaceId,
 }: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   requireMembership?: boolean;
   userId: string;
   workspaceId: string;
@@ -74,6 +74,7 @@ export const resolveWorkspaceGrantedPermissions = async ({
             eq(workspaceMembers.workspaceId, workspaceId),
             eq(workspaceMembers.userId, userId),
             isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
           ),
         )
         .limit(1)
@@ -126,6 +127,7 @@ export const hasWorkspaceScopedPermission = async ({
           eq(workspaceMembers.workspaceId, workspaceId),
           eq(workspaceMembers.userId, userId),
           isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
         ),
       )
       .limit(1);

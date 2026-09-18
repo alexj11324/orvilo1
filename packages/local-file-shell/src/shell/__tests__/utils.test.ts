@@ -49,8 +49,8 @@ const ENCODING_PREAMBLE =
   '\n$OutputEncoding = [System.Text.Encoding]::UTF8\n';
 
 const EXIT_CODE_GUARD =
-  '\n$__lobeExecOk = $?' +
-  '\nif (-not $__lobeExecOk) {' +
+  '\n$__orviloExecOk = $?' +
+  '\nif (-not $__orviloExecOk) {' +
   '\n  if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }' +
   '\n  exit 1' +
   '\n}';

@@ -76,7 +76,7 @@ const renderInspector = (args: Partial<EditTaskParams>) =>
     <EditTaskInspector
       apiName="editTask"
       args={{ identifier: 'T-1', ...args }}
-      identifier="lobe-task"
+      identifier="orvilo-task"
     />,
   );
 
@@ -115,18 +115,18 @@ describe('EditTaskInspector', () => {
   });
 
   it('renders the resolved agent name instead of the raw assignee id', () => {
-    mocks.agentMetaById.agt_lobe = {
-      avatar: 'lobe-avatar',
+    mocks.agentMetaById.agt_orvilo = {
+      avatar: 'orvilo-avatar',
       backgroundColor: '#123456',
       title: 'Orvilo AI',
     };
 
-    renderInspector({ assigneeAgentId: 'agt_lobe' });
+    renderInspector({ assigneeAgentId: 'agt_orvilo' });
 
-    expect(screen.getByTestId('assignee-avatar').dataset.agentId).toBe('agt_lobe');
+    expect(screen.getByTestId('assignee-avatar').dataset.agentId).toBe('agt_orvilo');
     expect(screen.getByTestId('assignee-avatar').dataset.fallbackToDefault).toBe('false');
     expect(screen.getByText('Orvilo AI')).toBeTruthy();
-    expect(screen.queryByText('agt_lobe')).toBeNull();
+    expect(screen.queryByText('agt_orvilo')).toBeNull();
   });
 });
 

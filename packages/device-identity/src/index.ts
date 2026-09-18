@@ -4,10 +4,10 @@ import { machineIdSync } from 'node-machine-id';
 
 /**
  * Constant mixed into the deviceId hash. Not a secret — it only ensures the
- * hash input is namespaced to LobeHub so the same machine id used elsewhere
+ * hash input is namespaced to Orvilo so the same machine id used elsewhere
  * can't produce a colliding value.
  */
-const SALT = 'lobehub-device-salt';
+const SALT = 'orvilo-device-salt';
 
 export type IdentitySource = 'fallback' | 'machine-id';
 
@@ -45,7 +45,7 @@ export const deriveScopedFallbackId = (seedId: string, principal: string): strin
 /**
  * Derive a stable deviceId for `(machine, user)`.
  *
- * Same machine + same user → same id (survives LobeHub reinstall, since the
+ * Same machine + same user → same id (survives Orvilo reinstall, since the
  * machine id is OS-level). Same machine + different user → different id, so the
  * server can't correlate accounts on one machine. When the machine id can't be
  * read, falls back to `fallbackId` (or a fresh random UUID) and flags the

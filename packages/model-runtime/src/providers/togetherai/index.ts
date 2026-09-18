@@ -9,15 +9,15 @@ export const params = {
   baseURL: 'https://api.together.xyz/v1',
   constructorOptions: {
     defaultHeaders: {
-      'HTTP-Referer': 'https://chat-preview.lobehub.com',
-      'X-Title': 'Lobe Chat',
+      'HTTP-Referer': 'https://chat-preview.aspectlylabs.com',
+      'X-Title': 'Orvilo',
     },
   },
   debug: {
     chatCompletion: () => process.env.DEBUG_TOGETHERAI_CHAT_COMPLETION === '1',
   },
   models: async ({ client }) => {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const visionKeywords = ['qvq', 'vision'];
 
@@ -30,7 +30,7 @@ export const params = {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.id.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -62,6 +62,6 @@ export const params = {
   provider: ModelProvider.TogetherAI,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeTogetherAI = createOpenAICompatibleRuntime(params);
+export const OrviloTogetherAI = createOpenAICompatibleRuntime(params);
 
 export type { TogetherAIModel } from './type';

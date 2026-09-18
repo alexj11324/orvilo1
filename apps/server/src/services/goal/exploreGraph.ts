@@ -10,7 +10,7 @@ import {
 } from '@orvilo/utils/goalGraph';
 
 import { GoalExplorationModel, goalExplorationSnapshot } from '@/database/models/goalExploration';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { GoalExplorationPlanner } from './explorationPlanner';
 
@@ -27,7 +27,7 @@ export const experimentResults = (graph: GoalGraphSnapshot, nodeId: string): str
 };
 
 export async function exploreGraph(params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   userId: string;
   workspaceId?: string;
   graph: GoalGraphSnapshot;

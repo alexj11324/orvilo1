@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
@@ -21,7 +21,7 @@ export { patchManifestWithPermissions } from './patchManifestPermissions';
  * Returns the stored permission, or null if no connector/tool entry exists.
  */
 export async function getConnectorToolPermission(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   identifier: string,
   toolName: string,

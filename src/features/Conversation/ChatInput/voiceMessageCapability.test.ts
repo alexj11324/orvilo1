@@ -29,7 +29,7 @@ const multimodalServerConfig = {
   enableMultimodalUnderstanding: true,
   multimodalUnderstanding: {
     model: 'fallback-audio-model',
-    provider: ModelProvider.LobeHub,
+    provider: ModelProvider.Orvilo,
   },
   telemetry: {},
 };
@@ -114,14 +114,14 @@ describe('canSendVoiceMessage', () => {
       abilities: { functionCall: true },
       enabled: true,
       id: 'deepseek-v4-pro',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     const fallbackModel = {
       abilities: { audio: true },
       enabled: true,
       id: 'fallback-audio-model',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     useAgentStore.setState({
@@ -129,7 +129,7 @@ describe('canSendVoiceMessage', () => {
         [agentId]: {
           chatConfig: { enableAgentMode: true },
           model: primaryModel.id,
-          provider: ModelProvider.LobeHub,
+          provider: ModelProvider.Orvilo,
           userId: 'user-author',
           visibility: 'public',
           workspaceId: 'workspace-1',
@@ -168,14 +168,14 @@ describe('useCanSendVoiceMessage', () => {
       abilities: { functionCall: true },
       enabled: true,
       id: 'deepseek-v4-pro',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     const fallbackModel = {
       abilities: { audio: true },
       enabled: true,
       id: 'fallback-audio-model',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     act(() => {
@@ -184,7 +184,7 @@ describe('useCanSendVoiceMessage', () => {
           [agentId]: {
             chatConfig: { enableAgentMode: false },
             model: primaryModel.id,
-            provider: ModelProvider.LobeHub,
+            provider: ModelProvider.Orvilo,
           },
         },
       } as any);
@@ -204,7 +204,7 @@ describe('useCanSendVoiceMessage', () => {
           [agentId]: {
             chatConfig: { enableAgentMode: true },
             model: primaryModel.id,
-            provider: ModelProvider.LobeHub,
+            provider: ModelProvider.Orvilo,
           },
         },
       } as any);
@@ -219,14 +219,14 @@ describe('useCanSendVoiceMessage', () => {
       abilities: { functionCall: true },
       enabled: true,
       id: 'deepseek-v4-flash',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     const fallbackModel = {
       abilities: { audio: true },
       enabled: true,
       id: 'fallback-audio-model',
-      providerId: ModelProvider.LobeHub,
+      providerId: ModelProvider.Orvilo,
       type: 'chat',
     } as const;
     act(() => {
@@ -235,7 +235,7 @@ describe('useCanSendVoiceMessage', () => {
           [agentId]: {
             chatConfig: { enableAgentMode: true },
             model: primaryModel.id,
-            provider: ModelProvider.LobeHub,
+            provider: ModelProvider.Orvilo,
             userId: 'user-author',
             visibility: 'public',
             workspaceId: 'workspace-1',

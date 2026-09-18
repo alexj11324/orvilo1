@@ -39,7 +39,7 @@ import {
   threads,
   topics,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { insertInBatches, splitCrossBatchSelfReferences } from '../../utils/batchInsert';
 import { COPIED_TOPIC_USAGE_RESET } from '../../utils/copiedTranscript';
 import { copyMessagesInDatabase, type IdPair } from '../../utils/copyMessagesInDatabase';
@@ -125,10 +125,10 @@ export interface CreateGroupWithSupervisorResult {
  */
 export class AgentGroupRepository {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -207,7 +207,7 @@ export class AgentGroupRepository {
     targetWorkspaceId,
   }: {
     agentIdMap: Map<string, string>;
-    executor: LobeChatDatabase;
+    executor: OrviloDatabase;
     newGroupId: string;
     sourceGroupId: string;
     targetUserId: string;

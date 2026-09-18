@@ -126,7 +126,7 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).toContain('do not place it as a foreground subject');
   });
 
-  it('defaults to the lobe mascot style direction', () => {
+  it('defaults to the orvilo mascot style direction', () => {
     const prompt = buildAgentArtworkPrompt({ id: 'agent-1', kind: 'avatar' });
 
     expect(prompt).toContain('one vivid contrasting solid background color');
@@ -136,8 +136,8 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).not.toContain('smirk');
   });
 
-  it('swaps the character-shaped lobe direction for a style-only one on covers', () => {
-    const prompt = buildAgentArtworkPrompt({ id: 'agent-1', kind: 'background', style: 'lobe' });
+  it('swaps the character-shaped orvilo direction for a style-only one on covers', () => {
+    const prompt = buildAgentArtworkPrompt({ id: 'agent-1', kind: 'background', style: 'orvilo' });
 
     expect(prompt).toContain('soft 3D cartoon world');
     expect(prompt).not.toContain('big lively glossy eyes');
@@ -268,12 +268,12 @@ describe('buildAgentArtworkPrompt', () => {
     expect(prompt).not.toContain('keyed out cleanly');
   });
 
-  it('keeps the mascot character wording when the lobe backdrop clause is dropped', () => {
+  it('keeps the mascot character wording when the orvilo backdrop clause is dropped', () => {
     const prompt = buildAgentArtworkPrompt({
       composition: 'fullBody',
       id: 'agent-1',
       kind: 'avatar',
-      style: 'lobe',
+      style: 'orvilo',
     });
 
     expect(prompt).toContain('mascot-style 3D emoji character');

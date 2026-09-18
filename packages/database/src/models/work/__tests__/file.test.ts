@@ -36,7 +36,7 @@ const baseFileParams = (
   threadId,
   title: 'deck.pptx',
   toolCallId: 'op:op-file-1',
-  toolIdentifier: 'lobe-cloud-sandbox',
+  toolIdentifier: 'orvilo-cloud-sandbox',
   toolName: 'writeFile',
   topicId,
   userId,

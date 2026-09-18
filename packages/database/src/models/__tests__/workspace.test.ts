@@ -10,12 +10,12 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { hasWorkspaceAdminAccess, WorkspaceModel } from '../workspace';
 import { WorkspaceAuditLogModel } from '../workspaceAuditLog';
 import { WorkspaceMemberModel } from '../workspaceMember';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const ownerId = 'workspace-model-owner';
 const memberId = 'workspace-model-member';
@@ -236,6 +236,10 @@ describe('WorkspaceModel', () => {
     });
     expect(memberships.find((member) => member.userId === ownerId)?.role).toBe('admin');
     expect(memberships.find((member) => member.userId === secondOwnerId)?.role).toBe('owner');
+    // Role changes are authz events — both memberships must bump
+    // authzVersion so cached authorization decisions invalidate.
+    expect(memberships.find((member) => member.userId === ownerId)?.authzVersion).toBe(2);
+    expect(memberships.find((member) => member.userId === secondOwnerId)?.authzVersion).toBe(2);
   });
 
   it('downgrades to Free by clearing the grace period without touching members', async () => {
@@ -466,7 +470,8 @@ describe('WorkspaceMemberModel', () => {
       status: 'pending',
       workspaceId,
     });
-    expect(invitation.token).toHaveLength(32);
+    // 256-bit token, base64url-encoded → 43 chars.
+    expect(invitation.token).toHaveLength(43);
     expect(invitation.expiresAt.getTime()).toBeGreaterThan(
       before.getTime() + 6 * 24 * 60 * 60 * 1000,
     );

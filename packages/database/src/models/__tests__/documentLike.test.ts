@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { documentLikes, documents, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   DOCUMENT_LIKE_DOCUMENT_NOT_FOUND,
   DOCUMENT_LIKE_WORKSPACE_REQUIRED,
   DocumentLikeModel,
 } from '../documentLike';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const authorId = 'document-like-author';
 const memberId = 'document-like-member';

@@ -1,4 +1,4 @@
-import { type LobeChatDatabase, type Transaction } from '@orvilo/database';
+import { type OrviloDatabase, type Transaction } from '@orvilo/database';
 import { inferContentTypeFromImageUrl, nanoid, uuid } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import { sha256 } from 'js-sha256';
@@ -26,14 +26,14 @@ export interface FileAccessUrlItem {
  * Provides file operation services using a modular implementation approach
  */
 export class FileService {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
   private userId: string;
   private fileModel: FileModel;
 
   private impl: FileServiceImpl;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.fileModel = new FileModel(db, userId, workspaceId);

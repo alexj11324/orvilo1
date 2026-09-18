@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "نماینده پیش‌فرض",
   "verify.confirm.defaultAgentHint": "پیام‌های شما ابتدا به اینجا ارسال می‌شوند. هر زمان می‌توانید از طریق /agents در ربات یا از تنظیمات → پیام‌رسان تغییر دهید.",
   "verify.confirm.defaultAgentPlaceholder": "یک نماینده انتخاب کنید",
-  "verify.confirm.fields.lobeHubAccount": "حساب Orvilo",
+  "verify.confirm.fields.orviloHubAccount": "حساب Orvilo",
   "verify.confirm.fields.platformAccount": "حساب {{platform}}",
   "verify.confirm.fields.workspace": "فضای کاری",
   "verify.confirm.noAgents": "شما هنوز هیچ نماینده‌ای ندارید. یکی را در Orvilo ایجاد کنید، سپس برای تکمیل لینک کردن بازگردید.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "این حساب Orvilo قبلاً به یک حساب تلگرام دیگر متصل شده است. ابتدا آن را در تنظیمات → پیام‌رسان قطع کنید تا بتوانید حساب جدیدی را متصل کنید.",
   "verify.signInCta": "برای ادامه وارد شوید",
   "verify.signInRequired": "لطفاً وارد Orvilo شوید تا لینک را تأیید کنید.",
-  "verify.success.backToLobeHub": "بازگشت به Orvilo",
+  "verify.success.backToOrvilo": "بازگشت به Orvilo",
   "verify.success.description": "حساب شما اکنون به {{platform}} متصل شده است. {{platform}} را باز کنید و اولین پیام خود را ارسال کنید.",
   "verify.success.openBot": "باز کردن در {{platform}}",
   "verify.success.title": "با موفقیت لینک شد!"

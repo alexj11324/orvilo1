@@ -3,7 +3,7 @@
  *
  * Converts Claude Code CLI `--output-format stream-json --verbose` (ndjson)
  * events into unified HeterogeneousAgentEvent[] that the executor feeds into
- * LobeHub's Gateway event handler.
+ * Orvilo's Gateway event handler.
  *
  * Stream-json event shapes (from real CLI output):
  *
@@ -140,13 +140,13 @@ const stripModelBetaMarker = (model?: string) => {
 };
 
 /**
- * Tool name CC sees for the LobeHub-hosted MCP `ask_user_question` server.
+ * Tool name CC sees for the Orvilo-hosted MCP `ask_user_question` server.
  * Source of truth lives in `../askUser/constants.ts`; replicated here as a
  * literal so the adapter compiles in browser bundles without dragging in
  * any of the askUser package's runtime (node:http, MCP SDK, etc.) by
  * accident. Keep in sync.
  */
-const ASK_USER_MCP_TOOL_NAME = 'mcp__lobe_cc__ask_user_question';
+const ASK_USER_MCP_TOOL_NAME = 'mcp__orvilo_cc__ask_user_question';
 
 /**
  * apiName the adapter rewrites the MCP tool to so the renderer routes on

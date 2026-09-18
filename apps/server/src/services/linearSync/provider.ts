@@ -11,7 +11,7 @@ import type {
 } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { createLinearInstallationAuth, type LinearInstallationAuthOptions } from './auth';
 import { LINEAR_GRAPHQL_URL } from './oauth';
@@ -962,7 +962,7 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
 }
 
 export const createLinearGraphqlIssueProvider = (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   installationId: string;
   organizationId: string;
   options?: LinearInstallationAuthOptions;

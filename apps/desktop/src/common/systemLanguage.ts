@@ -1,4 +1,4 @@
-export const SYSTEM_LANGUAGE_ARG_PREFIX = '--lobe-system-language=';
+export const SYSTEM_LANGUAGE_ARG_PREFIX = '--orvilo-system-language=';
 
 export const FALLBACK_LOCALE = 'en-US';
 

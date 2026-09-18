@@ -13,7 +13,7 @@ import { type MessageDispatch } from '../reducer';
 import { messagesReducer } from '../reducer';
 import { reconcileAssistantToolLinks } from '../utils/reconcileTools';
 
-const log = debug('lobe-store:message-internals');
+const log = debug('orvilo-store:message-internals');
 
 /**
  * Internal core methods that serve as building blocks for other actions

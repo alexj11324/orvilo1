@@ -26,4 +26,4 @@ export const params = {
   provider: ModelProvider.GiteeAI,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeGiteeAI = createOpenAICompatibleRuntime(params);
+export const OrviloGiteeAI = createOpenAICompatibleRuntime(params);

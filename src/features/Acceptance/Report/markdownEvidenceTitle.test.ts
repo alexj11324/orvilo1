@@ -13,8 +13,8 @@ describe('evidenceTitleFromMarkdown — the collapsed row label', () => {
 
   it('strips bold / code / link syntax from the first line', () => {
     expect(
-      evidenceTitleFromMarkdown('**环境**: worktree `lobehub-wt-x`(基线 [canary](https://x))'),
-    ).toBe('环境: worktree lobehub-wt-x(基线 canary)');
+      evidenceTitleFromMarkdown('**环境**: worktree `orvilo-wt-x`(基线 [canary](https://x))'),
+    ).toBe('环境: worktree orvilo-wt-x(基线 canary)');
   });
 
   it('skips blank lines and fence markers — a doc opening with a code block is labeled by its first code line', () => {

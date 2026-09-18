@@ -59,17 +59,14 @@ describe('useCanonicalTaskSlug', () => {
   });
 
   it('keeps the workspace prefix and agent scope of the current URL', () => {
-    mocks.params = { aid: 'agt_owner', workspaceSlug: 'lobehub' };
+    mocks.params = { aid: 'agt_owner', workspaceSlug: 'orvilo' };
     setTaskName('Ship the Thing');
 
     renderHook(() => useCanonicalTaskSlug('T-1'));
 
-    expect(mocks.navigate).toHaveBeenCalledWith(
-      '/lobehub/agent/agt_owner/task/T-1/ship-the-thing',
-      {
-        replace: true,
-      },
-    );
+    expect(mocks.navigate).toHaveBeenCalledWith('/orvilo/agent/agt_owner/task/T-1/ship-the-thing', {
+      replace: true,
+    });
   });
 
   it('preserves the query string and hash', () => {

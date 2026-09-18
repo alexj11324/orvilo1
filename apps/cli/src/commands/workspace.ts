@@ -20,7 +20,7 @@ interface WorkspaceRow {
 }
 
 const SCOPE_HINTS: Record<WorkspaceScope['source'], string> = {
-  env: 'LOBEHUB_WORKSPACE_ID',
+  env: 'ORVILO_WORKSPACE_ID',
   explicit: '--workspace',
   personal: 'personal (no workspace scope)',
   settings: `${CLI_PRIMARY_BIN} workspace use`,
@@ -48,16 +48,16 @@ const requireScope = (explicit?: string): string => {
 };
 
 /**
- * `LOBEHUB_WORKSPACE_ID` outranks the persisted scope, so writing the file
+ * `ORVILO_WORKSPACE_ID` outranks the persisted scope, so writing the file
  * changes nothing until it is unset. Saying so is the difference between the
  * user believing they switched and their next mutation hitting another tenant.
  */
 const warnIfEnvOverridesPersistedScope = (): void => {
-  const fromEnv = process.env.LOBEHUB_WORKSPACE_ID;
+  const fromEnv = process.env.ORVILO_WORKSPACE_ID;
   if (!fromEnv) return;
 
   log.warn(
-    `LOBEHUB_WORKSPACE_ID=${fromEnv} is set and takes precedence — commands keep running against that workspace until you unset it.`,
+    `ORVILO_WORKSPACE_ID=${fromEnv} is set and takes precedence — commands keep running against that workspace until you unset it.`,
   );
 };
 
@@ -72,7 +72,7 @@ const persistScope = (workspaceId: string): void => {
     // API-key mode has no local account identity to bind to, so there is no way
     // to tell later whether the saved scope still belongs to the caller.
     log.error(
-      `Cannot save a scope for these credentials. Run '${CLI_PRIMARY_BIN} login', or set LOBEHUB_WORKSPACE_ID for this session.`,
+      `Cannot save a scope for these credentials. Run '${CLI_PRIMARY_BIN} login', or set ORVILO_WORKSPACE_ID for this session.`,
     );
     process.exit(1);
   }
@@ -238,7 +238,7 @@ export function registerWorkspaceCommand(program: Command) {
   workspace
     .command('create <name>')
     .description('Create a workspace')
-    .requiredOption('-s, --slug <slug>', 'URL slug, unique across LobeHub')
+    .requiredOption('-s, --slug <slug>', 'URL slug, unique across Orvilo')
     .option('-d, --description <description>', 'Description')
     .option('--avatar <avatar>', 'Avatar URL or emoji')
     .option('--use', 'Switch the CLI scope to the new workspace')
@@ -434,7 +434,7 @@ export function registerWorkspaceCommand(program: Command) {
         const scopeId = requireScope(options.workspace);
         const invitation = await (
           await getTrpcClient(scopeId)
-        ).workspaceMember.invite.mutate({ email, role });
+        ).workspaceMember.invite.mutate({ emails: [email], role });
 
         if (options.json !== undefined) return outputJson(invitation, options.json);
         console.log(`Invited ${pc.bold(email)} as ${role}.`);

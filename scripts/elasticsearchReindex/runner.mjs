@@ -9,7 +9,7 @@ import { build } from 'esbuild';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectDirectory = path.resolve(scriptDirectory, '../..');
 const dependencyPath = path.join(projectDirectory, 'node_modules');
-const runtimeDirectory = await mkdtemp(path.join(os.tmpdir(), 'lobehub-fts-reindex-'));
+const runtimeDirectory = await mkdtemp(path.join(os.tmpdir(), 'orvilo-fts-reindex-'));
 const outputFile = path.join(runtimeDirectory, 'fts-search-elasticsearch-reindex.cjs');
 
 let exitCode;

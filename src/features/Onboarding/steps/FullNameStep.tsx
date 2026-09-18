@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import LobeMessage from '../components/LobeMessage';
+import OrviloMessage from '../components/OrviloMessage';
 
 interface FullNameStepProps {
   onBack: () => void;
@@ -46,7 +46,9 @@ const FullNameStep = memo<FullNameStepProps>(({ onBack, onNext }) => {
 
   return (
     <Flexbox gap={16}>
-      <LobeMessage sentences={[t('username.title'), t('username.title2'), t('username.title3')]} />
+      <OrviloMessage
+        sentences={[t('username.title'), t('username.title2'), t('username.title3')]}
+      />
       <Flexbox horizontal align={'center'} gap={12}>
         <Input
           autoFocus

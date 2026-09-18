@@ -686,7 +686,7 @@ describe('google contextBuilders', () => {
                 language: ['JSON'],
                 path: 'package.json',
                 query: '"version":',
-                repo: 'lobehub/lobe-chat',
+                repo: 'aspectlylabs/orvilo',
               }),
               name: 'grep____searchGitHub____mcp',
             },
@@ -711,7 +711,7 @@ describe('google contextBuilders', () => {
                 language: ['JSON'],
                 path: 'package.json',
                 query: '"version":',
-                repo: 'lobehub/lobe-chat',
+                repo: 'aspectlylabs/orvilo',
               },
               name: 'grep____searchGitHub____mcp',
             },
@@ -740,7 +740,7 @@ describe('google contextBuilders', () => {
               {
                 function: {
                   arguments: '{"query":"杭州天气","searchEngines":["google"]}',
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 id: 'call_001',
                 type: 'function',
@@ -749,7 +749,7 @@ describe('google contextBuilders', () => {
           },
           {
             content: 'Tool execution was aborted by user.',
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             role: 'tool',
             tool_call_id: 'call_001',
           },
@@ -760,7 +760,7 @@ describe('google contextBuilders', () => {
               {
                 function: {
                   arguments: '{"query":"杭州 天气","searchEngines":["bing"]}',
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 id: 'call_002',
                 type: 'function',
@@ -769,7 +769,7 @@ describe('google contextBuilders', () => {
           },
           {
             content: 'no result',
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             role: 'tool',
             tool_call_id: 'call_002',
           },
@@ -796,7 +796,7 @@ describe('google contextBuilders', () => {
               {
                 functionCall: {
                   args: { query: '杭州天气', searchEngines: ['google'] },
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 thoughtSignature: GEMINI_MAGIC_THOUGHT_SIGNATURE,
               },
@@ -807,7 +807,7 @@ describe('google contextBuilders', () => {
             parts: [
               {
                 functionResponse: {
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                   response: { result: 'Tool execution was aborted by user.' },
                 },
               },
@@ -819,7 +819,7 @@ describe('google contextBuilders', () => {
               {
                 functionCall: {
                   args: { query: '杭州 天气', searchEngines: ['bing'] },
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 thoughtSignature: GEMINI_MAGIC_THOUGHT_SIGNATURE,
               },
@@ -830,7 +830,7 @@ describe('google contextBuilders', () => {
             parts: [
               {
                 functionResponse: {
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                   response: { result: 'no result' },
                 },
               },
@@ -854,7 +854,7 @@ describe('google contextBuilders', () => {
               {
                 function: {
                   arguments: '{"query":"杭州天气","searchEngines":["google"]}',
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 id: 'call_001',
                 thoughtSignature: serializeScopedSignature(
@@ -868,7 +868,7 @@ describe('google contextBuilders', () => {
           },
           {
             content: 'Tool result',
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             role: 'tool',
             tool_call_id: 'call_001',
           },
@@ -886,7 +886,7 @@ describe('google contextBuilders', () => {
               {
                 functionCall: {
                   args: { query: '杭州天气', searchEngines: ['google'] },
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 // Should keep existing thoughtSignature, not add magic signature
                 thoughtSignature: existingSignature,
@@ -898,7 +898,7 @@ describe('google contextBuilders', () => {
             parts: [
               {
                 functionResponse: {
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                   response: { result: 'Tool result' },
                 },
               },
@@ -1069,7 +1069,7 @@ describe('google contextBuilders', () => {
               {
                 function: {
                   arguments: '{"query":"杭州天气","searchEngines":["google"]}',
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 id: 'call_001',
                 type: 'function',
@@ -1078,7 +1078,7 @@ describe('google contextBuilders', () => {
           },
           {
             content: 'Tool execution was aborted by user.',
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             role: 'tool',
             tool_call_id: 'call_001',
           },
@@ -1109,7 +1109,7 @@ describe('google contextBuilders', () => {
               {
                 functionCall: {
                   args: { query: '杭州天气', searchEngines: ['google'] },
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                 },
                 // Magic signature added even when last message is user text
                 // (cross-provider scenario: OpenAI → Gemini switch)
@@ -1122,7 +1122,7 @@ describe('google contextBuilders', () => {
             parts: [
               {
                 functionResponse: {
-                  name: 'lobe-web-browsing____search',
+                  name: 'orvilo-web-browsing____search',
                   response: { result: 'Tool execution was aborted by user.' },
                 },
               },
@@ -1484,7 +1484,7 @@ describe('google contextBuilders', () => {
     it('should correctly convert full conversation with thoughtSignature', async () => {
       const messages: OpenAIChatMessage[] = [
         { content: 'system prompt', role: 'system' },
-        { content: 'LobeChat 最新版本', role: 'user' },
+        { content: 'Orvilo 最新版本', role: 'user' },
         {
           content: '',
           role: 'assistant',
@@ -1495,7 +1495,7 @@ describe('google contextBuilders', () => {
                   language: ['JSON'],
                   path: 'package.json',
                   query: '"version":',
-                  repo: 'lobehub/lobe-chat',
+                  repo: 'aspectlylabs/orvilo',
                 }),
                 name: 'grep____searchGitHub____mcp',
               },
@@ -1525,7 +1525,9 @@ describe('google contextBuilders', () => {
           role: 'user',
         },
         {
-          parts: [{ text: 'LobeChat 最新版本', thoughtSignature: GEMINI_MAGIC_THOUGHT_SIGNATURE }],
+          parts: [
+            { text: 'Orvilo 最新版本', thoughtSignature: GEMINI_MAGIC_THOUGHT_SIGNATURE },
+          ],
           role: 'user',
         },
         {
@@ -1536,7 +1538,7 @@ describe('google contextBuilders', () => {
                   language: ['JSON'],
                   path: 'package.json',
                   query: '"version":',
-                  repo: 'lobehub/lobe-chat',
+                  repo: 'aspectlylabs/orvilo',
                 },
                 name: 'grep____searchGitHub____mcp',
               },
@@ -1829,7 +1831,7 @@ describe('google contextBuilders', () => {
         {
           function: {
             description: 'Search the web',
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             parameters: {
               properties: { query: { type: 'string' } },
               required: ['query'],
@@ -1853,7 +1855,7 @@ describe('google contextBuilders', () => {
         {
           function: {
             description: 'Search the web (duplicate)',
-            name: 'lobe-web-browsing____search',
+            name: 'orvilo-web-browsing____search',
             parameters: {
               properties: { query: { type: 'string' } },
               required: ['query'],
@@ -1868,7 +1870,7 @@ describe('google contextBuilders', () => {
 
       expect(googleTools).toHaveLength(1);
       expect(googleTools![0].functionDeclarations).toHaveLength(2);
-      expect(googleTools![0].functionDeclarations![0].name).toBe('lobe-web-browsing____search');
+      expect(googleTools![0].functionDeclarations![0].name).toBe('orvilo-web-browsing____search');
       expect(googleTools![0].functionDeclarations![0].description).toBe('Search the web');
       expect(googleTools![0].functionDeclarations![1].name).toBe('get_weather');
     });

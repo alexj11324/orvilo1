@@ -14,7 +14,7 @@ In `NODE_ENV=development`, `AgentRuntimeService.executeStep()` automatically rec
 
 **Data flow**: executeStep loop -> build `StepPresentationData` -> write partial snapshot to disk -> on completion, finalize to `.agent-tracing/{timestamp}_{traceId}.json`
 
-**Context engine capture**: In `RuntimeExecutors.ts`, the `call_llm` executor calls `ctx.tracingContextEngine(input, output)` after `serverMessagesEngine()` processes messages. `AgentRuntimeService.executeStep` buffers the call per step and forwards it to `OperationTraceRecorder.appendStep` as the typed `contextEngine` field. CE flows through this side channel rather than the `events` array so its heavy payload (agentDocuments, systemRole, …) never enters the Redis state pipeline (LOBE-9110).
+**Context engine capture**: In `RuntimeExecutors.ts`, the `call_llm` executor calls `ctx.tracingContextEngine(input, output)` after `serverMessagesEngine()` processes messages. `AgentRuntimeService.executeStep` buffers the call per step and forwards it to `OperationTraceRecorder.appendStep` as the typed `contextEngine` field. CE flows through this side channel rather than the `events` array so its heavy payload (agentDocuments, systemRole, …) never enters the Redis state pipeline (ORVILO-9110).
 
 ## Package Location
 
@@ -48,7 +48,7 @@ packages/agent-tracing/
 
 Server deployments also upload completed snapshots to object storage (zstd-compressed; the key is stored in `agent_operations.trace_s3_key`).
 
-**Preferred: `lh trace op`.** The server resolves the key and signs the object for the caller's own scope, so a LobeHub login is the only requirement — no `TRACING_BASE_URL`, no bucket domain, and no SQL to turn a topic id into an operation id:
+**Preferred: `lh trace op`.** The server resolves the key and signs the object for the caller's own scope, so a Orvilo login is the only requirement — no `TRACING_BASE_URL`, no bucket domain, and no SQL to turn a topic id into an operation id:
 
 ```bash
 lh trace op list --topic tpc_xxx # operations of a topic, newest first, with a TRACE column
@@ -60,7 +60,7 @@ lh trace op inspect op_xxx_agt_xxx_tpc_xxx_xxxx -T # tool injection (enabledTool
 
 Backend: the `agentTrace` lambda router (`getSnapshotUrl` / `listOperations`). Note it is `blocked` for restricted API keys, so these commands need a real session, not a scoped key.
 
-**Fallback: the standalone `agent-tracing` CLI.** It has no LobeHub session, so it builds the object URL itself and needs the bucket's public domain configured:
+**Fallback: the standalone `agent-tracing` CLI.** It has no Orvilo session, so it builds the object URL itself and needs the bucket's public domain configured:
 
 - env var: `TRACING_BASE_URL=https://<bucket-public-domain>/agent-traces`
 - or `.agent-tracing/.env` in the repo root with the same `TRACING_BASE_URL=...` line
@@ -177,13 +177,13 @@ agent-tracing replay <target> --all-steps
 
 A snapshot already freezes everything one LLM call saw: `steps[].contextEngine.output` is the
 exact message array sent to the model, `context.payload.tools` the toolset it could reach.
-`replay` sends that frozen payload back out with only the model swapped, so a difference in
+`replay` sends that frozen payload back out with only the model swapped, so a difference
 output is attributable to the model rather than to context assembly. If every model fails the
 same payload, the context is at fault; if some pass, it is model selection.
 
-Available from both CLIs — `agent-tracing replay` (reads `LOBEHUB_JWT`) and `lh trace op replay`
+Available from both CLIs — `agent-tracing replay` (reads `ORVILO_JWT`) and `lh trace op replay`
 (uses the `lh login` session). Both need credentials because the call goes out through the
-LobeHub chat route.
+Orvilo chat route.
 
 ```bash
 # One call: defaults to the last call_llm step and the model the op ran on
@@ -240,7 +240,7 @@ Reading a row:
 - **Block colors** encode role directly: orange system, green user, blue assistant, gray tool.
   Assistant reasoning, content, and tool calls use different steps of the same blue scale;
   framework-injected blocks use a lighter orange than the system prompt. Every value is a step
-  index into a LobeHub scale vendored in `viewer/contextMapScales.ts`, with assignments in
+  index into a Orvilo scale vendored in `viewer/contextMapScales.ts`, with assignments
   `viewer/contextMapPalette.ts`. The HTML report ships both themes and follows the system theme.
 - **Neutral message frames** group segments that belong to the same payload message. Every role
   uses the same frame color: the outline communicates structure only, while the block fill carries
@@ -249,7 +249,7 @@ Reading a row:
 - **Fill** says whether the provider reused it: shaded `▓` (HTML: 60%-opaque hatch) was served
   from the prefix cache; solid `█` (HTML: flat) was re-processed by the model.
 - **The line under the track** is the cache ledger — a bracket / green band spanning exactly the
-  cached prefix, then the break marker (`▲` in the terminal, a red rule through the track in
+  cached prefix, then the break marker (`▲` in the terminal, a red rule through the track
   HTML) at the column where reuse stopped, with the reason and the re-processed tokens.
 
 | Flag            | Short | Description                                                |

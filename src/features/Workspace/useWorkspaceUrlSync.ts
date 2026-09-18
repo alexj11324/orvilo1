@@ -15,15 +15,26 @@ import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
  * first segment happens to resemble one.
  *
  * Kept in sync with `sharedMainAreaChildren` (paths) + the personal-only list
- * in router configs. If you add a new root path segment, add it here too.
+ * in router configs. If you add a new root path segment, add it here too —
+ * `__tests__/reservedSegments.test.ts` now enforces exactly that, so the
+ * instruction no longer depends on someone reading this comment. It found five
+ * segments that had drifted out of the set (`agents`, `automations`, `goal`,
+ * `inbox`, `project`); `/inbox` in particular was being treated as an
+ * unresolved workspace slug, so the sync returned early and never switched the
+ * store to personal the way it does for `/tasks`.
  */
-const RESERVED_FIRST_SEGMENTS = new Set([
+export const RESERVED_FIRST_SEGMENTS = new Set([
   // Shared (mirrored under /:workspaceSlug too):
   'agent',
-  'group',
+  'agents',
+  'automations',
   'community',
+  'goal',
+  'group',
+  'inbox',
   'memory',
   'page',
+  'project',
   'projects',
   'resource',
   'image',
@@ -40,6 +51,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'share',
   'devtools',
   'desktop-onboarding',
+  'invite',
 ]);
 
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;

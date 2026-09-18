@@ -157,7 +157,7 @@ async function main() {
       '## References',
       '',
       '- Design doc: `docs/api-v2-design.md`',
-      '- SDK repo: `lobehub/sdk-js`',
+      '- SDK repo: `aspectlylabs/sdk-js`',
     ].join('\n'),
     priority: 4,
     assigneeAgentId: agentId,

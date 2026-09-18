@@ -11,7 +11,7 @@ const {
   mockCreateVideo,
   mockFindUserById,
   mockGenerationTopicFindById,
-  mockIsLobeHubModelAvailable,
+  mockIsOrviloModelAvailable,
   mockProcessBackgroundVideoPolling,
   mockResolveBusinessModelMapping,
   mockAfter,
@@ -26,14 +26,14 @@ const {
   });
   const mockFindUserById = vi.fn();
   const mockGenerationTopicFindById = vi.fn();
-  const mockIsLobeHubModelAvailable = vi.fn();
+  const mockIsOrviloModelAvailable = vi.fn();
   const mockProcessBackgroundVideoPolling = vi.fn().mockResolvedValue(undefined);
   const mockResolveBusinessModelMapping = vi.fn();
   return {
     mockCreateVideo,
     mockFindUserById,
     mockGenerationTopicFindById,
-    mockIsLobeHubModelAvailable,
+    mockIsOrviloModelAvailable,
     mockProcessBackgroundVideoPolling,
     mockResolveBusinessModelMapping,
     mockAfter,
@@ -62,6 +62,12 @@ vi.mock('@/database/models/user', () => ({
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn().mockResolvedValue(mockServerDB),
 }));
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
 vi.mock('@/database/server', () => ({
   getServerDB: vi.fn().mockResolvedValue(mockServerDB),
 }));
@@ -80,13 +86,13 @@ vi.mock('@orvilo/business-model-runtime', async (importOriginal) => ({
     mockResolveBusinessModelMapping(...args),
 }));
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
-  isLobeHubModelAvailable: (
+  isOrviloModelAvailable: (
     ...args: [
       string,
       string,
       { getUserEmail?: () => Promise<string | null | undefined>; userEmail?: string | null }?,
     ]
-  ) => mockIsLobeHubModelAvailable(...args),
+  ) => mockIsOrviloModelAvailable(...args),
 }));
 vi.mock('@/business/server/video-generation/getVideoFreeQuota', () => ({
   getVideoFreeQuota: vi.fn().mockResolvedValue({ remaining: 10 }),
@@ -182,7 +188,7 @@ describe('videoRouter', () => {
     );
     mockFindUserById.mockResolvedValue({ email: 'user@example.com' });
     mockGenerationTopicFindById.mockResolvedValue({ id: 'topic-1' });
-    mockIsLobeHubModelAvailable.mockResolvedValue(true);
+    mockIsOrviloModelAvailable.mockResolvedValue(true);
   });
 
   describe('createVideo - async strategy routing', () => {
@@ -222,12 +228,12 @@ describe('videoRouter', () => {
         BRANDING_PROVIDER,
         'onboarding-video',
       );
-      expect(mockIsLobeHubModelAvailable).toHaveBeenCalledWith(
+      expect(mockIsOrviloModelAvailable).toHaveBeenCalledWith(
         'dreamina-seedance-2-0-260128',
         'video',
         { getUserEmail: expect.any(Function) },
       );
-      const availabilityOptions = mockIsLobeHubModelAvailable.mock.calls.at(-1)?.[2];
+      const availabilityOptions = mockIsOrviloModelAvailable.mock.calls.at(-1)?.[2];
       expect(mockFindUserById).not.toHaveBeenCalled();
       await expect(availabilityOptions!.getUserEmail!()).resolves.toBe('user@example.com');
       expect(mockFindUserById).toHaveBeenCalledWith(mockServerDB, mockCtx.userId);
@@ -239,7 +245,7 @@ describe('videoRouter', () => {
 
     it('should reject unavailable branding-provider video models before creating async tasks', async () => {
       setupMocks();
-      mockIsLobeHubModelAvailable.mockResolvedValue(false);
+      mockIsOrviloModelAvailable.mockResolvedValue(false);
 
       const caller = videoRouter.createCaller(mockCtx);
 
@@ -251,7 +257,7 @@ describe('videoRouter', () => {
         }),
       ).rejects.toMatchObject({
         code: 'BAD_REQUEST',
-        message: 'LobeHubModelDeprecated',
+        message: 'OrviloModelDeprecated',
       });
 
       expect(mockTransaction).not.toHaveBeenCalled();

@@ -12,7 +12,7 @@ import { useClientDataSWRWithSync } from '@/libs/swr';
 import { documentService } from '@/services/document';
 import { useGlobalStore } from '@/store/global';
 import { type StoreSetter } from '@/store/types';
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 import { DocumentSourceType } from '@/types/document';
 import { type ResourceItem } from '@/types/resource';
 import { setNamespace } from '@/utils/storeDebug';
@@ -34,11 +34,11 @@ const EDITOR_DOCUMENT_FILE_TYPE = CUSTOM_DOCUMENT_FILE_TYPE;
 interface ResourceDocumentSnapshot {
   content?: string | null;
   createdAt?: Date | string;
-  editorData?: LobeDocument['editorData'] | string;
+  editorData?: OrviloDocument['editorData'] | string;
   fileType?: string;
   id: string;
   knowledgeBaseId?: string;
-  metadata?: LobeDocument['metadata'] | null;
+  metadata?: OrviloDocument['metadata'] | null;
   parentId?: string | null;
   slug?: string | null;
   source?: string | null;
@@ -71,7 +71,7 @@ export class DocumentActionImpl {
     this.#get = get;
   }
 
-  #findExistingDocument = (documentId: string): LobeDocument | undefined => {
+  #findExistingDocument = (documentId: string): OrviloDocument | undefined => {
     const { documents, localDocumentMap } = this.#get();
 
     return localDocumentMap.get(documentId) ?? documents.find((doc) => doc.id === documentId);
@@ -82,7 +82,7 @@ export class DocumentActionImpl {
   };
 
   #parseEditorData = (
-    editorData: LobeDocument['editorData'] | string | undefined,
+    editorData: OrviloDocument['editorData'] | string | undefined,
     fallback: ResourceItem['editorData'],
   ): ResourceItem['editorData'] => {
     if (editorData === undefined) return fallback;
@@ -92,9 +92,9 @@ export class DocumentActionImpl {
   };
 
   #createUpdatedDocument = (
-    existingDocument: LobeDocument,
-    updates: Partial<LobeDocument>,
-  ): LobeDocument => {
+    existingDocument: OrviloDocument,
+    updates: Partial<OrviloDocument>,
+  ): OrviloDocument => {
     const mergedMetadata =
       updates.metadata !== undefined
         ? { ...existingDocument.metadata, ...updates.metadata }
@@ -113,7 +113,7 @@ export class DocumentActionImpl {
     };
   };
 
-  #setLocalDocument = (documentId: string, document: LobeDocument, actionName: string) => {
+  #setLocalDocument = (documentId: string, document: OrviloDocument, actionName: string) => {
     const { localDocumentMap } = this.#get();
     const newMap = new Map(localDocumentMap);
     newMap.set(documentId, document);
@@ -318,7 +318,7 @@ export class DocumentActionImpl {
     const tempId = `temp-document-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const now = new Date();
 
-    const newPage: LobeDocument = {
+    const newPage: OrviloDocument = {
       content: null,
       createdAt: now,
       editorData: null,
@@ -370,7 +370,7 @@ export class DocumentActionImpl {
     // Add the new page to local map immediately for instant UI update
     const { localDocumentMap } = this.#get();
     const newMap = new Map(localDocumentMap);
-    const editorPage: LobeDocument = {
+    const editorPage: OrviloDocument = {
       content: newPage.content || null,
       createdAt: newPage.createdAt ? new Date(newPage.createdAt) : new Date(),
       editorData:
@@ -410,7 +410,7 @@ export class DocumentActionImpl {
       const { localDocumentMap } = this.#get();
       const newMap = new Map(localDocumentMap);
 
-      const fullDocument: LobeDocument = {
+      const fullDocument: OrviloDocument = {
         content: document.content || null,
         createdAt: document.createdAt ? new Date(document.createdAt) : new Date(),
         editorData:
@@ -457,7 +457,7 @@ export class DocumentActionImpl {
       const pages = result.items.filter(isAllowedDocument).map((doc) => ({
         ...doc,
         filename: doc.filename ?? doc.title ?? 'Untitled',
-      })) as LobeDocument[];
+      })) as OrviloDocument[];
 
       const hasMore = result.items.length >= pageSize;
 
@@ -492,14 +492,14 @@ export class DocumentActionImpl {
     }
   };
 
-  getOptimisticDocuments = (): LobeDocument[] => {
+  getOptimisticDocuments = (): OrviloDocument[] => {
     const { localDocumentMap, documents } = this.#get();
 
     // Track which pages we've added
     const addedIds = new Set<string>();
 
     // Create result array - start with server pages
-    const result: LobeDocument[] = documents.map((page) => {
+    const result: OrviloDocument[] = documents.map((page) => {
       addedIds.add(page.id);
       // Check if we have a local optimistic update for this page
       const localUpdate = localDocumentMap.get(page.id);
@@ -541,7 +541,7 @@ export class DocumentActionImpl {
       const newPages = result.items.filter(isAllowedDocument).map((doc) => ({
         ...doc,
         filename: doc.filename ?? doc.title ?? 'Untitled',
-      })) as LobeDocument[];
+      })) as OrviloDocument[];
 
       const hasMore = result.items.length >= pageSize;
 
@@ -604,7 +604,7 @@ export class DocumentActionImpl {
     this.#set({ localDocumentMap: newMap }, false, n('removeTempDocument'));
   };
 
-  replaceTempDocumentWithReal = (tempId: string, realPage: LobeDocument): void => {
+  replaceTempDocumentWithReal = (tempId: string, realPage: OrviloDocument): void => {
     const { localDocumentMap } = this.#get();
     const newMap = new Map(localDocumentMap);
 
@@ -617,7 +617,7 @@ export class DocumentActionImpl {
     this.#set({ localDocumentMap: newMap }, false, n('replaceTempDocumentWithReal'));
   };
 
-  updateDocument = async (id: string, updates: Partial<LobeDocument>): Promise<void> => {
+  updateDocument = async (id: string, updates: Partial<OrviloDocument>): Promise<void> => {
     await documentService.updateDocument({
       content: updates.content ?? undefined,
       editorData: updates.editorData
@@ -664,7 +664,7 @@ export class DocumentActionImpl {
 
   updateDocumentOptimistically = async (
     documentId: string,
-    updates: Partial<LobeDocument>,
+    updates: Partial<OrviloDocument>,
   ): Promise<void> => {
     const { localDocumentMap, documents } = this.#get();
 
@@ -728,10 +728,10 @@ export class DocumentActionImpl {
     }
   };
 
-  useFetchDocumentDetail = (documentId: string | undefined): SWRResponse<LobeDocument | null> => {
+  useFetchDocumentDetail = (documentId: string | undefined): SWRResponse<OrviloDocument | null> => {
     const swrKey = documentId ? ['documentDetail', documentId] : null;
 
-    return useClientDataSWRWithSync<LobeDocument | null>(
+    return useClientDataSWRWithSync<OrviloDocument | null>(
       swrKey,
       async () => {
         if (!documentId) return null;
@@ -742,8 +742,8 @@ export class DocumentActionImpl {
           return null;
         }
 
-        // Transform API response to LobeDocument format
-        const fullDocument: LobeDocument = {
+        // Transform API response to OrviloDocument format
+        const fullDocument: OrviloDocument = {
           content: document.content || null,
           createdAt: document.createdAt ? new Date(document.createdAt) : new Date(),
           editorData:

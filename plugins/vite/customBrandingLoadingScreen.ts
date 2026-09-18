@@ -15,9 +15,9 @@ const escapeHtml = (value: string) =>
     .replaceAll('"', '&quot;');
 
 /**
- * Replace the hardcoded LobeHub wordmark in the static loading screen with the
+ * Replace the hardcoded Orvilo wordmark in the static loading screen with the
  * custom brand name, so white-label deployments (BRANDING_NAME !== 'LobeHub')
- * never flash the LobeHub logo before the SPA boots. No-op for the default
+ * never flash the Orvilo logo before the SPA boots. No-op for the default
  * branding.
  */
 export const customBrandingLoadingScreen = (): Plugin => ({

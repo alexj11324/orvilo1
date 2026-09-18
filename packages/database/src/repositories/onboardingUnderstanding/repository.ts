@@ -26,7 +26,7 @@ import {
   upsertUserPersonaInTransaction,
 } from '../../models/userMemory/persona';
 import { messages, threads, topics } from '../../schemas';
-import type { LobeChatDatabase, Transaction } from '../../type';
+import type { OrviloDatabase, Transaction } from '../../type';
 import { getUnderstandingSourceFingerprint } from './fingerprint';
 
 export { getUnderstandingSourceFingerprint } from './fingerprint';
@@ -300,7 +300,7 @@ const mutateTopicSession = async <Result>(
 
 export class OnboardingUnderstandingRepository {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
   ) {}
 

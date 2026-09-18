@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
@@ -27,7 +27,7 @@ const retryReason = (error: unknown) => {
  * operationId claimable for an idempotent retry.
  */
 export const processTaskCancellation = async (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   dispatchId: string;
   leaseMs?: number;
   retryMs?: number;
@@ -102,7 +102,7 @@ export const processTaskCancellation = async (input: {
 
 /** Recover stop intents whose immediate post-commit wakeup was lost. */
 export const sweepTaskCancellations = async (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   limit?: number;
 }): Promise<TaskCancellationOutcome[]> => {
   const candidates = await TaskDispatchModel.findCancellationCandidates(input.db, {

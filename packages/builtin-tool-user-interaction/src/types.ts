@@ -1,6 +1,6 @@
 import type { AskUserQuestionArgs } from '@orvilo/shared-tool-ui/ask-user';
 
-export const UserInteractionIdentifier = 'lobe-user-interaction';
+export const UserInteractionIdentifier = 'orvilo-user-interaction';
 
 export const UserInteractionApiName = {
   askUserQuestion: 'askUserQuestion',
@@ -13,7 +13,7 @@ export const UserInteractionApiName = {
 export type InteractionStatus = 'cancelled' | 'pending' | 'skipped' | 'submitted';
 
 /**
- * The AskUserQuestion data model is shared with Claude Code and lobe-agent — it
+ * The AskUserQuestion data model is shared with Claude Code and orvilo-agent — it
  * lives in `@orvilo/shared-tool-ui/ask-user`. Re-exported here so consumers
  * get the argument types from this package's single import surface.
  */

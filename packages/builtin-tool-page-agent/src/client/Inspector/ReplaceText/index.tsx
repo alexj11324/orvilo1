@@ -40,7 +40,7 @@ export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, 
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-page-agent.apiName.replaceText.init')}
+            {t('builtins.orvilo-page-agent.apiName.replaceText.init')}
           </span>
         </div>
       );
@@ -52,19 +52,19 @@ export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, 
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-page-agent.apiName.replaceText')}
+          {t('builtins.orvilo-page-agent.apiName.replaceText')}
         </span>
         {hasResult && (
           <>
             <span className={styles.from}>{from}</span>
             <Icon className={styles.arrow} icon={ArrowRight} size={12} />
             <span className={highlightTextStyles.gold}>
-              {to || t('builtins.lobe-page-agent.apiName.replaceText.empty')}
+              {to || t('builtins.orvilo-page-agent.apiName.replaceText.empty')}
             </span>
             {count > 0 && (
               <Text code as={'span'} fontSize={12} type={'secondary'}>
                 {' '}
-                ({t('builtins.lobe-page-agent.apiName.replaceText.count', { count })})
+                ({t('builtins.orvilo-page-agent.apiName.replaceText.count', { count })})
               </Text>
             )}
           </>

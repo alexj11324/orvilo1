@@ -1,6 +1,6 @@
 import type { ExtendedHumanInterventionConfig } from '@/types/index';
 
-export interface LobeChatPluginApi {
+export interface OrviloPluginApi {
   /**
    * Default execution timeout in milliseconds for this API.
    * Falls back to the global default (120_000 ms) when omitted.
@@ -26,8 +26,8 @@ export interface LobeChatPluginApi {
   url?: string;
 }
 
-export interface LobeToolManifest {
-  api: LobeChatPluginApi[];
+export interface OrviloToolManifest {
+  api: OrviloPluginApi[];
   identifier: string;
   meta: any;
   systemRole?: string;
@@ -57,7 +57,7 @@ export interface ToolsGenerationContext {
  */
 export type PluginEnableChecker = (params: {
   context?: ToolsGenerationContext;
-  manifest: LobeToolManifest;
+  manifest: OrviloToolManifest;
   model: string;
   pluginId: string;
   provider: string;
@@ -112,7 +112,7 @@ export interface ToolsEngineOptions {
   /** Optional tool name generator function */
   generateToolName?: ToolNameGenerator;
   /** Statically injected manifest schemas */
-  manifestSchemas: LobeToolManifest[];
+  manifestSchemas: OrviloToolManifest[];
 }
 
 /**
@@ -120,7 +120,7 @@ export interface ToolsEngineOptions {
  */
 export interface ToolsGenerationResult {
   /** List of enabled manifests with systemRole and other metadata */
-  enabledManifests: LobeToolManifest[];
+  enabledManifests: OrviloToolManifest[];
   /** List of enabled tool IDs */
   enabledToolIds: string[];
   /** Filtered plugins and their reasons */
@@ -166,7 +166,7 @@ export interface UniformTool {
 
 // ---- Tool Lifecycle Types ----
 
-export type ToolSource = 'builtin' | 'client' | 'mcp' | 'composio' | 'lobehubSkill';
+export type ToolSource = 'builtin' | 'client' | 'mcp' | 'composio' | 'orviloSkill';
 
 /**
  * Where the tool is executed for a given invocation.
@@ -187,7 +187,7 @@ export interface OperationToolSet {
   activatableToolIds?: string[];
   enabledToolIds: string[];
   executorMap?: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
   sourceMap: Record<string, ToolSource>;
   tools: UniformTool[];
 }
@@ -198,7 +198,7 @@ export interface OperationToolSet {
 export interface ActivatedStepTool {
   activatedAtStep: number;
   id: string;
-  manifest?: LobeToolManifest;
+  manifest?: OrviloToolManifest;
   source: ActivationSource;
 }
 
@@ -209,7 +209,7 @@ export interface ActivatedStepTool {
 export interface StepToolDelta {
   activatedTools: Array<{
     id: string;
-    manifest?: LobeToolManifest;
+    manifest?: OrviloToolManifest;
     source: ActivationSource;
   }>;
   deactivatedToolIds?: string[];
@@ -221,8 +221,8 @@ export interface StepToolDelta {
 export interface ResolvedToolSet {
   enabledToolIds: string[];
   executorMap?: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
-  promptManifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
+  promptManifestMap: Record<string, OrviloToolManifest>;
   sourceMap: Record<string, ToolSource>;
   tools: UniformTool[];
 }

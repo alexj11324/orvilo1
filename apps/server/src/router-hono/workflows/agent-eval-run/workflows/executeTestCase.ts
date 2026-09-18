@@ -7,7 +7,7 @@ import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/ut
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:execute-test-case');
+const log = debug('orvilo-server:workflows:execute-test-case');
 
 /**
  * Execute test case workflow - manages K executions of a single test case

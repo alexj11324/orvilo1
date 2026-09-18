@@ -8,7 +8,7 @@ import type {
 } from '../../types/video';
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 
-const log = createDebug('lobe-video:zhipu');
+const log = createDebug('orvilo-video:zhipu');
 
 interface ZhipuVideoStatusResponse {
   error?: {

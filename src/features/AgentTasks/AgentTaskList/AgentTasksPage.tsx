@@ -1,5 +1,5 @@
 import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, TabsIndicator, TabsList, TabsRoot, TabsTab } from '@lobehub/ui/base-ui';
+import { ActionIcon, TabsIndicator, TabsList, TabsRoot, TabsTab, Text } from '@lobehub/ui/base-ui';
 import { Pagination } from 'antd';
 import { Plus } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,6 +9,20 @@ import { useSearchParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
+import {
+  AutomationScopeSwitch,
+  AutomationStatusSelect,
+} from '@/features/Automations/AutomationScheduleFilters';
+import AutomationScheduleList from '@/features/Automations/AutomationScheduleList';
+import {
+  type AutomationScope,
+  type AutomationStatusFilter,
+  resolveAutomationScope,
+  resolveAutomationStatusFilter,
+  SCHEDULED_TASKS_PAGE_SIZE,
+} from '@/features/Automations/shared';
+import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPage';
+import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -25,7 +39,6 @@ import { createTaskModal } from '../CreateTaskModal';
 import Breadcrumb from '../shared/Breadcrumb';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import CreateTaskInlineEntry from './CreateTaskInlineEntry';
-import EmptyState from './EmptyState';
 import KanbanBoard from './KanbanBoard';
 import type { TaskListViewOptions } from './listViewOptions';
 import { getVisibleTaskStatuses, normalizeTaskListViewOptions } from './listViewOptions';
@@ -37,15 +50,21 @@ import TasksGroupConfig from './TasksGroupConfig';
 interface TaskCreateActionBehaviorParams {
   canCreateTask: boolean;
   inlineCollapsed: boolean;
-  viewMode: TaskViewMode;
+  /**
+   * Whether the surface on screen is the board — the stored kanban mode, or an
+   * empty ordinary collection that falls back to the board. The inline
+   * composer lives on the list surface only, so on a board the header create
+   * opens the modal instead of expanding a composer that is not there.
+   */
+  isBoardSurface: boolean;
 }
 
 export const getTaskCreateActionBehavior = ({
   canCreateTask,
   inlineCollapsed,
-  viewMode,
+  isBoardSurface,
 }: TaskCreateActionBehaviorParams) => {
-  const shouldExpandInline = inlineCollapsed && viewMode === 'list';
+  const shouldExpandInline = inlineCollapsed && !isBoardSurface;
 
   return {
     disabled: shouldExpandInline ? false : !canCreateTask,
@@ -55,26 +74,23 @@ export const getTaskCreateActionBehavior = ({
 
 interface TaskPageHeaderVisibilityParams {
   agentId?: string;
-  isEmptyHero: boolean;
   isMobile: boolean;
   projectId?: string;
 }
 
 export const getTaskPageHeaderVisibility = ({
   agentId,
-  isEmptyHero,
   isMobile,
   projectId,
 }: TaskPageHeaderVisibilityParams) => {
   // The global page's own crumb is the `tasks` tab, so the breadcrumb only
   // earns its place once the list is scoped to an agent or a project.
   const isScoped = !!(agentId || projectId);
-  const isGlobalEmpty = !isScoped && isEmptyHero;
 
   return {
     showBreadcrumb: isScoped,
-    showTaskAgentPanelToggle: !isGlobalEmpty && shouldRenderTaskAgentPanelToggle(isMobile),
-    showViewOptions: !isGlobalEmpty,
+    showTaskAgentPanelToggle: shouldRenderTaskAgentPanelToggle(isMobile),
+    showViewOptions: true,
   };
 };
 
@@ -108,12 +124,20 @@ export const resolveTaskCollection = (
 export const resolveMyTaskScope = (searchParams: URLSearchParams): MyTaskScope =>
   searchParams.get('scope') === 'created' ? 'created' : 'assigned';
 
-export const clampCollectionPage = (page: number, total: number): number =>
-  Math.min(page, Math.max(1, Math.ceil(total / COLLECTION_PAGE_SIZE)));
+/**
+ * Keep the current page inside the range the total implies. `pageSize` is a
+ * parameter rather than a module constant because the paginated collections do
+ * not share one: the automations tab pages 25 at a time and "My tasks" pages
+ * `COLLECTION_PAGE_SIZE`. Clamping with the wrong size snaps a reachable page
+ * back to the first one.
+ */
+export const clampCollectionPage = (page: number, total: number, pageSize: number): number =>
+  Math.min(page, Math.max(1, Math.ceil(total / pageSize)));
 
 /**
- * View options every paginated (server-sliced) collection pins, because a
- * client-side reorder or cut would only ever apply to the fetched page:
+ * View options the paginated (server-sliced) "My tasks" collection pins,
+ * because a client-side reorder or cut would only ever apply to the fetched
+ * page:
  * - ordering follows the server's updatedAt DESC page order. `compareTaskItems`
  *   inverts `orderDirection` for the date columns (see
  *   `effectiveOrderDirection`), so the token that renders newest-first is 'asc';
@@ -129,18 +153,13 @@ const PAGINATED_COLLECTION_VIEW = {
   showSubTasks: true,
 } as const;
 
-export const getScheduledTaskViewOptions = (
-  viewOptions: TaskListViewOptions,
-): TaskListViewOptions => ({
-  ...viewOptions,
-  ...PAGINATED_COLLECTION_VIEW,
-  groupBy: 'automationMode',
-  hideCompleted: false,
-});
-
 /**
  * "My tasks" additionally sends `hideCompleted` as a server status filter
  * (`getVisibleTaskStatuses`) rather than applying it to the fetched page.
+ *
+ * The automations tab is paginated too, but it renders the shared
+ * `AutomationScheduleList` — its ordering, columns and narrowing all belong to
+ * that surface, so this page pins no view options for it.
  */
 export const getMyTaskViewOptions = (viewOptions: TaskListViewOptions): TaskListViewOptions => ({
   ...viewOptions,
@@ -166,6 +185,18 @@ export const resolveTaskCollectionView = (
   viewMode: TaskViewMode,
 ): 'board' | 'list' => (collection !== 'scheduled' && viewMode === 'kanban' ? 'board' : 'list');
 
+/**
+ * The ordinary collection's surface. The kanban board doubles as its empty
+ * state — a settled empty list lands on the board whatever the stored view
+ * mode says — so the list surface only renders when there is something to
+ * list in list mode.
+ */
+export const resolveOrdinaryCollectionSurface = (
+  viewMode: TaskViewMode,
+  isListEmpty: boolean,
+): 'board' | 'list' =>
+  resolveTaskCollectionView('tasks', viewMode) === 'board' || isListEmpty ? 'board' : 'list';
+
 const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
@@ -185,6 +216,13 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const isMineCollection = collection === 'mine';
   const isOrdinaryCollection = collection === 'tasks';
   const myTaskScope = resolveMyTaskScope(searchParams);
+  // The automations tab reads the same two narrowings as the Automations page,
+  // off the same query params, so a link into either door opens the same slice.
+  // `scope` is shared with "My tasks"' member scoping and both read it as
+  // "created by me"; switching collections clears it, so neither inherits the
+  // other's reading.
+  const automationScope = resolveAutomationScope(searchParams);
+  const automationStatusFilter = resolveAutomationStatusFilter(searchParams);
   // "My tasks" honours the list/board switch like the ordinary tab does; the
   // board fetches its own server groups, so the paginated list fetch below is
   // gated off while it is up.
@@ -199,7 +237,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // than the newest 50 once the workspace grows past that. The scheduled and
   // "My tasks" tabs render their own paginated collections, so the fetch is
   // gated to the ordinary tab; and the kanban view fetches its own server
-  // groups, so there only the single page behind the empty-hero decision runs.
+  // groups, so there only the single page behind the empty-board decision runs.
   const isListView = !isBoardView;
   const { error, isLoading, mutate } = useFetchTaskList(
     projectId
@@ -229,14 +267,19 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // signal never disagrees with the emptiness signal. Still resets to false on a
   // failed first load, so we surface loading only while there's no error (below).
   const isTaskListInit = useTaskStore(taskListSelectors.isTaskListInit);
-  const isEmptyHero = useTaskStore(taskListSelectors.isListEmpty);
-  const useFetchScheduledTaskList = useTaskStore((s) => s.useFetchScheduledTaskList);
-  const scheduledSWR = useFetchScheduledTaskList({
+  const isListEmpty = useTaskStore(taskListSelectors.isListEmpty);
+  // The board doubles as the ordinary collection's empty state, so an empty
+  // collection renders the board surface — and follows its create affordance —
+  // whatever the stored view mode says.
+  const ordinarySurface = resolveOrdinaryCollectionSurface(viewMode, isListEmpty);
+  const isBoardSurface = isMineBoard || (isOrdinaryCollection && ordinarySurface === 'board');
+  const scheduledSWR = useScheduledTaskPage({
     agentId,
     enabled: isScheduledCollection,
-    limit: COLLECTION_PAGE_SIZE,
-    offset: (collectionPage - 1) * COLLECTION_PAGE_SIZE,
+    page: collectionPage,
     projectId,
+    scope: automationScope,
+    statusFilter: automationStatusFilter,
   });
   const rawViewOptions = useGlobalStore(systemStatusSelectors.taskListViewOptions);
   const viewOptions = useMemo(() => normalizeTaskListViewOptions(rawViewOptions), [rawViewOptions]);
@@ -255,15 +298,16 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const collectionTasks = collectionSWR.data?.data ?? [];
   const collectionTasksTotal = collectionSWR.data?.total ?? 0;
   const isCollectionListInit = collectionSWR.data !== undefined;
-  const scheduledViewOptions = useMemo(
-    () => getScheduledTaskViewOptions(viewOptions),
-    [viewOptions],
-  );
   const myTaskViewOptions = useMemo(() => getMyTaskViewOptions(viewOptions), [viewOptions]);
+  const collectionPageSize = isScheduledCollection
+    ? SCHEDULED_TASKS_PAGE_SIZE
+    : COLLECTION_PAGE_SIZE;
   useEffect(() => {
     if (!isCollectionListInit) return;
-    setCollectionPage((page) => clampCollectionPage(page, collectionTasksTotal));
-  }, [isCollectionListInit, collectionTasksTotal]);
+    setCollectionPage((page) =>
+      clampCollectionPage(page, collectionTasksTotal, collectionPageSize),
+    );
+  }, [collectionPageSize, isCollectionListInit, collectionTasksTotal]);
   const inlineCollapsed = useGlobalStore(systemStatusSelectors.taskCreateInlineCollapsed);
   const [showTaskAgentPanel, toggleTaskAgentPanel] = useGlobalStore((s) => [
     systemStatusSelectors.showTaskAgentPanel(s),
@@ -289,9 +333,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
       getTaskCreateActionBehavior({
         canCreateTask,
         inlineCollapsed,
-        viewMode,
+        isBoardSurface,
       }),
-    [canCreateTask, inlineCollapsed, viewMode],
+    [canCreateTask, inlineCollapsed, isBoardSurface],
   );
 
   const handleCreateTask = useCallback(() => {
@@ -325,6 +369,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
       }
       // The sub-view only means something inside "My tasks".
       if (value !== 'mine') next.delete('scope');
+      // ...and the active/paused narrowing only means something inside the
+      // automations tab, which brings its own scope from the tab itself.
+      if (value !== 'scheduled') next.delete('status');
       setCollectionPage(1);
       setSearchParams(next, { replace: true });
     },
@@ -345,9 +392,36 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
     [searchParams, setSearchParams],
   );
 
+  const handleAutomationScopeChange = useCallback(
+    (value: AutomationScope) => {
+      const next = new URLSearchParams(searchParams);
+      if (value === 'created') {
+        next.set('scope', 'created');
+      } else {
+        next.delete('scope');
+      }
+      setCollectionPage(1);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleAutomationStatusChange = useCallback(
+    (value: AutomationStatusFilter) => {
+      const next = new URLSearchParams(searchParams);
+      if (value === 'all') {
+        next.delete('status');
+      } else {
+        next.set('status', value);
+      }
+      setCollectionPage(1);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   const headerVisibility = getTaskPageHeaderVisibility({
     agentId,
-    isEmptyHero: isOrdinaryCollection ? isEmptyHero : false,
     isMobile,
     projectId,
   });
@@ -372,145 +446,186 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
           </TabsList>
         </TabsRoot>
       )}
+      {isScheduledCollection && (
+        <>
+          <AutomationScopeSwitch scope={automationScope} onChange={handleAutomationScopeChange} />
+          <AutomationStatusSelect
+            value={automationStatusFilter}
+            onChange={handleAutomationStatusChange}
+          />
+        </>
+      )}
     </Flexbox>
   );
 
+  // Collaboration scope: a project board joins `project:{id}`; the global
+  // workspace task page joins `workspace:{id}`; personal mode joins nothing —
+  // there is no tenant to share presence with. Project rooms only exist under
+  // a workspace, so without an active workspace there is no room to join.
+  const collaborationRoom = activeWorkspaceId
+    ? projectId
+      ? { id: projectId, scope: 'project' as const }
+      : { id: activeWorkspaceId, scope: 'workspace' as const }
+    : null;
+
   return (
-    <LinearTaskSyncProvider
-      taskIds={
-        isMineCollection || isScheduledCollection
-          ? collectionTasks.map((task) => task.id)
-          : undefined
-      }
-    >
-      <Flexbox flex={1} height={'100%'}>
-        <NavHeader
-          left={headerLeft}
-          right={
-            <Flexbox horizontal align={'center'} gap={4}>
-              {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
-              {isOrdinaryCollection && (inlineCollapsed || viewMode === 'kanban') && (
-                <ActionIcon
-                  disabled={createActionBehavior.disabled}
-                  icon={Plus}
-                  size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                  title={createActionBehavior.disabled ? reason : undefined}
-                  onClick={handleCreateTask}
-                />
-              )}
-              {!isScheduledCollection && headerVisibility.showViewOptions && (
-                <TasksGroupConfig
-                  options={viewOptions}
-                  pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
-                  setOptions={setViewOptions}
-                />
-              )}
-              {headerVisibility.showTaskAgentPanelToggle && (
-                <ToggleRightPanelButton
-                  hideWhenExpanded
-                  expand={showTaskAgentPanel}
-                  onToggle={() => toggleTaskAgentPanel()}
-                />
-              )}
-            </Flexbox>
-          }
-          styles={{
-            left: {
-              paddingLeft: 4,
-              gap: 8,
-            },
-          }}
-        />
-        {isMineBoard ? (
-          <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
-            <KanbanBoard
-              myTaskScope={myTaskScope}
-              options={viewOptions}
-              routeScope={routeScope}
-              emptyDescription={t(
-                myTaskScope === 'created'
-                  ? 'taskList.mine.emptyCreated'
-                  : 'taskList.mine.emptyAssigned',
-              )}
-            />
-          </Flexbox>
-        ) : !isOrdinaryCollection ? (
-          <WideScreenContainer
-            fullWidth
-            gap={16}
-            paddingBlock={16}
-            paddingInline={16}
-            wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-          >
-            <TaskList
-              data={isCollectionListInit || undefined}
-              error={collectionSWR.error}
-              isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
-              items={collectionTasks}
-              options={isMineCollection ? myTaskViewOptions : scheduledViewOptions}
-              routeScope={routeScope}
-              emptyDescription={
-                isMineCollection
-                  ? t(
-                      myTaskScope === 'created'
-                        ? 'taskList.mine.emptyCreated'
-                        : 'taskList.mine.emptyAssigned',
-                    )
-                  : t('taskList.scheduled.empty')
-              }
-              onRetry={() => collectionSWR.mutate()}
-            />
-            {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-              <Flexbox horizontal justify={'center'} paddingBlock={8}>
-                <Pagination
-                  current={collectionPage}
-                  pageSize={COLLECTION_PAGE_SIZE}
-                  showSizeChanger={false}
-                  total={collectionTasksTotal}
-                  onChange={setCollectionPage}
-                />
+    <CollaborationProvider room={collaborationRoom} viewKey="tasks">
+      <LinearTaskSyncProvider
+        taskIds={
+          isMineCollection || isScheduledCollection
+            ? collectionTasks.map((task) => task.id)
+            : undefined
+        }
+      >
+        <Flexbox flex={1} height={'100%'}>
+          <NavHeader
+            left={headerLeft}
+            right={
+              <Flexbox horizontal align={'center'} gap={4}>
+                {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
+                {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
+                  <ActionIcon
+                    disabled={createActionBehavior.disabled}
+                    icon={Plus}
+                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    title={createActionBehavior.disabled ? reason : undefined}
+                    onClick={handleCreateTask}
+                  />
+                )}
+                {!isScheduledCollection && headerVisibility.showViewOptions && (
+                  <TasksGroupConfig
+                    options={viewOptions}
+                    pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+                    setOptions={setViewOptions}
+                  />
+                )}
+                {headerVisibility.showTaskAgentPanelToggle && (
+                  <ToggleRightPanelButton
+                    hideWhenExpanded
+                    expand={showTaskAgentPanel}
+                    onToggle={() => toggleTaskAgentPanel()}
+                  />
+                )}
               </Flexbox>
-            )}
-          </WideScreenContainer>
-        ) : isEmptyHero ? (
-          <EmptyState agentId={agentId} projectId={projectId} />
-        ) : isBoardView ? (
-          <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
-            <KanbanBoard
-              agentId={agentId}
-              options={viewOptions}
-              projectId={projectId}
-              routeScope={routeScope}
-            />
-          </Flexbox>
-        ) : (
-          <WideScreenContainer
-            fullWidth
-            gap={16}
-            paddingBlock={16}
-            paddingInline={16}
-            wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-          >
-            {!inlineCollapsed && (
-              <CreateTaskInlineEntry
-                agentId={agentId}
-                lockAssignee={!!agentId}
-                projectId={projectId}
+            }
+            styles={{
+              left: {
+                paddingLeft: 4,
+                gap: 8,
+              },
+            }}
+          />
+          {isMineBoard ? (
+            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+              <KanbanBoard
+                myTaskScope={myTaskScope}
+                options={viewOptions}
+                routeScope={routeScope}
+                emptyDescription={t(
+                  myTaskScope === 'created'
+                    ? 'taskList.mine.emptyCreated'
+                    : 'taskList.mine.emptyAssigned',
+                )}
               />
-            )}
-            <TaskList
-              data={isTaskListInit || undefined}
-              error={error}
-              isLoading={isLoading || (!isTaskListInit && !error)}
-              options={viewOptions}
-              routeScope={routeScope}
-              onRetry={() => mutate()}
-              onShowHiddenCompleted={handleShowHiddenCompleted}
-            />
-          </WideScreenContainer>
-        )}
-      </Flexbox>
-    </LinearTaskSyncProvider>
+            </Flexbox>
+          ) : isScheduledCollection ? (
+            <WideScreenContainer
+              fullWidth
+              gap={16}
+              paddingBlock={16}
+              paddingInline={16}
+              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+            >
+              <AutomationScheduleList
+                error={collectionSWR.error}
+                hasSettled={isCollectionListInit}
+                isFiltered={automationStatusFilter !== 'all'}
+                isLoading={!isCollectionListInit && !collectionSWR.error}
+                page={collectionPage}
+                tasks={collectionTasks}
+                total={collectionTasksTotal}
+                emptyContent={
+                  <Flexbox align={'center'} paddingBlock={48}>
+                    <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
+                  </Flexbox>
+                }
+                onPageChange={setCollectionPage}
+                onRefetch={() => collectionSWR.mutate()}
+              />
+            </WideScreenContainer>
+          ) : isMineCollection ? (
+            <WideScreenContainer
+              fullWidth
+              gap={16}
+              paddingBlock={16}
+              paddingInline={16}
+              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+            >
+              <TaskList
+                data={isCollectionListInit || undefined}
+                error={collectionSWR.error}
+                isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
+                items={collectionTasks}
+                options={myTaskViewOptions}
+                routeScope={routeScope}
+                emptyDescription={t(
+                  myTaskScope === 'created'
+                    ? 'taskList.mine.emptyCreated'
+                    : 'taskList.mine.emptyAssigned',
+                )}
+                onRetry={() => collectionSWR.mutate()}
+              />
+              {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
+                <Flexbox horizontal justify={'center'} paddingBlock={8}>
+                  <Pagination
+                    current={collectionPage}
+                    pageSize={COLLECTION_PAGE_SIZE}
+                    showSizeChanger={false}
+                    total={collectionTasksTotal}
+                    onChange={setCollectionPage}
+                  />
+                </Flexbox>
+              )}
+            </WideScreenContainer>
+          ) : ordinarySurface === 'board' ? (
+            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+              <KanbanBoard
+                agentId={agentId}
+                options={viewOptions}
+                projectId={projectId}
+                routeScope={routeScope}
+              />
+            </Flexbox>
+          ) : (
+            <WideScreenContainer
+              fullWidth
+              gap={16}
+              paddingBlock={16}
+              paddingInline={16}
+              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+            >
+              {!inlineCollapsed && (
+                <CreateTaskInlineEntry
+                  agentId={agentId}
+                  lockAssignee={!!agentId}
+                  projectId={projectId}
+                />
+              )}
+              <TaskList
+                data={isTaskListInit || undefined}
+                error={error}
+                isLoading={isLoading || (!isTaskListInit && !error)}
+                options={viewOptions}
+                routeScope={routeScope}
+                onRetry={() => mutate()}
+                onShowHiddenCompleted={handleShowHiddenCompleted}
+              />
+            </WideScreenContainer>
+          )}
+          <CollaborationOverlay />
+        </Flexbox>
+      </LinearTaskSyncProvider>
+    </CollaborationProvider>
   );
 });
 

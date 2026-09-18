@@ -38,7 +38,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
@@ -155,7 +155,7 @@ const VERIFY_SETTLED_STATUSES = new Set(['passed', 'failed', 'errored', 'deliver
 
 export class TaskService {
   private agentModel: AgentModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private taskModel: TaskModel;
   private projectModel: ProjectModel;
   private taskTopicModel: TaskTopicModel;
@@ -164,7 +164,7 @@ export class TaskService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -1232,7 +1232,7 @@ export class TaskService {
   }
 
   private async assertAssigneeUserAssignableWithDatabase(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     assigneeUserId?: string | null,
     lockMember = false,
   ): Promise<void> {
@@ -1273,7 +1273,7 @@ export class TaskService {
 
   private async withAssigneeUserLock<T>(
     assigneeUserId: string | null | undefined,
-    write: (db: LobeChatDatabase) => Promise<T>,
+    write: (db: OrviloDatabase) => Promise<T>,
   ): Promise<T> {
     if (!assigneeUserId || !this.workspaceId) {
       await this.assertAssigneeUserAssignableWithDatabase(this.db, assigneeUserId);
@@ -1578,6 +1578,8 @@ export class TaskService {
           size: doc?.charCount,
           sourceTaskId: doc?.sourceTaskId,
           sourceTaskIdentifier: doc?.sourceTaskIdentifier,
+          sourceTopicId: doc?.sourceTopicId,
+          sourceTopicTitle: doc?.sourceTopicTitle,
           title: doc?.title,
         };
       });

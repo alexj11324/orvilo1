@@ -2,7 +2,7 @@ import type { SQL, SQLWrapper } from 'drizzle-orm';
 import { eq, isNull } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 import type { FtsSearchBackendScope } from '../types';
 
@@ -15,7 +15,7 @@ export interface PgSearchFtsSearchWorkspaceScopedColumns {
 
 /** Shared state and query-shaping helpers used by the pg_search provider modules. */
 export interface PgSearchFtsSearchContext {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   liftedScopeWhere: (workspaceIdColumn: SQLWrapper) => SQL | undefined;
   liftsAgentFilter: boolean;
   liftsWorkspaceFilter: boolean;
@@ -57,7 +57,7 @@ const AGENT_SCOPE_CANDIDATE_POOL = 20_000;
 const WORKSPACE_ID_IN_BM25_INDEX = false;
 
 export function createPgSearchFtsSearchContext(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   scope: FtsSearchBackendScope,
 ): PgSearchFtsSearchContext {
   // The original backend copied scope fields in its constructor. Keep the same

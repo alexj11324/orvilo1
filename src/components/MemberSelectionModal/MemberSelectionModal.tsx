@@ -17,11 +17,11 @@ import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
 import ModelSelect from '@/features/ModelSelect';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useSessionStore } from '@/store/session';
-import { type LobeAgentSession } from '@/types/session';
-import { LobeSessionType } from '@/types/session';
+import { type OrviloAgentSession } from '@/types/session';
+import { OrviloSessionType } from '@/types/session';
 
 const AvailableAgentItem = memo<{
-  agent: LobeAgentSession;
+  agent: OrviloAgentSession;
   cx: any;
   isSelected: boolean;
   onToggle: (_agentId: string) => void;
@@ -211,8 +211,8 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
     const agentSessions = useSessionStore((s) => {
       const allSessions = s.sessions || [];
       return allSessions.filter(
-        (session): session is LobeAgentSession =>
-          session.type === LobeSessionType.Agent && !session.config?.virtual,
+        (session): session is OrviloAgentSession =>
+          session.type === OrviloSessionType.Agent && !session.config?.virtual,
       );
     });
 

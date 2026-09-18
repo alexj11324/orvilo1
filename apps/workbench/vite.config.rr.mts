@@ -6,9 +6,9 @@ import { lobeStaticCssPlugin } from '@lobehub/ui/static-css/vite';
 import { reactRouter } from '@react-router/dev/vite';
 import { defineConfig, type Plugin } from 'vite';
 
-import { lobeIconImports } from '../../plugins/vite/lobeIconImports';
 import { viteMarkdownImport } from '../../plugins/vite/markdownImport';
 import { viteNodeModuleStub } from '../../plugins/vite/nodeModuleStub';
+import { orviloIconImports } from '../../plugins/vite/orviloIconImports';
 import { vitePlatformResolve } from '../../plugins/vite/platformResolve';
 import { sharedRendererDefine } from '../../plugins/vite/sharedRendererConfig';
 import { shikiCdnUrl } from './app/stubs/shikiCdn';
@@ -321,7 +321,7 @@ export default defineConfig({
     lobeStaticCssPlugin({ antd: antdStaticCssOptions, themeVars: themeVarsCssOptions }),
     staticCssDevServe(),
     reactRouter(),
-    ...lobeIconImports(),
+    ...orviloIconImports(),
   ],
   optimizeDeps: {
     exclude: ['shiki', '@shikijs/core', '@shikijs/stream', '@shikijs/transformers'],

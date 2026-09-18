@@ -9,7 +9,7 @@ import { authSelectors } from '@/store/user/selectors';
 
 import { buildBootMetricsPayload } from './buildPayload';
 
-const SEEN_KEY = 'lobe:boot:seen';
+const SEEN_KEY = 'orvilo:boot:seen';
 
 let sent = false;
 
@@ -75,9 +75,9 @@ const sendPayload = (ingestUrl: string, cold: boolean): void => {
     const userState = getUserStoreState();
 
     const htmlMarkMs =
-      typeof (window as Window & { __LOBE_BOOT_T_HTML__?: number }).__LOBE_BOOT_T_HTML__ ===
+      typeof (window as Window & { __ORVILO_BOOT_T_HTML__?: number }).__ORVILO_BOOT_T_HTML__ ===
       'number'
-        ? (window as Window & { __LOBE_BOOT_T_HTML__?: number }).__LOBE_BOOT_T_HTML__
+        ? (window as Window & { __ORVILO_BOOT_T_HTML__?: number }).__ORVILO_BOOT_T_HTML__
         : undefined;
 
     const navEntry = performance.getEntriesByType('navigation')[0] as

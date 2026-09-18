@@ -4,14 +4,14 @@ import { ToolNameResolver } from '../ToolNameResolver';
 import { ToolResolver } from '../ToolResolver';
 import type {
   ActivatedStepTool,
-  LobeToolManifest,
   OperationToolSet,
+  OrviloToolManifest,
   StepToolDelta,
 } from '../types';
 
 // --- Mock manifests ---
 
-const mockSearchManifest: LobeToolManifest = {
+const mockSearchManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Search the web',
@@ -24,7 +24,7 @@ const mockSearchManifest: LobeToolManifest = {
   type: 'builtin',
 };
 
-const mockCalcManifest: LobeToolManifest = {
+const mockCalcManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Calculate expression',
@@ -37,7 +37,7 @@ const mockCalcManifest: LobeToolManifest = {
   type: 'default',
 };
 
-const mockLocalSystemManifest: LobeToolManifest = {
+const mockLocalSystemManifest: OrviloToolManifest = {
   api: [
     {
       description: 'Run local command',
@@ -57,8 +57,8 @@ const mockLocalSystemManifest: LobeToolManifest = {
 
 // --- Helpers ---
 
-function makeOperationToolSet(manifests: LobeToolManifest[]): OperationToolSet {
-  const manifestMap: Record<string, LobeToolManifest> = {};
+function makeOperationToolSet(manifests: OrviloToolManifest[]): OperationToolSet {
+  const manifestMap: Record<string, OrviloToolManifest> = {};
   const sourceMap: Record<string, any> = {};
   const enabledToolIds: string[] = [];
   const tools: any[] = [];
@@ -246,7 +246,7 @@ describe('ToolResolver', () => {
       const opSet = makeOperationToolSet([mockSearchManifest]);
 
       // Manually add a manifest that is NOT in enabledToolIds (simulating the bug)
-      const webBrowsingManifest: LobeToolManifest = {
+      const webBrowsingManifest: OrviloToolManifest = {
         api: [
           {
             description: 'Search the web',
@@ -254,19 +254,19 @@ describe('ToolResolver', () => {
             parameters: { properties: {}, type: 'object' },
           },
         ],
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         meta: { title: 'Web Browsing' },
         systemRole: 'You have a Web Browsing tool...',
         type: 'builtin',
       };
-      opSet.manifestMap['lobe-web-browsing'] = webBrowsingManifest;
+      opSet.manifestMap['orvilo-web-browsing'] = webBrowsingManifest;
       // Note: NOT added to enabledToolIds or tools
 
       const result = resolver.resolve(opSet, emptyDelta);
 
-      // The resolved manifestMap should NOT contain lobe-web-browsing
+      // The resolved manifestMap should NOT contain orvilo-web-browsing
       // because it's not in enabledToolIds
-      expect(result.manifestMap['lobe-web-browsing']).toBeUndefined();
+      expect(result.manifestMap['orvilo-web-browsing']).toBeUndefined();
       expect(result.manifestMap['web-search']).toBeDefined();
       expect(result.enabledToolIds).toEqual(['web-search']);
     });
@@ -327,7 +327,7 @@ describe('ToolResolver', () => {
     });
 
     it('should clear manifest systemRole when only part of the manifest is offered to the model', () => {
-      const manifestWithSystemRole: LobeToolManifest = {
+      const manifestWithSystemRole: OrviloToolManifest = {
         ...mockLocalSystemManifest,
         systemRole: 'Use all local-system tools.',
       };

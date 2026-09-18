@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { EvalService } from './eval.service';
 
@@ -102,7 +102,7 @@ const datasetRow = {
   workspaceId: null,
 };
 
-const service = () => new EvalService({} as LobeChatDatabase, 'user-1', 'ws-1');
+const service = () => new EvalService({} as OrviloDatabase, 'user-1', 'ws-1');
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import debug from 'debug';
 
-const log = debug('lobe-server:schedule-after-response');
+const log = debug('orvilo-server:schedule-after-response');
 
 export type ScheduleAfterResponseWork = () => Promise<unknown> | unknown;
 

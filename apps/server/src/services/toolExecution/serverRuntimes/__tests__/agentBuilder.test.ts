@@ -88,7 +88,7 @@ describe('agentBuilderRuntime', () => {
 
   describe('getAvailableModels', () => {
     it('does not query or expose models when access cannot be resolved', async () => {
-      mockGetAiProviderList.mockResolvedValue([{ enabled: true, id: 'lobehub', name: 'LobeHub' }]);
+      mockGetAiProviderList.mockResolvedValue([{ enabled: true, id: 'orvilo', name: 'Orvilo' }]);
 
       const result = await createRuntime().getAvailableModels({});
 
@@ -100,13 +100,13 @@ describe('agentBuilderRuntime', () => {
     });
 
     it('does not expose models hidden for the current user', async () => {
-      mockGetAiProviderList.mockResolvedValue([{ enabled: true, id: 'lobehub', name: 'LobeHub' }]);
+      mockGetAiProviderList.mockResolvedValue([{ enabled: true, id: 'orvilo', name: 'Orvilo' }]);
       mockGetAiProviderModelList.mockResolvedValue([
         { displayName: 'Hidden Chat', id: 'hidden-chat' },
         { displayName: 'Visible Chat', id: 'visible-chat' },
       ]);
       mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-        { id: 'hidden-chat', providerId: 'lobehub' },
+        { id: 'hidden-chat', providerId: 'orvilo' },
       ]);
 
       const result = await createRuntime().getAvailableModels({});
@@ -115,7 +115,7 @@ describe('agentBuilderRuntime', () => {
         state: {
           providers: [
             {
-              id: 'lobehub',
+              id: 'orvilo',
               models: [{ id: 'visible-chat', name: 'Visible Chat' }],
             },
           ],
@@ -253,31 +253,31 @@ describe('agentBuilderRuntime', () => {
     it('flips an existing disabled builtin-tool entry back to pinned, without duplicating it', async () => {
       mockGetAgentConfigById.mockResolvedValue({
         id: 'agent-1',
-        plugins: [{ identifier: 'lobe-web-browsing', mode: 'disabled' }],
+        plugins: [{ identifier: 'orvilo-web-browsing', mode: 'disabled' }],
       });
 
       const runtime = createRuntime();
       const result = await runtime.installPlugin(
-        { identifier: 'lobe-web-browsing', source: 'official' },
+        { identifier: 'orvilo-web-browsing', source: 'official' },
         { editingAgentId: 'agent-1', toolManifestMap: {} },
       );
 
       expect(result.success).toBe(true);
       expect(result.state).toMatchObject({ agentId: 'agent-1' });
       expect(mockUpdateConfig).toHaveBeenCalledWith('agent-1', {
-        plugins: [{ identifier: 'lobe-web-browsing', mode: 'pinned' }],
+        plugins: [{ identifier: 'orvilo-web-browsing', mode: 'pinned' }],
       });
     });
 
     it('is a no-op write when the builtin-tool identifier is already pinned', async () => {
       mockGetAgentConfigById.mockResolvedValue({
         id: 'agent-1',
-        plugins: ['lobe-web-browsing'],
+        plugins: ['orvilo-web-browsing'],
       });
 
       const runtime = createRuntime();
       const result = await runtime.installPlugin(
-        { identifier: 'lobe-web-browsing', source: 'official' },
+        { identifier: 'orvilo-web-browsing', source: 'official' },
         { editingAgentId: 'agent-1', toolManifestMap: {} },
       );
 

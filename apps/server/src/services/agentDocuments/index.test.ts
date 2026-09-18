@@ -12,7 +12,7 @@ import {
 } from '@/database/models/agentDocuments';
 import { AgentSkillModel } from '@/database/models/agentSkill';
 import { TopicDocumentModel } from '@/database/models/topicDocument';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { DocumentService } from '../document';
 import { SkillResourceService } from '../skill/resource';
@@ -86,7 +86,7 @@ vi.mock('@lobehub/editor/headless', () => ({
 }));
 
 describe('AgentDocumentsService', () => {
-  const db = {} as LobeChatDatabase;
+  const db = {} as OrviloDatabase;
   const userId = 'user-1';
 
   const mockModel = {
@@ -270,7 +270,7 @@ describe('AgentDocumentsService', () => {
         expect.objectContaining({
           metadata: {
             agentSignal: {
-              hintedByTool: 'lobe-agent-documents.createDocument',
+              hintedByTool: 'orvilo-agent-documents.createDocument',
               hintIsSkill: true,
             },
           },

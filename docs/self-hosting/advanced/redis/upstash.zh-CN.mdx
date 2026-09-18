@@ -1,6 +1,6 @@
 ---
 title: 配置 Upstash Redis 服务
-description: 详细指南：如何配置 Upstash Redis 用于 LobeHub 的缓存和会话存储。
+description: 详细指南：如何配置 Upstash Redis 用于 Orvilo 的缓存和会话存储。
 tags:
   - Upstash
   - Redis
@@ -10,7 +10,7 @@ tags:
 
 # 配置 Upstash Redis 服务
 
-[Upstash](https://upstash.com/) 是一个 Serverless Redis 服务，提供免费额度和按量付费模式，非常适合 LobeHub 部署使用。
+[Upstash](https://upstash.com/) 是一个 Serverless Redis 服务，提供免费额度和按量付费模式，非常适合 Orvilo 部署使用。
 
 ## 配置步骤
 
@@ -21,7 +21,7 @@ tags:
   2. 点击 **Create Database**，配置：名称、区域、启用 TLS
   3. 从数据库详情页复制 **Redis URL**（TCP 连接方式，不是 REST API）：
 
-  <Image alt={'从 Upstash 复制 Redis URL'} src={'https://hub-apac-1.lobeobjects.space/docs/43d110283ba816c0c2b45408e4f9d344.png'} />
+  <Image alt={'从 Upstash 复制 Redis URL'} src={'https://hub-apac-1.objects.aspectlylabs.com/docs/43d110283ba816c0c2b45408e4f9d344.png'} />
 
   ### 配置环境变量
 
@@ -33,11 +33,11 @@ tags:
   REDIS_TLS=1
 
   # 可选：设置 Redis 键前缀
-  REDIS_PREFIX=lobechat
+  REDIS_PREFIX=orvilo
   ```
 
   <Callout type={'info'}>
-    Upstash 使用 `rediss://`（双's'）表示 TLS 连接，LobeHub 自动支持此格式。
+    Upstash 使用 `rediss://`（双's'）表示 TLS 连接，Orvilo 自动支持此格式。
   </Callout>
 </Steps>
 
@@ -51,7 +51,7 @@ REDIS_URL=rediss://default:xxxxxxxxxxxxx@us1-xxxxx-xxxxx.upstash.io:6379
 REDIS_TLS=1
 
 # 可选：键前缀，用于数据隔离
-REDIS_PREFIX=lobechat
+REDIS_PREFIX=orvilo
 ```
 
 ## 注意事项

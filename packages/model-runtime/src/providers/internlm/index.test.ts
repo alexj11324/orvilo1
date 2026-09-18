@@ -3,14 +3,14 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeInternLMAI, params } from './index';
+import { OrviloInternLMAI, params } from './index';
 
 // Mock a model with abilities in model-bank
 vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         id: 'test-model-with-abilities',
         abilities: {
@@ -26,7 +26,7 @@ vi.mock('model-bank', async (importOriginal) => {
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeInternLMAI,
+  Runtime: OrviloInternLMAI,
   provider: ModelProvider.InternLM,
   defaultBaseURL: 'https://chat.intern-ai.org.cn/api/v1',
   chatDebugEnv: 'DEBUG_INTERNLM_CHAT_COMPLETION',
@@ -37,11 +37,11 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeInternLMAI - custom features', () => {
-  let instance: InstanceType<typeof LobeInternLMAI>;
+describe('OrviloInternLMAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloInternLMAI>;
 
   beforeEach(() => {
-    instance = new LobeInternLMAI({ apiKey: 'test_api_key' });
+    instance = new OrviloInternLMAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

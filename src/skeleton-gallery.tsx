@@ -7,8 +7,6 @@ import ConversationListSkeleton from '@/components/Skeleton/Conversation/List';
 import TaskItemSkeleton from '@/features/AgentTasks/AgentTaskList/TaskItemSkeleton';
 import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
 import ModelSkeletonList from '@/features/Settings/provider/features/ModelList/SkeletonList';
-import MemoryDetailLoading from '@/routes/(main)/memory/features/DetailLoading';
-import MemoryLoading from '@/routes/(main)/memory/features/Loading';
 
 const Case = ({ children, title }: { children: ReactNode; title: string }) => (
   <Flexbox gap={12} style={{ borderBottom: '1px solid #eee', padding: 24 }} width={'100%'}>
@@ -34,12 +32,6 @@ createRoot(document.querySelector('#root')!).render(
       </Case>
       <Case title="AgentTasks / TaskItemSkeleton">
         <TaskItemSkeleton />
-      </Case>
-      <Case title="memory / Loading">
-        <MemoryLoading />
-      </Case>
-      <Case title="memory / DetailLoading">
-        <MemoryDetailLoading />
       </Case>
       <Case title="Settings / provider ModelList SkeletonList">
         <ModelSkeletonList />

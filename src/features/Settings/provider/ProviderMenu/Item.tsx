@@ -6,7 +6,7 @@ import { memo, useMemo } from 'react';
 import { useLocation } from 'react-router';
 
 import { ProductLogo } from '@/components/Branding/ProductLogo';
-import { ProviderIcon } from '@/components/LobeIcons';
+import { ProviderIcon } from '@/components/OrviloIcons';
 import { isCustomBranding } from '@/const/version';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { type AiProviderListItem } from '@/types/aiProvider';

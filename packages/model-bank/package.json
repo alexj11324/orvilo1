@@ -11,7 +11,7 @@
     "./aiProvider": "./src/types/aiProvider.ts",
     "./modelProvider": "./src/const/modelProvider.ts",
     "./modelProviders": "./src/modelProviders/index.ts",
-    "./modelProviders/lobehub": "./src/modelProviders/lobehub.ts",
+    "./modelProviders/orvilo": "./src/modelProviders/orvilo.ts",
     "./ai21": "./src/aiModels/ai21.ts",
     "./ai302": "./src/aiModels/ai302.ts",
     "./ai360": "./src/aiModels/ai360.ts",

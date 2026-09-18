@@ -12,6 +12,7 @@ export * from './auth';
 export * from './brief';
 export * from './chunk';
 export * from './clientDB';
+export * from './collaboration';
 export * from './conversation';
 export * from './creds';
 export * from './device';

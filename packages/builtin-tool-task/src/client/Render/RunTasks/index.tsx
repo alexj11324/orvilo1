@@ -116,11 +116,11 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
       <Block variant={'outlined'} width={'100%'}>
         <div className={styles.header}>
           <span className={styles.headerCount}>
-            {t('builtins.lobe-task.runTasks.count', { count: rows.length })}
+            {t('builtins.orvilo-task.runTasks.count', { count: rows.length })}
           </span>
           {failedCount > 0 && (
             <span className={styles.failedBadge}>
-              {t('builtins.lobe-task.runTasks.failedCount', { count: failedCount })}
+              {t('builtins.orvilo-task.runTasks.failedCount', { count: failedCount })}
             </span>
           )}
         </div>

@@ -81,7 +81,7 @@ export const CONTAMINATION_MAX_COST_USD = 0.5;
 /**
  * A window is contaminated when the provider's meter moved but our ledger saw
  * (essentially) no spend — i.e. an external consumer (a CLI run outside
- * LobeHub) drove the utilization. Contaminated windows must be excluded from
+ * Orvilo) drove the utilization. Contaminated windows must be excluded from
  * calibration, else capacity is systematically under-estimated.
  */
 export const isWindowContaminated = (peakUtilization: number, ledgerCostUsd: number): boolean =>

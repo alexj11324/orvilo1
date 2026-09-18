@@ -28,7 +28,7 @@ const briefProcedure = wsCompatProcedure.use(serverDatabase);
  * `agent:update` is the permission every writable built-in role holds
  * (`:all` for Owner, `:owner` for Admin/Member) and Viewer does not. It is NOT
  * `task:update` — that is not an RBAC action at all and is rejected for every
- * role including Owner, which is what broke this router before (lobehub#17507).
+ * role including Owner, which is what broke this router before (orvilo#17507).
  */
 const briefWriteProcedure = briefProcedure.use(withScopedPermission('agent:update'));
 

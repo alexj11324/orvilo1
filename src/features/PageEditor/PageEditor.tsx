@@ -86,16 +86,16 @@ const styles = StyleSheet.create({
 
 const overrideStyles = createStaticStyles(({ css }) => ({
   editorContent: css`
-    .lobe-editor-table-scroll-wrapper.lobe-editor-table-scroll-wrapper {
-      --lobe-block-anchor-padding: var(--lobe-pageeditor-table-bleed-inline);
+    .orvilo-editor-table-scroll-wrapper.orvilo-editor-table-scroll-wrapper {
+      --lobe-block-anchor-padding: var(--orvilo-pageeditor-table-bleed-inline);
 
       position: relative;
       box-sizing: border-box;
       width: 100cqi;
-      margin-inline: calc(var(--lobe-pageeditor-table-bleed-inline) * -1);
+      margin-inline: calc(var(--orvilo-pageeditor-table-bleed-inline) * -1);
     }
 
-    .lobe-editor-table-scroll-wrapper .editor_table {
+    .orvilo-editor-table-scroll-wrapper .editor_table {
       width: max-content;
     }
   `,
@@ -161,7 +161,7 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
     : `calc(${TABLE_BASE_BLEED}px + max((100cqi - ${CONVERSATION_MIN_WIDTH}px) / 2, 0px))`;
   const editorContentStyle = {
     ...styles.editorContent,
-    '--lobe-pageeditor-table-bleed-inline': tableBleedInline,
+    '--orvilo-pageeditor-table-bleed-inline': tableBleedInline,
   } as CSSProperties;
   const resizeFrameRef = useRef<number | undefined>(undefined);
   const restoreScrollFrameRef = useRef<number | undefined>(undefined);

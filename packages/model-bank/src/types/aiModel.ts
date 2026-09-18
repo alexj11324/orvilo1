@@ -242,10 +242,10 @@ export interface Pricing {
 }
 
 /**
- * Where a benchmark dimension's raw value comes from. `lobehub` marks values
+ * Where a benchmark dimension's raw value comes from. `orvilo` marks values
  * derived from our own data (e.g. the price axis) rather than an external board.
  */
-export type ModelRatingSource = 'artificial-analysis' | 'design-arena' | 'lmarena' | 'lobehub';
+export type ModelRatingSource = 'artificial-analysis' | 'design-arena' | 'lmarena' | 'orvilo';
 
 export interface ModelBenchmarkScore {
   /**
@@ -331,7 +331,7 @@ export const isAiModelVisible = (model: { visible?: boolean }) => model.visible 
  * User-level default reasoning params for a model instance (userId + providerId + modelId),
  * stored under `ai_models.config.chatConfig` on the personal-scope row (workspaceId IS NULL).
  *
- * Field names intentionally mirror the same-named `LobeAgentChatConfig` fields so
+ * Field names intentionally mirror the same-named `OrviloAgentChatConfig` fields so
  * `applyModelExtendParams` can consume this object unchanged. Deliberately narrow:
  * the reasoning-effort family, Gemini thinking levels, and `reasoningMode`.
  * Numeric thinking budgets and other extend params remain agent-scoped.
@@ -704,7 +704,7 @@ export interface AiFullModelCard extends AIBaseModelCard {
   type: AiModelType;
 }
 
-export interface LobeDefaultAiModelListItem extends AiFullModelCard {
+export interface OrviloDefaultAiModelListItem extends AiFullModelCard {
   abilities: ModelAbilities;
   providerId: string;
 }

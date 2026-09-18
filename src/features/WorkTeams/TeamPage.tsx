@@ -2,12 +2,15 @@
 
 import { Empty, Flexbox } from '@lobehub/ui';
 import { Button, Select, Text, toast } from '@lobehub/ui/base-ui';
-import { memo, useCallback, useMemo, useState } from 'react';
+import type { WorkQueryLayout } from '@orvilo/types';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
+import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -171,6 +174,7 @@ const TeamPage = memo(() => {
   const workspaceId = useActiveWorkspaceId();
   const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
   const [noProject, setNoProject] = useState(false);
+  const [layout, setLayout] = useState<WorkQueryLayout>('list');
   const { data: teamData } = useClientDataSWR(
     teamId && workspaceId ? ['team', workspaceId, teamId] : null,
     () => lambdaClient.team.team.query({ teamId: teamId! }),
@@ -186,16 +190,30 @@ const TeamPage = memo(() => {
         query: teamTriageQuery(teamId!, cycleId, noProject),
       }),
   );
-  const { data: teamTasksData } = useClientDataSWR(
-    teamId && workspaceId ? ['team-tasks', workspaceId, teamId, cycleId, noProject] : null,
+  const { data: teamTasksData, isLoading: isTeamTasksLoading } = useClientDataSWR(
+    teamId && workspaceId ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout] : null,
     () =>
       workAttentionService.query({
-        query: teamTaskQuery(teamId!, cycleId, noProject),
+        query: teamTaskQuery(teamId!, cycleId, noProject, layout),
       }),
   );
-  const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
-  const teamTasks =
+  const firstTeamTasks =
     teamTasksData?.data && 'tasks' in teamTasksData.data ? teamTasksData.data.tasks : [];
+  const firstTeamGroups =
+    teamTasksData?.data && 'groups' in teamTasksData.data ? (teamTasksData.data.groups ?? []) : [];
+  const teamQueryHash =
+    teamTasksData?.data && 'queryHash' in teamTasksData.data
+      ? teamTasksData.data.queryHash
+      : undefined;
+  const [teamTail, setTeamTail] = useState<typeof firstTeamTasks>([]);
+  const [teamGroupTail, setTeamGroupTail] = useState<typeof firstTeamGroups>([]);
+  useEffect(() => {
+    setTeamTail([]);
+    setTeamGroupTail([]);
+  }, [cycleId, layout, noProject, teamId, teamQueryHash, workspaceId]);
+  const teamTasks = mergeWorkQueryPage(firstTeamTasks, teamTail);
+  const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
+  const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
 
   const act = useCallback(
@@ -216,7 +234,7 @@ const TeamPage = memo(() => {
         });
         await Promise.all([
           mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject]),
+          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout]),
         ]);
         toast.success(t('teams.triageUpdated'));
       } catch (error) {
@@ -227,15 +245,44 @@ const TeamPage = memo(() => {
         );
       }
     },
-    [cycleId, noProject, t, teamId, workspaceId],
+    [cycleId, layout, noProject, t, teamId, workspaceId],
   );
 
   const refreshTriage = useCallback(() => {
     void Promise.all([
       mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject]),
+      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout]),
     ]);
-  }, [cycleId, noProject, teamId, workspaceId]);
+  }, [cycleId, layout, noProject, teamId, workspaceId]);
+
+  const loadMoreTeam = useCallback(async () => {
+    const last = teamTasks.at(-1);
+    if (!last || !teamId || !teamQueryHash) return;
+    const next = await workAttentionService.query({
+      afterId: last.id,
+      query: teamTaskQuery(teamId, cycleId, noProject, 'list'),
+      queryHash: teamQueryHash,
+    });
+    const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
+    setTeamTail((current) => mergeWorkQueryPage(current, incoming));
+  }, [cycleId, noProject, teamId, teamQueryHash, teamTasks]);
+
+  const loadMoreTeamGroup = useCallback(
+    async (groupKey: string) => {
+      const column = teamGroups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      if (!last || !teamId || !teamQueryHash) return;
+      const next = await workAttentionService.query({
+        afterId: last.id,
+        groupKey,
+        query: teamTaskQuery(teamId, cycleId, noProject, 'board'),
+        queryHash: teamQueryHash,
+      });
+      const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
+      setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
+    },
+    [cycleId, noProject, teamGroups, teamId, teamQueryHash],
+  );
 
   const cycleOptions = useMemo(
     () => [
@@ -255,6 +302,14 @@ const TeamPage = memo(() => {
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {teamData?.data.team.name ?? t('tab.teams')}
           </Text>
+        }
+        right={
+          <Button
+            size="small"
+            onClick={() => setLayout((current) => (current === 'board' ? 'list' : 'board'))}
+          >
+            {layout === 'board' ? t('teams.layoutList') : t('teams.layoutBoard')}
+          </Button>
         }
       />
       <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
@@ -302,6 +357,30 @@ const TeamPage = memo(() => {
             />
           ))
         )}
+        <Text weight={500}>{t('teams.work')}</Text>
+        <WorkQueryResults
+          emptyLabel={t('teams.workEmpty')}
+          groups={teamGroups}
+          layout={layout}
+          loadMoreLabel={t('myWork.loadMore')}
+          loading={isTeamTasksLoading}
+          loadingLabel={t('teams.loading')}
+          movable={layout === 'board'}
+          tasks={teamTasks}
+          groupBy={
+            teamTasksData?.data && 'groupBy' in teamTasksData.data
+              ? teamTasksData.data.groupBy
+              : undefined
+          }
+          total={
+            teamTasksData?.data && 'total' in teamTasksData.data
+              ? teamTasksData.data.total
+              : undefined
+          }
+          onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
+          onLoadMoreGroup={layout === 'board' ? (key) => void loadMoreTeamGroup(key) : undefined}
+          onMoved={refreshTriage}
+        />
       </Flexbox>
     </Flexbox>
   );

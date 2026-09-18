@@ -1,4 +1,9 @@
-import { applyNoProjectFilter, type WorkQuery, type WorkQueryPredicate } from '@orvilo/types';
+import {
+  applyNoProjectFilter,
+  type WorkQuery,
+  type WorkQueryLayout,
+  type WorkQueryPredicate,
+} from '@orvilo/types';
 
 export const ALL_TEAM_CYCLES = '__all__';
 
@@ -32,7 +37,12 @@ export const teamTaskQuery = (
   teamId: string,
   cycleId?: string | null,
   noProject = false,
-): WorkQuery => withTeamScope(teamId, [], cycleId, noProject);
+  layout: WorkQueryLayout = 'list',
+): WorkQuery => {
+  const query = withTeamScope(teamId, [], cycleId, noProject);
+  if (layout !== 'board') return query;
+  return { ...query, groupBy: 'workflowCategory', layout: 'board' };
+};
 
 export const teamTriageQuery = (
   teamId: string,

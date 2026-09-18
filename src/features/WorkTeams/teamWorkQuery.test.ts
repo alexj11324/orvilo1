@@ -23,6 +23,14 @@ describe('teamWorkQuery', () => {
     );
   });
 
+  it('groups Team work on the server when the board layout is requested', () => {
+    expect(teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'board')).toMatchObject({
+      groupBy: 'workflowCategory',
+      layout: 'board',
+    });
+    expect(teamTaskQuery('team-1').layout).toBeUndefined();
+  });
+
   it('adds a cycleId eq predicate for an existing cycle', () => {
     expect(teamTriageQuery('team-1', 'cycle-9').filter?.all).toContainEqual({
       field: 'cycleId',

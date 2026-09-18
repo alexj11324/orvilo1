@@ -165,7 +165,7 @@ export default {
   'cmdk.keywords.automations': 'automations schedule automation cron',
   'cmdk.keywords.about': 'about version info',
 
-  'cmdk.keywords.apikey': 'apikey api key token',
+  'cmdk.keywords.apikey': 'apikey api key token signed orvilo',
 
   'cmdk.keywords.appearance': 'common appearance theme display',
 

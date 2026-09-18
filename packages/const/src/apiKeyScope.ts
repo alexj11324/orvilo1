@@ -1,6 +1,11 @@
 /**
  * API Key Scopes
  *
+ * These scopes belong to **Orvilo signed TRPC keys** stored in `api_keys`
+ * and enforced by `TRPC_NAMESPACE_API_KEY_RULES`. They are not model /
+ * custom-provider credentials, and this catalog must not resurrect the
+ * retired `/settings/provider` surface.
+ *
  * A scope describes what a signed API key is allowed to do. The effective
  * permission of a request is always the intersection of the issuer's own
  * permissions (RBAC / workspace role) and the key's scopes — scopes can only
@@ -304,7 +309,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),
   // Inbox / My Work / saved views: personal attention is the `notification`
-  // domain (`user:*`). Task-shaped queries and mutations stack `agent:*`
+  // domain (`user:*`) on **signed Orvilo TRPC keys**, not model-provider
+  // credentials. Task-shaped queries and mutations stack `agent:*`
   // via TRPC_PROCEDURE_EXTRA_SCOPES. `workAttention.decide` is blocked
   // below — ACP permits, PR review, and ownership transfer are interactive
   // human decisions, same class as `resourceTransferRequest`.

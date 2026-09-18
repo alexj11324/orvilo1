@@ -14,7 +14,7 @@ This is a reuse-and-connect increment, not a rebuild. Team, notifications, Inbox
 - `24d035c2` merge PR #79
 - `3f172b9a` CI quality-gate on tag promotion (#82)
 - `5498a06d` consent-based ownership transfer (#81) — occupies migration **0174**
-- `d02f13f1` hidden-surface retirement (#94) — `/acceptance` and `/verify` stay reserved redirects; `/settings/provider` is retired
+- `d02f13f1` hidden-surface retirement (#94) — `/acceptance` and `/verify` stay reserved redirects; `/settings/provider` is retired. Signed Orvilo API keys (`/settings/apikey`, `api_keys`, `TRPC_NAMESPACE_API_KEY_RULES`) are a different catalog and stay.
 
 Notification schema is unchanged since the research SHA. Collaboration tables (`event_outbox`, `action_approvals`, `execution_grants`, `task_inputs`) are present.
 

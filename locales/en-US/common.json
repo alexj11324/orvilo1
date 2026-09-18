@@ -159,7 +159,7 @@
   "cmdk.keyboard.Enter": "Enter",
   "cmdk.keyboard.Tab": "Tab",
   "cmdk.keywords.about": "about version info",
-  "cmdk.keywords.apikey": "apikey api key token",
+  "cmdk.keywords.apikey": "apikey api key token signed orvilo",
   "cmdk.keywords.appearance": "common appearance theme display",
   "cmdk.keywords.automations": "automations schedule automation cron",
   "cmdk.keywords.billing": "billing payment invoice transaction",

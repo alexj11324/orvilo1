@@ -29,9 +29,10 @@ const TeamTriageRow = memo<{
   destinations: Array<{ label: string; value: string }>;
   onAccept: (taskId: string) => void;
   onDecline: (taskId: string) => void;
+  onDuplicate: (taskId: string) => void;
   onTransferred: () => void;
   task: TeamTriageTask;
-}>(({ destinations, onAccept, onDecline, onTransferred, task }) => {
+}>(({ destinations, onAccept, onDecline, onDuplicate, onTransferred, task }) => {
   const { t } = useTranslation('common');
   const [destination, setDestination] = useState<string | undefined>();
   const selected = destination ?? destinations[0]?.value;
@@ -61,6 +62,9 @@ const TeamTriageRow = memo<{
       </Button>
       <Button size="small" onClick={() => onDecline(task.id)}>
         {t('teams.decline')}
+      </Button>
+      <Button size="small" onClick={() => onDuplicate(task.id)}>
+        {t('teams.markDuplicate')}
       </Button>
       {destinations.length > 0 ? (
         <>
@@ -118,7 +122,7 @@ const TeamPage = memo(() => {
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
 
   const act = useCallback(
-    async (taskId: string, action: 'accept' | 'decline') => {
+    async (taskId: string, action: 'accept' | 'decline' | 'duplicate') => {
       try {
         await workAttentionService.triage({ action, taskId, teamId: teamId! });
         await mutate(['team-triage', workspaceId, teamId]);
@@ -157,6 +161,7 @@ const TeamPage = memo(() => {
               task={task}
               onAccept={(id) => void act(id, 'accept')}
               onDecline={(id) => void act(id, 'decline')}
+              onDuplicate={(id) => void act(id, 'duplicate')}
               onTransferred={refreshTriage}
             />
           ))

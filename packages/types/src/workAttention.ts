@@ -98,6 +98,8 @@ export interface NotificationFeedCard {
   activityVersion: number;
   availableActions: Array<'archive' | 'decide' | 'open' | 'snooze'>;
   content: string;
+  /** Verbs the current visitor may send through `workAttention.decide`. */
+  decisionVerbs?: DecisionVerb[];
   kind: NotificationFeedKind;
   lastActivityAt: string;
   notificationId: string;

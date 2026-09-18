@@ -6,7 +6,7 @@ import { NotificationModel } from '@/database/models/notification';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { ActionSourceRegistry, toFeedCard } from '@/server/services/workAttention';
+import { ActionSourceRegistry, mapFeedWithLiveActions } from '@/server/services/workAttention';
 
 const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -83,9 +83,10 @@ export const notificationRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
+      const pending = await ctx.actionSources.listPendingForActor();
+      await ctx.notificationModel.ensureActionCards(pending);
       const rows = await ctx.notificationModel.listFeed(input);
-      return rows.map(toFeedCard);
+      return mapFeedWithLiveActions(rows, pending);
     }),
 
   feedSummary: notificationReadProcedure.query(async ({ ctx }) => {

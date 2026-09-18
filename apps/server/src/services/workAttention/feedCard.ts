@@ -1,6 +1,7 @@
 import {
   ACTION_SOURCE_KINDS,
   type ActionSourceKind,
+  type DecisionVerb,
   type NotificationFeedCard,
   type TypedNavigationTarget,
 } from '@orvilo/types';
@@ -28,19 +29,46 @@ const navigationFor = (row: NotificationItem): TypedNavigationTarget => {
   return { kind: 'inbox' };
 };
 
-export const toFeedCard = (row: NotificationItem): NotificationFeedCard => {
+export interface LiveActionOverlay {
+  outgoing?: boolean;
+  sourceRevision?: number | string | null;
+}
+
+export const decisionVerbsFor = (
+  kind: ActionSourceKind | null,
+  outgoing = false,
+): DecisionVerb[] => {
+  if (!kind) return [];
+  if (kind === 'acp_input') return ['submit_input'];
+  if (kind === 'resource_transfer' || kind === 'workspace_ownership_transfer') {
+    return outgoing ? ['cancel'] : ['approve', 'decline'];
+  }
+  return ['approve', 'decline'];
+};
+
+export const toFeedCard = (
+  row: NotificationItem,
+  live?: LiveActionOverlay,
+): NotificationFeedCard => {
   const actionKind = asActionKind(row.actionKind);
   const unresolvedAction = row.kind === 'action' && !row.resolvedAt;
   return {
     actionRef:
       actionKind && row.actionRequestId
-        ? { kind: actionKind, requestId: row.actionRequestId }
+        ? {
+            kind: actionKind,
+            requestId: row.actionRequestId,
+            ...(live?.sourceRevision !== undefined && live.sourceRevision !== null
+              ? { sourceRevision: live.sourceRevision }
+              : {}),
+          }
         : null,
     activityVersion: row.activityVersion,
     availableActions: unresolvedAction
       ? ['archive', 'decide', 'open', 'snooze']
       : ['archive', 'open', 'snooze'],
     content: row.content,
+    decisionVerbs: unresolvedAction ? decisionVerbsFor(actionKind, Boolean(live?.outgoing)) : [],
     kind: row.kind,
     lastActivityAt: (row.lastActivityAt ?? row.createdAt).toISOString(),
     notificationId: row.id,
@@ -53,4 +81,18 @@ export const toFeedCard = (row: NotificationItem): NotificationFeedCard => {
     title: row.title,
     type: row.type,
   };
+};
+
+export const mapFeedWithLiveActions = (
+  rows: NotificationItem[],
+  pending: Array<{
+    outgoing?: boolean;
+    requestId: string;
+    sourceRevision?: number | string | null;
+  }>,
+): NotificationFeedCard[] => {
+  const live = new Map(pending.map((item) => [item.requestId, item]));
+  return rows.map((row) =>
+    toFeedCard(row, row.actionRequestId ? live.get(row.actionRequestId) : undefined),
+  );
 };

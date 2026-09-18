@@ -582,6 +582,7 @@
   "teams.decline": "拒绝",
   "teams.empty": "当前工作区还没有团队",
   "teams.loading": "正在加载团队…",
+  "teams.markDuplicate": "标为重复",
   "teams.personal": "切换到工作区后才能查看团队",
   "teams.transfer": "转到团队",
   "teams.transferFailed": "无法转到其他团队",

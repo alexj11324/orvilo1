@@ -1,6 +1,6 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
+import { Empty, Flexbox, Input } from '@lobehub/ui';
 import {
   Button,
   TabsIndicator,
@@ -10,7 +10,7 @@ import {
   Text,
   toast,
 } from '@lobehub/ui/base-ui';
-import type { NotificationFeedCard } from '@orvilo/types';
+import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
 
+import { versionedDecisionFromCard, visibleDecisionVerbs } from './inboxDecide';
 import {
   feedFilterForChip,
   INBOX_FILTER_CHIPS,
@@ -83,6 +84,7 @@ const WorkInboxPage = memo(() => {
   const [filterChip, setFilterChip] = useState<InboxFilterChip>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [inputDraft, setInputDraft] = useState('');
 
   const kind = tab === 'action' ? 'action' : 'update';
   const filter = feedFilterForChip(filterChip);
@@ -98,6 +100,11 @@ const WorkInboxPage = memo(() => {
     () => cards.find((card) => card.notificationId === selectedId) ?? null,
     [cards, selectedId],
   );
+  const decisionVerbs = selected ? visibleDecisionVerbs(selected) : [];
+
+  useEffect(() => {
+    setInputDraft('');
+  }, [selectedId]);
   const cardIds = useMemo(() => cards.map((card) => card.notificationId), [cards]);
   const surface = inboxSurface(isMobile, detailOpen);
   const selectedNotificationId = selected?.notificationId;
@@ -175,14 +182,18 @@ const WorkInboxPage = memo(() => {
   );
 
   const decide = useCallback(
-    async (card: NotificationFeedCard, decision: 'approve' | 'decline') => {
-      if (!card.actionRef) return;
+    async (
+      card: NotificationFeedCard,
+      decision: DecisionVerb,
+      inputPayload?: Record<string, unknown>,
+    ) => {
+      const command = versionedDecisionFromCard(card, decision, {
+        idempotencyKey: crypto.randomUUID(),
+        inputPayload,
+      });
+      if (!command) return;
       try {
-        const result = await workAttentionService.decide({
-          actionRef: card.actionRef,
-          decision,
-          idempotencyKey: crypto.randomUUID(),
-        });
+        const result = await workAttentionService.decide(command);
         const status = result.data.status;
         if (status === 'stale' || status === 'expired') {
           toast.error(t('inbox.actionStale'));
@@ -335,29 +346,54 @@ const WorkInboxPage = memo(() => {
             <>
               <Text weight={600}>{selected.title}</Text>
               <Text>{selected.content}</Text>
-              <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
-                {selected.availableActions.includes('decide') && selected.actionRef ? (
-                  <>
+              <Flexbox gap={8}>
+                {decisionVerbs.includes('submit_input') ? (
+                  <Input
+                    placeholder={t('inbox.inputPlaceholder')}
+                    value={inputDraft}
+                    onChange={(event) => setInputDraft(event.target.value)}
+                  />
+                ) : null}
+                <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+                  {decisionVerbs.includes('approve') ? (
                     <Button type="primary" onClick={() => void decide(selected, 'approve')}>
                       {t('inbox.approve')}
                     </Button>
+                  ) : null}
+                  {decisionVerbs.includes('decline') ? (
                     <Button onClick={() => void decide(selected, 'decline')}>
                       {t('inbox.decline')}
                     </Button>
-                  </>
-                ) : null}
-                <Button onClick={() => openTarget(selected)}>{t('inbox.open')}</Button>
-                {selected.availableActions.includes('archive') ? (
-                  <Button onClick={() => void archiveCard(selected)}>{t('inbox.archive')}</Button>
-                ) : null}
-                {selected.availableActions.includes('snooze') ? (
-                  <Button onClick={() => void snoozeCard(selected)}>{t('inbox.snooze')}</Button>
-                ) : null}
-                {selected.read ? (
-                  <Button onClick={() => void markCardUnread(selected)}>
-                    {t('inbox.markUnread')}
-                  </Button>
-                ) : null}
+                  ) : null}
+                  {decisionVerbs.includes('cancel') ? (
+                    <Button onClick={() => void decide(selected, 'cancel')}>
+                      {t('inbox.cancel')}
+                    </Button>
+                  ) : null}
+                  {decisionVerbs.includes('submit_input') ? (
+                    <Button
+                      disabled={!inputDraft.trim()}
+                      type="primary"
+                      onClick={() =>
+                        void decide(selected, 'submit_input', { text: inputDraft.trim() })
+                      }
+                    >
+                      {t('inbox.submitInput')}
+                    </Button>
+                  ) : null}
+                  <Button onClick={() => openTarget(selected)}>{t('inbox.open')}</Button>
+                  {selected.availableActions.includes('archive') ? (
+                    <Button onClick={() => void archiveCard(selected)}>{t('inbox.archive')}</Button>
+                  ) : null}
+                  {selected.availableActions.includes('snooze') ? (
+                    <Button onClick={() => void snoozeCard(selected)}>{t('inbox.snooze')}</Button>
+                  ) : null}
+                  {selected.read ? (
+                    <Button onClick={() => void markCardUnread(selected)}>
+                      {t('inbox.markUnread')}
+                    </Button>
+                  ) : null}
+                </Flexbox>
               </Flexbox>
             </>
           )}

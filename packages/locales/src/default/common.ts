@@ -658,6 +658,7 @@ export default {
   'teams.decline': 'Decline',
   'teams.empty': 'No teams in this workspace',
   'teams.loading': 'Loading teams…',
+  'teams.markDuplicate': 'Mark duplicate',
   'teams.personal': 'Switch to a workspace to see teams',
   'teams.transfer': 'Move to team',
   'teams.transferFailed': 'Could not move this task',

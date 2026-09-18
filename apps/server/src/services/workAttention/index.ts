@@ -1,5 +1,5 @@
 export { ActionSourceRegistry } from './actionSources';
-export { toFeedCard } from './feedCard';
+export { mapFeedWithLiveActions, toFeedCard } from './feedCard';
 export {
   NotificationProjectionService,
   resolveNotificationTargets,

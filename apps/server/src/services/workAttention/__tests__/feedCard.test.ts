@@ -56,6 +56,7 @@ describe('toFeedCard', () => {
     );
     expect(action.availableActions).toContain('decide');
     expect(action.actionRef).toEqual({ kind: 'acp_permission', requestId: 'apr_1' });
+    expect(action.decisionVerbs).toEqual(['approve', 'decline']);
   });
 
   it('keeps decide on ownership-transfer cards and opens members settings', () => {
@@ -107,5 +108,35 @@ describe('toFeedCard', () => {
     );
     expect(card.availableActions).toContain('decide');
     expect(card.read).toBe(true);
+  });
+
+  it('pins sourceRevision and cancel-only verbs onto outgoing transfers', () => {
+    const card = toFeedCard(
+      row({
+        actionKind: 'resource_transfer',
+        actionRequestId: 'xfer_1',
+        kind: 'action',
+        type: 'resource_transfer',
+      }),
+      { outgoing: true, sourceRevision: 'xfer_1' },
+    );
+    expect(card.actionRef).toEqual({
+      kind: 'resource_transfer',
+      requestId: 'xfer_1',
+      sourceRevision: 'xfer_1',
+    });
+    expect(card.decisionVerbs).toEqual(['cancel']);
+  });
+
+  it('asks for submit_input on acp_input cards instead of approve', () => {
+    const card = toFeedCard(
+      row({
+        actionKind: 'acp_input',
+        actionRequestId: 'task_1',
+        kind: 'action',
+        type: 'acp_input',
+      }),
+    );
+    expect(card.decisionVerbs).toEqual(['submit_input']);
   });
 });

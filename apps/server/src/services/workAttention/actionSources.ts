@@ -41,9 +41,11 @@ const PENDING_SOURCE_LIMIT = 50;
 export interface PendingSourceCard {
   actionKind: ActionSourceKind;
   content: string;
+  outgoing?: boolean;
   requestId: string;
   resourceId?: string;
   resourceType?: string;
+  sourceRevision?: number | string | null;
   title: string;
 }
 
@@ -157,6 +159,7 @@ export class ActionSourceRegistry {
         requestId: row.id,
         resourceId: row.targetId ?? undefined,
         resourceType: row.targetType ?? undefined,
+        sourceRevision: row.baseSha ?? row.baseVersion ?? null,
         title: 'Approval required',
       });
     }
@@ -173,9 +176,11 @@ export class ActionSourceRegistry {
             row.initiatorId === this.userId
               ? 'Waiting for the recipient. You can withdraw this transfer.'
               : 'Resource transfer request',
+          outgoing: row.initiatorId === this.userId,
           requestId: row.id,
           resourceId: row.resourceId,
           resourceType: row.resourceType,
+          sourceRevision: row.id,
           title:
             row.initiatorId === this.userId
               ? 'Outgoing resource transfer'
@@ -205,9 +210,11 @@ export class ActionSourceRegistry {
             row.fromUserId === this.userId
               ? 'Waiting for the invited member. You can cancel this transfer.'
               : 'Workspace ownership transfer request',
+          outgoing: row.fromUserId === this.userId,
           requestId: row.id,
           resourceId: row.workspaceId,
           resourceType: 'workspace',
+          sourceRevision: row.id,
           title:
             row.fromUserId === this.userId
               ? 'Outgoing ownership transfer'
@@ -236,6 +243,7 @@ export class ActionSourceRegistry {
         content:
           row.reviewContext.summary ?? row.sanitizedRequest.prompt ?? 'Agent needs your review',
         requestId: row.id,
+        sourceRevision: row.version,
         title: row.reviewContext.title || 'Agent needs your review',
       });
     }

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { agentOperations } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
@@ -21,7 +21,7 @@ import {
   writeRemoteRunAdmission,
 } from '../runAdmission';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const createdIds: string[] = [];
 

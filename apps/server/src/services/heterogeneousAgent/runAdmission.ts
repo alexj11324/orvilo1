@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { DeviceTransportErrorCode as TransportCode } from '@orvilo/device-gateway-client';
 import type {
   AgentRunAdmissionRecord,
@@ -182,7 +182,7 @@ const mergeSubkey = (key: string, patch: Record<string, unknown>) =>
  * admission can never mint a second execution record (or bump the fence).
  */
 export const createRemoteRunAdmission = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
   admission: Omit<RemoteRunAdmission, 'state' | 'updatedAt'>,
 ): Promise<boolean> => {
@@ -212,7 +212,7 @@ export const createRemoteRunAdmission = async (
  * dropped (stale/duplicate signal), which callers treat as a no-op.
  */
 export const writeRemoteRunAdmission = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
   patch: Partial<RemoteRunAdmission> & { state: AgentRunAdmissionState },
 ): Promise<boolean> => {
@@ -248,7 +248,7 @@ export const writeRemoteRunAdmission = async (
 
 /** First producer callback — the run demonstrably reached the host. */
 export const markRemoteRunRunning = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
 ): Promise<boolean> => writeRemoteRunAdmission(db, operationId, { state: 'running' });
 
@@ -258,7 +258,7 @@ export const markRemoteRunRunning = async (
  * existing — never creates one.
  */
 export const patchRemoteRunAdmission = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
   patch: Partial<Omit<RemoteRunAdmission, 'state' | 'idempotencyKey' | 'generation' | 'channel'>>,
 ): Promise<boolean> => {
@@ -287,7 +287,7 @@ export const patchRemoteRunAdmission = async (
  * re-arms `requested` (clearing the stale `resolvedAt`).
  */
 export const markRemoteCancelRequested = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
   reason?: string,
 ): Promise<boolean> => {
@@ -319,7 +319,7 @@ export const markRemoteCancelRequested = async (
  * stopped — but `confirmed` is terminal and never regresses.
  */
 export const resolveRemoteCancel = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
   state: 'confirmed' | 'unknown',
   reason?: string,
@@ -356,7 +356,7 @@ export const resolveRemoteCancel = async (
  * does not exist or is not a remote-admitted run.
  */
 export const loadRemoteRunRecord = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
 ): Promise<
   { admission?: RemoteRunAdmission; cancel?: RemoteRunCancel; status?: string } | undefined
@@ -381,7 +381,7 @@ export const loadRemoteRunRecord = async (
  * (or callers that omit the generation) are grandfathered.
  */
 export const remoteRunGenerationMatches = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   operationId: string,
   runGeneration?: number,
 ): Promise<boolean> => {
@@ -396,7 +396,7 @@ export const remoteRunGenerationMatches = async (
  * plus the stream tail cursor a reconnect would resume from.
  */
 export const loadRemoteExecutionStatus = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   streamManager: IStreamEventManager,
   operationId: string,
 ): Promise<RemoteExecutionStatus | undefined> => {

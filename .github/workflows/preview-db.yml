@@ -39,7 +39,7 @@ jobs:
       github.triggering_actor == github.repository_owner
     name: Provision per-PR database
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
       APP_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_app_${{ github.run_id }}_${{ github.run_attempt }}
@@ -65,7 +65,7 @@ jobs:
           IGNORED_CHECK_RUNS: Check Duplicate Run,Vercel Preview Comments,Check all PR gates before Vercel,Deploy Vercel Preview,Provision per-PR database
           IGNORED_STATUS_CONTEXTS: Vercel
           REQUIRED_EVENT: push
-          GATE_TIMEOUT_MS: '900000'
+          GATE_TIMEOUT_MS: '2400000'
           VERCEL_PREVIEW_DEPLOYMENT_GATE: ${{ vars.VERCEL_PREVIEW_DEPLOYMENT_GATE }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

@@ -12,7 +12,15 @@ interface WorkflowStep {
 }
 
 interface Workflow {
-  jobs: Record<string, { if?: string; env?: Record<string, string>; steps: WorkflowStep[] }>;
+  jobs: Record<
+    string,
+    {
+      'if'?: string;
+      'env'?: Record<string, string>;
+      'steps': WorkflowStep[];
+      'timeout-minutes'?: number;
+    }
+  >;
 }
 
 const provisionWorkflow = parse(
@@ -49,6 +57,8 @@ describe('Preview database workflow', () => {
     expect(gate?.run).toContain('api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env');
     expect(gate?.env?.REQUIRED_WORKFLOWS).toBe('Test CI,E2E CI');
     expect(gate?.env?.IGNORED_CHECK_RUNS).toContain('Provision per-PR database');
+    expect(gate?.env?.GATE_TIMEOUT_MS).toBe('2400000');
+    expect(provisionWorkflow.jobs.provision['timeout-minutes']).toBe(45);
   });
 
   it('extracts grant log metadata in a fail-closed command', () => {

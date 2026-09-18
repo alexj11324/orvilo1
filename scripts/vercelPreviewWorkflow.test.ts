@@ -24,7 +24,7 @@ const workflow = parse(
 };
 
 describe('gated Vercel Preview workflow', () => {
-  it('runs the privileged gate from the base revision on PR changes', () => {
+  it('runs the privileged gate in the base context on PR changes', () => {
     expect(workflow.on.pull_request_target.types).toEqual([
       'opened',
       'reopened',
@@ -41,6 +41,27 @@ describe('gated Vercel Preview workflow', () => {
     expect(workflow.jobs.gate.env?.GATE_TIMEOUT_MS).toBe('3600000');
     expect(workflow.jobs.gate['timeout-minutes']).toBeGreaterThanOrEqual(70);
     expect(workflow.jobs.gate.steps).toHaveLength(2);
+  });
+
+  it('checks out workflow-owned helper code from the default branch, not the PR base', () => {
+    // Stacked PR bases and canary do not carry scripts/ci/ — checking out
+    // pull_request.base.sha there dies with MODULE_NOT_FOUND before the gate
+    // can run. Pin the ref so a reversion cannot silently restore that path.
+    const checkoutRefs = Object.values(workflow.jobs).flatMap((job) =>
+      (job.steps ?? [])
+        .filter(
+          (step): step is { uses: string; with?: { ref?: string } } =>
+            typeof step === 'object' &&
+            step !== null &&
+            (step as { uses?: string }).uses === 'actions/checkout@v6',
+        )
+        .map((step) => step.with?.ref),
+    );
+
+    expect(checkoutRefs.length).toBeGreaterThan(0);
+    for (const ref of checkoutRefs) {
+      expect(ref).toBe('${{ github.event.repository.default_branch }}');
+    }
   });
 
   it('starts the exact deployment only after the gate succeeds and the switch is open', () => {

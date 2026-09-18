@@ -412,7 +412,8 @@ function parseComments(
     // would dispatch a corrective run in response to its own comments. The
     // credential's owner is the actor; a reviewer who wants to block the
     // delivery uses a different account or a formal review.
-    if (selfLogin && comment.user.login.toLowerCase() === selfLogin) continue;
+    if (selfLogin && isString(comment.user.login) && comment.user.login.toLowerCase() === selfLogin)
+      continue;
     const id = `${prefix}:${comment.id}`;
     ids.push(id);
     const digest = createHash('sha256').update(JSON.stringify(comment.body)).digest('hex');
@@ -472,24 +473,24 @@ export async function readPullRequestReviewSnapshot(
     if (!pr) return;
     const [checkRuns, statuses, reviews, inline, ordinary, threads, testMerge, viewer] =
       await Promise.all([
-      readPages(
-        request,
-        `${root}/commits/${pr.headSha}/check-runs?filter=latest`,
-        token,
-        'check_runs',
-      ),
-      readPages(request, `${root}/commits/${pr.headSha}/statuses`, token),
-      readPages(request, `${root}/pulls/${number}/reviews`, token),
-      readPages(request, `${root}/pulls/${number}/comments`, token),
-      readPages(request, `${root}/issues/${number}/comments`, token),
-      readThreads(request, coordinate, pr, token),
-      resolveTestMerge(request, root, pr, token),
-      // The credential owner's login lets the feedback cursor tell the
-      // controller's own replies from human review. A token without /user
-      // scope (e.g. an installation token) simply yields no exclusion — those
-      // actors post as Bots and are already filtered.
-      request('/user', token),
-    ]);
+        readPages(
+          request,
+          `${root}/commits/${pr.headSha}/check-runs?filter=latest`,
+          token,
+          'check_runs',
+        ),
+        readPages(request, `${root}/commits/${pr.headSha}/statuses`, token),
+        readPages(request, `${root}/pulls/${number}/reviews`, token),
+        readPages(request, `${root}/pulls/${number}/comments`, token),
+        readPages(request, `${root}/issues/${number}/comments`, token),
+        readThreads(request, coordinate, pr, token),
+        resolveTestMerge(request, root, pr, token),
+        // The credential owner's login lets the feedback cursor tell the
+        // controller's own replies from human review. A token without /user
+        // scope (e.g. an installation token) simply yields no exclusion — those
+        // actors post as Bots and are already filtered.
+        request('/user', token),
+      ]);
     if (!checkRuns || !statuses || !reviews || !inline || !ordinary || !threads || !testMerge)
       return;
     const selfLogin =

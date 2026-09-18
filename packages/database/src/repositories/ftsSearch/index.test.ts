@@ -1833,8 +1833,14 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
      * transient: retrying the identical query re-reads a settled heap.
      */
     const isTransientBm25ScanError = (error: unknown): boolean => {
-      const err = error as { code?: string; message?: string } | undefined;
-      return err?.code === 'XX000' || err?.message?.includes('item_pointer_is_valid') === true;
+      // nodeDrizzle rethrows as `Failed query: ...` with the postgres
+      // diagnostics on `.cause` — walk the chain to reach them.
+      let err = error as { cause?: unknown; code?: string; message?: string } | undefined;
+      while (err) {
+        if (err.code === 'XX000' || err.message?.includes('item_pointer_is_valid')) return true;
+        err = err.cause as typeof err;
+      }
+      return false;
     };
 
     /** Runs a search against the test DB and returns every BM25 statement it emitted. */

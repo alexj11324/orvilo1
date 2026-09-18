@@ -1,5 +1,6 @@
 'use client';
 
+import type { TFunction } from 'i18next';
 import { CheckIcon, CircleCheckIcon, PlusIcon, RocketIcon } from 'lucide-react';
 import { AnimatePresence, useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -69,7 +70,7 @@ import { OnboardingStepper, OnboardingStepperCompact } from './onboarding-steppe
 
 type TimezoneGroup = { items: string[]; value: string };
 
-function createTimezoneGroups(t: ReturnType<typeof useTranslation>['t']): TimezoneGroup[] {
+function createTimezoneGroups(t: TFunction<'onboarding'>): TimezoneGroup[] {
   return [
     {
       value: t('reui.timezone.americas'),

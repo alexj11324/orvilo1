@@ -116,7 +116,7 @@ export function OnboardingStepper({
     >
       <StepperNav aria-label={t('reui.stepper.ariaLabel')} className="w-full">
         {steps.map((step) => {
-          const description = t(`reui.stepper.${step.id}`);
+          const description = t(`reui.stepper.${step.id}` as const);
 
           return (
             <StepperItem

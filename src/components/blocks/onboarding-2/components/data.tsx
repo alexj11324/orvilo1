@@ -100,8 +100,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[DiscoverySourceValue, HugeIcon]>
   ).map(([value, Icon]) => ({
     value: value as DiscoverySourceValue,
-    label: t(`reui.source.${value}.label`),
-    description: t(`reui.source.${value}.description`),
+    label: t(`reui.source.${value}.label` as const),
+    description: t(`reui.source.${value}.description` as const),
     icon: <HugeiconsIcon aria-hidden="true" className="size-4" icon={Icon} />,
   })),
   goalOptions: (
@@ -114,14 +114,14 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[GoalValue, LucideIcon]>
   ).map(([value, Icon]) => ({
     value: value as GoalValue,
-    label: t(`reui.goal.${value}.label`),
-    description: t(`reui.goal.${value}.description`),
+    label: t(`reui.goal.${value}.label` as const),
+    description: t(`reui.goal.${value}.description` as const),
     icon: <Icon aria-hidden="true" />,
   })),
   inviteRoleOptions: (['guest', 'member', 'admin'] as InviteRoleValue[]).map((value) => ({
     value,
-    label: t(`reui.inviteRole.${value}.label`),
-    description: t(`reui.inviteRole.${value}.description`),
+    label: t(`reui.inviteRole.${value}.label` as const),
+    description: t(`reui.inviteRole.${value}.description` as const),
   })),
   roleOptions: (
     [
@@ -134,8 +134,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[RoleValue, LucideIcon]>
   ).map(([value, Icon]) => ({
     value: value as RoleValue,
-    label: t(`reui.role.${value}.label`),
-    description: t(`reui.role.${value}.description`),
+    label: t(`reui.role.${value}.label` as const),
+    description: t(`reui.role.${value}.description` as const),
     icon: <Icon aria-hidden="true" />,
     ...(value === 'developer' ? { recommended: true } : {}),
   })),
@@ -149,9 +149,9 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
   ].map(([id, value]) => ({
     id: id as string,
     value: value as number,
-    label: t(`reui.step.${id}.label`),
-    title: t(`reui.step.${id}.title`),
-    description: t(`reui.step.${id}.description`),
+    label: t(`reui.step.${id}.label` as const),
+    title: t(`reui.step.${id}.title` as const),
+    description: t(`reui.step.${id}.description` as const),
     ...(['source', 'invite'].includes(id as string) ? { optional: true } : {}),
   })),
   teamSizeOptions: (
@@ -167,8 +167,8 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     ] as Array<[TeamSizeValue, string]>
   ).map(([value, key]) => ({
     value: value as TeamSizeValue,
-    label: t(`reui.teamSize.${key}.label`),
-    description: t(`reui.teamSize.${key}.description`),
+    label: t(`reui.teamSize.${key}.label` as const),
+    description: t(`reui.teamSize.${key}.description` as const),
     ...(value === 'team' ? { recommended: true } : {}),
   })),
 });

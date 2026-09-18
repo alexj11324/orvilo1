@@ -2,7 +2,7 @@
 
 import { mergeProps } from '@base-ui/react/merge-props';
 import { useRender } from '@base-ui/react/use-render';
-import type { HTMLAttributes, ReactElement } from 'react';
+import type { HTMLAttributes, ReactElement, ReactNode } from 'react';
 import {
   Children,
   createContext,
@@ -291,7 +291,7 @@ function StepperTrigger({ className, children, tabIndex, render, ...props }: Ste
     'onClick': () => setActiveStep(step),
     'onKeyDown': handleKeyDown,
     'disabled': isDisabled,
-    children,
+    children: children as ReactNode,
   };
 
   return useRender({

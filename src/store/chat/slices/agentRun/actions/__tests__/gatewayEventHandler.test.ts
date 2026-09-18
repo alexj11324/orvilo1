@@ -866,20 +866,18 @@ describe('createGatewayEventHandler', () => {
       const adapter = createAdapter('kimi-code');
 
       adapter.adapt({
-        role: 'assistant',
-        tool_calls: [
-          {
-            function: {
-              arguments: JSON.stringify({ command: 'git worktree add /tmp/kimi-wt' }),
-              name: 'Shell',
-            },
-            id: 'kimi-shell-1',
-            type: 'function',
-          },
-        ],
+        name: 'Shell',
+        rawInput: { command: 'git worktree add /tmp/kimi-wt' },
+        sessionUpdate: 'tool_call',
+        toolCallId: 'kimi-shell-1',
       });
       const toolEnd = adapter
-        .adapt({ content: 'created', role: 'tool', tool_call_id: 'kimi-shell-1' })
+        .adapt({
+          output: 'created',
+          sessionUpdate: 'tool_call_update',
+          status: 'completed',
+          toolCallId: 'kimi-shell-1',
+        })
         .find((event) => event.type === 'tool_end');
 
       expect(toolEnd).toBeDefined();

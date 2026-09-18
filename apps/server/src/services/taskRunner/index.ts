@@ -23,6 +23,7 @@ import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
+import { AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
   type PreparedTaskDispatch,
@@ -30,7 +31,6 @@ import {
   TaskDispatchService,
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
-import { AgentDelegationService } from '@/server/services/agentDelegation';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
@@ -668,6 +668,69 @@ export class TaskRunnerService {
         });
       }
 
+      // Register the dispatched topic as a visible run attempt — shared by
+      // the outcome_unknown park and the confirmed-failure path below.
+      const registerDispatchedAttempt = async () => {
+        if (!result.topicId || taskTopicStarted) return;
+        await this.taskModel.updateCurrentTopic(task.id, result.topicId);
+        await this.taskTopicModel.startRun(task.id, result.topicId, {
+          dispatch: {
+            ...preparedDispatch!.dispatch,
+            fence: preparedDispatch!.fence,
+          },
+          environmentSnapshot,
+          integration: runIntegration,
+          operationId: result.operationId,
+          seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
+          trigger,
+        });
+        if (delegation) {
+          delegatedEpoch = await this.delegationService.claimExecutionEpoch({
+            grantId: delegation.grantId,
+            taskId: task.id,
+            topicId: result.topicId,
+          });
+        }
+        provisionedRegistered = true;
+        if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
+        taskTopicStarted = true;
+      };
+
+      if (result.remoteAdmission === 'unknown') {
+        // The device may still be executing — this is not a confirmed
+        // failure. Keep the topic run open, park the dispatch at
+        // outcome_unknown, release the kickoff claims, and let the host's
+        // terminal callback or the reconciler settle it. Marking it failed
+        // here would orphan a possibly-live writer.
+        await registerDispatchedAttempt();
+        await this.taskDispatch.transition(preparedDispatch!, {
+          expected: ['dispatched', 'running', 'waiting', 'outcome_unknown'],
+          operationId: result.operationId,
+          phase: 'outcome_unknown',
+          waitingReason:
+            result.message || 'Dispatch acknowledgement lost; run may still be executing',
+        });
+        await this.taskModel.updateHeartbeat(task.id);
+        registrationComplete = true;
+        // A host that completed while the ack was still in flight buffered its
+        // completion in `earlyCompletion` — replay it now that registration is
+        // durable so the topic run and dispatch actually settle.
+        if (earlyCompletion) await handleCompletion(earlyCompletion);
+        await this.taskModel.releaseRunReservation(task.id, reservationId);
+        ownsReservation = false;
+        await this.taskModel
+          .releaseRunKickoff(task.id, kickoffClaimToken)
+          .catch((releaseError) =>
+            log('runTask: failed to release kickoff claim for %s — %O', task.id, releaseError),
+          );
+        ownsKickoffClaim = false;
+        return {
+          ...result,
+          taskId: task.id,
+          taskIdentifier: task.identifier,
+        };
+      }
+
       if (!result.success) {
         // execAgent reports a dispatch or startup failure as a result rather
         // than a throw (`startOperation`, `heteroDispatch`): the assistant
@@ -676,30 +739,7 @@ export class TaskRunnerService {
         // the Task looking in flight — a goal coordinator would even record a
         // `started_run` for it — with nothing left to ever settle it. Keep the
         // attempt visible as a failed run, then fail the kickoff like any other.
-        if (result.topicId && !taskTopicStarted) {
-          await this.taskModel.updateCurrentTopic(task.id, result.topicId);
-          await this.taskTopicModel.startRun(task.id, result.topicId, {
-            dispatch: {
-              ...preparedDispatch!.dispatch,
-              fence: preparedDispatch!.fence,
-            },
-            environmentSnapshot,
-            integration: runIntegration,
-            operationId: result.operationId,
-            seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
-            trigger,
-          });
-          if (delegation) {
-            delegatedEpoch = await this.delegationService.claimExecutionEpoch({
-              grantId: delegation.grantId,
-              taskId: task.id,
-              topicId: result.topicId,
-            });
-          }
-          provisionedRegistered = true;
-          if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
-          taskTopicStarted = true;
-        }
+        await registerDispatchedAttempt();
         if (result.topicId) {
           await this.taskTopicModel.updateStatus(task.id, result.topicId, 'failed');
         }
@@ -819,11 +859,18 @@ export class TaskRunnerService {
             operationId: dispatchedOperationId,
             topicId: dispatchedTopicId,
           });
+          // Prefer the P20 cancel tri-state when present: only `confirmed`
+          // satisfies a physical-exit requirement; `unknown` (signal never
+          // provably landed) must preserve the worktree either way.
           orphanInterruptionConfirmed =
             interruption.success &&
-            (requiresPhysicalExitConfirmation
-              ? interruption.deviceCancellationConfirmed === true
-              : interruption.deviceCancellationConfirmed !== false);
+            (interruption.cancelState !== undefined
+              ? requiresPhysicalExitConfirmation
+                ? interruption.cancelState === 'confirmed'
+                : interruption.cancelState !== 'unknown'
+              : requiresPhysicalExitConfirmation
+                ? interruption.deviceCancellationConfirmed === true
+                : interruption.deviceCancellationConfirmed !== false);
           if (!orphanInterruptionConfirmed) {
             log(
               'runTask: orphaned operation %s did not confirm interruption; preserving worktree',

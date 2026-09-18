@@ -1396,6 +1396,9 @@ const HeteroIngestSchema = z.object({
   assistantMessageId: z.string().min(1).optional(),
   events: z.array(AgentStreamEventSchema).min(1),
   operationId: z.string().min(1),
+  /** Run generation the producer was admitted under (P20 fence). Producers
+   * that omit it are grandfathered; a mismatch drops the batch. */
+  runGeneration: z.number().int().nonnegative().optional(),
   topicId: z.string().min(1),
 });
 
@@ -1431,6 +1434,9 @@ const HeteroFinishSchema = z.object({
    * unusable; the server clears the persisted `heteroSessionId` so a later
    * turn does not attempt to resume the dead session again. */
   resumeSessionInvalidated: z.boolean().optional(),
+  /** Run generation the producer was admitted under (P20 fence). A mismatch
+   * drops the terminal callback as a stale writer. */
+  runGeneration: z.number().int().nonnegative().optional(),
   sessionId: z.string().optional(),
   topicId: z.string().min(1),
 });
@@ -3076,7 +3082,7 @@ export const aiAgentRouter = router({
    * unchanged. Phase 2a: pub/sub only — no DB persistence (phase 2b adds it).
    */
   heteroIngest: heteroAgentProcedure.input(HeteroIngestSchema).mutation(async ({ input, ctx }) => {
-    const { agentType, assistantMessageId, events, operationId, topicId } = input;
+    const { agentType, assistantMessageId, events, operationId, runGeneration, topicId } = input;
 
     await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
 
@@ -3107,6 +3113,7 @@ export const aiAgentRouter = router({
         assistantMessageId,
         events: events as AgentStreamEvent[],
         operationId,
+        runGeneration,
         topicId,
       });
       return { ack: true as const };
@@ -3173,6 +3180,7 @@ export const aiAgentRouter = router({
       operationId,
       result,
       resumeSessionInvalidated,
+      runGeneration,
       sessionId,
       topicId,
     } = input;
@@ -3204,6 +3212,7 @@ export const aiAgentRouter = router({
         operationId,
         result,
         resumeSessionInvalidated,
+        runGeneration,
         sessionId,
         topicId,
       });

@@ -17,6 +17,11 @@ import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/wor
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import type { SerializedHook } from '@/server/services/agentExecution/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
+import {
+  markRemoteRunRunning,
+  remoteRunGenerationMatches,
+  resolveRemoteCancel,
+} from '@/server/services/heterogeneousAgent/runAdmission';
 import { instantiateVerifyPlanOnStart } from '@/server/services/verify';
 
 // Module-level singleton so we don't create a new Redis connection per request.
@@ -89,6 +94,12 @@ const NotifySchema = z.object({
    */
   operationId: z.string().optional(),
   /**
+   * Run generation the remote producer was admitted under (P20 fence).
+   * Callers that omit it are grandfathered; a mismatch drops the callback as
+   * a stale writer.
+   */
+  runGeneration: z.number().int().nonnegative().optional(),
+  /**
    * Role of the message to write:
    * - 'user' (default): write as user message and trigger the agent to reply
    * - 'assistant': write directly as assistant message without an extra LLM call
@@ -121,6 +132,7 @@ export const agentNotifyRouter = router({
       done = false,
       error: terminalError,
       messageId,
+      runGeneration,
     } = input;
 
     // An error is itself a terminal signal — finalize the run even if the
@@ -207,17 +219,48 @@ export const agentNotifyRouter = router({
     // This applies to progress as well as terminal delivery: a delayed update must
     // not overwrite a completed member's final message.
     let terminalRetry = false;
-    if (role === 'assistant' && input.operationId && !activeOperation) {
+    if (input.operationId && !activeOperation) {
+      // A caller-supplied operationId that resolves to neither the topic's
+      // running marker nor a child operation must still belong to this user
+      // before it may touch the admission ledger (`findById` is userId-scoped).
+      // Without this guard a `user`-role callback could flip a foreign
+      // remote-admitted operation's admission state.
       const operation = await new AgentOperationModel(
         ctx.serverDB,
         ctx.userId,
         ctx.workspaceId ?? undefined,
       ).findById(input.operationId);
-      terminalRetry = isTerminal && !!operation?.completedAt;
-      if (!terminalRetry) {
-        log('notify: ignoring stale callback for operationId=%s', input.operationId);
+      if (!operation) {
+        log('notify: ignoring callback with unowned operationId=%s', input.operationId);
         return { messageId: undefined, operationId: undefined, topicId };
       }
+      if (role === 'assistant') {
+        terminalRetry = isTerminal && !!operation.completedAt;
+        if (!terminalRetry) {
+          log('notify: ignoring stale callback for operationId=%s', input.operationId);
+          return { messageId: undefined, operationId: undefined, topicId };
+        }
+      }
+    }
+
+    // Generation fence (P20): a producer asserting a generation that differs
+    // from the admitted one is a stale writer — drop the callback like any
+    // other stale op. Callers that omit the field are grandfathered.
+    if (
+      remoteOperationId &&
+      !(await remoteRunGenerationMatches(ctx.serverDB, remoteOperationId, runGeneration))
+    ) {
+      log('notify: drop stale-generation callback op=%s gen=%s', remoteOperationId, runGeneration);
+      return { messageId: undefined, operationId: undefined, topicId };
+    }
+
+    // An accepted callback proves the remote run reached the execution host —
+    // latch the durable admission ledger to `running` (no-op once latched or
+    // for non-admitted ops).
+    if (remoteOperationId) {
+      await markRemoteRunRunning(ctx.serverDB, remoteOperationId).catch((err) =>
+        log('notify: admission running write failed op=%s: %O', remoteOperationId, err),
+      );
     }
 
     const terminalOperation = activeOperation;
@@ -231,6 +274,14 @@ export const agentNotifyRouter = router({
       try {
         const stream = getStreamManager();
         if (isTerminal) {
+          // A terminal signal proves the host process stopped — resolve a
+          // pending remote cancel to `confirmed` (first resolution wins).
+          await resolveRemoteCancel(
+            ctx.serverDB,
+            remoteOperationId,
+            'confirmed',
+            `host reported ${completionReason}`,
+          ).catch((err) => log('notify: cancel resolve failed op=%s: %O', remoteOperationId, err));
           // Remote hetero (openclaw / hermes) has no `heteroFinish` callback, so
           // this is its terminal funnel. Route it through CompletionLifecycle's
           // single entry — the SAME owner the CLI / in-process paths use — so

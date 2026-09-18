@@ -87,7 +87,8 @@ vi.mock('@/server/modules/AgentExecution/factory', async (orig) => ({
 }));
 
 // Imported after the mocks above are registered.
-const { CompletionLifecycle } = await import('@/server/services/agentExecution/CompletionLifecycle');
+const { CompletionLifecycle } =
+  await import('@/server/services/agentExecution/CompletionLifecycle');
 const { agentNotifyRouter } = await import('../agentNotify');
 
 const OP = 'op-remote-1';
@@ -165,6 +166,40 @@ describe('agentNotifyRouter.notify — remote hetero terminal signal', () => {
     expect(mockMessageUpdate).not.toHaveBeenCalled();
     expect(mockMessageCreate).not.toHaveBeenCalled();
     expect(mockExecAgent).not.toHaveBeenCalled();
+  });
+
+  // A caller-supplied operationId that resolves to neither the topic marker
+  // nor a child operation must still be owned by this user — otherwise a
+  // user-role callback could flip a foreign remote run's admission ledger.
+  it('drops a user-role callback carrying an unowned operationId', async () => {
+    mockOpFindById.mockResolvedValueOnce(null);
+
+    const result = await createCaller().notify({
+      content: 'hello',
+      operationId: 'foreign-op',
+      role: 'user',
+      topicId: TOPIC,
+    });
+
+    expect(result).toEqual({ messageId: undefined, operationId: undefined, topicId: TOPIC });
+    expect(mockOpFindById).toHaveBeenCalledWith('foreign-op');
+    expect(mockMessageCreate).not.toHaveBeenCalled();
+    expect(mockExecAgent).not.toHaveBeenCalled();
+  });
+
+  it('accepts a user-role callback whose operationId belongs to the caller', async () => {
+    mockOpFindById.mockResolvedValueOnce({ id: 'op-owned', userId: 'user-1' });
+    mockExecAgent.mockResolvedValue({ operationId: 'op-new', success: true });
+
+    const result = await createCaller().notify({
+      content: 'hello',
+      operationId: 'op-owned',
+      role: 'user',
+      topicId: TOPIC,
+    });
+
+    expect(mockExecAgent).toHaveBeenCalled();
+    expect(result.operationId).toBe('op-new');
   });
 
   it('empty done signal finalizes success AND carries the final reply into the hooks', async () => {

@@ -35,6 +35,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
+import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   AgentExecutionParams,
   AgentExecutionResult,
@@ -43,7 +44,6 @@ import type {
   SubAgentBridgeParams,
 } from '@/server/services/agentRuntime';
 import { AgentRuntimeService } from '@/server/services/agentRuntime';
-import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
@@ -540,6 +540,12 @@ export class AiAgentService {
       });
       if (interruption.deviceCancellationConfirmed === false) {
         throw new Error('Replaced heterogeneous agent process did not confirm termination');
+      }
+      // P20: an `unknown` cancel means the stop signal never provably landed —
+      // the previous writer may still be active on the device. Starting a
+      // replacement would double-write, so fail closed instead.
+      if (interruption.cancelState === 'unknown') {
+        throw new Error('Replaced remote agent process cancellation outcome is unknown');
       }
     }
     const reserved = await acquireTopicStartReservation({
@@ -1516,6 +1522,7 @@ export class AiAgentService {
     threadId?: string;
     topicId?: string;
   }): Promise<{
+    cancelState?: 'confirmed' | 'none' | 'requested' | 'unknown';
     deviceCancellationConfirmed?: boolean;
     operationId?: string;
     success: boolean;

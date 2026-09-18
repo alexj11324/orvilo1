@@ -1,6 +1,7 @@
 import {
   describeGatewayRequestFailure,
   describeGatewayResponseFailure,
+  DeviceTransportErrorCode,
   type DeviceTransportFailure,
   type DeviceUnavailableErrorData,
 } from './deviceTransportError';
@@ -29,6 +30,14 @@ export interface DeviceStatusResult {
 export interface DeviceToolCallResult {
   content: string;
   error?: string;
+  /**
+   * Normalized transport failure code (e.g. `DEVICE_RESPONSE_TIMEOUT`) when the
+   * failure happened on the server → gateway → device hop — or
+   * `GATEWAY_NOT_CONFIGURED` when no gateway client exists. Absent when the
+   * device itself answered with an ordinary tool error. Lets callers tell
+   * "never delivered" apart from "may still be running" without string-matching.
+   */
+  errorCode?: DeviceTransportErrorCode | 'GATEWAY_NOT_CONFIGURED';
   /** Structured availability context for callers that can choose whether to retry. */
   errorData?: DeviceUnavailableErrorData;
   state?: unknown;
@@ -39,6 +48,8 @@ export interface DeviceToolCallResult {
 export interface DeviceMessageApiResult {
   content: string;
   error?: string;
+  /** Normalized transport failure code; see {@link DeviceToolCallResult.errorCode}. */
+  errorCode?: DeviceTransportErrorCode | 'GATEWAY_NOT_CONFIGURED';
   /** Structured availability context for callers that can choose whether to retry. */
   errorData?: DeviceUnavailableErrorData;
   success: boolean;
@@ -52,6 +63,8 @@ export interface DeviceMessageApiResult {
 export interface DeviceRpcResult<T = unknown> {
   data?: T;
   error?: string;
+  /** Normalized transport failure code; see {@link DeviceToolCallResult.errorCode}. */
+  errorCode?: DeviceTransportErrorCode | 'GATEWAY_NOT_CONFIGURED';
   /** Structured availability context for callers that can choose whether to retry. */
   errorData?: DeviceUnavailableErrorData;
   success: boolean;
@@ -61,6 +74,7 @@ export interface DeviceRpcResult<T = unknown> {
 const toFailedToolCallResult = (failure: DeviceTransportFailure): DeviceToolCallResult => ({
   content: failure.content,
   error: failure.error,
+  errorCode: failure.code,
   ...(failure.data ? { errorData: failure.data } : {}),
   success: false,
 });
@@ -246,6 +260,7 @@ export class GatewayHttpClient {
       return {
         content: failure.content,
         error: failure.error,
+        errorCode: failure.code,
         ...(failure.data ? { errorData: failure.data } : {}),
         success: false,
       };
@@ -267,6 +282,12 @@ export class GatewayHttpClient {
     args?: string[];
     cwd?: string;
     deviceId?: string;
+    /**
+     * Server-side admission idempotency key (always the operationId). Relayed
+     * to the device so a retried `agent_run_request` cannot spawn a duplicate
+     * execution of the same logical run.
+     */
+    idempotencyKey?: string;
     /** Image attachments forwarded into the `agent_run_request` message. */
     imageList?: Array<{ id?: string; url: string }>;
     jwt: string;
@@ -274,6 +295,8 @@ export class GatewayHttpClient {
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;
+    /** Run generation/fence minted at admission, relayed to the device. */
+    runGeneration?: number;
     systemContext?: string;
     timeout?: number;
     topicId: string;
@@ -286,13 +309,36 @@ export class GatewayHttpClient {
      * `lh hetero exec` can write back under the topic's scope.
      */
     ingestWorkspaceId?: string;
-  }): Promise<{ success: boolean; error?: string; errorData?: DeviceUnavailableErrorData }> {
-    const res = await this.post('/api/device/agent/run', params);
+  }): Promise<{
+    error?: string;
+    errorCode?: DeviceTransportErrorCode | 'GATEWAY_NOT_CONFIGURED';
+    errorData?: DeviceUnavailableErrorData;
+    success: boolean;
+  }> {
+    let res: Response;
+    try {
+      res = await this.post('/api/device/agent/run', params);
+    } catch (error) {
+      // Same treatment as `postToolCall`: a client-side timeout or an
+      // unreachable gateway used to escape as a raw `TimeoutError` /
+      // `fetch failed`, which callers then finalized as an ordinary dispatch
+      // failure — stranding a run the device may actually be executing. The
+      // described failure carries the transport code so the admission ledger
+      // can record `unknown` instead of pretending the run never started.
+      const failure = describeGatewayRequestFailure(error, 'agent run');
+      return {
+        error: failure.error,
+        errorCode: failure.code,
+        ...(failure.data ? { errorData: failure.data } : {}),
+        success: false,
+      };
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       const failure = describeGatewayResponseFailure(res.status, text, 'agent run', params);
       return {
         error: failure.error,
+        errorCode: failure.code,
         ...(failure.data ? { errorData: failure.data } : {}),
         success: false,
       };
@@ -301,6 +347,7 @@ export class GatewayHttpClient {
     if (data && (data.success === false || data.status === 'rejected')) {
       return {
         error: data.error ?? data.reason ?? 'DEVICE_REJECTED',
+        errorCode: DeviceTransportErrorCode.GatewayRejected,
         success: false,
       };
     }
@@ -341,6 +388,7 @@ export class GatewayHttpClient {
       const failure = describeGatewayResponseFailure(res.status, text, 'RPC call', params);
       return {
         error: failure.error,
+        errorCode: failure.code,
         ...(failure.data ? { errorData: failure.data } : {}),
         success: false,
       };

@@ -67,8 +67,15 @@ export async function runTaskWatchdog(
       for (const operationId of operationIds) {
         try {
           const result = await aiAgentService.interruptTask({ operationId });
+          // Prefer the P20 cancel tri-state: 'unknown' means the signal never
+          // provably landed; 'requested' counts as confirmed-for-reclaim only
+          // when no physical writer confirmation is required — here it does
+          // not gate reclaim, since the topic cancellation below is fenced by
+          // the operation settle, not the device exit.
           const operationCancellationConfirmed =
-            result.success && result.deviceCancellationConfirmed !== false;
+            result.cancelState !== undefined
+              ? result.cancelState !== 'unknown'
+              : result.success && result.deviceCancellationConfirmed !== false;
           if (!operationCancellationConfirmed) {
             cancellationConfirmed = false;
             log(

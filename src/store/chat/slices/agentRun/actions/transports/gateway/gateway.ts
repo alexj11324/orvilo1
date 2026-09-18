@@ -60,15 +60,26 @@ import { createGatewayMemberStreamHandler } from './gatewayMemberStreamHandler';
 /**
  * Interrupts a gateway operation and rejects when its physical shutdown is unconfirmed.
  *
- * Device confirmation is authoritative for local heterogeneous agents because
- * their server runtime may already be absent while the native process still
- * needs to release its writer. Other runtimes fall back to the service result.
+ * `cancelState` (P20) is authoritative when present:
+ * - `confirmed` — the host acknowledged the stop (device exit or in-process runtime).
+ * - `requested` — the cancel signal was durably recorded and dispatched; host
+ *   confirmation arrives via the run's terminal callback. The local teardown
+ *   may proceed — the gateway `agent_runtime_end` remains authoritative.
+ * - `unknown` — the signal could not be confirmed delivered; the remote writer
+ *   may still be active, so the caller must not treat the cancel as done.
+ * - `none` — no signal was dispatched (op already terminal/missing).
+ *
+ * Older servers return only `deviceCancellationConfirmed`/`success`; fall back
+ * to that boolean collapse when `cancelState` is absent.
  */
 const interruptGatewayTaskOrThrow = async (
   params: Parameters<typeof aiAgentService.interruptTask>[0],
 ): Promise<void> => {
   const result = await aiAgentService.interruptTask(params);
-  const cancellationConfirmed = result.deviceCancellationConfirmed ?? result.success;
+  const cancellationConfirmed =
+    result.cancelState !== undefined
+      ? result.cancelState !== 'unknown'
+      : (result.deviceCancellationConfirmed ?? result.success);
 
   if (!cancellationConfirmed) {
     throw new Error(

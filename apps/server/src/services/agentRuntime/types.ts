@@ -12,6 +12,7 @@ import type {
   ChatTopicBotContext,
   EvalToolForwardingConfig,
   ExpertiseContextSnapshot,
+  RemoteExecutionStatus,
   UserInterventionConfig,
 } from '@orvilo/types';
 import type { SearchDecision } from 'model-bank';
@@ -597,6 +598,12 @@ export interface OperationStatusResult {
   needsHumanInput: boolean;
   operationId: string;
   recentEvents?: any[];
+  /**
+   * Remote-execution surface (P20): the durable admission + cancel ledger for
+   * device/sandbox-dispatched runs, plus the stream tail cursor a reconnect
+   * would resume from. Absent for pure in-process runs.
+   */
+  remoteExecution?: RemoteExecutionStatus;
   stats: {
     lastActiveTime: number;
     totalCost: number;

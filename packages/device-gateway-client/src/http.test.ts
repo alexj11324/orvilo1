@@ -383,7 +383,9 @@ describe('GatewayHttpClient', () => {
     });
 
     it('describes an unreachable gateway host', async () => {
-      vi.mocked(fetch).mockRejectedValue(new TypeError('fetch failed'));
+      vi.mocked(fetch).mockRejectedValue(
+        Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }),
+      );
 
       const result = await client.executeToolCall(
         { userId: 'user-1' },
@@ -485,6 +487,32 @@ describe('GatewayHttpClient', () => {
       );
     });
 
+    it('forwards the admission identity (idempotencyKey + runGeneration) to the device', async () => {
+      mockFetch({
+        json: vi.fn().mockResolvedValue({ success: true }),
+        ok: true,
+      });
+
+      await client.dispatchAgentRun({
+        agentType: 'claude-code',
+        assistantMessageId: 'asst-1',
+        idempotencyKey: 'op-1',
+        jwt: 'jwt',
+        operationId: 'op-1',
+        prompt: 'run',
+        runGeneration: 1,
+        topicId: 'tpc-1',
+        userId: 'user-1',
+      });
+
+      const [, init] = vi.mocked(fetch).mock.calls[0];
+      expect(JSON.parse((init as any).body)).toMatchObject({
+        idempotencyKey: 'op-1',
+        operationId: 'op-1',
+        runGeneration: 1,
+      });
+    });
+
     it('should preserve backward compatibility when accepted response has no JSON body', async () => {
       mockFetch({
         json: vi.fn().mockRejectedValue(new Error('empty body')),
@@ -523,7 +551,11 @@ describe('GatewayHttpClient', () => {
         userId: 'user-1',
       });
 
-      expect(result).toEqual({ error: 'spawn failed', success: false });
+      expect(result).toEqual({
+        error: 'spawn failed',
+        errorCode: 'DEVICE_GATEWAY_REJECTED',
+        success: false,
+      });
     });
 
     it('should surface success false returned with HTTP 200', async () => {
@@ -542,7 +574,11 @@ describe('GatewayHttpClient', () => {
         userId: 'user-1',
       });
 
-      expect(result).toEqual({ error: 'DEVICE_OFFLINE', success: false });
+      expect(result).toEqual({
+        error: 'DEVICE_OFFLINE',
+        errorCode: 'DEVICE_GATEWAY_REJECTED',
+        success: false,
+      });
     });
 
     it('should surface non-ok agent-run responses', async () => {
@@ -562,7 +598,11 @@ describe('GatewayHttpClient', () => {
         userId: 'user-1',
       });
 
-      expect(result).toEqual({ error: 'DEVICE_OFFLINE', success: false });
+      expect(result).toEqual({
+        error: 'DEVICE_OFFLINE',
+        errorCode: 'DEVICE_CHANNEL_UNAVAILABLE',
+        success: false,
+      });
     });
 
     /** @example A pre-acceptance 404 keeps enough context for an outer agent to retry. */
@@ -815,7 +855,11 @@ describe('GatewayHttpClient', () => {
         { method: 'initWorkspace' },
       );
 
-      expect(result).toEqual({ error: 'offline', success: false });
+      expect(result).toEqual({
+        error: 'offline',
+        errorCode: 'DEVICE_CHANNEL_UNAVAILABLE',
+        success: false,
+      });
     });
 
     it('defaults success to false when the field is missing', async () => {

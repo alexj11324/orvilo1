@@ -1291,6 +1291,64 @@ describe('GatewayConnectionCtr', () => {
         killSpy.mockRestore();
       });
     });
+
+    // Regression: a retried agent_run_request after a lost ack reuses the same
+    // idempotency key (= operationId). The device must ack the already-accepted
+    // run instead of spawning a duplicate process.
+    describe('agent run redelivery dedupe', () => {
+      const spawnOnce = async (operationId: string, runGeneration = 1) => {
+        let capturedOnChildSpawned: ((child: any) => void) | undefined;
+        vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(
+          (params: any) => {
+            capturedOnChildSpawned = params.onChildSpawned;
+            return Promise.resolve({ status: 'accepted' });
+          },
+        );
+
+        const client = await connectAndOpen();
+        client.simulateAgentRunRequest('claude-code', operationId, 'hi', 'mock-jwt', {
+          runGeneration,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+
+        const mockChild = new EventEmitter() as any;
+        mockChild.pid = 31337;
+        capturedOnChildSpawned?.(mockChild);
+        return client;
+      };
+
+      it('acks a retried request for a live run without respawning', async () => {
+        const client = await spawnOnce('op-dedupe');
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+
+        client.simulateAgentRunRequest('claude-code', 'op-dedupe', 'hi', 'mock-jwt', {
+          runGeneration: 1,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+        expect(client.sendAgentRunAck).toHaveBeenLastCalledWith({
+          operationId: 'op-dedupe',
+          status: 'accepted',
+        });
+      });
+
+      it('stops the stale writer and respawns on a newer runGeneration', async () => {
+        const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+        const client = await spawnOnce('op-supersede', 1);
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+
+        client.simulateAgentRunRequest('claude-code', 'op-supersede', 'hi', 'mock-jwt', {
+          runGeneration: 2,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(killSpy).toHaveBeenCalledWith(-31337, 'SIGKILL');
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(2);
+        killSpy.mockRestore();
+      });
+    });
   });
 
   // ─── runHeteroTask ───

@@ -930,6 +930,7 @@ function bindGatewayClientHandlers(
           prompt: request.prompt,
           resumeFallbackSystemContext: request.resumeFallbackSystemContext,
           resumeSessionId: request.resumeSessionId,
+          runGeneration: request.runGeneration,
           serverUrl: getServerUrl(),
           systemContext: request.systemContext,
           topicId: request.topicId,

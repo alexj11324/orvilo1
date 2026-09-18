@@ -15,7 +15,7 @@
 
 | 分支     | 语义                | 谁往里写                                   |
 | -------- | ------------------- | ------------------------------------------ |
-| `canary` | 开发主干 + 云端生产 | 只接受 PR；由 `main` 自动回同步            |
+| `canary` | 开发主干 + 云端生产 | 只接受 PR；回同步当前受阻，见「保护规则」  |
 | `main`   | 发布快照            | 只接受来自 `release/*` 或 `hotfix/*` 的 PR |
 
 **`main` 不是「生产环境」。** 它是发布基准线：打 tag、发 GitHub Release、
@@ -69,6 +69,11 @@ feat/xxx ──PR──▶ canary ───────────────�
 > `canary`，下一次 release 就会在旧版本号上再 bump 一次，且两条线会持续
 > 分叉到无法自动合并。
 
+> **当前状态：回同步尚未生效。** `sync-main-to-canary.yaml` 处于 disabled
+> 状态，而且它靠直接 push 写回分支，会被 `trunk-branches` ruleset 挡住。
+> 在这条链路打通之前，上面第 1–3 步能跑，第 4 步不会发生。启用前必须先把它
+> 改造成通过 PR 提交，详见「保护规则」。
+
 ## Hotfix 流程
 
 已发布版本出现必须立刻修的问题时：
@@ -92,7 +97,7 @@ feat/xxx ──PR──▶ canary ───────────────�
 
 | 通道           | 触发                                                   | 更新源 / 目标                         | 状态      |
 | -------------- | ------------------------------------------------------ | ------------------------------------- | --------- |
-| Web 生产       | `push main`                                            | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
+| Web 生产       | `push canary`                                          | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
 | Vercel Preview | PR                                                     | Vercel（`vercel-preview.yml`）        | ✅ 运行中 |
 | Test / E2E CI  | push + PR                                              | —                                     | ✅ 运行中 |
 | Desktop Canary | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
@@ -119,12 +124,23 @@ Release 的实际代价有三条，接受它们是因为省去了一整套对象
 
 ## 保护规则
 
-`canary` 与 `main` 都必须开启分支保护：
+`canary` 与 `main` 由仓库 ruleset `trunk-branches` 保护（已启用）：
 
 - 禁止直接 push，只能通过 PR。
-- 必需的 CI 检查（Test CI、E2E CI）通过后方可合并。
-- 允许 GitHub Actions 绕过 —— 因为 `auto-tag-release` 与
-  `sync-main-to-canary` 需要写回 `main` / `canary`。
+- 禁止 force push（`non_fast_forward`）。
+- 禁止删除分支（`deletion`）。
+- **不设必需批准数**：仓库只有一个 maintainer，而 GitHub 不允许自我批准，
+  设成 1 会把所有人都锁死。
 
-> **这条豁免是设计的一部分，不是疏漏。** 发布自动化写回受保护分支是标准
-> 做法；豁免范围限定为 Actions 本身，人类贡献者仍然只能走 PR。
+> **为什么不给 GitHub Actions 开豁免**：个人账号的 repository ruleset
+> 不支持把 GitHub Actions 加入 bypass list —— API 直接拒绝：
+> `Actor GitHub Actions integration must be part of the ruleset source or
+owner organization`。该能力只对 organization 级 ruleset 开放。
+>
+> 后果：`auto-tag-release.yml` 与 `sync-main-to-canary.yaml` 都靠**直接
+> push** 写回分支，在本规则下会被挡。两者当前都是 disabled 状态，所以不影响
+> 现状；**启用前必须先改造成通过 PR 提交**。
+
+尚未加入必需状态检查（`required_status_checks`）：`test.yml` 的检查名带矩阵
+变量（如 `Test App (shard ${{ matrix.shard }}/2)`），硬编码进去会让 PR 永远
+无法合并。等检查名稳定后再加。

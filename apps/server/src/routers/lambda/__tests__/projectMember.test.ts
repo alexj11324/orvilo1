@@ -335,6 +335,16 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
       fakeDb,
       expect.objectContaining({ action: 'project_member.removed' }),
     );
+    // The projection gates the terminal kick on this field — dropping the row
+    // is only a revocation when the project no longer admits the member via
+    // visibility.
+    expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({
+        eventType: 'project_member.removed',
+        payload: expect.objectContaining({ projectVisibility: 'public' }),
+      }),
+    );
   });
 
   it('requires manage rights to remove', async () => {

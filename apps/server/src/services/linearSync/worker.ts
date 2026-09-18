@@ -2140,18 +2140,43 @@ export class LinearSyncWorker {
     }
   }
 
-  /** The fencing contract every progress commit re-verifies against the row. */
+  /**
+   * The fencing contract every progress commit re-verifies against the row.
+   * `leaseDeadlineMs` tracks the lease the claim observed (and each renewal
+   * refreshes) so `renewScopeImport` can skip the write while half the lock
+   * window still remains.
+   */
   private scopeImportClaim(scope: {
     importRunId: string | null;
     leaseFence: number;
+    lockedUntil: Date | null;
     scopeRevision: number;
   }) {
     return {
       fence: scope.leaseFence,
       importRunId: scope.importRunId,
+      leaseDeadlineMs: scope.lockedUntil?.getTime() ?? 0,
       owner: this.leaseOwner,
       scopeRevision: scope.scopeRevision,
     };
+  }
+
+  /**
+   * Keep the claim's lease ahead of long-running phase work. No-ops until
+   * half the lock window has elapsed, then issues the same fenced
+   * conditional write commits use — a missed renewal is a lease loss, not a
+   * silent success. Without this the fixed 60s lease can expire mid-phase,
+   * and the owner's own progress commit then gets rejected on
+   * `lockedUntil > now()` even though no replacement exists.
+   */
+  private async renewScopeImport(
+    scopeId: string,
+    claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
+  ) {
+    if (Date.now() < claim.leaseDeadlineMs - LINEAR_SYNC_DEFAULT_LEASE_MS / 2) return;
+    const renewed = await this.model.renewScopeImportLease(scopeId, claim);
+    if (!renewed?.lockedUntil) throw new LinearSyncLeaseLostError();
+    claim.leaseDeadlineMs = renewed.lockedUntil.getTime();
   }
 
   /**
@@ -2164,6 +2189,7 @@ export class LinearSyncWorker {
     claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
     patch: Parameters<LinearSyncModel['updateScopeImportState']>[1],
   ) {
+    await this.renewScopeImport(scopeId, claim);
     const row = await this.model.updateScopeImportState(scopeId, patch, claim);
     if (!row) throw new LinearSyncLeaseLostError();
     return row;
@@ -2187,6 +2213,10 @@ export class LinearSyncWorker {
     const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
     for (const remote of linkable) {
+      // Team work is unbounded — remote lookups, workflow-state mirrors, link
+      // upserts — so the lease must be renewed ahead of each unit or the
+      // closing progress commit would fail on an expired `lockedUntil`.
+      await this.renewScopeImport(scope.id, claim);
       const existingLink = await this.model.findTeamLinkByLinearTeamId(remote.id);
       let localTeamId = existingLink?.teamId;
       if (!localTeamId && teamModel) {
@@ -2300,6 +2330,7 @@ export class LinearSyncWorker {
     const projectModel = installer ? new ProjectModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
     for (const remote of eligible) {
+      await this.renewScopeImport(scope.id, claim);
       const allowedTeamIds = remote.teamIds.filter((teamId) => teamLinks.has(teamId));
       // A project whose only teams were filtered out must not create an empty
       // binding. Keeping it pending would make every continuation retry the
@@ -2415,6 +2446,7 @@ export class LinearSyncWorker {
         });
         return { ...result, phase: 'reconciliation' };
       }
+      await this.renewScopeImport(scope.id, claim);
       await this.model.transaction(async (model) => {
         // The completion write and its event must commit under the same
         // claim — a stale worker must never mark another owner's run done.
@@ -2460,6 +2492,10 @@ export class LinearSyncWorker {
     let pageBlocked = false;
     const seenIssueIds = new Set<string>();
     for (const issue of page.issues) {
+      // Per-issue remote fetches can stretch a bounded page past the lock
+      // window — renew before each unit so the closing cursor commit still
+      // owns the lease.
+      await this.renewScopeImport(scope.id, claim);
       if (seenIssueIds.has(issue.id)) continue;
       seenIssueIds.add(issue.id);
       if (scope.settings?.includeProjectlessIssues === false && !issue.projectId) continue;

@@ -110,6 +110,12 @@ const OnboardingPage = memo(() => {
       values,
       useUserStore.getState().onboarding?.setup?.workspaceId,
       createdWorkspaceRef,
+      // Persist the candidate workspace id before the create call — a lost
+      // response then resumes by identity on the next attempt instead of
+      // matching by slug.
+      async (candidate) => {
+        await persistOnboardingSetup(values, candidate, updateOnboarding);
+      },
     );
     createdWorkspaceRef.current = { id: workspace.id, slug: workspace.slug };
 

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   listTeamLinks: vi.fn(),
   recordDomainEvent: vi.fn(),
   releaseScopeImport: vi.fn(),
+  renewScopeImportLease: vi.fn(),
   updateScopeImportState: vi.fn(),
 }));
 
@@ -22,6 +23,7 @@ vi.mock('@/database/models/linearSync', () => ({
     listTeamLinks = mocks.listTeamLinks;
     recordDomainEvent = mocks.recordDomainEvent;
     releaseScopeImport = mocks.releaseScopeImport;
+    renewScopeImportLease = mocks.renewScopeImportLease;
     transaction = vi.fn(async (callback: (model: unknown, db: unknown) => unknown) =>
       callback(this, {}),
     );
@@ -94,6 +96,9 @@ describe('LinearSyncWorker.importScope lease fencing', () => {
       scopeRow({ status: 'importing', ...patch }),
     );
     mocks.releaseScopeImport.mockResolvedValue(scopeRow());
+    mocks.renewScopeImportLease.mockResolvedValue({
+      lockedUntil: new Date(Date.now() + 60_000),
+    });
   });
 
   it('commits the completion write under the active claim before emitting the event', async () => {
@@ -112,6 +117,44 @@ describe('LinearSyncWorker.importScope lease fencing', () => {
     expect(mocks.releaseScopeImport).toHaveBeenCalledWith(
       expect.objectContaining({ leaseFence: 4, scopeId: 'scope-1' }),
     );
+    // A fresh lease (60s window, renews under 30s left) skips the write.
+    expect(mocks.renewScopeImportLease).not.toHaveBeenCalled();
+  });
+
+  it('renews the lease before the completion commit when the window is half gone', async () => {
+    arrangeScope({
+      importPhase: 'reconciliation',
+      lockedUntil: new Date(Date.now() + 10_000),
+    });
+
+    const result = await newWorker().importScope({} as never, 'scope-1', 10);
+
+    expect(result).toMatchObject({ completed: true, phase: 'completed' });
+    expect(mocks.renewScopeImportLease).toHaveBeenCalledWith(
+      'scope-1',
+      expect.objectContaining({ fence: 4, importRunId: 'worker-a', scopeRevision: 9 }),
+    );
+    expect(mocks.updateScopeImportState).toHaveBeenCalledWith(
+      'scope-1',
+      expect.objectContaining({ importPhase: 'completed' }),
+      expect.anything(),
+    );
+  });
+
+  it('treats a missed lease renewal as lease loss — the completion commit never lands', async () => {
+    arrangeScope({
+      importPhase: 'reconciliation',
+      lockedUntil: new Date(Date.now() + 10_000),
+    });
+    mocks.renewScopeImportLease.mockResolvedValue(null);
+
+    await expect(newWorker().importScope({} as never, 'scope-1', 10)).rejects.toThrow(
+      'Linear sync lease is no longer owned by this worker',
+    );
+
+    expect(mocks.updateScopeImportState).not.toHaveBeenCalled();
+    expect(mocks.recordDomainEvent).not.toHaveBeenCalled();
+    expect(mocks.releaseScopeImport).toHaveBeenCalledTimes(1);
   });
 
   it('treats a missed fenced commit as lease loss — no event, release still runs', async () => {

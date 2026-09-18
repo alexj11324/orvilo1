@@ -1609,4 +1609,54 @@ describe('LinearSyncModel', () => {
     const control = await model.updateScopeImportState(scope.id, { lastError: 'manual reset' });
     expect(control?.lastError).toBe('manual reset');
   });
+
+  it('renews a live claim under the same fencing — and refuses a lost lease', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const scope = await model.upsertScope({ installationId });
+
+    const claimed = await model.claimScopeImport({ leaseOwner: 'worker-a', scopeId: scope.id });
+    expect(claimed).not.toBeNull();
+    const claimA = {
+      fence: claimed!.leaseFence,
+      importRunId: claimed!.importRunId,
+      owner: 'worker-a',
+      scopeRevision: claimed!.scopeRevision,
+    };
+
+    // Renewal extends the lease for the rightful owner…
+    const renewed = await model.renewScopeImportLease(scope.id, claimA);
+    expect(renewed).not.toBeNull();
+    expect(renewed!.lockedUntil!.getTime()).toBeGreaterThan(Date.now() + 50_000);
+
+    // …while a wrong owner/fence/revision gets nothing.
+    for (const bad of [
+      { ...claimA, owner: 'worker-b' },
+      { ...claimA, fence: claimA.fence + 1 },
+      { ...claimA, importRunId: 'other-run' },
+      { ...claimA, scopeRevision: claimA.scopeRevision + 1 },
+    ]) {
+      expect(await model.renewScopeImportLease(scope.id, bad)).toBeNull();
+    }
+
+    // Once the lease has lapsed on the database clock, even the matching
+    // owner cannot renew — the row is claimable by another worker instead.
+    await db
+      .update(linearSyncScopes)
+      .set({ lockedUntil: new Date(Date.now() - 1_000) })
+      .where(eq(linearSyncScopes.id, scope.id));
+    expect(await model.renewScopeImportLease(scope.id, claimA)).toBeNull();
+
+    const claimedB = await model.claimScopeImport({ leaseOwner: 'worker-b', scopeId: scope.id });
+    expect(claimedB).not.toBeNull();
+    const claimB = {
+      fence: claimedB!.leaseFence,
+      importRunId: claimedB!.importRunId,
+      owner: 'worker-b',
+      scopeRevision: claimedB!.scopeRevision,
+    };
+    // The stale owner's renewal bounces off the new fence; the new owner renews.
+    expect(await model.renewScopeImportLease(scope.id, claimA)).toBeNull();
+    expect(await model.renewScopeImportLease(scope.id, claimB)).not.toBeNull();
+  });
 });

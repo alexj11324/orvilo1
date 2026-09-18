@@ -325,7 +325,7 @@ export const removeProjectMember = async (
   },
 ) => {
   return db.transaction(async (tx) => {
-    const { callerProjectRole, workspaceRole } = await loadCallerAccess(tx, {
+    const { callerProjectRole, project, workspaceRole } = await loadCallerAccess(tx, {
       actorUserId: params.actorUserId,
       projectId: params.projectId,
       workspaceId: params.workspaceId,
@@ -360,6 +360,10 @@ export const removeProjectMember = async (
       payload: {
         authzVersion,
         projectId: params.projectId,
+        // The projector needs the project's visibility to decide whether
+        // losing this row is a real revocation (private/restricted) or a
+        // no-op for room access (public keeps the room reachable without it).
+        projectVisibility: project.visibility,
         userId: params.targetUserId,
       },
       workspaceId: params.workspaceId,

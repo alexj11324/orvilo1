@@ -125,6 +125,55 @@ describe('projectOutboxEvent', () => {
     expect(deliveries[0]?.publish.kind).toBe('broadcast');
   });
 
+  it('does not kick on project_member.removed for a public project — the room stays reachable', () => {
+    const deliveries = projectOutboxEvent(
+      row({
+        aggregateId: 'prj_1',
+        aggregateType: 'project',
+        eventType: 'project_member.removed',
+        payload: { authzVersion: 12, projectVisibility: 'public', userId: 'user-9' },
+        workspaceId: 'ws-1',
+      }),
+    );
+    // No terminal kick: public visibility keeps assertRoomAccess open without
+    // the membership row. The invalidate still tells the room to re-fetch.
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]?.publish.kind).toBe('broadcast');
+  });
+
+  it.each(['private', 'restricted'])(
+    'kicks on project_member.removed for a %s project — the grant was the access basis',
+    (projectVisibility) => {
+      const deliveries = projectOutboxEvent(
+        row({
+          aggregateId: 'prj_1',
+          aggregateType: 'project',
+          eventType: 'project_member.removed',
+          payload: { projectVisibility, userId: 'user-9' },
+          workspaceId: 'ws-1',
+        }),
+      );
+      expect(deliveries[0]?.publish).toMatchObject({
+        kind: 'kick',
+        scope: 'project',
+        scopeId: 'prj_1',
+      });
+    },
+  );
+
+  it('kicks on project_member.removed when visibility is absent — fail closed', () => {
+    const deliveries = projectOutboxEvent(
+      row({
+        aggregateId: 'prj_1',
+        aggregateType: 'project',
+        eventType: 'project_member.removed',
+        payload: { userId: 'user-9' },
+        workspaceId: 'ws-1',
+      }),
+    );
+    expect(deliveries[0]?.publish.kind).toBe('kick');
+  });
+
   it('does not kick on project_member.added — grants never tear sockets down', () => {
     const deliveries = projectOutboxEvent(
       row({

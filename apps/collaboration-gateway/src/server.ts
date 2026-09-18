@@ -2,8 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 import {
+  COLLABORATION_GATEWAY_PROTOCOL_VERSION,
   type CollaborationClientMessage,
   type CollaborationServerMessage,
+  GATEWAY_PROTOCOL_VERSION_HEADER,
   parseRoomKey,
   type RoomPublishRequest,
 } from '@orvilo/types';
@@ -42,7 +44,12 @@ const readBody = async (req: IncomingMessage): Promise<unknown> => {
 };
 
 const sendJson = (res: ServerResponse, status: number, body: unknown) => {
-  res.writeHead(status, { 'content-type': 'application/json' });
+  res.writeHead(status, {
+    'content-type': 'application/json',
+    // The projector treats a scoped kick acked without this marker as
+    // undelivered — see `RoomPublisher` in apps/server.
+    [GATEWAY_PROTOCOL_VERSION_HEADER]: String(COLLABORATION_GATEWAY_PROTOCOL_VERSION),
+  });
   res.end(JSON.stringify(body));
 };
 
@@ -126,7 +133,11 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
 
     if (req.method === 'GET' && url.pathname === '/health') {
-      sendJson(res, 200, { connections: hub.connectionCount, ok: true });
+      sendJson(res, 200, {
+        connections: hub.connectionCount,
+        ok: true,
+        protocol: COLLABORATION_GATEWAY_PROTOCOL_VERSION,
+      });
       return;
     }
 

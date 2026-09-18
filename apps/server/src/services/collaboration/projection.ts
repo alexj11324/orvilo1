@@ -42,6 +42,20 @@ const payloadAuthzVersion = (payload: unknown): number | undefined => {
   return typeof payload.authzVersion === 'number' ? payload.authzVersion : undefined;
 };
 
+/**
+ * Project visibilities where room access is gated on an explicit
+ * project_members row — must match `assertRoomAccess` in roomAuthz.ts.
+ * Anything else (including values this codebase does not emit) reads as
+ * publicly reachable to any workspace member, so dropping the row alone does
+ * not revoke access.
+ */
+const MEMBERSHIP_GATED_PROJECT_VISIBILITIES = new Set(['private', 'restricted']);
+
+const payloadProjectVisibility = (payload: unknown): string | undefined => {
+  if (!isRecord(payload)) return undefined;
+  return typeof payload.projectVisibility === 'string' ? payload.projectVisibility : undefined;
+};
+
 const isActivityEventPayload = (payload: unknown): payload is ServerActivityEvent =>
   isRecord(payload) &&
   typeof payload.eventId === 'string' &&
@@ -128,9 +142,18 @@ export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
         : isRecord(event.payload) && typeof event.payload.workspaceId === 'string'
           ? event.payload.workspaceId
           : null;
-    // Without a tenant the kick cannot be scoped safely — the broadcast below
-    // still tells the room to re-fetch, and the ticket expiry bounds the leak.
-    if (userId && workspaceId) {
+    // Kick only when the removed row was the member's basis of access. On a
+    // publicly visible project the room stays reachable without the row —
+    // a terminal kick would sever sockets for nothing; the invalidate below
+    // still makes every connection re-authorize on its next ticket refresh.
+    // Events without visibility (pre-field in-flight rows) kick anyway —
+    // failing closed is cheaper than leaking a revoked private room.
+    const visibility = payloadProjectVisibility(event.payload);
+    if (
+      userId &&
+      workspaceId &&
+      (visibility === undefined || MEMBERSHIP_GATED_PROJECT_VISIBILITIES.has(visibility))
+    ) {
       deliveries.push({
         publish: {
           authzVersion: payloadAuthzVersion(event.payload),

@@ -16,8 +16,16 @@ const doneState = {
   status: 'done' as const,
 };
 
+// The runtime mock must accept every state shape a real run can return —
+// parked, running, done, error, interrupted — not just the parked shape
+// `makeService` defaults to.
+type MockRuntime = {
+  executeSync: ReturnType<typeof vi.fn>;
+  getCoordinator: () => { loadAgentState: (opId: string) => Promise<any> };
+};
+
 const makeService = (loadAgentState: (opId: string) => Promise<any>) => {
-  const runtime = {
+  const runtime: MockRuntime = {
     executeSync: vi.fn(async () => parkedState),
     getCoordinator: () => ({ loadAgentState }),
   };
@@ -33,7 +41,7 @@ vi.mock('@/server/modules/AgentExecution/InMemoryStreamEventManager', () => ({
 vi.mock('@/server/modules/AgentExecution/StreamEventManager', () => ({}));
 vi.mock('@/server/services/agentRuntime', () => ({ AgentRuntimeService: class {} }));
 
-const lastRuntime: { current?: ReturnType<typeof makeService>['runtime'] } = {};
+const lastRuntime: { current?: MockRuntime } = {};
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: class {
     createIsolatedRuntime = vi.fn(() => lastRuntime.current);

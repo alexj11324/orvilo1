@@ -260,6 +260,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
     recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
     topicMock.appendRunningOperationChild.mockResolvedValue(true);

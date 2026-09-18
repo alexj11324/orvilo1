@@ -42,11 +42,15 @@ jobs:
       REQUIRED_EVENT: push
       GATE_TIMEOUT_MS: '3600000'
     steps:
+      # Trusted workflow-owned code — check it out from the branch this
+      # workflow file runs from (the default branch), not the PR base sha.
+      # Stacked PR bases and canary do not carry scripts/ci/, so checking out
+      # base.sha there dies with MODULE_NOT_FOUND before the gate can run.
       - name: Checkout gate implementation
         uses: actions/checkout@v6
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Wait for exact-head gates
         run: node scripts/ci/vercelPreviewGate.mjs
@@ -67,11 +71,13 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
+      # Same as the gate: the helper and setup-env action are workflow-owned
+      # code and only exist on the default branch.
       - name: Checkout deployment helper
         uses: actions/checkout@v6
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Setup environment
         uses: ./.github/actions/setup-env

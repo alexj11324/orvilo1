@@ -116,7 +116,7 @@ describe('TargetRequiredError service boundary (web, no bound device)', () => {
     const { isTargetRequiredError } = await import('./targetRequiredError');
 
     const failure = await captureError(() =>
-      heterogeneousAgentCatalogService.listModels({ type: 'claude-code' }),
+      heterogeneousAgentCatalogService.listModels({ type: 'qoder' }),
     );
 
     expect(isTargetRequiredError(failure)).toBe(true);

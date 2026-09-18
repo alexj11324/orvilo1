@@ -2,7 +2,7 @@
 
 import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
+import { type ElectronAppState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { cssVar } from 'antd-style';
 import { Bell, Check, FolderOpen, Mic, MonitorCog, SquareArrowOutUpRight } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
@@ -72,7 +72,7 @@ export const useIsMacOsDevice = (): boolean | null => {
     let mounted = true;
     ensureElectronIpc()
       .system.getAppState()
-      .then((state) => {
+      .then((state: ElectronAppState) => {
         if (mounted) setIsMac(state.platform === 'darwin');
       })
       .catch(() => {

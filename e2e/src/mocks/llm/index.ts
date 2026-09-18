@@ -1,10 +1,20 @@
 /**
  * LLM Mock Framework
  *
- * Intercepts /webapi/chat/[provider] requests and returns mock SSE responses.
- * This allows E2E tests to run without real LLM API calls.
+ * Two delivery surfaces share one response registry:
+ *  - Browser-side fetch interceptor for any residual client `/webapi/chat/*`
+ *    calls (installed by `setup()`).
+ *  - The standalone mock LLM server (`scripts/mockServices.ts`) which answers
+ *    the server-side agent runtime's OpenAI-compatible `chat/completions`
+ *    calls in gateway mode (the browser client runtime is retired).
+ *
+ * The registry is persisted to a shared state file (./registry.ts) on every
+ * mutation so the standalone server — a separate process — resolves the same
+ * canned responses the test just configured.
  */
 import type { Page } from 'playwright';
+
+import { persistMockLLMConfig, persistMockLLMResponses } from './registry';
 
 // ============================================
 // Types
@@ -113,10 +123,29 @@ export class LLMMockManager {
   }
 
   /**
+   * Mirror this worker's response registry to its own state file so the
+   * standalone mock LLM server (which the server-side agent runtime calls in
+   * gateway mode) resolves the same responses. Worker-scoped — a sibling
+   * parallel worker's `clearResponses` can never delete these keys.
+   */
+  private persistResponses(): void {
+    persistMockLLMResponses({
+      customResponseFragments: Object.fromEntries(this.customResponseFragments),
+      customResponses: Object.fromEntries(this.customResponses),
+    });
+  }
+
+  /** Persist the shared stream-timing config (global, last write wins). */
+  private persistConfig(): void {
+    persistMockLLMConfig({ ...this.config });
+  }
+
+  /**
    * Set a custom response for a specific user message
    */
   setResponse(userMessage: string, response: string): void {
     this.customResponses.set(userMessage.toLowerCase().trim(), response);
+    this.persistResponses();
   }
 
   /**
@@ -125,6 +154,7 @@ export class LLMMockManager {
    */
   setResponseContaining(userMessageFragment: string, response: string): void {
     this.customResponseFragments.set(userMessageFragment.toLowerCase().trim(), response);
+    this.persistResponses();
   }
 
   /**
@@ -133,6 +163,7 @@ export class LLMMockManager {
    */
   setConfig(partial: Partial<LLMMockConfig>): void {
     this.config = { ...this.config, ...partial };
+    this.persistConfig();
   }
 
   /**
@@ -141,6 +172,7 @@ export class LLMMockManager {
    */
   resetConfig(): void {
     this.config = { ...defaultConfig };
+    this.persistConfig();
   }
 
   /**
@@ -149,6 +181,7 @@ export class LLMMockManager {
   clearResponses(): void {
     this.customResponses.clear();
     this.customResponseFragments.clear();
+    this.persistResponses();
   }
 
   /**

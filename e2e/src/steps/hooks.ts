@@ -1,6 +1,7 @@
 import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@cucumber/cucumber';
 import { type Cookie, request } from 'playwright';
 
+import { clearMockLLMWorkerState } from '../mocks/llm/registry';
 import { seedTestUser, TEST_USER } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
@@ -20,6 +21,35 @@ BeforeAll({ timeout: 600_000 }, async function () {
   baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
 
   console.log(`Base URL: ${baseUrl}`);
+
+  // The browser client runtime is retired — sends run through the server-side
+  // agent runtime in gateway mode. That path needs two stand-ins started by
+  // `bun e2e/scripts/mockServices.ts` (wired into e2e.yml and setup.ts):
+  // the fake Agent Gateway (browser WS channel) and the mock OpenAI-compatible
+  // LLM endpoint (DEEPSEEK_PROXY_URL). Warn loudly when they are missing so a
+  // bare `cucumber-js` invocation fails with an actionable hint instead of a
+  // wall of "message was not persisted" timeouts.
+  const llmPort = process.env.E2E_MOCK_LLM_PORT || '3406';
+  const gatewayPort = process.env.E2E_MOCK_GATEWAY_PORT || '3407';
+  for (const [name, url] of [
+    ['mock LLM', `http://localhost:${llmPort}/health`],
+    ['fake gateway', `http://localhost:${gatewayPort}/health`],
+  ] as const) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error(String(res.status));
+      console.log(`   ✓ ${name} healthy (${url})`);
+    } catch {
+      console.warn(
+        `   ⚠️ ${name} is not reachable at ${url} — agent-send scenarios will fail. ` +
+          `Start it with: bun e2e/scripts/mockServices.ts`,
+      );
+    }
+  }
+
+  // Clean slate for this worker's shared mock-LLM registry file — stale
+  // responses from a previous run must not shadow this run's defaults.
+  clearMockLLMWorkerState();
 
   // Seed test user before starting web server
   await seedTestUser();

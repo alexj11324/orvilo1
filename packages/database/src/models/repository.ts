@@ -333,6 +333,31 @@ export class RepositoryModel {
     return toDecisionItem(row);
   };
 
+  /**
+   * Serialize relation mutations for one association quad. `apply` and
+   * `revoke` on different decisions of the same (source, relation, repo)
+   * quad must observe each other's commits — otherwise a revoke can check
+   * for applied siblings before a concurrent apply commits and delete the
+   * row the new decision just backed. Transaction-scoped advisory lock on
+   * the quad hash; released automatically on commit/rollback.
+   */
+  private lockAssociationQuad = async (
+    tx: { execute: (query: ReturnType<typeof sql>) => Promise<unknown> },
+    decision: Pick<
+      typeof associationDecisions.$inferSelect,
+      'relation' | 'sourceId' | 'sourceKind' | 'targetRepositoryId'
+    >,
+  ) => {
+    const key = [
+      this.workspaceId,
+      decision.sourceKind,
+      decision.sourceId,
+      decision.relation,
+      decision.targetRepositoryId,
+    ].join('|');
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${key}, 17))`);
+  };
+
   private transitionDecision = async (
     decisionId: string,
     status: AssociationDecisionStatus,
@@ -374,34 +399,51 @@ export class RepositoryModel {
             eq(associationDecisions.workspaceId, this.workspaceId),
           ),
         )
-        .for('update')
         .limit(1);
       if (!decision) return null;
-      if (decision.status === 'applied') return toDecisionItem(decision);
-      if (decision.status !== 'proposed') return null;
 
-      if (decision.relation === 'project_repository' && decision.sourceKind === 'project') {
+      // Lock order is quad → decision row everywhere: revoke updates the
+      // decision row while holding the quad lock, so taking the row lock
+      // first here would deadlock against a concurrent same-quad revoke.
+      await this.lockAssociationQuad(tx, decision);
+
+      const [locked] = await tx
+        .select()
+        .from(associationDecisions)
+        .where(
+          and(
+            eq(associationDecisions.id, decisionId),
+            eq(associationDecisions.workspaceId, this.workspaceId),
+          ),
+        )
+        .for('update')
+        .limit(1);
+      if (!locked) return null;
+      if (locked.status === 'applied') return toDecisionItem(locked);
+      if (locked.status !== 'proposed') return null;
+
+      if (locked.relation === 'project_repository' && locked.sourceKind === 'project') {
         await tx
           .insert(projectRepositories)
           .values({
             addedByUserId: this.userId,
-            associationDecisionId: decision.id,
-            projectId: decision.sourceId,
-            repositoryId: decision.targetRepositoryId,
+            associationDecisionId: locked.id,
+            projectId: locked.sourceId,
+            repositoryId: locked.targetRepositoryId,
             workspaceId: this.workspaceId,
           })
           .onConflictDoNothing({
             target: [projectRepositories.projectId, projectRepositories.repositoryId],
           });
       }
-      if (decision.relation === 'team_repository_default' && decision.sourceKind === 'team') {
+      if (locked.relation === 'team_repository_default' && locked.sourceKind === 'team') {
         await tx
           .insert(teamRepoDefaults)
           .values({
             addedByUserId: this.userId,
-            associationDecisionId: decision.id,
-            repositoryId: decision.targetRepositoryId,
-            teamId: decision.sourceId,
+            associationDecisionId: locked.id,
+            repositoryId: locked.targetRepositoryId,
+            teamId: locked.sourceId,
             workspaceId: this.workspaceId,
           })
           .onConflictDoNothing({
@@ -445,6 +487,10 @@ export class RepositoryModel {
         .limit(1);
       if (!decision) return null;
 
+      // Must run before the sibling check so a concurrent apply on the same
+      // quad cannot slip a new backer in after the check but before the delete.
+      await this.lockAssociationQuad(tx, decision);
+
       const [otherAppliedDecision] = await tx
         .select({ id: associationDecisions.id })
         .from(associationDecisions)
@@ -466,11 +512,16 @@ export class RepositoryModel {
         decision.relation === 'project_repository' &&
         decision.sourceKind === 'project'
       ) {
+        // The row's provenance names which decision wrote it, but any applied
+        // sibling with the same quad backs it too — and `otherAppliedDecision`
+        // already proved none exists. A non-null provenance can therefore only
+        // point at this or another non-applied decision, so it is safe to
+        // remove; a null provenance is a manual link and must survive.
         await tx
           .delete(projectRepositories)
           .where(
             and(
-              eq(projectRepositories.associationDecisionId, decision.id),
+              isNotNull(projectRepositories.associationDecisionId),
               eq(projectRepositories.projectId, decision.sourceId),
               eq(projectRepositories.repositoryId, decision.targetRepositoryId),
               eq(projectRepositories.workspaceId, this.workspaceId),
@@ -486,7 +537,7 @@ export class RepositoryModel {
           .delete(teamRepoDefaults)
           .where(
             and(
-              eq(teamRepoDefaults.associationDecisionId, decision.id),
+              isNotNull(teamRepoDefaults.associationDecisionId),
               eq(teamRepoDefaults.teamId, decision.sourceId),
               eq(teamRepoDefaults.repositoryId, decision.targetRepositoryId),
               eq(teamRepoDefaults.workspaceId, this.workspaceId),

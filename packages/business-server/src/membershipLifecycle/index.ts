@@ -1,9 +1,10 @@
+import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import type { LobeChatDatabase } from '@orvilo/database';
 import type { WorkspaceMemberItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 
-import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { WorkspaceModel } from '@/database/models/workspace';
+import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 
 import { emitWorkspaceEvent, recordAudit } from './audit';
 import {
@@ -291,6 +292,15 @@ export const removeMember = async (
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'reassignToUserId must be an active member of this workspace',
+        });
+      }
+      // Membership alone is not enough: a viewer passes `getMember` but can
+      // never own a task, so reassigning to them would silently orphan the
+      // departing member's open work.
+      if (!canWorkspaceRoleBeTaskAssignee(reassignTarget.role)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'reassignToUserId must hold a task-assignable workspace role',
         });
       }
     }

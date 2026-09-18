@@ -17,10 +17,7 @@ import {
   wsCompatProcedure,
   wsMemberProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
-import {
-  issueInvitations,
-  listInvitations,
-} from '@/business/server/workspaceInvitation';
+import { issueInvitations, listInvitations } from '@/business/server/workspaceInvitation';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
@@ -44,19 +41,29 @@ const wrapInternal = (domain: string, error: unknown): never => {
   });
 };
 
-const inviteInput = z.object({
-  emails: z.array(z.string().min(1).max(320)).min(1).max(50),
-  projectIds: z.array(z.string().min(1)).optional(),
-  projectRoles: z
-    .array(
-      z.object({
-        projectId: z.string().min(1),
-        role: z.enum(['commenter', 'contributor', 'manager', 'viewer']),
-      }),
-    )
-    .optional(),
-  role: z.enum(['admin', 'member', 'viewer']).default('member'),
-});
+const inviteInput = z
+  .object({
+    // Legacy single-invite shape the released CLI still sends (`{email, role}`).
+    email: z.string().min(1).max(320).optional(),
+    emails: z.array(z.string().min(1).max(320)).max(50).optional(),
+    projectIds: z.array(z.string().min(1)).optional(),
+    projectRoles: z
+      .array(
+        z.object({
+          projectId: z.string().min(1),
+          role: z.enum(['commenter', 'contributor', 'manager', 'viewer']),
+        }),
+      )
+      .optional(),
+    role: z.enum(['admin', 'member', 'viewer']).default('member'),
+  })
+  .refine(
+    (input) => {
+      const total = (input.emails?.length ?? 0) + (input.email ? 1 : 0);
+      return total >= 1 && total <= 50;
+    },
+    { message: 'Provide between 1 and 50 emails' },
+  );
 
 const userIdInput = z.object({ userId: z.string().min(1) });
 
@@ -97,7 +104,9 @@ export const workspaceMemberRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         return await issueInvitations(ctx.serverDB, {
-          emails: input.emails,
+          // Both wire shapes converge on one list — `email` is the legacy
+          // single-invite spelling, `emails` the batch one.
+          emails: [...(input.emails ?? []), ...(input.email ? [input.email] : [])],
           ipAddress: ctx.clientIp ?? undefined,
           inviterRole: ctx.workspaceRole ?? null,
           inviterUserId: ctx.userId,

@@ -279,4 +279,41 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
       { projectId: 'proj-1', role: 'viewer', user: null, userId: 'u-2' },
     ]);
   });
+
+  it('hides a private project roster from a workspace member with no grant', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    projectMemberModel.getRole.mockResolvedValue(null);
+
+    await expect(createCaller('member').list({ projectId: 'proj-1' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    expect(projectMemberModel.listByProject).not.toHaveBeenCalled();
+  });
+
+  it('lets a granted project member list a private roster', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    projectMemberModel.getRole.mockResolvedValue('viewer');
+
+    const rows = await createCaller('member').list({ projectId: 'proj-1' });
+    expect(rows).toHaveLength(2);
+  });
+
+  it('hides a private roster even from a workspace admin without a grant', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    projectMemberModel.getRole.mockResolvedValue(null);
+
+    await expect(createCaller('admin').list({ projectId: 'proj-1' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('lets the creator list a private roster without a member row', async () => {
+    queries.findProjectsByIds.mockResolvedValue([
+      { ...workspaceProject, userId: 'u-member', visibility: 'private' },
+    ]);
+    projectMemberModel.getRole.mockResolvedValue(null);
+
+    const rows = await createCaller('member').list({ projectId: 'proj-1' });
+    expect(rows).toHaveLength(2);
+  });
 });

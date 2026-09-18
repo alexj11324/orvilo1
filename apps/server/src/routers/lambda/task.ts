@@ -1359,6 +1359,10 @@ export const taskRouter = router({
 
         // Delegated run: the grant must be live, unexpired, action-permitted
         // and bound to THIS task — a grant for another task stays invisible.
+        // The validated grant then BINDS the run: it executes as the grant's
+        // agent (never the task's stored assignee or the inbox fallback) and
+        // is epoch-fenced to the grant id on its task_topics row.
+        let delegation: { agentId: string; grantId: string } | undefined;
         if (input.delegationGrantId) {
           const grant = await ctx.delegation.validateGrantForRun({
             action: 'run',
@@ -1367,6 +1371,7 @@ export const taskRouter = router({
           if (grant.taskId !== task.id) {
             throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
           }
+          delegation = { agentId: grant.agentId, grantId: grant.id };
         }
 
         const runner = new TaskRunnerService(
@@ -1376,6 +1381,7 @@ export const taskRouter = router({
         );
         return await runner.runTask({
           continueTopicId: input.continueTopicId,
+          delegation,
           extraPrompt: input.prompt,
           idempotencyKey: input.idempotencyKey,
           taskId: task.id,

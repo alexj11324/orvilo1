@@ -1,7 +1,9 @@
 import type {
   CollaborationActor,
   CollaborationServerMessage,
+  PresenceCursor,
   PresenceEntry,
+  PresenceSelection,
   PresenceState,
 } from '@orvilo/types';
 
@@ -37,14 +39,63 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 /**
- * Sanitize a client presence payload: the shape is open-ended by contract but
- * must stay a JSON object — the server never trusts actor fields inside it.
+ * String fields in presence payloads are length-capped: the state is stored
+ * per connection and fanned out verbatim to every peer, so an unbounded
+ * client-supplied string would amplify a small frame into a large broadcast.
+ */
+const PRESENCE_STRING_MAX = 256;
+
+const boundedString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length <= PRESENCE_STRING_MAX;
+
+const finiteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const sanitizeCursor = (value: unknown): PresenceCursor | undefined => {
+  if (!isRecord(value)) return undefined;
+  if (
+    !boundedString(value.entityId) ||
+    !boundedString(value.entityType) ||
+    !finiteNumber(value.u) ||
+    !finiteNumber(value.v)
+  ) {
+    return undefined;
+  }
+  const cursor: PresenceCursor = {
+    entityId: value.entityId,
+    entityType: value.entityType,
+    u: value.u,
+    v: value.v,
+  };
+  if (boundedString(value.anchor)) cursor.anchor = value.anchor;
+  if (boundedString(value.viewKey)) cursor.viewKey = value.viewKey;
+  return cursor;
+};
+
+const sanitizeSelection = (value: unknown): PresenceSelection | undefined => {
+  if (!isRecord(value)) return undefined;
+  if (!boundedString(value.entityId) || !boundedString(value.entityType)) return undefined;
+  const selection: PresenceSelection = {
+    entityId: value.entityId,
+    entityType: value.entityType,
+  };
+  if (boundedString(value.anchor)) selection.anchor = value.anchor;
+  return selection;
+};
+
+/**
+ * Sanitize a client presence payload field-by-field: required fields must be
+ * present and correctly typed (finite coordinates, bounded strings) or the
+ * whole sub-object is dropped — a malformed `cursor` never takes down a valid
+ * `selection`. The server never trusts actor fields inside the payload.
  */
 const sanitizePresenceState = (value: unknown): PresenceState | null => {
   if (!isRecord(value)) return null;
   const state: PresenceState = {};
-  if (isRecord(value.cursor)) state.cursor = value.cursor as PresenceState['cursor'];
-  if (isRecord(value.selection)) state.selection = value.selection as PresenceState['selection'];
+  const cursor = sanitizeCursor(value.cursor);
+  if (cursor) state.cursor = cursor;
+  const selection = sanitizeSelection(value.selection);
+  if (selection) state.selection = selection;
   if (typeof value.typing === 'boolean') state.typing = value.typing;
   return state;
 };

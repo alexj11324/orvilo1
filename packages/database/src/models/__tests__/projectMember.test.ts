@@ -120,6 +120,29 @@ describe('ProjectMemberModel', () => {
       // add(1) → remove(2) → restore(3); the raw suspendedAt write did not bump.
       expect(restored.authzVersion).toBe(3);
     });
+
+    it('rejects a membership whose project lives in another workspace', async () => {
+      const otherWorkspaceId = 'pm-other-workspace';
+      await serverDB
+        .insert(workspaces)
+        .values({ id: otherWorkspaceId, name: 'WS2', primaryOwnerId: ownerId, slug: 'pm-ws-2' });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId: ownerId, workspaceId: otherWorkspaceId },
+        // memberId belongs to both workspaces, so the composite
+        // (workspace_id, user_id) FK alone cannot stop the cross-tenant
+        // insert — only the project↔workspace consistency check can.
+        { role: 'member', userId: memberId, workspaceId: otherWorkspaceId },
+      ]);
+
+      const model = new ProjectMemberModel(serverDB, ownerId);
+
+      // projectId lives in `workspaceId`; recording it under another
+      // workspace must fail instead of minting a cross-tenant grant.
+      await expect(
+        model.add({ projectId, userId: memberId, workspaceId: otherWorkspaceId }),
+      ).rejects.toThrow('Project does not belong to the supplied workspace');
+      expect(await model.listByProject(projectId)).toHaveLength(0);
+    });
   });
 
   describe('remove', () => {

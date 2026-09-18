@@ -120,7 +120,12 @@ export const outboxRowToActivityEvent = (row: OutboxEventRow): ServerActivityEve
     const event = row.payload;
     return { ...event, eventId: event.eventId || row.eventId };
   }
-  if (!ROOM_SCOPES.has(row.aggregateType)) return null;
+  // `SemanticTarget.entityType` only spans 'project' | 'task' — synthesizing a
+  // marker for any other aggregate (notably 'workspace') would emit a target
+  // pointing at a task id that is really a workspace id. Workspace rooms get
+  // their signal from the live invalidate/kick path in projectOutboxEvent, so
+  // history replay simply drops non-entity aggregates.
+  if (row.aggregateType !== 'project' && row.aggregateType !== 'task') return null;
 
   const payload = isRecord(row.payload) ? row.payload : {};
   const actorPayload = isRecord(payload.actor) ? payload.actor : null;
@@ -148,6 +153,7 @@ export const outboxRowToActivityEvent = (row: OutboxEventRow): ServerActivityEve
     target: {
       anchor: 'card',
       entityId: row.aggregateId,
+      // Guarded above: only 'project' | 'task' aggregates reach this point.
       entityType: row.aggregateType === 'project' ? 'project' : 'task',
     },
     workspaceId:

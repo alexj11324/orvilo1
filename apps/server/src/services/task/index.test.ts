@@ -2293,6 +2293,34 @@ describe('TaskService', () => {
       expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
     });
 
+    it('persists a first-pass interruption when a new second-pass sibling fails', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskTopicModel.findRunningByTaskIds
+        .mockResolvedValueOnce([
+          { operationId: 'op-stopped', status: 'running', taskId: 'task-p', topicId: 'topic-1' },
+        ])
+        .mockResolvedValueOnce([
+          { operationId: 'op-stopped', status: 'running', taskId: 'task-p', topicId: 'topic-1' },
+          { operationId: 'op-live', status: 'running', taskId: 'task-p', topicId: 'topic-2' },
+        ]);
+      mockTaskTopicModel.cancelIfRunning.mockResolvedValue(true);
+      interruptTaskMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false });
+
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+      ).rejects.toThrow('Task interruption was not confirmed');
+
+      expect(interruptTaskMock).toHaveBeenCalledTimes(2);
+      expect(mockTaskTopicModel.cancelIfRunning).toHaveBeenCalledWith('task-p', 'topic-1');
+      expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalledWith('task-p', 'topic-2');
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+    });
+
     it('preserves task state when a running cascade topic has no operation identity', async () => {
       const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
       mockTaskModel.resolve.mockResolvedValue(parent);

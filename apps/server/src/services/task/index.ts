@@ -1105,7 +1105,8 @@ export class TaskService {
         if (
           !topic.topicId ||
           !topic.operationId ||
-          resnapshotResults.get(topic.operationId)?.status !== 'fulfilled'
+          (!confirmedOperationIds.has(topic.operationId) &&
+            resnapshotResults.get(topic.operationId)?.status !== 'fulfilled')
         ) {
           continue;
         }

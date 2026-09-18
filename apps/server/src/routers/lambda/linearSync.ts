@@ -562,11 +562,23 @@ export const linearSyncRouter = router({
           // Atomic check-and-reset: a scope mid-flight keeps its cursors and
           // the trigger below simply resumes it.
           await ctx.linearSyncModel.resetScopeImport(scope.id);
-          await LinearSyncWorkflow.triggerInstallation({
-            installationId: input.installationId,
-            limit: 20,
-            workspaceId: ctx.workspaceId!,
-          });
+          try {
+            await LinearSyncWorkflow.triggerInstallation({
+              installationId: input.installationId,
+              limit: 20,
+              workspaceId: ctx.workspaceId!,
+            });
+          } catch (error) {
+            // The reset already flipped the scope to 'importing' — record the
+            // trigger failure on it so the wedged state is diagnosable and a
+            // later claim can still recover it.
+            await ctx.linearSyncModel
+              .updateScopeImportState(scope.id, {
+                lastError: `Import trigger failed: ${error instanceof Error ? error.message : String(error)}`,
+              })
+              .catch(() => undefined);
+            throw error;
+          }
         }
         return { data: scope, message: 'Linear sync scope updated', success: true };
       } catch (error) {

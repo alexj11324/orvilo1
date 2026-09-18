@@ -11,11 +11,13 @@ import {
   linearProjectBindings,
   linearSyncInbox,
   linearSyncOutbox,
+  linearTeamLinks,
   projects,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
   tasks,
+  teams,
   users,
   workspaces,
 } from '../../schemas';
@@ -1401,5 +1403,52 @@ describe('LinearSyncModel', () => {
       .orderBy(desc(taskDomainEvents.revision))
       .limit(1);
     expect(event.source).toBe('linear');
+  });
+
+  it('unlinks synced team links whose remote team fell out of scope approval', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    // (workspace_id, team_id) is unique — each link needs its own team row.
+    const link = async (linearTeamId: string, key: string) => {
+      const [team] = await db
+        .insert(teams)
+        .values({ createdByUserId: userId, key, name: key, workspaceId })
+        .returning();
+      return model.upsertTeamLink({ installationId, linearTeamId, teamId: team.id });
+    };
+
+    await link('lin-eng', 'ENG');
+    await link('lin-sec', 'SEC');
+    // A link under a different installation must not be touched.
+    const otherInstallation = '00000000-0000-4000-8000-000000000099';
+    await db.insert(linearInstallations).values({
+      id: otherInstallation,
+      installedByUserId: userId,
+      organizationId: 'linear-org-2',
+      workspaceId,
+    });
+    const [otherTeam] = await db
+      .insert(teams)
+      .values({ createdByUserId: userId, key: 'OTH', name: 'Other', workspaceId })
+      .returning();
+    await model.upsertTeamLink({
+      installationId: otherInstallation,
+      linearTeamId: 'lin-other',
+      teamId: otherTeam.id,
+    });
+
+    await model.markTeamLinksUnlinkedOutsideScope({
+      installationId,
+      keepLinearTeamIds: ['lin-eng'],
+    });
+
+    const states = Object.fromEntries(
+      (await db.select().from(linearTeamLinks)).map((row) => [row.linearTeamId, row.syncState]),
+    );
+    expect(states).toMatchObject({
+      'lin-eng': 'synced',
+      'lin-sec': 'unlinked',
+      'lin-other': 'synced',
+    });
   });
 });

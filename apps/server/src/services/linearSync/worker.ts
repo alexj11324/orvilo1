@@ -2165,6 +2165,14 @@ export class LinearSyncWorker {
       linked += 1;
     }
 
+    // Teams that fell out of approval (removed from `approvedTeamIds` or
+    // excluded by `privateTeamPolicy`) keep their link row for audit but must
+    // stop syncing — team-scope outbound writes are gated on 'synced'.
+    await this.model.markTeamLinksUnlinkedOutsideScope({
+      installationId: installation.id,
+      keepLinearTeamIds: eligible.map((team) => team.id),
+    });
+
     await this.model.updateScopeImportState(scope.id, {
       importPhase: 'projects',
       teamsLinked: linked,

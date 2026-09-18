@@ -36,7 +36,21 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import type {
   LinearSyncInboxItem,
@@ -1055,6 +1069,32 @@ export class LinearSyncModel {
       })
       .returning();
     return row;
+  }
+
+  /**
+   * Unlink synced team links whose remote team is no longer approved by the
+   * installation's scope (removed from `approvedTeamIds` or excluded by the
+   * private-team policy). The link row stays for audit; `syncState` leaving
+   * 'synced' is what stops team-scope outbound writes. Re-approving the team
+   * in a later import flips it back via `upsertTeamLink`.
+   */
+  async markTeamLinksUnlinkedOutsideScope(input: {
+    installationId: string;
+    keepLinearTeamIds: string[];
+  }) {
+    await this.db
+      .update(linearTeamLinks)
+      .set({ syncState: 'unlinked', updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearTeamLinks.workspaceId, this.workspaceId),
+          eq(linearTeamLinks.installationId, input.installationId),
+          eq(linearTeamLinks.syncState, 'synced'),
+          input.keepLinearTeamIds.length
+            ? notInArray(linearTeamLinks.linearTeamId, input.keepLinearTeamIds)
+            : sql`true`,
+        ),
+      );
   }
 
   async transaction<T>(callback: (model: LinearSyncModel, db: LobeChatDatabase) => Promise<T>) {

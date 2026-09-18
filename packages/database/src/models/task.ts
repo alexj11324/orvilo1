@@ -2325,6 +2325,7 @@ export class TaskModel {
       executionGeneration: number;
       policyRevision: number;
       requirementRevision: number;
+      runReservationId?: string;
       status?: string;
     },
     extra?: {
@@ -2354,6 +2355,9 @@ export class TaskModel {
             eq(tasks.policyRevision, expected.policyRevision),
             eq(tasks.requirementRevision, expected.requirementRevision),
             expected.status ? eq(tasks.status, expected.status) : undefined,
+            expected.runReservationId
+              ? eq(tasks.runReservationId, expected.runReservationId)
+              : undefined,
             expected.assigneeAgentId === null
               ? isNull(tasks.assigneeAgentId)
               : eq(tasks.assigneeAgentId, expected.assigneeAgentId),

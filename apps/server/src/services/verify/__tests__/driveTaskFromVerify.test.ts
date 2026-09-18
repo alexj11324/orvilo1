@@ -33,6 +33,7 @@ const {
   opFindById,
   taskFindById,
   taskReleaseRunReservation,
+  taskRenewRunReservation,
   taskTopicFindByOperationId,
   taskUpdateStatus,
   taskUpdateStatusForExecutionContract,
@@ -66,6 +67,7 @@ const {
   statusRecompute: vi.fn(),
   taskFindById: vi.fn(),
   taskReleaseRunReservation: vi.fn(),
+  taskRenewRunReservation: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
   taskUpdateStatus: vi.fn(),
   taskUpdateStatusForExecutionContract: vi.fn(),
@@ -114,6 +116,7 @@ vi.mock('@/database/models/task', () => ({
     return {
       findById: taskFindById,
       releaseRunReservation: taskReleaseRunReservation,
+      renewRunReservation: taskRenewRunReservation,
       updateStatus: taskUpdateStatus,
       updateStatusIfReservation: taskUpdateStatusIfReservation,
       updateStatusForExecutionContract: taskUpdateStatusForExecutionContract,
@@ -271,6 +274,7 @@ describe('driveTaskFromVerify', () => {
       opFindById,
       taskFindById,
       taskReleaseRunReservation,
+      taskRenewRunReservation,
       taskTopicFindByOperationId,
       taskUpdateStatus,
       taskUpdateStatusForExecutionContract,
@@ -292,10 +296,15 @@ describe('driveTaskFromVerify', () => {
     runCompleteTaskDrive.mockResolvedValue(true);
     runReleaseTaskDrive.mockResolvedValue(true);
     runRenewTaskDrive.mockResolvedValue(true);
+    taskRenewRunReservation.mockResolvedValue(true);
     taskUpdateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
     taskUpdateStatusForExecutionContract.mockResolvedValue({ id: 'task-1', status: 'paused' });
     scheduleCapReached.mockResolvedValue(false);
-    serviceUpdateStatus.mockResolvedValue({ paused: [], task: {}, unlocked: [] });
+    serviceUpdateStatus.mockImplementation(async (...args: unknown[]) => {
+      const options = args[3] as { onStatusCommitted?: () => void } | undefined;
+      options?.onStatusCommitted?.();
+      return { paused: [], task: {}, unlocked: [] };
+    });
     integrateOnComplete.mockResolvedValue('settled');
     briefModelConstruct.mockImplementation(function () {
       return { create: briefCreate };
@@ -325,17 +334,25 @@ describe('driveTaskFromVerify', () => {
   it('passed → completes the task (with cascade), delivers the creator callback, marks done', async () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
     await driveTaskFromVerify(db, 'u1', 'op-1');
-    expect(serviceUpdateStatus).toHaveBeenCalledWith({
-      expectedContract: {
-        assigneeAgentId: 'a1',
-        executionGeneration: 1,
-        policyRevision: 1,
-        requirementRevision: 1,
-        status: 'running',
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      {
+        expectedContract: {
+          assigneeAgentId: 'a1',
+          executionGeneration: 1,
+          policyRevision: 1,
+          requirementRevision: 1,
+          status: 'running',
+        },
+        id: 'task-1',
+        status: 'completed',
       },
-      id: 'task-1',
-      status: 'completed',
-    });
+      undefined,
+      {
+        currentStatus: 'running',
+        reservationId: 'completion:op-1:lease-1',
+      },
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
+    );
     // Deferred creator callback fires here (not in onTopicComplete), reason 'done'.
     expect(deliverMock).toHaveBeenCalledTimes(1);
     expect(deliverMock.mock.calls[0][0]).toMatchObject({
@@ -346,6 +363,37 @@ describe('driveTaskFromVerify', () => {
     });
     expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
     expect(rearmHeartbeatAfterVerify).not.toHaveBeenCalled();
+  });
+
+  it('renews the task completion reservation while Verify drives the task', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(taskRenewRunReservation).toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+    );
+  });
+
+  it('stops treating the completion reservation as external ownership loss after commit', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    serviceUpdateStatus.mockImplementationOnce(async (...args: unknown[]) => {
+      const options = args[3] as { onStatusCommitted?: () => void } | undefined;
+      options?.onStatusCommitted?.();
+      // A renewal after the atomic status write would now fail because that
+      // write consumed the reservation. The remaining task-drive work must
+      // continue instead of retiring as a superseded Verify generation.
+      taskRenewRunReservation.mockResolvedValue(false);
+      return { paused: [], task: {}, unlocked: [] };
+    });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(deliverMock).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'done', taskId: 'task-1' }),
+    );
+    expect(runCompleteTaskDrive).toHaveBeenCalledWith('run-1', 'drive-owner');
   });
 
   it('passed → keeps a recurring task scheduled', async () => {
@@ -394,6 +442,7 @@ describe('driveTaskFromVerify', () => {
         currentStatus: 'scheduled',
         reservationId: 'completion:op-1:lease-1',
       },
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
     expect(deliverMock).toHaveBeenCalledWith(
       expect.objectContaining({ reason: 'done', taskId: 'task-1' }),
@@ -412,6 +461,7 @@ describe('driveTaskFromVerify', () => {
       status: 'scheduled',
     });
     scheduleCapReached.mockResolvedValue(true);
+    taskRenewRunReservation.mockResolvedValue(false);
     serviceUpdateStatus.mockResolvedValueOnce(null);
 
     await driveTaskFromVerify(db, 'u1', 'op-1');
@@ -585,6 +635,30 @@ describe('driveTaskFromVerify', () => {
     expect(deliverMock.mock.calls[0][0]).toMatchObject({ reason: 'error', taskId: 'task-1' });
   });
 
+  it('continues failed-result side effects after the pause commit consumes the reservation', async () => {
+    vi.useFakeTimers();
+    try {
+      runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'failed' });
+      taskUpdateStatusForExecutionContract.mockImplementationOnce(async () => {
+        taskRenewRunReservation.mockResolvedValue(false);
+        // Let the lease timer observe the reservation-clearing commit before
+        // the model call returns. That loss belongs to this successful local
+        // transition and must not retire the Verify drive.
+        await vi.advanceTimersByTimeAsync(60_000);
+        return { id: 'task-1', status: 'paused' };
+      });
+
+      await driveTaskFromVerify(db, 'u1', 'op-1');
+
+      expect(deliverMock).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'error', taskId: 'task-1' }),
+      );
+      expect(runCompleteTaskDrive).toHaveBeenCalledWith('run-1', 'drive-owner');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('errored → pauses without an inbox brief; never claims the delivery "did not pass"', async () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'errored' });
     await driveTaskFromVerify(db, 'u1', 'op-1');
@@ -700,6 +774,9 @@ describe('driveTaskFromVerify', () => {
     expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
     expect(serviceUpdateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'task-1', status: 'completed' }),
+      undefined,
+      expect.objectContaining({ reservationId: 'completion:op-corrective:lease-2' }),
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
   });
 
@@ -710,6 +787,9 @@ describe('driveTaskFromVerify', () => {
 
     expect(serviceUpdateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'task-1', status: 'completed' }),
+      undefined,
+      expect.objectContaining({ reservationId: 'completion:op-1:lease-1' }),
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
     expect(briefCreate).not.toHaveBeenCalled();
   });

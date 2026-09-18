@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { vi } from 'vitest';
 
 import {
   BASE,
@@ -14,6 +15,7 @@ import type {
 } from '../../githubRepo/reviewSnapshot';
 
 type Row = {
+  executionGeneration?: number;
   integration: {
     attempts: number;
     baseBranch: string;
@@ -80,11 +82,17 @@ function setup(
     runningTask?: boolean;
     noMatchingRowsAtConfirmation?: boolean;
     otherRepositoryRow?: boolean;
+    premerge?: Partial<RemotePrReviewSnapshot>;
+    freshTask?: Record<string, unknown>;
+    rowState?: string;
+    staleGeneration?: boolean;
     superseded?: boolean;
+    taskCount?: number;
     unavailable?: boolean;
   } = {},
 ) {
   const row: Row = {
+    executionGeneration: options.staleGeneration ? 2 : 3,
     integration: {
       attempts: 0,
       baseBranch: 'main',
@@ -93,7 +101,7 @@ function setup(
       ...(options.missingPr ? {} : { prNumber: 9 }),
       repo: 'acme/widgets',
       role: 'task',
-      state: 'verification_pending',
+      state: options.rowState ?? 'verification_pending',
     },
     seq: 1,
     status: options.liveTopic ? 'running' : 'completed',
@@ -120,6 +128,7 @@ function setup(
     assigneeAgentId: null,
     context: { deliveryReview: { handledFeedbackIds: options.handled ?? [] } },
     createdByUserId: 'u1',
+    executionGeneration: 3,
     id: 'task-1',
     identifier: 'T-1',
     instruction: 'Fix the code',
@@ -140,7 +149,8 @@ function setup(
       from: () => ({
         where: () => ({
           orderBy: () => ({
-            limit: async () => [structuredClone(task)],
+            limit: async () =>
+              Array.from({ length: options.taskCount ?? 1 }, () => structuredClone(task)),
           }),
         }),
       }),
@@ -149,9 +159,12 @@ function setup(
   const mocks: Record<string, Record<string, unknown>> = {
     '@orvilo/types': { cloudSandboxRepoPath: () => '/workspace/widgets' },
     'debug': { __esModule: true, default: () => () => {} },
-    'drizzle-orm': Object.fromEntries(
-      ['and', 'asc', 'eq', 'isNull', 'or'].map((key) => [key, (...args: unknown[]) => args]),
-    ),
+    'drizzle-orm': {
+      ...Object.fromEntries(
+        ['and', 'asc', 'eq', 'isNull', 'or'].map((key) => [key, (...args: unknown[]) => args]),
+      ),
+      sql: (strings: TemplateStringsArray, ...params: unknown[]) => ({ params, strings }),
+    },
     '@/database/schemas/task': { tasks: {} },
     '@/database/models/agent': {
       AgentModel: class {
@@ -162,6 +175,9 @@ function setup(
     },
     '@/database/models/task': {
       TaskModel: class {
+        async findById() {
+          return structuredClone({ ...task, ...options.freshTask });
+        }
         async update(_id: string, patch: { error?: string | null }) {
           state.errors.push(patch.error ?? null);
         }
@@ -222,17 +238,21 @@ function setup(
       ) => {
         state.expected.push(expected);
         if (options.unavailable) return undefined;
+        // Call 1 is the sweep read, call 2 the merge-boundary revalidation,
+        // calls >= 3 the post-merge confirmation.
         const result =
           state.expected.length === 1
             ? snapshot(options.first)
-            : snapshot({
-                merged: true,
-                mergedAt: DATE,
-                mergeCommitSha: MERGE,
-                open: false,
-                ...options.confirmation,
-              });
-        if (state.expected.length > 1 && options.noMatchingRowsAtConfirmation) state.rows = [];
+            : state.expected.length === 2
+              ? snapshot(options.premerge)
+              : snapshot({
+                  merged: true,
+                  mergedAt: DATE,
+                  mergeCommitSha: MERGE,
+                  open: false,
+                  ...options.confirmation,
+                });
+        if (state.expected.length >= 3 && options.noMatchingRowsAtConfirmation) state.rows = [];
         if (
           expected &&
           (result.baseBranch !== expected.baseBranch ||
@@ -321,12 +341,96 @@ add('a same-name branch from another repository is not stamped integrated', asyn
   );
 });
 
-add('a newer delivery supersedes an older pending row', async (load) => {
-  const f = setup({ superseded: true });
+add(
+  'a newer integrated delivery retries completion instead of resurrecting the pending row',
+  async (load) => {
+    const f = setup({ superseded: true });
+    const result = await (await load(f.mocks))(f.db);
+    // The integrated successor owns the outcome: completion is retried (the
+    // DB gate re-verifies proof) without dispatching or re-reading GitHub.
+    assert.equal(f.state.completed.length, 1);
+    assert.equal(f.state.expected.length, 0);
+    assert.equal(f.state.merges.length, 0);
+    assert.deepEqual(result.merged, ['T-1']);
+  },
+);
+
+add('a delivery row from a superseded generation is ignored', async (load) => {
+  const f = setup({ staleGeneration: true });
   const result = await (await load(f.mocks))(f.db);
   assert.equal(result.checked, 0);
   assert.equal(f.state.expected.length, 0);
   assert.equal(f.state.merges.length, 0);
+  assert.equal(f.state.completed.length, 0);
+});
+
+add('a mid-sweep restart fences the merge against the new generation', async (load) => {
+  const f = setup({ freshTask: { executionGeneration: 4, status: 'running' } });
+  const result = await (await load(f.mocks))(f.db);
+  assert.equal(f.state.merges.length, 0);
+  assert.equal(f.state.completed.length, 0);
+  assert.deepEqual(result.waiting, ['T-1']);
+});
+
+add('a deleted task cannot merge its stale review snapshot', async (load) => {
+  const f = setup({ freshTask: { isDeleted: true } });
+  const result = await (await load(f.mocks))(f.db);
+  assert.equal(f.state.merges.length, 0);
+  assert.equal(f.state.completed.length, 0);
+  assert.deepEqual(result.waiting, ['T-1']);
+});
+
+add('a late pending check re-read at the merge boundary blocks the merge', async (load) => {
+  const f = setup({
+    premerge: { checks: { failed: [], pending: ['Typecheck'], skipped: [], successful: [] } },
+  });
+  const result = await (await load(f.mocks))(f.db);
+  assert.equal(f.state.expected.length, 2);
+  assert.equal(f.state.merges.length, 0);
+  assert.equal(f.state.completed.length, 0);
+  assert.deepEqual(result.waiting, ['T-1']);
+});
+
+add(
+  'an externally merged PR detected at the merge boundary completes through proof',
+  async (load) => {
+    const f = setup({
+      premerge: { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    });
+    const result = await (await load(f.mocks))(f.db);
+    assert.equal(f.state.merges.length, 0);
+    assert.equal(f.state.completed.length, 1);
+    assert.deepEqual(result.merged, ['T-1']);
+  },
+);
+
+add(
+  'a delivered-but-unbound row is adopted into review by establishing its PR',
+  async (load) => {
+    const f = setup({ missingPr: true, rowState: 'pending', runningTask: true });
+    const result = await (await load(f.mocks))(f.db);
+    assert.ok(f.state.events.includes('create-pr'));
+    assert.equal(f.state.merges.length, 1);
+    assert.equal(f.state.completed.length, 1);
+    assert.deepEqual(result.merged, ['T-1']);
+  },
+);
+
+add('the sweep stops taking new candidates once its time budget is spent', async (load) => {
+  const f = setup({ taskCount: 50 });
+  let calls = 0;
+  const spy = vi.spyOn(Date, 'now').mockImplementation(() => {
+    calls += 1;
+    // Call 1 sets the deadline and call 2 is the first loop check; every
+    // later call reports the budget spent.
+    return calls <= 2 ? 0 : 11 * 60 * 1000;
+  });
+  try {
+    const result = await (await load(f.mocks))(f.db);
+    assert.equal(result.checked, 1);
+  } finally {
+    spy.mockRestore();
+  }
 });
 
 add('paused with a still-live topic does not dispatch or merge', async (load) => {

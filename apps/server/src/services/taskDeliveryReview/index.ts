@@ -1,6 +1,6 @@
 import { cloudSandboxRepoPath, type TaskItem, type TaskTopicIntegration } from '@orvilo/types';
 import debug from 'debug';
-import { and, asc, eq, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
@@ -23,6 +23,12 @@ import { TaskRunnerService } from '@/server/services/taskRunner';
 const log = debug('task-delivery-review');
 const MAX_REVIEW_CORRECTIVE_ATTEMPTS = 5;
 const REVIEW_SCAN_LIMIT = 50;
+// The sweep runs inside the 15-minute watchdog execution window alongside the
+// heartbeat/cancellation scans. A sequential pass of GitHub reads (each with
+// its own request timeout) must leave headroom for the rest of the watchdog,
+// so the sweep stops taking new candidates once the budget is spent — the
+// oldest-first ordering lets the next sweep resume where this one stopped.
+const REVIEW_SWEEP_BUDGET_MS = 10 * 60 * 1000;
 
 interface DeliveryReviewContext {
   handledFeedbackIds?: string[];
@@ -50,13 +56,40 @@ const reviewContext = (task: TaskItem): DeliveryReviewContext => {
   return context.deliveryReview ?? {};
 };
 
-const activeDeliveryRow = (rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>) => {
-  // Pick the newest code delivery FIRST. Filtering by phase first can resurrect an
-  // older pending delivery after its successor has already merged, failed or started.
+const activeDeliveryRow = (
+  rows: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>,
+  task: TaskItem,
+) => {
+  // Pick the newest repository-bound delivery FIRST. Filtering by phase first
+  // can resurrect an older pending delivery after its successor has already
+  // merged, failed or started.
   const latest = [...rows]
     .filter((row) => row.topicId && row.integration?.repo)
     .sort((a, b) => b.seq - a.seq)[0];
-  return latest?.integration?.state === 'verification_pending' ? latest : undefined;
+  if (!latest?.topicId) return undefined;
+  // Only the current execution generation owns a delivery. Rows stamped with
+  // an older generation belong to a superseded run and must not steer this
+  // run's review or completion.
+  if (latest.executionGeneration !== task.executionGeneration) return undefined;
+  const state = latest.integration?.state;
+  if (state === 'verification_pending') return latest;
+  // The merge proof can land while the completion update does not (a crash
+  // between updateIntegration and updateStatus): an integrated row on an
+  // uncompleted task retries the completion transition instead of stranding.
+  if (state === 'integrated') return latest;
+  // A repository-bound delivery whose run ended before its PR identity became
+  // durable (e.g. deployed mid-flight) is adopted into review: the sweep
+  // establishes the missing PR instead of dead-ending the task.
+  if (
+    !latest.integration?.prNumber &&
+    (state === 'pending' ||
+      state === 'merging' ||
+      state === 'publish_failed' ||
+      state === 'conflict')
+  ) {
+    return latest;
+  }
+  return undefined;
 };
 
 const allFeedbackIds = (snapshot: RemotePrReviewSnapshot): string[] => [
@@ -281,10 +314,31 @@ export const runTaskDeliveryReviewSweep = async (
     );
   }
 
+  // Prefilter to tasks that actually own a repository-bound delivery row in
+  // the current generation. The bounded scan must not spend its limit on the
+  // 50 oldest ordinary running/paused tasks while real deliveries wait.
   const candidates = await db
     .select()
     .from(tasks)
-    .where(and(...filters))
+    .where(
+      and(
+        ...filters,
+        sql`exists (
+          select 1 from task_topics tt
+          where tt.task_id = ${tasks.id}
+            and tt.execution_generation = ${tasks.executionGeneration}
+            and nullif(btrim(coalesce(tt.integration ->> 'repo', '')), '') is not null
+            and tt.integration ->> 'state' in (
+              'verification_pending',
+              'integrated',
+              'pending',
+              'merging',
+              'publish_failed',
+              'conflict'
+            )
+        )`,
+      ),
+    )
     .orderBy(asc(tasks.updatedAt))
     .limit(REVIEW_SCAN_LIMIT);
   const result: TaskDeliveryReviewSweepResult = {
@@ -295,7 +349,13 @@ export const runTaskDeliveryReviewSweep = async (
     waiting: [],
   };
 
+  const deadline = Date.now() + REVIEW_SWEEP_BUDGET_MS;
+
   for (const task of candidates) {
+    // Each candidate costs several sequential GitHub reads; once the sweep
+    // budget is spent the remaining candidates defer to the next watchdog run
+    // rather than being killed mid-request by the execution timeout.
+    if (Date.now() >= deadline) break;
     // Ownerless rows cannot hold a verifiable delivery — the credential
     // lookup and every model below require a real user scope.
     const ownerId = task.createdByUserId;
@@ -304,7 +364,7 @@ export const runTaskDeliveryReviewSweep = async (
     const topicModel = new TaskTopicModel(db, ownerId, workspaceId);
     const taskModel = new TaskModel(db, ownerId, workspaceId);
     const rows = await topicModel.findByTaskId(task.id);
-    const row = activeDeliveryRow(rows);
+    const row = activeDeliveryRow(rows, task);
     if (!row?.topicId || !row.integration?.repo) continue;
     const record = row.integration;
     const repo = row.integration.repo;
@@ -318,6 +378,19 @@ export const runTaskDeliveryReviewSweep = async (
     }
 
     try {
+      // A delivery that already produced its merge proof retries the
+      // completion transition. The database gate re-verifies that the merged
+      // PR belongs to the current execution generation before letting it
+      // through, so a stale row cannot complete a rerun task.
+      if (record.state === 'integrated') {
+        await new TaskService(db, ownerId, workspaceId).updateStatus({
+          id: task.id,
+          status: 'completed',
+        });
+        result.merged.push(task.identifier);
+        continue;
+      }
+
       const credKey = await getCredentialKey(db, ownerId, task, workspaceId);
       const token = await resolveGithubAccessToken({
         credKey,
@@ -503,8 +576,60 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
+      // Fence the merge against the CURRENT execution contract: the task row
+      // read at scan time may be stale — a restart, cancellation or deletion
+      // since then means this snapshot no longer owns the outcome.
+      const fresh = await taskModel.findById(task.id);
+      if (
+        !fresh ||
+        fresh.isDeleted === true ||
+        fresh.executionGeneration !== row.executionGeneration ||
+        (fresh.status !== 'paused' && fresh.status !== 'running')
+      ) {
+        result.waiting.push(task.identifier);
+        continue;
+      }
+
+      // CI and review state were read earlier in this sweep; re-read the
+      // decision at the merge boundary so a late-registered pending check or
+      // a new blocking review cannot ride a stale green verdict into the
+      // merge. The expected identity pins the read to the accepted revision.
+      const decision = await getPullRequestReviewSnapshot(repo, snapshot.number, token, {
+        baseBranch: snapshot.baseBranch,
+        headBranch: snapshot.headBranch,
+        headSha: snapshot.headSha,
+        nodeId: snapshot.nodeId,
+        repositoryId: snapshot.repositoryId,
+        sameRepository: true,
+      });
+      if (!decision) {
+        await taskModel.update(task.id, {
+          error:
+            'GitHub PR state could not be re-verified at the merge boundary; the next sweep will retry.',
+        });
+        result.waiting.push(task.identifier);
+        continue;
+      }
+      if (decision.merged) {
+        await markDeliveryMerged({
+          db,
+          ownerId,
+          record: { ...deliveryRecord, prNumber: decision.number },
+          snapshot: decision,
+          task,
+          topicModel,
+          workspaceId,
+        });
+        result.merged.push(task.identifier);
+        continue;
+      }
+      if (!decision.open || !isRemotePrMergeReady(decision)) {
+        result.waiting.push(task.identifier);
+        continue;
+      }
+
       const merge = await mergePullRequest({
-        expectedHeadSha: snapshot.headSha,
+        expectedHeadSha: decision.headSha,
         mergeMethod: 'squash',
         prNumber: snapshot.number,
         repo,

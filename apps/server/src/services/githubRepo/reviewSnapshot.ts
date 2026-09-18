@@ -383,6 +383,7 @@ function parseReviews(rows: JsonObject[]): string[] | undefined {
 function parseComments(
   rows: JsonObject[],
   prefix: string,
+  selfLogin?: string,
 ):
   | {
       ids: string[];
@@ -406,6 +407,12 @@ function parseComments(
     // This patch preserves the existing human-comment scheduling policy. Bot thread/review
     // blockers remain enforced; arbitrary bot chatter is not promoted into agent commands.
     if (!isObject(comment.user) || comment.user.type === 'Bot') continue;
+    // Replies the corrective run posts through the delivery credential are the
+    // controller's own output, not new human feedback — treating them as such
+    // would dispatch a corrective run in response to its own comments. The
+    // credential's owner is the actor; a reviewer who wants to block the
+    // delivery uses a different account or a formal review.
+    if (selfLogin && comment.user.login.toLowerCase() === selfLogin) continue;
     const id = `${prefix}:${comment.id}`;
     ids.push(id);
     const digest = createHash('sha256').update(JSON.stringify(comment.body)).digest('hex');
@@ -463,7 +470,8 @@ export async function readPullRequestReviewSnapshot(
     if (!first.ok) return;
     const pr = parsePr(first.json, repo, number, expected);
     if (!pr) return;
-    const [checkRuns, statuses, reviews, inline, ordinary, threads, testMerge] = await Promise.all([
+    const [checkRuns, statuses, reviews, inline, ordinary, threads, testMerge, viewer] =
+      await Promise.all([
       readPages(
         request,
         `${root}/commits/${pr.headSha}/check-runs?filter=latest`,
@@ -476,9 +484,18 @@ export async function readPullRequestReviewSnapshot(
       readPages(request, `${root}/issues/${number}/comments`, token),
       readThreads(request, coordinate, pr, token),
       resolveTestMerge(request, root, pr, token),
+      // The credential owner's login lets the feedback cursor tell the
+      // controller's own replies from human review. A token without /user
+      // scope (e.g. an installation token) simply yields no exclusion — those
+      // actors post as Bots and are already filtered.
+      request('/user', token),
     ]);
     if (!checkRuns || !statuses || !reviews || !inline || !ordinary || !threads || !testMerge)
       return;
+    const selfLogin =
+      viewer.ok && isObject(viewer.json) && isString(viewer.json.login)
+        ? viewer.json.login.toLowerCase()
+        : undefined;
     const checks = classifyChecks(checkRuns, statuses, pr.headSha);
     if (!checks) return;
     if (testMerge.sha) {
@@ -521,8 +538,8 @@ export async function readPullRequestReviewSnapshot(
       checks.pending.push(`GitHub review decision: ${threads.reviewDecision}`);
     }
     const requestedChangeReviewIds = parseReviews(reviews);
-    const inlineComments = parseComments(inline, 'review-comment');
-    const ordinaryComments = parseComments(ordinary, 'issue-comment');
+    const inlineComments = parseComments(inline, 'review-comment', selfLogin);
+    const ordinaryComments = parseComments(ordinary, 'issue-comment', selfLogin);
     if (!requestedChangeReviewIds || !inlineComments || !ordinaryComments) return;
 
     // Fence the whole read, including a base-branch change or retarget while pagination ran.

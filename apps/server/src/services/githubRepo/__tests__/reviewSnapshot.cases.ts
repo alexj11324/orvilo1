@@ -495,6 +495,33 @@ add('untrusted bot chatter does not become an automatic human feedback command',
 });
 
 add(
+  'replies posted under the delivery credential are not new human feedback',
+  async (read) => {
+    const ordinary = [
+      comment(1, { user: { id: 7, login: 'Delivery-Actor', type: 'User' } }),
+      comment(2, { user: { id: 41, login: 'reviewer', type: 'User' } }),
+    ];
+    const result = await read(fixture({ ordinary }).transport, COORDINATE, 9);
+    assert.deepEqual(result?.humanCommentIds, ['issue-comment:2']);
+  },
+  true,
+);
+
+add(
+  'a credential without readable /user scope keeps all human comments visible',
+  async (read) => {
+    const ordinary = [comment(1, { user: { id: 7, login: 'delivery-actor', type: 'User' } })];
+    const result = await read(
+      fixture({ ordinary, viewer: null }).transport,
+      COORDINATE,
+      9,
+    );
+    assert.deepEqual(result?.humanCommentIds, ['issue-comment:1']);
+  },
+  true,
+);
+
+add(
   'wrong repository identity is rejected',
   async (read) => {
     const pr = openPr({

@@ -64,6 +64,8 @@ export const review = (id: number, state: string, userId = 41, patch: Row = {}):
 
 export interface FixtureOptions {
   checks?: Row[];
+  /** GET /user response; null simulates a token without user scope. */
+  viewer?: Row | null;
   finalPr?: Row;
   hook?: (
     path: string,
@@ -93,6 +95,10 @@ export function fixture(options: FixtureOptions = {}) {
     const intercepted = options.hook?.(path, init, calls.length);
     if (intercepted) return structuredClone(intercepted);
     const url = new URL(path, 'https://api.github.com');
+    if (url.pathname === '/user') {
+      const viewer = options.viewer === undefined ? { login: 'delivery-actor' } : options.viewer;
+      return response(viewer ?? { message: 'Requires authentication' }, viewer ? 200 : 401);
+    }
     const page = Number(url.searchParams.get('page') ?? '1');
     const slice = (rows: Row[]) => rows.slice((page - 1) * 100, page * 100);
     if (url.pathname === `${ROOT}/pulls/9`) {

@@ -434,7 +434,7 @@ export function registerWorkspaceCommand(program: Command) {
         const scopeId = requireScope(options.workspace);
         const invitation = await (
           await getTrpcClient(scopeId)
-        ).workspaceMember.invite.mutate({ email, role });
+        ).workspaceMember.invite.mutate({ emails: [email], role });
 
         if (options.json !== undefined) return outputJson(invitation, options.json);
         console.log(`Invited ${pc.bold(email)} as ${role}.`);

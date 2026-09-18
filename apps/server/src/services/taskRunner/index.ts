@@ -544,6 +544,16 @@ export class TaskRunnerService {
             const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
             const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
+            // Revalidate the task reservation in the same transaction that
+            // publishes the running topic. A concurrent terminal cascade
+            // locks and clears this reservation before changing status, so a
+            // dispatched operation cannot register after cancellation wins.
+            if (!(await taskModel.renewRunReservation(task.id, reservationId))) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Task run reservation was lost before operation registration.',
+              });
+            }
             await dispatch.transition(preparedDispatch!, {
               environmentSnapshot,
               expected: ['dispatched'],
@@ -700,29 +710,44 @@ export class TaskRunnerService {
 
       if (!taskTopicStarted) {
         if (!result.topicId) throw new Error('Agent run started without a topic id');
-        await this.taskDispatch.transition(preparedDispatch!, {
-          environmentSnapshot,
-          expected: ['dispatched'],
-          operationId: result.operationId,
-          phase: 'running',
-        });
-        await this.taskModel.updateCurrentTopic(task.id, result.topicId);
-        await this.taskTopicModel.startRun(task.id, result.topicId, {
-          dispatch: { ...preparedDispatch!.dispatch, fence: preparedDispatch!.fence },
-          environmentSnapshot,
-          integration: runIntegration,
-          operationId: result.operationId,
-          seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
-          trigger,
-        });
-        if (delegation) {
-          delegatedEpoch = await this.delegationService.claimExecutionEpoch({
-            grantId: delegation.grantId,
-            taskId: task.id,
-            topicId: result.topicId,
+        await this.db.transaction(async (tx) => {
+          const dispatch = new TaskDispatchService(tx, this.workspaceId);
+          const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+          const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+
+          if (!(await taskModel.renewRunReservation(task.id, reservationId))) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task run reservation was lost before operation registration.',
+            });
+          }
+          await dispatch.transition(preparedDispatch!, {
+            environmentSnapshot,
+            expected: ['dispatched'],
+            operationId: result.operationId,
+            phase: 'running',
           });
-        }
-        if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
+          await taskModel.updateCurrentTopic(task.id, result.topicId);
+          await taskTopicModel.startRun(task.id, result.topicId, {
+            dispatch: { ...preparedDispatch!.dispatch, fence: preparedDispatch!.fence },
+            environmentSnapshot,
+            integration: runIntegration,
+            operationId: result.operationId,
+            seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
+            trigger,
+          });
+          if (delegation) {
+            delegatedEpoch = await this.delegationService.claimExecutionEpoch(
+              {
+                grantId: delegation.grantId,
+                taskId: task.id,
+                topicId: result.topicId,
+              },
+              tx,
+            );
+          }
+          if (!continueTopicId) await taskModel.incrementTopicCount(task.id);
+        });
         taskTopicStarted = true;
         runtimeDispatchStarted = true;
         provisionedRegistered = true;

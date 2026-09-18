@@ -79,10 +79,15 @@ const setupHappyPath = (task: TaskItem, execResult: unknown) => {
 const newRunner = (overrides: {
   assertExecutionEpoch?: ReturnType<typeof vi.fn>;
   claimExecutionEpoch?: ReturnType<typeof vi.fn>;
+  db?: unknown;
   getAgentModelConfig?: ReturnType<typeof vi.fn>;
   getBuiltinAgent?: ReturnType<typeof vi.fn>;
 } = {}) => {
-  const service = new TaskRunnerService({} as never, 'user-1', 'ws-1');
+  const db = (overrides.db ?? {}) as {
+    transaction?: (callback: (tx: unknown) => Promise<void>) => Promise<void>;
+  };
+  db.transaction ??= async (callback) => callback(db);
+  const service = new TaskRunnerService(db as never, 'user-1', 'ws-1');
   const agentModel = {
     getAgentModelConfig:
       overrides.getAgentModelConfig ?? vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
@@ -179,6 +184,51 @@ describe('TaskRunnerService delegated runs', () => {
     // The registration never commits — no heartbeat, no durable registration.
     expect(updateHeartbeat).not.toHaveBeenCalled();
     // The orphaned operation started by execAgent is interrupted on teardown.
+    expect(interruptTask).toHaveBeenCalledWith(
+      expect.objectContaining({ operationId: 'op-1', topicId: 'tpc_1' }),
+    );
+  });
+
+  it('does not register an operation after a terminal cascade clears its reservation', async () => {
+    const task = baseTask();
+    setupHappyPath(task, {
+      operationId: 'op-1',
+      success: true,
+      topicId: 'tpc_1',
+    });
+    const db = {} as { transaction: (callback: (tx: unknown) => Promise<void>) => Promise<void> };
+    db.transaction = async (callback) => callback(db);
+    const { service } = newRunner({ db });
+    const renewRunReservation = vi.mocked(TaskModel.prototype.renewRunReservation);
+    renewRunReservation.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    vi.mocked(AiAgentService.prototype.execAgent).mockImplementationOnce(async (input) => {
+      await input.beforeOperationStart?.({ operationId: 'op-1', topicId: 'tpc_1' });
+      return { operationId: 'op-1', success: true, topicId: 'tpc_1' } as never;
+    });
+
+    await expect(service.runTask(runParams)).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    expect(TaskTopicModel.prototype.startRun).not.toHaveBeenCalled();
+    expect(TaskDispatchService.prototype.transition).toHaveBeenCalledTimes(1);
+  });
+
+  it('interrupts a fallback operation when a terminal cascade wins before registration', async () => {
+    const task = baseTask();
+    const { interruptTask } = setupHappyPath(task, {
+      operationId: 'op-1',
+      success: true,
+      topicId: 'tpc_1',
+    });
+    const { service } = newRunner();
+    const renewRunReservation = vi.mocked(TaskModel.prototype.renewRunReservation);
+    renewRunReservation
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+
+    await expect(service.runTask(runParams)).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    expect(TaskTopicModel.prototype.startRun).not.toHaveBeenCalled();
     expect(interruptTask).toHaveBeenCalledWith(
       expect.objectContaining({ operationId: 'op-1', topicId: 'tpc_1' }),
     );

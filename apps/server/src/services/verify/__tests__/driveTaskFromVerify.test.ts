@@ -33,6 +33,7 @@ const {
   opFindById,
   taskFindById,
   taskReleaseRunReservation,
+  taskRenewRunReservation,
   taskTopicFindByOperationId,
   taskUpdateStatus,
   taskUpdateStatusForExecutionContract,
@@ -66,6 +67,7 @@ const {
   statusRecompute: vi.fn(),
   taskFindById: vi.fn(),
   taskReleaseRunReservation: vi.fn(),
+  taskRenewRunReservation: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
   taskUpdateStatus: vi.fn(),
   taskUpdateStatusForExecutionContract: vi.fn(),
@@ -114,6 +116,7 @@ vi.mock('@/database/models/task', () => ({
     return {
       findById: taskFindById,
       releaseRunReservation: taskReleaseRunReservation,
+      renewRunReservation: taskRenewRunReservation,
       updateStatus: taskUpdateStatus,
       updateStatusIfReservation: taskUpdateStatusIfReservation,
       updateStatusForExecutionContract: taskUpdateStatusForExecutionContract,
@@ -271,6 +274,7 @@ describe('driveTaskFromVerify', () => {
       opFindById,
       taskFindById,
       taskReleaseRunReservation,
+      taskRenewRunReservation,
       taskTopicFindByOperationId,
       taskUpdateStatus,
       taskUpdateStatusForExecutionContract,
@@ -292,6 +296,7 @@ describe('driveTaskFromVerify', () => {
     runCompleteTaskDrive.mockResolvedValue(true);
     runReleaseTaskDrive.mockResolvedValue(true);
     runRenewTaskDrive.mockResolvedValue(true);
+    taskRenewRunReservation.mockResolvedValue(true);
     taskUpdateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
     taskUpdateStatusForExecutionContract.mockResolvedValue({ id: 'task-1', status: 'paused' });
     scheduleCapReached.mockResolvedValue(false);
@@ -346,6 +351,17 @@ describe('driveTaskFromVerify', () => {
     });
     expect(runClaimTaskDrive).toHaveBeenCalledWith('run-1');
     expect(rearmHeartbeatAfterVerify).not.toHaveBeenCalled();
+  });
+
+  it('renews the task completion reservation while Verify drives the task', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(taskRenewRunReservation).toHaveBeenCalledWith(
+      'task-1',
+      'completion:op-1:lease-1',
+    );
   });
 
   it('passed → keeps a recurring task scheduled', async () => {
@@ -412,6 +428,7 @@ describe('driveTaskFromVerify', () => {
       status: 'scheduled',
     });
     scheduleCapReached.mockResolvedValue(true);
+    taskRenewRunReservation.mockResolvedValue(false);
     serviceUpdateStatus.mockResolvedValueOnce(null);
 
     await driveTaskFromVerify(db, 'u1', 'op-1');

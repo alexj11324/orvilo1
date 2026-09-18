@@ -27,6 +27,8 @@ import { VerifyStatusService } from './statusService';
 
 const log = debug('orvilo-server:verify-settle');
 
+class CompletionReservationLostError extends Error {}
+
 const TERMINAL_TASK_STATUS = new Set(['canceled', 'completed', 'failed']);
 const MAX_OPERATION_ANCESTORS = 32;
 
@@ -145,6 +147,7 @@ export const driveTaskFromVerify = async (
     // subsequent task CAS updates.
     const completionReservationId =
       originalCompletionReservationId ?? correctiveCompletionReservationId;
+    let completionReservationActive = Boolean(completionReservationId);
 
     const taskTopic = op.topicId
       ? await new TaskTopicModel(db, userId, workspaceId).findByTopicId(op.topicId)
@@ -176,29 +179,78 @@ export const driveTaskFromVerify = async (
     // effect below succeeds, so a process death can be reclaimed.
     const taskDriveOwner = await runModel.claimTaskDrive(run.id);
     if (!taskDriveOwner) return;
-    let leaseFailure: Error | undefined;
-    leaseTimer = setInterval(() => {
-      renewal = renewal
-        .then(async () => {
-          if (!(await runModel.renewTaskDrive(run.id, taskDriveOwner))) {
-            throw new Error('Task-drive lease ownership was lost');
-          }
-        })
-        .catch((error) => {
-          leaseFailure = error instanceof Error ? error : new Error(String(error));
-        });
-    }, 60_000);
-    leaseTimer.unref?.();
-    const renewTaskDrive = async () => {
-      await renewal;
-      if (leaseFailure) throw leaseFailure;
+    let taskDriveLeaseFailure: Error | undefined;
+    let completionLeaseFailure: Error | undefined;
+    const renewTaskDriveLease = async () => {
       if (!(await runModel.renewTaskDrive(run.id, taskDriveOwner))) {
         throw new Error('Task-drive lease ownership was lost');
       }
     };
+    const renewCompletionReservation = async () => {
+      if (
+        completionReservationId &&
+        completionReservationActive &&
+        !(await taskModel.renewRunReservation(taskOperation.taskId, completionReservationId)) &&
+        completionReservationActive
+      ) {
+        throw new CompletionReservationLostError(
+          'Task completion reservation ownership was lost',
+        );
+      }
+    };
+    leaseTimer = setInterval(() => {
+      renewal = renewal
+        .then(async () => {
+          try {
+            await renewTaskDriveLease();
+          } catch (error) {
+            taskDriveLeaseFailure = error instanceof Error ? error : new Error(String(error));
+            return;
+          }
+          try {
+            await renewCompletionReservation();
+          } catch (error) {
+            completionLeaseFailure = error instanceof Error ? error : new Error(String(error));
+          }
+        })
+        .catch((error) => {
+          taskDriveLeaseFailure = error instanceof Error ? error : new Error(String(error));
+        });
+    }, 60_000);
+    leaseTimer.unref?.();
+    const retireLostCompletionReservation = async (): Promise<false> => {
+      completionReservationActive = false;
+      completionLeaseFailure = undefined;
+      if (!(await runModel.completeTaskDrive(run.id, taskDriveOwner))) {
+        throw new Error('Task-drive lease expired after completion reservation ownership was lost');
+      }
+      return false;
+    };
+    const renewTaskDrive = async (): Promise<boolean> => {
+      await renewal;
+      if (taskDriveLeaseFailure) throw taskDriveLeaseFailure;
+      if (completionLeaseFailure instanceof CompletionReservationLostError) {
+        return retireLostCompletionReservation();
+      }
+      if (completionLeaseFailure) throw completionLeaseFailure;
+      await renewTaskDriveLease();
+      try {
+        await renewCompletionReservation();
+      } catch (error) {
+        if (error instanceof CompletionReservationLostError) {
+          return retireLostCompletionReservation();
+        }
+        throw error;
+      }
+      return true;
+    };
     const retireSupersededDrive = async () => {
       log('verify settle ignored superseded generation task=%s', taskOperation.taskId);
-      await renewTaskDrive();
+      completionReservationActive = false;
+      completionLeaseFailure = undefined;
+      await renewal;
+      if (taskDriveLeaseFailure) throw taskDriveLeaseFailure;
+      await renewTaskDriveLease();
       if (!(await runModel.completeTaskDrive(run.id, taskDriveOwner))) {
         throw new Error('Task-drive lease expired before stale generation was retired');
       }
@@ -258,12 +310,12 @@ export const driveTaskFromVerify = async (
     // The review already retries a check whose review could not run. An
     // `errored` result here is the reviewer's problem, and another builder
     // attempt would only re-deliver into the same broken review.
-    await renewTaskDrive();
+    if (!(await renewTaskDrive())) return;
     const goalReview =
       run.status === 'passed'
         ? await reviewGoalDelivery(db, userId, taskOperation.taskId, operationId, workspaceId)
         : undefined;
-    await renewTaskDrive();
+    if (!(await renewTaskDrive())) return;
     let outcome =
       goalReview?.status === 'rejected'
         ? 'failed'
@@ -285,7 +337,7 @@ export const driveTaskFromVerify = async (
     if (outcome === 'passed') {
       if (!op.topicId) {
         outcome = 'integration_blocked';
-        await renewTaskDrive();
+        if (!(await renewTaskDrive())) return;
         await taskModel.updateStatus(taskOperation.taskId, 'paused', {
           error: 'Verified run is missing its delivery topic',
         });
@@ -296,12 +348,12 @@ export const driveTaskFromVerify = async (
           taskTopic.operationId !== taskOperation.id
         ) {
           outcome = 'integration_blocked';
-          await renewTaskDrive();
+          if (!(await renewTaskDrive())) return;
           await taskModel.updateStatus(taskOperation.taskId, 'paused', {
             error: 'Verified run is no longer the active delivery generation',
           });
         } else {
-          await renewTaskDrive();
+          if (!(await renewTaskDrive())) return;
           const integration = await new TaskIntegrationService(
             db,
             userId,
@@ -320,7 +372,7 @@ export const driveTaskFromVerify = async (
           }
           if (integration === 'blocked') {
             outcome = 'integration_blocked';
-            await renewTaskDrive();
+            if (!(await renewTaskDrive())) return;
             await taskModel.updateStatus(taskOperation.taskId, 'paused', {
               error: 'Verified delivery could not be published',
             });
@@ -342,7 +394,7 @@ export const driveTaskFromVerify = async (
           currentTask.automationMode === 'schedule' &&
           (await new TaskLifecycleService(db, userId, workspaceId).scheduleCapReached(currentTask))
         ) {
-          await renewTaskDrive();
+          if (!(await renewTaskDrive())) return;
           const completion = completionReservationId
             ? await new TaskService(db, userId, workspaceId).updateStatus(
                 { id: taskOperation.taskId, status: 'completed' },
@@ -357,6 +409,7 @@ export const driveTaskFromVerify = async (
             await retireSupersededDrive();
             return;
           }
+          completionReservationActive = false;
           log('verify passed → capped schedule task %s completed', taskOperation.taskId);
         } else {
           log('verify passed → recurring task %s remains scheduled', taskOperation.taskId);
@@ -364,7 +417,7 @@ export const driveTaskFromVerify = async (
       } else {
         // The verify → TaskService → aiAgent → agentRuntime completion → verify
         // cycle is safe statically since every use is call-time (inside this fn).
-        await renewTaskDrive();
+        if (!(await renewTaskDrive())) return;
         const completion = await new TaskService(db, userId, workspaceId).updateStatus({
           expectedContract,
           id: taskOperation.taskId,
@@ -374,6 +427,7 @@ export const driveTaskFromVerify = async (
           await retireSupersededDrive();
           return;
         }
+        completionReservationActive = false;
         log('verify passed → task %s completed', taskOperation.taskId);
       }
     } else {
@@ -420,7 +474,7 @@ export const driveTaskFromVerify = async (
       } else {
         // Verification outcomes belong to the task itself. Do not create an inbox
         // brief here: a verifier rejection/error is not a separate user todo.
-        await renewTaskDrive();
+        if (!(await renewTaskDrive())) return;
         const paused = await taskModel.updateStatusForExecutionContract(
           taskOperation.taskId,
           'paused',
@@ -435,6 +489,7 @@ export const driveTaskFromVerify = async (
           await retireSupersededDrive();
           return;
         }
+        completionReservationActive = false;
         log(
           isErrored ? 'verify errored → task %s paused' : 'verify failed → task %s paused',
           taskOperation.taskId,
@@ -466,7 +521,7 @@ export const driveTaskFromVerify = async (
               : outcome === 'unjudgeable'
                 ? 'Acceptance review could not judge this delivery from the captured evidence. Review it manually, or restate the check so evidence can settle it.'
                 : undefined;
-      await renewTaskDrive();
+      if (!(await renewTaskDrive())) return;
       await new TaskResultBridgeService(db, userId, workspaceId).deliver({
         operationId,
         reason: outcome === 'passed' ? 'done' : 'error',
@@ -489,7 +544,7 @@ export const driveTaskFromVerify = async (
     // this is the server-side driver for long-horizon goals, and without it a
     // goal only progresses while some client keeps ticking it.
     try {
-      await renewTaskDrive();
+      if (!(await renewTaskDrive())) return;
       const goal = await new GoalModel(db, userId, workspaceId).findByGraphTask(
         taskOperation.taskId,
       );
@@ -502,6 +557,7 @@ export const driveTaskFromVerify = async (
     }
 
     if (completionReservationId) {
+      completionReservationActive = false;
       await taskModel.releaseRunReservation(taskOperation.taskId, completionReservationId);
     }
     if (currentTask.automationMode === 'heartbeat') {
@@ -509,7 +565,7 @@ export const driveTaskFromVerify = async (
         taskOperation.taskId,
       );
     }
-    await renewTaskDrive();
+    if (!(await renewTaskDrive())) return;
     if (!(await runModel.completeTaskDrive(run.id, taskDriveOwner))) {
       throw new Error('Task-drive lease expired before completion');
     }

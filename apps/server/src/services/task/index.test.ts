@@ -2173,8 +2173,119 @@ describe('TaskService', () => {
 
       await new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' });
 
-      expect(mockTaskModel.lockForStatusChange).not.toHaveBeenCalled();
+      expect(mockTaskModel.lockForStatusChange).toHaveBeenCalledWith(['task-p']);
       expect(mockTaskModel.addActivities).not.toHaveBeenCalled();
+    });
+
+    it('interrupts a shared operation once before cleaning cascade worktrees', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.updateStatusForIds.mockResolvedValue([{ ...parent, status: 'canceled' }]);
+      mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([
+        { operationId: 'op-shared', status: 'running', taskId: 'task-p', topicId: 'topic-1' },
+        { operationId: 'op-shared', status: 'running', taskId: 'task-p', topicId: 'topic-2' },
+      ]);
+      mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([]);
+      (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
+
+      await new TaskService(db, userId).updateStatusCascade({
+        id: 'P-1',
+        status: 'canceled',
+      });
+
+      expect(interruptTaskMock).toHaveBeenCalledTimes(1);
+      expect(interruptTaskMock).toHaveBeenCalledWith({ operationId: 'op-shared' });
+      expect(taskWorktreeCleanupMock).toHaveBeenCalledWith('task-p');
+    });
+
+    it('preserves worktrees when a late cascade interruption is unconfirmed', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.updateStatusForIds.mockResolvedValue([{ ...parent, status: 'canceled' }]);
+      mockTaskModel.lockForStatusChange.mockResolvedValue([parent]);
+      mockTaskTopicModel.findRunningByTaskIds
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { operationId: 'op-late', status: 'running', taskId: 'task-p', topicId: 'topic-late' },
+        ]);
+      mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([
+        { operationId: 'op-late', status: 'canceled', taskId: 'task-p', topicId: 'topic-late' },
+      ]);
+      interruptTaskMock.mockResolvedValueOnce({ success: false });
+      (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
+
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+      ).rejects.toThrow('Task interruption was not confirmed');
+
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+      expect(cascadeManyMock).not.toHaveBeenCalled();
+    });
+
+    it('preserves task state when a running cascade topic has no operation identity', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([
+        { operationId: null, status: 'running', taskId: 'task-p', topicId: 'topic-starting' },
+      ]);
+
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+      ).rejects.toThrow('running topic has no operation identity');
+
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+    });
+
+    it('preserves worktrees when a late cascade topic has no operation identity', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.updateStatusForIds.mockResolvedValue([{ ...parent, status: 'canceled' }]);
+      mockTaskModel.lockForStatusChange.mockResolvedValue([parent]);
+      mockTaskTopicModel.findRunningByTaskIds
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { operationId: null, status: 'running', taskId: 'task-p', topicId: 'topic-starting' },
+        ]);
+      mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([
+        { operationId: null, status: 'canceled', taskId: 'task-p', topicId: 'topic-starting' },
+      ]);
+      (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
+
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+      ).rejects.toThrow('running topic has no operation identity');
+
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
+      expect(cascadeManyMock).not.toHaveBeenCalled();
+    });
+
+    it('rolls back when an unconfirmed operation appears under the task lock', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.lockForStatusChange.mockResolvedValue([parent]);
+      mockTaskTopicModel.findRunningByTaskIds
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { operationId: 'op-raced', status: 'running', taskId: 'task-p', topicId: 'topic-raced' },
+        ]);
+      (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
+
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+      ).rejects.toThrow('Task execution changed during cancellation');
+
+      expect(interruptTaskMock).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
     });
   });
 

@@ -340,6 +340,19 @@ export class TaskService {
     }
   };
 
+  private interruptTaskOperations = async (
+    service: AiAgentService,
+    operationIds: Array<string | null | undefined>,
+  ): Promise<Map<string, PromiseSettledResult<void>>> => {
+    const uniqueOperationIds = [
+      ...new Set(operationIds.filter((id): id is string => Boolean(id))),
+    ];
+    const settled = await Promise.allSettled(
+      uniqueOperationIds.map((operationId) => this.interruptTaskOperation(service, operationId)),
+    );
+    return new Map(uniqueOperationIds.map((operationId, index) => [operationId, settled[index]!]));
+  };
+
   /**
    * Cancel a running topic: interrupt the remote operation (if any), then
    * mark the topic as `canceled` and pause its parent task.
@@ -1005,19 +1018,31 @@ export class TaskService {
 
     const runningTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
     if (runningTopics.length > 0) {
-      const settled = await Promise.allSettled(
-        runningTopics.map(async (topic) => {
-          if (topic.operationId) {
-            await this.interruptTaskOperation(aiAgentService, topic.operationId);
-          }
-        }),
+      if (runningTopics.some((topic) => !topic.operationId)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Task interruption could not be confirmed because a running topic has no operation identity.',
+        });
+      }
+      const interruptionResults = await this.interruptTaskOperations(
+        aiAgentService,
+        runningTopics.map((topic) => topic.operationId),
       );
-      const failure = settled.find((result) => result.status === 'rejected');
+      const failure = [...interruptionResults.values()].find(
+        (result) => result.status === 'rejected',
+      );
       if (failure) {
         // Persist the interrupts that did succeed before surfacing the error,
         // so an actually-stopped operation is not left recorded as running.
-        for (const [index, topic] of runningTopics.entries()) {
-          if (settled[index].status !== 'fulfilled' || !topic.topicId) continue;
+        for (const topic of runningTopics) {
+          if (
+            !topic.topicId ||
+            (topic.operationId &&
+              interruptionResults.get(topic.operationId)?.status !== 'fulfilled')
+          ) {
+            continue;
+          }
           await this.taskTopicModel
             .cancelIfRunning(topic.taskId, topic.topicId)
             .catch(() => undefined);
@@ -1025,22 +1050,72 @@ export class TaskService {
         throw failure.reason;
       }
     }
+    const confirmedOperationIds = new Set(
+      runningTopics.flatMap((topic) => (topic.operationId ? [topic.operationId] : [])),
+    );
+
+    // Close the common snapshot-to-transaction race without holding database
+    // locks while a device process exits. Anything that still appears after
+    // this pass is rejected inside the transaction below.
+    const resnapshotTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
+    if (resnapshotTopics.some((topic) => !topic.operationId)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'Task interruption could not be confirmed because a running topic has no operation identity.',
+      });
+    }
+    const resnapshotResults = await this.interruptTaskOperations(
+      aiAgentService,
+      resnapshotTopics
+        .filter((topic) => !confirmedOperationIds.has(topic.operationId ?? ''))
+        .map((topic) => topic.operationId),
+    );
+    const resnapshotFailure = [...resnapshotResults.values()].find(
+      (result) => result.status === 'rejected',
+    );
+    if (resnapshotFailure) throw resnapshotFailure.reason;
+    for (const [operationId, result] of resnapshotResults) {
+      if (result.status === 'fulfilled') confirmedOperationIds.add(operationId);
+    }
 
     const completedAt = new Date();
     let updatedTasks: TaskItem[] = [];
-    let canceledTopics: Awaited<ReturnType<TaskTopicModel['cancelRunningByTaskIds']>> = [];
     await this.db.transaction(async (tx) => {
       const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
       const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
+      // Hold every target task row while checking for topics that started after
+      // the interruption passes. A competing run must cross the same
+      // task-status boundary, so no new execution can slip between this check
+      // and the terminal status update.
+      const locked = await taskModel.lockForStatusChange(targetIds);
+      const transactionRunningTopics = await taskTopicModel.findRunningByTaskIds(targetIds);
+      if (transactionRunningTopics.some((topic) => !topic.operationId)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Task interruption could not be confirmed because a running topic has no operation identity.',
+        });
+      }
+      if (
+        transactionRunningTopics.some(
+          (topic) => !confirmedOperationIds.has(topic.operationId ?? ''),
+        )
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task execution changed during cancellation. Retry to stop the current run.',
+        });
+      }
+
       // Cancel by the frozen id set rather than the pre-read topic list, so a
       // topic that started between the snapshot and this transaction is still
       // closed together with the status update.
-      canceledTopics = await taskTopicModel.cancelRunningByTaskIds(targetIds);
+      await taskTopicModel.cancelRunningByTaskIds(targetIds);
       // The pre-transaction snapshot only chose *which* tasks; what each one
       // is leaving is read under the lock, so a collaborator's edit between
       // the dialog and this write is logged as it really was.
-      const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
       updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
         completedAt,
         runReservationExpiresAt: null,
@@ -1074,14 +1149,6 @@ export class TaskService {
         );
       }
     });
-
-    // Best-effort: stop any operation discovered only inside the transaction.
-    const interruptedOperationIds = new Set(runningTopics.map((topic) => topic.operationId));
-    await Promise.allSettled(
-      canceledTopics
-        .filter((topic) => topic.operationId && !interruptedOperationIds.has(topic.operationId))
-        .map((topic) => aiAgentService.interruptTask({ operationId: topic.operationId! })),
-    );
 
     // Every cascaded task reached a terminal status — its merge pipeline is
     // abandoned, so tear down any provisioned worktrees it left behind.

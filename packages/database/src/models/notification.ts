@@ -8,6 +8,7 @@ import {
   NOTIFICATION_BULK_PREPARE_LIMIT,
   NOTIFICATION_BULK_PREPARE_WINDOW_MS,
   notificationScopeKey,
+  parseNotificationBulkFingerprint,
 } from '@orvilo/types';
 import {
   and,
@@ -124,6 +125,23 @@ export class NotificationModel {
         return [eq(notifications.isArchived, false)];
       }
     }
+  };
+
+  private feedWhere = (opts: {
+    filter?: Exclude<NotificationPresentationFilter, 'all'>;
+    kind?: NotificationFeedKind;
+  }): SQL[] => {
+    const conditions: SQL[] = [...this.scope(), this.resourceReadable()];
+    if (opts.kind === 'action') {
+      conditions.push(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt));
+      if (opts.filter === 'archived' || opts.filter === 'snoozed') {
+        conditions.push(...this.presentationWhere(opts.filter));
+      }
+    } else {
+      conditions.push(...this.presentationWhere(opts.filter));
+      if (opts.kind) conditions.push(eq(notifications.kind, opts.kind));
+    }
+    return conditions;
   };
 
   async list(
@@ -298,18 +316,12 @@ export class NotificationModel {
     } = {},
   ) {
     const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
-    const conditions: SQL[] = [...this.scope(), this.resourceReadable()];
-    if (opts.kind === 'action') {
-      conditions.push(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt));
-      // Needs-you stays source-driven: personal archive must not hide an
-      // unresolved request. Archived / snoozed filters still apply when asked.
-      if (opts.filter === 'archived' || opts.filter === 'snoozed') {
-        conditions.push(...this.presentationWhere(opts.filter));
-      }
-    } else {
-      conditions.push(...this.presentationWhere(opts.filter));
-      if (opts.kind) conditions.push(eq(notifications.kind, opts.kind));
-    }
+    const conditions: SQL[] = [
+      ...this.feedWhere({
+        filter: opts.filter === 'all' ? undefined : opts.filter,
+        kind: opts.kind,
+      }),
+    ];
 
     if (opts.cursor) {
       const cursorRow = await this.db
@@ -383,15 +395,20 @@ export class NotificationModel {
       );
   }
 
-  async archiveAll(cutoffRevision?: number) {
+  async archiveAll(
+    cutoffRevision?: number,
+    query: {
+      filter?: Exclude<NotificationPresentationFilter, 'all'>;
+      kind?: NotificationFeedKind;
+    } = {},
+  ) {
     const cutoff = cutoffRevision ?? (await this.snapshotCutoff());
     return this.db
       .update(notifications)
       .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
       .where(
         and(
-          ...this.scope(),
-          eq(notifications.isArchived, false),
+          ...this.feedWhere(query),
           or(eq(notifications.kind, 'update'), sql`${notifications.resolvedAt} is not null`)!,
           sql`${notifications.latestFeedRevision} <= ${cutoff}`,
         ),
@@ -404,6 +421,9 @@ export class NotificationModel {
    */
   async prepareBulk(params: { action: NotificationBulkAction; queryFingerprint: string }) {
     if (params.action !== 'archive' && params.action !== 'mark_read') {
+      throw new NotificationBulkError('FORBIDDEN_ACTION');
+    }
+    if (!parseNotificationBulkFingerprint(params.action, params.queryFingerprint)) {
       throw new NotificationBulkError('FORBIDDEN_ACTION');
     }
     const windowStart = new Date(Date.now() - NOTIFICATION_BULK_PREPARE_WINDOW_MS);
@@ -468,10 +488,13 @@ export class NotificationModel {
       throw new NotificationBulkError('EXPIRED');
     }
 
+    const query = parseNotificationBulkFingerprint(claimed.action, claimed.queryFingerprint);
+    if (!query) throw new NotificationBulkError('FORBIDDEN_ACTION');
+
     if (claimed.action === 'archive') {
-      await this.archiveAll(claimed.cutoffRevision);
+      await this.archiveAll(claimed.cutoffRevision, query);
     } else if (claimed.action === 'mark_read') {
-      await this.markAllAsReadAt(claimed.cutoffRevision);
+      await this.markAllAsReadAt(claimed.cutoffRevision, query);
     } else {
       throw new NotificationBulkError('FORBIDDEN_ACTION');
     }
@@ -494,7 +517,13 @@ export class NotificationModel {
     return Number(row?.max ?? 0);
   }
 
-  private async markAllAsReadAt(cutoffRevision: number) {
+  private async markAllAsReadAt(
+    cutoffRevision: number,
+    query: {
+      filter?: Exclude<NotificationPresentationFilter, 'all'>;
+      kind?: NotificationFeedKind;
+    } = {},
+  ) {
     const now = new Date();
     return this.db
       .update(notifications)
@@ -505,9 +534,8 @@ export class NotificationModel {
       })
       .where(
         and(
-          ...this.scope(),
+          ...this.feedWhere(query),
           eq(notifications.isRead, false),
-          eq(notifications.isArchived, false),
           sql`${notifications.latestFeedRevision} <= ${cutoffRevision}`,
         ),
       );

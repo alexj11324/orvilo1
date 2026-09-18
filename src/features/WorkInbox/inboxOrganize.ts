@@ -1,4 +1,8 @@
-import type { NotificationPresentationFilter } from '@orvilo/types';
+import {
+  notificationBulkFingerprint,
+  type NotificationFeedKind,
+  type NotificationPresentationFilter,
+} from '@orvilo/types';
 
 export const INBOX_FILTER_CHIPS = ['all', 'unread', 'mentions', 'snoozed', 'archived'] as const;
 
@@ -16,7 +20,8 @@ export const snoozeUntilIso = (now = new Date(), hours = SNOOZE_HOURS): string =
 export const inboxBulkFingerprint = (
   action: 'archive' | 'mark_read',
   chip: InboxFilterChip,
-): string => `${action}:${chip}`;
+  kind: NotificationFeedKind,
+): string => notificationBulkFingerprint(action, chip, kind);
 
 const ALLOWED_HTTPS_HOSTS = ['github.com', 'linear.app'] as const;
 

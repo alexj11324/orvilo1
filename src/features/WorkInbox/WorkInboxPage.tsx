@@ -246,27 +246,27 @@ const WorkInboxPage = memo(() => {
     try {
       const prepared = await notificationService.prepareBulk({
         action: 'mark_read',
-        queryFingerprint: inboxBulkFingerprint('mark_read', filterChip),
+        queryFingerprint: inboxBulkFingerprint('mark_read', filterChip, kind),
       });
       await notificationService.applyBulk(prepared.data.token);
       await refresh();
     } catch {
       organizeFailed();
     }
-  }, [filterChip, organizeFailed, refresh]);
+  }, [filterChip, kind, organizeFailed, refresh]);
 
   const archiveAll = useCallback(async () => {
     try {
       const prepared = await notificationService.prepareBulk({
         action: 'archive',
-        queryFingerprint: inboxBulkFingerprint('archive', filterChip),
+        queryFingerprint: inboxBulkFingerprint('archive', filterChip, kind),
       });
       await notificationService.applyBulk(prepared.data.token);
       await refresh();
     } catch {
       organizeFailed();
     }
-  }, [filterChip, organizeFailed, refresh]);
+  }, [filterChip, kind, organizeFailed, refresh]);
 
   const filterLabel = (chip: InboxFilterChip) => {
     if (chip === 'all') return t('inbox.allStatus');

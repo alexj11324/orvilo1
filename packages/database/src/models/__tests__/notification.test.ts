@@ -875,6 +875,37 @@ describe('NotificationModel (integration)', () => {
       await expect(model.applyBulk(prepared.token)).rejects.toMatchObject({ code: 'CONSUMED' });
     });
 
+    it('archives only cards that match the prepared filter', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          category: 'mention',
+          dedupeKey: 'mention-keep-scope',
+          kind: 'update',
+          latestFeedRevision: 2,
+          title: 'Mentioned',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          category: 'workspace',
+          dedupeKey: 'plain-keep-scope',
+          kind: 'update',
+          latestFeedRevision: 2,
+          title: 'Ordinary',
+        }),
+      );
+
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:mentions:update',
+      });
+      await model.applyBulk(prepared.token);
+
+      const remaining = await model.list();
+      expect(remaining.map((row) => row.title)).toEqual(['Ordinary']);
+    });
+
     it('does not let another user consume a snapshot', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       const other = new NotificationModel(serverDB, otherUserId, { workspaceId: null });
@@ -914,13 +945,13 @@ describe('NotificationModel (integration)', () => {
           action: 'archive' as const,
           cutoffRevision: index + 1,
           expiresAt: new Date(Date.now() + 60_000),
-          queryFingerprint: `archive:${index}`,
+          queryFingerprint: 'archive:all',
           scopeKey: 'personal',
           userId,
         })),
       );
       await expect(
-        model.prepareBulk({ action: 'archive', queryFingerprint: 'archive:overflow' }),
+        model.prepareBulk({ action: 'archive', queryFingerprint: 'archive:all' }),
       ).rejects.toMatchObject({ code: 'RATE_LIMITED' });
     });
   });

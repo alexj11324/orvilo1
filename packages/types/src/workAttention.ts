@@ -29,6 +29,42 @@ export type NotificationFeedTab = 'action' | 'activity';
 
 export type NotificationPresentationFilter = 'all' | 'archived' | 'mentions' | 'snoozed' | 'unread';
 
+const PRESENTATION_FILTERS: readonly NotificationPresentationFilter[] = [
+  'all',
+  'archived',
+  'mentions',
+  'snoozed',
+  'unread',
+];
+const FEED_KINDS: readonly NotificationFeedKind[] = ['action', 'update'];
+
+export const notificationBulkFingerprint = (
+  action: NotificationBulkAction,
+  chip: NotificationPresentationFilter,
+  kind?: NotificationFeedKind,
+): string => (kind ? `${action}:${chip}:${kind}` : `${action}:${chip}`);
+
+/** Server-validated Inbox bulk query. `filter` omitted means the All chip. */
+export const parseNotificationBulkFingerprint = (
+  action: NotificationBulkAction,
+  fingerprint: string,
+):
+  | { filter?: Exclude<NotificationPresentationFilter, 'all'>; kind?: NotificationFeedKind }
+  | undefined => {
+  const parts = fingerprint.split(':');
+  if (parts[0] !== action) return undefined;
+  const chip = parts[1];
+  if (!PRESENTATION_FILTERS.includes(chip as NotificationPresentationFilter)) return undefined;
+  const filter =
+    chip === 'all' ? undefined : (chip as Exclude<NotificationPresentationFilter, 'all'>);
+  if (parts.length === 2) return { filter };
+  const kind = parts[2];
+  if (parts.length === 3 && FEED_KINDS.includes(kind as NotificationFeedKind)) {
+    return { filter, kind: kind as NotificationFeedKind };
+  }
+  return undefined;
+};
+
 export type AttentionErrorCode =
   | 'ALREADY_DECIDED'
   | 'CURSOR_INVALID'

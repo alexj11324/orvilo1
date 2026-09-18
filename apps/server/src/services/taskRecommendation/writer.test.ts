@@ -21,8 +21,8 @@ describe('TaskRecommendationWriter', () => {
         {
           instruction: 'Inspect the pull request and return a private risk report.',
           reason: 'The lifecycle change needs focused analysis.',
-          sourceUrls: ['https://github.com/lobehub/lobehub/pull/1'],
-          title: 'Review LobeHub lifecycle changes',
+          sourceUrls: ['https://github.com/alexj11324/orvilo1/pull/1'],
+          title: 'Review Orvilo lifecycle changes',
         },
       ],
     };

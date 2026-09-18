@@ -31,7 +31,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuestionArgs>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
     const { t } = useTranslation('plugin');
-    const label = t('builtins.lobe-user-interaction.apiName.askUserQuestion');
+    const label = t('builtins.orvilo-user-interaction.apiName.askUserQuestion');
     const argsQuestions = normalizeAskUserQuestions(args);
     const questions = argsQuestions.length ? argsQuestions : normalizeAskUserQuestions(partialArgs);
     const firstQuestion = questions[0];

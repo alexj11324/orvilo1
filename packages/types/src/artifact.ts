@@ -8,10 +8,10 @@ export interface PortalArtifact {
 }
 
 export enum ArtifactType {
-  Code = 'application/lobe.artifacts.code',
+  Code = 'application/orvilo.artifacts.code',
   Default = 'html',
   Python = 'python',
-  React = 'application/lobe.artifacts.react',
+  React = 'application/orvilo.artifacts.react',
 }
 
 export interface SharedArtifactData {

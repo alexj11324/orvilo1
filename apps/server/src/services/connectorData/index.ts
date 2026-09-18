@@ -13,7 +13,7 @@ import type { TwitterConnectorClient } from '@orvilo/connector-data/twitter';
 import { createTwitterMarketConnectorClient } from '@orvilo/connector-data/twitter';
 
 import { ConnectorModel } from '@/database/models/connector';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getComposioClient, isComposioConnectedAccountLookupNotFoundError } from '@/libs/composio';
 import { MarketService } from '@/server/services/market';
 
@@ -67,11 +67,11 @@ const isActiveComposioReference = (
  * - The database and user scope come from an authenticated server context
  *
  * Returns:
- * - Provider clients backed by Composio or LobeHub Market
+ * - Provider clients backed by Composio or Orvilo Market
  */
 export class ConnectorDataService {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}
@@ -122,7 +122,7 @@ export class ConnectorDataService {
   };
 
   /**
-   * Resolves the current user's LobeHub Market GitHub connection.
+   * Resolves the current user's Orvilo Market GitHub connection.
    *
    * Use when:
    * - A server workflow needs GitHub REST or GraphQL data without handling OAuth credentials
@@ -229,7 +229,7 @@ export class ConnectorDataService {
   };
 
   /**
-   * Resolves the current user's LobeHub Market X connection.
+   * Resolves the current user's Orvilo Market X connection.
    *
    * Use when:
    * - An onboarding collector needs read-only public X profile and recent-post evidence

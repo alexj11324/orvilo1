@@ -2,12 +2,12 @@ import debug from 'debug';
 
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { finalizeVerifyRun } from './settle';
 import { VerifyStatusService } from './statusService';
 
-const log = debug('lobe-server:verify-verifier-terminal');
+const log = debug('orvilo-server:verify-verifier-terminal');
 
 const TERMINAL_RESULT_STATUSES = new Set(['passed', 'failed', 'errored', 'skipped']);
 
@@ -25,7 +25,7 @@ export interface SettleVerifierCheckFromTerminalParams {
  * still stuck in pending/running once the verifier child op is terminal.
  */
 export const settleVerifierCheckFromTerminal = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: SettleVerifierCheckFromTerminalParams,
   workspaceId?: string,

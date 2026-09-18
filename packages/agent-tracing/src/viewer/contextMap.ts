@@ -15,7 +15,7 @@ import {
   TERMINAL_LANE_COLOR,
 } from './contextMapPalette';
 
-// ANSI helpers — weight from the terminal's own attributes, hue from the LobeHub scales.
+// ANSI helpers — weight from the terminal's own attributes, hue from the Orvilo scales.
 const dim = (s: string) => `\x1B[2m${s}\x1B[22m`;
 const bold = (s: string) => `\x1B[1m${s}\x1B[22m`;
 const red = (s: string) => ansi(TERMINAL_LANE_COLOR.miss, s);

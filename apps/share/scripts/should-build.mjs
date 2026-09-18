@@ -13,7 +13,7 @@ const manifestPath =
 //
 // Matched anywhere in the path, not anchored: a host repo that builds this app
 // from a submodule reports the same files under its own prefix
-// (`lobehub/apps/share/...`), and both spellings must trigger.
+// (`aspectlylabs/apps/share/...`), and both spellings must trigger.
 const META_TRIGGER_SEGMENTS = [
   'apps/share/',
   'plugins/vite/',

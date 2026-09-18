@@ -131,7 +131,7 @@ describe('artifact publish', () => {
     ).not.toHaveBeenCalled();
   });
 
-  const manifestPath = () => path.join(workingDirectory, '.lobehub', 'artifacts.json');
+  const manifestPath = () => path.join(workingDirectory, '.orvilo', 'artifacts.json');
 
   const readManifest = () => JSON.parse(fs.readFileSync(manifestPath(), 'utf8'));
 

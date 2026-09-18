@@ -1,4 +1,4 @@
-export const RECENT_DIRS_KEY = 'lobechat-recent-working-directories';
+export const RECENT_DIRS_KEY = 'orvilo-recent-working-directories';
 export const MAX_RECENT_DIRS = 20;
 
 export interface RecentDirEntry {

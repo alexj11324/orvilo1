@@ -9,6 +9,7 @@ import qs from 'query-string';
 
 import { DEFAULT_LANG } from '@/const/locale';
 import { OFFICIAL_SITE, OFFICIAL_URL } from '@/const/url';
+import metadataCopy from '@/locales/default/metadata';
 import { type Locales } from '@/locales/resources';
 import { getCanonicalUrl } from '@/server/utils/url';
 
@@ -28,11 +29,11 @@ export const AUTHOR_LIST = {
     name: 'CanisMinor',
     url: 'https://github.com/canisminor1990',
   },
-  lobehub: {
+  orvilo: {
     avatar: 'https://avatars.githubusercontent.com/u/131470832?v=4',
     desc: 'Official Account',
-    name: 'LobeHub',
-    url: 'https://github.com/lobehub',
+    name: 'Orvilo',
+    url: 'https://github.com/orvilo',
   },
 };
 
@@ -106,7 +107,7 @@ export class Ld {
             'email': BRANDING_EMAIL.support,
           }
         : undefined,
-      'description': `Agent teammates that grow with you\n${BRANDING_NAME} is a work-and-lifestyle space to find, build, and collaborate with agent teams that grow with you.`,
+      'description': `Agent teammates that grow with you\n${metadataCopy['chat.description'].replace('{{appName}}', BRANDING_NAME)}`,
       'email': BRANDING_EMAIL.business,
       // No `founders`: upstream named its own founders here, and carrying that
       // over would publish a false statement about named individuals under a
@@ -134,8 +135,8 @@ export class Ld {
       '@type': 'Organization',
     };
     if (!ids || ids.length === 0) return defaultAuthor;
-    if (ids.length === 1 && ids[0] === 'lobehub') return defaultAuthor;
-    const personId = ids.find((id) => id !== 'lobehub');
+    if (ids.length === 1 && ids[0] === 'orvilo') return defaultAuthor;
+    const personId = ids.find((id) => id !== 'orvilo');
     if (!personId) return defaultAuthor;
     const person = (AUTHOR_LIST as any)?.[personId];
     if (!person) return defaultAuthor;

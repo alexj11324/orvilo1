@@ -58,9 +58,9 @@ export const resolveTemplateIcon = (
 export const getMainIconProvider = (
   template: TaskTemplate,
 ): TaskTemplateConnectorReference | undefined => {
-  // The self-icon union is currently the single lobehub provider id 'github';
+  // The self-icon union is currently the single orvilo provider id 'github';
   // expand `SELF_ICON_MAP` and this mapping together when more are added.
-  if (template.icon) return { identifier: template.icon, source: 'lobehub' };
+  if (template.icon) return { identifier: template.icon, source: 'orvilo' };
 
   for (const spec of getPrioritizedConnectors(template)) {
     if (getProviderMeta(spec)) return spec;

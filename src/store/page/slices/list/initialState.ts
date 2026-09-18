@@ -1,15 +1,15 @@
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 import { type PageQueryFilter } from '../../initialState';
 
 export interface ListState {
   currentPage: number;
-  documents: LobeDocument[];
+  documents: OrviloDocument[];
   documentsTotal: number;
   hasMoreDocuments: boolean;
   isDocumentListLoading: boolean;
   isLoadingMoreDocuments: boolean;
-  localPageMap: Map<string, LobeDocument>;
+  localPageMap: Map<string, OrviloDocument>;
   queryFilter?: PageQueryFilter;
   searchKeywords: string;
   showOnlyPagesNotInLibrary: boolean;

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { acceptances, verifyRuns, workspaceMembers, workspaces } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { acceptanceRouter } from '../acceptance';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(() => testDB),
 }));
@@ -29,7 +29,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 describe('acceptanceRouter purge', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let ownerId: string;
   let strangerId: string;
   let workspaceOwnerId: string;

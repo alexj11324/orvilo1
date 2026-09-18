@@ -83,13 +83,13 @@ describe('replyTemplate', () => {
               {
                 apiName: 'readUrl',
                 arguments: '{"url":"https://example.com"}',
-                identifier: 'lobe-web-browsing',
+                identifier: 'orvilo-web-browsing',
               },
             ],
           }),
         ),
       ).toBe(
-        '○ **builtin·search**(q: "test")\n○ **lobe-web-browsing·readUrl**(url: "https://example.com")',
+        '○ **builtin·search**(q: "test")\n○ **orvilo-web-browsing·readUrl**(url: "https://example.com")',
       );
     });
 
@@ -220,7 +220,7 @@ describe('replyTemplate', () => {
               {
                 apiName: 'readUrl',
                 arguments: '{"url":"https://example.com"}',
-                identifier: 'lobe-web-browsing',
+                identifier: 'orvilo-web-browsing',
               },
             ],
             stepType: 'call_tool',
@@ -228,14 +228,14 @@ describe('replyTemplate', () => {
               { apiName: 'search', identifier: 'builtin', output: 'Found 5 results' },
               {
                 apiName: 'readUrl',
-                identifier: 'lobe-web-browsing',
+                identifier: 'orvilo-web-browsing',
                 output: 'Page loaded successfully',
               },
             ],
           }),
         ),
       ).toBe(
-        `⏺ **builtin·search**(q: "test")\n⎿  success: 15 chars\n⏺ **lobe-web-browsing·readUrl**(url: "https://example.com")\n⎿  success: 24 chars\n\n💭 Processing...`,
+        `⏺ **builtin·search**(q: "test")\n⎿  success: 15 chars\n⏺ **orvilo-web-browsing·readUrl**(url: "https://example.com")\n⎿  success: 24 chars\n\n💭 Processing...`,
       );
     });
 

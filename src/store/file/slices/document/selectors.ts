@@ -1,4 +1,4 @@
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 import { type FilesStoreState } from '../../initialState';
 
@@ -25,12 +25,12 @@ const getDocumentById = (documentId: string | undefined) => (s: FilesStoreState)
 /**
  * Get all documents merged from local optimistic map and server data
  */
-const getOptimisticDocuments = (s: FilesStoreState): LobeDocument[] => {
+const getOptimisticDocuments = (s: FilesStoreState): OrviloDocument[] => {
   // Track which documents we've added
   const addedIds = new Set<string>();
 
   // Create result array - start with server documents
-  const result: LobeDocument[] = s.documents.map((doc) => {
+  const result: OrviloDocument[] = s.documents.map((doc) => {
     addedIds.add(doc.id);
     // Check if we have a local optimistic update for this document
     const localUpdate = s.localDocumentMap.get(doc.id);

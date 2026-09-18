@@ -121,7 +121,7 @@ describe('executeDeviceRpc', () => {
         '---',
         'name: agent-testing',
         'description: >',
-        '  Agentic end-to-end testing for LobeHub: backend verification via the CLI,',
+        '  Agentic end-to-end testing for Orvilo: backend verification via the CLI,',
         '  frontend verification via agent-browser (Electron).',
         '---',
         'body',
@@ -133,7 +133,7 @@ describe('executeDeviceRpc', () => {
     };
 
     expect(result.skills.find((skill) => skill.name === 'agent-testing')?.description).toBe(
-      'Agentic end-to-end testing for LobeHub: backend verification via the CLI, frontend verification via agent-browser (Electron).',
+      'Agentic end-to-end testing for Orvilo: backend verification via the CLI, frontend verification via agent-browser (Electron).',
     );
   });
 

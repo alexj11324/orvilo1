@@ -20,7 +20,7 @@ import {
 } from './types';
 import { createMCPError } from './types';
 
-const log = debug('lobe-mcp:client');
+const log = debug('orvilo-mcp:client');
 // MCP tool call timeout (milliseconds), configurable via the environment variable MCP_TOOL_TIMEOUT, default is 60000
 // Parse MCP_TOOL_TIMEOUT, only use if it's a valid positive number, otherwise fallback to default 60000
 const MCP_TOOL_TIMEOUT = (() => {
@@ -148,7 +148,7 @@ async function preCheckStdioCommand(params: {
           jsonrpc: '2.0',
           method: 'initialize',
           params: {
-            clientInfo: { name: 'lobe-mcp-precheck', version: '1.0.0' },
+            clientInfo: { name: 'orvilo-mcp-precheck', version: '1.0.0' },
             protocolVersion: '2024-11-05',
           },
         }) + '\n';
@@ -168,7 +168,7 @@ export class MCPClient {
 
   constructor(params: MCPClientParams) {
     this.params = params;
-    this.mcp = new Client({ name: 'lobehub-mcp-client', version: '1.0.0' });
+    this.mcp = new Client({ name: 'orvilo-mcp-client', version: '1.0.0' });
 
     switch (params.type) {
       case 'http': {

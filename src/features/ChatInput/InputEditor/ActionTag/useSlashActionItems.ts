@@ -102,7 +102,7 @@ export const useSlashActionItems = (): SlashOptions['items'] => {
     isEqual,
   );
 
-  // Installed skills shared with the @ mention menu (builtin / lobehub / market / user agent skills).
+  // Installed skills shared with the @ mention menu (builtin / orvilo / market / user agent skills).
   // Tools intentionally stay out of slash — they remain @-mention only.
   const installedSkillsAndTools = useInstalledSkillsAndTools();
   const installedSkills = useMemo(

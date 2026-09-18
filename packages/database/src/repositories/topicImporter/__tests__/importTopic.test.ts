@@ -7,12 +7,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { agents, messagePlugins, messages, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { TopicImporterRepo } from '../index';
 
 const userId = 'topic-importer-user';
 const agentId = 'topic-importer-agent';
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 
 describe('TopicImporterRepo.importTopic', () => {
   beforeEach(async () => {
@@ -149,7 +149,7 @@ describe('TopicImporterRepo.importTopic', () => {
       expect(firstPlugin).toBeDefined();
       expect(firstPlugin!.apiName).toBe('search');
       expect(firstPlugin!.arguments).toBe('{"query": "杭州天气"}');
-      expect(firstPlugin!.identifier).toBe('lobe-web-browsing');
+      expect(firstPlugin!.identifier).toBe('orvilo-web-browsing');
       expect(firstPlugin!.type).toBe('builtin');
       expect(firstPlugin!.toolCallId).toBe('toolu_1');
       expect(firstPlugin!.state).toEqual({
@@ -198,7 +198,7 @@ describe('TopicImporterRepo.importTopic', () => {
           type: 'builtin',
           apiName: 'search',
           arguments: '{"query": "杭州天气"}',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
         },
       ]);
     });

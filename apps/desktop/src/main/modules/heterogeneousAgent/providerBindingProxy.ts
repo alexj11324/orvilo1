@@ -163,7 +163,7 @@ const writeProviderRequestFailure = (
 /**
  * Keep the real provider credential inside Electron main. Kimi receives only
  * an operation-local credential for this loopback relay, so Bash/MCP children
- * cannot print the upstream key into Kimi transcripts or LobeHub traces.
+ * cannot print the upstream key into Kimi transcripts or Orvilo traces.
  */
 export const startProviderBindingProxy = async ({
   apiKey,

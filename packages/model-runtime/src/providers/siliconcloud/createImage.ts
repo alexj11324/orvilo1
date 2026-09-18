@@ -8,7 +8,7 @@ import { AgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeError } from '../../utils/createError';
 import { parseDataUri } from '../../utils/uriParser';
 
-const log = createDebug('lobe-image:siliconcloud');
+const log = createDebug('orvilo-image:siliconcloud');
 
 interface SiliconCloudImageResponse {
   images: { url: string }[];

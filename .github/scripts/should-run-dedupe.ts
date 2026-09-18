@@ -101,8 +101,8 @@ async function main(): Promise<void> {
 
   const repository = process.env.GITHUB_REPOSITORY;
   const [repositoryOwner, repositoryName] = repository?.split('/') ?? [];
-  const owner = process.env.GITHUB_REPOSITORY_OWNER || repositoryOwner || 'lobehub';
-  const repo = process.env.GITHUB_REPOSITORY_NAME || repositoryName || 'lobehub';
+  const owner = process.env.GITHUB_REPOSITORY_OWNER || repositoryOwner || 'orvilo';
+  const repo = process.env.GITHUB_REPOSITORY_NAME || repositoryName || 'orvilo';
   const issueNumber = Number(process.env.ISSUE_NUMBER);
   if (!issueNumber) throw new Error('ISSUE_NUMBER environment variable is required');
 

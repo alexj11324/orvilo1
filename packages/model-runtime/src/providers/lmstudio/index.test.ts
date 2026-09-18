@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeLMStudioAI, params } from './index';
+import { OrviloLMStudioAI, params } from './index';
 
 const provider = ModelProvider.LMStudio;
 const defaultBaseURL = 'http://127.0.0.1:1234/v1';
 
 testProvider({
-  Runtime: LobeLMStudioAI,
+  Runtime: OrviloLMStudioAI,
   chatDebugEnv: 'DEBUG_LMSTUDIO_CHAT_COMPLETION',
   chatModel: 'deepseek-r1',
   defaultBaseURL,
@@ -19,11 +19,11 @@ testProvider({
   },
 });
 
-describe('LobeLMStudioAI - custom features', () => {
-  let instance: InstanceType<typeof LobeLMStudioAI>;
+describe('OrviloLMStudioAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloLMStudioAI>;
 
   beforeEach(() => {
-    instance = new LobeLMStudioAI({ apiKey: 'placeholder-to-avoid-error' });
+    instance = new OrviloLMStudioAI({ apiKey: 'placeholder-to-avoid-error' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -74,7 +74,7 @@ describe('LobeLMStudioAI - custom features', () => {
       expect(mockClient.models.list).toHaveBeenCalled();
     });
 
-    it('should handle known models from LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle known models from ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockClient = {
         models: {
           list: vi.fn().mockResolvedValue({

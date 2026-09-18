@@ -30,7 +30,7 @@ describe('OnlyboxesSandboxProvider', () => {
     vi.setSystemTime(new Date('2026-05-30T00:00:00.000Z'));
     vi.doMock('@/envs/app', () => ({
       appEnv: {
-        APP_URL: 'https://lobehub.example.com',
+        APP_URL: 'https://orvilo.example.com',
       },
     }));
     vi.doMock('@/envs/sandbox', () => ({
@@ -52,7 +52,7 @@ describe('OnlyboxesSandboxProvider', () => {
       return new Response(
         JSON.stringify({
           exit_code: 0,
-          session_id: 'lobe-user-1-topic-1',
+          session_id: 'orvilo-user-1-topic-1',
           stderr: '',
           stdout: 'ok\n',
         }),
@@ -81,7 +81,7 @@ describe('OnlyboxesSandboxProvider', () => {
           command: 'echo ok',
           create_if_missing: true,
           lease_ttl_sec: 120,
-          session_id: 'lobe-user-1-topic-1',
+          session_id: 'orvilo-user-1-topic-1',
           timeout_ms: 120_000,
         }),
         method: 'POST',
@@ -94,7 +94,7 @@ describe('OnlyboxesSandboxProvider', () => {
     expect(verifyJITSignature(authorization)).toBe(true);
     expect(decodeJITPayload(authorization)).toEqual({
       exp: Date.parse('2026-05-30T00:15:00.000Z'),
-      iss: 'https://lobehub.example.com',
+      iss: 'https://orvilo.example.com',
       sub: 'user-1',
     });
   });
@@ -106,7 +106,7 @@ describe('OnlyboxesSandboxProvider', () => {
         return new Response(
           JSON.stringify({
             exit_code: 2,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: 'failed\n',
             stdout: 'partial\n',
           }),
@@ -214,7 +214,7 @@ describe('OnlyboxesSandboxProvider', () => {
         return new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: JSON.stringify({
               files: [{ isDirectory: false, name: 'a.txt' }],
@@ -251,7 +251,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: JSON.stringify({ success: true }),
           }),
@@ -262,7 +262,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: JSON.stringify({ bytesWritten: 11, success: true }),
           }),
@@ -307,7 +307,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: '',
           }),
@@ -320,7 +320,7 @@ describe('OnlyboxesSandboxProvider', () => {
             result: {
               file_path: '/workspace/report.txt',
               mime_type: 'text/plain',
-              session_id: 'lobe-user-1-topic-1',
+              session_id: 'orvilo-user-1-topic-1',
               size_bytes: 12,
             },
             status: 'succeeded',
@@ -364,7 +364,7 @@ describe('OnlyboxesSandboxProvider', () => {
             action: 'export',
             file_path: '/workspace/report.txt',
             headers: { 'x-amz-acl': 'public-read' },
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             signed_url: 'https://uploads.example.com/put',
           },
           mode: 'sync',
@@ -382,7 +382,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: '',
           }),
@@ -393,7 +393,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: 'from skill\n',
           }),
@@ -427,7 +427,7 @@ describe('OnlyboxesSandboxProvider', () => {
     const commandBody = JSON.parse(String(fetchMock.mock.calls[1][1].body)) as { command: string };
     expect(setupBody.command).toContain("curl -fsSL 'https://files.example.com/demo.zip'");
     expect(setupBody.command).toContain('unzip -q');
-    expect(commandBody.command).toContain("cd '/tmp/lobe-skills/");
+    expect(commandBody.command).toContain("cd '/tmp/orvilo-skills/");
     expect(commandBody.command).toContain("/demo'");
     expect(commandBody.command).toContain('python scripts/run.py');
   });
@@ -439,7 +439,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: '',
           }),
@@ -450,7 +450,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: 'from second skill\n',
           }),
@@ -492,7 +492,7 @@ describe('OnlyboxesSandboxProvider', () => {
     expect(setupBody.command).toContain("curl -fsSL 'https://files.example.com/second.zip'");
     expect(setupBody.command).toContain('/first-skill/');
     expect(setupBody.command).toContain('/second-skill/');
-    expect(commandBody.command).toContain("cd '/tmp/lobe-skills/");
+    expect(commandBody.command).toContain("cd '/tmp/orvilo-skills/");
     expect(commandBody.command).toContain("/second-skill'");
     expect(commandBody.command).toContain('python scripts/run.py');
   });
@@ -504,7 +504,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: '',
           }),
@@ -515,7 +515,7 @@ describe('OnlyboxesSandboxProvider', () => {
         new Response(
           JSON.stringify({
             exit_code: 0,
-            session_id: 'lobe-user-1-topic-1',
+            session_id: 'orvilo-user-1-topic-1',
             stderr: '',
             stdout: 'from legacy skill\n',
           }),

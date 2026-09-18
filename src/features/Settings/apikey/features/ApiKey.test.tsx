@@ -346,7 +346,7 @@ describe('ApiKey', () => {
     await screen.findByText('Other Key');
 
     const otherRow = screen.getByText('Other Key').closest('tr')!;
-    expect(within(otherRow).getByText(`sk-lh-${'*'.repeat(12)}`)).toBeInTheDocument();
+    expect(within(otherRow).getByText(`sk-ov-${'*'.repeat(12)}`)).toBeInTheDocument();
     // central revocation is one row-menu click away for an admin
     expect(
       within(otherRow).getByRole('button', { name: 'apikey.list.actions.delete' }),
@@ -364,7 +364,7 @@ describe('ApiKey', () => {
       within(dialog).getByRole('button', { name: 'apikey.list.actions.delete' }),
     ).toBeEnabled();
     // ...but its secret stays masked there too
-    expect(within(dialog).getByText(`sk-lh-${'*'.repeat(12)}`)).toBeInTheDocument();
+    expect(within(dialog).getByText(`sk-ov-${'*'.repeat(12)}`)).toBeInTheDocument();
 
     const mineRow = screen.getByText('My Key').closest('tr')!;
     expect(within(mineRow).getByText('lb-plain-secret')).toBeInTheDocument();

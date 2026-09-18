@@ -8,7 +8,7 @@ import {
   type MessageGatewayHost,
 } from '@/server/services/gateway/MessageGatewayClient';
 
-const log = debug('lobe-server:agent:gateway-desired-connections');
+const log = debug('orvilo-server:agent:gateway-desired-connections');
 
 /**
  * The host a presented credential speaks for.

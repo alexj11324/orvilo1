@@ -69,7 +69,7 @@ describe('McpInstallController', () => {
     it('should succeed for official market without schema', async () => {
       const result = await controller.handleInstallRequest({
         id: 'test-plugin',
-        marketId: 'lobehub',
+        marketId: 'orvilo',
       });
 
       expect(result).toBe(true);
@@ -77,7 +77,7 @@ describe('McpInstallController', () => {
         'app',
         'mcpInstallRequest',
         {
-          marketId: 'lobehub',
+          marketId: 'orvilo',
           pluginId: 'test-plugin',
           schema: undefined,
         },
@@ -204,7 +204,7 @@ describe('McpInstallController', () => {
 
       const result = await controllerWithoutBrowserManager.handleInstallRequest({
         id: 'test-plugin',
-        marketId: 'lobehub',
+        marketId: 'orvilo',
       });
 
       expect(result).toBe(false);

@@ -86,7 +86,9 @@ describe('agentGroupRouter.forkAgentGroup', () => {
     } as unknown as Parameters<typeof caller.forkAgentGroup>[0]);
 
     const [, requestInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect((requestInit.headers as Record<string, string>)['x-lobe-owner-account-id']).toBe('321');
+    expect((requestInit.headers as Record<string, string>)['x-orvilo-owner-account-id']).toBe(
+      '321',
+    );
   });
 });
 

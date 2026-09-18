@@ -51,7 +51,7 @@ describe('devLoadingProgress', () => {
     expect(server.hot.send).toHaveBeenCalledTimes(1);
     expect(server.hot.send).toHaveBeenCalledWith({
       data: { count: 2, file: 'src/b.tsx' },
-      event: 'lobe:dev-loading-progress',
+      event: 'orvilo:dev-loading-progress',
       type: 'custom',
     });
     vi.useRealTimers();

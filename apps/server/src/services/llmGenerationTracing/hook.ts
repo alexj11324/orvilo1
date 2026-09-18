@@ -10,7 +10,7 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 
 import { getLLMGenerationTracingService } from './index';
 
-const log = debug('lobe-server:llm-generation-tracing:hook');
+const log = debug('orvilo-server:llm-generation-tracing:hook');
 
 const pickString = (value: unknown): string | undefined =>
   typeof value === 'string' ? value : undefined;

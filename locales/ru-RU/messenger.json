@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "Агент по умолчанию",
   "verify.confirm.defaultAgentHint": "Ваши сообщения будут сначала направляться сюда. Вы можете переключиться в любое время через /agents в боте или в Настройки → Мессенджер.",
   "verify.confirm.defaultAgentPlaceholder": "Выберите агента",
-  "verify.confirm.fields.lobeHubAccount": "Аккаунт Orvilo",
+  "verify.confirm.fields.orviloHubAccount": "Аккаунт Orvilo",
   "verify.confirm.fields.platformAccount": "Аккаунт {{platform}}",
   "verify.confirm.fields.workspace": "Рабочее пространство",
   "verify.confirm.noAgents": "У вас пока нет агентов. Создайте одного в Orvilo, затем вернитесь, чтобы завершить привязку.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "Этот аккаунт Orvilo уже связан с другим аккаунтом Telegram. Отключите его в Настройки → Мессенджер перед привязкой нового.",
   "verify.signInCta": "Войдите, чтобы продолжить",
   "verify.signInRequired": "Пожалуйста, войдите в Orvilo, чтобы подтвердить привязку.",
-  "verify.success.backToLobeHub": "Вернуться в Orvilo",
+  "verify.success.backToOrvilo": "Вернуться в Orvilo",
   "verify.success.description": "Ваш аккаунт теперь подключен к {{platform}}. Откройте {{platform}} и отправьте ваше первое сообщение.",
   "verify.success.openBot": "Открыть в {{platform}}",
   "verify.success.title": "Успешно привязано!"

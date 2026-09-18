@@ -4,14 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { TogetherAIModel } from './index';
-import { LobeTogetherAI, params } from './index';
+import { OrviloTogetherAI, params } from './index';
 
 const provider = ModelProvider.TogetherAI;
 const defaultBaseURL = 'https://api.together.xyz/v1';
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeTogetherAI,
+  Runtime: OrviloTogetherAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_TOGETHERAI_CHAT_COMPLETION',
   chatModel: 'mistralai/mistral-7b-instruct:free',
@@ -25,7 +25,7 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeTogetherAI - custom features', () => {
+describe('OrviloTogetherAI - custom features', () => {
   describe('params export', () => {
     it('should export params object', () => {
       expect(params).toBeDefined();
@@ -35,8 +35,8 @@ describe('LobeTogetherAI - custom features', () => {
 
     it('should have custom defaultHeaders', () => {
       expect(params.constructorOptions?.defaultHeaders).toEqual({
-        'HTTP-Referer': 'https://chat-preview.lobehub.com',
-        'X-Title': 'Lobe Chat',
+        'HTTP-Referer': 'https://chat-preview.aspectlylabs.com',
+        'X-Title': 'Orvilo',
       });
     });
 
@@ -238,7 +238,7 @@ describe('LobeTogetherAI - custom features', () => {
       expect(result[1].vision).toBe(true); // 'qvq' keyword
     });
 
-    it('should handle models not in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle models not in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockModels: Partial<TogetherAIModel>[] = [
         {
           context_length: 4096,

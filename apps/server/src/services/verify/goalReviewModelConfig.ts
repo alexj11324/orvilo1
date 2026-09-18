@@ -5,7 +5,7 @@ import { pickTrimmedString, toRecord } from '@orvilo/utils/object';
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { AiInfraRepos } from '@/database/repositories/aiInfra';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { resolveGoalModelConfig } from '@/server/services/goal/modelConfig';
@@ -15,7 +15,7 @@ import { isHeterogeneousVerifyProvider, REVIEW_PREDICT_MODEL_CONFIG } from './mo
 
 /** Resolve within the task owner's scope; never select an arbitrary enabled model. */
 export const resolveGoalReviewModelConfig = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   params: { requiresVision: boolean; taskId: string; verifierAgentId?: string | null },
   workspaceId?: string,

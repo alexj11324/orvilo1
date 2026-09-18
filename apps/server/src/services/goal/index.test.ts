@@ -28,7 +28,7 @@ import {
   topics,
   users,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime/AgentRuntimeCoordinator';
 
 import { TaskService } from '../task';
@@ -46,7 +46,7 @@ import { VERIFY_SETTLE_GRACE_MS } from './recoveryPolicy';
 import { TaskRecoveryCoordinator } from './taskRecoveryCoordinator';
 import type { GoalTickObservation } from './traceObservation';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'goal-service-test-user';
 
 beforeEach(async () => {
@@ -621,11 +621,11 @@ describe('GoalService', () => {
     await workModel.registerExternal({
       changeType: 'created',
       identifier: 'ENG-7',
-      resourceId: 'lobehub/lobehub#7',
+      resourceId: 'alexj11324/orvilo1#7',
       resourceType: 'github_issue',
       rootOperationId: 'op-delivered',
       title: 'The delivered issue',
-      toolIdentifier: 'lobe-github',
+      toolIdentifier: 'orvilo-github',
       toolName: 'createIssue',
     });
     await taskModel.updateStatus(created.taskId!, 'completed');
@@ -656,11 +656,11 @@ describe('GoalService', () => {
     });
     await workModel.registerExternal({
       changeType: 'created',
-      resourceId: 'lobehub/lobehub#8',
+      resourceId: 'alexj11324/orvilo1#8',
       resourceType: 'github_issue',
       rootOperationId: 'op-delivered',
       title: 'Delivered once',
-      toolIdentifier: 'lobe-github',
+      toolIdentifier: 'orvilo-github',
       toolName: 'createIssue',
     });
     await taskModel.updateStatus(created.taskId!, 'completed');

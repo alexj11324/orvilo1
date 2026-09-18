@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * Normalized payload for importing an external CLI agent session
- * (Claude Code / Codex local transcript) into LobeHub.
+ * (Claude Code / Codex local transcript) into Orvilo.
  *
  * Produced by the transcript parsers in `@orvilo/heterogeneous-agents/transcript`,
  * consumed by `HeteroSessionImporterRepo` in `@orvilo/database`.
@@ -107,7 +107,7 @@ export interface HeteroSessionImportStatus {
     topicClientId: string;
     topicId: string;
   }[];
-  /** sessionIds that originated from LobeHub live runs (importing would duplicate) */
+  /** sessionIds that originated from Orvilo live runs (importing would duplicate) */
   linked: string[];
 }
 

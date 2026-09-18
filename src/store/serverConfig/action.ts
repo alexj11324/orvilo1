@@ -8,7 +8,7 @@ import { type GlobalRuntimeConfig } from '@/types/serverConfig';
 
 import { type ServerConfigStore } from './store';
 
-const CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG = '__LOBECLOUD_DESKTOP_BUSINESS_FEATURES__';
+const CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG = '__ORVILOCLOUD_DESKTOP_BUSINESS_FEATURES__';
 
 const setDesktopBusinessFeaturesFlag = (enableBusinessFeatures: boolean | undefined) => {
   (globalThis as unknown as Record<string, boolean | undefined>)[

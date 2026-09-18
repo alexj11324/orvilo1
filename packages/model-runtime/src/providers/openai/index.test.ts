@@ -7,7 +7,7 @@ import { AgentRuntimeErrorType } from '../../types/error';
 import * as debugStreamModule from '../../utils/debugStream';
 import * as getModelPricingModule from '../../utils/getModelPricing';
 import officalOpenAIModels from './fixtures/openai-models.json';
-import { LobeOpenAI, params } from './index';
+import { OrviloOpenAI, params } from './index';
 
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -20,11 +20,11 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('LobeOpenAI', () => {
-  let instance: InstanceType<typeof LobeOpenAI>;
+describe('OrviloOpenAI', () => {
+  let instance: InstanceType<typeof OrviloOpenAI>;
 
   beforeEach(() => {
-    instance = new LobeOpenAI({ apiKey: 'test' });
+    instance = new OrviloOpenAI({ apiKey: 'test' });
 
     // 使用 vi.spyOn 来模拟 chat.completions.create 方法
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -121,7 +121,7 @@ describe('LobeOpenAI', () => {
 
       it('should throw AgentRuntimeError with NoOpenAIAPIKey if no apiKey is provided', async () => {
         try {
-          new LobeOpenAI({});
+          new OrviloOpenAI({});
         } catch (e) {
           expect(e).toEqual({ errorType: 'InvalidProviderAPIKey' });
         }
@@ -165,7 +165,7 @@ describe('LobeOpenAI', () => {
         };
         const apiError = new OpenAI.APIError(400, errorInfo, 'module error', new Headers());
 
-        instance = new LobeOpenAI({
+        instance = new OrviloOpenAI({
           apiKey: 'test',
 
           baseURL: 'https://api.abc.com/v1',

@@ -26,7 +26,7 @@ const UpdateDocument = memo<UpdateDocumentRenderProps>(({ args }) => {
 
   if (hunks.length === 0) return null;
 
-  const totalLabel = t('builtins.lobe-web-onboarding.inspector.hunkCount', {
+  const totalLabel = t('builtins.orvilo-web-onboarding.inspector.hunkCount', {
     count: hunks.length,
   });
 

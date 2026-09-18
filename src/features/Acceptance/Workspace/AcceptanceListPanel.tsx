@@ -78,8 +78,8 @@ import type { ReportPanelExpand } from './useReportPanelExpand';
 
 const PANEL_MIN = 260;
 const PANEL_MAX = 420;
-const ACCEPTANCE_LIST_FILTER_STORAGE_KEY = 'lobehub-acceptance-list-filter';
-const ACCEPTANCE_GROUP_MODE_STORAGE_KEY = 'lobehub-acceptance-group-mode';
+const ACCEPTANCE_LIST_FILTER_STORAGE_KEY = 'orvilo-acceptance-list-filter';
+const ACCEPTANCE_GROUP_MODE_STORAGE_KEY = 'orvilo-acceptance-group-mode';
 /** Pull the next page before the sentinel is actually on screen. */
 const LOAD_MORE_ROOT_MARGIN = '240px';
 type BatchSuccessKey =

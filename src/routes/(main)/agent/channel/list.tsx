@@ -9,11 +9,12 @@ import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { DEFAULT_AVATAR } from '@/const/meta';
+import type { SerializedPlatformDefinition } from '@/server/services/bot/platforms/types';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
 import { BOT_RUNTIME_STATUSES, type BotRuntimeStatus } from '../../../../types/botRuntimeStatus';
-import { type ChannelPlatformDefinition, getPlatformIcon } from './const';
+import { getPlatformIcon } from './const';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   card: css`
@@ -113,7 +114,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface PlatformGridProps {
   agentId: string;
   onSelect: (id: string) => void;
-  platforms: ChannelPlatformDefinition[];
+  platforms: SerializedPlatformDefinition[];
   runtimeStatuses: Map<string, BotRuntimeStatus>;
 }
 
@@ -152,9 +153,6 @@ const PlatformGrid = memo<PlatformGridProps>(
         }
         case 'wechat': {
           return t('channel.platform.wechat.description');
-        }
-        case 'whatsapp': {
-          return t('channel.platform.whatsapp.description');
         }
         default: {
           return t('channel.platform.default.description', { name });
@@ -241,9 +239,7 @@ const PlatformGrid = memo<PlatformGridProps>(
                 PlatformIcon && 'Color' in PlatformIcon
                   ? (PlatformIcon as any).Color
                   : PlatformIcon;
-              const runtimeStatus = platform.comingSoon
-                ? undefined
-                : runtimeStatuses.get(platform.id);
+              const runtimeStatus = runtimeStatuses.get(platform.id);
               const statusColor = getStatusColor(runtimeStatus);
               const statusTitle = getStatusTitle(runtimeStatus);
               const description = getPlatformDescription(platform.id, platform.name);
@@ -261,11 +257,6 @@ const PlatformGrid = memo<PlatformGridProps>(
                       {platform.name}
                     </Text>
                     <Flexbox horizontal align={'center'} className={styles.trailing} gap={4}>
-                      {platform.comingSoon && (
-                        <Tag size={'small'} style={{ marginInlineEnd: 0 }}>
-                          {t('channel.comingSoon')}
-                        </Tag>
-                      )}
                       {platform.access?.requiredPlan === 'paid' && (
                         <Tag color="gold" size={'small'} style={{ marginInlineEnd: 0 }}>
                           {platform.access.rolloutMode === 'notice'

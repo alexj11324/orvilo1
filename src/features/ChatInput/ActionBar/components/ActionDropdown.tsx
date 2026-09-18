@@ -89,7 +89,7 @@ const SubmenuScrollStyle = createGlobalStyle`
      measured 243px collapsed vs 400px expanded, the jump driven by whichever
      title happens to be longest. Pin the width so the container stays put and
      the rows ellipsize into it. */
-  [data-submenu] > [role='menu']:has(.lobe-skill-submenu-search) {
+  [data-submenu] > [role='menu']:has(.orvilo-skill-submenu-search) {
     width: min(90vw, 400px);
   }
 
@@ -122,23 +122,23 @@ const SubmenuScrollStyle = createGlobalStyle`
      search floating in a tall gap and indented past the rows below. Trim the
      padding so the search sits snug against the divider and its icon lines up
      with the 16px icon column shared by the menu rows. */
-  [data-submenu] > [role='menu'] > *:has(.lobe-skill-submenu-search) {
+  [data-submenu] > [role='menu'] > *:has(.orvilo-skill-submenu-search) {
     padding-block: 4px;
     padding-inline: 4px;
   }
 
   /* Submenu triggers that opt into a custom trailing chevron (the Plus menu's
-     Skills / Web Search / Attachments rows mark their extra icon with .lobe-submenu-chevron)
+     Skills / Web Search / Attachments rows mark their extra icon with .orvilo-submenu-chevron)
      render that chevron themselves; hide base-ui's default triangle submenu arrow
      — always the last child of the trigger's content — so the two don't stack. */
-  .lobe-submenu-chevron {
+  .orvilo-submenu-chevron {
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
   }
 
-  [role='menuitem']:has(.lobe-submenu-chevron) > * > *:last-child {
+  [role='menuitem']:has(.orvilo-submenu-chevron) > * > *:last-child {
     display: none;
   }
 `;

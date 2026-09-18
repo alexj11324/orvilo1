@@ -10,7 +10,7 @@ const log = debug('context-engine:provider:BotPlatformContextInjector');
 export interface BotPlatformContext {
   /** Whether the platform can read chat history at runtime (`readMessages`). */
   canReadHistory?: boolean;
-  /** Identifiers of the conversation this run replies in (`lobe-message` args). */
+  /** Identifiers of the conversation this run replies in (`orvilo-message` args). */
   currentChannel?: BotPlatformInfo['currentChannel'];
   platformName: string;
   /** Pre-injected recent same-channel history for platforms without history-read. */

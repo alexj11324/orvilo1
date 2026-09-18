@@ -352,8 +352,8 @@ export function defineConfig(customOptions: CustomBetterAuthOptions) {
         },
       }),
       passkey({
-        rpName: 'LobeHub',
-        // Extract rpID from auth URL (e.g., 'lobehub.com' from 'https://lobehub.com')
+        rpName: 'Orvilo',
+        // Extract rpID from auth URL (e.g., 'orvilo.aspectlylabs.com' from 'https://orvilo.aspectlylabs.com')
         // Returns undefined if AUTH_URL is not set (e.g., in e2e tests)
         rpID: getPasskeyRpID(),
         // Support multiple origins: web + Android APK key hashes

@@ -5,7 +5,7 @@ import { takeWorkIntent } from '@/utils/clientWorkIntentStash';
 vi.mock('@orvilo/builtin-tools', () => ({
   builtinTools: [
     {
-      identifier: 'lobe-task',
+      identifier: 'orvilo-task',
       manifest: {
         api: [
           { name: 'createTask', work: { action: 'create', resourceType: 'task' } },
@@ -39,7 +39,7 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
   });
 
   it('stashes a created-task intent with the resolved target', () => {
-    stashBuiltinToolWorkIntent('lobe-task', 'createTask', { instruction: 'do', name: 'A' }, ctx, {
+    stashBuiltinToolWorkIntent('orvilo-task', 'createTask', { instruction: 'do', name: 'A' }, ctx, {
       content: '',
       state: { identifier: 'T-1', success: true, taskId: 'task_1' },
       success: true,
@@ -55,7 +55,7 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
 
   it('stashes an update intent (changeType "updated") resolved via args.identifier', () => {
     stashBuiltinToolWorkIntent(
-      'lobe-task',
+      'orvilo-task',
       'editTask',
       { identifier: 'T-9', name: 'Edited' },
       ctx,
@@ -74,7 +74,7 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
   });
 
   it('stashes only the succeeded items of a partially failed batch', () => {
-    stashBuiltinToolWorkIntent('lobe-task', 'createTasks', { tasks: [] }, ctx, {
+    stashBuiltinToolWorkIntent('orvilo-task', 'createTasks', { tasks: [] }, ctx, {
       content: '',
       state: {
         failed: 1,
@@ -96,7 +96,7 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
   });
 
   it('stashes a delete intent carrying the resolved target', () => {
-    stashBuiltinToolWorkIntent('lobe-task', 'deleteTask', { identifier: 'T-1' }, ctx, {
+    stashBuiltinToolWorkIntent('orvilo-task', 'deleteTask', { identifier: 'T-1' }, ctx, {
       content: '',
       state: { identifier: 'T-1', success: true, taskId: 'task_1' },
       success: true,
@@ -110,7 +110,7 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
   });
 
   it('stashes nothing when the delete call failed (no targets)', () => {
-    stashBuiltinToolWorkIntent('lobe-task', 'deleteTask', { identifier: 'T-1' }, ctx, {
+    stashBuiltinToolWorkIntent('orvilo-task', 'deleteTask', { identifier: 'T-1' }, ctx, {
       content: 'boom',
       success: false,
     });
@@ -119,13 +119,13 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
   });
 
   it('stashes nothing for an API without a work config', () => {
-    stashBuiltinToolWorkIntent('lobe-task', 'listTasks', {}, ctx, { content: '', success: true });
+    stashBuiltinToolWorkIntent('orvilo-task', 'listTasks', {}, ctx, { content: '', success: true });
 
     expect(takeWorkIntent(ctx.toolCallId)).toBeUndefined();
   });
 
   it('stashes nothing when the call failed (no targets)', () => {
-    stashBuiltinToolWorkIntent('lobe-task', 'editTask', { identifier: 'T-1' }, ctx, {
+    stashBuiltinToolWorkIntent('orvilo-task', 'editTask', { identifier: 'T-1' }, ctx, {
       content: 'boom',
       success: false,
     });
@@ -135,7 +135,7 @@ describe('stashBuiltinToolWorkIntent (client dispatch)', () => {
 
   it('stashes nothing when the tool call has no toolCallId to key by', () => {
     stashBuiltinToolWorkIntent(
-      'lobe-task',
+      'orvilo-task',
       'createTask',
       { name: 'A' },
       { ...ctx, toolCallId: undefined },

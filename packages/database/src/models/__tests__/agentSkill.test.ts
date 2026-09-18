@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { agentSkills, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentSkillModel } from '../agentSkill';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'agent-skill-model-test-user-id';
 const agentSkillModel = new AgentSkillModel(serverDB, userId);
@@ -341,7 +341,7 @@ describe('AgentSkillModel', () => {
       await serverDB.insert(agentSkills).values({
         name: 'agent-browser',
         description: 'browser CLI',
-        identifier: 'lobe-agent-browser',
+        identifier: 'orvilo-agent-browser',
         source: 'user',
         manifest: createManifest(),
         userId,

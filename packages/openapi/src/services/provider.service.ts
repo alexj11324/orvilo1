@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 
 import type { AiProviderSelectItem } from '@/database/schemas';
 import { aiModels, aiProviders } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import { BaseService } from '../common/base.service';
@@ -27,7 +27,7 @@ import type {
 export class ProviderService extends BaseService {
   private gateKeeperPromise: Promise<KeyVaultsGateKeeper> | null = null;
 
-  constructor(db: LobeChatDatabase, userId: string | null, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
     super(db, userId, workspaceId);
   }
 

@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { TRPCError } from '@trpc/server';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -80,7 +80,7 @@ const normalizedEditorDataFromDiffNode = {
 
 describe('DocumentService', () => {
   let service: DocumentService;
-  let mockDb: LobeChatDatabase;
+  let mockDb: OrviloDatabase;
   let mockDocumentModel: any;
   let mockDocumentHistoryService: any;
   let mockFileModel: any;
@@ -99,7 +99,7 @@ describe('DocumentService', () => {
           findMany: vi.fn().mockResolvedValue([]),
         },
       },
-      transaction: vi.fn(async (callback: (tx: LobeChatDatabase) => Promise<unknown>) =>
+      transaction: vi.fn(async (callback: (tx: OrviloDatabase) => Promise<unknown>) =>
         callback(mockDb),
       ),
     } as any;

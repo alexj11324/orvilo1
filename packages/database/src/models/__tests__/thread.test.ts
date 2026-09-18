@@ -12,7 +12,7 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ThreadModel } from '../thread';
 
 const userId = 'thread-user-test';
@@ -20,7 +20,7 @@ const otherUserId = 'other-user-test';
 const sessionId = 'thread-session';
 const topicId = 'thread-topic';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const threadModel = new ThreadModel(serverDB, userId);
 
 describe('ThreadModel', () => {

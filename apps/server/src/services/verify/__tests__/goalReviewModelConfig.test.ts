@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { resolveGoalReviewModelConfig } from '../goalReviewModelConfig';
 
@@ -36,7 +36,7 @@ vi.mock('../modelConfig', () => ({
   REVIEW_PREDICT_MODEL_CONFIG: { model: 'gemini', provider: 'google' },
   isHeterogeneousVerifyProvider: (provider: string) => provider === 'codex',
 }));
-const db = {} as LobeChatDatabase;
+const db = {} as OrviloDatabase;
 const configured = { model: 'gpt-4o', provider: 'openai' };
 const resolve = (requiresVision = false, verifierAgentId?: string) =>
   resolveGoalReviewModelConfig(db, 'u1', { taskId: 't1', requiresVision, verifierAgentId }, 'w1');

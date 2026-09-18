@@ -6,7 +6,7 @@ export const DEFAULT_DISCORD_CONNECTION_MODE = 'websocket';
 // --------------- Credential formats ---------------
 //
 // Operators routinely paste the wrong value into these fields — an OAuth
-// authorize URL, a LobeHub `sk-lh-…` API key, even a block of prose — and the
+// authorize URL, a Orvilo `sk-ov-…` API key, even a block of prose — and the
 // bot then fails to connect with no obvious cause. The patterns below are
 // deliberately shape-checks, not authenticity checks: they reject values that
 // could never work while staying loose enough to survive Discord widening its

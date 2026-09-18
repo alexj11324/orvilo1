@@ -150,8 +150,8 @@ describe('internalJwt', () => {
         operation_id: 'op-123',
         purpose: 'hetero-operation',
       });
-      expect(setAudienceMock).toHaveBeenCalledWith('urn:lobehub:hetero-operation');
-      expect(setIssuerMock).toHaveBeenCalledWith('urn:lobehub:internal');
+      expect(setAudienceMock).toHaveBeenCalledWith('urn:orvilo:hetero-operation');
+      expect(setIssuerMock).toHaveBeenCalledWith('urn:orvilo:internal');
       expect(setJtiMock).toHaveBeenCalled();
       expect(setSubjectMock).toHaveBeenCalledWith('user-456');
       expect(setExpirationTimeMock).toHaveBeenCalledWith('4h');
@@ -203,11 +203,11 @@ describe('internalJwt', () => {
 
   describe('validateHeteroOperationClaims', () => {
     const validClaims = {
-      aud: 'urn:lobehub:hetero-operation',
+      aud: 'urn:orvilo:hetero-operation',
       capabilities: ['model:invoke'],
       exp: 2,
       iat: 1,
-      iss: 'urn:lobehub:internal',
+      iss: 'urn:orvilo:internal',
       jti: 'jti-1',
       operation_id: 'op-1',
       purpose: 'hetero-operation',
@@ -235,7 +235,7 @@ describe('internalJwt', () => {
       const token = await signInternalJWT();
 
       expect(token).toBe('signed.jwt.token');
-      expect(SignJWTMock).toHaveBeenCalledWith({ purpose: 'lobe-internal-call' });
+      expect(SignJWTMock).toHaveBeenCalledWith({ purpose: 'orvilo-internal-call' });
       expect(setExpirationTimeMock).toHaveBeenCalledWith('30s');
     });
   });

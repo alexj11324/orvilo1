@@ -3,15 +3,15 @@ import { ModelProvider } from 'model-bank';
 import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeTaichuAI } from './index';
+import { OrviloTaichuAI } from './index';
 
 const provider = ModelProvider.Taichu;
 const defaultBaseURL = 'https://cloud.zidongtaichu.com/maas/v1';
 
 testProvider({
-  Runtime: LobeTaichuAI,
+  Runtime: OrviloTaichuAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_TAICHU_CHAT_COMPLETION',
@@ -21,10 +21,10 @@ testProvider({
   },
 });
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeTaichuAI({ apiKey: 'test' });
+  instance = new OrviloTaichuAI({ apiKey: 'test' });
 
   // 使用 vi.spyOn 来模拟 chat.completions.create 方法
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -36,10 +36,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeTaichuAI', () => {
+describe('OrviloTaichuAI', () => {
   describe('chat', () => {
     it('should correctly adjust temperature and top_p parameters', async () => {
-      const instance = new LobeTaichuAI({ apiKey: 'test_api_key' });
+      const instance = new OrviloTaichuAI({ apiKey: 'test_api_key' });
 
       // Mock the chat.completions.create method
       const errorInfo = {

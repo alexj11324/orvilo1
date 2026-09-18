@@ -29,7 +29,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   AgentProviderAccountModel,
   AgentQuotaSnapshotModel,
@@ -55,7 +55,7 @@ const readToken = (): string => {
 };
 
 describe.skipIf(!RUN)('quota real-account E2E (local DB)', () => {
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let identity: QuotaAccountIdentity;
   let readings: QuotaLimitReading[];
 

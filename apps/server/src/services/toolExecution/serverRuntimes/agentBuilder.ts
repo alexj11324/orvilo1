@@ -67,7 +67,7 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
           const enabledProviders =
             hiddenBuiltinModels === undefined ? [] : allProviders.filter((p) => p.enabled);
 
-          // LobeHub provider first, then by sort order
+          // Orvilo provider first, then by sort order
           enabledProviders.sort((a, b) => {
             if (a.id === BRANDING_PROVIDER) return -1;
             if (b.id === BRANDING_PROVIDER) return 1;
@@ -309,7 +309,7 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
 
         if (source === 'official') {
           if (builtinTools.some((t) => t.identifier === identifier)) {
-            // Builtin tools (lobe-web-browsing, lobe-image-generation, etc.) need no OAuth
+            // Builtin tools (orvilo-web-browsing, orvilo-image-generation, etc.) need no OAuth
             try {
               const agent = await agentModel.getAgentConfigById(agentId);
               if (!agent) return { content: `Agent "${agentId}" not found.`, success: false };
@@ -333,9 +333,9 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
             }
           }
 
-          // OAuth-based tools (Composio, LobehubSkill) cannot be installed in background context
+          // OAuth-based tools (Composio, OrviloSkill) cannot be installed in background context
           return {
-            content: `Installing official integrations that require OAuth (Composio, LobehubSkill) is not supported in background execution. Please install "${identifier}" from the Agent Builder UI instead.`,
+            content: `Installing official integrations that require OAuth (Composio, OrviloSkill) is not supported in background execution. Please install "${identifier}" from the Agent Builder UI instead.`,
             error: { message: 'OAuth not available in background context', type: 'NotSupported' },
             success: false,
           };

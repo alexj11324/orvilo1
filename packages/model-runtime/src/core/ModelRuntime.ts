@@ -2,9 +2,9 @@ import type { ModelPerformance, ModelUsage, TracePayload } from '@orvilo/types';
 import { createTimingHelpers, getDurationMs } from '@orvilo/utils';
 import type { ClientOptions } from 'openai';
 
-import type { LobeBedrockAIParams } from '../providers/bedrock';
-import type { LobeCloudflareParams } from '../providers/cloudflare';
-import { LobeOpenAI } from '../providers/openai';
+import type { OrviloBedrockAIParams } from '../providers/bedrock';
+import type { OrviloCloudflareParams } from '../providers/cloudflare';
+import { OrviloOpenAI } from '../providers/openai';
 import { providerRuntimeMap } from '../runtimeMap';
 import type {
   ASROptions,
@@ -33,14 +33,14 @@ import type {
   HandleCreateVideoWebhookPayload,
 } from '../types/video';
 import { AgentRuntimeError } from '../utils/createError';
-import type { LobeRuntimeAI } from './BaseAI';
+import type { OrviloRuntimeAI } from './BaseAI';
 
-const { logger: timing } = createTimingHelpers('lobe-server:chat:lobehub:timing');
+const { logger: timing } = createTimingHelpers('orvilo-server:chat:orvilo:timing');
 
-const getLobeHubTimingMetadata = (options?: {
+const getOrviloTimingMetadata = (options?: {
   metadata?: Record<string, unknown>;
 }): Record<string, unknown> | undefined =>
-  options?.metadata?.provider === 'lobehub' ? options.metadata : undefined;
+  options?.metadata?.provider === 'orvilo' ? options.metadata : undefined;
 
 const buildGenerateObjectSpeed = (startedAt: number, usage: ModelUsage): ModelPerformance => {
   const latency = Math.max(Date.now() - startedAt, 0);
@@ -140,9 +140,9 @@ export interface ModelRuntimeHooks {
 
 export class ModelRuntime {
   private _hooks?: ModelRuntimeHooks;
-  private _runtime: LobeRuntimeAI;
+  private _runtime: OrviloRuntimeAI;
 
-  constructor(runtime: LobeRuntimeAI, hooks?: ModelRuntimeHooks) {
+  constructor(runtime: OrviloRuntimeAI, hooks?: ModelRuntimeHooks) {
     this._runtime = runtime;
     this._hooks = hooks;
   }
@@ -177,7 +177,7 @@ export class ModelRuntime {
    * ```
    */
   async chat(payload: ChatStreamPayload, options?: ChatMethodOptions) {
-    const metadata = getLobeHubTimingMetadata(options);
+    const metadata = getOrviloTimingMetadata(options);
     const startedAt = Date.now();
     if (metadata) {
       timing(
@@ -252,7 +252,7 @@ export class ModelRuntime {
     options?: ChatMethodOptions,
   ): Promise<ChatMethodOptions | undefined> {
     const hookOptions = this._hooks?.beforeChat && !options ? {} : options;
-    const metadata = getLobeHubTimingMetadata(options);
+    const metadata = getOrviloTimingMetadata(options);
     const beforeChatStartedAt = Date.now();
     if (metadata) {
       timing(
@@ -504,8 +504,8 @@ export class ModelRuntime {
     provider: string,
     params: Partial<
       ClientOptions &
-        LobeBedrockAIParams &
-        LobeCloudflareParams & {
+        OrviloBedrockAIParams &
+        OrviloCloudflareParams & {
           apiKey?: string;
           baseURL?: string;
           userId?: string;
@@ -515,11 +515,11 @@ export class ModelRuntime {
     hooks?: ModelRuntimeHooks,
   ) {
     // runtime map does not include every provider id (e.g. vertex), so index loosely
-    const runtimeMap: Partial<Record<string, new (params: any) => LobeRuntimeAI>> =
+    const runtimeMap: Partial<Record<string, new (params: any) => OrviloRuntimeAI>> =
       providerRuntimeMap;
-    const providerAI = runtimeMap[provider] ?? LobeOpenAI;
+    const providerAI = runtimeMap[provider] ?? OrviloOpenAI;
 
-    const runtimeModel: LobeRuntimeAI = new providerAI(params);
+    const runtimeModel: OrviloRuntimeAI = new providerAI(params);
 
     return new ModelRuntime(runtimeModel, hooks);
   }

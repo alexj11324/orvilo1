@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
@@ -7,9 +7,9 @@ import { type UserItem } from '@/database/schemas';
 import { account, nextauthAccounts, session, users } from '@/database/schemas';
 
 export class WebhookUserService {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     this.db = db;
   }
 

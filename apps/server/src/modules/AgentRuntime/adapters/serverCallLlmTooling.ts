@@ -3,8 +3,8 @@ import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import {
   buildStepSkillDelta,
   buildStepToolDelta,
-  type LobeToolManifest,
   type OperationToolSet,
+  type OrviloToolManifest,
   type ResolvedSkillSet,
   type ResolvedToolSet,
   SkillResolver,
@@ -24,7 +24,7 @@ export interface ServerCallLlmTooling {
    * `buildStepToolDelta` uses below). Exposed so callers building prompt
    * template variables can tell whether `runCommand`/`execScript` will
    * execute on a device instead of falling back to the cloud sandbox —
-   * `resolved.enabledToolIds.includes('lobe-cloud-sandbox')` alone doesn't
+   * `resolved.enabledToolIds.includes('orvilo-cloud-sandbox')` alone doesn't
    * cover it, since Skills' sandbox fallback applies whenever no device is
    * routed, independent of whether the dedicated Cloud Sandbox tool is
    * offered.
@@ -36,7 +36,7 @@ export interface ServerCallLlmTooling {
    * alongside `activeDeviceId` because `'auto'` is the one target where a
    * device can be routed (`activeDeviceId` set) while the cloud sandbox is
    * *also* reachable — see `AgentToolsEngine`'s `agentModeRules` gate for
-   * `lobe-cloud-sandbox`, which allows it for `'auto'` regardless of routing.
+   * `orvilo-cloud-sandbox`, which allows it for `'auto'` regardless of routing.
    */
   executionTarget?: ExecutionPlan['target'];
   resolved: ResolvedToolSet;
@@ -71,7 +71,7 @@ export const resolveServerCallLlmTooling = (
     activeDeviceId,
     enabledToolIds: operationToolSet.enabledToolIds,
     forceFinish: state.forceFinish,
-    localSystemManifest: LocalSystemManifest as unknown as LobeToolManifest,
+    localSystemManifest: LocalSystemManifest as unknown as OrviloToolManifest,
     operationManifestMap: operationToolSet.manifestMap,
   });
 

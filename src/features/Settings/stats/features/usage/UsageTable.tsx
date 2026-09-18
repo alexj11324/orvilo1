@@ -6,7 +6,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
-import { ProviderIcon } from '@/components/LobeIcons';
+import { ProviderIcon } from '@/components/OrviloIcons';
 import SpendType, { type SpendTypeValue } from '@/components/SpendType';
 import TablePagination from '@/components/TablePagination';
 import TotalToken from '@/components/TotalToken';

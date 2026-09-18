@@ -1,61 +1,56 @@
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-interface GlobalStateMock {
-  toggleCommandMenu: () => void;
-}
-
-const mocks = vi.hoisted(() => ({
-  activeWorkspaceSlug: null as string | null,
-  showMarket: true,
-}));
+import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/config/routes', () => ({
-  getRouteById: (id: string) => ({
-    icon: () => id,
-  }),
+  getRouteById: (id: string) => ({ icon: () => id }),
 }));
 
 vi.mock('@/store/global', () => ({
-  useGlobalStore: (selector: (state: GlobalStateMock) => unknown) =>
+  useGlobalStore: (selector: (state: { toggleCommandMenu: () => void }) => unknown) =>
     selector({ toggleCommandMenu: vi.fn() }),
 }));
 
 vi.mock('@/store/serverConfig', () => ({
   featureFlagsSelectors: {},
-  useServerConfigStore: () => ({
-    hideGitHub: false,
-    showMarket: mocks.showMarket,
-  }),
+  useServerConfigStore: () => ({ hideGitHub: false }),
 }));
 
-vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
-  useActiveWorkspaceSlug: () => mocks.activeWorkspaceSlug,
-}));
+/**
+ * Sidebar keys whose product surface has been withdrawn by the task-first
+ * convergence. They must not render from any code path, and they must not come
+ * back through a persisted preference either — the preference side is covered by
+ * the system-status normalizer tests.
+ */
+const RETIRED_SIDEBAR_KEYS = ['community', 'image', 'memory', 'pages'];
+
+const renderedKeys = async () => {
+  const { useNavLayout } = await import('./useNavLayout');
+  const { result } = renderHook(() => useNavLayout());
+  return [...result.current.topNavItems, ...result.current.bottomMenuItems].map((item) => item.key);
+};
 
 describe('useNavLayout', () => {
-  beforeEach(() => {
-    mocks.activeWorkspaceSlug = null;
-    mocks.showMarket = true;
+  it.each(RETIRED_SIDEBAR_KEYS)('never renders the retired "%s" destination', async (key) => {
+    expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps Memory visible in personal mode', async () => {
+  it('keeps the task destination reachable', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
 
-    const memoryItem = result.current.bottomMenuItems.find((item) => item.key === 'memory');
+    const tasksItem = result.current.topNavItems.find((item) => item.key === 'tasks');
 
-    expect(memoryItem?.hidden).not.toBe(true);
+    expect(tasksItem).toBeDefined();
+    expect(tasksItem?.url).toBe('/tasks');
   });
 
-  it('hides Memory in workspace mode', async () => {
-    mocks.activeWorkspaceSlug = 'lobe-team';
-
+  it('keeps the automation destination reachable', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
 
-    const memoryItem = result.current.bottomMenuItems.find((item) => item.key === 'memory');
+    const automationsItem = result.current.topNavItems.find((item) => item.key === 'automations');
 
-    expect(memoryItem?.hidden).toBe(true);
+    expect(automationsItem).toBeDefined();
+    expect(automationsItem?.url).toBe('/automations');
   });
 });

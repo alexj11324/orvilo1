@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agents, chatGroups, sessions, threads, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { ThreadStatus, ThreadType } from '@orvilo/types';
@@ -10,7 +10,7 @@ import { aiAgentRouter } from '../../aiAgent';
 import { cleanupTestUser, createTestUser } from './setup';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -47,7 +47,7 @@ vi.mock('@/server/services/aiChat', () => ({
 }));
 
 describe('Agent Task Integration', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let userId: string;
   let testAgentId: string;
   let testAgent2Id: string;

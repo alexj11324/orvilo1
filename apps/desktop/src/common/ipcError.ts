@@ -14,7 +14,7 @@
  * existing "promise rejects on failure" contract for every caller.
  */
 
-const IPC_ERROR_MARKER = '__lobeIpcError__';
+const IPC_ERROR_MARKER = '__orviloIpcError__';
 
 /** Bound recursion on a deliberately malicious / cyclic `cause` chain. */
 const MAX_CAUSE_DEPTH = 5;

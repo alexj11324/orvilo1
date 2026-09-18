@@ -4,7 +4,7 @@
  * Centralized error handling for ComfyUI runtime
  * Maps internal errors to framework errors
  */
-import { type ILobeAgentRuntimeErrorType } from '@orvilo/model-runtime';
+import { type IOrviloAgentRuntimeErrorType } from '@orvilo/model-runtime';
 import { AgentRuntimeError, AgentRuntimeErrorType } from '@orvilo/model-runtime';
 import { TRPCError } from '@trpc/server';
 
@@ -32,7 +32,7 @@ interface ComfyUIError {
 
 interface ParsedError {
   error: ComfyUIError;
-  errorType: ILobeAgentRuntimeErrorType;
+  errorType: IOrviloAgentRuntimeErrorType;
 }
 
 /**
@@ -266,7 +266,7 @@ function parseComfyUIErrorMessage(error: any): ParsedError {
   let missingFileName: string | undefined;
   let missingFileType: 'model' | 'component' | undefined;
   let userGuidance: string | undefined;
-  let errorType: ILobeAgentRuntimeErrorType = AgentRuntimeErrorType.ComfyUIBizError;
+  let errorType: IOrviloAgentRuntimeErrorType = AgentRuntimeErrorType.ComfyUIBizError;
 
   // Check for JSON parsing errors (indicates non-ComfyUI service)
   if (
@@ -429,7 +429,7 @@ export class ErrorHandlerService {
 
       const agentError = AgentRuntimeError.createImage({
         error: enhancedError,
-        errorType: errorType as ILobeAgentRuntimeErrorType,
+        errorType: errorType as IOrviloAgentRuntimeErrorType,
         provider: 'comfyui',
       });
 

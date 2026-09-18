@@ -2,28 +2,16 @@
 
 import { Github } from '@lobehub/icons';
 import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { ActionIcon, Avatar, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
-import {
-  BookmarkIcon,
-  BookmarkMinusIcon,
-  CircleIcon,
-  DotIcon,
-  DownloadIcon,
-  ScaleIcon,
-  StarIcon,
-} from 'lucide-react';
-import { memo, useState } from 'react';
+import { CircleIcon, DotIcon, DownloadIcon, ScaleIcon, StarIcon } from 'lucide-react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import useSWR from 'swr';
 
 import OfficialIcon from '@/components/OfficialIcon';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
 import { useCategory } from '@/hooks/useMCPCategory';
-import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
-import { favoriteKeys } from '@/libs/swr/keys';
-import { socialService } from '@/services/social';
 
 import InstallationIcon from '../../components/MCPDepsIcon';
 import PublishedTime from '../../components/PublishedTime';
@@ -69,48 +57,6 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
     isOfficial,
   } = useDetailContext();
   const { mobile = isMobile } = useResponsive();
-  const { isAuthenticated, signIn, session } = useMarketAuth();
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
-
-  // Set access token for social service
-  if (session?.accessToken) {
-    socialService.setAccessToken(session.accessToken);
-  }
-
-  // Fetch favorite status
-  const { data: favoriteStatus, mutate: mutateFavorite } = useSWR(
-    identifier && isAuthenticated ? favoriteKeys.status('plugin', identifier) : null,
-    () => socialService.checkFavoriteStatus('plugin', identifier!),
-    { revalidateOnFocus: false },
-  );
-
-  const isFavorited = favoriteStatus?.isFavorited ?? false;
-
-  const handleFavoriteClick = async () => {
-    if (!isAuthenticated) {
-      await signIn('mcp');
-      return;
-    }
-
-    if (!identifier) return;
-
-    setFavoriteLoading(true);
-    try {
-      if (isFavorited) {
-        await socialService.removeFavorite('plugin', identifier);
-        toast.success(t('assistant.unfavoriteSuccess'));
-      } else {
-        await socialService.addFavorite('plugin', identifier);
-        toast.success(t('assistant.favoriteSuccess'));
-      }
-      await mutateFavorite();
-    } catch (error) {
-      console.error('Favorite action failed:', error);
-      toast.error(t('assistant.favoriteFailed'));
-    } finally {
-      setFavoriteLoading(false);
-    }
-  };
 
   const recommendedDeployment = getRecommendedDeployment(deploymentOptions);
   const categories = useCategory();
@@ -191,14 +137,6 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
                   <ActionIcon fill={cssVar.colorTextDescription} icon={Github} />
                 </a>
               )}
-              <Tooltip title={isFavorited ? t('assistant.unfavorite') : t('assistant.favorite')}>
-                <ActionIcon
-                  icon={isFavorited ? BookmarkMinusIcon : BookmarkIcon}
-                  loading={favoriteLoading}
-                  variant={isFavorited ? 'outlined' : undefined}
-                  onClick={handleFavoriteClick}
-                />
-              </Tooltip>
             </Flexbox>
           </Flexbox>
           <Flexbox horizontal align={'center'} gap={4}>

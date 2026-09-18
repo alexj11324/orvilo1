@@ -104,7 +104,7 @@ const BatchCreateAgentsRender = memo<
     return (
       <Flexbox align="center" className={styles.empty} gap={8}>
         <Users size={24} />
-        <span>{t('builtins.lobe-group-agent-builder.inspector.noResults')}</span>
+        <span>{t('builtins.orvilo-group-agent-builder.inspector.noResults')}</span>
       </Flexbox>
     );
   }

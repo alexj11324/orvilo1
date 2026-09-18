@@ -8,9 +8,9 @@ import { MarketOIDC } from './oidc';
 describe('MarketOIDC.buildAuthUrl', () => {
   it('should join market baseUrl with OIDC auth path correctly (no string concat issues)', async () => {
     const client = new MarketOIDC({
-      baseUrl: 'https://market.lobehub.com/', // trailing slash on purpose
-      clientId: 'lobehub-desktop',
-      redirectUri: 'https://market.lobehub.com/lobehub-oidc/callback/desktop',
+      baseUrl: 'https://market.aspectlylabs.com/', // trailing slash on purpose
+      clientId: 'orvilo-desktop',
+      redirectUri: 'https://market.aspectlylabs.com/orvilo-oidc/callback/desktop',
       scope: 'openid profile email',
     });
 
@@ -22,10 +22,10 @@ describe('MarketOIDC.buildAuthUrl', () => {
 
     const url = await client.buildAuthUrl();
 
-    expect(url).toContain('https://market.lobehub.com/lobehub-oidc/auth?');
-    expect(url).toContain(`client_id=${encodeURIComponent('lobehub-desktop')}`);
+    expect(url).toContain('https://market.aspectlylabs.com/orvilo-oidc/auth?');
+    expect(url).toContain(`client_id=${encodeURIComponent('orvilo-desktop')}`);
     expect(url).toContain(
-      `redirect_uri=${encodeURIComponent('https://market.lobehub.com/lobehub-oidc/callback/desktop')}`,
+      `redirect_uri=${encodeURIComponent('https://market.aspectlylabs.com/orvilo-oidc/callback/desktop')}`,
     );
     expect(url).toContain(`state=${encodeURIComponent('state_value')}`);
     expect(url).toContain(`code_challenge=${encodeURIComponent('code_challenge')}`);
@@ -34,7 +34,7 @@ describe('MarketOIDC.buildAuthUrl', () => {
     expect(parsed.searchParams.get('scope')).toBe('openid profile email');
 
     // The auth endpoint must be a plain path; it is opened in a real browser.
-    expect(MARKET_OIDC_ENDPOINTS.auth).toBe('/lobehub-oidc/auth');
+    expect(MARKET_OIDC_ENDPOINTS.auth).toBe('/orvilo-oidc/auth');
   });
 });
 
@@ -52,15 +52,15 @@ describe('MarketOIDC.startAuthorization', () => {
 
   it('should reject promptly when popup closes without a handoff result', async () => {
     const client = new MarketOIDC({
-      baseUrl: 'https://market.lobehub.com',
-      clientId: 'lobechat-com',
+      baseUrl: 'https://market.aspectlylabs.com',
+      clientId: 'orvilo-com',
       redirectUri: 'http://localhost:3010/market-auth-callback',
       scope: 'openid profile email',
     });
 
     sessionStorage.setItem('market_state', 'state_value');
     vi.spyOn(client, 'buildAuthUrl').mockResolvedValue(
-      'https://market.lobehub.com/lobehub-oidc/auth',
+      'https://market.aspectlylabs.com/orvilo-oidc/auth',
     );
 
     let isClosed = false;
@@ -86,8 +86,8 @@ describe('MarketOIDC.startAuthorization', () => {
 
   it('should resolve from storage handoff when popup closes after callback persistence', async () => {
     const client = new MarketOIDC({
-      baseUrl: 'https://market.lobehub.com',
-      clientId: 'lobechat-com',
+      baseUrl: 'https://market.aspectlylabs.com',
+      clientId: 'orvilo-com',
       redirectUri: 'http://localhost:3010/market-auth-callback',
       scope: 'openid profile email',
     });
@@ -96,7 +96,7 @@ describe('MarketOIDC.startAuthorization', () => {
 
     sessionStorage.setItem('market_state', state);
     vi.spyOn(client, 'buildAuthUrl').mockResolvedValue(
-      'https://market.lobehub.com/lobehub-oidc/auth',
+      'https://market.aspectlylabs.com/orvilo-oidc/auth',
     );
 
     let isClosed = false;

@@ -3,7 +3,7 @@ import type OpenAI from 'openai';
 import type { Stream } from 'openai/streaming';
 
 import type { ChatStreamCallbacks } from '../../../types';
-import type { ILobeAgentRuntimeErrorType } from '../../../types/error';
+import type { IOrviloAgentRuntimeErrorType } from '../../../types/error';
 import { AgentRuntimeErrorType } from '../../../types/error';
 import { isErrorCausedByContentFilter } from '../../../utils/isErrorCausedByContentFilter';
 import { serializeScopedSignature } from '../../../utils/signatureScope';
@@ -46,7 +46,7 @@ const hasThoughtSignature = (
  * Drop citations without a valid url. Some providers (e.g. OpenRouter's built-in
  * web search) emit empty citation objects like `{}`, which would otherwise break
  * downstream rendering (`new URL(undefined)`) and message persistence (Zod requires
- * `url` to be a string). See https://github.com/lobehub/lobehub/issues/15043
+ * `url` to be a string). See
  */
 const filterValidCitations = (citations: ChatCitationItem[]): ChatCitationItem[] =>
   citations.filter((citation) => !!citation?.url);
@@ -133,7 +133,7 @@ const transformOpenAIStream = (
 
     if (baseResp.status_code !== 0) {
       // Map MiniMax error codes to corresponding error types
-      let errorType: ILobeAgentRuntimeErrorType = AgentRuntimeErrorType.ProviderBizError;
+      let errorType: IOrviloAgentRuntimeErrorType = AgentRuntimeErrorType.ProviderBizError;
 
       switch (baseResp.status_code) {
         // 1004 - Unauthorized / Token mismatch / 2049 - Invalid API Key
@@ -237,10 +237,10 @@ const transformOpenAIStream = (
                 generateToolCallId(mapIndex, value.function?.name),
 
               // mistral's tool calling don't have index and function field, it's data like:
-              // [{"id":"xbhnmTtY7","function":{"name":"lobe-image-designer____text2image____builtin","arguments":"{\"prompts\": [\"A photo of a small, fluffy dog with a playful expression and wagging tail.\", \"A watercolor painting of a small, energetic dog with a glossy coat and bright eyes.\", \"A vector illustration of a small, adorable dog with a short snout and perky ears.\", \"A drawing of a small, scruffy dog with a mischievous grin and a wagging tail.\"], \"quality\": \"standard\", \"seeds\": [123456, 654321, 111222, 333444], \"size\": \"1024x1024\", \"style\": \"vivid\"}"}}]
+              // [{"id":"xbhnmTtY7","function":{"name":"orvilo-image-designer____text2image____builtin","arguments":"{\"prompts\": [\"A photo of a small, fluffy dog with a playful expression and wagging tail.\", \"A watercolor painting of a small, energetic dog with a glossy coat and bright eyes.\", \"A vector illustration of a small, adorable dog with a short snout and perky ears.\", \"A drawing of a small, scruffy dog with a mischievous grin and a wagging tail.\"], \"quality\": \"standard\", \"seeds\": [123456, 654321, 111222, 333444], \"size\": \"1024x1024\", \"style\": \"vivid\"}"}}]
 
               // minimax's tool calling don't have index field, it's data like:
-              // [{"id":"call_function_4752059746","type":"function","function":{"name":"lobe-image-designer____text2image____builtin","arguments":"{\"prompts\": [\"一个流浪的地球，背景是浩瀚"}}]
+              // [{"id":"call_function_4752059746","type":"function","function":{"name":"orvilo-image-designer____text2image____builtin","arguments":"{\"prompts\": [\"一个流浪的地球，背景是浩瀚"}}]
 
               // so we need to add these default values
               index: toolIndex,
@@ -514,8 +514,8 @@ const transformOpenAIStream = (
       // DeepSeek reasoner will put thinking in the reasoning_content field
       // litellm and not set content = null when processing reasoning content
       // en: siliconflow and aliyun bailian has encountered a situation where both content and reasoning_content are present, so need to handle it
-      // refs: https://github.com/lobehub/lobe-chat/issues/5681 (siliconflow)
-      // refs: https://github.com/lobehub/lobe-chat/issues/5956 (aliyun bailian)
+      // refs:  (siliconflow)
+      // refs:  (aliyun bailian)
       if (typeof content === 'string' && typeof reasoning_content === 'string') {
         if (content === '' && reasoning_content === '') {
           content = null;
@@ -709,7 +709,7 @@ export interface OpenAIStreamOptions {
   bizErrorTypeTransformer?: (error: {
     message: string;
     name: string;
-  }) => ILobeAgentRuntimeErrorType | undefined;
+  }) => IOrviloAgentRuntimeErrorType | undefined;
   callbacks?: ChatStreamCallbacks;
   enableStreaming?: boolean; // Choose TPS calculation method (pass false for non-streaming)
   inputStartAt?: number;

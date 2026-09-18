@@ -810,7 +810,7 @@ describe('createGatewayEventHandler', () => {
               apiName: 'deleteTask',
               arguments: JSON.stringify({ identifier: 'T-3' }),
               id: 'tc-1',
-              identifier: 'lobe-task',
+              identifier: 'orvilo-task',
             },
           },
           result: { content: 'Task deleted', success: true },
@@ -818,10 +818,10 @@ describe('createGatewayEventHandler', () => {
       );
       await flush();
 
-      expect(getExecutorMock).toHaveBeenCalledWith('lobe-task');
+      expect(getExecutorMock).toHaveBeenCalledWith('orvilo-task');
       expect(onAfterCall).toHaveBeenCalledWith({
         apiName: 'deleteTask',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         params: { identifier: 'T-3' },
         result: { content: 'Task deleted', success: true },
         toolCallId: 'tc-1',
@@ -842,7 +842,7 @@ describe('createGatewayEventHandler', () => {
             apiName: 'createTask',
             arguments: JSON.stringify({ name: 'New', instruction: 'do thing' }),
             id: 'tc-2',
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
           },
           result: { success: true },
         }),
@@ -852,7 +852,7 @@ describe('createGatewayEventHandler', () => {
       expect(onAfterCall).toHaveBeenCalledWith(
         expect.objectContaining({
           apiName: 'createTask',
-          identifier: 'lobe-task',
+          identifier: 'orvilo-task',
           toolCallId: 'tc-2',
         }),
       );
@@ -924,7 +924,7 @@ describe('createGatewayEventHandler', () => {
             apiName: 'editTask',
             arguments: JSON.stringify({ identifier: 'T-5', name: 'renamed' }),
             id: 'tc-3',
-            identifier: 'lobe-task',
+            identifier: 'orvilo-task',
           },
         }),
       );
@@ -932,7 +932,7 @@ describe('createGatewayEventHandler', () => {
 
       expect(onBeforeCall).toHaveBeenCalledWith({
         apiName: 'editTask',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         params: { identifier: 'T-5', name: 'renamed' },
         toolCallId: 'tc-3',
         topicId: 'topic-1',
@@ -988,7 +988,7 @@ describe('createGatewayEventHandler', () => {
               apiName: 'createTask',
               arguments: '{}',
               id: 'tool-call-1',
-              identifier: 'lobe-task',
+              identifier: 'orvilo-task',
             },
           },
           result: { success: true, workRegistration: { type: 'task' } },
@@ -1434,7 +1434,7 @@ describe('createGatewayEventHandler', () => {
           budget,
           error: { message: 'Budget exceeded' },
           errorType: 'FreePlanLimit',
-          provider: 'lobehub',
+          provider: 'orvilo',
         }),
       );
       await flush();
@@ -1445,7 +1445,7 @@ describe('createGatewayEventHandler', () => {
           body: expect.objectContaining({
             budget,
             message: 'Budget exceeded',
-            provider: 'lobehub',
+            provider: 'orvilo',
           }),
           message: 'Budget exceeded',
           type: 'FreePlanLimit',
@@ -1462,7 +1462,7 @@ describe('createGatewayEventHandler', () => {
         makeEvent('error', {
           _responseBody: {
             error: { message: 'Payment required' },
-            provider: 'lobehub',
+            provider: 'orvilo',
           },
           error: { status: 402 },
           errorType: 'ProviderBizError',
@@ -1476,7 +1476,7 @@ describe('createGatewayEventHandler', () => {
           body: expect.objectContaining({
             error: { message: 'Payment required', status: 402 },
             message: 'Payment required',
-            provider: 'lobehub',
+            provider: 'orvilo',
           }),
           message: 'Payment required',
           type: 'ProviderBizError',

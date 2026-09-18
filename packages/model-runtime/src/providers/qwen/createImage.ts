@@ -6,7 +6,7 @@ import type { TaskResult } from '../../utils/asyncifyPolling';
 import { asyncifyPolling } from '../../utils/asyncifyPolling';
 import { AgentRuntimeError } from '../../utils/createError';
 
-const log = createDebug('lobe-image:qwen');
+const log = createDebug('orvilo-image:qwen');
 
 const text2ImageModels = [
   /^wan2\.(2|5)-t2i-/,

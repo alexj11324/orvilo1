@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces, workspaceUserSettings } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { WorkspaceUserSettingsModel } from '../workspaceUserSettings';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const workspaceId = 'ws-user-settings-test';
 const userA = 'ws-us-user-a';

@@ -25,7 +25,7 @@ import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { users } from '@/database/schemas';
 import type { AcceptanceItem } from '@/database/schemas/verify';
 import { acceptances } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { isUuid } from '@/database/utils/uuid';
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -129,7 +129,7 @@ const acceptanceWriteProcedure = acceptanceProcedure.use(requireWorkspaceRoleWhe
  * author is worse than one nobody can sign.
  */
 const resolveAcceptanceForWrite = async (
-  ctx: { serverDB: LobeChatDatabase; userId: string },
+  ctx: { serverDB: OrviloDatabase; userId: string },
   id: string,
 ): Promise<{ acceptance: AcceptanceItem; service: AcceptanceService }> => {
   const acceptance = isUuid(id)
@@ -154,7 +154,7 @@ const resolveAcceptanceForWrite = async (
 };
 
 const canReadAcceptance = async (
-  ctx: { serverDB: LobeChatDatabase; userId?: string | null },
+  ctx: { serverDB: OrviloDatabase; userId?: string | null },
   acceptance: AcceptanceItem,
 ) => {
   if (ctx.userId && ctx.userId === acceptance.userId) return true;

@@ -5,7 +5,7 @@
  */
 
 export interface InboxIdentity {
-  /** Personal name the user gave the assistant (falls back to "Lobe"). */
+  /** Personal name the user gave the assistant (falls back to "Orvilo"). */
   name?: string;
   /** Role title shown alongside the name. */
   title?: string;
@@ -14,11 +14,11 @@ export interface InboxIdentity {
 /**
  * The default assistant is renameable — when the user gives it a name (and
  * optionally a role title), the prompt must introduce that identity instead of
- * the hardcoded "Lobe", or the assistant answers "who are you?" with the
+ * the hardcoded "Orvilo", or the assistant answers "who are you?" with the
  * product default no matter what it is called.
  */
 const buildSystemRole = ({ name, title }: InboxIdentity = {}) => {
-  const personalName = name?.trim() || 'Lobe';
+  const personalName = name?.trim() || 'Orvilo';
   const role = title?.trim();
   const identity = role ? `${personalName} (${role})` : personalName;
 

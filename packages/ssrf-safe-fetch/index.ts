@@ -59,7 +59,7 @@ const readBodyWithCap = async (
  * @param url - The URL to fetch
  * @param options - Standard fetch options
  * @param ssrfOptions - Optional per-call SSRF configuration overrides
- * @see https://lobehub.com/docs/self-hosting/environment-variables/basic#ssrf-allow-private-ip-address
+ * @see https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/basic#ssrf-allow-private-ip-address
  */
 export const ssrfSafeFetch = async (
   url: string,
@@ -117,7 +117,7 @@ export const ssrfSafeFetch = async (
       console.error('SSRF protection blocked request:', error);
       throw new Error(
         `SSRF blocked: ${errorMessage}. ` +
-          'See: https://lobehub.com/docs/self-hosting/environment-variables/basic#ssrf-allow-private-ip-address',
+          'See: https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/basic#ssrf-allow-private-ip-address',
         { cause: error },
       );
     }

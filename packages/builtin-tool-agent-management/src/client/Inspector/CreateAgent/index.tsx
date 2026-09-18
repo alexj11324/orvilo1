@@ -39,7 +39,7 @@ export const CreateAgentInspector = memo<BuiltinInspectorProps<CreateAgentParams
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-agent-management.apiName.createAgent')}
+            {t('builtins.orvilo-agent-management.apiName.createAgent')}
           </span>
         </div>
       );
@@ -48,7 +48,7 @@ export const CreateAgentInspector = memo<BuiltinInspectorProps<CreateAgentParams
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-agent-management.inspector.createAgent.title')}
+          {t('builtins.orvilo-agent-management.inspector.createAgent.title')}
         </span>
         <Avatar
           avatar={avatar || DEFAULT_AVATAR}

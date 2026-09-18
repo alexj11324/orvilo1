@@ -6,7 +6,7 @@ import { memo, Suspense } from 'react';
 import { SafeBoundary } from '@/components/ErrorBoundary';
 import { type DynamicRouteMetaProps, type RouteMeta } from '@/spa/router/routeMeta';
 
-const log = debug('lobe-client:route-meta');
+const log = debug('orvilo-client:route-meta');
 
 interface DynamicMetaRunnerProps extends DynamicRouteMetaProps {
   DynamicMeta: NonNullable<RouteMeta['DynamicMeta']>;

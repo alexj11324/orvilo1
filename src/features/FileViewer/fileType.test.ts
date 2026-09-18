@@ -39,7 +39,7 @@ describe('isPdfFile', () => {
       isPdfFile({
         fileName: '国内大模型蒸馏风波的来龙去脉',
         fileType: 'custom/document',
-        path: 'https://lobechat-cloud.example.r2.cloudflarestorage.com/assets/495734/a3bedf85.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=abc',
+        path: 'https://orvilo-cloud.example.r2.cloudflarestorage.com/assets/495734/a3bedf85.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=abc',
       }),
     ).toBe(true);
   });

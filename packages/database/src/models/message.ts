@@ -86,7 +86,7 @@ import {
   topics,
   users,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { sanitizeBm25Query } from '../utils/bm25';
 import { notCopiedTranscript } from '../utils/copiedTranscript';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
@@ -632,7 +632,7 @@ const sanitizeVisitorTaskDetail = (taskDetail: TaskDetail | undefined): TaskDeta
  * data wherever they occur inside an unbounded per-tool blob
  * (`pluginState`/`pluginError`, live Gateway event payloads). A builtin tool's
  * server runtime writes whatever shape it wants into `state`/error payloads —
- * e.g. `lobe-agent`'s `analyzeMedia` writes `{ model, provider, usage }`
+ * e.g. `orvilo-agent`'s `analyzeMedia` writes `{ model, provider, usage }`
  * straight into it — so unlike a short, fully enumerable list of top-level
  * `UIChatMessage` fields there is no finite set of "every tool's state shape"
  * to allowlist by hand: a new tool, or a new field on an existing tool's
@@ -908,7 +908,7 @@ export const toVisitorMessage = (
 
 export class MessageModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private ftsSearchCandidateSource?: FtsSearchCandidateSource;
   private workspaceId?: string;
   /**
@@ -922,7 +922,7 @@ export class MessageModel {
   private includeShareVisitor: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     ftsSearchCandidateSource?: FtsSearchCandidateSource,
@@ -1242,7 +1242,7 @@ export class MessageModel {
   };
 
   /**
-   * Exact per-topic turn count for one role, used by `maxTurnsPerTopic`.
+   * Exact per-topic turn count for one role.
    *
    * MUST NOT reuse {@link MessageModel.count}: its `analyticsConditions()` ANDs
    * in `notShareVisitorMessage()`, which excludes every message whose topic has
@@ -1251,10 +1251,10 @@ export class MessageModel {
    * separately), but it would make `count()` return 0 forever for a share
    * topic, silently disabling the turn cap.
    *
-   * Safe without a visitor/ownership check here: the caller (shareChat router /
-   * `reserveShareVisitorTurn`) already resolved and authorized the topic, and
-   * `this.ownership()` matches because share messages carry the creator's
-   * `userId` (the model is constructed with `share.ownerId`).
+   * Safe without a visitor/ownership check here: callers already resolved
+   * and authorized the topic, and `this.ownership()` matches because share
+   * messages carry the creator's `userId` (a share-runtime model is
+   * constructed with `share.ownerId`).
    */
   countByTopic = async ({ role, topicId }: { role: string; topicId: string }): Promise<number> => {
     const result = await this.db
@@ -4942,7 +4942,7 @@ export class MessageModel {
    * Check which user IDs from the given list have at least one message.
    */
   static checkUsersHaveMessages = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userIds: string[],
   ): Promise<Set<string>> => {
     if (userIds.length === 0) return new Set();

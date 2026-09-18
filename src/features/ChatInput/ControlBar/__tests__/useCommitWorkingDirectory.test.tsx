@@ -80,7 +80,7 @@ describe('useCommitWorkingDirectory — localTarget', () => {
 
     const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
     await result.current.commit(
-      { path: 'C:/Users/me/LobeHub/sandbox/agent-id' },
+      { path: 'C:/Users/me/Orvilo/sandbox/agent-id' },
       {
         localTarget: true,
       },
@@ -88,7 +88,7 @@ describe('useCommitWorkingDirectory — localTarget', () => {
 
     // Per-user slot — never the workspace-shared row.
     expect(testState.agent.updateAgentRuntimeEnvConfigById).toHaveBeenCalledWith('agent-id', {
-      workingDirectory: 'C:/Users/me/LobeHub/sandbox/agent-id',
+      workingDirectory: 'C:/Users/me/Orvilo/sandbox/agent-id',
     });
     expect(testState.agent.updateAgentConfigById).not.toHaveBeenCalled();
   });

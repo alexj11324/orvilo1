@@ -1,9 +1,9 @@
 import { AgentRuntimeErrorType, RequestTrigger } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeVertexAI } from '../../providers/vertexai';
+import { OrviloVertexAI } from '../../providers/vertexai';
 import { getRuntimeSignatureScopeSource } from '../../utils/signatureScope';
-import type { LobeRuntimeAI } from '../BaseAI';
+import type { OrviloRuntimeAI } from '../BaseAI';
 import { createRouterRuntime } from './createRuntime';
 
 describe('createRouterRuntime', () => {
@@ -36,7 +36,7 @@ describe('createRouterRuntime', () => {
     });
 
     it('should create UniformRuntime class with valid routers', () => {
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = vi.fn();
         models = vi.fn();
         embeddings = vi.fn();
@@ -63,7 +63,7 @@ describe('createRouterRuntime', () => {
       const mockConstructor = vi.fn();
       let signatureScopeSource;
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         constructor(options: any) {
           mockConstructor(options);
         }
@@ -113,7 +113,7 @@ describe('createRouterRuntime', () => {
     it('should call chat on the correct runtime based on model', async () => {
       const mockChat = vi.fn().mockResolvedValue('chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
@@ -137,15 +137,15 @@ describe('createRouterRuntime', () => {
       expect(mockChat).toHaveBeenCalledWith(payload, undefined);
     });
 
-    it('should attach route attempt metadata for lobehub runtime only', async () => {
+    it('should attach route attempt metadata for orvilo runtime only', async () => {
       const mockChat = vi.fn().mockResolvedValue('chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
       const Runtime = createRouterRuntime({
-        id: 'lobehub',
+        id: 'orvilo',
         routers: [
           {
             apiType: 'openai',
@@ -166,23 +166,23 @@ describe('createRouterRuntime', () => {
           apiType: 'openai',
           channelId: 'channel-1',
           optionIndex: 0,
-          providerId: 'lobehub',
+          providerId: 'orvilo',
           success: true,
           totalOptions: 1,
         }),
       );
     });
 
-    it('should throw in development when lobehub route attempt is missing trigger', async () => {
+    it('should throw in development when orvilo route attempt is missing trigger', async () => {
       vi.stubEnv('NODE_ENV', 'development');
       const mockChat = vi.fn().mockResolvedValue('chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
       const Runtime = createRouterRuntime({
-        id: 'lobehub',
+        id: 'orvilo',
         routers: [
           {
             apiType: 'openai',
@@ -201,16 +201,16 @@ describe('createRouterRuntime', () => {
       expect(mockChat).not.toHaveBeenCalled();
     });
 
-    it('should throw in development when lobehub route attempt is missing user', async () => {
+    it('should throw in development when orvilo route attempt is missing user', async () => {
       vi.stubEnv('NODE_ENV', 'development');
       const mockChat = vi.fn().mockResolvedValue('chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
       const Runtime = createRouterRuntime({
-        id: 'lobehub',
+        id: 'orvilo',
         routers: [
           {
             apiType: 'openai',
@@ -235,12 +235,12 @@ describe('createRouterRuntime', () => {
       const mockChat = vi.fn().mockResolvedValue('chat-response');
       const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
       const Runtime = createRouterRuntime({
-        id: 'lobehub',
+        id: 'orvilo',
         onRouteAttempt,
         routers: [
           {
@@ -272,12 +272,12 @@ describe('createRouterRuntime', () => {
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const mockChat = vi.fn().mockResolvedValue('chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
       const Runtime = createRouterRuntime({
-        id: 'lobehub',
+        id: 'orvilo',
         routers: [
           {
             apiType: 'openai',
@@ -300,10 +300,10 @@ describe('createRouterRuntime', () => {
       expect(consoleError).not.toHaveBeenCalled();
     });
 
-    it('should not attach route attempt metadata for non-lobehub runtime', async () => {
+    it('should not attach route attempt metadata for non-orvilo runtime', async () => {
       const mockChat = vi.fn().mockResolvedValue('chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
@@ -331,7 +331,7 @@ describe('createRouterRuntime', () => {
       const mockError = new Error('API Error');
       const mockChat = vi.fn().mockRejectedValue(mockError);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
@@ -369,7 +369,7 @@ describe('createRouterRuntime', () => {
       const mockError = new Error('API Error');
       const mockChat = vi.fn().mockRejectedValue(mockError);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
@@ -403,7 +403,7 @@ describe('createRouterRuntime', () => {
     it('should call models method on first runtime', async () => {
       const mockModels = vi.fn().mockResolvedValue(['model-1', 'model-2']);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         models = mockModels;
       }
 
@@ -426,12 +426,12 @@ describe('createRouterRuntime', () => {
     });
 
     it('should use the baseURL-matched runtime client for functional model discovery', async () => {
-      class OpenAIRuntime implements LobeRuntimeAI {
+      class OpenAIRuntime implements OrviloRuntimeAI {
         client = { provider: 'openai-compatible' };
         models = vi.fn();
       }
 
-      class AnthropicRuntime implements LobeRuntimeAI {
+      class AnthropicRuntime implements OrviloRuntimeAI {
         client = { provider: 'anthropic-compatible' };
         models = vi.fn();
       }
@@ -472,7 +472,7 @@ describe('createRouterRuntime', () => {
     it('should call embeddings on the correct runtime based on model', async () => {
       const mockEmbeddings = vi.fn().mockResolvedValue('embeddings-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         embeddings = mockEmbeddings;
       }
 
@@ -502,7 +502,7 @@ describe('createRouterRuntime', () => {
     it('should call textToSpeech on the correct runtime based on model', async () => {
       const mockTextToSpeech = vi.fn().mockResolvedValue('speech-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         textToSpeech = mockTextToSpeech;
       }
 
@@ -530,7 +530,7 @@ describe('createRouterRuntime', () => {
 
   describe('dynamic routers configuration', () => {
     it('should support function-based routers configuration', async () => {
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = vi.fn().mockResolvedValue('chat-response');
         models = vi.fn();
         embeddings = vi.fn();
@@ -639,7 +639,7 @@ describe('createRouterRuntime', () => {
     ])(
       'should forward request pricing context to dynamic routers for %s',
       async (_method, call) => {
-        class MockRuntime implements LobeRuntimeAI {
+        class MockRuntime implements OrviloRuntimeAI {
           chat = vi.fn().mockResolvedValue('chat-response');
           createImage = vi.fn().mockResolvedValue({ imageUrl: 'image-url' });
           createVideo = vi.fn().mockResolvedValue({ inferenceId: 'video-id' });
@@ -693,7 +693,7 @@ describe('createRouterRuntime', () => {
     it('should support async function-based routers configuration', async () => {
       const mockChat = vi.fn().mockResolvedValue('async-chat-response');
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         chat = mockChat;
       }
 
@@ -723,7 +723,7 @@ describe('createRouterRuntime', () => {
     it('should only use raw-audio-compatible routes for audio messages', async () => {
       const attemptedRoutes: string[] = [];
 
-      class CompatibleRuntime implements LobeRuntimeAI {
+      class CompatibleRuntime implements OrviloRuntimeAI {
         private readonly apiKey: string;
 
         constructor(options: any) {
@@ -747,11 +747,11 @@ describe('createRouterRuntime', () => {
         attemptedRoutes.push('vertexai');
         return 'vertex-response';
       });
-      vi.spyOn(LobeVertexAI, 'initFromVertexAI').mockReturnValue({ chat: vertexChat } as any);
+      vi.spyOn(OrviloVertexAI, 'initFromVertexAI').mockReturnValue({ chat: vertexChat } as any);
 
       const unsupportedChat = vi.fn();
 
-      class UnsupportedRuntime implements LobeRuntimeAI {
+      class UnsupportedRuntime implements OrviloRuntimeAI {
         chat = unsupportedChat;
       }
 
@@ -798,7 +798,7 @@ describe('createRouterRuntime', () => {
     it('should fail closed when no route supports raw audio input', async () => {
       const unsupportedChat = vi.fn();
 
-      class UnsupportedRuntime implements LobeRuntimeAI {
+      class UnsupportedRuntime implements OrviloRuntimeAI {
         chat = unsupportedChat;
       }
 
@@ -841,7 +841,7 @@ describe('createRouterRuntime', () => {
     it('should preserve the original fallback order for text messages', async () => {
       const attemptedKeys: string[] = [];
 
-      class TextRuntime implements LobeRuntimeAI {
+      class TextRuntime implements OrviloRuntimeAI {
         private readonly apiKey: string;
 
         constructor(options: any) {
@@ -881,7 +881,7 @@ describe('createRouterRuntime', () => {
       // Test that errors are caught and re-thrown when all options fail
       const mockChatAlwaysFail = vi.fn().mockRejectedValue(new Error('All failed'));
 
-      class AlwaysFailRuntime implements LobeRuntimeAI {
+      class AlwaysFailRuntime implements OrviloRuntimeAI {
         chat = mockChatAlwaysFail;
       }
 
@@ -909,7 +909,7 @@ describe('createRouterRuntime', () => {
     it('should fallback when a provider reports insufficient account quota', async () => {
       const attemptedKeys: string[] = [];
 
-      class AccountBalanceRuntime implements LobeRuntimeAI {
+      class AccountBalanceRuntime implements OrviloRuntimeAI {
         private readonly apiKey: string;
 
         constructor(options: { apiKey: string }) {
@@ -982,11 +982,11 @@ describe('createRouterRuntime', () => {
       const mockChatFail = vi.fn().mockRejectedValue(exceededError);
       const mockChatSuccess = vi.fn().mockResolvedValue('success');
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
-      class SuccessRuntime implements LobeRuntimeAI {
+      class SuccessRuntime implements OrviloRuntimeAI {
         chat = mockChatSuccess;
       }
 
@@ -1028,7 +1028,7 @@ describe('createRouterRuntime', () => {
 
       const mockChatFail = vi.fn().mockRejectedValue(invalidRequestError);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1061,7 +1061,7 @@ describe('createRouterRuntime', () => {
 
       const mockChatFail = vi.fn().mockRejectedValue(invalidRequestError);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1098,7 +1098,7 @@ describe('createRouterRuntime', () => {
       const mockChatFail = vi.fn().mockRejectedValue(imageDecodeError);
       const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1144,7 +1144,7 @@ describe('createRouterRuntime', () => {
       const mockChatFail = vi.fn().mockRejectedValue(retryableError);
       const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1190,7 +1190,7 @@ describe('createRouterRuntime', () => {
 
       const mockChatFail = vi.fn().mockRejectedValue(invalidSchemaError);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1231,7 +1231,7 @@ describe('createRouterRuntime', () => {
 
       const mockChatFail = vi.fn().mockRejectedValue(unsupportedParameterError);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1266,11 +1266,11 @@ describe('createRouterRuntime', () => {
       const mockChatSuccess = vi.fn().mockResolvedValue('success');
       const shouldStopFallback = vi.fn().mockResolvedValue(true);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
-      class SuccessRuntime implements LobeRuntimeAI {
+      class SuccessRuntime implements OrviloRuntimeAI {
         chat = mockChatSuccess;
       }
 
@@ -1315,7 +1315,7 @@ describe('createRouterRuntime', () => {
 
       const mockChatFail = vi.fn().mockRejectedValue(bizError);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1350,7 +1350,7 @@ describe('createRouterRuntime', () => {
 
       const mockChatFail = vi.fn().mockRejectedValue(invalidKeyError);
 
-      class FailRuntime implements LobeRuntimeAI {
+      class FailRuntime implements OrviloRuntimeAI {
         chat = mockChatFail;
       }
 
@@ -1377,7 +1377,7 @@ describe('createRouterRuntime', () => {
     it('should use apiType from option item when specified for fallback', async () => {
       const constructorCalls: any[] = [];
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         constructor(options: any) {
           constructorCalls.push(options);
         }
@@ -1410,11 +1410,11 @@ describe('createRouterRuntime', () => {
         const mockChatOpenAI = vi.fn().mockResolvedValue('openai-response');
         const mockChatAnthropic = vi.fn().mockResolvedValue('anthropic-response');
 
-        class OpenAIRuntime implements LobeRuntimeAI {
+        class OpenAIRuntime implements OrviloRuntimeAI {
           chat = mockChatOpenAI;
         }
 
-        class AnthropicRuntime implements LobeRuntimeAI {
+        class AnthropicRuntime implements OrviloRuntimeAI {
           chat = mockChatAnthropic;
         }
 
@@ -1454,11 +1454,11 @@ describe('createRouterRuntime', () => {
         const mockChatOpenAI = vi.fn().mockResolvedValue('openai-response');
         const mockChatAnthropic = vi.fn().mockResolvedValue('anthropic-response');
 
-        class OpenAIRuntime implements LobeRuntimeAI {
+        class OpenAIRuntime implements OrviloRuntimeAI {
           chat = mockChatOpenAI;
         }
 
-        class AnthropicRuntime implements LobeRuntimeAI {
+        class AnthropicRuntime implements OrviloRuntimeAI {
           chat = mockChatAnthropic;
         }
 
@@ -1500,11 +1500,11 @@ describe('createRouterRuntime', () => {
       const mockChatFirst = vi.fn().mockResolvedValue('first-response');
       const mockChatLast = vi.fn().mockResolvedValue('last-response');
 
-      class FirstRuntime implements LobeRuntimeAI {
+      class FirstRuntime implements OrviloRuntimeAI {
         chat = mockChatFirst;
       }
 
-      class LastRuntime implements LobeRuntimeAI {
+      class LastRuntime implements OrviloRuntimeAI {
         chat = mockChatLast;
       }
 
@@ -1543,11 +1543,11 @@ describe('createRouterRuntime', () => {
       const mockChatSpecific = vi.fn().mockResolvedValue('specific-response');
       const mockChatFallback = vi.fn().mockResolvedValue('fallback-response');
 
-      class SpecificRuntime implements LobeRuntimeAI {
+      class SpecificRuntime implements OrviloRuntimeAI {
         chat = mockChatSpecific;
       }
 
-      class FallbackRuntime implements LobeRuntimeAI {
+      class FallbackRuntime implements OrviloRuntimeAI {
         chat = mockChatFallback;
       }
 
@@ -1586,7 +1586,7 @@ describe('createRouterRuntime', () => {
         .fn()
         .mockResolvedValue({ imageUrl: 'https://example.com/image.png' });
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         createImage = mockCreateImage;
       }
 
@@ -1616,7 +1616,7 @@ describe('createRouterRuntime', () => {
         .mockResolvedValue({ imageUrl: 'https://example.com/image.png' });
       const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         createImage = mockCreateImage;
       }
 
@@ -1652,7 +1652,7 @@ describe('createRouterRuntime', () => {
     it('should call createVideo on the correct runtime', async () => {
       const mockCreateVideo = vi.fn().mockResolvedValue({ inferenceId: 'job-1' });
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         createVideo = mockCreateVideo;
       }
 
@@ -1680,7 +1680,7 @@ describe('createRouterRuntime', () => {
       const mockCreateVideo = vi.fn().mockResolvedValue({ inferenceId: 'job-1' });
       const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         createVideo = mockCreateVideo;
       }
 
@@ -1717,7 +1717,7 @@ describe('createRouterRuntime', () => {
         videoUrl: 'https://example.com/video.mp4',
       });
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         handlePollVideoStatus = mockHandlePollVideoStatus;
       }
 
@@ -1748,7 +1748,7 @@ describe('createRouterRuntime', () => {
     it('should call generateObject on the correct runtime', async () => {
       const mockGenerateObject = vi.fn().mockResolvedValue({ name: 'test' });
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         generateObject = mockGenerateObject;
       }
 
@@ -1777,7 +1777,7 @@ describe('createRouterRuntime', () => {
       const mockGenerateObject = vi.fn().mockResolvedValue({ name: 'test' });
       const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         generateObject = mockGenerateObject;
       }
 
@@ -1809,7 +1809,7 @@ describe('createRouterRuntime', () => {
     it('should trim apiKey and baseURL', async () => {
       const constructorOptions: any[] = [];
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         constructor(options: any) {
           constructorOptions.push(options);
         }
@@ -1842,7 +1842,7 @@ describe('createRouterRuntime', () => {
     it('should use default apiKey when not provided', async () => {
       const constructorOptions: any[] = [];
 
-      class MockRuntime implements LobeRuntimeAI {
+      class MockRuntime implements OrviloRuntimeAI {
         constructor(options: any) {
           constructorOptions.push(options);
         }
@@ -1871,7 +1871,7 @@ describe('createRouterRuntime', () => {
     it('should preserve inherited runtime id across nested router runtimes', async () => {
       const constructorOptions: any[] = [];
 
-      class LeafRuntime implements LobeRuntimeAI {
+      class LeafRuntime implements OrviloRuntimeAI {
         constructor(options: any) {
           constructorOptions.push(options);
         }
@@ -1891,7 +1891,7 @@ describe('createRouterRuntime', () => {
       });
 
       const OuterRuntime = createRouterRuntime({
-        id: 'lobehub',
+        id: 'orvilo',
         routers: [
           {
             apiType: 'deepseek',
@@ -1908,13 +1908,13 @@ describe('createRouterRuntime', () => {
         { metadata: { trigger: RequestTrigger.Chat } },
       );
 
-      expect(constructorOptions[0]).toEqual(expect.objectContaining({ id: 'lobehub' }));
+      expect(constructorOptions[0]).toEqual(expect.objectContaining({ id: 'orvilo' }));
     });
   });
 
   describe('sortRouterOptions hook', () => {
     const createRecordingRuntime = (attemptedKeys: string[], failKeys: Set<string> = new Set()) =>
-      class RecordingRuntime implements LobeRuntimeAI {
+      class RecordingRuntime implements OrviloRuntimeAI {
         private apiKey: string;
 
         constructor(options: any) {

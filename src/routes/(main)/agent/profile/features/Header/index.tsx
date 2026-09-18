@@ -1,7 +1,7 @@
 import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, confirmModal, type ModalInstance, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
-import { getActivePluginIds, type LobeAgentConfig } from '@orvilo/types';
+import { getActivePluginIds, type OrviloAgentConfig } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import type { TFunction } from 'i18next';
@@ -115,7 +115,7 @@ const Header = memo(() => {
   // dependency array below to read `config.model` off nothing and drop the whole
   // page into the error boundary.
   const config = useAgentStore(agentSelectors.currentAgentConfig, isEqual) as
-    LobeAgentConfig | undefined;
+    OrviloAgentConfig | undefined;
   const systemRole = useAgentStore(agentSelectors.currentAgentSystemRole);
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
@@ -126,7 +126,7 @@ const Header = memo(() => {
   const authorName = useAuthorInfo(authorId)?.fullName;
   const hasActiveWorkspace = useHasActiveWorkspace();
   // Resource permissions apply to every public workspace agent, including the
-  // workspace-scoped LobeAI row. Builtin restrictions only prevent visibility
+  // workspace-scoped OrviloAI row. Builtin restrictions only prevent visibility
   // changes; they must not hide the independent General-access control.
   const showPermissionsEntry = hasActiveWorkspace && !!activeAgentId && visibility !== 'private';
   // The Permission page also hosts the model / execution-environment policies,
@@ -261,7 +261,7 @@ const Header = memo(() => {
     canSubmit: canSubmitToMarket,
     getPrompt: () => ({
       editorData: editor
-        ? (editor.getDocument('json') as LobeAgentConfig['editorData'])
+        ? (editor.getDocument('json') as OrviloAgentConfig['editorData'])
         : config?.editorData,
       systemRole: editor ? (editor.getDocument('markdown') as unknown as string) : systemRole,
     }),

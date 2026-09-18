@@ -224,8 +224,8 @@ export const params = {
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${client.apiKey}`,
-        'Bigmodel-Organization': 'lobehub',
-        'Bigmodel-Project': 'lobechat',
+        'Bigmodel-Organization': 'orvilo',
+        'Bigmodel-Project': 'orvilo',
       },
       method: 'GET',
     });
@@ -243,4 +243,4 @@ export const params = {
   provider: ModelProvider.ZhiPu,
 } satisfies OpenAICompatibleFactoryOptions<ZhipuRuntimeOptions>;
 
-export const LobeZhipuAI = createOpenAICompatibleRuntime<ZhipuRuntimeOptions>(params);
+export const OrviloZhipuAI = createOpenAICompatibleRuntime<ZhipuRuntimeOptions>(params);

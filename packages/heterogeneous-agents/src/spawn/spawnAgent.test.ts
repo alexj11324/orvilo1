@@ -551,7 +551,7 @@ describe('spawnAgent', () => {
   });
 
   it('fails before spawn when the configured working directory no longer exists', async () => {
-    const missingCwd = path.join(os.tmpdir(), `lobehub-missing-cwd-${Date.now()}`);
+    const missingCwd = path.join(os.tmpdir(), `orvilo-missing-cwd-${Date.now()}`);
     const { spawnAgent } = await import('./spawnAgent');
 
     await expect(
@@ -748,7 +748,7 @@ describe('spawnAgent', () => {
       const { spawnAgent } = await import('./spawnAgent');
       const handle = await spawnAgent({
         agentType: 'droid',
-        extraArgs: ['--tag', 'lobe'],
+        extraArgs: ['--tag', 'orvilo'],
         initialModel: 'gpt-5.4',
         operationId: 'op-droid',
         prompt: 'do a thing',
@@ -759,7 +759,7 @@ describe('spawnAgent', () => {
 
       await expect(handle.exit).resolves.toEqual({ code: 0, signal: null });
       expect(spawnCalls[0]).toMatchObject({
-        args: ['exec', '--output-format', 'acp', '--tag', 'lobe'],
+        args: ['exec', '--output-format', 'acp', '--tag', 'orvilo'],
         command: 'droid',
       });
       expect(fake.requests.map((request) => request.method)).toEqual([
@@ -849,7 +849,7 @@ describe('spawnAgent', () => {
   });
 
   it('resolves a relative TRAE command against the child working directory before probing', async () => {
-    const cwd = await mkdtemp(path.join(os.tmpdir(), 'lobehub-trae-cwd-'));
+    const cwd = await mkdtemp(path.join(os.tmpdir(), 'orvilo-trae-cwd-'));
     tempDirs.push(cwd);
     const relativeCommand = './bin/traecli';
     const resolvedCommand = path.resolve(cwd, relativeCommand);
@@ -1155,7 +1155,7 @@ describe('spawnAgent', () => {
   });
 
   it('uses codex `exec resume` form with thread id + `-` stdin marker on resume', async () => {
-    const codexHome = await mkdtemp(path.join(os.tmpdir(), 'lobe-codex-spawn-empty-'));
+    const codexHome = await mkdtemp(path.join(os.tmpdir(), 'orvilo-codex-spawn-empty-'));
     tempDirs.push(codexHome);
     nextFakeProc = createFakeProc().proc;
     const { spawnAgent } = await import('./spawnAgent');
@@ -1218,7 +1218,7 @@ describe('spawnAgent', () => {
   });
 
   it('spawns OpenCode resume with --session and --file before extra args', async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'lobe-opencode-spawn-'));
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'orvilo-opencode-spawn-'));
     tempDirs.push(dir);
     const imagePath = path.join(dir, 'input.png');
     await writeFile(imagePath, 'image');
@@ -1251,7 +1251,7 @@ describe('spawnAgent', () => {
   });
 
   it('spawns Pi in JSON mode, resumes its native session, and sends images as @path args', async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'lobe-pi-spawn-'));
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'orvilo-pi-spawn-'));
     tempDirs.push(dir);
     const imagePath = path.join(dir, 'input.png');
     await writeFile(imagePath, 'image');
@@ -1287,7 +1287,7 @@ describe('spawnAgent', () => {
       new URL('../adapters/__fixtures__/codex/collab_tool_call.spawn_wait.jsonl', import.meta.url),
       'utf8',
     );
-    const codexHome = await mkdtemp(path.join(os.tmpdir(), 'lobe-codex-spawn-'));
+    const codexHome = await mkdtemp(path.join(os.tmpdir(), 'orvilo-codex-spawn-'));
     tempDirs.push(codexHome);
     const sessionDir = path.join(codexHome, 'sessions', '2026', '06', '11');
     await mkdir(sessionDir, { recursive: true });

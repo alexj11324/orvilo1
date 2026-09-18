@@ -14,7 +14,7 @@ export interface AuthInfo {
 
 export async function getAuthInfo(workspaceId?: string): Promise<AuthInfo> {
   const serverUrl = resolveServerUrl();
-  const envJwt = process.env.LOBEHUB_JWT;
+  const envJwt = process.env.ORVILO_JWT;
   if (envJwt) {
     return {
       accessToken: envJwt,
@@ -78,7 +78,7 @@ export interface AgentStreamAuthInfo {
 export async function getAgentStreamAuthInfo(workspaceId?: string): Promise<AgentStreamAuthInfo> {
   const serverUrl = resolveServerUrl();
 
-  const envJwt = process.env.LOBEHUB_JWT;
+  const envJwt = process.env.ORVILO_JWT;
   if (envJwt) {
     return {
       headers: withWorkspaceHeader({ 'Oidc-Auth': envJwt }, workspaceId),

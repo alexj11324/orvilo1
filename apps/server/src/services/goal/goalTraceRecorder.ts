@@ -11,13 +11,13 @@ import debug from 'debug';
 import { sql } from 'drizzle-orm';
 
 import { GoalTraceModel } from '@/database/models/goalTrace';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { buildGoalTraceKey, buildGoalTracePartialKey } from '@/server/modules/GoalTracing';
 
 import type { GoalTickObservation } from './traceObservation';
 import { createDefaultGoalTraceStore } from './traceStore';
 
-const log = debug('lobe-server:goal-trace');
+const log = debug('orvilo-server:goal-trace');
 
 /**
  * Advisory-lock namespace, so a goal's trace lock cannot collide with another
@@ -39,7 +39,7 @@ export class GoalAdvanceRecorder {
   private readonly operationIds = new Set<string>();
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly goalId: string,
     private readonly trigger: GoalAdvanceTrigger,
     private readonly store: IGoalTraceStore | null = createDefaultGoalTraceStore(),
@@ -98,12 +98,12 @@ export class GoalAdvanceRecorder {
    * transaction open for one storage round trip, which is the cost of the
    * trajectory being complete.
    */
-  private async serializedPerGoal<T>(run: (tx: LobeChatDatabase) => Promise<T>): Promise<T> {
+  private async serializedPerGoal<T>(run: (tx: OrviloDatabase) => Promise<T>): Promise<T> {
     return this.db.transaction(async (tx) => {
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(${GOAL_TRACE_LOCK_NAMESPACE}, hashtext(${this.goalId}))`,
       );
-      return run(tx as unknown as LobeChatDatabase);
+      return run(tx as unknown as OrviloDatabase);
     });
   }
 
@@ -117,7 +117,7 @@ export class GoalAdvanceRecorder {
    */
   private async writeObservationRow(
     trajectory: GoalTrajectory,
-    tx: LobeChatDatabase = this.db,
+    tx: OrviloDatabase = this.db,
   ): Promise<void> {
     const rollup = buildGoalTraceRollup(trajectory);
 

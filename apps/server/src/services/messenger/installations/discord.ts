@@ -4,7 +4,7 @@ import { getMessengerDiscordConfig } from '@/config/messenger';
 
 import type { InstallationCredentials, MessengerInstallationStore } from './types';
 
-const log = debug('lobe-server:messenger:install-store:discord');
+const log = debug('orvilo-server:messenger:install-store:discord');
 
 /**
  * Discord uses a single App-level bot token that works across every guild

@@ -1,9 +1,9 @@
-import type { LobeAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { devices } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 /**
  * Collect device ids that an incoming `agencyConfig` patch is *setting*
@@ -11,7 +11,7 @@ import type { LobeChatDatabase, Transaction } from '../type';
  * deletes (per `pruneWorkingDirByDeviceDeletes`) and are skipped.
  */
 export const collectBoundDeviceIds = (
-  agencyConfig: PartialDeep<LobeAgentAgencyConfig> | null | undefined,
+  agencyConfig: PartialDeep<OrviloAgentAgencyConfig> | null | undefined,
 ): string[] => {
   if (!agencyConfig) return [];
   const ids: string[] = [];
@@ -44,11 +44,11 @@ export const collectBoundDeviceIds = (
  * device are dropped for the new owner as well.
  */
 export const sanitizeAgencyConfigsForWorkspace = async (
-  db: LobeChatDatabase | Transaction,
+  db: OrviloDatabase | Transaction,
   targetWorkspaceId: string,
-  agencyConfigs: Array<LobeAgentAgencyConfig | null | undefined>,
+  agencyConfigs: Array<OrviloAgentAgencyConfig | null | undefined>,
   options?: { viewerUserId?: string },
-): Promise<Array<LobeAgentAgencyConfig | null>> => {
+): Promise<Array<OrviloAgentAgencyConfig | null>> => {
   const viewerUserId = options?.viewerUserId;
   const allCandidateIds = [
     ...new Set(agencyConfigs.flatMap((config) => collectBoundDeviceIds(config))),
@@ -78,12 +78,12 @@ export const sanitizeAgencyConfigsForWorkspace = async (
   );
 
   return agencyConfigs.map((config) => {
-    let next: LobeAgentAgencyConfig | null = config ?? null;
+    let next: OrviloAgentAgencyConfig | null = config ?? null;
     if (!next) return next;
 
     const candidateIds = collectBoundDeviceIds(next);
     if (candidateIds.length > 0) {
-      const cleaned: LobeAgentAgencyConfig = { ...next };
+      const cleaned: OrviloAgentAgencyConfig = { ...next };
       if (cleaned.boundDeviceId && !allowed.has(cleaned.boundDeviceId)) {
         delete cleaned.boundDeviceId;
       }

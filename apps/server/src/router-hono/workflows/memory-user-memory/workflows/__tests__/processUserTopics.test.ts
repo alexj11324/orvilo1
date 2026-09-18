@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   createExecutor: vi.fn(),
   filterTopicIdsForUser: vi.fn(),
   getTopicsForUser: vi.fn(),
+  isUserMemoryExtractionEnabled: vi.fn(),
   triggerProcessTopics: vi.fn(),
   triggerProcessUserTopics: vi.fn(),
 }));
@@ -45,6 +46,10 @@ vi.mock('@/server/services/memory/userMemory/extract', () => ({
 vi.mock('@/database/models/asyncTask', () => ({ AsyncTaskModel: class {} }));
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn() }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
+}));
+
 vi.mock('../runGuard', () => ({
   checkGuard: vi.fn().mockResolvedValue({ result: true }),
   ensureWorkflowStarted: vi.fn().mockResolvedValue({ started: true }),
@@ -68,6 +73,7 @@ describe('processUserTopicsHandler per-user fan-out ceiling', () => {
       getTopicsForUser: mocks.getTopicsForUser,
     });
     mocks.filterTopicIdsForUser.mockImplementation(async (_userId, topicIds: string[]) => topicIds);
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
     mocks.triggerProcessTopics.mockResolvedValue({ workflowRunId: 'process-topics-run' });
     mocks.triggerProcessUserTopics.mockResolvedValue({ workflowRunId: 'next-page-run' });
   });
@@ -137,5 +143,20 @@ describe('processUserTopicsHandler per-user fan-out ceiling', () => {
       expect.objectContaining({ topicIds }),
       { extraHeaders: {} },
     );
+  });
+
+  it('skips topic fan-out entirely for a user who disabled memory', async () => {
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(false);
+
+    const result = await processUserTopicsHandler({
+      requestPayload: { ...basePayload, topicIds: ['t1'] },
+      ...createContext(),
+    } as never);
+
+    expect(result).toMatchObject({ processedUsers: 0 });
+    expect(mocks.filterTopicIdsForUser).not.toHaveBeenCalled();
+    expect(mocks.getTopicsForUser).not.toHaveBeenCalled();
+    expect(mocks.triggerProcessTopics).not.toHaveBeenCalled();
+    expect(mocks.triggerProcessUserTopics).not.toHaveBeenCalled();
   });
 });

@@ -504,17 +504,17 @@ describe('LocalFileProtocolManager', () => {
     await expect(
       manager.copyExternalFileForPublish({
         filePath: '/outside/logo.png',
-        targetPath: '/Users/alice/project/.lobe-artifacts/site/logo.png',
+        targetPath: '/Users/alice/project/.orvilo-artifacts/site/logo.png',
         workspaceRoot: '/Users/alice/project',
       }),
     ).resolves.toBe(true);
 
-    expect(mockMkdir).toHaveBeenCalledWith('/Users/alice/project/.lobe-artifacts/site', {
+    expect(mockMkdir).toHaveBeenCalledWith('/Users/alice/project/.orvilo-artifacts/site', {
       recursive: true,
     });
     expect(mockCopyFile).toHaveBeenCalledWith(
       '/outside/logo.png',
-      '/Users/alice/project/.lobe-artifacts/site/logo.png',
+      '/Users/alice/project/.orvilo-artifacts/site/logo.png',
     );
     await expect(
       manager.createPreviewUrl({

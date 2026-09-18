@@ -1,14 +1,14 @@
 ---
-title: Configuring Microsoft Authentication for LobeHub
+title: Configuring Microsoft Authentication for Orvilo
 description: >-
-  Learn how to configure Microsoft (Entra ID / Azure AD) SSO for LobeHub,
+  Learn how to configure Microsoft (Entra ID / Azure AD) SSO for Orvilo,
   including creating applications in Azure Portal and setting up environment
   variables.
 tags:
   - Microsoft
   - Authentication
   - Azure AD
-  - LobeHub
+  - Orvilo
   - Single Sign-On
 ---
 
@@ -24,8 +24,6 @@ tags:
      - **Single tenant**: Only users in your organization
      - **Multitenant**: Users in any Azure AD organization
      - **Multitenant + personal**: Also includes personal Microsoft accounts
-
-  <Image alt="App Register" inStep src="https://github.com/lobehub/lobehub/assets/13883964/4f9d83bd-b3fc-4abc-bcf4-ccbad65c219d" />
 
   ### Configure Redirect URI
 
@@ -47,8 +45,6 @@ tags:
 
   After creation, view the **Overview** tab:
 
-  <Image alt="App Overview" inStep src="https://github.com/lobehub/lobehub/assets/13883964/48a0b702-05bd-4ce4-a007-a8ad00a36e5a" />
-
   Note down:
 
   - **Application (client) ID** - This is your `AUTH_MICROSOFT_ID`
@@ -60,8 +56,6 @@ tags:
   2. Click **New client secret**
   3. Fill in description and select expiration time
   4. Click **Add**
-
-  <Image alt="Create App Client Secret" inStep src="https://github.com/lobehub/lobehub/assets/13883964/c9d66fa0-158c-4bd3-a1fa-969e638259d2" />
 
   <Callout type={'warning'}>
     Copy the client secret **Value** immediately - you won't be able to see it
@@ -98,7 +92,7 @@ tags:
 
 <Callout type={'info'}>
   After successful deployment, users will be able to authenticate with Microsoft
-  and use LobeHub.
+  and use Orvilo.
 </Callout>
 
 ## Common Issues

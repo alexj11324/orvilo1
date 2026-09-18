@@ -14,7 +14,7 @@ import {
   topics,
   topicShares,
 } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { insertInBatches, splitCrossBatchSelfReferences } from '../utils/batchInsert';
 import { copyMessagesInDatabase, type IdPair } from '../utils/copyMessagesInDatabase';
 import { idGenerator } from '../utils/idGenerator';
@@ -80,7 +80,7 @@ export interface CreateAgentCopyJobParams {
  */
 export class AgentCopyJobModel {
   static createJob = async (
-    trx: Transaction | LobeChatDatabase,
+    trx: Transaction | OrviloDatabase,
     params: CreateAgentCopyJobParams,
   ): Promise<string> => {
     const [job] = await trx
@@ -142,7 +142,7 @@ export class AgentCopyJobModel {
    * query.
    */
   static hasPendingCopyJobForSourceAgents = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     sourceAgentIds: string[],
     sourceUserId?: string,
   ): Promise<boolean> => {
@@ -171,7 +171,7 @@ export class AgentCopyJobModel {
    * are still being read.
    */
   static hasPendingCopyJobForSourceGroups = async (
-    db: Transaction | LobeChatDatabase,
+    db: Transaction | OrviloDatabase,
     sourceGroupIds: string[],
     sourceUserId?: string,
   ): Promise<boolean> => {
@@ -201,7 +201,7 @@ export class AgentCopyJobModel {
    * under concurrent workers.
    */
   static processNextTopic = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     jobId: string,
   ): Promise<{ done: boolean; topicId?: string }> => {
     return db.transaction(async (trx) => {
@@ -553,7 +553,7 @@ export class AgentCopyJobModel {
    * Run a copy job to completion. In-process drivers call this; step-based
    * drivers (workflows) call `processNextTopic` directly.
    */
-  static drain = async (db: LobeChatDatabase, jobId: string): Promise<void> => {
+  static drain = async (db: OrviloDatabase, jobId: string): Promise<void> => {
     while (true) {
       const { done } = await AgentCopyJobModel.processNextTopic(db, jobId);
       if (done) return;

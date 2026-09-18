@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { users, userSettings } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,7 +77,7 @@ vi.mock('@/server/services/memory/userMemory/extract', () => ({
   resolveRuntimeAgentConfig: vi.fn().mockResolvedValue({}),
 }));
 
-let db: LobeChatDatabase;
+let db: OrviloDatabase;
 const userId = 'user-persona-service';
 
 beforeEach(async () => {

@@ -29,7 +29,7 @@
  *     - `user`     — user signs in / waits for a reset / fixes their input.
  *     - `provider` — the model provider behind the CLI; neither user nor we
  *                    can fix it directly.
- *     - `harness`  — our bug (LobeHub, the adapter, the spawn/resume plumbing)
+ *     - `harness`  — our bug (Orvilo, the adapter, the spawn/resume plumbing)
  *                    or the CLI's own.
  *     - `system`   — machine / network / OS layer.
  * - `countAsFailure` — whether it should count toward operational failure

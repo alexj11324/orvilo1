@@ -61,7 +61,7 @@ export function attributesForEnv(): DetectedResourceAttributes {
 
 export function attributesCommon(): DetectedResourceAttributes {
   return {
-    [ATTR_SERVICE_NAME]: 'lobehub',
+    [ATTR_SERVICE_NAME]: 'orvilo',
     'service.instance.id': SERVICE_INSTANCE_ID,
     ...attributesForEnv(),
   };
@@ -133,8 +133,8 @@ export function register(options?: RegisterOptions) {
   if (typeof options?.version !== 'undefined') {
     attributes[ATTR_SERVICE_VERSION] = options.version;
   }
-  if (typeof options?.debug !== 'undefined' || env.OTEL_JS_LOBEHUB_DIAG) {
-    const levelFromEnv = debugLogLevelFromString(env.OTEL_JS_LOBEHUB_DIAG);
+  if (typeof options?.debug !== 'undefined' || env.OTEL_JS_ORVILO_DIAG) {
+    const levelFromEnv = debugLogLevelFromString(env.OTEL_JS_ORVILO_DIAG);
 
     diag.setLogger(
       new DiagConsoleLogger(),

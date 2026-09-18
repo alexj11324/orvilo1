@@ -5,7 +5,7 @@ surfaces (CLI, Electron, Web) hit.
 
 ## Resolve ports first
 
-Run `test-env.sh` as described in
+Run `test-env.sh` as described
 [PROCESS.md Step 2](../PROCESS.md#step-2--environment-and-auth)
 before starting or probing any local test surface.
 
@@ -17,16 +17,16 @@ before starting or probing any local test surface.
 | `bun run dev`       | Full-stack (Next.js + Vite SPA, via `devStartupSequence`) | `PORT` + `SPA_PORT` |
 | `bun run dev:spa`   | Vite SPA only, proxies API to `PORT`                      | `SPA_PORT`          |
 
-In the **cloud repo** (where this repo is the `lobehub/` submodule), local
+In the **cloud repo** (where this repo is the `aspectlylabs/` submodule), local
 worktree names map to fallback defaults only when `.env` and shell env do not
 provide values:
 
 | Workspace directory | Default `SERVER_URL`             |
 | ------------------- | -------------------------------- |
-| `lobehub`           | `http://localhost:3010`          |
-| `lobehub-cloud`     | `http://localhost:3020`          |
-| `lobehub-cloud-1`   | `http://localhost:3021`          |
-| `lobehub-cloud-N`   | `http://localhost:$((3020 + N))` |
+| `orvilo`            | `http://localhost:3010`          |
+| `orvilo-cloud`      | `http://localhost:3020`          |
+| `orvilo-cloud-1`    | `http://localhost:3021`          |
+| `orvilo-cloud-N`    | `http://localhost:$((3020 + N))` |
 
 `test-env.sh` and `setup-auth.sh` both use the resolved env first and these
 worktree defaults only as fallback. Treat the dev-server terminal output as the

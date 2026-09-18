@@ -35,7 +35,7 @@ export const ViewTaskInspector = memo<BuiltinInspectorProps<ViewTaskParams, View
     return (
       <div className={inspectorTextStyles.root}>
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-task.apiName.viewTask')}
+          {t('builtins.orvilo-task.apiName.viewTask')}
         </span>
         {identifier && <span className={styles.identifierChip}>{identifier}</span>}
       </div>

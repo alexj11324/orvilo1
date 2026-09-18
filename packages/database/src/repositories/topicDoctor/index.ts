@@ -4,7 +4,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { MessageModel } from '../../models/message';
 import { messages } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 interface TopicScope {
@@ -28,12 +28,12 @@ export interface RepairResult {
  * is worth paying a read to be certain of what is being changed.
  */
 export class TopicDoctorRepo {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private messageModel: MessageModel;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

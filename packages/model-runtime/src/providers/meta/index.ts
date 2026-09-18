@@ -58,7 +58,7 @@ export const handleMetaResponsesPayload = (payload: ChatStreamPayload) => {
   } as any;
 };
 
-export const LobeMetaAI = createOpenAICompatibleRuntime({
+export const OrviloMetaAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.meta.ai/v1',
   chatCompletion: {
     handlePayload: handleMetaChatCompletionPayload,

@@ -1,7 +1,7 @@
 import { MemorySourceType } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { LobeChatTopicContextProvider } from './chatTopic';
+import { OrviloTopicContextProvider } from './chatTopic';
 
 const job = {
   source: MemorySourceType.ChatTopic,
@@ -9,9 +9,9 @@ const job = {
   userId: 'user-1',
 };
 
-describe('LobeChatTopicContextProvider', () => {
+describe('OrviloTopicContextProvider', () => {
   it('should build XML topic context with messages and metadata', async () => {
-    const provider = new LobeChatTopicContextProvider({
+    const provider = new OrviloTopicContextProvider({
       conversations: [
         {
           content: 'Hello',

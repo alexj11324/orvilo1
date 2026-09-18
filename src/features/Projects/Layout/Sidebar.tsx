@@ -1,7 +1,13 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { ClipboardCheckIcon, HouseIcon, ListTodoIcon, TargetIcon } from 'lucide-react';
+import {
+  ClipboardCheckIcon,
+  HouseIcon,
+  LibraryBigIcon,
+  ListTodoIcon,
+  TargetIcon,
+} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -18,6 +24,7 @@ import {
   getProjectAcceptancePath,
   getProjectGoalsPath,
   getProjectOverviewPath,
+  getProjectResourcesPath,
   getProjectTasksPath,
 } from './navigation';
 import ProjectHeader from './ProjectHeader';
@@ -33,6 +40,7 @@ const ProjectSidebarContent = memo(() => {
   const projectTasksPath = getProjectTasksPath(projectId!);
   const projectGoalsPath = getProjectGoalsPath(projectId!);
   const projectAcceptancePath = getProjectAcceptancePath(projectId!);
+  const projectResourcesPath = getProjectResourcesPath(projectId!);
 
   const header = <ProjectHeader project={detail?.project} />;
 
@@ -60,6 +68,14 @@ const ProjectSidebarContent = memo(() => {
             icon={ListTodoIcon}
             title={t('sections.tasks')}
             onClick={() => navigate(projectTasksPath)}
+          />
+          {/* Sits next to Tasks: a project's libraries are the context those
+              tasks run against, not a separate product surface. */}
+          <NavItem
+            active={pathname === projectResourcesPath}
+            icon={LibraryBigIcon}
+            title={t('resources.title')}
+            onClick={() => navigate(projectResourcesPath)}
           />
           <NavItem
             active={pathname === projectGoalsPath}

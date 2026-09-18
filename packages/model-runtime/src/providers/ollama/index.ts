@@ -5,7 +5,7 @@ import type { Tool } from 'ollama/browser';
 import { Ollama } from 'ollama/browser';
 import type { ClientOptions } from 'openai';
 
-import type { LobeRuntimeAI } from '../../core/BaseAI';
+import type { OrviloRuntimeAI } from '../../core/BaseAI';
 import { convertIterableToStream, createModelPullStream, OllamaStream } from '../../core/streams';
 import type {
   ChatMethodOptions,
@@ -36,7 +36,7 @@ export const params = {
   provider: ModelProvider.Ollama,
 };
 
-export class LobeOllamaAI implements LobeRuntimeAI {
+export class OrviloOllamaAI implements OrviloRuntimeAI {
   private client: Ollama;
 
   baseURL?: string;
@@ -102,7 +102,6 @@ export class LobeOllamaAI implements LobeRuntimeAI {
       const fetchErrorMessage = e.message?.toLowerCase();
       if (fetchErrorMessage === 'fetch failed' || fetchErrorMessage === 'failed to fetch') {
         // A long-running chat request can fail even while the local Ollama service remains healthy.
-        // See https://github.com/lobehub/lobehub/issues/17316
         try {
           await this.client.list();
         } catch {
@@ -143,7 +142,7 @@ export class LobeOllamaAI implements LobeRuntimeAI {
   }
 
   async models() {
-    const { LOBE_DEFAULT_MODEL_LIST } = await import('model-bank');
+    const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 
     const list = await this.client.list();
 
@@ -151,7 +150,7 @@ export class LobeOllamaAI implements LobeRuntimeAI {
 
     return modelList
       .map((model) => {
-        const knownModel = LOBE_DEFAULT_MODEL_LIST.find(
+        const knownModel = ORVILO_DEFAULT_MODEL_LIST.find(
           (m) => model.name.toLowerCase() === m.id.toLowerCase(),
         );
 
@@ -324,4 +323,4 @@ export class LobeOllamaAI implements LobeRuntimeAI {
   }
 }
 
-export default LobeOllamaAI;
+export default OrviloOllamaAI;

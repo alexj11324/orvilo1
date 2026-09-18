@@ -20,7 +20,7 @@ import type { GoalGraphNodeKind } from '../Experiments/model';
  * filling a node with its status color.
  */
 export const KIND_COLOR: Record<GoalGraphNodeKind, { line: string; soft: string }> = {
-  // LobeHub's theme palette is an 11-step scale, not antd's 10-step one: the
+  // Orvilo's theme palette is an 11-step scale, not antd's 10-step one: the
   // primary-strength band sits at x9–x10, and x6/x7 resolve to near-pastel
   // tints (light-mode blue-7 is #93c8ff). x3/x10 gives the glyph a visible
   // tinted tile with a saturated line in both themes.

@@ -65,7 +65,7 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-group-management.apiName.broadcast')}
+            {t('builtins.orvilo-group-management.apiName.broadcast')}
           </span>
         </div>
       );
@@ -74,7 +74,7 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-group-management.inspector.broadcast.title')}
+          {t('builtins.orvilo-group-management.inspector.broadcast.title')}
         </span>
         {avatarItems.length > 0 && <Avatar.Group items={avatarItems} shape={'circle'} size={24} />}
       </Flexbox>

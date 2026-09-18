@@ -78,7 +78,7 @@ const spawn = (cmd: string, args: string[], env: NodeJS.ProcessEnv): Promise<Spa
 
 // A path with spaces AND a filename with spaces — the shape that gets torn
 // apart when the command string is re-tokenized.
-const fixtureDir = path.join(os.tmpdir(), 'lobe shell verify');
+const fixtureDir = path.join(os.tmpdir(), 'orvilo shell verify');
 const fixtureFile = path.join(fixtureDir, 'hello world.txt');
 await fs.mkdir(fixtureDir, { recursive: true });
 await fs.writeFile(fixtureFile, 'fixture-content');
@@ -216,12 +216,12 @@ if (await fileExists(ps51)) {
   // reason cmd is only the last-resort fallback. What rewriting does buy is
   // keeping the secret out of argv (and thus out of process listings). Probe
   // actual expansion with a metacharacter-free value instead.
-  const safeEnv = { ...env, LOBE_VERIFY_VALUE: 'plain-value' };
-  const safe = normalizeEnvVarRefs('echo [$env:LOBE_VERIFY_VALUE]', safeEnv, 'cmd');
+  const safeEnv = { ...env, ORVILO_VERIFY_VALUE: 'plain-value' };
+  const safe = normalizeEnvVarRefs('echo [$env:ORVILO_VERIFY_VALUE]', safeEnv, 'cmd');
   const r = await spawn('cmd.exe', ['/c', safe], safeEnv);
   check(
     'cmd resolves the rewritten %VAR% at runtime',
-    safe === 'echo [%LOBE_VERIFY_VALUE%]' && r.out === '[plain-value]',
+    safe === 'echo [%ORVILO_VERIFY_VALUE%]' && r.out === '[plain-value]',
     `rewritten=${safe} out=${JSON.stringify(r.out)}`,
   );
 }

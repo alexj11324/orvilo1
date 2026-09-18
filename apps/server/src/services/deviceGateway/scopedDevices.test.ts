@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -22,7 +22,7 @@ vi.mock('./index', () => ({
 
 const { getScopedOnlineDevices } = await import('./scopedDevices');
 
-const serverDB = {} as unknown as LobeChatDatabase;
+const serverDB = {} as unknown as OrviloDatabase;
 const row = (deviceId: string) => ({
   deviceId,
   friendlyName: null,

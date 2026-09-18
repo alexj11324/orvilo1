@@ -2,7 +2,7 @@
 
 import { Center, Flexbox, Icon, lobeStaticStylish } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
-import { LOBE_CHAT_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
+import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { useSize } from 'ahooks';
 import { createStaticStyles, cx } from 'antd-style';
 import { ArrowRightIcon } from 'lucide-react';
@@ -62,11 +62,11 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   const content = (
     <Flexbox horizontal align={'center'} flex={'none'} gap={8} ref={contentRef}>
-      <b>{t('alert.cloud.title', { name: LOBE_CHAT_CLOUD })}:</b>
+      <b>{t('alert.cloud.title', { name: ORVILO_CLOUD })}:</b>
       <span>
         {t(mobile ? 'alert.cloud.descOnMobile' : 'alert.cloud.desc', {
           credit: new Intl.NumberFormat('en-US').format(500_000),
-          name: LOBE_CHAT_CLOUD,
+          name: ORVILO_CLOUD,
         })}
       </span>
     </Flexbox>

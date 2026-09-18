@@ -40,7 +40,7 @@ Quick reference for assigning issues based on labels.
 | `feature:vision`         | @tjx666         | Vision/multimodal generation                                            |
 | `feature:knowledge-base` | @Innei          | Knowledge base and RAG                                                  |
 | `feature:files`          | @Innei          | File upload/management (when KB-related)<br>@ONLY-yours (general files) |
-| `feature:editor`         | @canisminor1990 | Lobe Editor                                                             |
+| `feature:editor`         | @canisminor1990 | Orvilo Editor                                                           |
 | `feature:markdown`       | @canisminor1990 | Markdown rendering                                                      |
 | `feature:auth`           | @tjx666         | Authentication/authorization                                            |
 | `feature:login`          | @tjx666         | Login issues                                                            |
@@ -76,13 +76,13 @@ Quick reference for assigning issues based on labels.
 
 ### Hosting Labels (hosting:\*)
 
-| Label               | Owner       | Notes                  |
-| ------------------- | ----------- | ---------------------- |
-| `hosting:cloud`     | @tjx666     | Official LobeHub Cloud |
-| `hosting:self-host` | @nekomeowww | Self-hosting issues    |
-| `hosting:vercel`    | @nekomeowww | Vercel deployment      |
-| `hosting:zeabur`    | @nekomeowww | Zeabur deployment      |
-| `hosting:railway`   | @nekomeowww | Railway deployment     |
+| Label               | Owner       | Notes                 |
+| ------------------- | ----------- | --------------------- |
+| `hosting:cloud`     | @tjx666     | Official Orvilo Cloud |
+| `hosting:self-host` | @nekomeowww | Self-hosting issues   |
+| `hosting:vercel`    | @nekomeowww | Vercel deployment     |
+| `hosting:zeabur`    | @nekomeowww | Zeabur deployment     |
+| `hosting:railway`   | @nekomeowww | Railway deployment    |
 
 ### Issue Type Labels
 

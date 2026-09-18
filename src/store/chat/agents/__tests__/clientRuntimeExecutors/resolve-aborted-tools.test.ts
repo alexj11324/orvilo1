@@ -19,7 +19,7 @@ describe('resolve_aborted_tools executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           type: 'default',
@@ -66,21 +66,21 @@ describe('resolve_aborted_tools executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test1' }),
           type: 'default',
         },
         {
           id: 'tool_2',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'craw',
           arguments: JSON.stringify({ url: 'https://example.com' }),
           type: 'default',
         },
         {
           id: 'tool_3',
-          identifier: 'lobe-image-generator',
+          identifier: 'orvilo-image-generator',
           apiName: 'generate',
           arguments: JSON.stringify({ prompt: 'test prompt' }),
           type: 'default',
@@ -175,7 +175,7 @@ describe('resolve_aborted_tools executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_abc',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'AI news' }),
         type: 'default',
@@ -474,7 +474,7 @@ describe('resolve_aborted_tools executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_special',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({
           query: 'Test with "quotes" and \'apostrophes\' and <tags>',
@@ -512,7 +512,7 @@ describe('resolve_aborted_tools executor', () => {
 
       const toolCalls: ChatToolPayload[] = Array.from({ length: 50 }, (_, i) => ({
         id: `tool_${i}`,
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: `query_${i}` }),
         type: 'default' as const,
@@ -602,7 +602,7 @@ describe('resolve_aborted_tools executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_plugin',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -641,7 +641,7 @@ describe('resolve_aborted_tools executor', () => {
       const toolCalls: ChatToolPayload[] = [
         {
           id: 'tool_1',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           arguments: JSON.stringify({ query: 'test' }),
           type: 'default',
@@ -680,7 +680,7 @@ describe('resolve_aborted_tools executor', () => {
 
       const toolCalls: ChatToolPayload[] = Array.from({ length: 5 }, (_, i) => ({
         id: `tool_${i}`,
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: `query_${i}` }),
         type: 'default' as const,

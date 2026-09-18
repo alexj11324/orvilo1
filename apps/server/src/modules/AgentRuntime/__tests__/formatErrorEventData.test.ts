@@ -90,7 +90,7 @@ describe('formatErrorEventData', () => {
         {
           error: { message: 'Payment required', status: 402, traceId: 'trace-402' },
           errorType: AgentRuntimeErrorType.ProviderBizError,
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         'llm_execution',
       );
@@ -98,7 +98,7 @@ describe('formatErrorEventData', () => {
       expect(out).toMatchObject({
         body: {
           message: 'Payment required',
-          provider: 'lobehub',
+          provider: 'orvilo',
           status: 402,
           traceId: 'trace-402',
         },
@@ -114,7 +114,7 @@ describe('formatErrorEventData', () => {
           error: { message: 'Payment required', status: 402, traceId: 'trace-402' },
           errorType: AgentRuntimeErrorType.ProviderBizError,
           message: 'error',
-          provider: 'lobehub',
+          provider: 'orvilo',
         },
         'llm_execution',
       );
@@ -122,7 +122,7 @@ describe('formatErrorEventData', () => {
       expect(out).toMatchObject({
         body: {
           message: 'Payment required',
-          provider: 'lobehub',
+          provider: 'orvilo',
           status: 402,
           traceId: 'trace-402',
         },

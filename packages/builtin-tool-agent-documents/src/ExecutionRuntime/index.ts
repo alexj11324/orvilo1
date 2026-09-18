@@ -247,8 +247,8 @@ export class AgentDocumentsExecutionRuntime {
 
   private buildCurrentPageDocumentWriteBlockedResult(apiName: string): BuiltinServerRuntimeOutput {
     const message =
-      `Cannot use lobe-agent-documents.${apiName} on the current page document ` +
-      `while page scope is active. Use lobe-page-agent so the open editor shows a diff node ` +
+      `Cannot use orvilo-agent-documents.${apiName} on the current page document ` +
+      `while page scope is active. Use orvilo-page-agent so the open editor shows a diff node ` +
       `for review instead of writing directly to the database.`;
 
     return {

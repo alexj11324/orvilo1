@@ -1,13 +1,13 @@
 name: orvilo
 services:
-  lobe:
+  orvilo:
     build:
       context: ../..
       dockerfile: Dockerfile
     image: ${ORVILO_IMAGE_TAG:-orvilo:local}
     container_name: orvilo
     ports:
-      - '${LOBE_PORT}:3210'
+      - '${ORVILO_PORT}:3210'
     depends_on:
       postgresql:
         condition: service_healthy
@@ -20,11 +20,11 @@ services:
     environment:
       - 'KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}'
       - 'AUTH_SECRET=${AUTH_SECRET}'
-      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}'
+      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
       - 'ES_REINDEX_STATE_DIR=/app/.elasticsearch-reindex'
       - 'INTERNAL_APP_URL=http://localhost:3210'
       - 'S3_ENDPOINT=${S3_ENDPOINT}'
-      - 'S3_BUCKET=${RUSTFS_LOBE_BUCKET}'
+      - 'S3_BUCKET=${RUSTFS_ORVILO_BUCKET}'
       - 'S3_ENABLE_PATH_STYLE=1'
       - 'S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}'
       - 'S3_ACCESS_KEY_ID=${RUSTFS_ACCESS_KEY}'
@@ -33,7 +33,7 @@ services:
       - 'S3_SET_ACL=0'
       - 'SEARXNG_URL=http://searxng:8080'
       - 'REDIS_URL=redis://redis:6379'
-      - 'REDIS_PREFIX=lobechat'
+      - 'REDIS_PREFIX=orvilo'
       - 'REDIS_TLS=0'
       - 'HATCHET_WORKER_ENABLED=0'
     env_file:
@@ -42,7 +42,7 @@ services:
       - 'fts-search-reindex-state:/app/.elasticsearch-reindex'
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
   hatchet-worker:
     build:
@@ -63,9 +63,9 @@ services:
       rustfs-init:
         condition: service_completed_successfully
     environment:
-      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}'
+      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
       - 'S3_ENDPOINT=${S3_ENDPOINT}'
-      - 'S3_BUCKET=${RUSTFS_LOBE_BUCKET}'
+      - 'S3_BUCKET=${RUSTFS_ORVILO_BUCKET}'
       - 'S3_ENABLE_PATH_STYLE=1'
       - 'S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}'
       - 'S3_ACCESS_KEY_ID=${RUSTFS_ACCESS_KEY}'
@@ -73,18 +73,18 @@ services:
       - 'S3_SET_ACL=0'
       - 'SEARXNG_URL=http://searxng:8080'
       - 'REDIS_URL=redis://redis:6379'
-      - 'REDIS_PREFIX=lobechat'
+      - 'REDIS_PREFIX=orvilo'
       - 'REDIS_TLS=0'
     env_file:
       - .env
     entrypoint: ['/bin/node', '/app/hatchet-worker/worker.mjs']
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
   postgresql:
     image: paradedb/paradedb:latest-pg17
-    container_name: lobe-postgres
+    container_name: orvilo-postgres
     # Optional: Remove or change these ports if:
     # - You don't need external database access
     # - The ports conflict with other services on your host
@@ -94,7 +94,7 @@ services:
       - './data:/var/lib/postgresql/data'
     command: ['postgres', '-c', 'shared_preload_libraries=pg_search']
     environment:
-      - 'POSTGRES_DB=${LOBE_DB_NAME}'
+      - 'POSTGRES_DB=${ORVILO_DB_NAME}'
       - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD}'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
@@ -103,11 +103,11 @@ services:
       retries: 5
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
   redis:
     image: redis:7-alpine
-    container_name: lobe-redis
+    container_name: orvilo-redis
     # Optional: Remove or change these ports if:
     # - You don't need external access
     # - The ports conflict with other services on your host
@@ -123,11 +123,11 @@ services:
       retries: 5
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
   rustfs:
     image: rustfs/rustfs:latest
-    container_name: lobe-rustfs
+    container_name: orvilo-rustfs
     ports:
       - '${RUSTFS_PORT}:9000'
       - '${RUSTFS_ADMIN_PORT}:9001'
@@ -150,32 +150,32 @@ services:
     command:
       ['--access-key', '${RUSTFS_ACCESS_KEY}', '--secret-key', '${RUSTFS_SECRET_KEY}', '/data']
     networks:
-      - lobe-network
+      - orvilo-network
 
   rustfs-init:
     image: minio/mc:latest
-    container_name: lobe-rustfs-init
+    container_name: orvilo-rustfs-init
     depends_on:
       rustfs:
         condition: service_healthy
     volumes:
       - ./bucket.config.json:/bucket.config.json:ro
     entrypoint: /bin/sh
-    command: -c ' set -eux; echo "S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}, S3_SECRET_KEY=${RUSTFS_SECRET_KEY}"; mc --version; mc alias set rustfs "http://rustfs:9000" "${RUSTFS_ACCESS_KEY}" "${RUSTFS_SECRET_KEY}"; mc ls rustfs || true; mc mb "rustfs/lobe" --ignore-existing; mc admin info rustfs || true; mc anonymous set-json "/bucket.config.json" "rustfs/lobe"; '
+    command: -c ' set -eux; echo "S3_ACCESS_KEY=${RUSTFS_ACCESS_KEY}, S3_SECRET_KEY=${RUSTFS_SECRET_KEY}"; mc --version; mc alias set rustfs "http://rustfs:9000" "${RUSTFS_ACCESS_KEY}" "${RUSTFS_SECRET_KEY}"; mc ls rustfs || true; mc mb "rustfs/orvilo" --ignore-existing; mc admin info rustfs || true; mc anonymous set-json "/bucket.config.json" "rustfs/orvilo"; '
     restart: 'no'
     networks:
-      - lobe-network
+      - orvilo-network
 
   searxng:
     image: searxng/searxng
-    container_name: lobe-searxng
+    container_name: orvilo-searxng
     volumes:
       - './searxng-settings.yml:/etc/searxng/settings.yml'
     environment:
       - 'SEARXNG_SETTINGS_FILE=/etc/searxng/settings.yml'
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
     env_file:
       - .env
 
@@ -202,14 +202,14 @@ services:
       context: ./elasticsearch
       args:
         ELASTICSEARCH_VERSION: 9.5.2
-    container_name: lobe-elasticsearch
+    container_name: orvilo-elasticsearch
     # Only this profile starts the bundled node. The reindex and sync services
     # below deliberately do not depend on it, so the same services also work
     # against an external Elasticsearch (ES_URL + ES_API_KEY in .env) without
     # building or starting a local node.
     profiles: [elasticsearch]
     # Intentionally no `ports`: security is disabled, so this node must stay
-    # reachable only from services on lobe-network. Never publish 9200.
+    # reachable only from services on orvilo-network. Never publish 9200.
     environment:
       - 'discovery.type=single-node'
       - 'cluster.name=orvilo'
@@ -235,7 +235,7 @@ services:
       start_period: 90s
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
   # One-off full backfill / status command for the optional Elasticsearch path.
   # It never starts with `docker compose up`; run it explicitly, for example:
@@ -255,7 +255,7 @@ services:
       postgresql:
         condition: service_healthy
     environment:
-      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}'
+      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
       - 'ES_REINDEX_STATE_DIR=/app/.elasticsearch-reindex'
     env_file:
       - .env
@@ -267,7 +267,7 @@ services:
     command: ['--status']
     restart: 'no'
     networks:
-      - lobe-network
+      - orvilo-network
 
   # Long-running incremental sync worker for the optional Elasticsearch path.
   # Start it only after the backfill status is ready_for_incremental_sync by
@@ -280,13 +280,13 @@ services:
       context: ../..
       dockerfile: Dockerfile
     image: ${ORVILO_IMAGE_TAG:-orvilo:local}
-    container_name: lobe-fts-search-sync
+    container_name: orvilo-fts-search-sync
     profiles: [elasticsearch-sync]
     depends_on:
       postgresql:
         condition: service_healthy
     environment:
-      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}'
+      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
       - 'FTS_SEARCH_SYNC_ENABLED=true'
       - 'MIGRATION_DB=1'
     env_file:
@@ -300,10 +300,10 @@ services:
     stop_grace_period: 2m
     restart: always
     networks:
-      - lobe-network
+      - orvilo-network
 
 networks:
-  lobe-network:
+  orvilo-network:
     driver: bridge
 
 volumes:

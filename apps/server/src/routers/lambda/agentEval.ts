@@ -130,7 +130,7 @@ const evalTestCaseContentSchema = z.object({
   messages: evalTestCaseMessagesSchema.optional(),
 });
 
-const log = debug('lobe-lambda-router:agent-eval');
+const log = debug('orvilo-lambda-router:agent-eval');
 
 const agentEvalProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;

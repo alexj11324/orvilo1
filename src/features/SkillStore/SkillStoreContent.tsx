@@ -9,20 +9,20 @@ import { useToolStore } from '@/store/tool';
 
 import Search from './Search';
 import AddSkillButton from './SkillList/AddSkillButton';
-import LobeHubList from './SkillList/LobeHub';
 import MarketSkillList from './SkillList/MarketSkills';
 import MCPList from './SkillList/MCP';
+import OrviloList from './SkillList/Orvilo';
 
 export enum SkillStoreTab {
-  LobeHub = 'lobehub',
   MCP = 'mcp',
+  Orvilo = 'orvilo',
   Skills = 'skills',
 }
 
 export const SkillStoreContent = () => {
   const { t } = useTranslation('setting');
-  const [activeTab, setActiveTab] = useState<SkillStoreTab>(SkillStoreTab.LobeHub);
-  const [lobehubKeywords, setLobehubKeywords] = useState('');
+  const [activeTab, setActiveTab] = useState<SkillStoreTab>(SkillStoreTab.Orvilo);
+  const [orviloKeywords, setOrviloKeywords] = useState('');
   const [skillKeywords, setSkillKeywords] = useState('');
 
   // Refresh builtin-tool install state for the active workspace whenever the
@@ -32,12 +32,12 @@ export const SkillStoreContent = () => {
   useFetchUninstalledBuiltinTools(true);
 
   const options: TabsItem[] = [
-    { key: SkillStoreTab.LobeHub, label: t('skillStore.tabs.lobehub') },
+    { key: SkillStoreTab.Orvilo, label: t('skillStore.tabs.orvilo') },
     { key: SkillStoreTab.Skills, label: t('skillStore.tabs.skills') },
     { key: SkillStoreTab.MCP, label: t('skillStore.tabs.mcp') },
   ];
 
-  const isLobeHub = activeTab === SkillStoreTab.LobeHub;
+  const isOrvilo = activeTab === SkillStoreTab.Orvilo;
   const isSkills = activeTab === SkillStoreTab.Skills;
   const isMCP = activeTab === SkillStoreTab.MCP;
 
@@ -59,13 +59,13 @@ export const SkillStoreContent = () => {
         </Flexbox>
         <Search
           activeTab={activeTab}
-          onLobeHubSearch={setLobehubKeywords}
+          onOrviloSearch={setOrviloKeywords}
           onSkillSearch={setSkillKeywords}
         />
       </Flexbox>
       <Flexbox height={496} style={{ marginBlockEnd: -12, marginInline: -16 }}>
-        <Flexbox flex={1} style={{ display: isLobeHub ? 'flex' : 'none', overflow: 'auto' }}>
-          <LobeHubList keywords={lobehubKeywords} />
+        <Flexbox flex={1} style={{ display: isOrvilo ? 'flex' : 'none', overflow: 'auto' }}>
+          <OrviloList keywords={orviloKeywords} />
         </Flexbox>
         <Flexbox flex={1} style={{ display: isSkills ? 'flex' : 'none', overflow: 'auto' }}>
           <MarketSkillList keywords={skillKeywords} />

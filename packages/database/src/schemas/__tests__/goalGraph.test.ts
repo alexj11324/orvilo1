@@ -112,7 +112,7 @@ describe('Goal Graph schema', () => {
         resourceId: task.id,
         resourceType: 'task',
         title: 'Verifier attack report',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         toolName: 'createTask',
         type: 'task',
         userId,
@@ -124,7 +124,7 @@ describe('Goal Graph schema', () => {
       .values({
         changeType: 'created',
         title: 'Verifier attack report',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         toolName: 'createTask',
         version: 1,
         workId: work.id,

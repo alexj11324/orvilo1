@@ -1,6 +1,6 @@
 import type { BuiltinSkill } from '@orvilo/types';
 
-import { toResourceMeta } from '../lobehub/helpers';
+import { toResourceMeta } from '../orvilo/helpers';
 import { TaskIdentifier, TaskManifest } from './manifest';
 import commands from './references/commands.md';
 import content from './SKILL.md';

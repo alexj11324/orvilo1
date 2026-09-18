@@ -92,7 +92,7 @@ export interface EnsureResumeTranscriptResult {
  * Ensure a resumable transcript exists before spawning CC with `--resume`.
  *
  * When the local transcript was GC'd (CC's `cleanupPeriodDays`, default 30),
- * rebuild it from the messages LobeHub still holds and write it to the path the
+ * rebuild it from the messages Orvilo still holds and write it to the path the
  * CLI expects, so `--resume <sessionId>` hydrates the native history again
  * instead of failing with "No conversation found with session ID".
  *

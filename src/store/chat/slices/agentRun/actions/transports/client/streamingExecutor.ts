@@ -11,8 +11,8 @@ import {
   GeneralChatAgent,
   isParkedStatus,
 } from '@orvilo/agent-runtime';
-import { LobeAgentManifest } from '@orvilo/builtin-tool-lobe-agent';
 import { createPathScopeAudit } from '@orvilo/builtin-tool-local-system';
+import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { manualModeExcludeToolIds } from '@orvilo/builtin-tools';
 import {
@@ -26,8 +26,8 @@ import { buildTaskDetailPrompt, buildTaskListPrompt } from '@orvilo/prompts';
 import {
   buildGoalOverviewContext,
   type ConversationContext,
-  type LobeAgentChatConfig,
   type MessageMetadata,
+  type OrviloAgentChatConfig,
   type RunSubAgentResult,
   type RuntimeInitialContext,
   type UIChatMessage,
@@ -70,7 +70,7 @@ import { getUserStoreState } from '@/store/user/store';
 import { buildRunLifecycle } from '../../lifecycle/buildRunLifecycle';
 import type { RunParkedReason, RunScope } from '../../lifecycle/types';
 
-const log = debug('lobe-store:streaming-executor');
+const log = debug('orvilo-store:streaming-executor');
 
 const dynamicInterventionAudits = {
   pathScopeAudit: createPathScopeAudit({
@@ -151,7 +151,7 @@ export class StreamingExecutorActionImpl {
     /** Model/provider the run is forced onto, resolved by the caller that spawns it. */
     modelOverride?: { model: string; provider: string };
     /** chatConfig patch merged over the resolved chatConfig (sub-agent thinking overrides). */
-    chatConfigOverride?: Partial<LobeAgentChatConfig> | null;
+    chatConfigOverride?: Partial<OrviloAgentChatConfig> | null;
   }): {
     state: AgentState;
     context: AgentRuntimeContext;
@@ -175,14 +175,14 @@ export class StreamingExecutorActionImpl {
     const groupId = operation?.context.groupId;
 
     // Resolve agent config with builtin agent runtime config merged
-    // This ensures runtime plugins (e.g., 'lobe-agent-builder' for Agent Builder) are included
-    // - isSubAgent: filters out lobe-agent tool to prevent nested sub-agent creation
+    // This ensures runtime plugins (e.g., 'orvilo-agent-builder' for Agent Builder) are included
+    // - isSubAgent: filters out orvilo-agent tool to prevent nested sub-agent creation
     // - disableTools: clears all plugins for broadcast scenarios
     const resolvedAgentConfig = resolveAgentConfig({
       agentId: effectiveAgentId || '',
       disableTools, // Clear plugins for broadcast scenarios
       groupId, // Pass groupId for supervisor detection
-      isSubAgent, // Filter out lobe-agent in sub-agent context
+      isSubAgent, // Filter out orvilo-agent in sub-agent context
       scope, // Pass scope from operation context
     });
 
@@ -251,8 +251,8 @@ export class StreamingExecutorActionImpl {
     const runtimePluginIds = [
       ...new Set([
         ...(pluginIds || []),
-        ...(hasTopicReference ? ['lobe-topic-reference'] : []),
-        ...(shouldEnableMultimodalUnderstanding ? [LobeAgentManifest.identifier] : []),
+        ...(hasTopicReference ? ['orvilo-topic-reference'] : []),
+        ...(shouldEnableMultimodalUnderstanding ? [OrviloAgentManifest.identifier] : []),
       ]),
     ];
     const effectivePluginIds = runtimePluginIds.length > 0 ? runtimePluginIds : undefined;
@@ -280,7 +280,7 @@ export class StreamingExecutorActionImpl {
       // manifest included but be defaulted to disabled by the enable checker, so
       // no function tools are sent. `platformFilter` still gates availability.
       mergedToolIds,
-      // Context-aware builtin manifests: lobe-agent hides callSubAgent in group /
+      // Context-aware builtin manifests: orvilo-agent hides callSubAgent in group /
       // sub-agent runs. Desktop client runs also need the local environment so
       // local-system can advertise IPC-only capabilities such as direct image reads.
       { executionEnv: isDesktop ? 'local' : undefined, isSubAgent, scope },
@@ -390,7 +390,7 @@ export class StreamingExecutorActionImpl {
       },
     };
 
-    // Build initialContext for page editor if lobe-page-agent is enabled
+    // Build initialContext for page editor if orvilo-page-agent is enabled
     let runtimeInitialContext: RuntimeInitialContext | undefined;
 
     if (scope === 'page' && enabledToolIds.includes(PageAgentIdentifier)) {
@@ -542,7 +542,7 @@ export class StreamingExecutorActionImpl {
      * over the resolved chatConfig, skipping nulled keys. Passed by
      * `runClientSubAgent` from the parent's `agencyConfig.subagent.chatConfig`.
      */
-    chatConfigOverride?: Partial<LobeAgentChatConfig> | null;
+    chatConfigOverride?: Partial<OrviloAgentChatConfig> | null;
     userMessageId?: string;
   }): Promise<{ cost?: Cost; model?: string; provider?: string; usage?: Usage } | void> => {
     const {
@@ -670,7 +670,7 @@ export class StreamingExecutorActionImpl {
       initialContext: params.initialContext,
       operationId,
       subAgentId, // Pass subAgentId for agent config retrieval (behavior depends on scope)
-      isSubAgent, // Pass isSubAgent to filter out lobe-agent tool in sub-agent context
+      isSubAgent, // Pass isSubAgent to filter out orvilo-agent tool in sub-agent context
       modelOverride: params.modelOverride,
       chatConfigOverride: params.chatConfigOverride,
     });
@@ -769,7 +769,7 @@ export class StreamingExecutorActionImpl {
       const currentDBMessages = this.#get().dbMessagesMap[messageKey] || [];
       // Use selectTodosFromMessages selector (shared with UI display)
       const todos = selectTodosFromMessages(currentDBMessages);
-      // Accumulate activated tool IDs from lobe-activator messages
+      // Accumulate activated tool IDs from orvilo-activator messages
       const activatedToolIds = selectActivatedToolIdsFromMessages(currentDBMessages)?.filter(
         (id) => scope === 'page' || id !== PageAgentIdentifier,
       );

@@ -9,7 +9,7 @@ const { mockMarketSDK, mockCreateAgentVersionHeader } = vi.hoisted(() => {
     agents: {
       createAgent: vi.fn(),
       createAgentVersion: vi.fn(async () => {
-        mockCreateAgentVersionHeader(mockMarketSDK.headers['x-lobe-owner-account-id']);
+        mockCreateAgentVersionHeader(mockMarketSDK.headers['x-orvilo-owner-account-id']);
         return { success: true };
       }),
       getAgentDetail: vi.fn(),
@@ -101,6 +101,6 @@ describe('agentRouter.publishOrCreate', () => {
       name: 'Existing Agent',
     });
     expect(mockCreateAgentVersionHeader).toHaveBeenCalledWith('123');
-    expect(mockMarketSDK.headers['x-lobe-owner-account-id']).toBeUndefined();
+    expect(mockMarketSDK.headers['x-orvilo-owner-account-id']).toBeUndefined();
   });
 });

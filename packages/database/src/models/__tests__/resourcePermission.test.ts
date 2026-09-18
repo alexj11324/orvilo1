@@ -8,10 +8,10 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ResourcePermissionModel } from '../resourcePermission';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const ownerId = 'rp-test-owner';
 const memberA = 'rp-test-member-a';

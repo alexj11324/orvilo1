@@ -785,7 +785,7 @@ export function planFromResult(result: Record<string, unknown>, droppedIds?: Set
 }
 
 /**
- * The LobeHub conversation this harness is running inside, read off the env the
+ * The Orvilo conversation this harness is running inside, read off the env the
  * agent runtime echoes into the child process. Lets a report published from an
  * in-app agent link back to the session that produced it with no flags to
  * remember. Absent (a plain terminal) → no origin, which is not an error.
@@ -798,9 +798,9 @@ export function planFromResult(result: Record<string, unknown>, droppedIds?: Set
  */
 export function originFromEnv(): VerifyRunOrigin | undefined {
   const origin: VerifyRunOrigin = {
-    agentId: firstString(process.env.LOBEHUB_AGENT_ID),
-    operationId: firstString(process.env.LOBEHUB_OPERATION_ID),
-    topicId: firstString(process.env.LOBEHUB_TOPIC_ID),
+    agentId: firstString(process.env.ORVILO_AGENT_ID),
+    operationId: firstString(process.env.ORVILO_OPERATION_ID),
+    topicId: firstString(process.env.ORVILO_TOPIC_ID),
   };
 
   return Object.values(origin).some(Boolean) ? origin : undefined;
@@ -917,9 +917,9 @@ export function subjectFromResult(result: Record<string, unknown>): {
   return ref ? { ref, requirement: firstString(value.requirement) } : null;
 }
 
-/** Default acceptance subject for a report authored inside a LobeHub topic. */
+/** Default acceptance subject for a report authored inside a Orvilo topic. */
 export function subjectFromEnv(): AcceptanceSubjectRef | null {
-  const topicId = firstString(process.env.LOBEHUB_TOPIC_ID);
+  const topicId = firstString(process.env.ORVILO_TOPIC_ID);
   return topicId ? { subjectId: topicId, subjectType: 'topic' } : null;
 }
 

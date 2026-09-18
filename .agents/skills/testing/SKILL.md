@@ -4,7 +4,7 @@ description: 'Use for Vitest tests, mocks, coverage and failing-test diagnosis.'
 user-invocable: false
 ---
 
-# LobeHub Testing Guide
+# Orvilo Testing Guide
 
 ## Quick Reference
 
@@ -48,8 +48,8 @@ cd packages/database && TEST_SERVER_DB=1 bunx vitest run --silent='passed-only' 
 
 **Default: do NOT mock `@lobehub/ui/base-ui` — render the real components.**
 `vitest.config.mts` redirects the library's internal MotionProvider to a static
-stub (`tests/mocks/lobehubUiMotionProvider.tsx`), so base-ui components render in
-tests without the app-level ConfigProvider. `Please wrap your app with <ConfigProvider> (or <MotionProvider>)` in a test means that redirect is not in
+stub (`tests/mocks/orviloUiMotionProvider.tsx`), so base-ui components render
+tests without the app-level ConfigProvider. `Please wrap your app with <ConfigProvider> (or <MotionProvider>)` in a test means that redirect is not
 effect (e.g. a package-local vitest config) — do not fix it by hand-mocking every
 component.
 

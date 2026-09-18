@@ -1,6 +1,6 @@
 ---
 name: linear
-description: 'Use for Linear issues, LOBE-xxx links, status updates, completion comments and sub-issue trees.'
+description: 'Use for Linear issues, ORVILO-xxx links, status updates, completion comments and sub-issue trees.'
 user-invocable: false
 ---
 
@@ -35,7 +35,7 @@ Specifics:
 
 ## Creating Sub-issue Trees
 
-When breaking a parent issue into a tree of sub-issues (e.g., task decomposition for LOBE-xxx), follow these conventions and check the available tool capabilities.
+When breaking a parent issue into a tree of sub-issues (e.g., task decomposition for ORVILO-xxx), follow these conventions and check the available tool capabilities.
 
 ### 1. Prefix titles with an ordering index
 
@@ -63,11 +63,11 @@ Linear supports **unlimited sub-issue depth**. A flat list of 8+ siblings under 
 - Core service → its SDK → SDK consumers
 - Don't create a sibling when a child is more accurate
 
-Set the parent relation when creating or moving an issue using the discovered schema (for example, `parentId: "LOBE-xxxx"` when supported). Moving the parent does not require rewriting `blockedBy` relations.
+Set the parent relation when creating or moving an issue using the discovered schema (for example, `parentId: "ORVILO-xxxx"` when supported). Moving the parent does not require rewriting `blockedBy` relations.
 
 ### 3. Sub-issue creation order is dictated by `blockedBy`
 
-`blockedBy` requires the blocker to exist first (you need its LOBE-id). So:
+`blockedBy` requires the blocker to exist first (you need its ORVILO-id). So:
 
 1. **Topologically sort** the DAG — leaves (no deps) first, roots last
 2. Create issues with zero deps in the first wave
@@ -85,7 +85,7 @@ Each sub-issue should state:
 - Goal (1–2 lines)
 - Key files to touch
 - Concrete changes / acceptance criteria
-- Dependencies (link to blocker issues by `LOBE-xxxx`)
+- Dependencies (link to blocker issues by `ORVILO-xxxx`)
 - Validation steps
 
 The implementer may open only the sub-issue, not the parent — don't rely on context that lives only in the parent description.
@@ -94,7 +94,7 @@ The implementer may open only the sub-issue, not the parent — don't rely on co
 
 Close out each issue before starting the next; do not defer all Linear updates to the end. Reuse existing authorization for that issue's status updates and comments without asking again.
 
-1. Complete implementation and the repository-required checks, including related tests; follow the Quality Check section of the repository's `AGENTS.md` (`bun run check` in LobeHub).
-2. Create a PR when needed using the **pr** skill. Include `Fixes LOBE-123` (or `Closes` / `Resolves`) in the PR body so Linear can link it and close the issue on merge.
+1. Complete implementation and the repository-required checks, including related tests; follow the Quality Check section of the repository's `AGENTS.md` (`bun run check` in Orvilo).
+2. Create a PR when needed using the **pr** skill. Include `Fixes ORVILO-123` (or `Closes` / `Resolves`) in the PR body so Linear can link it and close the issue on merge.
 3. Update the issue to **In Review** while its PR awaits merge, then **Done** after merge. For work that needs no PR, mark **Done** when its outcome and verification are complete.
 4. Proactively add or update a concise completion comment with the resulting behavior, important changes, validation, and PR link. PR linkage does not replace this human-readable summary. If an existing comment already covers the same result, do not post a duplicate.

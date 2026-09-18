@@ -41,7 +41,7 @@ describe('didToolMutateWorkView', () => {
     expect(
       didToolMutateWorkView({
         apiName: 'updateTaskStatus',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         succeeded: true,
         workRegistration: false,
       }),
@@ -52,7 +52,7 @@ describe('didToolMutateWorkView', () => {
     expect(
       didToolMutateWorkView({
         apiName: 'runTasks',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         result: { state: { succeeded: 1 } },
         succeeded: false,
         workRegistration: false,
@@ -62,7 +62,7 @@ describe('didToolMutateWorkView', () => {
     expect(
       didToolMutateWorkView({
         apiName: 'runTasks',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         succeeded: false,
         workRegistration: false,
       }),
@@ -73,7 +73,7 @@ describe('didToolMutateWorkView', () => {
     expect(
       didToolMutateWorkView({
         apiName: 'listTasks',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         succeeded: true,
         workRegistration: false,
       }),
@@ -81,7 +81,7 @@ describe('didToolMutateWorkView', () => {
     expect(
       didToolMutateWorkView({
         apiName: 'updateTaskStatus',
-        identifier: 'lobe-task',
+        identifier: 'orvilo-task',
         succeeded: false,
         workRegistration: false,
       }),

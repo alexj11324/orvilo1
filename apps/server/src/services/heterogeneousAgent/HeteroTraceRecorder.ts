@@ -9,7 +9,7 @@ import debug from 'debug';
 
 import { buildFinalSnapshotKey } from '@/server/modules/AgentTracing';
 
-const log = debug('lobe-server:hetero-trace-recorder');
+const log = debug('orvilo-server:hetero-trace-recorder');
 
 export interface HeteroFinalizeParams {
   agentId?: string | null;

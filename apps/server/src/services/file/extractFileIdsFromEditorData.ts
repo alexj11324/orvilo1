@@ -1,7 +1,7 @@
 import { files } from '@orvilo/database/schemas';
 import { and, inArray } from 'drizzle-orm';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 
 /**
@@ -87,7 +87,7 @@ function extractStorageKeyFromUrl(url: string): string | undefined {
 
 export async function extractFileIdsFromEditorData(
   json: unknown,
-  ctx: { db: LobeChatDatabase; userId: string; workspaceId?: string },
+  ctx: { db: OrviloDatabase; userId: string; workspaceId?: string },
 ): Promise<string[]> {
   const urls = collectAttachmentUrlsFromEditorData(json);
   if (urls.length === 0) return [];

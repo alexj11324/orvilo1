@@ -1,5 +1,5 @@
 // Import zod for common schemas
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 /**
  * Standard API response format
@@ -19,7 +19,7 @@ export interface IBaseService {
   /**
    * Database instance
    */
-  db?: LobeChatDatabase;
+  db?: OrviloDatabase;
 }
 
 /**

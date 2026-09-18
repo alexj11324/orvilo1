@@ -1,8 +1,8 @@
 ---
-title: LobeHub Authentication Service Environment Variables
+title: Orvilo Authentication Service Environment Variables
 description: >-
   Explore the essential environment variables for configuring authentication
-  services in LobeHub, including Better Auth, OAuth SSO, and provider-specific
+  services in Orvilo, including Better Auth, OAuth SSO, and provider-specific
   details.
 tags:
   - Authentication Service
@@ -12,7 +12,7 @@ tags:
 
 # Authentication Service
 
-LobeHub provides a complete authentication service capability when deployed. The following are the relevant environment variables. You can use these environment variables to easily define the identity verification services that need to be enabled in LobeHub.
+Orvilo provides a complete authentication service capability when deployed. The following are the relevant environment variables. You can use these environment variables to easily define the identity verification services that need to be enabled in Orvilo.
 
 ## Better Auth
 
@@ -30,7 +30,7 @@ LobeHub provides a complete authentication service capability when deployed. The
 - Type: Optional
 - Description: Prefix applied to every Better Auth cookie name. Configure a unique value when multiple deployments can write cookies on the same parent domain. Changing this value invalidates existing sessions for this deployment unless they are migrated separately.
 - Default: `better-auth`
-- Example: `my-lobehub`
+- Example: `my-orvilo`
 
 #### `AUTH_EMAIL_VERIFICATION`
 
@@ -51,7 +51,7 @@ LobeHub provides a complete authentication service capability when deployed. The
 - Type: Optional
 - Description: Replaces Better Auth's automatically generated trusted-origin list with a comma-separated list. Use this only when you need full control and include every required web origin and mobile custom scheme. URL paths are reduced to their origin. Prefer exact origins instead of wildcards.
 - Default: Generated from `APP_URL`, Vercel deployment URLs, the mobile app scheme, the Expo development scheme, and the Apple origin when Apple SSO is enabled.
-- Example: `https://lobe.example.com,com.example.app://`
+- Example: `https://orvilo.example.com,com.example.app://`
 
 #### `AUTH_ADDITIONAL_TRUSTED_ORIGINS`
 

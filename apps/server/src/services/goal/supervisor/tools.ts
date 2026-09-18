@@ -8,7 +8,7 @@ import { GoalGraphModel } from '@/database/models/goalGraph';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { ToolExecutionContext } from '@/server/services/toolExecution/types';
 
 const scopeSchema = z.object({ goalId: z.string().min(1), incidentId: z.string().min(1) });
@@ -33,7 +33,7 @@ export class GoalSupervisorTools {
     params: SupervisorScopeParams,
     action: (
       scope: Awaited<ReturnType<GoalSupervisorTools['authorize']>>,
-      db: LobeChatDatabase,
+      db: OrviloDatabase,
     ) => Promise<unknown>,
   ) => {
     try {
@@ -51,7 +51,7 @@ export class GoalSupervisorTools {
     }
   };
 
-  private authorize = async (db: LobeChatDatabase, params: SupervisorScopeParams) => {
+  private authorize = async (db: OrviloDatabase, params: SupervisorScopeParams) => {
     const { userId, workspaceId, topicId, agentId, operationId } = this.context;
     if (!userId || !topicId || !agentId || !operationId)
       throw new Error('Supervisor execution context required');

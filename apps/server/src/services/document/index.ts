@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CUSTOM_DOCUMENT_FILE_TYPE, CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { type DocumentItem } from '@orvilo/database/schemas';
 import { documents, files } from '@orvilo/database/schemas';
 import { loadFile, UnsupportedFileTypeError } from '@orvilo/file-loaders';
@@ -17,7 +17,7 @@ import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import { isValidEditorData } from '@/libs/editor/isValidEditorData';
 import { normalizeEditorDataDiffNodes } from '@/libs/editor/normalizeDiffNodes';
 import { diffAddedMentionUserIds } from '@/server/utils/documentMentions';
-import { type LobeDocument } from '@/types/document';
+import { type OrviloDocument } from '@/types/document';
 
 import { EditLockService } from '../editLock';
 import { FileService } from '../file';
@@ -37,7 +37,7 @@ import type {
   UpdateDocumentResult,
 } from './types';
 
-const log = debug('lobe-chat:service:document');
+const log = debug('orvilo:service:document');
 
 const normalizeParseFileError = (error: unknown) => {
   if (error instanceof UnsupportedFileTypeError) {
@@ -59,13 +59,13 @@ export class DocumentService {
   private fileServiceInstance?: FileService;
   private knowledgeBaseModel: KnowledgeBaseModel;
   private editLockService: EditLockService;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private callerAgentVisibility?: 'private' | 'public' | null;
 
   private workspaceId?: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     callerAgentVisibility?: 'private' | 'public' | null,
@@ -626,7 +626,7 @@ export class DocumentService {
   async updateDocument(id: string, params: UpdateDocumentParams): Promise<UpdateDocumentResult> {
     let changed = false;
     const result = await this.db.transaction(async (tx) => {
-      const transactionDb = tx as unknown as LobeChatDatabase;
+      const transactionDb = tx as unknown as OrviloDatabase;
       const documentModel = new DocumentModel(
         transactionDb,
         this.userId,
@@ -786,7 +786,7 @@ export class DocumentService {
   /**
    * Parse file and create a document for page editor (without page tags)
    */
-  async parseDocument(fileId: string): Promise<LobeDocument> {
+  async parseDocument(fileId: string): Promise<OrviloDocument> {
     const { filePath, file, cleanup } = await this.fileService.downloadFileToLocal(fileId);
 
     const logPrefix = `[${file.name}]`;
@@ -827,7 +827,7 @@ export class DocumentService {
         totalLineCount: cleanContent.split('\n').length,
       });
 
-      return document as LobeDocument;
+      return document as OrviloDocument;
     } catch (error) {
       const parseError = normalizeParseFileError(error);
       console.error(`${logPrefix} File parsing failed:`, parseError);
@@ -847,10 +847,10 @@ export class DocumentService {
    * transaction scoped, so a nested call would hold it until the outer
    * transaction commits instead of releasing it after the insert.
    */
-  async parseFile(fileId: string): Promise<LobeDocument> {
+  async parseFile(fileId: string): Promise<OrviloDocument> {
     // Idempotent: return existing document if already parsed
     const existingDoc = await this.documentModel.findByFileId(fileId);
-    if (existingDoc) return existingDoc as LobeDocument;
+    if (existingDoc) return existingDoc as OrviloDocument;
 
     const { filePath, file, cleanup } = await this.fileService.downloadFileToLocal(fileId);
 
@@ -887,7 +887,7 @@ export class DocumentService {
           sql`SELECT pg_advisory_xact_lock(hashtext(${`parseFile:${fileId}`})::bigint)`,
         );
 
-        const transactionDb = tx as unknown as LobeChatDatabase;
+        const transactionDb = tx as unknown as OrviloDatabase;
         const transactionDocumentModel = new DocumentModel(
           transactionDb,
           this.userId,
@@ -916,7 +916,7 @@ export class DocumentService {
         });
       });
 
-      return document as LobeDocument;
+      return document as OrviloDocument;
     } catch (error) {
       const parseError = normalizeParseFileError(error);
       console.error(`${logPrefix} File parsing failed:`, parseError);

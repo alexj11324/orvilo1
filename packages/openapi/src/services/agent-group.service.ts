@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { SessionGroupModel } from '@/database/models/sessionGroup';
 import { sessionGroups } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { BaseService } from '../common/base.service';
 import { projectPublicAgentGroup } from '../helpers/public-fields';
@@ -21,7 +21,7 @@ import type {
 export class AgentGroupService extends BaseService {
   private sessionGroupModel: SessionGroupModel;
 
-  constructor(db: LobeChatDatabase, userId: string | null, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
     super(db, userId, workspaceId);
     this.sessionGroupModel = new SessionGroupModel(db, userId!, workspaceId);
   }

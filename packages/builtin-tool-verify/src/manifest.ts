@@ -3,7 +3,7 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import { systemPrompt } from './systemRole';
 import { VerifyToolApiName } from './types';
 
-export const VerifyToolIdentifier = 'lobe-verify';
+export const VerifyToolIdentifier = 'orvilo-verify';
 
 export const VerifyToolManifest: BuiltinToolManifest = {
   api: [

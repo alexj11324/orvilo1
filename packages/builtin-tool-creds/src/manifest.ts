@@ -2,9 +2,9 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import type { JSONSchema7 } from 'json-schema';
 
 import { systemPrompt } from './systemRole';
-import { CredsApiName, LOBEHUB_OAUTH_PROVIDER_IDS, LOBEHUB_OAUTH_PROVIDER_LIST } from './types';
+import { CredsApiName, ORVILO_OAUTH_PROVIDER_IDS, ORVILO_OAUTH_PROVIDER_LIST } from './types';
 
-export const CredsIdentifier = 'lobe-creds';
+export const CredsIdentifier = 'orvilo-creds';
 
 export const CredsManifest: BuiltinToolManifest = {
   api: [
@@ -27,14 +27,14 @@ export const CredsManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'Initiate OAuth connection flow for a LobeHub Skill provider (e.g., GitHub, Linear, Microsoft Outlook, Notion, Twitter/X). Returns an authorization URL that the user must click to authorize. After authorization, the credential will be automatically saved.',
+        'Initiate OAuth connection flow for a Orvilo Skill provider (e.g., GitHub, Linear, Microsoft Outlook, Notion, Twitter/X). Returns an authorization URL that the user must click to authorize. After authorization, the credential will be automatically saved.',
       name: CredsApiName.initiateOAuthConnect,
       parameters: {
         additionalProperties: false,
         properties: {
           provider: {
-            description: `The OAuth provider ID. Available providers: ${LOBEHUB_OAUTH_PROVIDER_LIST}`,
-            enum: [...LOBEHUB_OAUTH_PROVIDER_IDS],
+            description: `The OAuth provider ID. Available providers: ${ORVILO_OAUTH_PROVIDER_LIST}`,
+            enum: [...ORVILO_OAUTH_PROVIDER_IDS],
             type: 'string',
           },
         },

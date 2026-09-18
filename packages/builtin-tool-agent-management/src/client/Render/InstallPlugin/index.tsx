@@ -47,14 +47,14 @@ export const InstallPluginRender = memo<
       <Flexbox gap={8}>
         <Flexbox horizontal align={'center'} gap={8}>
           <span className={styles.label}>
-            {t('builtins.lobe-agent-management.render.installPlugin.plugin')}
+            {t('builtins.orvilo-agent-management.render.installPlugin.plugin')}
           </span>
           <Tag>{pluginState.pluginName || pluginState.pluginId}</Tag>
         </Flexbox>
         <span className={pluginState.installed ? styles.statusSuccess : styles.statusFail}>
           {pluginState.installed
-            ? t('builtins.lobe-agent-management.render.installPlugin.success')
-            : t('builtins.lobe-agent-management.render.installPlugin.failed')}
+            ? t('builtins.orvilo-agent-management.render.installPlugin.success')
+            : t('builtins.orvilo-agent-management.render.installPlugin.failed')}
         </span>
       </Flexbox>
     </div>

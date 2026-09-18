@@ -326,7 +326,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
         metadata: {
           agentConfig: {},
         },
-        modelRuntimeConfig: { model: 'gpt-test', provider: 'lobehub' },
+        modelRuntimeConfig: { model: 'gpt-test', provider: 'orvilo' },
         origin: {
           userId: 'user-1',
         },
@@ -376,7 +376,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
         metadata: {
           agentConfig: {},
         },
-        modelRuntimeConfig: { model: 'gpt-test', provider: 'lobehub' },
+        modelRuntimeConfig: { model: 'gpt-test', provider: 'orvilo' },
         origin: {
           userId: 'user-1',
         },
@@ -409,7 +409,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
         metadata: {
           agentConfig: {},
         },
-        modelRuntimeConfig: { model: 'gpt-test', provider: 'lobehub' },
+        modelRuntimeConfig: { model: 'gpt-test', provider: 'orvilo' },
         origin: {
           userId: 'user-1',
         },
@@ -435,7 +435,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
         metadata: {
           agentConfig: {},
         },
-        modelRuntimeConfig: { model: 'gpt-test', provider: 'lobehub' },
+        modelRuntimeConfig: { model: 'gpt-test', provider: 'orvilo' },
         origin: {
           userId: 'user-1',
         },
@@ -457,7 +457,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
           {
             function: {
               arguments: JSON.stringify({ path }),
-              name: 'lobe-cloud-sandbox____writeFile____builtin',
+              name: 'orvilo-cloud-sandbox____writeFile____builtin',
             },
             id: 'call-1',
             type: 'function',
@@ -480,7 +480,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
         metadata: {
           agentConfig: {},
         },
-        modelRuntimeConfig: { model: 'gpt-test', provider: 'lobehub' },
+        modelRuntimeConfig: { model: 'gpt-test', provider: 'orvilo' },
         origin: {
           userId: 'user-1',
         },
@@ -504,7 +504,7 @@ describe('AgentRuntimeService.executeStep - early exit on terminal state', () =>
         metadata: {
           agentConfig: {},
         },
-        modelRuntimeConfig: { model: 'gpt-test', provider: 'lobehub' },
+        modelRuntimeConfig: { model: 'gpt-test', provider: 'orvilo' },
         origin: {
           userId: 'user-1',
         },

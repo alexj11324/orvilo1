@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { FtsSearchRepo } from './index';
 import type {
   FtsSearchBackend,
@@ -10,7 +10,7 @@ import type {
   FtsSearchMessageResult,
 } from './types';
 
-const db = {} as LobeChatDatabase;
+const db = {} as OrviloDatabase;
 const now = new Date('2026-08-26T00:00:00.000Z');
 
 const messageResult: FtsSearchMessageResult = {

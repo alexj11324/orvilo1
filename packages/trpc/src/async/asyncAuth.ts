@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
@@ -7,7 +7,7 @@ import { validateInternalJWT } from '@/libs/trpc/utils/internalJwt';
 
 import { asyncTrpc } from './init';
 
-const log = debug('lobe-async:auth');
+const log = debug('orvilo-async:auth');
 
 export const asyncAuth = asyncTrpc.middleware(async (opts) => {
   const { ctx } = opts;
@@ -35,7 +35,7 @@ export const asyncAuth = asyncTrpc.middleware(async (opts) => {
 
   try {
     log('Looking up user in database: %s', ctx.userId);
-    const result = await UserModel.findById(ctx.serverDB as LobeChatDatabase, ctx.userId);
+    const result = await UserModel.findById(ctx.serverDB as OrviloDatabase, ctx.userId);
 
     if (!result) {
       log('User not found in database: %s', ctx.userId);

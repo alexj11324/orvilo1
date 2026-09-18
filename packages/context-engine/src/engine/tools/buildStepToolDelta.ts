@@ -1,4 +1,4 @@
-import type { LobeToolManifest, StepToolDelta } from './types';
+import type { OrviloToolManifest, StepToolDelta } from './types';
 
 export interface BuildStepToolDeltaParams {
   /**
@@ -18,7 +18,7 @@ export interface BuildStepToolDeltaParams {
    * The local-system manifest to inject when device is active.
    * Passed in to avoid a hard dependency on @orvilo/builtin-tool-local-system.
    */
-  localSystemManifest?: LobeToolManifest;
+  localSystemManifest?: OrviloToolManifest;
   /**
    * Tool IDs mentioned via @tool in user messages
    */
@@ -26,7 +26,7 @@ export interface BuildStepToolDeltaParams {
   /**
    * The operation-level manifest map (used to check if a tool is already present)
    */
-  operationManifestMap: Record<string, LobeToolManifest>;
+  operationManifestMap: Record<string, OrviloToolManifest>;
 }
 
 /**

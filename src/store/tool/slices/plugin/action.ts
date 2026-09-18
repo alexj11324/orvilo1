@@ -1,5 +1,5 @@
 import { type Schema, type ValidationResult } from '@cfworker/json-schema';
-import { type LobeTool } from '@orvilo/types';
+import { type OrviloTool } from '@orvilo/types';
 import { type SWRResponse } from 'swr';
 
 import { MESSAGE_CANCEL_FLAT } from '@/const/message';
@@ -96,7 +96,7 @@ export class PluginActionImpl {
       enable ? toolKeys.installedPlugins() : null,
       () => pluginService.getInstalledPlugins(),
       {
-        onSuccess: (data: LobeTool[]) => {
+        onSuccess: (data: OrviloTool[]) => {
           this.#set(
             { installedPlugins: data, loadingInstallPlugins: false },
             false,

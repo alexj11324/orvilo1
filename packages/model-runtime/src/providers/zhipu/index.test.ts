@@ -1,15 +1,15 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type LobeOpenAICompatibleRuntime } from '../../core/BaseAI';
+import { type OrviloOpenAICompatibleRuntime } from '../../core/BaseAI';
 import { testProvider } from '../../providerTestUtils';
-import { LobeZhipuAI, params } from './index';
+import { OrviloZhipuAI, params } from './index';
 
 testProvider({
   provider: 'zhipu',
   defaultBaseURL: 'https://open.bigmodel.cn/api/paas/v4',
   chatModel: 'glm-4',
-  Runtime: LobeZhipuAI,
+  Runtime: OrviloZhipuAI,
   chatDebugEnv: 'DEBUG_ZHIPU_CHAT_COMPLETION',
   test: {
     skipAPICall: true, // Skip because Zhipu has custom handlePayload that normalizes temperature
@@ -23,10 +23,10 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: LobeOpenAICompatibleRuntime;
+let instance: OrviloOpenAICompatibleRuntime;
 
 beforeEach(() => {
-  instance = new LobeZhipuAI({ apiKey: 'test' });
+  instance = new OrviloZhipuAI({ apiKey: 'test' });
 
   // Mock chat.completions.create
   vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
@@ -38,7 +38,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeZhipuAI - custom features', () => {
+describe('OrviloZhipuAI - custom features', () => {
   describe('Debug Configuration', () => {
     it('should disable debug by default', () => {
       delete process.env.DEBUG_ZHIPU_CHAT_COMPLETION;
@@ -56,7 +56,7 @@ describe('LobeZhipuAI - custom features', () => {
 
   describe('handlePayload', () => {
     it('should send mapped model id when modelIdMapping is configured', async () => {
-      const mappedInstance = new LobeZhipuAI({
+      const mappedInstance = new OrviloZhipuAI({
         apiKey: 'test',
         modelIdMapping: { 'glm-4-alltools': 'upstream-glm-deployment' },
       });
@@ -922,8 +922,8 @@ describe('LobeZhipuAI - custom features', () => {
         {
           headers: {
             'Authorization': 'Bearer test_api_key',
-            'Bigmodel-Organization': 'lobehub',
-            'Bigmodel-Project': 'lobechat',
+            'Bigmodel-Organization': 'orvilo',
+            'Bigmodel-Project': 'orvilo',
           },
           method: 'GET',
         },
@@ -966,7 +966,7 @@ describe('LobeZhipuAI - custom features', () => {
       const mockClient = { apiKey: 'test_api_key' };
       const models = await params.models({ client: mockClient as any });
 
-      // processModelList will merge with LOBE_DEFAULT_MODEL_LIST
+      // processModelList will merge with ORVILO_DEFAULT_MODEL_LIST
       // Check that fetch was called and data was processed
       expect(mockFetch).toHaveBeenCalled();
       expect(models).toBeDefined();

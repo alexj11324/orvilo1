@@ -29,12 +29,12 @@ describe('auth', () => {
   });
 
   it('uses the configured Better Auth cookie prefix', async () => {
-    mocks.authEnv.AUTH_COOKIE_PREFIX = 'lobehub-oss';
+    mocks.authEnv.AUTH_COOKIE_PREFIX = 'orvilo-oss';
 
     await import('./auth');
 
     expect(mocks.defineConfig).toHaveBeenCalledWith({
-      cookiePrefix: 'lobehub-oss',
+      cookiePrefix: 'orvilo-oss',
       plugins: [],
     });
   });

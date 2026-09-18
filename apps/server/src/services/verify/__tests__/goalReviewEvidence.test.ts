@@ -2,7 +2,7 @@
 import { REVIEW_PREDICT_PROMPT_VERSION } from '@orvilo/prompts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { VerifyReviewPredictorService } from '../reviewPredictor';
 
@@ -76,7 +76,7 @@ const params = {
   checkResultId: 'r1',
   modelConfig: { model: 'review-model', provider: 'review-provider' },
 };
-const review = () => new VerifyReviewPredictorService({} as LobeChatDatabase, 'u1');
+const review = () => new VerifyReviewPredictorService({} as OrviloDatabase, 'u1');
 
 describe('Goal review evidence', () => {
   it('uses original text and records generation provenance', async () => {

@@ -2,11 +2,11 @@
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobeDeepSeekAnthropicAI, openAIParams } from '../index';
+import { openAIParams, OrviloDeepSeekAnthropicAI } from '../index';
 import { expectNoLoneSurrogateEscapes, loneHighSurrogate, validEmoji } from './testUtils';
 
-describe('LobeDeepSeekAnthropicAI generateObject', () => {
-  let instance: InstanceType<typeof LobeDeepSeekAnthropicAI>;
+describe('OrviloDeepSeekAnthropicAI generateObject', () => {
+  let instance: InstanceType<typeof OrviloDeepSeekAnthropicAI>;
 
   const generateObjectPayload = {
     messages: [{ content: 'Generate a handoff', role: 'user' as const }],
@@ -28,7 +28,7 @@ describe('LobeDeepSeekAnthropicAI generateObject', () => {
   };
 
   beforeEach(() => {
-    instance = new LobeDeepSeekAnthropicAI({ apiKey: 'test' });
+    instance = new OrviloDeepSeekAnthropicAI({ apiKey: 'test' });
 
     vi.spyOn((instance as any).client.messages, 'create').mockResolvedValue({
       content: [

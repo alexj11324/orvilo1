@@ -12,7 +12,7 @@ import {
   runWithScheduledWorkScope,
 } from '@/server/utils/scheduleAfterResponse';
 
-const log = debug('lobe-server:agent:run-step');
+const log = debug('orvilo-server:agent:run-step');
 
 /**
  * Latest point in an invocation at which a new step may START, in ms.
@@ -158,7 +158,7 @@ export async function runStep(c: Context): Promise<Response> {
 
     const serverDB = await getServerDB();
     // Step through AiAgentService so the runtime keeps its `execSubAgent`
-    // fork callback (needed by `lobe-agent.callSubAgent`). Every Hatchet step
+    // fork callback (needed by `orvilo-agent.callSubAgent`). Every Hatchet step
     // is a fresh worker invocation, and a bare AgentRuntimeService would lose
     // the in-process callback → SUB_AGENT_UNAVAILABLE.
     //

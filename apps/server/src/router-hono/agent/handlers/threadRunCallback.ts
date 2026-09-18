@@ -13,7 +13,7 @@ import {
   updateThreadRunProgress,
 } from '@/server/services/aiAgent/hooks/threadRunHooks';
 
-const log = debug('lobe-server:agent:thread-run-callback');
+const log = debug('orvilo-server:agent:thread-run-callback');
 
 /** Persist isolated-thread progress and completion after a queue worker boundary. */
 export async function threadRunCallback(c: Context): Promise<Response> {

@@ -5,7 +5,7 @@
  * actual TTL and what we promise to recipients can't drift apart.
  *
  * If you change this, also update the "expire after 1 week" copy in
- * `lobehub/src/locales/default/setting.ts` (`workspace.members.invite.modal.expiryWarning`).
+ * `aspectlylabs/src/locales/default/setting.ts` (`workspace.members.invite.modal.expiryWarning`).
  */
 export const INVITATION_EXPIRY_DAYS = 7;
 

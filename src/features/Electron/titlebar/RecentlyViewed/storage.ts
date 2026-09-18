@@ -2,8 +2,8 @@ import { isRetiredProductUrl } from '../retiredProductUrl';
 import { type TabScope, tabScopeKey } from '../TabBar/scope';
 import { type TabItem } from '../TabBar/types';
 
-export const PINNED_PAGES_STORAGE_KEY_V3 = 'lobechat:desktop:pinned-pages:v3';
-export const PINNED_PAGES_STORAGE_KEY_PREFIX = 'lobechat:desktop:pinned-pages:v4';
+export const PINNED_PAGES_STORAGE_KEY_V3 = 'orvilo:desktop:pinned-pages:v3';
+export const PINNED_PAGES_STORAGE_KEY_PREFIX = 'orvilo:desktop:pinned-pages:v4';
 
 export const pinnedPagesStorageKey = (scope: TabScope): string =>
   `${PINNED_PAGES_STORAGE_KEY_PREFIX}:${tabScopeKey(scope)}`;

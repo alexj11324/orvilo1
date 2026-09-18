@@ -24,7 +24,7 @@ export const SearchMarketToolsInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-builder.apiName.searchMarketTools')}
+          {t('builtins.orvilo-agent-builder.apiName.searchMarketTools')}
         </span>
       </div>
     );
@@ -36,7 +36,7 @@ export const SearchMarketToolsInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-builder.apiName.searchMarketTools')}:{' '}
+        {t('builtins.orvilo-agent-builder.apiName.searchMarketTools')}:{' '}
       </span>
       {displayText && <span className={highlightTextStyles.primary}>{displayText}</span>}
       {!isLoading &&
@@ -51,7 +51,7 @@ export const SearchMarketToolsInspector = memo<
             fontSize={12}
             style={{ marginInlineStart: 4 }}
           >
-            ({t('builtins.lobe-agent-builder.inspector.noResults')})
+            ({t('builtins.orvilo-agent-builder.inspector.noResults')})
           </Text>
         ))}
     </div>

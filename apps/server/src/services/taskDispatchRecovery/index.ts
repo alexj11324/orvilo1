@@ -5,7 +5,7 @@ import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel, type TaskDispatchRecoveryClaim } from '@/database/models/taskDispatch';
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
@@ -66,7 +66,7 @@ const releaseUnknown = async (input: {
  * agree on the same stable identity before local lifecycle state can advance.
  */
 export const processTaskDispatchRecovery = async (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   dispatchId: string;
   leaseMs?: number;
   retryMs?: number;
@@ -185,7 +185,7 @@ export const processTaskDispatchRecovery = async (input: {
 
 /** Recover expired dispatch leases without creating replacement operations. */
 export const sweepTaskDispatchRecovery = async (input: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   limit?: number;
 }): Promise<TaskDispatchRecoveryOutcome[]> => {
   const candidates = await TaskDispatchModel.findRecoveryCandidates(input.db, {

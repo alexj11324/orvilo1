@@ -13,11 +13,11 @@ const createProxy = () =>
     }
     if (input.endpoint === '/user/orgs') {
       return {
-        data: [{ description: 'Making AI accessible.', login: 'lobehub' }],
+        data: [{ description: 'Making AI accessible.', login: 'orvilo' }],
         status: 200,
       };
     }
-    if (input.endpoint === '/repos/lobehub/lobehub/contributors') {
+    if (input.endpoint === '/repos/alexj11324/orvilo1/contributors') {
       return { data: [{ contributions: 12, login: 'octocat' }], status: 200 };
     }
     if (input.endpoint === '/graphql') {
@@ -28,12 +28,12 @@ const createProxy = () =>
             data: {
               viewer: {
                 bio: 'Building tools.',
-                company: '@lobehub',
+                company: '@orvilo',
                 location: 'Shanghai',
                 login: 'octocat',
                 name: 'Octocat',
                 pronouns: 'they/them',
-                websiteUrl: 'https://lobehub.com',
+                websiteUrl: 'https://orvilo.aspectlylabs.com',
               },
             },
           },
@@ -62,14 +62,14 @@ describe('createGitHubMarketTransport', () => {
     });
     /** @example `/user/orgs` retains the organization fields consumed by the loader. */
     await expect(transport.listUserOrganizations({ perPage: 20 })).resolves.toEqual([
-      { description: 'Making AI accessible.', login: 'lobehub' },
+      { description: 'Making AI accessible.', login: 'orvilo' },
     ]);
     /** @example Repository path segments and pagination are proxied without credentials. */
     await expect(
       transport.listRepositoryContributors({
-        owner: 'lobehub',
+        owner: 'orvilo',
         perPage: 5,
-        repository: 'lobehub',
+        repository: 'orvilo',
       }),
     ).resolves.toEqual([{ contributions: 12, login: 'octocat' }]);
     /** @example GraphQL unwraps the GitHub response envelope for existing Zod schemas. */
@@ -94,13 +94,13 @@ describe('createGitHubMarketConnectorClient', () => {
     /** @example The normalized profile contract is independent of the auth provider. */
     await expect(client.getUserProfile()).resolves.toEqual({
       bio: 'Building tools.',
-      company: '@lobehub',
+      company: '@orvilo',
       externalAccountId: '98765',
       location: 'Shanghai',
       login: 'octocat',
       name: 'Octocat',
       pronouns: 'they/them',
-      websiteUrl: 'https://lobehub.com',
+      websiteUrl: 'https://orvilo.aspectlylabs.com',
     });
   });
 });

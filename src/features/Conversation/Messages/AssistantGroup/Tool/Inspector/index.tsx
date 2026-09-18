@@ -1,6 +1,6 @@
 import { Flexbox } from '@lobehub/ui';
 import type { ActivateToolsState } from '@orvilo/builtin-tool-activator';
-import { ActivatorApiName, LobeActivatorIdentifier } from '@orvilo/builtin-tool-activator';
+import { ActivatorApiName, OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { AuvApiName, AuvIdentifier } from '@orvilo/builtin-tool-auv';
 import { LocalSystemApiName, LocalSystemIdentifier } from '@orvilo/builtin-tool-local-system';
 import { getBuiltinInspector } from '@orvilo/builtin-tools/inspectors';
@@ -68,7 +68,7 @@ const Inspectors = memo<InspectorProps>(
     const activateToolsState = result?.state as ActivateToolsState | undefined;
     let statusSuccessVariant: 'warning' | undefined;
     if (
-      identifier === LobeActivatorIdentifier &&
+      identifier === OrviloActivatorIdentifier &&
       apiName === ActivatorApiName.activateTools &&
       !isTitleLoading &&
       !result?.error
@@ -99,7 +99,7 @@ const Inspectors = memo<InspectorProps>(
     // carries the action/purpose even in the compact row. Image reads likewise
     // need their viewing label instead of the generic read-file title.
     const isComputerUse =
-      (identifier === AuvIdentifier || identifier === 'lobe-auv') &&
+      (identifier === AuvIdentifier || identifier === 'orvilo-auv') &&
       apiName === AuvApiName.runCommand;
     const readPath =
       args?.path ||

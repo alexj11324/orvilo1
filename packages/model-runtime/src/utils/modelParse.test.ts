@@ -9,7 +9,7 @@ import {
   processMultiProviderModelList,
 } from './modelParse';
 
-// Mock the imported LOBE_DEFAULT_MODEL_LIST
+// Mock the imported ORVILO_DEFAULT_MODEL_LIST
 const { loadModelsMock, mockDefaultModelList } = vi.hoisted(() => ({
   loadModelsMock: vi.fn(),
   mockDefaultModelList: [
@@ -114,9 +114,9 @@ vi.mock('model-bank', () => ({
   AiModelTypeSchema: {
     options: ['chat', 'embedding', 'tts', 'asr', 'image', 'video', 'text2music', 'realtime'],
   },
-  LOBE_DEFAULT_MODEL_LIST: mockDefaultModelList,
+  ORVILO_DEFAULT_MODEL_LIST: mockDefaultModelList,
   loadModels: vi.fn().mockResolvedValue(mockDefaultModelList),
-  ModelProvider: { LobeHub: 'lobehub' },
+  ModelProvider: { Orvilo: 'orvilo' },
   // 新增 provider 专用清单，供 findKnownModelByProvider 使用
   google: [
     {
@@ -624,7 +624,7 @@ describe('modelParse', () => {
       expect(model.functionCall).toBe(true); // 'claude' keyword
       expect(model.vision).toBe(true); // 'claude' keyword
       expect(model.reasoning).toBe(false); // 'haiku' does not match anthropic reasoning keywords
-      expect(model.enabled).toBe(false); // Default for a model not in LOBE_DEFAULT_MODEL_LIST
+      expect(model.enabled).toBe(false); // Default for a model not in ORVILO_DEFAULT_MODEL_LIST
       expect(model.displayName).toBe('claude-3-haiku-unlisted'); // Defaults to id
     });
 
@@ -642,7 +642,7 @@ describe('modelParse', () => {
         },
       };
       const mockModule = await import('model-bank');
-      mockModule.LOBE_DEFAULT_MODEL_LIST.push(tempMockEntry as any);
+      mockModule.ORVILO_DEFAULT_MODEL_LIST.push(tempMockEntry as any);
 
       const modelList = [{ id: modelId }];
       const result = await processMultiProviderModelList(modelList);
@@ -770,7 +770,7 @@ describe('modelParse', () => {
         };
 
         const mockModule = await import('model-bank');
-        mockModule.LOBE_DEFAULT_MODEL_LIST.push(tempModelEntry as any);
+        mockModule.ORVILO_DEFAULT_MODEL_LIST.push(tempModelEntry as any);
 
         const config = MODEL_LIST_CONFIGS.openai;
         const result = await processModelList([modelWithOverlap], config);
@@ -865,7 +865,7 @@ describe('modelParse', () => {
 
       it('should include known extendParams for OpenAI and Google providers regardless of providerid', async () => {
         const mockModule = await import('model-bank');
-        mockModule.LOBE_DEFAULT_MODEL_LIST.push(
+        mockModule.ORVILO_DEFAULT_MODEL_LIST.push(
           {
             id: 'gpt-openai-extend-restricted',
             displayName: 'OpenAI Extend Restricted',
@@ -899,7 +899,7 @@ describe('modelParse', () => {
 
       it('should allow known extendParams for non-OpenAI providers when provider is aihubmix', async () => {
         const mockModule = await import('model-bank');
-        mockModule.LOBE_DEFAULT_MODEL_LIST.push({
+        mockModule.ORVILO_DEFAULT_MODEL_LIST.push({
           id: 'gemini-extend-aihubmix',
           displayName: 'Gemini Extend Aihubmix',
           settings: {
@@ -918,8 +918,8 @@ describe('modelParse', () => {
 
       it('should omit search settings when provider is neither aihubmix nor newapi', async () => {
         const mockModule = await import('model-bank');
-        const initialLength = mockModule.LOBE_DEFAULT_MODEL_LIST.length;
-        mockModule.LOBE_DEFAULT_MODEL_LIST.push({
+        const initialLength = mockModule.ORVILO_DEFAULT_MODEL_LIST.length;
+        mockModule.ORVILO_DEFAULT_MODEL_LIST.push({
           id: 'search-settings-model',
           displayName: 'Search Settings Model',
           settings: {
@@ -939,14 +939,14 @@ describe('modelParse', () => {
           expect(model?.settings?.searchImpl).toBeUndefined();
           expect(model?.settings?.searchProvider).toBeUndefined();
         } finally {
-          mockModule.LOBE_DEFAULT_MODEL_LIST.splice(initialLength);
+          mockModule.ORVILO_DEFAULT_MODEL_LIST.splice(initialLength);
         }
       });
 
       it('should include search settings when provider is aihubmix', async () => {
         const mockModule = await import('model-bank');
-        const initialLength = mockModule.LOBE_DEFAULT_MODEL_LIST.length;
-        mockModule.LOBE_DEFAULT_MODEL_LIST.push({
+        const initialLength = mockModule.ORVILO_DEFAULT_MODEL_LIST.length;
+        mockModule.ORVILO_DEFAULT_MODEL_LIST.push({
           id: 'search-settings-aihubmix',
           displayName: 'Search Settings Aihubmix',
           settings: {
@@ -966,14 +966,14 @@ describe('modelParse', () => {
           expect(model?.settings?.searchImpl).toBe('params');
           expect(model?.settings?.searchProvider).toBe('builtin');
         } finally {
-          mockModule.LOBE_DEFAULT_MODEL_LIST.splice(initialLength);
+          mockModule.ORVILO_DEFAULT_MODEL_LIST.splice(initialLength);
         }
       });
 
       it('should include search settings when provider is newapi', async () => {
         const mockModule = await import('model-bank');
-        const initialLength = mockModule.LOBE_DEFAULT_MODEL_LIST.length;
-        mockModule.LOBE_DEFAULT_MODEL_LIST.push({
+        const initialLength = mockModule.ORVILO_DEFAULT_MODEL_LIST.length;
+        mockModule.ORVILO_DEFAULT_MODEL_LIST.push({
           id: 'search-settings-newapi',
           displayName: 'Search Settings NewAPI',
           settings: {
@@ -993,7 +993,7 @@ describe('modelParse', () => {
           expect(model?.settings?.searchImpl).toBe('params');
           expect(model?.settings?.searchProvider).toBe('builtin');
         } finally {
-          mockModule.LOBE_DEFAULT_MODEL_LIST.splice(initialLength);
+          mockModule.ORVILO_DEFAULT_MODEL_LIST.splice(initialLength);
         }
       });
 
@@ -1141,7 +1141,7 @@ describe('modelParse', () => {
         },
       };
       const mockModule = await import('model-bank');
-      mockModule.LOBE_DEFAULT_MODEL_LIST.push(tempMockEntry as any);
+      mockModule.ORVILO_DEFAULT_MODEL_LIST.push(tempMockEntry as any);
 
       const modelList = [{ id: modelId }];
       const result = await processMultiProviderModelList(modelList);
@@ -1170,7 +1170,7 @@ describe('modelParse', () => {
         },
       };
       const mockModule = await import('model-bank');
-      mockModule.LOBE_DEFAULT_MODEL_LIST.push(tempMockEntry as any);
+      mockModule.ORVILO_DEFAULT_MODEL_LIST.push(tempMockEntry as any);
 
       const modelList = [{ id: modelId }];
       const result = await processMultiProviderModelList(modelList);

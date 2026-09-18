@@ -236,14 +236,14 @@ describe('path helpers', () => {
   it('treats macOS /private/tmp and /tmp as the same workspace', () => {
     expect(
       isPathInsideWorkspace(
-        '/private/tmp/lobe-html-publish-fixture/app.css',
-        '/tmp/lobe-html-publish-fixture',
+        '/private/tmp/orvilo-html-publish-fixture/app.css',
+        '/tmp/orvilo-html-publish-fixture',
       ),
     ).toBe(true);
     expect(
       isPathInsideWorkspace(
-        '/tmp/lobe-html-publish-fixture/app.css',
-        '/private/tmp/lobe-html-publish-fixture',
+        '/tmp/orvilo-html-publish-fixture/app.css',
+        '/private/tmp/orvilo-html-publish-fixture',
       ),
     ).toBe(true);
     expect(isPathInsideWorkspace('/private/tmp-other/app.css', '/tmp')).toBe(false);
@@ -251,27 +251,27 @@ describe('path helpers', () => {
     expect(
       resolveLocalResourceHref({
         href: './app.css',
-        sourcePath: '/private/tmp/lobe-html-publish-fixture/index.html',
-        workingDirectory: '/tmp/lobe-html-publish-fixture',
+        sourcePath: '/private/tmp/orvilo-html-publish-fixture/index.html',
+        workingDirectory: '/tmp/orvilo-html-publish-fixture',
       }),
     ).toEqual({
-      absolutePath: '/private/tmp/lobe-html-publish-fixture/app.css',
+      absolutePath: '/private/tmp/orvilo-html-publish-fixture/app.css',
       href: './app.css',
       kind: 'resolved',
     });
 
     expect(
       toWorkspaceRelativePath(
-        '/private/tmp/lobe-html-publish-fixture/index.html',
-        '/tmp/lobe-html-publish-fixture',
+        '/private/tmp/orvilo-html-publish-fixture/index.html',
+        '/tmp/orvilo-html-publish-fixture',
       ),
     ).toBe('index.html');
     expect(
       toWorkspaceAbsolutePath(
-        '/private/tmp/lobe-html-publish-fixture/index.html',
-        '/tmp/lobe-html-publish-fixture',
+        '/private/tmp/orvilo-html-publish-fixture/index.html',
+        '/tmp/orvilo-html-publish-fixture',
       ),
-    ).toBe('/private/tmp/lobe-html-publish-fixture/index.html');
+    ).toBe('/private/tmp/orvilo-html-publish-fixture/index.html');
   });
 
   it('computes the lowest common ancestor inside the workspace', () => {

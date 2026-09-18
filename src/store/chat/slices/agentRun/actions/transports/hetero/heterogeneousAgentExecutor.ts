@@ -88,7 +88,7 @@ import { createMessageWriteBatcher, type ToolMessageUpdateOperation } from './me
 import { createPendingCreateLedger } from './pendingCreateLedger';
 import { resolveQuotaAccountSpawnPlan } from './resolveQuotaAccountEnv';
 import { buildResumeReplayMessages } from './resumeReplay';
-import { buildLobeHubSessionEnv } from './sessionEnv';
+import { buildOrviloSessionEnv } from './sessionEnv';
 
 /** Mirrors `idGenerator('threads', 16)` on the server so sync-allocated ids have the same shape. */
 const generateThreadId = () => `thd_${createNanoId(16)()}`;
@@ -1814,8 +1814,8 @@ export const executeHeterogeneousAgent = async (
    * matches arrival.
    */
   const reduceAndApplyMain = async (event: AgentStreamEvent) => {
-    // Server-default CLIs report `lobehub/${catalogId}` (older Claude Code
-    // sessions used `lobehub-default`). Stamp the catalog id onto the message
+    // Server-default CLIs report `aspectlylabs/${catalogId}` (older Claude Code
+    // sessions used `orvilo-default`). Stamp the catalog id onto the message
     // so the usage footer and model-card lookup resolve the real model.
     if (serverDefaultConfiguredModel) {
       const reported = event.data?.model;
@@ -1916,12 +1916,12 @@ export const executeHeterogeneousAgent = async (
       : await resolveQuotaAccountSpawnPlan(context.agentId, adapterType);
 
     const sessionEnv = {
-      // Tell the CLI which LobeHub conversation it is running inside. The child
+      // Tell the CLI which Orvilo conversation it is running inside. The child
       // (and every subprocess it spawns, e.g. `lh`) inherits these, so a tool
       // running under the agent can attribute its output back to this topic
       // without the agent having to pass ids it can't see. User-configured env
       // wins — this is provenance, never an override the user can't escape.
-      ...buildLobeHubSessionEnv({
+      ...buildOrviloSessionEnv({
         agentId: context.agentId,
         operationId,
         topicId: context.topicId,

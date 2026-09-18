@@ -32,13 +32,13 @@
   "applications": [
     {
       "owner": "admin",
-      "name": "lobechat",
+      "name": "orvilo",
       "createdTime": "2025-08-11T17:06:30+08:00",
-      "displayName": "LobeChat",
+      "displayName": "Orvilo",
       "logo": "https://orvilo.aspectlylabs.com/app-icons/icon-192x192.png",
       "homepageUrl": "https://orvilo.aspectlylabs.com",
       "description": "",
-      "organization": "lobechat",
+      "organization": "orvilo",
       "cert": "cert-built-in",
       "defaultGroup": "",
       "headerHtml": "",
@@ -660,9 +660,9 @@
   "organizations": [
     {
       "owner": "admin",
-      "name": "lobechat",
+      "name": "orvilo",
       "createdTime": "2025-08-11T16:57:04+08:00",
-      "displayName": "LobeChat",
+      "displayName": "Orvilo",
       "websiteUrl": "https://orvilo.aspectlylabs.com",
       "logo": "https://orvilo.aspectlylabs.com/app-icons/icon-192x192.png",
       "logoDark": "",
@@ -1361,7 +1361,7 @@
   "transactions": [],
   "users": [
     {
-      "owner": "lobechat",
+      "owner": "orvilo",
       "name": "user",
       "createdTime": "2025-08-11T17:18:50+08:00",
       "updatedTime": "2025-08-11T09:19:46Z",
@@ -1680,7 +1680,7 @@
       "owner": "admin",
       "name": "webhook_default",
       "createdTime": "2025-08-11T17:13:56+08:00",
-      "organization": "lobechat",
+      "organization": "orvilo",
       "url": "http://localhost:3210/api/webhooks/casdoor",
       "method": "POST",
       "contentType": "application/json",

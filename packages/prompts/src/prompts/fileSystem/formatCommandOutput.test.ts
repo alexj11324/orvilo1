@@ -79,7 +79,7 @@ describe('formatCommandOutput', () => {
   it('should format output as-is when it contains saved file metadata', () => {
     const result = formatCommandOutput({
       output:
-        'head\n... [omitted 12000 bytes; full output saved to: /tmp/lobehub-shell/output.log]\ntail',
+        'head\n... [omitted 12000 bytes; full output saved to: /tmp/orvilo-shell/output.log]\ntail',
       success: true,
     });
 
@@ -88,7 +88,7 @@ describe('formatCommandOutput', () => {
 
       Output:
       head
-      ... [omitted 12000 bytes; full output saved to: /tmp/lobehub-shell/output.log]
+      ... [omitted 12000 bytes; full output saved to: /tmp/orvilo-shell/output.log]
       tail"
     `);
   });
@@ -111,7 +111,7 @@ describe('formatCommandOutput', () => {
     const result = formatCommandOutput({
       output: 'preview output',
       outputFiles: {
-        stdout: { path: '/tmp/lobehub-shell/stdout.log', size: 1536, truncated: false },
+        stdout: { path: '/tmp/orvilo-shell/stdout.log', size: 1536, truncated: false },
       },
       success: true,
     });
@@ -119,7 +119,7 @@ describe('formatCommandOutput', () => {
     expect(result).toMatchInlineSnapshot(`
       "Output retrieved.
 
-      Full stdout saved to: /tmp/lobehub-shell/stdout.log (1.5KB)
+      Full stdout saved to: /tmp/orvilo-shell/stdout.log (1.5KB)
 
       Output:
       preview output"
@@ -130,7 +130,7 @@ describe('formatCommandOutput', () => {
     const result = formatCommandOutput({
       output: 'preview output',
       outputFiles: {
-        stdout: { path: '/tmp/lobehub-shell/stdout.log', size: 1536, truncated: true },
+        stdout: { path: '/tmp/orvilo-shell/stdout.log', size: 1536, truncated: true },
       },
       success: true,
     });
@@ -138,7 +138,7 @@ describe('formatCommandOutput', () => {
     expect(result).toMatchInlineSnapshot(`
       "Output retrieved.
 
-      Stdout too large (1.5KB). Full stdout saved to: /tmp/lobehub-shell/stdout.log
+      Stdout too large (1.5KB). Full stdout saved to: /tmp/orvilo-shell/stdout.log
 
       Output:
       preview output"

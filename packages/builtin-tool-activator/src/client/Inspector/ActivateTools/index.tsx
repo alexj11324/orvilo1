@@ -71,7 +71,7 @@ export const ActivateToolsInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-activator.apiName.activateTools')}
+          {t('builtins.orvilo-activator.apiName.activateTools')}
         </span>
         {identifiers && identifiers.length > 0 && (
           <span className={styles.tools}>
@@ -98,13 +98,13 @@ export const ActivateToolsInspector = memo<
       gap={8}
       style={{ flexWrap: 'wrap' }}
     >
-      <span>{t('builtins.lobe-activator.apiName.activateTools')}</span>
+      <span>{t('builtins.orvilo-activator.apiName.activateTools')}</span>
       {hasNotFound && (
         <Tooltip title={notFoundTitle}>
           <Flexbox horizontal className={styles.notFoundHint} gap={4}>
             <Icon color={cssVar.colorWarning} icon={AlertTriangle} />
             <span>
-              {t('builtins.lobe-activator.inspector.activateTools.notFoundCount', {
+              {t('builtins.orvilo-activator.inspector.activateTools.notFoundCount', {
                 count: notFoundList.length,
               })}
             </span>

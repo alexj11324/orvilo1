@@ -3,7 +3,7 @@
 import { Icon } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
-import { getComposioAppByIdentifier, getLobehubSkillProviderById } from '@orvilo/const';
+import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
@@ -14,7 +14,7 @@ import type { AgentBoundConnector } from '@/store/tool/slices/connector/types';
  * A row in the unified settings' "Agent Connectors" section.
  *
  * Rendered identically to the base connector rows (same NavItem + the same brand
- * icon a base Composio/LobeHub connector of this identifier would show), so the
+ * icon a base Composio/Orvilo connector of this identifier would show), so the
  * only visual difference is a tag naming the owning agent. Selectable — clicking
  * routes to the shared ConnectorDetail on the right, keyed by connector id to
  * avoid the identifier collision an agent connector can have with a base one.
@@ -28,7 +28,7 @@ const AgentConnectorItem = memo<{
   // fall back to the generic MCP icon for custom/unknown connectors.
   const brand =
     getComposioAppByIdentifier(connector.identifier) ??
-    getLobehubSkillProviderById(connector.identifier);
+    getOrviloSkillProviderById(connector.identifier);
 
   const renderIcon = () => {
     if (brand) {

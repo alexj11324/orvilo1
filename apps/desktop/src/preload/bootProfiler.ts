@@ -1,7 +1,7 @@
 import type { DesktopBootProfilePayload } from '@orvilo/electron-client-ipc';
 import { ipcRenderer } from 'electron';
 
-const PROFILE_FLAG = 'LOBE_DESKTOP_BOOT_PROFILE';
+const PROFILE_FLAG = 'ORVILO_DESKTOP_BOOT_PROFILE';
 
 const afterVisibleFrame = (callback: () => void) => {
   if (typeof window.requestAnimationFrame !== 'function') {

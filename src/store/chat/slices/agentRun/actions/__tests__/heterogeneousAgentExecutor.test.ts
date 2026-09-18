@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type * as LobeChatConst from '@orvilo/const';
+import type * as OrviloConst from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import type { AgentEventAdapter } from '@orvilo/heterogeneous-agents';
 import { createAdapter } from '@orvilo/heterogeneous-agents';
@@ -116,7 +116,7 @@ vi.mock('../transports/gateway/gatewayEventHandler', () => ({
 // module-evaluation time (which happens during collection, before any test).
 const desktopFlag = vi.hoisted(() => ({ value: false }));
 vi.mock('@orvilo/const', async (importOriginal) => {
-  const actual = await importOriginal<typeof LobeChatConst>();
+  const actual = await importOriginal<typeof OrviloConst>();
   return {
     ...actual,
     get isDesktop() {
@@ -879,7 +879,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       );
     });
 
-    it.each(['lobehub/claude-server', 'lobehub-default'])(
+    it.each(['aspectlylabs/claude-server', 'orvilo-default'])(
       'persists the catalog model instead of the CLI report %s',
       async (reportedModel) => {
         await runWithEvents(
@@ -901,7 +901,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
         expect(
           mockUpdateMessage.mock.calls.every(
             ([, val]: any) =>
-              val.model !== 'lobehub/claude-server' && val.model !== 'lobehub-default',
+              val.model !== 'aspectlylabs/claude-server' && val.model !== 'orvilo-default',
           ),
         ).toBe(true);
       },
@@ -1125,7 +1125,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
 
       ipc.emitRawLine(
         'ipc-sess-1',
-        ccToolUse('msg_ask', 'toolu_ask', 'mcp__lobe_cc__ask_user_question', {
+        ccToolUse('msg_ask', 'toolu_ask', 'mcp__orvilo_cc__ask_user_question', {
           questions: [
             {
               header: 'Scope',
@@ -3316,7 +3316,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       // replay checks whether the client executor reproduces that text loss.
       const tracePath = path.join(
         os.homedir(),
-        'Library/Application Support/LobeHub/lobehub-storage/heteroAgent/tracing/codex',
+        'Library/Application Support/Orvilo/orvilo-storage/heteroAgent/tracing/codex',
         '20260707-202328-11c75f72-2a74-4545-b39f-bf3e089c2d01',
         'stdout.jsonl',
       );

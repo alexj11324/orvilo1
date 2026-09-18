@@ -77,7 +77,6 @@ export class S3 {
       endpoint,
       forcePathStyle: options?.forcePathStyle,
       region: options?.region || DEFAULT_S3_REGION,
-      // refs: https://github.com/lobehub/lobe-chat/pull/5479
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
     });

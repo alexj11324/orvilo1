@@ -218,7 +218,7 @@ const SkillInstalledPanel = memo<SkillInstalledPanelProps>(({ onClose, onOpenSki
           </Button>
         )}
         <Button type={'primary'} onClick={onClose}>
-          {t('createModal.skillSuggestion.actions.tryInLobeAI')}
+          {t('createModal.skillSuggestion.actions.tryInOrviloAI')}
         </Button>
       </Flexbox>
     </Flexbox>
@@ -317,12 +317,21 @@ export interface CreateAgentModalProps {
   onCreateBlank: () => Promise<void> | void;
   onOpenSkills?: (identifier: string) => void;
   onSubmit: (prompt: string) => Promise<void> | void;
-  onTryInLobeAI?: () => Promise<void> | void;
+  onTryInOrviloAI?: () => Promise<void> | void;
   type: 'agent' | 'group';
 }
 
 export const CreateAgentModal = memo<CreateAgentModalProps>(
-  ({ type, agentId, modalRef, onClose, onOpenSkills, onSubmit, onCreateBlank, onTryInLobeAI }) => {
+  ({
+    type,
+    agentId,
+    modalRef,
+    onClose,
+    onOpenSkills,
+    onSubmit,
+    onCreateBlank,
+    onTryInOrviloAI,
+  }) => {
     const { t } = useTranslation('chat');
     const editorRef = useRef<ChatInputEditor | null>(null);
     const contentRef = useRef('');
@@ -479,13 +488,13 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
       [onOpenSkills, trackSkillSuggestionAction],
     );
 
-    const handleTryInLobeAI = useCallback(() => {
+    const handleTryInOrviloAI = useCallback(() => {
       if (installedSkill) {
-        trackSkillSuggestionAction('try_in_lobeai_clicked', installedSkill.identifier);
-        void onTryInLobeAI?.();
+        trackSkillSuggestionAction('try_in_orviloai_clicked', installedSkill.identifier);
+        void onTryInOrviloAI?.();
       }
       handleClose();
-    }, [handleClose, installedSkill, onTryInLobeAI, trackSkillSuggestionAction]);
+    }, [handleClose, installedSkill, onTryInOrviloAI, trackSkillSuggestionAction]);
 
     const handleCreateBlank = useCallback(async () => {
       if (loading) return;
@@ -541,7 +550,7 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
             </Flexbox>
             <SkillInstalledPanel
               skill={installedSkill}
-              onClose={handleTryInLobeAI}
+              onClose={handleTryInOrviloAI}
               onOpenSkills={onOpenSkills ? handleOpenInstalledSkill : undefined}
             />
           </Flexbox>

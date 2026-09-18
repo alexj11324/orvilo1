@@ -2,7 +2,7 @@
 
 import { Markdown, Tooltip } from '@lobehub/ui';
 import { Avatar, Button, confirmModal, Skeleton, toast } from '@lobehub/ui/base-ui';
-import { getLobehubSkillProviderById } from '@orvilo/const';
+import { getOrviloSkillProviderById } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -13,11 +13,11 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { ConnectorDetail, CustomConnectorModal } from '@/features/Connectors';
-import { useSkillConnect } from '@/features/SkillStore/SkillList/LobeHub/useSkillConnect';
+import { useSkillConnect } from '@/features/SkillStore/SkillList/Orvilo/useSkillConnect';
 import { usePermission } from '@/hooks/usePermission';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
 import { useToolStore } from '@/store/tool';
-import { builtinToolSelectors, lobehubSkillStoreSelectors } from '@/store/tool/selectors';
+import { builtinToolSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
 import { loadBuiltinSkill } from '@/store/tool/slices/builtin/loadBuiltinSkills';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 import { pluginSelectors } from '@/store/tool/slices/plugin/selectors';
@@ -34,7 +34,7 @@ export type ToolDetailType =
   | 'agent-skill'
   | 'builtin'
   | 'builtin-skill'
-  | 'lobehub-connector'
+  | 'orvilo-connector'
   | 'mcp-connector'
   | 'plugin';
 
@@ -100,20 +100,20 @@ const ManageTooltip = ({ children, title }: { children: ReactNode; title?: strin
     children
   );
 
-interface LobehubConnectorActionProps {
+interface OrviloConnectorActionProps {
   identifier: string;
   label: string;
   onDisconnected?: () => void;
 }
 
-const LobehubConnectorAction = memo<LobehubConnectorActionProps>(
+const OrviloConnectorAction = memo<OrviloConnectorActionProps>(
   ({ identifier, label, onDisconnected }) => {
     const { t } = useTranslation('setting');
     const { allowed: canCreate } = usePermission('create_content');
     const { allowed: canEdit } = usePermission('edit_own_content');
     const { handleConnect, handleDisconnect, isConnected, isConnecting } = useSkillConnect({
       identifier,
-      type: 'lobehub',
+      type: 'orvilo',
     });
 
     const handleConfirmDisconnect = useCallback(() => {
@@ -121,14 +121,14 @@ const LobehubConnectorAction = memo<LobehubConnectorActionProps>(
 
       confirmModal({
         cancelText: t('cancel', { ns: 'common' }),
-        content: t('tools.lobehubSkill.disconnectConfirm.desc', { name: label }),
+        content: t('tools.orviloSkill.disconnectConfirm.desc', { name: label }),
         okButtonProps: { danger: true },
-        okText: t('tools.lobehubSkill.disconnect'),
+        okText: t('tools.orviloSkill.disconnect'),
         onOk: async () => {
           const disconnected = await handleDisconnect();
           if (disconnected) onDisconnected?.();
         },
-        title: t('tools.lobehubSkill.disconnectConfirm.title', { name: label }),
+        title: t('tools.orviloSkill.disconnectConfirm.title', { name: label }),
       });
     }, [canEdit, handleDisconnect, label, onDisconnected, t]);
 
@@ -142,7 +142,7 @@ const LobehubConnectorAction = memo<LobehubConnectorActionProps>(
           size="small"
           onClick={handleConfirmDisconnect}
         >
-          {t('tools.lobehubSkill.disconnect')}
+          {t('tools.orviloSkill.disconnect')}
         </Button>
       );
     }
@@ -158,13 +158,13 @@ const LobehubConnectorAction = memo<LobehubConnectorActionProps>(
           handleConnect();
         }}
       >
-        {t('tools.lobehubSkill.connect')}
+        {t('tools.orviloSkill.connect')}
       </Button>
     );
   },
 );
 
-LobehubConnectorAction.displayName = 'LobehubConnectorAction';
+OrviloConnectorAction.displayName = 'OrviloConnectorAction';
 
 /**
  * Right panel for the Settings > Skill master-detail layout.
@@ -239,13 +239,13 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
   const canMigrateLegacy =
     (type === 'mcp-connector' || type === 'plugin') && Boolean(legacyPlugin?.customParams?.mcp);
 
-  // For lobehub-connector: get the server's tool list from the store
-  const lobehubServer = useToolStore(lobehubSkillStoreSelectors.getServerByIdentifier(identifier));
-  const lobehubProvider =
-    type === 'lobehub-connector' ? getLobehubSkillProviderById(identifier) : undefined;
-  const lobehubLabel =
-    type === 'lobehub-connector'
-      ? lobehubProvider?.label || lobehubServer?.name || identifier
+  // For orvilo-connector: get the server's tool list from the store
+  const orviloServer = useToolStore(orviloSkillStoreSelectors.getServerByIdentifier(identifier));
+  const orviloProvider =
+    type === 'orvilo-connector' ? getOrviloSkillProviderById(identifier) : undefined;
+  const orviloLabel =
+    type === 'orvilo-connector'
+      ? orviloProvider?.label || orviloServer?.name || identifier
       : identifier;
 
   // For builtin-skill: look up from store
@@ -264,19 +264,19 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
     type === 'builtin' ||
     type === 'plugin' ||
     type === 'mcp-connector' ||
-    type === 'lobehub-connector';
+    type === 'orvilo-connector';
 
   const { title: builtinSkillTitle, description: builtinSkillDescription } =
     getLocalizedBuiltinSkillDetail(builtinSkill, identifier, ts);
   const noPermissionsTitle = getNoPermissionsTitle(identifier, type, ts);
 
-  const renderLobehubConnectorAction = (onDisconnected?: () => void) => {
-    if (type !== 'lobehub-connector') return undefined;
+  const renderOrviloConnectorAction = (onDisconnected?: () => void) => {
+    if (type !== 'orvilo-connector') return undefined;
 
     return (
-      <LobehubConnectorAction
+      <OrviloConnectorAction
         identifier={identifier}
-        label={lobehubLabel}
+        label={orviloLabel}
         onDisconnected={onDisconnected}
       />
     );
@@ -291,9 +291,9 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
       try {
         if (type === 'builtin') {
           await syncBuiltinTool(identifier);
-        } else if (type === 'lobehub-connector') {
-          // Use tools from the lobehub skill server (already fetched via OAuth flow)
-          const tools = (lobehubServer?.tools ?? []).map((t) => ({
+        } else if (type === 'orvilo-connector') {
+          // Use tools from the orvilo skill server (already fetched via OAuth flow)
+          const tools = (orviloServer?.tools ?? []).map((t) => ({
             description: t.description,
             inputSchema: t.inputSchema as Record<string, unknown>,
             toolName: t.name,
@@ -303,7 +303,7 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
           } else {
             await syncToolsFromClient({
               identifier,
-              name: lobehubServer?.name || identifier,
+              name: orviloServer?.name || identifier,
               sourceType: 'marketplace',
               tools,
             });
@@ -325,8 +325,8 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
     fetchConnectors,
     identifier,
     isConnectorType,
-    lobehubServer?.name,
-    lobehubServer?.tools,
+    orviloServer?.name,
+    orviloServer?.tools,
     syncBuiltinTool,
     syncPluginTools,
     syncToolsFromClient,
@@ -497,7 +497,7 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
       <div className={styles.noPermissions}>
         <div className={styles.noPermissionsHeader}>
           <div className={styles.noPermissionsTitle}>
-            {type === 'lobehub-connector' ? lobehubLabel : noPermissionsTitle}
+            {type === 'orvilo-connector' ? orviloLabel : noPermissionsTitle}
           </div>
           {canMigrateLegacy ? (
             <Button
@@ -513,7 +513,7 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
               {ts('tools.legacyConnector.configure')}
             </Button>
           ) : (
-            renderLobehubConnectorAction()
+            renderOrviloConnectorAction()
           )}
         </div>
         {canMigrateLegacy
@@ -541,7 +541,7 @@ const SkillDetail = memo<SkillDetailProps>(({ identifier, type, onDelete }) => {
   return (
     <ConnectorDetail
       connectorId={connector.id}
-      lifecycleActions={renderLobehubConnectorAction(() => setNoManifest(true))}
+      lifecycleActions={renderOrviloConnectorAction(() => setNoManifest(true))}
       onDelete={onDelete}
     />
   );

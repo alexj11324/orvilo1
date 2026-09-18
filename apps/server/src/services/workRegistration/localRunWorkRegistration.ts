@@ -6,7 +6,7 @@ import type { WorkModel } from '@/database/models/work';
 import { UNEXECUTED_INTERVENTION_STATUSES } from './constants';
 import { registerShellWorks } from './shellWorkRegistration';
 
-const log = debug('lobe-server:local-run-work-registration');
+const log = debug('orvilo-server:local-run-work-registration');
 
 /**
  * Prefix for the synthetic root operation id minted for desktop-local hetero

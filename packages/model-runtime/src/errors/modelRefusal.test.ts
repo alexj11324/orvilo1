@@ -8,7 +8,7 @@ describe('ModelRefusalError', () => {
     const diagnostics = {
       finishReason: 'refusal',
       model: 'fable',
-      provider: 'lobehub',
+      provider: 'orvilo',
     };
     const error = new ModelRefusalError(undefined, diagnostics);
 

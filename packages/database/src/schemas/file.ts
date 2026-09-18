@@ -15,7 +15,7 @@ import {
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-import type { LobeDocumentPage } from '@/types/document';
+import type { OrviloDocumentPage } from '@/types/document';
 import type { FileSource, FileUploadSessionStatus } from '@/types/files';
 
 import { idGenerator, randomSlug } from '../utils/idGenerator';
@@ -98,7 +98,7 @@ export const documents = pgTable(
     metadata: jsonb('metadata').$type<Record<string, any>>(),
 
     // Page/chunk data
-    pages: jsonb('pages').$type<LobeDocumentPage[]>(),
+    pages: jsonb('pages').$type<OrviloDocumentPage[]>(),
 
     // Source type
     sourceType: text('source_type', {

@@ -1,6 +1,9 @@
 import { Children, type FC, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import WebLayout from './index';
+import DesktopLayout from './index.desktop';
+
 const { nullComponent, passthrough } = vi.hoisted(() => ({
   nullComponent: () => ({ default: () => null }),
   passthrough: () => ({ default: ({ children }: { children?: unknown }) => children }),
@@ -40,6 +43,7 @@ vi.mock('@/features/Electron/ScreenCapture/OverlaySnapshotPublisher', nullCompon
 vi.mock('@/features/Electron/system/ZoomHUD', nullComponent);
 vi.mock('@/features/Electron/titlebar/TabBar/TabCacheBridges', nullComponent);
 vi.mock('@/features/Electron/titlebar/TitleBar', nullComponent);
+vi.mock('@/features/GlobalOverlays', nullComponent);
 vi.mock('@/features/HotkeyHelperPanel', nullComponent);
 vi.mock('@/features/NavPanel/Shell', nullComponent);
 vi.mock('@/layout/GlobalProvider/CmdkLazy', nullComponent);
@@ -67,26 +71,31 @@ const findByName = (
   return hit;
 };
 
+/**
+ * Imported statically on purpose. Loaded with `await import(...)` inside the
+ * test body, the two layout graphs are evaluated *within* the timeout budget,
+ * and the desktop one costs ~26s against a 20s budget — a red test that says
+ * nothing about where auth recovery is mounted. Imported at the top of the file,
+ * `vi.mock` being hoisted still lands the mocks first, and the evaluation moves
+ * into collection, which no `testTimeout` governs.
+ */
 const layouts = [
-  ['desktop', () => import('./index.desktop')],
-  ['web', () => import('./index')],
+  ['desktop', DesktopLayout],
+  ['web', WebLayout],
 ] as const;
 
-describe.each(layouts)('main layout (%s)', (_name, load) => {
-  it(
-    'keeps auth recovery outside WorkspaceContextSlot so a blocked shell cannot hide it',
-    { timeout: 20_000 },
-    async () => {
-      const { default: Layout } = await load();
+describe.each(layouts)('main layout (%s)', (_name, Layout) => {
+  it('keeps auth recovery outside WorkspaceContextSlot so a blocked shell cannot hide it', async () => {
+    const tree = await (Layout as FC)({});
+    const slot = findByName(tree, 'WorkspaceContextSlot');
 
-      const tree = await (Layout as FC)({});
-      const slot = findByName(tree, 'WorkspaceContextSlot');
-
-      expect(slot).toBeDefined();
-      for (const name of ['AuthRequiredModal', 'DesktopAutoOidcOnFirstOpen']) {
-        expect(findByName(tree, name)).toBeDefined();
-        expect(findByName(slot!.props.children, name)).toBeUndefined();
-      }
-    },
-  );
+    // The pair below is self-guarding: the first `findByName` fails the test if
+    // the traversal cannot find the component anywhere, so the second cannot
+    // pass merely because the traversal is broken.
+    expect(slot).toBeDefined();
+    for (const name of ['AuthRequiredModal', 'DesktopAutoOidcOnFirstOpen']) {
+      expect(findByName(tree, name)).toBeDefined();
+      expect(findByName(slot!.props.children, name)).toBeUndefined();
+    }
+  });
 });

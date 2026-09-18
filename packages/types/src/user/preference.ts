@@ -122,7 +122,7 @@ export interface WorkspaceUserPreference {
   sidebarPinnedOverrides?: Record<string /* itemId */, boolean>;
 }
 
-export interface LobeUser {
+export interface OrviloUser {
   avatar?: string;
   email?: string | null;
   firstName?: string | null;

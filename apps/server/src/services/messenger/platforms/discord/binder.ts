@@ -17,7 +17,7 @@ import type {
   UnlinkedMessageContext,
 } from '../../types';
 
-const log = debug('lobe-server:messenger:discord');
+const log = debug('orvilo-server:messenger:discord');
 
 /**
  * Application prefix on Discord button `custom_id`s so we can distinguish
@@ -141,7 +141,7 @@ export class MessengerDiscordBinder implements MessengerPlatformBinder {
       try {
         await api.createMessage(
           dmChannelId,
-          'LobeHub is temporarily unavailable. Please try again in a moment.',
+          'Orvilo is temporarily unavailable. Please try again in a moment.',
         );
       } catch (err) {
         log('handleUnlinkedMessage: fallback createMessage failed: %O', err);
@@ -161,8 +161,8 @@ export class MessengerDiscordBinder implements MessengerPlatformBinder {
     // where the unlinked message handler runs after the chat-sdk has already
     // dispatched the message — so we stick to a markdown link for v1.
     const text = [
-      "Hi, I'm LobeHub — your AI agent on Discord.",
-      'To start, link your LobeHub account.',
+      "Hi, I'm Orvilo — your AI agent on Discord.",
+      'To start, link your Orvilo account.',
       '',
       `🔗 [Link Account](${verifyUrl})`,
       '',
@@ -189,7 +189,7 @@ export class MessengerDiscordBinder implements MessengerPlatformBinder {
     const dmChannelId = await openDM(api, params.platformUserId);
     if (!dmChannelId) return;
 
-    const headline = '✅ Linked successfully! Your LobeHub account is now connected.';
+    const headline = '✅ Linked successfully! Your Orvilo account is now connected.';
     const tail = params.activeAgentName
       ? `\n\nActive agent: **${params.activeAgentName}**\n\nGo ahead and send your first message — send \`/agents\` any time to switch the active agent.`
       : '\n\nSend `/agents` to list your agents and pick the active one.';

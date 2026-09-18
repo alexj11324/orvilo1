@@ -12,13 +12,13 @@ import { DocumentModel } from '@/database/models/document';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyReportModel } from '@/database/models/verifyReport';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { countStats, meanConfidence, rollupVerdict } from './reportRollup';
 import { ReportNarrativeSchema } from './schema';
 
-const log = debug('lobe-server:verify-reporter');
+const log = debug('orvilo-server:verify-reporter');
 
 export interface GenerateReportParams {
   deliverable: string;
@@ -39,14 +39,14 @@ export interface GenerateReportParams {
  * which lets a standalone harness write a report it computed itself.
  */
 export class VerifyReporterService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly resultModel: VerifyCheckResultModel;
   private readonly evidenceModel: VerifyEvidenceModel;
   private readonly reportModel: VerifyReportModel;
   private readonly documentModel: DocumentModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);

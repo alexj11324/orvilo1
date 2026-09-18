@@ -3,19 +3,19 @@ import { and, asc, desc, eq, inArray, isNull, lte, or, sum } from 'drizzle-orm';
 
 import type { FileUploadItem, NewFileUpload } from '../schemas';
 import { fileUploads } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 const LIVE_STATUSES: FileUploadSessionStatus[] = ['active', 'cleaning'];
 const TERMINAL_STATUSES: FileUploadSessionStatus[] = ['settled', 'released', 'expired'];
 
-type Database = LobeChatDatabase | Transaction;
+type Database = OrviloDatabase | Transaction;
 
 export class FileUploadModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -212,7 +212,7 @@ export class FileUploadModel {
   };
 
   static claimExpiredBatch = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     params: { batchSize: number; cleanupLeaseBefore: Date; expiresBefore: Date },
   ): Promise<FileUploadItem[]> => {
     return db.transaction(async (transaction) => {
@@ -248,7 +248,7 @@ export class FileUploadModel {
   };
 
   static markExpired = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     id: string,
   ): Promise<FileUploadItem | undefined> => {
     const [row] = await db
@@ -261,7 +261,7 @@ export class FileUploadModel {
   };
 
   static deleteTerminalBatch = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     params: { batchSize: number; updatedBefore: Date },
   ): Promise<number> => {
     return db.transaction(async (transaction) => {

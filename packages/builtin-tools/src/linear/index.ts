@@ -2,7 +2,7 @@ import { LINEAR_TOOL_NAMES, LinearInspector } from '@orvilo/shared-tool-ui/inspe
 import { LinearRender } from '@orvilo/shared-tool-ui/renders';
 import type { BuiltinInspector, BuiltinRender } from '@orvilo/types';
 
-// LobeHub built-in Linear skill: tool calls arrive with
+// Orvilo built-in Linear skill: tool calls arrive with
 // `identifier='linear'` and bare `apiName` like 'get_issue'. The shared
 // inspector / render tolerate both bare and MCP-prefixed names, so we just
 // register them under every supported tool suffix.

@@ -1,4 +1,8 @@
-import type { LobeAgentAgencyConfig, LobeAgentChatConfig, LobeAgentConfig } from '@orvilo/types';
+import type {
+  OrviloAgentAgencyConfig,
+  OrviloAgentChatConfig,
+  OrviloAgentConfig,
+} from '@orvilo/types';
 
 import type { GroupSupervisorContext } from './agents/group-supervisor/type';
 
@@ -29,7 +33,7 @@ export type BuiltinAgentSlug = (typeof BUILTIN_AGENT_SLUGS)[keyof typeof BUILTIN
  */
 export interface BuiltinAgentPersistConfig {
   /** Default chat configuration */
-  chatConfig?: Partial<LobeAgentChatConfig>;
+  chatConfig?: Partial<OrviloAgentChatConfig>;
   /** Default model */
   model?: string;
   /** Default provider */
@@ -41,10 +45,10 @@ export interface BuiltinAgentPersistConfig {
  */
 export interface BuiltinAgentRuntimeResult {
   /** Runtime agency configuration overrides */
-  agencyConfig?: Partial<LobeAgentAgencyConfig>;
+  agencyConfig?: Partial<OrviloAgentAgencyConfig>;
 
   /** Runtime chat configuration overrides */
-  chatConfig?: Partial<LobeAgentChatConfig>;
+  chatConfig?: Partial<OrviloAgentChatConfig>;
 
   /** Plugins to enable for the agent */
   plugins?: string[];
@@ -92,7 +96,7 @@ export interface RuntimeContext {
   storedSystemRole?: string;
 
   /** Target agent config for AgentBuilder */
-  targetAgentConfig?: LobeAgentConfig;
+  targetAgentConfig?: OrviloAgentConfig;
 
   /** User's locale */
   userLocale?: string;

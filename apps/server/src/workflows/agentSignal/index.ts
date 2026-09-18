@@ -9,7 +9,7 @@ import type { AgentSignalWorkflowRunPayload } from './types';
 
 export type { AgentSignalWorkflowRunPayload, AgentSignalWorkflowSourceEventInput } from './types';
 
-const log = debug('lobe-server:workflows:agent-signal');
+const log = debug('orvilo-server:workflows:agent-signal');
 
 const WORKFLOW_PATHS = {
   run: '/api/workflows/agent-signal/run',

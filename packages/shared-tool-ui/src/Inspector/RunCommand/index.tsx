@@ -69,7 +69,7 @@ export interface RunCommandInspectorProps extends BuiltinInspectorProps<
    * default terminal glyph stays inside the command chip.
    */
   icon?: ComponentType<{ className?: string; size?: number }>;
-  /** i18n key for the API name label, e.g. 'builtins.lobe-local-system.apiName.runCommand' */
+  /** i18n key for the API name label, e.g. 'builtins.orvilo-local-system.apiName.runCommand' */
   translationKey: string;
 }
 

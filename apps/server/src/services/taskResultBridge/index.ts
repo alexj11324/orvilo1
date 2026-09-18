@@ -7,7 +7,7 @@ import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
 import type { BotCallbackBody } from '@/server/services/bot/BotCallbackService';
 import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
@@ -16,7 +16,7 @@ import { AiAgentService } from '../aiAgent';
 import { acquireTopicStartReservation } from '../aiAgent/topicStartReservation';
 import { TaskResultCallbackRedisStore } from './redisStore';
 
-const log = debug('lobe-server:taskResultBridge');
+const log = debug('orvilo-server:taskResultBridge');
 
 // Task statuses at which an automation task (heartbeat/schedule) is "done"
 // enough to report back — so we don't ping the creator on every tick.
@@ -98,11 +98,11 @@ export interface CompleteCreatorWakeupParams {
  * throws so a bridge failure never affects task status.
  */
 export class TaskResultBridgeService {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

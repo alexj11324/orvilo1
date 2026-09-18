@@ -87,7 +87,7 @@ const normalizeEndpoint = (
     // supported provider endpoint shape and must never reach profile files or metadata.
     if (url.username || url.password || url.search || url.hash) return;
     const endpoint = stripTrailingSlashes(url.toString());
-    // LobeHub's Google runtime accepts a host root and lets the SDK append its
+    // Orvilo's Google runtime accepts a host root and lets the SDK append its
     // default v1beta version. Pi custom providers instead set apiVersion=""
     // and require the configured baseUrl to include the version path.
     if (protocol === 'google-generative-ai' && !/\/v\d+(?:beta\d*)?\/?$/.test(url.pathname)) {
@@ -210,9 +210,9 @@ export const resolveHeterogeneousProviderBinding = ({
       (protocol === 'openai-chat-completions' && apiConfig.providerId === 'openai')
     )
   ) {
-    // Kimi only knows the selected wire protocol, not LobeHub's provider id.
+    // Kimi only knows the selected wire protocol, not Orvilo's provider id.
     // Without an explicit endpoint, its SDK would silently use OpenAI or
-    // Anthropic instead of a third-party provider whose URL LobeHub normally
+    // Anthropic instead of a third-party provider whose URL Orvilo normally
     // supplies inside that provider's own model runtime.
     return { error: { code: 'endpointMissing', providerId: apiConfig.providerId } };
   }
@@ -266,7 +266,7 @@ export const formatHeterogeneousProviderBindingError = (
 ): string => {
   switch (error.code) {
     case 'agentUnsupported': {
-      return `${error.agentType} does not support LobeHub Provider binding.`;
+      return `${error.agentType} does not support Orvilo Provider binding.`;
     }
     case 'configMissing': {
       return 'A provider and model binding is required.';

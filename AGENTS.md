@@ -1,6 +1,6 @@
-# LobeHub Development Guidelines
+# Orvilo Development Guidelines
 
-Guidelines for using AI coding agents in this opensource LobeHub repository.
+Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 ## Tech Stack
 
@@ -102,4 +102,4 @@ When acceptance is required, put its published `https://orvilo.aspectlylabs.com/
 
 Before reviewing a PR / diff / branch change, read the **deep-review** skill. Ordinary review requests use its light mode (one independent reviewer against the dimension quick checklists); the full multi-subagent deep mode runs only on explicit invocation.
 
-When designing or reviewing user-facing flows (empty/loading/error states, confirmations, async feedback, button hierarchy, lists at scale, pickers), follow LobeHub's design values in [`DESIGN.md`](./DESIGN.md) — Natural / Meaningful / Certainty / Growth (自然 / 意义感 / 确定性 / 成长).
+When designing or reviewing user-facing flows (empty/loading/error states, confirmations, async feedback, button hierarchy, lists at scale, pickers), follow Orvilo's design values in [`DESIGN.md`](./DESIGN.md) — Natural / Meaningful / Certainty / Growth (自然 / 意义感 / 确定性 / 成长).

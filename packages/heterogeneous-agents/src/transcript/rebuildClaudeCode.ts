@@ -8,7 +8,7 @@ import type { HeteroSessionImportMessage } from '@orvilo/types';
  * (`~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl`) after `cleanupPeriodDays`
  * (default 30). Once the file is gone, `--resume <sessionId>` fails with
  * "No conversation found with session ID". Rebuilding the transcript from the
- * messages LobeHub still holds lets `--resume` hydrate the full native history
+ * messages Orvilo still holds lets `--resume` hydrate the full native history
  * (text + tool cycles) again, and CC appends new turns in place under the same
  * sessionId — so the stored `heteroSessionId` stays valid.
  *
@@ -206,7 +206,7 @@ export const encodeClaudeProjectDir = (realCwd: string): string => {
   if (slug.length <= MAX_DIR_SLUG) return slug;
   // djb2-ish hash matching the CLI's "truncate + base36 hash" shape; the exact
   // hash doesn't need to match the CLI because callers only hit this branch for
-  // pathologically long cwds, which LobeHub doesn't produce.
+  // pathologically long cwds, which Orvilo doesn't produce.
   let h = 0;
   for (let i = 0; i < normalized.length; i += 1)
     h = (Math.imul(31, h) + normalized.charCodeAt(i)) | 0;

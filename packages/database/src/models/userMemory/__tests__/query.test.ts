@@ -13,14 +13,14 @@ import {
   userMemoriesPreferences,
   users,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserMemoryModel } from '../model';
 import type { LayerBaseMemorySignals } from '../query';
 import { buildBm25MatchCondition, scoreHybridCandidates } from '../query';
 
 const userId = 'memory-query-test-user';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 let memoryModel: UserMemoryModel;
 

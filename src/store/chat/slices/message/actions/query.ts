@@ -33,7 +33,7 @@ import { reconcileAssistantToolLinks } from '../utils/reconcileTools';
  */
 
 const prefetchingMessageKeys = new Set<string>();
-const log = debug('lobe-client:message-query');
+const log = debug('orvilo-client:message-query');
 
 type Setter = StoreSetter<ChatStore>;
 export const messageQuery = (set: Setter, get: () => ChatStore, _api?: unknown) =>

@@ -61,7 +61,7 @@ export const BatchCreateAgentsInspector = memo<
     return (
       <div className={styles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-group-agent-builder.apiName.batchCreateAgents')}
+          {t('builtins.orvilo-group-agent-builder.apiName.batchCreateAgents')}
         </span>
       </div>
     );
@@ -79,7 +79,7 @@ export const BatchCreateAgentsInspector = memo<
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
       >
-        {t('builtins.lobe-group-agent-builder.apiName.batchCreateAgents')}:
+        {t('builtins.orvilo-group-agent-builder.apiName.batchCreateAgents')}:
       </span>
       {displayInfo && (
         <>
@@ -97,7 +97,7 @@ export const BatchCreateAgentsInspector = memo<
           <span className={styles.count}>
             {pluginState
               ? `${successCount}/${totalCount}`
-              : `${totalCount} ${t('builtins.lobe-group-agent-builder.inspector.agents')}`}
+              : `${totalCount} ${t('builtins.orvilo-group-agent-builder.inspector.agents')}`}
           </span>
         </>
       )}

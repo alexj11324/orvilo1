@@ -25,7 +25,7 @@ const emailService = new EmailService();
 await emailService.sendMail({
   from: 'noreply@example.com',
   to: 'user@example.com',
-  subject: 'Welcome to LobeChat',
+  subject: 'Welcome to Orvilo',
   text: 'Thanks for signing up!',
   html: '<p>Thanks for signing up!</p>',
 });
@@ -160,7 +160,7 @@ export const auth = betterAuth({
       const emailService = new EmailService();
 
       await emailService.sendMail({
-        from: 'noreply@lobechat.com',
+        from: 'noreply@orvilo.aspectlylabs.com',
         to: user.email,
         subject: 'Reset Your Password',
         text: `Click here to reset your password: ${url}`,
@@ -178,7 +178,7 @@ export const auth = betterAuth({
       const emailService = new EmailService();
 
       await emailService.sendMail({
-        from: 'noreply@lobechat.com',
+        from: 'noreply@orvilo.aspectlylabs.com',
         to: user.email,
         subject: 'Verify Your Email',
         text: `Click here to verify your email: ${url}`,
@@ -254,7 +254,7 @@ try {
 Enable debug logging:
 
 ```bash
-DEBUG=lobe-email:* node your-app.js
+DEBUG=orvilo-email:* node your-app.js
 ```
 
 This will log detailed information about email sending operations.

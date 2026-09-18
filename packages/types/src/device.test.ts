@@ -135,7 +135,7 @@ describe('workingDirConfigSchema', () => {
             reviewDecision: 'APPROVED',
             state: 'OPEN',
             title: 'Improve worktree handling',
-            url: 'https://github.com/lobehub/lobehub/pull/123',
+            url: 'https://github.com/alexj11324/orvilo1/pull/123',
           },
           pullRequestStatus: 'ok',
         },

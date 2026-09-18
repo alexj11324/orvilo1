@@ -13,10 +13,10 @@ import {
   userSettings,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { AgentSignalNightlyReviewModel } from '../nightlyReview';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const enabledUserId = 'nightly-review-enabled-user';
 const enabledUserWithoutTimezoneId = 'nightly-review-enabled-user-utc';
@@ -284,12 +284,12 @@ describe('AgentSignalNightlyReviewModel', () => {
     const seedNightlyCapabilityTargets = async (caseName: string, blockedEnabled?: boolean) => {
       await serverDB.insert(users).values({ id: enabledUserId });
 
-      const [lobeAiAgent, blockedAgent, enabledAgent] = await serverDB
+      const [orviloAiAgent, blockedAgent, enabledAgent] = await serverDB
         .insert(agents)
         .values([
           {
             chatConfig: chatConfigForSelfIteration(blockedEnabled),
-            id: `nightly-lobe-ai-${caseName}`,
+            id: `nightly-orvilo-ai-${caseName}`,
             slug: INBOX_SESSION_ID,
             title: 'Orvilo AI',
             userId: enabledUserId,
@@ -313,7 +313,7 @@ describe('AgentSignalNightlyReviewModel', () => {
         .returning();
 
       await serverDB.insert(topics).values(
-        [lobeAiAgent, blockedAgent, enabledAgent].map((agent) => ({
+        [orviloAiAgent, blockedAgent, enabledAgent].map((agent) => ({
           agentId: agent.id,
           id: `nightly-topic-${agent.id}`,
           title: agent.title ?? agent.id,
@@ -321,7 +321,7 @@ describe('AgentSignalNightlyReviewModel', () => {
         })),
       );
       await serverDB.insert(messages).values(
-        [lobeAiAgent, blockedAgent, enabledAgent].map((agent, index) => ({
+        [orviloAiAgent, blockedAgent, enabledAgent].map((agent, index) => ({
           agentId: agent.id,
           content: `${agent.title} activity`,
           createdAt: new Date(`2026-05-03T1${index + 2}:00:00.000Z`),
@@ -332,15 +332,15 @@ describe('AgentSignalNightlyReviewModel', () => {
         })),
       );
 
-      return { blockedAgent, enabledAgent, lobeAiAgent };
+      return { blockedAgent, enabledAgent, orviloAiAgent };
     };
 
     /**
      * @example
-     * expect(result.map((item) => item.agentId)).toEqual(['nightly-lobe-ai-disabled']).
+     * expect(result.map((item) => item.agentId)).toEqual(['nightly-orvilo-ai-disabled']).
      */
-    it('includes Orvilo AI when the agent switch is disabled and excludes non-Lobe disabled agents', async () => {
-      const { blockedAgent, enabledAgent, lobeAiAgent } = await seedNightlyCapabilityTargets(
+    it('includes Orvilo AI when the agent switch is disabled and excludes non-Orvilo disabled agents', async () => {
+      const { blockedAgent, enabledAgent, orviloAiAgent } = await seedNightlyCapabilityTargets(
         'disabled',
         false,
       );
@@ -352,16 +352,16 @@ describe('AgentSignalNightlyReviewModel', () => {
         windowStart: new Date('2026-05-03T00:00:00.000Z'),
       });
 
-      expect(result.map((item) => item.agentId)).toEqual([enabledAgent.id, lobeAiAgent.id]);
+      expect(result.map((item) => item.agentId)).toEqual([enabledAgent.id, orviloAiAgent.id]);
       expect(result.map((item) => item.agentId)).not.toContain(blockedAgent.id);
     });
 
     /**
      * @example
-     * expect(result.map((item) => item.agentId)).toEqual(['nightly-lobe-ai-implicit']).
+     * expect(result.map((item) => item.agentId)).toEqual(['nightly-orvilo-ai-implicit']).
      */
-    it('includes Orvilo AI when the agent switch is missing and excludes non-Lobe implicit agents', async () => {
-      const { blockedAgent, enabledAgent, lobeAiAgent } =
+    it('includes Orvilo AI when the agent switch is missing and excludes non-Orvilo implicit agents', async () => {
+      const { blockedAgent, enabledAgent, orviloAiAgent } =
         await seedNightlyCapabilityTargets('implicit');
 
       const model = new AgentSignalNightlyReviewModel(serverDB);
@@ -371,7 +371,7 @@ describe('AgentSignalNightlyReviewModel', () => {
         windowStart: new Date('2026-05-03T00:00:00.000Z'),
       });
 
-      expect(result.map((item) => item.agentId)).toEqual([enabledAgent.id, lobeAiAgent.id]);
+      expect(result.map((item) => item.agentId)).toEqual([enabledAgent.id, orviloAiAgent.id]);
       expect(result.map((item) => item.agentId)).not.toContain(blockedAgent.id);
     });
 

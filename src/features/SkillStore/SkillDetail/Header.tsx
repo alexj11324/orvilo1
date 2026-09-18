@@ -7,7 +7,7 @@ import { Loader2, Plus, SquareArrowOutUpRight } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useSkillConnect } from '@/features/SkillStore/SkillList/LobeHub/useSkillConnect';
+import { useSkillConnect } from '@/features/SkillStore/SkillList/Orvilo/useSkillConnect';
 import { usePermission } from '@/hooks/usePermission';
 import { useToolStore } from '@/store/tool';
 import { builtinToolSelectors } from '@/store/tool/selectors';
@@ -26,7 +26,7 @@ const isEmojiOrText = (str: string): boolean => {
 };
 
 interface HeaderProps {
-  type: 'builtin' | 'composio' | 'lobehub';
+  type: 'builtin' | 'composio' | 'orvilo';
 }
 
 const Header = memo<HeaderProps>(({ type }) => {
@@ -46,7 +46,7 @@ const Header = memo<HeaderProps>(({ type }) => {
   } = useSkillConnect({
     identifier,
     serverName,
-    type: isBuiltin ? 'lobehub' : type, // Use lobehub as fallback for builtin
+    type: isBuiltin ? 'orvilo' : type, // Use orvilo as fallback for builtin
   });
 
   // Builtin tool installation state (global, stored in tool store)
@@ -113,7 +113,7 @@ const Header = memo<HeaderProps>(({ type }) => {
       );
     }
 
-    // Handle Composio/LobeHub skills
+    // Handle Composio/Orvilo skills
     if (isConnected) return null;
 
     if (isConnecting) {

@@ -22,7 +22,7 @@ import { type ServerRuntimeRegistration } from './types';
  * the run's identity in the args (mirroring how localSystem injects `cwd`); the
  * device strips it back out before invoking the executor.
  */
-const log = debug('lobe-server:browser-runtime');
+const log = debug('orvilo-server:browser-runtime');
 
 /** `data:image/png;base64,…` → the media type and the payload. */
 const DATA_URL_RE = /^data:(image\/[\w.+-]+);base64,(.+)$/;

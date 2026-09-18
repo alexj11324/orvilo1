@@ -1,10 +1,26 @@
-import { type AiProviderRuntimeState } from '@orvilo/types';
+import { type AiProviderRuntimeState, MemorySourceType } from '@orvilo/types';
 import { type EnabledAiModel } from 'model-bank';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as DatabaseServerModule from '@/database/server';
 import { type MemoryExtractionPrivateConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 
 import { makeTaskErrorItem, MemoryExtractionExecutor } from '../extract';
+
+const mocks = vi.hoisted(() => ({
+  getServerDB: vi.fn(),
+  isUserMemoryExtractionEnabled: vi.fn(),
+}));
+
+vi.mock('@/database/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof DatabaseServerModule>()),
+  getServerDB: mocks.getServerDB,
+}));
+
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  filterMemoryExtractionEnabledUsers: vi.fn(),
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
+}));
 
 const createRuntimeState = (models: EnabledAiModel[], keyVaults: Record<string, any>) =>
   ({
@@ -473,6 +489,65 @@ describe('MemoryExtractionExecutor.resolveRuntimeKeyVaults', () => {
     });
 
     warnSpy.mockRestore();
+  });
+});
+
+describe('MemoryExtractionExecutor.extractTopic memory-enabled gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const createDbSpy = () => {
+    const findFirst = vi.fn(async () => undefined);
+    mocks.getServerDB.mockResolvedValue({
+      query: { topics: { findFirst } },
+    });
+    return findFirst;
+  };
+
+  it('returns without touching the topic record when the target user disabled memory', async () => {
+    /**
+     * @example
+     * const result = await executor.extractTopic({ topicId: 't1', userId: 'u1', ... });
+     * // => { extracted: false, layers: {}, memoryIds: [] }
+     */
+    const findFirst = createDbSpy();
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(false);
+    const executor = createExecutor();
+
+    const result = await executor.extractTopic({
+      forceAll: true, // even a forced run cannot bypass the opt-out
+      forceTopics: true,
+      layers: [],
+      source: MemorySourceType.ChatTopic,
+      topicId: 't1',
+      userId: 'u1',
+    });
+
+    expect(result).toMatchObject({ extracted: false, layers: {}, memoryIds: [] });
+    expect(mocks.isUserMemoryExtractionEnabled).toHaveBeenCalledWith('u1', expect.anything());
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it('proceeds to the topic lookup when memory is enabled', async () => {
+    const findFirst = createDbSpy();
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
+    const executor = createExecutor();
+
+    const result = await executor.extractTopic({
+      forceAll: false,
+      forceTopics: false,
+      layers: [],
+      source: MemorySourceType.ChatTopic,
+      topicId: 't1',
+      userId: 'u1',
+    });
+
+    // The topic does not exist, so nothing is extracted — but the gate let the
+    // lookup run, proving enabled users are not short-circuited.
+    expect(result).toMatchObject({ extracted: false, memoryIds: [] });
+    expect(mocks.isUserMemoryExtractionEnabled).toHaveBeenCalledWith('u1', expect.anything());
+    expect(findFirst).toHaveBeenCalledOnce();
   });
 });
 

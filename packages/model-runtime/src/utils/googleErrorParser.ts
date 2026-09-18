@@ -1,10 +1,10 @@
 import { ErrorClassifier } from '../errors';
-import type { ILobeAgentRuntimeErrorType } from '../types/error';
+import type { IOrviloAgentRuntimeErrorType } from '../types/error';
 import { AgentRuntimeErrorType } from '../types/error';
 
 export interface ParsedError {
   error: any;
-  errorType: ILobeAgentRuntimeErrorType;
+  errorType: IOrviloAgentRuntimeErrorType;
 }
 
 export interface GoogleChatError {
@@ -124,7 +124,7 @@ export function parseGoogleErrorMessage(message: string): ParsedError {
   }
 
   // Unified error type determination function
-  const getErrorType = (code: number | null, message: string): ILobeAgentRuntimeErrorType => {
+  const getErrorType = (code: number | null, message: string): IOrviloAgentRuntimeErrorType => {
     if (code === 400 && message.includes('API key not valid')) {
       return AgentRuntimeErrorType.InvalidProviderAPIKey;
     } else if (code === 429) {

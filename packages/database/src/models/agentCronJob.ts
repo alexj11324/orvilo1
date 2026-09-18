@@ -7,15 +7,15 @@ import type {
   UpdateAgentCronJobData,
 } from '../schemas/agentCronJob';
 import { agentCronJobs } from '../schemas/agentCronJob';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class AgentCronJobModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId?: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId?: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId!;
     this.workspaceId = workspaceId;
@@ -73,7 +73,7 @@ export class AgentCronJobModel {
   }
 
   // Get all enabled cron jobs (system-wide for execution)
-  static async getEnabledJobs(db: LobeChatDatabase): Promise<AgentCronJob[]> {
+  static async getEnabledJobs(db: OrviloDatabase): Promise<AgentCronJob[]> {
     return db
       .select()
       .from(agentCronJobs)
@@ -136,7 +136,7 @@ export class AgentCronJobModel {
 
   // Update execution statistics after job execution
   static async updateExecutionStats(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     jobId: string,
   ): Promise<AgentCronJob | null> {
     // Update execution statistics and decrement remaining executions

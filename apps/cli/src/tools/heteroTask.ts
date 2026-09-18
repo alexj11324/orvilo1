@@ -217,6 +217,28 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
   } = params;
   const workDir = cwd || process.cwd();
   const lhPath = resolveLhPath();
+
+  // Idempotent redelivery: the gateway retries this tool call after a lost
+  // ack with the same taskId. A live tracked task IS the accepted run — ack
+  // it instead of killing or duplicating it. A higher runGeneration
+  // supersedes: the server fenced the stale writer off, so stop it first.
+  const existingTask = getTask(taskId);
+  if (existingTask) {
+    const superseded =
+      runGeneration != null &&
+      existingTask.runGeneration != null &&
+      runGeneration > existingTask.runGeneration;
+    const existingAlive = isTaskProcessAlive(existingTask.pid);
+    if (existingAlive && !superseded) {
+      log.info(`runHeteroTask dedupe: taskId=${taskId} already active (pid=${existingTask.pid})`);
+      return JSON.stringify({ deduped: true, pid: existingTask.pid, taskId });
+    }
+    if (existingAlive) {
+      await cancelHeteroTask({ signal: 'SIGKILL', taskId });
+    }
+    removeTask(taskId);
+  }
+
   // Propagate workspace scope into the spawned child so its own `lh notify`
   // invocations (and any grandchildren it shells out) inherit the same scope
   // via getTrpcClient → resolveWorkspaceId.
@@ -507,6 +529,19 @@ function isUnixProcessGroupAlive(pid: number): boolean {
   } catch (error) {
     return (error as NodeJS.ErrnoException).code !== 'ESRCH';
   }
+}
+
+/** Cross-platform liveness probe for a tracked task (unix pid is a group leader). */
+function isTaskProcessAlive(pid: number): boolean {
+  if (process.platform === 'win32') {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code !== 'ESRCH';
+    }
+  }
+  return isUnixProcessGroupAlive(pid);
 }
 
 async function waitForUnixProcessGroupExit(pid: number, timeoutMs: number): Promise<boolean> {

@@ -228,7 +228,8 @@ export interface AgentRunAdmissionRecord {
 export interface AgentRunCancelRecord {
   reason?: string;
   requestedAt: string;
-  resolvedAt?: string;
+  /** `null` while the cancel is still pending — cleared on re-armed retries. */
+  resolvedAt?: string | null;
   state: Exclude<AgentRunCancelState, 'none'>;
 }
 

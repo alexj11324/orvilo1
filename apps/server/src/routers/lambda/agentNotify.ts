@@ -219,16 +219,27 @@ export const agentNotifyRouter = router({
     // This applies to progress as well as terminal delivery: a delayed update must
     // not overwrite a completed member's final message.
     let terminalRetry = false;
-    if (role === 'assistant' && input.operationId && !activeOperation) {
+    if (input.operationId && !activeOperation) {
+      // A caller-supplied operationId that resolves to neither the topic's
+      // running marker nor a child operation must still belong to this user
+      // before it may touch the admission ledger (`findById` is userId-scoped).
+      // Without this guard a `user`-role callback could flip a foreign
+      // remote-admitted operation's admission state.
       const operation = await new AgentOperationModel(
         ctx.serverDB,
         ctx.userId,
         ctx.workspaceId ?? undefined,
       ).findById(input.operationId);
-      terminalRetry = isTerminal && !!operation?.completedAt;
-      if (!terminalRetry) {
-        log('notify: ignoring stale callback for operationId=%s', input.operationId);
+      if (!operation) {
+        log('notify: ignoring callback with unowned operationId=%s', input.operationId);
         return { messageId: undefined, operationId: undefined, topicId };
+      }
+      if (role === 'assistant') {
+        terminalRetry = isTerminal && !!operation.completedAt;
+        if (!terminalRetry) {
+          log('notify: ignoring stale callback for operationId=%s', input.operationId);
+          return { messageId: undefined, operationId: undefined, topicId };
+        }
       }
     }
 

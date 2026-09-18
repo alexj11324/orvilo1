@@ -295,6 +295,26 @@ export default class GatewayConnectionCtr extends ControllerModule {
   private async executeAgentRun(
     request: AgentRunRequestMessage,
   ): Promise<{ reason?: string; status: 'accepted' | 'rejected' }> {
+    // Idempotent redelivery: the server retries `agent_run_request` after a
+    // lost ack with the same idempotency key (= operationId). A live run
+    // already tracked for this operation IS the accepted run — ack it instead
+    // of spawning a duplicate. A higher runGeneration supersedes: the server
+    // fenced the stale writer off, so it is killed before the respawn.
+    const taskId = request.operationId;
+    const existing = this.platformTasks.get(taskId);
+    if (existing) {
+      const superseded =
+        request.runGeneration != null &&
+        existing.runGeneration != null &&
+        request.runGeneration > existing.runGeneration;
+      if (!superseded) {
+        logger.info(`agent_run_request dedupe: op=${taskId} already active (pid=${existing.pid})`);
+        return { status: 'accepted' };
+      }
+      this.killPlatformProcessTree(existing.pid, 'SIGKILL');
+      await this.waitForPlatformProcessTreeExit(existing.pid, PLATFORM_CANCEL_FORCE_MS);
+    }
+
     try {
       const serverUrl = await this.remoteServerConfigCtr.getRemoteServerUrl();
       if (!serverUrl) {
@@ -341,7 +361,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
         onChildSpawned: (child: ChildProcess) => {
           const pid = child.pid;
           if (pid === undefined) return;
-          const taskId = request.operationId;
           this.platformTasks.set(taskId, {
             agentType: request.agentType,
             operationId: request.operationId,

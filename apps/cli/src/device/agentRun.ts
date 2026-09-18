@@ -8,7 +8,17 @@ import {
 import { resolveHeteroSpawnCwd } from '@orvilo/heterogeneous-agents/workingDirectory';
 
 import { getTask, removeTask, saveTask } from '../daemon/taskRegistry';
-import { registerAgentRun } from './agentRunRegistry';
+import { cancelAgentRun, registerAgentRun } from './agentRunRegistry';
+
+/** Liveness probe for a detached run — the wrapper pid is a process-group leader. */
+function isProcessGroupAlive(pid: number): boolean {
+  try {
+    process.kill(process.platform === 'win32' ? pid : -pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code !== 'ESRCH';
+  }
+}
 
 export interface SpawnHeteroAgentRunParams {
   agentType: string;
@@ -58,7 +68,7 @@ interface SpawnHeteroAgentRunLogger {
  * is handled inside `lh hetero exec`, which can classify it and emit
  * `heteroFinish`; other wrapper spawn failures flow back as rejected dispatches.
  */
-export function spawnHeteroAgentRun(
+export async function spawnHeteroAgentRun(
   params: SpawnHeteroAgentRunParams,
   logger?: SpawnHeteroAgentRunLogger,
 ): Promise<AgentRunAckResult> {
@@ -80,6 +90,38 @@ export function spawnHeteroAgentRun(
     workspaceId,
   } = params;
   const workDir = cwd ?? process.cwd();
+
+  // Idempotent redelivery: the gateway retries `agent_run_request` after a
+  // lost ack with the same idempotency key (= operationId). A live run
+  // already tracking this operation IS the accepted run — ack it instead of
+  // spawning a duplicate. A higher runGeneration supersedes: the server
+  // fenced the stale writer off, so it is stopped before the respawn.
+  const existing = getTask(operationId);
+  if (existing) {
+    const superseded =
+      runGeneration != null &&
+      existing.runGeneration != null &&
+      runGeneration > existing.runGeneration;
+    const existingAlive = isProcessGroupAlive(existing.pid);
+    if (existingAlive && !superseded) {
+      logger?.info?.(
+        `hetero exec dedupe (op=${operationId}): run already active pid=${existing.pid}`,
+      );
+      return { status: 'accepted' };
+    }
+    if (existingAlive) {
+      await cancelAgentRun(operationId, 'SIGINT');
+      if (isProcessGroupAlive(existing.pid)) {
+        try {
+          process.kill(process.platform === 'win32' ? existing.pid : -existing.pid, 'SIGKILL');
+        } catch {
+          // The group exited between the graceful cancel and the escalation.
+        }
+      }
+    }
+    removeTask(operationId);
+  }
+
   // A stale project path must not prevent the wrapper CLI from starting: the
   // inner spawnAgent preflight owns cwd classification and reports the
   // structured working_directory_not_found error through heteroFinish.

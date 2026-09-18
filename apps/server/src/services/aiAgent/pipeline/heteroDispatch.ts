@@ -1016,8 +1016,10 @@ export const dispatchHeteroAgent = async (
       // Ambiguous ack: the request may have reached the device — a 120 s tool
       // timeout does NOT prove the task never launched, and the notify
       // callbacks would still arrive. Keep the operation row, topic marker and
-      // stream open so they can land; report the contract outcome instead of
-      // a fabricated failure. The watchdog reaps a truly dead admission.
+      // stream open so they can land, and return an IN-PROGRESS result
+      // (`success: true` + `status: 'unknown'` + `remoteAdmission: 'unknown'`)
+      // so consumers keep the run live instead of terminalizing a possibly-
+      // running host. The watchdog reaps a truly dead admission.
       log(
         'execAgent: remote hetero dispatch outcome unknown (device may be running) op=%s error=%s',
         operationId,
@@ -1026,17 +1028,20 @@ export const dispatchHeteroAgent = async (
       return {
         agentId: resolvedAgentId,
         assistantMessageId,
-        autoStarted: false,
+        autoStarted: true,
         createdAt: new Date().toISOString(),
-        error: 'OUTCOME_UNKNOWN',
         errorData: result.errorData,
+        heteroType,
         message:
-          'Could not confirm the device accepted the run; it may still be executing. Do not retry the same operation.',
+          'Dispatch acknowledgement was lost; the run may still be executing on the device. Do not retry the same operation.',
         operationId,
         remoteAdmission: 'unknown',
-        status: 'error',
-        success: false,
+        status: 'unknown',
+        success: true,
         timestamp: new Date().toISOString(),
+        token: deps.withholdGatewayToken
+          ? undefined
+          : await signUserJWT(deps.userId).catch(() => undefined),
         topicId,
         userMessageId: userMessageId ?? parentMessageId ?? '',
       };
@@ -1248,7 +1253,8 @@ export const dispatchHeteroAgent = async (
         topicId,
       });
       if (dispatchOutcome.outcome === 'unknown') {
-        // Ambiguous ack — keep the run open; see the remote-hetero branch above.
+        // Ambiguous ack — keep the run open and report an in-progress result;
+        // see the remote-hetero branch above.
         log(
           'execAgent: hetero device dispatch outcome unknown (device may be running) op=%s error=%s',
           operationId,
@@ -1257,17 +1263,20 @@ export const dispatchHeteroAgent = async (
         return {
           agentId: resolvedAgentId,
           assistantMessageId,
-          autoStarted: false,
+          autoStarted: true,
           createdAt: new Date().toISOString(),
-          error: 'OUTCOME_UNKNOWN',
           errorData: result.errorData,
+          heteroType,
           message:
-            'Could not confirm the device accepted the run; it may still be executing. Do not retry the same operation.',
+            'Dispatch acknowledgement was lost; the run may still be executing on the device. Do not retry the same operation.',
           operationId,
           remoteAdmission: 'unknown',
-          status: 'error',
-          success: false,
+          status: 'unknown',
+          success: true,
           timestamp: new Date().toISOString(),
+          token: deps.withholdGatewayToken
+            ? undefined
+            : await signUserJWT(deps.userId).catch(() => undefined),
           topicId,
           userMessageId: userMessageId ?? parentMessageId ?? '',
         };

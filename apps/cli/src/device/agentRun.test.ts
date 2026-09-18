@@ -20,6 +20,14 @@ vi.mock('../daemon/taskRegistry', () => ({
   removeTask: removeTaskMock,
   saveTask: saveTaskMock,
 }));
+const { cancelAgentRunMock, registerAgentRunMock } = vi.hoisted(() => ({
+  cancelAgentRunMock: vi.fn(),
+  registerAgentRunMock: vi.fn(),
+}));
+vi.mock('./agentRunRegistry', () => ({
+  cancelAgentRun: cancelAgentRunMock,
+  registerAgentRun: registerAgentRunMock,
+}));
 // `resolveHeteroSpawnCwd` stats the candidate directories; treat every path as
 // an existing directory unless a test says otherwise.
 vi.mock('node:fs', async (importOriginal) => {
@@ -61,6 +69,7 @@ describe('spawnHeteroAgentRun', () => {
 
   afterEach(() => {
     spawnMock.mockReset();
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
   });
 
@@ -337,7 +346,10 @@ describe('spawnHeteroAgentRun', () => {
     const child = makeFakeChild();
     Object.defineProperty(child, 'pid', { value: 7777 });
     spawnMock.mockReturnValue(child);
-    // A newer run reused the same operationId with a different PID.
+    // A newer run reused the same operationId with a different PID. The first
+    // getTask call is the redelivery dedupe probe — empty so this spawn is
+    // fresh; the exit handler then sees the newer PID's entry.
+    getTaskMock.mockReturnValueOnce(undefined);
     getTaskMock.mockReturnValue({ pid: 8888 });
 
     const ackPromise = spawnHeteroAgentRun({
@@ -350,5 +362,40 @@ describe('spawnHeteroAgentRun', () => {
     child.emit('exit', 0, null);
 
     expect(removeTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('acks a redelivered run request without spawning a duplicate', async () => {
+    // A retry after a lost ack reuses the same operationId: the tracked run is
+    // still live, so the daemon must return the existing acceptance instead of
+    // spawning a second writer.
+    getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
+    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
+
+    const ack = await spawnHeteroAgentRun({ ...baseParams, runGeneration: 1 });
+
+    expect(ack).toEqual({ status: 'accepted' });
+    expect(spawnMock).not.toHaveBeenCalled();
+    killSpy.mockRestore();
+  });
+
+  it('stops the stale writer and respawns when a retry carries a newer generation', async () => {
+    getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
+    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
+    const child = makeFakeChild();
+    Object.defineProperty(child, 'pid', { value: 5555 });
+    spawnMock.mockReturnValue(child);
+
+    const ackPromise = spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 });
+    // The dedupe preamble is async — spawn only happens after the fenced
+    // writer is stopped.
+    await vi.waitFor(() => {
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+    });
+    child.emit('spawn');
+
+    await expect(ackPromise).resolves.toEqual({ status: 'accepted' });
+    expect(cancelAgentRunMock).toHaveBeenCalledWith('op', 'SIGINT');
+    expect(removeTaskMock).toHaveBeenCalledWith('op');
+    killSpy.mockRestore();
   });
 });

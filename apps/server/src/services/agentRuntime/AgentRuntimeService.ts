@@ -2604,21 +2604,30 @@ export class AgentRuntimeService {
         // finished remote run keeps `state: 'running'` while only the durable
         // operation row carries the terminal status. Derive liveness from
         // both, or a completed run would report `running` forever.
+        const durableStatus = remoteExecution.durableStatus;
         const durableTerminal = ['abandoned', 'done', 'error', 'interrupted'].includes(
-          remoteExecution.durableStatus ?? '',
+          durableStatus ?? '',
         );
         const remoteActive =
           !durableTerminal && !['offline', 'rejected'].includes(remoteExecution.admission.state);
+        // A terminal durable run keeps its own outcome (`done` stays a
+        // completion, `interrupted` stays interrupted); only a non-terminal
+        // ledger with a dead admission collapses to `error`.
+        const status = remoteActive
+          ? 'running'
+          : durableTerminal
+            ? (durableStatus as 'abandoned' | 'done' | 'error' | 'interrupted')
+            : 'error';
 
         return {
           currentState: {
             lastModified: remoteExecution.admission.updatedAt,
-            status: remoteActive ? 'running' : 'error',
+            status,
             stepCount: 0,
           },
-          hasError: !remoteActive,
+          hasError: status === 'error',
           isActive: remoteActive,
-          isCompleted: false,
+          isCompleted: status === 'done',
           metadata: {},
           needsHumanInput: false,
           operationId,

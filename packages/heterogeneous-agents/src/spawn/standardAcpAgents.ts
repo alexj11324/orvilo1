@@ -122,17 +122,27 @@ const takeFlagValue = (
 };
 
 /**
- * Pull the model/effort selectors out of legacy CLI args so provider-binding
- * and user-supplied `--model`/`--effort`/`-c key="value"` flags keep working
- * through the ACP session-config surface instead of reaching the child argv
- * (which bridge binaries own outright).
+ * Pull the model/effort/mode selectors out of legacy CLI args so
+ * provider-binding and user-supplied flags keep working through the ACP
+ * session-config surface instead of reaching the child argv (which bridge
+ * binaries own outright). Everything pushed here is a user preference, so it
+ * is marked `optional`: `StandardAcpSession` applies it only when the agent's
+ * advertised config vocabulary accepts it, and skips it with a trace note
+ * otherwise.
  *
  * - `--model` / `-m` → `initialModel` (pi additionally folds a preceding
  *   `--provider` into the `provider/model` composite its catalog uses)
+ * - `--mode` → `amp-mode` config option (amp — the `amp-acp` bridge advertises
+ *   the exact `AMP_AGENT_MODES` vocabulary under that configId)
+ * - `--effort` / `--reasoning-effort` → `effort` config option
+ *   (claude-agent-acp advertises `effort` when the resolved model supports it)
  * - `-c model_reasoning_effort="…"` / `--effort` / `--reasoning-effort` →
- *   `reasoning_effort` config option (codex only — other agents keep the flag
- *   in `args` untouched)
+ *   `reasoning_effort` config option (codex)
  * - `-c service_tier="fast"` → `fast-mode` `on` (codex)
+ *
+ * Flags without a verified ACP configId stay in `args`: native `*--acp`
+ * runtimes still forward them to the vendor parser, while bridge agents drop
+ * them (the bridge owns its argv).
  */
 export const extractStandardAcpSelectors = (
   agentType: string,
@@ -151,6 +161,24 @@ export const extractStandardAcpSelectors = (
       const { consumed, value } = takeFlagValue(args, index);
       index += consumed - 1;
       if (value) model = value;
+      continue;
+    }
+    if (agentType === 'amp' && (arg === '--mode' || arg.startsWith('--mode='))) {
+      const { consumed, value } = takeFlagValue(args, index);
+      index += consumed - 1;
+      if (value) configOptions.push({ configId: 'amp-mode', optional: true, value });
+      continue;
+    }
+    if (
+      agentType === 'claude-code' &&
+      (arg === '--effort' ||
+        arg === '--reasoning-effort' ||
+        arg.startsWith('--effort=') ||
+        arg.startsWith('--reasoning-effort='))
+    ) {
+      const { consumed, value } = takeFlagValue(args, index);
+      index += consumed - 1;
+      if (value) configOptions.push({ configId: 'effort', optional: true, value });
       continue;
     }
     if (agentType === 'pi' && (arg === '--provider' || arg.startsWith('--provider='))) {
@@ -181,9 +209,9 @@ export const extractStandardAcpSelectors = (
         const inline =
           raw.length > 1 && raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
         if (key === 'model_reasoning_effort') {
-          configOptions.push({ configId: 'reasoning_effort', value: inline });
+          configOptions.push({ configId: 'reasoning_effort', optional: true, value: inline });
         } else if (key === 'service_tier' && inline === 'fast') {
-          configOptions.push({ configId: 'fast-mode', value: 'on' });
+          configOptions.push({ configId: 'fast-mode', optional: true, value: 'on' });
         }
       }
       continue;
@@ -193,7 +221,7 @@ export const extractStandardAcpSelectors = (
   }
 
   if (effort) {
-    configOptions.push({ configId: 'reasoning_effort', value: effort });
+    configOptions.push({ configId: 'reasoning_effort', optional: true, value: effort });
   }
 
   return {

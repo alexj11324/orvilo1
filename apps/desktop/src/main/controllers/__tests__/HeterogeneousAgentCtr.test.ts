@@ -2835,8 +2835,8 @@ describe('HeterogeneousAgentCtr', () => {
       });
 
       expect(options.configOptions).toEqual([
-        { configId: 'reasoning_effort', value: 'high' },
-        { configId: 'fast-mode', value: 'on' },
+        { configId: 'reasoning_effort', optional: true, value: 'high' },
+        { configId: 'fast-mode', optional: true, value: 'on' },
       ]);
       expect(options.args).toEqual([]);
     });

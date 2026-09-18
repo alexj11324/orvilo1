@@ -100,6 +100,25 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 6px;
     border-radius: ${cssVar.borderRadius};
   `,
+  scopePillButton: css`
+    cursor: pointer;
+
+    border: none;
+
+    font: inherit;
+    color: inherit;
+
+    background: transparent;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 1px;
+    }
+  `,
 }));
 
 /**
@@ -157,7 +176,15 @@ const ShellTopBar = ({ actions, onBack, title, titleExtra }: ShellTopBarProps) =
     : [];
 
   const scopePill = scopeName ? (
-    <Flexbox horizontal align={'center'} className={styles.scopePill} gap={6}>
+    <Flexbox
+      horizontal
+      align={'center'}
+      {...(switchable
+        ? { 'aria-haspopup': 'menu' as const, as: 'button' as const, type: 'button' as const }
+        : {})}
+      className={switchable ? `${styles.scopePill} ${styles.scopePillButton}` : styles.scopePill}
+      gap={6}
+    >
       <Avatar avatar={scopeAvatar} shape={'square'} size={20} />
       <Text fontSize={13} weight={600}>
         {scopeName}

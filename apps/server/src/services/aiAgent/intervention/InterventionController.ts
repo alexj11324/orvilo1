@@ -112,6 +112,14 @@ export class InterventionController {
     const durableOperation = await this.deps.agentOperationModel.findById(resolvedOperationId);
     const resolvedTopicId = topicId ?? durableOperation?.topicId ?? undefined;
     const admission = readRemoteRunAdmission(durableOperation?.metadata);
+    // A terminal durable row means the host already reported terminal — there
+    // is no live process left to signal, and the admission ledger for that run
+    // must not be reopened with a fresh `requested` write.
+    const durableIsTerminal =
+      durableOperation?.status === 'abandoned' ||
+      durableOperation?.status === 'done' ||
+      durableOperation?.status === 'error' ||
+      durableOperation?.status === 'interrupted';
 
     // 2. Resolve the device-hosted process target. Prefer the topic's
     // runningOperation marker (heteroType tells us a device process exists);
@@ -127,7 +135,7 @@ export class InterventionController {
         }
       | undefined;
 
-    if (resolvedTopicId) {
+    if (resolvedTopicId && !durableIsTerminal) {
       const topic = await this.deps.topicModel.findById(resolvedTopicId);
       const runningOp = (topic?.metadata as any)?.runningOperation as
         | {
@@ -170,6 +178,7 @@ export class InterventionController {
 
     if (
       !deviceTarget &&
+      !durableIsTerminal &&
       admission?.deviceId &&
       admission.state !== 'offline' &&
       admission.state !== 'rejected'
@@ -263,7 +272,7 @@ export class InterventionController {
     // after the runtime acknowledges the interrupt to avoid unlocking a live
     // task. For remote-admitted runs without a device target (cloud sandbox),
     // this IS the cancel signal — persist the intent before dispatching it.
-    if (!deviceTarget) {
+    if (!deviceTarget && !durableIsTerminal) {
       await markRemoteCancelRequested(this.deps.db, resolvedOperationId, 'interruptTask').catch(
         (err) =>
           log('interruptTask: cancel ledger write failed op=%s: %O', resolvedOperationId, err),
@@ -292,18 +301,22 @@ export class InterventionController {
 
     if (!interrupted && deviceCancellationConfirmed !== true) {
       const alreadyCancelled = thread?.status === ThreadStatus.Cancel;
-      const durableAlreadyTerminal =
-        durableOperation?.status === 'abandoned' ||
-        durableOperation?.status === 'done' ||
-        durableOperation?.status === 'error' ||
-        durableOperation?.status === 'interrupted';
-      const success = alreadyCancelled || durableAlreadyTerminal;
+      const success = alreadyCancelled || durableIsTerminal;
 
       // A terminal durable row means the host already reported terminal —
       // confirmed. Otherwise the signal never landed: unknown, not a silent
-      // success. A remote-admitted run keeps its live `requested`/`unknown`
-      // ledger state for the terminal callback or watchdog to resolve.
+      // success. Either way the ledger must reflect the final answer rather
+      // than staying stuck at `requested` — a sandbox-admitted run has no
+      // device-side callback left to resolve it.
       const cancelState = success ? 'confirmed' : 'unknown';
+      await resolveRemoteCancel(
+        this.deps.db,
+        resolvedOperationId,
+        cancelState,
+        success ? 'host already terminal' : 'cancel signal dispatched but no runtime/device ack',
+      ).catch((err) =>
+        log('interruptTask: cancel settle write failed op=%s: %O', resolvedOperationId, err),
+      );
 
       return {
         cancelState,

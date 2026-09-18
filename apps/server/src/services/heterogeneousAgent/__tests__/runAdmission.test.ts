@@ -253,14 +253,16 @@ describe('runAdmission pure helpers', () => {
     expect(classifyRemoteDispatchFailure(DeviceTransportErrorCode.Unauthorized)).toBe('rejected');
     expect(classifyRemoteDispatchFailure(DeviceTransportErrorCode.RateLimited)).toBe('rejected');
 
+    // Provably pre-connect — the request never left this process.
+    expect(classifyRemoteDispatchFailure(DeviceTransportErrorCode.GatewayUnreachable)).toBe(
+      'offline',
+    );
+
     // Ambiguous — the request may have been delivered before the failure.
     expect(classifyRemoteDispatchFailure(DeviceTransportErrorCode.DeviceResponseTimeout)).toBe(
       'unknown',
     );
     expect(classifyRemoteDispatchFailure(DeviceTransportErrorCode.GatewayError)).toBe('unknown');
-    expect(classifyRemoteDispatchFailure(DeviceTransportErrorCode.GatewayUnreachable)).toBe(
-      'unknown',
-    );
     expect(classifyRemoteDispatchFailure(undefined)).toBe('unknown');
     expect(classifyRemoteDispatchFailure('SOME_FUTURE_CODE')).toBe('unknown');
   });

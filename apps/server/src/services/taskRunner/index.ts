@@ -690,6 +690,35 @@ export class TaskRunnerService {
           if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
           taskTopicStarted = true;
         }
+        if (result.remoteAdmission === 'unknown') {
+          // The device may still be executing — this is not a confirmed
+          // failure. Keep the topic run open, park the dispatch at
+          // outcome_unknown, release the kickoff claims, and let the host's
+          // terminal callback or the reconciler settle it. Marking it failed
+          // here would orphan a possibly-live writer.
+          await this.taskDispatch.transition(preparedDispatch!, {
+            expected: ['dispatched', 'running', 'waiting', 'outcome_unknown'],
+            operationId: result.operationId,
+            phase: 'outcome_unknown',
+            waitingReason:
+              result.message || 'Dispatch acknowledgement lost; run may still be executing',
+          });
+          await this.taskModel.updateHeartbeat(task.id);
+          registrationComplete = true;
+          await this.taskModel.releaseRunReservation(task.id, reservationId);
+          ownsReservation = false;
+          await this.taskModel
+            .releaseRunKickoff(task.id, kickoffClaimToken)
+            .catch((releaseError) =>
+              log('runTask: failed to release kickoff claim for %s — %O', task.id, releaseError),
+            );
+          ownsKickoffClaim = false;
+          return {
+            ...result,
+            taskId: task.id,
+            taskIdentifier: task.identifier,
+          };
+        }
         if (result.topicId) {
           await this.taskTopicModel.updateStatus(task.id, result.topicId, 'failed');
         }

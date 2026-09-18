@@ -90,6 +90,8 @@ interface PlatformTaskEntry {
   operationId: string;
   parentOperationId?: string;
   pid: number;
+  /** Admission fence echoed back on exit notify callbacks. */
+  runGeneration?: number;
   topicId: string;
   /**
    * Workspace that owns the dispatched topic — used at exit time so the
@@ -328,6 +330,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
         prompt: request.prompt,
         resumeFallbackSystemContext: request.resumeFallbackSystemContext,
         resumeSessionId: request.resumeSessionId,
+        runGeneration: request.runGeneration,
         serverUrl,
         systemContext: request.systemContext,
         topicId: request.topicId,
@@ -343,6 +346,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             agentType: request.agentType,
             operationId: request.operationId,
             pid,
+            runGeneration: request.runGeneration,
             topicId: request.topicId,
             workspaceId: request.ingestWorkspaceId ?? request.workspaceId,
           });
@@ -527,6 +531,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             parentOperationId?: string;
             platformAgentId?: string;
             prompt: string;
+            runGeneration?: number;
             taskId: string;
             topicId: string;
             workspaceId?: string;
@@ -794,6 +799,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
     parentOperationId?: string;
     platformAgentId?: string;
     prompt: string;
+    runGeneration?: number;
     taskId: string;
     topicId: string;
     workspaceId?: string;
@@ -806,6 +812,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       parentOperationId,
       platformAgentId,
       prompt,
+      runGeneration,
       taskId,
       topicId,
       workspaceId,
@@ -825,9 +832,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
       ...process.env,
       ...(accessToken && { ORVILO_JWT: accessToken }),
       ORVILO_OPERATION_ID: operationId,
+      ...(runGeneration != null && { ORVILO_RUN_GENERATION: String(runGeneration) }),
       ...(serverUrl && { ORVILO_SERVER: serverUrl }),
       ...(workspaceId && { ORVILO_WORKSPACE_ID: workspaceId }),
     };
+    // The child's operation has its own admission record; an ambient generation
+    // from the app's own context would be a stale fence on the wrong operation.
+    if (runGeneration == null) delete childEnv.ORVILO_RUN_GENERATION;
     const sessionKey = parentOperationId ? operationId : topicId;
 
     if (agentType === 'openclaw') {
@@ -885,6 +896,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
         operationId,
         parentOperationId,
         pid,
+        runGeneration,
         topicId,
         workspaceId,
       });
@@ -906,6 +918,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             content: text,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           }).finally(() =>
@@ -917,6 +930,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
               error: terminalError,
               operationId,
               role: 'assistant',
+              runGeneration,
               topicId,
               workspaceId,
             }),
@@ -928,6 +942,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             done: true,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           });
@@ -981,6 +996,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
         operationId,
         parentOperationId,
         pid,
+        runGeneration,
         topicId,
         workspaceId,
       });
@@ -1010,6 +1026,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             content: text,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           }).finally(() =>
@@ -1021,6 +1038,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
               error: terminalError,
               operationId,
               role: 'assistant',
+              runGeneration,
               topicId,
               workspaceId,
             }),
@@ -1041,6 +1059,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             content: response,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           }).finally(() =>
@@ -1050,6 +1069,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
               done: true,
               operationId,
               role: 'assistant',
+              runGeneration,
               topicId,
               workspaceId,
             }),
@@ -1061,6 +1081,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             done: true,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           });
@@ -1189,6 +1210,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
     error?: { message: string; type?: string };
     operationId?: string;
     role: string;
+    runGeneration?: number;
     topicId: string;
     /**
      * Workspace scope for the notify. When set, attaches `X-Workspace-Id` so

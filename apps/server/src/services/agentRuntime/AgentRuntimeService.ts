@@ -2600,7 +2600,15 @@ export class AgentRuntimeService {
           return null;
         }
 
-        const remoteActive = !['offline', 'rejected'].includes(remoteExecution.admission.state);
+        // The admission ledger is not settled on normal completion — a
+        // finished remote run keeps `state: 'running'` while only the durable
+        // operation row carries the terminal status. Derive liveness from
+        // both, or a completed run would report `running` forever.
+        const durableTerminal = ['abandoned', 'done', 'error', 'interrupted'].includes(
+          remoteExecution.durableStatus ?? '',
+        );
+        const remoteActive =
+          !durableTerminal && !['offline', 'rejected'].includes(remoteExecution.admission.state);
 
         return {
           currentState: {

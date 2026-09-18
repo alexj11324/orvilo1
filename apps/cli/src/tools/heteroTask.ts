@@ -74,6 +74,12 @@ export interface RunHeteroTaskParams {
   parentOperationId?: string;
   platformAgentId?: string;
   prompt: string;
+  /**
+   * Admission fence minted by the server for this operation. Forwarded to the
+   * spawned child as `ORVILO_RUN_GENERATION` so its ingest/notify callbacks
+   * are generation-fenced like direct device dispatches.
+   */
+  runGeneration?: number;
   taskId: string;
   topicId: string;
   /**
@@ -110,6 +116,7 @@ async function sendAutoNotify(
   agentId?: string,
   operationId?: string,
   workspaceId?: string,
+  runGeneration?: number,
 ): Promise<void> {
   try {
     const client = await getTrpcClient(workspaceId);
@@ -118,6 +125,7 @@ async function sendAutoNotify(
       content: text,
       operationId,
       role: 'assistant',
+      runGeneration,
       topicId,
     });
   } catch (err) {
@@ -141,6 +149,7 @@ async function sendTerminalSignal(
   workspaceId?: string,
   error?: { message: string; type?: string },
   cancelled = false,
+  runGeneration?: number,
 ): Promise<void> {
   try {
     const client = await getTrpcClient(workspaceId);
@@ -149,6 +158,7 @@ async function sendTerminalSignal(
       content: '',
       done: true,
       operationId,
+      runGeneration,
       ...(cancelled ? { cancelled: true } : {}),
       ...(error ? { error } : {}),
       role: 'assistant',
@@ -200,6 +210,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
     parentOperationId,
     platformAgentId,
     prompt,
+    runGeneration,
     taskId,
     topicId,
     workspaceId,
@@ -212,8 +223,12 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
     ORVILO_OPERATION_ID: operationId,
+    ...(runGeneration != null && { ORVILO_RUN_GENERATION: String(runGeneration) }),
     ...(workspaceId && { ORVILO_WORKSPACE_ID: workspaceId }),
   };
+  // The child's operation has its own admission record; an ambient generation
+  // from this process's own run would be a stale fence on the wrong operation.
+  if (runGeneration == null) delete childEnv.ORVILO_RUN_GENERATION;
   const sessionKey = parentOperationId ? operationId : topicId;
 
   if (agentType === 'openclaw') {
@@ -280,6 +295,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
       operationId,
       parentOperationId,
       pid,
+      runGeneration,
       startedAt: new Date().toISOString(),
       taskId,
       topicId,
@@ -304,7 +320,15 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
           : `Task failed (exit code: ${code})`;
         // Write the notice bubble first, THEN signal terminal (sequential).
         // Fire-and-forget both, but ensure the terminal signal is always sent.
-        void sendAutoNotify(topicId, taskId, text, agentId, operationId, workspaceId).finally(() =>
+        void sendAutoNotify(
+          topicId,
+          taskId,
+          text,
+          agentId,
+          operationId,
+          workspaceId,
+          runGeneration,
+        ).finally(() =>
           sendTerminalSignal(
             topicId,
             agentId,
@@ -312,11 +336,20 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
             workspaceId,
             cancelled ? undefined : { message: text, type: 'HeteroProcessError' },
             cancelled,
+            runGeneration,
           ),
         );
       } else {
         // Clean exit — openclaw already sent its final message; just signal done.
-        void sendTerminalSignal(topicId, agentId, operationId, workspaceId);
+        void sendTerminalSignal(
+          topicId,
+          agentId,
+          operationId,
+          workspaceId,
+          undefined,
+          false,
+          runGeneration,
+        );
       }
     });
 
@@ -373,6 +406,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
       operationId,
       parentOperationId,
       pid,
+      runGeneration,
       startedAt: new Date().toISOString(),
       taskId,
       topicId,
@@ -398,7 +432,15 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
         const text = cancelled
           ? `Task cancelled (signal: ${signal})`
           : `Task failed (exit code: ${code})`;
-        void sendAutoNotify(topicId, taskId, text, agentId, operationId, workspaceId).finally(() =>
+        void sendAutoNotify(
+          topicId,
+          taskId,
+          text,
+          agentId,
+          operationId,
+          workspaceId,
+          runGeneration,
+        ).finally(() =>
           sendTerminalSignal(
             topicId,
             agentId,
@@ -406,6 +448,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
             workspaceId,
             cancelled ? undefined : { message: text, type: 'HeteroProcessError' },
             cancelled,
+            runGeneration,
           ),
         );
         return;
@@ -419,11 +462,35 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
       if (sessionId) saveHermesSessionId(sessionKey, sessionId);
 
       if (response) {
-        void sendAutoNotify(topicId, taskId, response, agentId, operationId, workspaceId).finally(
-          () => sendTerminalSignal(topicId, agentId, operationId, workspaceId),
+        void sendAutoNotify(
+          topicId,
+          taskId,
+          response,
+          agentId,
+          operationId,
+          workspaceId,
+          runGeneration,
+        ).finally(() =>
+          sendTerminalSignal(
+            topicId,
+            agentId,
+            operationId,
+            workspaceId,
+            undefined,
+            false,
+            runGeneration,
+          ),
         );
       } else {
-        void sendTerminalSignal(topicId, agentId, operationId, workspaceId);
+        void sendTerminalSignal(
+          topicId,
+          agentId,
+          operationId,
+          workspaceId,
+          undefined,
+          false,
+          runGeneration,
+        );
       }
     });
 
@@ -502,6 +569,7 @@ export async function cancelHeteroTask(
       entry.agentId,
       entry.operationId,
       entry.workspaceId,
+      entry.runGeneration,
     );
     return { exited: true, pid: entry.pid, signal, taskId };
   }

@@ -274,6 +274,11 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   // dropped; `loadQuota` drains it (re-checking freshness against the snapshot
   // that just settled) when the in-flight request completes.
   const pendingRevalidateMsRef = useRef<number | null>(null);
+  // When a revalidation-triggered load last consulted upstream. Freshness
+  // cannot be judged from `snapshot.updatedAt` alone: an unattributable or
+  // absent live sample leaves the stamp on the persisted receipt, which would
+  // make every trigger re-hit the live endpoint forever.
+  const lastRevalidateAtRef = useRef(0);
   const mountedRef = useRef(true);
   // `loadQuota`'s settle path re-enters the gate below to drain a parked
   // trigger, and the gate starts `loadQuota` — the cycle is bridged through a
@@ -416,6 +421,11 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
 
       if (recentlyFailed) return;
 
+      // A revalidation-triggered load already consulted upstream within this
+      // window — the settled snapshot is as fresh as the provider can tell us
+      // even when its `updatedAt` still reads the older persisted receipt.
+      if (currentTime - lastRevalidateAtRef.current <= staleMs) return;
+
       const current = quotaRef.current;
       if (current && currentTime - current.updatedAt <= staleMs) return;
 
@@ -427,6 +437,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
         return;
       }
 
+      lastRevalidateAtRef.current = currentTime;
       void loadQuota({ revalidate: true });
     },
     [loadQuota],
@@ -440,6 +451,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
     sourceKeyRef.current = sourceKey;
     quotaRef.current = null;
     lastTransientErrorAtRef.current = 0;
+    lastRevalidateAtRef.current = 0;
     // The previous source's in-flight request is disowned — the
     // requestId/sourceKey guards discard its result — so its lifecycle
     // markers must not leak into the new source: a stranded `inFlight` would
@@ -471,14 +483,17 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   useEffect(() => {
     if (!autoRefreshMs) return;
 
+    // The interval goes through the ref and depends only on `autoRefreshMs` —
+    // a timer that re-registered on every render-driven callback identity
+    // change would restart its countdown each `setNow` tick and never fire.
     const interval = window.setInterval(() => {
-      requestRevalidation(autoRefreshMs);
+      requestRevalidationRef.current(autoRefreshMs);
     }, autoRefreshMs);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [autoRefreshMs, requestRevalidation]);
+  }, [autoRefreshMs]);
 
   // Revalidate when the window regains focus: the user may have burned quota
   // elsewhere (another device, a terminal CLI session) meanwhile. The listener
@@ -488,7 +503,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   // window + error cooldown in the sampler host) keep this from hammering the
   // rate-limited live endpoints.
   useEffect(() => {
-    const revalidateOnFocus = () => requestRevalidation(QUOTA_STALE_MS);
+    const revalidateOnFocus = () => requestRevalidationRef.current(QUOTA_STALE_MS);
 
     window.addEventListener('focus', revalidateOnFocus);
     document.addEventListener('visibilitychange', revalidateOnFocus);
@@ -497,7 +512,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       window.removeEventListener('focus', revalidateOnFocus);
       document.removeEventListener('visibilitychange', revalidateOnFocus);
     };
-  }, [requestRevalidation]);
+  }, []);
 
   const formatDuration = useCallback(
     (ms: number) => {

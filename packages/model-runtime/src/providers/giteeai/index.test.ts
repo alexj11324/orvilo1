@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeGiteeAI, params } from './index';
+import { OrviloGiteeAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -12,18 +12,18 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 }));
 
 testProvider({
-  Runtime: LobeGiteeAI,
+  Runtime: OrviloGiteeAI,
   chatDebugEnv: 'DEBUG_GITEE_AI_CHAT_COMPLETION',
   chatModel: 'deepseek-r1',
   defaultBaseURL: 'https://ai.gitee.com/v1',
   provider: ModelProvider.GiteeAI,
 });
 
-describe('LobeGiteeAI - custom features', () => {
-  let instance: InstanceType<typeof LobeGiteeAI>;
+describe('OrviloGiteeAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloGiteeAI>;
 
   beforeEach(() => {
-    instance = new LobeGiteeAI({ apiKey: 'test_api_key' });
+    instance = new OrviloGiteeAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

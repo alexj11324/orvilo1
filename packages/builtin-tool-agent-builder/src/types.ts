@@ -1,10 +1,10 @@
-import type { LobeAgentConfig, MetaData } from '@orvilo/types';
+import type { MetaData, OrviloAgentConfig } from '@orvilo/types';
 import type { PartialDeep } from 'type-fest';
 
 /**
  * Agent Builder Tool Identifier
  */
-export const AgentBuilderIdentifier = 'lobe-agent-builder';
+export const AgentBuilderIdentifier = 'orvilo-agent-builder';
 
 /**
  * Agent Builder API Names
@@ -32,7 +32,7 @@ export interface UpdateAgentConfigParams {
   /**
    * Partial agent configuration to update
    */
-  config?: PartialDeep<LobeAgentConfig>;
+  config?: PartialDeep<OrviloAgentConfig>;
   /**
    * Partial metadata to update
    */
@@ -168,7 +168,7 @@ export interface InstallPluginParams {
    */
   identifier: string;
   /**
-   * Plugin source type: 'market' for MCP marketplace, 'official' for builtin/composio/lobehubSkill tools
+   * Plugin source type: 'market' for MCP marketplace, 'official' for builtin/composio/orviloSkill tools
    */
   source: 'market' | 'official';
 }
@@ -194,9 +194,9 @@ export interface InstallPluginState {
    */
   isComposio?: boolean;
   /**
-   * Whether the plugin is a LobehubSkill provider that needs OAuth connection
+   * Whether the plugin is a OrviloSkill provider that needs OAuth connection
    */
-  isLobehubSkill?: boolean;
+  isOrviloSkill?: boolean;
   /**
    * Plugin identifier
    */
@@ -214,7 +214,7 @@ export interface InstallPluginState {
    */
   serverName?: string;
   /**
-   * Server status (for Composio tools and LobehubSkill providers)
+   * Server status (for Composio tools and OrviloSkill providers)
    */
   serverStatus?: 'connected' | 'pending_auth' | 'error' | 'not_connected';
   /**

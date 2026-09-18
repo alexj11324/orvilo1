@@ -1,5 +1,5 @@
 ---
-title: LobeHub Model Service Providers - Environment Variables and Configuration
+title: Orvilo Model Service Providers - Environment Variables and Configuration
 description: >-
   Learn about the environment variables and configuration settings for various
   model service providers like OpenAI, Google AI, AWS Bedrock, Ollama,
@@ -11,7 +11,7 @@ tags:
 
 # Model Providers
 
-When deploying LobeHub, a rich set of environment variables related to model service providers is provided, allowing you to easily define the model service providers to be enabled in LobeHub.
+When deploying Orvilo, a rich set of environment variables related to model service providers is provided, allowing you to easily define the model service providers to be enabled in Orvilo.
 
 ## OpenAI
 
@@ -51,9 +51,9 @@ When deploying LobeHub, a rich set of environment variables related to model ser
 
 Related discussions:
 
-- [Why is the return value blank after installing Docker, configuring environment variables?](https://github.com/lobehub/lobehub/discussions/623)
-- [Reasons for errors when using third-party interfaces](https://github.com/lobehub/lobehub/discussions/734)
-- [No response in chat after filling in the proxy server address](https://github.com/lobehub/lobehub/discussions/1065)
+- Why is the return value blank after installing Docker, configuring environment variables?
+- Reasons for errors when using third-party interfaces
+- No response in chat after filling in the proxy server address
 
 ### `OPENAI_MODEL_LIST`
 
@@ -64,16 +64,16 @@ Related discussions:
 
 The above example adds `qwen-7b-chat` and `glm-6b` to the model list, removes `gpt-3.5-turbo` from the list, and displays the name of `gpt-4-turbo` as `gpt-4o`. If you want to disable all models first and then enable specific models, you can use `-all,+gpt-3.5-turbo`, which means only `gpt-3.5-turbo` will be enabled.
 
-You can find all current model names in [modelProviders](https://github.com/lobehub/lobehub/tree/main/src/config/modelProviders).
+You can find all current model names in [modelProviders](https://github.com/alexj11324/orvilo1/tree/main/packages/model-bank/src/modelProviders).
 
 ## Meta
 
-Use the official [Meta Model API](https://dev.meta.ai/). See [Using Meta in LobeHub](/docs/usage/providers/meta) for setup instructions.
+Use the official [Meta Model API](https://dev.meta.ai/). See [Using Meta in Orvilo](/docs/usage/providers/meta) for setup instructions.
 
 ### `META_API_KEY`
 
 - Type: Optional for the deployment; required when providing a shared server key. Users can instead enter their own key in Meta provider settings.
-- Description: A key created in the [Model API dashboard](https://dev.meta.ai/). Setting a non-empty key automatically enables Meta in the server configuration. `ENABLED_META` is derived from this key, not a separate environment switch. LobeHub uses `META_API_KEY`, rather than the `MODEL_API_KEY` name in Meta's SDK examples.
+- Description: A key created in the [Model API dashboard](https://dev.meta.ai/). Setting a non-empty key automatically enables Meta in the server configuration. `ENABLED_META` is derived from this key, not a separate environment switch. Orvilo uses `META_API_KEY`, rather than the `MODEL_API_KEY` name in Meta's SDK examples.
 - Default: Unset; no shared server key.
 - Example: `your-meta-model-api-key`
 
@@ -410,7 +410,7 @@ If you need to use Azure OpenAI to provide model services, you can refer to the 
 ### `PERPLEXITY_MODEL_LIST`
 
 - Type: Optional
-- Description: Used to control the model list, use `+` to add a model, use `-` to hide a model, use `model_name=display_name` to customize the display name of a model, separated by commas. Definition syntax rules see
+- Description: Used to control the model list, use `+` to add a model, use `-` to hide a model, use `model_name=display_name` to customize the display name of a model, separated by commas. Definition syntax rules
 - Default: `-`
 - Example: `-all,+sonar-pro,+sonar`
 
@@ -886,7 +886,7 @@ NewAPI is a multi-provider model aggregation service that supports automatic mod
 
 ## Unsloth
 
-Connect to your own Unsloth Studio instance. See [Using Unsloth in LobeHub](/docs/usage/providers/unsloth) for browser authentication and desktop CORS limitations.
+Connect to your own Unsloth Studio instance. See [Using Unsloth in Orvilo](/docs/usage/providers/unsloth) for browser authentication and desktop CORS limitations.
 
 ### `UNSLOTH_API_KEY`
 
@@ -898,7 +898,7 @@ Connect to your own Unsloth Studio instance. See [Using Unsloth in LobeHub](/doc
 ### `UNSLOTH_PROXY_URL`
 
 - Type: Optional
-- Description: Overrides the OpenAI-compatible API base URL. Use an address reachable from the LobeHub server. Inside Docker, `127.0.0.1` refers to the container, not the host running Studio. An explicitly configured Studio port overrides its default `8888`.
+- Description: Overrides the OpenAI-compatible API base URL. Use an address reachable from the Orvilo server. Inside Docker, `127.0.0.1` refers to the container, not the host running Studio. An explicitly configured Studio port overrides its default `8888`.
 - Default: `http://127.0.0.1:8888/v1`
 - Example: `http://studio.example.com:8888/v1`
 

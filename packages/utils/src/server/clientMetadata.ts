@@ -10,9 +10,9 @@ export interface ClientMetadata {
 }
 
 const MAX_CLIENT_VERSION_LENGTH = 128;
-const DESKTOP_USER_AGENT_PATTERN = /\bLobeHub Desktop\/(\S+)/i;
-const MOBILE_USER_AGENT_PATTERN = /\bLobeHub-Mobile\/(android|ios)-v(\S+)/i;
-const LEGACY_IOS_USER_AGENT_PATTERNS = [/\bLobeHub-iOS\/(\S+)/i, /\bLobeHub\/(\S+)\s+CFNetwork\//i];
+const DESKTOP_USER_AGENT_PATTERN = /\bOrvilo Desktop\/(\S+)/i;
+const MOBILE_USER_AGENT_PATTERN = /\bOrvilo-Mobile\/(android|ios)-v(\S+)/i;
+const LEGACY_IOS_USER_AGENT_PATTERNS = [/\bOrvilo-iOS\/(\S+)/i, /\bOrvilo\/(\S+)\s+CFNetwork\//i];
 
 const normalizeVersion = (version: string | null | undefined) => {
   const normalizedVersion = version?.trim();

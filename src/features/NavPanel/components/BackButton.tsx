@@ -7,7 +7,7 @@ import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 
-export const BACK_BUTTON_ID = 'lobe-back-button';
+export const BACK_BUTTON_ID = 'orvilo-back-button';
 
 const BackButton = memo<ActionIconProps & { to?: string }>(({ to = '/', onClick, ...rest }) => {
   const activeSlug = useActiveWorkspaceSlug();

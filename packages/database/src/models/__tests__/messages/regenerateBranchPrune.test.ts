@@ -7,14 +7,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pruneRegeneratedBranch } from '../../../../../../apps/server/src/services/aiAgent/pruneRegeneratedBranch';
 import { getTestDB } from '../../../core/getTestDB';
 import { messageGroups, messages, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
 
 const userId = 'regenerate-prune-test-user';
 const topicId = 'regenerate-prune-topic';
 
 let messageModel: MessageModel;
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 
 beforeEach(async () => {
   serverDB = await getTestDB();

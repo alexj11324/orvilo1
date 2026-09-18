@@ -14,7 +14,7 @@ import { FileModel } from '@/database/models/file';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyReviewPredictionModel } from '@/database/models/verifyReviewPrediction';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 import { FileService } from '@/server/services/file';
 
@@ -25,7 +25,7 @@ import { describeWithheldEvidence } from './reviewInspection';
 import type { RawReviewPrediction } from './schema';
 import { ReviewPredictionSchema } from './schema';
 
-const log = debug('lobe-server:verify-review-predictor');
+const log = debug('orvilo-server:verify-review-predictor');
 
 /** Exactly what the model hands back, so the three readers cannot drift. */
 type CheckEvidenceRows = Awaited<ReturnType<VerifyEvidenceModel['listByCheckResult']>>;
@@ -116,7 +116,7 @@ export const isCurrentReviewPrediction = (
  * statistic computed afterwards is measuring the model against itself.
  */
 export class VerifyReviewPredictorService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
   private readonly resultModel: VerifyCheckResultModel;
@@ -126,7 +126,7 @@ export class VerifyReviewPredictorService {
   private readonly fileModel: FileModel;
   private readonly fileService: FileService;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

@@ -1,4 +1,4 @@
-import { LOBE_DEFAULT_MODEL_LIST } from 'model-bank';
+import { ORVILO_DEFAULT_MODEL_LIST } from 'model-bank';
 import { describe, expect, it } from 'vitest';
 
 import { type ModelUsage } from '@/types/message';
@@ -6,7 +6,7 @@ import { type ModelUsage } from '@/types/message';
 import { computeMessageCostSplit } from './cost';
 
 // Pick any builtin model that has cache-read pricing so the savings math is exercised.
-const priced = LOBE_DEFAULT_MODEL_LIST.find(
+const priced = ORVILO_DEFAULT_MODEL_LIST.find(
   (m) =>
     m.pricing?.units?.some((u: any) => u.name === 'textInput') &&
     m.pricing?.units?.some((u: any) => u.name === 'textInput_cacheRead'),

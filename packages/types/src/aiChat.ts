@@ -7,8 +7,8 @@ import { ChatToolPayloadSchema, MessageMetadataSchema } from './message/common';
 import type { ContextSelection, CreateMessageParams, PageSelection } from './message/ui/params';
 import { ContextSelectionSchema, PageSelectionSchema } from './message/ui/params';
 import type { OpenAIChatMessage } from './openai/chat';
-import type { LobeUniformTool } from './tool';
-import { LobeUniformToolSchema } from './tool';
+import type { OrviloUniformTool } from './tool';
+import { OrviloUniformToolSchema } from './tool';
 import type { ChatTopic, ChatTopicMetadata } from './topic';
 import type { ChatThreadType } from './topic/thread';
 import { ThreadType } from './topic/thread';
@@ -252,7 +252,7 @@ export const StructureOutputSchema = z.object({
   provider: z.string(),
   schema: StructureSchema.optional(),
   tools: z
-    .array(z.object({ function: LobeUniformToolSchema, type: z.literal('function') }))
+    .array(z.object({ function: OrviloUniformToolSchema, type: z.literal('function') }))
     .optional(),
   /**
    * Structured tracing config (scenario / promptVersion / schemaName /
@@ -292,7 +292,7 @@ export interface StructureOutputParams {
   schema?: IStructureSchema;
   systemRole?: string;
   tools?: {
-    function: LobeUniformTool;
+    function: OrviloUniformTool;
     type: 'function';
   }[];
   /**

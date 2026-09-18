@@ -526,8 +526,8 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
             {
               children: skillMenuItems,
               // Trailing chevron (replaces base-ui's default triangle submenu arrow,
-              // which is hidden via the .lobe-submenu-chevron rule in ActionDropdown).
-              extra: <Icon className="lobe-submenu-chevron" icon={ChevronRight} size={16} />,
+              // which is hidden via the .orvilo-submenu-chevron rule in ActionDropdown).
+              extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
               footer: skillMarketFooter,
               header: skillMarketHeader,
               icon: SkillsIcon,
@@ -620,7 +620,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                       onClick: () => handleSelectSearch('provider'),
                     },
                   ],
-                  extra: <Icon className="lobe-submenu-chevron" icon={ChevronRight} size={16} />,
+                  extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
                   icon: activeIcon(
                     activeSearchOption === 'off' ? GlobeOffIcon : Globe,
                     activeSearchOption !== 'off',
@@ -693,8 +693,8 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                   : []),
             ],
             // Trailing chevron (replaces base-ui's default triangle submenu arrow,
-            // which is hidden via the .lobe-submenu-chevron rule in ActionDropdown).
-            extra: <Icon className="lobe-submenu-chevron" icon={ChevronRight} size={16} />,
+            // which is hidden via the .orvilo-submenu-chevron rule in ActionDropdown).
+            extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
             footer: canConfigureResource ? knowledgeFooter : undefined,
             icon: LibraryBig,
             key: 'attachments',
@@ -707,7 +707,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       : uploadItems;
 
     // Goal creation has one canonical entry: drop the goal chip at the head of
-    // the composer. The agent then plans and calls lobe-goal.createGoal,
+    // the composer. The agent then plans and calls orvilo-goal.createGoal,
     // regardless of whether this conversation already has a topic.
     const acceptanceItems: ActionDropdownMenuItems = enableTopicAcceptance
       ? [

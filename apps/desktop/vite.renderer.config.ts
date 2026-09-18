@@ -105,10 +105,10 @@ function electronDesktopHtmlPlugin(): PluginOption {
   };
 }
 
-const CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG = '__LOBECLOUD_DESKTOP_BUSINESS_FEATURES__';
+const CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG = '__ORVILOCLOUD_DESKTOP_BUSINESS_FEATURES__';
 const BUSINESS_CONST_MODULE_ID = '@orvilo/business-const';
 const CLOUD_BUSINESS_CONST_MODULE_ID = '@cloud/business-const';
-const DYNAMIC_BUSINESS_CONST_QUERY = '?lobe-cloud-desktop-business-const';
+const DYNAMIC_BUSINESS_CONST_QUERY = '?orvilo-cloud-desktop-business-const';
 
 const createBusinessFeaturesBootstrapScript = () =>
   `globalThis[${JSON.stringify(CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG)}] = true;`;
@@ -144,32 +144,32 @@ const injectDynamicBusinessFeatureFlag = (code: string) => {
 
   return `${topicLinkFlag.code}
 
-const __lobeCloudDesktopBusinessFeaturesFlagKey = '${CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG}';
-const __lobeCloudDesktopApplyBusinessFeaturesFlag = (value) => {
+const __orviloCloudDesktopBusinessFeaturesFlagKey = '${CLOUD_DESKTOP_BUSINESS_FEATURES_FLAG}';
+const __orviloCloudDesktopApplyBusinessFeaturesFlag = (value) => {
   const enabled = Boolean(value);
   ENABLE_BUSINESS_FEATURES = enabled;${topicLinkAssignment}
   return enabled;
 };
 
-const __lobeCloudDesktopExistingDescriptor = Object.getOwnPropertyDescriptor(
+const __orviloCloudDesktopExistingDescriptor = Object.getOwnPropertyDescriptor(
   globalThis,
-  __lobeCloudDesktopBusinessFeaturesFlagKey,
+  __orviloCloudDesktopBusinessFeaturesFlagKey,
 );
-const __lobeCloudDesktopInitialValue = __lobeCloudDesktopExistingDescriptor?.get
-  ? __lobeCloudDesktopExistingDescriptor.get.call(globalThis)
-  : globalThis[__lobeCloudDesktopBusinessFeaturesFlagKey];
+const __orviloCloudDesktopInitialValue = __orviloCloudDesktopExistingDescriptor?.get
+  ? __orviloCloudDesktopExistingDescriptor.get.call(globalThis)
+  : globalThis[__orviloCloudDesktopBusinessFeaturesFlagKey];
 
-Object.defineProperty(globalThis, __lobeCloudDesktopBusinessFeaturesFlagKey, {
+Object.defineProperty(globalThis, __orviloCloudDesktopBusinessFeaturesFlagKey, {
   configurable: true,
   get() {
     return ENABLE_BUSINESS_FEATURES;
   },
   set(value) {
-    __lobeCloudDesktopApplyBusinessFeaturesFlag(value);
+    __orviloCloudDesktopApplyBusinessFeaturesFlag(value);
   },
 });
 
-__lobeCloudDesktopApplyBusinessFeaturesFlag(__lobeCloudDesktopInitialValue);
+__orviloCloudDesktopApplyBusinessFeaturesFlag(__orviloCloudDesktopInitialValue);
 `;
 };
 
@@ -192,7 +192,7 @@ function cloudDesktopBusinessConstPlugin(): PluginOption {
       const sourcePath = id.slice(0, -DYNAMIC_BUSINESS_CONST_QUERY.length);
       return injectDynamicBusinessFeatureFlag(readFileSync(sourcePath, 'utf8'));
     },
-    name: 'lobe-cloud-desktop-business-const',
+    name: 'orvilo-cloud-desktop-business-const',
     transformIndexHtml() {
       return [
         {
@@ -208,7 +208,7 @@ function cloudDesktopBusinessConstPlugin(): PluginOption {
 const cloudTsconfigPathsPlugin = () =>
   ({
     ...tsconfigPaths({ projects: [path.resolve(CLOUD_ROOT_DIR, 'tsconfig.json')] }),
-    name: 'lobe-cloud-desktop-tsconfig-paths',
+    name: 'orvilo-cloud-desktop-tsconfig-paths',
   }) satisfies PluginOption;
 
 export default defineConfig(async (env) => {

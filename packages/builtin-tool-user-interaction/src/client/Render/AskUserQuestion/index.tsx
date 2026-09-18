@@ -23,8 +23,8 @@ export const AskUserQuestionRender = memo<
       isError={!!pluginError}
       questions={normalizeAskUserQuestions(args)}
       labels={{
-        noAnswer: t('plugin:builtins.lobe-claude-code.askUserQuestion.noAnswer'),
-        notAnswered: t('plugin:builtins.lobe-claude-code.askUserQuestion.notAnswered'),
+        noAnswer: t('plugin:builtins.orvilo-claude-code.askUserQuestion.noAnswer'),
+        notAnswered: t('plugin:builtins.orvilo-claude-code.askUserQuestion.notAnswered'),
         recommendedTag: t('tool:askUserQuestion.recommendedTag'),
         supplement: t('tool:askUserQuestion.supplement.enter'),
       }}

@@ -129,10 +129,10 @@ describe('setupElectronApi', () => {
     expect(mockGetProcessMemoryInfo).toHaveBeenCalledOnce();
   });
 
-  it('should expose lobeEnv with darwinMajorVersion, isMacTahoe, platform and version info', () => {
+  it('should expose orviloEnv with darwinMajorVersion, isMacTahoe, platform and version info', () => {
     setupElectronApi();
 
-    const call = mockContextBridgeExposeInMainWorld.mock.calls.find((i) => i[0] === 'lobeEnv');
+    const call = mockContextBridgeExposeInMainWorld.mock.calls.find((i) => i[0] === 'orviloEnv');
     expect(call).toBeTruthy();
     const exposedEnv = call?.[1] as any;
 
@@ -180,8 +180,8 @@ describe('setupElectronApi', () => {
       onStreamInvoke: mockOnStreamInvoke,
     });
 
-    // Third call should be for 'lobeEnv'
-    expect(mockContextBridgeExposeInMainWorld.mock.calls[2][0]).toBe('lobeEnv');
+    // Third call should be for 'orviloEnv'
+    expect(mockContextBridgeExposeInMainWorld.mock.calls[2][0]).toBe('orviloEnv');
   });
 
   it('should handle errors when exposing electron API fails', () => {
@@ -193,7 +193,7 @@ describe('setupElectronApi', () => {
     setupElectronApi();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(error);
-    // Should still try to expose electronAPI and lobeEnv even if first one fails
+    // Should still try to expose electronAPI and orviloEnv even if first one fails
     expect(mockContextBridgeExposeInMainWorld).toHaveBeenCalledTimes(3);
   });
 

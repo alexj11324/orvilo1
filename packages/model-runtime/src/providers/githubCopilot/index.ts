@@ -4,7 +4,7 @@ import { ModelProvider } from 'model-bank';
 import OpenAI from 'openai';
 
 import { buildDefaultAnthropicPayload } from '../../core/anthropicCompatibleFactory';
-import { type LobeRuntimeAI } from '../../core/BaseAI';
+import { type OrviloRuntimeAI } from '../../core/BaseAI';
 import {
   convertOpenAIMessages,
   convertOpenAIResponseInputs,
@@ -85,7 +85,7 @@ class CopilotTokenManager {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Token ${githubToken}`,
-        'User-Agent': 'LobeChat/1.0',
+        'User-Agent': 'Orvilo/1.0',
       },
       method: 'GET',
     });
@@ -125,7 +125,7 @@ class CopilotTokenManager {
 // Singleton token manager
 const tokenManager = new CopilotTokenManager();
 
-export interface LobeGithubCopilotAIParams {
+export interface OrviloGithubCopilotAIParams {
   apiKey?: string;
   /**
    * Cached bearer token from previous OAuth exchange
@@ -141,7 +141,7 @@ export interface LobeGithubCopilotAIParams {
   oauthAccessToken?: string;
 }
 
-export class LobeGithubCopilotAI implements LobeRuntimeAI {
+export class OrviloGithubCopilotAI implements OrviloRuntimeAI {
   baseURL = COPILOT_BASE_URL;
   private accountChannelId?: Promise<string>;
   private cachedBearerToken?: string;
@@ -152,7 +152,7 @@ export class LobeGithubCopilotAI implements LobeRuntimeAI {
     oauthAccessToken,
     bearerToken,
     bearerTokenExpiresAt,
-  }: LobeGithubCopilotAIParams = {}) {
+  }: OrviloGithubCopilotAIParams = {}) {
     // Priority 1: Use cached bearer token if still valid (refresh 5 minutes early)
     if (bearerToken && bearerTokenExpiresAt && Date.now() < bearerTokenExpiresAt - 300_000) {
       this.cachedBearerToken = bearerToken;
@@ -220,8 +220,8 @@ export class LobeGithubCopilotAI implements LobeRuntimeAI {
           defaultHeaders: {
             'Authorization': `Bearer ${bearerToken}`,
             'Copilot-Integration-Id': 'vscode-chat',
-            'Editor-Plugin-Version': 'LobeChat/1.0',
-            'Editor-Version': 'LobeChat/1.0',
+            'Editor-Plugin-Version': 'Orvilo/1.0',
+            'Editor-Version': 'Orvilo/1.0',
             'anthropic-version': '2023-06-01',
           },
         });
@@ -283,8 +283,8 @@ export class LobeGithubCopilotAI implements LobeRuntimeAI {
         baseURL: COPILOT_BASE_URL,
         defaultHeaders: {
           'Copilot-Integration-Id': 'vscode-chat',
-          'Editor-Plugin-Version': 'LobeChat/1.0',
-          'Editor-Version': 'LobeChat/1.0',
+          'Editor-Plugin-Version': 'Orvilo/1.0',
+          'Editor-Version': 'Orvilo/1.0',
         },
       });
 
@@ -452,8 +452,8 @@ export class LobeGithubCopilotAI implements LobeRuntimeAI {
             'Accept': 'application/json',
             'Authorization': `Bearer ${bearerToken}`,
             'Copilot-Integration-Id': 'vscode-chat',
-            'Editor-Plugin-Version': 'LobeChat/1.0',
-            'Editor-Version': 'LobeChat/1.0',
+            'Editor-Plugin-Version': 'Orvilo/1.0',
+            'Editor-Version': 'Orvilo/1.0',
           },
           method: 'GET',
         });
@@ -608,4 +608,4 @@ export class LobeGithubCopilotAI implements LobeRuntimeAI {
   }
 }
 
-export default LobeGithubCopilotAI;
+export default OrviloGithubCopilotAI;

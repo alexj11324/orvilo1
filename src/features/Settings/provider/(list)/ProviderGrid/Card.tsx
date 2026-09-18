@@ -7,7 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BrandingProviderCard } from '@/business/client/features/BrandingProviderCard';
-import { ProviderCombine, ProviderIcon } from '@/components/LobeIcons';
+import { ProviderCombine, ProviderIcon } from '@/components/OrviloIcons';
 import { useIsDark } from '@/hooks/useIsDark';
 import { type AiProviderListItem } from '@/types/aiProvider';
 

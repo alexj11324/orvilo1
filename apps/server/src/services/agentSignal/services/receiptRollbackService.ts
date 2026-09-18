@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   getAgentSignalReceipt,
   updateAgentSignalReceiptMetadata,
@@ -28,7 +28,7 @@ export interface RollbackAgentSignalReceiptInput {
  */
 export interface AgentSignalReceiptRollbackContext {
   /** Database handle used by the document service. */
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   /** Owner user id for scoped document access. */
   userId: string;
   /** Optional workspace scope for collaborative documents. */

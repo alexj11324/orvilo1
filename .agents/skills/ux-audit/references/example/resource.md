@@ -1,6 +1,6 @@
 # Worked example — Resource (资源) module audit
 
-A real run of this skill against the **Resource module**, 2026-07 (LOBE-11149) — a
+A real run of this skill against the **Resource module**, 2026-07 (ORVILO-11149) — a
 knowledge-base / file-library manager: resource home (all resources) → library (a single
 knowledge base) → library-slug (a folder inside a library). Three surfaces under
 `src/routes/(main)/resource/**`, all delegating to one shared feature,
@@ -66,7 +66,7 @@ the "don't regress" list for the next refactor. Keep, don't "fix":
   (none / loaded / all) feeding **batch delete** and **batch chunk**, both gated behind a confirm
   and run async — destructive batch work never fires unconfirmed.
 - **✅ 亮点 — Optimistic create/rename merged against server data.** KB create modal, inline
-  rename and optimistic resource ops merged against the server via
+  rename and optimistic resource ops merged against the server
   `mergeServerResourcesWithOptimistic` — the list updates instantly without diverging from
   server truth.
 - **Explorer `EmptyPlaceholder` + chrome-reusing skeletons.** The Explorer `EmptyPlaceholder` is
@@ -119,7 +119,7 @@ with no load-more; matches #51+ are unreachable. Server-side query is correct (n
 partial-page false-empty), but the surface silently truncates. → Read §1.2 (search over a large
 set must page through all matches, not cap silently).
 
-**🟡 E — inline rename draft is in-memory `useState`, lost if the row/popover closes
+**🟡 E — inline rename draft is in-memory `useState`, lost if the row/popover
 mid-edit.** Minor (per Edit §2.1 the bar is lighter for transient inline edits), but a rename
 interrupted by a click-away discards the typed name with no restore
 (`(home)/_layout/Body/LibraryList/Item/Editing.tsx`). → Edit §2.1.

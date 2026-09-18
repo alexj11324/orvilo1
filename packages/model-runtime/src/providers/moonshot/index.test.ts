@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   anthropicParams,
   fetchMoonshotModels,
-  LobeMoonshotAI,
-  LobeMoonshotAnthropicAI,
-  LobeMoonshotOpenAI,
+  OrviloMoonshotAI,
+  OrviloMoonshotAnthropicAI,
+  OrviloMoonshotOpenAI,
 } from './index';
 
 const { loadModelsMock } = vi.hoisted(() => ({
@@ -30,7 +30,7 @@ beforeEach(() => {
   loadModelsMock.mockResolvedValue([]);
 });
 
-describe('LobeMoonshotAI', () => {
+describe('OrviloMoonshotAI', () => {
   const createRuntime = ({
     baseURL,
     sdkType,
@@ -38,7 +38,7 @@ describe('LobeMoonshotAI', () => {
     baseURL?: string;
     sdkType?: string;
   } = {}) =>
-    new LobeMoonshotAI({
+    new OrviloMoonshotAI({
       apiKey: 'test',
       ...(baseURL ? { baseURL } : {}),
       ...(sdkType ? { sdkType } : {}),
@@ -66,35 +66,35 @@ describe('LobeMoonshotAI', () => {
       const router = await resolveRouter();
 
       expect(router.apiType).toBe('openai');
-      expect(router.runtime).toBe(LobeMoonshotOpenAI);
+      expect(router.runtime).toBe(OrviloMoonshotOpenAI);
     });
 
     it('should route to OpenAI format when baseURL ends with /v1', async () => {
       const router = await resolveRouter(defaultOpenAIBaseURL);
 
       expect(router.apiType).toBe('openai');
-      expect(router.runtime).toBe(LobeMoonshotOpenAI);
+      expect(router.runtime).toBe(OrviloMoonshotOpenAI);
     });
 
     it('should route to Anthropic format when baseURL ends with /anthropic', async () => {
       const router = await resolveRouter(anthropicBaseURL);
 
       expect(router.apiType).toBe('anthropic');
-      expect(router.runtime).toBe(LobeMoonshotAnthropicAI);
+      expect(router.runtime).toBe(OrviloMoonshotAnthropicAI);
     });
 
     it('should route to Anthropic format when baseURL ends with /anthropic/', async () => {
       const router = await resolveRouter(`${anthropicBaseURL}/`);
 
       expect(router.apiType).toBe('anthropic');
-      expect(router.runtime).toBe(LobeMoonshotAnthropicAI);
+      expect(router.runtime).toBe(OrviloMoonshotAnthropicAI);
     });
 
     it('should route to Anthropic format when sdkType is anthropic', async () => {
       const router = await resolveRouter('https://aihubmix.com/v1/messages', 'anthropic');
 
       expect(router.apiType).toBe('anthropic');
-      expect(router.runtime).toBe(LobeMoonshotAnthropicAI);
+      expect(router.runtime).toBe(OrviloMoonshotAnthropicAI);
     });
 
     it('should normalize /v1/messages before creating an Anthropic SDK runtime', async () => {
@@ -102,10 +102,10 @@ describe('LobeMoonshotAI', () => {
         'https://aihubmix.com/v1/messages',
         'anthropic',
       );
-      const runtime = new LobeMoonshotAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
+      const runtime = new OrviloMoonshotAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
 
       expect(option.baseURL).toBe('https://aihubmix.com');
-      expect(runtime).toBeInstanceOf(LobeMoonshotAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloMoonshotAnthropicAI);
       expect((runtime as any).baseURL).toBe('https://aihubmix.com');
     });
 
@@ -114,10 +114,10 @@ describe('LobeMoonshotAI', () => {
         'https://api.moonshot.cn/anthropic/v1/messages',
         'anthropic',
       );
-      const runtime = new LobeMoonshotAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
+      const runtime = new OrviloMoonshotAnthropicAI({ apiKey: 'test', baseURL: option.baseURL });
 
       expect(option.baseURL).toBe(anthropicBaseURL);
-      expect(runtime).toBeInstanceOf(LobeMoonshotAnthropicAI);
+      expect(runtime).toBeInstanceOf(OrviloMoonshotAnthropicAI);
       expect((runtime as any).baseURL).toBe(anthropicBaseURL);
     });
 
@@ -125,7 +125,7 @@ describe('LobeMoonshotAI', () => {
       const router = await resolveRouter(anthropicBaseURL, 'openai');
 
       expect(router.apiType).toBe('openai');
-      expect(router.runtime).toBe(LobeMoonshotOpenAI);
+      expect(router.runtime).toBe(OrviloMoonshotOpenAI);
     });
 
     it('should reject unsupported sdkType values', async () => {
@@ -183,8 +183,8 @@ describe('LobeMoonshotAI', () => {
   });
 });
 
-describe('LobeMoonshotOpenAI', () => {
-  let instance: InstanceType<typeof LobeMoonshotOpenAI>;
+describe('OrviloMoonshotOpenAI', () => {
+  let instance: InstanceType<typeof OrviloMoonshotOpenAI>;
 
   const getLastRequestPayload = () => {
     const calls = ((instance as any).client.chat.completions.create as Mock).mock.calls;
@@ -192,7 +192,7 @@ describe('LobeMoonshotOpenAI', () => {
   };
 
   beforeEach(() => {
-    instance = new LobeMoonshotOpenAI({ apiKey: 'test' });
+    instance = new OrviloMoonshotOpenAI({ apiKey: 'test' });
 
     vi.spyOn((instance as any).client.chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
@@ -205,8 +205,8 @@ describe('LobeMoonshotOpenAI', () => {
 
   describe('init', () => {
     it('should correctly initialize with an API key', async () => {
-      const runtime = new LobeMoonshotOpenAI({ apiKey: 'test_api_key' });
-      expect(runtime).toBeInstanceOf(LobeMoonshotOpenAI);
+      const runtime = new OrviloMoonshotOpenAI({ apiKey: 'test_api_key' });
+      expect(runtime).toBeInstanceOf(OrviloMoonshotOpenAI);
       expect((runtime as any).baseURL).toEqual(defaultOpenAIBaseURL);
     });
   });
@@ -621,7 +621,7 @@ describe('LobeMoonshotOpenAI', () => {
         );
 
         const payload = getLastRequestPayload();
-        expect(payload.prompt_cache_key).toBe('lobe:user-abc:kimi-k2.6');
+        expect(payload.prompt_cache_key).toBe('orvilo:user-abc:kimi-k2.6');
       });
 
       it('should not inject prompt_cache_key when user is not provided', async () => {
@@ -637,8 +637,8 @@ describe('LobeMoonshotOpenAI', () => {
   });
 });
 
-describe('LobeMoonshotAnthropicAI', () => {
-  let instance: InstanceType<typeof LobeMoonshotAnthropicAI>;
+describe('OrviloMoonshotAnthropicAI', () => {
+  let instance: InstanceType<typeof OrviloMoonshotAnthropicAI>;
 
   const getLastRequestPayload = () => {
     const calls = ((instance as any).client.messages.create as Mock).mock.calls;
@@ -646,7 +646,7 @@ describe('LobeMoonshotAnthropicAI', () => {
   };
 
   beforeEach(() => {
-    instance = new LobeMoonshotAnthropicAI({ apiKey: 'test' });
+    instance = new OrviloMoonshotAnthropicAI({ apiKey: 'test' });
 
     vi.spyOn((instance as any).client.messages, 'create').mockResolvedValue(
       new ReadableStream() as any,
@@ -659,8 +659,8 @@ describe('LobeMoonshotAnthropicAI', () => {
 
   describe('init', () => {
     it('should correctly initialize with an API key', async () => {
-      const runtime = new LobeMoonshotAnthropicAI({ apiKey: 'test_api_key' });
-      expect(runtime).toBeInstanceOf(LobeMoonshotAnthropicAI);
+      const runtime = new OrviloMoonshotAnthropicAI({ apiKey: 'test_api_key' });
+      expect(runtime).toBeInstanceOf(OrviloMoonshotAnthropicAI);
       expect((runtime as any).baseURL).toEqual(anthropicBaseURL);
     });
   });

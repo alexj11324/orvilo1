@@ -141,8 +141,8 @@ export class DevinAcpSession extends AcpAgentSession<
     return {
       clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
       clientInfo: {
-        name: 'lobehub',
-        title: 'LobeHub',
+        name: 'orvilo',
+        title: 'Orvilo',
         version: this.options.clientVersion,
       },
       protocolVersion: ACP_PROTOCOL_VERSION,

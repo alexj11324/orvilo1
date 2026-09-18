@@ -8,9 +8,9 @@ import { CHIEF_AGENT_ARTWORKS } from '@/features/ChiefAgent/artwork';
  * style, while the variety keeps the model from copying one character
  * instead of inventing a subject for the agent.
  */
-const REFERENCE_IDS = new Set(['lobe', 'byte', 'buttercup']);
+const REFERENCE_IDS = new Set(['orvilo', 'byte', 'buttercup']);
 
-export const LOBE_STYLE_REFERENCE_IMAGE_URLS = CHIEF_AGENT_ARTWORKS.filter((item) =>
+export const ORVILO_STYLE_REFERENCE_IMAGE_URLS = CHIEF_AGENT_ARTWORKS.filter((item) =>
   REFERENCE_IDS.has(item.id),
 ).map((item) => item.avatar);
 
@@ -21,8 +21,8 @@ export const styleReferencesForArtworkStyle = (
   style: AgentArtworkStyle,
   appOrigin?: string,
 ): string[] | undefined =>
-  style === 'lobe'
-    ? LOBE_STYLE_REFERENCE_IMAGE_URLS
+  style === 'orvilo'
+    ? ORVILO_STYLE_REFERENCE_IMAGE_URLS
     : style === 'lineArt' && appOrigin
       ? [lineArtReferenceImageUrl(appOrigin)]
       : undefined;

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getAgentStoreState } from '@/store/agent';
-import { composioStoreSelectors, lobehubSkillStoreSelectors } from '@/store/tool/selectors';
+import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import { AgentManagerRuntime } from '../AgentManagerRuntime';
 import type { IAgentService, IDiscoverService } from '../types';
@@ -116,12 +116,12 @@ vi.mock('@/store/tool', () => ({
 
 vi.mock('@/store/tool/selectors', () => ({
   builtinToolSelectors: {
-    metaList: vi.fn(() => [{ identifier: 'lobe-web-browsing', meta: { title: 'Web Browsing' } }]),
+    metaList: vi.fn(() => [{ identifier: 'orvilo-web-browsing', meta: { title: 'Web Browsing' } }]),
   },
   composioStoreSelectors: {
     getServers: vi.fn(() => []),
   },
-  lobehubSkillStoreSelectors: {
+  orviloSkillStoreSelectors: {
     getServers: vi.fn(() => []),
   },
   pluginSelectors: {
@@ -146,7 +146,7 @@ describe('AgentManagerRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(composioStoreSelectors.getServers).mockReturnValue([]);
-    vi.mocked(lobehubSkillStoreSelectors.getServers).mockReturnValue([]);
+    vi.mocked(orviloSkillStoreSelectors.getServers).mockReturnValue([]);
     Reflect.deleteProperty(window, 'global_serverConfigStore');
     runtime = new AgentManagerRuntime({
       agentService: mockAgentService,
@@ -786,19 +786,19 @@ describe('AgentManagerRuntime', () => {
   });
 
   describe('installPlugin', () => {
-    /** @example An unqualified GitHub install selects the canonical LobeHub owner. */
-    it('routes colliding official connector identifiers to LobeHub', async () => {
+    /** @example An unqualified GitHub install selects the canonical Orvilo owner. */
+    it('routes colliding official connector identifiers to Orvilo', async () => {
       // ROOT CAUSE:
       //
       // Official connector installation used to check the Composio catalog first.
       // Because GitHub existed in both catalogs, the agent builder opened Composio
-      // even though the generic connector catalog assigns GitHub to LobeHub.
+      // even though the generic connector catalog assigns GitHub to Orvilo.
       //
       // We fixed this by resolving the shared catalog owner before dispatching
       // to either authorization runtime.
       window.global_serverConfigStore = {
         getState: () => ({
-          serverConfig: { enableComposio: true, enableLobehubSkill: true },
+          serverConfig: { enableComposio: true, enableOrviloSkill: true },
         }),
       } as unknown as NonNullable<typeof window.global_serverConfigStore>;
       vi.mocked(composioStoreSelectors.getServers).mockReturnValue([
@@ -812,12 +812,12 @@ describe('AgentManagerRuntime', () => {
           status: ComposioServerStatus.ACTIVE,
         },
       ]);
-      vi.mocked(lobehubSkillStoreSelectors.getServers).mockReturnValue([
+      vi.mocked(orviloSkillStoreSelectors.getServers).mockReturnValue([
         {
           identifier: 'github',
           isConnected: true,
           name: 'GitHub',
-          status: LobehubSkillStatus.CONNECTED,
+          status: OrviloSkillStatus.CONNECTED,
         },
       ]);
 
@@ -827,13 +827,13 @@ describe('AgentManagerRuntime', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.content).toContain('Successfully enabled LobehubSkill provider');
-      expect(result.state).toMatchObject({ isLobehubSkill: true, pluginId: 'github' });
+      expect(result.content).toContain('Successfully enabled OrviloSkill provider');
+      expect(result.state).toMatchObject({ isOrviloSkill: true, pluginId: 'github' });
     });
 
     it('should install builtin tool', async () => {
       const result = await runtime.installPlugin('agent-id', {
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         source: 'official',
       });
 
@@ -841,7 +841,7 @@ describe('AgentManagerRuntime', () => {
       expect(result.content).toContain('Successfully enabled builtin tool');
       expect(result.state).toMatchObject({
         installed: true,
-        pluginId: 'lobe-web-browsing',
+        pluginId: 'orvilo-web-browsing',
         success: true,
       });
     });
@@ -859,19 +859,19 @@ describe('AgentManagerRuntime', () => {
     it('flips an existing disabled object entry back to pinned, without duplicating it', async () => {
       const originalPlugins = mockAgentConfig.plugins;
       mockAgentConfig.plugins = [
-        { identifier: 'lobe-web-browsing', mode: 'disabled' } as any,
+        { identifier: 'orvilo-web-browsing', mode: 'disabled' } as any,
       ] as any;
 
       try {
         const result = await runtime.installPlugin('agent-id', {
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           source: 'official',
         });
 
         expect(result.success).toBe(true);
         expect(getLastOptimisticConfigUpdateCall()).toEqual([
           'agent-id',
-          { plugins: [{ identifier: 'lobe-web-browsing', mode: 'pinned' }] },
+          { plugins: [{ identifier: 'orvilo-web-browsing', mode: 'pinned' }] },
         ]);
       } finally {
         mockAgentConfig.plugins = originalPlugins;

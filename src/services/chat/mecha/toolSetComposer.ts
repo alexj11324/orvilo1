@@ -1,12 +1,12 @@
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
-import type { LobeToolManifest, ToolsGenerationResult } from '@orvilo/context-engine';
+import type { OrviloToolManifest, ToolsGenerationResult } from '@orvilo/context-engine';
 import { generateToolsFromManifest } from '@orvilo/context-engine';
 import debug from 'debug';
 
 type UniformToolArray = NonNullable<ToolsGenerationResult['tools']>;
 type UniformTool = UniformToolArray[number];
 
-const log = debug('lobe-mecha:tool-set-composer');
+const log = debug('orvilo-mecha:tool-set-composer');
 
 export interface ToolSetComposerContext {
   isPageEditorReady?: boolean;
@@ -15,19 +15,19 @@ export interface ToolSetComposerContext {
 
 export interface ToolSetComposerInput {
   context: ToolSetComposerContext;
-  injectedManifests?: LobeToolManifest[];
+  injectedManifests?: OrviloToolManifest[];
   toolsDetailed: ToolsGenerationResult;
 }
 
 export interface ComposedToolSet {
-  enabledManifests: LobeToolManifest[];
+  enabledManifests: OrviloToolManifest[];
   enabledToolIds: string[];
   tools?: UniformTool[];
 }
 
 const mergeInjectedManifests = (
   base: ComposedToolSet,
-  injectedManifests: LobeToolManifest[] | undefined,
+  injectedManifests: OrviloToolManifest[] | undefined,
 ): ComposedToolSet => {
   if (!injectedManifests?.length) return base;
 

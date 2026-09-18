@@ -18,7 +18,7 @@ import {
   parseTelegramThreadId,
 } from './threadId';
 
-const log = debug('lobe-server:bot:telegram-guest-adapter');
+const log = debug('orvilo-server:bot:telegram-guest-adapter');
 
 interface TelegramGuestUser {
   first_name?: string;
@@ -78,10 +78,10 @@ interface TelegramGuestUpdate {
  *   bridges `guest_query_id` to `inline_message_id`.
  *
  * Isolating those protocol exceptions here avoids forking or teaching the
- * upstream adapter about LobeHub session state, while preserving one adapter
+ * upstream adapter about Orvilo session state, while preserving one adapter
  * instance and one Chat SDK dispatch pipeline for both Telegram transports.
  */
-export class LobeTelegramAdapter extends TelegramAdapter {
+export class OrviloTelegramAdapter extends TelegramAdapter {
   private readonly sessionScope: string;
 
   constructor(config: ConstructorParameters<typeof TelegramAdapter>[0], sessionScope: string) {
@@ -259,7 +259,7 @@ const forceGuestMention = (parsed: Message, sessionScope: string): Message => {
   }
 };
 
-export const createLobeTelegramAdapter = (
+export const createOrviloTelegramAdapter = (
   config: ConstructorParameters<typeof TelegramAdapter>[0],
   sessionScope: string,
-): LobeTelegramAdapter => new LobeTelegramAdapter(config, sessionScope);
+): OrviloTelegramAdapter => new OrviloTelegramAdapter(config, sessionScope);

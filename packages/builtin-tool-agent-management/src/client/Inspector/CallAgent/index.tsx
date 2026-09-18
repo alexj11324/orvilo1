@@ -45,15 +45,15 @@ export const CallAgentInspector = memo<BuiltinInspectorProps<CallAgentParams>>(
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-agent-management.apiName.callAgent')}
+            {t('builtins.orvilo-agent-management.apiName.callAgent')}
           </span>
         </div>
       );
     }
 
     const titleKey = runAsTask
-      ? 'builtins.lobe-agent-management.inspector.callAgent.task'
-      : 'builtins.lobe-agent-management.inspector.callAgent.sync';
+      ? 'builtins.orvilo-agent-management.inspector.callAgent.task'
+      : 'builtins.orvilo-agent-management.inspector.callAgent.sync';
 
     const agentName = agentMeta?.title || agentId;
 

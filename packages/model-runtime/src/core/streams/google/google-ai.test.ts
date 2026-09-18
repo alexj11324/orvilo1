@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { serializeScopedSignature, type SignatureScope } from '../../../utils/signatureScope';
 import * as uuidModule from '../../../utils/uuid';
-import { GoogleGenerativeAIStream, LOBE_ERROR_KEY } from './index';
+import { GoogleGenerativeAIStream, ORVILO_ERROR_KEY } from './index';
 
 const thoughtSignatureScope: SignatureScope = { fingerprint: 'a'.repeat(32) };
 const scopedThoughtSignature = (signature: string) =>
@@ -1182,7 +1182,7 @@ describe('GoogleGenerativeAIStream', () => {
                       name: 'grep____searchGitHub____mcp',
                       args: {
                         query: '"version":',
-                        repo: 'lobehub/lobe-chat',
+                        repo: 'aspectlylabs/orvilo',
                         path: 'package.json',
                       },
                     },
@@ -1243,7 +1243,7 @@ describe('GoogleGenerativeAIStream', () => {
         [
           'id: chat_1',
           'event: tool_calls',
-          `data: [{"function":{"arguments":"{\\"query\\":\\"\\\\\\"version\\\\\\":\\",\\"repo\\":\\"lobehub/lobe-chat\\",\\"path\\":\\"package.json\\"}","name":"grep____searchGitHub____mcp"},"id":"call_search_1","index":0,"thoughtSignature":"${scopedThoughtSignature('123')}","type":"function"}]\n`,
+          `data: [{"function":{"arguments":"{\\"query\\":\\"\\\\\\"version\\\\\\":\\",\\"repo\\":\\"aspectlylabs/orvilo\\",\\"path\\":\\"package.json\\"}","name":"grep____searchGitHub____mcp"},"id":"call_search_1","index":0,"thoughtSignature":"${scopedThoughtSignature('123')}","type":"function"}]\n`,
 
           'id: chat_1',
           'event: stop',
@@ -1445,7 +1445,7 @@ describe('GoogleGenerativeAIStream', () => {
                 parts: [
                   {
                     functionCall: {
-                      name: 'lobe-agent____createPlan',
+                      name: 'orvilo-agent____createPlan',
                       args: {
                         goal: 'Fix Linear API Argument Validation Error',
                         description: 'Investigate the Linear API error.',
@@ -1478,7 +1478,7 @@ describe('GoogleGenerativeAIStream', () => {
                 parts: [
                   {
                     functionCall: {
-                      name: 'lobe-agent____createTodos',
+                      name: 'orvilo-agent____createTodos',
                       args: {
                         adds: [
                           'Verify Linear GraphQL API requirements',
@@ -1554,12 +1554,12 @@ describe('GoogleGenerativeAIStream', () => {
           // First tool call (createPlan)
           'id: chat_test',
           'event: tool_calls',
-          `data: [{"function":{"arguments":"{\\"goal\\":\\"Fix Linear API Argument Validation Error\\",\\"description\\":\\"Investigate the Linear API error.\\",\\"context\\":\\"The user is encountering a validation error.\\"}","name":"lobe-agent____createPlan"},"id":"lobe-agent____createPlan_0_tool_id_1","index":0,"thoughtSignature":"${scopedThoughtSignature('EoIYCv8XAXLI2nx+C18votz5l0A...')}","type":"function"}]\n`,
+          `data: [{"function":{"arguments":"{\\"goal\\":\\"Fix Linear API Argument Validation Error\\",\\"description\\":\\"Investigate the Linear API error.\\",\\"context\\":\\"The user is encountering a validation error.\\"}","name":"orvilo-agent____createPlan"},"id":"orvilo-agent____createPlan_0_tool_id_1","index":0,"thoughtSignature":"${scopedThoughtSignature('EoIYCv8XAXLI2nx+C18votz5l0A...')}","type":"function"}]\n`,
 
           // Second tool call (createTodos) - should be a SEPARATE event with index:0
           'id: chat_test',
           'event: tool_calls',
-          'data: [{"function":{"arguments":"{\\"adds\\":[\\"Verify Linear GraphQL API requirements\\",\\"Determine if code needs to look up Team UUID\\",\\"Provide corrected code\\"]}","name":"lobe-agent____createTodos"},"id":"lobe-agent____createTodos_0_tool_id_2","index":0,"type":"function"}]\n',
+          'data: [{"function":{"arguments":"{\\"adds\\":[\\"Verify Linear GraphQL API requirements\\",\\"Determine if code needs to look up Team UUID\\",\\"Provide corrected code\\"]}","name":"orvilo-agent____createTodos"},"id":"orvilo-agent____createTodos_0_tool_id_2","index":0,"type":"function"}]\n',
 
           // Stop and usage
           'id: chat_test',
@@ -1784,14 +1784,14 @@ describe('GoogleGenerativeAIStream', () => {
       ]);
     });
 
-    it('should pass through injected lobe error marker', async () => {
+    it('should pass through injected orvilo error marker', async () => {
       vi.spyOn(uuidModule, 'nanoid').mockReturnValueOnce('1');
 
       const errorPayload = { message: 'internal error', code: 123 };
 
       const mockGoogleStream = new ReadableStream({
         start(controller) {
-          controller.enqueue({ [LOBE_ERROR_KEY]: errorPayload });
+          controller.enqueue({ [ORVILO_ERROR_KEY]: errorPayload });
           controller.close();
         },
       });

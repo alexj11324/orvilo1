@@ -27,7 +27,7 @@ import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selec
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useUserStore } from '@/store/user';
 import { systemAgentSelectors } from '@/store/user/selectors';
-import type { LobeAgentChatConfig, LobeAgentConfig } from '@/types/agent';
+import type { OrviloAgentChatConfig, OrviloAgentConfig } from '@/types/agent';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
@@ -420,8 +420,8 @@ const PARAM_ORDER: ParamKey[] = ['temperature', 'top_p', 'frequency_penalty', 'p
 
 const REASONING_PARAMS_SET = new Set<string>(MODEL_REASONING_EXTEND_PARAMS);
 
-const ADVANCED_OPEN_STORAGE_KEY = 'lobehub-chat-input-params-advanced-open';
-const MODEL_CONFIG_OPEN_STORAGE_KEY = 'lobehub-chat-input-params-model-config-open';
+const ADVANCED_OPEN_STORAGE_KEY = 'orvilo-input-params-advanced-open';
+const MODEL_CONFIG_OPEN_STORAGE_KEY = 'orvilo-input-params-model-config-open';
 
 const getStoredOpen = (storageKey: string) => {
   if (typeof window === 'undefined') return false;
@@ -721,7 +721,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
 
       // Save changes immediately - manually construct config object to ensure latest values are used
       setUpdating(true);
-      const currentValues = form.getFieldsValue(true) as PartialDeep<LobeAgentConfig>;
+      const currentValues = form.getFieldsValue(true) as PartialDeep<OrviloAgentConfig>;
       const prevParams = (currentValues.params ?? {}) as Partial<
         Record<ParamKey, null | number | undefined>
       >;
@@ -741,8 +741,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
 
       const updatedConfig = {
         ...currentValues,
-        params: currentParams as LobeAgentConfig['params'],
-      } satisfies PartialDeep<LobeAgentConfig>;
+        params: currentParams as OrviloAgentConfig['params'],
+      } satisfies PartialDeep<OrviloAgentConfig>;
 
       try {
         await updateAgentConfig(updatedConfig);
@@ -755,7 +755,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
 
   const handleValuesChange = useMemo(
     () =>
-      debounce(async (values: PartialDeep<LobeAgentConfig>) => {
+      debounce(async (values: PartialDeep<OrviloAgentConfig>) => {
         if (!canCreate) return;
         setUpdating(true);
         try {
@@ -780,7 +780,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
         lastValuesRef.current[namePath[1] as ParamKey] = value;
       }
       refreshFormValues((current) => current + 1);
-      handleValuesChange(form.getFieldsValue(true) as PartialDeep<LobeAgentConfig>);
+      handleValuesChange(form.getFieldsValue(true) as PartialDeep<OrviloAgentConfig>);
     },
     [canCreate, form, handleValuesChange, refreshFormValues],
   );
@@ -814,7 +814,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
   }, [canCreate, setUpdating, updateAgentConfig]);
 
   const handleSubAgentChatConfigChange = useCallback(
-    async (patch: Partial<LobeAgentChatConfig>) => {
+    async (patch: Partial<OrviloAgentChatConfig>) => {
       if (!canCreate) return;
       await updateAgentConfig({ agencyConfig: { subagent: { chatConfig: patch } } });
     },

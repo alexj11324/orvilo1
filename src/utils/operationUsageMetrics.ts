@@ -42,7 +42,7 @@ interface SubAgentSpend {
  * — which DOES sit in the parent's list — is where the child's spend enters the
  * parent's ledger.
  */
-const SUB_AGENT_TOOL_IDENTIFIER = 'lobe-agent';
+const SUB_AGENT_TOOL_IDENTIFIER = 'orvilo-agent';
 
 const subAgentSpendToMetrics = (state?: SubAgentSpend | null): OperationUsageMetrics => {
   // The flat fields are the authoritative totals the bridge backfills when the

@@ -25,7 +25,6 @@ export interface GithubModelCard {
   version: string;
 }
 
-
 export const params = {
   baseURL: 'https://models.github.ai/inference',
   chatCompletion: {
@@ -75,4 +74,4 @@ export const params = {
   provider: ModelProvider.Github,
 } satisfies OpenAICompatibleFactoryOptions;
 
-export const LobeGithubAI = createOpenAICompatibleRuntime(params);
+export const OrviloGithubAI = createOpenAICompatibleRuntime(params);

@@ -5,7 +5,7 @@ import {
   selectAssignableMembers,
   TaskIdentifier,
 } from '@orvilo/builtin-tool-task';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { TaskAssignableMember, TaskCreatedItem } from '@orvilo/prompts';
 import {
   formatDependencyAdded,
@@ -43,7 +43,7 @@ import { type ServerRuntimeRegistration } from './types';
 // task we derive the workspace from that task row; otherwise we fall back to
 // personal mode.
 const resolveWorkspaceId = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   taskId: string | undefined,
 ): Promise<string | undefined> => {
   if (!taskId) return undefined;
@@ -61,7 +61,7 @@ export interface TaskRuntimeDeps {
   // Assistant message that carried the createTask tool call — the tool-call
   // anchor, NOT the source user message. Recorded as `context.origin.messageId`.
   assistantMessageId?: string;
-  db?: LobeChatDatabase;
+  db?: OrviloDatabase;
   // Pointers to the conversation that invoked the createTask tool. Recorded into
   // `tasks.context.origin` so the task's handoff result can later be delivered
   // back to this session. All optional — a task can be created
@@ -176,13 +176,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
     instruction: string;
     assigneeAgentId?: string;
     assigneeUserId?: string;
-    // Bind a goal entity to the created task (see TaskService.createTask).
-    goal?: {
-      maxRounds?: number | null;
-      maxTotalCost?: number | null;
-      requirement?: string | null;
-      title?: string;
-    };
     name: string;
     parentIdentifier?: string;
     priority?: number;

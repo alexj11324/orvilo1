@@ -1,7 +1,7 @@
 import type { ModelProviderCard } from '../types';
 
 const AiHubMix: ModelProviderCard = {
-  apiKeyUrl: 'https://lobe.li/9mZhb4T',
+  apiKeyUrl: 'https://aihubmix.com',
   chatModels: [],
   checkModel: 'gpt-4.1-nano',
   description: 'AIHubMix provides access to multiple AI models through a unified API.',
@@ -16,7 +16,7 @@ const AiHubMix: ModelProviderCard = {
     showModelFetcher: true,
     supportResponsesApi: true,
   },
-  url: 'https://aihubmix.com?utm_source=lobehub',
+  url: 'https://aihubmix.com?utm_source=orvilo',
 };
 
 export default AiHubMix;

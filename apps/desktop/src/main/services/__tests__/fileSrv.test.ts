@@ -15,7 +15,7 @@ vi.mock('electron', () => ({
 // Mock constants that depend on electron
 vi.mock('@/const/dir', () => ({
   FILE_STORAGE_DIR: 'file-storage',
-  LOCAL_STORAGE_URL_PREFIX: '/lobe-desktop-file',
+  LOCAL_STORAGE_URL_PREFIX: '/orvilo-desktop-file',
 }));
 
 // Mock file-system utilities
@@ -524,13 +524,13 @@ describe('FileService', () => {
     it('should generate correct HTTP URL for new format', async () => {
       const result = await fileService.getFileHTTPURL('desktop://documents/photo.jpg');
 
-      expect(result).toBe('http://localhost:3000/lobe-desktop-file/documents/photo.jpg');
+      expect(result).toBe('http://localhost:3000/orvilo-desktop-file/documents/photo.jpg');
     });
 
     it('should generate correct HTTP URL for legacy format', async () => {
       const result = await fileService.getFileHTTPURL('desktop://1234567890/image.png');
 
-      expect(result).toBe('http://localhost:3000/lobe-desktop-file/1234567890/image.png');
+      expect(result).toBe('http://localhost:3000/orvilo-desktop-file/1234567890/image.png');
     });
 
     it('should throw error for invalid path', async () => {
@@ -542,7 +542,7 @@ describe('FileService', () => {
     it('should handle paths with special characters', async () => {
       const result = await fileService.getFileHTTPURL('desktop://user/my%20file.txt');
 
-      expect(result).toBe('http://localhost:3000/lobe-desktop-file/user/my%20file.txt');
+      expect(result).toBe('http://localhost:3000/orvilo-desktop-file/user/my%20file.txt');
     });
   });
 

@@ -1,6 +1,6 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -10,7 +10,6 @@ import type {
   ExecVirtualSubAgentParams,
   ScheduleAgentRunParams,
   ScheduleAgentRunResult,
-  UserInterventionConfig,
   WorkingDirConfig,
 } from '@orvilo/types';
 import { getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
@@ -69,13 +68,12 @@ import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
 import { startOperation } from './pipeline/startOperation';
 import { discoverTools } from './pipeline/toolDiscovery';
 import { resolveNewTopicSnapshot, setupTurn } from './pipeline/turnSetup';
-import { applyShareGateToAgentConfig } from './shareGate';
 import type { SubAgentRunDeps } from './subAgentRuns';
 import { execAgentMember, execAgentThreadRun } from './subAgentRuns';
 import { acquireTopicStartReservation } from './topicStartReservation';
 import type { ExecRunContext, InternalExecAgentParams } from './types';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 /**
  * AI Agent Service
@@ -87,7 +85,7 @@ const log = debug('lobe-server:ai-agent-service');
  */
 export class AiAgentService {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly agentDocumentsService: AgentDocumentsService;
   private readonly agentModel: AgentModel;
   private readonly agentOperationModel: AgentOperationModel;
@@ -114,7 +112,7 @@ export class AiAgentService {
   private readonly withholdGatewayToken: boolean;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userId: string,
     options?: {
       /**
@@ -296,7 +294,7 @@ export class AiAgentService {
    *
    * Delegates to the internal AgentRuntimeService, which is already wired with
    * the agent-invocation fork callbacks. The QStash step worker drives stepping
-   * through here so `lobe-agent.callSubAgent` can fork virtual sub-agents —
+   * through here so `orvilo-agent.callSubAgent` can fork virtual sub-agents —
    * building a bare runtime there would lose the callback and fail with
    * SUB_AGENT_UNAVAILABLE.
    */
@@ -702,7 +700,7 @@ export class AiAgentService {
       initialStepCount,
       signal,
       skipTaskVerification,
-      userInterventionConfig: requestedUserInterventionConfig = { approvalMode: 'headless' },
+      userInterventionConfig = { approvalMode: 'headless' },
       queueRetries,
       queueRetryDelay,
       parentMessageId,
@@ -714,34 +712,10 @@ export class AiAgentService {
       approvalResolutionRequestId: providedApprovalResolutionRequestId,
       approvalSourceOperationId: providedApprovalSourceOperationId,
       selectedToolIds,
-      shareGate,
       mentionedAgents,
       suppressUserMessage,
       ephemeralUserMessage,
     } = params;
-
-    // Agent Share visitor runs execute under the CREATOR's credentials (see
-    // `shareChat.ts` `execAgent` → `AiAgentService.execAgent({ shareGate })`)
-    // with no visitor-facing approval UI at all, so no approval can ever be
-    // WAITED for: `headless` is the only mode that converts an intervention
-    // into an immediate blocked tool result ('always'-policy calls become
-    // `resolve_blocked_tools`) instead of parking the run on
-    // `request_human_approve` forever. Forced unconditionally — overriding
-    // whatever the caller passed — so a future execAgent call site cannot
-    // reintroduce a waiting mode by omission.
-    //
-    // `headless` DOES auto-run overridable ('required') interventions. That is
-    // acceptable here only because of the two share-specific layers on top:
-    // `applyShareGateToInterventionRequiredApis` strips every
-    // intervention-gated API from what the model is offered, and
-    // `isShareBlockedBuiltinDispatch` re-blocks intervention-gated (and
-    // non-enabled, and data-rule-violating) builtin calls at the executor
-    // dispatch site — re-reading the UNSTRIPPED manifest, since the assembly
-    // strip removes the very intervention config the runtime would otherwise
-    // consult. No 'required' builtin API can execute through either layer.
-    const userInterventionConfig: UserInterventionConfig = shareGate
-      ? { approvalMode: 'headless' }
-      : requestedUserInterventionConfig;
 
     // Honour client-minted row ids on a FRESH send only. Resume / regeneration
     // replays reach this method too (resumeApproval, resumeToolResult,
@@ -837,16 +811,10 @@ export class AiAgentService {
         instructions,
         modelOverride,
         providerOverride,
-        shareVisitorUserId: shareGate?.visitorUserId,
         throwIfExecutionAborted,
         toolModeOverride,
       },
     );
-
-    // Share-visitor runs must never see the creator's files/knowledge bases.
-    // Applied to the resolved config before anything downstream (knowledge
-    // flags, tools engine, context snapshot) reads it.
-    if (shareGate) applyShareGateToAgentConfig(agentConfig);
 
     let resumeParentMessage: Awaited<ReturnType<MessageModel['findById']>>;
 
@@ -1006,7 +974,6 @@ export class AiAgentService {
         resolvedAgentId,
         resume,
         runFromHistory,
-        shareGate,
         throwIfExecutionAborted,
         title,
         trigger,
@@ -1041,7 +1008,6 @@ export class AiAgentService {
       prompt,
       provider,
       resolvedAgentId,
-      shareGate,
       topicId,
       trigger,
       userMessageId: turn.userMessageId,
@@ -1097,24 +1063,8 @@ export class AiAgentService {
 
       globalMemoryEnabled = agentMemoryEnabled ?? memorySettings?.enabled !== false;
 
-      // Timezone drives the session-date placeholder rendered back to whoever
-      // is actually conversing. In a share-visitor run that is the VISITOR,
-      // not the creator whose settings this block otherwise reads — memory /
-      // expertise intentionally stay creator-scoped below (gated by
-      // `allowReadMemory`), but the timezone has no such gate and must not
-      // leak the creator's own setting into a visitor's turn.
-      if (shareGate) {
-        const visitorSettings = await new UserModel(
-          this.db,
-          shareGate.visitorUserId,
-        ).getUserSettings();
-        const visitorGeneralSettings = visitorSettings?.general as
-          { timezone?: string } | undefined;
-        userTimezone = visitorGeneralSettings?.timezone;
-      } else {
-        const generalSettings = settings?.general as { timezone?: string } | undefined;
-        userTimezone = generalSettings?.timezone;
-      }
+      const generalSettings = settings?.general as { timezone?: string } | undefined;
+      userTimezone = generalSettings?.timezone;
     } catch (error) {
       log('execAgent: failed to fetch user settings: %O', error);
     }
@@ -1123,13 +1073,6 @@ export class AiAgentService {
       enableExpertise = preference?.lab?.enableSelfLearning === true;
     } catch (error) {
       console.error('Failed to resolve expertise injection Lab preference:', error);
-    }
-    // Share visitors only get the creator's memory (persona + learned
-    // expertise) when the share explicitly allows it — both surfaces would
-    // otherwise leak the creator's personal context into visitor turns.
-    if (shareGate && !shareGate.shareConfig.allowReadMemory) {
-      globalMemoryEnabled = false;
-      enableExpertise = false;
     }
     log(
       'execAgent: globalMemoryEnabled=%s, timezone=%s',
@@ -1142,7 +1085,6 @@ export class AiAgentService {
     const loadHistoryMessages = createHistoryMessagesLoader(
       {
         db: this.db,
-        isShareVisitorRun: !!shareGate,
         messageModel: this.messageModel,
         userId: this.userId,
         workspaceId: this.workspaceId,
@@ -1472,7 +1414,7 @@ export class AiAgentService {
     });
 
   /**
-   * Execute a virtual sub-agent created by `lobe-agent.callSubAgent`.
+   * Execute a virtual sub-agent created by `orvilo-agent.callSubAgent`.
    *
    * This path is a child operation of the current agent run. It is marked as a
    * sub-agent so it cannot recursively spawn more sub-agents, and it registers
@@ -1492,7 +1434,7 @@ export class AiAgentService {
     });
 
   /**
-   * Fork a single group member ("call agent member") under a `lobe-group-management`
+   * Fork a single group member ("call agent member") under a `orvilo-group-management`
    * tool call. Dispatches to the in-group (non-isolated, shared group session)
    * or isolated (own thread) path, installing the group-action member completion
    * bridge. Invoked once per member by the runtime's `agentMember` runner.

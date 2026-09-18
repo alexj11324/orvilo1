@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { documents, sessions, topicDocuments, topics, users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { DocumentModel } from '../document';
 import { TopicDocumentModel } from '../topicDocument';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'topic-document-model-test-user-id';
 const userId2 = 'topic-document-model-test-user-id-2';

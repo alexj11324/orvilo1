@@ -4,10 +4,10 @@ import type { ModulePreloadOptions, Plugin } from 'vite';
 
 import { viteCompletionSounds } from './completionSounds';
 import { viteEmotionSpeedy } from './emotionSpeedy';
-import { lobeIconImports } from './lobeIconImports';
-import { lobeUiImports } from './lobeUiImports';
 import { viteMarkdownImport } from './markdownImport';
 import { viteNodeModuleStub } from './nodeModuleStub';
+import { orviloIconImports } from './orviloIconImports';
+import { orviloUiImports } from './orviloUiImports';
 import { vitePlatformResolve } from './platformResolve';
 import { viteStaticStylesPrecompile } from './staticStylesPrecompile';
 
@@ -326,7 +326,7 @@ interface SharedRolldownOutputOptions {
 }
 
 // @lobehub/ui members on the first-screen path of dist/desktop, measured with
-// bundle-size-gate --type entry-graph. lobeUiImports splits the barrel into one
+// bundle-size-gate --type entry-graph. orviloUiImports splits the barrel into one
 // module per member; folding the eager ones back into one chunk keeps the heavy
 // members (Markdown, Mermaid, EmojiPicker, Highlighter, Image) on lazy routes.
 const UI_CORE_MEMBER_RE =
@@ -417,7 +417,7 @@ export function sharedRendererPlugins(options: SharedRendererOptions) {
     isDev &&
       ({
         enforce: 'pre',
-        name: 'lobe-dev-editor-provider',
+        name: 'orvilo-dev-editor-provider',
         resolveId(source, importer) {
           if (source !== '@lobehub/editor/react/EditorProvider') return null;
           return this.resolve('@lobehub/editor/react', importer, { skipSelf: true });
@@ -425,7 +425,7 @@ export function sharedRendererPlugins(options: SharedRendererOptions) {
       } satisfies Plugin),
 
     isDev && {
-      name: 'lobe-dev-strip-manifest',
+      name: 'orvilo-dev-strip-manifest',
       transformIndexHtml: {
         order: 'pre' as const,
         handler: (html: string) => html.replace(/\s*<link\s+rel="manifest"[^>]*>\s*/i, '\n    '),
@@ -440,7 +440,7 @@ export function sharedRendererPlugins(options: SharedRendererOptions) {
       }),
     react(),
     viteStaticStylesPrecompile(),
-    ...(options.platform === 'desktop' ? [] : [...lobeIconImports(), ...lobeUiImports()]),
+    ...(options.platform === 'desktop' ? [] : [...orviloIconImports(), ...orviloUiImports()]),
   ];
 }
 

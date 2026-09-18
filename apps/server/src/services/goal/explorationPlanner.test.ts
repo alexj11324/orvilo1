@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { GoalExplorationPlanner } from './explorationPlanner';
 
@@ -25,7 +25,7 @@ const input = {
   instruction: 'Compare alternatives',
   maxExperiments: 3,
 };
-const planner = new GoalExplorationPlanner({} as LobeChatDatabase, 'user');
+const planner = new GoalExplorationPlanner({} as OrviloDatabase, 'user');
 
 describe('GoalExplorationPlanner', () => {
   it('uses the configured Goal model and records a separate prompt cohort', async () => {

@@ -6,8 +6,8 @@ import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentDriver } from '../types';
 
-const HOST_API_KEY_ENV = 'LOBEHUB_GROK_API_KEY';
-const HOST_MODEL_ALIAS_PREFIX = 'lobehub-provider';
+const HOST_API_KEY_ENV = 'ORVILO_GROK_API_KEY';
+const HOST_MODEL_ALIAS_PREFIX = 'orvilo-provider';
 
 const GROK_PROVIDER_BINDING_VALUE_FLAGS = [
   '-m',
@@ -151,7 +151,7 @@ export const grokBuildDriver: HeterogeneousAgentDriver = {
     const isMessages = resolution.protocol === 'anthropic-messages';
     const config = [
       `[model.${alias}]`,
-      `name = ${tomlString('LobeHub Provider')}`,
+      `name = ${tomlString('Orvilo Provider')}`,
       `model = ${tomlString(resolution.apiConfig.model)}`,
       `base_url = ${tomlString(baseURL)}`,
       `env_key = ${tomlString(HOST_API_KEY_ENV)}`,
@@ -179,7 +179,7 @@ export const grokBuildDriver: HeterogeneousAgentDriver = {
     const alias = buildModelAlias(['server-default', endpoint, model].join('\0'));
     const config = [
       `[model.${alias}]`,
-      `name = ${tomlString('LobeHub Server Default')}`,
+      `name = ${tomlString('Orvilo Server Default')}`,
       `model = ${tomlString(requestModel)}`,
       `base_url = ${tomlString(`${stripTrailingSlashes(endpoint)}/api/v1/openai/v1`)}`,
       `env_key = ${tomlString(HOST_API_KEY_ENV)}`,

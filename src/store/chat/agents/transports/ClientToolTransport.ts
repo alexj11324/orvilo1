@@ -15,8 +15,8 @@ import { registerClientWorkFromIntent } from '../registerClientWorkFromIntent';
 import type { ClientMessageTransport } from './ClientMessageTransport';
 
 const TOOL_PRICING: Record<string, number> = {
-  'lobe-web-browsing/craw': 0.002,
-  'lobe-web-browsing/search': 0.001,
+  'orvilo-web-browsing/craw': 0.002,
+  'orvilo-web-browsing/search': 0.001,
 };
 
 const CANCELLED_CONTENT = 'Tool execution was cancelled by user.';

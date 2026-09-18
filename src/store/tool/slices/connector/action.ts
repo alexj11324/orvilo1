@@ -298,7 +298,7 @@ export class ConnectorActionImpl {
   };
 
   /**
-   * Sync tools from a client-provided list (for Lobehub OAuth skills / Composio
+   * Sync tools from a client-provided list (for Orvilo OAuth skills / Composio
    * that already have their tool list available on the client side).
    * Idempotent — safe to call whenever the detail panel opens.
    */

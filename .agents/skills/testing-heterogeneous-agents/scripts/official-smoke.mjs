@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Exercise every server-advertised LobeHub official-provider model through the
+ * Exercise every server-advertised Orvilo official-provider model through the
  * real Desktop heterogeneous-agent IPC path.
  *
  * This harness never invokes an installer, updater command, or sign-in flow.
@@ -32,7 +32,7 @@ const AGENTS = {
 };
 
 const AGENT_TYPES = Object.keys(AGENTS);
-const CASE_RUNS_KEY = '__LOBE_HETERO_OFFICIAL_SMOKE_RUNS';
+const CASE_RUNS_KEY = '__ORVILO_HETERO_OFFICIAL_SMOKE_RUNS';
 const DEFAULT_TIMEOUT_SECONDS = 180;
 const DEFAULT_CDP_PORT = 9222;
 const POLL_INTERVAL_MS = 500;
@@ -241,9 +241,9 @@ const buildPreflightScript = (topicId) => {
 (async function () {
   const invoke = window.electronAPI && window.electronAPI.invoke;
   const ipc = window.electron && window.electron.ipcRenderer;
-  const stores = window.__LOBE_STORES;
+  const stores = window.__ORVILO_STORES;
   if (!invoke || !ipc) throw new Error('Electron preload IPC is unavailable; attach to the app renderer target.');
-  if (!stores || !stores.user || !stores.chat) throw new Error('LobeHub stores are unavailable; wait for the app to finish loading.');
+  if (!stores || !stores.user || !stores.chat) throw new Error('Orvilo stores are unavailable; wait for the app to finish loading.');
 
   const user = stores.user();
   const chat = stores.chat();
@@ -276,9 +276,9 @@ const buildPreflightScript = (topicId) => {
     activeAgentId: chat.activeAgentId || null,
     capability,
     binaries,
-    electron: window.lobeEnv ? {
-      electronVersion: window.lobeEnv.electronVersion,
-      platform: window.lobeEnv.platform,
+    electron: window.orviloEnv ? {
+      electronVersion: window.orviloEnv.electronVersion,
+      platform: window.orviloEnv.platform,
     } : null,
     isSignedIn: Boolean(user.isSignedIn && user.user && user.user.id),
     remoteConfig: remoteConfig ? {
@@ -300,7 +300,7 @@ const readPreflight = async (options) => {
     fail('Electron is not signed in; restore its login state before retrying', 3);
   if (!preflight.capability?.enabled) {
     fail(
-      `the LobeHub official heterogeneous capability is unavailable (${preflight.capability?.reason ?? 'unknown'})`,
+      `the Orvilo official heterogeneous capability is unavailable (${preflight.capability?.reason ?? 'unknown'})`,
       3,
     );
   }
@@ -362,7 +362,7 @@ const printMatrix = (preflight, matrix, json) => {
     return;
   }
 
-  console.log('LobeHub official heterogeneous-provider matrix');
+  console.log('Orvilo official heterogeneous-provider matrix');
   console.log(`Server mode: ${preflight.remoteConfig?.storageMode ?? 'unknown'}`);
   console.log(`Topic: ${preflight.topicId ?? '(no active topic; run needs --topic-id)'}`);
   for (const { agentType, model } of matrix) {
@@ -491,7 +491,7 @@ const buildCaseStartScript = (input) => `
       relayInvocation.ingress === input.ingress &&
       relayInvocation.model === input.model &&
       relayInvocation.operationId === input.operationId &&
-      relayInvocation.provider === 'lobehub'
+      relayInvocation.provider === 'orvilo'
     );
     const ok = !caughtError && completed && markerObserved && relayVerified;
     const observedModels = [...new Set(events.map((event) => event.model).filter(Boolean))];
@@ -553,7 +553,7 @@ const buildCasePollScript = (operationId) => `
 
 const executeCell = async (options, preflight, cell) => {
   const operationId = randomUUID();
-  const marker = `LOBEHUB_HETERO_SMOKE_OK_${operationId.slice(0, 8).toUpperCase()}`;
+  const marker = `ORVILO_HETERO_SMOKE_OK_${operationId.slice(0, 8).toUpperCase()}`;
   const input = {
     agentType: cell.agentType,
     command: AGENTS[cell.agentType].command,
@@ -682,7 +682,7 @@ const gitValue = (args, fallback = 'unknown') => {
 const buildPlan = (matrix) =>
   matrix.map((cell) => ({
     category: 'Official heterogeneous provider compatibility',
-    expected: `The real ${AGENTS[cell.agentType].title} CLI completes against ${cell.model} and returns the per-run marker through LobeHub's official relay.`,
+    expected: `The real ${AGENTS[cell.agentType].title} CLI completes against ${cell.model} and returns the per-run marker through Orvilo's official relay.`,
     id: stableCaseId(cell),
     method: `Launch ${AGENTS[cell.agentType].title} through Desktop's server-default binding, select ${cell.model}, and issue one marker-only prompt.`,
     requiredEvidence: ['text'],
@@ -752,18 +752,18 @@ const writeReport = ({ cases, createdAt, dir, matrix, options, plan, preflight }
       verdict,
     },
     surfaces: ['desktop'],
-    title: 'LobeHub official heterogeneous provider compatibility matrix',
+    title: 'Orvilo official heterogeneous provider compatibility matrix',
   };
   writeFileSync(path.join(dir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
 
   const server =
     preflight.remoteConfig?.storageMode === 'selfHost'
       ? (preflight.remoteConfig.remoteServerUrl ?? 'self-hosted server')
-      : 'LobeHub Cloud';
+      : 'Orvilo Cloud';
   const report = `## 备注 / 说明
 
 - Matrix source: the live \`getServerDefaultHeterogeneousCapability\` response from ${server}.
-- Execution path: Electron renderer → Desktop IPC → server-default binding → real CLI → LobeHub official relay.
+- Execution path: Electron renderer → Desktop IPC → server-default binding → real CLI → Orvilo official relay.
 - The harness did not read custom provider credentials or invoke any installer/updater command.
 - Claude Code runs set \`DISABLE_AUTOUPDATER=1\` and \`DISABLE_UPDATES=1\`.
 - Server operation records and official-provider usage are expected side effects of live cells.

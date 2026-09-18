@@ -27,7 +27,7 @@ interface BackendProxyRemoteBaseOptions {
 
 /**
  * Holds per-session proxy context for routing renderer-originated backend
- * requests (`/trpc`, `/webapi`, `/api/auth`, `/market`) to the remote LobeHub
+ * requests (`/trpc`, `/webapi`, `/api/auth`, `/market`) to the remote Orvilo
  * server. The context is consumed by `createAppRequestInterceptor`, which the
  * `app://` protocol manager invokes before its static / Vite fallback.
  */
@@ -243,7 +243,7 @@ export class BackendProxyProtocolManager {
   }
 
   /**
-   * Proxy a renderer-originated request through the remote LobeHub backend.
+   * Proxy a renderer-originated request through the remote Orvilo backend.
    * Returns `null` if the session has no proxy context registered yet (caller
    * decides how to fall back). Upstream network failures become a controlled
    * 502 response so they do not escape Electron's `protocol.handle` callback.

@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   searchAgents,
   searchChatGroups,
@@ -24,7 +24,7 @@ export class PgSearchFtsSearchBackend implements FtsSearchBackend {
 
   private readonly context: PgSearchFtsSearchContext;
 
-  constructor(db: LobeChatDatabase, scope: FtsSearchBackendScope) {
+  constructor(db: OrviloDatabase, scope: FtsSearchBackendScope) {
     this.context = createPgSearchFtsSearchContext(db, scope);
   }
 

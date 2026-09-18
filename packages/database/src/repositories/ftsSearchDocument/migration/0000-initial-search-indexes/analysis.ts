@@ -1,6 +1,6 @@
 export const analysis = {
   analyzer: {
-    lobehub_cjk_bigram_english: {
+    orvilo_cjk_bigram_english: {
       /** Normalize width and case before generating CJK bigrams so decomposed characters stay intact. */
       filter: [
         'english_possessive_stemmer',
@@ -12,17 +12,17 @@ export const analysis = {
       tokenizer: 'standard',
       type: 'custom',
     },
-    lobehub_filename: {
+    orvilo_filename: {
       filter: ['icu_folding'],
-      tokenizer: 'lobehub_filename',
+      tokenizer: 'orvilo_filename',
       type: 'custom',
     },
-    lobehub_icu: {
+    orvilo_icu: {
       filter: ['icu_folding'],
       tokenizer: 'icu_tokenizer',
       type: 'custom',
     },
-    lobehub_icu_english: {
+    orvilo_icu_english: {
       filter: ['english_possessive_stemmer', 'icu_folding', 'english_stop', 'english_stemmer'],
       tokenizer: 'icu_tokenizer',
       type: 'custom',
@@ -43,7 +43,7 @@ export const analysis = {
     },
   },
   tokenizer: {
-    lobehub_filename: {
+    orvilo_filename: {
       tokenize_on_chars: ['whitespace', '-', '_', '/', '.'],
       type: 'char_group',
     },

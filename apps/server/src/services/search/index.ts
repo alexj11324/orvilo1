@@ -12,7 +12,7 @@ const DEFAULT_CRAWL_CONCURRENCY = 3;
 const DEFAULT_CRAWLER_RETRY = 1;
 const SEARCH_PROVIDERS_FAILED =
   'Web search failed because all configured providers returned errors';
-const log = debug('lobe-oom:web-browsing:search-service');
+const log = debug('orvilo-oom:web-browsing:search-service');
 
 const parseImplEnv = (envString: string = '') => {
   // Handle full-width commas and extra whitespace

@@ -2,7 +2,7 @@
 import type { OnboardingTaskRecommendationSession } from '@orvilo/types';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { TaskRecommendationMaterializer } from './materializer';
 
@@ -20,7 +20,7 @@ const recommendationSession = (): OnboardingTaskRecommendationSession => ({
       providerId: 'github',
       reason: 'A'.repeat(300),
       sources: [
-        { type: 'github', url: 'https://github.com/lobehub/lobehub/pull/1' },
+        { type: 'github', url: 'https://github.com/alexj11324/orvilo1/pull/1' },
         { subject: 'CI result', type: 'gmail', url: 'gmail:thread:1' },
         {
           title: 'Launch plan',
@@ -59,7 +59,7 @@ describe('TaskRecommendationMaterializer', () => {
     };
     const database = {
       transaction: vi.fn(async (callback) => callback(transaction)),
-    } as unknown as LobeChatDatabase;
+    } as unknown as OrviloDatabase;
     const createTask = vi.fn(async () => ({ id: 'task-1' }));
     const materializer = new TaskRecommendationMaterializer(database, 'user-1', createTask);
     const input = {
@@ -89,7 +89,7 @@ describe('TaskRecommendationMaterializer', () => {
           'Inspect the pull request without writing to GitHub.',
           '',
           'Sources:',
-          '- https://github.com/lobehub/lobehub/pull/1',
+          '- https://github.com/alexj11324/orvilo1/pull/1',
           '- CI result: gmail:thread:1',
           '- Launch plan: https://www.notion.so/launch-plan',
         ].join('\n'),

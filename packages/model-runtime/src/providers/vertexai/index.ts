@@ -4,12 +4,12 @@ import { GoogleGenAI } from '@google/genai';
 import { AgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeError } from '../../utils/createError';
 import type { ModelIdMappingOptions } from '../../utils/modelIdMapping';
-import { LobeGoogleAI } from '../google';
+import { OrviloGoogleAI } from '../google';
 
 const DEFAULT_VERTEXAI_LOCATION = 'global';
 type VertexAIInitOptions = GoogleGenAIOptions & ModelIdMappingOptions;
 
-export class LobeVertexAI extends LobeGoogleAI {
+export class OrviloVertexAI extends OrviloGoogleAI {
   static initFromVertexAI(params?: VertexAIInitOptions) {
     try {
       const { modelIdMapping, ...googleOptions } = params ?? {};
@@ -19,7 +19,7 @@ export class LobeVertexAI extends LobeGoogleAI {
         vertexai: true,
       });
 
-      return new LobeGoogleAI({
+      return new OrviloGoogleAI({
         apiKey: 'avoid-error',
         client,
         isVertexAi: true,

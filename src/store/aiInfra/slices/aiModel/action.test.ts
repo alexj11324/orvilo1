@@ -305,7 +305,7 @@ describe('AiModelAction', () => {
         { displayName: 'Duplicate Three First', id: 'duplicate-three', type: 'chat' },
         { displayName: 'Duplicate Three Second', id: 'duplicate-three', type: 'chat' },
         {
-          displayName: 'LobeHub Image Model',
+          displayName: 'Orvilo Image Model',
           id: generatedImageModelId,
           type: 'image',
         },
@@ -336,7 +336,7 @@ describe('AiModelAction', () => {
         'KoboldCpp First',
       );
       expect(batchUpdateArg.find(({ id }) => id === generatedImageModelId)?.displayName).toBe(
-        'LobeHub Image Model',
+        'Orvilo Image Model',
       );
       expect(t).toHaveBeenCalledWith('providerModels.list.fetcher.duplicatesRemovedWithMore', {
         count: 4,

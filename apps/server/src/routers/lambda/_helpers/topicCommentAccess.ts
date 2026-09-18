@@ -2,13 +2,13 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
 import { topics } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getWorkspaceScopedPermissionMatches } from '@/server/services/workspacePermission';
 
 import { assertCanViewTopicTargets } from './conversationResourceGuard';
 
 export const assertTopicCommentReadAccess = async (params: {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   grantedPermissions?: readonly string[];
   hideExistence?: boolean;
   topicId: string;

@@ -71,7 +71,7 @@ export const getAppConfig = () => {
       /**
        * Trusted Client ID for Market API authentication
        * Must be registered in Market's TRUSTED_CLIENT_IDS whitelist
-       * e.g., "lobechat-com", "lobehub-desktop"
+       * e.g., "orvilo-com", "orvilo-desktop"
        */
       MARKET_TRUSTED_CLIENT_ID: z.string().optional(),
 

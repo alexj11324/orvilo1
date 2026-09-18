@@ -612,7 +612,7 @@ export const messageRuntime: ServerRuntimeRegistration = {
       listMessengerPlatforms: async () => {
         // Mirror of `messenger.availablePlatforms` — surfaces per-deployment
         // OAuth deep-link fields (appId / botUsername) so the LLM can tell the
-        // user *which* LobeHub bot identity they'd be installing.
+        // user *which* Orvilo bot identity they'd be installing.
         const enabled = await getEnabledMessengerPlatforms();
         const enabledSet = new Set<string>(enabled);
         const definitions = messengerPlatformRegistry

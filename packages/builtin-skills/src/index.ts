@@ -2,12 +2,12 @@ import type { BuiltinSkill } from '@orvilo/types';
 
 import { AgentBrowserSkill } from './agent-browser';
 import { ArtifactsSkill } from './artifacts';
-import { LobeHubSkill } from './lobehub';
+import { OrviloSkill } from './orvilo';
 import { TaskSkill } from './task';
 
 export { AgentBrowserIdentifier } from './agent-browser';
 export { ArtifactsIdentifier } from './artifacts';
-export { LobeHubIdentifier } from './lobehub';
+export { OrviloIdentifier } from './orvilo';
 export { TaskIdentifier } from './task';
 export {
   buildReactArtifactProject,
@@ -40,7 +40,7 @@ export { AcceptanceIdentifier, AcceptanceSkill } from './acceptance';
 export const builtinSkills: BuiltinSkill[] = [
   AgentBrowserSkill,
   ArtifactsSkill,
-  LobeHubSkill,
+  OrviloSkill,
   TaskSkill,
   // FindSkillsSkill
 ];

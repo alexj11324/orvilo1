@@ -8,7 +8,7 @@ export const errorMidStream = defineCase({
   steps: [
     llmStep({ text: '尝试调用工具。', durationMs: 400 }),
     toolStep({
-      identifier: 'lobe-todo-write',
+      identifier: 'orvilo-todo-write',
       apiName: 'addTodo',
       arguments: JSON.stringify({ title: 'fails' }),
       error: { message: 'Permission denied', type: 'ToolExecutionError' },

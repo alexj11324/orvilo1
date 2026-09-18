@@ -3,7 +3,7 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import { systemPrompt } from './systemRole';
 import { GoalApiName } from './types';
 
-export const GoalIdentifier = 'lobe-goal';
+export const GoalIdentifier = 'orvilo-goal';
 
 export const GoalManifest: BuiltinToolManifest = {
   api: [

@@ -2,7 +2,7 @@ import type { AiModelReasoningConfig } from 'model-bank';
 import { AiModelReasoningConfigSchema } from 'model-bank/aiModel';
 import { z } from 'zod';
 
-import type { LobeAgentAgencyConfig } from '../agent';
+import type { OrviloAgentAgencyConfig } from '../agent';
 import type { HeterogeneousReasoningEffort } from '../agent/heteroSelectorCapabilities';
 import type { SerializedAgentHook } from '../agentHook';
 import { serializedAgentHookSchema } from '../agentHook';
@@ -128,9 +128,9 @@ export type TopicExecutionConfig = z.infer<typeof topicExecutionConfigSchema>;
 
 /** Replace routing as a unit so an absent device never inherits an Agent's device. */
 export const applyTopicExecutionConfig = (
-  defaults: LobeAgentAgencyConfig | undefined,
+  defaults: OrviloAgentAgencyConfig | undefined,
   execution: TopicExecutionConfig | null | undefined,
-): LobeAgentAgencyConfig | undefined => {
+): OrviloAgentAgencyConfig | undefined => {
   if (!execution || defaults?.executionTargetSelectionPolicy === 'fixed') return defaults;
   return {
     ...defaults,
@@ -142,7 +142,7 @@ export const applyTopicExecutionConfig = (
 };
 
 export const snapshotTopicExecutionConfig = (
-  config: LobeAgentAgencyConfig | undefined,
+  config: OrviloAgentAgencyConfig | undefined,
 ): TopicExecutionConfig => ({
   inheritWorkspaceScope: true,
   boundDeviceId: config?.boundDeviceId,

@@ -32,13 +32,13 @@ for ch in stable nightly canary; do
   cat > "$SERVER_DIR/$ch/$ch-mac.yml" << EOF
 version: 99.0.0
 files:
-  - url: LobeHub-99.0.0-arm64.dmg
+  - url: Orvilo-99.0.0-arm64.dmg
     sha512: placeholder-sha512-will-be-replaced
     size: 100000000
-  - url: LobeHub-99.0.0-arm64-mac.zip
+  - url: Orvilo-99.0.0-arm64-mac.zip
     sha512: placeholder-sha512-will-be-replaced
     size: 100000000
-path: LobeHub-99.0.0-arm64.dmg
+path: Orvilo-99.0.0-arm64.dmg
 sha512: placeholder-sha512-will-be-replaced
 releaseDate: '2026-01-15T10:00:00.000Z'
 releaseNotes: |
@@ -64,7 +64,7 @@ cat > "$SCRIPT_DIR/dev-app-update.local.yml" << 'EOF'
 
 provider: generic
 url: http://localhost:8787/stable
-updaterCacheDirName: lobehub-desktop-local-test
+updaterCacheDirName: orvilo-desktop-local-test
 channel: stable
 EOF
 echo "✅ 创建本地测试配置文件"

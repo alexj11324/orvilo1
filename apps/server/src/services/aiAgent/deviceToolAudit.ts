@@ -6,7 +6,7 @@ import type { DeviceAccessReason } from './deviceAccessPolicy';
 export type { DeviceAccessReason } from './deviceAccessPolicy';
 export { isDeviceToolIdentifier } from './deviceToolRegistry';
 
-const log = debug('lobe-server:agent-device-tool-audit');
+const log = debug('orvilo-server:agent-device-tool-audit');
 
 export interface DeviceToolAuditEntry {
   apiName: string;
@@ -44,7 +44,7 @@ export interface LogDeviceToolAuditParams {
  * Reason for being a logger (not a DB table): the goal here is post-incident
  * forensics ("who triggered this read_file?"), not real-time risk control.
  * The debug namespace keeps it cheap, fire-and-forget, and consistent with
- * the existing `lobe-server:device-gateway` line at the actual proxy dispatch.
+ * the existing `orvilo-server:device-gateway` line at the actual proxy dispatch.
  *
  * Sensitive payloads (file contents, shell stdout, tool args) are NEVER
  * recorded here — only identity + decision metadata.

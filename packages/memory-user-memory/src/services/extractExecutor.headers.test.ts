@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { ModelRuntime } from '@orvilo/model-runtime';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,7 +18,7 @@ const createService = () =>
         [LayersEnum.Preference]: 'glm-5',
       },
     },
-    db: {} as LobeChatDatabase,
+    db: {} as OrviloDatabase,
     runtimes: {
       gatekeeper: ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),
       layerExtractor: ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),

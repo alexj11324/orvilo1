@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { oidcSessions } from '@orvilo/database/schemas';
 import { eq } from 'drizzle-orm';
 
@@ -47,7 +47,7 @@ const getOIDCSessionCookie = (context: OIDCSessionCookieContext): OIDCSessionCoo
  * Clears the signed OIDC session referenced by the current browser.
  */
 export const clearCurrentOIDCSession = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   context: OIDCSessionCookieContext,
 ) => {
   const cookie = getOIDCSessionCookie(context);
@@ -66,7 +66,7 @@ export const clearCurrentOIDCSession = async (
  * persistent grants remain untouched.
  */
 export const clearMismatchedOIDCSession = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   context: OIDCSessionCookieContext | null,
 ) => {

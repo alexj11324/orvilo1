@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 
 import { TopicDocumentModel } from '@/database/models/topicDocument';
 import { AgentDocumentVfsService } from '@/server/services/agentDocumentVfs';
@@ -25,7 +25,7 @@ interface ArchiveToolResultParams {
   content: string;
   identifier?: string;
   limit?: number;
-  serverDB?: LobeChatDatabase;
+  serverDB?: OrviloDatabase;
   toolCallId?: string;
   topicId?: string | null;
   userId?: string;
@@ -93,12 +93,12 @@ export const archiveToolResultIfNeeded = async ({
     }
 
     const agentDocumentIdHint =
-      stats.id ?? '(call lobe-agent-documents.listDocuments with scope=currentTopic to look up)';
+      stats.id ?? '(call orvilo-agent-documents.listDocuments with scope=currentTopic to look up)';
 
     return {
       archivePath,
       archived: true,
-      content: `${truncatedContent}\nFull content archived to the agent-document VFS.\nPath: ${archivePath}\nAgent Document ID: ${agentDocumentIdHint}\nTo inspect specific sections, call the lobe-agent-documents tool with apiName=readDocument and id=<Agent Document ID above>. Do NOT activate cloud-sandbox or local-system file tools — this archive exists only inside the agent document tree.`,
+      content: `${truncatedContent}\nFull content archived to the agent-document VFS.\nPath: ${archivePath}\nAgent Document ID: ${agentDocumentIdHint}\nTo inspect specific sections, call the orvilo-agent-documents tool with apiName=readDocument and id=<Agent Document ID above>. Do NOT activate cloud-sandbox or local-system file tools — this archive exists only inside the agent document tree.`,
     };
   } catch (error) {
     const message = getErrorMessage(error);

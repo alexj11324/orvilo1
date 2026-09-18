@@ -12,7 +12,7 @@ vi.mock('@orvilo/builtin-skills', () => {
       {
         content: '# Artifacts',
         description: '',
-        identifier: 'lobe-artifacts',
+        identifier: 'orvilo-artifacts',
         name: 'artifacts',
         source: 'builtin',
       },
@@ -28,7 +28,7 @@ describe('loadBuiltinSkills', () => {
   it('retries the import after a failed chunk load instead of caching the rejection', async () => {
     await expect(loadBuiltinSkills()).rejects.toThrow();
 
-    const skill = await loadBuiltinSkill('lobe-artifacts');
+    const skill = await loadBuiltinSkill('orvilo-artifacts');
 
     expect(skill?.content).toBe('# Artifacts');
     expect(chunk.attempts).toBe(2);

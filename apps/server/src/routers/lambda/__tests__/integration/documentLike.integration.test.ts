@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   documentLikes,
   documents,
@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { documentLikeRouter } from '../../documentLike';
 import { cleanupTestUser, createTestUser } from './setup';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 const notifyDocumentLiked = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const revokeDocumentLikeNotification = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('@/database/core/db-adaptor', () => ({
@@ -45,7 +45,7 @@ const context = (userId: string, workspaceId?: string) => ({
 });
 
 describe('documentLikeRouter integration', () => {
-  let db: LobeChatDatabase;
+  let db: OrviloDatabase;
   let documentId: string;
   let memberId: string;
   let outsiderId: string;

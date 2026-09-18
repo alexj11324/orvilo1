@@ -3,7 +3,7 @@ import type { MessengerOversizeImageStrategy } from '@orvilo/const';
 import type { MessengerPlatform } from '@/config/messenger';
 import type { SafeMessengerAccountLink } from '@/database/models/messengerAccountLink';
 import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { BotMessageAttachment } from '@/server/services/bot/platforms/types';
 import { getInstallationStore } from '@/server/services/messenger/installations';
 import { sendOutboundDirectMessage } from '@/server/services/messenger/outbound';
@@ -50,7 +50,7 @@ export interface MessengerPushWindowStatus extends WechatPushWindowStatus {
 
 const resolveAccountLink = async (params: {
   platform: MessengerPushPlatform;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   tenantId?: string;
   userId: string;
 }): Promise<SafeMessengerAccountLink | undefined> => {
@@ -71,7 +71,7 @@ const sendAlwaysAvailableMessage = async (params: {
   content?: string;
   oversizeImageStrategy?: MessengerOversizeImageStrategy;
   platform: Exclude<MessengerPushPlatform, 'wechat'>;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   tenantId?: string;
   userId: string;
 }): Promise<MessengerPushResult> => {
@@ -112,7 +112,7 @@ export const sendMessengerPush = async (params: {
    */
   oversizeImageStrategy?: MessengerOversizeImageStrategy;
   platform: MessengerPushPlatform;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   tenantId?: string;
   userId: string;
 }): Promise<MessengerPushResult> => {
@@ -129,7 +129,7 @@ export const sendMessengerPush = async (params: {
 
 export const getMessengerPushWindow = async (params: {
   platform: MessengerPushPlatform;
-  serverDB: LobeChatDatabase;
+  serverDB: OrviloDatabase;
   tenantId?: string;
   userId: string;
 }): Promise<MessengerPushWindowStatus> => {

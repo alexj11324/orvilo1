@@ -1,10 +1,10 @@
 # @orvilo/electron-server-ipc
 
-LobeHub 的 Electron 应用与服务端之间的 IPC（进程间通信）模块，提供可靠的跨进程通信能力。
+Orvilo 的 Electron 应用与服务端之间的 IPC（进程间通信）模块，提供可靠的跨进程通信能力。
 
 ## 📝 简介
 
-`@orvilo/electron-server-ipc` 是 LobeHub 桌面应用的核心组件，负责处理 Electron 主进程与 nextjs 服务端之间的通信。它提供了一套简单而健壮的 API，用于在不同进程间传递数据和执行远程方法调用。
+`@orvilo/electron-server-ipc` 是 Orvilo 桌面应用的核心组件，负责处理 Electron 主进程与 nextjs 服务端之间的通信。它提供了一套简单而健壮的 API，用于在不同进程间传递数据和执行远程方法调用。
 
 ## 🛠️ 核心功能
 
@@ -62,7 +62,7 @@ IPC 服务端实现需要处理各种通信场景和边缘情况。我们欢迎�
 
 ### 贡献流程
 
-1. Fork [LobeHub 仓库](https://github.com/lobehub/lobe-chat)
+1. Fork [Orvilo 仓库](https://github.com/alexj11324/orvilo1)
 2. 对 IPC 服务端包实施改进
 3. 提交 Pull Request 并描述：
 
@@ -73,4 +73,4 @@ IPC 服务端实现需要处理各种通信场景和边缘情况。我们欢迎�
 
 ## 📌 说明
 
-这是 LobeHub 的内部模块 (`"private": true`)，专为 LobeHub 桌面应用设计，不作为独立包发布。
+这是 Orvilo 的内部模块 (`"private": true`)，专为 Orvilo 桌面应用设计，不作为独立包发布。

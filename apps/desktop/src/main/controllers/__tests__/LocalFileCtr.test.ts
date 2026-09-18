@@ -381,13 +381,13 @@ describe('LocalFileCtr', () => {
 
       const result = await localFileCtr.copyAssetForPublish({
         from: '/outside/image.png',
-        to: '/workspace/.lobe-artifacts/site/image.png',
+        to: '/workspace/.orvilo-artifacts/site/image.png',
         workingDirectory: '/workspace',
       });
 
       expect(mockLocalFileProtocolManager.copyExternalFileForPublish).toHaveBeenCalledWith({
         filePath: '/outside/image.png',
-        targetPath: '/workspace/.lobe-artifacts/site/image.png',
+        targetPath: '/workspace/.orvilo-artifacts/site/image.png',
         workspaceRoot: '/workspace',
       });
       expect(result).toEqual({ success: true });

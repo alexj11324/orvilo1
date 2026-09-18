@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import type { CollaborationRoom, RoomAuthorization, RoomSnapshotResult } from '@orvilo/types';
 import { roomKey } from '@orvilo/types';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { users, WorkspaceMemberModel } from './contractTables';
 import { actorColorForId, assertRoomAccess } from './roomAuthz';
@@ -17,11 +17,11 @@ import { signRoomTicket } from './ticket';
  * room access, the actor identity, ticket claims — from the database.
  */
 export class CollaborationService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

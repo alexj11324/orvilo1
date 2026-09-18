@@ -4,14 +4,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
-const { mockMessageCreate, mockMessageQuery, mockCreateOperation, mockTopicFindById } = vi.hoisted(
-  () => ({
-    mockCreateOperation: vi.fn(),
-    mockMessageCreate: vi.fn(),
-    mockMessageQuery: vi.fn(),
-    mockTopicFindById: vi.fn(),
-  }),
-);
+const {
+  mockFindShareVisitorTopicIds,
+  mockMessageCreate,
+  mockMessageQuery,
+  mockCreateOperation,
+  mockTopicFindById,
+} = vi.hoisted(() => ({
+  mockCreateOperation: vi.fn(),
+  mockFindShareVisitorTopicIds: vi.fn(),
+  mockMessageCreate: vi.fn(),
+  mockMessageQuery: vi.fn(),
+  mockTopicFindById: vi.fn(),
+}));
 
 // Mock trusted client to avoid server-side env access
 vi.mock('@/libs/trusted-client', () => ({
@@ -82,22 +87,9 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-new' }),
       findById: mockTopicFindById,
+      findShareVisitorTopicIds: mockFindShareVisitorTopicIds,
       updateMetadata: vi.fn().mockResolvedValue(undefined),
     };
-  }),
-}));
-
-// Real implementation wraps the create in a `db.transaction(...)` for
-// per-visitor cap enforcement — irrelevant to the read-side guard under test
-// here, and `mockDb = {}` has no `transaction`. Delegate straight to the
-// underlying model methods so a share-gated run in these tests exercises the
-// same message-creation call the non-share path does.
-vi.mock('../shareVisitorAbuseGuards', () => ({
-  // Not exercised by these tests (they all target an existing topic), but
-  // stubbed so an accidental new-topic share run doesn't hit `db.transaction`.
-  reserveShareVisitorTopic: vi.fn().mockResolvedValue({ id: 'topic-shared-new' }),
-  reserveShareVisitorTurn: vi.fn(function (_params, createParams, id) {
-    return mockMessageCreate(createParams, id);
   }),
 }));
 
@@ -122,7 +114,7 @@ vi.mock('@/server/services/agentRuntime', () => ({
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getLobehubSkillManifests: vi.fn().mockResolvedValue([]),
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -162,7 +154,7 @@ vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
   return {
     ...actual,
-    LOBE_DEFAULT_MODEL_LIST: [
+    ORVILO_DEFAULT_MODEL_LIST: [
       {
         abilities: { functionCall: true, video: false, vision: true },
         id: 'gpt-4',
@@ -192,6 +184,7 @@ describe('AiAgentService.execAgent - topic history loading', () => {
       success: true,
     });
     mockTopicFindById.mockResolvedValue(undefined);
+    mockFindShareVisitorTopicIds.mockResolvedValue([]);
 
     service = new AiAgentService(mockDb, userId);
   });
@@ -286,10 +279,10 @@ describe('AiAgentService.execAgent - topic history loading', () => {
   describe('share-visitor topic guard', () => {
     // Visitor topics carry the CREATOR's own userId (billing attribution) plus
     // `senderId` set to the visitor — see `packages/database/src/utils/shareVisitor.ts`.
-    // A non-share run must never be able to load one via a leaked/guessed topicId.
+    // No run may ever operate on one now that visitor execution is retired.
     const visitorTopic = { id: 'topic-visitor', model: null, senderId: 'visitor-1' };
 
-    it('rejects a non-share run whose topicId resolves to a share-visitor topic', async () => {
+    it('rejects a run whose topicId resolves to a share-visitor topic', async () => {
       mockTopicFindById.mockResolvedValue(visitorTopic);
 
       await expect(
@@ -306,29 +299,24 @@ describe('AiAgentService.execAgent - topic history loading', () => {
       expect(mockCreateOperation).not.toHaveBeenCalled();
     });
 
-    it("still allows the visitor's own authorized share run to load the same topic", async () => {
-      mockTopicFindById.mockResolvedValue(visitorTopic);
-      mockMessageQuery.mockResolvedValue([]);
+    it('rejects a run when the visitor topic is filtered out of the default read scope', async () => {
+      // `findById` ANDs `notShareVisitorTopic` under the default scope, so a
+      // creator-scoped model sees nothing at all — the case a scheduled
+      // retry/continuation or a leaked topicId hits.
+      // `findShareVisitorTopicIds` is the fail-closed backstop for the miss.
+      mockTopicFindById.mockResolvedValue(undefined);
+      mockFindShareVisitorTopicIds.mockResolvedValue(['topic-visitor']);
 
-      await service.execAgent({
-        agentId: 'agent-1',
-        appContext: { topicId: 'topic-visitor' },
-        prompt: 'hi',
-        shareGate: {
+      await expect(
+        service.execAgent({
           agentId: 'agent-1',
-          shareConfig: { toolGrants: [] },
-          shareId: 'share-1',
-          visitorUserId: 'visitor-1',
-        },
-      });
+          appContext: { topicId: 'topic-visitor' },
+          prompt: 'hi',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
-      expect(mockCreateOperation).toHaveBeenCalled();
-      // Authorized share run must opt into `allowShareVisitor` so it keeps
-      // seeing its own transcript.
-      expect(mockMessageQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ topicId: 'topic-visitor' }),
-        expect.objectContaining({ allowShareVisitor: true }),
-      );
+      expect(mockMessageQuery).not.toHaveBeenCalled();
+      expect(mockCreateOperation).not.toHaveBeenCalled();
     });
   });
 });

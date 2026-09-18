@@ -3,7 +3,7 @@ import type {
   BotSenderMetadata,
   ChatTopicBotContext,
   ExecAgentParams,
-  LobeAgentChatConfig,
+  OrviloAgentChatConfig,
   RuntimeMentionedAgent,
   UserInterventionConfig,
   WorkingDirConfig,
@@ -16,7 +16,6 @@ import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
 import type { EvalRuntimeContext } from '@/server/services/agentRuntime/types';
 
 import type { DeviceAccessReason } from './deviceAccessPolicy';
-import type { AgentShareGate } from './shareGate';
 
 /**
  * Resolved run state shared by the {@link AiAgentService.execAgent} pipeline
@@ -45,13 +44,6 @@ export interface ExecRunContext {
   provider: string;
   /** The actual executing agent row id resolved from id/slug. */
   resolvedAgentId: string;
-  /**
-   * Shared-agent visitor gate for this run, mirrored from
-   * {@link InternalExecAgentParams.shareGate} so every extracted pipeline stage
-   * can enforce it without threading a separate argument. Undefined for every
-   * ordinary (non-share) run.
-   */
-  shareGate?: AgentShareGate;
   /** Topic id — guaranteed to exist by the time pipeline stages run. */
   topicId: string;
   trigger?: string;
@@ -94,7 +86,7 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * the executing agent's own chatConfig, skipping nulled keys. Internal-only:
    * set by the callSubAgent thread-run path, never client-passable.
    */
-  chatConfigOverride?: Partial<LobeAgentChatConfig> | null;
+  chatConfigOverride?: Partial<OrviloAgentChatConfig> | null;
   /**
    * Thread `execAgent` materialised from `appContext.newThread` for THIS turn.
    * Internal-only: set by the wrapper after it creates the row, never
@@ -205,7 +197,7 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   }[];
   /**
    * When present, this execAgent call resumes a previous op that paused on a
-   * `humanIntervention: 'always'` tool (e.g. lobe-agent `askUserQuestion`). The
+   * `humanIntervention: 'always'` tool (e.g. orvilo-agent `askUserQuestion`). The
    * service writes the human-provided `content` as the target tool message's
    * result and resumes from `phase: 'tool_result'` — the tool is NOT
    * re-executed. `parentMessageId` must point at the pending `role='tool'`
@@ -227,12 +219,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * downstream (connectors, installed plugins) keep it to the caller's own tools.
    */
   selectedToolIds?: string[];
-  /**
-   * Shared-agent visitor gate. Set ONLY by the shareChat router after the
-   * share access check — never client-passable. Restricts tools/memory/files at
-   * operation-build time, denies device access, and scopes the visitor's rows.
-   */
-  shareGate?: AgentShareGate;
   /** Abort startup before the agent runtime operation is created */
   signal?: AbortSignal;
   /**

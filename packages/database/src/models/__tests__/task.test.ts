@@ -16,12 +16,12 @@ import {
 } from '../../schemas';
 import { taskTopics } from '../../schemas/task';
 import { works } from '../../schemas/work';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { taskActivityActor, TaskModel } from '../task';
 import { WorkModel } from '../work';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'task-test-user-id';
 const userId2 = 'task-test-user-id-2';
@@ -373,7 +373,7 @@ describe('TaskModel', () => {
       await workModel.registerTask({
         changeType: 'created',
         toolCallId: 'tool-call-task-keep',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         toolName: 'createTask',
         taskId: task.id,
       });
@@ -1465,6 +1465,73 @@ describe('TaskModel', () => {
       const owner = await ownerModel.getTreePinnedDocuments(task.id);
       expect(owner.nodeMap[doc.id]).toMatchObject({ title: 'Shared Doc' });
       expect(owner.nodeMap[doc.id].inaccessible).toBeUndefined();
+    });
+
+    // The plan asks for an artifact to be traceable back to the specific run.
+    // That link already exists: a document Work records the topic it was
+    // produced in, so the node reads it from there instead of from a second
+    // association.
+    it('reports the run that produced a pinned document', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const topicId = await createTopic('topic-artifact-run');
+      await serverDB.update(topics).set({ title: 'Artifact run' }).where(eq(topics.id, topicId));
+
+      const task = await model.create({ instruction: 'Test' });
+      const [doc] = await serverDB
+        .insert(documents)
+        .values({
+          content: '',
+          fileType: 'text/plain',
+          source: 'test',
+          sourceType: 'file',
+          title: 'Produced Doc',
+          totalCharCount: 0,
+          totalLineCount: 0,
+          userId,
+        })
+        .returning();
+
+      await new WorkModel(serverDB, userId).registerDocument({
+        changeType: 'created',
+        documentId: doc.id,
+        rootOperationId: 'op-artifact-run',
+        toolIdentifier: 'lobe-agent-documents',
+        toolName: 'createDocument',
+        topicId,
+      });
+      await model.pinDocument(task.id, doc.id);
+
+      const { nodeMap } = await model.getTreePinnedDocuments(task.id);
+      expect(nodeMap[doc.id]).toMatchObject({
+        sourceTopicId: topicId,
+        sourceTopicTitle: 'Artifact run',
+      });
+    });
+
+    // The other half: a document pinned by hand has no producing run, and the
+    // join must not invent one.
+    it('reports no run for a hand-pinned document', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+      const [doc] = await serverDB
+        .insert(documents)
+        .values({
+          content: '',
+          fileType: 'text/plain',
+          source: 'test',
+          sourceType: 'file',
+          title: 'Hand pinned',
+          totalCharCount: 0,
+          totalLineCount: 0,
+          userId,
+        })
+        .returning();
+
+      await model.pinDocument(task.id, doc.id);
+
+      const { nodeMap } = await model.getTreePinnedDocuments(task.id);
+      expect(nodeMap[doc.id].sourceTopicId).toBeNull();
+      expect(nodeMap[doc.id].sourceTopicTitle).toBeNull();
     });
 
     it('should unpin document', async () => {

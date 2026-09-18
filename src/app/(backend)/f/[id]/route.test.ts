@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FileModel } from '@/database/models/file';
@@ -39,7 +39,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 describe('file proxy route', () => {
-  const db = {} as LobeChatDatabase;
+  const db = {} as OrviloDatabase;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,7 +60,7 @@ describe('file proxy route', () => {
   });
 
   it('should redirect to a cached presigned preview URL instead of a public full file URL', async () => {
-    const response = await GET(new Request('https://lobehub.com/f/file-id'), {
+    const response = await GET(new Request('https://orvilo.aspectlylabs.com/f/file-id'), {
       params: Promise.resolve({ id: 'file-id' }),
     });
 
@@ -75,9 +75,12 @@ describe('file proxy route', () => {
   });
 
   it('should redirect download requests to a content-disposition attachment URL', async () => {
-    const response = await GET(new Request('https://lobehub.com/f/file-id?download=1'), {
-      params: Promise.resolve({ id: 'file-id' }),
-    });
+    const response = await GET(
+      new Request('https://orvilo.aspectlylabs.com/f/file-id?download=1'),
+      {
+        params: Promise.resolve({ id: 'file-id' }),
+      },
+    );
 
     expect(response.status).toBe(302);
     expect(response.headers.get('location')).toBe('https://s3.example.com/presigned-download-url');

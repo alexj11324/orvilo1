@@ -8,7 +8,7 @@ import { FileModel } from '@/database/models/file';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { files } from '@/database/schemas/file';
 import { verifyCheckResults, verifyEvidence, verifyRuns } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import type { FileService } from '@/server/services/file';
 
@@ -20,7 +20,7 @@ export interface PurgePreview {
 }
 
 const listRunIds = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId: string | undefined,
   acceptanceIds: string[],
@@ -38,7 +38,7 @@ const listRunIds = async (
   return rows.map((row) => row.id);
 };
 
-const listExclusiveEvidenceFileIds = async (db: LobeChatDatabase, runIds: string[]) => {
+const listExclusiveEvidenceFileIds = async (db: OrviloDatabase, runIds: string[]) => {
   if (runIds.length === 0) return [];
   const otherEvidence = alias(verifyEvidence, 'other_evidence');
   const otherResults = alias(verifyCheckResults, 'other_results');
@@ -70,7 +70,7 @@ const listExclusiveEvidenceFileIds = async (db: LobeChatDatabase, runIds: string
 };
 
 const listRetainedHashes = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   rows: { fileHash: string | null; id: string }[],
 ) => {
   const hashes = rows.map((row) => row.fileHash).filter((hash): hash is string => Boolean(hash));
@@ -91,7 +91,7 @@ const listRetainedHashes = async (
 };
 
 const purgeFiles = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   fileService: FileService,
   userId: string,
   workspaceId: string | undefined,
@@ -126,7 +126,7 @@ const purgeFiles = async (
 };
 
 export const previewAcceptancePurge = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   workspaceId: string | undefined,
   acceptanceIds: string[],
@@ -167,7 +167,7 @@ export const previewAcceptancePurge = async (
 };
 
 export const purgeAcceptance = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   fileService: FileService,
   userId: string,
   workspaceId: string | undefined,
@@ -195,7 +195,7 @@ export const purgeAcceptance = async (
 };
 
 export const purgeVerifyRun = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   fileService: FileService,
   userId: string,
   workspaceId: string | undefined,

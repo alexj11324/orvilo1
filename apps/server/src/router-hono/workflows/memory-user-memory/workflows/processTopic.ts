@@ -13,6 +13,7 @@ import {
   MemoryExtractionExecutor,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { WorkflowAbort, WorkflowNonRetryableError } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
@@ -67,6 +68,26 @@ export const processTopicHandler = async (context: WorkflowContext<MemoryExtract
         if (!payload.sources.includes(MemorySourceType.ChatTopic)) {
           span.setStatus({ code: SpanStatusCode.OK });
           return { message: 'Source not supported in topic workflow.' };
+        }
+
+        // Unified production gate: extraction never runs for a user who
+        // disabled memory, no matter which entry scheduled this run. The
+        // executor re-checks the same gate inside extractTopic.
+        const memoryEnabledStepName = `memory:user-memory:extract:users:${userId}:topics:${topicId}:memory-enabled-check`;
+        const memoryEnabledGuard = await checkGuard(context, WORKFLOW_PATH, {
+          stepName: memoryEnabledStepName,
+        });
+        if (!memoryEnabledGuard.result) {
+          span.setStatus({ code: SpanStatusCode.OK });
+          return memoryEnabledGuard.response;
+        }
+
+        const memoryEnabled = await runStep(context, memoryEnabledStepName, () =>
+          isUserMemoryExtractionEnabled(userId),
+        );
+        if (!memoryEnabled) {
+          span.setStatus({ code: SpanStatusCode.OK });
+          return { message: 'User memory is disabled, skip topic.', skipped: true };
         }
 
         if (payload.asyncTaskId) {

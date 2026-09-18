@@ -367,7 +367,7 @@ export const agentQuotaWindows = pgTable(
     estimatedCapacityUsd: amountNumeric('estimated_capacity_usd'),
     /**
      * Δutilization > 0 while our ledger saw ≈0 spend → an external consumer (CLI
-     * outside LobeHub) moved the meter. Excluded from calibration.
+     * outside Orvilo) moved the meter. Excluded from calibration.
      */
     contaminated: boolean('contaminated').notNull().default(false),
 

@@ -1,5 +1,5 @@
 import type { AgentState } from '@orvilo/agent-runtime';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   isBuiltinHeterogeneousType,
   isLocalHeterogeneousType,
@@ -23,12 +23,12 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 
 import { STOPPED_TOOL_CONTENT } from '../helpers/agentFactory';
 
-const log = debug('lobe-server:ai-agent-service');
+const log = debug('orvilo-server:ai-agent-service');
 
 interface InterventionControllerDeps {
   agentOperationModel: AgentOperationModel;
   agentRuntimeService: AgentRuntimeService;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   messageModel: MessageModel;
   resolveDeviceWorkspaceId: (deviceId: string | undefined) => Promise<string | undefined>;
   threadModel: ThreadModel;

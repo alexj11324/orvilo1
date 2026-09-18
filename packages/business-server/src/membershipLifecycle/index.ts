@@ -1,5 +1,5 @@
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { WorkspaceMemberItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 
@@ -47,7 +47,7 @@ const activeMembership = (member: WorkspaceMemberItem | undefined) =>
  * viewers — everyone else gets the same profile with `email: null`.
  */
 export const listMemberSummaries = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { includeDeleted: boolean; viewerIsAdmin: boolean; workspaceId: string },
 ): Promise<MemberSummary[]> => {
   const rows = await listMembersWithProfiles(db, params.workspaceId, params.includeDeleted);
@@ -65,7 +65,7 @@ export const listMemberSummaries = async (
 };
 
 export const changeMemberRole = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorRole: WorkspaceRoleName | null;
     actorUserId: string;
@@ -135,7 +135,7 @@ export const changeMemberRole = async (
 };
 
 const setMemberSuspended = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorRole: WorkspaceRoleName | null;
     actorUserId: string;
@@ -197,17 +197,17 @@ const setMemberSuspended = async (
 };
 
 export const suspendMember = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: Omit<Parameters<typeof setMemberSuspended>[1], 'suspended'>,
 ) => setMemberSuspended(db, { ...params, suspended: true });
 
 export const resumeMember = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: Omit<Parameters<typeof setMemberSuspended>[1], 'suspended'>,
 ) => setMemberSuspended(db, { ...params, suspended: false });
 
 export const previewMemberRemoval = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { targetUserId: string; workspaceId: string },
 ): Promise<MemberRemovalPreview> => {
   // Suspended members are removable — and the preview is precisely how an
@@ -241,7 +241,7 @@ export const previewMemberRemoval = async (
 };
 
 export const removeMember = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorRole: WorkspaceRoleName | null;
     actorUserId: string;
@@ -344,7 +344,7 @@ export const removeMember = async (
 };
 
 export const leaveWorkspace = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { ipAddress?: string; userId: string; workspaceId: string },
 ) => {
   return db.transaction(async (tx) => {
@@ -383,7 +383,7 @@ export const leaveWorkspace = async (
 };
 
 export const transferWorkspaceOwnership = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     actorUserId: string;
     ipAddress?: string;

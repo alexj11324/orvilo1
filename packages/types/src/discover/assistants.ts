@@ -1,6 +1,6 @@
 import type { FewShots } from '../llm';
 import type { MetaData } from '../meta';
-import type { LobeAgentSettings } from '../session';
+import type { OrviloAgentSettings } from '../session';
 
 export enum AssistantCategory {
   Academic = 'academic',
@@ -40,7 +40,7 @@ export type AgentStatus = 'published' | 'unpublished' | 'archived' | 'deprecated
 
 export type AgentType = 'agent' | 'agent-group';
 
-export interface DiscoverAssistantItem extends Omit<LobeAgentSettings, 'meta'>, MetaData {
+export interface DiscoverAssistantItem extends Omit<OrviloAgentSettings, 'meta'>, MetaData {
   author: string;
   category?: AssistantCategory;
   createdAt: string;

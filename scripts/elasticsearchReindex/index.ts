@@ -230,7 +230,7 @@ const telemetrySdk = process.env.ENABLE_TELEMETRY
           meterName: 'fts-search-reindex',
         },
       ],
-      name: 'lobehub-fts-search-reindex',
+      name: 'orvilo-fts-search-reindex',
     })
   : undefined;
 const pool = new Pool({ connectionString: databaseUrl });

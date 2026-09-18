@@ -12,7 +12,7 @@
  */
 export const IGNORED_FILES = [
   'providers.ts', // Dynamically generated from DEFAULT_MODEL_PROVIDER_LIST
-  'models.ts', // Dynamically generated from LOBE_DEFAULT_MODEL_LIST
+  'models.ts', // Dynamically generated from ORVILO_DEFAULT_MODEL_LIST
   'auth.ts', // Auth-related dynamic keys
   'authError.ts', // Auth error dynamic keys
   'error.ts', // Error messages with dynamic codes

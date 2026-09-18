@@ -87,7 +87,7 @@ describe('Agent skill VFS providers', () => {
 
       const result = await provider.list({
         agentId: 'agent-1',
-        path: './lobe/skills/agent/skills',
+        path: './orvilo/skills/agent/skills',
         resolvedPath: { namespace: 'agent', relativePath: '' },
       });
 
@@ -95,7 +95,7 @@ describe('Agent skill VFS providers', () => {
         expect.objectContaining({
           name: 'agent-skill',
           namespace: 'agent',
-          path: './lobe/skills/agent/skills/agent-skill',
+          path: './orvilo/skills/agent/skills/agent-skill',
           type: 'directory',
         }),
       ]);
@@ -167,7 +167,7 @@ describe('Agent skill VFS providers', () => {
       );
       expect(documentService.createDocument).not.toHaveBeenCalled();
       expect(agentDocumentModel.associate).not.toHaveBeenCalled();
-      expect(result.path).toBe('./lobe/skills/agent/skills/writer/SKILL.md');
+      expect(result.path).toBe('./orvilo/skills/agent/skills/writer/SKILL.md');
     });
 
     /**
@@ -238,7 +238,7 @@ describe('Agent skill VFS providers', () => {
       const result = await provider.update({
         agentId: 'agent-1',
         content: 'new content',
-        path: './lobe/skills/agent/skills/skill-a/SKILL.md',
+        path: './orvilo/skills/agent/skills/skill-a/SKILL.md',
       });
 
       expect(documentService.trySaveCurrentDocumentHistory).toHaveBeenCalledWith(
@@ -279,7 +279,7 @@ describe('Agent skill VFS providers', () => {
 
       await provider.delete({
         agentId: 'agent-1',
-        path: './lobe/skills/agent/skills/skill-a/SKILL.md',
+        path: './orvilo/skills/agent/skills/skill-a/SKILL.md',
       });
 
       expect(agentDocumentModel.deleteSubtreeByDocumentId).toHaveBeenCalledWith(

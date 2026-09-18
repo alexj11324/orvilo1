@@ -2,13 +2,13 @@
 import { ModelProvider } from 'model-bank';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeGLMCodingPlanAI } from './index';
+import { OrviloGLMCodingPlanAI } from './index';
 
 const provider = ModelProvider.GLMCodingPlan;
 const defaultBaseURL = 'https://open.bigmodel.cn/api/coding/paas/v4';
 
 testProvider({
-  Runtime: LobeGLMCodingPlanAI,
+  Runtime: OrviloGLMCodingPlanAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_GLM_CODING_PLAN_CHAT_COMPLETION',

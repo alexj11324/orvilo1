@@ -35,8 +35,8 @@ const protocolStream = (events: Array<{ data: unknown; id?: string; type: string
   });
 };
 
-const ANTHROPIC_STREAM_MODEL = 'lobehub/claude-sonnet-4-6';
-const RESPONSES_STREAM_MODEL = 'lobehub/gpt-5.4';
+const ANTHROPIC_STREAM_MODEL = 'aspectlylabs/claude-sonnet-4-6';
+const RESPONSES_STREAM_MODEL = 'aspectlylabs/gpt-5.4';
 
 const readText = async (stream: ReadableStream<Uint8Array>) => new Response(stream).text();
 
@@ -65,7 +65,7 @@ describe('heterogeneous direct invocation protocol', () => {
     const chat = vi.fn().mockResolvedValue(new Response('stream'));
     vi.mocked(resolveServerDefaultHeterogeneousModel).mockResolvedValue({
       model: 'claude-sonnet-4-6',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: true,
     });
     vi.mocked(initModelRuntimeFromServerConfig).mockResolvedValue({
@@ -78,11 +78,11 @@ describe('heterogeneous direct invocation protocol', () => {
       payload: normalizeAnthropicRequest(
         {
           messages: [],
-          model: 'lobehub-default',
+          model: 'orvilo-default',
           stream: true,
           thinking: { type: 'adaptive' },
         },
-        'lobehub-default',
+        'orvilo-default',
       ),
       signal: new AbortController().signal,
       userId: 'user-1',
@@ -108,7 +108,7 @@ describe('heterogeneous direct invocation protocol', () => {
     const chat = vi.fn().mockResolvedValue(new Response('stream'));
     vi.mocked(resolveServerDefaultHeterogeneousModel).mockResolvedValue({
       model: 'doubao-seed-2.1-pro',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: false,
     });
     vi.mocked(initModelRuntimeFromServerConfig).mockResolvedValue({
@@ -120,7 +120,7 @@ describe('heterogeneous direct invocation protocol', () => {
       model: 'doubao-seed-2.1-pro',
       payload: {
         messages: [],
-        model: 'lobehub-default',
+        model: 'orvilo-default',
         stream: true,
         thinking: { type: 'adaptive' },
       },
@@ -142,7 +142,7 @@ describe('heterogeneous direct invocation protocol', () => {
     vi.mocked(resolveServerDefaultHeterogeneousModel).mockResolvedValue({
       deploymentName: 'prod-gpt',
       model: 'gpt-5.4',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: false,
     });
     vi.mocked(initModelRuntimeFromServerConfig).mockResolvedValue({
@@ -154,7 +154,7 @@ describe('heterogeneous direct invocation protocol', () => {
       model: 'gpt-5.4',
       payload: {
         messages: [],
-        model: 'lobehub-default',
+        model: 'orvilo-default',
         reasoning: { effort: 'high', summary: 'detailed' },
         stream: true,
       },
@@ -178,7 +178,7 @@ describe('heterogeneous direct invocation protocol', () => {
     const chat = vi.fn().mockResolvedValue(new Response('stream'));
     vi.mocked(resolveServerDefaultHeterogeneousModel).mockResolvedValue({
       model: 'kimi-k3',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: false,
     });
     vi.mocked(initModelRuntimeFromServerConfig).mockResolvedValue({
@@ -191,11 +191,11 @@ describe('heterogeneous direct invocation protocol', () => {
       payload: normalizeResponsesRequest(
         {
           input: 'hello',
-          model: 'lobehub-default',
+          model: 'orvilo-default',
           reasoning: { effort: 'high', summary: 'auto' },
           stream: true,
         },
-        'lobehub-default',
+        'orvilo-default',
       ),
       signal: new AbortController().signal,
       userId: 'user-1',
@@ -215,7 +215,7 @@ describe('heterogeneous direct invocation protocol', () => {
     const chat = vi.fn().mockResolvedValue(new Response('stream'));
     vi.mocked(resolveServerDefaultHeterogeneousModel).mockResolvedValue({
       model: 'deepseek-v4-pro',
-      provider: 'lobehub',
+      provider: 'orvilo',
       supportsAdaptiveThinking: false,
     });
     vi.mocked(initModelRuntimeFromServerConfig).mockResolvedValue({
@@ -228,7 +228,7 @@ describe('heterogeneous direct invocation protocol', () => {
       payload: {
         apiMode: 'responses',
         messages: [],
-        model: 'lobehub-default',
+        model: 'orvilo-default',
         reasoning: { effort: 'max', summary: 'detailed' },
         stream: true,
       },
@@ -256,7 +256,7 @@ describe('heterogeneous direct invocation protocol', () => {
       invokeServerDefaultModel({
         agentType: 'codex',
         model: 'claude-sonnet-4-6',
-        payload: { messages: [], model: 'lobehub-default', stream: true },
+        payload: { messages: [], model: 'orvilo-default', stream: true },
         signal: new AbortController().signal,
         userId: 'user-1',
       }),
@@ -296,10 +296,10 @@ describe('heterogeneous direct invocation protocol', () => {
             role: 'user',
           },
         ],
-        model: 'lobehub-default',
+        model: 'orvilo-default',
         system: [{ text: 'system', type: 'text' }],
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages[0]).toEqual({ content: 'system', role: 'system' });
@@ -364,7 +364,7 @@ describe('heterogeneous direct invocation protocol', () => {
       system: 'x-anthropic-billing-header: cc_version=2.1.231;',
     },
   ])('strips the Claude Code billing attribution when it is $name', ({ expected, system }) => {
-    const payload = normalizeAnthropicRequest({ messages: [], system }, 'lobehub-default');
+    const payload = normalizeAnthropicRequest({ messages: [], system }, 'orvilo-default');
 
     expect(payload.messages).toEqual(expected ? [{ content: expected, role: 'system' }] : []);
   });
@@ -372,7 +372,7 @@ describe('heterogeneous direct invocation protocol', () => {
   it('preserves non-leading Anthropic billing header text as user-authored system content', () => {
     const system =
       'Keep this text\nx-anthropic-billing-header: this non-leading occurrence is user content';
-    const payload = normalizeAnthropicRequest({ messages: [], system }, 'lobehub-default');
+    const payload = normalizeAnthropicRequest({ messages: [], system }, 'orvilo-default');
 
     expect(payload.messages).toEqual([{ content: system, role: 'system' }]);
   });
@@ -386,7 +386,7 @@ describe('heterogeneous direct invocation protocol', () => {
           { text: 'x-anthropic-billing-header: this later block is user content', type: 'text' },
         ],
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages).toEqual([
@@ -414,13 +414,13 @@ describe('heterogeneous direct invocation protocol', () => {
                 ].join('\r\n'),
                 type: 'text',
               },
-              { text: 'Reply with exactly LOBEHUB_HETERO_SMOKE_OK.', type: 'text' },
+              { text: 'Reply with exactly ORVILO_HETERO_SMOKE_OK.', type: 'text' },
             ],
             role: 'user',
           },
         ],
       },
-      'lobehub-default',
+      'orvilo-default',
       { unwrapSystemReminders: true },
     );
 
@@ -432,7 +432,7 @@ describe('heterogeneous direct invocation protocol', () => {
           '# currentDate',
           "Today's date is 2026-09-05.",
           '',
-          'Reply with exactly LOBEHUB_HETERO_SMOKE_OK.',
+          'Reply with exactly ORVILO_HETERO_SMOKE_OK.',
         ].join('\r\n'),
         role: 'user',
       },
@@ -443,7 +443,7 @@ describe('heterogeneous direct invocation protocol', () => {
     const content = 'Preface\n<system-reminder>user-authored text</system-reminder>';
     const payload = normalizeAnthropicRequest(
       { messages: [{ content, role: 'user' }] },
-      'lobehub-default',
+      'orvilo-default',
       { unwrapSystemReminders: true },
     );
     const defaultPayload = normalizeAnthropicRequest(
@@ -452,7 +452,7 @@ describe('heterogeneous direct invocation protocol', () => {
           { content: '<system-reminder>Claude context</system-reminder>\n\nPrompt', role: 'user' },
         ],
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages).toEqual([{ content, role: 'user' }]);
@@ -477,7 +477,7 @@ describe('heterogeneous direct invocation protocol', () => {
           },
         ],
       },
-      'lobehub-default',
+      'orvilo-default',
       { unwrapSystemReminders: true },
     );
 
@@ -504,7 +504,7 @@ describe('heterogeneous direct invocation protocol', () => {
           },
         ],
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages[0]).toMatchObject({
@@ -525,20 +525,20 @@ describe('heterogeneous direct invocation protocol', () => {
         input: [
           { content: 'Pi coding assistant', role: 'system' },
           {
-            content: [{ text: 'LOBEHUB_HETERO_SMOKE_OK', type: 'input_text' }],
+            content: [{ text: 'ORVILO_HETERO_SMOKE_OK', type: 'input_text' }],
             role: 'user',
           },
         ],
         max_output_tokens: 16_384,
-        model: 'lobehub/glm-5.2',
+        model: 'aspectlylabs/glm-5.2',
         stream: true,
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages).toEqual([
       { content: 'Pi coding assistant', role: 'system' },
-      { content: 'LOBEHUB_HETERO_SMOKE_OK', role: 'user' },
+      { content: 'ORVILO_HETERO_SMOKE_OK', role: 'user' },
     ]);
     expect(payload.max_tokens).toBe(16_384);
     expect(payload).not.toHaveProperty('apiMode');
@@ -574,7 +574,7 @@ describe('heterogeneous direct invocation protocol', () => {
         ],
         instructions: 'system',
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages.map(({ role }) => role)).toEqual([
@@ -606,7 +606,7 @@ describe('heterogeneous direct invocation protocol', () => {
           { call_id: 'call-2', output: 'file result', type: 'function_call_output' },
         ],
       },
-      'lobehub-default',
+      'orvilo-default',
     );
 
     expect(payload.messages.map(({ role }) => role)).toEqual(['assistant', 'tool', 'tool']);

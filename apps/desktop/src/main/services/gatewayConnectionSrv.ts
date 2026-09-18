@@ -254,7 +254,7 @@ export default class GatewayConnectionService extends ServiceModule {
   }
 
   /**
-   * Derive the stable, user-scoped device id. Survives LobeHub reinstalls
+   * Derive the stable, user-scoped device id. Survives Orvilo reinstalls
    * because it hashes the OS machine id; falls back to the stored random UUID
    * when the machine id is unavailable. Caches the result for this session.
    */
@@ -703,7 +703,7 @@ export default class GatewayConnectionService extends ServiceModule {
       result: {
         success: true,
         systemInfo: {
-          supportedTools: ['lobe-computer-use'],
+          supportedTools: ['orvilo-computer-use'],
           arch: os.arch(),
           // Tell the server-side prompt builder which shell runCommand spawns here.
           defaultShell: (await getShellInfo()).displayName,

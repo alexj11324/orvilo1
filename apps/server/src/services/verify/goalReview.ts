@@ -3,7 +3,7 @@ import type { VerifyRunMetadata } from '@orvilo/types';
 import { GoalModel } from '@/database/models/goal';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { AcceptanceService, buildAcceptanceCheckUnion } from './acceptanceService';
 import { mapWithConcurrency } from './concurrency';
@@ -12,7 +12,7 @@ import { REVIEW_PREDICT_CONCURRENCY, VerifyReviewPredictorService } from './revi
 
 /** Called under the verify run's task-drive claim, before completing a Goal task. */
 export const reviewGoalDelivery = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   userId: string,
   taskId: string,
   operationId: string,

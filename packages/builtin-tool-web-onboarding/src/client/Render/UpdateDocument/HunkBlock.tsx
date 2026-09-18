@@ -89,11 +89,11 @@ interface HunkBlockProps {
 interface HunkContent {
   added?: string;
   labelKey:
-    | 'builtins.lobe-web-onboarding.updateDocument.hunkMode.delete'
-    | 'builtins.lobe-web-onboarding.updateDocument.hunkMode.deleteLines'
-    | 'builtins.lobe-web-onboarding.updateDocument.hunkMode.insertAt'
-    | 'builtins.lobe-web-onboarding.updateDocument.hunkMode.replace'
-    | 'builtins.lobe-web-onboarding.updateDocument.hunkMode.replaceLines';
+    | 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.delete'
+    | 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.deleteLines'
+    | 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.insertAt'
+    | 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.replace'
+    | 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.replaceLines';
   lineRange?: string;
   removed?: string;
 }
@@ -102,27 +102,27 @@ const resolveHunk = (hunk: MarkdownPatchHunk): HunkContent => {
   switch (hunk.mode) {
     case 'delete': {
       return {
-        labelKey: 'builtins.lobe-web-onboarding.updateDocument.hunkMode.delete',
+        labelKey: 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.delete',
         removed: hunk.search,
       };
     }
     case 'deleteLines': {
       return {
-        labelKey: 'builtins.lobe-web-onboarding.updateDocument.hunkMode.deleteLines',
+        labelKey: 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.deleteLines',
         lineRange: `${hunk.startLine}–${hunk.endLine}`,
       };
     }
     case 'insertAt': {
       return {
         added: hunk.content,
-        labelKey: 'builtins.lobe-web-onboarding.updateDocument.hunkMode.insertAt',
+        labelKey: 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.insertAt',
         lineRange: `L${hunk.line}`,
       };
     }
     case 'replaceLines': {
       return {
         added: hunk.content,
-        labelKey: 'builtins.lobe-web-onboarding.updateDocument.hunkMode.replaceLines',
+        labelKey: 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.replaceLines',
         lineRange: `${hunk.startLine}–${hunk.endLine}`,
       };
     }
@@ -130,7 +130,7 @@ const resolveHunk = (hunk: MarkdownPatchHunk): HunkContent => {
       // 'replace' or undefined — both shapes are MarkdownPatchReplaceHunk
       return {
         added: hunk.replace,
-        labelKey: 'builtins.lobe-web-onboarding.updateDocument.hunkMode.replace',
+        labelKey: 'builtins.orvilo-web-onboarding.updateDocument.hunkMode.replace',
         removed: hunk.search,
       };
     }

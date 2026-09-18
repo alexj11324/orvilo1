@@ -10,7 +10,9 @@ const isParallelWorker = workerSuffix !== 'local';
 
 // Test user credentials - these are used for e2e testing only
 export const TEST_USER = {
-  email: isParallelWorker ? `e2e-test+${workerSuffix}@lobehub.com` : 'e2e-test@lobehub.com',
+  email: isParallelWorker
+    ? `e2e-test+${workerSuffix}@orvilo.aspectlylabs.com`
+    : 'e2e-test@orvilo.aspectlylabs.com',
   fullName: isParallelWorker ? `E2E Test User ${workerSuffix}` : 'E2E Test User',
   id: isParallelWorker ? `user_e2e_test_user_${workerSuffix}` : 'user_e2e_test_user_001',
   password: 'TestPassword123!',

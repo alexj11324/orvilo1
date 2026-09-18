@@ -81,20 +81,20 @@ export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskSt
       <TaskResultCard
         icon={Pencil}
         identifier={identifier}
-        title={t('builtins.lobe-task.apiName.editTask')}
+        title={t('builtins.orvilo-task.apiName.editTask')}
       >
         {hasAnyChange ? (
           <>
             {hasName && (
-              <InlineField label={t('builtins.lobe-task.edit.rename')}>{params.name}</InlineField>
+              <InlineField label={t('builtins.orvilo-task.edit.rename')}>{params.name}</InlineField>
             )}
             {hasPriority && (
-              <InlineField label={t('builtins.lobe-task.edit.priority')}>
+              <InlineField label={t('builtins.orvilo-task.edit.priority')}>
                 <TaskPriorityTag disableDropdown priority={params.priority!} size={16} />
               </InlineField>
             )}
             {hasAssignee && (
-              <InlineField label={t('builtins.lobe-task.edit.assign')}>
+              <InlineField label={t('builtins.orvilo-task.edit.assign')}>
                 {params.assigneeAgentId || params.assigneeUserId ? (
                   <>
                     {params.assigneeAgentId && <AssigneeInline agentId={params.assigneeAgentId} />}
@@ -103,33 +103,33 @@ export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskSt
                     )}
                   </>
                 ) : (
-                  <Text type={'secondary'}>{t('builtins.lobe-task.edit.unassign')}</Text>
+                  <Text type={'secondary'}>{t('builtins.orvilo-task.edit.unassign')}</Text>
                 )}
               </InlineField>
             )}
             {hasParent && (
-              <InlineField label={t('builtins.lobe-task.edit.parent')}>
+              <InlineField label={t('builtins.orvilo-task.edit.parent')}>
                 {params.parentIdentifier === null ? (
-                  <Text type={'secondary'}>{t('builtins.lobe-task.edit.parentClear')}</Text>
+                  <Text type={'secondary'}>{t('builtins.orvilo-task.edit.parentClear')}</Text>
                 ) : (
                   <span className={monoChipClassName}>{params.parentIdentifier}</span>
                 )}
               </InlineField>
             )}
             {hasInstruction && (
-              <SectionField label={t('builtins.lobe-task.field.instruction')}>
+              <SectionField label={t('builtins.orvilo-task.field.instruction')}>
                 <Markdown fontSize={12} variant={'chat'}>
                   {params.instruction!}
                 </Markdown>
               </SectionField>
             )}
             {hasDescription && (
-              <SectionField label={t('builtins.lobe-task.field.description')}>
+              <SectionField label={t('builtins.orvilo-task.field.description')}>
                 {params.description}
               </SectionField>
             )}
             {hasAddDeps && (
-              <InlineField label={t('builtins.lobe-task.edit.blocksOn')}>
+              <InlineField label={t('builtins.orvilo-task.edit.blocksOn')}>
                 <div className={styles.deps}>
                   {params.addDependencies!.map((dep) => (
                     <span className={styles.addChip} key={`add-${dep}`}>
@@ -140,7 +140,7 @@ export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskSt
               </InlineField>
             )}
             {hasRemoveDeps && (
-              <InlineField label={t('builtins.lobe-task.edit.unblocks')}>
+              <InlineField label={t('builtins.orvilo-task.edit.unblocks')}>
                 <div className={styles.deps}>
                   {params.removeDependencies!.map((dep) => (
                     <span className={styles.removeChip} key={`remove-${dep}`}>

@@ -19,7 +19,7 @@ const { createTelegramAdapterMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('./guestAdapter', () => ({
-  createLobeTelegramAdapter: createTelegramAdapterMock,
+  createOrviloTelegramAdapter: createTelegramAdapterMock,
 }));
 
 vi.mock('@/server/services/gateway/runtimeStatus', () => ({

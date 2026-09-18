@@ -9,18 +9,20 @@ import {
 
 describe('normalizeBrowserUrl', () => {
   it('keeps explicit http URLs', () => {
-    expect(normalizeBrowserUrl('https://lobehub.com')).toBe('https://lobehub.com');
+    expect(normalizeBrowserUrl('https://orvilo.aspectlylabs.com')).toBe(
+      'https://orvilo.aspectlylabs.com',
+    );
   });
 
   it('normalizes hostnames and local dev URLs', () => {
-    expect(normalizeBrowserUrl('lobehub.com')).toBe('https://lobehub.com');
+    expect(normalizeBrowserUrl('orvilo.aspectlylabs.com')).toBe('https://orvilo.aspectlylabs.com');
     expect(normalizeBrowserUrl('localhost:3000')).toBe('http://localhost:3000');
     expect(normalizeBrowserUrl('127.0.0.1:9876')).toBe('http://127.0.0.1:9876');
   });
 
   it('turns plain text into a search URL', () => {
-    expect(normalizeBrowserUrl('lobe browser feature')).toBe(
-      'https://www.bing.com/search?q=lobe+browser+feature',
+    expect(normalizeBrowserUrl('orvilo browser feature')).toBe(
+      'https://www.bing.com/search?q=orvilo+browser+feature',
     );
   });
 });
@@ -31,25 +33,25 @@ describe('createElementContext', () => {
       createElementContext({
         element: {
           html: '<button class="go">Send</button>',
-          pageTitle: 'LobeHub',
+          pageTitle: 'Orvilo',
           selector: 'form > button.go',
           tag: 'button',
           text: 'Send',
           thumbnailUrl: 'data:image/jpeg;base64,thumb',
-          url: 'https://lobehub.com',
+          url: 'https://orvilo.aspectlylabs.com',
         },
         elementTitle: 'Element',
         id: 'element-1',
       }),
     ).toEqual({
       content:
-        'Source: https://lobehub.com\nElement: form > button.go\n\nSend\n\n```html\n<button class="go">Send</button>\n```',
+        'Source: https://orvilo.aspectlylabs.com\nElement: form > button.go\n\nSend\n\n```html\n<button class="go">Send</button>\n```',
       element: {
-        pageTitle: 'LobeHub',
+        pageTitle: 'Orvilo',
         selector: 'form > button.go',
         tag: 'button',
         thumbnailUrl: 'data:image/jpeg;base64,thumb',
-        url: 'https://lobehub.com',
+        url: 'https://orvilo.aspectlylabs.com',
       },
       format: 'text',
       id: 'element-1',

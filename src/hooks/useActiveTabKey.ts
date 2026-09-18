@@ -1,3 +1,5 @@
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { stripWorkspaceSlug } from '@/features/Workspace/workspaceAwarePath';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { usePathname, useSearchParams } from '@/libs/router/navigation';
 import { ProfileTabs, SettingsTabs, SidebarTabKey } from '@/store/global/initialState';
@@ -8,7 +10,10 @@ import { ProfileTabs, SettingsTabs, SidebarTabKey } from '@/store/global/initial
  */
 export const useActiveTabKey = () => {
   const { pathname } = useActiveLocation();
-  return (pathname.split('/').find(Boolean)! as SidebarTabKey) || SidebarTabKey.Home;
+  // Destinations are mirrored under `/{slug}` inside a workspace, so the raw
+  // first segment is the slug there, not a tab key — strip it before reading.
+  const scoped = stripWorkspaceSlug(pathname, useActiveWorkspaceSlug());
+  return (scoped.split('/').find(Boolean)! as SidebarTabKey) || SidebarTabKey.Home;
 };
 
 /**

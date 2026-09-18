@@ -40,7 +40,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         return (
           <div className={oneLineEllipsis}>
             <span className={shinyTextStyles.shinyText}>
-              {t('builtins.lobe-page-agent.apiName.initPage')}
+              {t('builtins.orvilo-page-agent.apiName.initPage')}
             </span>
           </div>
         );
@@ -49,21 +49,21 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
       return (
         <div className={oneLineEllipsis}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-page-agent.apiName.initPage.creating')}
+            {t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </span>
           {displayLines > 0 && (
             <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
               {' '}
               <Icon icon={Plus} size={12} />
               <AnimatedNumber value={displayLines} />
-              {t('builtins.lobe-page-agent.apiName.initPage.lines')}
+              {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
             </Text>
           )}
           {chars > 0 && (
             <Text code as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
               {' '}
               <AnimatedNumber value={chars} />
-              {t('builtins.lobe-page-agent.apiName.initPage.chars')}
+              {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
             </Text>
           )}
         </div>
@@ -73,20 +73,20 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
     return (
       <div className={oneLineEllipsis}>
         <span className={styles.title}>
-          {t('builtins.lobe-page-agent.apiName.initPage.result')}
+          {t('builtins.orvilo-page-agent.apiName.initPage.result')}
         </span>
         {displayLines > 0 && (
           <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
             <Icon icon={Plus} size={12} />
             <AnimatedNumber value={displayLines} />
-            {t('builtins.lobe-page-agent.apiName.initPage.lines')}
+            {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
           </Text>
         )}
         {chars > 0 && (
           <Text code as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
             {' '}
             <AnimatedNumber value={chars} />
-            {t('builtins.lobe-page-agent.apiName.initPage.chars')}
+            {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
           </Text>
         )}
       </div>

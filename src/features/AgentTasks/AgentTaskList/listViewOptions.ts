@@ -54,7 +54,8 @@ export interface TaskGroupMeta {
 
 export const DEFAULT_TASK_LIST_VIEW_OPTIONS: TaskListViewOptions = {
   groupBy: 'status',
-  hideCompleted: true,
+  // Completed work shows by default; only `canceled` starts folded away.
+  hideCompleted: false,
   // Nesting is the default *shape* for sub-tasks, but sub-tasks stay hidden
   // until asked for: a parent already carries its progress (`3/8`), so listing
   // its children as peers only pads the list with rows the parent stands for.

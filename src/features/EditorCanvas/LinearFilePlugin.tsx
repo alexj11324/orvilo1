@@ -49,7 +49,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorFillTertiary};
     }
 
-    &:hover [data-lobehub-file-download] {
+    &:hover [data-orvilo-file-download] {
       opacity: 1;
     }
   `,
@@ -254,7 +254,7 @@ export const LinearFileCard = memo<LinearFileCardProps>(({ node, uploadTracker }
           <div className={styles.size}>{formatSize(size)}</div>
         ) : null}
       </div>
-      <div className={styles.download} data-lobehub-file-download="">
+      <div className={styles.download} data-orvilo-file-download="">
         <ActionIcon
           aria-label="Download"
           icon={DownloadIcon}

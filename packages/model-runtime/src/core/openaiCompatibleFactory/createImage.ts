@@ -14,7 +14,7 @@ import { parseDataUri } from '../../utils/uriParser';
 import { convertImageUrlToFile } from '../contextBuilders/openai';
 import { convertOpenAIImageUsage } from '../usageConverters/openai';
 
-const log = createDebug('lobe-image:openai-compatible');
+const log = createDebug('orvilo-image:openai-compatible');
 
 interface CreateOpenAICompatibleImageOptions {
   pricingContext?: CreateImageMethodOptions['pricingContext'];

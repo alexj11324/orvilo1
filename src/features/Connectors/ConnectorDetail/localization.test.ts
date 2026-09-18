@@ -12,13 +12,13 @@ const createTranslator = (translations: Record<string, string> = {}) =>
 describe('getLocalizedConnectorDetail', () => {
   it('localizes builtin connector name and description with setting keys', () => {
     const t = createTranslator({
-      'tools.builtins.lobe-web-browsing.description': '搜索网页获取最新信息',
-      'tools.builtins.lobe-web-browsing.title': '网页浏览',
+      'tools.builtins.orvilo-web-browsing.description': '搜索网页获取最新信息',
+      'tools.builtins.orvilo-web-browsing.title': '网页浏览',
     });
 
     const result = getLocalizedConnectorDetail({
       connector: {
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         metadata: { description: 'Search the web' },
         name: 'Web Browsing',
         sourceType: 'builtin',
@@ -27,17 +27,17 @@ describe('getLocalizedConnectorDetail', () => {
     });
 
     expect(result).toEqual({ description: '搜索网页获取最新信息', name: '网页浏览' });
-    expect(t).toHaveBeenCalledWith('tools.builtins.lobe-web-browsing.title', {
+    expect(t).toHaveBeenCalledWith('tools.builtins.orvilo-web-browsing.title', {
       defaultValue: 'Web Browsing',
     });
-    expect(t).toHaveBeenCalledWith('tools.builtins.lobe-web-browsing.description', {
+    expect(t).toHaveBeenCalledWith('tools.builtins.orvilo-web-browsing.description', {
       defaultValue: 'Search the web',
     });
   });
 
-  it('localizes LobeHub marketplace connector descriptions from provider metadata', () => {
+  it('localizes Orvilo marketplace connector descriptions from provider metadata', () => {
     const t = createTranslator({
-      'tools.lobehubSkill.providers.github.description': '连接 GitHub 代码仓库',
+      'tools.orviloSkill.providers.github.description': '连接 GitHub 代码仓库',
     });
 
     const result = getLocalizedConnectorDetail({
@@ -47,12 +47,12 @@ describe('getLocalizedConnectorDetail', () => {
         name: 'GitHub connector',
         sourceType: 'marketplace',
       },
-      lobehubProvider: { description: 'GitHub provider description', label: 'GitHub' },
+      orviloProvider: { description: 'GitHub provider description', label: 'GitHub' },
       t,
     });
 
     expect(result).toEqual({ description: '连接 GitHub 代码仓库', name: 'GitHub' });
-    expect(t).toHaveBeenCalledWith('tools.lobehubSkill.providers.github.description', {
+    expect(t).toHaveBeenCalledWith('tools.orviloSkill.providers.github.description', {
       defaultValue: 'GitHub provider description',
     });
   });

@@ -64,7 +64,7 @@ describe('invoke', () => {
 
   it('should rebuild and throw a real Error (with cause) from a main-process error envelope', async () => {
     mockIpcRendererInvoke.mockResolvedValue({
-      __lobeIpcError__: true,
+      __orviloIpcError__: true,
       error: {
         cause: { code: 'ENOTFOUND', message: 'getaddrinfo ENOTFOUND example.com', name: 'Error' },
         message: 'fetch failed',
@@ -80,7 +80,7 @@ describe('invoke', () => {
   });
 
   it('should not treat a plain object result as an error envelope', async () => {
-    const result = { __lobeIpcError__: false, data: 'ok' };
+    const result = { __orviloIpcError__: false, data: 'ok' };
     mockIpcRendererInvoke.mockResolvedValue(result);
 
     await expect(invoke('someEvent')).resolves.toEqual(result);

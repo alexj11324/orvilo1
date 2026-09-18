@@ -37,7 +37,7 @@ export const listBuiltinInspectorEntries = (): BuiltinInspectorRegistryEntry[] =
 
 /**
  * Get builtin inspector component for a specific API
- * @param identifier - Tool identifier (e.g., 'lobe-code-interpreter')
+ * @param identifier - Tool identifier (e.g., 'orvilo-code-interpreter')
  * @param apiName - API name (e.g., 'executeCode')
  */
 export const getBuiltinInspector = (

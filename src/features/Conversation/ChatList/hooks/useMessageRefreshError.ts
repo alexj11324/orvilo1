@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const log = debug('lobe-client:message-refresh');
+const log = debug('orvilo-client:message-refresh');
 
 interface UseMessageRefreshErrorOptions {
   error?: unknown;

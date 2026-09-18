@@ -1,7 +1,7 @@
 import { and, count, countDistinct, eq, inArray, isNull, not, notInArray, or } from 'drizzle-orm';
 
 import { expertiseBindings, expertiseDomains } from '../schemas';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from './workspace';
 
 interface AgentExpertiseHandoverParams {
@@ -11,7 +11,7 @@ interface AgentExpertiseHandoverParams {
   workspaceId: string;
 }
 
-type Db = LobeChatDatabase | Transaction;
+type Db = OrviloDatabase | Transaction;
 
 /**
  * Domains bound to these agents that the recipient cannot see (private to

@@ -8,7 +8,7 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import { AgentModel } from '@/database/models/agent';
 import type { DecryptedBotProvider } from '@/database/models/agentBotProvider';
 import { AgentBotProviderModel } from '@/database/models/agentBotProvider';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
 import { resolveToolMode } from '@/helpers/executionTarget';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
@@ -81,11 +81,11 @@ const WEBHOOK_RECONCILE_COOLDOWN_MS = 5 * 60 * 1000;
 /** Redis key prefix for the fleet-wide reconcile cooldown (SET NX EX). */
 const WEBHOOK_RECONCILE_KEY_PREFIX = 'bot:webhook-reconcile';
 
-const log = debug('lobe-server:bot:message-router');
+const log = debug('orvilo-server:bot:message-router');
 const WECHAT_PRO_FEATURE_NOTICE =
-  '提示：由于 WeChat 渠道通信成本过高，LobeHub 微信渠道能力将于近期调整为付费功能。预告期内已有连接可继续使用，但新建或重新连接微信渠道需要升级到个人付费 Plan。';
+  '提示：由于 WeChat 渠道通信成本过高，Orvilo 微信渠道能力将于近期调整为付费功能。预告期内已有连接可继续使用，但新建或重新连接微信渠道需要升级到个人付费 Plan。';
 const WECHAT_PRO_FEATURE_NOTICE_WORKSPACE =
-  '提示：由于 WeChat 渠道通信成本过高，LobeHub 微信渠道能力将于近期调整为付费功能。预告期内已有连接可继续使用，但新建或重新连接微信渠道需要将所属工作区升级到付费 Plan。';
+  '提示：由于 WeChat 渠道通信成本过高，Orvilo 微信渠道能力将于近期调整为付费功能。预告期内已有连接可继续使用，但新建或重新连接微信渠道需要将所属工作区升级到付费 Plan。';
 
 /**
  * Compact summary of a Chat SDK Message's attachments for debug logging.
@@ -424,7 +424,7 @@ export class BotMessageRouter {
   private async createAndRegisterBot(
     entry: PlatformDefinition,
     provider: DecryptedBotProvider,
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
   ): Promise<RegisteredBot> {
     const { agentId, userId, applicationId, workspaceId } = provider;
     const platform = entry.id;
@@ -583,7 +583,7 @@ export class BotMessageRouter {
         concurrencyStrategy === 'burst' || concurrencyStrategy === 'debounce'
           ? { debounceMs, strategy: concurrencyStrategy }
           : 'queue',
-      userName: `lobehub-bot-${label}`,
+      userName: `orvilo-bot-${label}`,
     };
 
     const redisClient = getAgentRuntimeRedisClient();
@@ -679,7 +679,7 @@ export class BotMessageRouter {
 
   private registerHandlers(
     bot: Chat<any>,
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     client: PlatformClient,
     commands: BotCommand[],
     info: ResolvedAgentInfo & {
@@ -1850,7 +1850,7 @@ export class BotMessageRouter {
    * needing every command entry threaded through CommandContext.
    */
   private buildCommands(
-    serverDB: LobeChatDatabase,
+    serverDB: OrviloDatabase,
     info: {
       agentId: string;
       applicationId: string;
@@ -2128,7 +2128,7 @@ export class BotMessageRouter {
         name: 'approve',
       },
       {
-        description: 'Send feedback directly to the LobeHub team (no AI reply)',
+        description: 'Send feedback directly to the Orvilo team (no AI reply)',
         // Declaring the argument so Discord/Slack surface a `/feedback <message>`
         // prompt instead of registering the command as zero-arg (see the
         // `options` comment on the BotCommand interface).

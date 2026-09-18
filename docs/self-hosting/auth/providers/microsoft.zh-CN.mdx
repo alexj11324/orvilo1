@@ -1,13 +1,13 @@
 ---
-title: 在 LobeHub 中配置 Microsoft 身份验证
+title: 在 Orvilo 中配置 Microsoft 身份验证
 description: >-
-  学习如何在 LobeHub 中配置 Microsoft (Entra ID / Azure AD) SSO，包括在 Azure Portal
+  学习如何在 Orvilo 中配置 Microsoft (Entra ID / Azure AD) SSO，包括在 Azure Portal
   创建应用和设置环境变量。
 tags:
   - Microsoft
   - 身份验证
   - Azure AD
-  - LobeHub
+  - Orvilo
   - 单点登录
 ---
 
@@ -23,8 +23,6 @@ tags:
      - **Single tenant**：仅限组织内用户
      - **Multitenant**：任何 Azure AD 组织的用户
      - **Multitenant + personal**：也包括个人 Microsoft 帐户
-
-  <Image alt="应用注册" inStep src="https://github.com/lobehub/lobehub/assets/13883964/4f9d83bd-b3fc-4abc-bcf4-ccbad65c219d" />
 
   ### 配置重定向 URI
 
@@ -46,8 +44,6 @@ tags:
 
   创建后，查看 **Overview** 标签页：
 
-  <Image alt="应用概览" inStep src="https://github.com/lobehub/lobehub/assets/13883964/48a0b702-05bd-4ce4-a007-a8ad00a36e5a" />
-
   记录：
 
   - **Application (client) ID** - 即 `AUTH_MICROSOFT_ID`
@@ -59,8 +55,6 @@ tags:
   2. 点击 **New client secret**
   3. 填写描述并选择过期时间
   4. 点击 **Add**
-
-  <Image alt="创建客户端密钥" inStep src="https://github.com/lobehub/lobehub/assets/13883964/c9d66fa0-158c-4bd3-a1fa-969e638259d2" />
 
   <Callout type={'warning'}>
     立即复制客户端密钥的 **Value** - 之后将无法再次查看。
@@ -93,7 +87,7 @@ tags:
 </Steps>
 
 <Callout type={'info'}>
-  部署成功后，用户将可以通过 Microsoft 身份认证并使用 LobeHub。
+  部署成功后，用户将可以通过 Microsoft 身份认证并使用 Orvilo。
 </Callout>
 
 ## 常见问题

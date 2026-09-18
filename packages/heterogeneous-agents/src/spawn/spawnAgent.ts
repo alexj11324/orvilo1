@@ -531,7 +531,7 @@ const spawnGrokAcpAgent = async (
   const bridge = createAcpSpawnBridge();
   const session = new GrokAcpSession({
     args: options.extraArgs ?? [],
-    clientVersion: 'lobehub-cli',
+    clientVersion: 'orvilo-cli',
     commandPath: command,
     cwd,
     detached: options.detached,
@@ -559,7 +559,7 @@ const spawnCursorAcpAgent = async (
   const session = new CursorAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
-    clientVersion: 'lobehub-cli',
+    clientVersion: 'orvilo-cli',
     commandPath: command,
     cwd,
     detached: options.detached,
@@ -587,7 +587,7 @@ const spawnDroidAcpAgent = async (
   const session = new DroidAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
-    clientVersion: 'lobehub-cli',
+    clientVersion: 'orvilo-cli',
     commandPath: command,
     cwd,
     env: { ...process.env, ...options.env },
@@ -628,7 +628,7 @@ const spawnDevinAcpAgent = async (
   const session = new DevinAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
-    clientVersion: 'lobehub-cli',
+    clientVersion: 'orvilo-cli',
     commandPath: command,
     cwd,
     detached: options.detached,

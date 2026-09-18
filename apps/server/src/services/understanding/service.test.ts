@@ -113,7 +113,7 @@ const createHarness = (initialSession?: OnboardingUnderstandingSession) => {
   }));
   providers.set('github', {
     collect: githubCollect,
-    connectionSource: 'lobehub',
+    connectionSource: 'orvilo',
     id: 'github',
   });
   providers.set('gmail', {
@@ -250,7 +250,7 @@ const createHarness = (initialSession?: OnboardingUnderstandingSession) => {
   const writerAgent = vi.fn(async () => ({
     id: 'agent-1',
     model: 'gpt-5.4-mini',
-    provider: 'lobehub',
+    provider: 'orvilo',
   }));
   const generateObject = vi.fn(
     async (
@@ -708,7 +708,7 @@ describe('UnderstandingService', () => {
       collect: vi.fn(async () => {
         throw upstreamError;
       }),
-      connectionSource: 'lobehub',
+      connectionSource: 'orvilo',
       id: 'github',
     });
 
@@ -766,7 +766,7 @@ describe('UnderstandingService', () => {
     expect(harness.generateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'gpt-5.4-mini',
-        provider: 'lobehub',
+        provider: 'orvilo',
         schema: UNDERSTANDING_ANALYSIS_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       }),
@@ -797,7 +797,7 @@ describe('UnderstandingService', () => {
     expect(createdMessage).toMatchObject({
       agentId: 'agent-1',
       model: 'gpt-5.4-mini',
-      provider: 'lobehub',
+      provider: 'orvilo',
       role: 'assistant',
     });
     expect(JSON.parse(createdMessage.content)).toEqual(analysis);

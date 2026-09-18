@@ -1,8 +1,8 @@
 import type { CSSProperties, PropsWithChildren } from 'react';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteError } from 'react-router';
 import { isRtlLang } from 'rtl-detect';
-import { href as antdStaticCssHref } from 'virtual:lobehub/antd-static-css';
-import { href as themeVarsCssHref } from 'virtual:lobehub/theme-vars-css';
+import { href as antdStaticCssHref } from 'virtual:aspectlylabs/antd-static-css';
+import { href as themeVarsCssHref } from 'virtual:aspectlylabs/theme-vars-css';
 
 import NextThemeProvider from '@/layout/GlobalProvider/NextThemeProvider';
 import { isChunkLoadError, notifyChunkError } from '@/utils/chunkError';

@@ -1,4 +1,4 @@
-import type { ILobeAgentRuntimeErrorType } from '../types/error';
+import type { IOrviloAgentRuntimeErrorType } from '../types/error';
 import { AgentRuntimeErrorType } from '../types/error';
 
 export interface ComfyUIError {
@@ -14,7 +14,7 @@ export interface ComfyUIError {
 
 export interface ParsedError {
   error: ComfyUIError;
-  errorType: ILobeAgentRuntimeErrorType;
+  errorType: IOrviloAgentRuntimeErrorType;
 }
 
 /**
@@ -211,7 +211,7 @@ export function parseComfyUIErrorMessage(error: any): ParsedError {
   const errorInfo = extractComfyUIErrorInfo(error);
 
   // Default error type
-  let errorType: ILobeAgentRuntimeErrorType = AgentRuntimeErrorType.ComfyUIBizError;
+  let errorType: IOrviloAgentRuntimeErrorType = AgentRuntimeErrorType.ComfyUIBizError;
 
   // Note: SyntaxError checking moved to server-side errorHandlerService
   // Client-side will never receive raw SyntaxError as it's already processed by server

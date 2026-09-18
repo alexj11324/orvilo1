@@ -17,7 +17,7 @@ const timestamp = (value: Date | string | null | undefined) =>
   value ? new Date(value).getTime() : 0;
 
 const getAgentIdFromUrl = (url: string): string | undefined => {
-  const pathname = new URL(url, 'https://lobehub.local').pathname;
+  const pathname = new URL(url, 'https://orvilo.local').pathname;
   const segments = pathname.split('/').filter(Boolean);
   const agentIndex = segments.indexOf('agent');
   const encodedId = agentIndex >= 0 ? segments[agentIndex + 1] : undefined;
@@ -31,7 +31,7 @@ const fallbackAgentUrl = (scope: TabScope, agentId: string) => {
 };
 
 const resolveRecentItem = (page: ResolvedTab, agentNames: ReadonlyMap<string, string>) => {
-  const pathname = new URL(page.tab.url, 'https://lobehub.local').pathname;
+  const pathname = new URL(page.tab.url, 'https://orvilo.local').pathname;
   const segments = pathname.split('/').filter(Boolean);
   const agentIndex = segments.indexOf('agent');
   if (

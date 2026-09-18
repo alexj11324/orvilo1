@@ -1,7 +1,7 @@
 ---
 title: Share Settings via URL - Import and Export Configuration Settings
 description: >-
-  Learn how to import and export configuration settings for LobeHub via URL.
+  Learn how to import and export configuration settings for Orvilo via URL.
   Understand the supported settings, URL format, and parameter schema for
   keyVaults and languageModel.
 tags:
@@ -9,13 +9,13 @@ tags:
   - URL Import
   - URL Export
   - Configuration Settings
-  - LobeHub
+  - Orvilo
   - Parameter Schema
 ---
 
 # Share settings via URL
 
-LobeHub support import settings from external URL to quickly set up LobeHub configuration.
+Orvilo support import settings from external URL to quickly set up Orvilo configuration.
 
 The currently supported settings are:
 
@@ -27,8 +27,8 @@ The currently supported settings are:
 Use the following URL format to import settings parameters from an external URL:
 
 ```plaintext
-https://lobehub.com/?settings=<settings object in JSON format>
-https://lobehub.com/?settings={"keyVaults":{"openai":{"apiKey":"user-key","baseURL":"https://your-proxy.com/v1"}}}
+https://orvilo.aspectlylabs.com/?settings=<settings object in JSON format>
+https://orvilo.aspectlylabs.com/?settings={"keyVaults":{"openai":{"apiKey":"user-key","baseURL":"https://your-proxy.com/v1"}}}
 ```
 
 Example of settings in JSON format:
@@ -62,7 +62,7 @@ console.log(url);
 ```
 
 <Callout type={'warning'}>
-  LobeHub does not verify the correctness of the settings parameters in the URL, nor provide
+  Orvilo does not verify the correctness of the settings parameters in the URL, nor provide
   encryption or decryption methods. Please use with caution.
 </Callout>
 

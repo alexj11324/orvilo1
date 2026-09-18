@@ -28,9 +28,7 @@ vi.mock('@/database/models/oauthHandoff', () => ({
 }));
 
 const createRequest = (search: string) => {
-  const url = new URL(
-    `https://lobehub-cloud-next-stable.vercel.app/oidc/callback/desktop${search}`,
-  );
+  const url = new URL(`https://orvilo-cloud-next-stable.vercel.app/oidc/callback/desktop${search}`);
   return Object.assign(new Request(url), { nextUrl: url }) as unknown as NextRequest;
 };
 

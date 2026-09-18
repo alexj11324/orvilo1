@@ -26,7 +26,7 @@ import type {
   TextToSpeechPayload,
 } from '../types';
 
-export interface LobeRuntimeAI {
+export interface OrviloRuntimeAI {
   baseURL?: string;
   chat?: (payload: ChatStreamPayload, options?: ChatMethodOptions) => Promise<Response>;
   createImage?: (
@@ -72,7 +72,7 @@ export interface LobeRuntimeAI {
 }
 /* eslint-enabled */
 
-export abstract class LobeOpenAICompatibleRuntime {
+export abstract class OrviloOpenAICompatibleRuntime {
   abstract baseURL: string;
   abstract client: OpenAI;
 

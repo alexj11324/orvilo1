@@ -7,7 +7,7 @@ import { getServerDB } from '@/database/server';
 import { GoalAdvanceRecorder, TERMINAL_GOAL_STATUSES } from './goalTraceRecorder';
 import { GoalService } from './index';
 
-const log = debug('lobe-server:goal-advance');
+const log = debug('orvilo-server:goal-advance');
 
 /**
  * Outcomes the coordinator cannot get past by ticking again.

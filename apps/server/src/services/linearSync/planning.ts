@@ -16,7 +16,7 @@ import {
   taskPlanningRevisions,
   tasks,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   createGoalTaskOwnershipAdapter,
   projectPlannerOwnershipError,
@@ -125,12 +125,12 @@ export interface ApplyPlanningProposalResult {
 class PlanningLeaseLostError extends Error {}
 
 export class LinearPlanningWorker {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly model: LinearSyncModel;
   private readonly workspaceId: string;
 
   constructor(
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     workspaceId: string,
     private readonly ownershipAdapterFactory = createGoalTaskOwnershipAdapter,
   ) {
@@ -483,7 +483,7 @@ export class LinearPlanningWorker {
       }
 
       const goalOwners = await this.ownershipAdapterFactory(
-        tx as unknown as LobeChatDatabase,
+        tx as unknown as OrviloDatabase,
         this.workspaceId,
       ).findOwners(existingTaskIds);
       const ownershipError = projectPlannerOwnershipError(goalOwners);
@@ -836,7 +836,7 @@ export class LinearPlanningWorker {
   }
 
   private async applyDependencyAction(
-    tx: LobeChatDatabase,
+    tx: OrviloDatabase,
     taskModel: TaskModel,
     action: Extract<TaskPlanningAction, { action: 'set_dependency' }>,
     idempotencyKey: string,

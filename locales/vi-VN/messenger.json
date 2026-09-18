@@ -184,7 +184,7 @@
   "verify.confirm.defaultAgent": "Đại lý mặc định",
   "verify.confirm.defaultAgentHint": "Tin nhắn của bạn sẽ được chuyển đến đây trước tiên. Bạn có thể chuyển đổi bất kỳ lúc nào qua /agents trong bot hoặc từ Cài đặt → Messenger.",
   "verify.confirm.defaultAgentPlaceholder": "Chọn một đại lý",
-  "verify.confirm.fields.lobeHubAccount": "Tài khoản Orvilo",
+  "verify.confirm.fields.orviloHubAccount": "Tài khoản Orvilo",
   "verify.confirm.fields.platformAccount": "Tài khoản {{platform}}",
   "verify.confirm.fields.workspace": "Không gian làm việc",
   "verify.confirm.noAgents": "Bạn chưa có đại lý nào. Tạo một đại lý trong Orvilo, sau đó quay lại để hoàn tất liên kết.",
@@ -203,7 +203,7 @@
   "verify.error.unlinkBeforeRelink": "Tài khoản Orvilo này đã được liên kết với một tài khoản Telegram khác. Ngắt kết nối trong Cài đặt → Messenger trước khi liên kết tài khoản mới.",
   "verify.signInCta": "Đăng nhập để tiếp tục",
   "verify.signInRequired": "Vui lòng đăng nhập vào Orvilo để xác nhận liên kết.",
-  "verify.success.backToLobeHub": "Quay lại Orvilo",
+  "verify.success.backToOrvilo": "Quay lại Orvilo",
   "verify.success.description": "Tài khoản của bạn hiện đã được kết nối với {{platform}}. Mở {{platform}} và gửi tin nhắn đầu tiên của bạn.",
   "verify.success.openBot": "Mở trong {{platform}}",
   "verify.success.title": "Liên kết thành công!"

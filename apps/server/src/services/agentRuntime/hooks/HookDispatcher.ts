@@ -16,7 +16,7 @@ import type {
   ToolCallHookEvent,
 } from './types';
 
-const log = debug('lobe-server:hook-dispatcher');
+const log = debug('orvilo-server:hook-dispatcher');
 
 export class CriticalHookDeliveryError extends Error {
   constructor(

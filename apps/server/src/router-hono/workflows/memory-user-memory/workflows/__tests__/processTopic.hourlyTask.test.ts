@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   extractTopic: vi.fn(),
   incrementUserMemoryExtractionProgress: vi.fn(),
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
+  isUserMemoryExtractionEnabled: vi.fn(),
 }));
 
 vi.mock('@orvilo/observability-otel/modules/hatchet-workflow', () => ({
@@ -65,6 +66,10 @@ vi.mock('@/database/server', () => ({
   })),
 }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
+}));
+
 vi.mock('../runGuard', () => ({
   checkGuard: vi.fn().mockResolvedValue({ result: true }),
   ensureWorkflowStarted: vi.fn().mockResolvedValue({ started: true }),
@@ -82,6 +87,7 @@ describe('processTopicHandler hourly task behavior', () => {
     mocks.extractTopic.mockResolvedValue(undefined);
     mocks.incrementUserMemoryExtractionProgress.mockResolvedValue(undefined);
     mocks.isHourlyMemoryExtractionCancellationRequested.mockResolvedValue(false);
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
   });
 
   it('checks hourly cancellation before CEPA and identity extraction', async () => {
@@ -145,5 +151,28 @@ describe('processTopicHandler hourly task behavior', () => {
     expect(mocks.incrementUserMemoryExtractionProgress).toHaveBeenCalledWith(
       '00000000-0000-4000-8000-000000000002',
     );
+  });
+
+  it('skips extraction entirely for a user who disabled memory', async () => {
+    /**
+     * @example
+     * await expect(processTopicHandler(context)).resolves.toMatchObject({ skipped: true });
+     */
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(false);
+
+    const context = createContext({
+      baseUrl: 'https://app.example.com',
+      hourlyTaskId: '00000000-0000-4000-8000-000000000001',
+      sources: [MemorySourceType.ChatTopic],
+      topicIds: ['t1'],
+      userIds: ['u1'],
+    });
+
+    await expect(processTopicHandler(context as never)).resolves.toEqual({
+      message: 'User memory is disabled, skip topic.',
+      skipped: true,
+    });
+    expect(mocks.createExecutor).not.toHaveBeenCalled();
+    expect(mocks.extractTopic).not.toHaveBeenCalled();
   });
 });

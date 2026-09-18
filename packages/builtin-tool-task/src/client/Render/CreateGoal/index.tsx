@@ -57,31 +57,31 @@ type PhaseKey = keyof typeof PHASE_META;
 const phaseLabel = (t: TFunction<'plugin'>, phase: PhaseKey): string => {
   switch (phase) {
     case 'accepted': {
-      return t('builtins.lobe-task.goal.phase.accepted');
+      return t('builtins.orvilo-task.goal.phase.accepted');
     }
     case 'awaitingDecision': {
-      return t('builtins.lobe-task.goal.phase.awaitingDecision');
+      return t('builtins.orvilo-task.goal.phase.awaitingDecision');
     }
     case 'awaitingReview': {
-      return t('builtins.lobe-task.goal.phase.awaitingReview');
+      return t('builtins.orvilo-task.goal.phase.awaitingReview');
     }
     case 'closed': {
-      return t('builtins.lobe-task.goal.phase.closed');
+      return t('builtins.orvilo-task.goal.phase.closed');
     }
     case 'errored': {
-      return t('builtins.lobe-task.goal.phase.errored');
+      return t('builtins.orvilo-task.goal.phase.errored');
     }
     case 'rejected': {
-      return t('builtins.lobe-task.goal.phase.rejected');
+      return t('builtins.orvilo-task.goal.phase.rejected');
     }
     case 'repairing': {
-      return t('builtins.lobe-task.goal.phase.repairing');
+      return t('builtins.orvilo-task.goal.phase.repairing');
     }
     case 'verifying': {
-      return t('builtins.lobe-task.goal.phase.verifying');
+      return t('builtins.orvilo-task.goal.phase.verifying');
     }
     case 'running': {
-      return t('builtins.lobe-task.goal.running');
+      return t('builtins.orvilo-task.goal.running');
     }
   }
 };
@@ -183,8 +183,10 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
             </Flexbox>
             <Text fontSize={12} type={'secondary'}>
               {meta.settled
-                ? t('builtins.lobe-task.goal.settledHint')
-                : t('builtins.lobe-task.goal.runningHint', { count: args?.criteria?.length ?? 0 })}
+                ? t('builtins.orvilo-task.goal.settledHint')
+                : t('builtins.orvilo-task.goal.runningHint', {
+                    count: args?.criteria?.length ?? 0,
+                  })}
             </Text>
           </Flexbox>
         </Flexbox>

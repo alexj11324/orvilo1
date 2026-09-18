@@ -5,12 +5,12 @@ import { extractLarkDocLinks, flattenLarkMessageContent, parseLarkDocUrl } from 
 describe('parseLarkDocUrl', () => {
   it('extracts the token from a docx link and ignores query / fragment', () => {
     expect(
-      parseLarkDocUrl('https://lobe-hub.feishu.cn/docx/Abc123DefGhi456?from=chat#heading'),
+      parseLarkDocUrl('https://orvilo-hub.feishu.cn/docx/Abc123DefGhi456?from=chat#heading'),
     ).toEqual({
-      host: 'lobe-hub.feishu.cn',
+      host: 'orvilo-hub.feishu.cn',
       kind: 'docx',
       token: 'Abc123DefGhi456',
-      url: 'https://lobe-hub.feishu.cn/docx/Abc123DefGhi456',
+      url: 'https://orvilo-hub.feishu.cn/docx/Abc123DefGhi456',
     });
   });
 
@@ -26,7 +26,7 @@ describe('parseLarkDocUrl', () => {
   });
 
   it('rejects non-document and non-Feishu URLs', () => {
-    expect(parseLarkDocUrl('https://lobe-hub.feishu.cn/space/home')).toBeUndefined();
+    expect(parseLarkDocUrl('https://orvilo-hub.feishu.cn/space/home')).toBeUndefined();
     expect(parseLarkDocUrl('https://docs.google.com/document/d/abc')).toBeUndefined();
     expect(parseLarkDocUrl('docx/Abc123')).toBeUndefined();
     expect(parseLarkDocUrl('see https://x.feishu.cn/docx/Abc123')).toBeUndefined();
@@ -36,8 +36,8 @@ describe('parseLarkDocUrl', () => {
 describe('extractLarkDocLinks', () => {
   it('finds every distinct document link in free text, in order', () => {
     const text = [
-      '会议纪要 https://lobe-hub.feishu.cn/docx/AAA?from=chat 和',
-      'https://lobe-hub.feishu.cn/wiki/BBB ，再看一次 https://lobe-hub.feishu.cn/docx/AAA',
+      '会议纪要 https://orvilo-hub.feishu.cn/docx/AAA?from=chat 和',
+      'https://orvilo-hub.feishu.cn/wiki/BBB ，再看一次 https://orvilo-hub.feishu.cn/docx/AAA',
     ].join(' ');
     expect(extractLarkDocLinks(text).map((l) => `${l.kind}:${l.token}`)).toEqual([
       'docx:AAA',
@@ -54,10 +54,10 @@ describe('flattenLarkMessageContent', () => {
   it('returns the text and its links for a text message', () => {
     const result = flattenLarkMessageContent(
       'text',
-      JSON.stringify({ text: '看下 https://lobe-hub.feishu.cn/docx/AAA' }),
+      JSON.stringify({ text: '看下 https://orvilo-hub.feishu.cn/docx/AAA' }),
     );
-    expect(result.text).toBe('看下 https://lobe-hub.feishu.cn/docx/AAA');
-    expect(result.links).toEqual(['https://lobe-hub.feishu.cn/docx/AAA']);
+    expect(result.text).toBe('看下 https://orvilo-hub.feishu.cn/docx/AAA');
+    expect(result.links).toEqual(['https://orvilo-hub.feishu.cn/docx/AAA']);
     expect(result.imageKeys).toEqual([]);
   });
 
@@ -65,9 +65,9 @@ describe('flattenLarkMessageContent', () => {
     const content = {
       content: [
         [
-          { tag: 'at', user_id: 'ou_bot', user_name: 'LobeHub CAO' },
+          { tag: 'at', user_id: 'ou_bot', user_name: 'Orvilo CAO' },
           { tag: 'text', text: ' 帮我看这份纪要 ' },
-          { href: 'https://lobe-hub.feishu.cn/docx/AAA', tag: 'a', text: '远程设备研讨会' },
+          { href: 'https://orvilo-hub.feishu.cn/docx/AAA', tag: 'a', text: '远程设备研讨会' },
         ],
         [{ tag: 'img', image_key: 'img_1' }],
       ],
@@ -75,9 +75,9 @@ describe('flattenLarkMessageContent', () => {
     };
     const result = flattenLarkMessageContent('post', JSON.stringify(content));
     expect(result.text).toBe(
-      '智能纪要\n@LobeHub CAO 帮我看这份纪要 远程设备研讨会 (https://lobe-hub.feishu.cn/docx/AAA)\n[image]',
+      '智能纪要\n@Orvilo CAO 帮我看这份纪要 远程设备研讨会 (https://orvilo-hub.feishu.cn/docx/AAA)\n[image]',
     );
-    expect(result.links).toEqual(['https://lobe-hub.feishu.cn/docx/AAA']);
+    expect(result.links).toEqual(['https://orvilo-hub.feishu.cn/docx/AAA']);
     expect(result.imageKeys).toEqual(['img_1']);
   });
 
@@ -189,7 +189,7 @@ describe('flattenLarkMessageContent', () => {
             {
               tag: 'button',
               text: { content: '查看纪要', tag: 'plain_text' },
-              url: 'https://lobe-hub.feishu.cn/docx/CCC',
+              url: 'https://orvilo-hub.feishu.cn/docx/CCC',
             },
           ],
           tag: 'action',
@@ -199,9 +199,9 @@ describe('flattenLarkMessageContent', () => {
     };
     const result = flattenLarkMessageContent('interactive', JSON.stringify(card));
     expect(result.text).toBe(
-      '**参会人**：A、B\n查看纪要\n9/9 多Agent协作方案评审会\n[links: https://lobe-hub.feishu.cn/docx/CCC]',
+      '**参会人**：A、B\n查看纪要\n9/9 多Agent协作方案评审会\n[links: https://orvilo-hub.feishu.cn/docx/CCC]',
     );
-    expect(result.links).toEqual(['https://lobe-hub.feishu.cn/docx/CCC']);
+    expect(result.links).toEqual(['https://orvilo-hub.feishu.cn/docx/CCC']);
   });
 
   it('keeps malformed content as-is instead of throwing', () => {

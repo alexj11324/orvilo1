@@ -81,7 +81,7 @@ vi.mock('@/server/services/resourcePermission', () => ({
 vi.mock('../agentBuilder', () => ({
   agentBuilderRuntime: {
     factory: () => ({ updateConfig: mockBuilderUpdateConfig }),
-    identifier: 'lobe-agent-builder',
+    identifier: 'orvilo-agent-builder',
   },
 }));
 
@@ -108,7 +108,7 @@ describe('groupAgentBuilderRuntime', () => {
   // registry entry makes `executeBuiltinTool` throw "is not implemented", so no
   // member ever reaches the group.
   it('is registered in the server runtime registry', () => {
-    expect(hasServerRuntime('lobe-group-agent-builder')).toBe(true);
+    expect(hasServerRuntime('orvilo-group-agent-builder')).toBe(true);
   });
 
   describe('createAgent', () => {
@@ -119,14 +119,14 @@ describe('groupAgentBuilderRuntime', () => {
         {
           systemRole: 'You drive launches.',
           title: 'Product Manager',
-          tools: ['lobe-web-browsing'],
+          tools: ['orvilo-web-browsing'],
         },
         groupCtx,
       );
 
       expect(mockBatchCreate).toHaveBeenCalledWith([
         expect.objectContaining({
-          plugins: ['lobe-web-browsing'],
+          plugins: ['orvilo-web-browsing'],
           title: 'Product Manager',
           virtual: true,
           visibility: 'public',

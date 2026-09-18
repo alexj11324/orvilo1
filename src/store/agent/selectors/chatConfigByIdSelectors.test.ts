@@ -67,7 +67,7 @@ describe('chatConfigByIdSelectors', () => {
           'agent-1': {
             chatConfig: { enableAgentMode: true, historyCount: 10 },
             model: 'claude-opus-4-8',
-            provider: 'lobehub',
+            provider: 'orvilo',
           },
         },
       });

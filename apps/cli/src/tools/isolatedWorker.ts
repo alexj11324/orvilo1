@@ -1,7 +1,7 @@
 import * as childProcess from 'node:child_process';
 
 const ISOLATED_TOOL_APIS = new Set(['globFiles', 'grepContent', 'listFiles', 'searchFiles']);
-const TOOL_WORKER_ENV = 'LOBEHUB_CLI_TOOL_WORKER';
+const TOOL_WORKER_ENV = 'ORVILO_CLI_TOOL_WORKER';
 const DEFAULT_WORKER_TIMEOUT_MS = 30_000;
 
 export const shouldRunInWorker = (apiName: string) =>

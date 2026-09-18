@@ -1,4 +1,4 @@
-import type { LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentChatConfig } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,8 +8,8 @@ import {
   resolveEffectiveReasoningChatConfig,
 } from './modelExtendParams';
 
-const chatConfig = (config: Partial<LobeAgentChatConfig> = {}): LobeAgentChatConfig =>
-  ({ ...config }) as LobeAgentChatConfig;
+const chatConfig = (config: Partial<OrviloAgentChatConfig> = {}): OrviloAgentChatConfig =>
+  ({ ...config }) as OrviloAgentChatConfig;
 
 describe('applyModelExtendParams', () => {
   it('returns empty when the model has no extend params', () => {
@@ -30,7 +30,7 @@ describe('applyModelExtendParams', () => {
     ).toEqual({});
   });
 
-  // Gemini 3 Pro via the agent path (provider=lobehub) billed reasoning tokens but
+  // Gemini 3 Pro via the agent path (provider=orvilo) billed reasoning tokens but
   // returned empty thinking summaries because thinkingLevel never reached the
   // request. With the model's extendParams present, thinkingLevel must default
   // to 'high' even when the chat config does not set thinkingLevel3.

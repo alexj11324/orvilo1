@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { GenerateObjectPayload, ModelRuntime } from '@orvilo/model-runtime';
 import { LayersEnum, MemorySourceType } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,7 +45,7 @@ describe('MemoryExtractionService topic metadata', () => {
         [LayersEnum.Preference]: 'layer-model',
       },
     },
-    db: {} as LobeChatDatabase,
+    db: {} as OrviloDatabase,
     runtimes: { gatekeeper: runtime, layerExtractor: runtime },
   });
 

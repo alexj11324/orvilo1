@@ -4,7 +4,7 @@ import {
   manualModeExcludeToolIds,
   runtimeManagedToolIds,
 } from '@orvilo/builtin-tools';
-import type { BuiltinSkillManifest, LobeToolMeta } from '@orvilo/types';
+import type { BuiltinSkillManifest, OrviloToolMeta } from '@orvilo/types';
 
 import {
   isBuiltinSkillAvailableInCurrentEnv,
@@ -15,7 +15,7 @@ import type { ToolStoreState } from '../../initialState';
 import { agentSkillsSelectors } from '../agentSkills/selectors';
 import { ComposioServerStatus } from '../composioStore';
 
-export interface LobeToolMetaWithAvailability extends LobeToolMeta {
+export interface OrviloToolMetaWithAvailability extends OrviloToolMeta {
   /**
    * Whether the tool is available in web environment
    * e.g., LocalSystem is desktop-only, so availableInWeb is false
@@ -23,8 +23,8 @@ export interface LobeToolMetaWithAvailability extends LobeToolMeta {
   availableInWeb: boolean;
 }
 
-const toBuiltinMeta = (t: ToolStoreState['builtinTools'][number]): LobeToolMeta => ({
-  author: 'LobeHub',
+const toBuiltinMeta = (t: ToolStoreState['builtinTools'][number]): OrviloToolMeta => ({
+  author: 'Orvilo',
   identifier: t.identifier,
   meta: t.manifest.meta,
   type: 'builtin' as const,
@@ -32,13 +32,13 @@ const toBuiltinMeta = (t: ToolStoreState['builtinTools'][number]): LobeToolMeta 
 
 const toBuiltinMetaWithAvailability = (
   t: ToolStoreState['builtinTools'][number],
-): LobeToolMetaWithAvailability => ({
+): OrviloToolMetaWithAvailability => ({
   ...toBuiltinMeta(t),
   availableInWeb: isBuiltinToolAvailableInCurrentEnv(t.identifier),
 });
 
-const toSkillMeta = (s: BuiltinSkillManifest): LobeToolMeta => ({
-  author: 'LobeHub',
+const toSkillMeta = (s: BuiltinSkillManifest): OrviloToolMeta => ({
+  author: 'Orvilo',
   identifier: s.identifier,
   meta: {
     avatar: s.avatar,
@@ -48,12 +48,12 @@ const toSkillMeta = (s: BuiltinSkillManifest): LobeToolMeta => ({
   type: 'builtin' as const,
 });
 
-const toSkillMetaWithAvailability = (s: BuiltinSkillManifest): LobeToolMetaWithAvailability => ({
+const toSkillMetaWithAvailability = (s: BuiltinSkillManifest): OrviloToolMetaWithAvailability => ({
   ...toSkillMeta(s),
   availableInWeb: isBuiltinSkillAvailableInCurrentEnv(s.identifier),
 });
 
-const getComposioMetas = (s: ToolStoreState): LobeToolMeta[] =>
+const getComposioMetas = (s: ToolStoreState): OrviloToolMeta[] =>
   (s.composioServers || [])
     .filter((server) => server.status === ComposioServerStatus.ACTIVE && server.tools?.length)
     .map((server) => ({
@@ -62,14 +62,14 @@ const getComposioMetas = (s: ToolStoreState): LobeToolMeta[] =>
       identifier: server.identifier,
       meta: {
         avatar: '☁️',
-        description: `LobeHub Mcp Server: ${server.label}`,
+        description: `Orvilo Mcp Server: ${server.label}`,
         tags: ['composio', 'mcp'],
         title: server.label,
       },
       type: 'builtin' as const,
     }));
 
-const getComposioMetasWithAvailability = (s: ToolStoreState): LobeToolMetaWithAvailability[] =>
+const getComposioMetasWithAvailability = (s: ToolStoreState): OrviloToolMetaWithAvailability[] =>
   getComposioMetas(s).map((meta) => ({ ...meta, availableInWeb: true }));
 
 // Set form for O(1) lookup inside the filter loop.
@@ -119,7 +119,7 @@ const isProfileConfigurableBuiltinTool = (
 const buildVisibleMetaList = (
   s: ToolStoreState,
   { includeHidden }: { includeHidden: boolean },
-): LobeToolMeta[] => {
+): OrviloToolMeta[] => {
   const { uninstalledBuiltinTools } = s;
 
   const builtinMetas = s.builtinTools
@@ -163,7 +163,7 @@ const buildVisibleMetaList = (
  * Used for general tool display in chat input bar
  * Only returns tools that are not in the uninstalledBuiltinTools list
  */
-const metaList = (s: ToolStoreState): LobeToolMeta[] =>
+const metaList = (s: ToolStoreState): OrviloToolMeta[] =>
   buildVisibleMetaList(s, { includeHidden: false });
 
 /**
@@ -174,16 +174,16 @@ const metaList = (s: ToolStoreState): LobeToolMeta[] =>
  * Pure infrastructure and runtime-managed tools are still excluded because the
  * user's toggle cannot truthfully control them.
  */
-const metaListIncludingHidden = (s: ToolStoreState): LobeToolMeta[] =>
+const metaListIncludingHidden = (s: ToolStoreState): OrviloToolMeta[] =>
   buildVisibleMetaList(s, { includeHidden: true });
 
 // Legacy exclusions for broad metadata inventories. Agent Profile visibility
 // is governed by `isProfileConfigurableBuiltinTool` instead.
 const EXCLUDED_TOOLS = new Set([
-  'lobe-agent-builder',
-  'lobe-group-agent-builder',
-  'lobe-group-management',
-  'lobe-skills',
+  'orvilo-agent-builder',
+  'orvilo-group-agent-builder',
+  'orvilo-group-management',
+  'orvilo-skills',
 ]);
 
 /**
@@ -191,7 +191,7 @@ const EXCLUDED_TOOLS = new Set([
  * Used by detail, lookup, and context-building surfaces rather than as a
  * user-configurable Agent Profile list.
  */
-const allMetaList = (s: ToolStoreState): LobeToolMetaWithAvailability[] => {
+const allMetaList = (s: ToolStoreState): OrviloToolMetaWithAvailability[] => {
   const builtinMetas = s.builtinTools
     .filter((item) => {
       // Exclude internal tools that should not be user-configurable
@@ -219,7 +219,7 @@ const allMetaList = (s: ToolStoreState): LobeToolMetaWithAvailability[] => {
  * Excludes only tools with `discoverable: false` (pure infrastructure / internal).
  * Includes hidden and runtime-managed tools (web-browsing, memory, cloud-sandbox, etc.).
  */
-const discoverableMetaList = (s: ToolStoreState): LobeToolMeta[] => {
+const discoverableMetaList = (s: ToolStoreState): OrviloToolMeta[] => {
   const { uninstalledBuiltinTools } = s;
 
   const skillMetas = (s.builtinSkills || [])
@@ -249,7 +249,7 @@ const discoverableMetaList = (s: ToolStoreState): LobeToolMeta[] => {
  * platform-specific tools). This is an inventory/lookup selector; Agent
  * Profile uses `installedProfileConfigurableMetaList` for its picker.
  */
-const installedAllMetaList = (s: ToolStoreState): LobeToolMetaWithAvailability[] => {
+const installedAllMetaList = (s: ToolStoreState): OrviloToolMetaWithAvailability[] => {
   const { uninstalledBuiltinTools } = s;
 
   const builtinMetas = s.builtinTools
@@ -273,7 +273,7 @@ const installedAllMetaList = (s: ToolStoreState): LobeToolMetaWithAvailability[]
  */
 const installedProfileConfigurableMetaList =
   (options: ProfileConfigurableToolOptions) =>
-  (s: ToolStoreState): LobeToolMetaWithAvailability[] => {
+  (s: ToolStoreState): OrviloToolMetaWithAvailability[] => {
     const { uninstalledBuiltinTools } = s;
 
     const builtinMetas = s.builtinTools
@@ -313,7 +313,7 @@ const ACTIVATION_MODE_CONTROLLED_TOOL_IDS = new Set(activationModeControlledTool
  */
 const fixedDisplayMetaList =
   ({ isManualMode }: { isManualMode: boolean } = { isManualMode: false }) =>
-  (s: ToolStoreState): LobeToolMeta[] =>
+  (s: ToolStoreState): OrviloToolMeta[] =>
     alwaysOnToolIds
       .filter((id) => !ACTIVATION_MODE_CONTROLLED_TOOL_IDS.has(id))
       .filter((id) => !(isManualMode && MANUAL_MODE_EXCLUDE_TOOL_IDS.has(id)))

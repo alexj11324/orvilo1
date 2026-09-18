@@ -8,7 +8,7 @@ import {
 } from '@/database/models/agentEval';
 import type { AgentEvalRunItem } from '@/database/schemas';
 import { agentEvalExperiments, agents } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { AgentEvalRunService, RUN_CREATE_ID_CONFLICT } from '@/server/services/agentEvalRun';
 import { AgentEvalRunWorkflow } from '@/server/workflows/agentEvalRun';
 
@@ -85,7 +85,7 @@ export class EvalService extends BaseService {
   private runService: AgentEvalRunService;
   private runTopicModel: AgentEvalRunTopicModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     super(db, userId, workspaceId);
     this.datasetModel = new AgentEvalDatasetModel(db, userId, workspaceId);
     this.runModel = new AgentEvalRunModel(db, userId, workspaceId);

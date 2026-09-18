@@ -1,59 +1,59 @@
 {
   "0000-initial-search-indexes": {
     "agents": {
-      "fingerprint": "6fd440be1df5ee1437f4a4ec7d22556d1c855ce43bd7fda61ecf0dae32ede233",
+      "fingerprint": "28c1f76bbae02d2283396989bd6ef1de12fba88a349bd68241eadcd633aae3da",
       "schemaVersion": 1
     },
     "chatGroups": {
-      "fingerprint": "5b086a9c74ecf70d27334b12cae2de5c5b6412bdc4ad79290514b723b2ec23e2",
+      "fingerprint": "6bc0f7e0df59d7b5ca3b74feaa62a72092cf6ca3958fd301a5c822e0bf1a096f",
       "schemaVersion": 1
     },
     "documents": {
-      "fingerprint": "6d564684eb449d0a70b3c354fa6d9fefe4948cee09d8b46335a7069ac064cde8",
+      "fingerprint": "83fbf0471c2222a2b0f09a6acfb37496e49b272c7915cc77b5216402b25c9ac1",
       "schemaVersion": 1
     },
     "files": {
-      "fingerprint": "709e38c13c4684ffc4cb5aec00b4cd276b61a23f0387595bae02466a30291ffc",
+      "fingerprint": "cd8f3fea6f5eeafa16fa81810f91362b186789615dd44a821db86a22ae6118ff",
       "schemaVersion": 1
     },
     "knowledgeBases": {
-      "fingerprint": "db6e7e1027953600ca9d5d1147f6138ca6868fcd9c58e30e1ce75d2813027320",
+      "fingerprint": "6aa9756d73e20cfe0df2a42c9e1b0c9291ae8a6d317a993a37294392602ff04b",
       "schemaVersion": 1
     },
     "memoryActivities": {
-      "fingerprint": "ea4665bd0026a75719da8580a350245a8deafa85591d36b577e264e84e32d526",
+      "fingerprint": "282f9a223855791ab783e5616d6f9ceabdaec3f82eb97e6026edcaa559667523",
       "schemaVersion": 1
     },
     "memoryContexts": {
-      "fingerprint": "1b9c24a3ab665a84686c766568d976193f670d469fbd29ff30ab2736f3d23b84",
+      "fingerprint": "aaf705c946e989a290d268c16e174d767d1cf9d6499c6c62ad1437819219f8d9",
       "schemaVersion": 1
     },
     "memoryExperiences": {
-      "fingerprint": "9748bd7a25f0f53162ad90e3742244e689b4023c863ad71c226b7d0a9763444c",
+      "fingerprint": "4e808b13be4a947fbf891cfeace97435ea4964b83a11eb78a90762f24a96a028",
       "schemaVersion": 1
     },
     "memoryIdentities": {
-      "fingerprint": "491c3b1a096644552e1486cf6862899bd57042df787f01319442d9e615da0c20",
+      "fingerprint": "dd48dc14556b037912f2f015d7dce7291e14ec19d83eaf25c8c250a9446308f8",
       "schemaVersion": 1
     },
     "memoryPreferences": {
-      "fingerprint": "e62b555d4548b7f880a6700e0662a3b832a3aa052ad518c869881e1ce99660f7",
+      "fingerprint": "b15943b758dfa3ed2917c544829027cbc40a1c0190a1d01a05b52fe521721ba0",
       "schemaVersion": 1
     },
     "messages": {
-      "fingerprint": "c1e0a4ea89bd0c3ad7776287deb05eb82a8d286dc851d112a60c729839bc0d4a",
+      "fingerprint": "84309b7b920a972419377dd805a8ae4566beedd716b439ed96915aa4e875b736",
       "schemaVersion": 1
     },
     "personaDocuments": {
-      "fingerprint": "0e627cf7a6a0ce38ae8b06affc5ad6b30c3c443bf93ae19df743f2b652ec323b",
+      "fingerprint": "f8f4ddf195910c939e0abaca9e2a0a7cb4a87db145c2c84181a470a9e827df93",
       "schemaVersion": 1
     },
     "topics": {
-      "fingerprint": "362f4b72197fefee4ffb49298aa134c6da6fba9885e7a23840eb55f053a689b8",
+      "fingerprint": "667bb809c05a2135ad49fc2e5162df38b9fe554c6a955cedaf92f03b4d394f6b",
       "schemaVersion": 1
     },
     "userMemories": {
-      "fingerprint": "df04d074c1f56b5934891b8612b804917c09302a9042015c394216513093d6e9",
+      "fingerprint": "e0896f55bcce266351652214b1cc2bf4a352eb81d00d29d930cf845efe295a7d",
       "schemaVersion": 1
     }
   }

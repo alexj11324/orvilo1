@@ -8,13 +8,13 @@ import type {
   PushTokenItem,
 } from '../schemas/pushToken';
 import { pushLiveActivities, pushTokens } from '../schemas/pushToken';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 export class PushTokenModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -85,9 +85,9 @@ export class PushTokenModel {
 /** Owner-scoped ActivityKit update-token registry, correlated by opaque activity key. */
 export class PushLiveActivityModel {
   private readonly userId: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -181,7 +181,7 @@ export class PushLiveActivityModel {
  * Not bound to a userId — operates across all users at once.
  */
 export async function deletePushTokensByExpoTokens(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   tokens: string[],
 ): Promise<void> {
   if (tokens.length === 0) return;
@@ -196,7 +196,7 @@ export async function deletePushTokensByExpoTokens(
  * Matching owner/device Live Activity registrations are removed atomically.
  */
 export async function deletePushTokenByExpoTokenAndDevice(
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   args: { deviceId: string; expoToken: string },
 ): Promise<void> {
   await db.transaction(async (tx) => {

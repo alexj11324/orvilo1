@@ -5,11 +5,11 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import {
   clampCollectionPage,
   getMyTaskViewOptions,
-  getScheduledTaskViewOptions,
   getTaskCreateActionBehavior,
   getTaskPageHeaderVisibility,
   PAGINATED_COLLECTION_PINNED_OPTIONS,
   resolveMyTaskScope,
+  resolveOrdinaryCollectionSurface,
   resolveTaskCollection,
   resolveTaskCollectionView,
 } from './AgentTasksPage';
@@ -26,39 +26,21 @@ const taskUpdatedAt = (id: string, updatedAt: string): TaskListItem =>
 describe('AgentTasksPage', () => {
   describe('clampCollectionPage', () => {
     it('moves a stale last page back into range when the result total shrinks', () => {
-      expect(clampCollectionPage(2, 50)).toBe(1);
-      expect(clampCollectionPage(3, 51)).toBe(2);
+      expect(clampCollectionPage(2, 50, 50)).toBe(1);
+      expect(clampCollectionPage(3, 51, 50)).toBe(2);
     });
 
     it('keeps the first page valid for an empty result', () => {
-      expect(clampCollectionPage(1, 0)).toBe(1);
-    });
-  });
-
-  describe('getScheduledTaskViewOptions', () => {
-    it('keeps client sorting aligned with the updatedAt-desc server pagination and renders every fetched row', () => {
-      expect(
-        getScheduledTaskViewOptions({
-          ...DEFAULT_TASK_LIST_VIEW_OPTIONS,
-          orderBy: 'title',
-          orderDirection: 'asc',
-          showSubTasks: false,
-        }),
-      ).toEqual({
-        ...DEFAULT_TASK_LIST_VIEW_OPTIONS,
-        groupBy: 'automationMode',
-        hideCompleted: false,
-        orderBy: 'updatedAt',
-        orderDirection: 'asc',
-        showSubTasks: true,
-      });
+      expect(clampCollectionPage(1, 0, 50)).toBe(1);
     });
 
-    it('renders a page newest-first, like the server paginates it', () => {
-      const options = getScheduledTaskViewOptions(DEFAULT_TASK_LIST_VIEW_OPTIONS);
-      const newer = taskUpdatedAt('a', '2026-02-01');
-      const older = taskUpdatedAt('b', '2026-01-01');
-      expect(compareTaskItems(newer, older, options)).toBeLessThan(0);
+    it('clamps against the page size the collection actually pages by', () => {
+      // The bug this guards: the automations tab pages 25 at a time, so with 40
+      // automations page 2 exists. Clamping with "My tasks"' size of 50 would
+      // compute one page and snap the user straight back to page 1.
+      expect(clampCollectionPage(2, 40, 25)).toBe(2);
+      expect(clampCollectionPage(3, 40, 25)).toBe(2);
+      expect(clampCollectionPage(3, 40, 50)).toBe(1);
     });
   });
 
@@ -123,6 +105,21 @@ describe('AgentTasksPage', () => {
     });
   });
 
+  describe('resolveOrdinaryCollectionSurface', () => {
+    it('lands a settled empty collection on the board regardless of the stored view mode', () => {
+      // Regression for the retired empty-state hero: an empty ordinary
+      // collection renders the kanban board even when the user last picked
+      // the list view — there is no hero or bare-list surface to fall back to.
+      expect(resolveOrdinaryCollectionSurface('list', true)).toBe('board');
+      expect(resolveOrdinaryCollectionSurface('kanban', true)).toBe('board');
+    });
+
+    it('follows the stored view mode once the collection has tasks', () => {
+      expect(resolveOrdinaryCollectionSurface('list', false)).toBe('list');
+      expect(resolveOrdinaryCollectionSurface('kanban', false)).toBe('board');
+    });
+  });
+
   describe('PAGINATED_COLLECTION_PINNED_OPTIONS', () => {
     it('names exactly the controls a paginated collection overrides', () => {
       // Each pinned name must be a control the view options actually fix, or
@@ -181,7 +178,7 @@ describe('AgentTasksPage', () => {
         getTaskCreateActionBehavior({
           canCreateTask: false,
           inlineCollapsed: true,
-          viewMode: 'list',
+          isBoardSurface: false,
         }),
       ).toEqual({ disabled: false, mode: 'inline' });
     });
@@ -191,9 +188,21 @@ describe('AgentTasksPage', () => {
         getTaskCreateActionBehavior({
           canCreateTask: false,
           inlineCollapsed: false,
-          viewMode: 'kanban',
+          isBoardSurface: true,
         }),
       ).toEqual({ disabled: true, mode: 'modal' });
+    });
+
+    it('opens the create modal on the board surface even when the inline entry is collapsed', () => {
+      // The empty-ordinary board has no inline composer to expand: its header
+      // create must open the modal, exactly like the selected kanban view.
+      expect(
+        getTaskCreateActionBehavior({
+          canCreateTask: true,
+          inlineCollapsed: true,
+          isBoardSurface: true,
+        }),
+      ).toEqual({ disabled: false, mode: 'modal' });
     });
   });
 
@@ -208,20 +217,18 @@ describe('AgentTasksPage', () => {
   });
 
   describe('getTaskPageHeaderVisibility', () => {
-    it('hides empty global-task chrome that has no useful content yet', () => {
-      expect(
-        getTaskPageHeaderVisibility({ agentId: undefined, isEmptyHero: true, isMobile: false }),
-      ).toEqual({
+    it('keeps view options and the panel toggle on the empty global board', () => {
+      // The board is the empty state now, so an empty global collection keeps
+      // the same header chrome as any other board — the view switch included.
+      expect(getTaskPageHeaderVisibility({ agentId: undefined, isMobile: false })).toEqual({
         showBreadcrumb: false,
-        showTaskAgentPanelToggle: false,
-        showViewOptions: false,
+        showTaskAgentPanelToggle: true,
+        showViewOptions: true,
       });
     });
 
-    it('keeps scoped task-list context when only the selected agent has no tasks', () => {
-      expect(
-        getTaskPageHeaderVisibility({ agentId: 'agent-1', isEmptyHero: true, isMobile: false }),
-      ).toEqual({
+    it('keeps scoped task-list context on an agent scope', () => {
+      expect(getTaskPageHeaderVisibility({ agentId: 'agent-1', isMobile: false })).toEqual({
         showBreadcrumb: true,
         showTaskAgentPanelToggle: true,
         showViewOptions: true,
@@ -229,16 +236,22 @@ describe('AgentTasksPage', () => {
     });
 
     it('keeps the breadcrumb for a project scope and drops it for the global list', () => {
-      expect(
-        getTaskPageHeaderVisibility({ isEmptyHero: false, isMobile: false, projectId: 'p-1' }),
-      ).toEqual({
+      expect(getTaskPageHeaderVisibility({ isMobile: false, projectId: 'p-1' })).toEqual({
         showBreadcrumb: true,
         showTaskAgentPanelToggle: true,
         showViewOptions: true,
       });
-      expect(getTaskPageHeaderVisibility({ isEmptyHero: false, isMobile: false })).toEqual({
+      expect(getTaskPageHeaderVisibility({ isMobile: false })).toEqual({
         showBreadcrumb: false,
         showTaskAgentPanelToggle: true,
+        showViewOptions: true,
+      });
+    });
+
+    it('hides the task agent panel toggle on mobile layouts', () => {
+      expect(getTaskPageHeaderVisibility({ isMobile: true })).toEqual({
+        showBreadcrumb: false,
+        showTaskAgentPanelToggle: false,
         showViewOptions: true,
       });
     });

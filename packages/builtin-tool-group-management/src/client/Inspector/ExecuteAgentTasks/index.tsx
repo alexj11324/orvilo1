@@ -78,7 +78,7 @@ export const ExecuteAgentTasksInspector = memo<BuiltinInspectorProps<ExecuteTask
       return (
         <div className={styles.root}>
           <span className={shinyTextStyles.shinyText}>
-            {t('builtins.lobe-group-management.apiName.executeAgentTasks')}
+            {t('builtins.orvilo-group-management.apiName.executeAgentTasks')}
           </span>
         </div>
       );
@@ -87,7 +87,7 @@ export const ExecuteAgentTasksInspector = memo<BuiltinInspectorProps<ExecuteTask
     return (
       <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-group-management.inspector.executeAgentTasks.title')}
+          {t('builtins.orvilo-group-management.inspector.executeAgentTasks.title')}
         </span>
         {avatarItems.length > 0 && <Avatar.Group items={avatarItems} shape={'circle'} size={24} />}
       </Flexbox>

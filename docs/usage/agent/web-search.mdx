@@ -4,7 +4,7 @@ description: >-
   Agents search the internet for real-time information — with source citations
   and grounding.
 tags:
-  - LobeHub
+  - Orvilo
   - Web Search
   - Real-time Information
   - Citations
@@ -13,7 +13,7 @@ tags:
 
 # Web Search
 
-LobeHub's web search integration lets Agents access current information from the internet — real-time news, prices, documentation, and facts beyond their training cutoff. When web search is active, the Agent retrieves up-to-date answers and cites the sources it used.
+Orvilo's web search integration lets Agents access current information from the internet — real-time news, prices, documentation, and facts beyond their training cutoff. When web search is active, the Agent retrieves up-to-date answers and cites the sources it used.
 
 ## What Web Search Enables
 
@@ -50,15 +50,15 @@ Expand the grounding card to see exactly where the information came from and eva
 
 ## Enabling Web Search
 
-Web search ships as a native built-in tool (`lobe-web-browsing`) — there's nothing to install. Turn it on per Agent with one click:
+Web search ships as a native built-in tool (`orvilo-web-browsing`) — there's nothing to install. Turn it on per Agent with one click:
 
 Open the Agent's **Profile**, click **+ Add Skill**, and enable **Web Search**. That's it — the Agent can now search the web automatically when a question needs current information, or on your explicit request.
 
 <Callout type={'info'}>
   Built-in Web Search does not need a marketplace plugin or MCP install on the client. **Self-hosted
-  deployments** still need a server search provider configured (default is SearXNG via
+  deployments** still need a server search provider configured (default is SearXNG
   `SEARXNG_URL` / `SEARCH_PROVIDERS`) — see [Online Search](/docs/self-hosting/advanced/online-search).
-  Managed LobeHub Cloud already has this wired for you.
+  Managed Orvilo Cloud already has this wired for you.
 </Callout>
 
 ### Optional: MCP-Based Search Tools

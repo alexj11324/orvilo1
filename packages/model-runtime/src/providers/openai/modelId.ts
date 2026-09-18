@@ -65,7 +65,7 @@ const GPT_MODEL_PATTERN =
  * the Responses contract, so capability detection must preserve that namespace separately from
  * OpenRouter's `openai/*` model IDs.
  *
- * @see https://github.com/lobehub/lobehub/issues/17831
+ * @see
  */
 const CODEX_MODEL_PREFIX = 'codex/';
 const OPENROUTER_OPENAI_MODEL_PREFIX = 'openai/';

@@ -398,7 +398,7 @@ export const buildGoogleMessages = async (
   // This handles cross-provider scenarios (e.g., OpenAI → Gemini switch) where
   // historical tool_calls lack thoughtSignature, as well as multi-turn Gemini
   // conversations where earlier turns may have lost their signatures.
-  // @see https://linear.app/lobehub/issue/
+  // @see https://linear.app/orvilo/issue/
   for (const content of filteredContents) {
     if (content.role === 'model' && content.parts) {
       for (const part of content.parts) {
@@ -421,7 +421,7 @@ export const buildGoogleMessages = async (
  * schema may place `enum` on non-STRING types (e.g. number, boolean)
  * or `required` on non-OBJECT types.
  *
- * @see https://linear.app/lobehub/issue/
+ * @see https://linear.app/orvilo/issue/
  */
 export const sanitizeGeminiSchema = (schema: any): any => {
   // A boolean schema (`items: true`) is valid JSON Schema but rejected by
@@ -521,7 +521,6 @@ export const buildGoogleTool = (tool: ChatCompletionTool): FunctionDeclaration =
   const functionDeclaration = tool.function;
   const parameters = functionDeclaration.parameters;
 
-  // refs: https://github.com/lobehub/lobe-chat/pull/5002
   const hasProperties = parameters?.properties && Object.keys(parameters.properties).length > 0;
 
   const jsonSchema = hasProperties

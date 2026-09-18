@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 import type { CreateImageOptions } from '../../core/openaiCompatibleFactory';
 import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
 
-const log = createDebug('lobe-image:volcengine');
+const log = createDebug('orvilo-image:volcengine');
 
 /**
  * Volcengine image generation implementation

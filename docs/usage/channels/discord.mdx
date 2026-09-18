@@ -1,8 +1,8 @@
 ---
-title: Connect LobeHub to Discord
+title: Connect Orvilo to Discord
 description: >-
-  Learn how to create a Discord bot and connect it to your LobeHub agent as a
-  message channel, allowing your AI assistant to interact with users directly in
+  Learn how to create a Discord bot and connect it to your Orvilo agent as a
+  message channel, allowing your AI assistant to interact with users directly
   Discord servers and direct messages.
 tags:
   - Discord
@@ -11,13 +11,13 @@ tags:
   - Integration
 ---
 
-# Connect LobeHub to Discord
+# Connect Orvilo to Discord
 
-By connecting a Discord channel to your LobeHub agent, users can interact with the AI assistant directly through Discord server channels and direct messages.
+By connecting a Discord channel to your Orvilo agent, users can interact with the AI assistant directly through Discord server channels and direct messages.
 
 ## Prerequisites
 
-- A LobeHub account with an active subscription
+- A Orvilo account with an active subscription
 - A Discord account with **Manage Server** permission on the target server
 
 ## Step 1: Create a Discord Application and Bot
@@ -25,9 +25,9 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 <Steps>
   ### Go to the Discord Developer Portal
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/83f435317ea2c9c4a2adcbfd74301536.png)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/83f435317ea2c9c4a2adcbfd74301536.png)
 
-  Visit the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**. Give your application a name (e.g., "LobeHub Assistant") and click **Create**.
+  Visit the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**. Give your application a name (e.g., "Orvilo Assistant") and click **Create**.
 
   ### Create a Bot
 
@@ -35,7 +35,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 
   ### Enable Privileged Gateway Intents
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/6126baa4154be45eefdad73c576723d0.png)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/6126baa4154be45eefdad73c576723d0.png)
 
   On the Bot settings page, scroll down to **Privileged Gateway Intents** and enable:
 
@@ -47,7 +47,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 
   ### Copy the Bot Token
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/e76272de65ad8db8746b1dcafeafdce8.png)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/e76272de65ad8db8746b1dcafeafdce8.png)
 
   On the **Bot** page, click **Reset Token** to generate your bot token. Copy and save it securely.
 
@@ -55,7 +55,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 
   ### Copy the Application ID and Public Key
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/d42901c6eb84e3e335d9a8535f317a35.png)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/d42901c6eb84e3e335d9a8535f317a35.png)
 
   Go to **General Information** in the left sidebar. Copy and save:
 
@@ -65,16 +65,16 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
   You will need all three values (Bot Token, Application ID, Public Key) in the next step.
 </Steps>
 
-## Step 2: Configure Discord in LobeHub
+## Step 2: Configure Discord in Orvilo
 
 <Steps>
   ### Open Channel Settings
 
-  In LobeHub, navigate to your agent's settings, then select the **Channels** tab. Click **Discord** from the platform list.
+  In Orvilo, navigate to your agent's settings, then select the **Channels** tab. Click **Discord** from the platform list.
 
   ### Fill in the Credentials
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/c5ced26ea287ee215a9dc385367c1083.png)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/c5ced26ea287ee215a9dc385367c1083.png)
 
   Enter the following fields:
 
@@ -86,7 +86,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 
   ### Save Configuration
 
-  Click **Save Configuration**. Your credentials will be saved and LobeHub will start listening for Discord events.
+  Click **Save Configuration**. Your credentials will be saved and Orvilo will start listening for Discord events.
 </Steps>
 
 ## Step 3: Invite the Bot to Your Server
@@ -94,7 +94,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 <Steps>
   ### Generate an Invite URL
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/5e8a93f33e085a187deddb87704f0bd3.png)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/5e8a93f33e085a187deddb87704f0bd3.png)
 
   In the Discord Developer Portal, go to **OAuth2** → **URL Generator**. Select the following scopes:
 
@@ -114,7 +114,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 
   ### Authorize the Bot
 
-  ![](https://hub-apac-1.lobeobjects.space/docs/d83686461d14690e87512491c1349b6b.webp)
+  ![](https://hub-apac-1.objects.aspectlylabs.com/docs/d83686461d14690e87512491c1349b6b.webp)
 
   Copy the generated URL, open it in your browser, select the server you want to add the bot to, and click **Authorize**.
 
@@ -123,7 +123,7 @@ By connecting a Discord channel to your LobeHub agent, users can interact with t
 
 ## Step 4: Test the Connection
 
-Back in LobeHub's channel settings for Discord, click **Test Connection** to verify everything is configured correctly. Then send a message to your bot on Discord to confirm it responds.
+Back in Orvilo's channel settings for Discord, click **Test Connection** to verify everything is configured correctly. Then send a message to your bot on Discord to confirm it responds.
 
 ## Step 5: Set Your Platform Identity (Recommended)
 
@@ -137,17 +137,17 @@ This is your own Discord user ID, used by:
 - **AI tools push** — lets the agent reach you proactively (reminders, notifications) by mapping its internal user reference to your Discord account.
 - **Anti-lockout** — auto-trusted by **Allowed Users**, so scoping the bot to friends won't accidentally lock you out.
 
-To get it: in Discord, open **User Settings → Advanced** and turn on **Developer Mode**. Then right-click your own username anywhere in Discord and choose **Copy User ID**. Paste the numeric ID into **Your Platform User ID** in LobeHub's Advanced Settings.
+To get it: in Discord, open **User Settings → Advanced** and turn on **Developer Mode**. Then right-click your own username anywhere in Discord and choose **Copy User ID**. Paste the numeric ID into **Your Platform User ID** in Orvilo's Advanced Settings.
 
 ### Default Server
 
 The Discord guild ID the bot's AI tools should default to when you ask it to "list channels", "send to #announcements", or anything else that needs a server context without naming one explicitly. Doesn't affect access control — that's **Group Policy**'s job.
 
-To get it: with **Developer Mode** on, right-click the server name in your server list and choose **Copy Server ID**. Paste it into **Default Server** in LobeHub's Advanced Settings.
+To get it: with **Developer Mode** on, right-click the server name in your server list and choose **Copy Server ID**. Paste it into **Default Server** in Orvilo's Advanced Settings.
 
 ## Access Policies
 
-LobeHub gates inbound traffic with three layered settings, all under **Advanced Settings** and all defaulting to permissive.
+Orvilo gates inbound traffic with three layered settings, all under **Advanced Settings** and all defaulting to permissive.
 
 ### Allowed User IDs (global)
 

@@ -316,11 +316,11 @@ const SYSTEM_STRINGS: Partial<Record<BotReplyLocale, SystemStrings>> = {
     cmdApproveUnknownCode: 'That pairing code is unknown or has expired.',
     cmdApproveUsage: 'Usage: `/approve <code>`',
     cmdFeedbackError: "Couldn't send your feedback right now. Please try again in a moment.",
-    cmdFeedbackSubmitted: 'Thanks — your feedback has been sent to the LobeHub team.',
+    cmdFeedbackSubmitted: 'Thanks — your feedback has been sent to the Orvilo team.',
     cmdFeedbackSubmittedWithLink: (issueUrl) =>
-      `Thanks — your feedback has been sent to the LobeHub team. Tracked at: ${issueUrl}`,
+      `Thanks — your feedback has been sent to the Orvilo team. Tracked at: ${issueUrl}`,
     cmdFeedbackUsage:
-      'Usage: `/feedback <your message>` — sends feedback directly to the LobeHub team (no AI reply).',
+      'Usage: `/feedback <your message>` — sends feedback directly to the Orvilo team (no AI reply).',
     cmdModeSetAgent: 'Switched to Agent Mode — replies can use tools and run multi-step tasks.',
     cmdModeSetChat: 'Switched to Chat Mode — replies are plain conversation without tools.',
     cmdModeStatus: (mode) =>
@@ -368,15 +368,15 @@ const SYSTEM_STRINGS: Partial<Record<BotReplyLocale, SystemStrings>> = {
     errorHarnessInternal:
       '**Something went wrong on our side.**\nThe agent run hit an internal error, which has been logged. Please try again — if it keeps happening, share the Operation ID below with support.',
     errorFreePlanLimit:
-      '**Free plan limit reached.**\nThe free-plan allowance this bot runs on is used up. Ask the bot owner to upgrade to a paid plan on the LobeHub website to keep going.',
+      '**Free plan limit reached.**\nThe free-plan allowance this bot runs on is used up. Ask the bot owner to upgrade to a paid plan on the Orvilo website to keep going.',
     errorInsufficientCredits:
-      "**Not enough credits.**\nThe credits this bot runs on can't cover this model's estimated cost. Ask the bot owner to top up credits or upgrade their plan on the LobeHub website, or switch to a less expensive model in the agent's settings.",
+      "**Not enough credits.**\nThe credits this bot runs on can't cover this model's estimated cost. Ask the bot owner to top up credits or upgrade their plan on the Orvilo website, or switch to a less expensive model in the agent's settings.",
     errorInsufficientMemberBudget:
       "**Member budget in this workspace is used up.**\nThe bot owner's spending allowance in this workspace can't cover this run's estimated cost — topping up credits won't change it. Ask a workspace admin to raise the bot owner's member budget, or switch to a less expensive model in the agent's settings.",
     errorInsufficientWorkspaceCredits:
       "**Workspace credits exhausted.**\nThis workspace's shared credits can't cover this run's estimated cost. Ask a workspace admin to top up or upgrade the workspace, or switch to a less expensive model in the agent's settings.",
     errorSubscriptionPlanLimit:
-      "**Plan limit reached.**\nThe subscription plan this bot runs on can't cover this request — either its credits are used up for this billing period, or the plan doesn't include this model. Ask the bot owner to upgrade or top up their plan on the LobeHub website, or configure a custom model API in the agent's provider settings.",
+      "**Plan limit reached.**\nThe subscription plan this bot runs on can't cover this request — either its credits are used up for this billing period, or the plan doesn't include this model. Ask the bot owner to upgrade or top up their plan on the Orvilo website, or configure a custom model API in the agent's provider settings.",
     errorInvalidProviderAPIKey:
       "**Invalid or missing API key.**\nThe configured model provider rejected its API key. Please verify the key in the agent's provider settings (it may be expired, revoked, or mistyped) and try again.",
     errorLocationNotSupported:
@@ -413,10 +413,10 @@ const SYSTEM_STRINGS: Partial<Record<BotReplyLocale, SystemStrings>> = {
     guestAttachmentOverflow:
       '<i>Additional attachments could not be listed in this Guest Mode reply.</i>',
     guestLinkButton: 'Open Bot',
-    guestLinkPromptChat: 'Continue in a private chat with this bot to link your LobeHub account.',
+    guestLinkPromptChat: 'Continue in a private chat with this bot to link your Orvilo account.',
     guestLinkPromptDm:
-      'Open a private chat with this bot and send /start to link your LobeHub account.',
-    guestLinkTitle: 'Link LobeHub',
+      'Open a private chat with this bot and send /start to link your Orvilo account.',
+    guestLinkTitle: 'Link Orvilo',
     guestMediaUnavailable: 'This attachment can’t be delivered in Telegram Guest Mode.',
     guestPairingCapacityExceeded:
       'This bot is handling too many Guest Mode access requests right now. Please try again in a few minutes.',
@@ -444,11 +444,11 @@ const SYSTEM_STRINGS: Partial<Record<BotReplyLocale, SystemStrings>> = {
     cmdApproveUnknownCode: '该配对码不存在或已过期。',
     cmdApproveUsage: '用法：`/approve <配对码>`',
     cmdFeedbackError: '发送反馈失败，请稍后再试。',
-    cmdFeedbackSubmitted: '已收到，感谢反馈，已转交 LobeHub 团队。',
+    cmdFeedbackSubmitted: '已收到，感谢反馈，已转交 Orvilo 团队。',
     cmdFeedbackSubmittedWithLink: (issueUrl) =>
-      `已收到，感谢反馈，已转交 LobeHub 团队。跟踪链接：${issueUrl}`,
+      `已收到，感谢反馈，已转交 Orvilo 团队。跟踪链接：${issueUrl}`,
     cmdFeedbackUsage:
-      '用法：`/feedback <你的反馈内容>` —— 反馈会直达 LobeHub 团队，不会触发 AI 回复。',
+      '用法：`/feedback <你的反馈内容>` —— 反馈会直达 Orvilo 团队，不会触发 AI 回复。',
     cmdModeSetAgent: '已切换到 Agent 模式 —— 回复可调用工具并执行多步任务。',
     cmdModeSetChat: '已切换到 Chat 模式 —— 仅进行纯对话，不调用工具。',
     cmdModeStatus: (mode) =>
@@ -492,15 +492,15 @@ const SYSTEM_STRINGS: Partial<Record<BotReplyLocale, SystemStrings>> = {
     errorHarnessInternal:
       '**我们这边出了点问题**\nAgent 执行遇到内部错误，已记录。请重试；如果持续出现，请把下方 Operation ID 提供给支持人员。',
     errorFreePlanLimit:
-      '**免费计划额度已用尽**\n该机器人所使用的免费计划额度已经用完。请联系机器人所有者前往 LobeHub 网页端升级到付费计划后继续。',
+      '**免费计划额度已用尽**\n该机器人所使用的免费计划额度已经用完。请联系机器人所有者前往 Orvilo 网页端升级到付费计划后继续。',
     errorInsufficientCredits:
-      '**积分余额不足**\n该机器人所使用的积分不足以覆盖本次模型调用的预估费用。请联系机器人所有者前往 LobeHub 网页端充值积分或升级订阅计划，或在 Agent 设置中切换到费用更低的模型。',
+      '**积分余额不足**\n该机器人所使用的积分不足以覆盖本次模型调用的预估费用。请联系机器人所有者前往 Orvilo 网页端充值积分或升级订阅计划，或在 Agent 设置中切换到费用更低的模型。',
     errorInsufficientMemberBudget:
       '**该工作区的成员预算已用尽**\n机器人所有者在当前工作区的成员预算不足以覆盖本次运行的预估费用，充值积分不会改变该预算。请联系工作区管理员提高机器人所有者的成员预算，或在 Agent 设置中切换到费用更低的模型。',
     errorInsufficientWorkspaceCredits:
       '**工作区额度已用尽**\n当前工作区的共享额度不足以覆盖本次运行的预估费用。请联系工作区管理员充值或升级工作区，或在 Agent 设置中切换到费用更低的模型。',
     errorSubscriptionPlanLimit:
-      '**已达到订阅计划限制**\n该机器人所使用的订阅计划无法覆盖本次请求：可能是本周期的订阅积分已用完，也可能是当前计划不包含该模型。请联系机器人所有者前往 LobeHub 网页端升级计划或充值，或在 Agent 的 Provider 设置中配置自定义模型 API。',
+      '**已达到订阅计划限制**\n该机器人所使用的订阅计划无法覆盖本次请求：可能是本周期的订阅积分已用完，也可能是当前计划不包含该模型。请联系机器人所有者前往 Orvilo 网页端升级计划或充值，或在 Agent 的 Provider 设置中配置自定义模型 API。',
     errorInvalidProviderAPIKey:
       '**API Key 无效或缺失**\n所配置的模型 Provider 拒绝了 API Key，可能已过期、被吊销或填写错误。请到 Agent 的 Provider 设置中检查并更新 API Key 后重试。',
     errorLocationNotSupported:
@@ -533,9 +533,9 @@ const SYSTEM_STRINGS: Partial<Record<BotReplyLocale, SystemStrings>> = {
     groupRejectedDisabled: '该机器人不在群组或频道中响应。请通过私信联系。',
     guestAttachmentOverflow: '<i>更多附件无法在这条访客模式回复中列出。</i>',
     guestLinkButton: '打开机器人',
-    guestLinkPromptChat: '请在私聊中继续，以完成 LobeHub 账户关联。',
-    guestLinkPromptDm: '请私聊该机器人并发送 /start，以完成 LobeHub 账户关联。',
-    guestLinkTitle: '关联 LobeHub',
+    guestLinkPromptChat: '请在私聊中继续，以完成 Orvilo 账户关联。',
+    guestLinkPromptDm: '请私聊该机器人并发送 /start，以完成 Orvilo 账户关联。',
+    guestLinkTitle: '关联 Orvilo',
     guestMediaUnavailable: '该附件无法通过 Telegram 访客模式送达。',
     guestPairingCapacityExceeded: '该机器人当前待处理的访客模式访问请求过多，请稍后再试。',
     guestPairingCode: (code) =>

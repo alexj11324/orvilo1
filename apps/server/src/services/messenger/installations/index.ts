@@ -81,13 +81,13 @@ export const messengerConnectionId = (platform: string): string =>
  *    the gateway, so we must return that exact connectionId; otherwise
  *    `startTyping` targets a non-existent DO and typing is invisible.
  *
- * 2. **Everything else** — per-user shard `(platform, lobeUserId)` so each
+ * 2. **Everything else** — per-user shard `(platform, orviloUserId)` so each
  *    user gets their own webhook-mode DO. Solves the cross-conversation
  *    `TypingState` overwrite bug from a shared DO and avoids piling 200K-MAU
  *    load onto a single hot DO.
  *      - Telegram / single-token platforms: `messenger:<platform>:user-<userId>`
  *      - Slack: `messenger:slack:<tenantId>:user-<userId>` — tenant retained
- *        because the same `lobeUserId` may link multiple workspaces, each
+ *        because the same `orviloUserId` may link multiple workspaces, each
  *        with its own rotating OAuth token.
  *
  * Single source of truth: derives directly from the `installationKey`

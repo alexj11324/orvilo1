@@ -25,7 +25,7 @@ export const initializeWithClientStore = async ({
   /**
    * Since #5267, we map parameters for client-fetch in function `getProviderAuthPayload`
    * which called by `createPayloadWithKeyVaults` below.
-   * @see https://github.com/lobehub/lobe-chat/pull/5267
+   * @see
    * @file src/services/_auth.ts
    */
   const providerAuthPayload = { ...payload, ...createPayloadWithKeyVaults(provider) };

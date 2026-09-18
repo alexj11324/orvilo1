@@ -5,13 +5,13 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
-const log = debug('lobe-server:agent:group-member-callback');
+const log = debug('orvilo-server:agent:group-member-callback');
 
 /**
  * Group-action member completion bridge webhook (queue mode).
  *
  * When a group member op — forked by a supervisor parked on a
- * `lobe-group-management` action (speak / broadcast / delegate /
+ * `orvilo-group-management` action (speak / broadcast / delegate /
  * executeAgentTask(s)) — reaches a terminal state, its `onComplete` hook is
  * delivered here by Hatchet (in-memory handler hooks don't survive queue mode's
  * cross-process steps). Backfills the member anchor, enforces the K=N member

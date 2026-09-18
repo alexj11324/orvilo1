@@ -20,11 +20,11 @@ import {
   topics,
   users,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
 import { codeEmbedding } from '../fixtures/embedding';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'message-create-test';
 const otherUserId = 'message-create-test-other';
@@ -261,7 +261,7 @@ describe('MessageModel Create Tests', () => {
         plugin: {
           apiName: 'searchWithSearXNG',
           arguments: '{\n  "query": "Composio"\n}',
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           type: 'builtin',
         },
         pluginState: state,
@@ -281,7 +281,7 @@ describe('MessageModel Create Tests', () => {
         .from(messagePlugins)
         .where(eq(messagePlugins.id, result.id));
       expect(pluginResult).toHaveLength(1);
-      expect(pluginResult[0].identifier).toBe('lobe-web-browsing');
+      expect(pluginResult[0].identifier).toBe('orvilo-web-browsing');
       expect(pluginResult[0].state!).toMatchObject(state);
     });
 
@@ -307,7 +307,7 @@ describe('MessageModel Create Tests', () => {
           plugin: {
             apiName: 'search',
             arguments: argsWithNullByte,
-            identifier: 'lobe-web-browsing',
+            identifier: 'orvilo-web-browsing',
             type: 'builtin',
           },
           pluginState: stateWithNullByte,
@@ -323,7 +323,7 @@ describe('MessageModel Create Tests', () => {
         .from(messagePlugins)
         .where(eq(messagePlugins.toolCallId, 'call_null_byte_test'));
       expect(pluginResult).toHaveLength(1);
-      expect(pluginResult[0].identifier).toBe('lobe-web-browsing');
+      expect(pluginResult[0].identifier).toBe('orvilo-web-browsing');
       // The stored data should not contain null bytes
       expect(JSON.stringify(pluginResult[0].state)).not.toContain('\u0000');
       expect(pluginResult[0].arguments).not.toContain('\u0000');

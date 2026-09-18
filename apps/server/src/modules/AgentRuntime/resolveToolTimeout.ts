@@ -1,4 +1,4 @@
-import { type LobeToolManifest } from '@orvilo/context-engine';
+import { type OrviloToolManifest } from '@orvilo/context-engine';
 
 /**
  * Global fallback when neither the LLM nor the tool manifest specifies a
@@ -36,7 +36,7 @@ export interface ResolveToolTimeoutInput {
    */
   args?: Record<string, unknown> | null;
   /** Manifest for the tool being dispatched, looked up by identifier. */
-  manifest?: LobeToolManifest;
+  manifest?: OrviloToolManifest;
 }
 
 /**

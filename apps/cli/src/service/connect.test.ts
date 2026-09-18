@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installConnectService, readConnectServiceStatus, startConnectService } from './connect';
 
-const tmpDir = path.join(os.tmpdir(), `lobehub-connect-service-test-${process.pid}`);
+const tmpDir = path.join(os.tmpdir(), `orvilo-connect-service-test-${process.pid}`);
 const unitDir = path.join(tmpDir, 'systemd-user');
 const entryPath = path.join(tmpDir, 'lh.js');
 
@@ -55,11 +55,11 @@ describe('connect service', () => {
     process.env = {
       ...originalEnv,
       HOME: tmpDir,
-      LOBEHUB_CONNECT_SERVICE_UNIT_DIR: unitDir,
+      ORVILO_CONNECT_SERVICE_UNIT_DIR: unitDir,
     };
-    delete process.env.LOBEHUB_CLI_HOME;
-    delete process.env.LOBEHUB_CLI_API_KEY;
-    delete process.env.LOBEHUB_JWT;
+    delete process.env.ORVILO_CLI_HOME;
+    delete process.env.ORVILO_CLI_API_KEY;
+    delete process.env.ORVILO_JWT;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.AWS_SECRET_ACCESS_KEY;
 
@@ -98,16 +98,16 @@ describe('connect service', () => {
   it('installs and starts the user systemd service', () => {
     installConnectService();
 
-    const unitPath = path.join(unitDir, 'lobehub-connect.service');
+    const unitPath = path.join(unitDir, 'orvilo-connect.service');
     expect(fs.existsSync(unitPath)).toBe(true);
     expect(fs.readFileSync(unitPath, 'utf8')).toContain(
       `"${process.execPath}" "${fs.realpathSync(entryPath)}" "connect" "--service-child"`,
     );
     expect(fs.readFileSync(unitPath, 'utf8')).toContain(
-      `EnvironmentFile=${path.join(tmpDir, '.lobehub', 'connect-service.env')}`,
+      `EnvironmentFile=${path.join(tmpDir, '.orvilo', 'connect-service.env')}`,
     );
     expect(systemctlCalls).toContainEqual(['--user', 'daemon-reload']);
-    expect(systemctlCalls).toContainEqual(['--user', 'enable', '--now', 'lobehub-connect.service']);
+    expect(systemctlCalls).toContainEqual(['--user', 'enable', '--now', 'orvilo-connect.service']);
   });
 
   it('does not install when a managed connect daemon is already running', () => {
@@ -116,12 +116,12 @@ describe('connect service', () => {
     expect(() => installConnectService()).toThrow(
       'Background connect daemon is already running (PID 12345).',
     );
-    expect(fs.existsSync(path.join(unitDir, 'lobehub-connect.service'))).toBe(false);
+    expect(fs.existsSync(path.join(unitDir, 'orvilo-connect.service'))).toBe(false);
     expect(systemctlCalls).not.toContainEqual([
       '--user',
       'enable',
       '--now',
-      'lobehub-connect.service',
+      'orvilo-connect.service',
     ]);
   });
 
@@ -129,29 +129,29 @@ describe('connect service', () => {
     loadCredentialsMock.mockReturnValue(null);
 
     expect(() => installConnectService()).toThrow("No authentication found. Run 'lh login' first");
-    expect(fs.existsSync(path.join(unitDir, 'lobehub-connect.service'))).toBe(false);
+    expect(fs.existsSync(path.join(unitDir, 'orvilo-connect.service'))).toBe(false);
     expect(systemctlCalls).not.toContainEqual([
       '--user',
       'enable',
       '--now',
-      'lobehub-connect.service',
+      'orvilo-connect.service',
     ]);
   });
 
   it('writes the current environment to a service-scoped env file', () => {
     process.env.ANTHROPIC_API_KEY = 'anthropic-key';
     process.env.AWS_SECRET_ACCESS_KEY = 'aws-secret';
-    process.env.LOBEHUB_CLI_API_KEY = 'test-key';
+    process.env.ORVILO_CLI_API_KEY = 'test-key';
     process.env.QUOTED_ENV = 'value with "quotes", \\slashes, and $dollars';
 
     installConnectService();
 
-    const envFilePath = path.join(tmpDir, '.lobehub', 'connect-service.env');
+    const envFilePath = path.join(tmpDir, '.orvilo', 'connect-service.env');
     const envFile = fs.readFileSync(envFilePath, 'utf8');
     expect(fs.statSync(envFilePath).mode & 0o777).toBe(0o600);
     expect(envFile).toContain('ANTHROPIC_API_KEY="anthropic-key"');
     expect(envFile).toContain('AWS_SECRET_ACCESS_KEY="aws-secret"');
-    expect(envFile).toContain('LOBEHUB_CLI_API_KEY="test-key"');
+    expect(envFile).toContain('ORVILO_CLI_API_KEY="test-key"');
     expect(envFile).toContain('QUOTED_ENV="value with \\"quotes\\", \\\\slashes, and \\$dollars"');
     expect(systemctlCalls.some((call) => call.includes('import-environment'))).toBe(false);
     expect(systemctlCalls.some((call) => call.includes('unset-environment'))).toBe(false);
@@ -165,13 +165,13 @@ describe('connect service', () => {
   it('starts an installed service after preflight checks pass', () => {
     installConnectService();
     systemctlCalls = [];
-    process.env.LOBEHUB_CLI_API_KEY = 'rotated-key';
+    process.env.ORVILO_CLI_API_KEY = 'rotated-key';
 
     expect(startConnectService()).toBe(true);
 
-    expect(fs.readFileSync(path.join(tmpDir, '.lobehub', 'connect-service.env'), 'utf8')).toContain(
-      'LOBEHUB_CLI_API_KEY="rotated-key"',
+    expect(fs.readFileSync(path.join(tmpDir, '.orvilo', 'connect-service.env'), 'utf8')).toContain(
+      'ORVILO_CLI_API_KEY="rotated-key"',
     );
-    expect(systemctlCalls).toContainEqual(['--user', 'start', 'lobehub-connect.service']);
+    expect(systemctlCalls).toContainEqual(['--user', 'start', 'orvilo-connect.service']);
   });
 });

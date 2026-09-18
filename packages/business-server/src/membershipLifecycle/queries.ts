@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import type { UserItem, WorkspaceItem, WorkspaceMemberItem } from '@orvilo/database/schemas';
 import type { TaskItem } from '@orvilo/types';
 import { and, asc, count, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
@@ -23,7 +23,7 @@ const MEMBER_LIST_LIMIT = 500;
  * filters `deleted_at IS NULL`, which cannot lock a removed member's row.
  */
 export const lockMembershipForUpdate = (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
 ) =>
@@ -41,7 +41,7 @@ export const lockMembershipForUpdate = (
  * removal preview needs the row even when the member is suspended (suspended
  * members are removable, and their impact is exactly what the preview shows).
  */
-export const findMembershipRow = (db: LobeChatDatabase, workspaceId: string, userId: string) =>
+export const findMembershipRow = (db: OrviloDatabase, workspaceId: string, userId: string) =>
   db
     .select()
     .from(workspaceMembers)
@@ -54,7 +54,7 @@ export const findMembershipRow = (db: LobeChatDatabase, workspaceId: string, use
  * Lock the workspace row first in every membership mutation — the fixed lock
  * order is workspace → invitation → membership.
  */
-export const lockWorkspaceForUpdate = (db: LobeChatDatabase, workspaceId: string) =>
+export const lockWorkspaceForUpdate = (db: OrviloDatabase, workspaceId: string) =>
   db
     .select()
     .from(workspaces)
@@ -67,7 +67,7 @@ export const lockWorkspaceForUpdate = (db: LobeChatDatabase, workspaceId: string
  * and role-change paths all invalidate cached grants through this counter.
  */
 export const bumpAuthzVersion = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
 ) => {
@@ -88,7 +88,7 @@ export interface MemberWithProfile {
 }
 
 export const listMembersWithProfiles = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   includeDeleted: boolean,
 ): Promise<MemberWithProfile[]> => {
@@ -124,7 +124,7 @@ const openTaskWhere = (workspaceId: string, userId: string, column: 'assignee' |
   );
 
 export const countOpenTasksAssignedTo = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
 ) => {
@@ -136,7 +136,7 @@ export const countOpenTasksAssignedTo = async (
 };
 
 export const countOpenTasksReviewedBy = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
 ) => {
@@ -148,7 +148,7 @@ export const countOpenTasksReviewedBy = async (
 };
 
 export const listOpenAssignedTaskTitles = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
   limit = 20,
@@ -167,7 +167,7 @@ export const listOpenAssignedTaskTitles = async (
  * run or is the delegation subject — both become orphaned on removal.
  */
 export const countActiveDelegations = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
 ) => {
@@ -190,7 +190,7 @@ export const countActiveDelegations = async (
  * personal list) so the preview never over-promises what removal touches.
  */
 export const countMemberBoundDevices = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   userId: string,
 ) => {
@@ -213,7 +213,7 @@ export const countMemberBoundDevices = async (
  * per-field and the contract only transfers assignee responsibility.
  */
 export const reassignOpenAssignedTasks = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { fromUserId: string; toUserId: string; workspaceId: string },
 ) => {
   const moved: TaskItem[] = await db
@@ -236,7 +236,7 @@ export const reassignOpenAssignedTasks = async (
   return moved.length;
 };
 
-export const findUserById = (db: LobeChatDatabase, userId: string) =>
+export const findUserById = (db: OrviloDatabase, userId: string) =>
   db
     .select()
     .from(users)
@@ -245,13 +245,13 @@ export const findUserById = (db: LobeChatDatabase, userId: string) =>
     .then((rows) => rows[0] as UserItem | undefined);
 
 /** Resolve accounts whose stored or normalized email matches the invitation target. */
-export const findUsersByNormalizedEmail = (db: LobeChatDatabase, emailNormalized: string) =>
+export const findUsersByNormalizedEmail = (db: OrviloDatabase, emailNormalized: string) =>
   db
     .select()
     .from(users)
     .where(or(eq(users.normalizedEmail, emailNormalized), eq(users.email, emailNormalized)));
 
-export const findProjectsByIds = (db: LobeChatDatabase, projectIds: string[]) => {
+export const findProjectsByIds = (db: OrviloDatabase, projectIds: string[]) => {
   if (projectIds.length === 0) return Promise.resolve([]);
   return db.select().from(projects).where(inArray(projects.id, projectIds));
 };

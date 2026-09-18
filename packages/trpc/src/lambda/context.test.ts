@@ -51,8 +51,8 @@ vi.mock('@/database/models/apiKey', () => ({
 }));
 
 vi.mock('@/envs/auth', () => ({
-  LOBE_CHAT_AUTH_HEADER: 'X-lobe-chat-auth',
-  LOBE_CHAT_OIDC_AUTH_HEADER: 'Oidc-Auth',
+  ORVILO_AUTH_HEADER: 'X-orvilo-auth',
+  ORVILO_OIDC_AUTH_HEADER: 'Oidc-Auth',
   authEnv: {
     ENABLE_OIDC: true,
   },
@@ -221,7 +221,7 @@ describe('createLambdaContext', () => {
     const request = new NextRequest('https://example.com/trpc/lambda', {
       headers: {
         'user-agent': 'Mozilla/5.0 Chrome/140.0.0.0',
-        'x-lobe-client-version': '2.2.10',
+        'x-orvilo-client-version': '2.2.10',
       },
     });
 

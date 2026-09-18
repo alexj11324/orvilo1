@@ -4,8 +4,8 @@ import { resolveMessengerInstallHref } from './installHref';
 
 describe('resolveMessengerInstallHref', () => {
   it('builds an absolute install URL against the app origin on web', () => {
-    expect(resolveMessengerInstallHref('discord', 'https://lobehub.com')).toBe(
-      'https://lobehub.com/api/agent/messenger/discord/install',
+    expect(resolveMessengerInstallHref('discord', 'https://orvilo.aspectlylabs.com')).toBe(
+      'https://orvilo.aspectlylabs.com/api/agent/messenger/discord/install',
     );
   });
 

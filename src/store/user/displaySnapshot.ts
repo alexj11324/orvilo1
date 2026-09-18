@@ -14,7 +14,7 @@ export interface UserDisplaySnapshot {
  * Persisting that whole response would also restore stale entitlement and onboarding state.
  */
 const storage = new LocalStorageQueryProjectionStorage<UserDisplaySnapshot>({
-  namespace: 'lobehub:user-display-snapshot:v1',
+  namespace: 'orvilo:user-display-snapshot:v1',
 });
 const snapshotKey = (userId: string) => ({ queryKey: 'display', scope: userId });
 

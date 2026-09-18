@@ -29,7 +29,7 @@ export const AddContextMemoryInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-user-memory.apiName.addContextMemory')}
+          {t('builtins.orvilo-user-memory.apiName.addContextMemory')}
         </span>
       </div>
     );
@@ -40,7 +40,7 @@ export const AddContextMemoryInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-user-memory.apiName.addContextMemory')}
+        {t('builtins.orvilo-user-memory.apiName.addContextMemory')}
       </span>
       {title && (
         <>

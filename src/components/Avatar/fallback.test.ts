@@ -23,7 +23,7 @@ describe('getAvatarInitials', () => {
   });
 
   it('takes the first two letters of a single word', () => {
-    expect(getAvatarInitials('lobehub')).toBe('LO');
+    expect(getAvatarInitials('orvilo')).toBe('OR');
     expect(getAvatarInitials('x')).toBe('X');
   });
 
@@ -53,7 +53,7 @@ describe('resolveAvatar', () => {
   });
 
   it('gives every unconfigured name the same neutral tile', () => {
-    const seeds = ['贺素青', 'Claude Code', 'lobehub', 'agent-default', 'Verify', 'Inbox'];
+    const seeds = ['贺素青', 'Claude Code', 'orvilo', 'agent-default', 'Verify', 'Inbox'];
     const backgrounds = new Set(seeds.map((name) => resolveAvatar({ name }).background));
 
     expect(backgrounds).toEqual(new Set([undefined]));

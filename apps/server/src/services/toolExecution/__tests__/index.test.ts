@@ -39,7 +39,7 @@ describe('ToolExecutionService', () => {
         apiName: 'runCommand',
         arguments: '{}',
         id: 'http-command',
-        identifier: 'lobe-cloud-sandbox',
+        identifier: 'orvilo-cloud-sandbox',
         type: 'builtin',
       },
       { toolManifestMap: {} },
@@ -78,7 +78,7 @@ describe('ToolExecutionService', () => {
               apiName: 'readFile',
               arguments: '{}',
               id: 'read-retry',
-              identifier: 'lobe-cloud-sandbox',
+              identifier: 'orvilo-cloud-sandbox',
               type: 'builtin',
             },
             { toolManifestMap: {} },
@@ -132,7 +132,7 @@ describe('ToolExecutionService', () => {
                   apiName: api,
                   arguments: '{}',
                   id: 'side-effect',
-                  identifier: 'lobe-cloud-sandbox',
+                  identifier: 'orvilo-cloud-sandbox',
                   type: 'builtin',
                 },
                 { toolManifestMap: {} },
@@ -150,8 +150,8 @@ describe('ToolExecutionService', () => {
   );
 
   it.each([
-    { identifier: 'lobe-cloud-sandbox', error: { message: 'Forbidden' } },
-    { identifier: 'linear', error: { code: 'LOBEHUB_SKILL_ERROR', message: 'Forbidden' } },
+    { identifier: 'orvilo-cloud-sandbox', error: { message: 'Forbidden' } },
+    { identifier: 'linear', error: { code: 'ORVILO_SKILL_ERROR', message: 'Forbidden' } },
   ])('makes a bare denial actionable for $identifier', async ({ identifier, error }) => {
     const service = new ToolExecutionService({
       builtinToolsExecutor: {
@@ -245,7 +245,7 @@ describe('ToolExecutionService', () => {
         apiName: 'search',
         arguments: '{}',
         id: 'tool-call-1',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         type: 'builtin',
       },
       {
@@ -275,7 +275,7 @@ describe('ToolExecutionService', () => {
         apiName: 'search',
         arguments: '{}',
         id: 'tool-call-1',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         type: 'builtin',
       },
       {
@@ -312,7 +312,7 @@ describe('ToolExecutionService', () => {
         apiName: 'runCommand',
         arguments: '{}',
         id: 'tool-call-1',
-        identifier: 'lobe-skills',
+        identifier: 'orvilo-skills',
         type: 'builtin',
       },
       { skipResultTruncation: true, toolManifestMap: {} },
@@ -352,7 +352,7 @@ describe('ToolExecutionService', () => {
         apiName: 'readFile',
         arguments: '{}',
         id: 'tool-call-1',
-        identifier: 'lobe-local-system',
+        identifier: 'orvilo-local-system',
         type: 'builtin',
       },
       { toolManifestMap: {} },

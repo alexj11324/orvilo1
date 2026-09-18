@@ -1,5 +1,5 @@
 import type { IconProps } from '@lobehub/ui';
-import { isDesktop, LOBEHUB_SKILL_PROVIDERS } from '@orvilo/const';
+import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
 import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +28,7 @@ import { containsHan, loadPinyinTexts, type PinyinTexts } from './pinyin';
 export interface SettingsSearchResult {
   /** Present on item-level results; used as the URL hash for scroll targeting */
   anchor?: string;
-  /** Where the result lives, e.g. `General › Appearance` */
+  /** Where the result lives, e.g. `Account › Appearance` */
   breadcrumb: string;
   icon?: IconProps['icon'];
   key: string;
@@ -79,7 +79,7 @@ export const useSettingsSearch = (
 } => {
   const { t } = useTranslation(['setting', 'labs', 'electron', 'subscription', 'spend', 'auth']);
   const categoryGroups = useCategory();
-  const { enableSTT, hideDocs, showAiImage } = useServerConfigStore(featureFlagsSelectors);
+  const { enableSTT, hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const enableGatewayMode = useServerConfigStore(serverConfigSelectors.enableGatewayMode);
   const enableComposio = useServerConfigStore(serverConfigSelectors.enableComposio);
@@ -105,7 +105,6 @@ export const useSettingsSearch = (
       isDesktop,
       isLogin: !!isLogin,
       isWindows: getPlatform() === 'Windows',
-      showAiImage: !!showAiImage,
     };
 
     // Tab-level entries first so they rank above item-level matches.
@@ -117,10 +116,12 @@ export const useSettingsSearch = (
 
     for (const group of categoryGroups) {
       for (const item of group.items) {
-        // The same tab may appear in multiple groups (e.g. APIKey in Agent and
-        // System when dev mode is on); index only the first occurrence,
-        // matching the sidebar's top-to-bottom order — otherwise one query
-        // shows duplicate results pointing at the same page.
+        // One tab, one result: when a tab is reachable from two groups, index the
+        // first occurrence so the sidebar's top-to-bottom order decides which group
+        // it is reported under, and one query cannot return two results pointing at
+        // the same page. No tab is listed twice since the S70 regroup merged the
+        // duplicate API Key entry, but the map below is keyed by tab and must keep
+        // agreeing with that rule if one ever is.
         if (visibleTabs.has(item.key)) continue;
 
         const url = item.href ?? getTabUrl(item.key);
@@ -203,7 +204,7 @@ export const useSettingsSearch = (
     // renders from.
     const connectorTab = visibleTabs.get(SettingsTabs.Connector);
     if (connectorTab)
-      for (const connector of LOBEHUB_SKILL_PROVIDERS) {
+      for (const connector of ORVILO_SKILL_PROVIDERS) {
         entries.push({
           breadcrumb: `${connectorTab.groupTitle} › ${connectorTab.label}`,
           haystack: [connector.label.toLowerCase(), connector.id.toLowerCase()],
@@ -246,7 +247,6 @@ export const useSettingsSearch = (
     hasEmail,
     hideDocs,
     isLogin,
-    showAiImage,
   ]);
 
   // Load the pinyin dict only when the index actually contains Han text, so

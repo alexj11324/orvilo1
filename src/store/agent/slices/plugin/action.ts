@@ -55,7 +55,7 @@ export class PluginSliceActionImpl {
     if (!originConfig) return;
 
     const config = produce(originConfig, (draft) => {
-      // `LobeAgentConfig['plugins']` is still typed `string[]` — widening it is
+      // `OrviloAgentConfig['plugins']` is still typed `string[]` — widening it is
       // deferred to the final phase of the tri-state rollout so `.includes()`
       // call sites keep getting compiler errors until manually migrated. The
       // runtime value legitimately becomes mixed-shape here (JSONB has no

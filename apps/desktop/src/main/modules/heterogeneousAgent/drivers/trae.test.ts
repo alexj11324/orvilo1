@@ -27,7 +27,7 @@ const bindingContext = (): PrepareProviderBindingContext => ({
   ],
   env: {
     KEEP_ME: 'yes',
-    LOBEHUB_TRAE_API_KEY: 'stale-host-key',
+    ORVILO_TRAE_API_KEY: 'stale-host-key',
     OPENAI_API_KEY: 'stale-openai-key',
     TRAE_HOME: '/user/trae',
   },
@@ -73,21 +73,21 @@ describe('traeDriver', () => {
       '-c',
       'model="bound-model"',
       '-c',
-      'model_provider="lobehub"',
+      'model_provider="orvilo"',
       '-c',
-      'model_providers.lobehub.name="LobeHub Provider"',
+      'model_providers.orvilo.name="Orvilo Provider"',
       '-c',
-      'model_providers.lobehub.base_url="https://responses.example.com/v1"',
+      'model_providers.orvilo.base_url="https://responses.example.com/v1"',
       '-c',
-      'model_providers.lobehub.env_key="LOBEHUB_TRAE_API_KEY"',
+      'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
       '-c',
-      'model_providers.lobehub.wire_api="responses"',
+      'model_providers.orvilo.wire_api="responses"',
       '-c',
-      'model_providers.lobehub.requires_openai_auth=false',
+      'model_providers.orvilo.requires_openai_auth=false',
     ]);
     expect(plan.env).toEqual({
       KEEP_ME: 'yes',
-      LOBEHUB_TRAE_API_KEY: 'bound-key',
+      ORVILO_TRAE_API_KEY: 'bound-key',
       TRAE_HOME: '/user/trae',
     });
     expect(plan.args.join(' ')).not.toContain('bound-key');
@@ -98,7 +98,7 @@ describe('traeDriver', () => {
     const plan = await traeDriver.prepareServerDefaultBinding!({
       args: ['--profile', 'stale', '--permission-mode', 'auto'],
       endpoint: 'https://app.example.com/',
-      env: { LOBEHUB_TRAE_API_KEY: 'stale-token', TRAE_HOME: '/user/trae' },
+      env: { ORVILO_TRAE_API_KEY: 'stale-token', TRAE_HOME: '/user/trae' },
       model: 'gpt-5.4',
       profileDir: '/managed/trae',
     });
@@ -106,22 +106,22 @@ describe('traeDriver', () => {
       '--permission-mode',
       'auto',
       '-c',
-      'model="lobehub/gpt-5.4"',
+      'model="aspectlylabs/gpt-5.4"',
       '-c',
-      'model_provider="lobehub"',
+      'model_provider="orvilo"',
       '-c',
-      'model_providers.lobehub.name="LobeHub Provider"',
+      'model_providers.orvilo.name="Orvilo Provider"',
       '-c',
-      'model_providers.lobehub.base_url="https://app.example.com/api/v1/openai/v1"',
+      'model_providers.orvilo.base_url="https://app.example.com/api/v1/openai/v1"',
       '-c',
-      'model_providers.lobehub.env_key="LOBEHUB_TRAE_API_KEY"',
+      'model_providers.orvilo.env_key="ORVILO_TRAE_API_KEY"',
       '-c',
-      'model_providers.lobehub.wire_api="responses"',
+      'model_providers.orvilo.wire_api="responses"',
       '-c',
-      'model_providers.lobehub.requires_openai_auth=false',
+      'model_providers.orvilo.requires_openai_auth=false',
     ]);
     expect(plan.env).toEqual({ TRAE_HOME: '/user/trae' });
-    expect(plan.operationTokenEnvKey).toBe('LOBEHUB_TRAE_API_KEY');
+    expect(plan.operationTokenEnvKey).toBe('ORVILO_TRAE_API_KEY');
     expect(plan.args.join(' ')).not.toContain('stale-token');
     expect(plan.profileFiles).toBeUndefined();
   });

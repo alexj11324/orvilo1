@@ -1,4 +1,4 @@
-export const SkillsIdentifier = 'lobe-skills';
+export const SkillsIdentifier = 'orvilo-skills';
 
 export const SkillsApiName = {
   execScript: 'execScript',

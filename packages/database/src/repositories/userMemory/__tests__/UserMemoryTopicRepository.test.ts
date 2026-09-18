@@ -5,7 +5,7 @@ import { getTestDB } from '../../../core/getTestDB';
 import { messages } from '../../../schemas/message';
 import { topics } from '../../../schemas/topic';
 import { users } from '../../../schemas/user';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { UserMemoryTopicRepository } from '../UserMemoryTopicRepository';
 
 const userId = 'user-memory-topic-test-user';
@@ -13,7 +13,7 @@ const topicId = 'test-topic-1';
 
 let repo: UserMemoryTopicRepository;
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 beforeEach(async () => {
   // Clean up

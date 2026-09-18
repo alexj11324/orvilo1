@@ -6,7 +6,7 @@ import { createLogger } from '@/utils/logger';
 import normalizeUpdateChannelMigration from './001-normalize-update-channel';
 import type { StoreMigration } from './defineMigration';
 
-export const APPLIED_STORE_MIGRATIONS_KEY = 'lobeDesktopAppliedStoreMigrations';
+export const APPLIED_STORE_MIGRATIONS_KEY = 'orviloDesktopAppliedStoreMigrations';
 
 const logger = createLogger('core:storeMigration');
 

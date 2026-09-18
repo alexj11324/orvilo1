@@ -249,7 +249,7 @@ export default {
   'verify.confirm.defaultAgentHint':
     'Your messages will be routed here first. You can switch any time via /agents in the bot or from Settings → Messenger.',
   'verify.confirm.defaultAgentPlaceholder': 'Select an agent',
-  'verify.confirm.fields.lobeHubAccount': 'Orvilo account',
+  'verify.confirm.fields.orviloHubAccount': 'Orvilo account',
   'verify.confirm.fields.platformAccount': '{{platform}} account',
   'verify.confirm.fields.workspace': 'Workspace',
   'verify.confirm.noAgents':
@@ -273,7 +273,7 @@ export default {
     'This Orvilo account is already linked to another account on this platform. Disconnect it in Settings → Messenger before linking a new one.',
   'verify.signInCta': 'Sign in to continue',
   'verify.signInRequired': 'Please sign in to Orvilo to confirm the link.',
-  'verify.success.backToLobeHub': 'Back to Orvilo',
+  'verify.success.backToOrvilo': 'Back to Orvilo',
   'verify.success.description':
     'Your account is now connected to {{platform}}. Open {{platform}} and send your first message.',
   'verify.success.openBot': 'Open in {{platform}}',

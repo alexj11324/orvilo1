@@ -36,7 +36,7 @@ interface DeploymentRecord {
 }
 
 /**
- * `market.deployments.*` only exists on the LobeHub Cloud server; the OSS
+ * `market.deployments.*` only exists on the Orvilo Cloud server; the OSS
  * `LambdaRouter` this CLI is typed against ships an empty stub, so the calls
  * are described here and reached through a cast.
  */

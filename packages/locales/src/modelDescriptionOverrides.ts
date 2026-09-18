@@ -10,9 +10,9 @@ export const modelDescriptionOverrides = {
   'grok-4.20-beta-0309-non-reasoning.description': 'A non-reasoning variant for simple use cases',
   'grok-4.20-beta-0309-reasoning.description':
     'Intelligent, blazing-fast model that reasons before responding',
-  'lobehub-glm-5.2-fast.description':
+  'orvilo-glm-5.2-fast.description':
     'Fast variant of GLM-5.2 with substantially lower latency. Same capabilities as GLM-5.2 — costs more, but responds much faster.',
-  'lobehub-kimi-k3-fast.description':
+  'orvilo-kimi-k3-fast.description':
     'Fast variant of Kimi K3 with substantially lower latency. Same capabilities as Kimi K3 — costs more, but responds much faster.',
   'qwen3.8-max-preview.description':
     "Qwen3.8-Max-Preview is a preview of Alibaba's next-generation 2.4T-parameter flagship model, with major gains over Qwen3.7-Max in coding and professional productivity, and leading performance on complex long-horizon tasks such as full-stack development and data analysis.",

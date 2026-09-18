@@ -1,4 +1,4 @@
-import type * as LobeChatConst from '@orvilo/const';
+import type * as OrviloConst from '@orvilo/const';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type * as LucideReact from 'lucide-react';
 import type { CSSProperties, PropsWithChildren, ReactNode } from 'react';
@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
     authorId: undefined as string | undefined,
     config: {
       model: 'gpt-4o',
-      plugins: ['lobe-web-browsing'],
+      plugins: ['orvilo-web-browsing'],
       provider: 'openai',
     },
     isInbox: false,
@@ -66,7 +66,7 @@ vi.mock('@/business/client/useAgentShareSupported', () => ({
 }));
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
-  ...(await importOriginal<typeof LobeChatConst>()),
+  ...(await importOriginal<typeof OrviloConst>()),
   isDesktop: false,
 }));
 
@@ -434,7 +434,7 @@ describe('Agent profile Header', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows workspace resource permission controls for the LobeAI inbox agent', () => {
+  it('shows workspace resource permission controls for the OrviloAI inbox agent', () => {
     mocks.agentState.isInbox = true;
 
     render(<Header />);

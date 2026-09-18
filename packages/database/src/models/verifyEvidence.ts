@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { files } from '../schemas/file';
 import { verifyCheckResults, verifyEvidence } from '../schemas/verify';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 /** Caller-supplied fields when recording one evidence artifact (ownership is injected). */
@@ -17,11 +17,11 @@ export type VerifyEvidenceForRun = VerifyEvidence & { checkItemId: string };
 export type VerifyEvidenceForRuns = VerifyEvidenceForRun & { verifyRunId: string };
 
 export class VerifyEvidenceModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

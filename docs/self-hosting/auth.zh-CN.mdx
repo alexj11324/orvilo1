@@ -1,16 +1,16 @@
 ---
-title: LobeHub 身份验证服务配置
+title: Orvilo 身份验证服务配置
 description: 了解如何使用 Better Auth 配置外部身份验证服务，以统一管理用户授权。支持的身份验证服务包括 Auth0、 Azure ID 等。
 tags:
   - 身份验证服务
   - Better Auth
-  - LobeHub
+  - Orvilo
   - SSO
 ---
 
 # 身份验证服务
 
-LobeHub 支持使用 Better Auth 配置外部身份验证服务，供企业 / 组织内部使用，统一管理用户授权。
+Orvilo 支持使用 Better Auth 配置外部身份验证服务，供企业 / 组织内部使用，统一管理用户授权。
 
 ## Better Auth
 
@@ -26,14 +26,14 @@ LobeHub 支持使用 Better Auth 配置外部身份验证服务，供企业 / �
 
 ## 快速开始
 
-要在 LobeHub 中启用 Better Auth，请设置以下环境变量：
+要在 Orvilo 中启用 Better Auth，请设置以下环境变量：
 
-| 环境变量                   | 类型  | 描述                                                                                                                                                                                |
-| ---------------------- | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`          | 必选  | 用于加密会话令牌的密钥。使用以下命令生成：`openssl rand -base64 32`                                                                                                                                    |
-| `APP_URL`              | 必选  | 本实例的公网访问地址（例如 `https://lobe.example.com`）。Better Auth 将其作为 `baseURL` 生成 OAuth 回调与 trusted origins。Vercel 上未设置时可回退到 `VERCEL_*`；其他环境若省略会默认 `http://localhost:<PORT>`，导致公网域名 SSO 失败。 |
-| `NEXT_PUBLIC_AUTH_URL` | 已废弃 | 已移除的 NextAuth / 浏览器认证 URL。设置该变量会导致部署失败，请改用 `APP_URL`。                                                                                                                             |
-| `AUTH_SSO_PROVIDERS`   | 可选  | 启用的 SSO 提供商列表，以逗号分隔，例如 `google,github,microsoft`                                                                                                                                  |
+| 环境变量                   | 类型  | 描述                                                                                                                                                                                  |
+| ---------------------- | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`          | 必选  | 用于加密会话令牌的密钥。使用以下命令生成：`openssl rand -base64 32`                                                                                                                                      |
+| `APP_URL`              | 必选  | 本实例的公网访问地址（例如 `https://orvilo.example.com`）。Better Auth 将其作为 `baseURL` 生成 OAuth 回调与 trusted origins。Vercel 上未设置时可回退到 `VERCEL_*`；其他环境若省略会默认 `http://localhost:<PORT>`，导致公网域名 SSO 失败。 |
+| `NEXT_PUBLIC_AUTH_URL` | 已废弃 | 已移除的 NextAuth / 浏览器认证 URL。设置该变量会导致部署失败，请改用 `APP_URL`。                                                                                                                               |
+| `AUTH_SSO_PROVIDERS`   | 可选  | 启用的 SSO 提供商列表，以逗号分隔，例如 `google,github,microsoft`                                                                                                                                    |
 
 ## 支持的 SSO 提供商
 
@@ -193,7 +193,7 @@ SMTP_FROM=noreply@yourdomain.com      # 可选，默认为 SMTP_USER
 | 环境变量           | 类型 | 描述                              |
 | -------------- | -- | ------------------------------- |
 | `REDIS_URL`    | 可选 | Redis 连接 URL，配置后自动启用 Redis 会话存储 |
-| `REDIS_PREFIX` | 可选 | Redis 键前缀，默认为 `lobechat`        |
+| `REDIS_PREFIX` | 可选 | Redis 键前缀，默认为 `orvilo`          |
 
 <Callout type={'info'}>
   配置 Redis 后，认证会话数据将存储在 Redis 中，可以实现跨多个服务实例的会话共享，并提升会话验证速度。详细配置请参阅 [Redis 缓存服务](/zh/docs/self-hosting/advanced/redis)。
@@ -248,7 +248,7 @@ Better Auth 支持内置提供商（Google、GitHub、Microsoft、Apple、AWS Co
 
 ### Webhook 支持
 
-允许 LobeHub 在身份提供商中用户信息更新时接收通知。支持的提供商包括 Casdoor 和 Logto。请参考具体提供商文档进行配置。
+允许 Orvilo 在身份提供商中用户信息更新时接收通知。支持的提供商包括 Casdoor 和 Logto。请参考具体提供商文档进行配置。
 
 ### 其他 SSO 提供商
 

@@ -41,7 +41,7 @@ describe('preloadLang', () => {
   });
 
   it('should resolve "auto" to the system language so the preloaded bundle matches switchLang', () => {
-    vi.stubGlobal('lobeEnv', { systemLanguage: 'ja-JP' });
+    vi.stubGlobal('orviloEnv', { systemLanguage: 'ja-JP' });
 
     preloadLang('auto');
     vi.runAllTimers();

@@ -6,25 +6,25 @@ exports[`htmlToMarkdown > should transform terms.html to markdown 1`] = `
 
 2024-03-01 
 
- Welcome to LobeHub! Please carefully read the following Terms of Use (hereinafter referred to as the "Agreement"). This Agreement constitutes a legally binding agreement between You and LobeHub regarding the access and use of the LobeHub software applications, services, and websites (collectively referred to as the "Services").
+ Welcome to Orvilo! Please carefully read the following Terms of Use (hereinafter referred to as the "Agreement"). This Agreement constitutes a legally binding agreement between You and Orvilo regarding the access and use of the Orvilo software applications, services, and websites (collectively referred to as the "Services").
 
  By accessing or using the Services in any way, You acknowledge that You have read, understood, and agreed to be bound by all the terms of this Agreement. If You do not agree to any part of this Agreement, You are not permitted to continue accessing or using the Services.
 
-##  Definitions[ ](https://lobehub.com/zh/terms#definitions) 
+##  Definitions[ ](https://orvilo.aspectlylabs.com/zh/terms#definitions) 
 
  The words of which the initial letter is capitalized have meanings defined under the following conditions. The following definitions shall have the same meaning regardless of whether they appear in singular or in plural.
 
 * **Affiliate** means an entity that controls, is controlled by or is under common control with a party, where "control" means ownership of 50% or more of the shares, equity interest or other securities entitled to vote for election of directors or other managing authority.
 * **Agreement** means this Terms of Use Agreement.
-* **Company** (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to LobeHub LLC.
-* **Service** means the LobeHub software applications, services, and website.
+* **Company** (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to Orvilo LLC.
+* **Service** means the Orvilo software applications, services, and website.
 * **You** means the individual accessing or using the Services, or the company, or other legal entity on behalf of which such individual is accessing or using the Services, as applicable.
 
-##  Our Services[ ](https://lobehub.com/zh/terms#our-services) 
+##  Our Services[ ](https://orvilo.aspectlylabs.com/zh/terms#our-services) 
 
- LobeHub provides a platform and interface that enables users to interact with artificial intelligence technologies, including but not limited to natural language processing models or content generation models developed independently or provided by third parties such as Google, Microsoft, OpenAI, and other commercial companies as well as open-source communities. The Service facilitates functions such as information retrieval, content creation, and automation through user interaction with AI systems. Additionally, it utilizes cloud technology to provide capabilities like data synchronization, vector data storage, server-side functionalities, etc., to enhance the interactive experience with AI models.
+ Orvilo provides a platform and interface that enables users to interact with artificial intelligence technologies, including but not limited to natural language processing models or content generation models developed independently or provided by third parties such as Google, Microsoft, OpenAI, and other commercial companies as well as open-source communities. The Service facilitates functions such as information retrieval, content creation, and automation through user interaction with AI systems. Additionally, it utilizes cloud technology to provide capabilities like data synchronization, vector data storage, server-side functionalities, etc., to enhance the interactive experience with AI models.
 
-##  Eligibility[ ](https://lobehub.com/zh/terms#eligibility) 
+##  Eligibility[ ](https://orvilo.aspectlylabs.com/zh/terms#eligibility) 
 
  By accessing or using the Services, You represent and warrant to the Company that You: (1)Are of legal age (18 years and above). (2)Have legal capacity and agree to abide by these terms. (3)Will use the Services in accordance with this Agreement and all applicable laws. (4)Will not use the Services for any illegal, harmful, dangerous, or offensive purposes.
 
@@ -37,13 +37,13 @@ Examples of prohibited activities include but are not limited to:
 
  If You do not comply with the usage conditions, We reserve the right to suspend or terminate Your account and refuse any and all current or future use of the Services (or any part thereof).
 
-##  Account Registration[ ](https://lobehub.com/zh/terms#account-registration) 
+##  Account Registration[ ](https://orvilo.aspectlylabs.com/zh/terms#account-registration) 
 
- To access the Services, You must register an account by providing true, accurate, up-to-date, and complete information. You are solely responsible for all activities that occur under Your account, including maintaining the security of Your account and restricting access. You must immediately notify LobeHub of any unauthorized account use or other security breaches.
+ To access the Services, You must register an account by providing true, accurate, up-to-date, and complete information. You are solely responsible for all activities that occur under Your account, including maintaining the security of Your account and restricting access. You must immediately notify Orvilo of any unauthorized account use or other security breaches.
 
  Please ensure to keep Your password secure and take responsibility for all use of Your account and password. If We deem the chosen username inappropriate, containing obscene content, or otherwise offensive, We reserve the right to delete, revoke, or modify that username.
 
-##  Purchases and Payments[ ](https://lobehub.com/zh/terms#purchases-and-payments) 
+##  Purchases and Payments[ ](https://orvilo.aspectlylabs.com/zh/terms#purchases-and-payments) 
 
  You agree to provide current, complete, and accurate purchase and account information for all purchases made using the Services. You also agree to promptly update Your account and payment information, including email address, payment method, and payment card expiration date, to allow us to complete Your transactions and contact You when necessary. Sales tax will be added to the purchase price as required by law.
 
@@ -53,19 +53,19 @@ Examples of prohibited activities include but are not limited to:
 
  We reserve the right to refuse or cancel Your order at any time for certain reasons, including but not limited to: (1) Service availability, (2) errors in Service description or pricing, (3) order errors, (4) suspected fraud or unauthorized or illegal transactions. We reserve the right, at our sole discretion, to limit or prohibit orders placed by dealers, resellers, or distributors.
 
-##  Fee Changes[ ](https://lobehub.com/zh/terms#fee-changes) 
+##  Fee Changes[ ](https://orvilo.aspectlylabs.com/zh/terms#fee-changes) 
 
  We reserve the right to adjust the Service fees at our discretion and at any time. Any changes in fees will take effect immediately upon the change. Services that have already been paid for and purchased will not be affected.
 
  If Your order requires recurring automatic billing, the revised price will take effect on the next billing cycle. We will notify You in advance of any fee adjustments so that You have the opportunity to cancel the order before the adjustment takes effect. If You do not cancel the order and continue to use the Services, You agree to pay the revised fee amount.
 
-##  Refunds[ ](https://lobehub.com/zh/terms#refunds) 
+##  Refunds[ ](https://orvilo.aspectlylabs.com/zh/terms#refunds) 
 
  For Services that have been purchased but not used, We support refunds within 30 days of payment. However, for Services that have been used or purchased for more than 30 days, We will not accept refund requests.
 
  For subscription-based Services where partial usage has occurred, Your refund request will be reviewed on a case-by-case basis, and the final decision on approving the refund will be at the Company's discretion.
 
-##  Content[ ](https://lobehub.com/zh/terms#content) 
+##  Content[ ](https://orvilo.aspectlylabs.com/zh/terms#content) 
 
  Our Services allows You to generate and publish content. You are responsible for the legality, reliability, and appropriateness of the content generated using the AI ability. We do not assume responsibility for user-generated content on the Services. You explicitly understand and agree that You are solely responsible for the content You post and all activities conducted under Your account, whether by Yourself or by third parties using Your account.
 
@@ -77,42 +77,42 @@ Examples of prohibited activities include but are not limited to:
 
  We do not assume any responsibility for the security and integrity of content in the event of content damage or loss under any circumstances.
 
-##  Intellectual Property Rights[ ](https://lobehub.com/zh/terms#intellectual-property-rights) 
+##  Intellectual Property Rights[ ](https://orvilo.aspectlylabs.com/zh/terms#intellectual-property-rights) 
 
- LobeHub reserves all rights to the technology, software, first-party content, and data within the Services, including but not limited to patents, trademarks, trade secrets, copyrights, and other intellectual property rights. Your permission to use the Services does not grant You any ownership or title. You are not permitted to copy, modify, adapt, translate, create derivative works, reverse engineer, disassemble, or decompile the Services or any part thereof. If You wish to participate in collaborative technical development, please engage through our GitHub open-source community and adhere to the relevant open-source licenses.
+ Orvilo reserves all rights to the technology, software, first-party content, and data within the Services, including but not limited to patents, trademarks, trade secrets, copyrights, and other intellectual property rights. Your permission to use the Services does not grant You any ownership or title. You are not permitted to copy, modify, adapt, translate, create derivative works, reverse engineer, disassemble, or decompile the Services or any part thereof. If You wish to participate in collaborative technical development, please engage through our GitHub open-source community and adhere to the relevant open-source licenses.
 
-##  Privacy and Security[ ](https://lobehub.com/zh/terms#privacy-and-security) 
+##  Privacy and Security[ ](https://orvilo.aspectlylabs.com/zh/terms#privacy-and-security) 
 
- LobeHub employs industry-standard technical, managerial, and physical security measures to protect the security, confidentiality, and integrity of Your data. However, We cannot guarantee that unauthorized access, hacking attacks, data loss, or other breaches will never occur. LobeHub is not liable for any damages or liabilities related to security incidents. Please refer to our Privacy Policy for more detailed information.
+ Orvilo employs industry-standard technical, managerial, and physical security measures to protect the security, confidentiality, and integrity of Your data. However, We cannot guarantee that unauthorized access, hacking attacks, data loss, or other breaches will never occur. Orvilo is not liable for any damages or liabilities related to security incidents. Please refer to our Privacy Policy for more detailed information.
 
-##  Termination of Services[ ](https://lobehub.com/zh/terms#termination-of-services) 
+##  Termination of Services[ ](https://orvilo.aspectlylabs.com/zh/terms#termination-of-services) 
 
- You may close Your account and cease using the Services at any time. In the event of a violation of the terms of the agreement, LobeHub may immediately suspend or terminate Your access to the Services. Upon termination, You will immediately lose the right to access or use the Services. LobeHub will not be liable to You or any third party for the termination of the Services.
+ You may close Your account and cease using the Services at any time. In the event of a violation of the terms of the agreement, Orvilo may immediately suspend or terminate Your access to the Services. Upon termination, You will immediately lose the right to access or use the Services. Orvilo will not be liable to You or any third party for the termination of the Services.
 
-##  Disclaimer of Warranties[ ](https://lobehub.com/zh/terms#disclaimer-of-warranties) 
+##  Disclaimer of Warranties[ ](https://orvilo.aspectlylabs.com/zh/terms#disclaimer-of-warranties) 
 
- The Services provided by LobeHub are provided on an "as-is" basis, and without any form of guarantee. We explicitly disclaim all warranties, whether express, implied, statutory, or otherwise, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement. Your use of the Services is at Your own risk.
+ The Services provided by Orvilo are provided on an "as-is" basis, and without any form of guarantee. We explicitly disclaim all warranties, whether express, implied, statutory, or otherwise, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement. Your use of the Services is at Your own risk.
 
-##  Limitation of Liability[ ](https://lobehub.com/zh/terms#limitation-of-liability) 
+##  Limitation of Liability[ ](https://orvilo.aspectlylabs.com/zh/terms#limitation-of-liability) 
 
- In no event shall LobeHub, its Affiliates, directors, employees, or agents be liable for any direct, indirect, punitive, incidental, special, or consequential damages arising from or related to Your use or inability to use the Services. This limitation applies regardless of the basis or form of action.
+ In no event shall Orvilo, its Affiliates, directors, employees, or agents be liable for any direct, indirect, punitive, incidental, special, or consequential damages arising from or related to Your use or inability to use the Services. This limitation applies regardless of the basis or form of action.
 
-##  Modification of Terms[ ](https://lobehub.com/zh/terms#modification-of-terms) 
+##  Modification of Terms[ ](https://orvilo.aspectlylabs.com/zh/terms#modification-of-terms) 
 
  We may revise this agreement periodically, and the new version of the agreement will replace the previous version. We will indicate the "last updated" date at the beginning and provide notice within the Services to inform You of significant changes. It is Your responsibility to regularly review these legal terms to stay informed of any updates. By continuing to use the Services after the revised legal terms are posted, You will be deemed to have understood and accepted any changes to the revised legal terms.
 
-##  Governing Law and Jurisdiction[ ](https://lobehub.com/zh/terms#governing-law-and-jurisdiction) 
+##  Governing Law and Jurisdiction[ ](https://orvilo.aspectlylabs.com/zh/terms#governing-law-and-jurisdiction) 
 
  This agreement shall be governed by the laws of the State of Delaware, and You agree to submit to the exclusive jurisdiction of the state and federal courts located in Delaware for the resolution of any disputes related to this agreement or the Services. You may also be required to comply with the laws of Your local jurisdiction, state, country, or international laws when using the Services.
 
-##  Conclusion[ ](https://lobehub.com/zh/terms#conclusion) 
+##  Conclusion[ ](https://orvilo.aspectlylabs.com/zh/terms#conclusion) 
 
- This agreement represents the entire agreement between You and LobeHub regarding the use of the Services. It supersedes any prior agreements or understandings. The failure of LobeHub to enforce any provision of this agreement does not constitute a waiver of its rights.
+ This agreement represents the entire agreement between You and Orvilo regarding the use of the Services. It supersedes any prior agreements or understandings. The failure of Orvilo to enforce any provision of this agreement does not constitute a waiver of its rights.
 
- By accessing or using the LobeHub Services, You acknowledge that You have read, understood, and agreed to be bound by this agreement. If You have any questions regarding this agreement, please contact us at[support@lobehub.com](mailto:support@lobehub.com).",
+ By accessing or using the Orvilo Services, You acknowledge that You have read, understood, and agreed to be bound by this agreement. If You have any questions regarding this agreement, please contact us at[support@aspectlylabs.com](mailto:support@aspectlylabs.com).",
   "description": "Lasted Updated at",
-  "length": 18284,
-  "title": "Terms of Service · LobeHub",
+  "length": 18272,
+  "title": "Terms of Service · Orvilo",
 }
 `;
 

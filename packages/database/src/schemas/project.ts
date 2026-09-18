@@ -41,7 +41,7 @@ export const projects = pgTable(
       .$defaultFn(() => idGenerator('projects'))
       .notNull(),
     slug: varchar('slug', { length: 100 }).$defaultFn(() => randomSlug(3)),
-    /** Human-readable task prefix within the project scope, for example LOBE. */
+    /** Human-readable task prefix within the project scope, for example ORVILO. */
     identifier: varchar('identifier', { length: 6 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
@@ -127,7 +127,7 @@ export const projectWorkingDirectories = pgTable(
       onDelete: 'set null',
     }),
 
-    /** Absolute path on the bound device, for example /Users/name/Code/lobehub. */
+    /** Absolute path on the bound device, for example /Users/name/Code/orvilo. */
     path: text('path').notNull(),
     /** User-facing label; defaults to the final path segment at the application boundary. */
     name: varchar('name', { length: 255 }).notNull(),

@@ -30,11 +30,11 @@ const USER_REQUEST =
 // The assistant turn's tool sequence — the reusable "how" that the inbound
 // prompt alone could not capture (it did not exist yet at user-message time).
 const ASSISTANT_TOOLS = [
-  { apiName: 'searchAgent', arguments: '{"query":"device 2"}', identifier: 'lobehub-agent' },
+  { apiName: 'searchAgent', arguments: '{"query":"device 2"}', identifier: 'orvilo-agent' },
   {
     apiName: 'assignTask',
     arguments: '{"taskId":"T199","deviceId":"cc-2"}',
-    identifier: 'lobehub-task',
+    identifier: 'orvilo-task',
   },
 ];
 
@@ -184,8 +184,8 @@ describe('createCompletionSkillSynthesisSourceHandler', () => {
     // Acceptance: the synthesis prompt carries the tool sequence + final product
     // (trajectory), not just the user prompt.
     expect(dispatched.prompt).toContain(USER_REQUEST);
-    expect(dispatched.prompt).toContain('lobehub-task.assignTask');
-    expect(dispatched.prompt).toContain('lobehub-agent.searchAgent');
+    expect(dispatched.prompt).toContain('orvilo-task.assignTask');
+    expect(dispatched.prompt).toContain('orvilo-agent.searchAgent');
     expect(dispatched.prompt).toContain('completion_trajectory');
     expect(dispatched.prompt).toContain('<turn_trajectory>');
 
@@ -336,7 +336,7 @@ describe('completion skill synthesis end-to-end (emit -> handler, no operation-m
     expect(dispatched.marker.anchorMessageId).toBe(ASSISTANT_MESSAGE_ID);
     expect(dispatched.sourceMessageId).toBe(ASSISTANT_MESSAGE_ID);
     expect(dispatched.prompt).toContain('<turn_trajectory>');
-    expect(dispatched.prompt).toContain('lobehub-task.assignTask');
+    expect(dispatched.prompt).toContain('orvilo-task.assignTask');
     // The parked candidate is consumed so a duplicate completion cannot re-run.
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({ feedbackMessageId: USER_MESSAGE_ID, pendingSynthesis: undefined }),

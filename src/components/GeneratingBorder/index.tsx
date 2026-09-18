@@ -10,7 +10,7 @@ import { memo, type ReactNode } from 'react';
  * Declared once here rather than per call site.
  */
 const BorderAngleProperty = createGlobalStyle`
-  @property --lobe-generating-border-angle {
+  @property --orvilo-generating-border-angle {
     inherits: false;
     initial-value: 0deg;
     syntax: '<angle>';
@@ -39,7 +39,7 @@ const styles = createStaticStyles(({ css }) => ({
       border-radius: inherit;
 
       background: conic-gradient(
-        from var(--lobe-generating-border-angle),
+        from var(--orvilo-generating-border-angle),
         ${cssVar.colorBorderSecondary} 0deg 210deg,
         #ff3d8d 238deg,
         #8b5cf6 258deg,
@@ -55,18 +55,18 @@ const styles = createStaticStyles(({ css }) => ({
         linear-gradient(#fff 0 0) content-box,
         linear-gradient(#fff 0 0);
 
-      animation: lobe-generating-border-flow 1.8s linear infinite;
+      animation: orvilo-generating-border-flow 1.8s linear infinite;
 
       mask-composite: exclude;
     }
 
-    @keyframes lobe-generating-border-flow {
+    @keyframes orvilo-generating-border-flow {
       from {
-        --lobe-generating-border-angle: 0deg;
+        --orvilo-generating-border-angle: 0deg;
       }
 
       to {
-        --lobe-generating-border-angle: 360deg;
+        --orvilo-generating-border-angle: 360deg;
       }
     }
 

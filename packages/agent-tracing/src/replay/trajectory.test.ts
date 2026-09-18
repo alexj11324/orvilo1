@@ -41,13 +41,13 @@ describe('recordedOutcome', () => {
     const snap = snapshot([
       {
         content: 'let me look',
-        toolsCalling: [{ apiName: 'globFiles', identifier: 'lobe-local-system' }],
+        toolsCalling: [{ apiName: 'globFiles', identifier: 'orvilo-local-system' }],
       },
     ]);
 
     expect(recordedOutcome(snap, 0)).toEqual({
       content: 'let me look',
-      toolCalls: [{ arguments: undefined, name: 'lobe-local-system____globFiles' }],
+      toolCalls: [{ arguments: undefined, name: 'orvilo-local-system____globFiles' }],
     });
   });
 

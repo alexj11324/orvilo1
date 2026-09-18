@@ -40,7 +40,7 @@ import MessageFromUrl from './MainChatInput/MessageFromUrl';
 import ThreadHydration from './ThreadHydration';
 import { useActionsBarConfig } from './useActionsBarConfig';
 
-const log = debug('lobe-render:agent:ConversationArea');
+const log = debug('orvilo-render:agent:ConversationArea');
 
 const styles = createStaticStyles(({ css }) => ({
   // When the chat column is wide enough for the header to float above the
@@ -83,7 +83,7 @@ const Conversation = memo(() => {
   const actionsBarConfig = useActionsBarConfig();
 
   // Heterogeneous agents (Claude Code, etc.) use a simplified input — their
-  // toolchain/memory/model are managed by the external runtime, so LobeHub's
+  // toolchain/memory/model are managed by the external runtime, so Orvilo's
   // model/tools/memory/KB/MCP/runtime-mode pickers don't apply.
   const isHeterogeneousAgent = useAgentStore(
     agentByIdSelectors.isAgentHeterogeneousById(context.agentId),

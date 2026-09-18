@@ -9,15 +9,15 @@ import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
 
 import type { AsyncTaskSelectItem, NewAsyncTaskItem } from '../schemas';
 import { asyncTasks } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class AsyncTaskModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;
@@ -52,7 +52,7 @@ export class AsyncTaskModel {
     });
   };
 
-  static findByInferenceId = async (db: LobeChatDatabase, inferenceId: string) => {
+  static findByInferenceId = async (db: OrviloDatabase, inferenceId: string) => {
     return db.query.asyncTasks.findFirst({
       where: eq(asyncTasks.inferenceId, inferenceId),
     });

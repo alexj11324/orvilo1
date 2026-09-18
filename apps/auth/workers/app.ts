@@ -97,7 +97,7 @@ export default {
     if (isAssetPath(pathname)) return env.ASSETS.fetch(request);
 
     if (!matchesPrefix(pathname, AUTH_PATH_PREFIXES))
-      return Response.redirect(env.AUTH_APP_HOME || 'https://lobehub.com', 302);
+      return Response.redirect(env.AUTH_APP_HOME || 'https://orvilo.aspectlylabs.com', 302);
 
     return serveDocument(request, env, pathname);
   },

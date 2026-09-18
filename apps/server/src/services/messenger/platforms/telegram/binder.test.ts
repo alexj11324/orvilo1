@@ -31,7 +31,7 @@ const { getMessengerTelegramConfig } = await import('@/config/messenger');
 
 const VALID_CONFIG = {
   botToken: 'tg-bot-token',
-  botUsername: 'lobehub_bot',
+  botUsername: 'orvilo_bot',
   webhookSecret: 'tg-secret',
 };
 
@@ -131,7 +131,7 @@ describe('MessengerTelegramBinder.handleUnlinkedMessage', () => {
     expect(sendMessageWithUrlButton).toHaveBeenCalledTimes(1);
     const [chatId, text, button] = sendMessageWithUrlButton.mock.calls[0];
     expect(chatId).toBe('C_DM');
-    expect(text).toContain('Welcome to LobeHub');
+    expect(text).toContain('Welcome to Orvilo');
     expect(button.text).toContain('Link Account');
     expect(button.url).toContain('https://app.example.com/verify-im');
     expect(button.url).toContain('im_type=telegram');
@@ -193,7 +193,7 @@ describe('MessengerTelegramBinder.handleUnlinkedMessage', () => {
     expect(text).toContain('private chat');
     expect(extra.replyMarkup.inline_keyboard[0][0]).toEqual({
       text: 'Open Bot',
-      url: 'https://t.me/lobehub_bot?start=link',
+      url: 'https://t.me/orvilo_bot?start=link',
     });
     expect(issueLinkToken).not.toHaveBeenCalled();
     expect(sendMessageWithUrlButton).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('MessengerTelegramBinder.handleUnlinkedMessage', () => {
     expect(answerGuestArticle).toHaveBeenCalledWith(
       'gq-99',
       expect.stringContaining('send /start'),
-      expect.objectContaining({ title: 'Link LobeHub' }),
+      expect.objectContaining({ title: 'Link Orvilo' }),
     );
     expect(answerGuestArticle.mock.calls[0]?.[2]?.replyMarkup).toBeUndefined();
   });
@@ -239,13 +239,13 @@ describe('MessengerTelegramBinder.handleUnlinkedMessage', () => {
     expect(answerGuestArticle).toHaveBeenCalledTimes(1);
     const [guestQueryId, text, extra] = answerGuestArticle.mock.calls[0];
     expect(guestQueryId).toBe('gq-zh');
-    expect(text).toBe('请在私聊中继续，以完成 LobeHub 账户关联。');
+    expect(text).toBe('请在私聊中继续，以完成 Orvilo 账户关联。');
     expect(text).not.toContain('private chat');
     expect(extra.replyMarkup.inline_keyboard[0][0]).toMatchObject({
       text: '打开机器人',
-      url: 'https://t.me/lobehub_bot?start=link',
+      url: 'https://t.me/orvilo_bot?start=link',
     });
-    expect(extra.title).toBe('关联 LobeHub');
+    expect(extra.title).toBe('关联 Orvilo');
   });
 
   it('no-ops when telegram is not configured', async () => {

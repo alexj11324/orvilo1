@@ -10,10 +10,10 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ProjectMemberModel } from '../projectMember';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const ownerId = 'pm-owner';
 const memberId = 'pm-member';

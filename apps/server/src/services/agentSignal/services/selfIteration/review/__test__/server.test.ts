@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import type { SkillManagementDocumentService } from '@/server/services/skillManagement';
 
 import { createReviewRuntimePrimitives, createServerSelfReviewPolicyOptions } from '../server';
@@ -22,7 +22,7 @@ describe('createServerSelfReviewPolicyOptions', () => {
   it('exposes dispatch-shaped handler deps (gate, guard, collector, db) without legacy runner/brief/receipt wiring', () => {
     const options = createServerSelfReviewPolicyOptions({
       agentId: 'agent-1',
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       selfIterationEnabled: true,
       userId: 'user-1',
     });
@@ -42,7 +42,7 @@ describe('createServerSelfReviewPolicyOptions', () => {
   it('rejects the review when self-iteration is disabled (before any DB access)', async () => {
     const options = createServerSelfReviewPolicyOptions({
       agentId: 'agent-1',
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       selfIterationEnabled: false,
       userId: 'user-1',
     });
@@ -53,7 +53,7 @@ describe('createServerSelfReviewPolicyOptions', () => {
   it('rejects reviews whose payload user id does not match the policy owner', async () => {
     const options = createServerSelfReviewPolicyOptions({
       agentId: 'agent-1',
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       selfIterationEnabled: true,
       userId: 'user-1',
     });
@@ -69,7 +69,7 @@ describe('createReviewRuntimePrimitives', () => {
     const service = createReviewRuntimePrimitives({
       agentId: 'agent-1',
       briefModel: {} as never,
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       localDate: '2026-05-04',
       proposalBriefWriter: {} as never,
       reviewWindowEnd: '2026-05-04T14:00:00.000Z',
@@ -105,7 +105,7 @@ describe('createReviewRuntimePrimitives', () => {
     const service = createReviewRuntimePrimitives({
       agentId: 'agent-1',
       briefModel: {} as never,
-      db: {} as unknown as LobeChatDatabase,
+      db: {} as unknown as OrviloDatabase,
       localDate: '2026-05-04',
       proposalBriefWriter: {} as never,
       reviewWindowEnd: '2026-05-04T14:00:00.000Z',

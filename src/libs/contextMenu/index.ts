@@ -12,7 +12,7 @@ import { isDarwinDesktop } from './platform';
 import { toNativeTemplate } from './toNativeTemplate';
 import type { NativeContextMenuItem, ShowContextMenuOptions } from './types';
 
-const log = debug('lobe-client:context-menu');
+const log = debug('orvilo-client:context-menu');
 
 let popupToken = 0;
 let activeMenu: 'native' | 'web' | null = null;

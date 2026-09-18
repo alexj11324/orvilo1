@@ -11,7 +11,7 @@ export type CreateAgentModalSkillSuggestionAction =
   | 'install_succeeded'
   | 'open_skills_clicked'
   | 'shown'
-  | 'try_in_lobeai_clicked';
+  | 'try_in_orviloai_clicked';
 
 interface TrackCreateAgentModalCreationSucceededParams {
   analytics?: AnalyticsManager | null;

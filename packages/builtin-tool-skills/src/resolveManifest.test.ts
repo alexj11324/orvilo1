@@ -48,7 +48,7 @@ describe('resolveSkillsManifest', () => {
     // cross-tool arbitration rides the tool systemRole, not the descriptions
     expect(result.systemRole).toContain(systemPrompt);
     expect(result.systemRole).toContain('`execScript` runs skill scripts on the device');
-    expect(result.systemRole).toContain('`lobe-local-system` runCommand');
+    expect(result.systemRole).toContain('`orvilo-local-system` runCommand');
   });
 
   it.each(['bound-device-offline', 'no-online-device'] as const)(

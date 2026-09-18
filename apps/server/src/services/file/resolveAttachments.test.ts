@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveAttachmentMetadata } from './resolveAttachments';
@@ -44,7 +44,7 @@ describe('resolveAttachmentMetadata', () => {
     );
 
     const result = await resolveAttachmentMetadata({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       fileIds: ['file_historical'],
       userId: 'user-1',
     });

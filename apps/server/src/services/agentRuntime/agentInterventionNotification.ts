@@ -275,7 +275,7 @@ export const buildRuntimeInterventionNotification = async ({
       item.detail = buildQuestionDetail(args);
     } else if (
       interactionKind === 'custom' &&
-      tool.identifier === 'lobe-web-onboarding' &&
+      tool.identifier === 'orvilo-web-onboarding' &&
       tool.apiName === 'showAgentMarketplace'
     ) {
       const requestId = boundedString(args.requestId) ?? tool.id;

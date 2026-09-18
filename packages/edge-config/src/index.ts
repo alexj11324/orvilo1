@@ -6,7 +6,7 @@ import { appEnv } from '@/envs/app';
 
 import type { EdgeConfigData, EdgeConfigKeys } from './types';
 
-const debug = createDebug('lobe-server:edge-config');
+const debug = createDebug('orvilo-server:edge-config');
 
 export class EdgeConfig {
   get client(): EdgeConfigClient {

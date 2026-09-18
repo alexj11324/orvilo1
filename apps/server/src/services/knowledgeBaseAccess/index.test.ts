@@ -3,7 +3,7 @@ import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { getWorkspaceScopedPermissionMatches } from '@/server/services/workspacePermission';
 
 import {
@@ -40,7 +40,7 @@ const dbWithResults = (...results: unknown[][]) => {
         where: next,
       }),
     }),
-  } as unknown as LobeChatDatabase;
+  } as unknown as OrviloDatabase;
 };
 
 /**
@@ -65,7 +65,7 @@ const dbCapturingWhere = (...results: unknown[][]) => {
         where: next,
       }),
     }),
-  } as unknown as LobeChatDatabase;
+  } as unknown as OrviloDatabase;
 
   return { clauses, db };
 };

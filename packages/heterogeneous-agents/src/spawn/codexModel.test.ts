@@ -14,7 +14,7 @@ import {
 const tempDirs: string[] = [];
 
 const makeTempCodexHome = async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'lobe-codex-model-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'orvilo-codex-model-'));
   tempDirs.push(dir);
   return dir;
 };

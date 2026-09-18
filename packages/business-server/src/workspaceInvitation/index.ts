@@ -1,5 +1,5 @@
 import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -136,7 +136,7 @@ const toInvitationListItem = (
  * a delivery failure can never poison business state.
  */
 export const issueInvitations = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     emails: string[];
     ipAddress?: string;
@@ -282,7 +282,7 @@ export const issueInvitations = async (
 };
 
 export const listInvitations = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { actorUserId: string; workspaceId: string },
 ): Promise<InvitationListItem[]> => {
   const invitationModel = new WorkspaceInvitationModel(db, params.actorUserId);
@@ -325,7 +325,7 @@ export const listInvitations = async (
  * The raw token and full project detail stay server-side; the email is masked.
  */
 export const previewInvitation = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { token: string; userId: string },
 ): Promise<InvitationPreview> => {
   const invitation = await new WorkspaceInvitationModel(db, params.userId).findByToken(
@@ -392,7 +392,7 @@ export const previewInvitation = async (
  * record — never a client-claimed address.
  */
 export const acceptInvitation = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { ipAddress?: string; token: string; userId: string },
 ): Promise<{ alreadyMember: boolean; workspaceId: string }> => {
   const invitationModel = new WorkspaceInvitationModel(db, params.userId);
@@ -547,7 +547,7 @@ export const acceptInvitation = async (
 };
 
 const assertInvitationWorkspaceAdmin = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   actorUserId: string,
 ) => {
@@ -573,7 +573,7 @@ const assertInvitationWorkspaceAdmin = async (
  * or forwarded email cannot keep working. Same pending row, same audit trail.
  */
 export const resendInvitation = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { actorUserId: string; invitationId: string; ipAddress?: string },
 ): Promise<{ emailed: boolean; generation: number; invitationId: string }> => {
   const invitation = await new WorkspaceInvitationModel(db, params.actorUserId).findById(
@@ -667,7 +667,7 @@ export const resendInvitation = async (
 };
 
 export const revokeInvitation = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: { actorUserId: string; invitationId: string; ipAddress?: string },
 ): Promise<{ invitationId: string; revoked: boolean }> => {
   const invitation = await new WorkspaceInvitationModel(db, params.actorUserId).findById(

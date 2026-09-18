@@ -58,7 +58,7 @@ vi.mock('@/libs/oidc-provider/access-control', () => ({
 }));
 
 vi.mock('@/envs/auth', () => ({
-  LOBE_CHAT_OIDC_AUTH_HEADER: 'Oidc-Auth',
+  ORVILO_OIDC_AUTH_HEADER: 'Oidc-Auth',
 }));
 
 describe('checkAuth', () => {
@@ -76,7 +76,7 @@ describe('checkAuth', () => {
   });
 
   it('should authenticate an active OIDC JWT and run the handler', async () => {
-    const oidcRequest = new Request('https://example.com/webapi/chat/lobehub', {
+    const oidcRequest = new Request('https://example.com/webapi/chat/orvilo', {
       headers: { 'Oidc-Auth': 'valid-token' },
     });
     vi.mocked(validateOIDCJWT).mockResolvedValueOnce({
@@ -99,7 +99,7 @@ describe('checkAuth', () => {
   });
 
   it('should reject an inactive OIDC user without running the handler', async () => {
-    const oidcRequest = new Request('https://example.com/webapi/chat/lobehub', {
+    const oidcRequest = new Request('https://example.com/webapi/chat/orvilo', {
       headers: { 'Oidc-Auth': 'valid-token' },
     });
     const inactiveError = Object.assign(new Error('OIDC user is no longer active'), {
@@ -178,10 +178,10 @@ describe('checkAuth', () => {
 
   it('should log decoded OIDC client info when auth fails with OIDC header', async () => {
     const payload = Buffer.from(
-      JSON.stringify({ client_id: 'lobehub-desktop', sub: 'user-123' }),
+      JSON.stringify({ client_id: 'orvilo-desktop', sub: 'user-123' }),
       'utf8',
     ).toString('base64url');
-    const oidcRequest = new Request('https://example.com/webapi/chat/lobehub', {
+    const oidcRequest = new Request('https://example.com/webapi/chat/orvilo', {
       headers: {
         'Oidc-Auth': `header.${payload}.signature`,
         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
@@ -196,9 +196,9 @@ describe('checkAuth', () => {
     await checkAuth(mockHandler)(oidcRequest, mockOptions);
 
     expect(consoleInfoSpy).toHaveBeenCalledWith('[auth] OIDC authentication failed', {
-      clientId: 'lobehub-desktop',
+      clientId: 'orvilo-desktop',
       code: 'UNAUTHORIZED',
-      path: '/webapi/chat/lobehub',
+      path: '/webapi/chat/orvilo',
       provider: 'mock',
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
       xClientType: 'desktop',
@@ -249,7 +249,7 @@ describe('checkAuth', () => {
       vi.stubEnv('MOCK_DEV_USER_ID', 'mock-user-456');
 
       const debugRequest = new Request('https://example.com', {
-        headers: { 'lobe-auth-dev-backend-api': '1' },
+        headers: { 'orvilo-auth-dev-backend-api': '1' },
       });
 
       await checkAuth(mockHandler)(debugRequest, mockOptions);

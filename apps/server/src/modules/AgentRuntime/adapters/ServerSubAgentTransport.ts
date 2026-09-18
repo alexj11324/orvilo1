@@ -28,14 +28,13 @@ export class ServerSubAgentTransport implements SubAgentTransport {
 
   async execSubAgent(params: ExecSubAgentParams): Promise<ExecSubAgentResult> {
     // Agent share (defensive layer): a share-visitor run's `ctx.agentShareVisitor` is
-    // set from `state.principal.actor.shareVisitor` (see AgentRuntimeService).
+    // set from `state.principal.actor.shareVisitor` (see AgentRuntimeService) —
+    // retained for visitor ops persisted before visitor execution was retired.
     // `callSubAgent`/`callAgent` children built via `execAgentThreadRun` don't
-    // thread the parent's `shareGate` through — they'd otherwise execute with
-    // the CREATOR's full, unrestricted tool/file/memory surface. The
-    // assembly-time defense (the shareGate tool allowlist + `stripSubAgentDispatchApis`)
-    // already keeps `callSubAgent` out of the model's tool list for a share
-    // run; this is the fail-closed backstop in case that surface is ever
-    // reached some other way (e.g. a stale/replayed tool call).
+    // inherit the parent's share restrictions — they'd otherwise execute with
+    // the CREATOR's full, unrestricted tool/file/memory surface. This is the
+    // fail-closed backstop in case that surface is ever reached (e.g. a
+    // stale/replayed tool call on a persisted visitor op).
     if (this.ctx.agentShareVisitor) return shareGateBlockedResult;
     if (!this.ctx.execSubAgent) return fallbackResult('Sub-agent dispatch is not available.');
 

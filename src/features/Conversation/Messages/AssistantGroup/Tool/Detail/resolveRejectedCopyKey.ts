@@ -1,5 +1,5 @@
 /**
- * All ask surfaces (user-interaction, lobe-agent, claude-code) share this
+ * All ask surfaces (user-interaction, orvilo-agent, claude-code) share this
  * apiName; other skippable interactions (e.g. the onboarding marketplace
  * picker) get the generic skipped copy instead of the question-specific one.
  */

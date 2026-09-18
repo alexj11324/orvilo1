@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeOpenAICompatibleRuntime } from './core/BaseAI';
+import type { OrviloOpenAICompatibleRuntime } from './core/BaseAI';
 import * as debugStreamModule from './utils/debugStream';
 
 interface TesstProviderParams {
@@ -35,7 +35,7 @@ export const testProvider = ({
   // Mock the console.error to avoid polluting test output
   vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  let instance: LobeOpenAICompatibleRuntime;
+  let instance: OrviloOpenAICompatibleRuntime;
 
   beforeEach(() => {
     instance = new Runtime({ apiKey: 'test' });

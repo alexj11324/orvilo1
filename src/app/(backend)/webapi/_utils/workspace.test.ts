@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import {
   resolveValidWorkspaceIdFromRequest,
@@ -17,7 +17,7 @@ vi.mock('@/database/models/workspace', () => ({
   getActiveWorkspaceMembershipRole: mockGetActiveWorkspaceMembershipRole,
 }));
 
-const serverDB = {} as LobeChatDatabase;
+const serverDB = {} as OrviloDatabase;
 
 const createRequest = (workspaceId?: string | null) => {
   const headers = new Headers();

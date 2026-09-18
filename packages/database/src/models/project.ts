@@ -14,7 +14,7 @@ import { projectMembers } from '../schemas/projectMember';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { works } from '../schemas/work';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
 
@@ -172,7 +172,7 @@ export class ProjectModel {
   private readonly canManageAll: boolean;
 
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId?: string,
     options: ProjectModelOptions = {},
@@ -232,7 +232,7 @@ export class ProjectModel {
         name: input.name,
       });
       const coordinator = await new AgentModel(
-        tx as LobeChatDatabase,
+        tx as OrviloDatabase,
         this.userId,
         this.workspaceId,
       ).create({
@@ -282,7 +282,7 @@ export class ProjectModel {
         .delete(projects)
         .where(and(eq(projects.id, id), this.manageable()))
         .returning();
-      await new AgentModel(tx as LobeChatDatabase, this.userId, this.workspaceId).delete(
+      await new AgentModel(tx as OrviloDatabase, this.userId, this.workspaceId).delete(
         project.coordinatorAgentId,
       );
       return deleted ?? null;

@@ -110,7 +110,7 @@ describe('agentSelectors', () => {
           'agent-1': {
             chatConfig: { enableAgentMode: true },
             model: 'claude-opus-4-8',
-            provider: 'lobehub',
+            provider: 'orvilo',
           },
         },
       });

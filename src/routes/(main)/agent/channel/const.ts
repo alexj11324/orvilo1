@@ -1,8 +1,6 @@
 import * as Icons from '@lobehub/ui/icons';
 import type { FC } from 'react';
 
-import type { SerializedPlatformDefinition } from '@/server/services/bot/platforms/types';
-
 /** Known icon names from @lobehub/ui/icons that correspond to chat platforms. */
 const ICON_NAMES = [
   'Discord',
@@ -38,33 +36,14 @@ export function getPlatformIcon(nameOrId: string): FC<any> | undefined {
 }
 
 /**
- * Channel platform definition extended with a frontend-only `comingSoon` flag.
- * Coming-soon platforms are virtual: they appear in the sidebar list and show
- * a placeholder detail view, but never participate in credentials/runtime flow.
+ * Platforms registered server-side but hidden behind a lab flag. An
+ * experimental channel is not an actionable entry until its flag turns the
+ * capability on, so it is filtered out of the platform list entirely rather
+ * than shown as a placeholder. (The old virtual "coming soon" entries —
+ * WhatsApp, and iMessage with its flag off — advertised platforms with no
+ * real configuration capability and were removed.)
  */
-export interface ChannelPlatformDefinition extends SerializedPlatformDefinition {
-  comingSoon?: boolean;
-}
-
-/**
- * Virtual platforms shown in the sidebar with a "Coming Soon" badge.
- * Not registered on the server — handled entirely on the client.
- */
-export const COMING_SOON_PLATFORMS: ChannelPlatformDefinition[] = [
-  {
-    comingSoon: true,
-    connectionMode: 'webhook',
-    id: 'whatsapp',
-    name: 'WhatsApp',
-    schema: [],
-  },
-  // iMessage is registered server-side but lab-gated: shown as a placeholder
-  // unless the `imessage` feature flag is on (see channel/index.tsx).
-  {
-    comingSoon: true,
-    connectionMode: 'webhook',
-    id: 'imessage',
-    name: 'iMessage',
-    schema: [],
-  },
-];
+export const visibleChannelPlatforms = <T extends { id: string }>(
+  platforms: T[],
+  options: { enableImessage: boolean },
+): T[] => platforms.filter((p) => p.id !== 'imessage' || options.enableImessage);

@@ -17,7 +17,7 @@ import { UserModel } from '@/database/models/user';
 import { UserMemoryModel } from '@/database/models/userMemory';
 import { UserPersonaModel } from '@/database/models/userMemory/persona';
 import { AiInfraRepos } from '@/database/repositories/aiInfra';
-import { type LobeChatDatabase } from '@/database/type';
+import { type OrviloDatabase } from '@/database/type';
 import { type MemoryAgentConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -60,10 +60,10 @@ const normalizeProvider = (provider: string) => provider.toLowerCase();
 
 export class UserPersonaService {
   private readonly preferredLanguage?: string;
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly agentConfig: MemoryAgentConfig;
 
-  constructor(db: LobeChatDatabase) {
+  constructor(db: OrviloDatabase) {
     const { agentPersonaWriter } = parseMemoryExtractionConfig();
 
     this.db = db;
@@ -120,7 +120,7 @@ export class UserPersonaService {
       {} as ProviderKeyVaultMap,
     );
 
-    const hooks = getBusinessModelRuntimeHooks(payload.userId, 'lobehub');
+    const hooks = getBusinessModelRuntimeHooks(payload.userId, 'orvilo');
 
     const runtime = await resolveRuntimeAgentConfig(
       agentConfig,
@@ -173,7 +173,7 @@ export class UserPersonaService {
   }
 }
 
-export const buildUserPersonaJobInput = async (db: LobeChatDatabase, userId: string) => {
+export const buildUserPersonaJobInput = async (db: OrviloDatabase, userId: string) => {
   const personaModel = new UserPersonaModel(db, userId);
   const latestPersona = await personaModel.getLatestPersonaDocument();
   const { agentPersonaWriter } = parseMemoryExtractionConfig();

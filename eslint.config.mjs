@@ -16,13 +16,13 @@ const performanceRestrictedImportPaths = [
     allowTypeImports: true,
     importNames: ['ModelIcon', 'ModelTag', 'ProviderCombine', 'ProviderIcon'],
     message:
-      'These features statically import every brand icon (~3 MB). Import them from "@/components/LobeIcons", which mounts them through lazy().',
+      'These features statically import every brand icon (~3 MB). Import them from "@/components/OrviloIcons", which mounts them through lazy().',
     name: '@lobehub/icons',
   },
   {
     allowTypeImports: true,
     message:
-      'Import ProviderIcon / ProviderCombine from "@/components/LobeIcons", which mounts them through lazy().',
+      'Import ProviderIcon / ProviderCombine from "@/components/OrviloIcons", which mounts them through lazy().',
     name: '@/libs/providerIcon',
   },
   {
@@ -162,7 +162,7 @@ export default eslint(
       // AI coding tools directories
       '.claude',
       '.serena',
-      '.i18nrc.js',
+      '**/.i18nrc.js',
       // vendored code (copied from @microsoft/fetch-event-source)
       'packages/utils/src/client/fetchEventSource/parse.ts',
       // generated files (regenerate with `bun generate:openapi` in packages/openapi)
@@ -341,8 +341,6 @@ export default eslint(
   },
   {
     // Sidebar/titlebar/command-menu trees the desktop shell renders outside TabHost.
-    // GenerationLayout is split deliberately: Body and Header are portal'd into the
-    // sidebar, while the layout root stays in the route tree and owns the url sync.
     files: [
       'src/features/AgentSidebar/**/*.{ts,tsx}',
       'src/features/CommandMenu/**/*.{ts,tsx}',
@@ -350,8 +348,6 @@ export default eslint(
       'src/features/HomeSidebar/**/*.{ts,tsx}',
       'src/features/Pages/PageLayout/Sidebar.{ts,tsx}',
       'src/features/WorkspaceSetting/SideBar/**/*.{ts,tsx}',
-      'src/routes/(main)/(create)/features/GenerationLayout/Body/**/*.{ts,tsx}',
-      'src/routes/(main)/(create)/features/GenerationLayout/Header/**/*.{ts,tsx}',
     ],
     rules: {
       'no-restricted-imports': createRestrictedImportRule({
@@ -525,15 +521,6 @@ export default eslint(
       'react/no-unescaped-entities': 0,
     },
   },
-  // Store/image and types/generation - disable sorting
-  {
-    files: ['src/store/image/**/*', 'src/types/generation/**/*'],
-    rules: {
-      'perfectionist/sort-interfaces': 0,
-      'perfectionist/sort-object-types': 0,
-      'perfectionist/sort-objects': 0,
-    },
-  },
   // model-bank aiModels - enforce English-only descriptions
   {
     files: ['packages/model-bank/src/aiModels/**/*'],
@@ -570,7 +557,7 @@ export default eslint(
       'no-console': 0,
     },
   },
-  // lobehub-cli - console output is the primary interface
+  // orvilo-cli - console output is the primary interface
   {
     files: ['apps/cli/**/*'],
     rules: {

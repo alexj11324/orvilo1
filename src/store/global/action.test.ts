@@ -32,8 +32,8 @@ afterEach(() => {
 describe('createPreferenceSlice', () => {
   describe('toggleHomeRail', () => {
     it('should persist the Home rail visibility for the next page startup', async () => {
-      const previousStatus = localStorage.getItem('LOBE_SYSTEM_STATUS');
-      localStorage.removeItem('LOBE_SYSTEM_STATUS');
+      const previousStatus = localStorage.getItem('ORVILO_SYSTEM_STATUS');
+      localStorage.removeItem('ORVILO_SYSTEM_STATUS');
       const { result } = renderHook(() => useGlobalStore());
 
       try {
@@ -59,8 +59,8 @@ describe('createPreferenceSlice', () => {
           expect(createInitialSystemStatus().showHomeRail).toBe(true);
         });
       } finally {
-        if (previousStatus === null) localStorage.removeItem('LOBE_SYSTEM_STATUS');
-        else localStorage.setItem('LOBE_SYSTEM_STATUS', previousStatus);
+        if (previousStatus === null) localStorage.removeItem('ORVILO_SYSTEM_STATUS');
+        else localStorage.setItem('ORVILO_SYSTEM_STATUS', previousStatus);
       }
     });
   });
@@ -630,7 +630,7 @@ describe('createPreferenceSlice', () => {
   });
 
   describe('workspace overlay routing', () => {
-    // The lobehub-side `useActiveWorkspaceId` returns null by default; the
+    // The orvilo-side `useActiveWorkspaceId` returns null by default; the
     // cloud build overrides it. Stub the sync getter so we can exercise
     // workspace-mode routing without booting a workspace store.
     const setActiveWorkspace = (id: string | null) => {

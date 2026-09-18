@@ -12,7 +12,7 @@ import { useAppPainted } from '@/spa/atoms/app';
 import { removeStaticLoadingScreen } from '@/spa/loadingScreen';
 import { useUserStore } from '@/store/user';
 import { readUserDisplaySnapshot } from '@/store/user/displaySnapshot';
-import { type LobeUser } from '@/types/user';
+import { type OrviloUser } from '@/types/user';
 
 /**
  * Sync Better-Auth session state to Zustand store
@@ -98,7 +98,7 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
             fullName: betterAuthUser.name,
             id: betterAuthUser.id,
             username: betterAuthUser.username,
-          } as LobeUser,
+          } as OrviloUser,
         };
       });
       return;

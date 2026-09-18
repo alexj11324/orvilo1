@@ -40,7 +40,7 @@ export interface ImessageAdapterConfig {
   transport?: ImessageBridgeTransport;
   userName?: string;
   /**
-   * Shared secret appended to the LobeHub webhook URL. BlueBubbles webhooks are
+   * Shared secret appended to the Orvilo webhook URL. BlueBubbles webhooks are
    * not signed, so the route-level secret is the lightweight authenticity gate.
    */
   webhookSecret: string;

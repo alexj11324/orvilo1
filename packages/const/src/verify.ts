@@ -5,7 +5,7 @@
  * Deliberately kept here rather than in `@orvilo/types`: these are runtime
  * values, and `@orvilo/types` is replaced by a hand-written stub inside the
  * isolated desktop workspace (`apps/desktop/stubs/types`), so a value imported
- * from it is unreachable for members of that workspace — `@lobehub/cli` among
+ * from it is unreachable for members of that workspace — `@orvilo/cli` among
  * them. This module imports nothing, so it resolves from every workspace.
  *
  * `packages/types/src/verify.ts` declares the same unions independently (it must
@@ -390,7 +390,7 @@ export const DEFAULT_GOAL_MAX_ROUNDS = 3;
 export const GOAL_MAX_ROUNDS_RANGE = { max: 10, min: 2 } as const;
 
 /**
- * The LobeHub conversation an ingested report was authored in. Lets the report
+ * The Orvilo conversation an ingested report was authored in. Lets the report
  * link back to (and later resume) the agent session that produced it. Lives here
  * because the CLI authors it (from the child env the runtime echoes in) before
  * any other layer sees it.
@@ -414,10 +414,10 @@ export interface VerifyRunOrigin {
  * timing here rather than in the driver means every report is priced by one
  * model, and any published `interactionCost` can be recomputed from its trace.
  */
-export const GOMS_KLM_MODEL = 'goms-klm@lobe-v1';
+export const GOMS_KLM_MODEL = 'goms-klm@orvilo-v1';
 
 /** Schema tag every trace atom carries; a foreign tag is not summed. */
-export const GOMS_KLM_TRACE_SCHEMA = 'lobehub.agentBrowserKlmTrace@1';
+export const GOMS_KLM_TRACE_SCHEMA = 'orvilo.agentBrowserKlmTrace@1';
 
 /**
  * Conventional trace filename inside a report directory. `acceptance run ingest`

@@ -1,15 +1,15 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
 import { type NextRequest } from 'next/server';
 
-import { LOBE_CHAT_AUTH_HEADER } from '@/envs/auth';
+import { ORVILO_AUTH_HEADER } from '@/envs/auth';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
-const log = debug('lobe-async:context');
+const log = debug('orvilo-async:context');
 
 export interface AsyncAuthContext {
   authorizationToken?: string;
-  serverDB?: LobeChatDatabase;
+  serverDB?: OrviloDatabase;
   userId?: string | null;
 }
 
@@ -33,27 +33,27 @@ export const createAsyncRouteContext = async (request: NextRequest): Promise<Asy
   log('Creating async route context');
 
   const authorization = request.headers.get('Authorization');
-  const lobeChatAuthorization = request.headers.get(LOBE_CHAT_AUTH_HEADER);
+  const orviloAuthorization = request.headers.get(ORVILO_AUTH_HEADER);
 
   log('Authorization header present: %s', !!authorization);
-  log('LobeChat auth header present: %s', !!lobeChatAuthorization);
+  log('Orvilo auth header present: %s', !!orviloAuthorization);
 
   if (!authorization) {
     log('No authorization header found');
     throw new Error('No authorization header found');
   }
 
-  if (!lobeChatAuthorization) {
-    log('No LobeChat authorization header found');
-    throw new Error('No LobeChat authorization header found');
+  if (!orviloAuthorization) {
+    log('No Orvilo authorization header found');
+    throw new Error('No Orvilo authorization header found');
   }
 
   try {
     log('Initializing KeyVaultsGateKeeper');
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
 
-    log('Decrypting LobeChat authorization');
-    const { plaintext } = await gateKeeper.decrypt(lobeChatAuthorization);
+    log('Decrypting Orvilo authorization');
+    const { plaintext } = await gateKeeper.decrypt(orviloAuthorization);
 
     log('Parsing decrypted authorization data');
     const { userId } = JSON.parse(plaintext);

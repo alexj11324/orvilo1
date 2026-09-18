@@ -1,7 +1,7 @@
 import type { GoalGraphSnapshot } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { exploreGraph } from './exploreGraph';
 
@@ -56,7 +56,7 @@ beforeEach(() => {
 describe('exploreGraph', () => {
   it('tells the planner which experiments a previous turn derived, and from what', async () => {
     await exploreGraph({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       effects: [],
       graph: graph([{ kind: 'derived_from', sourceNodeId: 'child', targetNodeId: 'parent' }]),
       userId: 'user',
@@ -82,7 +82,7 @@ describe('exploreGraph', () => {
       targetNodeId: 'rerun-result',
     });
     await exploreGraph({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       effects: [],
       graph: withCorrection,
       userId: 'user',
@@ -104,7 +104,7 @@ describe('exploreGraph', () => {
     apply.mockResolvedValue({ outcome: 'revision-limit', reason: 'allowance spent' });
     const effects: any[] = [];
     const result = await exploreGraph({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       effects,
       graph: graph(),
       userId: 'user',
@@ -127,7 +127,7 @@ describe('exploreGraph', () => {
     apply.mockResolvedValue({ nodeId: 'retry', outcome: 'revised', parentNodeId: 'parent' });
     const effects: any[] = [];
     const result = await exploreGraph({
-      db: {} as LobeChatDatabase,
+      db: {} as OrviloDatabase,
       effects,
       graph: graph(),
       userId: 'user',

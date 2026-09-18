@@ -60,7 +60,7 @@ const toToolPayload = (toolCalling: {
   arguments: toolCalling.arguments ?? '{}',
   id: toolCalling.id ?? `mock-tc-${Date.now()}`,
   identifier: toolCalling.identifier ?? 'mock-tool',
-  type: toolCalling.identifier?.startsWith('lobe-') ? 'builtin' : 'default',
+  type: toolCalling.identifier?.startsWith('orvilo-') ? 'builtin' : 'default',
 });
 
 export const createMockStoreInjector = (get: () => ChatStore, params: MockStoreInjectorParams) => {

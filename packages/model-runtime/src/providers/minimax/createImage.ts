@@ -5,7 +5,7 @@ import type { CreateImagePayload, CreateImageResponse } from '../../types/image'
 import { AgentRuntimeError } from '../../utils/createError';
 import { resolveMappedModelId } from '../../utils/modelIdMapping';
 
-const log = createDebug('lobe-image:minimax');
+const log = createDebug('orvilo-image:minimax');
 
 interface MiniMaxImageResponse {
   base_resp: {

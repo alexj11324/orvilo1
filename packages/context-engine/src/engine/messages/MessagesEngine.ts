@@ -232,7 +232,7 @@ export class MessagesEngine {
     // as they already include current date in their system prompts
     const toolIds = toolsConfig?.tools || [];
     const hasDateAwareTools =
-      toolIds.includes('lobe-web-browsing') || toolIds.includes('lobe-user-memory');
+      toolIds.includes('orvilo-web-browsing') || toolIds.includes('orvilo-user-memory');
     const isSystemDateEnabled = enableSystemDate !== false && !hasDateAwareTools;
     const currentUserMessage = [...messages]
       .reverse()
@@ -434,7 +434,7 @@ export class MessagesEngine {
         activeTopicDocument: initialContext?.activeTopicDocument,
         enabled: hasActiveTopicDocument && !isPageEditorEnabled,
       }),
-      // LobeHub skill URLs in the current message → route them to the Skill Store
+      // Orvilo skill URLs in the current message → route them to the Skill Store
       // instead of letting the model crawl the page and follow its CLI steps.
       new SkillImportRouteInjector({ enabled: isSkillStoreReachable }),
       // Selected skills (ephemeral user-selected slash skills for this request)
@@ -572,7 +572,7 @@ export class MessagesEngine {
       // hoist that nested content into top-level `role: 'tool'` messages.
       // PlaceholderVariablesProcessor only walks `message.content`, so it MUST
       // run after the hoist or it would silently miss every placeholder buried
-      // inside an assistantGroup. (Regression discovered while wiring lobehub
+      // inside an assistantGroup. (Regression discovered while wiring orvilo
       // skill identity placeholders — see .)
       new PlaceholderVariablesProcessor({ variableGenerators: variableGenerators || {} }),
 

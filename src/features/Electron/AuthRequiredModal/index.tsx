@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useElectronStore } from '@/store/electron';
 
-const log = debug('lobe-client:auth-required-modal');
+const log = debug('orvilo-client:auth-required-modal');
 
 interface AuthRequiredModalContentProps {
   onActionReady: (api: { signIn: () => Promise<void> }) => void;

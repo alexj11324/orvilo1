@@ -14,16 +14,16 @@ import { archiveToolResultViaServer } from '@/services/toolResultArchive';
 import { operationSelectors } from '@/store/chat/slices/operation';
 import { type ChatStore } from '@/store/chat/store';
 import { useToolStore } from '@/store/tool';
-import { composioStoreSelectors, lobehubSkillStoreSelectors } from '@/store/tool/selectors';
+import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
 import { hasExecutor } from '@/store/tool/slices/builtin/executors';
 import { type StoreSetter } from '@/store/types';
 import { safeParseJSON } from '@/utils/safeParseJSON';
 
 import { dbMessageSelectors } from '../../message/selectors';
 import { type RemoteToolExecutor } from './exector';
-import { composioExecutor, lobehubSkillExecutor } from './exector';
+import { composioExecutor, orviloSkillExecutor } from './exector';
 
-const log = debug('lobe-store:plugin-types');
+const log = debug('orvilo-store:plugin-types');
 
 /**
  * Plugin type-specific implementations
@@ -50,18 +50,17 @@ export class PluginTypesActionImpl {
   ): Promise<any> => {
     // When the tool call comes from a DB-stored message (e.g. after humanIntervention approval),
     // the `source` field is not persisted and arrives as undefined. Fall back to a live store
-    // lookup so Composio / LobeHub Skill tools still route correctly.
+    // lookup so Composio / Orvilo Skill tools still route correctly.
     let effectiveSource = payload.source;
     if (!effectiveSource) {
       const toolStoreState = useToolStore.getState();
-      const composioTools = composioStoreSelectors.composioAsLobeTools(toolStoreState);
+      const composioTools = composioStoreSelectors.composioAsOrviloTools(toolStoreState);
       if (composioTools.some((t) => t.identifier === payload.identifier)) {
         effectiveSource = 'composio';
       } else {
-        const lobehubSkillTools =
-          lobehubSkillStoreSelectors.lobehubSkillAsLobeTools(toolStoreState);
-        if (lobehubSkillTools.some((t) => t.identifier === payload.identifier)) {
-          effectiveSource = 'lobehubSkill';
+        const orviloSkillTools = orviloSkillStoreSelectors.orviloSkillAsOrviloTools(toolStoreState);
+        if (orviloSkillTools.some((t) => t.identifier === payload.identifier)) {
+          effectiveSource = 'orviloSkill';
         }
       }
     }
@@ -73,8 +72,8 @@ export class PluginTypesActionImpl {
       });
     }
 
-    if (effectiveSource === 'lobehubSkill') {
-      return await this.#get().invokeLobehubSkillTypePlugin(id, {
+    if (effectiveSource === 'orviloSkill') {
+      return await this.#get().invokeOrviloSkillTypePlugin(id, {
         ...payload,
         source: effectiveSource,
       });
@@ -117,7 +116,7 @@ export class PluginTypesActionImpl {
       // For agent-builder tools, inject activeAgentId from store if not in context
       // This is needed because AgentBuilderProvider uses a separate scope for messages
       // but the tools need the correct agentId for execution
-      if (payload.identifier === 'lobe-agent-builder') {
+      if (payload.identifier === 'orvilo-agent-builder') {
         const activeAgentId = this.#get().activeAgentId;
         if (activeAgentId) {
           agentId = activeAgentId;
@@ -127,7 +126,7 @@ export class PluginTypesActionImpl {
       // For group-agent-builder tools, inject activeGroupId from store if not in context
       // This is needed because AgentBuilderProvider uses a separate scope for messages
       // but still needs groupId for tool execution
-      if (!groupId && payload.identifier === 'lobe-group-agent-builder') {
+      if (!groupId && payload.identifier === 'orvilo-group-agent-builder') {
         const { getChatGroupStoreState } = await import('@/store/agentGroup');
         groupId = getChatGroupStoreState().activeGroupId;
       }
@@ -135,7 +134,7 @@ export class PluginTypesActionImpl {
       // Get group orchestration callbacks if available (for group management tools)
       const groupOrchestration = this.#get().getGroupOrchestrationCallbacks?.();
 
-      // Sub-agent runner injected for sub-agent-spawning tools (lobe-agent.callSubAgent).
+      // Sub-agent runner injected for sub-agent-spawning tools (orvilo-agent.callSubAgent).
       // Runs the sub-agent in an isolated thread using the current client runtime
       // and resolves with its output, so the tool returns a normal tool result.
       const subAgentParentOperationId = rootRuntimeOperationId ?? operationId;
@@ -301,15 +300,15 @@ export class PluginTypesActionImpl {
     );
   };
 
-  invokeLobehubSkillTypePlugin = async (
+  invokeOrviloSkillTypePlugin = async (
     id: string,
     payload: ChatToolPayload,
   ): Promise<string | undefined> => {
     return this.#get().internal_invokeRemoteToolPlugin(
       id,
       payload,
-      lobehubSkillExecutor,
-      'invokeLobehubSkillTypePlugin',
+      orviloSkillExecutor,
+      'invokeOrviloSkillTypePlugin',
     );
   };
 

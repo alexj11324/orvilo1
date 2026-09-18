@@ -53,7 +53,7 @@ export const SetTaskScheduleInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-task.apiName.setTaskSchedule')}
+        {t('builtins.orvilo-task.apiName.setTaskSchedule')}
       </span>
       {identifier && <span className={styles.identifierChip}>{identifier}</span>}
       {modeLabel && (

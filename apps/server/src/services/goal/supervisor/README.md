@@ -13,7 +13,7 @@ the proposed general Goal supervisor, not a claim of unattended long-horizon
 operation. Agent-authored failures without a persisted operation are outside it.
 
 A virtual native agent investigates the failure in a separate durable Topic
-with an exclusive `lobe-goal-supervisor` tool set: `inspectGoal`, `inspectTask`,
+with an exclusive `orvilo-goal-supervisor` tool set: `inspectGoal`, `inspectTask`,
 `readArtifact`, and `resolveInterruption`. Every call checks the server-created
 Goal/incident/topic/agent/operation binding. The model must inspect the Goal and
 Task before recording an idempotent recovery request; final prose/JSON is not an

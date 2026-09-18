@@ -4,13 +4,13 @@ import { isNonEmptyString, isPlainRecord } from '@orvilo/utils/object';
 /**
  * Wire-format tool identifiers that carry skill activations in their
  * pluginState. Literal copies of `SkillsIdentifier`
- * (@orvilo/builtin-tool-skills) and `LobeActivatorIdentifier`
+ * (@orvilo/builtin-tool-skills) and `OrviloActivatorIdentifier`
  * (@orvilo/builtin-tool-activator) — both are frozen, persisted in DB
  * message rows, and not importable here without adding tool-package deps to
  * the runtime core.
  */
-const SKILLS_IDENTIFIER = 'lobe-skills';
-const ACTIVATOR_IDENTIFIER = 'lobe-activator';
+const SKILLS_IDENTIFIER = 'orvilo-skills';
+const ACTIVATOR_IDENTIFIER = 'orvilo-activator';
 
 /**
  * Options for message visitor traversal
@@ -37,9 +37,9 @@ export interface MessageVisitorOptions {
  *   if (id) return { activeDeviceId: id };
  * }, { role: 'tool' });
  *
- * // Find latest lobe-agent todos
+ * // Find latest orvilo-agent todos
  * const todos = findInMessages(messages, (msg) => {
- *   if (msg.plugin?.identifier === LobeAgentIdentifier) return msg.pluginState?.todos;
+ *   if (msg.plugin?.identifier === OrviloAgentIdentifier) return msg.pluginState?.todos;
  * }, { role: 'tool' });
  * ```
  */
@@ -70,7 +70,7 @@ export const findInMessages = <T>(
  * ```typescript
  * // Accumulate activated tool identifiers
  * const tools = collectFromMessages(messages, (msg) => {
- *   if (msg.plugin?.identifier === LobeActivatorIdentifier) {
+ *   if (msg.plugin?.identifier === OrviloActivatorIdentifier) {
  *     return msg.pluginState?.activatedTools;
  *   }
  * }, { role: 'tool' });
@@ -274,7 +274,7 @@ export const extractActivatedSkillsFromMessages = (
 };
 
 /**
- * Accumulate tool identifiers activated by lobe-activator across conversation
+ * Accumulate tool identifiers activated by orvilo-activator across conversation
  * turns. A new operation uses these identifiers to restore its step-level tool
  * state, keeping discovered tools callable after the operation boundary.
  */

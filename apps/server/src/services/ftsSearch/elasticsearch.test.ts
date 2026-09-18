@@ -44,7 +44,7 @@ const identityIndex = (
   },
   settings: {
     index: {
-      analysis: { analyzer: { lobehub_icu: { type: 'custom' } } },
+      analysis: { analyzer: { orvilo_icu: { type: 'custom' } } },
       uuid,
     },
   },
@@ -105,7 +105,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       body: { query: { match_all: {} } },
       entity: 'agents',
       executedQueryChars: 1,
-      index: 'lobehub-agents',
+      index: 'orvilo-agents',
       originalQueryChars: 1,
       pagination: 'bounded',
       queryFieldCount: 1,
@@ -114,7 +114,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe('http://elasticsearch:9200/lobehub-agents/_search');
+    expect(String(endpoint)).toBe('http://elasticsearch:9200/orvilo-agents/_search');
     expect(Object.keys(init.headers)).not.toContain('Authorization');
   });
 
@@ -155,7 +155,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         body: { query: { match_all: {} }, size: 1 },
         entity: 'agents',
         executedQueryChars: 0,
-        index: 'lobehub-dev-agents',
+        index: 'orvilo-dev-agents',
         originalQueryChars: 0,
         pagination: 'bounded',
         queryFieldCount: 0,
@@ -169,7 +169,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       took: 12,
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      new URL('https://search.example.com/lobehub-dev-agents/_search'),
+      new URL('https://search.example.com/orvilo-dev-agents/_search'),
       expect.objectContaining({
         body: JSON.stringify({ query: { match_all: {} }, size: 1 }),
         headers: {
@@ -226,7 +226,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         body: { query: { match_all: {} } },
         entity: 'agents',
         executedQueryChars: 96,
-        index: 'lobehub-dev-agents',
+        index: 'orvilo-dev-agents',
         originalQueryChars: 7000,
         pagination: 'bounded',
         queryFieldCount: 8,
@@ -281,7 +281,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         body: { query: { match_all: {} } },
         entity: 'agents',
         executedQueryChars: 0,
-        index: 'lobehub-dev-agents',
+        index: 'orvilo-dev-agents',
         originalQueryChars: 0,
         pagination: 'bounded',
         queryFieldCount: 0,
@@ -314,7 +314,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         body: { query: { match_all: {} } },
         entity: 'agents',
         executedQueryChars: 0,
-        index: 'lobehub-dev-agents',
+        index: 'orvilo-dev-agents',
         originalQueryChars: 0,
         pagination: 'bounded',
         queryFieldCount: 0,
@@ -335,7 +335,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       body: { query: { match_all: {} } },
       entity: 'agents' as const,
       executedQueryChars: 0,
-      index: 'lobehub-dev-agents',
+      index: 'orvilo-dev-agents',
       originalQueryChars: 0,
       pagination: 'bounded' as const,
       queryFieldCount: 0,
@@ -395,17 +395,17 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       .fn()
       .mockResolvedValueOnce(
         Response.json({
-          'lobehub-agents-v2': { aliases: { 'lobehub-agents': { is_write_index: true } } },
-          'lobehub-agents-v1': { aliases: { 'lobehub-agents': { is_write_index: false } } },
-          'custom-topics': { aliases: { 'lobehub-topics': {} } },
+          'orvilo-agents-v2': { aliases: { 'orvilo-agents': { is_write_index: true } } },
+          'orvilo-agents-v1': { aliases: { 'orvilo-agents': { is_write_index: false } } },
+          'custom-topics': { aliases: { 'orvilo-topics': {} } },
         }),
       )
       .mockResolvedValueOnce(
         Response.json({
-          'lobehub-agents-v1': { aliases: { 'lobehub-agents': { is_write_index: false } } },
-          'lobehub-agents-v2': { aliases: { 'lobehub-agents': { is_write_index: true } } },
-          'lobehub-agents-v3': { aliases: {} },
-          'lobehub-agents-v3-backup': { aliases: {} },
+          'orvilo-agents-v1': { aliases: { 'orvilo-agents': { is_write_index: false } } },
+          'orvilo-agents-v2': { aliases: { 'orvilo-agents': { is_write_index: true } } },
+          'orvilo-agents-v3': { aliases: {} },
+          'orvilo-agents-v3-backup': { aliases: {} },
         }),
       );
     vi.stubGlobal('fetch', fetchMock);
@@ -415,14 +415,14 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     });
 
     await expect(
-      client.getFtsSearchSyncGenerationTargets(['lobehub-topics', 'lobehub-agents']),
+      client.getFtsSearchSyncGenerationTargets(['orvilo-topics', 'orvilo-agents']),
     ).resolves.toEqual({
-      'lobehub-agents': ['lobehub-agents-v1', 'lobehub-agents-v2', 'lobehub-agents-v3'],
-      'lobehub-topics': ['custom-topics'],
+      'orvilo-agents': ['orvilo-agents-v1', 'orvilo-agents-v2', 'orvilo-agents-v3'],
+      'orvilo-topics': ['custom-topics'],
     });
     expect(fetchMock.mock.calls.map(([url]) => url.toString())).toEqual([
-      'https://search.example.com/_alias/lobehub-topics,lobehub-agents',
-      'https://search.example.com/lobehub-topics-v*,lobehub-agents-v*/_alias?expand_wildcards=open&allow_no_indices=true',
+      'https://search.example.com/_alias/orvilo-topics,orvilo-agents',
+      'https://search.example.com/orvilo-topics-v*,orvilo-agents-v*/_alias?expand_wildcards=open&allow_no_indices=true',
     ]);
   });
 
@@ -433,8 +433,8 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         .fn()
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } },
-            'lobehub-agents-v2': { aliases: { 'lobehub-agents': {} } },
+            'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } },
+            'orvilo-agents-v2': { aliases: { 'orvilo-agents': {} } },
           }),
         )
         .mockResolvedValueOnce(Response.json({})),
@@ -444,17 +444,17 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       url: 'https://search.example.com',
     });
 
-    await expect(client.getFtsSearchSyncGenerationTargets(['lobehub-agents'])).rejects.toThrow(
-      'is not a writable alias: lobehub-agents',
+    await expect(client.getFtsSearchSyncGenerationTargets(['orvilo-agents'])).rejects.toThrow(
+      'is not a writable alias: orvilo-agents',
     );
   });
 
   it('verifies sync readiness from one alias lookup and its complete index identity', async () => {
     const aliasResponse = () =>
       Response.json({
-        'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } },
-        'lobehub-topics-v1': {
-          aliases: { 'lobehub-topics': { is_write_index: true } },
+        'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } },
+        'orvilo-topics-v1': {
+          aliases: { 'orvilo-topics': { is_write_index: true } },
         },
       });
     const fetchMock = vi
@@ -462,23 +462,23 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       .mockResolvedValueOnce(aliasResponse())
       .mockResolvedValueOnce(
         Response.json({
-          'lobehub-agents-v1': identityIndex('agents', 'agents-index-uuid'),
-          'lobehub-topics-v1': identityIndex('topics', 'topics-index-uuid'),
+          'orvilo-agents-v1': identityIndex('agents', 'agents-index-uuid'),
+          'orvilo-topics-v1': identityIndex('topics', 'topics-index-uuid'),
         }),
       );
     vi.stubGlobal('fetch', fetchMock);
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
     await expect(
-      client.assertFtsSearchSyncAliases(['lobehub-agents', 'lobehub-topics']),
+      client.assertFtsSearchSyncAliases(['orvilo-agents', 'orvilo-topics']),
     ).resolves.toBeUndefined();
     expect(fetchMock.mock.calls.map(([url]) => url.toString())).toEqual([
-      'https://search.example.com/_alias/lobehub-agents,lobehub-topics',
-      'https://search.example.com/lobehub-agents-v1,lobehub-topics-v1?filter_path=*.mappings,*.settings.index.analysis,*.settings.index.uuid',
+      'https://search.example.com/_alias/orvilo-agents,orvilo-topics',
+      'https://search.example.com/orvilo-agents-v1,orvilo-topics-v1?filter_path=*.mappings,*.settings.index.analysis,*.settings.index.uuid',
     ]);
   });
 
@@ -489,11 +489,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(
-          Response.json({ 'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } } }),
+          Response.json({ 'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } } }),
         )
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-agents-v1': {
+            'orvilo-agents-v1': {
               ...identity,
               mappings: {
                 ...identity.mappings,
@@ -505,12 +505,12 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       vi.stubGlobal('fetch', fetchMock);
       const client = new ElasticsearchFtsSearchHttpClient({
         apiKey: 'test-api-key',
-        indexNamespace: 'lobehub',
+        indexNamespace: 'orvilo',
         url: 'https://search.example.com',
       });
 
-      await expect(client.assertFtsSearchSyncAliases(['lobehub-agents'])).rejects.toThrow(
-        'Elasticsearch full-text search sync alias lacks a boolean fts_search_sync_deleted mapping: lobehub-agents',
+      await expect(client.assertFtsSearchSyncAliases(['orvilo-agents'])).rejects.toThrow(
+        'Elasticsearch full-text search sync alias lacks a boolean fts_search_sync_deleted mapping: orvilo-agents',
       );
     },
   );
@@ -520,16 +520,16 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       .fn()
       .mockResolvedValueOnce(
         Response.json({
-          'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } },
-          'lobehub-topics-v1': { aliases: { 'lobehub-topics': {} } },
+          'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } },
+          'orvilo-topics-v1': { aliases: { 'orvilo-topics': {} } },
         }),
       )
       .mockResolvedValueOnce(
         Response.json({
-          'lobehub-agents-v1': identityIndex('agents', 'agents-index-uuid', {
+          'orvilo-agents-v1': identityIndex('agents', 'agents-index-uuid', {
             reindex_run_id: '00000000-0000-4000-8000-000000000001',
           }),
-          'lobehub-topics-v1': identityIndex('topics', 'topics-index-uuid', {
+          'orvilo-topics-v1': identityIndex('topics', 'topics-index-uuid', {
             reindex_run_id: '00000000-0000-4000-8000-000000000002',
           }),
         }),
@@ -537,43 +537,43 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     vi.stubGlobal('fetch', fetchMock);
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
     const identities = await client.getFtsSearchSyncIndexIdentities([
-      'lobehub-topics',
-      'lobehub-agents',
+      'orvilo-topics',
+      'orvilo-agents',
     ]);
 
     // Entities are rebuilt and promoted independently, so different reindex runs are expected.
     expect(identities).toEqual({
-      'lobehub-agents': {
+      'orvilo-agents': {
         indexUuid: 'agents-index-uuid',
         mappingSha256: expect.stringMatching(/^[\da-f]{64}$/),
-        physicalIndex: 'lobehub-agents-v1',
+        physicalIndex: 'orvilo-agents-v1',
         reindexRunId: '00000000-0000-4000-8000-000000000001',
         schemaFingerprint: getFtsSearchIndexSchemaFingerprint('agents'),
         schemaVersion: getFtsSearchIndexSchemaVersion('agents'),
         settingsSha256: expect.stringMatching(/^[\da-f]{64}$/),
       },
-      'lobehub-topics': {
+      'orvilo-topics': {
         indexUuid: 'topics-index-uuid',
         mappingSha256: expect.stringMatching(/^[\da-f]{64}$/),
-        physicalIndex: 'lobehub-topics-v1',
+        physicalIndex: 'orvilo-topics-v1',
         reindexRunId: '00000000-0000-4000-8000-000000000002',
         schemaFingerprint: getFtsSearchIndexSchemaFingerprint('topics'),
         schemaVersion: getFtsSearchIndexSchemaVersion('topics'),
         settingsSha256: expect.stringMatching(/^[\da-f]{64}$/),
       },
     });
-    expect(Object.keys(identities)).toEqual(['lobehub-agents', 'lobehub-topics']);
-    expect(identities['lobehub-agents'].settingsSha256).toBe(
-      identities['lobehub-topics'].settingsSha256,
+    expect(Object.keys(identities)).toEqual(['orvilo-agents', 'orvilo-topics']);
+    expect(identities['orvilo-agents'].settingsSha256).toBe(
+      identities['orvilo-topics'].settingsSha256,
     );
     expect(fetchMock.mock.calls.map(([url]) => url.toString())).toEqual([
-      'https://search.example.com/_alias/lobehub-topics,lobehub-agents',
-      'https://search.example.com/lobehub-agents-v1,lobehub-topics-v1?filter_path=*.mappings,*.settings.index.analysis,*.settings.index.uuid',
+      'https://search.example.com/_alias/orvilo-topics,orvilo-agents',
+      'https://search.example.com/orvilo-agents-v1,orvilo-topics-v1?filter_path=*.mappings,*.settings.index.analysis,*.settings.index.uuid',
     ]);
   });
 
@@ -583,11 +583,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       vi
         .fn()
         .mockResolvedValueOnce(
-          Response.json({ 'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } } }),
+          Response.json({ 'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } } }),
         )
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-agents-v1': identityIndex('agents', 'agents-index-uuid', {
+            'orvilo-agents-v1': identityIndex('agents', 'agents-index-uuid', {
               schema_fingerprint: undefined,
             }),
           }),
@@ -595,12 +595,12 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     );
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    await expect(client.getFtsSearchSyncIndexIdentities(['lobehub-agents'])).resolves.toEqual({
-      'lobehub-agents': expect.objectContaining({ schemaFingerprint: null }),
+    await expect(client.getFtsSearchSyncIndexIdentities(['orvilo-agents'])).resolves.toEqual({
+      'orvilo-agents': expect.objectContaining({ schemaFingerprint: null }),
     });
   });
 
@@ -614,23 +614,21 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         .mockImplementation(async (url: URL) =>
           Response.json(
             url.pathname.startsWith('/_alias/')
-              ? { 'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } } }
-              : { 'lobehub-agents-v1': { ...index, settings: { index: settings } } },
+              ? { 'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } } }
+              : { 'orvilo-agents-v1': { ...index, settings: { index: settings } } },
           ),
         ),
     );
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    await expect(client.assertFtsSearchSyncAliases(['lobehub-agents'])).resolves.toBeUndefined();
-    await expect(client.getFtsSearchSyncIndexIdentities(['lobehub-agents'])).resolves.toMatchObject(
-      {
-        'lobehub-agents': { indexUuid: null, schemaFingerprint: null, schemaVersion: 1 },
-      },
-    );
+    await expect(client.assertFtsSearchSyncAliases(['orvilo-agents'])).resolves.toBeUndefined();
+    await expect(client.getFtsSearchSyncIndexIdentities(['orvilo-agents'])).resolves.toMatchObject({
+      'orvilo-agents': { indexUuid: null, schemaFingerprint: null, schemaVersion: 1 },
+    });
   });
 
   it('rejects a runtime identity response with missing reindex metadata', async () => {
@@ -639,11 +637,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       vi
         .fn()
         .mockResolvedValueOnce(
-          Response.json({ 'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } } }),
+          Response.json({ 'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } } }),
         )
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-agents-v1': {
+            'orvilo-agents-v1': {
               mappings: {
                 properties: { fts_search_sync_deleted: { type: 'boolean' } },
                 sensitive_payload: 'must-not-leak',
@@ -655,11 +653,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     );
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    const request = client.getFtsSearchSyncIndexIdentities(['lobehub-agents']);
+    const request = client.getFtsSearchSyncIndexIdentities(['orvilo-agents']);
     await expect(request).rejects.toThrow(
       'Elasticsearch full-text search sync index identity response has an invalid shape',
     );
@@ -677,11 +675,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         vi
           .fn()
           .mockResolvedValueOnce(
-            Response.json({ 'lobehub-topics-v1': { aliases: { 'lobehub-topics': {} } } }),
+            Response.json({ 'orvilo-topics-v1': { aliases: { 'orvilo-topics': {} } } }),
           )
           .mockResolvedValueOnce(
             Response.json({
-              'lobehub-topics-v1': identityIndex('topics', 'topics-index-uuid', {
+              'orvilo-topics-v1': identityIndex('topics', 'topics-index-uuid', {
                 schema_fingerprint: 'older-generation',
                 schema_version: liveVersion,
               }),
@@ -690,13 +688,13 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       );
       const client = new ElasticsearchFtsSearchHttpClient({
         apiKey: 'test-api-key',
-        indexNamespace: 'lobehub',
+        indexNamespace: 'orvilo',
         url: 'https://search.example.com',
       });
 
       await expect(
-        client.getFtsSearchSyncIndexIdentities(['lobehub-topics']),
-      ).resolves.toMatchObject({ 'lobehub-topics': { schemaVersion: liveVersion } });
+        client.getFtsSearchSyncIndexIdentities(['orvilo-topics']),
+      ).resolves.toMatchObject({ 'orvilo-topics': { schemaVersion: liveVersion } });
     } finally {
       definition.schemaVersion = liveVersion;
     }
@@ -708,11 +706,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       vi
         .fn()
         .mockResolvedValueOnce(
-          Response.json({ 'lobehub-topics-v2': { aliases: { 'lobehub-topics': {} } } }),
+          Response.json({ 'orvilo-topics-v2': { aliases: { 'orvilo-topics': {} } } }),
         )
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-topics-v2': identityIndex('topics', 'topics-index-uuid', {
+            'orvilo-topics-v2': identityIndex('topics', 'topics-index-uuid', {
               schema_version: getFtsSearchIndexSchemaVersion('topics') + 1,
             }),
           }),
@@ -720,22 +718,22 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     );
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    await expect(client.getFtsSearchSyncIndexIdentities(['lobehub-topics'])).rejects.toThrow(
-      `Elasticsearch full-text search alias lobehub-topics implements schema version ${getFtsSearchIndexSchemaVersion('topics') + 1} but the deployed code declares v${getFtsSearchIndexSchemaVersion('topics')}`,
+    await expect(client.getFtsSearchSyncIndexIdentities(['orvilo-topics'])).rejects.toThrow(
+      `Elasticsearch full-text search alias orvilo-topics implements schema version ${getFtsSearchIndexSchemaVersion('topics') + 1} but the deployed code declares v${getFtsSearchIndexSchemaVersion('topics')}`,
     );
   });
 
   it('lists the mapped fields of every generation index', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       Response.json({
-        'lobehub-topics-v1': {
+        'orvilo-topics-v1': {
           mappings: { properties: { id: { type: 'keyword' }, title: { type: 'text' } } },
         },
-        'lobehub-topics-v2': {
+        'orvilo-topics-v2': {
           mappings: {
             properties: {
               id: { type: 'keyword' },
@@ -754,18 +752,18 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
 
     await expect(
       client.getFtsSearchSyncIndexFields({
-        'lobehub-topics-v1': 'topics',
-        'lobehub-topics-v2': 'topics',
+        'orvilo-topics-v1': 'topics',
+        'orvilo-topics-v2': 'topics',
       }),
     ).resolves.toEqual({
       fieldsByIndex: {
-        'lobehub-topics-v1': ['id', 'title'],
-        'lobehub-topics-v2': ['content', 'id', 'title'],
+        'orvilo-topics-v1': ['id', 'title'],
+        'orvilo-topics-v2': ['content', 'id', 'title'],
       },
       incompatibilities: [],
     });
     expect(fetchMock.mock.calls[0][0].toString()).toBe(
-      'https://search.example.com/lobehub-topics-v1,lobehub-topics-v2/_mapping?filter_path=*.mappings.properties',
+      'https://search.example.com/orvilo-topics-v1,orvilo-topics-v2/_mapping?filter_path=*.mappings.properties',
     );
   });
 
@@ -774,7 +772,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(
         Response.json({
-          'lobehub-topics-v1': { mappings: { properties: { id: { type: 'keyword' } } } },
+          'orvilo-topics-v1': { mappings: { properties: { id: { type: 'keyword' } } } },
         }),
       ),
     );
@@ -785,10 +783,10 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
 
     await expect(
       client.getFtsSearchSyncIndexFields({
-        'lobehub-topics-v1': 'topics',
-        'lobehub-topics-v2': 'topics',
+        'orvilo-topics-v1': 'topics',
+        'orvilo-topics-v2': 'topics',
       }),
-    ).rejects.toThrow('field lookup is missing index lobehub-topics-v2');
+    ).rejects.toThrow('field lookup is missing index orvilo-topics-v2');
   });
 
   it('reports a generation that requires a field missing from the current projection', async () => {
@@ -796,7 +794,7 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(
         Response.json({
-          'lobehub-agents-v1': {
+          'orvilo-agents-v1': {
             mappings: {
               properties: {
                 id: { type: 'keyword' },
@@ -813,17 +811,17 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     });
 
     await expect(
-      client.getFtsSearchSyncIndexFields({ 'lobehub-agents-v1': 'agents' }),
+      client.getFtsSearchSyncIndexFields({ 'orvilo-agents-v1': 'agents' }),
     ).resolves.toEqual({
       fieldsByIndex: {
-        'lobehub-agents-v1': ['id', 'legacy_title'],
+        'orvilo-agents-v1': ['id', 'legacy_title'],
       },
       incompatibilities: [
         {
           entity: 'agents',
-          index: 'lobehub-agents-v1',
+          index: 'orvilo-agents-v1',
           message:
-            'Elasticsearch full-text search index lobehub-agents-v1 is incompatible with the current agents projection: target field legacy_title (text) is missing from the current mapping. Retain compatible source fields in FTS_SEARCH_RETAINED_SOURCE_PROPERTIES and the document builder, or retire the index before syncing agents.',
+            'Elasticsearch full-text search index orvilo-agents-v1 is incompatible with the current agents projection: target field legacy_title (text) is missing from the current mapping. Retain compatible source fields in FTS_SEARCH_RETAINED_SOURCE_PROPERTIES and the document builder, or retire the index before syncing agents.',
         },
       ],
     });
@@ -835,11 +833,11 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       vi
         .fn()
         .mockResolvedValueOnce(
-          Response.json({ 'lobehub-topics-v1': { aliases: { 'lobehub-topics': {} } } }),
+          Response.json({ 'orvilo-topics-v1': { aliases: { 'orvilo-topics': {} } } }),
         )
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-topics-v1': identityIndex('topics', 'topics-index-uuid', {
+            'orvilo-topics-v1': identityIndex('topics', 'topics-index-uuid', {
               schema_fingerprint: 'f'.repeat(64),
             }),
           }),
@@ -847,12 +845,12 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
     );
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    await expect(client.getFtsSearchSyncIndexIdentities(['lobehub-topics'])).rejects.toThrow(
-      'Elasticsearch full-text search alias lobehub-topics was built from a different v1 mapping than the deployed code declares',
+    await expect(client.getFtsSearchSyncIndexIdentities(['orvilo-topics'])).rejects.toThrow(
+      'Elasticsearch full-text search alias orvilo-topics was built from a different v1 mapping than the deployed code declares',
     );
   });
 
@@ -863,12 +861,12 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
       new ElasticsearchFtsSearchHttpClient({
         apiKey: 'test-api-key',
         url: 'https://search.example.com',
-      }).getFtsSearchSyncIndexIdentities(['lobehub-topics']),
+      }).getFtsSearchSyncIndexIdentities(['orvilo-topics']),
     ).rejects.toThrow('index namespace is required');
     await expect(
       new ElasticsearchFtsSearchHttpClient({
         apiKey: 'test-api-key',
-        indexNamespace: 'lobehub',
+        indexNamespace: 'orvilo',
         url: 'https://search.example.com',
       }).getFtsSearchSyncIndexIdentities(['other-topics']),
     ).rejects.toThrow('alias does not belong to the configured index namespace: other-topics');
@@ -881,49 +879,47 @@ describe('ElasticsearchFtsSearchHttpClient', () => {
         .fn()
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-agents-v1': {
-              aliases: { 'lobehub-agents': { is_write_index: false } },
+            'orvilo-agents-v1': {
+              aliases: { 'orvilo-agents': { is_write_index: false } },
             },
-            'lobehub-agents-v2': {
-              aliases: { 'lobehub-agents': { is_write_index: true } },
+            'orvilo-agents-v2': {
+              aliases: { 'orvilo-agents': { is_write_index: true } },
             },
           }),
         )
         .mockResolvedValueOnce(
           Response.json({
-            'lobehub-agents-v2': identityIndex('agents', 'agents-index-uuid'),
+            'orvilo-agents-v2': identityIndex('agents', 'agents-index-uuid'),
           }),
         ),
     );
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    await expect(client.getFtsSearchSyncIndexIdentities(['lobehub-agents'])).resolves.toMatchObject(
-      {
-        'lobehub-agents': { physicalIndex: 'lobehub-agents-v2' },
-      },
-    );
+    await expect(client.getFtsSearchSyncIndexIdentities(['orvilo-agents'])).resolves.toMatchObject({
+      'orvilo-agents': { physicalIndex: 'orvilo-agents-v2' },
+    });
   });
 
   it('rejects a multi-target alias without an explicit write index', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       Response.json({
-        'lobehub-agents-v1': { aliases: { 'lobehub-agents': {} } },
-        'lobehub-agents-v2': { aliases: { 'lobehub-agents': {} } },
+        'orvilo-agents-v1': { aliases: { 'orvilo-agents': {} } },
+        'orvilo-agents-v2': { aliases: { 'orvilo-agents': {} } },
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
     const client = new ElasticsearchFtsSearchHttpClient({
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
 
-    await expect(client.assertFtsSearchSyncAliases(['lobehub-agents'])).rejects.toThrow(
-      'Elasticsearch full-text search sync destination is not a writable alias: lobehub-agents',
+    await expect(client.assertFtsSearchSyncAliases(['orvilo-agents'])).rejects.toThrow(
+      'Elasticsearch full-text search sync destination is not a writable alias: orvilo-agents',
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

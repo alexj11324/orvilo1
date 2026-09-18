@@ -2,11 +2,9 @@
 
 import {
   BrainCircuit,
-  Download,
   FilesIcon,
   FileText,
   HomeIcon,
-  Image,
   ImageIcon,
   LayoutPanelTopIcon,
   LibraryBigIcon,
@@ -30,11 +28,9 @@ import {
   BusinessResourceRoutes,
 } from '@/business/client/BusinessDesktopRoutes';
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
-import AppsSkeleton from '@/components/Skeleton/Apps';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { delayed } from '@/components/Skeleton/Delayed';
-import GenerationSkeleton from '@/components/Skeleton/Generation';
 import MemorySkeleton from '@/components/Skeleton/Memory';
 import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
@@ -50,7 +46,12 @@ import {
   automationRunsRouteMeta,
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
-import { projectsRouteMeta } from '@/features/Projects/routeMeta';
+import { inboxRouteMeta } from '@/features/HomeInbox/routeMeta';
+import {
+  projectLibraryRouteMeta,
+  projectResourcesRouteMeta,
+  projectsRouteMeta,
+} from '@/features/Projects/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
 import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
@@ -112,7 +113,12 @@ const resourceCategoryRoutes: RouteObject[] = [
 }));
 
 export interface MainAreaRouteOptions {
-  /** Electron renders Home inside each tab router; Web renders it beside the router outlet. */
+  /**
+   * What each platform puts in the index slot. They differ because the slot
+   * means different things: on Web the root router is the only router, so its
+   * index element is the app's landing behaviour; Electron gives every tab its
+   * own router, so each tab's index element is that tab's opening screen.
+   */
   createHomeElement?: () => ReactElement;
   /** Electron keeps the workspace settings redirect behind its own lazy route module. */
   createWorkspaceSettingsIndexElement?: () => ReactElement;
@@ -535,72 +541,27 @@ export const sharedMainAreaChildren: RouteObject[] = [
   },
 
   // Memory routes
+  //
+  // The browsing layers — home, identities, contexts, experiences, activities —
+  // are retired. What survives is the manager the user needs in order to read,
+  // correct and delete what was remembered about them, so the index keeps that
+  // reachable instead of falling through to the catch-all.
   {
     children: [
       {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/(home)'),
-          'Desktop > Memory > Home',
-          { preloadId: 'memory' },
-        ),
-        handle: {
-          meta: routeMeta({
-            icon: BrainCircuit,
-            Skeleton: MemorySkeleton,
-            titleKey: 'navigation.memory',
-          }),
-        },
+        element: redirectElement('preferences'),
         index: true,
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/identities'),
-          'Desktop > Memory > Identities',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryIdentities' }),
-        },
-        path: 'identities',
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/contexts'),
-          'Desktop > Memory > Contexts',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryContexts' }),
-        },
-        path: 'contexts',
       },
       {
         element: dynamicElement(
           () => import('@/routes/(main)/memory/preferences'),
           'Desktop > Memory > Preferences',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryPreferences' }),
-        },
-        path: 'preferences',
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/experiences'),
-          'Desktop > Memory > Experiences',
-        ),
-        handle: {
-          meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memoryExperiences' }),
-        },
-        path: 'experiences',
-      },
-      {
-        element: dynamicElement(
-          () => import('@/routes/(main)/memory/activities'),
-          'Desktop > Memory > Activities',
+          { preloadId: 'memory' },
         ),
         handle: {
           meta: routeMeta({ icon: BrainCircuit, titleKey: 'navigation.memory' }),
         },
-        path: 'activities',
+        path: 'preferences',
       },
     ],
     element: dynamicLayout(
@@ -609,159 +570,13 @@ export const sharedMainAreaChildren: RouteObject[] = [
       { preloadId: 'memory' },
     ),
     errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
+    // On the parent rather than the index child: the index only redirects, so
+    // this is the deepest meta `/memory` and `/memory/preferences` resolve to.
+    handle: { meta: routeMeta({ Skeleton: MemorySkeleton }) },
     path: 'memory',
   },
 
-  // Video routes
-  {
-    children: [
-      {
-        element: dynamicElement(() => import('@/routes/(main)/(create)/video'), 'Desktop > Video', {
-          preloadId: 'video',
-        }),
-        index: true,
-      },
-    ],
-    element: dynamicLayout(
-      () => import('@/routes/(main)/(create)/video/_layout'),
-      'Desktop > Video > Layout',
-      { preloadId: 'video' },
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: GenerationSkeleton }) },
-    path: 'video',
-  },
-
-  // Image routes
-  {
-    children: [
-      {
-        element: dynamicElement(() => import('@/routes/(main)/(create)/image'), 'Desktop > Image', {
-          preloadId: 'image',
-        }),
-        handle: {
-          meta: routeMeta({ icon: Image, titleKey: 'navigation.image' }),
-        },
-        index: true,
-      },
-    ],
-    element: dynamicLayout(
-      () => import('@/routes/(main)/(create)/image/_layout'),
-      'Desktop > Image > Layout',
-      { preloadId: 'image' },
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: GenerationSkeleton }) },
-    path: 'image',
-  },
-
   ...BusinessDesktopRoutesWithMainLayout,
-
-  // Eval routes
-  {
-    children: [
-      // Home (overview)
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/eval'),
-              'Desktop > Eval > Overview',
-              { preloadId: 'eval' },
-            ),
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/eval/experiments/[experimentId]'),
-              'Desktop > Eval > Experiment Detail',
-            ),
-            path: 'experiments/:experimentId',
-          },
-          // A dataset and a case are addressable on their own — a dataset need
-          // not belong to a benchmark, so a benchmark id cannot be part of
-          // their canonical path. They live in the home group to keep the eval
-          // workspace sidebar; the bench group's sidebar is benchmark-scoped
-          // and has nothing to show for a dataset that belongs to none.
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/eval/datasets/[datasetId]'),
-              'Desktop > Eval > Dataset Detail',
-            ),
-            path: 'datasets/:datasetId',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/eval/cases/[caseId]'),
-              'Desktop > Eval > Test Case Detail',
-            ),
-            path: 'cases/:caseId',
-          },
-        ],
-        element: dynamicElement(
-          () => import('@/routes/(main)/eval/(home)/_layout'),
-          'Desktop > Eval > Home > Layout',
-          { preloadId: 'eval' },
-        ),
-      },
-      // Bench routes (with dedicated sidebar)
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/eval/bench/[benchmarkId]'),
-              'Desktop > Eval > Benchmark Detail',
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-            index: true,
-          },
-          {
-            children: [
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/eval/bench/[benchmarkId]/runs/[runId]'),
-                  'Desktop > Eval > Run Detail',
-                ),
-                index: true,
-              },
-              {
-                element: dynamicElement(
-                  () =>
-                    import('@/routes/(main)/eval/bench/[benchmarkId]/runs/[runId]/cases/[caseId]'),
-                  'Desktop > Eval > Case Detail',
-                ),
-                path: 'cases/:caseId',
-              },
-            ],
-            path: 'runs/:runId',
-          },
-          {
-            // Legacy shape, kept so existing links still resolve; it redirects
-            // to the benchmark-free `/eval/datasets/:datasetId`.
-            element: dynamicElement(
-              () => import('@/routes/(main)/eval/bench/[benchmarkId]/datasets/[datasetId]'),
-              'Desktop > Eval > Dataset Detail (legacy redirect)',
-            ),
-            path: 'datasets/:datasetId',
-          },
-        ],
-        element: dynamicElement(
-          () => import('@/routes/(main)/eval/bench/[benchmarkId]/_layout'),
-          'Desktop > Eval > Bench > Layout',
-        ),
-        path: 'bench/:benchmarkId',
-      },
-    ],
-    element: dynamicElement(
-      () => import('@/routes/(main)/eval/_layout'),
-      'Desktop > Eval > Layout',
-      { preloadId: 'eval' },
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-    path: 'eval',
-  },
 
   // Agents view-all route (flat list of workspace/private agents)
   {
@@ -822,6 +637,25 @@ export const sharedMainAreaChildren: RouteObject[] = [
         path: 'goals',
       },
       {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/resources'),
+          'Desktop > Project Resources',
+        ),
+        handle: { meta: projectResourcesRouteMeta },
+        path: 'resources',
+      },
+      // A library opened from the project renders inside the project, so the
+      // reader keeps the project's sidebar. Registered here rather than only
+      // under `/resource` because `getProjectLibraryPath` builds this URL.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/library/[id]'),
+          'Desktop > Project Library',
+        ),
+        handle: { meta: projectLibraryRouteMeta },
+        path: 'library/:id',
+      },
+      {
         children: [
           {
             element: dynamicElement(
@@ -863,6 +697,22 @@ export const sharedMainAreaChildren: RouteObject[] = [
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'tasks',
       },
+      // The inbox kept its capability but lost its page when Web stopped mounting
+      // the old Home. A thin route is what the plan asks for, so the capability is
+      // reachable without reviving the surface it used to live on.
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/inbox'), 'Desktop > Inbox', {
+              preloadId: 'inbox',
+            }),
+            handle: { meta: inboxRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'inbox',
+      },
       {
         children: [
           {
@@ -898,6 +748,11 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'Desktop > Task Workspace > Layout',
       { preloadId: 'tasks' },
     ),
+    // This one wrapper carries `/tasks`, `/inbox`, `/task/*` and `/goal/*`, and
+    // every one of them mounts the portal column (`TaskWorkspaceLayout` renders
+    // `AgentTaskManager` or `MobilePortal`). Declaring it once here is what lets
+    // the acceptance drawer know it would be a second host; see `RouteMeta`.
+    handle: { meta: routeMeta({ portalColumn: true }) },
   },
 
   // Automations routes — recurring agent runs, one level above the task list
@@ -944,13 +799,11 @@ export const sharedMainAreaChildren: RouteObject[] = [
 const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): RouteObject[] => [
   ...sharedMainAreaChildren,
 
-  // Apps page (personal-only — never mirrored under /:workspaceSlug)
+  // Retired: `/apps` folded into Settings > About, which now hosts the app
+  // download links. Kept as a redirect so legacy deep-links and stored tab
+  // state still land somewhere honest.
   {
-    element: dynamicElement(() => import('@/routes/(main)/apps'), 'Desktop > Apps'),
-    errorElement: <ErrorBoundary />,
-    handle: {
-      meta: routeMeta({ icon: Download, Skeleton: AppsSkeleton, titleKey: 'navigation.apps' }),
-    },
+    element: redirectElement('/settings/about'),
     path: 'apps',
   },
 
@@ -1041,8 +894,8 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
   // Must come AFTER all reserved root paths so they don't shadow e.g. /agent.
   {
     children: [
-      // Web renders Home beside the router outlet; Electron injects a per-tab
-      // Home element because each tab owns an independent memory router.
+      // The workspace index is the same landing slot as the root index: both
+      // platforms fill it with the redirect to the task board.
       {
         element: deferPlatformElement(options.createHomeElement),
         handle: { meta: workspaceHomeRouteMeta },
@@ -1378,7 +1231,8 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
     path: ':workspaceSlug',
   },
 
-  // Web leaves this element empty; Electron injects the per-tab Home route.
+  // Both platforms land on the task board now — the element is a redirect on
+  // Web and, inside each Electron tab's own memory router, the same one.
   {
     element: deferPlatformElement(options.createHomeElement),
     handle: {

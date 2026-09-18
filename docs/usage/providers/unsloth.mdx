@@ -1,18 +1,18 @@
 ---
-title: Using Unsloth in LobeHub
+title: Using Unsloth in Orvilo
 description: >-
   Learn how to configure and use Unsloth to run local AI models, including your
-  own fine-tuned models, for conversations within LobeHub.
+  own fine-tuned models, for conversations within Orvilo.
 tags:
-  - LobeHub
+  - Orvilo
   - Unsloth
   - Open Source Models
   - Fine-tuning
 ---
 
-# Using Unsloth in LobeHub
+# Using Unsloth in Orvilo
 
-[Unsloth](https://unsloth.ai/) runs local models and exposes an OpenAI-compatible API through Unsloth Studio. LobeHub connects to your running instance; this integration does not provide a hosted inference account or download models for you. Check the model's license and your hardware requirements before downloading it.
+[Unsloth](https://unsloth.ai/) runs local models and exposes an OpenAI-compatible API through Unsloth Studio. Orvilo connects to your running instance; this integration does not provide a hosted inference account or download models for you. Check the model's license and your hardware requirements before downloading it.
 
 <Steps>
   ### Step 1: Start Unsloth Studio
@@ -21,14 +21,14 @@ tags:
   - Download a model in Studio and make it available for inference. The [Unsloth model catalog](https://huggingface.co/unsloth) lists available models; a catalog entry does not mean the model is installed locally.
   - The default API base URL is `http://127.0.0.1:8888/v1`. If you explicitly start Studio on another port, replace `8888` with that port, such as `8000`. Use the base URL ending in `/v1`, not the full `/chat/completions` path.
 
-  ### Step 2: Choose How LobeHub Connects
+  ### Step 2: Choose How Orvilo Connects
 
-  - Server requests require the LobeHub server to reach Studio. `127.0.0.1` refers to the server itself; inside Docker it refers to the container. Use an address reachable from that server or container when Studio runs elsewhere.
-  - Client Request Mode sends requests from your browser. Studio must allow the LobeHub page's origin through CORS, and requests from another browser origin require a real API key from your Studio instance. A successful keyless terminal request does not establish browser access. Do not use a made-up key.
+  - Server requests require the Orvilo server to reach Studio. `127.0.0.1` refers to the server itself; inside Docker it refers to the container. Use an address reachable from that server or container when Studio runs elsewhere.
+  - Client Request Mode sends requests from your browser. Studio must allow the Orvilo page's origin through CORS, and requests from another browser origin require a real API key from your Studio instance. A successful keyless terminal request does not establish browser access. Do not use a made-up key.
 
   ### Step 3: Configure and Check the Connection
 
-  - Go to the `App Settings` in LobeHub and open the `AI Service Providers` section
+  - Go to the `App Settings` in Orvilo and open the `AI Service Providers` section
   - Find and select the `Unsloth` provider from the list
   - Enable the provider, enter your API base URL, and enter the real Studio API key when authentication is required. Enable Client Request Mode only for a browser-accessible endpoint.
   - Click **Fetch Model List** and choose a model returned by your running Studio instance. If adding a model manually, use its exact local API model ID. The two built-in example models are not enabled by default and are not guaranteed to be installed. Existing saved model selections are preserved.

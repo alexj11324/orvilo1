@@ -21,6 +21,7 @@ import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
 import { RouteMetaBridge } from '@/features/RouteMeta';
 import { usePlatform } from '@/hooks/usePlatform';
+import WebSessionAuthRecovery from '@/layout/AuthProvider/SessionAuth/WebSessionAuthRecovery';
 import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
 import dynamic from '@/libs/next/dynamic';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -47,7 +48,10 @@ const Layout: FC = () => {
     <GlobalOverlayHostContext value={true}>
       <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
         {isDesktop && <DesktopAutoOidcOnFirstOpen />}
-        {isDesktop && <AuthRequiredModal />}
+        {/* One session-auth adapter per client, same `sessionAuthEvents`
+            signal: desktop re-auths in place via the OIDC modal, web redirects
+            to /signin. */}
+        {isDesktop ? <AuthRequiredModal /> : <WebSessionAuthRecovery />}
         <WorkspaceContextSlot>
           <RouteMetaBridge />
           <Suspense fallback={null}>{showCloudPromotion && <CloudBanner />}</Suspense>

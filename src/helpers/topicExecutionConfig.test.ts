@@ -70,12 +70,14 @@ it.each([undefined, 'local'] as const)(
       true,
     );
     expect(selection.workspaceScoped).toBe(true);
+    // pending `none` — the member's client never executes a shared local/unset
+    // target, and the cloud sandbox is never an implicit substitute
     expect(
       resolveExecutionTarget(selection.agencyConfig, {
         clientExecutionAvailable: true,
         isHetero: true,
         workspaceScoped: selection.workspaceScoped,
       }),
-    ).toBe('sandbox');
+    ).toBe('none');
   },
 );

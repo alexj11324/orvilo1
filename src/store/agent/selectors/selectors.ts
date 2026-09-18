@@ -192,12 +192,14 @@ const currentAgentDisabledPlugins = (s: AgentStoreState) => {
 };
 
 /**
- * Get displayable agent plugins by filtering out platform-specific tools
- * that shouldn't be shown in the current environment
+ * Get displayable agent plugins. Display shows what the agent is configured
+ * with — device-bound tools (local-system, auv) stay visible because the
+ * capability question is answered by the run's target device, not the
+ * viewing client.
  */
 const displayableAgentPlugins = (s: AgentStoreState) => {
   const plugins = currentAgentPlugins(s);
-  return filterToolIds(plugins);
+  return filterToolIds(plugins, { canExecuteOnDevice: true });
 };
 
 const currentAgentKnowledgeBases = (s: AgentStoreState) => {
@@ -340,19 +342,25 @@ const currentAgentRuntimeEnvConfig = (s: AgentStoreState): RuntimeEnvConfig | un
 const currentAgentWorkingDirectory =
   (currentDeviceId?: string) =>
   (s: AgentStoreState): string | undefined => {
-    if (!isDesktop) return;
-
-    const homePath = globalAgentContextManager.getContext().homePath;
     const activeAgentId = s.activeAgentId;
-    if (!activeAgentId) return homePath;
-
-    const agencyConfig = currentAgentConfig(s)?.agencyConfig;
+    const agencyConfig = activeAgentId ? currentAgentConfig(s)?.agencyConfig : undefined;
     const targetDeviceId = resolveTargetDeviceId(agencyConfig, currentDeviceId);
     const agentChoice = targetDeviceId
       ? getWorkingDirEffectivePath(agencyConfig?.workingDirByDevice?.[targetDeviceId])
       : undefined;
 
-    return agentChoice ?? s.localAgentWorkingDirectoryMap[activeAgentId] ?? homePath;
+    if (agentChoice) return agentChoice;
+
+    // The home-path fallback is a device-local concept — only the desktop
+    // client (which can BE the device) carries the Electron agent context. A
+    // web viewer still sees the per-device choice above and any legacy map
+    // value; it just has no local home path to fall back to.
+    const legacyChoice = activeAgentId ? s.localAgentWorkingDirectoryMap[activeAgentId] : undefined;
+    if (!isDesktop) return legacyChoice;
+
+    const homePath = globalAgentContextManager.getContext().homePath;
+    if (!activeAgentId) return homePath;
+    return legacyChoice ?? homePath;
   };
 
 const isCurrentAgentExternal = (s: AgentStoreState): boolean => !currentAgentData(s)?.virtual;

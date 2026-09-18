@@ -1,1 +1,1 @@
-export { default } from '@/features/DesktopOnboarding';
+export { default } from '@/features/DesktopOnboarding/Redirect';

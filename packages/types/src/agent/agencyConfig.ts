@@ -1117,8 +1117,11 @@ export interface OrviloAgentAgencyConfig {
    */
   enableGraphMode?: boolean;
   /**
-   * Execution target for the hetero agent. When omitted, resolves to a
-   * platform default: `'local'` on desktop and `'none'` on web.
+   * Execution target for the hetero agent. When omitted, resolves to `'none'`
+   * — a pending state identical on every client; the viewing platform never
+   * supplies an implicit default. A desktop surface that can prove this
+   * machine's registered device identity may persist an explicit
+   * `'local'` + `boundDeviceId` binding instead.
    */
   executionTarget?: DeviceExecutionTarget;
   /**
@@ -1143,9 +1146,10 @@ export interface OrviloAgentAgencyConfig {
    * no network).
    *
    * Modelled as a flag rather than a sixth `DeviceExecutionTarget` deliberately:
-   * every existing routing rule (web coercion, gateway upgrade, bot-trigger
-   * promotion, fixed-workspace policy) stays literally unchanged, and the flag
-   * composes if sandboxed execution later extends to `device` targets.
+   * every existing routing rule (bound-device display, gateway upgrade,
+   * bot-trigger promotion, fixed-workspace policy) stays literally unchanged,
+   * and the flag composes if sandboxed execution later extends to `device`
+   * targets.
    *
    * Only shell commands are affected. File tools (`writeFile` / `editFile`) run
    * in the desktop process itself, and heterogeneous CLI agents spawn through

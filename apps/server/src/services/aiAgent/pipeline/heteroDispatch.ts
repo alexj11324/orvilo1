@@ -1089,9 +1089,10 @@ export const dispatchHeteroAgent = async (
     //   - executionTarget 'device' → dispatch to boundDeviceId (errors if unset)
     //   - executionTarget 'local' + boundDeviceId (desktop sync opened on web)
     //     → dispatch to that device
-    //   - everything else ('sandbox' / unbound 'local' / 'none' / unset) → cloud
-    //     sandbox when the provider supports it; Amp and OpenCode remain
-    //     unrouted because they require a local or connected device
+    //   - explicit 'sandbox' → cloud sandbox
+    //   - 'none' / unset / unbound 'local' → pending: fails loudly below with an
+    //     actionable "pick a device / cloud sandbox" error — never an implicit
+    //     cloud fallback and never whichever client happened to send the run
     // `onlineDeviceIds` is intentionally omitted: hetero dispatch trusts
     // the binding and fails loudly at the gateway if the device is offline.
     // `canUseDevice` degrades device-capable targets to the sandbox when

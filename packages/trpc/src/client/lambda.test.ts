@@ -6,6 +6,7 @@ import { lambdaClient } from './lambda';
 vi.mock('@/const/version', () => ({ isDesktop: false }));
 vi.mock('@/services/_auth', () => ({ createHeaderWithAuth: async () => ({}) }));
 vi.mock('@/business/client/trpc-headers', () => ({ getBusinessTrpcHeaders: async () => ({}) }));
+vi.mock('@/store/user/store', () => ({ getUserStoreState: () => ({ isSignedIn: false }) }));
 // i18next is never initialised in this suite, so `t` echoes the key — assertions
 // below check which copy was selected, not its wording.
 vi.mock('i18next', () => ({ t: (key: string) => key }));
@@ -138,5 +139,68 @@ describe('lambdaClient unreadable response handling', () => {
     await expect(
       lambdaClient.agent.getAgentConfigById.query({ agentId: 'agt_test' }),
     ).rejects.toThrow('agentId is required');
+  });
+});
+
+describe('lambdaClient session-auth events', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('location', new URL('http://localhost/chat'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    fetchMock.mockReset();
+  });
+
+  const unauthorizedResponse = () =>
+    new Response(
+      JSON.stringify({
+        error: superjson.serialize({
+          code: -32_001,
+          data: { code: 'UNAUTHORIZED', httpStatus: 401 },
+          message: 'session expired',
+        }),
+      }),
+      { headers: { 'content-type': 'application/json' }, status: 401 },
+    );
+
+  it('emits session-auth-expired for a non-market 401', async () => {
+    const { sessionAuthEvents } = await import('@/layout/AuthProvider/SessionAuth/events');
+    const handler = vi.fn();
+    const unsubscribe = sessionAuthEvents.on('session-auth-expired', handler);
+
+    fetchMock.mockResolvedValueOnce(unauthorizedResponse());
+    await expect(
+      lambdaClient.agent.getAgentConfigById.query({ agentId: 'agt_test' }),
+    ).rejects.toThrow('session expired');
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'agent.getAgentConfigById',
+        source: 'trpc',
+      }),
+    );
+    unsubscribe();
+  });
+
+  it('does not emit session-auth-expired for a market 401', async () => {
+    const { sessionAuthEvents } = await import('@/layout/AuthProvider/SessionAuth/events');
+    const handler = vi.fn();
+    const unsubscribe = sessionAuthEvents.on('session-auth-expired', handler);
+
+    fetchMock.mockResolvedValueOnce(unauthorizedResponse());
+    await expect(
+      lambdaClient.market.agent.getOwnAgents.query({ page: 1, pageSize: 10 }),
+    ).rejects.toThrow();
+
+    // A market.* 401 routes to marketAuthEvents (or bubbles when the Orvilo
+    // session is already gone) — never to the session-auth funnel.
+    expect(handler).not.toHaveBeenCalled();
+    unsubscribe();
   });
 });

@@ -82,10 +82,18 @@ export const workspaceRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }): Promise<WorkspaceItem> => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
       try {
-        return await new WorkspaceModel(ctx.serverDB, ctx.userId).create(input);
+        return await model.create(input);
       } catch (error) {
         if (isUniqueViolation(error)) {
+          // Idempotent recovery: a retried create (double submit, onboarding
+          // replay, a second control client firing the same request) must land
+          // on the workspace the first call made — not on a hard failure. Only
+          // reuse when the caller actually owns the conflicting row; a slug
+          // taken by someone else stays a real CONFLICT.
+          const existing = await model.findBySlug(input.slug);
+          if (existing?.primaryOwnerId === ctx.userId) return existing;
           throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
         }
         console.error('[workspace:create]', error);

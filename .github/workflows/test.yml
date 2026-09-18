@@ -21,7 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      skip_reason: ${{ steps.skip_check.outputs.skip_reason }}
+      # The action's output is `reason` — `skip_reason` would always read
+      # empty and fail closed even for legitimate completed duplicates.
+      skip_reason: ${{ steps.skip_check.outputs.reason }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
@@ -443,6 +445,9 @@ jobs:
   # rules require this one name, so "the tests passed" can never mean "one
   # shard was green while another failed" — a job that failed, was skipped, or
   # never ran keeps the gate red.
+  # MAINTENANCE: adding a CI job above requires updating both `needs` here
+  # and the `required` list in the step below — a job absent from both is
+  # silently excluded from the gate.
   required-quality-gate:
     name: Required Quality Gate
     needs:

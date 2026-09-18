@@ -65,7 +65,7 @@ describe('OIDC HTTP adapter', () => {
 
       expect(nodeRequest).toMatchObject({
         method: 'POST',
-        url: '/token?client_id=test',
+        url: '/oidc/token?client_id=test',
       });
       expect(nodeRequest.socket.remoteAddress).toBe('203.0.113.10');
       expect(nodeRequest.readable).toBe(true);

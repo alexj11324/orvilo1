@@ -12,10 +12,13 @@ const log = debug('orvilo-oidc:http-adapter');
 
 const methodsWithBody = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const OIDC_MOUNT_PATH = '/oidc';
+const OIDC_DISCOVERY_PATHS = new Set([
+  `${OIDC_MOUNT_PATH}/.well-known/openid-configuration`,
+  `${OIDC_MOUNT_PATH}/.well-known/oauth-authorization-server`,
+]);
 
 const pathRelativeToOidcMount = (pathname: string): string => {
-  if (pathname === OIDC_MOUNT_PATH) return '/';
-  if (pathname.startsWith(`${OIDC_MOUNT_PATH}/`)) {
+  if (OIDC_DISCOVERY_PATHS.has(pathname)) {
     return pathname.slice(OIDC_MOUNT_PATH.length);
   }
   return pathname;

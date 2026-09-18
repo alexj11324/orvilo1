@@ -301,14 +301,11 @@ export const createOIDCProvider = async (db: OrviloDatabase): Promise<Provider> 
     rotateRefreshToken: true,
 
     routes: {
-      // The Next route mounts oidc-provider at /oidc. Keep provider routes
-      // relative to that mount so discovery and the default endpoints use the
-      // same path semantics as the custom device-flow endpoints.
-      authorization: '/auth',
-      code_verification: '/device',
-      device_authorization: '/device/auth',
-      end_session: '/session/end',
-      token: '/token',
+      authorization: '/oidc/auth',
+      code_verification: '/oidc/device',
+      device_authorization: '/oidc/device/auth',
+      end_session: '/oidc/session/end',
+      token: '/oidc/token',
     },
     // 3. Scopes definition
     scopes: defaultScopes,

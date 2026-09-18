@@ -63,6 +63,12 @@ export class CollaborationActionImpl {
     this.#get = get;
   }
 
+  /**
+   * The gateway's join snapshot is authoritative for presence (replace) but
+   * not for activity — it hardcodes `activities: []`, so a reconnect would
+   * wipe events still inside their display window. Activities merge keyed by
+   * eventId instead: replayed rows dedup, accumulated ones survive.
+   */
   applySnapshot = (
     key: string,
     snapshot: {
@@ -80,7 +86,7 @@ export class CollaborationActionImpl {
         for (const broadcast of snapshot.presence) {
           presence[broadcast.connectionId] = { ...broadcast, receivedAt };
         }
-        const activities: RoomCollaboration['activities'] = {};
+        const activities: RoomCollaboration['activities'] = { ...room.activities };
         for (const event of snapshot.activities) {
           activities[event.eventId] = event;
         }

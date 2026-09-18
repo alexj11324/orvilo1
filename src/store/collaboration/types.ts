@@ -89,6 +89,12 @@ export interface PresenceBroadcast {
 
 export type ServerMessage =
   | { connectionId: string; event: ServerActivityEvent; type: 'activity' }
+  | {
+      /** Payload-free cache hint: re-fetch the owning domain via the API. */
+      entity: 'project' | 'task' | 'workspace';
+      entityId: string;
+      type: 'invalidate';
+    }
   | { connectionId: string; type: 'presence-gone' }
   | { type: 'pong' }
   | {

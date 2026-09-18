@@ -47,6 +47,7 @@ import { botMessageRouter } from './botMessage';
 import { briefRouter } from './brief';
 import { changelogRouter } from './changelog';
 import { chunkRouter } from './chunk';
+import { collaborationRouter } from './collaboration';
 import { comfyuiRouter } from './comfyui';
 import { composioRouter } from './composio';
 import { configRouter } from './config';
@@ -132,6 +133,7 @@ export const lambdaRouter = router({
   apiKey: apiKeyRouter,
   asr: asrRouter,
   chunk: chunkRouter,
+  collaboration: collaborationRouter,
   comfyui: comfyuiRouter,
   config: configRouter,
   connector: connectorRouter,

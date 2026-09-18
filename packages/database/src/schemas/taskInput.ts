@@ -26,10 +26,9 @@ export const taskInputs = pgTable(
       .primaryKey(),
     // Tenant anchor: denormalized from the task so cross-task checks stay
     // cheap and a workspace cascade carries every input with it. Service
-    // writes keep it consistent with `tasks.workspace_id` in one transaction.
-    workspaceId: text('workspace_id')
-      .references(() => workspaces.id, { onDelete: 'cascade' })
-      .notNull(),
+    // writes keep it consistent with `tasks.workspace_id` in one transaction —
+    // nullable like the task column itself (personal tasks have no workspace).
+    workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     taskId: text('task_id')
       .references(() => tasks.id, { onDelete: 'cascade' })
       .notNull(),

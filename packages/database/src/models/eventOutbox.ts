@@ -12,6 +12,16 @@ const DEFAULT_MAX_ATTEMPTS = 10;
 /** Dedup key for one outbox event — consumers treat a repeated eventId as a no-op. */
 export const newEventId = (): string => randomUUID();
 
+/**
+ * Standalone form of `EventOutboxModel.insertOutboxEvent` for call sites that
+ * already hold the enclosing transaction — the row commits atomically with the
+ * business change it announces.
+ */
+export const insertOutboxEvent = (
+  executor: Transaction | OrviloDatabase,
+  params: NewOutboxEvent,
+) => new EventOutboxModel(executor as OrviloDatabase).insertOutboxEvent(executor, params);
+
 export interface NewOutboxEvent {
   aggregateId: string;
   aggregateType: string;

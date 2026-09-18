@@ -2,6 +2,7 @@ export const HATCHET_TASK_NAMES = {
   agentStep: 'orvilo-agent-step',
   agentSignalNightlySchedule: 'orvilo-agent-signal-nightly-schedule',
   botReplay: 'orvilo-bot-replay',
+  collaborationOutboxSweep: 'orvilo-collaboration-outbox-sweep',
   goalAdvance: 'orvilo-goal-advance',
   goalSweep: 'orvilo-goal-sweep',
   linearSyncSweep: 'orvilo-linear-sync-sweep',

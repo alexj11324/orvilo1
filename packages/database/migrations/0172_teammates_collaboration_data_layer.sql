@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS "project_members" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "task_inputs" (
 	"id" text PRIMARY KEY NOT NULL,
-	"workspace_id" text NOT NULL,
+	"workspace_id" text,
 	"task_id" text NOT NULL,
 	"author_user_id" text NOT NULL,
 	"sequence" integer NOT NULL,

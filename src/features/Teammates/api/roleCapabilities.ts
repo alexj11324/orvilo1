@@ -78,3 +78,20 @@ export const PROJECT_ROLE_ORDER: readonly ProjectRole[] = [
   'commenter',
   'viewer',
 ];
+
+/**
+ * Whether the caller may be OFFERED a project-scoped invite. Mirrors the
+ * invite endpoint's private-project ceiling exactly: only the project owner
+ * can grant access to a private project — workspace-admin status is not a
+ * bypass — so for anyone else the affordance hides rather than producing a
+ * guaranteed FORBIDDEN.
+ */
+export const canInviteToProject = (
+  callerCanInvite: boolean,
+  project: { userId?: string | null; visibility?: string | null } | undefined,
+  callerUserId?: string | null,
+): boolean => {
+  if (!callerCanInvite) return false;
+  if (project?.visibility !== 'private') return true;
+  return !!callerUserId && project.userId === callerUserId;
+};

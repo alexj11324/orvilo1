@@ -16,6 +16,11 @@ import {
   openInviteTeammateModal,
 } from '@/features/Teammates';
 
+import {
+  type WorkspaceMemberTabKey,
+  workspaceMemberTabKeys,
+} from './workspaceMemberTabs';
+
 const styles = createStaticStyles(({ css }) => ({
   header: css`
     display: flex;
@@ -31,7 +36,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-type TabKey = 'agents' | 'invitations' | 'members';
+type TabKey = WorkspaceMemberTabKey;
 
 /**
  * Workspace members settings: the member roster, the invitation lifecycle,
@@ -45,14 +50,19 @@ const WorkspaceMembers = memo(() => {
   const capabilities = useWorkspaceCapabilities();
   const [tab, setTab] = useState<TabKey>('members');
 
-  const tabs = useMemo(
-    () => [
-      { key: 'members', label: t('workspaceSetting.members.tabMembers') },
-      { key: 'invitations', label: t('workspaceSetting.members.tabInvitations') },
-      { key: 'agents', label: t('workspaceSetting.members.tabAgents') },
-    ],
-    [t],
-  );
+  const tabs = useMemo(() => {
+    const labels: Record<WorkspaceMemberTabKey, string> = {
+      agents: t('workspaceSetting.members.tabAgents'),
+      invitations: t('workspaceSetting.members.tabInvitations'),
+      members: t('workspaceSetting.members.tabMembers'),
+    };
+    // `canInvite` mirrors the invitations endpoint's role ceiling — without
+    // it the tab is withheld entirely instead of mounting a doomed query.
+    return workspaceMemberTabKeys(capabilities.canInvite).map((key) => ({
+      key,
+      label: labels[key],
+    }));
+  }, [t, capabilities.canInvite]);
 
   if (!workspace) {
     return (
@@ -88,7 +98,7 @@ const WorkspaceMembers = memo(() => {
         onChange={(key) => setTab(key as TabKey)}
       />
       {tab === 'members' && <MembersPanel />}
-      {tab === 'invitations' && <InvitationsPanel />}
+      {tab === 'invitations' && capabilities.canInvite && <InvitationsPanel />}
       {tab === 'agents' && <AgentsPanel />}
     </Flexbox>
   );

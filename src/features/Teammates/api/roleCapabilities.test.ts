@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canGrantRole,
   canInviteMembers,
+  canInviteToProject,
   canManageMember,
   changeableRolesFor,
   grantableWorkspaceRoles,
@@ -104,5 +105,29 @@ describe('changeableRolesFor', () => {
     expect(changeableRolesFor('admin', 'member')).toEqual(['viewer']);
     expect(changeableRolesFor('admin', 'viewer')).toEqual(['member']);
     expect(changeableRolesFor('member', 'viewer')).toEqual([]);
+  });
+});
+
+describe('canInviteToProject', () => {
+  it('offers invites on public projects to anyone who can invite', () => {
+    expect(canInviteToProject(true, { userId: 'other', visibility: 'public' }, 'me')).toBe(true);
+    expect(canInviteToProject(true, { userId: 'me', visibility: 'public' }, 'me')).toBe(true);
+  });
+
+  it('offers private-project invites only to the project owner', () => {
+    // The invite endpoint rejects non-owner grants on private projects —
+    // workspace admin status is not a bypass, so the affordance hides.
+    expect(canInviteToProject(true, { userId: 'me', visibility: 'private' }, 'me')).toBe(true);
+    expect(canInviteToProject(true, { userId: 'other', visibility: 'private' }, 'me')).toBe(false);
+  });
+
+  it('never offers invites to callers without the workspace capability', () => {
+    expect(canInviteToProject(false, { userId: 'me', visibility: 'private' }, 'me')).toBe(false);
+    expect(canInviteToProject(false, { userId: 'me', visibility: 'public' }, 'me')).toBe(false);
+  });
+
+  it('denies private invites when the caller identity is missing', () => {
+    expect(canInviteToProject(true, { userId: 'me', visibility: 'private' }, undefined)).toBe(false);
+    expect(canInviteToProject(true, { userId: 'me', visibility: 'private' }, null)).toBe(false);
   });
 });

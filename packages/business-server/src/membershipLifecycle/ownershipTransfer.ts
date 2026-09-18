@@ -110,7 +110,7 @@ export const respondOwnershipTransfer = async (
   db: OrviloDatabase,
   params: { accept: boolean; ipAddress?: string; userId: string; workspaceId: string },
 ) => {
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     await lockWorkspaceForUpdate(tx, params.workspaceId);
     const transfer = await lockPendingOwnershipTransferForUpdate(tx, params.workspaceId);
     if (!transfer) {
@@ -123,8 +123,27 @@ export const respondOwnershipTransfer = async (
       });
     }
     if (transfer.expiresAt.getTime() <= Date.now()) {
+      // The expired write must COMMIT — throwing inside this callback would
+      // roll it back and leave the row pending (and blocking) forever. The
+      // caller-side rejection happens after the transaction resolves.
       await decideOwnershipTransfer(tx, transfer.id, 'expired');
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'This transfer request has expired' });
+      await recordAudit(tx, {
+        action: 'workspace.ownership_transfer_expired',
+        ipAddress: params.ipAddress,
+        metadata: { transferId: transfer.id },
+        resourceId: transfer.id,
+        resourceType: 'workspace_ownership_transfer',
+        userId: params.userId,
+        workspaceId: params.workspaceId,
+      });
+      await emitWorkspaceEvent(tx, {
+        aggregateId: params.workspaceId,
+        aggregateType: 'workspace',
+        eventType: 'workspace.ownership_transfer.expired',
+        payload: { transferId: transfer.id },
+        workspaceId: params.workspaceId,
+      });
+      return { expired: true as const };
     }
 
     if (params.accept) {
@@ -164,6 +183,10 @@ export const respondOwnershipTransfer = async (
     });
     return { accepted: params.accept };
   });
+  if ('expired' in outcome) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'This transfer request has expired' });
+  }
+  return outcome;
 };
 
 /** Owner retracts a still-pending request. */

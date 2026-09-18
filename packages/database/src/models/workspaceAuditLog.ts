@@ -13,6 +13,7 @@ export type WorkspaceAuditAction =
   | 'workspace.ownership_transfer_accepted'
   | 'workspace.ownership_transfer_declined'
   | 'workspace.ownership_transfer_cancelled'
+  | 'workspace.ownership_transfer_expired'
   | 'workspace.deleted'
   | 'workspace.cleanup_triggered'
   | 'workspace.account_upgraded'

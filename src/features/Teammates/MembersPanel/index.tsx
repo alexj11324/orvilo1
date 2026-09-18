@@ -151,7 +151,9 @@ const MemberRow = memo<MemberRowProps>(
     const joinedAt = member.joinedAt ? new Date(member.joinedAt) : null;
 
     const menuItems = useMemo(() => {
-      if (!manageable) return [];
+      // Ownership transfer is reachable even when ordinary member management
+      // is not — a legacy co-owner row is a valid transfer target.
+      if (!manageable && !transferEligible) return [];
       const items: {
         danger?: boolean;
         icon: ReactNode;
@@ -167,7 +169,7 @@ const MemberRow = memo<MemberRowProps>(
           onClick: () => onTransfer(member),
         });
       }
-      if (status === 'active') {
+      if (manageable && status === 'active') {
         items.push({
           icon: <Icon icon={PauseCircle} />,
           key: 'suspend',
@@ -175,7 +177,7 @@ const MemberRow = memo<MemberRowProps>(
           onClick: () => void suspend(member.userId),
         });
       }
-      if (status === 'suspended') {
+      if (manageable && status === 'suspended') {
         items.push({
           icon: <Icon icon={PlayCircle} />,
           key: 'resume',
@@ -183,13 +185,15 @@ const MemberRow = memo<MemberRowProps>(
           onClick: () => void resume(member.userId),
         });
       }
-      items.push({
-        danger: true,
-        icon: <Icon icon={UserMinus} />,
-        key: 'remove',
-        label: t('workspaceSetting.members.remove'),
-        onClick: () => onRemove(member),
-      });
+      if (manageable) {
+        items.push({
+          danger: true,
+          icon: <Icon icon={UserMinus} />,
+          key: 'remove',
+          label: t('workspaceSetting.members.remove'),
+          onClick: () => onRemove(member),
+        });
+      }
       return items;
     }, [manageable, transferEligible, status, t, suspend, resume, member, onRemove, onTransfer]);
 
@@ -257,7 +261,7 @@ const MemberRow = memo<MemberRowProps>(
         <div className={styles.numeric}>{joinedAt ? joinedAt.toLocaleDateString() : '—'}</div>
 
         <div>
-          {manageable && menuItems.length > 0 && (
+          {menuItems.length > 0 && (
             <DropdownMenu items={menuItems}>
               <Button disabled={mutating} size="small" type="text">
                 ⋯
@@ -283,7 +287,11 @@ export const MembersPanel = memo(() => {
   const capabilities = useWorkspaceCapabilities();
   const callerUserId = useUserStore(userProfileSelectors.userId);
   const { data: members, error, isLoading, mutate } = useWorkspaceMembersQuery();
-  const { data: pendingTransfer } = usePendingOwnershipTransferQuery();
+  const {
+    data: pendingTransfer,
+    error: transferError,
+    mutate: refreshTransfer,
+  } = usePendingOwnershipTransferQuery();
   const { cancelOwnershipTransfer, mutating, requestOwnershipTransfer, respondOwnershipTransfer } =
     useTeammateActions();
 
@@ -391,6 +399,20 @@ export const MembersPanel = memo(() => {
 
   return (
     <Flexbox gap={8}>
+      {transferError && (
+        // A failed pending-transfer lookup is NOT "no transfer" — hiding it
+        // would let the owner open a second request and leave the recipient
+        // unable to see or answer the pending one.
+        <Alert
+          title={t('workspaceSetting.members.transferLoadFailed')}
+          type="warning"
+          action={
+            <Button size="small" onClick={() => void refreshTransfer()}>
+              {t('retry', { ns: 'common' })}
+            </Button>
+          }
+        />
+      )}
       {pendingTransfer && (isTransferInitiator || isTransferRecipient) && (
         <div className={styles.transferBanner}>
           <span className={styles.transferBannerText}>
@@ -456,7 +478,10 @@ export const MembersPanel = memo(() => {
                   capabilities.role,
                   member,
                   callerUserId,
-                  !!pendingTransfer,
+                  // An unknown pending state (lookup failed) is treated as
+                  // possibly-pending so the menu can't offer a request the
+                  // server would reject with a duplicate-pending conflict.
+                  !!pendingTransfer || !!transferError,
                 )}
                 onRemove={openRemoveModal}
                 onTransfer={openTransferConfirm}

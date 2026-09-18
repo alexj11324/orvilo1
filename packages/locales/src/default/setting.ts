@@ -2394,6 +2394,13 @@ When I am ___, I need ___
   'workspace.auditLog.actions.workspace.deleted': 'Workspace deleted',
   'workspace.auditLog.actions.workspace.downgraded': 'Workspace downgraded',
   'workspace.auditLog.actions.workspace.frozen': 'Workspace frozen',
+  'workspace.auditLog.actions.workspace.ownership_transfer_accepted': 'Ownership transfer accepted',
+  'workspace.auditLog.actions.workspace.ownership_transfer_cancelled':
+    'Ownership transfer cancelled',
+  'workspace.auditLog.actions.workspace.ownership_transfer_declined': 'Ownership transfer declined',
+  'workspace.auditLog.actions.workspace.ownership_transfer_expired': 'Ownership transfer expired',
+  'workspace.auditLog.actions.workspace.ownership_transfer_requested':
+    'Ownership transfer requested',
   'workspace.auditLog.actions.workspace.primary_ownership_transferred':
     'Primary ownership transferred',
   'workspace.auditLog.actions.workspace.settings_reset': 'Workspace settings reset',
@@ -3759,6 +3766,7 @@ When I am ___, I need ___
   'workspaceSetting.members.transferConfirmTitle': 'Transfer ownership to {{name}}?',
   'workspaceSetting.members.transferDecline': 'Decline',
   'workspaceSetting.members.transferDeclined': 'Transfer request declined.',
+  'workspaceSetting.members.transferLoadFailed': "Couldn't load the pending ownership transfer.",
   'workspaceSetting.members.transferOwnership': 'Transfer ownership',
   'workspaceSetting.members.transferRequested':
     'Transfer request sent — it expires if not answered in time.',

@@ -1,5 +1,5 @@
 import { toast } from '@lobehub/ui/base-ui';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -67,11 +67,28 @@ export const usePendingOwnershipTransferQuery = (options?: { enabled?: boolean }
   const workspaceId = useActiveWorkspaceId();
   const enabled = options?.enabled ?? true;
 
-  return useClientDataSWR(
+  const query = useClientDataSWR(
     workspaceId && enabled ? teammatesKeys.ownershipTransfer() : null,
     () => teammatesClient.workspace.pendingOwnershipTransfer.query(),
     { refreshInterval: 30_000 },
   );
+
+  // A resolved hand-off (pending → null) changes BOTH parties' roles and
+  // roster rows, but only the clicker's own mutations revalidate those keys.
+  // The other side only sees this poll tick to null — refresh the dependent
+  // caches here so the previous owner doesn't sit on a stale owner badge.
+  const hadPendingRef = useRef(false);
+  const data = query.data;
+  useEffect(() => {
+    const hasPending = !!data;
+    if (hadPendingRef.current && !hasPending) {
+      void mutate(teammatesKeys.members(false));
+      void mutate(WORKSPACE_LIST_KEY);
+    }
+    hadPendingRef.current = hasPending;
+  }, [data]);
+
+  return query;
 };
 
 /** Workspace-visible agent roster — read-only surface in v1. */

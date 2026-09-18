@@ -5,6 +5,8 @@ import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 import { authedProcedure } from '@/libs/trpc/lambda';
 import { trpc } from '@/libs/trpc/lambda/init';
 
+import { fetchDbGrantedCodes } from './dbGrants';
+
 export type WorkspaceRole = 'admin' | 'member' | 'owner' | 'viewer';
 
 const WORKSPACE_ROLES: readonly WorkspaceRole[] = ['admin', 'member', 'owner', 'viewer'];
@@ -87,11 +89,17 @@ export const resolveWorkspaceMembership = async (
  * - No `X-Workspace-Id` → personal mode: passes through with
  *   `workspaceRole: undefined` (the caller is the implicit owner of their
  *   personal space) and no membership.
- * - `X-Workspace-Id` present → the caller must be an active member, otherwise
- *   the request is rejected with FORBIDDEN. It is *never* silently downgraded
- *   to personal — that would mis-target reads and writes at the wrong tenant.
- *   The error is uniform for non-member / suspended / removed / unknown
- *   workspaces so the response cannot leak workspace existence.
+ * - `X-Workspace-Id` present → the caller must be an active member *or* hold
+ *   an active globally-granted DB role (e.g. `super_admin` via
+ *   `rbac_user_roles.workspace_id IS NULL`), which legitimately applies
+ *   inside any workspace — the same contract `RbacModel` enforces on the
+ *   OpenAPI surface. Global roleholders continue with `membership: null` and
+ *   no `workspaceRole`; downstream permission middlewares still gate on the
+ *   codes their grants actually cover. Everyone else is rejected with
+ *   FORBIDDEN — never silently downgraded to personal, which would
+ *   mis-target reads and writes at the wrong tenant. The error is uniform
+ *   for non-member / suspended / removed / unknown workspaces so the
+ *   response cannot leak workspace existence.
  *
  * On success it attaches `membership` + `workspaceRole` for downstream
  * middlewares and procedures, plus `workspaceSlug` (kept for ctx-shape
@@ -111,13 +119,18 @@ export const cloudWorkspaceAuth = trpc.middleware(async (opts) => {
   }
 
   const membership = await resolveWorkspaceMembership(ctx);
-  if (!membership) throw notAMember();
+  // A non-member is rejected unless they hold an active globally-granted DB
+  // role (super_admin etc.) — those apply inside any workspace, so global
+  // roleholders are not membership-locked. `fetchDbGrantedCodes` with no
+  // `codes` lists every active global grant; unauthenticated callers and
+  // grant-less non-members short-circuit to the same uniform FORBIDDEN.
+  if (!membership && (await fetchDbGrantedCodes(ctx)).size === 0) throw notAMember();
 
   return opts.next({
     ctx: {
       membership,
       workspaceId: ctx.workspaceId,
-      workspaceRole: membership.role,
+      workspaceRole: membership?.role,
       workspaceSlug: undefined as string | undefined,
     },
   });

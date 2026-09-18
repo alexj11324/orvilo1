@@ -115,8 +115,7 @@ vi.mock('@/database/models/user', () => ({
 vi.mock('@/business/server/trpc-middlewares/workspaceAuth', async () => {
   const { authedProcedure } = await import('@/libs/trpc/lambda');
   const { trpc } = await import('@/libs/trpc/lambda/init');
-  const pass = () =>
-    trpc.middleware(async (opts: any) => opts.next({ ctx: opts.ctx }));
+  const pass = () => trpc.middleware(async (opts: any) => opts.next({ ctx: opts.ctx }));
   return {
     requireWorkspaceRole: pass,
     requireWorkspaceRoleWhenScoped: pass,
@@ -200,7 +199,9 @@ describe('workspaceMemberRouter.invite', () => {
       role: 'member',
     });
 
-    expect(results).toEqual([{ email: 'NewPerson@X.com', invitationId: 'inv-new', ok: true }]);
+    expect(results).toEqual([
+      { email: 'NewPerson@X.com', emailed: true, invitationId: 'inv-new', ok: true },
+    ]);
     expect(invitationModel.createInvitation).toHaveBeenCalledWith(
       expect.objectContaining({ emailNormalized: 'newperson@x.com', role: 'member' }),
     );
@@ -212,6 +213,48 @@ describe('workspaceMemberRouter.invite', () => {
       fakeDb,
       expect.objectContaining({ action: 'member.invited' }),
     );
+  });
+
+  it('accepts the legacy single-email shape the released CLI still sends', async () => {
+    const { results } = await createCaller('admin').invite({
+      email: 'New@X.com',
+      role: 'member',
+    });
+
+    expect(results).toEqual([
+      { email: 'New@X.com', emailed: true, invitationId: 'inv-new', ok: true },
+    ]);
+    expect(invitationModel.createInvitation).toHaveBeenCalledWith(
+      expect.objectContaining({ emailNormalized: 'new@x.com' }),
+    );
+  });
+
+  it('reports emailed:false when delivery fails but the invite still landed', async () => {
+    sendInvitationEmail.mockResolvedValueOnce(false);
+
+    const { results } = await createCaller('admin').invite({
+      emails: ['x@x.com'],
+      role: 'member',
+    });
+
+    // The row is pending and resend-able, so ok stays true — only the
+    // delivery outcome is flagged.
+    expect(results).toEqual([
+      { email: 'x@x.com', emailed: false, invitationId: 'inv-new', ok: true },
+    ]);
+    expect(invitationQueries.markInvitationSent).not.toHaveBeenCalled();
+  });
+
+  it('dedupes addresses that normalize to the same email within one batch', async () => {
+    const { results } = await createCaller('admin').invite({
+      emails: ['dup@x.com', ' Dup@X.com '],
+      role: 'member',
+    });
+
+    expect(results[0]).toMatchObject({ ok: true });
+    expect(results[1]).toMatchObject({ error: 'already-invited', ok: false });
+    expect(invitationModel.createInvitation).toHaveBeenCalledTimes(1);
+    expect(sendInvitationEmail).toHaveBeenCalledTimes(1);
   });
 
   it('keeps per-email failures isolated', async () => {
@@ -406,6 +449,18 @@ describe('workspaceMemberRouter.changeRole / suspend / resume / remove / leave',
       fakeDb,
       expect.objectContaining({ action: 'member.removed' }),
     );
+  });
+
+  it('rejects reassigning tasks to a workspace viewer', async () => {
+    // A viewer is an active member but can never own a task — reassigning to
+    // them would orphan the departing member's open work.
+    memberModel.getMember.mockResolvedValue({ role: 'viewer' });
+
+    await expect(
+      createCaller('admin').remove({ reassignToUserId: 'u-viewer', userId: 'u-target' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(queries.reassignOpenAssignedTasks).not.toHaveBeenCalled();
+    expect(memberModel.removeMember).not.toHaveBeenCalled();
   });
 
   it('refuses to remove the owner or yourself', async () => {

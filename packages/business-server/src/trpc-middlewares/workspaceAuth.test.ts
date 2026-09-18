@@ -15,9 +15,10 @@ import {
   wsProcedure,
 } from './workspaceAuth';
 
-const { mockGetActiveWorkspaceMembershipRole, mockGetServerDB } = vi.hoisted(() => ({
+const { mockGetActiveWorkspaceMembershipRole, mockGetServerDB, mockWhere } = vi.hoisted(() => ({
   mockGetActiveWorkspaceMembershipRole: vi.fn(),
   mockGetServerDB: vi.fn(),
+  mockWhere: vi.fn(),
 }));
 
 vi.mock('@/database/core/db-adaptor', () => ({
@@ -27,6 +28,26 @@ vi.mock('@/database/core/db-adaptor', () => ({
 vi.mock('@/database/models/workspace', () => ({
   getActiveWorkspaceMembershipRole: mockGetActiveWorkspaceMembershipRole,
 }));
+
+/**
+ * Minimal drizzle-select chain for the global-grant probe in
+ * `fetchDbGrantedCodes` (`select → from → innerJoin × 3 → where`).
+ * `mockWhere` resolves the rows — non-empty means the caller holds an
+ * active global DB grant.
+ */
+const makeDb = () => ({
+  select: () => ({
+    from: () => ({
+      innerJoin: () => ({
+        innerJoin: () => ({
+          innerJoin: () => ({
+            where: mockWhere,
+          }),
+        }),
+      }),
+    }),
+  }),
+});
 
 const testRouter = router({
   compatContext: wsCompatProcedure.query(({ ctx }) => ({
@@ -65,7 +86,8 @@ const expectTrpcError = async (promise: Promise<unknown>, code: TRPCError['code'
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetServerDB.mockResolvedValue({});
+  mockGetServerDB.mockResolvedValue(makeDb());
+  mockWhere.mockResolvedValue([]);
   mockGetActiveWorkspaceMembershipRole.mockResolvedValue('member');
 });
 
@@ -121,6 +143,30 @@ describe('wsCompatProcedure', () => {
 
   it('rejects suspended and removed members (helper reports null)', async () => {
     mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
+    const caller = authedCaller({ userId: 'user-1', workspaceId: 'ws-1' });
+
+    await expectTrpcError(caller.compatContext(), 'FORBIDDEN');
+  });
+
+  it('lets a non-member holding an active global grant through without membership', async () => {
+    // e.g. super_admin granted via rbac_user_roles with workspace_id IS NULL —
+    // globally-granted roles legitimately apply inside any workspace, so the
+    // request continues with `membership: null` and no `workspaceRole`.
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
+    mockWhere.mockResolvedValueOnce([{ code: 'rbac:role_read:all' }]);
+    const caller = authedCaller({ userId: 'user-1', workspaceId: 'ws-1' });
+
+    await expect(caller.compatContext()).resolves.toEqual({
+      membership: null,
+      workspaceId: 'ws-1',
+      workspaceRole: undefined,
+      workspaceSlug: undefined,
+    });
+  });
+
+  it('still rejects a non-member who holds no global grant', async () => {
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValueOnce(null);
+    mockWhere.mockResolvedValueOnce([]); // the grant probe finds nothing
     const caller = authedCaller({ userId: 'user-1', workspaceId: 'ws-1' });
 
     await expectTrpcError(caller.compatContext(), 'FORBIDDEN');

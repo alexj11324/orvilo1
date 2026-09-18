@@ -81,6 +81,7 @@ export class RbacModel {
             eq(workspaceMembers.workspaceId, workspaceId),
             inArray(workspaceMembers.userId, uniqueUserIds),
             isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
           ),
         ),
       db
@@ -150,6 +151,7 @@ export class RbacModel {
           eq(workspaceMembers.workspaceId, workspaceId),
           eq(workspaceMembers.userId, userId),
           isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
         ),
       )
       .limit(1);

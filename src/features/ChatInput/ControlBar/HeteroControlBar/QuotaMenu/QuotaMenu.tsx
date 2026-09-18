@@ -266,6 +266,26 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   const quotaRef = useRef<S | null>(null);
   const requestIdRef = useRef(0);
   const sourceKeyRef = useRef(sourceKey);
+  // Request lifecycle as refs rather than render state: the focus/visibility
+  // listeners are registered once and must observe the CURRENT request, not
+  // the `loading`/`quota` values of whichever render last re-registered them.
+  const inFlightRef = useRef(false);
+  // A revalidation trigger that lands mid-request is parked here instead of
+  // dropped; `loadQuota` drains it (re-checking freshness against the snapshot
+  // that just settled) when the in-flight request completes.
+  const pendingRevalidateMsRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+  // `loadQuota`'s settle path re-enters the gate below to drain a parked
+  // trigger, and the gate starts `loadQuota` — the cycle is bridged through a
+  // ref so neither callback closes over the other.
+  const requestRevalidationRef = useRef<(staleMs: number) => void>(() => {});
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const hasQuotaDataForSnapshot = useCallback(
     (snapshot: S | null) => {
@@ -277,6 +297,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   );
 
   const setQuotaSnapshot = useCallback((nextQuota: S) => {
+    if (!mountedRef.current) return;
     quotaRef.current = nextQuota;
     setQuota(nextQuota);
   }, []);
@@ -286,8 +307,12 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       if (sourceKeyRef.current !== sourceKey) return;
 
       // A completed mutation owns the newest snapshot. Invalidate any older
-      // read still in flight so it cannot repaint pre-mutation quota data.
+      // read still in flight so it cannot repaint pre-mutation quota data, and
+      // drop a parked revalidation — the mutation's snapshot is the freshest
+      // truth, the pending intent was recorded against pre-mutation data.
       requestIdRef.current += 1;
+      inFlightRef.current = false;
+      pendingRevalidateMsRef.current = null;
       setLoading(false);
       setRefreshError(null);
       setQuotaSnapshot(nextQuota);
@@ -308,7 +333,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       requestId = requestIdRef.current,
       requestSourceKey = sourceKeyRef.current,
     ) => {
-      if (!isCurrentRequest(requestId, requestSourceKey)) return;
+      if (!isCurrentRequest(requestId, requestSourceKey) || !mountedRef.current) return;
 
       if (nextQuota.status === 'error') {
         lastTransientErrorAtRef.current = Date.now();
@@ -333,6 +358,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
 
+      inFlightRef.current = true;
       setRefreshError(null);
       setLoading(true);
 
@@ -353,17 +379,74 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
         applyQuotaResult(createErrorSnapshot(error), options, requestId, requestSourceKey);
       } finally {
         if (isCurrentRequest(requestId, requestSourceKey)) {
-          setLoading(false);
+          inFlightRef.current = false;
+          if (mountedRef.current) {
+            setLoading(false);
+            // Drain a trigger that was parked while this request was in
+            // flight. The gate re-evaluates visibility/cooldown/freshness
+            // against the snapshot we just produced, so a successful refresh
+            // usually makes the parked intent a no-op.
+            const pendingStaleMs = pendingRevalidateMsRef.current;
+            if (pendingStaleMs !== null) {
+              pendingRevalidateMsRef.current = null;
+              requestRevalidationRef.current(pendingStaleMs);
+            }
+          }
         }
       }
     },
     [applyQuotaResult, createErrorSnapshot, fetchQuota, isCurrentRequest, setQuotaSnapshot],
   );
 
+  /**
+   * Shared "maybe revalidate" gate for every passive trigger — window focus,
+   * visibilitychange, the auto-refresh tick and popover open. It reads only
+   * refs, so the focus listener is registered once yet always acts on current
+   * state; a trigger that arrives while a request is in flight is parked in
+   * `pendingRevalidateMsRef` and re-evaluated when that request settles.
+   */
+  const requestRevalidation = useCallback(
+    (staleMs: number) => {
+      if (document.visibilityState === 'hidden') return;
+
+      const currentTime = Date.now();
+      const recentlyFailed =
+        lastTransientErrorAtRef.current > 0 &&
+        currentTime - lastTransientErrorAtRef.current < QUOTA_RETRY_COOLDOWN_MS;
+
+      if (recentlyFailed) return;
+
+      const current = quotaRef.current;
+      if (current && currentTime - current.updatedAt <= staleMs) return;
+
+      if (inFlightRef.current) {
+        // One coalesced pending run; the strictest (smallest) window wins so a
+        // 60 s focus gate is not lost behind a 120 s poll gate.
+        const pending = pendingRevalidateMsRef.current;
+        pendingRevalidateMsRef.current = pending === null ? staleMs : Math.min(pending, staleMs);
+        return;
+      }
+
+      void loadQuota({ revalidate: true });
+    },
+    [loadQuota],
+  );
+
+  useEffect(() => {
+    requestRevalidationRef.current = requestRevalidation;
+  }, [requestRevalidation]);
+
   useEffect(() => {
     sourceKeyRef.current = sourceKey;
     quotaRef.current = null;
     lastTransientErrorAtRef.current = 0;
+    // The previous source's in-flight request is disowned — the
+    // requestId/sourceKey guards discard its result — so its lifecycle
+    // markers must not leak into the new source: a stranded `inFlight` would
+    // park every future revalidation forever, and a parked revalidation would
+    // fire a request the new source never asked for.
+    inFlightRef.current = false;
+    pendingRevalidateMsRef.current = null;
     setQuota(null);
     setRefreshError(null);
   }, [sourceKey]);
@@ -382,48 +465,30 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
 
   // Scheduled auto-refresh: quota burns down while the user just watches the
   // agent work, so poll on the configured cadence whenever the tab is visible.
-  // Each tick re-checks staleness and the transient-error cooldown, and the
-  // sampler-side snapshot cache still coalesces concurrent pollers.
+  // The gate re-checks visibility, the transient-error cooldown and staleness
+  // (with the poll window) on every tick, and the sampler-side snapshot cache
+  // still coalesces concurrent pollers.
   useEffect(() => {
     if (!autoRefreshMs) return;
 
     const interval = window.setInterval(() => {
-      if (document.visibilityState === 'hidden' || loading) return;
-
-      const currentTime = Date.now();
-      const recentlyFailed =
-        lastTransientErrorAtRef.current > 0 &&
-        currentTime - lastTransientErrorAtRef.current < QUOTA_RETRY_COOLDOWN_MS;
-
-      if (recentlyFailed) return;
-      if (quota && currentTime - quota.updatedAt < autoRefreshMs) return;
-
-      void loadQuota({ revalidate: true });
+      requestRevalidation(autoRefreshMs);
     }, autoRefreshMs);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [autoRefreshMs, loadQuota, loading, quota]);
+  }, [autoRefreshMs, requestRevalidation]);
 
   // Revalidate when the window regains focus: the user may have burned quota
-  // elsewhere (another device, a terminal CLI session) meanwhile. Upstream
-  // snapshot caches (90 s fresh window + error cooldown in the sampler host)
-  // keep this from hammering the rate-limited live endpoints.
+  // elsewhere (another device, a terminal CLI session) meanwhile. The listener
+  // is registered ONCE — `requestRevalidation` reads refs only — so a focus
+  // that lands mid-request is parked and drained on settle instead of being
+  // dropped by a stale `loading` closure. Upstream snapshot caches (90 s fresh
+  // window + error cooldown in the sampler host) keep this from hammering the
+  // rate-limited live endpoints.
   useEffect(() => {
-    const revalidateOnFocus = () => {
-      if (document.visibilityState === 'hidden' || loading) return;
-
-      const currentTime = Date.now();
-      const recentlyFailed =
-        lastTransientErrorAtRef.current > 0 &&
-        currentTime - lastTransientErrorAtRef.current < QUOTA_RETRY_COOLDOWN_MS;
-
-      if (recentlyFailed) return;
-      if (quota && currentTime - quota.updatedAt <= QUOTA_STALE_MS) return;
-
-      void loadQuota({ revalidate: true });
-    };
+    const revalidateOnFocus = () => requestRevalidation(QUOTA_STALE_MS);
 
     window.addEventListener('focus', revalidateOnFocus);
     document.addEventListener('visibilitychange', revalidateOnFocus);
@@ -432,7 +497,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       window.removeEventListener('focus', revalidateOnFocus);
       document.removeEventListener('visibilitychange', revalidateOnFocus);
     };
-  }, [loadQuota, loading, quota]);
+  }, [requestRevalidation]);
 
   const formatDuration = useCallback(
     (ms: number) => {
@@ -497,17 +562,11 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
     (nextOpen: boolean) => {
       setOpen(nextOpen);
 
-      if (!nextOpen || loading) return;
-      const currentTime = Date.now();
-      const recentlyFailed =
-        lastTransientErrorAtRef.current > 0 &&
-        currentTime - lastTransientErrorAtRef.current < QUOTA_RETRY_COOLDOWN_MS;
-
-      if ((!quota || currentTime - quota.updatedAt > QUOTA_STALE_MS) && !recentlyFailed) {
-        void loadQuota({ revalidate: true });
-      }
+      // Opening the popover is a revalidation trigger like focus — a request
+      // already in flight parks the intent instead of dropping it.
+      if (nextOpen) requestRevalidation(QUOTA_STALE_MS);
     },
-    [loadQuota, loading, quota],
+    [requestRevalidation],
   );
 
   const renderQuotaWindow = ({ key, label, window }: QuotaWindowItem) => {

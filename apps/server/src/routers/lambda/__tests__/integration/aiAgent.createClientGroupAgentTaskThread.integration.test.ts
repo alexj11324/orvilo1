@@ -20,7 +20,8 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // Mock services
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: vi.fn().mockImplementation(function () {
-    return {};
+    // The middleware builds ctx.agentRuntimeService through this facade.
+    return { createIsolatedRuntime: vi.fn(() => ({})) };
   }),
 }));
 

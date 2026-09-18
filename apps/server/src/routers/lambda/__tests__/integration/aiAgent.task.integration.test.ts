@@ -17,20 +17,28 @@ vi.mock('@/database/core/db-adaptor', () => ({
   }),
 }));
 
+// Mock AgentRuntimeService - controls operation status
+const mockGetOperationStatus = vi.fn();
+
 // Mock AiAgentService - controls task execution behavior
 const mockExecGroupSubAgentTask = vi.fn();
 const mockInterruptTask = vi.fn();
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: vi.fn().mockImplementation(function () {
     return {
+      // The middleware builds ctx.agentRuntimeService through this facade —
+      // hand back the same mocked surface the bare constructor used to.
+      createIsolatedRuntime: vi.fn(function () {
+        return {
+          getOperationStatus: mockGetOperationStatus,
+        };
+      }),
       execSubAgent: mockExecGroupSubAgentTask,
       interruptTask: mockInterruptTask,
     };
   }),
 }));
 
-// Mock AgentRuntimeService - controls operation status
-const mockGetOperationStatus = vi.fn();
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {

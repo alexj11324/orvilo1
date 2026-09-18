@@ -21,6 +21,8 @@ const mockExecGroupSubAgentTask = vi.fn();
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: vi.fn().mockImplementation(function () {
     return {
+      // The middleware builds ctx.agentRuntimeService through this facade.
+      createIsolatedRuntime: vi.fn(() => ({})),
       execSubAgent: mockExecGroupSubAgentTask,
     };
   }),

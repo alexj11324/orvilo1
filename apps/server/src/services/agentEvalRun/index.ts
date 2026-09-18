@@ -34,7 +34,6 @@ import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { agentEvalRunTopics, messagePlugins, messages, topics } from '@/database/schemas';
 import { AgentService } from '@/server/services/agent';
-import { AgentRuntimeService } from '@/server/services/agentRuntime/AgentRuntimeService';
 import type { EvalRuntimeContext } from '@/server/services/agentRuntime/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
@@ -495,12 +494,16 @@ export class AgentEvalRunService {
     const runningTopics = runTopics.filter((t) => t.status === 'running');
 
     if (runningTopics.length > 0) {
-      const agentRuntimeService = new AgentRuntimeService(this.db, this.userId);
+      // interruptTask (not bare interruptOperation) so device-hosted runs also
+      // get their process cancelled through the admission ledger path.
+      const aiAgentService = new AiAgentService(this.db, this.userId, {
+        workspaceId: this.workspaceId,
+      });
       for (const rt of runningTopics) {
         const opId = (rt.evalResult as EvalRunTopicResult)?.operationId;
         if (opId) {
           try {
-            await agentRuntimeService.interruptOperation(opId);
+            await aiAgentService.interruptTask({ operationId: opId, topicId: rt.topicId });
           } catch {
             // best effort
           }
@@ -2436,19 +2439,10 @@ export class AgentEvalRunService {
     const timedOutRows = await this.runTopicModel.batchMarkTimeout(run.id, perCaseTimeout);
     if (timedOutRows.length === 0) return false;
 
-    // Interrupt running agents before writing timeout state (best-effort)
-    const agentRuntimeService = new AgentRuntimeService(this.db, this.userId);
-    for (const row of timedOutRows) {
-      const opId = (row.evalResult as EvalRunTopicResult)?.operationId;
-      if (opId) {
-        try {
-          await agentRuntimeService.interruptOperation(opId);
-        } catch {
-          // best effort — don't block timeout handling
-        }
-      }
-    }
-
+    // Persist the durable timeout state BEFORE any cancellation waits:
+    // interruptTask can block ~10s per unresponsive device-hosted run, and
+    // batchMarkTimeout only selects `running` rows — a crash mid-interrupt
+    // would leave the run stuck with rows already flipped but no results.
     // Write evalResult with duration for each timed-out topic
     for (const row of timedOutRows) {
       const duration = row.createdAt ? now - new Date(row.createdAt).getTime() : undefined;
@@ -2507,6 +2501,23 @@ export class AgentEvalRunService {
           timeoutCases,
         },
       });
+    }
+
+    // Interrupt running agents last (best-effort). interruptTask — not bare
+    // interruptOperation — so device-hosted runs also get their process
+    // cancelled through the admission ledger path.
+    const aiAgentService = new AiAgentService(this.db, this.userId, {
+      workspaceId: this.workspaceId,
+    });
+    for (const row of timedOutRows) {
+      const opId = (row.evalResult as EvalRunTopicResult)?.operationId;
+      if (opId) {
+        try {
+          await aiAgentService.interruptTask({ operationId: opId, topicId: row.topicId });
+        } catch {
+          // best effort — don't block timeout handling
+        }
+      }
     }
 
     return true;

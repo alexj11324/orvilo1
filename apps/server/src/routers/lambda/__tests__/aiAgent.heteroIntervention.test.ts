@@ -33,6 +33,8 @@ const businessV2 = vi.hoisted(() => ({
 vi.mock('@/business/server/agent-run/agentInterventionReview', () => businessV2);
 
 const aiAgentService = vi.hoisted(() => ({
+  // The middleware builds ctx.agentRuntimeService through this facade.
+  createIsolatedRuntime: vi.fn(() => ({})),
   ensureInterventionContinuationStarted: vi.fn(),
   execAgent: vi.fn(),
   loadInterventionContinuationState: vi.fn(),

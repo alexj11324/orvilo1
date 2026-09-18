@@ -21,7 +21,8 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // Mock AiAgentService - not needed for createClientTaskThread but required for aiAgentProcedure
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: vi.fn().mockImplementation(function () {
-    return {};
+    // The middleware builds ctx.agentRuntimeService through this facade.
+    return { createIsolatedRuntime: vi.fn(() => ({})) };
   }),
 }));
 

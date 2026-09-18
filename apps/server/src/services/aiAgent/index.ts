@@ -110,6 +110,8 @@ export class AiAgentService {
    * entirely.
    */
   private readonly withholdGatewayToken: boolean;
+  private readonly includeShareVisitor: boolean;
+  private readonly runtimeOptions?: AgentRuntimeServiceOptions;
 
   constructor(
     db: OrviloDatabase,
@@ -134,7 +136,9 @@ export class AiAgentService {
     this.workspaceId = options?.workspaceId;
     this.withholdGatewayToken = options?.withholdGatewayToken ?? false;
     const wsId = this.workspaceId;
-    const includeShareVisitor = options?.includeShareVisitor ?? false;
+    this.includeShareVisitor = options?.includeShareVisitor ?? false;
+    this.runtimeOptions = options?.runtimeOptions;
+    const includeShareVisitor = this.includeShareVisitor;
     const messageModelOptions = { includeShareVisitor };
     const topicModelOptions = { includeShareVisitor };
     this.agentDocumentsService = new AgentDocumentsService(db, userId, wsId);
@@ -148,26 +152,7 @@ export class AiAgentService {
     this.taskModel = new TaskModel(db, userId, wsId);
     this.threadModel = new ThreadModel(db, userId, wsId);
     this.topicModel = new TopicModel(db, userId, wsId, undefined, topicModelOptions);
-    this.agentRuntimeService = new AgentRuntimeService(db, userId, {
-      ...options?.runtimeOptions,
-      includeShareVisitor,
-      agentFactory: createGraphAwareAgentFactory(options?.runtimeOptions?.agentFactory),
-      // ── Runtime delegate ─────────────────────────────────────────────────
-      // Operations the runtime delegates back UP to this layer. The dependency
-      // arrow is one-way (AiAgentService → AgentRuntimeService), so the runtime
-      // can't import us; instead we hand it the callbacks it needs to trigger
-      // high-level pipelines mid-step. See AgentRuntimeDelegate. New high-level
-      // capabilities the runtime calls into go in this `delegate` object.
-      //
-      // Arrow fields are auto-bound, so no `.bind(this)`.
-      delegate: {
-        execSubAgent: this.execSubAgent,
-        execVirtualSubAgent: this.execVirtualSubAgent,
-        execGroupMember: this.execGroupMember,
-        verifyShareRunStillAuthorized: this.verifyShareRunStillAuthorized,
-      },
-      workspaceId: wsId,
-    });
+    this.agentRuntimeService = this.createIsolatedRuntime();
 
     // marketService is used for creds, sandbox, skills etc.
     // Read accessToken from DB; if options.marketAccessToken is provided, use it as override.
@@ -300,6 +285,51 @@ export class AiAgentService {
    */
   executeStep(params: AgentExecutionParams): Promise<AgentExecutionResult> {
     return this.agentRuntimeService.executeStep(params);
+  }
+
+  /**
+   * Build an isolated {@link AgentRuntimeService} that shares this service's
+   * delegate wiring, graph-aware agent factory, share-visitor flag and
+   * workspace scope — plus caller-supplied option overrides (e.g.
+   * `queueService: null` or a custom stream/state manager for synchronous
+   * in-process driving). `delegate`/`includeShareVisitor`/`workspaceId` are
+   * pinned to this service's values and cannot be overridden.
+   *
+   * Runs that execute outside `execAgent`'s pipeline — synthetic agent runs
+   * like the agent-signal memory writer, or synchronous drivers like the
+   * OpenResponses `executeSync` path — must come through here. A bare
+   * `new AgentRuntimeService` loses the delegate, silently degrading
+   * callAgent/callSubAgent to their no-delegate fallbacks mid-run.
+   */
+  createIsolatedRuntime(overrides: AgentRuntimeServiceOptions = {}): AgentRuntimeService {
+    // An overriding agentFactory still goes through the graph-aware wrapper —
+    // it must never bypass graph context propagation.
+    const { agentFactory: overrideAgentFactory, ...rest } = overrides;
+    return new AgentRuntimeService(this.db, this.userId, {
+      ...this.runtimeOptions,
+      ...rest,
+      agentFactory: createGraphAwareAgentFactory(
+        overrideAgentFactory ?? this.runtimeOptions?.agentFactory,
+      ),
+      // ── Runtime delegate ─────────────────────────────────────────────────
+      // Operations the runtime delegates back UP to this layer. The dependency
+      // arrow is one-way (AiAgentService → AgentRuntimeService), so the runtime
+      // can't import us; instead we hand it the callbacks it needs to trigger
+      // high-level pipelines mid-step. See AgentRuntimeDelegate. New high-level
+      // capabilities the runtime calls into go in this `delegate` object.
+      // Pinned AFTER overrides — a caller override must not silently strip the
+      // delegate wiring this facade exists to preserve.
+      //
+      // Arrow fields are auto-bound, so no `.bind(this)`.
+      delegate: {
+        execGroupMember: this.execGroupMember,
+        execSubAgent: this.execSubAgent,
+        execVirtualSubAgent: this.execVirtualSubAgent,
+        verifyShareRunStillAuthorized: this.verifyShareRunStillAuthorized,
+      },
+      includeShareVisitor: this.includeShareVisitor,
+      workspaceId: this.workspaceId,
+    });
   }
 
   /** Mint a lock owner that spans a whole inline step loop. */

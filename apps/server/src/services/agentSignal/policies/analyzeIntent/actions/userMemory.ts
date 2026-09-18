@@ -226,8 +226,18 @@ export const runMemoryActionAgent = async (
     plugins: [MemoryIdentifier],
   };
 
+  // The synthetic memory writer is always a linear GeneralChatAgent — strip any
+  // graph config inherited from the source agent (agencyConfig and the legacy
+  // chatConfig fallback) so the graph-aware factory never builds a GraphAgent
+  // that would ignore the memory prompt/tool set.
   const memoryRuntimeAgentConfig = {
     ...agentConfig,
+    agencyConfig: agentConfig.agencyConfig
+      ? { ...agentConfig.agencyConfig, enableGraphMode: false, graph: undefined }
+      : agentConfig.agencyConfig,
+    chatConfig: agentConfig.chatConfig
+      ? { ...agentConfig.chatConfig, enableGraphMode: false, graph: undefined }
+      : agentConfig.chatConfig,
     plugins: [MemoryIdentifier],
     systemRole: createAgentSignalMemoryWriterSystemRole({ memoryLanguage }),
   };
@@ -256,12 +266,14 @@ export const runMemoryActionAgent = async (
   const manifestMap = toolsEngine.getEnabledPluginManifests([MemoryIdentifier]);
   const operationId = `agent-signal-memory-${nanoid()}`;
   const initialContext = createInitialContext(operationId);
-  // Lazy-loaded on purpose: `AgentRuntimeService` pulls the model-runtime core
+  // Lazy-loaded on purpose: `AiAgentService` pulls the model-runtime core
   // (eagerly touches server-only env at module init). This policy action sits on
   // the light agentSignal request path imported by aiAgent, so a static import
   // would couple that whole subsystem into every aiAgent import.
-  const { AgentRuntimeService } =
-    await import('@/server/services/agentRuntime/AgentRuntimeService');
+  const { AiAgentService } = await import('@/server/services/aiAgent');
+  const aiAgentService = new AiAgentService(options.db, options.userId, {
+    workspaceId: options.workspaceId,
+  });
 
   // Create a child thread under the triggering assistant message so that
   // memory-agent messages are isolated from the main topic conversation
@@ -321,10 +333,7 @@ export const runMemoryActionAgent = async (
   // The durable receipt is projected on the completion path from the run's
   // finalState — no blocking executeSync.
   if (dispatch) {
-    const runtimeService = new AgentRuntimeService(options.db, options.userId, {
-      workspaceId: options.workspaceId,
-    });
-    await runtimeService.createOperation({
+    await aiAgentService.createIsolatedRuntime().createOperation({
       ...createParams,
       appContext: { ...baseAppContext, agentSignal: dispatch.marker },
       autoStart: true,
@@ -336,14 +345,13 @@ export const runMemoryActionAgent = async (
 
   // Legacy synchronous path (self-iteration tool primitives, until S4).
   const streamEventManager = new InMemoryStreamEventManager();
-  const runtimeService = new AgentRuntimeService(options.db, options.userId, {
+  const runtimeService = aiAgentService.createIsolatedRuntime({
     coordinatorOptions: {
       stateManager: new InMemoryAgentStateManager(),
       streamEventManager,
     },
     queueService: null,
     streamEventManager,
-    workspaceId: options.workspaceId,
   });
   await runtimeService.createOperation({
     ...createParams,

@@ -251,8 +251,21 @@ G02 删该工具时把两处也删了，于是 auto 模式下它变成「可配�
 `expected [...] to include '<id>'`，而不是让人对着计数不符去猜。已证伪：换回
 `orvilo-skill-store` 时自检立即转红并点名。
 
+**同一类的第二、三处**（前一处修完、CI 才暴露下一处，所以改成一次扫完）：
+
+- `src/features/ChatInput/ActionBar/Token/utils.test.ts` —— 断言 `getToolExcludeDefaultToolIds('manual')` 含
+  `['orvilo-activator', 'orvilo-skill-store']`。改为与该函数实际返回的真实常量
+  `manualModeExcludeToolIds` 比对，并补一条非空断言（否则常量被清空时等价断言会空洞通过）。
+- `src/features/DevPanel/RenderGallery/fixtures/orvilo-skill-store.ts` —— 渲染画廊里该工具的 fixture。
+  画廊的 manifest 来自 `builtinTools` 注册表，工具已不在表里 → 该 fixture **不可达**，连同导入与注册项一并删除。
+
+**收尾方式改了**：不再等 CI 逐个暴露，而是**先扫出所有断言这几张表的文件**
+（`alwaysOnToolIds` / `manualModeExcludeToolIds` / `defaultToolIds` / `activationModeControlledToolIds`），
+确认「引用这些表 **且** 仍提及 skill-store」的集合为空之后才推。
+本机复跑相关 5 个测试文件 / 84 用例全绿。
+
 > 这与「判定为不做」表里 `orvilo-skill-store` 的 `NEEDS_TRACE` **不矛盾**：留的是**私有 overlay 可能提供**该工具这一事实（运行时按 manifest 条件启用），
-> 而**开源树自身的构建里它已不存在**，所以内置注册表、`alwaysOnToolIds` 这些**本仓自己的表**里不应再留着它，测试也不该再拿它当样例。
+> 而**开源树自身的构建里它已不存在**，所以内置注册表、`alwaysOnToolIds`、渲染画廊这些**本仓自己的表**里不应再留着它，测试也不该再拿它当样例。
 
 ### 判定为「不做」并附理由
 

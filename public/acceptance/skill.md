@@ -28,10 +28,14 @@ bundle distribution (`lh acceptance install`) is retired. Copy it into the
 project root:
 
 ```sh
+rm -rf /tmp/orvilo-skill
 git clone --depth 1 https://github.com/alexj11324/orvilo1 /tmp/orvilo-skill
 mkdir -p .agents/skills
 cp -R /tmp/orvilo-skill/.agents/skills/acceptance .agents/skills/acceptance
 ```
+
+The leading `rm -rf` keeps the recipe rerunnable — a fixed `/tmp` checkout would
+fail on retry or when installing into a second project.
 
 The copy is a materialized artifact — commit it so the project's own reviews
 see skill changes like any other file.

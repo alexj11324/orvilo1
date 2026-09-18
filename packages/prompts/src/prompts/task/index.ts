@@ -781,13 +781,14 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
     taskLines.push(
       '  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `lh verify plan state "$ORVILO_OPERATION_ID" --json` if you have a shell.',
     );
-    // Two builder shapes, two toolchains. The portable `acceptance` skill ships
-    // vendored in the repository (`.agents/skills/acceptance`) — server-side
+    // Two builder shapes, two toolchains. The portable `acceptance` skill may be
+    // vendored in the task repository (`.agents/skills/acceptance`) — server-side
     // distribution is retired — and is deliberately absent from
     // `builtinSkills`, so naming it unconditionally hands the in-product agent
-    // an instruction it cannot act on.
+    // an instruction it cannot act on. An arbitrary provisioned repository may
+    // not vendor it, so the instruction is conditional on its presence.
     taskLines.push(
-      '  With a shell: the `acceptance` skill is vendored under .agents/skills/acceptance in the repository, and `lh acceptance run result submit --operation "$ORVILO_OPERATION_ID" --item <checkItemId> --type screenshot --file <path>` uploads a captured artifact.',
+      '  With a shell: if `.agents/skills/acceptance` is vendored in this repository, follow it; otherwise install it per the public guide recipe (clone the Orvilo repository and copy `.agents/skills/acceptance` into this project). Submit artifacts via `lh acceptance run result submit --operation "$ORVILO_OPERATION_ID" --item <checkItemId> --type screenshot --file <path>`.',
     );
     taskLines.push(
       '  Without a shell: drive the product with your own tools and cite artifacts by id through `submitEvidence`.',

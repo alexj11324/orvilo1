@@ -111,26 +111,35 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
     });
 
     let cancelledWorkflowRuns = 0;
+    const failedWorkflowRunIds: string[] = [];
+    const ignoredWorkflowRunIds: string[] = [];
     if (workflowRunIds.length > 0) {
-      try {
-        const results = await Promise.allSettled(
-          workflowRunIds.map((workflowRunId) => cancelHatchetWorkflow(workflowRunId)),
-        );
-        cancelledWorkflowRuns = results.filter(
-          (result) => result.status === 'fulfilled' && result.value,
-        ).length;
-      } catch (error) {
+      const results = await Promise.allSettled(
+        workflowRunIds.map((workflowRunId) => cancelHatchetWorkflow(workflowRunId)),
+      );
+      results.forEach((result, index) => {
+        const workflowRunId = workflowRunIds[index];
+        if (result.status === 'fulfilled') {
+          if (result.value.status === 'cancelled') cancelledWorkflowRuns += 1;
+          else ignoredWorkflowRunIds.push(workflowRunId);
+          return;
+        }
+        failedWorkflowRunIds.push(workflowRunId);
         console.error(
-          '[memory-user-memory/pipelines/extract/chat-topic/cancel] failed to cancel workflow runs',
-          error,
+          '[memory-user-memory/pipelines/extract/chat-topic/cancel] workflow cancellation failed',
+          { reason: result.reason, workflowRunId },
         );
-      }
+      });
     }
 
     return c.json(
       {
         cancelledWorkflowRuns,
-        message: 'Memory extraction cancellation has been requested.',
+        failedWorkflowRunIds,
+        ignoredWorkflowRunIds,
+        message: failedWorkflowRunIds.length
+          ? 'Memory extraction cancellation was requested, but some workflow runs could not be cancelled.'
+          : 'Memory extraction cancellation has been requested.',
         status: AsyncTaskStatus.Error,
         taskId: task.id,
       },

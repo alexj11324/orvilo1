@@ -73,7 +73,9 @@ const createRequest = (body: Record<string, unknown>) =>
 describe('memory extraction cancel route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.cancel.mockImplementation(async (id: string) => id.startsWith('hatchet-dispatch:'));
+    mocks.cancel.mockImplementation(async (id: string) => ({
+      status: id.startsWith('hatchet-dispatch:') ? 'cancelled' : 'not-found',
+    }));
     mocks.update.mockResolvedValue(undefined);
   });
 
@@ -200,6 +202,50 @@ describe('memory extraction cancel route', () => {
         status: AsyncTaskStatus.Error,
       }),
     );
+  });
+
+  it('reports every partial Hatchet cancellation failure without hiding successful siblings', async () => {
+    mocks.findFirst.mockResolvedValue({
+      id: '00000000-0000-4000-8000-000000000004',
+      metadata: {
+        control: {
+          hatchet: {
+            workflowRunIds: [
+              'hatchet-dispatch:ok',
+              'hatchet-dispatch:done',
+              'hatchet-dispatch:boom',
+              'legacy-run',
+            ],
+          },
+        },
+      },
+      type: AsyncTaskType.UserMemoryExtractionWithChatTopic,
+      userId: 'user-1',
+      workspaceId: null,
+    });
+    mocks.cancel.mockImplementation(async (id: string) => {
+      if (id === 'hatchet-dispatch:boom') throw new Error('provider unavailable');
+      if (id === 'legacy-run') return { status: 'not-found' };
+      if (id === 'hatchet-dispatch:done') return { status: 'already-terminal' };
+      return { status: 'cancelled' };
+    });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = await app.fetch(
+      createRequest({ taskId: '00000000-0000-4000-8000-000000000004' }),
+    );
+    await expect(response.json()).resolves.toMatchObject({
+      cancelledWorkflowRuns: 1,
+      failedWorkflowRunIds: ['hatchet-dispatch:boom'],
+      ignoredWorkflowRunIds: ['hatchet-dispatch:done', 'legacy-run'],
+      status: AsyncTaskStatus.Error,
+    });
+    expect(response.status).toBe(200);
+    expect(mocks.cancel).toHaveBeenCalledTimes(4);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('workflow cancellation failed'),
+      expect.objectContaining({ workflowRunId: 'hatchet-dispatch:boom' }),
+    );
+    error.mockRestore();
   });
 
   it('normalizes hourly tasks with missing metadata before cancellation', async () => {

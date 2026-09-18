@@ -20,6 +20,8 @@ on:
 permissions:
   contents: read
   actions: read
+  checks: read
+  statuses: read
 
 # 建库/写 env 不是幂等中间态可以随便打断的操作，取消并发会留下半截环境
 concurrency:
@@ -56,9 +58,14 @@ jobs:
       - name: Validate exact-head CI, Vercel access, and manual deployment gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          REQUIRED_SHA: ${{ env.HEAD_SHA }}
-          REQUIRED_WORKFLOWS: E2E CI
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ env.HEAD_SHA }}
+          REQUIRED_WORKFLOWS: Test CI,E2E CI
+          REQUIRED_CHECK_RUNS: GitGuardian Security Checks
+          IGNORED_CHECK_RUNS: Check Duplicate Run,Vercel Preview Comments,Check all PR gates before Vercel,Deploy Vercel Preview,Provision per-PR database
+          IGNORED_STATUS_CONTEXTS: Vercel
           REQUIRED_EVENT: push
+          GATE_TIMEOUT_MS: '900000'
           VERCEL_PREVIEW_DEPLOYMENT_GATE: ${{ vars.VERCEL_PREVIEW_DEPLOYMENT_GATE }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -72,7 +79,7 @@ jobs:
           : "${VERCEL_TOKEN:?VERCEL_TOKEN is required for the Vercel preflight}"
           : "${VERCEL_ORG_ID:?VERCEL_ORG_ID is required for the Vercel preflight}"
           : "${VERCEL_PROJECT_ID:?VERCEL_PROJECT_ID is required for the Vercel preflight}"
-          node scripts/ci/checkGitHubWorkflowGate.mjs
+          node scripts/ci/vercelPreviewGate.mjs
           status=$(curl -sS -o /dev/null -w '%{http_code}' \
             "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}" \
             -H "Authorization: Bearer ${VERCEL_TOKEN}")

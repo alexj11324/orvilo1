@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface WorkflowStep {
+  env?: Record<string, string>;
   name?: string;
   run?: string;
   uses?: string;
@@ -43,8 +44,11 @@ describe('Preview database workflow', () => {
     expect(checkoutIndex).toBeLessThan(gateIndex);
     expect(gateIndex).toBeLessThan(tunnelIndex);
     expect(gate?.run).toContain('VERCEL_PREVIEW_DEPLOYMENT_GATE');
-    expect(gate?.run).toContain('checkGitHubWorkflowGate.mjs');
+    expect(gate?.run).toContain('vercelPreviewGate.mjs');
+    expect(gate?.run).not.toContain('checkGitHubWorkflowGate.mjs');
     expect(gate?.run).toContain('api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env');
+    expect(gate?.env?.REQUIRED_WORKFLOWS).toBe('Test CI,E2E CI');
+    expect(gate?.env?.IGNORED_CHECK_RUNS).toContain('Provision per-PR database');
   });
 
   it('extracts grant log metadata in a fail-closed command', () => {

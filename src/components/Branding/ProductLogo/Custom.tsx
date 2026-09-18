@@ -1,7 +1,7 @@
 import { type IconType } from '@lobehub/icons';
 import { type FlexboxProps } from '@lobehub/ui';
 import { Flexbox } from '@lobehub/ui';
-import { type OrviloProps } from '@lobehub/ui/brand';
+import { type LobeChatProps } from '@lobehub/ui/brand';
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
@@ -69,7 +69,7 @@ const Divider: IconType = (({ ref, size = '1em', style, ...rest }) => (
   </svg>
 )) as IconType;
 
-const CustomLogo = memo<OrviloProps>(({ extra, size = 32, className, style, type, ...rest }) => {
+const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, type, ...rest }) => {
   let logoComponent: ReactNode;
 
   switch (type) {

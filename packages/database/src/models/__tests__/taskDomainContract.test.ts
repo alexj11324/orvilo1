@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -241,7 +241,13 @@ describe('task domain contract', () => {
       requirementRevision: 4,
     });
     const events = (
-      await db.select().from(taskDomainEvents).where(eq(taskDomainEvents.workspaceId, workspaceId))
+      await db
+        .select()
+        .from(taskDomainEvents)
+        .where(eq(taskDomainEvents.workspaceId, workspaceId))
+        // Order by the monotonic sequence — without ORDER BY, real Postgres
+        // can return same-millisecond rows in arbitrary order.
+        .orderBy(asc(taskDomainEvents.revision))
     ).filter(({ type }) => type === 'task.comment.changed');
     expect(events.map(({ idempotencyKey }) => idempotencyKey)).toEqual([
       'command:comment:create',

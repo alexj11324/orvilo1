@@ -195,15 +195,19 @@ agent/:aid/docs/:docId       → 与主应用重复（见下）
 
 ### 全仓类型检查（第三轮，判据 3 的硬证据）
 
-方案判据 3 是「正式构建不携带其实现」。本轮补跑了全仓 `tsgo --noEmit`。
+方案判据 3 是「正式构建不携带其实现」。**这道判据由 CI 裁决，不在本机跑。**
 
-**怎么跑**：仓库的 `bun run type-check` 包装脚本在非 CI 下**故意** `exit 1`（它声称 tsgo 会 OOM 开发机）——**不要因此跳过**，直接调编译器即可：
+本机跑不出可信结论，三个原因叠在一起：
 
-```bash
-NODE_OPTIONS=--max-old-space-size=12288 bunx tsgo --noEmit
-```
+- `bun run type-check` 的包装脚本在非 CI 下**故意** `exit 1`。
+- 绕过它直接调编译器（`bunx tsgo --noEmit`）会**被 SIGKILL，退出码 137、日志为空** —— 而空日志与「跑完且无错误」**完全同形**。本轮就因此产生过一次假的「0 错误」读数（`rg -c "error TS"` 对空文件返回 0）。
+- 包自身的 `type-check` 同样不可用：workbench 的 `exclude` **覆盖**而非合并根配置，把 `apps/desktop/**` 拉进来后报 295 个既有错误。
 
-首次（与 vitest 并发、冷文件缓存）约 22 分钟；之后约 **6 秒**，峰值 RSS ≈ 640MB。**跑得异常快时不要默认它在缓存**—— 用探针证伪：往 `src/` 与 `packages/` 各注入一个 `const x: number = "s"`，两次都被精确捕获（`TS2322`，文件与行号正确），说明快轮确实做了全量检查，0 错误是真信号。
+所以本机已加 hook（`~/.claude/hooks/block-local-full-typecheck.py`，带 25 例行为测试）**直接拦掉**这些调用，并把请求指向 CI。
+
+**权威来源**是 `.github/workflows/test.yml` 的 `Typecheck` job，每次 push / PR 都跑。裁决以它为准。
+
+> 唯一一次完整跑完（约 22 分钟、峰值 RSS ≈ 640MB）确实抓到了下面 3 个错误，但那是并发极少时的运气，不是可复现条件 —— 同一命令随后连续两次 137。**别把「有一次跑成了」当成「本机能跑」。**
 
 **结论：`929106de` 当时有 3 个类型错误 —— 也就是说那个提交的正式构建根本编译不过。**
 249 个测试与 lint 全绿都没发现，原因分别是：vitest 不做类型检查；lint 的 `no-unused-vars` 只看「定义了没用」，不看「用了没有」。
@@ -216,7 +220,8 @@ NODE_OPTIONS=--max-old-space-size=12288 bunx tsgo --noEmit
 | `Settings/hooks/useSettingsCapability.test.ts:36`       | `Provider` 的 `children` 是必需 prop，`createElement` 的 children 实参重载不匹配                                                  | 本波次                 |
 
 修法：把 `getComposioServerByIdentifier` 提升为组件级 `useCallback`，与紧邻的 `getOrviloSkillServerByProvider` 对称（并相应替换 memo 依赖项）；其余两处按其类型契约改。
-**修后全仓 `tsgo --noEmit` 0 错误。**
+
+**修后验证**：本机那次完整跑（rebase 前）报告 0 错误 —— 并用探针证伪过快轮结论（往 `src/` 与 `packages/` 各注入一个 `const x: number = "s"`，两次都被精确捕获为 `TS2322`，文件与行号正确）。**rebase 到最新 `canary` 之后的确认由本 PR 的 `Typecheck` job 给出**，不再依赖本机。
 
 > 注：`ConnectorList.tsx:408` 那条一旦触发就是运行时的 `ReferenceError`，但该分支没有测试覆盖 —— 单测绿并不代表这条路径可达。
 

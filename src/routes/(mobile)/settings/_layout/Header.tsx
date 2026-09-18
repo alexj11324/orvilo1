@@ -23,7 +23,8 @@ const TAB_TITLE_KEY: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Labs]: 'labs:title',
   [SettingsTabs.Plans]: 'subscription:tab.plans',
   [SettingsTabs.Profile]: 'auth:profile.title',
-  [SettingsTabs.Referral]: 'subscription:tab.referral',
+  // No Referral entry: the page is retired and nothing routes to it any more,
+  // so this map would only ever title a not-found.
   // Legacy deep-links still hit `:tab` briefly before the redirect kicks in —
   // keep the title mapping so the header never flashes a raw key.
   [SettingsTabs.ServiceModel]: 'setting:tab.serviceModel',

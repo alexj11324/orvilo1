@@ -12,6 +12,7 @@ const DEFER_REDIRECT_PREFIXES = ['/invite'];
 // user who followed a share link should reach the shared agent, not be
 // bounced into onboarding first.
 const RESERVED_FIRST_SEGMENTS = new Set([
+  'acceptance',
   'agent',
   'apps',
   'desktop-onboarding',
@@ -33,6 +34,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'subscription',
   'task',
   'tasks',
+  'verify',
   'video',
 ]);
 

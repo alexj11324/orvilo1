@@ -1,7 +1,6 @@
 import Billing from '@/business/client/BusinessSettingPages/Billing';
 import Credits from '@/business/client/BusinessSettingPages/Credits';
 import Plans from '@/business/client/BusinessSettingPages/Plans';
-import Referral from '@/business/client/BusinessSettingPages/Referral';
 import Usage from '@/business/client/BusinessSettingPages/Usage';
 import { SettingsTabs } from '@/store/global/initialState';
 
@@ -18,11 +17,9 @@ import Labs from '../labs';
 import Memory from '../memory';
 import Messenger from '../messenger';
 import { DesktopNotificationSettings } from '../notification';
-import OAuthApps from '../oauth-apps';
 import Profile from '../profile';
 import Proxy from '../proxy';
 import Security from '../security';
-import Skill from '../skill';
 import Stats from '../stats';
 import Storage from '../storage';
 import SystemTools from '../system-tools';
@@ -46,14 +43,11 @@ export const componentMap = {
   [SettingsTabs.Stats]: Stats,
   [SettingsTabs.Usage]: Usage,
   [SettingsTabs.APIKey]: APIKey,
-  [SettingsTabs.OAuthApps]: OAuthApps,
   [SettingsTabs.Creds]: Creds,
   [SettingsTabs.Security]: Security,
-  [SettingsTabs.Skill]: Skill,
   [SettingsTabs.Connector]: Connector,
 
   [SettingsTabs.Plans]: Plans,
   [SettingsTabs.Credits]: Credits,
   [SettingsTabs.Billing]: Billing,
-  [SettingsTabs.Referral]: Referral,
 };

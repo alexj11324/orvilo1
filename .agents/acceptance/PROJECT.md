@@ -8,9 +8,11 @@ Its two siblings:
 
 - [`PROCESS.md`](./PROCESS.md) — the run process (plan gate, execution rules,
   publishing, teardown).
-- `.agents/skills/acceptance/` — the portable skill: what a check, evidence,
-  report, and round are. In this repository that path is a symlink onto the
-  skill's source, `packages/builtin-skills/src/acceptance/`.
+- `.agents/skills/acceptance/` — **retired.** It was a symlink onto
+  `packages/builtin-skills/src/acceptance/`, the portable skill that defined what
+  a check, evidence, report, and round are; both went with the standalone
+  acceptance platform (`docs/development/hidden-surface-retirement.md`). What a
+  check, evidence, report, and round are is now `PROCESS.md` itself.
 
 Every script referenced below lives under `.agents/acceptance/scripts/`, including
 the generic capture toolchain (`report-init.sh`, `cdp-screenshot.sh`,

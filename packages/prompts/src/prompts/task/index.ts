@@ -781,15 +781,11 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
     taskLines.push(
       '  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `lh verify plan state "$ORVILO_OPERATION_ID" --json` if you have a shell.',
     );
-    // Two builder shapes, two toolchains. The portable `acceptance` skill is
-    // pulled to disk by external CLI builders and is deliberately absent from
-    // `builtinSkills`, so naming it unconditionally hands the in-product agent
-    // an instruction it cannot act on.
+    // One toolchain now, not two. The `lh acceptance install` / `lh acceptance
+    // run result submit` pair went away with the standalone Acceptance platform,
+    // so the prompt no longer branches on whether the builder has a shell.
     taskLines.push(
-      '  With a shell: `lh acceptance install` gives you the `acceptance` skill, and `lh acceptance run result submit --operation "$ORVILO_OPERATION_ID" --item <checkItemId> --type screenshot --file <path>` uploads a captured artifact.',
-    );
-    taskLines.push(
-      '  Without a shell: drive the product with your own tools and cite artifacts by id through `submitEvidence`.',
+      '  Drive the real product with your own tools and cite each artifact by id through `submitEvidence`.',
     );
     taskLines.push(
       '  A criterion with a visible surface is proved by a screenshot or recording, and `screenshot`/`video` evidence must reference a real artifact by fileId. Never label prose as a visual artifact: if you could not capture one, say what you observed as `text` and name the blocker.',

@@ -51,10 +51,9 @@ interface TaskCreateActionBehaviorParams {
   canCreateTask: boolean;
   inlineCollapsed: boolean;
   /**
-   * Whether the surface on screen is the board — the stored kanban mode, or an
-   * empty ordinary collection that falls back to the board. The inline
-   * composer lives on the list surface only, so on a board the header create
-   * opens the modal instead of expanding a composer that is not there.
+   * Whether the surface on screen is the board — the stored kanban mode. The
+   * inline composer lives on the list surface only, so on a board the header
+   * create opens the modal instead of expanding a composer that is not there.
    */
   isBoardSurface: boolean;
 }
@@ -186,16 +185,15 @@ export const resolveTaskCollectionView = (
 ): 'board' | 'list' => (collection !== 'scheduled' && viewMode === 'kanban' ? 'board' : 'list');
 
 /**
- * The ordinary collection's surface. The kanban board doubles as its empty
- * state — a settled empty list lands on the board whatever the stored view
- * mode says — so the list surface only renders when there is something to
- * list in list mode.
+ * The ordinary collection's surface follows the stored view mode alone. The
+ * count must not vote: forcing the board onto an empty collection snapped
+ * list-mode users onto the board, and the first added task then snapped them
+ * back. Each surface renders its own empty state — the board shows its empty
+ * columns, the list shows `taskList.empty` — so an empty list-mode collection
+ * stays a list.
  */
-export const resolveOrdinaryCollectionSurface = (
-  viewMode: TaskViewMode,
-  isListEmpty: boolean,
-): 'board' | 'list' =>
-  resolveTaskCollectionView('tasks', viewMode) === 'board' || isListEmpty ? 'board' : 'list';
+export const resolveOrdinaryCollectionSurface = (viewMode: TaskViewMode): 'board' | 'list' =>
+  resolveTaskCollectionView('tasks', viewMode);
 
 const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const { t } = useTranslation('chat');
@@ -237,7 +235,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // than the newest 50 once the workspace grows past that. The scheduled and
   // "My tasks" tabs render their own paginated collections, so the fetch is
   // gated to the ordinary tab; and the kanban view fetches its own server
-  // groups, so there only the single page behind the empty-board decision runs.
+  // groups, so in board mode the list only warms a single store page.
   const isListView = !isBoardView;
   const { error, isLoading, mutate } = useFetchTaskList(
     projectId
@@ -267,11 +265,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // signal never disagrees with the emptiness signal. Still resets to false on a
   // failed first load, so we surface loading only while there's no error (below).
   const isTaskListInit = useTaskStore(taskListSelectors.isTaskListInit);
-  const isListEmpty = useTaskStore(taskListSelectors.isListEmpty);
-  // The board doubles as the ordinary collection's empty state, so an empty
-  // collection renders the board surface — and follows its create affordance —
-  // whatever the stored view mode says.
-  const ordinarySurface = resolveOrdinaryCollectionSurface(viewMode, isListEmpty);
+  // The surface follows the stored view mode alone; an empty collection no
+  // longer snaps onto the board (see resolveOrdinaryCollectionSurface).
+  const ordinarySurface = resolveOrdinaryCollectionSurface(viewMode);
   const isBoardSurface = isMineBoard || (isOrdinaryCollection && ordinarySurface === 'board');
   const scheduledSWR = useScheduledTaskPage({
     agentId,
@@ -495,7 +491,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
                 {!isScheduledCollection && headerVisibility.showViewOptions && (
                   <TasksGroupConfig
                     options={viewOptions}
-                    pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+                    pinnedOptions={
+                      isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined
+                    }
                     setOptions={setViewOptions}
                   />
                 )}
@@ -564,7 +562,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
               <TaskList
                 data={isCollectionListInit || undefined}
                 error={collectionSWR.error}
-                isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
+                isLoading={
+                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                }
                 items={collectionTasks}
                 options={myTaskViewOptions}
                 routeScope={routeScope}

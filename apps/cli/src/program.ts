@@ -27,7 +27,6 @@ import { registerPluginCommand } from './commands/plugin';
 import { registerProjectCommand } from './commands/project';
 import { registerSearchCommand } from './commands/search';
 import { registerSessionGroupCommand } from './commands/session-group';
-import { registerSkillCommand } from './commands/skill';
 import { registerStatusCommand } from './commands/status';
 import { registerTaskCommand } from './commands/task';
 import { registerThreadCommand } from './commands/thread';
@@ -36,7 +35,6 @@ import { registerTraceCommand } from './commands/trace';
 import { registerUpdateCommand } from './commands/update';
 import { registerUserCommand } from './commands/user';
 import { registerVerifyCommand } from './commands/verify';
-import { registerAcceptanceCommands } from './commands/verifyAcceptance';
 import { registerWorkspaceCommand } from './commands/workspace';
 import { CLI_DISPLAY_NAME, CLI_PRIMARY_BIN, CLI_PRODUCT_NAME } from './constants/identity';
 import { cliVersion } from './pkg';
@@ -91,7 +89,6 @@ export function createProgram() {
   registerFileCommand(program);
   registerArtifactCommand(program);
   registerHeteroCommand(program);
-  registerSkillCommand(program);
   registerSessionGroupCommand(program);
   registerTaskCommand(program);
   registerThreadCommand(program);
@@ -104,8 +101,6 @@ export function createProgram() {
   registerWorkspaceCommand(program);
   registerUserCommand(program);
   registerVerifyCommand(program);
-  // First-class review-loop entry: `lh acceptance list|view|feedback|accept|reject`.
-  registerAcceptanceCommands(program);
   registerConfigCommand(program);
   registerEvalCommand(program);
   registerMigrateCommand(program);

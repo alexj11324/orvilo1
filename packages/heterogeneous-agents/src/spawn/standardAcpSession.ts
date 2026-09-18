@@ -77,6 +77,12 @@ export interface StandardAcpConfigOption {
 export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   askUserBridge?: AskUserBridge;
   /**
+   * Spawn argv prefix from `resolveAcpSpawnTarget` — the package-runner argv
+   * (`bunx pkg@ver` / `npx -p … <bin>`) that boots the bridge when no bridge
+   * binary is installed. Prepended ahead of the session-built args.
+   */
+  commandArgs?: string[];
+  /**
    * Caller-supplied `session/set_config_option` applications, applied after
    * the factory's per-agent defaults (so callers may override them — e.g.
    * `--effort` → `reasoning_effort`, `service_tier` → `fast-mode`).
@@ -94,6 +100,12 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   /** `session/new` `mcpServers` entries forwarded verbatim (ACP shape). */
   mcpServers?: Record<string, unknown>[];
   onModel?: (model: string) => void;
+  /**
+   * Localized strings for the interactive permission card. English defaults
+   * apply when the host (CLI/server ingest) has no locale; the desktop shell
+   * passes its i18n renderings here.
+   */
+  permissionCardStrings?: { fallbackTitle: string; header: string };
   /** Structured prompt, or an already-normalized ACP block array. */
   prompt: AgentPromptInput | StandardAcpPromptBlock[];
   uploadImage?: UploadHeterogeneousImage;
@@ -191,8 +203,9 @@ const parseAdvertisedConfigOptions = (value: unknown): Map<string, Set<string> |
  * bridge binaries alike.
  *
  * The session owns the parts that are identical everywhere:
- *   - `initialize` (fs/terminal disabled, form elicitation advertised so
- *     bridges can surface AskUserQuestion-style forms)
+ *   - `initialize` (fs/terminal disabled; form elicitation advertised only
+ *     when an `askUserBridge` is attached, so bridges can surface
+ *     AskUserQuestion-style forms)
  *   - `session/new` | `session/load` (+ optional `_meta` / `mcpServers`)
  *   - model discovery + `initialModel` via `session/set_config_option`
  *     (or the legacy `session/set_model` fallback)
@@ -279,9 +292,11 @@ export class StandardAcpSession extends AcpAgentSession<
       clientCapabilities: {
         // `elicitation.form` opts into `elicitation/create` form requests —
         // how claude-agent-acp surfaces `AskUserQuestion` and codex-acp
-        // surfaces approval forms. `url` is intentionally not advertised:
-        // there is no channel to render an OAuth URL card.
-        elicitation: { form: {} },
+        // surfaces approval forms. Only advertised when an AskUser bridge is
+        // attached: without one the session would silently cancel every form
+        // the agent sends. `url` is intentionally never advertised — there
+        // is no channel to render an OAuth URL card.
+        ...(this.options.askUserBridge ? { elicitation: { form: {} } } : {}),
         fs: { readTextFile: false, writeTextFile: false },
         terminal: false,
       },
@@ -620,7 +635,8 @@ export class StandardAcpSession extends AcpAgentSession<
       title:
         typeof toolCall?.title === 'string' && toolCall.title
           ? toolCall.title
-          : `Allow ${this.sessionConfig.spec.label} to continue?`,
+          : (this.options.permissionCardStrings?.fallbackTitle ??
+            `Allow ${this.sessionConfig.spec.label} to continue?`),
     };
   }
 
@@ -649,7 +665,7 @@ export class StandardAcpSession extends AcpAgentSession<
     const arguments_ = {
       questions: [
         {
-          header: 'Permission required',
+          header: this.options.permissionCardStrings?.header ?? 'Permission required',
           multiSelect: false as const,
           options: request.options.map(({ name, optionId }) => ({ id: optionId, label: name })),
           question: request.title,

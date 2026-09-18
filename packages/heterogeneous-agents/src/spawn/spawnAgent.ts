@@ -413,6 +413,7 @@ const spawnStandardAcpAgent = async (
     args: selectors.args,
     askUserBridge: options.askUserBridge,
     clientVersion: 'lobehub-cli',
+    commandArgs: target.commandArgs,
     commandPath: target.commandPath,
     configOptions,
     cwd,

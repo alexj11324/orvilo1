@@ -51,6 +51,7 @@ import {
 import { isLoginShellTimeoutStatus } from '@orvilo/heterogeneous-agents/resolveCliCommand';
 import {
   ACP_RUNTIME_AGENT_TYPES,
+  type AcpAgentRuntimeSpec,
   AcpRpcResponseError,
   type AcpSpawnTarget,
   buildCursorAcpArgs,
@@ -2066,6 +2067,28 @@ export default class HeterogeneousAgentCtr {
   }
 
   /**
+   * Localized strings for the ACP interactive permission card. Falls back to
+   * the package's English defaults when i18n is not initialized yet (the card
+   * still renders — the strings just stay English).
+   */
+  private getAcpPermissionCardStrings(
+    spec: AcpAgentRuntimeSpec | undefined,
+  ): { fallbackTitle: string; header: string } | undefined {
+    try {
+      const label = spec?.label ?? 'the agent';
+      return {
+        fallbackTitle: this.app.i18n.t('heteroAgent.permission.allowToContinue', {
+          label,
+          ns: 'common',
+        }),
+        header: this.app.i18n.t('heteroAgent.permission.header', { ns: 'common' }),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Shared ACP path for every `ACP_RUNTIME_AGENT_TYPES` agent — native
    * `*-acp` modes (kimi, opencode, qoder, codebuddy) and upstream bridge
    * binaries (claude-agent-acp, codex-acp, amp-acp, pi-acp) alike.
@@ -2127,7 +2150,7 @@ export default class HeterogeneousAgentCtr {
     }
     const tracePayload = `${JSON.stringify(prompt)}\n`;
     const traceSession = await this.createCliTraceSession({
-      cliArgs: buildStandardAcpArgs(agentType, selectors.args),
+      cliArgs: [...target.commandArgs, ...buildStandardAcpArgs(agentType, selectors.args)],
       cwd,
       imageList: params.imageList ?? [],
       session,
@@ -2150,6 +2173,7 @@ export default class HeterogeneousAgentCtr {
       args: selectors.args,
       askUserBridge: intervention.bridge,
       clientVersion: electronApp.getVersion(),
+      commandArgs: target.commandArgs,
       commandPath: target.commandPath,
       configOptions: selectors.configOptions,
       cwd,
@@ -2176,6 +2200,7 @@ export default class HeterogeneousAgentCtr {
         return this.appendCliTraceFile(traceSession, 'stderr.log', data);
       },
       operationId: params.operationId,
+      permissionCardStrings: this.getAcpPermissionCardStrings(spec),
       prompt,
       resumeSessionId: session.agentSessionId,
       sessionId: session.sessionId,

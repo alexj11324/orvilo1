@@ -67,7 +67,11 @@ const createGrokAcpProc = ({
   proc.stderr = stderr;
   proc.pid = 54_321;
   proc.killed = false;
-  proc.kill = vi.fn(() => true);
+  proc.kill = vi.fn(() => {
+    proc.killed = true;
+    queueMicrotask(() => proc.emit('close', null, 'SIGTERM'));
+    return true;
+  });
   proc.stdin = {
     once: vi.fn(),
     write: vi.fn((chunk: string) => {
@@ -167,7 +171,11 @@ const createStandardAcpProc = ({
   proc.stderr = stderr;
   proc.pid = 12_345;
   proc.killed = false;
-  proc.kill = vi.fn(() => true);
+  proc.kill = vi.fn(() => {
+    proc.killed = true;
+    queueMicrotask(() => proc.emit('close', null, 'SIGTERM'));
+    return true;
+  });
   proc.stdin = {
     once: vi.fn(),
     write: vi.fn((chunk: string) => {
@@ -271,7 +279,7 @@ const createCursorAcpProc = () => {
     stdout.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
   Object.assign(proc, {
     kill: vi.fn(() => {
-      queueMicrotask(() => child.emit('close', null, 'SIGTERM'));
+      queueMicrotask(() => proc.emit('close', null, 'SIGTERM'));
       return true;
     }),
     killed: false,
@@ -396,6 +404,153 @@ describe('spawnAgent', () => {
       spawnAgent({ agentType: 'claude-code', operationId: 'op-1', prompt: 'hi' }),
     ).rejects.toThrow(/claude-agent-acp/);
     expect(spawnCalls).toHaveLength(0);
+  });
+
+  it('boots the pinned bridge package through bunx when the bridge binary is missing', async () => {
+    detectValidatedCommandCandidatesMock.mockImplementation(async (commands) => {
+      // Bridge binary candidates all miss; the first package runner resolves.
+      if (commands[0] === 'claude-agent-acp') return { available: false };
+      return { available: true, path: commands[0] };
+    });
+    const fake = createStandardAcpProc({ sessionId: 'cc-acp-runner' });
+    nextFakeProc = fake.proc;
+    const processKill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        operationId: 'op-runner',
+        prompt: 'hi',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      // The runner argv reaches the child: `bunx <pkg>@<pinned-version>` —
+      // never a bare unpinned package spec.
+      expect(spawnCalls[0]).toMatchObject({
+        args: ['@agentclientprotocol/claude-agent-acp@0.76.0'],
+        command: 'bunx',
+      });
+      expect(lastSpawnEnv().CLAUDE_CODE_EXECUTABLE).toBe('claude');
+      expect(fake.requests.map(({ method }) => method)).toContain('session/prompt');
+    } finally {
+      processKill.mockRestore();
+    }
+  });
+
+  it('falls back to npx with the pinned bridge package when bunx is missing', async () => {
+    detectValidatedCommandCandidatesMock.mockImplementation(async (commands) => {
+      if (commands[0] === 'codex-acp' || commands[0] === 'bunx') {
+        return { available: false };
+      }
+      return { available: true, path: commands[0] };
+    });
+    const fake = createStandardAcpProc({ sessionId: 'codex-acp-runner' });
+    nextFakeProc = fake.proc;
+    const processKill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'codex',
+        operationId: 'op-npx',
+        prompt: 'hi',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      expect(spawnCalls[0]).toMatchObject({
+        args: ['--yes', '-p', '@agentclientprotocol/codex-acp@1.11.0', 'codex-acp'],
+        command: 'npx',
+      });
+      expect(lastSpawnEnv().CODEX_PATH).toBe('codex');
+    } finally {
+      processKill.mockRestore();
+    }
+  });
+
+  it('warns when vendor CLI args are dropped for bridge agents', async () => {
+    const fake = createStandardAcpProc();
+    nextFakeProc = fake.proc;
+    const processKill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        extraArgs: ['--verbose', '--no-telemetry'],
+        operationId: 'op-drop',
+        prompt: 'hi',
+      });
+      const stderrChunks: string[] = [];
+      handle.stderr.on('data', (chunk) => stderrChunks.push(String(chunk)));
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      expect(stderrChunks.join('')).toContain(
+        'ignoring 2 agent CLI arg(s) unsupported by the ACP bridge: --verbose --no-telemetry',
+      );
+      // The bridge argv stays clean — vendor flags never reach the child.
+      expect(spawnCalls[0]).toMatchObject({ args: [], command: 'claude-agent-acp' });
+    } finally {
+      processKill.mockRestore();
+    }
+  });
+
+  it('only advertises form elicitation when an AskUser bridge is attached', async () => {
+    const fake = createStandardAcpProc();
+    nextFakeProc = fake.proc;
+    const processKill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        operationId: 'op-elicit-off',
+        prompt: 'hi',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      const initParams = fake.requests.find(({ method }) => method === 'initialize')?.params as
+        { clientCapabilities?: Record<string, unknown> } | undefined;
+      expect(initParams?.clientCapabilities?.elicitation).toBeUndefined();
+    } finally {
+      processKill.mockRestore();
+    }
+
+    const bridged = createStandardAcpProc();
+    nextFakeProc = bridged.proc;
+    const processKill2 = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        askUserBridge: { pending: vi.fn() } as never,
+        operationId: 'op-elicit-on',
+        prompt: 'hi',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      const initParams = bridged.requests.find(({ method }) => method === 'initialize')?.params as
+        { clientCapabilities?: Record<string, unknown> } | undefined;
+      expect(initParams?.clientCapabilities?.elicitation).toEqual({ form: {} });
+    } finally {
+      processKill2.mockRestore();
+    }
   });
 
   it('honors a custom vendor --command override through the bridge env', async () => {

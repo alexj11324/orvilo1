@@ -288,6 +288,7 @@ export const listHeterogeneousAgentModels = async (
         );
         const models = await listStandardAcpModels(params.type, {
           args: params.args,
+          commandArgs: target.commandArgs,
           commandPath: target.commandPath,
           cwd: params.cwd ?? process.cwd(),
           env: target.env,

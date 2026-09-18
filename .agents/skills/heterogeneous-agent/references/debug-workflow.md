@@ -14,15 +14,19 @@
 ## 1. Pipeline Map
 
 ```
-CLI raw stdout
-  -> HeterogeneousAgentCtr (Electron main)
-  -> heteroAgentRawLine broadcast
-  -> createAdapter(...)
+ACP endpoint process (vendor `*-acp` mode or upstream bridge binary)
+  -> AcpStdioClient (Electron main, JSON-RPC stdio)
+  -> AcpAgentSession subclass (initialize -> session/new|load -> session/prompt)
+  -> session/update notifications -> AgentStreamPipeline -> adapter
+  -> heteroAgentEvent broadcast
   -> executeHeterogeneousAgent(...)
   -> persistToolBatch / persistToolResult
   -> createGatewayEventHandler(...)
   -> UI hydration
 ```
+
+Reverse requests (`session/request_permission`, `elicitation/create`) become
+`AskUserBridge` intervention cards when a bridge is attached to the session.
 
 Start at the leftmost broken layer. Do not jump straight to UI rendering unless raw and adapted events already look correct.
 
@@ -30,10 +34,10 @@ Start at the leftmost broken layer. Do not jump straight to UI rendering unless 
 
 ### In-app live traces (the faithful capture — prefer this)
 
-The running app already records every CLI session it spawns. This is the most
-faithful trace you can get, because it captures the **exact** spawn args, env
-keys, cwd, `--resume`/`--mcp-config` flags, model, and stdin that the app used —
-things a hand-rolled `claude -p` / `codex exec` repro will not reproduce. Reach
+The running app already records every agent session it spawns. This is the most
+faithful trace you can get, because it captures the **exact** spawn command,
+env keys, cwd, ACP prompt blocks, model, and `resumeSessionId` that the app used —
+things a hand-rolled repro will not reproduce. Reach
 for this before reproducing manually. The recorder lives in
 `apps/desktop/src/main/controllers/HeterogeneousAgentCtr.ts`
 (`createCliTraceSession`, `shouldTraceCliOutput`, `resolveTraceRootDir`).
@@ -57,10 +61,12 @@ Layout per session — `.../<agentType>/<YYYYMMDD-HHMMSS>-<sessionId>/`:
 
 - `meta.json` — spawn `args`, `command`, `cwd`, `envKeys`, `model`,
   `resumeSessionId`/`agentSessionId`, attachment summaries. **Read this first**
-  to know exactly how the CLI was invoked.
-- `stdin.txt` — the stream-json request fed to the CLI.
-- `stdout.jsonl` — the raw provider NDJSON (the trace you actually read).
-- `stderr.log` — CLI stderr.
+  to know exactly which ACP endpoint was spawned (vendor binary, bridge
+  binary, or a `bunx`/`npx` package-runner fallback) and with what env.
+- `stdin.txt` — the `session/prompt` content-block array sent over JSON-RPC.
+- `stdout.jsonl` — the raw ACP JSON-RPC stream from the agent (the trace you
+  actually read: `session/update` notifications and request/response pairs).
+- `stderr.log` — endpoint stderr (also carries skipped-config-option notes).
 - `exit.json` — `{ code, signal, finishedAt }`.
 
 `.heerogeneous-tracing/.last-live-trace` always points at the most recent
@@ -72,95 +78,24 @@ cat "$dir/meta.json"      # how the CLI was spawned
 wc -l "$dir/stdout.jsonl" # raw event count
 ```
 
-Reproduce the same session yourself by reusing the recorded `meta.json` `args`
-together with `stdin.txt` (the args already include `--resume <sessionId>`),
-instead of guessing flags.
+Reproduce the same session yourself by reusing the recorded `meta.json`
+`command`/`args`/`envKeys` — for ACP agents the endpoint speaks JSON-RPC, so
+prefer driving it through `apps/cli`'s hetero exec path (`spawnAgent`) rather
+than hand-writing `session/prompt` frames.
 
-### Codex raw JSONL
+### What the wire looks like
 
-Use a read-only prompt and save traces under the repo-local scratch directory `.heerogeneous-tracing/`.
+Every ACP agent emits the same envelope:
 
-```bash
-ts=$(date +%Y%m%d-%H%M%S)
-out=".heerogeneous-tracing/codex-${ts}.jsonl"
-last=".heerogeneous-tracing/codex-${ts}.last.txt"
+- `initialize` / `session/new` / `session/prompt` request+response pairs
+- `session/update` notifications carrying `sessionUpdate` discriminators:
+  `agent_message_chunk`, `tool_call`, `tool_call_update`,
+  `config_option_update`, …
+- reverse requests: `session/request_permission`, `elicitation/create`
 
-cat << 'EOF' | codex exec --json --skip-git-repo-check --sandbox read-only -C "$PWD" -o "$last" - > "$out"
-You are being run only to collect a raw Codex JSON event trace.
-Do not modify any files.
-Use at least 4 separate shell tool invocations, one invocation per command.
-Run a short sequence of read-only repo checks and then reply with a one-sentence summary.
-EOF
-```
-
-What to look for in the JSONL:
-
-- `thread.started`
-- `turn.started`
-- `item.started` / `item.completed`
-- `item.type === 'command_execution'`
-- `item.type === 'agent_message'`
-- `turn.completed`
-
-If raw Codex already merges tools into one item, the adapter is innocent. If raw Codex emits independent items but UI collapses them, the bug is downstream.
-
-If the repo already contains useful traces under `.heerogeneous-tracing/`, inspect them before reproducing.
-
-### Claude Code raw NDJSON
-
-Mirror the arguments from `apps/desktop/src/main/modules/heterogeneousAgent/drivers/claudeCode.ts`.
-
-- `-p`
-- `--input-format stream-json`
-- `--output-format stream-json`
-- `--verbose`
-- `--include-partial-messages`
-- `--permission-mode bypassPermissions`
-
-You can capture a local raw trace like this:
-
-```bash
-ts=$(date +%Y%m%d-%H%M%S)
-out=".heerogeneous-tracing/claude-${ts}.ndjson"
-
-cat << 'EOF' | claude -p \
-  --input-format stream-json \
-  --output-format stream-json \
-  --verbose \
-  --include-partial-messages \
-  --permission-mode bypassPermissions \
-  > "$out"
-{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Do a few read-only repo checks, use several tool calls, and then summarize briefly."}]}}
-EOF
-```
-
-What to look for in Claude Code raw traces:
-
-- `type: 'system', subtype: 'init'`
-- `type: 'assistant'` blocks for `thinking`, `tool_use`, and `text`
-- `type: 'user'` blocks containing `tool_result`
-- `type: 'stream_event'` with `message_start`, `content_block_delta`, and `message_delta`
-- `type: 'result'`
-- `type: 'rate_limit_event'`
-
-Important Claude Code semantics:
-
-- Each content block often arrives as its own assistant event.
-- Multiple assistant events can share the same `message.id`; that is still one turn.
-- `message.id` change is the main-step boundary.
-- Partial deltas arrive before the later full assistant block.
-- `message_delta.usage` is the authoritative per-turn usage.
-- Subagent events are tagged with `parent_tool_use_id`.
-
-If the repo already contains useful references, inspect these first:
-
-- `.heerogeneous-tracing/cc-monitor-real-trace.jsonl`
-- `.heerogeneous-tracing/cc-stream-chain-reference.md`
-
-If you only need boundary semantics or tool persistence behavior, prefer existing adapter tests under:
-
-- `packages/heterogeneous-agents/src/adapters/claudeCode.test.ts`
-- `packages/heterogeneous-agents/src/adapters/claudeCode.e2e.test.ts`
+If the raw `session/update` stream already merges tools or drops a
+`tool_call_update`, the adapter is innocent. If the wire emits independent
+updates but the UI collapses them, the bug is downstream.
 
 ## 3. Compare Raw And Adapted Events
 
@@ -170,16 +105,18 @@ In dev builds, `executeHeterogeneousAgent` stores raw lines plus adapted events 
 
 Use that trace to compare:
 
-- raw `item.started` / `item.completed`
-- adapted `stream_chunk { chunkType: 'tools_calling' }`
+- raw `session/update` entries (`tool_call`, `tool_call_update`, `agent_message_chunk`)
+- adapted `stream_chunk { chunkType: 'tools_calling' | 'tool_state' | 'text' | 'reasoning' }`
 - adapted `tool_result`
 - adapted `tool_end`
 
-For Codex, the usual mapping is:
+For the standard-ACP agents, the usual mapping is:
 
-- raw `item.started(command_execution)` -> `tools_calling` + `tool_start`
-- raw `item.completed(command_execution)` -> `tool_result` + `tool_end`
-- raw `item.completed(agent_message)` -> `stream_chunk(text)`
+- raw `tool_call` -> `tool_start` (+ `tools_calling` chunk)
+- raw `tool_call_update` running -> `tool_state` chunk (`snapshotMode: 'replace'`)
+- raw `tool_call_update` completed/failed -> `tool_result` + `tool_end`
+- raw `agent_message_chunk` -> `stream_chunk(text)`
+- raw `agent_thought_chunk` -> `stream_chunk(reasoning)`
 
 If the raw trace is right but adapted events are wrong, fix the adapter before touching persistence.
 
@@ -187,39 +124,27 @@ If the raw trace is right but adapted events are wrong, fix the adapter before t
 
 This is the first thing to verify for "mixed tools in one assistant" bugs.
 
-### Claude Code
+### Standard ACP agents (TraeAcpAdapter family)
 
-Claude Code step boundaries are keyed off assistant `message.id` changes. The adapter should emit:
+Step boundaries come from the stream lifecycle in `AgentStreamPipeline` — a
+`stream_end` + `stream_start { newStep: true }` pair is emitted when the step
+index advances. Verify:
 
-- `stream_end`
-- `stream_start { newStep: true }`
+- one `tool_call` id maps to one stable `ToolCallPayload.id`
+- a terminal `tool_call_update` emits exactly one `tool_result`/`tool_end`
+- `tool_call_update` for a never-seen id still opens the tool row first
+- `session_configured` model/usage baselines never surface as user-visible text
 
-Also verify these Claude-specific invariants:
+### Claude Code / Codex via bridges
 
-- the first assistant after init does not open a new step
-- repeated assistant events with the same `message.id` do not open a new step
-- partial `content_block_delta` text/thinking does not get duplicated by the later full assistant event
-- `tool_result` from `type: 'user'` updates the matching tool row
-- `parent_tool_use_id` creates thread-scoped subagent chunks instead of main-stream chunks
-- TodoWrite `tool_use.input` is converted into synthesized `pluginState.todos` on `tool_result`
-
-Good references:
-
-- `packages/heterogeneous-agents/src/adapters/claudeCode.ts`
-- `packages/heterogeneous-agents/src/adapters/claudeCode.test.ts`
-
-### Codex
-
-Codex raw traces usually provide turn-level boundaries through:
-
-- `turn.started`
-- `turn.completed`
-
-The executor only cuts a new assistant message when it receives a step-boundary signal it understands. If the adapter emits `stream_start` without `newStep`, multiple Codex tools and text chunks can accumulate under the same assistant longer than intended.
+Vendor-specific stream semantics (Claude `message.id` turn boundaries, Codex
+`item.*` kinds) are normalized by the upstream bridge before they reach us —
+when a boundary bug reproduces on the wire, compare the bridge's
+`session/update` output against the adapter, not a vendor stream-json trace.
 
 Relevant files:
 
-- `packages/heterogeneous-agents/src/adapters/codex.ts`
+- `packages/heterogeneous-agents/src/adapters/traeAcp.ts`
 - `src/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor.ts`
 
 ## 5. Check Tool Persistence Invariants

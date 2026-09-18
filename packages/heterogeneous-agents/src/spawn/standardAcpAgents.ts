@@ -56,8 +56,13 @@ export const buildStandardAcpArgs = (agentType: string, userArgs: string[] = [])
 
 /** What to spawn for an agent's ACP endpoint after runtime resolution. */
 export interface AcpSpawnTarget {
-  /** ACP-mode argv prefix for native agents (`['acp']`, `['--acp']`). */
-  args: string[];
+  /**
+   * argv prepended before the session-built args — non-empty only when the
+   * ACP endpoint is a package-runner fallback (`bunx pkg@ver` / `npx -p …`).
+   * The native ACP prefix (`acp`, `--acp`) is owned by the session factory,
+   * not repeated here.
+   */
+  commandArgs: string[];
   commandPath: string;
   /** Extra env merged into the child (native-command forwarding + PATH fixups). */
   env: NodeJS.ProcessEnv;
@@ -80,20 +85,20 @@ export const resolveAcpSpawnTarget = async (
   const spec = getAcpAgentRuntime(agentType);
   if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
   if (!spec.bridge) {
-    return { args: [...(spec.acpArgs ?? [])], commandPath: vendorCommand, env };
+    return { commandArgs: [], commandPath: vendorCommand, env };
   }
 
   const status = await detectAcpBridgeCommand(spec.bridge, env);
   if (!status.available || !status.path) {
     // Rollout-compatible fallback: installs that predate the bridge
     // requirement can still launch through an on-machine package runner
-    // (bunx/npx fetches and caches the bridge package) instead of failing
-    // every prompt until the user hand-installs the bridge.
+    // (bunx/npx fetches and caches the pinned bridge package) instead of
+    // failing every prompt until the user hand-installs the bridge.
     const runner = await detectAcpBridgeRunner(spec.bridge, env);
     if (!runner) throw buildAcpBridgeNotFoundError(agentType);
 
     return {
-      args: runner.args,
+      commandArgs: runner.args,
       commandPath: runner.commandPath,
       env: {
         ...env,
@@ -104,7 +109,7 @@ export const resolveAcpSpawnTarget = async (
   }
 
   return {
-    args: [],
+    commandArgs: [],
     commandPath: status.path,
     env: {
       ...env,
@@ -254,6 +259,9 @@ export const extractStandardAcpSelectors = (
  * Instantiate the standard ACP session for `agentType`. `options.args` are
  * the raw user args — the factory applies the agent's ACP prefix (or drops
  * them for bridge agents, whose argv belongs to the bridge binary).
+ * `options.commandArgs` carries the spawn prefix from
+ * {@link resolveAcpSpawnTarget} — the package-runner argv that boots the
+ * bridge when no bridge binary is installed.
  */
 export const createStandardAcpSession = (
   agentType: string,
@@ -262,9 +270,20 @@ export const createStandardAcpSession = (
   const spec = getAcpAgentRuntime(agentType);
   if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
 
+  // Vendor-CLI flags cannot ride along on a bridge's own argv — surface the
+  // drop explicitly in the run trace instead of silently ignoring them.
+  if (spec.bridge && options.args.length > 0) {
+    void Promise.resolve(
+      options.onStderr(
+        `[${spec.label}] ignoring ${options.args.length} agent CLI arg(s) unsupported by the ` +
+          `ACP bridge: ${options.args.join(' ')}\n`,
+      ),
+    ).catch(() => {});
+  }
+
   return new StandardAcpSession(options, {
     agentType,
-    args: buildStandardAcpArgs(agentType, options.args),
+    args: [...(options.commandArgs ?? []), ...buildStandardAcpArgs(agentType, options.args)],
     configOptions: [...AGENT_CONFIG_OPTIONS(agentType), ...(options.configOptions ?? [])],
     spec,
   });
@@ -273,6 +292,8 @@ export const createStandardAcpSession = (
 export interface ListStandardAcpModelsOptions {
   args?: string[];
   clientVersion?: string;
+  /** Spawn prefix from `resolveAcpSpawnTarget` (bridge runner fallback). */
+  commandArgs?: string[];
   commandPath: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
@@ -290,6 +311,7 @@ export const listStandardAcpModels = async (
   createStandardAcpSession(agentType, {
     args: options.args ?? [],
     clientVersion: options.clientVersion ?? '1.0.0',
+    commandArgs: options.commandArgs,
     commandPath: options.commandPath,
     cwd: options.cwd,
     env: options.env,

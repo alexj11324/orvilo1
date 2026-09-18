@@ -45,6 +45,12 @@ export interface AcpBridgeSpec {
   overrideEnv: string;
   /** npm package carrying the bridge binary (used by the runner fallback). */
   package: string;
+  /**
+   * Pinned version fetched by the package-runner fallback. The runner path
+   * executes registry code on the user's machine outside the lockfile, so the
+   * tag is pinned to a reviewed release instead of resolving `latest`.
+   */
+  packageVersion: string;
 }
 
 type AcpRuntimeAgentType = Extract<
@@ -58,6 +64,7 @@ export const ACP_AGENT_RUNTIMES = {
       command: 'amp-acp',
       installCommand: 'npm install -g amp-acp',
       package: 'amp-acp',
+      packageVersion: '0.9.0',
       nativeCommandEnv: 'AMP_CLI_PATH',
       overrideEnv: 'LOBE_AMP_ACP_COMMAND',
     },
@@ -71,6 +78,7 @@ export const ACP_AGENT_RUNTIMES = {
       command: 'claude-agent-acp',
       installCommand: 'npm install -g @agentclientprotocol/claude-agent-acp',
       package: '@agentclientprotocol/claude-agent-acp',
+      packageVersion: '0.76.0',
       nativeCommandEnv: 'CLAUDE_CODE_EXECUTABLE',
       overrideEnv: 'LOBE_CLAUDE_CODE_ACP_COMMAND',
     },
@@ -91,6 +99,7 @@ export const ACP_AGENT_RUNTIMES = {
       command: 'codex-acp',
       installCommand: 'npm install -g @agentclientprotocol/codex-acp',
       package: '@agentclientprotocol/codex-acp',
+      packageVersion: '1.11.0',
       nativeCommandEnv: 'CODEX_PATH',
       overrideEnv: 'LOBE_CODEX_ACP_COMMAND',
     },
@@ -118,6 +127,7 @@ export const ACP_AGENT_RUNTIMES = {
       command: 'pi-acp',
       installCommand: 'npm install -g pi-acp',
       package: 'pi-acp',
+      packageVersion: '0.0.33',
       nativeCommandEnv: 'PI_ACP_PI_COMMAND',
       overrideEnv: 'LOBE_PI_ACP_COMMAND',
     },
@@ -202,12 +212,17 @@ export const detectAcpBridgeCommand = async (
  * (vendor CLI present, bridge absent): the runner fetches and caches the
  * pinned bridge package instead of failing every launch.
  */
+const pinnedBridgePackage = (spec: AcpBridgeSpec) => `${spec.package}@${spec.packageVersion}`;
+
 const ACP_BRIDGE_RUNNERS: ReadonlyArray<{
   args: (spec: AcpBridgeSpec) => string[];
   command: string;
 }> = [
-  { args: (spec) => [spec.package], command: 'bunx' },
-  { args: (spec) => ['--yes', '-p', spec.package, spec.command], command: 'npx' },
+  { args: (spec) => [pinnedBridgePackage(spec)], command: 'bunx' },
+  {
+    args: (spec) => ['--yes', '-p', pinnedBridgePackage(spec), spec.command],
+    command: 'npx',
+  },
 ];
 
 export interface AcpBridgeRunnerTarget {

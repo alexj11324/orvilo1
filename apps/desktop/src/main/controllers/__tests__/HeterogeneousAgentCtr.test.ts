@@ -442,7 +442,10 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     createStandardAcpSession: (agentType: string, options: any) =>
       new MockStandardAcpSession(options, {
         agentType,
-        args: (actual as any).buildStandardAcpArgs(agentType, options.args),
+        args: [
+          ...(options.commandArgs ?? []),
+          ...(actual as any).buildStandardAcpArgs(agentType, options.args),
+        ],
         configOptions: options.configOptions ?? [],
         spec: (actual as any).getAcpAgentRuntime(agentType),
       }),
@@ -509,10 +512,10 @@ describe('HeterogeneousAgentCtr', () => {
         const spec = getAcpAgentRuntime(agentType);
         if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
         if (!spec.bridge) {
-          return { args: [...(spec.acpArgs ?? [])], commandPath: vendorCommand, env };
+          return { commandArgs: [], commandPath: vendorCommand, env };
         }
         return {
-          args: [],
+          commandArgs: [],
           commandPath: `/mock-bridges/${spec.bridge.command}`,
           env: { ...env, [spec.bridge.nativeCommandEnv]: vendorCommand },
         };

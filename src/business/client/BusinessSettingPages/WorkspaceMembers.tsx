@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Button, confirmModal, Tabs, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
-import { UserPlus } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { LogOut, UserPlus } from 'lucide-react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
+import { useSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import {
   AgentsPanel,
@@ -15,11 +16,10 @@ import {
   MembersPanel,
   openInviteTeammateModal,
 } from '@/features/Teammates';
+import { useTeammateActions } from '@/features/Teammates/api/hooks';
 
-import {
-  type WorkspaceMemberTabKey,
-  workspaceMemberTabKeys,
-} from './workspaceMemberTabs';
+import { runLeaveWorkspace } from './workspaceMemberLeave';
+import { type WorkspaceMemberTabKey, workspaceMemberTabKeys } from './workspaceMemberTabs';
 
 const styles = createStaticStyles(({ css }) => ({
   header: css`
@@ -48,7 +48,24 @@ const WorkspaceMembers = memo(() => {
   const { t } = useTranslation('setting');
   const workspace = useActiveWorkspace();
   const capabilities = useWorkspaceCapabilities();
+  const { leave } = useTeammateActions();
+  const { switchToPersonal } = useSwitchWorkspace();
   const [tab, setTab] = useState<TabKey>('members');
+
+  const handleLeave = useCallback(() => {
+    if (!workspace) return;
+    confirmModal({
+      cancelText: t('cancel', { ns: 'common' }),
+      content: t('workspaceSetting.members.leaveConfirmContent', { name: workspace.name }),
+      okButtonProps: { danger: true },
+      okText: t('workspaceSetting.members.leave'),
+      onOk: async () => {
+        const ok = await runLeaveWorkspace({ leave, switchToPersonal });
+        if (ok) toast.success(t('workspaceSetting.members.leaveSuccess'));
+      },
+      title: t('workspaceSetting.members.leaveConfirmTitle', { name: workspace.name }),
+    });
+  }, [leave, switchToPersonal, t, workspace]);
 
   const tabs = useMemo(() => {
     const labels: Record<WorkspaceMemberTabKey, string> = {
@@ -80,15 +97,33 @@ const WorkspaceMembers = memo(() => {
         <Text fontSize={16} weight={600}>
           {t('workspaceSetting.members.title')}
         </Text>
-        {capabilities.canInvite && (
-          <Button
-            icon={<Icon icon={UserPlus} size={16} />}
-            type="primary"
-            onClick={() => openInviteTeammateModal()}
-          >
-            {t('workspaceSetting.members.inviteButton')}
-          </Button>
-        )}
+        <Flexbox horizontal align="center" gap={8}>
+          {(capabilities.canLeave || capabilities.isOwner) && (
+            <Tooltip
+              title={
+                capabilities.isOwner ? t('workspaceSetting.members.leaveOwnerHint') : undefined
+              }
+            >
+              <Button
+                danger
+                disabled={!capabilities.canLeave}
+                icon={<Icon icon={LogOut} size={16} />}
+                onClick={handleLeave}
+              >
+                {t('workspaceSetting.members.leave')}
+              </Button>
+            </Tooltip>
+          )}
+          {capabilities.canInvite && (
+            <Button
+              icon={<Icon icon={UserPlus} size={16} />}
+              type="primary"
+              onClick={() => openInviteTeammateModal()}
+            >
+              {t('workspaceSetting.members.inviteButton')}
+            </Button>
+          )}
+        </Flexbox>
       </div>
       <Tabs
         activeKey={tab}

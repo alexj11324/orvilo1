@@ -56,11 +56,24 @@ Open this URL to develop locally against the production backend (orvilo.aspectly
 
 ### Git Workflow
 
-- **Branch strategy**: `canary` is the development branch (cloud production); `main` is the release branch (periodically cherry-picks from canary)
+- **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md)
 - New branches should be created from `canary`; PRs should target `canary`
 - Use rebase for `git pull`
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
+- Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+
+### Cutting a Release
+
+Run `bun run release:branch`. It fetches `origin/canary`, computes the next version,
+creates `release/vX.Y.Z`, and opens a `🚀 release: vX.Y.Z` PR against `main`.
+
+Merging that PR triggers `auto-tag-release.yml`, which bumps `package.json`, generates
+the changelog, creates the tag and GitHub Release, and syncs `main` back to `canary`.
+**Do not hand-edit the root `package.json` version** — the tag workflow owns it.
+
+An urgent fix to an already-released version goes through `hotfix/<name>` branched from
+`main`; the same workflow picks it up as a patch bump.
 
 ### Package Management
 

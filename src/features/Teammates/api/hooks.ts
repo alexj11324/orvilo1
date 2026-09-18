@@ -149,8 +149,16 @@ export const useTeammateActions = () => {
   );
 
   const leave = useCallback(
-    () => report(() => teammatesClient.workspaceMember.leave.mutate(), refreshMembers),
-    [report, refreshMembers],
+    // No member-roster refresh here: the mutation removes the caller's own
+    // membership, so re-querying the departed workspace's roster would fail
+    // and flip a successful leave into a reported failure. Callers refresh
+    // the workspace list and navigate out instead.
+    () =>
+      report(
+        () => teammatesClient.workspaceMember.leave.mutate(),
+        () => Promise.resolve(),
+      ),
+    [report],
   );
 
   const resendInvitation = useCallback(

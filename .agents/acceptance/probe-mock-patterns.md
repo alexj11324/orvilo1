@@ -360,9 +360,13 @@ ran" — the button spins, no card, no error.
 
 **Works:** (1) temporarily pin the constants to `gpt-4o` / `openai` with an
 `[AGENT-TEST]` marker (snapshot the file first, restore byte-identically at teardown —
-the model-bank vision test guards the real value), then
+the model-bank vision test guards the real value), then point the openai provider at
+the stub. **The wiring step this recipe used to give —
 `aiInfra().updateAiProviderConfig('openai', { keyVaults: { apiKey: 'sk-stub', baseURL:
-'http://localhost:41100/v1' } })`; (2) start the dev server with
+'http://localhost:41100/v1' } })` — is RETIRED: the provider store action went away with
+the provider surface (P50), and agent runs go through ACP instead. A replacement
+server-side lever has not been re-derived, so treat this step as open, not settled.**
+(2) start the dev server with
 `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1`; (3) set `STUB_TEXT` to a `ReviewPredictionSchema`
 JSON (`{"action":"reject","regions":[{"imageIndex":0,...}]}`) — the runtime sends
 `response_format: json_schema` with `stream: false`, which the stub answers as a plain

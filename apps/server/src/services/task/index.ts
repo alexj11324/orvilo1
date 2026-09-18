@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
-import { isLocalHeterogeneousType, isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type {
   TaskAssignmentKind,
   TaskAutomationSnapshot,
@@ -21,8 +20,6 @@ import type {
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
-import { AgentOperationModel } from '@/database/models/agentOperation';
-import { MessageModel } from '@/database/models/message';
 import { ProjectModel } from '@/database/models/project';
 import { RbacModel } from '@/database/models/rbac';
 import {
@@ -147,14 +144,6 @@ export interface RunReadySubtasksResult {
   plan: SubtaskGraphPlan;
   skipped?: { reason: 'nothing-runnable' };
 }
-
-export type SteerTopicResult =
-  | { messageId: string; mode: 'continued' }
-  | { messageId: string; mode: 'injected' }
-  | { mode: 'requiresInterrupt' };
-
-/** Verify rounds past which `driveTaskFromVerify` no longer moves the task. */
-const VERIFY_SETTLED_STATUSES = new Set(['passed', 'failed', 'errored', 'delivered']);
 
 export class TaskService {
   private agentModel: AgentModel;
@@ -356,9 +345,7 @@ export class TaskService {
     service: AiAgentService,
     operationIds: Array<string | null | undefined>,
   ): Promise<Map<string, PromiseSettledResult<void>>> => {
-    const uniqueOperationIds = [
-      ...new Set(operationIds.filter((id): id is string => Boolean(id))),
-    ];
+    const uniqueOperationIds = [...new Set(operationIds.filter((id): id is string => Boolean(id)))];
     const settled = await Promise.allSettled(
       uniqueOperationIds.map((operationId) => this.interruptTaskOperation(service, operationId)),
     );
@@ -429,167 +416,6 @@ export class TaskService {
     await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
       target.taskId,
     );
-  }
-
-  /**
-   * Steer a task topic: deliver a user message into the run's conversation.
-   *
-   * - Homogeneous run (server runtime rehydrates topic messages at every step
-   *   boundary): persist the message — the next step consumes it live.
-   * - Heterogeneous run (external CLI/device process) or a parked approval:
-   *   the run never reads topic messages, so steering requires an explicit
-   *   interrupt; once confirmed (`interrupt: true`) the operation is stopped
-   *   and the same topic resumes anchored on the persisted steer message.
-   * - Topic not running (or the run ended between our status read and the
-   *   insert): continue the topic off the persisted message. A run that
-   *   finished without consuming a tail steer is also picked up by the
-   *   `onTopicComplete` late-steer fallback, so the message is never lost.
-   */
-  async steerTopic(input: {
-    fileIds?: string[];
-    id: string;
-    interrupt?: boolean;
-    message: string;
-    topicId: string;
-  }): Promise<SteerTopicResult> {
-    const task = await this.taskModel.resolve(input.id);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found.' });
-
-    if (!input.message.trim() && !input.fileIds?.length) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A steer needs a message or files.' });
-    }
-
-    const target = await this.taskTopicModel.findByTopicId(input.topicId);
-    if (!target || target.taskId !== task.id) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found for this task.' });
-    }
-
-    const running = target.status === 'running';
-    const topic = running ? await this.topicModel.findById(input.topicId) : null;
-    const runningOp = topic?.metadata?.runningOperation;
-    const heteroType = runningOp?.heteroType;
-    const isHetero =
-      !!heteroType &&
-      (isLocalHeterogeneousType(heteroType) || isRemoteHeterogeneousType(heteroType));
-
-    const operationId = target.operationId ?? runningOp?.operationId;
-    const operation = running
-      ? await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
-          operationId ?? '',
-        )
-      : null;
-
-    // Anything that cannot consume a live topic message needs the explicit
-    // interrupt opt-in before we tear the run down.
-    const needsInterrupt = isHetero || operation?.status === 'waiting_for_human';
-    if (running && needsInterrupt && !input.interrupt) {
-      return { mode: 'requiresInterrupt' };
-    }
-
-    // Persist the user's message first — it is the deliverable regardless of
-    // which dispatch branch runs below, and a confirmed interrupt must not
-    // drop it.
-    const messageModel = new MessageModel(this.db, this.userId, this.workspaceId);
-    const parentId =
-      (await messageModel.getLatestSpineMessageId({ topicId: input.topicId })) ??
-      (await messageModel.getLatestNonToolMessageId({ topicId: input.topicId }));
-    const steerMessage = await messageModel.create({
-      agentId: operation?.agentId ?? task.assigneeAgentId ?? undefined,
-      content: input.message,
-      files: input.fileIds,
-      metadata: { steer: true },
-      parentId,
-      role: 'user',
-      topicId: input.topicId,
-    });
-
-    if (running && needsInterrupt) {
-      const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
-      let stoppingDispatch;
-      if (
-        target.dispatchId &&
-        target.dispatchFence !== null &&
-        target.executionGeneration !== null
-      ) {
-        stoppingDispatch = await dispatchModel.requestStop({
-          dispatchId: target.dispatchId,
-          fence: target.dispatchFence,
-          generation: target.executionGeneration,
-          operationId,
-          reason: 'steer_interrupt',
-        });
-        if (!stoppingDispatch) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Task execution changed before the steer interrupt could be fenced.',
-          });
-        }
-      }
-      const aiAgentService = new AiAgentService(this.db, this.userId, {
-        workspaceId: this.workspaceId,
-      });
-      if (operationId) await this.interruptTaskOperation(aiAgentService, operationId);
-      // Settle the interrupted segment so the continuation can claim the
-      // topic (`runTask` refuses a 'running' continue target).
-      await this.taskTopicModel.updateStatus(task.id, input.topicId, 'canceled');
-      if (stoppingDispatch) {
-        const settled = await dispatchModel.settle({
-          dispatchId: stoppingDispatch.id,
-          expected: ['cancel_requested'],
-          fence: stoppingDispatch.fence,
-          generation: stoppingDispatch.generation,
-          operationId: stoppingDispatch.operationId ?? undefined,
-          phase: 'canceled',
-        });
-        if (!settled) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Task execution changed before the steer interrupt settled.',
-          });
-        }
-      }
-    } else if (running) {
-      return { messageId: steerMessage.id, mode: 'injected' };
-    }
-
-    // Verify-bound settle race: the topic is done but the confirmed verify
-    // plan still owns the next transition (`driveTaskFromVerify` CASes the
-    // task out of 'running'). Continuing now would bounce the status and hand
-    // the topic a second lifecycle pass. Park the message on the spine
-    // instead — once verify settles the task lands in 'paused', where a
-    // follow-up steer continues it normally.
-    if (!running && operationId) {
-      const verifyRun = await new VerifyRunModel(this.db, this.userId, this.workspaceId)
-        .findByOperation(operationId)
-        .catch(() => undefined);
-      if (verifyRun?.planConfirmedAt && !VERIFY_SETTLED_STATUSES.has(verifyRun.status ?? '')) {
-        return { messageId: steerMessage.id, mode: 'injected' };
-      }
-    }
-
-    const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
-    try {
-      await runner.runTask({
-        continueFromMessageId: steerMessage.id,
-        continueTopicId: input.topicId,
-        idempotencyKey: taskRunIdempotencyKey.steerContinuation({
-          messageId: steerMessage.id,
-          taskId: task.id,
-          topicId: input.topicId,
-        }),
-        taskId: task.id,
-      });
-    } catch (error) {
-      // Lost the status race: the topic flipped back to running between our
-      // read above and the continuation attempt. The persisted message sits
-      // on the spine, so the live run consumes it at its next step — that is
-      // delivery, not failure.
-      if (error instanceof TRPCError && error.code === 'CONFLICT') {
-        return { messageId: steerMessage.id, mode: 'injected' };
-      }
-      throw error;
-    }
-    return { messageId: steerMessage.id, mode: 'continued' };
   }
 
   /**

@@ -808,6 +808,12 @@ nodeintegration, plugins, disablewebsecurity, allowpopups, preload, …`). The h
   `window.__ORVILO_STORES.aiInfra().enabledChatModelList` → `[{id: provider, children: [{id: model}]}]` —
   and pick one from there. Also: a send that "resolves fine but creates no operation" is a UI-gate
   symptom; **screenshot the composer** instead of re-reading your store call.
+- **Superseded for agent runs (P50)**: the provider surface was retired, so `enabledAiProviders`
+  (and with it the provider-backed model list) is empty **by design** — that is not this bug, and
+  reading the store for a model to pin will now come back empty every time. Agent runs go through
+  ACP (heterogeneous agents) instead; see PROJECT.md §"Heterogeneous-agent compatibility". The
+  retired-model UI gate described above still exists, it just is no longer the failure mode you
+  will hit in a stock local environment.
 
 ### E29. Fresh-worktree `seed-user` dies on `Cannot find module 'bcryptjs'` — NODE\_PATH into .pnpm fixes it
 

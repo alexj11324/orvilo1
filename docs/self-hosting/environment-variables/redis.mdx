@@ -48,6 +48,17 @@ Supported URL formats:
   transmission.
 </Callout>
 
+### `REDIS_TLS_CA`
+
+- Type: Optional
+- Description: PEM-encoded CA certificate used to verify a private or self-hosted Redis TLS endpoint
+- Default: System trust store
+- Example: `-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----`
+
+Literal `\n` sequences are converted to newlines, which allows the certificate to be stored in
+single-line environment-variable providers. Keep certificate verification enabled for Redis
+connections that cross a public network.
+
 ### `REDIS_PASSWORD`
 
 - Type: Optional

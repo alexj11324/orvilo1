@@ -301,7 +301,7 @@ To sync manually: Actions → Upstream Sync → Run workflow.
 
 **Function timeout** — If requests timeout on Hobby plan: upgrade to Pro (60s timeout), use faster AI models (e.g., GPT-4o-mini instead of GPT-4o), reduce max tokens, or ensure streaming is enabled.
 
-**Database connection fails** — Verify `DATABASE_URL` format. Ensure `?sslmode=require` is appended for managed databases. Check that the database's IP allowlist includes Vercel IPs (or use `0.0.0.0/0` for open access). Test locally with `psql "$DATABASE_URL"`.
+**Database connection fails** — Verify `DATABASE_URL` format. Ensure `?sslmode=require` is appended for managed databases. For a private CA, set `DATABASE_SSL_CA` to its PEM certificate (literal `\\n` escapes are accepted) so Node verifies the server identity. `psql` does not accept the Node-only `uselibpqcompat` parameter; test it with a URL that omits that parameter and use `sslmode=verify-full&sslrootcert=/path/to/ca.crt`. Check that the database's IP allowlist includes Vercel IPs.
 
 **502 Bad Gateway** — Common causes: function timeout, out of memory, or database connection pool exhausted. Use a connection pooler (PgBouncer), reduce concurrent connections, or check database logs.
 

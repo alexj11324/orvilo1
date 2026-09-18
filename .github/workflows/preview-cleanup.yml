@@ -1,0 +1,170 @@
+name: Preview DB Cleanup
+
+# PR 关闭时删除对应的 orvilo_pr_<n> 数据库、migration/app roles 和该分支的
+# Vercel branch env。清理不受 PREVIEW_EPHEMERAL_DB_ENABLED 当前值影响。
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: preview-db-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  teardown:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner &&
+      github.triggering_actor == github.repository_owner
+    name: Drop per-PR database and role
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_NAME: orvilo_pr_${{ github.event.pull_request.number }}
+      APP_ROLE_PREFIX: orvilo_pr_${{ github.event.pull_request.number }}_app
+      MIGRATION_ROLE: orvilo_pr_${{ github.event.pull_request.number }}_migrate
+      DB_TLS_HOST: ${{ vars.PREVIEW_DB_TLS_HOST }}
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - name: Checkout trusted cleanup helpers
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Check branch reuse before all teardown
+        id: cleanup-preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/ci/checkPreviewCleanup.mjs
+
+      - name: Drop database and per-PR roles
+        if: steps.cleanup-preflight.outputs.allowed == 'true'
+        env:
+          ADMIN_URL: ${{ secrets.PREVIEW_DB_ADMIN_URL }}
+          DATABASE_SSL_CA: ${{ secrets.PREVIEW_DATABASE_SSL_CA }}
+        run: |
+          set -euo pipefail
+          : "${ADMIN_URL:?PREVIEW_DB_ADMIN_URL is required}"
+          : "${DATABASE_SSL_CA:?PREVIEW_DATABASE_SSL_CA is required}"
+          pg_ca_file="$RUNNER_TEMP/orvilo-preview-postgres-ca.crt"
+          # The wizard accepts literal \n sequences as a single-line PEM input.
+          DATABASE_SSL_CA="$DATABASE_SSL_CA" node -e '
+            process.stdout.write(process.env.DATABASE_SSL_CA.replaceAll("\\n", "\n"));
+          ' > "$pg_ca_file"
+          chmod 600 "$pg_ca_file"
+          ADMIN_URL=$(DATABASE_URL="$ADMIN_URL" DATABASE_HOST="$DB_TLS_HOST" CA_FILE="$pg_ca_file" node -e '
+            const url = new URL(process.env.DATABASE_URL);
+            if (process.env.DATABASE_HOST) url.hostname = process.env.DATABASE_HOST;
+            url.searchParams.delete("uselibpqcompat");
+            url.searchParams.set("sslmode", "verify-full");
+            url.searchParams.set("sslrootcert", process.env.CA_FILE);
+            process.stdout.write(url.href);
+          ')
+          if [[ ! "$DB_NAME" =~ ^orvilo_pr_[0-9]+$ || ! "$APP_ROLE_PREFIX" =~ ^orvilo_pr_[0-9]+_app$ || ! "$MIGRATION_ROLE" =~ ^orvilo_pr_[0-9]+_migrate$ ]]; then
+            echo "invalid Preview database or role identifier" >&2
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_URL"
+          cleanup_failed=0
+          # FORCE 断开残留连接（Postgres 13+；ParadeDB pg17 支持）
+          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v db_name="$DB_NAME" <<'SQL'
+          SELECT format('DROP DATABASE IF EXISTS %I WITH (FORCE)', :'db_name') \gexec
+          SQL
+          then
+            echo "dropped database=$DB_NAME"
+          else
+            echo "failed to drop database=$DB_NAME" >&2
+            cleanup_failed=1
+          fi
+          app_roles=$(psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role_prefix="$APP_ROLE_PREFIX" -qAt <<'SQL'
+          SELECT rolname
+          FROM pg_catalog.pg_roles
+          WHERE rolname = :'app_role_prefix'
+             OR strpos(rolname, :'app_role_prefix' || '_') = 1
+          ORDER BY rolname;
+          SQL
+          )
+          while IFS= read -r app_role; do
+            [[ -z "$app_role" ]] && continue
+            if [[ ! "$app_role" =~ ^orvilo_pr_[0-9]+_app(_[0-9]+_[0-9]+)?$ ]]; then
+              echo "invalid Preview app role identifier returned by PostgreSQL" >&2
+              cleanup_failed=1
+              continue
+            fi
+            if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v app_role="$app_role" <<'SQL'
+          SELECT format('DROP ROLE IF EXISTS %I', :'app_role') \gexec
+          SQL
+            then
+              echo "dropped app role=$app_role"
+            else
+              echo "failed to drop app role=$app_role" >&2
+              cleanup_failed=1
+            fi
+          done <<< "$app_roles"
+          if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v migration_role="$MIGRATION_ROLE" <<'SQL'
+          SELECT format('DROP ROLE IF EXISTS %I', :'migration_role') \gexec
+          SQL
+          then
+            echo "dropped migration role for database=$DB_NAME"
+          else
+            echo "failed to drop migration role=$DB_NAME" >&2
+            cleanup_failed=1
+          fi
+          exit "$cleanup_failed"
+
+      - name: Remove Vercel branch env DATABASE_URL
+        if: always() && steps.cleanup-preflight.outputs.allowed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$GITHUB_TOKEN"
+          echo "::add-mask::$VERCEL_TOKEN"
+          # Re-check before removing branch routing if another PR appeared
+          # after the preflight. A lookup error cannot authorize deletion.
+          node scripts/ci/checkPreviewCleanup.mjs
+          if [[ "$(tail -n 1 "$GITHUB_OUTPUT")" != "allowed=true" ]]; then
+            exit 0
+          fi
+          env_ids=$(curl -fsS \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            | jq -r --arg b "$HEAD_BRANCH" \
+              '.envs[]? | select(.key == "DATABASE_URL" and (.gitBranch // "") == $b and (((.target // []) | index("preview")) != null)) | .id')
+          if [ -z "$env_ids" ]; then
+            echo "no branch-scoped DATABASE_URL for $HEAD_BRANCH; nothing to remove"
+            exit 0
+          fi
+          removal_failed=0
+          while IFS= read -r env_id; do
+            [[ -z "$env_id" ]] && continue
+            if delete_status=$(curl -sS -X DELETE \
+              "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}/env/${env_id}?teamId=${VERCEL_ORG_ID}" \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              -o /dev/null -w '%{http_code}'); then
+              if [[ "$delete_status" =~ ^2[0-9][0-9]$ || "$delete_status" == "404" ]]; then
+                echo "removed or already absent env id=$env_id branch=$HEAD_BRANCH"
+                continue
+              fi
+              echo "failed to remove env id=$env_id branch=$HEAD_BRANCH (HTTP $delete_status)" >&2
+              removal_failed=1
+            else
+              echo "failed to remove env id=$env_id branch=$HEAD_BRANCH" >&2
+              removal_failed=1
+            fi
+          done <<< "$env_ids"
+          exit "$removal_failed"

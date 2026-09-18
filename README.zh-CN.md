@@ -51,6 +51,18 @@ pnpm --filter @orvilo/server dev
 `dev:spa` 启动后终端会打印一个 **Debug Proxy** URL。打开它会把你的本地开发服务器
 加载进线上环境，从而在真实服务端配置下获得 HMR。
 
+### Preview 测试
+
+Oracle 是当前暂时使用的生产目标。Docker 镜像由 GitHub Actions 的 arm64 runner 构建并推送，
+然后 Oracle 部署 job 通过 SSH 拉取当前 commit 对应的不可变镜像 tag。本地 Docker 或 Next.js
+构建不属于生产部署路径。
+
+Vercel Preview 默认暂停。Preview 数据库 workflow 仍受
+`PREVIEW_EPHEMERAL_DB_ENABLED` 和手动变量 `VERCEL_PREVIEW_DEPLOYMENT_GATE` 双重保护；
+只有 exact-head E2E CI 通过、Vercel Token 预检成功，并且人工确认配额可用后，才会打开
+Oracle 数据库隧道或写入 Vercel 环境变量。Preview 使用的 PostgreSQL、Redis 与 Cloudflare R2
+见 [`.env.example.preview`](./.env.example.preview)。
+
 ### 质量检查
 
 ```bash

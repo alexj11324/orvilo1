@@ -7,8 +7,9 @@ name: Build and deploy orvilo1
 # 构建与部署分开是有意的：
 #   - push 到 main 就构建并推镜像 —— 快，且能立刻发现构建坏了
 #   - 部署默认不自动跑，要手动 dispatch 时勾 deploy
-# 生产主机是共享的（同机还有 20+ 个其他产品的容器），而当前还没有测试门禁
-# 挡在构建前面，所以不该让每次提交都直接上生产。
+# 生产主机是共享的（同机还有 20+ 个其他产品的容器）。生产部署只允许从
+# main 手动 dispatch，并且先由 GitHub Actions 检查当前 commit 的 Test CI / E2E CI；
+# Docker 构建也只发生在 GitHub 的 arm64 runner，本地编译不属于生产路径。
 
 on:
   push:
@@ -22,6 +23,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   packages: write
 
 env:
@@ -79,8 +81,28 @@ jobs:
             echo "| digest | \`${DIGEST}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  ci-gate:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    name: Verify GitHub CI for Oracle deployment
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      REQUIRED_SHA: ${{ github.sha }}
+      REQUIRED_WORKFLOWS: Test CI,E2E CI
+      REQUIRED_EVENT: push
+    steps:
+      - name: Checkout workflow gate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Require exact-head GitHub CI
+        run: node scripts/ci/checkGitHubWorkflowGate.mjs
+
   deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    needs: ci-gate
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main' && needs.ci-gate.result == 'success'
     runs-on: ubuntu-latest
     environment: production
     steps:

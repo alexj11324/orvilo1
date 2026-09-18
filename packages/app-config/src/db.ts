@@ -2,9 +2,12 @@ import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
 export const getServerDBConfig = () => {
+  const databaseSslCA = process.env.DATABASE_SSL_CA?.replaceAll('\\n', '\n');
+
   return createEnv({
     runtimeEnv: {
       DATABASE_DRIVER: process.env.DATABASE_DRIVER || 'neon',
+      DATABASE_SSL_CA: databaseSslCA,
       DATABASE_STATEMENT_TIMEOUT: process.env.DATABASE_STATEMENT_TIMEOUT,
       DATABASE_TEST_URL: process.env.DATABASE_TEST_URL,
       DATABASE_URL: process.env.DATABASE_URL,
@@ -15,6 +18,7 @@ export const getServerDBConfig = () => {
     },
     server: {
       DATABASE_DRIVER: z.enum(['neon', 'node']),
+      DATABASE_SSL_CA: z.string().optional(),
       // Server-side timeout (in milliseconds) for a single SQL statement.
       // When set, Postgres aborts any statement running longer than this,
       // preventing a stuck query (e.g. lock contention) from blocking indefinitely.

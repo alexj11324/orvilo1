@@ -8,6 +8,8 @@ import { serverDBEnv } from '@/config/db';
 
 import * as schema from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { resolveNodePostgresConnectionOptions } from './connection-string';
+import { resolveNodePostgresPoolMax } from './pool-config';
 
 export const getDBInstance = (): OrviloDatabase => {
   // In test environment, return a mock instance to avoid initialization errors
@@ -40,7 +42,17 @@ If you don't have it, please run \`openssl rand -base64 32\` to create one.
     : {};
 
   if (serverDBEnv.DATABASE_DRIVER === 'node') {
-    const client = new NodePool({ connectionString, ...timeoutConfig });
+    const poolMax = resolveNodePostgresPoolMax(process.env.VERCEL_ENV);
+    const databaseSslCA = serverDBEnv.DATABASE_SSL_CA;
+    const client = new NodePool({
+      ...resolveNodePostgresConnectionOptions(
+        connectionString,
+        databaseSslCA,
+        process.env.VERCEL_ENV,
+      ),
+      ...(poolMax ? { max: poolMax } : {}),
+      ...timeoutConfig,
+    });
     // pg.Pool emits 'error' on idle clients when the backend connection drops.
     // Without a listener Node escalates it to uncaughtException and exits the process.
     // See: https://node-postgres.com/apis/pool#error

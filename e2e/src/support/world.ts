@@ -6,6 +6,8 @@ import { setWorldConstructor, World } from '@cucumber/cucumber';
 import type { Browser, BrowserContext, Page, Response } from '@playwright/test';
 import { chromium } from '@playwright/test';
 
+import { bootstrapPreviewBypass } from './previewBypass';
+
 /**
  * Default timeout for waiting operations (e.g., waitForURL, toBeVisible)
  */
@@ -72,6 +74,12 @@ export class CustomWorld extends World {
       baseURL: BASE_URL,
       viewport: { height: 720, width: 1280 },
     });
+
+    await bootstrapPreviewBypass(
+      this.browserContext.request,
+      BASE_URL,
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+    );
 
     // Set expect timeout for assertions (e.g., toBeVisible, toHaveText)
     this.browserContext.setDefaultTimeout(30_000);

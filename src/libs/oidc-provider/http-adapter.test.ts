@@ -114,6 +114,17 @@ describe('OIDC HTTP adapter', () => {
       });
     });
 
+    it('maps the mounted discovery endpoint to oidc-provider root routing', async () => {
+      const request = new Request('https://example.com/oidc/.well-known/openid-configuration', {
+        method: 'GET',
+      }) as unknown as NextRequest;
+
+      const { createNodeRequest } = await import('./http-adapter');
+      const nodeRequest = await createNodeRequest(request);
+
+      expect(nodeRequest.url).toBe('/.well-known/openid-configuration');
+    });
+
     it('does not consume an explicitly empty request body', async () => {
       const arrayBuffer = vi.fn();
       const request = {

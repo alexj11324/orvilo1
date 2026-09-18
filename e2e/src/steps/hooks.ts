@@ -1,6 +1,8 @@
 import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@cucumber/cucumber';
 import { type Cookie, request } from 'playwright';
 
+import { mockManager } from '../mocks';
+import { bootstrapPreviewBypass } from '../support/previewBypass';
 import { seedTestUser, TEST_USER } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
@@ -38,11 +40,13 @@ BeforeAll({ timeout: 600_000 }, async function () {
   const api = await request.newContext({ baseURL: baseUrl });
 
   try {
+    await bootstrapPreviewBypass(api, baseUrl, process.env.VERCEL_AUTOMATION_BYPASS_SECRET);
     const response = await api.post('/api/auth/sign-in/email', {
       data: {
         email: TEST_USER.email,
         password: TEST_USER.password,
       },
+      maxRedirects: 0,
     });
 
     if (!response.ok()) {

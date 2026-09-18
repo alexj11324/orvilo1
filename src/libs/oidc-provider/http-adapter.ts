@@ -11,6 +11,18 @@ import { appEnv } from '@/envs/app';
 const log = debug('orvilo-oidc:http-adapter');
 
 const methodsWithBody = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const OIDC_MOUNT_PATH = '/oidc';
+const OIDC_DISCOVERY_PATHS = new Set([
+  `${OIDC_MOUNT_PATH}/.well-known/openid-configuration`,
+  `${OIDC_MOUNT_PATH}/.well-known/oauth-authorization-server`,
+]);
+
+const pathRelativeToOidcMount = (pathname: string): string => {
+  if (OIDC_DISCOVERY_PATHS.has(pathname)) {
+    return pathname.slice(OIDC_MOUNT_PATH.length);
+  }
+  return pathname;
+};
 
 /**
  * Convert Next.js request headers to standard Node.js HTTP header format
@@ -32,7 +44,7 @@ export const createNodeRequest = async (req: NextRequest): Promise<IncomingMessa
   const url = new URL(req.url);
 
   // Compute path relative to prefix
-  let providerPath = url.pathname;
+  let providerPath = pathRelativeToOidcMount(url.pathname);
 
   // Ensure path always starts with /
   if (!providerPath.startsWith('/')) {

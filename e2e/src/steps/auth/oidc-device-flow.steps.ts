@@ -203,6 +203,23 @@ Then('CLI 应取得 access token 与 refresh token', async function (this: Custo
   const claims = decodeAccessToken(token.access_token!);
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   expect(audiences).toContain(RESOURCE);
-  expect(claims.iss).toBe(`${new URL(this.page.url()).origin}/oidc`);
+
+  const discoveryResponse = await this.browserContext.request.get(
+    '/oidc/.well-known/openid-configuration',
+  );
+  const discoveryBody = await discoveryResponse.text();
+  expect(
+    discoveryResponse.ok(),
+    `OIDC discovery failed with ${discoveryResponse.status()}: ${discoveryBody}`,
+  ).toBe(true);
+  const discovery = JSON.parse(discoveryBody) as { issuer?: string };
+  expect(discovery.issuer).toBeTruthy();
+
+  const issuerUrl = new URL(claims.iss!);
+  expect(issuerUrl.pathname).toBe('/oidc');
+  // Vercel immutable deployment URLs share one stable branch-level OIDC issuer.
+  // Validate the token against the provider's discovery document instead of
+  // assuming that issuer and browser origins must be identical.
+  expect(claims.iss).toBe(discovery.issuer);
   expect(claims.sub).toBe(TEST_USER.id);
 });

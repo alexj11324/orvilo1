@@ -128,10 +128,11 @@ const createRedisClient = async () => {
     commandTimeout: 10_000,
     connectTimeout: 10_000,
     db: config.database,
+    keyPrefix: config.prefix ? `${config.prefix}:` : undefined,
     lazyConnect: true,
     maxRetriesPerRequest: 2,
     password: config.password,
-    tls: config.tls ? {} : undefined,
+    tls: config.tls ? { ca: config.tlsCA } : undefined,
     username: config.username,
   });
 };

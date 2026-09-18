@@ -3,27 +3,27 @@ import { describe, expect, it } from 'vitest';
 import { createVercelPreviewDeploymentPayload } from './createVercelPreviewDeploymentPayload';
 
 describe('createVercelPreviewDeploymentPayload', () => {
-  it('pins the deployment to the exact PR branch and commit', () => {
+  it('creates an exact Git Preview deployment after branch setup completes', () => {
     expect(
       createVercelPreviewDeploymentPayload(
         'orvilo1',
         'prj_example123',
         1_370_358_179,
-        'fix/vercel-all-gates',
+        'feat/preview',
         '0123456789abcdef0123456789abcdef01234567',
-        51,
+        18,
       ),
     ).toEqual({
       gitSource: {
-        ref: 'fix/vercel-all-gates',
+        ref: 'feat/preview',
         repoId: 1_370_358_179,
         sha: '0123456789abcdef0123456789abcdef01234567',
         type: 'github',
       },
       meta: {
-        githubCommitRef: 'fix/vercel-all-gates',
+        githubCommitRef: 'feat/preview',
         githubCommitSha: '0123456789abcdef0123456789abcdef01234567',
-        githubPrId: '51',
+        githubPrId: '18',
         githubRepoId: '1370358179',
       },
       name: 'orvilo1',

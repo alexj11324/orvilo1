@@ -191,6 +191,46 @@ describe('workspace mode — membership enforcement', () => {
   });
 });
 
+describe('workspace mode — global DB grants for non-members', () => {
+  it('admits a non-member whose global grant covers the required code', async () => {
+    // super_admin-style grant (`rbac_user_roles.workspace_id IS NULL`): the
+    // workspace-auth probe passes on grant existence, then the permission
+    // gate evaluates exactly the DB-granted codes.
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue(null);
+    mockWhere.mockResolvedValue([{ code: 'agent:update:all' }]);
+    const c = caller({ workspaceId: 'ws-1' });
+
+    await expect(c.compatScopedAgentUpdate()).resolves.toEqual({ workspaceRole: undefined });
+  });
+
+  it('rejects a non-member whose global grant does not cover the required code', async () => {
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue(null);
+    mockWhere.mockResolvedValue([{ code: 'agent:read:all' }]);
+    const c = caller({ workspaceId: 'ws-1' });
+
+    await expectTrpcError(c.compatScopedAgentUpdate(), 'FORBIDDEN');
+  });
+
+  it('still rejects a non-member holding no global grant', async () => {
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue(null);
+    mockWhere.mockResolvedValue([]); // the grant probe finds nothing
+    const c = caller({ workspaceId: 'ws-1' });
+
+    await expectTrpcError(c.compatScopedAgentUpdate(), 'FORBIDDEN');
+  });
+
+  it('never falls back to the personal-mode baseline for non-members', async () => {
+    // `workspace:delete:all` is part of PERSONAL_MODE_CODES — a non-member's
+    // grant set must be their DB-granted codes only, or this would wrongly
+    // pass inside a workspace they do not belong to.
+    mockGetActiveWorkspaceMembershipRole.mockResolvedValue(null);
+    mockWhere.mockResolvedValue([{ code: 'agent:read:all' }]);
+    const c = caller({ workspaceId: 'ws-1' });
+
+    await expectTrpcError(c.rbacDeleteAll(), 'FORBIDDEN');
+  });
+});
+
 describe('operator semantics', () => {
   it('withAnyRbacPermission denies an empty code list', async () => {
     await expectTrpcError(caller({}).anyEmpty(), 'FORBIDDEN');

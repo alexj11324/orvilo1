@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { LobeChatDatabase, Transaction } from '@/database/type';
 
 import {
   executionGrants,
@@ -195,14 +195,20 @@ export class AgentDelegationService {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Delegation grant not found' });
     }
 
-    const revoked = await this.markRevoked(grant.id);
-    if (!revoked) return grant; // already terminal — idempotent
+    // The status flip and its room event commit in ONE transaction: if the
+    // outbox insert fails the revocation rolls back too, so a retry still
+    // emits the event instead of finding a terminal grant that never
+    // published. Idempotency comes from the conditional update's row count —
+    // only a row that was still 'active' transitions and publishes.
+    const revokedAt = new Date();
+    const revoked = await this.db.transaction(async (tx) => {
+      const didRevoke = await this.markRevoked(grant.id, tx);
+      if (!didRevoke) return false;
 
-    // No task bound → no task room to notify; the revocation still stands.
-    if (grant.taskId) {
-      await this.db.transaction(async (tx) => {
+      // No task bound → no task room to notify; the revocation still stands.
+      if (grant.taskId) {
         await insertOutboxEvent(tx, {
-          aggregateId: grant.taskId!,
+          aggregateId: grant.taskId,
           aggregateType: 'task',
           eventId: newEventId(),
           eventType: 'task.delegation.revoked',
@@ -215,10 +221,12 @@ export class AgentDelegationService {
           },
           workspaceId: grant.workspaceId,
         });
-      });
-    }
+      }
+      return true;
+    });
 
-    return { ...grant, revokedAt: new Date(), status: 'revoked' };
+    if (!revoked) return grant; // already terminal — idempotent
+    return { ...grant, revokedAt, status: 'revoked' };
   };
 
   /**
@@ -243,9 +251,17 @@ export class AgentDelegationService {
     return revoked;
   };
 
-  private markRevoked = async (grantId: string) => {
+  /**
+   * Conditional flip to 'revoked' — returns false when the row was already
+   * terminal, which is what makes callers idempotent. `executor` lets the
+   * revocation ride inside a caller's transaction (see `revokeGrant`).
+   */
+  private markRevoked = async (
+    grantId: string,
+    executor: LobeChatDatabase | Transaction = this.db,
+  ) => {
     const now = new Date();
-    const rows = await this.db
+    const rows = await executor
       .update(executionGrants)
       .set({ revokedAt: now, status: 'revoked', updatedAt: now })
       .where(and(eq(executionGrants.id, grantId), eq(executionGrants.status, 'active')))
@@ -280,16 +296,24 @@ export class AgentDelegationService {
   /**
    * Fencing claim: bind a grant to a task_topics run and advance the row's
    * execution epoch. The returned epoch is the fencing token — anything still
-   * holding the previous epoch is stale, regardless of lease timers.
+   * holding the previous epoch is stale, regardless of lease timers. Runs are
+   * keyed by the table's unique (taskId, topicId) pair — that's what the
+   * runner holds when the row is created. Pass `tx` to make the claim
+   * atomic with the transaction that creates the run row.
    */
-  claimExecutionEpoch = async (params: { grantId: string; taskTopicId: string }) => {
-    const [row] = await this.db
+  claimExecutionEpoch = async (
+    params: { grantId: string; taskId: string; topicId: string },
+    executor: LobeChatDatabase | Transaction = this.db,
+  ) => {
+    const [row] = await executor
       .update(taskTopics)
       .set({
         executionEpoch: sql`coalesce(${taskTopics.executionEpoch}, 0) + 1`,
         executionGrantId: params.grantId,
       })
-      .where(eq(taskTopics.id, params.taskTopicId))
+      .where(
+        and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
+      )
       .returning({ executionEpoch: taskTopics.executionEpoch });
 
     if (!row) {
@@ -305,7 +329,8 @@ export class AgentDelegationService {
   assertExecutionEpoch = async (params: {
     epoch: number;
     grantId: string;
-    taskTopicId: string;
+    taskId: string;
+    topicId: string;
   }) => {
     const [topic] = await this.db
       .select({
@@ -313,7 +338,9 @@ export class AgentDelegationService {
         executionGrantId: taskTopics.executionGrantId,
       })
       .from(taskTopics)
-      .where(eq(taskTopics.id, params.taskTopicId))
+      .where(
+        and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
+      )
       .limit(1);
 
     if (!isEpochCurrent(topic, { epoch: params.epoch, grantId: params.grantId })) {

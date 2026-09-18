@@ -30,6 +30,7 @@ import {
   TaskDispatchService,
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
+import { AgentDelegationService } from '@/server/services/agentDelegation';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
@@ -48,6 +49,14 @@ export interface RunTaskParams {
    */
   continueFromMessageId?: string;
   continueTopicId?: string;
+  /**
+   * Delegated execution: the validated execution grant this run consumes.
+   * The run executes as `agentId` — the delegate the grant was minted for —
+   * never the task's stored assignee or the inbox fallback, and its
+   * task_topics run row is epoch-fenced to `grantId` so a superseded
+   * delegation cannot commit.
+   */
+  delegation?: { agentId: string; grantId: string };
   extraPrompt?: string;
   /** Stable identity supplied by the originating command or scheduler tick. */
   idempotencyKey?: string;
@@ -107,6 +116,7 @@ export class TaskRunnerService {
   private agentModel: AgentModel;
   private briefModel: BriefModel;
   private db: LobeChatDatabase;
+  private delegationService: AgentDelegationService;
   private taskLifecycle: TaskLifecycleService;
   private taskDispatch: TaskDispatchService;
   private taskModel: TaskModel;
@@ -124,6 +134,7 @@ export class TaskRunnerService {
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
+    this.delegationService = new AgentDelegationService(db, userId, workspaceId);
     this.taskLifecycle = new TaskLifecycleService(db, userId, workspaceId);
     this.taskDispatch = new TaskDispatchService(db, workspaceId);
     this.taskWorkspace = new TaskWorkspaceService(db, userId, workspaceId);
@@ -134,6 +145,7 @@ export class TaskRunnerService {
       taskId: idOrIdentifier,
       continueFromMessageId,
       continueTopicId,
+      delegation,
       extraPrompt,
       integrationSeed,
       idempotencyKey,
@@ -190,14 +202,16 @@ export class TaskRunnerService {
     let preparedDispatch: PreparedTaskDispatch | undefined;
     let runtimeDispatchStarted = false;
 
-    // Persist the agent's model snapshot before the dispatch contract is
-    // captured. updateTaskConfig is a task policy mutation; doing it after
-    // prepare() would advance policyRevision and make this same run look
-    // stale at the first dispatch transition.
-    if (task.assigneeAgentId) {
+    // Persist the executing agent's model snapshot before the dispatch
+    // contract is captured. updateTaskConfig is a task policy mutation; doing
+    // it after prepare() would advance policyRevision and make this same run
+    // look stale at the first dispatch transition. A delegated run executes
+    // as the grant's agent — pin ITS model, not the stored assignee's.
+    const modelSnapshotAgentId = delegation?.agentId ?? task.assigneeAgentId;
+    if (modelSnapshotAgentId) {
       const taskConfig = (task.config ?? {}) as Record<string, unknown>;
       if (typeof taskConfig.model !== 'string' || typeof taskConfig.provider !== 'string') {
-        const snapshot = await this.agentModel.getAgentModelConfig(task.assigneeAgentId);
+        const snapshot = await this.agentModel.getAgentModelConfig(modelSnapshotAgentId);
         if (snapshot) {
           const updated = await this.taskModel.updateTaskConfig(task.id, snapshot);
           if (updated) task = updated;
@@ -227,7 +241,11 @@ export class TaskRunnerService {
       // authoritative assignee/revision snapshot, never the earlier resolve.
       task = preparedDispatch!.task;
 
-      if (!task.assigneeAgentId) {
+      // A delegated run executes as the grant's agent — the task's stored
+      // assignee and the inbox fallback are never substitutes for the
+      // delegate the grant was minted for.
+      let executingAgentId = delegation?.agentId ?? task.assigneeAgentId;
+      if (!executingAgentId) {
         const inboxAgent = await this.agentModel.getBuiltinAgent(INBOX_SESSION_ID);
         if (!inboxAgent) {
           throw new TRPCError({
@@ -246,6 +264,7 @@ export class TaskRunnerService {
           await this.taskModel.updateWithLog(task.id, { assigneeAgentId: inboxAgent.id }, {});
         }
         task.assigneeAgentId = inboxAgent.id;
+        executingAgentId = inboxAgent.id;
         await this.taskDispatch.transition(preparedDispatch!, {
           agentId: inboxAgent.id,
           expected: ['claimed'],
@@ -408,7 +427,7 @@ export class TaskRunnerService {
         [extraPrompt, provisioned?.prompt].filter(Boolean).join('\n\n') || undefined,
       );
 
-      const agentRef = task.assigneeAgentId!;
+      const agentRef = executingAgentId;
       const isSlug = !agentRef.startsWith('agt_');
 
       const aiAgentService = new AiAgentService(this.db, this.userId, {
@@ -420,6 +439,9 @@ export class TaskRunnerService {
       const taskLifecycle = this.taskLifecycle;
       const userId = this.userId;
       let registrationComplete = false;
+      // Fencing token claimed on this run's task_topics row for a delegated
+      // run; asserted just before the registration commits (below).
+      let delegatedEpoch: number | undefined;
       let earlyCompletion:
         | {
             dispatchFence?: number;
@@ -539,6 +561,14 @@ export class TaskRunnerService {
               seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
               trigger,
             });
+            // Bind the run row to the grant inside the same commit that
+            // creates it — the epoch never exists unbound for a delegated run.
+            if (delegation) {
+              delegatedEpoch = await this.delegationService.claimExecutionEpoch(
+                { grantId: delegation.grantId, taskId: task.id, topicId },
+                tx,
+              );
+            }
             if (!continueTopicId) await taskModel.incrementTopicCount(task.id);
             await taskModel.updateCurrentTopic(task.id, topicId);
           });
@@ -649,6 +679,13 @@ export class TaskRunnerService {
             seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
             trigger,
           });
+          if (delegation) {
+            delegatedEpoch = await this.delegationService.claimExecutionEpoch({
+              grantId: delegation.grantId,
+              taskId: task.id,
+              topicId: result.topicId,
+            });
+          }
           provisionedRegistered = true;
           if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
           taskTopicStarted = true;
@@ -678,10 +715,32 @@ export class TaskRunnerService {
           seq: continuedTopic?.seq ?? (task.totalTopics || 0) + 1,
           trigger,
         });
+        if (delegation) {
+          delegatedEpoch = await this.delegationService.claimExecutionEpoch({
+            grantId: delegation.grantId,
+            taskId: task.id,
+            topicId: result.topicId,
+          });
+        }
         if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
         taskTopicStarted = true;
         runtimeDispatchStarted = true;
         provisionedRegistered = true;
+      }
+      // Commit fence for delegated runs: the epoch claimed on this run's
+      // task_topics row must still be current before the registration becomes
+      // durable — a superseding delegation (newer claim on the row) fences
+      // this dispatch off here, and the catch below interrupts the orphan.
+      if (delegation) {
+        if (delegatedEpoch === undefined || !dispatchedTopicId) {
+          throw new Error('Delegated run registered no execution epoch');
+        }
+        await this.delegationService.assertExecutionEpoch({
+          epoch: delegatedEpoch,
+          grantId: delegation.grantId,
+          taskId: task.id,
+          topicId: dispatchedTopicId,
+        });
       }
       await this.taskModel.updateHeartbeat(task.id);
       registrationComplete = true;

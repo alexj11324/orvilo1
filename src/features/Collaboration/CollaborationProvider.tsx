@@ -5,35 +5,20 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CollaborationRoom, PresenceCursorState, PresenceState } from '@/store/collaboration';
 import { roomKey as toRoomKey } from '@/store/collaboration';
-import { useServerConfigStore } from '@/store/serverConfig';
-import { featureFlagsSelectors } from '@/store/serverConfig/selectors';
 
 import { AnchorRegistry } from './anchorRegistry';
-import { COLLAB_ID_ATTR, parseCollabId, pointToUV } from './anchors';
+import { collabAnchorFor, parseCollabId, pointToUV } from './anchors';
 import { acquireRoomConnection, releaseRoomConnection } from './connection';
 import { CollaborationContext } from './context';
 import { createThrottledEmitter, CURSOR_SEND_INTERVAL_MS, cursorMovedEnough } from './throttle';
-
-/**
- * `collaboration.presence` flag: the OSS schema has no such key yet, so read
- * the runtime flags record defensively. Absent means the flag simply isn't
- * gated server-side yet — presence stays enabled so the real channel is the
- * only source of truth. Explicit `false` disables everything, and nothing is
- * ever simulated locally either way.
- */
-const usePresenceEnabled = (explicit?: boolean): boolean =>
-  useServerConfigStore((s) => {
-    if (explicit === false) return false;
-    const flags = featureFlagsSelectors(s) as Record<string, unknown>;
-    const flag = flags['collaboration.presence'] ?? flags['collaborationPresence'];
-    return flag === undefined ? true : flag === true;
-  });
+import { usePresenceEnabled } from './usePresenceEnabled';
 
 /**
  * Publishes the local pointer as semantic-anchor presence. Hit-testing goes
- * through `closest('[data-collab-id]')` — the pointer's element ancestry
- * decides the anchor, and u/v capture *where inside* it the pointer is, so a
- * remote viewer with a different layout still resolves the same spot.
+ * through `collabAnchorFor` — the pointer's element ancestry decides the
+ * anchor (private-marked subtrees never resolve, so their entity ids stay off
+ * the wire), and u/v capture *where inside* it the pointer is, so a remote
+ * viewer with a different layout still resolves the same spot.
  *
  * Silent periods send nothing: the gateway's own timeout clears the cursor
  * server-side, and we clear ours on pointerleave / document hidden.
@@ -65,15 +50,14 @@ const useCursorPublisher = (
     };
 
     const onMove = (event: PointerEvent) => {
-      const target = event.target instanceof Element ? event.target : null;
-      const anchorEl = target?.closest(`[${COLLAB_ID_ATTR}]`);
-      const collabId = anchorEl?.getAttribute(COLLAB_ID_ATTR) ?? null;
+      const hit = collabAnchorFor(event.target);
       const point = { x: event.clientX, y: event.clientY };
 
-      if (!anchorEl || !collabId) {
+      if (!hit) {
         if (lastAnchorId.current) clear();
         return;
       }
+      const { anchorEl, collabId } = hit;
 
       const parsed = parseCollabId(collabId);
       if (!parsed) return;

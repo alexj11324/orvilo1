@@ -17,4 +17,5 @@ export { CursorLayer } from './CursorLayer';
 export { HumanCursor } from './HumanCursor';
 export { PresenceAvatarStack } from './PresenceAvatarStack';
 export { createThrottledEmitter, cursorMovedEnough } from './throttle';
+export { usePresenceEnabled } from './usePresenceEnabled';
 export { useRoomConnection } from './useRoomConnection';

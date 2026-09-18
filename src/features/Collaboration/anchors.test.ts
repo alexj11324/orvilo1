@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   anchorPointInOverlay,
+  COLLAB_ID_ATTR,
+  COLLAB_PRIVATE_ATTR,
+  collabAnchorFor,
   collabIdFor,
   collabIdForTarget,
   parseCollabId,
@@ -93,5 +96,62 @@ describe('anchorPointInOverlay / pointToUV', () => {
   it('returns 0 for zero-size rects instead of dividing by zero', () => {
     const flat = { height: 0, left: 10, top: 10, width: 0 };
     expect(pointToUV({ x: 50, y: 50 }, flat)).toEqual({ u: 0, v: 0 });
+  });
+});
+
+describe('collabAnchorFor', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const cardWith = (attrs: Record<string, string>) => {
+    const card = document.createElement('div');
+    card.setAttribute(COLLAB_ID_ATTR, 'task:t-1');
+    const status = document.createElement('span');
+    status.setAttribute(COLLAB_ID_ATTR, 'task:t-1:status');
+    card.append(status);
+    document.body.append(card);
+    for (const [name, value] of Object.entries(attrs)) card.setAttribute(name, value);
+    return { card, status };
+  };
+
+  it('resolves the nearest anchor element and its id', () => {
+    const { status } = cardWith({});
+    const hit = collabAnchorFor(status);
+    expect(hit?.collabId).toBe('task:t-1:status');
+    expect(hit?.anchorEl).toBe(status);
+  });
+
+  it('returns null for unanchored targets', () => {
+    const plain = document.createElement('div');
+    document.body.append(plain);
+    expect(collabAnchorFor(plain)).toBeNull();
+    expect(collabAnchorFor(null)).toBeNull();
+  });
+
+  it('never resolves anchors inside a private-marked subtree', () => {
+    const { card, status } = cardWith({ [COLLAB_PRIVATE_ATTR]: 'true' });
+    // Nested anchors share the suppression — the collab id embeds the entity
+    // id, which must stay off the wire for private tasks.
+    expect(collabAnchorFor(status)).toBeNull();
+    expect(collabAnchorFor(card)).toBeNull();
+  });
+
+  it('suppresses anchors when the private marker sits on an ancestor wrapper', () => {
+    const { card, status } = cardWith({});
+    const privateWrap = document.createElement('div');
+    privateWrap.setAttribute(COLLAB_PRIVATE_ATTR, 'true');
+    card.replaceWith(privateWrap);
+    privateWrap.append(card);
+    expect(collabAnchorFor(status)).toBeNull();
+    expect(collabAnchorFor(card)).toBeNull();
+  });
+
+  it('does not suppress anchors in sibling subtrees', () => {
+    const { status } = cardWith({});
+    const privateWrap = document.createElement('div');
+    privateWrap.setAttribute(COLLAB_PRIVATE_ATTR, 'true');
+    document.body.append(privateWrap);
+    expect(collabAnchorFor(status)?.collabId).toBe('task:t-1:status');
   });
 });

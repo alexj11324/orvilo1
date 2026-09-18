@@ -111,6 +111,13 @@ export interface RoomPublishRequest {
 // ── Polling snapshot (non-WS clients) ──────────────────
 
 export interface RoomSnapshotResult {
+  /**
+   * Activity history authorized for this room. Incremental pages (a `cursor`
+   * was supplied) replay an overlap window behind the cursor on purpose — a
+   * long-open transaction can commit a row whose `occurredAt` predates the
+   * cursor — so the same `eventId` may be served twice. Consumers MUST dedup
+   * on `eventId` (merge into an id-keyed map, not append).
+   */
   activities: ServerActivityEvent[];
   /** Opaque server cursor; pass back as `cursor` for the next incremental page. */
   nextCursor?: string;

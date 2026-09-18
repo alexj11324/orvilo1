@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 
 import type { RoomSnapshotResult, ServerActivityEvent } from '@orvilo/types';
 import type { LobeChatDatabase } from '@/database/type';
@@ -11,21 +11,26 @@ const SNAPSHOT_PAGE_SIZE = 50;
 
 /**
  * Transactions stamp `createdAt` at statement start but commit out of order —
- * a row inserted at t=100 can commit after one stamped t=110. Without a lag a
- * cursor advanced past the later row would silently skip the earlier one. The
- * watermark only serves rows older than this lag so in-flight commits always
- * land before the cursor claims them.
+ * a row inserted at t=100 can commit after one stamped t=110. The watermark
+ * only serves rows older than this lag so in-flight commits land before a
+ * snapshot claims them; incremental pages then replay an overlap window this
+ * wide behind the cursor so a transaction that outlived the lag (committed
+ * late with an already-passed stamp) is re-served instead of skipped. Rows in
+ * the window were already delivered once — clients MUST dedup on `eventId`
+ * (see `RoomSnapshotResult`).
  */
 const COMMIT_LAG_MS = 5_000;
 
 /**
- * Opaque replay cursor over the committed outbox log. `createdAt` alone can't
- * order concurrent commits; the eventId tiebreak keeps the comparison strict.
+ * Opaque replay cursor over the committed outbox log: the boundary row's
+ * `createdAt` (epoch ms) plus its eventId. `i` is retained for cursor
+ * stability/debugging — the overlap window below makes the lower bound a
+ * pure timestamp comparison, so eventId no longer participates in the filter.
  */
 interface SnapshotCursor {
-  /** eventId tiebreak for same-millisecond commits. */
+  /** eventId of the boundary row. */
   i: string;
-  /** createdAt, epoch ms. */
+  /** createdAt of the boundary row, epoch ms. */
   t: number;
 }
 
@@ -47,9 +52,11 @@ export const decodeCursor = (raw: string | undefined): SnapshotCursor | null => 
  * owns live presence, the local bus answers only when mounted in-process)
  * plus the room's recent authorized activity events.
  *
- * With a cursor the call is incremental: rows delivered after the cursor.
- * Without one it returns the newest page, ascending. Either way `nextCursor`
- * lets the next poll continue without overlap or gaps.
+ * With a cursor the call is incremental: it replays the overlap window
+ * (`cursor.t - COMMIT_LAG_MS`) plus everything newer, so previously delivered
+ * rows may reappear — clients dedup on `eventId`. Without a cursor it returns
+ * the newest page, ascending. Either way `nextCursor` lets the next poll
+ * continue without gaps.
  */
 export const buildRoomSnapshot = async (
   db: LobeChatDatabase,
@@ -57,16 +64,6 @@ export const buildRoomSnapshot = async (
 ): Promise<RoomSnapshotResult> => {
   const cursor = decodeCursor(params.cursor);
   const watermark = new Date(Date.now() - COMMIT_LAG_MS);
-
-  const newerThan = cursor
-    ? or(
-        gt(eventOutbox.createdAt, new Date(cursor.t)),
-        and(
-          eq(eventOutbox.createdAt, new Date(cursor.t)),
-          gt(eventOutbox.eventId, cursor.i),
-        ),
-      )
-    : undefined;
 
   const rows = await db
     .select()
@@ -76,7 +73,13 @@ export const buildRoomSnapshot = async (
         eq(eventOutbox.aggregateType, params.aggregateType),
         eq(eventOutbox.aggregateId, params.aggregateId),
         lte(eventOutbox.createdAt, watermark),
-        ...(newerThan ? [newerThan] : []),
+        // Overlap window instead of a strict `createdAt > cursor.t`: a
+        // transaction open longer than COMMIT_LAG_MS commits a row stamped
+        // behind the cursor, and a strict bound would lose it forever.
+        // Duplicates are safe — consumers dedup on `eventId`.
+        ...(cursor
+          ? [gte(eventOutbox.createdAt, new Date(cursor.t - COMMIT_LAG_MS))]
+          : []),
       ),
     )
     .orderBy(
@@ -92,9 +95,13 @@ export const buildRoomSnapshot = async (
     .filter((event): event is ServerActivityEvent => event !== null);
 
   const newest = ordered.at(-1);
-  const nextCursor = newest
-    ? encodeCursor({ i: newest.eventId, t: newest.createdAt.getTime() })
-    : params.cursor;
+  // Advance only when the page reached rows newer than the incoming cursor —
+  // a page of pure overlap replays must leave the cursor in place, or the
+  // lag-window rows it still expects to catch would be skipped next poll.
+  const nextCursor =
+    newest && (!cursor || newest.createdAt.getTime() > cursor.t)
+      ? encodeCursor({ i: newest.eventId, t: newest.createdAt.getTime() })
+      : params.cursor;
 
   const presence = (await getRoomPublisher().presence?.(params.room)) ?? [];
 

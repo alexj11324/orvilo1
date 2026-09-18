@@ -1,3 +1,5 @@
+import { isRecord } from '@orvilo/utils/object';
+
 import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
 import { teammatesClient } from '@/features/Teammates/api/client';
 import { teammatesKeys } from '@/features/Teammates/api/keys';
@@ -8,6 +10,7 @@ import {
   getCollaborationStoreState,
   type PresenceState,
   roomKey,
+  type ServerActivityEvent,
   type ServerMessage,
 } from '@/store/collaboration';
 
@@ -38,6 +41,8 @@ interface RoomConnection {
   reconnectTimer?: ReturnType<typeof setTimeout>;
   refCount: number;
   room: CollaborationRoom;
+  /** Opaque replay cursor from the last `collaboration.snapshot` response. */
+  snapshotCursor?: string;
   socket?: WebSocket;
   ticketExpiresAt?: number;
 }
@@ -59,6 +64,73 @@ const refreshAuthzData = async (): Promise<void> => {
     mutate(teammatesKeys.members(false)),
     mutate(teammatesKeys.invitations()),
   ]);
+};
+
+/**
+ * `invalidate` notices carry only `{entity, entityId}` — the authorized API is
+ * the re-fetch path, so refresh every cached variant of the owning domain
+ * instead of guessing which query shape holds the row. Cached keys are
+ * `[root, ...]` (workspace id appended by augmentKey), so a root-prefix match
+ * covers list, board and detail caches at once.
+ */
+const isTaskCacheKey = (key: unknown): boolean =>
+  Array.isArray(key) && typeof key[0] === 'string' && key[0].startsWith('task:');
+
+const isProjectCacheKey = (key: unknown): boolean =>
+  Array.isArray(key) && typeof key[0] === 'string' && key[0].startsWith('project/');
+
+const refreshForInvalidate = async (
+  entity: 'project' | 'task' | 'workspace',
+  entityId: string,
+): Promise<void> => {
+  if (entity === 'task') {
+    await mutate(isTaskCacheKey);
+    return;
+  }
+  if (entity === 'project') {
+    await Promise.allSettled([
+      mutate(isProjectCacheKey),
+      mutate(teammatesKeys.projectMembers(entityId)),
+    ]);
+    return;
+  }
+  // workspace — member/invite/workspace changes; the project list can move too
+  // when membership changes what this caller may see.
+  await Promise.allSettled([refreshAuthzData(), mutate(isProjectCacheKey)]);
+};
+
+/** Replayed events arrive as `unknown[]` — an eventId is the dedup key. */
+const isActivityEvent = (value: unknown): value is ServerActivityEvent =>
+  isRecord(value) && typeof value.eventId === 'string' && typeof value.action === 'string';
+
+/**
+ * Replay outbox events that landed while the socket was down. The gateway's
+ * join snapshot hardcodes `activities: []`, so history is recovered through
+ * the authorized `collaboration.snapshot` endpoint with a per-room cursor —
+ * each response advances the cursor so the next reconnect resumes where this
+ * one stopped.
+ */
+const syncRoomSnapshot = async (
+  key: string,
+  record: RoomConnection,
+  generation: number,
+): Promise<void> => {
+  try {
+    const snapshot = await teammatesClient.collaboration.snapshot.query({
+      cursor: record.snapshotCursor,
+      room: record.room,
+    });
+    if (record.generation !== generation) return;
+    record.snapshotCursor = snapshot.nextCursor ?? record.snapshotCursor;
+
+    const store = getCollaborationStoreState();
+    for (const event of snapshot.activities) {
+      if (isActivityEvent(event)) store.applyActivity(key, event);
+    }
+  } catch (error) {
+    if (record.generation !== generation) return;
+    console.error('[Collaboration] snapshot replay failed', error);
+  }
 };
 
 const teardown = (key: string, record: RoomConnection): void => {
@@ -142,6 +214,12 @@ const handleMessage = (key: string, record: RoomConnection, raw: string): void =
       store.applyActivity(key, message.event);
       break;
     }
+    case 'invalidate': {
+      // Deliberately payload-free: re-fetch through the authorized API so the
+      // room's audience never learns entity details in-band.
+      void refreshForInvalidate(message.entity, message.entityId);
+      break;
+    }
     case 'revoked': {
       teardown(key, record);
       store.setRoomStatus(key, 'revoked');
@@ -176,9 +254,12 @@ const connect = async (key: string, record: RoomConnection): Promise<void> => {
       if (record.generation !== generation) return;
       store.setRoomStatus(key, 'online');
       record.attempt = 0;
-      if (record.pendingPresence) {
-        send(record, { state: record.pendingPresence, type: 'presence' });
-      }
+      // Always publish on open — even `{}` registers the connection so
+      // presence-only consumers (the top-bar avatar stack) are visible to the
+      // room, and the heartbeat below keeps the entry inside its TTL.
+      send(record, { state: record.pendingPresence ?? {}, type: 'presence' });
+      // Replay whatever the room missed while the socket was down.
+      void syncRoomSnapshot(key, record, generation);
     };
 
     socket.onmessage = (event: MessageEvent<string>) => {
@@ -233,7 +314,11 @@ export const acquireRoomConnection = (
       getCollaborationStoreState().pruneRoom(key, Date.now());
     }, PRUNE_INTERVAL_MS);
     record.heartbeatTimer = setInterval(() => {
-      send(record!, { type: 'ping' });
+      // Re-send the LAST presence state rather than a bare ping: the gateway
+      // expires presence after a 45s TTL, and the state is a wholesale replace
+      // — resending `pendingPresence` keeps cursor/typing intact while keeping
+      // cursor-less connections (top bar) registered.
+      send(record!, { state: record!.pendingPresence ?? {}, type: 'presence' });
     }, HEARTBEAT_INTERVAL_MS);
     void connect(key, record);
   }

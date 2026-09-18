@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { WorkspaceMemberSummary } from '../api/contract';
 import { useRemovalPreview, useTeammateActions } from '../api/hooks';
+import { removalArmed } from './removalArmed';
 
 const styles = createStaticStyles(({ css }) => ({
   body: css`
@@ -147,7 +148,10 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
         <Button
           danger
-          disabled={isLoading}
+          // Remove stays armed only after the preview actually landed: a
+          // failed or in-flight preview means the impact numbers were never
+          // seen, so the destructive action must not be clickable.
+          disabled={!removalArmed({ error, isLoading, mutating, preview })}
           loading={mutating}
           type="primary"
           onClick={handleRemove}

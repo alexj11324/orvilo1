@@ -18,7 +18,12 @@ import {
 export interface ProjectMemberSummary {
   projectId: string;
   role: string;
-  user: { avatar: string | null; fullName: string | null; id: string; username: string | null } | null;
+  user: {
+    avatar: string | null;
+    fullName: string | null;
+    id: string;
+    username: string | null;
+  } | null;
   userId: string;
 }
 
@@ -77,14 +82,32 @@ export const listProjectMembers = async (
   db: LobeChatDatabase,
   params: { actorUserId: string; projectId: string; workspaceId: string },
 ): Promise<ProjectMemberSummary[]> => {
-  await loadWorkspaceProject(db, params.workspaceId, params.projectId);
+  const project = await loadWorkspaceProject(db, params.workspaceId, params.projectId);
+  // A private roster is visible only to the project's creator and its active
+  // project members — answering any other workspace member would leak who was
+  // granted access. NOT_FOUND keeps existence-hiding consistent with the
+  // project read path.
+  if (project.visibility === 'private' && project.userId !== params.actorUserId) {
+    const callerProjectRole = await new ProjectMemberModel(db, params.actorUserId).getRole(
+      params.projectId,
+      params.actorUserId,
+    );
+    if (callerProjectRole === null) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+    }
+  }
   const members = await new ProjectMemberModel(db, params.actorUserId).listByProject(
     params.projectId,
   );
   if (members.length === 0) return [];
 
   const profiles = new Map(
-    (await UserModel.getDisplayInfoByIds(db, members.map((m) => m.userId))).map((u) => [u.id, u]),
+    (
+      await UserModel.getDisplayInfoByIds(
+        db,
+        members.map((m) => m.userId),
+      )
+    ).map((u) => [u.id, u]),
   );
   return members.map((member) => {
     const user = profiles.get(member.userId);

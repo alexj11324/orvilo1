@@ -111,4 +111,16 @@ describe('outboxRowToActivityEvent', () => {
   it('returns null for aggregates with no room', () => {
     expect(outboxRowToActivityEvent(row({ aggregateType: 'user' }))).toBeNull();
   });
+
+  it('returns null for workspace aggregates — they have no SemanticTarget', () => {
+    // Workspace-aggregated rows only produce live invalidate/kick traffic.
+    // Synthesizing an activity marker would emit a 'task' target whose
+    // entityId is really a workspace id, sending the UI at a task that does
+    // not exist.
+    expect(
+      outboxRowToActivityEvent(
+        row({ aggregateId: 'ws-1', aggregateType: 'workspace', eventType: 'workspace.member.removed' }),
+      ),
+    ).toBeNull();
+  });
 });

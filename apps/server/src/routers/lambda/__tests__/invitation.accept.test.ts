@@ -309,6 +309,24 @@ describe('invitationRouter.accept', () => {
     expect(invitationModel.markAccepted).toHaveBeenCalled();
   });
 
+  it('rejects a suspended member without consuming the invitation', async () => {
+    queries.lockMembershipForUpdate.mockResolvedValue({
+      deletedAt: null,
+      role: 'member',
+      suspendedAt: new Date('2026-02-01'),
+      userId: 'u-invitee',
+    });
+
+    await expect(createCaller().accept({ token: 'raw-token' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: expect.stringContaining('suspended'),
+    });
+    // The invite must stay pending — marking it accepted would burn the token
+    // while the member remains locked out.
+    expect(invitationModel.markAccepted).not.toHaveBeenCalled();
+    expect(memberModel.addMember).not.toHaveBeenCalled();
+  });
+
   it('re-joins a removed member with only the new invitation scope', async () => {
     queries.lockMembershipForUpdate.mockResolvedValue({
       deletedAt: new Date('2026-02-01'),
@@ -375,12 +393,13 @@ describe('invitationRouter.preview', () => {
     const invitation = baseInvitation();
     invitationModel.findByToken.mockResolvedValue(invitation);
     workspaceModel.findById.mockResolvedValue({ avatar: null, id: 'ws-1', name: 'Team' });
-    queries.findUserById.mockResolvedValue({
-      avatar: 'a.png',
-      fullName: 'Owner One',
-      id: 'u-inviter',
-      username: 'owner',
-    });
+    // The caller's own account is now consulted for the email binding, so the
+    // mock must serve both the invitee (matching normalizedEmail) and inviter.
+    queries.findUserById.mockImplementation(async (_db: any, userId: string) =>
+      userId === 'u-invitee'
+        ? verifiedAccount()
+        : { avatar: 'a.png', fullName: 'Owner One', id: userId, username: 'owner' },
+    );
     invitationQueries.listInvitationProjectGrants.mockResolvedValue([
       { invitationId: 'inv-1', projectId: 'proj-1', projectName: 'Alpha', role: 'contributor' },
     ]);
@@ -414,6 +433,47 @@ describe('invitationRouter.preview', () => {
     const preview = await createCaller().preview({ token: 'raw-token' });
     expect(preview.status).toBe('accepted');
     expect(preview.acceptedByCurrentUser).toBe(true);
+  });
+
+  it('rejects when the caller account email does not match the bound email', async () => {
+    queries.findUserById.mockImplementation(async (_db: any, userId: string) =>
+      userId === 'u-invitee'
+        ? { ...verifiedAccount(), email: 'other@x.com', normalizedEmail: 'other@x.com' }
+        : { avatar: 'a.png', fullName: 'Owner One', id: userId, username: 'owner' },
+    );
+
+    await expect(createCaller().preview({ token: 'raw-token' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: expect.stringContaining('different email'),
+    });
+  });
+
+  it('rejects when the caller account carries no usable email', async () => {
+    queries.findUserById.mockImplementation(async (_db: any, userId: string) =>
+      userId === 'u-invitee'
+        ? { id: 'u-invitee' }
+        : { avatar: 'a.png', fullName: 'Owner One', id: userId, username: 'owner' },
+    );
+
+    await expect(createCaller().preview({ token: 'raw-token' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('still previews a link-only invitation bound to no email', async () => {
+    invitationModel.findByToken.mockResolvedValue({
+      ...baseInvitation(),
+      email: null,
+      emailNormalized: null,
+    });
+    queries.findUserById.mockImplementation(async (_db: any, userId: string) =>
+      userId === 'u-invitee'
+        ? { id: 'u-invitee' }
+        : { avatar: 'a.png', fullName: 'Owner One', id: userId, username: 'owner' },
+    );
+
+    const preview = await createCaller().preview({ token: 'raw-token' });
+    expect(preview.status).toBe('pending');
   });
 
   it('rejects expired invitations', async () => {
@@ -462,6 +522,21 @@ describe('invitationRouter.resend / revoke', () => {
       fakeDb,
       expect.objectContaining({ action: 'invitation.resent' }),
     );
+  });
+
+  it('resend enforces a cooldown while a previous send is still fresh', async () => {
+    // rotateToken stamps lastSentAt inside the locked transaction, so a resend
+    // serialized behind a just-committed one must back off rather than kill
+    // the link that was only just mailed.
+    invitationModel.lockForUpdate.mockResolvedValue({
+      ...baseInvitation(),
+      lastSentAt: new Date(),
+    });
+
+    await expect(createCaller('u-inviter').resend({ invitationId: 'inv-1' })).rejects.toMatchObject(
+      { code: 'BAD_REQUEST' },
+    );
+    expect(invitationModel.rotateToken).not.toHaveBeenCalled();
   });
 
   it('resend rejects a non-pending invitation', async () => {

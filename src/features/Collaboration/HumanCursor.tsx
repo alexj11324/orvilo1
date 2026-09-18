@@ -1,12 +1,13 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import type { PresenceEntry } from '@/store/collaboration';
 
 import { anchorPointInOverlay, collabIdFor } from './anchors';
 import { useCollaborationContext } from './context';
+import { cursorLabelForeground } from './cursorLabelColor';
 
 const styles = createStaticStyles(({ css }) => ({
   cursor: css`
@@ -63,6 +64,14 @@ export const HumanCursor = memo<{ entry: PresenceEntry }>(({ entry }) => {
   const u = cursor?.u ?? 0;
   const v = cursor?.v ?? 0;
 
+  // Anchor rects move on scroll/resize without a presence update — the registry
+  // bumps its version on both, so subscribing re-runs the position effect below
+  // and the cursor re-reads getRect instead of freezing at the stale point.
+  const layoutVersion = useSyncExternalStore(
+    ctx ? ctx.registry.subscribe : () => () => {},
+    ctx ? ctx.registry.getVersion : () => 0,
+  );
+
   useEffect(() => {
     if (!ctx || !collabId) {
       setVisible(false);
@@ -107,7 +116,7 @@ export const HumanCursor = memo<{ entry: PresenceEntry }>(({ entry }) => {
     animRef.current = requestAnimationFrame(step);
     setVisible(true);
     return () => cancelAnimationFrame(animRef.current);
-  }, [ctx, collabId, u, v]);
+  }, [ctx, collabId, u, v, layoutVersion]);
 
   if (!visible || !collabId) return null;
 
@@ -117,7 +126,12 @@ export const HumanCursor = memo<{ entry: PresenceEntry }>(({ entry }) => {
   return (
     <div className={styles.cursor} ref={nodeRef} style={{ opacity: 0.95 }}>
       <div className={styles.pointer} style={color ? { borderTopColor: color } : undefined} />
-      <div className={styles.label} style={color ? { background: color } : undefined}>
+      <div
+        className={styles.label}
+        style={
+          color ? { background: color, color: cursorLabelForeground(color) } : undefined
+        }
+      >
         {name}
       </div>
     </div>

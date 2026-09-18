@@ -5,17 +5,11 @@ import { z } from 'zod';
 
 import { ProjectMemberModel } from '@/database/models/projectMember';
 import { UserModel } from '@/database/models/user';
+import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceInvitationModel } from '@/database/models/workspaceInvitation';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import { WorkspaceModel } from '@/database/models/workspace';
 
-import {
-  canGrantWorkspaceRole,
-  capProjectRole,
-  isWorkspaceRoleName,
-  type ProjectRoleName,
-  type WorkspaceRoleName,
-} from '../membershipLifecycle/roles';
+import { emitWorkspaceEvent, recordAudit } from '../membershipLifecycle/audit';
 import {
   findProjectsByIds,
   findUserById,
@@ -23,7 +17,13 @@ import {
   lockMembershipForUpdate,
   lockWorkspaceForUpdate,
 } from '../membershipLifecycle/queries';
-import { emitWorkspaceEvent, recordAudit } from '../membershipLifecycle/audit';
+import {
+  canGrantWorkspaceRole,
+  capProjectRole,
+  isWorkspaceRoleName,
+  type ProjectRoleName,
+  type WorkspaceRoleName,
+} from '../membershipLifecycle/roles';
 import { maskEmail, sendInvitationEmail } from './email';
 import {
   listInvitationProjectGrants,
@@ -36,6 +36,11 @@ type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 export interface InviteResultItem {
   email: string;
+  /**
+   * Delivery outcome for a created invite — `false` means the row is pending
+   * and resend-able but the mail never left. Absent on failure rows.
+   */
+  emailed?: boolean;
   error?: string;
   invitationId?: string;
   ok: boolean;
@@ -67,8 +72,10 @@ export interface InvitationPreview {
 
 const emailFormat = z.email();
 
-const isExpired = (invitation: { expiresAt: Date }) =>
-  invitation.expiresAt.getTime() <= Date.now();
+/** Minimum spacing between resend attempts — enforced under the row lock. */
+const RESEND_COOLDOWN_MS = 60_000;
+
+const isExpired = (invitation: { expiresAt: Date }) => invitation.expiresAt.getTime() <= Date.now();
 
 /** Bounded retries for transaction serialization failures (lock-order contention). */
 const withRetry = async <T>(fn: () => Promise<T>, attempts = 3): Promise<T> => {
@@ -95,7 +102,10 @@ const toInvitationListItem = (
     role: string;
     status: string;
   },
-  inviters: Map<string, { avatar: string | null; fullName: string | null; username: string | null }>,
+  inviters: Map<
+    string,
+    { avatar: string | null; fullName: string | null; username: string | null }
+  >,
   grants: Map<string, Array<{ projectId: string; role: string }>>,
 ): InvitationListItem => {
   const inviter = inviters.get(invitation.inviterId);
@@ -183,9 +193,10 @@ export const issueInvitations = async (
 
   const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 86_400_000);
   const memberModel = new WorkspaceMemberModel(db, params.inviterUserId);
-  const pending = await new WorkspaceInvitationModel(db, params.inviterUserId).listPendingByWorkspace(
-    params.workspaceId,
-  );
+  const pending = await new WorkspaceInvitationModel(
+    db,
+    params.inviterUserId,
+  ).listPendingByWorkspace(params.workspaceId);
   const pendingEmails = new Set(pending.map((row) => row.invitation.emailNormalized));
 
   const results: InviteResultItem[] = [];
@@ -217,7 +228,10 @@ export const issueInvitations = async (
 
     try {
       const { invitation, token } = await db.transaction(async (tx) => {
-        const created = await new WorkspaceInvitationModel(tx, params.inviterUserId).createInvitation({
+        const created = await new WorkspaceInvitationModel(
+          tx,
+          params.inviterUserId,
+        ).createInvitation({
           emailNormalized,
           expiresAt,
           inviterId: params.inviterUserId,
@@ -244,6 +258,11 @@ export const issueInvitations = async (
         return created;
       });
 
+      // Claim the normalized address the moment the row exists so a duplicate
+      // in this same batch (`a@x.com` then ` A@x.com `) reads as
+      // already-invited instead of creating a second pending row.
+      pendingEmails.add(emailNormalized);
+
       const sent = await sendInvitationEmail({
         inviterEmail: inviter?.email,
         inviterName: inviter?.fullName ?? inviter?.username,
@@ -253,7 +272,7 @@ export const issueInvitations = async (
         workspaceName: workspace.name,
       });
       if (sent) await markInvitationSent(db, invitation.id, new Date());
-      results.push({ email: rawEmail, invitationId: invitation.id, ok: true });
+      results.push({ email: rawEmail, emailed: sent, invitationId: invitation.id, ok: true });
     } catch (error) {
       console.error('[workspaceInvitation:issueInvitations]', error);
       results.push(fail('invite-failed'));
@@ -309,16 +328,36 @@ export const previewInvitation = async (
   db: LobeChatDatabase,
   params: { token: string; userId: string },
 ): Promise<InvitationPreview> => {
-  const invitation = await new WorkspaceInvitationModel(db, params.userId).findByToken(params.token);
+  const invitation = await new WorkspaceInvitationModel(db, params.userId).findByToken(
+    params.token,
+  );
   if (!invitation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Invitation not found' });
 
   // Expired links are a hard error; revoked/accepted still render a preview
   // with their terminal status so the landing page can say what happened.
-  if (invitation.status === 'expired' || (invitation.status === 'pending' && isExpired(invitation))) {
+  if (
+    invitation.status === 'expired' ||
+    (invitation.status === 'pending' && isExpired(invitation))
+  ) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invitation expired' });
   }
   if (!['pending', 'accepted', 'revoked'].includes(invitation.status)) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: `Invitation ${invitation.status}` });
+  }
+
+  // Same binding rule as accept: a token bound to an email previews only for
+  // the account holding that address — the link alone must not leak workspace
+  // identity, inviter identity or the invited project scope to a bearer on a
+  // different account. Link-only invitations (no bound email) stay open.
+  const account = await findUserById(db, params.userId);
+  const accountEmail =
+    account?.normalizedEmail ??
+    (account?.email ? WorkspaceInvitationModel.normalizeEmail(account.email) : null);
+  if (invitation.emailNormalized && accountEmail !== invitation.emailNormalized) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'This invitation is bound to a different email — sign in with that account',
+    });
   }
 
   const workspace = await new WorkspaceModel(db, params.userId).findById(invitation.workspaceId);
@@ -327,7 +366,8 @@ export const previewInvitation = async (
   const grants = await listInvitationProjectGrants(db, [invitation.id]);
 
   return {
-    acceptedByCurrentUser: invitation.status === 'accepted' && invitation.acceptedBy === params.userId,
+    acceptedByCurrentUser:
+      invitation.status === 'accepted' && invitation.acceptedBy === params.userId,
     emailHint: maskEmail(invitation.emailNormalized),
     expiresAt: invitation.expiresAt,
     inviter: {
@@ -377,7 +417,9 @@ export const acceptInvitation = async (
   return withRetry(() =>
     db.transaction(async (tx) => {
       await lockWorkspaceForUpdate(tx, found.workspaceId);
-      const invitation = await new WorkspaceInvitationModel(tx, params.userId).lockForUpdate(found.id);
+      const invitation = await new WorkspaceInvitationModel(tx, params.userId).lockForUpdate(
+        found.id,
+      );
       if (!invitation || invitation.status !== 'pending') {
         throw new TRPCError({ code: 'CONFLICT', message: 'Invitation already used' });
       }
@@ -434,6 +476,15 @@ export const acceptInvitation = async (
       let alreadyMember = false;
 
       if (existing && existing.deletedAt === null) {
+        // A suspended member must not consume the invite: marking it accepted
+        // would burn the token while leaving them locked out. Only an admin
+        // resume clears suspension; the invitation stays pending for a retry.
+        if (existing.suspendedAt !== null) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'membership suspended — ask an admin to resume',
+          });
+        }
         // Idempotent re-join: never overwrite an active member's role or
         // accumulated grants. The invitation is still consumed below.
         alreadyMember = true;
@@ -451,7 +502,10 @@ export const acceptInvitation = async (
           if (held === null || held === undefined) {
             await projectMemberModel.add({
               projectId: grant.projectId,
-              role: capProjectRole(invitation.role as WorkspaceRoleName, grant.role as ProjectRoleName),
+              role: capProjectRole(
+                invitation.role as WorkspaceRoleName,
+                grant.role as ProjectRoleName,
+              ),
               userId: params.userId,
               workspaceId: found.workspaceId,
             });
@@ -528,7 +582,10 @@ export const resendInvitation = async (
   if (!invitation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Invitation not found' });
   await assertInvitationWorkspaceAdmin(db, invitation.workspaceId, params.actorUserId);
   if (invitation.status !== 'pending') {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only a pending invitation can be resent' });
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Only a pending invitation can be resent',
+    });
   }
   if (isExpired(invitation)) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invitation expired — issue a new one' });
@@ -549,6 +606,16 @@ export const resendInvitation = async (
     }
     if (isExpired(locked)) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invitation expired — issue a new one' });
+    }
+    // Cooldown under the row lock: rotateToken stamps `lastSentAt` inside this
+    // transaction, so a resend serialized behind a just-committed one sees the
+    // fresh stamp and backs off instead of rotating again and killing the link
+    // that was only just mailed.
+    if (locked.lastSentAt && Date.now() - locked.lastSentAt.getTime() < RESEND_COOLDOWN_MS) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Invitation was just resent — wait a moment before resending again',
+      });
     }
 
     const token = await new WorkspaceInvitationModel(tx, params.actorUserId).rotateToken(
@@ -582,7 +649,9 @@ export const resendInvitation = async (
     return { generation, token };
   });
 
-  const workspace = await new WorkspaceModel(db, params.actorUserId).findById(invitation.workspaceId);
+  const workspace = await new WorkspaceModel(db, params.actorUserId).findById(
+    invitation.workspaceId,
+  );
   const inviter = await findUserById(db, invitation.inviterId);
   const emailed = await sendInvitationEmail({
     inviterEmail: inviter?.email,

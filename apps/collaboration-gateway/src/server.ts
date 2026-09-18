@@ -20,6 +20,16 @@ export interface GatewayOptions {
 
 const WS_PATH = '/collaboration';
 
+/**
+ * Hard bound on a single client frame. Presence payloads are small JSON and
+ * the state fans out verbatim to the whole room — an unbounded frame would
+ * let one client amplify a huge buffer through every peer's socket.
+ * `maxPayload` is the transport-level enforcement; the byteLength check in
+ * the message handler keeps oversized buffers out of `JSON.parse` even if a
+ * frame slips through a non-ws path in tests.
+ */
+const MAX_MESSAGE_BYTES = 64 * 1024;
+
 const readBody = async (req: IncomingMessage): Promise<unknown> => {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(chunk as Buffer);
@@ -114,7 +124,7 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
     sendJson(res, 404, { error: 'not found' });
   });
 
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ maxPayload: MAX_MESSAGE_BYTES, noServer: true });
 
   const handleConnection = (ws: WebSocket, ticket: GatewayTicket) => {
     const connectionId = randomUUID();
@@ -135,9 +145,15 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
     connection.send({ activities: [], connectionId, presence, type: 'snapshot' });
 
     ws.on('message', (data) => {
+      const bytes = Array.isArray(data)
+        ? Buffer.concat(data)
+        : data instanceof ArrayBuffer
+          ? Buffer.from(data)
+          : data;
+      if (bytes.byteLength > MAX_MESSAGE_BYTES) return;
       let parsed: unknown;
       try {
-        parsed = JSON.parse(data.toString());
+        parsed = JSON.parse(bytes.toString('utf8'));
       } catch {
         return;
       }

@@ -176,12 +176,12 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
     [navigate, routeScope],
   );
 
-  const privacyBadge =
-    task.visibility === 'private' ? (
-      <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-        <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
-      </Tooltip>
-    ) : null;
+  const isPrivate = task.visibility === 'private';
+  const privacyBadge = isPrivate ? (
+    <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
+      <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+    </Tooltip>
+  ) : null;
 
   // Executor slot (top-right): the agent — or the hover-revealed assign
   // affordance when the card has none. Mirrors Cordy's board card.
@@ -271,6 +271,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent',
       className={cx(styles.card, overlay && styles.cardOverlay)}
       data-collab-id={`task:${task.id}`}
       data-collab-id-alt={`task:${task.identifier}`}
+      data-collab-private={isPrivate || undefined}
       onClick={overlay ? undefined : handleClick}
     >
       {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,

@@ -6,11 +6,13 @@
 export {
   actionApprovals,
   agents,
+  eventOutbox,
   executionGrants,
   projectMembers,
   taskInputs,
   tasks,
   taskTopics,
+  topics,
   workspaceMembers,
   workspaces,
 } from '@/database/schemas';

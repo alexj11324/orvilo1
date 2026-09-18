@@ -195,4 +195,18 @@ describe('gateway protocol', () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it('closes the socket when a frame exceeds the payload cap', async () => {
+    const token = await signRoomTicket({ room: 'task:t1', userId: 'user-big' });
+    const conn = await connect(`room=task:t1&token=${token}`);
+    await nextMessage(conn.messages, 'snapshot');
+
+    // >64KiB frame — ws maxPayload terminates the connection with 1009
+    // instead of feeding the buffer to JSON.parse.
+    conn.ws.send(JSON.stringify({ state: { typing: 'x'.repeat(128 * 1024) }, type: 'presence' }));
+    const code = await new Promise<number>((resolve) => {
+      conn.ws.once('close', (closeCode) => resolve(closeCode));
+    });
+    expect(code).toBe(1009);
+  });
 });

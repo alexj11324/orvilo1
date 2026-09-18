@@ -11,7 +11,7 @@ import {
   useModalContext,
 } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, TriangleAlert, XCircle } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -157,8 +157,10 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
       setResult(batch);
       void mutate(teammatesKeys.invitations());
       void mutate(teammatesKeys.members(false));
-      if (batch.results.every((entry) => entry.ok)) {
+      if (batch.results.every((entry) => entry.ok && entry.emailed !== false)) {
         // All delivered — the caller sees the green state briefly before close.
+        // `emailed === false` rows stay open: the invite exists but the mail
+        // never left, so the admin must see the warning and resend.
         setTimeout(close, 400);
       }
     } catch (error) {
@@ -242,23 +244,36 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
 
       {result && (
         <Flexbox className={styles.resultList}>
-          {result.results.map((entry) => (
-            <div className={styles.emailResult} key={entry.email}>
-              <Icon
-                color={entry.ok ? cssVar.colorSuccess : cssVar.colorError}
-                icon={entry.ok ? CheckCircle2 : XCircle}
-                size={14}
-              />
-              <Text fontSize={12} type={entry.ok ? undefined : 'danger'}>
-                {entry.ok
-                  ? t('workspaceSetting.members.inviteSent', { email: entry.email })
-                  : t('workspaceSetting.members.inviteFailed', {
-                      email: entry.email,
-                      error: entry.error ?? '',
-                    })}
-              </Text>
-            </div>
-          ))}
+          {result.results.map((entry) => {
+            // `ok` + `emailed === false` = the row exists but nothing was sent —
+            // distinct from both success and failure, so it needs its own look.
+            const emailFailed = entry.ok && entry.emailed === false;
+            return (
+              <div className={styles.emailResult} key={entry.email}>
+                <Icon
+                  color={
+                    emailFailed
+                      ? cssVar.colorWarning
+                      : entry.ok
+                        ? cssVar.colorSuccess
+                        : cssVar.colorError
+                  }
+                  icon={emailFailed ? TriangleAlert : entry.ok ? CheckCircle2 : XCircle}
+                  size={14}
+                />
+                <Text fontSize={12} type={entry.ok ? undefined : 'danger'}>
+                  {emailFailed
+                    ? t('workspaceSetting.members.inviteEmailFailed', { email: entry.email })
+                    : entry.ok
+                      ? t('workspaceSetting.members.inviteSent', { email: entry.email })
+                      : t('workspaceSetting.members.inviteFailed', {
+                          email: entry.email,
+                          error: entry.error ?? '',
+                        })}
+                </Text>
+              </div>
+            );
+          })}
         </Flexbox>
       )}
 

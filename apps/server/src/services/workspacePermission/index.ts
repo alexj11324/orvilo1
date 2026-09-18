@@ -74,6 +74,7 @@ export const resolveWorkspaceGrantedPermissions = async ({
             eq(workspaceMembers.workspaceId, workspaceId),
             eq(workspaceMembers.userId, userId),
             isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
           ),
         )
         .limit(1)
@@ -126,6 +127,7 @@ export const hasWorkspaceScopedPermission = async ({
           eq(workspaceMembers.workspaceId, workspaceId),
           eq(workspaceMembers.userId, userId),
           isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
         ),
       )
       .limit(1);

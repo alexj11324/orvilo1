@@ -19,6 +19,8 @@ import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
+import { favoriteLabel } from './favoriteLabel';
+
 interface WorkFavoritesProps {
   itemKey: string;
 }
@@ -51,7 +53,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
             key={`${item.targetType}:${item.targetId}`}
             to={targetPath(item.targetType, item.targetId)}
           >
-            <NavItem title={item.targetId} />
+            <NavItem title={favoriteLabel(item.targetType, item.title, t)} />
           </WorkspaceLink>
         ))}
       </AccordionPanel>

@@ -196,6 +196,8 @@ export interface NavigationFavorite {
   rank: number;
   targetId: string;
   targetType: NavigationFavoriteTargetType;
+  /** Resolved only when the caller can still read the target. Never a leaked stale title. */
+  title?: string | null;
   version: number;
 }
 

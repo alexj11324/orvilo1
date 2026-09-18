@@ -5,6 +5,7 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import type { NavigationFavoriteItem } from '../schemas/workAttention';
 import { navigationFavorites } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
+import { SavedViewModel } from './savedView';
 
 export class NavigationFavoriteModel {
   constructor(
@@ -15,8 +16,8 @@ export class NavigationFavoriteModel {
 
   private scopeKey = () => notificationScopeKey(this.workspaceId);
 
-  list = async (): Promise<NavigationFavoriteItem[]> => {
-    return this.db
+  list = async (): Promise<Array<NavigationFavoriteItem & { title: string | null }>> => {
+    const rows = await this.db
       .select()
       .from(navigationFavorites)
       .where(
@@ -26,6 +27,20 @@ export class NavigationFavoriteModel {
         ),
       )
       .orderBy(asc(navigationFavorites.rank), asc(navigationFavorites.createdAt));
+
+    const viewIds = rows.filter((row) => row.targetType === 'savedView').map((row) => row.targetId);
+    if (viewIds.length === 0) return rows.map((row) => ({ ...row, title: null }));
+
+    const readable = new Map(
+      (await new SavedViewModel(this.db, this.userId, this.workspaceId).list()).map((view) => [
+        view.id,
+        view.name,
+      ]),
+    );
+    return rows.map((row) => ({
+      ...row,
+      title: row.targetType === 'savedView' ? (readable.get(row.targetId) ?? null) : null,
+    }));
   };
 
   pin = async (params: {

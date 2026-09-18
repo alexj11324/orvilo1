@@ -147,7 +147,7 @@ export class TraeAcpAdapter implements AgentEventAdapter {
       // thread history; the host injects the prior totals so this adapter can
       // emit per-turn deltas instead of double-counting the thread backlog.
       if (isRecord(raw.initialCumulativeUsage)) {
-        this.cumulativeBaseline = raw.initialCumulativeUsage as UsageData;
+        this.cumulativeBaseline = raw.initialCumulativeUsage as unknown as UsageData;
       }
       return [];
     }

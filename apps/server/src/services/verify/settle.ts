@@ -423,26 +423,28 @@ export const driveTaskFromVerify = async (
         // The verify → TaskService → aiAgent → agentRuntime completion → verify
         // cycle is safe statically since every use is call-time (inside this fn).
         if (!(await renewTaskDrive())) return;
-        const completion = await new TaskService(db, userId, workspaceId).updateStatus(
-          {
-            expectedContract,
-            id: taskOperation.taskId,
-            status: 'completed',
-          },
-          undefined,
-          completionReservationId
-            ? {
+        const taskService = new TaskService(db, userId, workspaceId);
+        const completionInput = {
+          expectedContract,
+          id: taskOperation.taskId,
+          status: 'completed' as const,
+        };
+        const completion = completionReservationId
+          ? await taskService.updateStatus(
+              completionInput,
+              undefined,
+              {
                 currentStatus: currentTask.status as TaskStatus,
                 reservationId: completionReservationId,
-              }
-            : undefined,
-          {
-            onStatusCommitted: () => {
-              completionReservationActive = false;
-              completionLeaseFailure = undefined;
-            },
-          },
-        );
+              },
+              {
+                onStatusCommitted: () => {
+                  completionReservationActive = false;
+                  completionLeaseFailure = undefined;
+                },
+              },
+            )
+          : await taskService.updateStatus(completionInput);
         if (!completion) {
           await retireSupersededDrive();
           return;

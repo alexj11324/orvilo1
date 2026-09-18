@@ -273,15 +273,17 @@ export class NotificationModel {
     } = {},
   ) {
     const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
-    const conditions: SQL[] = [
-      ...this.scope(),
-      this.resourceReadable(),
-      ...this.presentationWhere(opts.filter),
-    ];
-    if (opts.kind) conditions.push(eq(notifications.kind, opts.kind));
-    // Action tab keeps unresolved requests even after personal archive.
+    const conditions: SQL[] = [...this.scope(), this.resourceReadable()];
     if (opts.kind === 'action') {
-      conditions.push(isNull(notifications.resolvedAt));
+      conditions.push(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt));
+      // Needs-you stays source-driven: personal archive must not hide an
+      // unresolved request. Archived / snoozed filters still apply when asked.
+      if (opts.filter === 'archived' || opts.filter === 'snoozed') {
+        conditions.push(...this.presentationWhere(opts.filter));
+      }
+    } else {
+      conditions.push(...this.presentationWhere(opts.filter));
+      if (opts.kind) conditions.push(eq(notifications.kind, opts.kind));
     }
 
     if (opts.cursor) {

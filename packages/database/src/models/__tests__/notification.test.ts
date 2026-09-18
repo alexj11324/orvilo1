@@ -600,6 +600,29 @@ describe('NotificationModel (integration)', () => {
       expect(remaining.map((row) => row.title)).toEqual(['Approve this']);
     });
 
+    it('keeps an individually archived unresolved action on the action feed', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          actionRequestId: 'apr_archive',
+          category: 'pending',
+          dedupeKey: 'action-archived',
+          kind: 'action',
+          title: 'Still needs a decision',
+          type: 'acp_permission',
+        }),
+      );
+      expect(created).toBeDefined();
+      await model.archive(created!.id);
+
+      const actionFeed = await model.listFeed({ kind: 'action' });
+      expect(actionFeed.map((row) => row.title)).toEqual(['Still needs a decision']);
+      expect(actionFeed[0]?.isArchived).toBe(true);
+
+      const activityFeed = await model.listFeed({ kind: 'update' });
+      expect(activityFeed.map((row) => row.title)).not.toContain('Still needs a decision');
+    });
+
     it('does not mark later feed revisions read during mark-all', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       await model.create(

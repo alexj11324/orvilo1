@@ -23,12 +23,12 @@ describe('workQueryHasMore', () => {
 describe('mergeWorkQueryGroups', () => {
   it('pages one column without shrinking the other column total', () => {
     const first = [
-      { key: 'todo', tasks: [{ id: 'a' }, { id: 'b' }], total: 3 },
-      { key: 'done', tasks: [{ id: 'z' }], total: 1 },
+      { hasMore: true, key: 'todo', tasks: [{ id: 'a' }, { id: 'b' }], total: 3 },
+      { hasMore: false, key: 'done', tasks: [{ id: 'z' }], total: 1 },
     ];
     const next = mergeWorkQueryGroups(first, [
-      { key: 'todo', tasks: [{ id: 'c' }], total: 3 },
-      { key: 'done', tasks: [], total: 1 },
+      { hasMore: false, key: 'todo', tasks: [{ id: 'c' }], total: 3 },
+      { hasMore: false, key: 'done', tasks: [], total: 1 },
     ]);
     expect(next.find((group) => group.key === 'todo')?.tasks.map((row) => row.id)).toEqual([
       'a',
@@ -37,5 +37,7 @@ describe('mergeWorkQueryGroups', () => {
     ]);
     expect(next.find((group) => group.key === 'done')?.total).toBe(1);
     expect(next.find((group) => group.key === 'done')?.tasks.map((row) => row.id)).toEqual(['z']);
+    expect(next.find((group) => group.key === 'todo')?.hasMore).toBe(false);
+    expect(next.find((group) => group.key === 'done')?.hasMore).toBe(false);
   });
 });

@@ -1,9 +1,10 @@
+import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 
 import { favoriteLabel } from './favoriteLabel';
 
 describe('favoriteLabel', () => {
-  const t = (key: string) => key;
+  const t = ((key: string) => key) as TFunction<'common'>;
 
   it('translates virtual builtin views instead of the English kernel name', () => {
     expect(favoriteLabel('savedView', 'All tasks', t, 'builtin:all')).toBe(

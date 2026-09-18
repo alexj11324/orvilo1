@@ -218,8 +218,9 @@ const SearchResults = memo<SearchResultsProps>(
 
     const getTypeLabel = (type: CommandMenuSearchResult['type']) => {
       switch (type) {
-        case 'page': {
-          return t('cmdk.search.file');
+        case 'page':
+        case 'pageContent': {
+          return t('cmdk.search.page');
         }
         default: {
           return t(`cmdk.search.${type}`);

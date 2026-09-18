@@ -1,3 +1,4 @@
+import type { NotificationFeedSummary } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,7 +15,9 @@ const mocks = vi.hoisted(() => ({
     enableBusinessFeatures: true,
     isSignedIn: false,
   },
-  useClientPollingSWR: vi.fn(() => ({ data: undefined })),
+  useClientPollingSWR: vi.fn((): { data: NotificationFeedSummary | undefined } => ({
+    data: undefined,
+  })),
 }));
 
 vi.mock('@/libs/swr', () => ({
@@ -85,7 +88,12 @@ describe('useInboxUnreadCount', () => {
   it('exposes unreadBadgeCount from the shared feed summary', () => {
     mocks.state.isSignedIn = true;
     mocks.useClientPollingSWR.mockReturnValue({
-      data: { pendingActionCount: 1, unreadBadgeCount: 3, unreadUpdateCount: 2 },
+      data: {
+        pendingActionCount: 1,
+        snoozedPendingCount: 0,
+        unreadBadgeCount: 3,
+        unreadUpdateCount: 2,
+      },
     });
 
     const { result } = renderHook(() => useInboxUnreadCount());

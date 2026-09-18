@@ -9,7 +9,7 @@ export const workQueryHasMore = (loaded: number, total: number | undefined) =>
   typeof total === 'number' && loaded < total;
 
 export interface WorkQueryGroupPage<T extends { id: string }> {
-  hasMore?: boolean;
+  hasMore: boolean;
   key: string;
   tasks: T[];
   total: number;

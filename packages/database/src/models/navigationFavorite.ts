@@ -32,10 +32,9 @@ export class NavigationFavoriteModel {
     if (viewIds.length === 0) return rows.map((row) => ({ ...row, title: null }));
 
     const readable = new Map(
-      (await new SavedViewModel(this.db, this.userId, this.workspaceId).list()).map((view) => [
-        view.id,
-        view.name,
-      ]),
+      (await new SavedViewModel(this.db, this.userId, this.workspaceId ?? undefined).list()).map(
+        (view) => [view.id, view.name],
+      ),
     );
     return rows.map((row) => ({
       ...row,

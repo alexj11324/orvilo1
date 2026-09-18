@@ -65,7 +65,7 @@ describe('OIDC HTTP adapter', () => {
 
       expect(nodeRequest).toMatchObject({
         method: 'POST',
-        url: '/oidc/token?client_id=test',
+        url: '/token?client_id=test',
       });
       expect(nodeRequest.socket.remoteAddress).toBe('203.0.113.10');
       expect(nodeRequest.readable).toBe(true);
@@ -112,6 +112,17 @@ describe('OIDC HTTP adapter', () => {
         grant_type: 'authorization_code',
         redirect_uri: 'https://example.com/oidc/callback/desktop',
       });
+    });
+
+    it('maps the mounted discovery endpoint to oidc-provider root routing', async () => {
+      const request = new Request('https://example.com/oidc/.well-known/openid-configuration', {
+        method: 'GET',
+      }) as unknown as NextRequest;
+
+      const { createNodeRequest } = await import('./http-adapter');
+      const nodeRequest = await createNodeRequest(request);
+
+      expect(nodeRequest.url).toBe('/.well-known/openid-configuration');
     });
 
     it('does not consume an explicitly empty request body', async () => {

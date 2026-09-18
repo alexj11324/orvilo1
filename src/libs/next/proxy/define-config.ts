@@ -240,6 +240,7 @@ export function defineConfig() {
     '/oidc/handoff',
     '/oidc/device/auth',
     '/oidc/token',
+    '/oidc/.well-known(.*)',
     // Interaction details for the consent/login page — must be reachable
     // before the user has a session, so it cannot be session-gated.
     '/oidc/interaction/(.*)',

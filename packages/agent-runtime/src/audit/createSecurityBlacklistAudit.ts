@@ -5,7 +5,7 @@ import {
   type SecurityBlacklistConfig,
 } from '@orvilo/types';
 
-import { InterventionChecker } from '../core/InterventionChecker';
+import { InterventionChecker } from './InterventionChecker';
 import { DEFAULT_SECURITY_BLACKLIST } from './defaultSecurityBlacklist';
 
 export const SECURITY_BLACKLIST_AUDIT_TYPE = 'securityBlacklist';

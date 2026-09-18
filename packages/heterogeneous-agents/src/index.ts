@@ -4,7 +4,6 @@ export {
   ClaudeCodeSdkAdapter,
   CodeBuddyAdapter,
   CodexAdapter,
-  CodexAppServerAdapter,
   CursorAdapter,
   GrokBuildAdapter,
   KimiCodeAdapter,

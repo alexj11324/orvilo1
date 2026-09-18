@@ -6,7 +6,7 @@ import {
   type ShouldInterveneParams,
 } from '@orvilo/types';
 
-import { DEFAULT_SECURITY_BLACKLIST } from '../audit/defaultSecurityBlacklist';
+import { DEFAULT_SECURITY_BLACKLIST } from './defaultSecurityBlacklist';
 
 /**
  * Result of security blacklist check

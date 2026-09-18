@@ -24,14 +24,16 @@ LobeHub 式发布体系在这个仓库里**代码齐全，但 39 个 workflow �
 
 **已配置的 secrets**（不要再让用户配这些）：
 `APPLE_TEAM_ID` · `APPLE_CERTIFICATE_BASE64` · `APPLE_CERTIFICATE_PASSWORD` ·
-`RENDERER_OTA_PRIVATE_KEY` · `RENDERER_OTA_PUBLIC_KEY` · `GH_TOKEN`
+`RENDERER_OTA_PRIVATE_KEY` · `RENDERER_OTA_PUBLIC_KEY` · `GH_TOKEN` ·
+`APPLE_API_KEY_BASE64` · `APPLE_API_KEY_ID` · `APPLE_API_ISSUER`
 
 `GH_TOKEN` 已于 2026-09-18 保存为本仓库 Actions secret，使用仅限
 `alexj11324/orvilo1` 的 fine-grained PAT：Contents 读写、Metadata 只读，
 到期日为 2026-10-18。尚未通过真实发布验证下游事件；到期前需要续期或替换。
 
 GSM 备份：`orvilo-apple-developer-id-p12`、`orvilo-apple-developer-id-password`、
-`orvilo-renderer-ota-private-key`（项目 `general-secrets-store`）。
+`orvilo-renderer-ota-private-key`、`orvilo-apple-notary-api-key`（项目 `general-secrets-store`）。
+公证 API Key 已在 2026-09-18 经授权保存，从 GSM 恢复后再次通过 Apple 认证。
 
 ## 二、剩余工作
 
@@ -160,8 +162,8 @@ gh secret list --repo alexj11324/orvilo1
 
 - OTA：准备复用 Oracle RustFS 的独立 `orvilo-desktop-updates` 桶，仅公开桌面更新文件。
   新发布用户只获得该桶的权限；原有共享桶不变。建桶和将凭据保存到 GSM / GitHub Secrets 待授权。
-- 公证：本机现有 Team ASC API 私钥已通过 `notarytool history` 认证验证。
-  将该私钥保存到 Orvilo CI 的 GSM / GitHub Secrets 待授权。该路径不需要 Apple 应用专用密码。
+- 公证：Team ASC API 私钥已保存到 GSM 和三项 GitHub Secrets，
+  从 GSM 恢复后通过 `notarytool history` 认证验证。该路径不需要 Apple 应用专用密码。
 - `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` 是另一种认证方式，可在不采用 API Key 时配置。
 - 合并仍需 `Required Quality Gate`、最新基线及所有 review 线程解决。
 

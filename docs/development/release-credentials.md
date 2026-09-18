@@ -77,21 +77,25 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1 <<< "$PASS"
 
 按「获取难度」排序。
 
-### 1. Notarization（公证）
+### 1. Notarization（公证，已配置）
 
-| Secret                        | 值                                        |
-| ----------------------------- | ----------------------------------------- |
-| `APPLE_ID`                    | 你的 Apple 账号邮箱                       |
-| `APPLE_APP_SPECIFIC_PASSWORD` | 在 appleid.apple.com 生成（不是账号密码） |
+| Secret                 | 用途                                       |
+| ---------------------- | ------------------------------------------ |
+| `APPLE_API_KEY_BASE64` | Team App Store Connect `.p8` 私钥的 base64 |
+| `APPLE_API_KEY_ID`     | 与该私钥匹配的 Key ID                      |
+| `APPLE_API_ISSUER`     | Team Issuer ID                             |
 
-另一条路是 **Team App Store Connect API Key**（Issuer ID + Key ID + `.p8`），
+已采用 **Team App Store Connect API Key**（Issuer ID + Key ID + `.p8`），
 它同样支持 Developer ID 公证。不要将证书分发类型与公证 API 的认证方式混为一谈。
 见 [Apple TN3147](https://developer.apple.com/documentation/technotes/tn3147-migrating-to-the-latest-notarization-tool)。
 
-2026-09-18 接手时已找到与现有 ASC Key ID 匹配的本地 `.p8`，并通过
-`notarytool history` 验证公证认证。GSM 中的原签名配置只包含 Key ID / Issuer ID，
-不含 `.p8`。将现有私钥保存到 Orvilo 的 GSM 与 GitHub Secrets 仍待明确授权；
-启用该路径后无需再配置 Apple ID 与应用专用密码。
+2026-09-18 经维护者明确授权，将匹配的现有本机 `.p8` 与两个 ID 保存到
+GSM 项目 `general-secrets-store` 的 `orvilo-apple-notary-api-key`，
+并写入本仓库上述三项 Actions Secrets。GSM 备份为以三项 Secret 名称为键的 JSON。
+从 GSM 恢复出的私钥再次通过 `notarytool history` 认证，临时文件已清理。
+
+无需再配置 `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD`。
+当前验证证明凭据可用；完整安装包提交公证和下载验收仍待真实发布完成。
 
 ### 2. npm 包发布
 

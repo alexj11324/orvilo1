@@ -48,7 +48,4 @@ export const taskRunIdempotencyKey = {
 
   readySubtask: (input: { parentTaskId: string; requestId: string; taskId: string }): string =>
     `ready-subtasks:${input.requestId}:parent:${input.parentTaskId}:task:${input.taskId}`,
-
-  steerContinuation: (input: { messageId: string; taskId: string; topicId: string }): string =>
-    `steer:${input.taskId}:topic:${input.topicId}:message:${input.messageId}`,
 };

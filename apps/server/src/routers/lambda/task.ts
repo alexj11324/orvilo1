@@ -877,40 +877,6 @@ export const taskRouter = router({
       }
     }),
 
-  /**
-   * Steer a task topic's agent: a message sent while the run is live is
-   * injected into the topic (the runtime picks it up at the next step); a
-   * run that cannot consume messages (heterogeneous process / parked
-   * approval) reports `requiresInterrupt` and must be resent with
-   * `interrupt: true`; an idle topic is continued off the new message.
-   */
-  steer: taskProcedureWrite
-    .input(
-      z.object({
-        fileIds: z.array(z.string()).optional(),
-        id: z.string(),
-        interrupt: z.boolean().optional(),
-        message: z.string(),
-        topicId: z.string(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await ctx.taskService.steerTopic(input);
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        if (error instanceof TaskDependencyError) {
-          throw new TRPCError({ cause: error, code: error.code, message: error.message });
-        }
-        console.error('[task:steer]', error);
-        throw new TRPCError({
-          cause: error,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to steer task topic',
-        });
-      }
-    }),
-
   deleteTopic: taskProcedureWrite
     .input(z.object({ topicId: z.string() }))
     .mutation(async ({ input, ctx }) => {

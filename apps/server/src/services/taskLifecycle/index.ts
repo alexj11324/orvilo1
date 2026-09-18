@@ -34,7 +34,6 @@ import {
 } from '@/business/server/task/notifyScheduledTaskResult';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
-import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
@@ -47,7 +46,6 @@ import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
-import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
 
 import {
@@ -126,7 +124,6 @@ export interface TopicCompleteParams {
 export class TaskLifecycleService {
   private briefModel: BriefModel;
   private db: OrviloDatabase;
-  private messageModel: MessageModel;
   private systemAgentService: SystemAgentService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
@@ -142,7 +139,6 @@ export class TaskLifecycleService {
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
-    this.messageModel = new MessageModel(db, userId, workspaceId);
     this.topicModel = new TopicModel(db, userId, workspaceId);
     this.systemAgentService = new SystemAgentService(db, userId, workspaceId);
   }
@@ -351,42 +347,6 @@ export class TaskLifecycleService {
           return;
         }
 
-        // A steer that landed after the run's last consumed step must continue
-        // before integration. The continuation reuses this topic's worktree;
-        // integrating first may publish and remove that directory underneath it.
-        if (topicId && !verifyBound) {
-          const steerMessageId = await this.findUnconsumedSteerMessageId(topicId);
-          if (steerMessageId) {
-            try {
-              const { TaskRunnerService } = await import('../taskRunner');
-              await new TaskRunnerService(this.db, this.userId, this.workspaceId).runTask({
-                continueFromMessageId: steerMessageId,
-                continueTopicId: topicId,
-                idempotencyKey: taskRunIdempotencyKey.steerContinuation({
-                  messageId: steerMessageId,
-                  taskId,
-                  topicId,
-                }),
-                replaceReservationId: claimed,
-                taskId,
-                trigger: params.runTrigger,
-              });
-              log(
-                'onTopicComplete: continuing topic=%s off late steer message %s',
-                topicId,
-                steerMessageId,
-              );
-              return;
-            } catch (error) {
-              log(
-                'onTopicComplete: late-steer continuation failed for topic=%s (non-fatal): %O',
-                topicId,
-                error,
-              );
-            }
-          }
-        }
-
         // 2c. Workspace-integration gate (CAID merge-back): a provisioned run's
         //    task branch must land on its base before the task may settle. A
         //    merge conflict holds the transition open (task stays 'running')
@@ -420,7 +380,7 @@ export class TaskLifecycleService {
             });
             return;
           }
-        if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
+          if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
         }
 
         // 3. Delivery acceptance now runs through Verify: the verify
@@ -808,28 +768,6 @@ export class TaskLifecycleService {
         await this.taskModel.releaseRunReservation(taskId, claimed);
       }
     }
-  }
-
-  /**
-   * A steer message the just-finished run never saw: the spine tail is a
-   * `metadata.steer` user row without a `steerConsumedBy` stamp (the stamp is
-   * written by the runtime when it loads the message into the working set —
-   * see `AgentRuntimeService.refreshMessagesFromDB`). Only the tail matters:
-   * an earlier unconsumed steer is still inside the continued run's history.
-   */
-  private async findUnconsumedSteerMessageId(topicId: string): Promise<string | undefined> {
-    const tailId = await this.messageModel
-      .getLatestSpineMessageId({ topicId })
-      .catch(() => undefined);
-    if (!tailId) return undefined;
-
-    const tail = await this.messageModel.findById(tailId).catch(() => undefined);
-    if (tail?.role !== 'user') return undefined;
-
-    const metadata = tail.metadata as
-      { steer?: boolean; steerConsumedBy?: string } | null | undefined;
-    if (metadata?.steer !== true || metadata.steerConsumedBy) return undefined;
-    return tail.id;
   }
 
   /**

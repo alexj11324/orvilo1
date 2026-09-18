@@ -1658,11 +1658,6 @@ export default {
   'taskDetail.replyInThread': 'Reply in this thread',
   'taskDetail.replyPlaceholder': 'Reply in this thread...',
   'taskDetail.sendFollowUp': 'Send follow up message',
-  'taskDetail.steerPlaceholder': 'Steer the agent — it picks this up at the next step...',
-  'taskDetail.steerInterrupt.content':
-    'This run is driven by an external agent process that cannot receive messages while running. Stop it and resume the run with your message?',
-  'taskDetail.steerInterrupt.ok': 'Stop & resume',
-  'taskDetail.steerInterrupt.title': 'Restart run to steer?',
   'taskDetail.deleteConfirm.content': 'This action cannot be undone.',
   'taskDetail.deleteConfirm.ok': 'Delete',
   'taskDetail.deleteConfirm.title': 'Delete this task?',

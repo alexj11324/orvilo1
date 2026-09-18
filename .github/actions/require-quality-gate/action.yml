@@ -1,0 +1,53 @@
+name: Require quality gate
+description: >-
+  Fail unless the most recently completed "Required Quality Gate" check run for
+  the exact commit concluded successfully. Optionally polls until it concludes.
+inputs:
+  sha:
+    description: Exact commit SHA whose quality evidence is required
+    required: true
+  wait_seconds:
+    description: How long to poll for the gate to conclude before failing
+    required: false
+    default: '0'
+runs:
+  using: composite
+  steps:
+    - name: Verify Required Quality Gate for the exact commit
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TARGET_SHA: ${{ inputs.sha }}
+        WAIT_SECONDS: ${{ inputs.wait_seconds }}
+      run: |
+        set -euo pipefail
+        deadline=$(( $(date +%s) + WAIT_SECONDS ))
+        while :; do
+          # The same SHA can carry several runs (push + pull_request + re-runs).
+          # Only the latest COMPLETED run counts: an older success must not
+          # outrank a newer failure, and a pending run is not evidence.
+          conclusion=$(gh api \
+            "repos/${{ github.repository }}/commits/${TARGET_SHA}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select(.name == "Required Quality Gate")]
+                  | map(select(.conclusion != null))
+                  | sort_by(.completed_at) | last | .conclusion // ""')
+          case "$conclusion" in
+            success)
+              echo "Required Quality Gate succeeded for ${TARGET_SHA}."
+              exit 0
+              ;;
+            '')
+              state='pending'
+              ;;
+            *)
+              echo "::error::Required Quality Gate for ${TARGET_SHA} concluded '${conclusion}' — refusing to proceed."
+              exit 1
+              ;;
+          esac
+          if [ "$(date +%s)" -ge "$deadline" ]; then
+            echo "::error::Timed out waiting for Required Quality Gate on ${TARGET_SHA} (still ${state})."
+            exit 1
+          fi
+          echo "Required Quality Gate ${state}; waiting 30s…"
+          sleep 30
+        done

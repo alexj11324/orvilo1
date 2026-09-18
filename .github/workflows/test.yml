@@ -437,3 +437,60 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/database/coverage/lcov.info
           flags: database
+
+  # Single required check for branch protection and deploy promotion. Branch
+  # rules require this one name, so "the tests passed" can never mean "one
+  # shard was green while another failed" — a job that failed, was skipped, or
+  # never ran keeps the gate red.
+  required-quality-gate:
+    name: Required Quality Gate
+    needs:
+      - check-duplicate-run
+      - typecheck
+      - test-packages
+      - test-app
+      - test-windows-shell
+      - test-desktop
+      - test-server
+      - test-databsae
+      - merge-app-coverage
+      - merge-server-coverage
+    # always(): a failed upstream must not skip this job — its result IS the
+    # failure signal branch protection and the deploy pipeline read.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify every required job succeeded for this commit
+        env:
+          NEEDS: ${{ toJson(needs) }}
+        run: |
+          set -euo pipefail
+          # A duplicate-of-a-passing-run skip means an identical tree already
+          # produced a green gate for this content — the earlier run's check
+          # run covers this SHA, so don't manufacture a failure for it.
+          if [ "$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.should_skip')" = "true" ]; then
+            echo "Duplicate run skipped: an identical run already carries this SHA's gate."
+            exit 0
+          fi
+
+          required=(
+            typecheck
+            test-packages
+            test-app
+            test-windows-shell
+            test-desktop
+            test-server
+            test-databsae
+            merge-app-coverage
+            merge-server-coverage
+          )
+          failed=0
+          for job in "${required[@]}"; do
+            result=$(echo "$NEEDS" | jq -r ".[\"$job\"].result")
+            echo "$job: $result"
+            [ "$result" = "success" ] || failed=1
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Required jobs failed or were skipped — quality gate stays red."
+            exit 1
+          fi

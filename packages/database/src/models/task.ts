@@ -56,6 +56,7 @@ import {
   tasks,
   taskTopics,
 } from '../schemas/task';
+import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
@@ -103,6 +104,7 @@ const TASK_DOMAIN_COLUMNS = [
   'assignmentMode',
   'automationMode',
   'config',
+  'cycleRefId',
   'description',
   'editorData',
   'heartbeatInterval',
@@ -122,10 +124,12 @@ const TASK_DOMAIN_COLUMNS = [
   'scheduleTimezone',
   'sortOrder',
   'status',
+  'teamId',
   'visibility',
   'workflowCategory',
   'workflowLocked',
   'workflowStateId',
+  'workflowStateRefId',
 ] as const satisfies readonly (keyof NewTask)[];
 
 const TASK_REQUIREMENT_COLUMNS = [
@@ -181,6 +185,9 @@ const touchedColumns = <T extends readonly (keyof NewTask)[]>(data: Partial<NewT
   columns.filter((column) => data[column] !== undefined);
 
 const taskMutationEventType = (data: Partial<NewTask>): TaskDomainEventType | undefined => {
+  if (data.teamId !== undefined) {
+    return 'task.moved';
+  }
   if (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) {
     return 'task.assigned';
   }
@@ -549,13 +556,51 @@ export class TaskModel {
       // seq lookup filter out private rows, a private creator would compute
       // a max seq that skips another member's existing identifier and hit
       // PG error 23505 on insert.
-      const seqResult = await runner
-        .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
-        .from(tasks)
-        .where(this.seqOwnership());
+      let nextSeq: number;
+      let identifier: string;
+      if (rest.teamId && this.workspaceId) {
+        // Team-owned issue: allocate `<teamKey>-<n>` through the transactional
+        // `teams.next_issue_seq` counter — never `max(seq)+1` across rows.
+        // Seed the counter from pre-existing workspace identifiers while the
+        // team row is locked. A team can be introduced after imported/project
+        // tasks already use the same key prefix.
+        const [team] = await runner
+          .select({ key: teams.key, nextIssueSeq: teams.nextIssueSeq })
+          .from(teams)
+          .where(and(eq(teams.id, rest.teamId), eq(teams.workspaceId, this.workspaceId)))
+          .for('update')
+          .limit(1);
+        if (!team) throw new Error(`Team not found: ${rest.teamId}`);
+        const [existingPrefix] = await runner
+          .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
+          .from(tasks)
+          .where(
+            and(
+              eq(tasks.workspaceId, this.workspaceId),
+              sql`${tasks.identifier} LIKE ${`${team.key}-%`}`,
+            ),
+          );
+        const firstAvailableSeq = Math.max(
+          Number(team.nextIssueSeq),
+          Number(existingPrefix.maxSeq) + 1,
+        );
+        const [allocated] = await runner
+          .update(teams)
+          .set({ nextIssueSeq: firstAvailableSeq + 1 })
+          .where(and(eq(teams.id, rest.teamId), eq(teams.workspaceId, this.workspaceId)))
+          .returning({ key: teams.key, seq: teams.nextIssueSeq });
+        if (!allocated) throw new Error(`Team not found: ${rest.teamId}`);
+        nextSeq = Number(allocated.seq) - 1;
+        identifier = `${allocated.key}-${nextSeq}`;
+      } else {
+        const seqResult = await runner
+          .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
+          .from(tasks)
+          .where(this.seqOwnership());
 
-      const nextSeq = Number(seqResult[0].maxSeq) + 1;
-      const identifier = `${identifierPrefix}-${nextSeq}`;
+        nextSeq = Number(seqResult[0].maxSeq) + 1;
+        identifier = `${identifierPrefix}-${nextSeq}`;
+      }
 
       const [task] = await runner
         .insert(tasks)
@@ -692,7 +737,7 @@ export class TaskModel {
         data.projectId !== undefined ||
         data.visibility !== undefined)
     ) {
-      return this.withDependencyLock((model) => model.update(id, data));
+      return this.withDependencyLock((model) => model.update(id, data, mutation));
     }
     await this.assertDependenciesForStatus([id], data.status);
 
@@ -753,6 +798,80 @@ export class TaskModel {
                   },
                 } satisfies LinearExternalRelationOutboxPayload)
               : undefined,
+          source: mutation.source ?? 'system',
+          suppressLinearOutbox: mutation.suppressLinearOutbox,
+          task,
+        });
+      }
+
+      return task;
+    });
+  }
+
+  /**
+   * Move a task to a different business team (linear-workspace-v3). The task
+   * keeps its identity; both the old and the new owner scope are marked dirty
+   * so the previous planner drops it and the new planner picks it up.
+   *
+   * Scope dirtying follows the single-owner rule: when the task sits in a
+   * project, the project scope is the planning owner regardless of team, so
+   * only that scope is dirtied; a projectless task dirties old + new team
+   * scopes (or the workspace scope when it had no team).
+   */
+  async moveToTeam(
+    id: string,
+    teamId: string | null,
+    mutation: TaskMutationContext = {},
+  ): Promise<TaskItem | null> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const [before] = await runner
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .limit(1);
+      if (!before || before.teamId === teamId) return before ?? null;
+
+      const [task] = await runner
+        .update(tasks)
+        .set({
+          domainRevision: sql`${tasks.domainRevision} + 1`,
+          teamId,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .returning();
+      if (!task) return null;
+
+      if (this.workspaceId && !mutation.suppressDomainEvent) {
+        const model = new LinearSyncModel(runner, this.workspaceId);
+        const baseKey =
+          mutation.idempotencyKey ?? `task:${task.id}:revision:${task.domainRevision}:task.moved`;
+
+        // Previous owner scope — only when the task was actually owned by a
+        // team scope (projectless). Project tasks dirty their project scope
+        // through the regular change event below instead.
+        if (!before.projectId && before.teamId) {
+          await model.recordDomainEventInTransaction(runner, {
+            eventId: mutation.eventId,
+            idempotencyKey: `${baseKey}:from`,
+            payload: {
+              aggregateRevision: task.domainRevision,
+              changedFields: ['teamId'],
+              previousTeamId: before.teamId,
+            },
+            source: mutation.source ?? 'system',
+            taskId: task.id,
+            teamId: before.teamId,
+            type: 'task.moved',
+          });
+        }
+
+        await model.recordTaskChangeInTransaction(runner, {
+          changedFields: ['teamId'],
+          eventId: mutation.eventId,
+          eventType: 'task.moved',
+          idempotencyKey: `${baseKey}:to`,
           source: mutation.source ?? 'system',
           suppressLinearOutbox: mutation.suppressLinearOutbox,
           task,
@@ -3418,7 +3537,7 @@ export class TaskModel {
       LINEAR_SYNC_TASK_COLUMNS.some((col) => data[col] !== undefined);
     // Nothing to diff against: a field unrelated to task activity or Linear
     // synchronization should not pay for a lock.
-    if (!touched) return this.update(id, data);
+    if (!touched) return this.update(id, data, mutation);
 
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
@@ -3622,11 +3741,7 @@ export class TaskModel {
         targetWorkspaceId && targetVisibility ? { visibility: targetVisibility } : {};
 
       // Reallocate identifier + seq in target scope to avoid collisions.
-      const baseSeq = await this.nextSeqIn(
-        trx as OrviloDatabase,
-        targetWorkspaceId,
-        targetUserId,
-      );
+      const baseSeq = await this.nextSeqIn(trx as OrviloDatabase, targetWorkspaceId, targetUserId);
       // Update each task individually because identifier/seq are per-row.
       for (const [idx, task] of subtree.entries()) {
         const seq = baseSeq + idx;

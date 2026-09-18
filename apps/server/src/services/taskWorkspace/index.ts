@@ -10,6 +10,7 @@ import { isRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
+import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import type { OrviloDatabase } from '@/database/type';
 import { resolveExecutionPlan } from '@/helpers/executionTarget';
@@ -117,6 +118,49 @@ export class TaskWorkspaceService {
       }
       if (!current.parentTaskId) break;
       current = await this.taskModel.findById(current.parentTaskId);
+    }
+
+    // Association fallback (linear-workspace-v3): no explicit binding on the
+    // task or its ancestors — ask the deterministic resolver. A resolved
+    // repository produces a remote-coordinate binding; `ambiguous`/`unresolved`
+    // stays unbound rather than silently picking a candidate.
+    if (this.workspaceId && (task.projectId || task.teamId)) {
+      const repositoryModel = new RepositoryModel(this.db, this.userId, this.workspaceId);
+      const resolution = await repositoryModel.resolveForTask(task.id);
+      if (resolution.ok) {
+        const repository = await repositoryModel.findById(resolution.repositoryId);
+        if (!repository) return undefined;
+
+        const boundDeviceId = task.assigneeAgentId
+          ? (await this.agentModel.getAgentConfig(task.assigneeAgentId))?.agencyConfig
+              ?.boundDeviceId
+          : undefined;
+        const checkouts = await repositoryModel.listCheckouts(repository.id);
+        const checkout =
+          checkouts.find(
+            (candidate) => boundDeviceId !== undefined && candidate.deviceId === boundDeviceId,
+          ) ?? (checkouts.length === 1 ? checkouts[0] : undefined);
+        if (checkout) {
+          return {
+            baseBranch: repository.coordinate.defaultBranch ?? undefined,
+            deviceId: checkout.deviceId ?? undefined,
+            provider: 'git',
+            repoPath: checkout.canonicalPath,
+          };
+        }
+
+        // A coordinate without a verified remote identity is only a display
+        // snapshot. Never turn a local-only repository name into a GitHub clone
+        // target; require an authorized checkout or a verified remote row.
+        const { owner, name } = repository.coordinate;
+        if (repository.remoteRepositoryId && owner && name) {
+          return {
+            baseBranch: repository.coordinate.defaultBranch ?? undefined,
+            provider: 'git',
+            repo: `${owner}/${name}`,
+          };
+        }
+      }
     }
     return undefined;
   }

@@ -517,6 +517,119 @@ export const linearSyncRouter = router({
       }
     }),
 
+  /** Workspace sync scope for one installation (linear-workspace-v3). */
+  syncScope: linearSyncProcedure
+    .input(z.object({ installationId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const scope = await ctx.linearSyncModel.findScopeByInstallation(input.installationId);
+        return { data: scope, success: true };
+      } catch (error) {
+        mapError(error, 'syncScope');
+      }
+    }),
+
+  /**
+   * Create or update the approved sync scope, then optionally start a
+   * resumable workspace import. The workflow layer keeps stepping the run —
+   * closing the browser does not interrupt it.
+   */
+  upsertSyncScope: linearSyncWriteProcedure
+    .input(
+      z.object({
+        installationId: z.string().uuid(),
+        settings: z.object({
+          approvedTeamIds: z.array(z.string().min(1)).optional(),
+          includeProjectlessIssues: z.boolean().optional(),
+          privateTeamPolicy: z.enum(['import_restricted', 'skip']).optional(),
+          publication: z
+            .object({
+              autoPublishNewProjects: z.boolean().optional(),
+              teamPublishRequiresApproval: z.boolean().optional(),
+            })
+            .optional(),
+        }),
+        startImport: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const scope = await ctx.linearSyncModel.upsertScope({
+          installationId: input.installationId,
+          settings: input.settings,
+        });
+        if (input.startImport) {
+          // Atomic check-and-reset: a scope mid-flight keeps its cursors and
+          // the trigger below simply resumes it.
+          await ctx.linearSyncModel.resetScopeImport(scope.id);
+          try {
+            await LinearSyncWorkflow.triggerInstallation({
+              installationId: input.installationId,
+              limit: 20,
+              workspaceId: ctx.workspaceId!,
+            });
+          } catch (error) {
+            // The reset already flipped the scope to 'importing' — record the
+            // trigger failure on it so the wedged state is diagnosable and a
+            // later claim can still recover it.
+            await ctx.linearSyncModel
+              .updateScopeImportState(scope.id, {
+                lastError: `Import trigger failed: ${error instanceof Error ? error.message : String(error)}`,
+              })
+              .catch(() => undefined);
+            throw error;
+          }
+        }
+        return { data: scope, message: 'Linear sync scope updated', success: true };
+      } catch (error) {
+        mapError(error, 'upsertSyncScope');
+      }
+    }),
+
+  /** Advance the workspace import by one bounded step (manual drive/debug). */
+  importScope: linearSyncWriteProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+        scopeId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const scope = await ctx.linearSyncModel.findScopeById(input.scopeId);
+        if (!scope) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear sync scope not found' });
+        }
+        const installation = await ctx.linearSyncModel.findInstallationById(scope.installationId);
+        if (!installation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Linear installation not found' });
+        }
+        const provider = createLinearGraphqlIssueProvider({
+          db: ctx.serverDB,
+          installationId: installation.id,
+          organizationId: installation.organizationId,
+          workspaceId: ctx.workspaceId!,
+        });
+        const data = await new LinearSyncWorker(ctx.serverDB, ctx.workspaceId!).importScope(
+          provider,
+          scope.id,
+          input.limit,
+        );
+        return { data, message: 'Linear scope import processed', success: true };
+      } catch (error) {
+        mapError(error, 'importScope');
+      }
+    }),
+
+  /** Durable local-team ↔ Linear-team links for the workspace. */
+  teamLinks: linearSyncProcedure.query(async ({ ctx }) => {
+    try {
+      return { data: await ctx.linearSyncModel.listTeamLinks(), success: true };
+    } catch (error) {
+      mapError(error, 'teamLinks');
+    }
+  }),
+
   issueLinks: linearSyncProcedure
     .input(
       z.object({

@@ -3,7 +3,16 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { messages, nextauthAccounts, tasks, topics, users, userSettings } from '../../schemas';
+import {
+  messages,
+  nextauthAccounts,
+  projects,
+  tasks,
+  topics,
+  users,
+  userSettings,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import type { ListUsersForMemoryExtractorCursor } from '../user';
 import { UserModel, UserNotFoundError } from '../user';
@@ -657,6 +666,47 @@ describe('UserModel', () => {
             where: eq(tasks.id, 'personal-task-deleted-with-user'),
           }),
         ).resolves.toBeUndefined();
+      });
+
+      it('deletes personal projects but keeps workspace projects on owner removal', async () => {
+        // The workspace is owned by another user so it survives the delete;
+        // `projects.user_id` set-nulls there while personal rows must be
+        // removed explicitly — otherwise they linger ownerless forever.
+        const [ws] = await serverDB
+          .insert(workspaces)
+          .values({
+            name: 'delete-user-ws',
+            primaryOwnerId: otherUserId,
+            slug: 'delete-user-ws',
+          })
+          .returning();
+        await serverDB.insert(projects).values([
+          {
+            id: 'proj-personal-deleted',
+            identifier: 'PERS',
+            name: 'Personal project',
+            userId,
+          },
+          {
+            id: 'proj-workspace-survives',
+            identifier: 'WKSP',
+            name: 'Workspace project',
+            userId,
+            workspaceId: ws.id,
+          },
+        ]);
+
+        await UserModel.deleteUser(serverDB, userId);
+
+        await expect(
+          serverDB.query.projects.findFirst({ where: eq(projects.id, 'proj-personal-deleted') }),
+        ).resolves.toBeUndefined();
+
+        const surviving = await serverDB.query.projects.findFirst({
+          where: eq(projects.id, 'proj-workspace-survives'),
+        });
+        expect(surviving).toBeDefined();
+        expect(surviving?.userId).toBeNull();
       });
 
       it('purges share-visitor topics and messages when the visitor is deleted', async () => {

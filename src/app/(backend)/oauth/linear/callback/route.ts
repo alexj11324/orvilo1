@@ -22,19 +22,24 @@ const jsonForScript = (value: unknown): string =>
     (character) => `\\u${character.codePointAt(0)!.toString(16).padStart(4, '0')}`,
   );
 
-const targetOrigin = (): string => {
+const targetOrigin = (request: NextRequest): string => {
   try {
-    return appEnv.APP_URL ? new URL(appEnv.APP_URL).origin : '*';
+    if (appEnv.APP_URL) return new URL(appEnv.APP_URL).origin;
   } catch {
-    return '*';
+    // fall through to the request origin
   }
+  // Same-origin fallback — never broadcast the result to '*'.
+  return request.nextUrl.origin;
 };
 
-const renderResultPage = (result: {
-  error?: string;
-  installationId?: string;
-  success: boolean;
-}): NextResponse => {
+const renderResultPage = (
+  request: NextRequest,
+  result: {
+    error?: string;
+    installationId?: string;
+    success: boolean;
+  },
+): NextResponse => {
   const payload = jsonForScript({ type: 'orvilo-linear-oauth', ...result });
   const html = `<!doctype html>
 <html>
@@ -44,7 +49,7 @@ const renderResultPage = (result: {
     <script>
       (function () {
         try {
-          if (window.opener) window.opener.postMessage(${payload}, ${jsonForScript(targetOrigin())});
+          if (window.opener) window.opener.postMessage(${payload}, ${jsonForScript(targetOrigin(request))});
         } catch (error) {}
         setTimeout(function () { window.close(); }, 300);
       })();
@@ -59,9 +64,10 @@ export const GET = async (request: NextRequest) => {
   const code = request.nextUrl.searchParams.get('code');
   const providerError = request.nextUrl.searchParams.get('error');
 
-  if (!state) return renderResultPage({ error: 'missing_state', success: false });
+  if (!state) return renderResultPage(request, { error: 'missing_state', success: false });
   const statePayload = await consumeLinearOAuthState(state);
-  if (!statePayload) return renderResultPage({ error: 'invalid_or_expired_state', success: false });
+  if (!statePayload)
+    return renderResultPage(request, { error: 'invalid_or_expired_state', success: false });
 
   // OAuth state is short-lived, but the installer’s authorization can change
   // while Linear’s consent screen is open. Re-check the live workspace grant
@@ -76,16 +82,17 @@ export const GET = async (request: NextRequest) => {
     });
   const canManageInstallation = await hasCurrentWorkspaceSettingsPermission();
   if (!canManageInstallation) {
-    return renderResultPage({ error: 'workspace_access_denied', success: false });
+    return renderResultPage(request, { error: 'workspace_access_denied', success: false });
   }
 
-  if (providerError) return renderResultPage({ error: 'authorization_denied', success: false });
-  if (!code) return renderResultPage({ error: 'missing_code', success: false });
+  if (providerError)
+    return renderResultPage(request, { error: 'authorization_denied', success: false });
+  if (!code) return renderResultPage(request, { error: 'missing_code', success: false });
 
   try {
     const config = getLinearOAuthConfig();
     if (statePayload.clientId !== config.clientId || statePayload.actor !== 'app') {
-      return renderResultPage({ error: 'invalid_oauth_configuration', success: false });
+      return renderResultPage(request, { error: 'invalid_oauth_configuration', success: false });
     }
 
     const tokens = await exchangeLinearAuthorizationCode({
@@ -96,7 +103,7 @@ export const GET = async (request: NextRequest) => {
       redirectUri: statePayload.redirectUri,
     });
     if (!tokens.refresh_token) {
-      return renderResultPage({ error: 'missing_refresh_token', success: false });
+      return renderResultPage(request, { error: 'missing_refresh_token', success: false });
     }
 
     // Both the organization and the app actor come from Linear's API. Nothing
@@ -107,17 +114,15 @@ export const GET = async (request: NextRequest) => {
     });
     const scopes = normalizeLinearScopes(tokens.scope, statePayload.scopes);
     if (!scopes.includes('read') || !scopes.includes('write')) {
-      return renderResultPage({ error: 'insufficient_scope', success: false });
+      return renderResultPage(request, { error: 'insufficient_scope', success: false });
     }
     if (!(await hasCurrentWorkspaceSettingsPermission())) {
-      return renderResultPage({ error: 'workspace_access_denied', success: false });
+      return renderResultPage(request, { error: 'workspace_access_denied', success: false });
     }
 
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-    const installation = await new LinearSyncModel(
-      serverDB,
-      statePayload.workspaceId,
-    ).upsertOAuthInstallation({
+    const model = new LinearSyncModel(serverDB, statePayload.workspaceId);
+    const installation = await model.upsertOAuthInstallation({
       accessTokenCiphertext: await gateKeeper.encrypt(tokens.access_token),
       accessTokenExpiresAt: tokens.expires_in
         ? new Date(Date.now() + tokens.expires_in * 1000)
@@ -131,10 +136,14 @@ export const GET = async (request: NextRequest) => {
       refreshTokenCiphertext: await gateKeeper.encrypt(tokens.refresh_token),
       scopes,
     });
+    // The workspace sync scope exists from the moment the installation lands;
+    // mirroring still waits for the approved team/project intent delivered
+    // through `upsertSyncScope`.
+    await model.upsertScope({ installationId: installation.id });
 
-    return renderResultPage({ installationId: installation.id, success: true });
+    return renderResultPage(request, { installationId: installation.id, success: true });
   } catch (error) {
     log('Linear OAuth callback failed: %O', error);
-    return renderResultPage({ error: 'installation_failed', success: false });
+    return renderResultPage(request, { error: 'installation_failed', success: false });
   }
 };

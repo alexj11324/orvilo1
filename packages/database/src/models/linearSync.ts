@@ -11,14 +11,21 @@ import type {
   LinearIssueLinkSyncState,
   LinearIssueSnapshot,
   LinearProjectBindingSettings,
+  LinearProjectSnapshot,
   LinearRelationKind,
   LinearRelationSnapshot,
   LinearSyncConflict,
+  LinearSyncImportPhase,
   LinearSyncInboxStatus,
   LinearSyncOutboxStatus,
   LinearSyncRecoveryKind,
   LinearSyncRecoveryRow,
+  LinearSyncScopeCursors,
+  LinearSyncScopeSettings,
+  LinearSyncScopeStatus,
   LinearSyncTombstone,
+  LinearTeamLinkSyncState,
+  LinearTeamSnapshot,
   LinearTombstoneKind,
   TaskDomainEventSource,
   TaskDomainEventType,
@@ -29,7 +36,21 @@ import type {
   TaskPlanningScopeType,
   TaskPlanningTrigger,
 } from '@orvilo/types';
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import type {
   LinearSyncInboxItem,
@@ -48,10 +69,13 @@ import {
   linearSyncImportReceipts,
   linearSyncInbox,
   linearSyncOutbox,
+  linearSyncScopes,
+  linearTeamLinks,
   taskDomainEvents,
   taskPlanningRevisions,
   taskPlanningScopes,
   tasks,
+  teamWorkflowStates,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
 
@@ -63,6 +87,8 @@ export interface RecordTaskDomainEventInput {
   projectId?: string | null;
   source: TaskDomainEventSource;
   taskId?: string | null;
+  /** Team scope the event affects (linear-workspace-v3). */
+  teamId?: string | null;
   type: TaskDomainEventType;
 }
 
@@ -583,6 +609,8 @@ export class LinearSyncModel {
     installationId: string;
     linearProjectId: string;
     projectId: string;
+    remoteSnapshot?: LinearProjectSnapshot;
+    scopeId?: string | null;
     settings?: LinearProjectBindingSettings;
     syncEnabled?: boolean;
     teamIds?: string[];
@@ -596,7 +624,9 @@ export class LinearSyncModel {
         installationId: input.installationId,
         linearProjectId: input.linearProjectId,
         projectId: input.projectId,
+        remoteSnapshot: input.remoteSnapshot ?? null,
         replanningEnabled: settings.replanningEnabled ?? false,
+        scopeId: input.scopeId ?? null,
         settings,
         syncEnabled: input.syncEnabled ?? true,
         teamIds: input.teamIds ?? [],
@@ -609,7 +639,9 @@ export class LinearSyncModel {
           defaultTeamId: input.defaultTeamId,
           installationId: input.installationId,
           linearProjectId: input.linearProjectId,
+          remoteSnapshot: input.remoteSnapshot ?? null,
           replanningEnabled: settings.replanningEnabled ?? false,
+          scopeId: input.scopeId ?? null,
           settings,
           syncEnabled: input.syncEnabled ?? true,
           teamIds: input.teamIds ?? [],
@@ -809,6 +841,318 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  // ── Workspace sync scope + team links (linear-workspace-v3) ─────────────
+
+  async findScopeByInstallation(installationId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearSyncScopes)
+      .where(
+        and(
+          eq(linearSyncScopes.installationId, installationId),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findScopeById(id: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearSyncScopes)
+      .where(and(eq(linearSyncScopes.id, id), eq(linearSyncScopes.workspaceId, this.workspaceId)))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /** Create or refresh the workspace-level scope for an installation. */
+  async upsertScope(input: {
+    installationId: string;
+    settings?: LinearSyncScopeSettings;
+    status?: LinearSyncScopeStatus;
+  }) {
+    const [installation] = await this.db
+      .select({ id: linearInstallations.id })
+      .from(linearInstallations)
+      .where(
+        and(
+          eq(linearInstallations.id, input.installationId),
+          eq(linearInstallations.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    if (!installation) {
+      throw new Error('Linear installation does not belong to this workspace');
+    }
+
+    const [row] = await this.db
+      .insert(linearSyncScopes)
+      .values({
+        installationId: input.installationId,
+        settings: input.settings ?? {},
+        status: input.status ?? 'active',
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          ...(input.settings !== undefined ? { settings: input.settings } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          scopeRevision: sql`${linearSyncScopes.scopeRevision} + 1`,
+          updatedAt: new Date(),
+        },
+        target: [linearSyncScopes.installationId],
+      })
+      .returning();
+    return row;
+  }
+
+  /**
+   * Atomically claim the import lease for a scope. Returns the claimed row,
+   * or null when another worker holds an unexpired lease — callers must not
+   * start a second writer for the same import run.
+   */
+  async claimScopeImport(input: { leaseOwner: string; lockMs?: number; scopeId: string }) {
+    const lockUntil = new Date(Date.now() + (input.lockMs ?? 60_000));
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({
+        importRunId: input.leaseOwner,
+        importStartedAt: sql`coalesce(${linearSyncScopes.importStartedAt}, now())`,
+        leaseFence: sql`${linearSyncScopes.leaseFence} + 1`,
+        leaseOwner: input.leaseOwner,
+        lockedUntil: lockUntil,
+        status: 'importing',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearSyncScopes.id, input.scopeId),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+          or(
+            isNull(linearSyncScopes.lockedUntil),
+            lt(linearSyncScopes.lockedUntil, new Date()),
+            eq(linearSyncScopes.leaseOwner, input.leaseOwner),
+          ),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /**
+   * Atomically reset a scope for a fresh import run. The `status != importing`
+   * predicate makes the check-and-reset a single statement so a worker that
+   * just claimed the lease cannot have its cursors wiped mid-flight.
+   */
+  async resetScopeImport(id: string) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({
+        cursors: {},
+        importCompletedAt: null,
+        importPhase: 'teams',
+        issuesFailed: 0,
+        issuesImported: 0,
+        projectsLinked: 0,
+        status: 'importing',
+        teamsLinked: 0,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearSyncScopes.id, id),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+          ne(linearSyncScopes.status, 'importing'),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async updateScopeImportState(
+    id: string,
+    patch: {
+      cursors?: LinearSyncScopeCursors;
+      importCompletedAt?: Date | null;
+      importPhase?: LinearSyncImportPhase | null;
+      issuesFailed?: number;
+      issuesImported?: number;
+      lastError?: string | null;
+      projectsLinked?: number;
+      status?: LinearSyncScopeStatus;
+      teamsLinked?: number;
+    },
+  ) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(linearSyncScopes.id, id), eq(linearSyncScopes.workspaceId, this.workspaceId)))
+      .returning();
+    return row ?? null;
+  }
+
+  async releaseScopeImport(input: { leaseFence: number; leaseOwner: string; scopeId: string }) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({ leaseOwner: null, lockedUntil: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearSyncScopes.id, input.scopeId),
+          eq(linearSyncScopes.leaseOwner, input.leaseOwner),
+          eq(linearSyncScopes.leaseFence, input.leaseFence),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  // ── Team links ─────────────────────────────────────────────────────────
+
+  async findTeamLinkByLinearTeamId(linearTeamId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearTeamLinks)
+      .where(
+        and(
+          eq(linearTeamLinks.linearTeamId, linearTeamId),
+          eq(linearTeamLinks.workspaceId, this.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findTeamLinkByTeamId(teamId: string) {
+    const [row] = await this.db
+      .select()
+      .from(linearTeamLinks)
+      .where(
+        and(eq(linearTeamLinks.teamId, teamId), eq(linearTeamLinks.workspaceId, this.workspaceId)),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async listTeamLinks(filter: { installationId?: string } = {}) {
+    return this.db
+      .select()
+      .from(linearTeamLinks)
+      .where(
+        and(
+          eq(linearTeamLinks.workspaceId, this.workspaceId),
+          filter.installationId
+            ? eq(linearTeamLinks.installationId, filter.installationId)
+            : undefined,
+        ),
+      );
+  }
+
+  async upsertTeamLink(input: {
+    installationId: string;
+    linearTeamId: string;
+    linearTeamKey?: string | null;
+    remoteSnapshot?: LinearTeamSnapshot;
+    scopeId?: string | null;
+    syncState?: LinearTeamLinkSyncState;
+    teamId: string;
+  }) {
+    const [row] = await this.db
+      .insert(linearTeamLinks)
+      .values({
+        installationId: input.installationId,
+        linearTeamId: input.linearTeamId,
+        linearTeamKey: input.linearTeamKey ?? null,
+        remoteSnapshot: input.remoteSnapshot,
+        scopeId: input.scopeId ?? null,
+        syncState: input.syncState ?? 'synced',
+        teamId: input.teamId,
+        workspaceId: this.workspaceId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          installationId: input.installationId,
+          linearTeamKey: input.linearTeamKey ?? null,
+          remoteSnapshot: input.remoteSnapshot,
+          scopeId: input.scopeId ?? null,
+          syncState: input.syncState ?? 'synced',
+          updatedAt: new Date(),
+        },
+        target: [linearTeamLinks.workspaceId, linearTeamLinks.linearTeamId],
+      })
+      .returning();
+    return row;
+  }
+
+  /**
+   * Unlink synced team links whose remote team is no longer approved by the
+   * installation's scope (removed from `approvedTeamIds` or excluded by the
+   * private-team policy). The link row stays for audit; `syncState` leaving
+   * 'synced' is what stops team-scope outbound writes. Re-approving the team
+   * in a later import flips it back via `upsertTeamLink`.
+   */
+  async markTeamLinksUnlinkedOutsideScope(input: {
+    installationId: string;
+    keepLinearTeamIds: string[];
+  }) {
+    await this.db
+      .update(linearTeamLinks)
+      .set({ syncState: 'unlinked', updatedAt: new Date() })
+      .where(
+        and(
+          eq(linearTeamLinks.workspaceId, this.workspaceId),
+          eq(linearTeamLinks.installationId, input.installationId),
+          eq(linearTeamLinks.syncState, 'synced'),
+          input.keepLinearTeamIds.length
+            ? notInArray(linearTeamLinks.linearTeamId, input.keepLinearTeamIds)
+            : sql`true`,
+        ),
+      );
+  }
+
+  /**
+   * Requeue outbox rows paused while a team link was unlinked. Called when the
+   * link returns to 'synced' so queued intents resume instead of staying
+   * paused forever. The lease fence bump prevents a stale in-flight worker
+   * from writing results into the revived row.
+   */
+  async requeueTeamLinkOutbox(linearTeamId: string) {
+    await this.db.execute(sql`
+      UPDATE linear_sync_outbox AS outbox
+      SET status = 'pending', available_at = now(), locked_until = NULL,
+          lease_owner = NULL, lease_fence = lease_fence + 1, updated_at = now()
+      WHERE outbox.workspace_id = ${this.workspaceId}
+        AND outbox.status = 'paused'
+        AND EXISTS (
+          SELECT 1 FROM linear_issue_links AS link
+          WHERE link.id = outbox.link_id
+            AND link.workspace_id = ${this.workspaceId}
+            AND link.linear_team_id = ${linearTeamId}
+        )
+      `);
+  }
+
+  async listIssueLinksOutsideTeamScope(input: {
+    installationId: string;
+    keepLinearTeamIds: string[];
+  }) {
+    return this.db
+      .select()
+      .from(linearIssueLinks)
+      .where(
+        and(
+          eq(linearIssueLinks.workspaceId, this.workspaceId),
+          eq(linearIssueLinks.installationId, input.installationId),
+          isNotNull(linearIssueLinks.linearTeamId),
+          ne(linearIssueLinks.syncState, 'removed'),
+          input.keepLinearTeamIds.length
+            ? notInArray(linearIssueLinks.linearTeamId, input.keepLinearTeamIds)
+            : sql`true`,
+        ),
+      );
+  }
+
   async transaction<T>(callback: (model: LinearSyncModel, db: OrviloDatabase) => Promise<T>) {
     return this.db.transaction((tx) =>
       callback(
@@ -984,10 +1328,12 @@ export class LinearSyncModel {
   }
 
   async createIssueLink(input: {
+    aliasIdentifiers?: string[];
     bindingId?: string | null;
     installationId: string;
     linearIdentifier: string;
     linearIssueId: string;
+    linearTeamId?: string | null;
     organizationId: string;
     remoteSnapshot?: LinearIssueSnapshot;
     taskId: string;
@@ -1000,11 +1346,13 @@ export class LinearSyncModel {
     const [row] = await this.db
       .insert(linearIssueLinks)
       .values({
+        aliasIdentifiers: input.aliasIdentifiers ?? [],
         bindingId: input.bindingId,
         installationId: input.installationId,
         lastConfirmedSnapshot: snapshot,
         linearIdentifier: input.linearIdentifier,
         linearIssueId: input.linearIssueId,
+        linearTeamId: input.linearTeamId ?? null,
         organizationId: input.organizationId,
         remoteSnapshot: input.remoteSnapshot,
         remoteUpdatedAt: input.remoteSnapshot?.updatedAt
@@ -2579,7 +2927,13 @@ export class LinearSyncModel {
           eq(taskDomainEvents.workspaceId, this.workspaceId),
           gt(taskDomainEvents.revision, fromRevision),
           lte(taskDomainEvents.revision, toRevision),
-          scope.scopeType === 'project' ? eq(taskDomainEvents.projectId, scope.scopeId) : undefined,
+          // A project task's events stay in its project scope even when a team
+          // is set — the team scope owns only projectless work.
+          scope.scopeType === 'project'
+            ? eq(taskDomainEvents.projectId, scope.scopeId)
+            : scope.scopeType === 'team'
+              ? and(eq(taskDomainEvents.teamId, scope.scopeId), isNull(taskDomainEvents.projectId))
+              : undefined,
         ),
       )
       .orderBy(taskDomainEvents.revision);
@@ -2744,6 +3098,7 @@ export class LinearSyncModel {
         projectId: input.projectId,
         source: input.source,
         taskId: input.taskId,
+        teamId: input.teamId,
         type: input.type,
         workspaceId: this.workspaceId,
       })
@@ -2769,8 +3124,14 @@ export class LinearSyncModel {
 
     if (!event) throw new Error('Failed to persist task domain event');
 
-    const scopeType: TaskPlanningScopeType = input.projectId ? 'project' : 'workspace';
-    const scopeId = input.projectId ?? this.workspaceId;
+    // A task with both a project and a team is planned by its project scope —
+    // the team scope only owns projectless work (single-dispatch-owner rule).
+    const scopeType: TaskPlanningScopeType = input.projectId
+      ? 'project'
+      : input.teamId
+        ? 'team'
+        : 'workspace';
+    const scopeId = input.projectId ?? input.teamId ?? this.workspaceId;
     const trigger: TaskPlanningTrigger = {
       ...(input.action ? { action: input.action } : {}),
       ...(input.eventId ? { eventId: input.eventId } : {}),
@@ -2849,6 +3210,7 @@ export class LinearSyncModel {
       projectId: input.task.projectId,
       source: input.source,
       taskId: input.task.id,
+      teamId: input.task.teamId,
       type: input.eventType,
     });
 
@@ -3029,17 +3391,42 @@ export class LinearSyncModel {
       return { event, link, outbox };
     }
     const settings = binding?.settings;
-    const statusId = settings?.statusMappings?.find(
+    const changedFields = new Set(input.changedFields);
+    const workflowChanged =
+      changedFields.has('workflowCategory') || changedFields.has('workflowStateId');
+    let statusId = settings?.statusMappings?.find(
       (mapping) =>
         mapping.workflowCategory === input.task.workflowCategory ||
         (!mapping.workflowCategory && mapping.localStatus === input.task.status),
     )?.linearStateId;
+    // Team-scope links carry no binding.statusMappings — the remote state id
+    // comes from the synced team workflow states matching the new category.
+    if (
+      statusId === undefined &&
+      workflowChanged &&
+      !binding &&
+      link.linearTeamId &&
+      input.task.teamId
+    ) {
+      const [teamState] = await db
+        .select({ remoteStateId: teamWorkflowStates.remoteStateId })
+        .from(teamWorkflowStates)
+        .where(
+          and(
+            eq(teamWorkflowStates.teamId, input.task.teamId),
+            eq(teamWorkflowStates.category, input.task.workflowCategory),
+            isNotNull(teamWorkflowStates.remoteStateId),
+          ),
+        )
+        .orderBy(teamWorkflowStates.position)
+        .limit(1);
+      statusId = teamState?.remoteStateId ?? undefined;
+    }
     const assignmentId = settings?.assignmentMappings?.find(
       (mapping) =>
         mapping.orviloAgentId === input.task.assigneeAgentId ||
         mapping.orviloUserId === input.task.assigneeUserId,
     )?.linearUserId;
-    const changedFields = new Set(input.changedFields);
     const assignmentChanged =
       changedFields.has('assigneeAgentId') || changedFields.has('assigneeUserId');
     const shouldClearAssignment =
@@ -3047,8 +3434,6 @@ export class LinearSyncModel {
       !input.task.assigneeAgentId &&
       !input.task.assigneeUserId &&
       Boolean(link.remoteSnapshot?.assigneeId);
-    const workflowChanged =
-      changedFields.has('workflowCategory') || changedFields.has('workflowStateId');
 
     const payload = {
       ...(assignmentChanged && (assignmentId !== undefined || shouldClearAssignment)
@@ -3107,11 +3492,14 @@ export class LinearSyncModel {
   async updateIssueLink(
     id: string,
     patch: {
+      aliasIdentifiers?: string[];
       bindingId?: string | null;
       conflict?: LinearSyncConflict | null;
       installationId?: string;
       lastInboundDeliveryId?: string | null;
       lastConfirmedSnapshot?: LinearIssueSnapshot;
+      linearIdentifier?: string;
+      linearTeamId?: string | null;
       remoteSnapshot?: LinearIssueSnapshot | null;
       remoteUpdatedAt?: Date | null;
       syncState?: LinearIssueLinkSyncState;

@@ -51,7 +51,7 @@ describe('ProjectModel', () => {
     expect(project.status).toBe('backlog');
     expect(project.coordinatorAgentId).toBeTruthy();
     expect(
-      await serverDB.select().from(agents).where(eq(agents.id, project.coordinatorAgentId)),
+      await serverDB.select().from(agents).where(eq(agents.id, project.coordinatorAgentId!)),
     ).toEqual([expect.objectContaining({ virtual: true })]);
     expect(await new AgentModel(serverDB, userId).queryAgents()).not.toContainEqual(
       expect.objectContaining({ id: project.coordinatorAgentId }),
@@ -69,7 +69,7 @@ describe('ProjectModel', () => {
     expect(await model.delete(project.id)).toEqual(expect.objectContaining({ id: project.id }));
     expect(await model.findById(project.id)).toBeNull();
     expect(
-      await serverDB.select().from(agents).where(eq(agents.id, project.coordinatorAgentId)),
+      await serverDB.select().from(agents).where(eq(agents.id, project.coordinatorAgentId!)),
     ).toHaveLength(0);
   });
 
@@ -271,7 +271,7 @@ describe('ProjectModel', () => {
         expect.objectContaining({ binding: expect.objectContaining({ role: 'reviewer' }) }),
       ]),
     );
-    await expect(model.removeAgent(project.id, project.coordinatorAgentId)).rejects.toThrow(
+    await expect(model.removeAgent(project.id, project.coordinatorAgentId!)).rejects.toThrow(
       'The project coordinator cannot be removed',
     );
     expect(await model.listKnowledgeBases(project.id)).toHaveLength(1);
@@ -299,7 +299,7 @@ describe('ProjectModel', () => {
     const initial = await model.getOrchestrationPolicy(project.id);
     expect(initial).toEqual(
       expect.objectContaining({
-        coordinatorAgentId: project.coordinatorAgentId,
+        coordinatorAgentId: project.coordinatorAgentId!,
         orchestrationPolicy: expect.objectContaining({
           concurrencyLimit: 1,
           executionBudget: { maxCost: 25, maxRuns: 10 },
@@ -330,7 +330,7 @@ describe('ProjectModel', () => {
     );
 
     const stale = await model.updateOrchestrationPolicy(project.id, {
-      coordinatorAgentId: project.coordinatorAgentId,
+      coordinatorAgentId: project.coordinatorAgentId!,
       expectedRevision: 1,
       orchestrationPolicy: {
         ...updated!.orchestrationPolicy,
@@ -376,7 +376,7 @@ describe('ProjectModel', () => {
     expect(policy?.requireHumanReviewRequired).toBe(true);
     await expect(
       model.updateOrchestrationPolicy(project.id, {
-        coordinatorAgentId: project.coordinatorAgentId,
+        coordinatorAgentId: project.coordinatorAgentId!,
         expectedRevision: policy!.orchestrationPolicyRevision,
         orchestrationPolicy: {
           ...policy!.orchestrationPolicy,
@@ -405,7 +405,7 @@ describe('ProjectModel', () => {
     );
     await expect(
       adminModel.updateOrchestrationPolicy(project.id, {
-        coordinatorAgentId: project.coordinatorAgentId,
+        coordinatorAgentId: project.coordinatorAgentId!,
         expectedRevision: 1,
         orchestrationPolicy: project.orchestrationPolicy,
       }),

@@ -30,6 +30,7 @@ vi.mock('@/envs/file', () => ({
     S3_ENABLE_PATH_STYLE: false,
     S3_ENDPOINT: 'https://s3.amazonaws.com',
     S3_PREVIEW_URL_EXPIRE_IN: 7200,
+    S3_PUBLIC_ENDPOINT: 'https://files.example.com',
     S3_REGION: 'us-east-1',
     S3_SECRET_ACCESS_KEY: 'test-secret-key',
     S3_SET_ACL: true,
@@ -158,6 +159,48 @@ describe('S3', () => {
         expect.anything(),
         expect.anything(),
       );
+    });
+  });
+
+  describe('presign endpoint', () => {
+    it('creates the API client before the presign client when configured', async () => {
+      const s3 = new S3('test-access-key', 'test-secret-key', 'http://rustfs:9000', {
+        bucket: 'test-bucket',
+        forcePathStyle: true,
+        presignEndpoint: 'https://files.example.com',
+      });
+
+      expect(S3Client).toHaveBeenCalledTimes(2);
+      expect(S3Client).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ endpoint: 'http://rustfs:9000' }),
+      );
+      expect(S3Client).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ endpoint: 'https://files.example.com' }),
+      );
+
+      await s3.createPreSignedUrl('upload-file.txt');
+
+      const presignClient = vi.mocked(S3Client).mock.results[1].value;
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(presignClient, expect.anything(), {
+        expiresIn: 3600,
+      });
+    });
+
+    it('reuses the API client for presigning when no presign endpoint is set', async () => {
+      const s3 = new S3('test-access-key', 'test-secret-key', 'https://s3.amazonaws.com', {
+        bucket: 'test-bucket',
+      });
+
+      expect(S3Client).toHaveBeenCalledTimes(1);
+
+      await s3.createPreSignedUrl('upload-file.txt');
+
+      const apiClient = vi.mocked(S3Client).mock.results[0].value;
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(apiClient, expect.anything(), {
+        expiresIn: 3600,
+      });
     });
   });
 });

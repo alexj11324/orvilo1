@@ -110,6 +110,11 @@ export interface CreateTaskInput {
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
+  /**
+   * Owning team for workspace-mode tasks (linear-workspace-v3). TaskModel
+   * allocates the identifier from the team's `next_issue_seq` counter.
+   */
+  teamId?: string;
   // Explicit visibility for the new task. When omitted, the service derives it
   // from `parentTaskId` (if present) or `assigneeAgentId`'s visibility, and
   // finally falls back to the schema default ('public').
@@ -202,6 +207,11 @@ export class TaskService {
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
       createData.identifierPrefix ??= project.identifier;
     }
+
+    // Repository associations are resolved at run provisioning time. Do not
+    // cache a project/team fallback into the task row here: a task-level
+    // association may be applied after creation and must take precedence over
+    // the then-current project or team default.
 
     // Pull the model/provider snapshot and the agent's visibility in a single
     // SQL — both are needed for the same `tasks.create` row, and a second

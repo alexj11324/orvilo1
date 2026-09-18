@@ -266,6 +266,7 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   ragEval: 'blocked',
   recent: rw('chat:read', null),
   referral: 'blocked',
+  repository: rw('agent:read', 'agent:write'),
   resourcePermission: 'blocked',
   // Member-to-member ownership handover: accepting/declining is an interactive
   // human decision, not something a restricted key should automate.
@@ -283,6 +284,7 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   subscription: 'blocked',
   task: rw('agent:read', 'agent:write'),
   taskTemplate: rw('agent:read', 'agent:write'),
+  team: rw('agent:read', 'agent:write'),
   thread: rw('chat:read', 'chat:write'),
   topUp: 'blocked',
   topic: rw('chat:read', 'chat:write'),

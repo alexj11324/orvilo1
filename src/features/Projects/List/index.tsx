@@ -163,7 +163,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
         <Text className={styles.identifier} fontSize={12}>
           {project.identifier}
         </Text>
-        <ProjectOwnerAvatar userId={project.userId} />
+        {project.userId ? <ProjectOwnerAvatar userId={project.userId} /> : null}
         <Text
           className={styles.updatedAt}
           fontSize={12}

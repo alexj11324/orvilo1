@@ -8,7 +8,8 @@ import { linearEnv } from '@/envs/linear';
 export const LINEAR_OAUTH_AUTHORIZE_URL = 'https://linear.app/oauth/authorize';
 export const LINEAR_OAUTH_TOKEN_URL = 'https://api.linear.app/oauth/token';
 export const LINEAR_OAUTH_REVOKE_URL = 'https://api.linear.app/oauth/revoke';
-export const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql';
+export const LINEAR_GRAPHQL_URL =
+  process.env.LINEAR_GRAPHQL_URL ?? 'https://api.linear.app/graphql';
 export const LINEAR_OAUTH_CALLBACK_PATH = '/oauth/linear/callback';
 
 export const LINEAR_OAUTH_DEFAULT_SCOPES = ['read', 'write'] as const;

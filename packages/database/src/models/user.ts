@@ -15,7 +15,15 @@ import { merge } from '@/utils/merge';
 import { today } from '@/utils/time';
 
 import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
-import { messages, nextauthAccounts, tasks, topics, users, userSettings } from '../schemas';
+import {
+  messages,
+  nextauthAccounts,
+  projects,
+  tasks,
+  topics,
+  users,
+  userSettings,
+} from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
 
@@ -461,6 +469,11 @@ export class UserModel {
     return db.transaction(async (tx) => {
       // Purge share-visitor topics authored by this user under any creator.
       await tx.delete(topics).where(eq(topics.senderId, id));
+      // Personal projects belong to the account: `projects.user_id` now
+      // set-nulls on user delete so workspace projects survive, but personal
+      // rows (workspace_id IS NULL) would otherwise linger ownerless with
+      // their children — equivalent to deleted for readers, never collected.
+      await tx.delete(projects).where(and(eq(projects.userId, id), isNull(projects.workspaceId)));
       // Personal tasks are owned by the account. Workspace tasks keep their
       // history and rely on the nullable creator FK when the user leaves.
       await tx.delete(tasks).where(and(eq(tasks.createdByUserId, id), isNull(tasks.workspaceId)));

@@ -30,8 +30,10 @@ import {
 } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 
+export type OnboardingStepId = 'profile' | 'role' | 'source' | 'workspace' | 'goals' | 'invite';
+
 export type OnboardingStep = {
-  id: string;
+  id: OnboardingStepId;
   value: number;
   label: string;
   title: string;
@@ -139,20 +141,22 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
     icon: <Icon aria-hidden="true" />,
     ...(value === 'developer' ? { recommended: true } : {}),
   })),
-  steps: [
-    ['profile', 1],
-    ['role', 2],
-    ['source', 3],
-    ['workspace', 4],
-    ['goals', 5],
-    ['invite', 6],
-  ].map(([id, value]) => ({
-    id: id as string,
-    value: value as number,
+  steps: (
+    [
+      ['profile', 1],
+      ['role', 2],
+      ['source', 3],
+      ['workspace', 4],
+      ['goals', 5],
+      ['invite', 6],
+    ] as Array<[OnboardingStepId, number]>
+  ).map(([id, value]) => ({
+    id,
+    value,
     label: t(`reui.step.${id}.label`),
     title: t(`reui.step.${id}.title`),
     description: t(`reui.step.${id}.description`),
-    ...(['source', 'invite'].includes(id as string) ? { optional: true } : {}),
+    ...(['source', 'invite'].includes(id) ? { optional: true } : {}),
   })),
   teamSizeOptions: (
     [
@@ -164,7 +168,7 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
       ['company', 'company'],
       ['enterprise', 'enterprise'],
       ['global', 'global'],
-    ] as Array<[TeamSizeValue, string]>
+    ] as Array<[TeamSizeValue, TeamSizeValue]>
   ).map(([value, key]) => ({
     value: value as TeamSizeValue,
     label: t(`reui.teamSize.${key}.label`),

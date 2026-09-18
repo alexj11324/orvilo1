@@ -183,8 +183,13 @@ export const triggerHatchetWorkflow = async (
   return { workflowRunId: `${DISPATCH_ID_PREFIX}${dispatchId}` };
 };
 
-export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<boolean> => {
-  if (!workflowRunId.startsWith(DISPATCH_ID_PREFIX)) return false;
+export type HatchetCancellationResult =
+  { status: 'cancelled' } | { status: 'already-terminal' } | { status: 'not-found' };
+
+export const cancelHatchetWorkflow = async (
+  workflowRunId: string,
+): Promise<HatchetCancellationResult> => {
+  if (!workflowRunId.startsWith(DISPATCH_ID_PREFIX)) return { status: 'not-found' };
   const dispatchId = workflowRunId.slice(DISPATCH_ID_PREFIX.length);
   const db = await getServerDB();
   const [dispatch] = await db
@@ -192,7 +197,7 @@ export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<bool
     .from(hatchetDispatches)
     .where(eq(hatchetDispatches.id, dispatchId))
     .limit(1);
-  if (!dispatch) return false;
+  if (!dispatch) return { status: 'not-found' };
 
   const [cancelled] = await db
     .update(hatchetDispatches)
@@ -213,5 +218,9 @@ export const cancelHatchetWorkflow = async (workflowRunId: string): Promise<bool
     await cancelHatchetTask(providerRunId);
   }
 
-  return Boolean(cancelled || dispatch.status === 'cancelled');
+  if (cancelled || (dispatch.status === 'cancelled' && providerRunId)) {
+    return { status: 'cancelled' };
+  }
+
+  return { status: 'already-terminal' };
 };

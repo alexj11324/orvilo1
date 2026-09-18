@@ -73,7 +73,9 @@ const createRequest = (body: Record<string, unknown>) =>
 describe('memory extraction cancel route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.cancel.mockImplementation(async (id: string) => id.startsWith('hatchet-dispatch:'));
+    mocks.cancel.mockImplementation(async (id: string) => ({
+      status: id.startsWith('hatchet-dispatch:') ? 'cancelled' : 'not-found',
+    }));
     mocks.update.mockResolvedValue(undefined);
   });
 
@@ -208,7 +210,12 @@ describe('memory extraction cancel route', () => {
       metadata: {
         control: {
           hatchet: {
-            workflowRunIds: ['hatchet-dispatch:ok', 'hatchet-dispatch:boom', 'legacy-run'],
+            workflowRunIds: [
+              'hatchet-dispatch:ok',
+              'hatchet-dispatch:done',
+              'hatchet-dispatch:boom',
+              'legacy-run',
+            ],
           },
         },
       },
@@ -218,7 +225,9 @@ describe('memory extraction cancel route', () => {
     });
     mocks.cancel.mockImplementation(async (id: string) => {
       if (id === 'hatchet-dispatch:boom') throw new Error('provider unavailable');
-      return id === 'hatchet-dispatch:ok';
+      if (id === 'legacy-run') return { status: 'not-found' };
+      if (id === 'hatchet-dispatch:done') return { status: 'already-terminal' };
+      return { status: 'cancelled' };
     });
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const response = await app.fetch(
@@ -226,11 +235,12 @@ describe('memory extraction cancel route', () => {
     );
     await expect(response.json()).resolves.toMatchObject({
       cancelledWorkflowRuns: 1,
-      failedWorkflowRunIds: ['hatchet-dispatch:boom', 'legacy-run'],
+      failedWorkflowRunIds: ['hatchet-dispatch:boom'],
+      ignoredWorkflowRunIds: ['hatchet-dispatch:done', 'legacy-run'],
       status: AsyncTaskStatus.Error,
     });
     expect(response.status).toBe(200);
-    expect(mocks.cancel).toHaveBeenCalledTimes(3);
+    expect(mocks.cancel).toHaveBeenCalledTimes(4);
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining('workflow cancellation failed'),
       expect.objectContaining({ workflowRunId: 'hatchet-dispatch:boom' }),

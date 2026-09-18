@@ -89,10 +89,14 @@ describe('triggerHatchetWorkflow', () => {
       ['user-1', 'topic-b'],
       ['user-2', 'topic-c'],
     ]) {
-      await triggerHatchetWorkflow(path, { userId, topicId }, {
-        concurrencyKey: `memory-user-memory.process-topic.${userId}`,
-        workflowRunId: topicId,
-      });
+      await triggerHatchetWorkflow(
+        path,
+        { userId, topicId },
+        {
+          concurrencyKey: `memory-user-memory.process-topic.${userId}`,
+          workflowRunId: topicId,
+        },
+      );
     }
     const inputs = mocks.enqueueHatchetTask.mock.calls.map(([, input]) => input);
     expect(inputs[0].laneKey).toBe(inputs[1].laneKey);
@@ -130,7 +134,7 @@ describe('triggerHatchetWorkflow', () => {
     mocks.updateReturning.mockResolvedValueOnce([]);
     await expect(
       cancelHatchetWorkflow('hatchet-dispatch:00000000-0000-4000-8000-000000000010'),
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ status: 'already-terminal' });
     expect(mocks.cancelHatchetTask).not.toHaveBeenCalled();
     expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
   });
@@ -158,7 +162,7 @@ describe('triggerHatchetWorkflow', () => {
     mocks.updateReturning.mockResolvedValue([]);
     await expect(
       cancelHatchetWorkflow('hatchet-dispatch:00000000-0000-4000-8000-000000000010'),
-    ).resolves.toBe(true);
+    ).resolves.toEqual({ status: 'cancelled' });
     expect(mocks.cancelHatchetTask).toHaveBeenCalledExactlyOnceWith('hatchet-run:provider-run');
   });
 });

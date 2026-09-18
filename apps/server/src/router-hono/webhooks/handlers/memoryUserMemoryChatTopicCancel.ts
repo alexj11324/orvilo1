@@ -40,7 +40,9 @@ const initMemoryExtractionMetadata = (task: typeof asyncTasks.$inferSelect) => {
       startedAt: metadata?.startedAt || task.createdAt?.toISOString() || new Date().toISOString(),
     });
   }
-  return initUserMemoryExtractionMetadata(task.metadata as UserMemoryExtractionMetadata | undefined);
+  return initUserMemoryExtractionMetadata(
+    task.metadata as UserMemoryExtractionMetadata | undefined,
+  );
 };
 
 export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
@@ -50,17 +52,23 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
     const task = await db.query.asyncTasks.findFirst({
       where: and(eq(asyncTasks.id, payload.taskId), inArray(asyncTasks.type, supportedTaskTypes)),
     });
-    if (!task) return c.json({ error: `Memory extraction task not found for id '${payload.taskId}'` }, 404);
+    if (!task)
+      return c.json({ error: `Memory extraction task not found for id '${payload.taskId}'` }, 404);
     if (payload.userId && payload.userId !== task.userId) {
-      return c.json({ error: `Task '${payload.taskId}' does not belong to the provided userId` }, 403);
+      return c.json(
+        { error: `Task '${payload.taskId}' does not belong to the provided userId` },
+        403,
+      );
     }
 
     const metadata = initMemoryExtractionMetadata(task);
-    const workflowRunIds = Array.from(new Set([
-      ...(metadata.control?.hatchet?.workflowRunIds || []),
-      ...(payload.workflowRunId ? [payload.workflowRunId] : []),
-      ...(payload.workflowRunIds || []),
-    ]));
+    const workflowRunIds = Array.from(
+      new Set([
+        ...(metadata.control?.hatchet?.workflowRunIds || []),
+        ...(payload.workflowRunId ? [payload.workflowRunId] : []),
+        ...(payload.workflowRunIds || []),
+      ]),
+    );
     const nextMetadata: typeof metadata = {
       ...metadata,
       control: {
@@ -72,13 +80,17 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
     };
     const asyncTaskModel = new AsyncTaskModel(db, task.userId, task.workspaceId ?? undefined);
     await asyncTaskModel.update(task.id, {
-      error: new AsyncTaskError(AsyncTaskErrorType.TaskCancelled, payload.reason || 'Memory extraction cancelled from webhook'),
+      error: new AsyncTaskError(
+        AsyncTaskErrorType.TaskCancelled,
+        payload.reason || 'Memory extraction cancelled from webhook',
+      ),
       metadata: nextMetadata,
       status: AsyncTaskStatus.Error,
     });
 
     let cancelledWorkflowRuns = 0;
     const failedWorkflowRunIds: string[] = [];
+    const ignoredWorkflowRunIds: string[] = [];
     if (workflowRunIds.length > 0) {
       const results = await Promise.allSettled(
         workflowRunIds.map((workflowRunId) => cancelHatchetWorkflow(workflowRunId)),
@@ -86,8 +98,8 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
       results.forEach((result, index) => {
         const workflowRunId = workflowRunIds[index];
         if (result.status === 'fulfilled') {
-          if (result.value) cancelledWorkflowRuns += 1;
-          else failedWorkflowRunIds.push(workflowRunId);
+          if (result.value.status === 'cancelled') cancelledWorkflowRuns += 1;
+          else ignoredWorkflowRunIds.push(workflowRunId);
           return;
         }
         failedWorkflowRunIds.push(workflowRunId);
@@ -98,15 +110,19 @@ export const memoryUserMemoryChatTopicCancel = async (c: Context) => {
       });
     }
 
-    return c.json({
-      cancelledWorkflowRuns,
-      failedWorkflowRunIds,
-      message: failedWorkflowRunIds.length
-        ? 'Memory extraction cancellation was requested, but some workflow runs could not be cancelled.'
-        : 'Memory extraction cancellation has been requested.',
-      status: AsyncTaskStatus.Error,
-      taskId: task.id,
-    }, 200);
+    return c.json(
+      {
+        cancelledWorkflowRuns,
+        failedWorkflowRunIds,
+        ignoredWorkflowRunIds,
+        message: failedWorkflowRunIds.length
+          ? 'Memory extraction cancellation was requested, but some workflow runs could not be cancelled.'
+          : 'Memory extraction cancellation has been requested.',
+        status: AsyncTaskStatus.Error,
+        taskId: task.id,
+      },
+      200,
+    );
   } catch (error) {
     console.error('[memory-user-memory/pipelines/extract/chat-topic/cancel] failed', error);
     return c.json({ error: (error as Error).message }, 500);

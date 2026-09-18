@@ -5,7 +5,10 @@ import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
+import { ProjectModel } from '../project';
 import { SavedViewModel } from '../savedView';
+import { TaskModel } from '../task';
+import { TeamModel } from '../team';
 
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'fav-user';
@@ -65,6 +68,59 @@ describe('NavigationFavoriteModel', () => {
     expect(listed.find((row) => row.targetId === readable.id)?.title).toBe('Assigned to me');
     expect(listed.find((row) => row.targetId === 'view_lost')?.title).toBeNull();
     expect(listed.find((row) => row.targetId === 'task_secret')?.title).toBeNull();
+  });
+
+  it('resolves task, team, and project titles the caller can still read', async () => {
+    const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
+    const visitorTasks = new TaskModel(serverDB, otherUserId, workspaceId);
+    const teams = new TeamModel(serverDB, userId, workspaceId);
+    const ownerProjects = new ProjectModel(serverDB, userId, workspaceId);
+    const visitorProjects = new ProjectModel(serverDB, otherUserId, workspaceId);
+    const visitor = new NavigationFavoriteModel(serverDB, otherUserId, workspaceId);
+
+    const readableTask = await visitorTasks.create({
+      instruction: 'Ship the picker',
+      name: 'Board picker',
+    });
+    const hiddenTask = await ownerTasks.create({
+      instruction: 'Stay hidden',
+      name: 'Secret task',
+      visibility: 'private',
+    });
+    const publicTeam = await teams.create({
+      key: 'PUB',
+      name: 'Public Team',
+      visibility: 'public',
+    });
+    const privateTeam = await teams.create({
+      key: 'PRV',
+      name: 'Private Team',
+      visibility: 'private',
+    });
+    const readableProject = await visitorProjects.create({
+      identifier: 'FAV01',
+      name: 'Roadmap',
+    });
+    const hiddenProject = await ownerProjects.create({
+      identifier: 'HID01',
+      name: 'Hidden Project',
+      visibility: 'private',
+    });
+
+    await visitor.pin({ targetId: readableTask.id, targetType: 'task' });
+    await visitor.pin({ targetId: hiddenTask.id, targetType: 'task' });
+    await visitor.pin({ targetId: publicTeam.id, targetType: 'team' });
+    await visitor.pin({ targetId: privateTeam.id, targetType: 'team' });
+    await visitor.pin({ targetId: readableProject.id, targetType: 'project' });
+    await visitor.pin({ targetId: hiddenProject.id, targetType: 'project' });
+
+    const listed = await visitor.list();
+    expect(listed.find((row) => row.targetId === readableTask.id)?.title).toBe('Board picker');
+    expect(listed.find((row) => row.targetId === hiddenTask.id)?.title).toBeNull();
+    expect(listed.find((row) => row.targetId === publicTeam.id)?.title).toBe('Public Team');
+    expect(listed.find((row) => row.targetId === privateTeam.id)?.title).toBeNull();
+    expect(listed.find((row) => row.targetId === readableProject.id)?.title).toBe('Roadmap');
+    expect(listed.find((row) => row.targetId === hiddenProject.id)?.title).toBeNull();
   });
 
   it('rejects a stale reorder instead of last-write-wins ranks', async () => {

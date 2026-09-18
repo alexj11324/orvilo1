@@ -5,7 +5,10 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import type { NavigationFavoriteItem } from '../schemas/workAttention';
 import { navigationFavorites } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
+import { ProjectModel } from './project';
 import { SavedViewModel } from './savedView';
+import { TaskModel } from './task';
+import { TeamModel } from './team';
 
 export class NavigationFavoriteConflictError extends Error {
   readonly code = 'FAVORITE_REVISION_CONFLICT' as const;
@@ -16,6 +19,15 @@ export class NavigationFavoriteConflictError extends Error {
   }
 }
 
+const favoriteKey = (type: NavigationFavoriteTargetType, id: string) => `${type}:${id}`;
+
+const taskTitle = (task: { instruction?: string | null; name?: string | null }) => {
+  const name = task.name?.trim();
+  if (name) return name;
+  const instruction = task.instruction?.trim();
+  return instruction || null;
+};
+
 export class NavigationFavoriteModel {
   constructor(
     private readonly db: OrviloDatabase,
@@ -24,6 +36,50 @@ export class NavigationFavoriteModel {
   ) {}
 
   private scopeKey = () => notificationScopeKey(this.workspaceId);
+
+  private resolveTitles = async (rows: NavigationFavoriteItem[]) => {
+    const titles = new Map<string, string>();
+    const idsFor = (type: NavigationFavoriteTargetType) =>
+      rows.filter((row) => row.targetType === type).map((row) => row.targetId);
+
+    const viewIds = idsFor('savedView');
+    const taskIds = idsFor('task');
+    const teamIds = idsFor('team');
+    const projectIds = idsFor('project');
+    const workspaceId = this.workspaceId ?? undefined;
+
+    const [views, tasks, readableTeams, projects] = await Promise.all([
+      viewIds.length > 0
+        ? new SavedViewModel(this.db, this.userId, workspaceId).list()
+        : Promise.resolve([]),
+      taskIds.length > 0
+        ? new TaskModel(this.db, this.userId, workspaceId).findByIds(taskIds)
+        : Promise.resolve([]),
+      teamIds.length > 0 && workspaceId
+        ? new TeamModel(this.db, this.userId, workspaceId).listReadable()
+        : Promise.resolve([]),
+      projectIds.length > 0
+        ? new ProjectModel(this.db, this.userId, workspaceId).findByIds(projectIds)
+        : Promise.resolve([]),
+    ]);
+
+    const wantedViews = new Set(viewIds);
+    for (const view of views) {
+      if (wantedViews.has(view.id)) titles.set(favoriteKey('savedView', view.id), view.name);
+    }
+    for (const task of tasks) {
+      const title = taskTitle(task);
+      if (title) titles.set(favoriteKey('task', task.id), title);
+    }
+    const wantedTeams = new Set(teamIds);
+    for (const team of readableTeams) {
+      if (wantedTeams.has(team.id)) titles.set(favoriteKey('team', team.id), team.name);
+    }
+    for (const project of projects) {
+      titles.set(favoriteKey('project', project.id), project.name);
+    }
+    return titles;
+  };
 
   list = async (): Promise<Array<NavigationFavoriteItem & { title: string | null }>> => {
     const rows = await this.db
@@ -37,17 +93,10 @@ export class NavigationFavoriteModel {
       )
       .orderBy(asc(navigationFavorites.rank), asc(navigationFavorites.createdAt));
 
-    const viewIds = rows.filter((row) => row.targetType === 'savedView').map((row) => row.targetId);
-    if (viewIds.length === 0) return rows.map((row) => ({ ...row, title: null }));
-
-    const readable = new Map(
-      (await new SavedViewModel(this.db, this.userId, this.workspaceId ?? undefined).list()).map(
-        (view) => [view.id, view.name],
-      ),
-    );
+    const titles = await this.resolveTitles(rows);
     return rows.map((row) => ({
       ...row,
-      title: row.targetType === 'savedView' ? (readable.get(row.targetId) ?? null) : null,
+      title: titles.get(favoriteKey(row.targetType, row.targetId)) ?? null,
     }));
   };
 

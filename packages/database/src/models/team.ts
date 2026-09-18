@@ -13,7 +13,7 @@ import type {
 import { and, asc, desc, eq, exists, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import { projectTeams, teamCycles, teamMembers, teams, teamWorkflowStates } from '../schemas/team';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { hasActiveWorkspaceMembership, hasWorkspaceAdminAccess } from './workspace';
 
 const toTeamItem = (row: typeof teams.$inferSelect): TeamItem => row as TeamItem;
@@ -34,7 +34,7 @@ const toCycleItem = (row: typeof teamCycles.$inferSelect): TeamCycleItem => row 
  */
 export class TeamModel {
   constructor(
-    private readonly db: LobeChatDatabase,
+    private readonly db: OrviloDatabase,
     private readonly userId: string,
     private readonly workspaceId: string,
   ) {}
@@ -168,7 +168,7 @@ export class TeamModel {
   /** Transactional `<key>-<n>` allocator — never `max(seq)+1` across rows. */
   allocateIssueSeq = async (
     teamId: string,
-    runner?: LobeChatDatabase,
+    runner?: OrviloDatabase,
   ): Promise<{ identifier: string; seq: number }> => {
     const db = runner ?? this.db;
     const [row] = await db

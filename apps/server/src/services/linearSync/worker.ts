@@ -2441,7 +2441,7 @@ export class LinearSyncWorker {
     provider: LinearIssueProvider,
     localTeamId: string,
     options: {
-      db?: LobeChatDatabase;
+      db?: OrviloDatabase;
       historicalImport?: boolean;
       knownRelations?: LinearRelationSnapshot[];
       model?: LinearSyncModel;
@@ -2451,7 +2451,7 @@ export class LinearSyncWorker {
       provider.listComments ? provider.listComments(issue.id) : [],
       options.knownRelations ?? (provider.listRelations ? provider.listRelations(issue.id) : []),
     ]);
-    const run = async (model: LinearSyncModel, db: LobeChatDatabase) => {
+    const run = async (model: LinearSyncModel, db: OrviloDatabase) => {
       const historicalImport = options.historicalImport ?? true;
       const relations = issueRelationsWithParent(issue, fetchedRelations);
       const existingLink = await model.findIssueLinkByExternalId(issue.id);
@@ -2748,7 +2748,7 @@ export class LinearSyncWorker {
       );
       return 'processed';
     };
-    const execute = async (model: LinearSyncModel, db: LobeChatDatabase) => {
+    const execute = async (model: LinearSyncModel, db: OrviloDatabase) => {
       const outcome = await run(model, db);
       if (outcome !== 'pending-binding') {
         for (const comment of knownComments) {

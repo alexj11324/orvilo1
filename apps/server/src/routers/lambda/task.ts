@@ -318,10 +318,10 @@ async function assertTaskSteeringCapability(
     if (role === 'owner' || role === 'admin') return;
 
     if (task.projectId) {
-      const projectRole = await new ProjectMemberModel(
-        ctx.serverDB,
+      const projectRole = await new ProjectMemberModel(ctx.serverDB, ctx.userId).getRole(
+        task.projectId,
         ctx.userId,
-      ).getRole(task.projectId, ctx.userId);
+      );
       if (projectRole === 'manager') return;
     }
   }

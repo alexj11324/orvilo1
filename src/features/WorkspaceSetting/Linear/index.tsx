@@ -707,7 +707,10 @@ const LinearWorkspaceSettings = memo(() => {
     setScopeApprovedTeamIds(settings?.approvedTeamIds ?? null);
     setScopeIncludeProjectless(settings?.includeProjectlessIssues !== false);
     setScopePrivateTeamPolicy(settings?.privateTeamPolicy ?? 'import_restricted');
-  }, [syncScope?.id, syncScope?.settings]);
+    // Rehydrate only when a different scope loads — polling refresh must not
+    // clobber in-progress draft edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncScope?.id]);
 
   // While an import runs, poll the durable scope row — the server keeps
   // stepping even if this page closes.

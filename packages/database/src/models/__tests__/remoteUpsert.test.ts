@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { teams, users, workspaces } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { RepositoryModel } from '../repository';
 import { TeamModel } from '../team';
 
@@ -20,7 +20,7 @@ const userId = 'user-upsert-test';
 const workspaceId = 'ws-upsert-test';
 const teamId = 'team-upsert-test';
 
-const seedFixtures = async (db: LobeChatDatabase) => {
+const seedFixtures = async (db: OrviloDatabase) => {
   await db.insert(users).values({ email: 'upsert@test.dev', id: userId });
   await db.insert(workspaces).values({
     id: workspaceId,

@@ -824,7 +824,7 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     return this.db.transaction(async (tx) => {
-      const runner = tx as LobeChatDatabase;
+      const runner = tx as OrviloDatabase;
       const [before] = await runner
         .select()
         .from(tasks)

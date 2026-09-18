@@ -2736,7 +2736,8 @@ When I am ___, I need ___
     'This Agent will be copied. The original stays where it is.',
   'workspace.general.copyOrviloAI.modal.selectAgents':
     'Select Agents to copy. Originals stay where they are.',
-  'workspace.general.copyOrviloAI.modal.selectPlaceholder': 'Select workspace or personal account...',
+  'workspace.general.copyOrviloAI.modal.selectPlaceholder':
+    'Select workspace or personal account...',
   'workspace.general.copyOrviloAI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
   'workspace.general.copyOrviloAI.modal.success': '{{count}} agent(s) copied',
@@ -3375,7 +3376,7 @@ When I am ___, I need ___
   'workspaceSetting.linear.description':
     'Connect one Linear organization to this workspace, map projects, and coordinate task changes with durable sync and replanning.',
   'workspaceSetting.linear.connectionTitle': 'Linear connection',
-  'workspaceSetting.linear.connectionDescription': 'Authorize Linear through your LobeHub account.',
+  'workspaceSetting.linear.connectionDescription': 'Authorize Linear through your Orvilo account.',
   'workspaceSetting.linear.connectedAs': 'Connected as {{name}}',
   'workspaceSetting.linear.connectedAccount': 'connected account',
   'workspaceSetting.linear.connect': 'Connect Linear',

@@ -34,14 +34,23 @@ export interface WorkspaceMemberSummary {
   workspaceId?: string;
 }
 
+/** `workspaceMember.invite` → per-email outcome. */
+export interface InviteResultItem {
+  email: string;
+  /**
+   * True only when the invite email actually left the mailer. `ok` with
+   * `emailed === false` means the invitation row exists but the message
+   * never sent — the admin should resend rather than assume delivery.
+   */
+  emailed?: boolean;
+  error?: string;
+  invitationId?: string;
+  ok: boolean;
+}
+
 /** `workspaceMember.invite` → per-email delivery report for the batch. */
 export interface InviteBatchResult {
-  results: {
-    email: string;
-    error?: string;
-    invitationId?: string;
-    ok: boolean;
-  }[];
+  results: InviteResultItem[];
 }
 
 /** `workspaceMember.listInvitations` → invitation row + display context. */

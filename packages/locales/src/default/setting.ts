@@ -3678,6 +3678,8 @@ When I am ___, I need ___
   'workspaceSetting.members.inviteAction': 'Send {{count}} invite',
   'workspaceSetting.members.inviteAction_other': 'Send {{count}} invites',
   'workspaceSetting.members.inviteButton': 'Invite',
+  'workspaceSetting.members.inviteEmailFailed':
+    '{{email}} — invitation created, but the email failed to send; resend from the Invitations tab',
   'workspaceSetting.members.inviteFailed': '{{email}} — {{error}}',
   'workspaceSetting.members.inviteSent': 'Invitation sent to {{email}}',
   'workspaceSetting.members.inviteTitle': 'Invite teammates',

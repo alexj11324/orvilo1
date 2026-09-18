@@ -3294,6 +3294,7 @@
   "workspaceSetting.members.inviteAction": "发送 {{count}} 份邀请",
   "workspaceSetting.members.inviteAction_other": "发送 {{count}} 份邀请",
   "workspaceSetting.members.inviteButton": "邀请",
+  "workspaceSetting.members.inviteEmailFailed": "{{email}} — 邀请已创建，但邮件发送失败；请在「邀请」标签页重新发送",
   "workspaceSetting.members.inviteFailed": "{{email}} — {{error}}",
   "workspaceSetting.members.inviteSent": "邀请已发送至 {{email}}",
   "workspaceSetting.members.inviteTitle": "邀请队友",

@@ -12,15 +12,15 @@ import { systemRoleTemplate } from './systemRole';
  * authority for editing the agent being configured, so these agent-editing /
  * orchestration tools are stripped from `ctx.plugins`:
  *
- * - `lobe-agent-management`: duplicate edit APIs (updatePrompt / updateAgent /
+ * - `orvilo-agent-management`: duplicate edit APIs (updatePrompt / updateAgent /
  *   installPlugin) PLUS a `<self_management>` prompt whose `<current_agent>`
  *   points at the builder ITSELF and tells the model to "prefer Agent Management
  *   and modify the current agent (yourself)". With both toolsets present this is
  *   what makes an ambiguous "help me change ..." edit the builder's own config
  *   instead of the agent on the left.
- * - `lobe-group-management` / `lobe-group-agent-builder`: group agent CRUD /
+ * - `orvilo-group-management` / `orvilo-group-agent-builder`: group agent CRUD /
  *   callAgent — a second, overlapping "edit/orchestrate agents" surface.
- * - `lobe-agent`: sub-agent dispatch / planning / todos — orchestration noise
+ * - `orvilo-agent`: sub-agent dispatch / planning / todos — orchestration noise
  *   that competes with the builder's single "configure this agent" job.
  *
  * Functional plugins the edited agent carries (web browsing, image generation,
@@ -31,10 +31,10 @@ import { systemRoleTemplate } from './systemRole';
  * selectors and avoids pulling extra package deps into builtin-agents.
  */
 const AGENT_BUILDER_CONFLICTING_TOOLS = new Set<string>([
-  'lobe-agent-management',
-  'lobe-group-management',
-  'lobe-group-agent-builder',
-  'lobe-agent',
+  'orvilo-agent-management',
+  'orvilo-group-management',
+  'orvilo-group-agent-builder',
+  'orvilo-agent',
 ]);
 
 /**

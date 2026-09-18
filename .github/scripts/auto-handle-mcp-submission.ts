@@ -27,7 +27,7 @@ declare global {
 
 const MARKER = '<!-- bot:mcp-submission -->';
 const REPO_PLACEHOLDER = 'https://github.com/<owner>/<repo>';
-const PUBLISH_SKILL_URL = 'https://lobehub.com/publish-mcp/skill.md';
+const PUBLISH_SKILL_URL = 'https://orvilo.aspectlylabs.com/publish-mcp/skill.md';
 
 interface GitHubLabel {
   name: string;
@@ -84,7 +84,7 @@ function buildComment(repoUrl: string | null): string {
 Paste this into Claude Code / Cursor / Codex / etc.:
 
 \`\`\`text
-Read ${PUBLISH_SKILL_URL} and follow the instructions to publish (or refresh) my MCP server on the LobeHub Marketplace
+Read ${PUBLISH_SKILL_URL} and follow the instructions to publish (or refresh) my MCP server on the Orvilo Marketplace
 \`\`\`
 
 ### Or run the CLI yourself (Node.js ≥ 22)
@@ -160,8 +160,8 @@ async function main(): Promise<void> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error('GITHUB_TOKEN environment variable is required');
 
-  const owner = process.env.GITHUB_REPOSITORY_OWNER || 'lobehub';
-  const repo = process.env.GITHUB_REPOSITORY_NAME || 'lobehub';
+  const owner = process.env.GITHUB_REPOSITORY_OWNER || 'orvilo';
+  const repo = process.env.GITHUB_REPOSITORY_NAME || 'orvilo';
   const issueNumber = Number(process.env.ISSUE_NUMBER);
   if (!issueNumber) throw new Error('ISSUE_NUMBER environment variable is required');
 

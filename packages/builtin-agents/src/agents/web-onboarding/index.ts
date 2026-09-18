@@ -6,10 +6,10 @@ import { BUILTIN_AGENT_SLUGS } from '../../types';
 import { createSystemRole } from './systemRole';
 
 /** Must match `WebOnboardingIdentifier` in `packages/builtin-tool-web-onboarding/src/types.ts`. */
-const WebOnboardingIdentifier = 'lobe-web-onboarding';
+const WebOnboardingIdentifier = 'orvilo-web-onboarding';
 
 export const WEB_ONBOARDING: BuiltinAgentDefinition = {
-  avatar: '/avatars/lobe-ai.png',
+  avatar: '/avatars/orvilo-ai.png',
   persist: {
     model: DEFAULT_ONBOARDING_MODEL,
     provider: DEFAULT_ONBOARDING_PROVIDER,

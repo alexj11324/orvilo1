@@ -1,5 +1,5 @@
 import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
-import OrviloProvider from 'model-bank/modelProviders/lobehub';
+import OrviloProvider from 'model-bank/modelProviders/orvilo';
 
 const locales: Record<`${string}.description`, string> = {};
 

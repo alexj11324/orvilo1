@@ -1,4 +1,4 @@
-import { type LobeToolManifest } from '@orvilo/context-engine';
+import { type OrviloToolManifest } from '@orvilo/context-engine';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,9 +8,9 @@ import {
   resolveToolTimeoutMs,
 } from '../resolveToolTimeout';
 
-const makeManifest = (api: LobeToolManifest['api']): LobeToolManifest => ({
+const makeManifest = (api: OrviloToolManifest['api']): OrviloToolManifest => ({
   api,
-  identifier: 'lobe-local-system',
+  identifier: 'orvilo-local-system',
   meta: {},
 });
 

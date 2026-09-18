@@ -42,7 +42,7 @@ const ROUTE_HINTS: [label: string, path: string][] = [
  * can write in-app links that actually resolve.
  *
  * Without this the model only knows the product name and guesses URLs from
- * training data (`https://lobehub.com/kb/...`): the wrong host, a route that
+ * training data (`https://orvilo.aspectlylabs.com/kb/...`): the wrong host, a route that
  * does not exist, and — inside a team workspace — missing the `/{slug}` prefix,
  * so the link opens the user's personal space instead of the shared resource.
  * Tool results already return workspace-aware URLs; this block closes the gap
@@ -74,14 +74,14 @@ export const workspaceContextPrompt = ({ appUrl, workspace }: WorkspaceContextIn
     if (origin) lines.push(`  <app_url>${escapedOrigin}</app_url>`);
     lines.push(`  <link_base>${linkBase}</link_base>`);
     lines.push(
-      `  <instruction>You are running inside the LobeHub app${origin ? ` at ${escapedOrigin}` : ''}, in the team workspace identified by the workspace_slug field above. Every in-app link to a workspace resource (agents, tasks, documents, pages, knowledge bases, files, settings) MUST start with the workspace slug prefix "${linkBase}/". A link without the "/${escapedSlug}" prefix opens the user's personal space and will not show workspace content.</instruction>`,
+      `  <instruction>You are running inside the Orvilo app${origin ? ` at ${escapedOrigin}` : ''}, in the team workspace identified by the workspace_slug field above. Every in-app link to a workspace resource (agents, tasks, documents, pages, knowledge bases, files, settings) MUST start with the workspace slug prefix "${linkBase}/". A link without the "/${escapedSlug}" prefix opens the user's personal space and will not show workspace content.</instruction>`,
     );
   } else {
     lines.push(
       `  <scope>personal</scope>`,
       `  <app_url>${escapedOrigin}</app_url>`,
       `  <link_base>${linkBase}</link_base>`,
-      `  <instruction>You are running inside the LobeHub app at ${escapedOrigin}, in the user's personal space. In-app links start with "${linkBase}/" directly (no workspace prefix).</instruction>`,
+      `  <instruction>You are running inside the Orvilo app at ${escapedOrigin}, in the user's personal space. In-app links start with "${linkBase}/" directly (no workspace prefix).</instruction>`,
     );
   }
 
@@ -89,7 +89,7 @@ export const workspaceContextPrompt = ({ appUrl, workspace }: WorkspaceContextIn
     `  <routes>`,
     ...ROUTE_HINTS.map(([label, path]) => `    ${label}: ${linkBase}${path}`),
     `  </routes>`,
-    `  <link_rules>These rules apply only to links into this LobeHub app (agents, tasks, documents, pages, knowledge bases, files, settings). When a tool result already contains such a URL, reuse it verbatim. Compose one yourself only from the routes above with an id you actually hold; never invent hosts, paths, slugs, or ids, and never place in-app resources under the marketing site lobehub.com. Links to other websites, including the LobeHub homepage itself, are not affected.</link_rules>`,
+    `  <link_rules>These rules apply only to links into this Orvilo app (agents, tasks, documents, pages, knowledge bases, files, settings). When a tool result already contains such a URL, reuse it verbatim. Compose one yourself only from the routes above with an id you actually hold; never invent hosts, paths, slugs, or ids, and never place in-app resources under the marketing site orvilo.aspectlylabs.com. Links to other websites, including the Orvilo homepage itself, are not affected.</link_rules>`,
     '</workspace_context>',
   );
 

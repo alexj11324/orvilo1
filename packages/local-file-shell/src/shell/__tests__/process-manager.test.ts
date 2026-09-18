@@ -49,7 +49,7 @@ describe('ShellProcessManager', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lobehub-shell-process-manager-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orvilo-shell-process-manager-'));
     manager = new ShellProcessManager(tmpDir);
   });
 
@@ -425,7 +425,7 @@ describe('ShellProcessManager default output root', () => {
       expect(outputFiles.stdout.path).toBe(
         path.join(
           os.tmpdir(),
-          'lobehub',
+          'orvilo',
           'shell',
           '2026-6-14',
           process.pid.toString(),
@@ -437,7 +437,7 @@ describe('ShellProcessManager default output root', () => {
       manager.cleanupAll();
     } finally {
       vi.useRealTimers();
-      fs.rmSync(path.join(os.tmpdir(), 'lobehub', 'shell', '2026-6-14', process.pid.toString()), {
+      fs.rmSync(path.join(os.tmpdir(), 'orvilo', 'shell', '2026-6-14', process.pid.toString()), {
         force: true,
         recursive: true,
       });

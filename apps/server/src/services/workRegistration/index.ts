@@ -5,7 +5,7 @@
  *
  * - `registerWorksForOperation` — completion-time scan of a server operation
  *   tree: entity `file` Works (sandbox export pipeline) + the shell Work scan
- *   (gh CLI runs from codex / claude-code / device `lobe-local-system`).
+ *   (gh CLI runs from codex / claude-code / device `orvilo-local-system`).
  * - `registerShellWorksForLocalRun` — the same shell scan replayed for
  *   desktop-LOCAL hetero runs, which have no `agent_operations` row and are
  *   reported by the client executor instead.

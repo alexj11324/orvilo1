@@ -5,7 +5,7 @@ import {
   ConnectorSourceType,
   ConnectorStatus,
 } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { syncConnectorToolsById } from '@/server/services/connector/sync';
 
@@ -34,7 +34,7 @@ export class McpServerService extends BaseService {
   private connectorModel: ConnectorModel;
   private connectorToolModel: ConnectorToolModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     super(db, userId, workspaceId);
     this.connectorModel = new ConnectorModel(db, userId, workspaceId);
     this.connectorToolModel = new ConnectorToolModel(db, userId, workspaceId);

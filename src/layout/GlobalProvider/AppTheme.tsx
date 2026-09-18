@@ -11,7 +11,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 
 import Link from '@/components/Link';
 import { genFontFamily, genFontFamilyCode } from '@/const/font';
-import { LOBE_THEME_NEUTRAL_COLOR, LOBE_THEME_PRIMARY_COLOR } from '@/const/theme';
+import { ORVILO_THEME_NEUTRAL_COLOR, ORVILO_THEME_PRIMARY_COLOR } from '@/const/theme';
 import { useIsDark } from '@/hooks/useIsDark';
 import { getUILocaleAndResources } from '@/libs/getUILocaleAndResources';
 import type { UILocaleResources } from '@/libs/getUILocaleAndResources.utils';
@@ -46,7 +46,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     scrollbar-color: ${cssVar.colorFill} transparent;
     scrollbar-width: thin;
 
-    #lobe-mobile-scroll-container {
+    #orvilo-mobile-scroll-container {
       scrollbar-width: none;
 
       ::-webkit-scrollbar {
@@ -148,11 +148,11 @@ const AppTheme = memo<AppThemeProps>(
     }, [language]);
 
     useEffect(() => {
-      setCookie(LOBE_THEME_PRIMARY_COLOR, primaryColor);
+      setCookie(ORVILO_THEME_PRIMARY_COLOR, primaryColor);
     }, [primaryColor]);
 
     useEffect(() => {
-      setCookie(LOBE_THEME_NEUTRAL_COLOR, neutralColor);
+      setCookie(ORVILO_THEME_NEUTRAL_COLOR, neutralColor);
     }, [neutralColor]);
 
     const currentAppearence = isDark ? 'dark' : 'light';
@@ -179,7 +179,7 @@ const AppTheme = memo<AppThemeProps>(
             primaryColor: primaryColor ?? defaultPrimaryColor,
           }}
           theme={{
-            cssVar: { key: 'lobe-vars' },
+            cssVar: { key: 'orvilo-vars' },
             token: {
               fontFamily,
               fontFamilyCode,

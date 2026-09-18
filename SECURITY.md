@@ -14,7 +14,7 @@ If you are running a 1.x deployment, we strongly recommend upgrading to the late
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities through the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/lobehub/lobehub/security/advisories/new) tab.
+Please report security vulnerabilities through the GitHub Security Advisory "Report a Vulnerability" tab.
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
@@ -37,8 +37,8 @@ A good vulnerability report should include:
 
 ### In Scope
 
-- Security issues affecting the **latest 2.x release** of LobeHub
-- Vulnerabilities in the **server-side deployment** (LobeHub Cloud or self-hosted server mode)
+- Security issues affecting the **latest 2.x release** of Orvilo
+- Vulnerabilities in the **server-side deployment** (Orvilo Cloud or self-hosted server mode)
 - Issues that can be exploited **without requiring admin/owner access** to the deployment
 
 ### Out of Scope (Not a Vulnerability)
@@ -47,7 +47,7 @@ The following are considered **by design** or **out of scope** and will not be a
 
 #### 1. End-of-Life Versions
 
-Any issue that only affects 1.x or earlier versions. This includes but is not limited to the `X-lobe-chat-auth` header mechanism, `webapi` route authentication, and other 1.x-specific architectures that have been completely removed in 2.x.
+Any issue that only affects 1.x or earlier versions. This includes but is not limited to the `X-orvilo-auth` header mechanism, `webapi` route authentication, and other 1.x-specific architectures that have been completely removed in 2.x.
 
 #### 2. File Proxy Public Access (`/f/:id`)
 
@@ -77,5 +77,5 @@ Reports based on theoretical attack scenarios without a working proof of concept
 
 ## Contact
 
-- **Primary**: [GitHub Security Advisories](https://github.com/lobehub/lobehub/security/advisories/new)
+- **Primary**: GitHub Security Advisories
 - **Urgent**: Discord — `arvinxu`

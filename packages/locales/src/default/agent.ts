@@ -37,10 +37,6 @@ export default {
     'Due to the high communication costs for the {{name}} channel, we plan to make this channel a paid feature soon. Existing connections remain available during the notice period, but creating or reconnecting this channel requires upgrading this workspace to Pro or Business.',
   'channel.paidFeature.notice.title': '{{name}} will soon require a paid plan',
   'channel.paidFeature.noticeBadge': 'Pro soon',
-  'channel.comingSoon': 'Coming Soon',
-  'channel.comingSoonDesc':
-    'We are working on bringing this integration to Orvilo. Stay tuned for updates.',
-  'channel.comingSoonTitle': '{{name}} integration is coming soon',
   'channel.copy': 'Copy',
   'channel.deleteAllChannels': 'Remove All Channels',
   'channel.deleteAllConfirm': 'Are you sure you want to remove all channels?',
@@ -76,8 +72,6 @@ export default {
     'Offer fast AI help in private and group chats—ideal for communities, audiences, and lightweight support.',
   'channel.platform.wechat.description':
     'Make the agent available in everyday chats—ideal for personal assistance and WeChat-based audiences.',
-  'channel.platform.whatsapp.description':
-    'Meet customers in familiar mobile chats for support and follow-ups—ideal for customer-facing teams.',
   'channel.discord.description':
     'Connect this agent to Discord server for channel chat and direct messages.',
   'channel.documentation': 'Documentation',
@@ -477,6 +471,10 @@ export default {
     'This tool can never be used in a shared run — visitor runs are blocked from your knowledge base and Agent files.',
   'share.settings.tools.title': 'Tools visitors can use',
   'share.settings.updateError': 'Could not save the change. Please try again.',
+  'share.unavailable.action': 'Back to the Agent',
+  'share.unavailable.desc':
+    'This deployment does not publish Agents for outside visitors, so there is nothing to configure on this page.',
+  'share.unavailable.title': 'Agent sharing is not available',
   'share.visitor.access.backHome': 'Back to home',
   'share.visitor.access.forbidden': "You don't have access to this shared agent.",
   'share.visitor.access.notFound': 'This share link is no longer available.',
@@ -484,36 +482,14 @@ export default {
   'share.visitor.access.signInDesc':
     'Sign in to start chatting with this shared agent. Your conversations stay tied to your account.',
   'share.visitor.access.signInTitle': 'Sign in to continue',
-  'share.visitor.errors.generic': 'Failed to send the message. Please try again.',
-  'share.visitor.errors.heterogeneousUnsupported':
-    "This shared agent isn't available for visitor chat yet. Please contact its owner.",
-  'share.visitor.errors.insufficientBudget':
-    'This shared agent has run out of budget. Please contact its owner.',
-  'share.visitor.errors.promptTooLong':
-    'Your message is too long. Please shorten it to {{max}} characters or fewer and try again.',
-  'share.visitor.errors.providerNotSupported':
-    'This shared agent is not available right now. Please contact its owner.',
-  'share.visitor.errors.sharingPaused':
-    'The owner has paused sharing, so new messages are turned off.',
-  'share.visitor.errors.spendLimit':
-    'This shared agent has reached its monthly usage limit set by its creator. It will be available again next month.',
   'share.visitor.errors.stopFailed': "Couldn't stop the run. Please try again.",
-  'share.visitor.errors.topicLimit':
-    'You have reached the conversation limit on this shared agent.',
-  'share.visitor.errors.turnLimit':
-    'This conversation has reached its turn limit. Start a new conversation to continue.',
   'share.visitor.errors.unavailable':
     'This conversation is no longer available. Try switching to another topic or starting a new one.',
-  'share.visitor.input.placeholder': 'Message this shared agent…',
-  'share.visitor.input.send': 'Send',
   'share.visitor.input.stop': 'Stop',
   'share.visitor.privacyNotice':
     'This conversation runs on the owner’s account and may be visible to them. Avoid sharing sensitive information.',
   'share.visitor.profile.about': 'About',
   'share.visitor.profile.createdBy': 'Created by {{creator}}',
-  'share.visitor.profile.cta': 'Start a conversation',
-  'share.visitor.profile.ctaSignIn': 'Sign in to start',
-  'share.visitor.profile.freeNote': 'Free · paid for by the creator',
   'share.visitor.profile.metrics.conversations': 'Conversations',
   'share.visitor.profile.metrics.conversationsCaption': 'started so far',
   'share.visitor.profile.metrics.tools': 'Open tools',
@@ -524,23 +500,8 @@ export default {
   'share.visitor.profile.metrics.viewsCaption': 'on this page',
   'share.visitor.profile.metrics.visitors': 'People who used it',
   'share.visitor.profile.metrics.visitorsCaption': 'visitors',
-  'share.visitor.profile.starters.desc': 'Pick one and it goes straight into the composer.',
-  'share.visitor.profile.starters.title': 'Not sure where to start?',
-  'share.visitor.profile.terms.account':
-    'It runs on the creator’s account, and every reply is paid for by them.',
-  'share.visitor.profile.terms.desc':
-    'Today these rules only show up as errors once you hit them. Here they are up front.',
-  'share.visitor.profile.terms.title': 'Before you start',
-  'share.visitor.profile.terms.tools_one': '{{count}} tool is open to visitors.',
-  'share.visitor.profile.terms.tools_other': '{{count}} tools are open to visitors.',
-  'share.visitor.profile.terms.topics': 'You can open up to {{count}} conversations.',
-  'share.visitor.profile.terms.turns': 'Each conversation allows up to {{count}} turns.',
-  'share.visitor.profile.terms.visibilityCreator':
-    'The creator has turned on session review, so they can read this conversation.',
-  'share.visitor.profile.terms.visibilityPrivate': 'Only you can see your conversations.',
   'share.visitor.topBar.home': 'Go to my Orvilo',
   'share.visitor.topics.empty': 'No conversations yet',
-  'share.visitor.topics.new': 'New conversation',
   'share.visitor.topics.title': 'Conversations',
   'share.visitor.topics.untitled': 'Untitled conversation',
 

@@ -72,7 +72,7 @@ export const GroupAgentBuilderManifest: BuiltinToolManifest = {
           },
           tools: {
             description:
-              'Array of tool identifiers to enable for this agent. Use identifiers from official_tools context (e.g., "lobe-cloud-sandbox", "web-crawler").',
+              'Array of tool identifiers to enable for this agent. Use identifiers from official_tools context (e.g., "orvilo-cloud-sandbox", "web-crawler").',
             items: { type: 'string' },
             type: 'array',
           },
@@ -198,7 +198,7 @@ export const GroupAgentBuilderManifest: BuiltinToolManifest = {
                 },
                 tools: {
                   description:
-                    'Array of tool identifiers to enable for this agent. Use identifiers from official_tools context (e.g., "lobe-cloud-sandbox", "web-crawler").',
+                    'Array of tool identifiers to enable for this agent. Use identifiers from official_tools context (e.g., "orvilo-cloud-sandbox", "web-crawler").',
                   items: { type: 'string' },
                   type: 'array',
                 },

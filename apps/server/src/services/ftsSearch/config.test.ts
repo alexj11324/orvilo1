@@ -16,7 +16,7 @@ const loadConfig = async () => {
 describe('loadElasticsearchFtsSearchConfig', () => {
   beforeEach(() => {
     for (const key of Object.keys(mocks.ftsSearchEnv)) delete mocks.ftsSearchEnv[key];
-    mocks.ftsSearchEnv.ES_INDEX_NAMESPACE = 'lobehub';
+    mocks.ftsSearchEnv.ES_INDEX_NAMESPACE = 'orvilo';
     mocks.ftsSearchEnv.ES_URL = 'https://search.example.com';
   });
 
@@ -26,7 +26,7 @@ describe('loadElasticsearchFtsSearchConfig', () => {
     await expect(loadConfig()).resolves.toEqual({
       allowInsecureHttp: false,
       apiKey: 'test-api-key',
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'https://search.example.com',
     });
   });
@@ -45,7 +45,7 @@ describe('loadElasticsearchFtsSearchConfig', () => {
     await expect(loadConfig()).resolves.toEqual({
       allowInsecureHttp: true,
       apiKey: undefined,
-      indexNamespace: 'lobehub',
+      indexNamespace: 'orvilo',
       url: 'http://elasticsearch:9200',
     });
   });

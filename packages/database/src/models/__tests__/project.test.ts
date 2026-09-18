@@ -15,13 +15,13 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 import type { CreateProjectInput } from '../project';
 import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'project-model-user';
 const otherUserId = 'project-model-other-user';
 let projectIdentifierSequence = 0;
@@ -102,12 +102,12 @@ describe('ProjectModel', () => {
   });
 
   it('normalizes identifiers and enforces uniqueness within their ownership scope', async () => {
-    const first = await model.create({ identifier: ' lobe ', name: 'First' });
-    expect(first.identifier).toBe('LOBE');
+    const first = await model.create({ identifier: ' orvilo ', name: 'First' });
+    expect(first.identifier).toBe('ORVILO');
 
-    await expect(model.create({ identifier: 'LOBE', name: 'Duplicate' })).rejects.toThrow();
-    await expect(otherModel.create({ identifier: 'LOBE', name: 'Other user' })).resolves.toEqual(
-      expect.objectContaining({ identifier: 'LOBE' }),
+    await expect(model.create({ identifier: 'ORVILO', name: 'Duplicate' })).rejects.toThrow();
+    await expect(otherModel.create({ identifier: 'ORVILO', name: 'Other user' })).resolves.toEqual(
+      expect.objectContaining({ identifier: 'ORVILO' }),
     );
 
     await serverDB.insert(workspaces).values({
@@ -461,7 +461,7 @@ describe('ProjectModel', () => {
     const [work] = await serverDB
       .insert(works)
       .values({
-        resourceId: 'lobehub/lobehub#1',
+        resourceId: 'alexj11324/orvilo1#1',
         resourceType: 'github_pull_request',
         toolIdentifier: 'github',
         toolName: 'create_pull_request',

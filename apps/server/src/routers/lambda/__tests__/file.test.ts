@@ -9,7 +9,8 @@ import { AsyncTaskStatus } from '@/types/asyncTask';
 import { FileSource } from '@/types/files';
 import { TransferErrorCode } from '@/types/transferError';
 
-const buildMockFileAccessUrl = ({ id }: { id: string }) => `https://lobehub.com/f/${id}`;
+const buildMockFileAccessUrl = ({ id }: { id: string }) =>
+  `https://orvilo.aspectlylabs.com/f/${id}`;
 
 const routerMocks = vi.hoisted(() => {
   const transactionClient = {};
@@ -137,7 +138,7 @@ vi.mock('@/config/db', () => ({
 
 vi.mock('@/envs/app', () => ({
   appEnv: {
-    APP_URL: 'https://lobehub.com',
+    APP_URL: 'https://orvilo.aspectlylabs.com',
   },
 }));
 
@@ -325,7 +326,11 @@ describe('fileRouter rehostImage', () => {
     });
     mockUploadFromBuffer.mockImplementation(async (_buffer, _mime, _path, beforeRecord) => {
       await beforeRecord(routerMocks.transactionClient);
-      return { fileId: 'image-id', key: 'stored-key', url: 'https://lobehub.com/f/image-id' };
+      return {
+        fileId: 'image-id',
+        key: 'stored-key',
+        url: 'https://orvilo.aspectlylabs.com/f/image-id',
+      };
     });
   });
 
@@ -333,7 +338,7 @@ describe('fileRouter rehostImage', () => {
     const { caller } = createCallerWithCtx();
     await expect(
       caller.rehostImage({ url: 'https://cdn.discordapp.com/image.png' }),
-    ).resolves.toEqual({ fileId: 'image-id', url: 'https://lobehub.com/f/image-id' });
+    ).resolves.toEqual({ fileId: 'image-id', url: 'https://orvilo.aspectlylabs.com/f/image-id' });
     expect(mockUploadFromBuffer.mock.calls[0][4]).toEqual({
       source: FileSource.PageEditor,
       visibility: 'private',
@@ -511,7 +516,7 @@ describe('fileRouter', () => {
 
       expect(result).toEqual({
         id: 'new-file-id',
-        url: 'https://lobehub.com/f/new-file-id',
+        url: 'https://orvilo.aspectlylabs.com/f/new-file-id',
       });
     });
 
@@ -768,7 +773,7 @@ describe('fileRouter', () => {
         }),
       ).resolves.toEqual({
         id: 'settled-file-id',
-        url: 'https://lobehub.com/f/settled-file-id',
+        url: 'https://orvilo.aspectlylabs.com/f/settled-file-id',
       });
 
       expect(mockFileModelCreate).not.toHaveBeenCalled();
@@ -916,7 +921,7 @@ describe('fileRouter', () => {
 
       expect(result).toEqual({
         id: 'new-file-id',
-        url: 'https://lobehub.com/f/new-file-id',
+        url: 'https://orvilo.aspectlylabs.com/f/new-file-id',
       });
 
       // Verify create was called with input size as fallback
@@ -1004,7 +1009,7 @@ describe('fileRouter', () => {
 
       const result = await caller.findById({ id: 'test-id' });
 
-      expect(result.url).toBe('https://lobehub.com/f/test-id');
+      expect(result.url).toBe('https://orvilo.aspectlylabs.com/f/test-id');
     });
   });
 
@@ -1020,7 +1025,7 @@ describe('fileRouter', () => {
 
       const result = await caller.getFileItemById({ id: 'test-id' });
 
-      expect(result?.url).toBe('https://lobehub.com/f/test-id');
+      expect(result?.url).toBe('https://orvilo.aspectlylabs.com/f/test-id');
     });
   });
 
@@ -1045,8 +1050,8 @@ describe('fileRouter', () => {
       const result = await caller.getFiles({});
 
       expect(result).toHaveLength(2);
-      expect(result[0].url).toBe('https://lobehub.com/f/file-1');
-      expect(result[1].url).toBe('https://lobehub.com/f/file-2');
+      expect(result[0].url).toBe('https://orvilo.aspectlylabs.com/f/file-1');
+      expect(result[1].url).toBe('https://orvilo.aspectlylabs.com/f/file-2');
     });
   });
 
@@ -1104,7 +1109,7 @@ describe('fileRouter', () => {
         finishEmbedding: true,
         id: 'file-1',
         sourceType: 'file',
-        url: 'https://lobehub.com/f/file-1',
+        url: 'https://orvilo.aspectlylabs.com/f/file-1',
       });
       expect(result.items[0].editorData).toBeNull();
       expect(result.items[1]).toMatchObject({

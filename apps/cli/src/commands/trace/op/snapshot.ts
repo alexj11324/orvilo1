@@ -13,7 +13,7 @@ import { localTraceStoreOptions } from '../../../utils/traceStore';
 
 /** Store locations `lh trace op` reads, in the order a tie is broken. */
 export interface LocalSnapshotStores {
-  /** `~/.lobehub/traces` — where locally executed agent runs record. */
+  /** `~/.orvilo/traces` — where locally executed agent runs record. */
   cliHome?: LoadSnapshotOptions;
   /** `.agent-tracing` under the cwd — where a dev-mode server writes. */
   cwd?: LoadSnapshotOptions;
@@ -57,7 +57,7 @@ export const loadLocalSnapshot = async (
  * The download path is what `lh` adds over the standalone `agent-tracing` CLI:
  * the object key lives on `agent_operations.trace_s3_key` and the server signs
  * it against the caller's own ownership scope, so inspecting a production run
- * needs a LobeHub login and nothing else — no `TRACING_BASE_URL`, no public
+ * needs a Orvilo login and nothing else — no `TRACING_BASE_URL`, no public
  * bucket domain, and no SQL to turn a topic id into an operation id first.
  */
 export const resolveSnapshotOrExit = async (target?: string): Promise<ExecutionSnapshot> => {

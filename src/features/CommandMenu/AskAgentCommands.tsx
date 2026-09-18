@@ -57,12 +57,12 @@ const AskAgentCommands = memo(() => {
   if (!isAtMention) return null;
 
   // Check if Orvilo AI matches the query
-  const showLobeAI = !mentionQuery || 'orvilo ai'.includes(mentionQuery);
+  const showOrviloAI = !mentionQuery || 'orvilo ai'.includes(mentionQuery);
 
   return (
     <Command.Group heading={t('cmdk.mentionAgent')}>
       {/* @Orvilo AI option */}
-      {showLobeAI && (
+      {showOrviloAI && (
         <Command.Item
           value="@orvilo-ai"
           onMouseDown={preventDefault}

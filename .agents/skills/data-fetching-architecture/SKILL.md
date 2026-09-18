@@ -4,7 +4,7 @@ description: 'Use for client APIs, SWR hooks, cache invalidation, async errors, 
 user-invocable: false
 ---
 
-# LobeHub Data Fetching Architecture
+# Orvilo Data Fetching Architecture
 
 ```text
 Component → Store useFetchXxx hook → Service → lambdaClient
@@ -18,7 +18,7 @@ Component → Store useFetchXxx hook → Service → lambdaClient
 - Store read hooks use `useClientDataSWR` and return its SWR response, including `error`
   and `mutate`. Sync successful results into the store through the wrapper's supported
   callback (`onSuccess`, or `onData` for the sync wrapper).
-- Components call these hooks and read store data through selectors. Do not fetch in
+- Components call these hooks and read store data through selectors. Do not fetch
   `useEffect` or duplicate server data in component `useState`.
 - Use `useFetchXxx` for read hooks and `refreshXxx` for cache invalidation.
 - For list/detail types, maps, reducers, and shared type sources, use
@@ -65,7 +65,7 @@ Hooks that share a known parent id can run together. If one request needs a valu
 returned by another, keep its key `null` until that value exists. Do not assume the
 application wrapper uses upstream SWR's default deduplication interval.
 
-For lists cached separately under multiple parents, see
+For lists cached separately under multiple parents
 [parent-keyed lists](references/walkthrough.md). Ordinary flat lists need no extra layer.
 
 ## Mutations

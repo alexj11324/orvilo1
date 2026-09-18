@@ -1107,7 +1107,7 @@ describe('FtsSearchReindexService', () => {
     pinTopicsInPlace(state);
     const mappings = upgradableTopicsMappings();
     /** Elasticsearch cannot re-analyze an existing field, so a changed analyzer needs a rebuild. */
-    mappings.properties.title = { analyzer: 'lobehub_icu', type: 'text' };
+    mappings.properties.title = { analyzer: 'orvilo_icu', type: 'text' };
     vi.mocked(client.describeGenerations).mockResolvedValue([
       createLiveTopicsGeneration({ mappings }),
     ]);

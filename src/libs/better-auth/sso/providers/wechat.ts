@@ -104,7 +104,7 @@ const provider: GenericProviderDefinition<{
         };
 
         const finalUnionId = unionId ?? profile.unionid ?? openId;
-        const syntheticEmail = `${finalUnionId}@wechat.lobehub`;
+        const syntheticEmail = `${finalUnionId}@wechat.orvilo`;
 
         return {
           email: syntheticEmail,

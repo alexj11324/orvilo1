@@ -19,7 +19,7 @@ vi.mock('node:util', () => ({
 }));
 
 vi.mock('@/modules/cliEmbedding', () => ({
-  resolveCliScript: () => '/app/resources/bin/lobe-cli.js',
+  resolveCliScript: () => '/app/resources/bin/orvilo-cli.js',
 }));
 
 const mockRemoteServerConfigCtr = {
@@ -53,7 +53,7 @@ describe('RemoteFileUploadService.uploadLocalFile', () => {
     const [execPath, args, opts] = execFileMock.mock.calls[0];
     expect(execPath).toBe(process.execPath);
     expect(args).toEqual([
-      '/app/resources/bin/lobe-cli.js',
+      '/app/resources/bin/orvilo-cli.js',
       'file',
       'upload',
       '/tmp/cat.png',
@@ -61,9 +61,9 @@ describe('RemoteFileUploadService.uploadLocalFile', () => {
       'id,url',
     ]);
     expect(opts.env.ELECTRON_RUN_AS_NODE).toBe('1');
-    expect(opts.env.LOBEHUB_JWT).toBe('token-abc');
-    // Trailing slash is stripped for LOBEHUB_SERVER.
-    expect(opts.env.LOBEHUB_SERVER).toBe('https://server.example.com');
+    expect(opts.env.ORVILO_JWT).toBe('token-abc');
+    // Trailing slash is stripped for ORVILO_SERVER.
+    expect(opts.env.ORVILO_SERVER).toBe('https://server.example.com');
   });
 
   it('still runs without a desktop session — lh falls back to its own login', async () => {
@@ -76,8 +76,8 @@ describe('RemoteFileUploadService.uploadLocalFile', () => {
 
     expect(record).toEqual({ id: 'file-2', url: 'https://files.example.com/b.png' });
     const [, , opts] = execFileMock.mock.calls[0];
-    expect(opts.env.LOBEHUB_JWT).toBeUndefined();
-    expect(opts.env.LOBEHUB_SERVER).toBeUndefined();
+    expect(opts.env.ORVILO_JWT).toBeUndefined();
+    expect(opts.env.ORVILO_SERVER).toBeUndefined();
   });
 
   it('returns undefined when the CLI output has no record', async () => {

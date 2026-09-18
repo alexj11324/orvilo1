@@ -34,9 +34,9 @@ describe('buildAgentDocumentUrl', () => {
   it('prefixes the standalone route with a workspace slug when provided', () => {
     expect(
       buildAgentDocumentUrl('https://orvilo.aspectlylabs.com', 'agt_x', 'docs_y', {
-        workspaceSlug: 'lobe-team',
+        workspaceSlug: 'orvilo-team',
       }),
-    ).toBe('https://orvilo.aspectlylabs.com/lobe-team/agent/agt_x/docs/y');
+    ).toBe('https://orvilo.aspectlylabs.com/orvilo-team/agent/agt_x/docs/y');
   });
 
   it('returns undefined when no origin is available', () => {

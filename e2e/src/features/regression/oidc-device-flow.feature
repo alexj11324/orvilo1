@@ -1,7 +1,7 @@
 @oidc @regression @smoke @P0
 Feature: OIDC Device Flow 原生表单提交
 
-  作为 LobeHub CLI 用户，
+  作为 Orvilo CLI 用户，
   我希望设备确认与权限确认在按钮进入 loading 状态后仍能提交，
   以便 CLI 可以完成授权并取得令牌。
 

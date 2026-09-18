@@ -1,6 +1,6 @@
 ---
 name: builtin-tool
-description: 'Use for LobeHub builtin agent tools: manifests, executors, runtimes, inspectors, renders, streaming and intervention.'
+description: 'Use for Orvilo builtin agent tools: manifests, executors, runtimes, inspectors, renders, streaming and intervention.'
 ---
 
 # Builtin Tool Authoring Guide
@@ -39,7 +39,7 @@ A builtin tool is a package the agent runtime can call. It ships **five faces**:
 
 ## Top-Level Design Principles
 
-1. **`lobe-<domain>` identifier is permanent.** It's stored in message history. Renames need `@deprecated` aliases (see `packages/builtin-tools/src/inspectors.ts:88-89`). Get it right the first time.
+1. **`orvilo-<domain>` identifier is permanent.** It's stored in message history. Renames need `@deprecated` aliases (see `packages/builtin-tools/src/inspectors.ts:88-89`). Get it right the first time.
 2. **ApiName is an `as const` object**, not a TS enum. It doubles as the runtime list `BaseExecutor` iterates over.
 3. **Three result fields, three audiences:**
    - `content: string` → the LLM reads it
@@ -98,7 +98,7 @@ packages/builtin-tool-<name>/
 
 Before opening the PR:
 
-- [ ] Identifier follows `lobe-<domain>` and is **stable** (lives in message history).
+- [ ] Identifier follows `orvilo-<domain>` and is **stable** (lives in message history).
 - [ ] Every `<Name>ApiName` value has: a manifest `api[]` entry, an executor method, an Inspector, an i18n `apiName.*` key.
 - [ ] `Params` interfaces match the JSON Schema; `State` interfaces match what the executor returns and what the UI surfaces read.
 - [ ] System prompt disambiguates confusable APIs and points to batch variants.

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { UIChatMessage } from '@/types/index';
 
 import type { SkillMeta } from '../../../providers/SkillContextProvider';
-import type { LobeToolManifest } from '../../tools/types';
+import type { OrviloToolManifest } from '../../tools/types';
 import { MessagesEngine } from '../MessagesEngine';
 import type { MessagesEngineParams } from '../types';
 
@@ -15,17 +15,17 @@ import type { MessagesEngineParams } from '../types';
  */
 
 const CREDS_SYSTEM_ROLE =
-  'lobe-creds usage: always list before creating; never print secret values.\n'.repeat(30);
+  'orvilo-creds usage: always list before creating; never print secret values.\n'.repeat(30);
 const SKILL_CONTENT = '# PowerShell\n\nUse pwsh for all Windows automation tasks.\n'.repeat(30);
 const RESOURCE_TREE = '<resources skill="PowerShell">\n- scripts/run.ps1\n</resources>';
 
 const credsManifest = {
   api: [{ description: 'List credentials', name: 'listCreds' }],
-  identifier: 'lobe-creds',
+  identifier: 'orvilo-creds',
   meta: { title: 'Creds' },
   systemRole: CREDS_SYSTEM_ROLE,
   type: 'builtin',
-} as unknown as LobeToolManifest;
+} as unknown as OrviloToolManifest;
 
 const powershellSkill: SkillMeta = {
   activated: true,
@@ -48,27 +48,27 @@ const activateToolsMessages = (): UIChatMessage[] =>
       tools: [
         {
           apiName: 'activateTools',
-          arguments: '{"identifiers":["lobe-creds"]}',
+          arguments: '{"identifiers":["orvilo-creds"]}',
           id: 'call_activate_1',
-          identifier: 'lobe-activator',
+          identifier: 'orvilo-activator',
           type: 'builtin',
         },
       ],
       updatedAt: now,
     },
     {
-      content: `Successfully activated tools:\n\n## Creds (lobe-creds)\n${CREDS_SYSTEM_ROLE}\n\nAvailable APIs:\n- **listCreds**: List credentials`,
+      content: `Successfully activated tools:\n\n## Creds (orvilo-creds)\n${CREDS_SYSTEM_ROLE}\n\nAvailable APIs:\n- **listCreds**: List credentials`,
       createdAt: now,
       id: 't1',
       plugin: {
         apiName: 'activateTools',
-        arguments: '{"identifiers":["lobe-creds"]}',
-        identifier: 'lobe-activator',
+        arguments: '{"identifiers":["orvilo-creds"]}',
+        identifier: 'orvilo-activator',
         type: 'builtin',
       },
       pluginState: {
         activatedSkills: [],
-        activatedTools: [{ apiCount: 1, identifier: 'lobe-creds', name: 'Creds' }],
+        activatedTools: [{ apiCount: 1, identifier: 'orvilo-creds', name: 'Creds' }],
         alreadyActive: [],
         notFound: [],
       },
@@ -92,7 +92,7 @@ const activateSkillMessages = (): UIChatMessage[] =>
           apiName: 'activateSkill',
           arguments: '{"name":"PowerShell"}',
           id: 'call_skill_1',
-          identifier: 'lobe-skills',
+          identifier: 'orvilo-skills',
           type: 'builtin',
         },
       ],
@@ -105,7 +105,7 @@ const activateSkillMessages = (): UIChatMessage[] =>
       plugin: {
         apiName: 'activateSkill',
         arguments: '{"name":"PowerShell"}',
-        identifier: 'lobe-skills',
+        identifier: 'orvilo-skills',
         type: 'builtin',
       },
       pluginState: { hasResources: true, name: 'PowerShell', source: 'user' },
@@ -140,7 +140,7 @@ describe('MessagesEngine — activation result trimming', () => {
       const engine = new MessagesEngine(
         createParams({
           messages: activateToolsMessages(),
-          toolsConfig: { manifests: [credsManifest], tools: ['lobe-creds'] },
+          toolsConfig: { manifests: [credsManifest], tools: ['orvilo-creds'] },
         }),
       );
 
@@ -151,7 +151,9 @@ describe('MessagesEngine — activation result trimming', () => {
       const systemMessage = result.messages.find((m) => m.role === 'system');
       expect(systemMessage?.content).toContain(CREDS_SYSTEM_ROLE);
       const toolMessage = result.messages.find((m) => m.role === 'tool');
-      expect(toolMessage?.content).toContain('Successfully activated tools: lobe-creds.listCreds.');
+      expect(toolMessage?.content).toContain(
+        'Successfully activated tools: orvilo-creds.listCreds.',
+      );
       expect(toolMessage?.content).toContain('in the system prompt');
     });
 
@@ -172,7 +174,7 @@ describe('MessagesEngine — activation result trimming', () => {
         createParams({
           capabilities: { isCanUseFC: () => false },
           messages: activateToolsMessages(),
-          toolsConfig: { manifests: [credsManifest], tools: ['lobe-creds'] },
+          toolsConfig: { manifests: [credsManifest], tools: ['orvilo-creds'] },
         }),
       );
 
@@ -252,7 +254,7 @@ describe('MessagesEngine — activation result trimming', () => {
           },
         ],
         messages: activateToolsMessages(),
-        toolsConfig: { manifests: [credsManifest], tools: ['lobe-creds'] },
+        toolsConfig: { manifests: [credsManifest], tools: ['orvilo-creds'] },
       }),
     );
 
@@ -271,7 +273,7 @@ describe('MessagesEngine — activation result trimming', () => {
   it('should stay byte-stable across subsequent requests (prompt-cache friendly)', async () => {
     const params = createParams({
       messages: activateToolsMessages(),
-      toolsConfig: { manifests: [credsManifest], tools: ['lobe-creds'] },
+      toolsConfig: { manifests: [credsManifest], tools: ['orvilo-creds'] },
     });
 
     const first = await new MessagesEngine(params).process();

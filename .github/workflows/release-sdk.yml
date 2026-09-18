@@ -47,10 +47,10 @@ jobs:
         working-directory: packages/sdk
 
       - name: Test package
-        run: pnpm --filter @lobehub/sdk test
+        run: pnpm --filter @orvilo/sdk test
 
       - name: Build package
-        run: pnpm --filter @lobehub/sdk build
+        run: pnpm --filter @orvilo/sdk build
 
       - name: Prepare publish package
         id: version
@@ -73,7 +73,7 @@ jobs:
           packageJson.files = ['dist'];
           packageJson.repository = {
             type: 'git',
-            url: 'https://github.com/lobehub/lobehub',
+            url: 'https://github.com/alexj11324/orvilo1',
             directory: 'packages/sdk',
           };
           packageJson.exports = Object.fromEntries(
@@ -101,7 +101,7 @@ jobs:
           NODE
 
           echo "version=${SDK_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Prepared @lobehub/sdk@${SDK_VERSION}"
+          echo "Prepared @orvilo/sdk@${SDK_VERSION}"
 
       - name: Publish to npm
         run: npm publish --provenance --access public

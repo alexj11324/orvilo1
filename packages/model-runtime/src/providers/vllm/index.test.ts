@@ -4,21 +4,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { VLLMModelCard } from './index';
-import { LobeVLLMAI } from './index';
+import { OrviloVLLMAI } from './index';
 
 testProvider({
-  Runtime: LobeVLLMAI,
+  Runtime: OrviloVLLMAI,
   provider: ModelProvider.VLLM,
   defaultBaseURL: 'http://localhost:8000/v1',
   chatDebugEnv: 'DEBUG_VLLM_CHAT_COMPLETION',
   chatModel: 'llama-2-7b-chat',
 });
 
-describe('LobeVLLMAI - custom features', () => {
-  let instance: InstanceType<typeof LobeVLLMAI>;
+describe('OrviloVLLMAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloVLLMAI>;
 
   beforeEach(() => {
-    instance = new LobeVLLMAI({ apiKey: 'test_api_key' });
+    instance = new OrviloVLLMAI({ apiKey: 'test_api_key' });
   });
 
   describe('models', () => {

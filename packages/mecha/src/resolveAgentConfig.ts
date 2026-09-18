@@ -6,15 +6,15 @@ import {
 } from '@orvilo/builtin-agents';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { TaskIdentifier } from '@orvilo/builtin-tool-task';
-import { type LobeToolManifest } from '@orvilo/context-engine';
+import { type OrviloToolManifest } from '@orvilo/context-engine';
 import {
   type AgentModelConfig,
   type AgentModelOverride,
   type ChatCompletionTool,
   getActivePluginIds,
-  type LobeAgentChatConfig,
-  type LobeAgentConfig,
   type MessageMapScope,
+  type OrviloAgentChatConfig,
+  type OrviloAgentConfig,
   resolveAgentModelConfig,
 } from '@orvilo/types';
 import debug from 'debug';
@@ -44,9 +44,9 @@ const isBuiltinAgentSlug = (slug: string): slug is BuiltinAgentSlug => {
  * Uses immer to create a new object without mutating the original.
  */
 const applyParamsFromChatConfig = (
-  agentConfig: LobeAgentConfig,
-  chatConfig: LobeAgentChatConfig,
-): LobeAgentConfig => {
+  agentConfig: OrviloAgentConfig,
+  chatConfig: OrviloAgentChatConfig,
+): OrviloAgentConfig => {
   // If params is not defined, return agentConfig as-is
   if (!agentConfig?.params) {
     return agentConfig;
@@ -102,11 +102,11 @@ export interface AgentConfigSnapshot {
     workspaceId?: string | null;
   };
   /** The agent's stored config, before runtime merging. */
-  agentConfig: LobeAgentConfig;
+  agentConfig: OrviloAgentConfig;
   /** Author-or-admin for this agent; see the interface doc. */
   canManage: boolean;
   /** The agent's stored chat config. */
-  chatConfig: LobeAgentChatConfig;
+  chatConfig: OrviloAgentChatConfig;
   /** The group named by `groupId`, when the caller is running in group scope. */
   group?: {
     agents?: unknown[];
@@ -121,7 +121,7 @@ export interface AgentConfigSnapshot {
   /** Workspace member's own model pick, when one applies. */
   memberModelOverride?: AgentModelOverride | null;
   /** Workspace member's own mode pick, when one applies. */
-  memberModeOverride?: LobeAgentChatConfig['enableAgentMode'];
+  memberModeOverride?: OrviloAgentChatConfig['enableAgentMode'];
   /**
    * The agent's slug, which identifies a builtin agent — and, together with
    * `agent.virtual` and `agent.workspaceId`, a COLLABORATIVE one whose members
@@ -159,7 +159,7 @@ export interface AgentConfigResolverContext {
 
   /**
    * Whether this is a sub-agent execution.
-   * When true, filters out the lobe-agent tool (which owns the sub-agent
+   * When true, filters out the orvilo-agent tool (which owns the sub-agent
    * dispatch APIs) to prevent nested sub-agent creation.
    */
   isSubAgent?: boolean;
@@ -181,7 +181,7 @@ export interface AgentConfigResolverContext {
   /** Message map scope (e.g., 'page', 'main', 'thread') */
   scope?: MessageMapScope;
   /** Target agent config for agent-builder */
-  targetAgentConfig?: LobeAgentConfig;
+  targetAgentConfig?: OrviloAgentConfig;
 }
 
 /**
@@ -189,11 +189,11 @@ export interface AgentConfigResolverContext {
  */
 export interface ResolvedAgentConfig {
   /** The resolved agent config */
-  agentConfig: LobeAgentConfig;
+  agentConfig: OrviloAgentConfig;
   /** The chat config */
-  chatConfig: LobeAgentChatConfig;
+  chatConfig: OrviloAgentChatConfig;
   /** Enabled manifests for context engineering (populated by internal_createAgentState) */
-  enabledManifests?: LobeToolManifest[];
+  enabledManifests?: OrviloToolManifest[];
   /** Enabled tool IDs after filtering (populated by internal_createAgentState) */
   enabledToolIds?: string[];
   /** Whether this is a builtin agent */
@@ -212,7 +212,7 @@ export interface ResolvedAgentConfig {
    * copy lets the model-params resolver re-apply the user's explicit sub-agent
    * reasoning choices on top of the model-instance defaults.
    */
-  subAgentChatConfigOverride?: Partial<LobeAgentChatConfig>;
+  subAgentChatConfigOverride?: Partial<OrviloAgentChatConfig>;
   /** Pre-generated tools array (populated by internal_createAgentState, undefined means tools disabled) */
   tools?: ChatCompletionTool[];
 }
@@ -253,9 +253,9 @@ export const resolveAgentConfig = (
   // 1. If disableTools is true, return empty array (for broadcast scenarios)
   // 2. Drop page-agent outside page scope.
   //
-  // lobe-agent's context trimming (hide `callSubAgent` in group / sub-agent runs)
-  // now lives in its manifest resolver (resolveLobeAgentManifest), applied at
-  // tools-engine build time. That keeps lobe-agent's plan / todo / media-analysis
+  // orvilo-agent's context trimming (hide `callSubAgent` in group / sub-agent runs)
+  // now lives in its manifest resolver (resolveOrviloAgentManifest), applied at
+  // tools-engine build time. That keeps orvilo-agent's plan / todo / media-analysis
   // available to sub-agents — only the nested dispatch API is removed — instead of
   // dropping the whole tool here.
   const applyPluginFilters = (pluginIds: string[]) => {
@@ -541,7 +541,7 @@ export const resolveAgentConfig = (
       : basePlugins;
 
   // Merge chatConfig: runtime chatConfig overrides base chatConfig
-  let resolvedChatConfig: LobeAgentChatConfig = {
+  let resolvedChatConfig: OrviloAgentChatConfig = {
     ...chatConfig,
     ...runtimeConfig?.chatConfig,
   };
@@ -595,7 +595,7 @@ export const resolveAgentConfig = (
   }
 
   // Merge runtime systemRole into agent config
-  const resolvedAgentConfig: LobeAgentConfig = {
+  const resolvedAgentConfig: OrviloAgentConfig = {
     ...agentConfig,
     ...(resolvedAgencyConfig ? { agencyConfig: resolvedAgencyConfig } : {}),
     systemRole: resolvedSystemRole,

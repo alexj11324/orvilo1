@@ -4,18 +4,22 @@ import type { RouteObject } from 'react-router';
 
 import { dynamicElement, ErrorBoundary } from '@/utils/router';
 
-import DesktopHomeRoute from './DesktopHomeRoute';
 import {
   createMainAreaRouteFactory,
   createSharedDesktopRoutes,
   type MainAreaRouteOptions,
 } from './desktopRouter.shared';
+import WebHomeRedirect from './WebHomeRedirect';
 
 export { sharedMainAreaChildren } from './desktopRouter.shared';
 
 const mainAreaRouteOptions: MainAreaRouteOptions = {
   // The first screen every tab paints — eager so it never suspends behind a chunk fetch.
-  createHomeElement: () => <DesktopHomeRoute />,
+  // Same landing element as Web: an empty tab's index redirects to `/tasks`,
+  // which is where the real kanban lives inside each tab's own memory router.
+  // Explicit tab urls are unaffected — only the `/` and `/:workspaceSlug`
+  // index slots carry it.
+  createHomeElement: () => <WebHomeRedirect />,
   createWorkspaceSettingsIndexElement: () =>
     dynamicElement(
       () => import('@/routes/(main)/[workspaceSlug]/settings'),

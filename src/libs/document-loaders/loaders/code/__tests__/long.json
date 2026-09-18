@@ -20,7 +20,7 @@
     "metadata": { "loc": { "lines": { "from": 40, "to": 40 } } }
   },
   {
-    "pageContent": "const SWR_USE_FETCH_MESSAGES = 'SWR_USE_FETCH_MESSAGES';\n\nexport interface SendMessageParams {\n  message: string;\n  files?: UploadFileItem[];\n  onlyAddUserMessage?: boolean;\n  /**\n   *\n   * https://github.com/lobehub/lobe-chat/pull/2086\n   */\n  isWelcomeQuestion?: boolean;\n}\n\ninterface ProcessMessageParams {\n  traceId?: string;\n  isWelcomeQuestion?: boolean;\n  /**\n   * the RAG query content, should be embedding and used in the semantic search\n   */\n  ragQuery?: string;\n}\n\nexport interface ChatMessageAction extends ChatRAGAction {\n  // create\n  sendMessage: (params: SendMessageParams) => Promise<void>;\n  addAIMessage: () => Promise<void>;\n  /**\n   * regenerate message\n   * trace enabled\n   * @param id\n   */\n  regenerateMessage: (id: string) => Promise<void>;",
+    "pageContent": "const SWR_USE_FETCH_MESSAGES = 'SWR_USE_FETCH_MESSAGES';\n\nexport interface SendMessageParams {\n  message: string;\n  files?: UploadFileItem[];\n  onlyAddUserMessage?: boolean;\n  /**\n   *\n   * \n   */\n  isWelcomeQuestion?: boolean;\n}\n\ninterface ProcessMessageParams {\n  traceId?: string;\n  isWelcomeQuestion?: boolean;\n  /**\n   * the RAG query content, should be embedding and used in the semantic search\n   */\n  ragQuery?: string;\n}\n\nexport interface ChatMessageAction extends ChatRAGAction {\n  // create\n  sendMessage: (params: SendMessageParams) => Promise<void>;\n  addAIMessage: () => Promise<void>;\n  /**\n   * regenerate message\n   * trace enabled\n   * @param id\n   */\n  regenerateMessage: (id: string) => Promise<void>;",
     "metadata": { "loc": { "lines": { "from": 42, "to": 73 } } }
   },
   {
@@ -176,7 +176,7 @@
     "metadata": { "loc": { "lines": { "from": 594, "to": 609 } } }
   },
   {
-    "pageContent": "return m;\n        });\n\n    // 3. add systemRole\n    if (agentConfig.systemRole) {\n      preprocessMsgs.unshift({ content: agentConfig.systemRole, role: 'system' } as ChatMessage);\n    }\n\n    // 4. handle max_tokens\n    agentConfig.params.max_tokens = chatConfig.enableMaxTokens\n      ? agentConfig.params.max_tokens\n      : undefined;\n\n    // 5. handle config for the vision model\n    // Due to the gpt-4-vision-preview model's default max_tokens is very small\n    // we need to set the max_tokens a larger one.\n    if (agentConfig.model === 'gpt-4-vision-preview') {\n      /* eslint-disable unicorn/no-lonely-if */\n      if (!agentConfig.params.max_tokens)\n        // refs: https://github.com/lobehub/lobe-chat/issues/837\n        agentConfig.params.max_tokens = 2048;\n    }",
+    "pageContent": "return m;\n        });\n\n    // 3. add systemRole\n    if (agentConfig.systemRole) {\n      preprocessMsgs.unshift({ content: agentConfig.systemRole, role: 'system' } as ChatMessage);\n    }\n\n    // 4. handle max_tokens\n    agentConfig.params.max_tokens = chatConfig.enableMaxTokens\n      ? agentConfig.params.max_tokens\n      : undefined;\n\n    // 5. handle config for the vision model\n    // Due to the gpt-4-vision-preview model's default max_tokens is very small\n    // we need to set the max_tokens a larger one.\n    if (agentConfig.model === 'gpt-4-vision-preview') {\n      /* eslint-disable unicorn/no-lonely-if */\n      if (!agentConfig.params.max_tokens)\n        // refs: \n        agentConfig.params.max_tokens = 2048;\n    }",
     "metadata": { "loc": { "lines": { "from": 598, "to": 619 } } }
   },
   {

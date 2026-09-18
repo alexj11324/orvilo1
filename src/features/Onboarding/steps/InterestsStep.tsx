@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import LobeMessage from '../components/LobeMessage';
+import OrviloMessage from '../components/OrviloMessage';
 import type { InterestAreaKey } from '../config';
 import { INTEREST_AREAS } from '../config';
 
@@ -83,7 +83,7 @@ const InterestsStep = memo<InterestsStepProps>(({ onBack, onNext }) => {
 
   return (
     <Flexbox gap={16}>
-      <LobeMessage
+      <OrviloMessage
         sentences={[t('interests.title'), t('interests.title2'), t('interests.title3')]}
       />
       <Flexbox horizontal align={'center'} gap={12} wrap={'wrap'}>

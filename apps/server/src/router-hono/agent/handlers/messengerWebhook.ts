@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import { getMessengerRouter } from '@/server/services/messenger';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
-const log = debug('lobe-server:messenger:webhook-route');
+const log = debug('orvilo-server:messenger:webhook-route');
 
 /**
  * Webhook endpoint for the shared Messenger bot.

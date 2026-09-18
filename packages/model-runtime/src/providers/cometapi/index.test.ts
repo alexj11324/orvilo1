@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeCometAPIAI, params } from './index';
+import { OrviloCometAPIAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -13,7 +13,7 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 
 // Basic provider tests
 testProvider({
-  Runtime: LobeCometAPIAI,
+  Runtime: OrviloCometAPIAI,
   chatDebugEnv: 'DEBUG_COMETAPI_COMPLETION',
   chatModel: 'gpt-3.5-turbo',
   defaultBaseURL: 'https://api.cometapi.com/v1',
@@ -24,11 +24,11 @@ testProvider({
 });
 
 // Custom feature tests
-describe('LobeCometAPIAI - custom features', () => {
-  let instance: InstanceType<typeof LobeCometAPIAI>;
+describe('OrviloCometAPIAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloCometAPIAI>;
 
   beforeEach(() => {
-    instance = new LobeCometAPIAI({ apiKey: 'test_api_key' });
+    instance = new OrviloCometAPIAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

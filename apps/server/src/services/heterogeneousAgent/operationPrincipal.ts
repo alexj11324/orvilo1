@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { RbacModel } from '@/database/models/rbac';
 import { hasActiveWorkspaceMembership } from '@/database/models/workspace';
 import { agentOperations } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { assertOIDCUserActive } from '@/libs/oidc-provider/access-control';
 import type {
   HeteroOperationCapability,
@@ -34,7 +34,7 @@ export interface ActiveHeteroOperationPrincipal {
 export const resolveActiveHeteroOperationPrincipal = async (params: {
   capability: HeteroOperationCapability;
   claims: HeteroOperationJwtClaims;
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   operationId: string;
 }): Promise<ActiveHeteroOperationPrincipal> => {
   const { capability, claims, db, operationId } = params;

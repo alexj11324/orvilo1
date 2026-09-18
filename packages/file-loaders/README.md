@@ -1,8 +1,8 @@
 # @orvilo/file-loaders
 
-`@orvilo/file-loaders` is a toolkit within the LobeHub project, specifically designed for loading various types of files from local file paths and converting their content into standardized `Document` object arrays.
+`@orvilo/file-loaders` is a toolkit within the Orvilo project, specifically designed for loading various types of files from local file paths and converting their content into standardized `Document` object arrays.
 
-Its primary purpose is to provide a unified interface for reading different file formats, extracting their core text content, and preparing them for subsequent processing (such as file preview, content extraction, or serving as knowledge base data sources in LobeHub).
+Its primary purpose is to provide a unified interface for reading different file formats, extracting their core text content, and preparing them for subsequent processing (such as file preview, content extraction, or serving as knowledge base data sources in Orvilo).
 
 ## ✨ Features
 
@@ -74,7 +74,7 @@ File formats and parsing requirements are constantly evolving. We welcome commun
 
 ### Contribution Process
 
-1. Fork the [LobeHub repository](https://github.com/lobehub/lobe-chat)
+1. Fork the [Orvilo repository](https://github.com/alexj11324/orvilo1)
 2. Add new format support or improve existing parsers
 3. Submit a Pull Request describing:
 
@@ -85,6 +85,6 @@ File formats and parsing requirements are constantly evolving. We welcome commun
 
 ## 📌 Note
 
-This is an internal module of LobeHub (`"private": true`), designed specifically for LobeHub and not published as a standalone package.
+This is an internal module of Orvilo (`"private": true`), designed specifically for Orvilo and not published as a standalone package.
 
-If you're interested in our project, feel free to check it out, star it, or contribute code on [GitHub](https://github.com/lobehub/lobe-chat)!
+If you're interested in our project, feel free to check it out, star it, or contribute code on [GitHub](https://github.com/alexj11324/orvilo1)!

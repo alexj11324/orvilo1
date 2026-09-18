@@ -1,6 +1,6 @@
-# 🤯 LobeHub Desktop Application
+# 🤯 Orvilo Desktop Application
 
-LobeHub Desktop is a cross-platform desktop application for [LobeHub](https://github.com/lobehub/lobehub), built with Electron, providing a more native desktop experience and functionality.
+Orvilo Desktop is a cross-platform desktop application for [Orvilo](https://github.com/alexj11324/orvilo1), built with Electron, providing a more native desktop experience and functionality.
 
 ## ✨ Features
 
@@ -11,7 +11,7 @@ LobeHub Desktop is a cross-platform desktop application for [LobeHub](https://gi
 - **🔒 Secure & Reliable**: macOS notarized, encrypted token storage, secure OAuth flow
 - **📦 Multiple Release Channels**: Stable, beta, and nightly build versions
 - **⚡ Advanced Window Management**: Multi-window architecture with theme synchronization
-- **🔗 Remote Server Sync**: Secure data synchronization with remote LobeHub instances
+- **🔗 Remote Server Sync**: Secure data synchronization with remote Orvilo instances
 - **🎯 Developer Tools**: Built-in development panel and comprehensive debugging tools
 
 ## 🚀 Development Setup
@@ -91,7 +91,7 @@ pnpm react-devtools # standalone UI, listens on ws://localhost:8097
 pnpm dev            # dev mode injects the bridge script automatically
 ```
 
-The bridge script is only injected during dev (`vite serve`), and never in
+The bridge script is only injected during dev (`vite serve`), and never
 production builds.
 
 ## 🎯 Release Channels
@@ -362,7 +362,7 @@ Desktop application development involves complex cross-platform considerations a
 
 ### Contribution Process
 
-1. Fork the [LobeHub repository](https://github.com/lobehub/lobehub)
+1. Fork the [Orvilo repository](https://github.com/alexj11324/orvilo1)
 2. Set up the desktop development environment following our setup guide
 3. Make your changes to the desktop application
 4. Submit a Pull Request describing:
@@ -387,4 +387,4 @@ Desktop application development involves complex cross-platform considerations a
 - **Development Guide**: [`Development.md`](./Development.md) - Comprehensive development documentation
 - **Architecture Docs**: [`/docs`](../../docs/) - Detailed technical specifications
 - **Contributing**: [`CONTRIBUTING.md`](../../CONTRIBUTING.md) - Contribution guidelines
-- **Issues & Support**: [GitHub Issues](https://github.com/lobehub/lobehub/issues)
+- **Issues & Support**: [GitHub Issues](https://github.com/alexj11324/orvilo1/issues)

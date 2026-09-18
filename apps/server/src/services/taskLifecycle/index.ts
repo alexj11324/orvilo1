@@ -41,7 +41,7 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
@@ -125,7 +125,7 @@ export interface TopicCompleteParams {
  */
 export class TaskLifecycleService {
   private briefModel: BriefModel;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private messageModel: MessageModel;
   private systemAgentService: SystemAgentService;
   private taskModel: TaskModel;
@@ -135,7 +135,7 @@ export class TaskLifecycleService {
 
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

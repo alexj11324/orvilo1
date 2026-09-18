@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateTrustedClientToken, getTrustedClientTokenForSession } from '@/libs/trusted-client';
 
-import { extractAccessToken, LOBEHUB_SKILL_DISCOVERY_TIMEOUT_MS, MarketService } from './index';
+import { extractAccessToken, MarketService, ORVILO_SKILL_DISCOVERY_TIMEOUT_MS } from './index';
 
 // Mock dependencies before importing the module under test
 vi.mock('@lobehub/market-sdk', () => {
@@ -217,7 +217,7 @@ describe('MarketService', () => {
             method: 'POST',
             parameters: [
               { in: 'header', name: 'Accept', value: 'application/vnd.github+json' },
-              { in: 'header', name: 'x-lobe-trust-token', value: 'untrusted-override' },
+              { in: 'header', name: 'x-orvilo-trust-token', value: 'untrusted-override' },
               { in: 'query', name: 'preview', value: 1 },
             ],
             provider: 'github',
@@ -229,7 +229,7 @@ describe('MarketService', () => {
 
         const [url, init] = fetchMock.mock.calls[0];
         expect(String(url)).toBe(
-          'https://market.lobehub.com/api/v1/proxy/github/graphql?preview=1',
+          'https://market.aspectlylabs.com/api/v1/proxy/github/graphql?preview=1',
         );
         expect(init).toEqual({
           body: JSON.stringify({ query: 'query { viewer { login } }' }),
@@ -237,7 +237,7 @@ describe('MarketService', () => {
             'Accept': 'application/vnd.github+json',
             'Accept-Encoding': 'identity',
             'Content-Type': 'application/json',
-            'x-lobe-trust-token': 'trusted-user-token',
+            'x-orvilo-trust-token': 'trusted-user-token',
           },
           method: 'POST',
         });
@@ -305,13 +305,13 @@ describe('MarketService', () => {
     });
   });
 
-  describe('executeLobehubSkill', () => {
+  describe('executeOrviloSkill', () => {
     it('should return success result with string content', async () => {
       const service = new MarketService();
       const mockCallTool = vi.fn().mockResolvedValue({ data: 'tool result', success: true });
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: { query: 'test' },
         provider: 'my-provider',
         toolName: 'search',
@@ -334,7 +334,7 @@ describe('MarketService', () => {
       const mockCallTool = vi.fn().mockResolvedValue({ data: responseData, success: true });
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: {},
         provider: 'provider',
         toolName: 'listItems',
@@ -349,7 +349,7 @@ describe('MarketService', () => {
       const mockCallTool = vi.fn().mockRejectedValue(new Error('Network error'));
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: {},
         provider: 'provider',
         toolName: 'failTool',
@@ -357,7 +357,7 @@ describe('MarketService', () => {
 
       expect(result).toEqual({
         content: 'Network error',
-        error: { code: 'LOBEHUB_SKILL_ERROR', message: 'Network error' },
+        error: { code: 'ORVILO_SKILL_ERROR', message: 'Network error' },
         success: false,
       });
     });
@@ -375,7 +375,7 @@ describe('MarketService', () => {
       (service as any).market.skills.callTool = mockCallTool;
 
       try {
-        const resultPromise = service.executeLobehubSkill({
+        const resultPromise = service.executeOrviloSkill({
           args: {},
           provider: 'github',
           timeoutMs: 1000,
@@ -385,10 +385,10 @@ describe('MarketService', () => {
         await vi.advanceTimersByTimeAsync(1000);
 
         await expect(resultPromise).resolves.toEqual({
-          content: 'LobeHub Skill execution timed out after 1000ms',
+          content: 'Orvilo Skill execution timed out after 1000ms',
           error: {
-            code: 'LOBEHUB_SKILL_TIMEOUT',
-            message: 'LobeHub Skill execution timed out after 1000ms',
+            code: 'ORVILO_SKILL_TIMEOUT',
+            message: 'Orvilo Skill execution timed out after 1000ms',
           },
           success: false,
         });
@@ -407,7 +407,7 @@ describe('MarketService', () => {
       });
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: { query: 'select * from events' },
         provider: 'posthog',
         toolName: 'query',
@@ -428,7 +428,7 @@ describe('MarketService', () => {
       });
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: { query: 'select * from events' },
         provider: 'posthog',
         toolName: 'query',
@@ -436,7 +436,7 @@ describe('MarketService', () => {
 
       expect(result).toEqual({
         content: 'PostHog query timed out',
-        error: { code: 'LOBEHUB_SKILL_ERROR', message: 'PostHog query timed out' },
+        error: { code: 'ORVILO_SKILL_ERROR', message: 'PostHog query timed out' },
         success: false,
       });
     });
@@ -449,7 +449,7 @@ describe('MarketService', () => {
       });
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: { query: 'select * from events' },
         provider: 'posthog',
         toolName: 'query',
@@ -458,7 +458,7 @@ describe('MarketService', () => {
       const message = JSON.stringify({ detail: 'PostHog query timed out', status: 504 });
       expect(result).toEqual({
         content: message,
-        error: { code: 'LOBEHUB_SKILL_ERROR', message },
+        error: { code: 'ORVILO_SKILL_ERROR', message },
         success: false,
       });
     });
@@ -471,15 +471,15 @@ describe('MarketService', () => {
       });
       (service as any).market.skills.callTool = mockCallTool;
 
-      const result = await service.executeLobehubSkill({
+      const result = await service.executeOrviloSkill({
         args: {},
         provider: 'posthog',
         toolName: 'query',
       });
 
       expect(result).toEqual({
-        content: 'LobeHub Skill call failed',
-        error: { code: 'LOBEHUB_SKILL_ERROR', message: 'LobeHub Skill call failed' },
+        content: 'Orvilo Skill call failed',
+        error: { code: 'ORVILO_SKILL_ERROR', message: 'Orvilo Skill call failed' },
         success: false,
       });
     });
@@ -542,14 +542,14 @@ describe('MarketService', () => {
     });
   });
 
-  describe('getLobehubSkillManifests', () => {
+  describe('getOrviloSkillManifests', () => {
     it('should return empty array when no connections', async () => {
       const service = new MarketService();
       (service as any).market.connect.listConnections = vi
         .fn()
         .mockResolvedValue({ connections: [] });
 
-      const result = await service.getLobehubSkillManifests();
+      const result = await service.getOrviloSkillManifests();
       expect(result).toEqual([]);
     });
 
@@ -559,7 +559,7 @@ describe('MarketService', () => {
         .fn()
         .mockResolvedValue({ connections: null });
 
-      const result = await service.getLobehubSkillManifests();
+      const result = await service.getOrviloSkillManifests();
       expect(result).toEqual([]);
     });
 
@@ -596,7 +596,7 @@ describe('MarketService', () => {
           });
         });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
 
       expect(manifests).toHaveLength(2);
       expect(manifests[0]).toEqual({
@@ -610,8 +610,8 @@ describe('MarketService', () => {
         identifier: 'twitter',
         meta: {
           avatar: '🐦',
-          description: 'LobeHub Skill: X',
-          tags: ['lobehub-skill', 'twitter'],
+          description: 'Orvilo Skill: X',
+          tags: ['orvilo-skill', 'twitter'],
           title: 'X',
         },
         type: 'builtin',
@@ -630,7 +630,7 @@ describe('MarketService', () => {
         tools: [{ description: 'Create', inputSchema: {}, name: 'create' }],
       });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
       expect(manifests).toHaveLength(1);
       expect(manifests[0].identifier).toBe('linear');
     });
@@ -646,10 +646,10 @@ describe('MarketService', () => {
         tools: [{ description: 'Search workspace', inputSchema: {}, name: 'notion-search' }],
       });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
       expect(manifests).toHaveLength(1);
       expect(manifests[0].meta).toMatchObject({
-        description: 'LobeHub Skill: Notion',
+        description: 'Orvilo Skill: Notion',
         title: 'Notion',
       });
     });
@@ -671,7 +671,7 @@ describe('MarketService', () => {
       });
       (service as any).market.skills.listTools = vi.fn().mockResolvedValue({ tools: [] });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
 
       expect((service as any).market.skills.listLiveTools).toHaveBeenCalledWith('posthog');
       expect((service as any).market.skills.listTools).not.toHaveBeenCalled();
@@ -680,8 +680,8 @@ describe('MarketService', () => {
         identifier: 'posthog',
         meta: {
           avatar: 'posthog-icon',
-          description: 'LobeHub Skill: PostHog',
-          tags: ['lobehub-skill', 'posthog'],
+          description: 'Orvilo Skill: PostHog',
+          tags: ['orvilo-skill', 'posthog'],
           title: 'PostHog',
         },
         systemRole: 'Use PostHog analytics tools with the connected workspace.',
@@ -700,7 +700,7 @@ describe('MarketService', () => {
       });
       (service as any).market.skills.listTools = vi.fn().mockResolvedValue({ tools: [] });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
       expect(manifests).toEqual([]);
     });
 
@@ -713,7 +713,7 @@ describe('MarketService', () => {
         tools: [{ description: 'Do', inputSchema: {}, name: 'doThing' }],
       });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
       expect(manifests[0].meta.avatar).toBe('🔗');
     });
 
@@ -723,7 +723,7 @@ describe('MarketService', () => {
         .fn()
         .mockRejectedValue(new Error('Network error'));
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
       expect(manifests).toEqual([]);
     });
 
@@ -736,10 +736,10 @@ describe('MarketService', () => {
       (service as any).market.connect.listConnections = vi.fn().mockRejectedValue(timeoutError);
 
       try {
-        const manifests = await service.getLobehubSkillManifests();
+        const manifests = await service.getOrviloSkillManifests();
 
         expect(manifests).toEqual([]);
-        expect(timeoutSpy).toHaveBeenCalledWith(LOBEHUB_SKILL_DISCOVERY_TIMEOUT_MS);
+        expect(timeoutSpy).toHaveBeenCalledWith(ORVILO_SKILL_DISCOVERY_TIMEOUT_MS);
         expect((service as any).market.connect.listConnections).toHaveBeenCalledWith({ signal });
       } finally {
         timeoutSpy.mockRestore();
@@ -761,7 +761,7 @@ describe('MarketService', () => {
         });
       });
 
-      const manifests = await service.getLobehubSkillManifests();
+      const manifests = await service.getOrviloSkillManifests();
       expect(manifests).toHaveLength(1);
       expect(manifests[0].identifier).toBe('working');
     });

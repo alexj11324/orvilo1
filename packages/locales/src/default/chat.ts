@@ -870,7 +870,7 @@ export default {
   'createModal.skillSuggestion.actions.install': 'Add Skill',
   'createModal.skillSuggestion.actions.installing': 'Adding…',
   'createModal.skillSuggestion.actions.openSkills': 'View in Skills',
-  'createModal.skillSuggestion.actions.tryInLobeAI': 'Use in Orvilo AI',
+  'createModal.skillSuggestion.actions.tryInOrviloAI': 'Use in Orvilo AI',
   'createModal.skillSuggestion.description':
     'This looks like a reusable workflow. Install the Skill once, then use it across Agents.',
   'createModal.skillSuggestion.installed.description':
@@ -1440,7 +1440,7 @@ export default {
   'sharePage.error.unauthorized.subtitle': 'Please sign in to view this shared topic.',
   'sharePage.error.unauthorized.title': 'Sign In Required',
   'sharePage.menu.copyLink': 'Copy Link',
-  'sharePage.menu.goToLobeHub': 'Go to Orvilo',
+  'sharePage.menu.goToOrvilo': 'Go to Orvilo',
   'sharePage.menu.more': 'More',
   'sharePage.menu.report': 'Report',
   'sharePage.meta.artifactDescription': 'An artifact shared from {{appName}}.',
@@ -2233,8 +2233,6 @@ export default {
   'taskList.visibility.label': 'Visibility',
   'taskList.breadcrumb.task': 'Task',
   'taskList.empty': 'No tasks yet',
-  'taskList.emptyHero.greeting': 'What should we tackle today?',
-  'taskList.emptyHero.templatesTitle': 'Templates picked for you',
   'taskList.form.columns': 'Columns',
   'taskList.form.grouping': 'Grouping',
   'taskList.form.nestedSubTasks': 'Nested sub-tasks',
@@ -2265,8 +2263,11 @@ export default {
   'taskList.mine.emptyAssigned': 'No tasks assigned to you yet',
   'taskList.mine.emptyCreated': "You haven't created any tasks yet",
   'taskList.mine.title': 'My tasks',
-  'taskList.scheduled.empty': 'No scheduled tasks yet',
-  'taskList.scheduled.title': 'Scheduled tasks',
+  'taskList.scheduled.empty': 'No automations yet',
+  // The collection keeps the `scheduled` identifier — it names a query and a
+  // route, and renaming it would break stored deep links. The product calls the
+  // surface "Automations".
+  'taskList.scheduled.title': 'Automations',
   'taskList.subtaskProgress.loadFailed':
     "Couldn't load sub-tasks. Click the progress badge to retry.",
   'taskList.title': 'Tasks',

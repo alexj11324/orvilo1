@@ -31,15 +31,10 @@ export type GroupAgentVisibility = 'public' | 'private' | 'internal';
  * Group Agent Category
  */
 export type GroupAgentCategory =
-  | 'productivity'
-  | 'entertainment'
-  | 'education'
-  | 'development'
-  | 'business'
-  | 'other';
+  'productivity' | 'entertainment' | 'education' | 'development' | 'business' | 'other';
 
 /**
- * Group Agent Config - similar to LobeAgentConfig but for groups
+ * Group Agent Config - similar to OrviloAgentConfig but for groups
  */
 export interface GroupAgentConfig {
   /**

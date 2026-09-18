@@ -166,13 +166,13 @@ describe('MarketSandboxProvider', () => {
     it('redacts auth env assignments from command logs without changing other params', () => {
       const params = {
         command:
-          'LOBEHUB_JWT=mock-jwt LOBEHUB_SERVER=https://orvilo.aspectlylabs.com npx -y @lobehub/cli topic list && GITHUB_TOKEN="ghp_token" gh repo view',
+          'ORVILO_JWT=mock-jwt ORVILO_SERVER=https://orvilo.aspectlylabs.com npx -y @orvilo/cli topic list && GITHUB_TOKEN="ghp_token" gh repo view',
         timeout: 1000,
       };
 
       expect(redactSandboxParams(params)).toEqual({
         command:
-          'LOBEHUB_JWT=[redacted] LOBEHUB_SERVER=https://orvilo.aspectlylabs.com npx -y @lobehub/cli topic list && GITHUB_TOKEN=[redacted] gh repo view',
+          'ORVILO_JWT=[redacted] ORVILO_SERVER=https://orvilo.aspectlylabs.com npx -y @orvilo/cli topic list && GITHUB_TOKEN=[redacted] gh repo view',
         timeout: 1000,
       });
     });

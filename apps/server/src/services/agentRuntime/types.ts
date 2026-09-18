@@ -2,14 +2,13 @@ import { type AgentRuntimeContext, type AgentState } from '@orvilo/agent-runtime
 import type {
   AgentGroupConfig,
   BotPlatformContext,
-  LobeToolManifest,
   OperationSkillSet,
+  OrviloToolManifest,
   ProjectInstructionFile,
   ToolExecutor,
   ToolSource,
 } from '@orvilo/context-engine';
 import type {
-  AgentShareVisitorContext,
   ChatTopicBotContext,
   EvalToolForwardingConfig,
   ExpertiseContextSnapshot,
@@ -34,7 +33,7 @@ export interface OperationToolSet {
   activatableToolIds?: string[];
   enabledToolIds?: string[];
   executorMap?: Record<string, ToolExecutor>;
-  manifestMap: Record<string, LobeToolManifest>;
+  manifestMap: Record<string, OrviloToolManifest>;
   sourceMap?: Record<string, ToolSource>;
   tools?: any[];
 }
@@ -402,14 +401,6 @@ export interface OperationCreationParams {
    * `agt_*` IDs) — no per-step DB lookup, mirroring `botContext`.
    */
   agentGroup?: AgentGroupConfig;
-  /**
-   * Shared-agent visitor marker. Persisted to
-   * `state.principal.actor.shareVisitor` so every later step can re-derive the
-   * share's restrictions without re-reading the share, and so
-   * `AgentRuntimeService.executeStep` can re-prove the run's authorization at
-   * each step boundary.
-   */
-  agentShareVisitor?: AgentShareVisitorContext;
   appContext: {
     agentId?: string;
     /**

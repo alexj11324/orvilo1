@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
-import { ProviderIcon } from '@/components/LobeIcons';
+import { ProviderIcon } from '@/components/OrviloIcons';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useProviderName } from '@/hooks/useProviderName';
 import { type GlobalLLMProviderKey } from '@/types/user/settings/modelProvider';

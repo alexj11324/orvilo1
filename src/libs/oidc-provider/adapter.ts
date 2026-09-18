@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   oidcAccessTokens,
   oidcAuthorizationCodes,
@@ -13,7 +13,7 @@ import debug from 'debug';
 import { eq, sql } from 'drizzle-orm';
 
 // Create adapter logging namespace
-const log = debug('lobe-oidc:adapter');
+const log = debug('orvilo-oidc:adapter');
 
 /**
  * Grace period for consumed RefreshToken (in seconds)
@@ -30,10 +30,10 @@ const log = debug('lobe-oidc:adapter');
 const REFRESH_TOKEN_GRACE_PERIOD_SECONDS = 180;
 
 class OIDCAdapter {
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private name: string;
 
-  constructor(name: string, db: LobeChatDatabase) {
+  constructor(name: string, db: OrviloDatabase) {
     log('[%s] Constructor called with name: %s', name, name);
 
     this.name = name;
@@ -607,7 +607,7 @@ class OIDCAdapter {
   /**
    * Create adapter factory
    */
-  static createAdapterFactory = (db: LobeChatDatabase) => {
+  static createAdapterFactory = (db: OrviloDatabase) => {
     log('Creating adapter factory with database instance');
     return (name: string) => new OIDCAdapter(name, db);
   };

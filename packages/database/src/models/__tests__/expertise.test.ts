@@ -15,10 +15,10 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { ExpertiseModel } from '../expertise';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'expertise-model-test-user';
 const runId = '6432288d-281b-4ffa-839f-8e8f45502f57';
 const lessonId = '7e21f858-688d-4a20-9866-51a256f2154a';

@@ -37,7 +37,6 @@ import InternLMProvider from './internlm';
 import JinaProvider from './jina';
 import KimiCodingPlanProvider from './kimiCodingPlan';
 import LMStudioProvider from './lmstudio';
-import LobeHubProvider from './lobehub';
 import LongCatProvider from './longcat';
 import MetaProvider from './meta';
 import MinimaxProvider from './minimax';
@@ -55,6 +54,7 @@ import OpenAIProvider from './openai';
 import OpenCodeCodingPlanProvider from './opencodeCodingPlan';
 import OpenCodeZenProvider from './opencodeZen';
 import OpenRouterProvider from './openrouter';
+import OrviloProvider from './orvilo';
 import PerplexityProvider from './perplexity';
 import PPIOProvider from './ppio';
 import QiniuProvider from './qiniu';
@@ -91,7 +91,7 @@ import ZhiPuProvider from './zhipu';
 /**
  * @deprecated
  */
-export const LOBE_DEFAULT_MODEL_LIST: ChatModelCard[] = [
+export const ORVILO_DEFAULT_MODEL_LIST: ChatModelCard[] = [
   OpenAIProvider.chatModels,
   QwenProvider.chatModels,
   ZhiPuProvider.chatModels,
@@ -145,7 +145,7 @@ export const LOBE_DEFAULT_MODEL_LIST: ChatModelCard[] = [
 ].flat();
 
 export const DEFAULT_MODEL_PROVIDER_LIST = [
-  ...(ENABLE_BUSINESS_FEATURES ? [LobeHubProvider] : []),
+  ...(ENABLE_BUSINESS_FEATURES ? [OrviloProvider] : []),
   AnthropicProvider,
   GoogleProvider,
   GLMCodingPlanProvider,
@@ -293,7 +293,6 @@ export { default as InternLMProviderCard } from './internlm';
 export { default as JinaProviderCard } from './jina';
 export { default as KimiCodingPlanProviderCard } from './kimiCodingPlan';
 export { default as LMStudioProviderCard } from './lmstudio';
-export { default as LobeHubProviderCard } from './lobehub';
 export { default as LongCatProviderCard } from './longcat';
 export { default as MetaProviderCard } from './meta';
 export { default as MinimaxProviderCard } from './minimax';
@@ -311,6 +310,7 @@ export { default as OpenAIProviderCard } from './openai';
 export { default as OpenCodeCodingPlanProviderCard } from './opencodeCodingPlan';
 export { default as OpenCodeZenProviderCard } from './opencodeZen';
 export { default as OpenRouterProviderCard } from './openrouter';
+export { default as OrviloProviderCard } from './orvilo';
 export { default as PerplexityProviderCard } from './perplexity';
 export { default as PPIOProviderCard } from './ppio';
 export { default as QiniuProviderCard } from './qiniu';

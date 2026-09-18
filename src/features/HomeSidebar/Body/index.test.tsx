@@ -130,14 +130,15 @@ describe('Home sidebar body', () => {
   });
 
   it('renders items strictly in sidebarItems order with the spacer at its stored position', () => {
+    // Production has no bottom-group destinations left, so every item is a top
+    // nav item; the render order still comes from `sidebarItems`, not from which
+    // list an item is declared in.
     mocks.navLayout = {
-      bottomMenuItems: [
-        { key: 'image', title: 'Image', url: '/image' },
-        { key: 'resource', title: 'Resource', url: '/resource' },
-      ],
+      bottomMenuItems: [],
       topNavItems: [
         { key: 'automations', title: 'Automations', url: '/automations' },
         { key: 'tasks', title: 'Tasks', url: '/tasks' },
+        { key: 'resource', title: 'Resource', url: '/resource' },
       ],
     };
     mocks.globalState.status.sidebarItems = [
@@ -145,7 +146,6 @@ describe('Home sidebar body', () => {
       'recents',
       'agent',
       '__spacer__',
-      'image',
       'tasks',
       'resource',
     ];
@@ -160,26 +160,30 @@ describe('Home sidebar body', () => {
     expect(spacerIndex).toBe(2);
     expect(children[0]).toHaveTextContent('Automations');
     expect(children[1]).toHaveAttribute('data-testid', 'sidebar-accordion');
-    expect(children[3]).toHaveTextContent('Image');
-    expect(children[4]).toHaveTextContent('Tasks');
-    expect(children[5]).toHaveTextContent('Resource');
+    expect(children[3]).toHaveTextContent('Tasks');
+    expect(children[4]).toHaveTextContent('Resource');
   });
 
   it('keeps a top item that was dragged past the spacer in its new position', () => {
     mocks.navLayout = {
-      bottomMenuItems: [{ key: 'image', title: 'Image', url: '/image' }],
-      topNavItems: [{ key: 'tasks', title: 'Tasks', url: '/tasks' }],
+      bottomMenuItems: [],
+      topNavItems: [
+        { key: 'tasks', title: 'Tasks', url: '/tasks' },
+        { key: 'resource', title: 'Resource', url: '/resource' },
+      ],
     };
-    // User dragged `tasks` from the top section to sit after `image`.
-    mocks.globalState.status.sidebarItems = ['recents', 'agent', '__spacer__', 'image', 'tasks'];
+    // User dragged `tasks` from the top section to sit after `resource`.
+    mocks.globalState.status.sidebarItems = ['recents', 'agent', '__spacer__', 'resource', 'tasks'];
 
     render(<Body />);
 
     const children = Array.from(screen.getByTestId('sidebar-body').children);
+    const spacerIndex = children.findIndex((child) =>
+      child.hasAttribute('data-sidebar-bottom-spacer'),
+    );
+    const tasksIndex = children.findIndex((child) => child.textContent === 'Tasks');
 
-    expect(children[0]).toHaveAttribute('data-testid', 'sidebar-accordion');
-    expect(children[1]).toHaveAttribute('data-sidebar-bottom-spacer');
-    expect(children[2]).toHaveTextContent('Image');
-    expect(children[3]).toHaveTextContent('Tasks');
+    // The drag survives: the item that was moved past the spacer stays below it.
+    expect(tasksIndex).toBeGreaterThan(spacerIndex);
   });
 });

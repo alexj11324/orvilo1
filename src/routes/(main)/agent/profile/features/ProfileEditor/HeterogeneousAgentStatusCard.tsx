@@ -314,7 +314,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
           label: (
             <ProviderItemRender
               name={t('heterogeneousStatus.apiMode.defaultProvider')}
-              provider="lobehub"
+              provider="orvilo"
             />
           ),
           value: SERVER_DEFAULT_PROVIDER_VALUE,

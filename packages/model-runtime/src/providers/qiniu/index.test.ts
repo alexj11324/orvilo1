@@ -3,13 +3,13 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeQiniuAI, params } from './index';
+import { OrviloQiniuAI, params } from './index';
 
 const provider = ModelProvider.Qiniu;
 const defaultBaseURL = 'https://openai.qiniu.com/v1';
 
 testProvider({
-  Runtime: LobeQiniuAI,
+  Runtime: OrviloQiniuAI,
   provider,
   defaultBaseURL,
   chatDebugEnv: 'DEBUG_QINIU_CHAT_COMPLETION',
@@ -22,11 +22,11 @@ testProvider({
   },
 });
 
-describe('LobeQiniuAI - custom features', () => {
-  let instance: InstanceType<typeof LobeQiniuAI>;
+describe('OrviloQiniuAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloQiniuAI>;
 
   beforeEach(() => {
-    instance = new LobeQiniuAI({ apiKey: 'test_api_key' });
+    instance = new OrviloQiniuAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -307,9 +307,9 @@ describe('LobeQiniuAI - custom features', () => {
       expect(params.baseURL).toBe('https://openai.qiniu.com/v1');
     });
 
-    it('should export LobeQiniuAI class', () => {
-      expect(LobeQiniuAI).toBeDefined();
-      expect(typeof LobeQiniuAI).toBe('function');
+    it('should export OrviloQiniuAI class', () => {
+      expect(OrviloQiniuAI).toBeDefined();
+      expect(typeof OrviloQiniuAI).toBe('function');
     });
 
     it('should export params with all required properties', () => {

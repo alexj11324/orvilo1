@@ -51,7 +51,7 @@ const PostItem = ({ id, versionRange, locale, showDivider = true }: PostItemProp
             alt={data.title}
             src={
               data.image.startsWith('/blog')
-                ? urlJoin('https://hub-apac-1.lobeobjects.space/', data.image)
+                ? urlJoin('https://hub-apac-1.objects.aspectlylabs.com/', data.image)
                 : data.image
             }
           />

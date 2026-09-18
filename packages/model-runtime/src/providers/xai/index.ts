@@ -130,7 +130,7 @@ export const handleXAIResponsesPayload = (payload: ChatStreamPayload) => {
   } as any;
 };
 
-export const LobeXAI = createOpenAICompatibleRuntime({
+export const OrviloXAI = createOpenAICompatibleRuntime({
   baseURL: 'https://api.x.ai/v1',
   chatCompletion: {
     handlePayload: handleXAIChatCompletionPayload,

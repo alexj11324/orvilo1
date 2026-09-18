@@ -34,7 +34,7 @@ export const listBuiltinRenderEntries = (): BuiltinRenderRegistryEntry[] =>
 
 /**
  * Get builtin render component for a specific API
- * @param identifier - Tool identifier (e.g., 'lobe-local-system')
+ * @param identifier - Tool identifier (e.g., 'orvilo-local-system')
  * @param apiName - API name (e.g., 'searchFiles')
  */
 export const getBuiltinRender = (

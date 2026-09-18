@@ -6,7 +6,7 @@ import type OpenAI from 'openai';
 import type { ChatPayloadForTransformStream } from '../streams/protocol';
 import { withUsageCost } from './utils/withUsageCost';
 
-const log = debug('lobe-cost:convertOpenAIUsage');
+const log = debug('orvilo-cost:convertOpenAIUsage');
 
 // Keep the reference implementation's behavior of filtering out zero/falsy values,
 // except for fields where 0 is semantically meaningful. `inputAudioTokens` must preserve an

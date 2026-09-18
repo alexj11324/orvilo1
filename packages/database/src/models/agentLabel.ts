@@ -2,7 +2,7 @@ import { and, asc, count, eq, inArray, not } from 'drizzle-orm';
 
 import type { AgentLabelItem } from '../schemas';
 import { agentLabelAssignments, agentLabels, agents } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface AgentLabelWithUsage extends AgentLabelItem {
@@ -11,10 +11,10 @@ export interface AgentLabelWithUsage extends AgentLabelItem {
 
 export class AgentLabelModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.db = db;
     this.workspaceId = workspaceId;

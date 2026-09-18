@@ -2,7 +2,7 @@
 import type { ModelRuntime } from '@orvilo/model-runtime';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import * as ModelRuntimeModule from '@/server/modules/ModelRuntime';
 
 import { SystemAgentService } from './index';
@@ -25,7 +25,7 @@ describe('SystemAgentService.generateTopicTitle', () => {
     vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockResolvedValue({
       generateObject,
     } as unknown as ModelRuntime);
-    const service = new SystemAgentService({} as LobeChatDatabase, 'user-1');
+    const service = new SystemAgentService({} as OrviloDatabase, 'user-1');
 
     for (const topicId of ['topic-a', 'topic-b', 'topic-a']) {
       expect(

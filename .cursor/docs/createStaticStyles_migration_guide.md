@@ -540,7 +540,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
 
 - `Checkbox`: `readableColor(token.colorPrimary)` → `cssVar.colorTextLightSolid`
 
-### 场景 9: rgba () → color-mix ()
+### 场景 9: rgba () → color-mix
 
 **适用：** 使用 `rgba()` 设置透明度
 
@@ -931,7 +931,7 @@ const Component = () => {
 **已优化示例：**
 
 - `AuroraBackground`, `Select`, `Input`, `Button`, `DatePicker`, `AutoComplete`, `InputNumber`, `InputPassword`, `InputOPT`, `TextArea`, `SpotlightCardItem`, `Spotlight`, `HotkeyInput` - 只使用 `isDarkMode` → `useThemeMode()`
-- `Image`, `GradientButton`, `Empty`, `FileTypeIcon`, `FormSubmitFooter`, `CodeEditor`, `LobeChat`, `Drawer`, `Modal`, `Avatar`, `AvatarGroup`, `SkeletonAvatar`, `SkeletonButton`, `SkeletonTags`, `Callout`, `LobeHub`, `GridBackground`, `FolderIcon`, `FileIcon`, `TokenTag`, `ChatSendButton`, `AvatarUploader` - 使用 token → `cssVar`
+- `Image`, `GradientButton`, `Empty`, `FileTypeIcon`, `FormSubmitFooter`, `CodeEditor`, `Orvilo`, `Drawer`, `Modal`, `Avatar`, `AvatarGroup`, `SkeletonAvatar`, `SkeletonButton`, `SkeletonTags`, `Callout`, `Orvilo`, `GridBackground`, `FolderIcon`, `FileIcon`, `TokenTag`, `ChatSendButton`, `AvatarUploader` - 使用 token → `cssVar`
 
 **无法优化的文件（需要保留 `useTheme()`）：**
 

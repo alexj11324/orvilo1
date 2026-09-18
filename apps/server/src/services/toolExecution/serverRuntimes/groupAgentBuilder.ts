@@ -4,7 +4,7 @@
  * The client counterpart (`packages/builtin-tool-group-agent-builder/src/ExecutionRuntime`)
  * drives zustand stores and only runs under the legacy client runtime. Cloud runs
  * gateway mode, where every builtin tool executes here, so without this runtime
- * `toolExecution/builtin.ts` throws `Builtin tool "lobe-group-agent-builder" is
+ * `toolExecution/builtin.ts` throws `Builtin tool "orvilo-group-agent-builder" is
  * not implemented` and *every* member/config mutation fails — the model then
  * falls back to generic agent creation, which spawns standalone agents outside
  * the group — built-in group agents were missing from the member list.

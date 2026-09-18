@@ -97,7 +97,7 @@ GitHub remote for a later integrator run to land it.
   worktree; otherwise unprovisioned (unchanged).
 - Remote provision returns `repos: [repo]` → `initialTopicMetadata.repos` → topic
   `metadata.repos` → `heteroDispatch` → `spawnHeteroSandbox` pre-clones it into
-  `/workspace/<dir>` (`repoToLocalDir` / `cloudSandboxRepoPath`, shared in
+  `/workspace/<dir>` (`repoToLocalDir` / `cloudSandboxRepoPath`, shared
   `@orvilo/types` and now also used by `cloudHeteroContext`).
 - The provision's `prompt` rides into `buildTaskPrompt`: create `task/<id>` off
   `origin/<base>`, commit + `push -u origin`, `gh pr create --base <base>`. The topic's

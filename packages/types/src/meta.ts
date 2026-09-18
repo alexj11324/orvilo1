@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const LobeMetaDataSchema = z.object({
+export const OrviloMetaDataSchema = z.object({
   /**
    * Character avatar
    */
@@ -28,7 +28,7 @@ export const LobeMetaDataSchema = z.object({
   title: z.string().optional(),
 });
 
-export type MetaData = z.infer<typeof LobeMetaDataSchema>;
+export type MetaData = z.infer<typeof OrviloMetaDataSchema>;
 
 export interface BaseDataModel {
   createdAt: number;

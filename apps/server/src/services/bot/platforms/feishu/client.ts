@@ -424,7 +424,7 @@ class FeishuWSClientImpl implements PlatformClient {
 
       const chatConfig: any = {
         adapters: { [this.config.platform]: adapter },
-        userName: `lobehub-gateway-${this.applicationId}`,
+        userName: `orvilo-gateway-${this.applicationId}`,
       };
 
       if (this.context.redisClient) {

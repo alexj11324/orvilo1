@@ -12,7 +12,7 @@ import { Pool as NodePool } from 'pg';
 import { serverDBEnv } from '@/config/db';
 
 import * as schema from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 const migrationsFolder = join(__dirname, '../../migrations');
 
@@ -21,10 +21,10 @@ const isServerDBMode = process.env.TEST_SERVER_DB === '1';
 let testClientDB: ReturnType<typeof pgliteDrizzle<typeof schema>> | null = null;
 let testServerDB: ReturnType<typeof nodeDrizzle<typeof schema>> | null = null;
 
-export const getTestDB = async (): Promise<LobeChatDatabase> => {
+export const getTestDB = async (): Promise<OrviloDatabase> => {
   // Server DB mode (node-postgres)
   if (isServerDBMode) {
-    if (testServerDB) return testServerDB as unknown as LobeChatDatabase;
+    if (testServerDB) return testServerDB as unknown as OrviloDatabase;
 
     const connectionString = serverDBEnv.DATABASE_TEST_URL;
 
@@ -37,11 +37,11 @@ export const getTestDB = async (): Promise<LobeChatDatabase> => {
 
     await nodeMigrate(testServerDB, { migrationsFolder });
 
-    return testServerDB as unknown as LobeChatDatabase;
+    return testServerDB as unknown as OrviloDatabase;
   }
 
   // Client DB mode (PGlite)
-  if (testClientDB) return testClientDB as unknown as LobeChatDatabase;
+  if (testClientDB) return testClientDB as unknown as OrviloDatabase;
 
   const pglite = new PGlite({ extensions: { vector } });
   testClientDB = pgliteDrizzle({ client: pglite, schema });
@@ -74,5 +74,5 @@ export const getTestDB = async (): Promise<LobeChatDatabase> => {
     );
   }
 
-  return testClientDB as unknown as LobeChatDatabase;
+  return testClientDB as unknown as OrviloDatabase;
 };

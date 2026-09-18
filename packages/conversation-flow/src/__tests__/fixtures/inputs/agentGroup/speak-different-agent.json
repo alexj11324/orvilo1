@@ -21,7 +21,7 @@
           "name": "speak",
           "arguments": "{\"agentId\": \"agent-backend\", \"instruction\": \"Please explain the API design.\"}"
         },
-        "identifier": "lobe-group-management",
+        "identifier": "orvilo-group-management",
         "apiName": "speak"
       }
     ],

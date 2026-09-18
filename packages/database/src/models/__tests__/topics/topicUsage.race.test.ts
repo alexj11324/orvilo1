@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import { agentOperations, topics, users } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { recomputeTopicUsage } from '../../topicUsage';
 
 // Real-Postgres reproduction of the lost-update interleave on the topic usage
@@ -23,7 +23,7 @@ import { recomputeTopicUsage } from '../../topicUsage';
 // guards the row lock: every trial must count BOTH completions.
 
 const userId = 'topic-usage-race-user';
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const cleanup = async () => {
   await serverDB.delete(agentOperations).where(eq(agentOperations.userId, userId));

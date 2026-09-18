@@ -2,7 +2,7 @@ import { and, eq, getTableColumns, inArray, isNull, type SQL } from 'drizzle-orm
 
 import type { MessengerAccountLinkItem, NewMessengerAccountLink } from '../schemas';
 import { messengerAccountLinks } from '../schemas';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 
 interface GateKeeper {
   decrypt: (ciphertext: string) => Promise<{ plaintext: string }>;
@@ -65,7 +65,7 @@ const uniqueViolationConstraint = (error: unknown): string | undefined => {
 
 /**
  * Thrown by `upsertForPlatform` when the IM identity is already bound to a
- * different LobeHub user. Callers (e.g. the messenger router) should surface
+ * different Orvilo user. Callers (e.g. the messenger router) should surface
  * a friendly 409 — never let the underlying DB unique-index error escape.
  */
 export class MessengerAccountLinkConflictError extends Error {
@@ -73,14 +73,14 @@ export class MessengerAccountLinkConflictError extends Error {
   readonly existingUserId: string;
 
   constructor(existingUserId: string, message?: string) {
-    super(message ?? 'IM identity is already linked to another LobeHub user');
+    super(message ?? 'IM identity is already linked to another Orvilo user');
     this.name = 'MessengerAccountLinkConflictError';
     this.existingUserId = existingUserId;
   }
 }
 
 /**
- * Thrown when the same LobeHub user already has a different IM identity bound
+ * Thrown when the same Orvilo user already has a different IM identity bound
  * for the requested `(platform, tenant)` scope and must explicitly unlink
  * before switching accounts.
  */
@@ -95,9 +95,9 @@ export class MessengerAccountLinkRelinkRequiredError extends Error {
 
 export class MessengerAccountLinkModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.userId = userId;
     this.db = db;
   }
@@ -136,7 +136,7 @@ export class MessengerAccountLinkModel {
     if (claimed && claimed.userId !== this.userId) {
       throw new MessengerAccountLinkConflictError(
         claimed.userId,
-        'Credential application is already linked to another LobeHub user',
+        'Credential application is already linked to another Orvilo user',
       );
     }
     throw new MessengerAccountLinkRelinkRequiredError();
@@ -158,7 +158,7 @@ export class MessengerAccountLinkModel {
    * `(user, platform, tenant)` — so we never let the
    * `messenger_account_links_platform_tenant_user_unique` constraint surface
    * as an opaque DB error when the IM identity is already owned by another
-   * LobeHub user; we throw `MessengerAccountLinkConflictError` instead.
+   * Orvilo user; we throw `MessengerAccountLinkConflictError` instead.
    *
    * Returns the resulting link row.
    */
@@ -412,7 +412,7 @@ export class MessengerAccountLinkModel {
    * — never exposes credentials.
    */
   static findByUserIds = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     userIds: string[],
     scope: { workspaceId: string | null },
   ): Promise<SafeMessengerAccountLink[]> => {
@@ -431,7 +431,7 @@ export class MessengerAccountLinkModel {
   };
 
   static findByPlatformUser = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     platform: string,
     platformUserId: string,
     tenantId: string = GLOBAL_TENANT_ID,
@@ -457,7 +457,7 @@ export class MessengerAccountLinkModel {
    * above and therefore cannot accidentally expose ciphertext.
    */
   static findByPlatformUserWithCredentials = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     params: CredentialLookupParams,
     gateKeeper?: GateKeeper,
   ): Promise<DecryptedMessengerAccountLink | undefined> => {
@@ -486,7 +486,7 @@ export class MessengerAccountLinkModel {
    * or host migrations — server-only, never expose through TRPC.
    */
   static findAllByPlatformWithCredentials = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     platform: string,
     gateKeeper?: GateKeeper,
   ): Promise<DecryptedMessengerAccountLink[]> => {
@@ -499,7 +499,7 @@ export class MessengerAccountLinkModel {
 
   /** Static setter used by IM `/switch` (no user-scope context, but trusted by sender match). */
   static setActiveAgentById = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     linkId: string,
     agentId: string | null,
   ): Promise<SafeMessengerAccountLink | undefined> => {
@@ -514,13 +514,13 @@ export class MessengerAccountLinkModel {
   /**
    * Static scope switch used by IM `/switch`. Moves the link to a new active
    * scope (personal → `null`, or a workspace id) and sets the active agent to
-   * `agentId` — callers pass the scope's default agent (inbox/LobeAI) so
+   * `agentId` — callers pass the scope's default agent (inbox/OrviloAI) so
    * switching never leaves the session agent-less; pass `null` only when the
    * target scope has no agents. Caller must authorize access to the target
    * scope first.
    */
   static setActiveScope = async (
-    db: LobeChatDatabase,
+    db: OrviloDatabase,
     linkId: string,
     workspaceId: string | null,
     agentId: string | null = null,

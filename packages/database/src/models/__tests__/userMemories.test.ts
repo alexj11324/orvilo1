@@ -15,7 +15,7 @@ import {
   userMemoriesPreferences,
   users,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import type {
   BaseCreateUserMemoryParams,
   CreateUserMemoryContextParams,
@@ -25,7 +25,7 @@ import type {
 } from '../userMemory';
 import { UserMemoryModel } from '../userMemory';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = idGenerator('user');
 const userId2 = idGenerator('user');

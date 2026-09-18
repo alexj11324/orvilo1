@@ -112,7 +112,7 @@ describe('Metadata', () => {
         url: 'https://example.com/twitter',
       });
 
-      expect(result.site ?? '').not.toContain('lobehub');
+      expect(result.site ?? '').not.toContain('orvilo');
     });
   });
 

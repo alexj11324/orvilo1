@@ -2,13 +2,13 @@ import debug from 'debug';
 
 import { gatewayEnv } from '@/envs/gateway';
 
-const log = debug('lobe-server:message-gateway-client');
+const log = debug('orvilo-server:message-gateway-client');
 
 // ─── Types ───
 
 /**
  * Feature capabilities the gateway may use to filter inbound traffic at the
- * edge before forwarding to LobeHub. Advisory: the server-side routers stay
+ * edge before forwarding to Orvilo. Advisory: the server-side routers stay
  * authoritative, and gateways that don't understand a capability simply
  * forward everything (current behavior).
  */
@@ -66,8 +66,8 @@ export interface MessageGatewayStats {
  *
  * A gateway is a pure connection proxy — it only manages persistent
  * connections (WebSocket/long-polling) and forwards inbound events to
- * LobeHub's webhook. Outbound messaging is NOT routed through the gateway;
- * LobeHub calls platform REST APIs directly.
+ * Orvilo's webhook. Outbound messaging is NOT routed through the gateway;
+ * Orvilo calls platform REST APIs directly.
  *
  * Deliberately one class for every host: the deployments speak the same HTTP
  * protocol, and the reconcile sync diffs them uniformly. Per-host behaviour

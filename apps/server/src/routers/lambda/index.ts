@@ -1,5 +1,5 @@
 /**
- * This file contains the root router of Lobe Chat tRPC-backend
+ * This file contains the root router of Orvilo tRPC-backend
  */
 import { accountDeletionRouter } from '@/business/server/lambda-routers/accountDeletion';
 import { artifactShareRouter } from '@/business/server/lambda-routers/artifactShare';

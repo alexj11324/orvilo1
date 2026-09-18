@@ -4,7 +4,7 @@ description: 'Use for the OSS repository map, code-layer lookup, apps/packages/s
 user-invocable: false
 ---
 
-# LobeHub Project Overview
+# Orvilo Project Overview
 
 > The directory listings below are a **curated map of key locations**, not an
 > exhaustive tree. `packages/`, `src/store/`, route groups etc. grow over time —
@@ -12,8 +12,8 @@ user-invocable: false
 
 ## Project Description
 
-Open-source, modern-design AI Agent Workspace: **LobeHub** (previously LobeChat).
-This repo is the **open-source root** (`github.com/lobehub/lobehub`, package `@lobehub/lobehub`).
+Open-source, modern-design AI Agent Workspace: **Orvilo** (previously LobeChat).
+This repo is the **open-source root** (`github.com/alexj11324/orvilo1`, package `orvilo`).
 
 **Supported platforms:**
 
@@ -54,7 +54,7 @@ git submodules.
 ```
 (repo root)
 ├── apps/
-│   ├── cli/                  # LobeHub CLI
+│   ├── cli/                  # Orvilo CLI
 │   ├── desktop/              # Electron desktop app
 │   └── server/               # Next.js-backed server (`@/server/*` alias)
 │       └── src/
@@ -126,7 +126,7 @@ React UI → Store Actions → Client Service → TRPC Lambda → Server Service
 ## Note: Relationship to the Cloud Repo
 
 This open-source repo is consumed by a **separate, private cloud (SaaS) repo**
-as a git submodule mounted at `lobehub/`. The cloud repo provides:
+as a git submodule mounted at `aspectlylabs/`. The cloud repo provides:
 
 - **`src/business/{client,server}`** and **`packages/business/*`** implementations
   that override the stubs shipped here.
@@ -134,7 +134,7 @@ as a git submodule mounted at `lobehub/`. The cloud repo provides:
   `subscription/`), cloud-only TRPC routers (billing, budget, risk control, …),
   and Vercel cron routes under `src/app/(backend)/cron/`.
 - File-resolution order in cloud: `@/store/x` → cloud `src/store/x` first, then
-  `lobehub/packages/store/src/x`, then `lobehub/src/store/x`. **Cloud override wins.**
+  `aspectlylabs/packages/store/src/x`, then `aspectlylabs/src/store/x`. **Cloud override wins.**
 
-When working in this repo alone, ignore the cloud layer — the stubs in
+When working in this repo alone, ignore the cloud layer — the stubs
 `src/business/` and `packages/business/` are the source of truth here.

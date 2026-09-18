@@ -40,7 +40,7 @@ const logger = createLogger('controllers:RemoteServerConfigCtr');
 
 /**
  * Remote Server Configuration Controller
- * Used to manage custom remote LobeChat server configuration
+ * Used to manage custom remote Orvilo server configuration
  */
 export default class RemoteServerConfigCtr extends ControllerModule {
   static override readonly groupName = 'remoteServer';
@@ -462,7 +462,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
 
       // Construct request body
       const body = querystring.stringify({
-        client_id: 'lobehub-desktop',
+        client_id: 'orvilo-desktop',
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
       });
@@ -574,7 +574,7 @@ export default class RemoteServerConfigCtr extends ControllerModule {
     const session = electronSession.fromPartition(partition);
 
     session.webRequest.onBeforeSendHeaders(
-      { urls: [`https://lobehub.com/*`, `https://*.lobehub.com/*`] },
+      { urls: [`https://orvilo.aspectlylabs.com/*`, `https://*.orvilo.aspectlylabs.com/*`] },
       async (details, callback) => {
         const requestHeaders = { ...details.requestHeaders };
 

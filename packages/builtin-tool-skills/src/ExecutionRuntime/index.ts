@@ -140,7 +140,7 @@ const hasHiddenSegment = (rel: string): boolean =>
 /**
  * Case-insensitive lookup by `name`. The model frequently emits a different
  * casing than what's registered (e.g. `Agent-Browser` for `agent-browser`,
- * `lobehub` for `LobeHub`); normalize both sides before comparing.
+ * `orvilo` for `Orvilo`); normalize both sides before comparing.
  */
 const findByNameCI = <T extends { name: string }>(items: T[], target: string): T | undefined => {
   const lower = target.toLowerCase();

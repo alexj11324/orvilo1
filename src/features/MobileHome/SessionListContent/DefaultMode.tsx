@@ -10,8 +10,8 @@ import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
-import { type LobeAgentSession, type LobeSessions } from '@/types/session';
-import { LobeSessionType, SessionDefaultGroup } from '@/types/session';
+import { type OrviloAgentSession, type OrviloSessions } from '@/types/session';
+import { OrviloSessionType, SessionDefaultGroup } from '@/types/session';
 
 import CollapseGroup, { type CollapseGroupItem } from './CollapseGroup';
 import Actions from './CollapseGroup/Actions';
@@ -33,14 +33,14 @@ const DefaultMode = memo(() => {
   const customSessionGroups = useSessionStore(sessionSelectors.customSessionGroups, isEqual);
   const pinnedSessions = useSessionStore(sessionSelectors.pinnedSessions, isEqual);
 
-  const shouldHideSession = (session: LobeSessions[0]) =>
+  const shouldHideSession = (session: OrviloSessions[0]) =>
     !isMobile &&
-    session.type === LobeSessionType.Agent &&
-    Boolean((session as LobeAgentSession).config?.virtual);
+    session.type === OrviloSessionType.Agent &&
+    Boolean((session as OrviloAgentSession).config?.virtual);
 
-  const filterSessionsForView = (sessions: LobeSessions): LobeSessions => {
+  const filterSessionsForView = (sessions: OrviloSessions): OrviloSessions => {
     const filteredForDevice = isMobile
-      ? sessions.filter((session) => session.type !== LobeSessionType.Group)
+      ? sessions.filter((session) => session.type !== OrviloSessionType.Group)
       : sessions;
 
     if (isMobile) return filteredForDevice;

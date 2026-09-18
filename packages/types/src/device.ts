@@ -179,8 +179,8 @@ export const getWorkingDirEffectivePath = (
 
 /**
  * Derive the target directory for a new worktree: a sibling of the source repo
- * named `<repoName>-<branch>` (e.g. `/code/lobehub` + `feat/x` →
- * `/code/lobehub-feat-x`), matching the convention agents already use for their
+ * named `<repoName>-<branch>` (e.g. `/code/orvilo` + `feat/x` →
+ * `/code/orvilo-feat-x`), matching the convention agents already use for their
  * linked worktrees. Preserves the source path's separator so Windows paths stay
  * intact, and folds ref-illegal characters in the branch to `-` for the folder.
  *

@@ -189,7 +189,7 @@ describe('defaultReadExternalAssetForPublish', () => {
 
 describe('defaultCopyAssetForPublish', () => {
   it('copies an outside file into a nested workspace directory', async () => {
-    const to = path.join(root, '.lobe-artifacts', 'site', 'secret.txt');
+    const to = path.join(root, '.orvilo-artifacts', 'site', 'secret.txt');
     const result = await defaultCopyAssetForPublish({
       from: path.join(outside, 'secret.txt'),
       to,

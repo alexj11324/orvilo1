@@ -20,17 +20,17 @@ describe('getIdentityMemoryViewModel', () => {
     const vm = getIdentityMemoryViewModel(
       asAdd({
         details: 'Mentioned while discussing infra work',
-        summary: 'Maintains LobeHub',
+        summary: 'Maintains Orvilo',
         tags: ['open-source'],
         title: 'Trusted open-source maintainer',
         withIdentity: {
-          description: 'Maintains the LobeHub monorepo and reviews most infra PRs.',
+          description: 'Maintains the Orvilo monorepo and reviews most infra PRs.',
           episodicDate: '2026-08-03T10:00:00Z',
           extractedLabels: ['maintainer'],
           relationship: 'self',
           role: 'platform engineer',
           scoreConfidence: 0.9,
-          sourceEvidence: 'I maintain LobeHub.',
+          sourceEvidence: 'I maintain Orvilo.',
           type: 'professional',
         },
       }),
@@ -38,7 +38,7 @@ describe('getIdentityMemoryViewModel', () => {
 
     expect(vm).toMatchObject({
       confidence: 90,
-      description: 'Maintains the LobeHub monorepo and reviews most infra PRs.',
+      description: 'Maintains the Orvilo monorepo and reviews most infra PRs.',
       episodicDate: '2026-08-03',
       hasIdentityContent: true,
       identityType: 'professional',
@@ -46,7 +46,7 @@ describe('getIdentityMemoryViewModel', () => {
       labels: ['maintainer'],
       relationship: 'self',
       role: 'platform engineer',
-      sourceEvidence: 'I maintain LobeHub.',
+      sourceEvidence: 'I maintain Orvilo.',
       tags: ['open-source'],
     });
   });

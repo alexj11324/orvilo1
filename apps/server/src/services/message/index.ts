@@ -1,4 +1,4 @@
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { CompressionRepository } from '@orvilo/database';
 import {
   type CreateMessageParams,
@@ -24,7 +24,7 @@ interface QueryOptions {
 }
 
 const { createPrefixedTimingContext, logTiming, toTimingContext } = createTimingHelpers(
-  'lobe-server:chat:lobehub:timing',
+  'orvilo-server:chat:orvilo:timing',
 );
 
 const logMessageTiming = (
@@ -95,7 +95,7 @@ export class MessageService {
   private fileService: FileService;
   private compressionRepository: CompressionRepository;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.messageModel = new MessageModel(db, userId, workspaceId);
     this.fileService = new FileService(db, userId, workspaceId);
     this.compressionRepository = new CompressionRepository(db, userId, workspaceId);

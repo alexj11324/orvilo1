@@ -3,7 +3,7 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeZeroOneAI, params } from './index';
+import { OrviloZeroOneAI, params } from './index';
 
 const loadModelsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 
@@ -12,18 +12,18 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
 }));
 
 testProvider({
-  Runtime: LobeZeroOneAI,
+  Runtime: OrviloZeroOneAI,
   chatDebugEnv: 'DEBUG_ZEROONE_CHAT_COMPLETION',
   chatModel: 'yi-34b-chat-0205',
   defaultBaseURL: 'https://api.lingyiwanwu.com/v1',
   provider: ModelProvider.ZeroOne,
 });
 
-describe('LobeZeroOneAI - custom features', () => {
-  let instance: InstanceType<typeof LobeZeroOneAI>;
+describe('OrviloZeroOneAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloZeroOneAI>;
 
   beforeEach(() => {
-    instance = new LobeZeroOneAI({ apiKey: 'test_api_key' });
+    instance = new OrviloZeroOneAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

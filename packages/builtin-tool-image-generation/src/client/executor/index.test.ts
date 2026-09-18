@@ -109,8 +109,8 @@ describe('ImageGenerationExecutor', () => {
   it('does not expose hidden models while the store model list is hydrating', async () => {
     mocks.enabledImageModelList.mockReturnValue([]);
     mocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledImageAiProviders: [{ id: 'lobehub', name: 'LobeHub' }],
-      hiddenBuiltinModels: [{ id: 'hidden-image', providerId: 'lobehub' }],
+      enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
+      hiddenBuiltinModels: [{ id: 'hidden-image', providerId: 'orvilo' }],
     });
     mocks.getAiProviderModelList.mockImplementation(
       async (_providerId: string, options: { limit?: number }) => {
@@ -122,14 +122,14 @@ describe('ImageGenerationExecutor', () => {
 
     const result = await imageGenerationExecutor.listImageModels({
       limit: 1,
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
 
     expect(result).toMatchObject({
       state: {
         providers: [
           {
-            id: 'lobehub',
+            id: 'orvilo',
             models: [{ id: 'visible-image' }],
           },
         ],
@@ -142,10 +142,10 @@ describe('ImageGenerationExecutor', () => {
   it('uses the client default blocklist with an older runtime-state response', async () => {
     mocks.enabledImageModelList.mockReturnValue([]);
     mocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledImageAiProviders: [{ id: 'lobehub', name: 'LobeHub' }],
+      enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
     });
     mocks.loadDefaultHiddenBuiltinModels.mockResolvedValue([
-      { id: 'hidden-image', providerId: 'lobehub' },
+      { id: 'hidden-image', providerId: 'orvilo' },
     ]);
     mocks.getAiProviderModelList.mockResolvedValue([
       { id: 'hidden-image' },
@@ -154,12 +154,12 @@ describe('ImageGenerationExecutor', () => {
 
     const result = await imageGenerationExecutor.listImageModels({
       limit: 1,
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
 
     expect(result).toMatchObject({
       state: {
-        providers: [{ id: 'lobehub', models: [{ id: 'visible-image' }] }],
+        providers: [{ id: 'orvilo', models: [{ id: 'visible-image' }] }],
         totalModels: 1,
       },
       success: true,
@@ -169,13 +169,13 @@ describe('ImageGenerationExecutor', () => {
   it('fails closed when the runtime-state policy is unresolved', async () => {
     mocks.enabledImageModelList.mockReturnValue([]);
     mocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledImageAiProviders: [{ id: 'lobehub', name: 'LobeHub' }],
+      enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
       hiddenBuiltinModelsResolved: false,
     });
 
     const result = await imageGenerationExecutor.listImageModels({
       limit: 1,
-      provider: 'lobehub',
+      provider: 'orvilo',
     });
 
     expect(result).toMatchObject({

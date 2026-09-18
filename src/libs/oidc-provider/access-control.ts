@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import {
   oidcAccessTokens,
   oidcAuthorizationCodes,
@@ -52,7 +52,7 @@ type OIDCUserArtifactTable = (typeof OIDC_USER_ARTIFACT_TABLES)[number];
  * checks reject them, but deleting these rows prevents refresh/session flows
  * from minting replacement tokens after the account is disabled.
  */
-export const revokeOIDCArtifactsByUserId = async (db: LobeChatDatabase, userId: string) => {
+export const revokeOIDCArtifactsByUserId = async (db: OrviloDatabase, userId: string) => {
   await db.transaction(async (tx) => {
     const deleteByUserId = async (table: OIDCUserArtifactTable) =>
       tx.delete(table).where(eq(table.userId, userId));
@@ -64,7 +64,7 @@ export const revokeOIDCArtifactsByUserId = async (db: LobeChatDatabase, userId: 
 /**
  * Rejects stateless OIDC access tokens once their subject is no longer active.
  */
-export const assertOIDCUserActive = async (db: LobeChatDatabase, userId: string) => {
+export const assertOIDCUserActive = async (db: OrviloDatabase, userId: string) => {
   const [user] = await db
     .select({ banExpires: users.banExpires, banned: users.banned, id: users.id })
     .from(users)

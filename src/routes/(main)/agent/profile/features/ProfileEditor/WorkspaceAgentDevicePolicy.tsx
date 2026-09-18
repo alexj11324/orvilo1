@@ -4,7 +4,7 @@ import { Flexbox } from '@lobehub/ui';
 import type { SelectOptions } from '@lobehub/ui/base-ui';
 import { Select } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
-import type { DeviceExecutionTarget, DeviceListItem, LobeAgentAgencyConfig } from '@orvilo/types';
+import type { DeviceExecutionTarget, DeviceListItem, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { MonitorSmartphone } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
@@ -312,7 +312,7 @@ const WorkspaceAgentDevicePolicy = memo<WorkspaceAgentDevicePolicyProps>(
       : undefined;
 
     const saveAgencyConfig = useCallback(
-      (patch: Partial<LobeAgentAgencyConfig>) =>
+      (patch: Partial<OrviloAgentAgencyConfig>) =>
         updateAgentConfigById(agentId, { agencyConfig: patch }),
       [agentId, updateAgentConfigById],
     );

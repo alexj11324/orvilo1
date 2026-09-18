@@ -1,8 +1,8 @@
 ---
-title: LobeHub 环境变量配置指南
-description: 了解如何使用环境变量自定义设置 LobeHub 部署，包括访问密码、单点登录、basePath 设置等。
+title: Orvilo 环境变量配置指南
+description: 了解如何使用环境变量自定义设置 Orvilo 部署，包括访问密码、单点登录、basePath 设置等。
 tags:
-  - LobeHub
+  - Orvilo
   - 环境变量
   - 配置指南
   - 单点登录
@@ -12,14 +12,14 @@ tags:
 
 # 环境变量
 
-LobeHub 在部署时提供了一些额外的配置项，你可以使用环境变量进行自定义设置。
+Orvilo 在部署时提供了一些额外的配置项，你可以使用环境变量进行自定义设置。
 
 ## 通用变量
 
 ### `KEY_VAULTS_SECRET`
 
 - 类型：可选
-- 描述：添加访问 LobeHub 服务的密码，你可以设置一个长密码以防被爆破
+- 描述：添加访问 Orvilo 服务的密码，你可以设置一个长密码以防被爆破
 - 默认值：-
 - 示例：`Kix2wcUONd4CX51E/ZPAd36BqM4wzJgKjPtz2sGztqQ=`
 
@@ -43,33 +43,33 @@ LobeHub 在部署时提供了一些额外的配置项，你可以使用环境变
 ### `DEFAULT_AGENT_CONFIG`
 
 - 类型：可选
-- 描述：用于配置 LobeHub 默认助理的默认配置。它支持多种数据类型和结构，包括键值对、嵌套字段、数组值等。
+- 描述：用于配置 Orvilo 默认助理的默认配置。它支持多种数据类型和结构，包括键值对、嵌套字段、数组值等。
 - 默认值：`-`
-- 示例：`'model=gpt-4o;params.max_tokens=300;plugins=search-engine,lobe-image-designer'`
+- 示例：`'model=gpt-4o;params.max_tokens=300;plugins=search-engine,orvilo-image-designer'`
 
-`DEFAULT_AGENT_CONFIG` 用于配置 LobeHub 默认助理的默认配置。它支持多种数据类型和结构，包括键值对、嵌套字段、数组值等。下表详细说明了 `DEFAULT_AGENT_CONFIG` 环境变量的配置项、示例以及相应解释：
+`DEFAULT_AGENT_CONFIG` 用于配置 Orvilo 默认助理的默认配置。它支持多种数据类型和结构，包括键值对、嵌套字段、数组值等。下表详细说明了 `DEFAULT_AGENT_CONFIG` 环境变量的配置项、示例以及相应解释：
 
-| 配置项类型 | 示例                                                                                                                | 解释                                             |
-| ----- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| 基本键值对 | `model=gpt-4`                                                                                                     | 设置模型为 `gpt-4`。                                 |
-| 嵌套字段  | `tts.sttLocale=en-US`                                                                                             | 设置文本到语音服务的语言区域为 `en-US`。                       |
-| 数组    | `plugins=search-engine,lobe-image-designer`                                                                       | 启用 `search-engine` 和 `lobe-image-designer` 插件。 |
-| 中文逗号  | `plugins=search-engine，lobe-image-designer`                                                                       | 同上，演示支持中文逗号分隔。                                 |
-| 多个配置项 | `model=glm-4;provider=zhipu`                                                                                      | 设置模型为 `glm-4` 且模型服务商为 `zhipu`。                 |
-| 数字值   | `params.max_tokens=300`, `chatConfig.historyCount=5`                                                              | 设置最大令牌数为 `300`，设置历史消息条数为 5。                    |
-| 布尔值   | `chatConfig.enableHistoryCount=true`,`chatConfig.enableCompressThreshold=true`, `chatConfig.enableStreaming=true` | 启用历史消息数量限制，历史长度压缩阈值，流式输出。                      |
-| 特殊字符  | `inputTemplate="Hello; I am a bot;"`                                                                              | 设置输入模板为 `Hello; I am a bot;`。                  |
-| 错误处理  | `model=gpt-4;maxToken`                                                                                            | 忽略无效条目 `maxToken`，仅解析出 `model=gpt-4`。          |
-| 值覆盖   | `model=gpt-4;model=gpt-4o`                                                                                        | 如果键重复，使用最后一次出现的值，此处 `model` 的值为 `gpt-4o`。      |
+| 配置项类型 | 示例                                                                                                                | 解释                                               |
+| ----- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 基本键值对 | `model=gpt-4`                                                                                                     | 设置模型为 `gpt-4`。                                   |
+| 嵌套字段  | `tts.sttLocale=en-US`                                                                                             | 设置文本到语音服务的语言区域为 `en-US`。                         |
+| 数组    | `plugins=search-engine,orvilo-image-designer`                                                                     | 启用 `search-engine` 和 `orvilo-image-designer` 插件。 |
+| 中文逗号  | `plugins=search-engine，orvilo-image-designer`                                                                     | 同上，演示支持中文逗号分隔。                                   |
+| 多个配置项 | `model=glm-4;provider=zhipu`                                                                                      | 设置模型为 `glm-4` 且模型服务商为 `zhipu`。                   |
+| 数字值   | `params.max_tokens=300`, `chatConfig.historyCount=5`                                                              | 设置最大令牌数为 `300`，设置历史消息条数为 5。                      |
+| 布尔值   | `chatConfig.enableHistoryCount=true`,`chatConfig.enableCompressThreshold=true`, `chatConfig.enableStreaming=true` | 启用历史消息数量限制，历史长度压缩阈值，流式输出。                        |
+| 特殊字符  | `inputTemplate="Hello; I am a bot;"`                                                                              | 设置输入模板为 `Hello; I am a bot;`。                    |
+| 错误处理  | `model=gpt-4;maxToken`                                                                                            | 忽略无效条目 `maxToken`，仅解析出 `model=gpt-4`。            |
+| 值覆盖   | `model=gpt-4;model=gpt-4o`                                                                                        | 如果键重复，使用最后一次出现的值，此处 `model` 的值为 `gpt-4o`。        |
 
 相关阅读：
 
-- [\[RFC\] 022 - 环境变量配置默认助手参数](https://github.com/lobehub/lobehub/discussions/913)
+- \[\[RFC] 022 - 环境变量配置默认助手参数]
 
 ### `SYSTEM_AGENT`
 
 - 类型：可选
-- 描述：用于配置 LobeHub 系统助手（如主题生成、翻译等功能）的模型和供应商。
+- 描述：用于配置 Orvilo 系统助手（如主题生成、翻译等功能）的模型和供应商。
 - 默认值：`-`
 - 示例：`default=ollama/deepseek-v3` 或 `topic=openai/gpt-4,translation=anthropic/claude-sonnet-4-5-20250929`
 
@@ -103,7 +103,7 @@ LobeHub 在部署时提供了一些额外的配置项，你可以使用环境变
 ### `FEATURE_FLAGS`
 
 - 类型：可选
-- 描述：用于控制 LobeHub 的特性功能，支持多个功能标志，使用 `+` 增加一个功能，使用 `-` 来关闭一个功能，多个功能标志之间使用英文逗号 `,` 隔开，最外层建议添加引号 `"` 以避免解析错误。
+- 描述：用于控制 Orvilo 的特性功能，支持多个功能标志，使用 `+` 增加一个功能，使用 `-` 来关闭一个功能，多个功能标志之间使用英文逗号 `,` 隔开，最外层建议添加引号 `"` 以避免解析错误。
 - 默认值：`-`
 - 示例：`"-welcome_suggest"`
 
@@ -160,9 +160,9 @@ LobeHub 在部署时提供了一些额外的配置项，你可以使用环境变
 
 **应用场景**：
 
-LobeHub 会在以下场景执行 SSRF 安全检查：
+Orvilo 会在以下场景执行 SSRF 安全检查：
 
-1. **图片 / 视频 URL 转 Base64**：在处理媒体消息时（例如视觉模型、多模态模型），LobeHub 会将图片和视频 URL 转换为 base64 格式。此检查可防止恶意用户通过媒体 URL 访问内网资源。
+1. **图片 / 视频 URL 转 Base64**：在处理媒体消息时（例如视觉模型、多模态模型），Orvilo 会将图片和视频 URL 转换为 base64 格式。此检查可防止恶意用户通过媒体 URL 访问内网资源。
 
    举例：
 
@@ -214,7 +214,7 @@ SSRF_ALLOW_IP_ADDRESS_LIST=192.168.1.100,10.0.0.50
 
 <Callout type={'warning'}>
   当它指向与应用不同的域名时，该资源域名**必须**返回覆盖应用域名的 `Access-Control-Allow-Origin`
-  响应头。一旦配置了资源基础 URL，LobeHub 会在生成的 `<script>` 与 `<link>` 标签上带出
+  响应头。一旦配置了资源基础 URL，Orvilo 会在生成的 `<script>` 与 `<link>` 标签上带出
   `crossorigin`；缺少该响应头会让浏览器拒绝执行这些资源，页面直接白屏。它同时也让这些文件的脚本报错能带着真实堆栈进入错误监控，而不是一条无信息的
   `Script error.`。
 </Callout>
@@ -261,18 +261,6 @@ MULTIMODAL_UNDERSTANDING_IMAGE_FORMATS=png,jpeg,webp
 
 启用后，当当前模型没有对应的原生多模态能力但支持工具调用时，用户仍可上传音频、图片或视频，并由兜底多模态理解模型进行分析。文件上传本身仍需要部署中正常配置文件存储能力。
 
-## AI 图像
-
-### `AI_IMAGE_DEFAULT_IMAGE_NUM`
-
-- 类型：可选
-- 描述：设置 AI 图像生成的默认图片数量。用户仍可在个人设置中覆盖此值。
-- 默认值：`2`
-- 示例：`6`
-- 范围：`1-20`
-
-此环境变量允许管理员为其部署自定义默认图片生成数量。值必须在 1 到 20 之间。如果未设置，默认为 2。用户仍可在个人设置中调整此值。
-
 ## 插件服务
 
 ### `TOOL_NAME_MAX_LENGTH`
@@ -286,7 +274,7 @@ MULTIMODAL_UNDERSTANDING_IMAGE_FORMATS=png,jpeg,webp
 ### `PLUGINS_INDEX_URL`
 
 - 类型：可选
-- 描述：LobeHub 插件市场的索引地址，如果你自行部署了插件市场的服务，可以使用该变量来覆盖默认的插件市场地址
+- 描述：Orvilo 插件市场的索引地址，如果你自行部署了插件市场的服务，可以使用该变量来覆盖默认的插件市场地址
 - 默认值：`https://registry.npmmirror.com/@lobehub/plugins-index/v1/files/public`
 
 ### `PLUGIN_SETTINGS`
@@ -315,5 +303,5 @@ MULTIMODAL_UNDERSTANDING_IMAGE_FORMATS=png,jpeg,webp
 ### `AGENTS_INDEX_URL`
 
 - 类型：可选
-- 描述：LobeHub 助手市场的索引地址，如果你自行部署了助手市场的服务，可以使用该变量来覆盖默认的市场地址
+- 描述：Orvilo 助手市场的索引地址，如果你自行部署了助手市场的服务，可以使用该变量来覆盖默认的市场地址
 - 默认值：`https://registry.npmmirror.com/@lobehub/agents-index/v1/files/public`

@@ -34,7 +34,7 @@ const PULL_REQUEST = {
   state: 'MERGED',
   statusCheckRollup: [{ conclusion: 'SUCCESS' }],
   title: 'feat: import local sessions',
-  url: 'https://github.com/lobehub/lobehub/pull/17101',
+  url: 'https://github.com/alexj11324/orvilo1/pull/17101',
 };
 
 const NORMALIZED_PULL_REQUEST = {
@@ -47,7 +47,7 @@ const NORMALIZED_PULL_REQUEST = {
   reviewDecision: 'APPROVED',
   state: 'MERGED',
   title: 'feat: import local sessions',
-  url: 'https://github.com/lobehub/lobehub/pull/17101',
+  url: 'https://github.com/alexj11324/orvilo1/pull/17101',
 };
 
 interface ShellFixture {

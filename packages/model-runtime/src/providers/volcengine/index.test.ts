@@ -3,10 +3,10 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeVolcengineAI } from './index';
+import { OrviloVolcengineAI } from './index';
 
 testProvider({
-  Runtime: LobeVolcengineAI,
+  Runtime: OrviloVolcengineAI,
   provider: ModelProvider.Volcengine,
   defaultBaseURL: 'https://ark.cn-beijing.volces.com/api/v3',
   chatDebugEnv: 'DEBUG_VOLCENGINE_CHAT_COMPLETION',
@@ -19,11 +19,11 @@ testProvider({
   },
 });
 
-describe('LobeVolcengineAI - custom features', () => {
-  let instance: InstanceType<typeof LobeVolcengineAI>;
+describe('OrviloVolcengineAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloVolcengineAI>;
 
   beforeEach(() => {
-    instance = new LobeVolcengineAI({ apiKey: 'test_api_key' });
+    instance = new OrviloVolcengineAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );

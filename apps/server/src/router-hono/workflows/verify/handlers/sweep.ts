@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import { getServerDB } from '@/database/server';
 import { sweepStuckVerifyRuns } from '@/server/services/verify';
 
-const log = debug('lobe-server:workflows:verify:sweep');
+const log = debug('orvilo-server:workflows:verify:sweep');
 
 /**
  * Cron-style sweep for verification runs stranded in `verifying` — see

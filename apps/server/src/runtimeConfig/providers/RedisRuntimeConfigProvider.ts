@@ -10,7 +10,7 @@ import type {
   VersionedSnapshot,
 } from '../types';
 
-const log = debug('lobe:runtime-config');
+const log = debug('orvilo:runtime-config');
 
 interface CacheRecord<T> {
   expiresAt: number;

@@ -135,7 +135,7 @@ describe('Acceptance installation guide', () => {
     expect(auth.api.getSession).not.toHaveBeenCalled();
 
     const guide = await readFile('public/acceptance/skill.md', 'utf8');
-    expect(guide).toContain('npm install -g @lobehub/cli');
+    expect(guide).toContain('npm install -g @orvilo/cli');
     expect(guide).toContain('lh login');
     expect(guide).toContain('lh acceptance install');
     expect(guide).toContain('.agents/skills/acceptance/SKILL.md');

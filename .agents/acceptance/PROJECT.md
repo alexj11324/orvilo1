@@ -1,8 +1,8 @@
-# PROJECT.md — acceptance adapter for LobeHub
+# PROJECT.md — acceptance adapter for Orvilo
 
-This file is the **commands** layer of LobeHub's acceptance setup: every
-LobeHub-specific command, port, service, surface, and probe. The `acceptance`
-skill reads it — it never guesses LobeHub's commands.
+This file is the **commands** layer of Orvilo's acceptance setup: every
+Orvilo-specific command, port, service, surface, and probe. The `acceptance`
+skill reads it — it never guesses Orvilo's commands.
 
 Its two siblings:
 
@@ -18,7 +18,7 @@ the generic capture toolchain (`report-init.sh`, `cdp-screenshot.sh`,
 
 ## 1. Project summary
 
-LobeHub is a chat/agent product with a Next.js server, a Vite + React SPA, an
+Orvilo is a chat/agent product with a Next.js server, a Vite + React SPA, an
 Electron desktop shell, and a CLI (`lh`). Repo layout that matters for testing:
 
 - `apps/server/` — the Next.js backend (TRPC routers, services, modules, auth).
@@ -81,7 +81,7 @@ stale standalone install: a recently added workspace package fails to resolve �
 
 - **Required services:**
   - **Postgres + Redis** — `init-dev-env.sh setup-db` (managed Docker containers
-    `lobehub-agent-testing-postgres` / `lobehub-agent-testing-redis`; requires
+    `orvilo-agent-testing-postgres` / `orvilo-agent-testing-redis`; requires
     Docker Desktop). To use an existing DB instead, set `DATABASE_URL` /
     `REDIS_URL` and skip `setup-db` (run `migrate` + `seed-user` with those env).
   - **s3rver (local S3)** — `init-dev-env.sh s3` (terminal B). A hard prerequisite
@@ -125,9 +125,9 @@ stale standalone install: a recently added workspace package fails to resolve �
   Hatchet client and worker settings. Treat the dev-server terminal output as final when the
   port is non-standard, then `export SERVER_URL=http://localhost:<port>`.
 
-  In the cloud repo (this repo as the `lobehub/` submodule), worktree names map
+  In the cloud repo (this repo as the `aspectlylabs/` submodule), worktree names map
   to fallback `SERVER_URL` defaults only when `.env` and shell env give none:
-  `lobehub`→3010, `lobehub-cloud`→3020, `lobehub-cloud-N`→`3020+N`.
+  `orvilo`→3010, `orvilo-cloud`→3020, `orvilo-cloud-N`→`3020+N`.
 
 - **Cucumber note:** when running Cucumber against this dev server in the no-`.env`
   branch, pass the same script env into the test process (`eval "$(.agents/acceptance/scripts/init-dev-env.sh env)"`)
@@ -139,7 +139,7 @@ stale standalone install: a recently added workspace package fails to resolve �
 
 ## 3. Auth
 
-- **Test account:** `agent-testing@lobehub.com` / `TestPassword123!`, onboarding
+- **Test account:** `agent-testing@orvilo.aspectlylabs.com` / `TestPassword123!`, onboarding
   completed. Created by `init-dev-env.sh seed-user`, which also writes a local
   CLI API key to `.records/env/agent-testing-cli.env`.
 
@@ -161,14 +161,14 @@ stale standalone install: a recently added workspace package fails to resolve �
 
 - **Chrome-cookie fallback (Web only):** ordinary Chrome is only a source for
   copying the better-auth session cookie into the `agent-browser` session
-  (`lobehub-dev`) when seed auth is unavailable or `status --surface web` still
+  (`orvilo-dev`) when seed auth is unavailable or `status --surface web` still
   fails. Copy the `Cookie:` header from the Network tab (NOT `document.cookie` —
   HttpOnly cookies are invisible there), then `pbpaste | setup-auth.sh web`. Use
   `localhost`, not `127.0.0.1` (better-auth cookies are stored for `localhost`).
   Never do this against production. Full decision flow, seeded-login mechanics,
   and failure modes: `.agents/acceptance/references/auth.md`.
 
-- **Login-state check** is standardized — do NOT hand-roll a `window.__LOBE_STORES`
+- **Login-state check** is standardized — do NOT hand-roll a `window.__ORVILO_STORES`
   eval; use `.agents/acceptance/scripts/app-probe.sh auth` (returns `{ isSignedIn, userId }`,
   works for Electron CDP and web sessions via `AB_TARGET`).
 
@@ -180,18 +180,18 @@ stale standalone install: a recently added workspace package fails to resolve �
   (referred to as `$CLI`). CLI-side code changes take effect immediately.
 
 - Auth: see §3 CLI. Source the seeded profile first:
-  `source .records/env/agent-testing-cli.env`. It sets `LOBE_API_KEY` /
-  `LOBEHUB_CLI_API_KEY`, `LOBEHUB_SERVER=http://localhost:3010`, and
-  `LOBEHUB_CLI_HOME=.lobehub-dev` for isolated settings.
+  `source .records/env/agent-testing-cli.env`. It sets `ORVILO_API_KEY` /
+  `ORVILO_CLI_API_KEY`, `ORVILO_SERVER=http://localhost:3010`, and
+  `ORVILO_CLI_HOME=.orvilo-dev` for isolated settings.
 
 - **Local-run vs publish env distinction:** those seeded overrides are for
   _running_ the local backend test. They are WRONG for _publishing_ — a localhost
   run yields a verify URL nobody else can open, and the local stub S3 makes
   evidence upload fail. Strip the local credentials and CLI home for the publish
   step, while pinning Orvilo explicitly (the skill's Step 6 does
-  `env -u LOBE_API_KEY -u LOBEHUB_CLI_API_KEY -u LOBEHUB_CLI_HOME LOBEHUB_SERVER=https://orvilo.aspectlylabs.com lh verify ingest-report …`
+  `env -u ORVILO_API_KEY -u ORVILO_CLI_API_KEY -u ORVILO_CLI_HOME ORVILO_SERVER=https://orvilo.aspectlylabs.com lh verify ingest-report …`
   so `lh` cannot fall back to an upstream host and still uses the user's real
-  `~/.lobehub` login).
+  `~/.orvilo` login).
 
 - Standalone install: `cd apps/cli && pnpm install` (root install does not cover it).
 
@@ -215,7 +215,7 @@ stale standalone install: a recently added workspace package fails to resolve �
 
 - Base URL: `$SERVER_URL` (default `http://localhost:3010`).
 
-- agent-browser session: `lobehub-dev`. Seed it with `setup-auth.sh web-seed`.
+- agent-browser session: `orvilo-dev`. Seed it with `setup-auth.sh web-seed`.
   It is the sole **evidence** source (do not use ordinary Chrome screenshots or
   Network records as proof) — but not necessarily the driver: prefer the CLI
   run driver (§4 CLI) or direct endpoint calls to produce the state, and use
@@ -235,12 +235,12 @@ stale standalone install: a recently added workspace package fails to resolve �
 
 - Launch: `.agents/acceptance/scripts/electron-dev.sh start` — CDP port `9222`
   (idempotent; `status` / `stop` / `restart`; env `CDP_PORT`, `ELECTRON_LOG`,
-  `ELECTRON_WAIT_S`, `RENDERER_WAIT_S`, `LOBE_LOGIN_STATE_DIR`, `KEEP_DATA`,
+  `ELECTRON_WAIT_S`, `RENDERER_WAIT_S`, `ORVILO_LOGIN_STATE_DIR`, `KEEP_DATA`,
   `SKIP_LOGIN_SAVE`). Connect with `agent-browser --cdp 9222 snapshot -i`.
 - Stop: `.agents/acceptance/scripts/electron-dev.sh stop` — always use this;
   `pkill -f "Electron"` leaves helper processes (GPU, renderer, network) alive.
 - Login persistence: `stop` snapshots the login to
-  `~/.lobehub/agent-testing/electron-login`; `start` seeds each new instance
+  `~/.orvilo/agent-testing/electron-login`; `start` seeds each new instance
   from it (`login-status` inspects it, `save-login <id>` captures a live one).
   Sign in once, not once per run — and if an instance comes up signed out,
   **inject the login state directly** (restore the snapshot, or mint it via
@@ -269,15 +269,15 @@ in Codex. Do not automatically load or run it during other acceptance tasks.
 ### Bot channels (project skill)
 
 Bot-channel surfaces (Discord / Slack / Telegram / WeChat / Lark / QQ / iMessage)
-live in a separate LobeHub project skill, `agent-testing-bot`
+live in a separate Orvilo project skill, `agent-testing-bot`
 (`.agents/skills/agent-testing-bot/`). It extends this same Plan/Execute/Finish
 process and report pipeline for the native-app surfaces (osascript / bridge,
 macOS-only). Route bot tests there.
 
 ## 5. Project probes & quick navigation
 
-`.agents/acceptance/scripts/app-probe.sh` is the LobeHub fast path into app state —
-use it instead of hand-rolling `window.__LOBE_STORES` eval snippets. Targets
+`.agents/acceptance/scripts/app-probe.sh` is the Orvilo fast path into app state —
+use it instead of hand-rolling `window.__ORVILO_STORES` eval snippets. Targets
 default to Electron (`--cdp 9222`); set `AB_TARGET="--session <name>"` for web
 sessions.
 
@@ -310,7 +310,7 @@ Routes worth jumping to:
 | `/settings`                  | Settings                          |
 | `/community`                 | Discover / community              |
 
-The Zustand store is at `window.__LOBE_STORES` (not `__ZUSTAND_STORES__`); the
+The Zustand store is at `window.__ORVILO_STORES` (not `__ZUSTAND_STORES__`); the
 chat input is `contenteditable` (snapshot with `-C`). For deeper one-off state
 inspection, fall back to raw `agent-browser --cdp 9222 eval`. The agent-gateway
 closed-loop probe/dump/analyze tooling lives at
@@ -368,7 +368,7 @@ in `.agents/acceptance/references/agent-gateway.md`.
 
 ## Project references
 
-Deeper LobeHub-specific notes kept alongside the moved scripts:
+Deeper Orvilo-specific notes kept alongside the moved scripts:
 
 - `.agents/acceptance/references/auth.md` — per-surface auth mechanics, the seeded
   web-login flow, the Electron OAuth+PKCE sign-in recipe and token-rotation traps,
@@ -380,10 +380,10 @@ Deeper LobeHub-specific notes kept alongside the moved scripts:
   instance pool (N worktrees / parallel runs): per-instance CDP port, userData,
   Vite port, IPC id, the collision matrix, and the login-copy recipe.
 - `.agents/acceptance/references/probe-field-notes.md` — historical, detailed
-  LobeHub probe incidents and their original cross-reference ids.
+  Orvilo probe incidents and their original cross-reference ids.
 - `.agents/acceptance/references/common-mistakes-field-notes.md` — original
   incident narratives retained after the maintained catalogue was normalized.
 
 The living logs (`.agents/acceptance/common-mistakes.md`,
-`.agents/acceptance/probe-mock-patterns.md`) hold the LobeHub-specific probe/mock and
+`.agents/acceptance/probe-mock-patterns.md`) hold the Orvilo-specific probe/mock and
 mistake recipes; the generic layer lives in the installed skill's `references/`.

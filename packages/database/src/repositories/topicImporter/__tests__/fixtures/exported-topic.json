@@ -38,7 +38,7 @@
       "updatedAt": "2025-12-22T08:13:22.122Z"
     },
     {
-      "content": "我是 Lobe",
+      "content": "我是 Orvilo",
       "createdAt": "2025-12-22T08:13:22.811Z",
       "id": "msg_5",
       "model": "claude-sonnet-4-5-20250929",
@@ -70,7 +70,7 @@
           "type": "builtin",
           "apiName": "search",
           "arguments": "{\"query\": \"杭州天气\"}",
-          "identifier": "lobe-web-browsing"
+          "identifier": "orvilo-web-browsing"
         }
       ]
     },
@@ -84,7 +84,7 @@
       "plugin": {
         "apiName": "search",
         "arguments": "{\"query\": \"杭州天气\"}",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "pluginState": {
@@ -108,7 +108,7 @@
           "type": "builtin",
           "apiName": "search",
           "arguments": "{\"query\": \"杭州天气预报\"}",
-          "identifier": "lobe-web-browsing"
+          "identifier": "orvilo-web-browsing"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "plugin": {
         "apiName": "search",
         "arguments": "{\"query\": \"杭州天气预报\"}",
-        "identifier": "lobe-web-browsing",
+        "identifier": "orvilo-web-browsing",
         "type": "builtin"
       },
       "pluginState": {

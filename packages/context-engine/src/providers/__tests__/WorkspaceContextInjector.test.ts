@@ -39,7 +39,7 @@ describe('WorkspaceContextInjector', () => {
     const provider = new WorkspaceContextInjector({
       context: {
         appUrl: 'https://orvilo.aspectlylabs.com',
-        workspace: { slug: 'lobehub' },
+        workspace: { slug: 'orvilo' },
       },
     });
 
@@ -49,9 +49,9 @@ describe('WorkspaceContextInjector', () => {
     expect(result.messages[0].role).toBe('system');
     expect(result.messages[0].content).toContain('You are a helpful assistant.');
     expect(result.messages[0].content).toContain('<workspace_context>');
-    expect(result.messages[0].content).toContain('<workspace_slug>lobehub</workspace_slug>');
+    expect(result.messages[0].content).toContain('<workspace_slug>orvilo</workspace_slug>');
     expect(result.messages[0].content).toContain(
-      '<link_base>https://orvilo.aspectlylabs.com/lobehub</link_base>',
+      '<link_base>https://orvilo.aspectlylabs.com/orvilo</link_base>',
     );
     expect(result.metadata.workspaceContextInjected).toBe(true);
   });
@@ -70,7 +70,7 @@ describe('WorkspaceContextInjector', () => {
 
   it('skips injection when disabled', async () => {
     const provider = new WorkspaceContextInjector({
-      context: { appUrl: 'https://orvilo.aspectlylabs.com', workspace: { slug: 'lobehub' } },
+      context: { appUrl: 'https://orvilo.aspectlylabs.com', workspace: { slug: 'orvilo' } },
       enabled: false,
     });
 

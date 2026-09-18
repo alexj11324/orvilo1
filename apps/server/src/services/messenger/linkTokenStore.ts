@@ -5,7 +5,7 @@ import debug from 'debug';
 import { getMessengerLinkTokenTtl, type MessengerPlatform } from '@/config/messenger';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 
-const log = debug('lobe-server:messenger:link-token');
+const log = debug('orvilo-server:messenger:link-token');
 
 /** Lower-cased random token used as the URL `random_id` query param. */
 export type LinkToken = string;

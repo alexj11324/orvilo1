@@ -8,7 +8,7 @@ import { enqueueHatchetTask } from '@/libs/hatchet';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
-const log = debug('lobe-server:workflows:goal:sweep');
+const log = debug('orvilo-server:workflows:goal:sweep');
 
 /**
  * How long a Work may hold its operation lease before the sweep treats the goal

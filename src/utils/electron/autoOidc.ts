@@ -1,4 +1,4 @@
-export const DESKTOP_AUTO_OIDC_FIRST_OPEN_STORAGE_KEY = 'lobechat:desktop:auto-oidc:first-open:v1';
+export const DESKTOP_AUTO_OIDC_FIRST_OPEN_STORAGE_KEY = 'orvilo:desktop:auto-oidc:first-open:v1';
 
 /**
  * Whether the "desktop auto OIDC on first open" flow has been handled.
@@ -30,5 +30,3 @@ export const setDesktopAutoOidcFirstOpenHandled = () => {
     return false;
   }
 };
-
-

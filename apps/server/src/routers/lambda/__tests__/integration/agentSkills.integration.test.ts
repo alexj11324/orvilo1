@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { agentSkills } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +17,7 @@ import { agentSkillsRouter } from '../../agentSkills';
 import { cleanupTestUser, createTestAgent, createTestContext, createTestUser } from './setup';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -115,7 +115,7 @@ const mockFetch = vi.fn(function () {
 vi.stubGlobal('fetch', mockFetch);
 
 describe('Skill Router Integration Tests', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let agentDocumentModel: AgentDocumentModel;
   let userId: string;
 
@@ -516,11 +516,11 @@ describe('Skill Router Integration Tests', () => {
       }
 
       expect(result.mount?.namespace).toBe('agent');
-      expect(result.path).toBe('./lobe/skills/agent/skills/research-helper/SKILL.md');
+      expect(result.path).toBe('./orvilo/skills/agent/skills/research-helper/SKILL.md');
 
       const fileNode = await caller.readDocumentByPath({
         agentId,
-        path: './lobe/skills/agent/skills/research-helper/SKILL.md',
+        path: './orvilo/skills/agent/skills/research-helper/SKILL.md',
       });
 
       if (!fileNode) {
@@ -586,7 +586,7 @@ describe('Skill Router Integration Tests', () => {
       await expect(
         caller.deleteSkillByPath({
           agentId,
-          path: './lobe/skills/agent/skills/missing-skill/SKILL.md',
+          path: './orvilo/skills/agent/skills/missing-skill/SKILL.md',
         }),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
@@ -613,7 +613,7 @@ describe('Skill Router Integration Tests', () => {
         caller.updateSkillByPath({
           agentId,
           content: '# Updated',
-          path: './lobe/skills/agent/skills/research-helper/notes.md',
+          path: './orvilo/skills/agent/skills/research-helper/notes.md',
         }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
@@ -925,7 +925,7 @@ describe('Skill Router Integration Tests', () => {
     it('should update existing skill when re-importing from same GitHub path', async () => {
       mockGitHubInstance.parseRepoUrl.mockReturnValue({
         branch: 'main',
-        owner: 'lobehub',
+        owner: 'alexj11324',
         path: 'skills/demo',
         repo: 'skills',
       });
@@ -950,14 +950,14 @@ describe('Skill Router Integration Tests', () => {
 
       // First import
       const first = await caller.importFromGitHub({
-        gitUrl: 'https://github.com/lobehub/skills/tree/main/skills/demo',
+        gitUrl: 'https://github.com/alexj11324/skills/tree/main/skills/demo',
       });
       expect(first!.skill.name).toBe('Original Name');
       expect(first!.skill.content).toBe('# Original');
 
       // Re-import (should update)
       const second = await caller.importFromGitHub({
-        gitUrl: 'https://github.com/lobehub/skills/tree/main/skills/demo',
+        gitUrl: 'https://github.com/alexj11324/skills/tree/main/skills/demo',
       });
       expect(second!.skill.id).toBe(first!.skill.id); // Same skill updated
       expect(second!.skill.name).toBe('Updated Name');
@@ -1050,9 +1050,11 @@ description: A skill from URL
 
     it('should keep the market identifier stable when re-importing from market', async () => {
       mockMarketServiceInstance.getSkillDownloadUrl
-        .mockReturnValueOnce('https://market.lobehub.com/api/v1/skills/github.owner.repo/download')
         .mockReturnValueOnce(
-          'https://market.lobehub.com/api/v1/skills/github.owner.repo/download?version=1.0.0',
+          'https://market.aspectlylabs.com/api/v1/skills/github.owner.repo/download',
+        )
+        .mockReturnValueOnce(
+          'https://market.aspectlylabs.com/api/v1/skills/github.owner.repo/download?version=1.0.0',
         );
 
       mockSsrfSafeFetch.mockResolvedValue({

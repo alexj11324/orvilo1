@@ -52,7 +52,7 @@ NC_LOG="$TMP/nc.log"
 cat > "$TMP/bin/docker" <<'SH'
 #!/usr/bin/env bash
 if [[ "${1:-}" == ps ]]; then
-  printf 'lobehub-agent-testing-redis\n'
+  printf 'orvilo-agent-testing-redis\n'
 fi
 SH
 cat > "$TMP/bin/curl" <<'SH'

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import {
   agents,
   chatGroups,
@@ -27,7 +27,7 @@ vi.mock('@/server/services/file', () => ({
   }),
 }));
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -41,7 +41,7 @@ const createWorkspaceContext = (userId: string, workspaceId?: string) => ({
 });
 
 describe('Topic Share Router Integration Tests (workspace permission matrix)', () => {
-  let serverDB: LobeChatDatabase;
+  let serverDB: OrviloDatabase;
   let creatorId: string;
   let memberId: string;
   let ownerId: string;

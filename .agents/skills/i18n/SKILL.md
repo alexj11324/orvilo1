@@ -4,7 +4,7 @@ description: 'Use for user-facing strings and react-i18next locale keys, namespa
 user-invocable: false
 ---
 
-# LobeHub Internationalization Guide
+# Orvilo Internationalization Guide
 
 - Default language: English (en-US)
 - Framework: react-i18next

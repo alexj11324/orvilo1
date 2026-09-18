@@ -10,7 +10,7 @@ import { resolveAgentEvalRunWorkspace } from '@/server/workflows/agentEvalRun/ut
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-const log = debug('lobe-server:workflows:run-agent-trajectory');
+const log = debug('orvilo-server:workflows:run-agent-trajectory');
 
 /**
  * Run agent trajectory workflow - executes a single agent runtime call

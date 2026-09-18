@@ -6,7 +6,7 @@ import { authEnv } from '@/envs/auth';
 import { OIDCService } from '@/server/services/oidc';
 import type { OidcInteractionDetailsResponse, OidcInteractionErrorResponse } from '@/types/oidc';
 
-const log = debug('lobe-oidc:interaction');
+const log = debug('orvilo-oidc:interaction');
 
 export async function GET(request: NextRequest, props: { params: Promise<{ uid: string }> }) {
   if (!authEnv.ENABLE_OIDC) {

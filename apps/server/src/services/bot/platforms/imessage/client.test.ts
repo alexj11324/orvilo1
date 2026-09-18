@@ -35,7 +35,7 @@ const createClient = (settings: Record<string, unknown> = {}) =>
       platform: 'imessage',
       settings,
     },
-    { appUrl: 'https://lobehub.example.com', userId: 'user-1' },
+    { appUrl: 'https://orvilo.example.com', userId: 'user-1' },
   );
 
 beforeEach(() => {

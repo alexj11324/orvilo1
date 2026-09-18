@@ -1,4 +1,4 @@
-import type { LobeAgentChatConfig } from '@orvilo/types';
+import type { OrviloAgentChatConfig } from '@orvilo/types';
 import type { AiModelReasoningConfig, ExtendParamsType } from 'model-bank/aiModel';
 import { MODEL_REASONING_EXTEND_PARAMS } from 'model-bank/aiModel';
 
@@ -11,7 +11,7 @@ export interface ResolveEffectiveReasoningChatConfigContext {
    * user-level per-model settings, and legacy agent values must not leak into
    * outbound payloads.
    */
-  agentChatConfig: LobeAgentChatConfig;
+  agentChatConfig: OrviloAgentChatConfig;
   /**
    * The user's per-model-instance defaults (`ai_models.config.chatConfig`,
    * personal scope).
@@ -46,8 +46,8 @@ const pickReasoningFields = (config?: AiModelReasoningConfig | null): AiModelRea
  */
 export const resolveEffectiveReasoningChatConfig = (
   ctx: ResolveEffectiveReasoningChatConfigContext,
-): LobeAgentChatConfig => {
-  const base: LobeAgentChatConfig = { ...ctx.agentChatConfig };
+): OrviloAgentChatConfig => {
+  const base: OrviloAgentChatConfig = { ...ctx.agentChatConfig };
   for (const key of MODEL_REASONING_EXTEND_PARAMS) delete base[key];
 
   return {
@@ -84,7 +84,7 @@ export interface ModelExtendParams {
 type ThinkingLevelExtendParam =
   'thinkingLevel' | 'thinkingLevel2' | 'thinkingLevel3' | 'thinkingLevel4';
 
-type ThinkingLevelValue = NonNullable<LobeAgentChatConfig['thinkingLevel']>;
+type ThinkingLevelValue = NonNullable<OrviloAgentChatConfig['thinkingLevel']>;
 
 const DEFAULT_THINKING_LEVEL_BY_EXTEND_PARAM = {
   thinkingLevel: 'high',
@@ -133,7 +133,7 @@ const MODEL_THINKING_LEVEL_DEFAULTS: Partial<
  * Without this fallback, an old `thinking: 'enabled'` or `thinking: 'disabled'`
  * setting would be treated as unset by models that now expose the `enableReasoning` switch.
  */
-const resolveEnableReasoningValue = (chatConfig: LobeAgentChatConfig): boolean | undefined => {
+const resolveEnableReasoningValue = (chatConfig: OrviloAgentChatConfig): boolean | undefined => {
   if (Object.hasOwn(chatConfig, 'enableReasoning')) return chatConfig.enableReasoning;
 
   if (chatConfig.thinking === 'enabled') return true;
@@ -158,14 +158,14 @@ const isThinkingLevelExtendParam = (
 
 export function resolveDefaultThinkingLevelForModel<
   T extends ThinkingLevelExtendParam = 'thinkingLevel',
->(model?: string, extendParam?: T): NonNullable<LobeAgentChatConfig[T]> {
+>(model?: string, extendParam?: T): NonNullable<OrviloAgentChatConfig[T]> {
   const param = (extendParam ?? 'thinkingLevel') as T;
 
   if (!model) {
-    return DEFAULT_THINKING_LEVEL_BY_EXTEND_PARAM[param] as NonNullable<LobeAgentChatConfig[T]>;
+    return DEFAULT_THINKING_LEVEL_BY_EXTEND_PARAM[param] as NonNullable<OrviloAgentChatConfig[T]>;
   }
 
-  return resolveThinkingLevelDefault(model, param) as NonNullable<LobeAgentChatConfig[T]>;
+  return resolveThinkingLevelDefault(model, param) as NonNullable<OrviloAgentChatConfig[T]>;
 }
 
 /**
@@ -182,7 +182,7 @@ export const resolveDefaultEnableAdaptiveThinkingForModel = (
 };
 
 export interface ApplyModelExtendParamsContext {
-  chatConfig: LobeAgentChatConfig;
+  chatConfig: OrviloAgentChatConfig;
   /**
    * The model's supported extend params (`settings.extendParams` from its model card).
    */

@@ -63,7 +63,7 @@ export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTas
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
         <Icon icon={Play} size={12} style={{ color: cssVar.colorWarning }} />
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.lobe-task.apiName.runTask')}
+          {t('builtins.orvilo-task.apiName.runTask')}
         </span>
         {identifier && (
           <span className={styles.identifierChip} style={{ marginInlineStart: 4 }}>
@@ -74,7 +74,7 @@ export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTas
           <>
             <span className={styles.separator}>·</span>
             <span style={{ color: cssVar.colorTextTertiary, fontSize: 12 }}>
-              {t('builtins.lobe-task.run.continueTopic')}
+              {t('builtins.orvilo-task.run.continueTopic')}
             </span>
           </>
         )}

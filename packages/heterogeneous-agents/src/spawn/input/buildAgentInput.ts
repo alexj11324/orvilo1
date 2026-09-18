@@ -92,7 +92,7 @@ const resolvePathInputImagePaths = async (
   const materializeDir =
     options.imageMaterializeDir ||
     options.cacheDir ||
-    path.join(tmpdir(), 'lobehub-hetero-agent-images');
+    path.join(tmpdir(), 'orvilo-hetero-agent-images');
 
   const results = await Promise.allSettled(
     imageBlocks.map(async (block) => {

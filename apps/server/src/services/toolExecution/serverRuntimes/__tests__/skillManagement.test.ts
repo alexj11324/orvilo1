@@ -13,7 +13,7 @@ describe('skillManagementRuntime', () => {
    * The hidden skill-management runtime declares the builtin identifier used by the registry.
    */
   it('declares the skill maintainer runtime identifier', () => {
-    expect(skillManagementRuntime.identifier).toBe('lobe-skill-maintainer');
+    expect(skillManagementRuntime.identifier).toBe('orvilo-skill-maintainer');
   });
 
   /**

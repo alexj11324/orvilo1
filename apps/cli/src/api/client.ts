@@ -23,15 +23,15 @@ async function getAuthAndServer(): Promise<{
   headers: () => Record<string, string>;
   serverUrl: string;
 }> {
-  // LOBEHUB_JWT + LOBEHUB_SERVER env vars (used by server-side sandbox execution)
-  const envJwt = process.env.LOBEHUB_JWT;
+  // ORVILO_JWT + ORVILO_SERVER env vars (used by server-side sandbox execution)
+  const envJwt = process.env.ORVILO_JWT;
   if (envJwt) {
     const serverUrl = resolveServerUrl();
 
     return {
       // Read per request: `hetero exec` renews its operation token in place, and
       // its clients live for the whole run.
-      headers: () => ({ 'Oidc-Auth': process.env.LOBEHUB_JWT || envJwt }),
+      headers: () => ({ 'Oidc-Auth': process.env.ORVILO_JWT || envJwt }),
       serverUrl,
     };
   }

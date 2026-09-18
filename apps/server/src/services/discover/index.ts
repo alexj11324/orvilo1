@@ -71,7 +71,7 @@ import { AssistantStore } from '@/server/modules/AssistantStore';
 import { PluginStore } from '@/server/modules/PluginStore';
 import { MarketService } from '@/server/services/market';
 
-const log = debug('lobe-server:discover');
+const log = debug('orvilo-server:discover');
 
 const loadBuiltinModels = async () => {
   const { loadModels } = await import('@/business/client/model-bank/loadModels');
@@ -129,7 +129,7 @@ export class DiscoverService {
     const deviceId = await getDeviceId();
 
     const { client_id, client_secret } = await this.market.registerClient({
-      clientName: `LobeHub ${isDesktop ? 'Desktop' : 'Web'}`,
+      clientName: `Orvilo ${isDesktop ? 'Desktop' : 'Web'}`,
       clientType: isDesktop ? 'desktop' : 'web',
       deviceId,
       platform: isDesktop ? process.platform : userAgent,
@@ -1151,7 +1151,7 @@ export class DiscoverService {
     if (builtinTool) {
       log('getPluginDetail: found builtin tool for identifier=%s', identifier);
       const plugin: DiscoverPluginDetail = {
-        author: 'LobeHub',
+        author: 'Orvilo',
         avatar: builtinTool.manifest.meta.avatar || '',
         category: undefined,
         createdAt: '',
@@ -1181,7 +1181,7 @@ export class DiscoverService {
         avatar: typeof composioTool.icon === 'string' ? composioTool.icon : '',
         category: undefined,
         createdAt: '',
-        description: `LobeHub Mcp Server: ${composioTool.label}`,
+        description: `Orvilo Mcp Server: ${composioTool.label}`,
         homepage: 'https://composio.dev',
         identifier: composioTool.identifier,
         manifest: undefined,
@@ -1355,7 +1355,7 @@ export class DiscoverService {
       try {
         const normalizedLocale = normalizeLocale(locale);
         const readmeUrl = urlJoin(
-          'https://raw.githubusercontent.com/lobehub/lobe-chat/refs/heads/main/docs/usage/providers',
+          'https://raw.githubusercontent.com/alexj11324/orvilo1/refs/heads/main/docs/usage/providers',
           normalizedLocale === 'zh-CN' ? `${identifier}.zh-CN.mdx` : `${identifier}.mdx`,
         );
         log('getProviderDetail: readme URL=%s', readmeUrl);

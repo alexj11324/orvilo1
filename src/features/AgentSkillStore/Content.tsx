@@ -15,9 +15,9 @@ import Item from './Item';
 
 /**
  * "Connect new tool" store for a single agent — a trimmed, agent-scoped mirror
- * of SkillStore's first (LobeHub) tab. v1 lists Composio connectors; "connected"
+ * of SkillStore's first (Orvilo) tab. v1 lists Composio connectors; "connected"
  * reflects the AGENT's own connectors, and connecting binds a fresh account to
- * the agent (agent_id). LobeHub-OAuth / custom-MCP tabs are intentionally left
+ * the agent (agent_id). Orvilo-OAuth / custom-MCP tabs are intentionally left
  * out for now.
  */
 const AgentSkillStoreContent = memo<{ agentId: string }>(({ agentId }) => {

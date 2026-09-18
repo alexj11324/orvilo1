@@ -119,4 +119,4 @@ export const WORKSPACE_FILE_TREE_GIT_IGNORED_OUTPUT_NAMES = [
  * file-upload drop zone ignores it — it only reacts to `Files` — and the drop
  * handler turns it into a `<localFile />` mention instead of uploading a blob.
  */
-export const WORKSPACE_FILE_DRAG_MIME = 'application/x-lobe-workspace-file';
+export const WORKSPACE_FILE_DRAG_MIME = 'application/x-orvilo-workspace-file';

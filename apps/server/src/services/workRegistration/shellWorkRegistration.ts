@@ -7,7 +7,7 @@ import type { WorkModel } from '@/database/models/work';
 
 import { SHELL_WORK_SCANNERS } from './shellWorkScanners';
 
-const log = debug('lobe-server:shell-work-registration');
+const log = debug('orvilo-server:shell-work-registration');
 
 /**
  * Shell tool surfaces whose raw command text may carry Work-registerable CLI
@@ -20,7 +20,7 @@ const log = debug('lobe-server:shell-work-registration');
  * - claude-code `Bash` — stdout is the tool MESSAGE CONTENT (the adapter
  *   persists the tool_result text as content, no structured state); failures
  *   surface via the plugin `error` column (is_error), never an exit code.
- * - lobe-local-system `runCommand` — device-executed homogeneous tool; its
+ * - orvilo-local-system `runCommand` — device-executed homogeneous tool; its
  *   `RunCommandState` carries `stdout` / `output` / `exitCode` / `success`.
  *
  * The github SKILL's surfaces (structured tools + sandbox `runCommand`) are
@@ -80,7 +80,7 @@ const stringField = (record: Record<string, unknown> | undefined, key: string) =
 /**
  * Register external Works from the shell tool calls of a completed operation:
  * heterogeneous CLI agents (codex / claude-code) and the device
- * `lobe-local-system` tool run CLIs like `gh` through their OWN shell
+ * `orvilo-local-system` tool run CLIs like `gh` through their OWN shell
  * surfaces, which never pass the skill-tool registration hook — so their
  * Work-worthy runs are recovered here, at completion time, from the persisted
  * command text + stdout (same completion-scan pattern as file-Work

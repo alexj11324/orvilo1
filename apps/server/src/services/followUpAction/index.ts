@@ -8,22 +8,22 @@ import {
 import type { FollowUpChip, FollowUpExtractInput, FollowUpExtractResult } from '@orvilo/types';
 import debug from 'debug';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorMessage } from '@/database/utils/shareVisitor';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { RawResponseSchema } from './schema';
 
-const log = debug('lobe-server:follow-up-action-service');
+const log = debug('orvilo-server:follow-up-action-service');
 
 const EMPTY_RESULT = (messageId: string): FollowUpExtractResult => ({ chips: [], messageId });
 
 export class FollowUpActionService {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

@@ -25,7 +25,7 @@ const ShareTheme = memo<PropsWithChildren>(({ children }) => {
         defaultAppearance={appearance}
         defaultThemeMode={appearance}
         style={{ height: '100%', minHeight: '100dvh', width: '100%' }}
-        theme={{ cssVar: { key: 'lobe-vars' } }}
+        theme={{ cssVar: { key: 'orvilo-vars' } }}
       >
         <App style={{ height: '100%' }}>
           <LazyMotion features={domMax}>{children}</LazyMotion>

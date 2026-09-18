@@ -5,7 +5,7 @@ import { clampToolIdentifier } from '@/utils/clampToolIdentifier';
 import { uuid } from '@/utils/uuid';
 
 import * as EXPORT_TABLES from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 import { DeprecatedDataImporterRepos } from './deprecated';
 
@@ -267,12 +267,12 @@ const IMPORT_TABLE_CONFIG: TableImportConfig[] = [
 export class DataImporterRepos {
   private userId: string;
   private workspaceId?: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private deprecatedDataImporterRepos: DeprecatedDataImporterRepos;
   private idMaps: Record<string, Record<string, string>> = {};
   private conflictRecords: Record<string, { field: string; value: any }[]> = {};
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.db = db;

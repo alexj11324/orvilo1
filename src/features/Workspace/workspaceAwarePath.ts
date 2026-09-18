@@ -136,3 +136,21 @@ export const buildWorkspaceAwarePath = (
 
   return `/${activeSlug}${to}`;
 };
+
+/**
+ * Inverse of {@link buildWorkspaceAwarePath}: drops a leading `/${slug}` so
+ * callers comparing the pathname against scope-relative destinations —
+ * mobile tab-bar routes, the active-tab key — see the same path regardless
+ * of which scope mirrored it. The strip is purely positional: only an exact
+ * `/${slug}` or `/${slug}/…` prefix comes off; everything else passes
+ * through unchanged.
+ */
+export const stripWorkspaceSlug = (
+  pathname: string,
+  activeSlug: string | null | undefined,
+): string => {
+  if (!activeSlug) return pathname;
+  if (pathname === `/${activeSlug}`) return '/';
+  if (pathname.startsWith(`/${activeSlug}/`)) return pathname.slice(activeSlug.length + 1);
+  return pathname;
+};

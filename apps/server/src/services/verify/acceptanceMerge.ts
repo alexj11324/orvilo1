@@ -11,9 +11,9 @@ import type {
   VerifyRunItem,
 } from '@/database/schemas/verify';
 import { verifyRuns } from '@/database/schemas/verify';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
-const log = debug('lobe-server:verify-acceptance-merge');
+const log = debug('orvilo-server:verify-acceptance-merge');
 
 /** What a merge moved — surfaced to the caller so the UI can report it. */
 export interface AcceptanceMergeSummary {
@@ -141,7 +141,7 @@ export const remapPlanItem = (
 };
 
 interface MergeRoundsParams {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   source: AcceptanceItem;
   target: AcceptanceItem;
   userId: string;

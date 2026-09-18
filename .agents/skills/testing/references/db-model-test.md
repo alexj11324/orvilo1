@@ -61,10 +61,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { users } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { MyModel } from '../myModel';
 
-const serverDB: LobeChatDatabase = await getTestDB(); // top-level await is fine
+const serverDB: OrviloDatabase = await getTestDB(); // top-level await is fine
 
 const userId = 'my-model-test-user';
 const otherUserId = 'other-user';

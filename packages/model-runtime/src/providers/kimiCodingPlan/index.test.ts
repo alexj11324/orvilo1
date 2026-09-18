@@ -4,7 +4,7 @@ import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as debugStreamModule from '../../utils/debugStream';
-import { LobeKimiCodingPlanAI, params } from './index';
+import { OrviloKimiCodingPlanAI, params } from './index';
 
 const provider = ModelProvider.KimiCodingPlan;
 const defaultBaseURL = 'https://api.kimi.com/coding';
@@ -15,10 +15,10 @@ const invalidErrorType = 'InvalidProviderAPIKey';
 // Mock the console.error to avoid polluting test output
 vi.spyOn(console, 'error').mockImplementation(() => {});
 
-let instance: InstanceType<typeof LobeKimiCodingPlanAI>;
+let instance: InstanceType<typeof OrviloKimiCodingPlanAI>;
 
 beforeEach(() => {
-  instance = new LobeKimiCodingPlanAI({ apiKey: 'test' });
+  instance = new OrviloKimiCodingPlanAI({ apiKey: 'test' });
 
   // Use vi.spyOn to mock the Anthropic messages.create call.
   vi.spyOn(instance['client'].messages, 'create').mockResolvedValue(new ReadableStream() as any);
@@ -28,29 +28,29 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LobeKimiCodingPlanAI', () => {
+describe('OrviloKimiCodingPlanAI', () => {
   describe('init', () => {
     it('should correctly initialize with an API key', async () => {
-      const instance = new LobeKimiCodingPlanAI({ apiKey: 'test_api_key' });
-      expect(instance).toBeInstanceOf(LobeKimiCodingPlanAI);
+      const instance = new OrviloKimiCodingPlanAI({ apiKey: 'test_api_key' });
+      expect(instance).toBeInstanceOf(OrviloKimiCodingPlanAI);
       expect(instance.baseURL).toBe(defaultBaseURL);
     });
 
     it('should correctly initialize with a baseURL', async () => {
-      const instance = new LobeKimiCodingPlanAI({
+      const instance = new OrviloKimiCodingPlanAI({
         apiKey: 'test_api_key',
         baseURL: 'https://api.custom.com/coding',
       });
-      expect(instance).toBeInstanceOf(LobeKimiCodingPlanAI);
+      expect(instance).toBeInstanceOf(OrviloKimiCodingPlanAI);
       expect(instance.baseURL).toBe('https://api.custom.com/coding');
     });
 
     it('should correctly initialize with different id', async () => {
-      const instance = new LobeKimiCodingPlanAI({
+      const instance = new OrviloKimiCodingPlanAI({
         apiKey: 'test_api_key',
         id: 'abc',
       });
-      expect(instance).toBeInstanceOf(LobeKimiCodingPlanAI);
+      expect(instance).toBeInstanceOf(OrviloKimiCodingPlanAI);
       expect(instance['id']).toBe('abc');
     });
   });
@@ -663,7 +663,7 @@ describe('LobeKimiCodingPlanAI', () => {
 
       it('should throw InvalidProviderAPIKey if no apiKey is provided', async () => {
         try {
-          new LobeKimiCodingPlanAI({});
+          new OrviloKimiCodingPlanAI({});
         } catch (e) {
           expect(e).toEqual({ errorType: invalidErrorType });
         }
@@ -718,7 +718,7 @@ describe('LobeKimiCodingPlanAI', () => {
       it('should desensitize custom baseURL in error message', async () => {
         // Arrange
         const apiError = { status: 401 };
-        const customInstance = new LobeKimiCodingPlanAI({
+        const customInstance = new OrviloKimiCodingPlanAI({
           apiKey: 'test',
           baseURL: 'https://api.custom.com/coding',
         });

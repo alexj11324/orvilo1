@@ -126,7 +126,7 @@ const ProviderSection = memo<{ provider: ImageGenerationProviderModels }>(({ pro
           {showProviderId && <span className={styles.providerId}>{provider.id}</span>}
         </Flexbox>
         <span className={styles.count}>
-          {t('builtins.lobe-image-generation.render.modelList.models', {
+          {t('builtins.orvilo-image-generation.render.modelList.models', {
             count: provider.models.length,
           })}
         </span>
@@ -152,12 +152,12 @@ const ProviderSection = memo<{ provider: ImageGenerationProviderModels }>(({ pro
                 }
               >
                 {model.description ||
-                  t('builtins.lobe-image-generation.render.modelList.noDescription')}
+                  t('builtins.orvilo-image-generation.render.modelList.noDescription')}
               </span>
               {parameterKeys.length > 0 && (
                 <span className={styles.parameters}>
                   <span className={styles.parametersLabel}>
-                    {t('builtins.lobe-image-generation.render.modelList.parameters')}:{' '}
+                    {t('builtins.orvilo-image-generation.render.modelList.parameters')}:{' '}
                   </span>
                   {parameterKeys.join(', ')}
                 </span>
@@ -176,8 +176,8 @@ const ProviderSection = memo<{ provider: ImageGenerationProviderModels }>(({ pro
             onClick={() => setExpanded((value) => !value)}
           >
             {expanded
-              ? t('builtins.lobe-image-generation.render.modelList.showLess')
-              : t('builtins.lobe-image-generation.render.modelList.showMore', {
+              ? t('builtins.orvilo-image-generation.render.modelList.showLess')
+              : t('builtins.orvilo-image-generation.render.modelList.showMore', {
                   count: remainingCount,
                 })}
           </Button>
@@ -199,7 +199,7 @@ export const ListImageModelsRender = memo<
       <Alert
         showIcon
         description={pluginError.message}
-        title={t('builtins.lobe-image-generation.render.modelList.failed')}
+        title={t('builtins.orvilo-image-generation.render.modelList.failed')}
         type={'error'}
       />
     );
@@ -212,7 +212,7 @@ export const ListImageModelsRender = memo<
   if (providers.length === 0) {
     return (
       <Text as={'div'} className={styles.empty}>
-        {t('builtins.lobe-image-generation.render.modelList.empty')}
+        {t('builtins.orvilo-image-generation.render.modelList.empty')}
       </Text>
     );
   }

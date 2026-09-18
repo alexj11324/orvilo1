@@ -92,7 +92,7 @@ describe('ProxyConnectionTester', () => {
           'https://www.google.com',
           expect.objectContaining({
             headers: expect.objectContaining({
-              'User-Agent': 'LobeChat-Desktop/1.0.0',
+              'User-Agent': 'Orvilo-Desktop/1.0.0',
             }),
             signal: expect.any(AbortSignal),
           }),

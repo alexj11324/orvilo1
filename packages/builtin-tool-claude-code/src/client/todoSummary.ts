@@ -28,8 +28,8 @@ export const computeTodoSummary = (args?: TodoWriteArgs): TodoSummary => {
 };
 
 export const TODO_SUMMARY_LABEL_KEYS = {
-  allDone: 'builtins.lobe-claude-code.todoWrite.allDone',
-  completedStep: 'builtins.lobe-claude-code.todoWrite.completedStep',
-  idle: 'builtins.lobe-claude-code.todoWrite.todos',
-  inProgress: 'builtins.lobe-claude-code.todoWrite.currentStep',
+  allDone: 'builtins.orvilo-claude-code.todoWrite.allDone',
+  completedStep: 'builtins.orvilo-claude-code.todoWrite.completedStep',
+  idle: 'builtins.orvilo-claude-code.todoWrite.todos',
+  inProgress: 'builtins.orvilo-claude-code.todoWrite.currentStep',
 } as const;

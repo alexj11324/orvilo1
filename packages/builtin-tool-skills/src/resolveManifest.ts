@@ -18,7 +18,7 @@ const EXEC_API_NAMES = new Set<string>([
 
 /**
  * APIs hidden when a device is routed — the sandbox-oriented surface makes no
- * sense there. `runCommand` duplicates `lobe-local-system` runCommand on the
+ * sense there. `runCommand` duplicates `orvilo-local-system` runCommand on the
  * device, and `exportFile` exists to pull artifacts OUT of the sandbox; device
  * runs leave artifacts on the user's machine, where they already are. This
  * also restores the original desktop manifest shape, which only ever exposed
@@ -36,7 +36,7 @@ const DEVICE_HIDDEN_API_NAMES = new Set<string>([
  *
  * - `device`: a device is routed — `execScript` runs ON it: the skill archive
  *   is downloaded/extracted device-side and the command runs in the skill
- *   directory. LobeHub-managed credentials are deliberately NOT injected into
+ *   directory. Orvilo-managed credentials are deliberately NOT injected into
  *   devices (`injectCredsToSandbox` only targets the sandbox).
  * - `device-unrouted`: the user chose local-device execution but no device is
  *   routed this run — the model must disclose that instead of silently
@@ -51,7 +51,7 @@ const EXEC_ENV_PREAMBLES: Partial<
   Record<NonNullable<BuiltinToolResolveContext['executionEnv']>, string>
 > = {
   'device':
-    "Execution environment: the user's selected device, not a cloud sandbox. The skill archive is auto-extracted on the device and the command runs in the skill directory. LobeHub-managed credentials (e.g. `GITHUB_TOKEN`) are NOT injected.",
+    "Execution environment: the user's selected device, not a cloud sandbox. The skill archive is auto-extracted on the device and the command runs in the skill directory. Orvilo-managed credentials (e.g. `GITHUB_TOKEN`) are NOT injected.",
   'device-unrouted':
     'Fallback execution environment: an isolated cloud sandbox. The user chose local-device execution but no device is routed this run — say so before running commands that assume their machine.',
   'sandbox': "Execution environment: an isolated cloud sandbox, not the user's machine.",
@@ -68,7 +68,7 @@ const EXEC_ENV_FACTS: Partial<
   Record<NonNullable<BuiltinToolResolveContext['executionEnv']>, string>
 > = {
   'device':
-    'A local device is routed: `execScript` runs skill scripts on the device (archive auto-extracted, cwd = skill directory); use `lobe-local-system` runCommand for other shell commands. LobeHub-managed credentials are not available on the device.',
+    'A local device is routed: `execScript` runs skill scripts on the device (archive auto-extracted, cwd = skill directory); use `orvilo-local-system` runCommand for other shell commands. Orvilo-managed credentials are not available on the device.',
   'device-unrouted':
     'No local device is routed; shell commands execute in the cloud sandbox this run.',
 };
@@ -109,7 +109,7 @@ const resolveUnroutedTexts = (
 };
 
 /**
- * Context-aware manifest for the lobe-skills tool: prefixes the exec-class API
+ * Context-aware manifest for the orvilo-skills tool: prefixes the exec-class API
  * descriptions with where they actually run, derived from the resolved
  * execution plan (see `BuiltinToolResolveContext.executionEnv`). Device runs
  * additionally drop the sandbox-only APIs (`runCommand` / `exportFile`).

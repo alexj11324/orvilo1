@@ -39,7 +39,7 @@ ${formatPageContentContext(document.snapshot)}
 ${snapshot}
 <guidance>
 The current conversation is not inside the page editor. Do not use PageAgent editor tools.
-When the user asks to continue editing this topic document, use lobe-agent-documents tools instead.
+When the user asks to continue editing this topic document, use orvilo-agent-documents tools instead.
 Use the injected current document snapshot when it is sufficient for the requested change.
 Call readDocument with format="xml" only when the injected snapshot is missing, stale, or insufficient.
 Prefer modifyNodes with agent_document_id when it is present.

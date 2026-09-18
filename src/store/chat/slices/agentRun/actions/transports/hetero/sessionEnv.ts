@@ -1,7 +1,7 @@
 /**
  * Provenance env for a heterogeneous agent's child process.
  *
- * An external CLI agent (Claude Code / Codex) runs blind to the LobeHub session
+ * An external CLI agent (Claude Code / Codex) runs blind to the Orvilo session
  * it was launched from: it has no way to name the topic it lives in, so anything
  * it publishes — a verification report, an artifact, a trace — lands detached
  * from the conversation that asked for it. Echoing the ids into the child env
@@ -12,23 +12,23 @@
  * Read by `lh verify ingest-report`, which stamps them onto the report's
  * `metadata.origin`.
  */
-export interface LobeHubSessionEnvIds {
+export interface OrviloSessionEnvIds {
   agentId?: string | null;
   operationId?: string | null;
   topicId?: string | null;
 }
 
 /** Only the ids that actually resolved — never an env var set to "undefined". */
-export const buildLobeHubSessionEnv = ({
+export const buildOrviloSessionEnv = ({
   agentId,
   operationId,
   topicId,
-}: LobeHubSessionEnvIds): Record<string, string> => {
+}: OrviloSessionEnvIds): Record<string, string> => {
   const env: Record<string, string> = {};
 
-  if (agentId) env.LOBEHUB_AGENT_ID = agentId;
-  if (operationId) env.LOBEHUB_OPERATION_ID = operationId;
-  if (topicId) env.LOBEHUB_TOPIC_ID = topicId;
+  if (agentId) env.ORVILO_AGENT_ID = agentId;
+  if (operationId) env.ORVILO_OPERATION_ID = operationId;
+  if (topicId) env.ORVILO_TOPIC_ID = topicId;
 
   return env;
 };

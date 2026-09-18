@@ -5,7 +5,7 @@
  * Note: AgentStateManager and StreamEventManager will automatically use
  * InMemory implementations when Redis is not available (test environment).
  */
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agents, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
@@ -23,7 +23,7 @@ import { createMockResponsesAPIStream } from './helpers';
 process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
 
 // Mock getServerDB to return our test database instance
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -43,7 +43,7 @@ vi.mock('@/server/services/file', () => ({
 
 let mockResponsesCreate: any;
 
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let userId: string;
 let testAgentId: string;
 let testAgent2Id: string;

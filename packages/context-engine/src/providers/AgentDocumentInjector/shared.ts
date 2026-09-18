@@ -147,7 +147,7 @@ function formatSize(doc: Pick<AgentContextDocument, 'content' | 'contentCharCoun
  * front of the prompt, so any string that drifts as wall-clock time passes
  * invalidates the provider-side prompt cache on every request even when no
  * document changed. An absolute date only changes when the document itself
- * is updated. See https://github.com/lobehub/lobehub/issues/15624
+ * is updated. See
  */
 function formatUpdatedDate(at: Date | string | undefined): string {
   if (!at) return '—';

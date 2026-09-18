@@ -15,7 +15,7 @@ describe('chat helper', () => {
     useAiInfraStore.setState({ enabledAiModels: [] });
   });
 
-  it('should resolve LobeHub routed model abilities by model id fallback', () => {
+  it('should resolve Orvilo routed model abilities by model id fallback', () => {
     useAiInfraStore.setState({
       enabledAiModels: [
         {
@@ -27,12 +27,12 @@ describe('chat helper', () => {
       ],
     });
 
-    expect(isCanUseVision('gemini-3.1-flash-lite-preview', ModelProvider.LobeHub)).toBe(true);
-    expect(isCanUseVideo('gemini-3.1-flash-lite-preview', ModelProvider.LobeHub)).toBe(true);
-    expect(isCanUseAudio('gemini-3.1-flash-lite-preview', ModelProvider.LobeHub)).toBe(true);
+    expect(isCanUseVision('gemini-3.1-flash-lite-preview', ModelProvider.Orvilo)).toBe(true);
+    expect(isCanUseVideo('gemini-3.1-flash-lite-preview', ModelProvider.Orvilo)).toBe(true);
+    expect(isCanUseAudio('gemini-3.1-flash-lite-preview', ModelProvider.Orvilo)).toBe(true);
   });
 
-  it('should not fallback across non-LobeHub providers', () => {
+  it('should not fallback across non-Orvilo providers', () => {
     useAiInfraStore.setState({
       enabledAiModels: [
         {
@@ -64,7 +64,7 @@ describe('chat helper', () => {
     expect(getRuntimeModelKnowledgeCutoff('gpt-4o', ModelProvider.OpenAI)).toBe('2023-10');
   });
 
-  it('should resolve LobeHub routed model knowledge cutoff by model id fallback', () => {
+  it('should resolve Orvilo routed model knowledge cutoff by model id fallback', () => {
     useAiInfraStore.setState({
       enabledAiModels: [
         {
@@ -77,11 +77,11 @@ describe('chat helper', () => {
     });
 
     expect(
-      getRuntimeModelKnowledgeCutoff('gemini-3.1-flash-lite-preview', ModelProvider.LobeHub),
+      getRuntimeModelKnowledgeCutoff('gemini-3.1-flash-lite-preview', ModelProvider.Orvilo),
     ).toBe('2025-01');
   });
 
-  it('should not fallback model knowledge cutoff across non-LobeHub providers', () => {
+  it('should not fallback model knowledge cutoff across non-Orvilo providers', () => {
     useAiInfraStore.setState({
       enabledAiModels: [
         {

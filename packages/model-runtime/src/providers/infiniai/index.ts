@@ -7,7 +7,7 @@ export interface InfiniAIModelCard {
   id: string;
 }
 
-export const LobeInfiniAI = createOpenAICompatibleRuntime({
+export const OrviloInfiniAI = createOpenAICompatibleRuntime({
   baseURL: 'https://cloud.infini-ai.com/maas/v1',
   chatCompletion: {
     handlePayload: (payload) => {

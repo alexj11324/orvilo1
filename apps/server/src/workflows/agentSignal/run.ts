@@ -47,7 +47,7 @@ import { runStep } from '@/server/workflows/step';
 
 import type { AgentSignalWorkflowRunPayload } from './types';
 
-const log = debug('lobe-server:workflows:agent-signal:run');
+const log = debug('orvilo-server:workflows:agent-signal:run');
 
 type WorkflowHydrationDiagnostic =
   | ClientRuntimeCompleteHydrationDiagnostic

@@ -1,7 +1,7 @@
 'use client';
 
 import type { IEditor } from '@lobehub/editor';
-import type { EditorState as LobehubEditorState } from '@lobehub/editor/react';
+import type { EditorState as OrviloEditorState } from '@lobehub/editor/react';
 import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
@@ -462,7 +462,7 @@ export class EditorActionImpl {
     }
   };
 
-  setEditorState = (editorState: LobehubEditorState | undefined): void => {
+  setEditorState = (editorState: OrviloEditorState | undefined): void => {
     this.#set({ editorState }, false, n('setEditorState'));
   };
 

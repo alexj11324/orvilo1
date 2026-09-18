@@ -141,7 +141,7 @@ export const importChromeLoginData = async (browserSession: Session): Promise<nu
 
   const sourceProfile = path.join(userData, profile);
   const cookiePath = await findCookiePath(sourceProfile);
-  const temporaryUserData = await mkdtemp(path.join(tmpdir(), 'lobehub-chrome-import-'));
+  const temporaryUserData = await mkdtemp(path.join(tmpdir(), 'orvilo-chrome-import-'));
   const temporaryProfile = path.join(temporaryUserData, profile);
   let chromeProcess: ReturnType<typeof spawn> | undefined;
 

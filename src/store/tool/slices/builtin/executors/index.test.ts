@@ -1,4 +1,4 @@
-import { LobeAgentApiName, LobeAgentIdentifier } from '@orvilo/builtin-tool-lobe-agent';
+import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { WebOnboardingApiName, WebOnboardingIdentifier } from '@orvilo/builtin-tool-web-onboarding';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -54,7 +54,7 @@ describe('builtin executor registry', () => {
   it('registers multimodal understanding executor APIs', async () => {
     await registerBuiltinToolExecutors();
 
-    await expect(hasExecutor(LobeAgentIdentifier, LobeAgentApiName.analyzeMedia)).resolves.toBe(
+    await expect(hasExecutor(OrviloAgentIdentifier, OrviloAgentApiName.analyzeMedia)).resolves.toBe(
       true,
     );
   }, 30_000);
@@ -77,8 +77,8 @@ describe('builtin executor registry', () => {
 
     await expect(
       invokeExecutor(
-        LobeAgentIdentifier,
-        LobeAgentApiName.callSubAgent,
+        OrviloAgentIdentifier,
+        OrviloAgentApiName.callSubAgent,
         { description: 'Nested work', instruction: 'Do nested work' },
         baseContext,
       ),

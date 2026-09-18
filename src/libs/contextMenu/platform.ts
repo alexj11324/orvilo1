@@ -1,5 +1,5 @@
-export type LobeEnv = NonNullable<Window['lobeEnv']>;
+export type OrviloEnv = NonNullable<Window['orviloEnv']>;
 
-export const getLobeEnv = (): LobeEnv | undefined => window.lobeEnv;
+export const getOrviloEnv = (): OrviloEnv | undefined => window.orviloEnv;
 
-export const isDarwinDesktop = (): boolean => getLobeEnv()?.platform === 'darwin';
+export const isDarwinDesktop = (): boolean => getOrviloEnv()?.platform === 'darwin';

@@ -15,7 +15,7 @@ import {
   useConversationStore,
 } from './store';
 
-const log = debug('lobe-render:features:Conversation');
+const log = debug('orvilo-render:features:Conversation');
 
 const assistantLikeRoles = new Set(['assistant', 'assistantGroup', 'supervisor']);
 

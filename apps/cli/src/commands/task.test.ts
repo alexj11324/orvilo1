@@ -70,18 +70,18 @@ describe('task create', () => {
 
   it('prints a clickable workspace task URL in human output', async () => {
     mockResolveWorkspaceId.mockReturnValue('ws-1');
-    mockGetWorkspace.mockResolvedValue({ id: 'ws-1', slug: 'lobehub' });
+    mockGetWorkspace.mockResolvedValue({ id: 'ws-1', slug: 'orvilo' });
     mockCreateTask.mockResolvedValue({
-      data: { id: 'task_2', identifier: 'LOBE-321', name: 'Workspace task' },
+      data: { id: 'task_2', identifier: 'ORVILO-321', name: 'Workspace task' },
       message: 'Task created',
       success: true,
     });
 
     await run('--instruction', 'Do the workspace thing');
 
-    expect(mockLogInfo).toHaveBeenCalledWith(expect.stringContaining('LOBE-321'));
+    expect(mockLogInfo).toHaveBeenCalledWith(expect.stringContaining('ORVILO-321'));
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('https://app.example.com/lobehub/task/LOBE-321'),
+      expect.stringContaining('https://app.example.com/orvilo/task/ORVILO-321'),
     );
   });
 });

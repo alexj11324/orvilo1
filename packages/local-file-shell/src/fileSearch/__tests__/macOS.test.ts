@@ -19,13 +19,13 @@ describe('buildFilenameKeywordExpression', () => {
   });
 
   it('splits whitespace-separated keywords into AND-ed substring terms', () => {
-    // Critical fix: a free-form keyword string from the LLM (e.g. "LobeHub
+    // Critical fix: a free-form keyword string from the LLM (e.g. "Orvilo
     // Financial Statement") used to require that exact phrase to appear in the
     // filename. Real files reorder words and use _/-/. as separators, so the
     // literal phrase almost never matched. AND-ing per-token substrings keeps
     // each token literal but removes the order constraint.
-    expect(buildFilenameKeywordExpression('LobeHub Financial Statement')).toBe(
-      '(kMDItemFSName == "*LobeHub*"cd && kMDItemFSName == "*Financial*"cd && kMDItemFSName == "*Statement*"cd)',
+    expect(buildFilenameKeywordExpression('Orvilo Financial Statement')).toBe(
+      '(kMDItemFSName == "*Orvilo*"cd && kMDItemFSName == "*Financial*"cd && kMDItemFSName == "*Statement*"cd)',
     );
   });
 

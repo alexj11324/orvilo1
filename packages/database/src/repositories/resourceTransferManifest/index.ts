@@ -11,7 +11,7 @@ import {
   projects,
   tasks,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import {
   collectBoundDeviceIds,
   sanitizeAgencyConfigsForWorkspace,
@@ -62,7 +62,7 @@ export interface MemberTransferManifest {
  * Read-only; authorization is the caller's responsibility.
  */
 export const buildMemberTransferManifest = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   params: {
     recipientId: string;
     resourceId: string;

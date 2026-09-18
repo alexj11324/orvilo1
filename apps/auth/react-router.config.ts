@@ -9,7 +9,7 @@ export default {
   buildDirectory: process.env.AUTH_BUILD_DIR || 'build',
   prerender: [...PRERENDER_ROUTES],
   // Lazy discovery hits /__manifest, which the gateway routes to the default
-  // target (app) on the shared lobehub.com origin — the HTML reply breaks
+  // target (app) on the shared orvilo.aspectlylabs.com origin — the HTML reply breaks
   // client navigations. The route table is tiny; ship it with the document.
   routeDiscovery: { mode: 'initial' },
   ssr: false,

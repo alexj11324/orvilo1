@@ -2,15 +2,15 @@ import type { EvalTestCaseContent } from '@orvilo/types';
 import { and, count, eq, sql } from 'drizzle-orm';
 
 import { agentEvalTestCases, type NewAgentEvalTestCase } from '../../schemas';
-import { type LobeChatDatabase } from '../../type';
+import { type OrviloDatabase } from '../../type';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 export class AgentEvalTestCaseModel {
   private userId: string;
-  private db: LobeChatDatabase;
+  private db: OrviloDatabase;
   private workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

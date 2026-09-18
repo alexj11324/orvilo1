@@ -1,4 +1,4 @@
-import type { LobeAgentChatConfig, OpenAIChatMessage } from '@orvilo/types';
+import type { OpenAIChatMessage, OrviloAgentChatConfig } from '@orvilo/types';
 import { z } from 'zod';
 
 // ==================== Chat Service Types ====================
@@ -89,7 +89,7 @@ export const TranslateServiceParamsSchema = z.object({
  */
 export interface MessageGenerationParams {
   agentId?: string;
-  chatConfig?: Partial<LobeAgentChatConfig>;
+  chatConfig?: Partial<OrviloAgentChatConfig>;
   conversationHistory: Array<{
     content: string;
     role: 'user' | 'assistant' | 'system';

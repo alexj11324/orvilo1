@@ -8,6 +8,15 @@ class ProjectService {
   acceptCompletion = async (id: string, comment?: string) =>
     lambdaClient.project.acceptCompletion.mutate({ comment, id });
 
+  /**
+   * Bind a knowledge base to a project. The server treats this as a reference:
+   * it validates that the caller may manage the project *and* can see the
+   * knowledge base, then upserts the `project_knowledge_bases` row — so adding
+   * an already-bound library is idempotent rather than an error.
+   */
+  addKnowledgeBase = async (id: string, knowledgeBaseId: string) =>
+    lambdaClient.project.addKnowledgeBase.mutate({ id, knowledgeBaseId });
+
   listAll = async (params: { statuses?: ProjectStatus[] } = {}) => {
     const projects = [];
     let offset = 0;
@@ -50,6 +59,14 @@ class ProjectService {
 
   rejectCompletion = async (id: string, comment: string) =>
     lambdaClient.project.rejectCompletion.mutate({ comment, id });
+
+  /**
+   * Drop a project's reference to a knowledge base. This deletes the binding
+   * row only — the library, its files and any other project's reference to it
+   * are untouched, which is why the UI asks for confirmation in those terms.
+   */
+  removeKnowledgeBase = async (id: string, knowledgeBaseId: string) =>
+    lambdaClient.project.removeKnowledgeBase.mutate({ id, knowledgeBaseId });
 
   reopen = async (id: string) => lambdaClient.project.reopen.mutate({ id });
 

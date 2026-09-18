@@ -779,14 +779,14 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
       '  Run the Acceptance inside this Task, not after it: drive the real product surface and submit each artifact as soon as the criterion it proves is provable.',
     );
     taskLines.push(
-      '  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `lh verify plan state "$LOBEHUB_OPERATION_ID" --json` if you have a shell.',
+      '  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `lh verify plan state "$ORVILO_OPERATION_ID" --json` if you have a shell.',
     );
     // Two builder shapes, two toolchains. The portable `acceptance` skill is
     // pulled to disk by external CLI builders and is deliberately absent from
     // `builtinSkills`, so naming it unconditionally hands the in-product agent
     // an instruction it cannot act on.
     taskLines.push(
-      '  With a shell: `lh acceptance install` gives you the `acceptance` skill, and `lh acceptance run result submit --operation "$LOBEHUB_OPERATION_ID" --item <checkItemId> --type screenshot --file <path>` uploads a captured artifact.',
+      '  With a shell: `lh acceptance install` gives you the `acceptance` skill, and `lh acceptance run result submit --operation "$ORVILO_OPERATION_ID" --item <checkItemId> --type screenshot --file <path>` uploads a captured artifact.',
     );
     taskLines.push(
       '  Without a shell: drive the product with your own tools and cite artifacts by id through `submitEvidence`.',

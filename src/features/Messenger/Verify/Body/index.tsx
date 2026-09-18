@@ -10,7 +10,7 @@ import TelegramBody from './Telegram';
 
 interface BodyProps {
   existingLink?: ExistingLink | null;
-  lobeAccount: string;
+  orviloAccount: string;
   platform: MessengerPlatform;
   platformMeta?: PlatformMeta;
   randomId: string;

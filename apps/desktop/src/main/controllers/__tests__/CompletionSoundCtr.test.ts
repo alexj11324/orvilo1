@@ -54,7 +54,7 @@ describe('local completion sound settings', () => {
     mocks.getPath.mockReturnValue(directory);
     mocks.setResourcesDir(directory);
     await mkdir(path.join(directory, 'sounds'), { recursive: true });
-    await writeFile(path.join(directory, 'sounds', 'lobehub-complete.aiff'), 'FORM');
+    await writeFile(path.join(directory, 'sounds', 'orvilo-complete.aiff'), 'FORM');
     mocks.getSoundSetting.mockResolvedValue('enabled');
     saved = undefined;
     controller = new CompletionSoundCtr(application);
@@ -129,7 +129,7 @@ describe('local completion sound settings', () => {
   it('keeps the in-app chime off by default while a preview still plays', async () => {
     expect(await controller.getPlayback()).toEqual({ play: false, volume: 0.7 });
     expect(await controller.getPlayback({ preview: true })).toEqual({
-      builtin: 'lobehub',
+      builtin: 'orvilo',
       play: true,
       volume: 0.7,
     });
@@ -145,12 +145,12 @@ describe('local completion sound settings', () => {
   });
 
   it('installs the banner sound into the user Sounds folder only when our chime is picked', async () => {
-    const target = path.join(directory, 'Library', 'Sounds', 'lobehub-complete.aiff');
+    const target = path.join(directory, 'Library', 'Sounds', 'orvilo-complete.aiff');
     expect(await controller.getNotificationSoundFile()).toBeUndefined();
     await expect(readFile(target)).rejects.toThrow();
 
-    await controller.setSettings({ notificationSound: 'lobehub' });
-    expect(await controller.getNotificationSoundFile()).toBe('lobehub-complete.aiff');
+    await controller.setSettings({ notificationSound: 'orvilo' });
+    expect(await controller.getNotificationSoundFile()).toBe('orvilo-complete.aiff');
     expect(await readFile(target, 'utf8')).toBe('FORM');
   });
 
@@ -158,7 +158,7 @@ describe('local completion sound settings', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       await rm(path.join(directory, 'sounds'), { force: true, recursive: true });
-      await controller.setSettings({ notificationSound: 'lobehub' });
+      await controller.setSettings({ notificationSound: 'orvilo' });
       expect(await controller.getNotificationSoundFile()).toBeUndefined();
     } finally {
       consoleError.mockRestore();

@@ -46,7 +46,7 @@ const moveArgsTargetEntityFile = (rawArguments: string): boolean => {
  * shapes must be handled (mirrors `messageSelectors.collectToolInvocations`):
  * raw in-memory assistant rows carrying OpenAI-style `tool_calls` (wire names
  * follow `identifier____apiName[____type]`, see ToolNameResolver;
- * `lobe-cloud-sandbox` and its apiNames survive normalization verbatim), and
+ * `orvilo-cloud-sandbox` and its apiNames survive normalization verbatim), and
  * conversation-flow grouped nodes — the runtime re-queries `state.messages`
  * with `flatten: true` after every tool batch (see `callToolsBatch`), which
  * folds this run's turn into `assistantGroup`/`supervisor` nodes whose tool
@@ -72,7 +72,7 @@ const moveArgsTargetEntityFile = (rawArguments: string): boolean => {
  * - `exportFile` calls targeting an entity path count too — code-generated
  *   artifacts (python-pptx / reportlab / …) never appear as edits, and their
  *   export is exactly what completion will register as a file Work. This
- *   includes the skills tool's export surface (`lobe-skills` exportFile),
+ *   includes the skills tool's export surface (`orvilo-skills` exportFile),
  *   which skill-driven flows (e.g. the pptx skill) use instead of the sandbox
  *   tool's.
  * - Any malformed shape returns false → today's early-publish behavior.

@@ -2,7 +2,7 @@ import { inArray } from 'drizzle-orm';
 
 import { RbacModel } from '@/database/models/rbac';
 import { agentsToSessions, messages, topics } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 import {
   assertCanPerformResourceAction,
   canPerformResourceAction,
@@ -12,7 +12,7 @@ import {
 import { getWorkspaceAgentParentGroupIds } from './workspaceAgentGuard';
 
 interface ConversationGuardCtx {
-  db: LobeChatDatabase;
+  db: OrviloDatabase;
   grantedPermissions?: readonly string[];
   userId: string;
   workspaceId?: string | null;

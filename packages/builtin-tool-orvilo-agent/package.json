@@ -1,0 +1,35 @@
+{
+  "name": "@orvilo/builtin-tool-orvilo-agent",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./client/executor": "./src/client/executor/index.ts",
+    "./planRuntime": "./src/PlanRuntime/index.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --silent='passed-only'",
+    "test:update": "vitest -u"
+  },
+  "dependencies": {
+    "@orvilo/builtin-tool-user-interaction": "workspace:*",
+    "@orvilo/const": "workspace:*",
+    "@orvilo/prompts": "workspace:*",
+    "@orvilo/shared-tool-ui": "workspace:*",
+    "@orvilo/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@lobehub/editor": "^4",
+    "@lobehub/ui": "^5",
+    "antd": "^6",
+    "antd-style": "*",
+    "lucide-react": "*",
+    "react": "*"
+  }
+}

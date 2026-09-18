@@ -16,7 +16,7 @@ import type {
   NewAgentOperation,
 } from '../schemas/agentOperations';
 import { agentOperations } from '../schemas/agentOperations';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { notShareVisitorTopicRef } from '../utils/shareVisitor';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
@@ -113,11 +113,11 @@ export interface RecordOperationCompletionParams {
 }
 
 export class AgentOperationModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

@@ -12,7 +12,7 @@ const token = (payload: Record<string, unknown>) =>
 const operationToken = (expiresAt: number) =>
   token({ exp: Math.floor(expiresAt / 1000), purpose: 'hetero-operation' });
 
-const originalJwt = process.env.LOBEHUB_JWT;
+const originalJwt = process.env.ORVILO_JWT;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -21,8 +21,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  if (originalJwt === undefined) delete process.env.LOBEHUB_JWT;
-  else process.env.LOBEHUB_JWT = originalJwt;
+  if (originalJwt === undefined) delete process.env.ORVILO_JWT;
+  else process.env.ORVILO_JWT = originalJwt;
 });
 
 /**
@@ -33,7 +33,7 @@ afterEach(() => {
  */
 describe('createOperationTokenRenewal', () => {
   it('swaps in a renewed token before the current one expires, then keeps renewing', async () => {
-    process.env.LOBEHUB_JWT = operationToken(NOW + 4 * HOUR);
+    process.env.ORVILO_JWT = operationToken(NOW + 4 * HOUR);
     const renewed = [operationToken(NOW + 7 * HOUR), operationToken(NOW + 10 * HOUR)];
     const renew = vi
       .fn()
@@ -48,17 +48,17 @@ describe('createOperationTokenRenewal', () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(renew).toHaveBeenCalledWith('op-1');
-    expect(process.env.LOBEHUB_JWT).toBe(renewed[0]);
+    expect(process.env.ORVILO_JWT).toBe(renewed[0]);
 
     await vi.advanceTimersByTimeAsync(3 * HOUR);
     expect(renew).toHaveBeenCalledTimes(2);
-    expect(process.env.LOBEHUB_JWT).toBe(renewed[1]);
+    expect(process.env.ORVILO_JWT).toBe(renewed[1]);
 
     renewal.stop();
   });
 
   it('retries a transient failure instead of letting the token lapse', async () => {
-    process.env.LOBEHUB_JWT = operationToken(NOW + 4 * HOUR);
+    process.env.ORVILO_JWT = operationToken(NOW + 4 * HOUR);
     const next = operationToken(NOW + 8 * HOUR);
     const renew = vi
       .fn()
@@ -71,13 +71,13 @@ describe('createOperationTokenRenewal', () => {
 
     await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(renew).toHaveBeenCalledTimes(2);
-    expect(process.env.LOBEHUB_JWT).toBe(next);
+    expect(process.env.ORVILO_JWT).toBe(next);
 
     renewal.stop();
   });
 
   it('stops once the server says the operation can no longer be renewed', async () => {
-    process.env.LOBEHUB_JWT = operationToken(NOW + 4 * HOUR);
+    process.env.ORVILO_JWT = operationToken(NOW + 4 * HOUR);
     const renew = vi.fn().mockRejectedValue({ data: { code: 'CONFLICT' }, message: 'ended' });
 
     const renewal = createOperationTokenRenewal({ operationId: 'op-1', renew });
@@ -89,8 +89,10 @@ describe('createOperationTokenRenewal', () => {
   });
 
   it('does not poll a server that has no renewal endpoint', async () => {
-    process.env.LOBEHUB_JWT = operationToken(NOW + 4 * HOUR);
-    const renew = vi.fn().mockRejectedValue({ data: { code: 'NOT_FOUND' }, message: 'No procedure' });
+    process.env.ORVILO_JWT = operationToken(NOW + 4 * HOUR);
+    const renew = vi
+      .fn()
+      .mockRejectedValue({ data: { code: 'NOT_FOUND' }, message: 'No procedure' });
 
     const renewal = createOperationTokenRenewal({ operationId: 'op-1', renew });
     await vi.advanceTimersByTimeAsync(3 * HOUR);
@@ -101,7 +103,7 @@ describe('createOperationTokenRenewal', () => {
   });
 
   it('leaves a desktop session token to its own refresh flow', async () => {
-    process.env.LOBEHUB_JWT = token({ exp: Math.floor((NOW + HOUR) / 1000), sub: 'user-1' });
+    process.env.ORVILO_JWT = token({ exp: Math.floor((NOW + HOUR) / 1000), sub: 'user-1' });
     const renew = vi.fn();
 
     const renewal = createOperationTokenRenewal({ operationId: 'op-1', renew });
@@ -112,7 +114,7 @@ describe('createOperationTokenRenewal', () => {
   });
 
   it('never renews after the run has stopped it', async () => {
-    process.env.LOBEHUB_JWT = operationToken(NOW + 4 * HOUR);
+    process.env.ORVILO_JWT = operationToken(NOW + 4 * HOUR);
     const renew = vi.fn();
 
     createOperationTokenRenewal({ operationId: 'op-1', renew }).stop();

@@ -9,7 +9,7 @@ import { workspaces } from './workspace';
 /**
  * Recycle-bin registry.
  *
- * Soft delete in LobeHub is a two-part contract:
+ * Soft delete in Orvilo is a two-part contract:
  *
  * 1. The source table carries `is_deleted` + `deleted_at` (see
  *    `_helpers.softDeleteColumns()`); every ownership-scoped read filters

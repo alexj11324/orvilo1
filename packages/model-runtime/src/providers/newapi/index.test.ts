@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatStreamPayload } from '../../types/chat';
 import * as modelParseModule from '../../utils/modelParse';
 import type { NewAPIModelCard, NewAPIPricing } from './index';
-import { LobeNewAPIAI, params } from './index';
+import { OrviloNewAPIAI, params } from './index';
 
 // Mock external dependencies
 vi.mock('../../utils/modelParse');
@@ -492,8 +492,8 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
 
   describe('Integration and Runtime Tests', () => {
     it('should validate runtime instantiation', () => {
-      expect(LobeNewAPIAI).toBeDefined();
-      expect(typeof LobeNewAPIAI).toBe('function');
+      expect(OrviloNewAPIAI).toBeDefined();
+      expect(typeof OrviloNewAPIAI).toBe('function');
     });
 
     it('should validate NewAPI type definitions', () => {
@@ -636,7 +636,7 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
       };
 
       // Create instance to test dynamic routers
-      const instance = new LobeNewAPIAI(testOptions);
+      const instance = new OrviloNewAPIAI(testOptions);
       expect(instance).toBeDefined();
 
       // The dynamic routers should be configured with user's baseURL
@@ -658,7 +658,7 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
 
     it('should export params with correct defaultHeaders', () => {
       expect(params.defaultHeaders).toEqual({
-        'X-Client': 'LobeHub',
+        'X-Client': 'Orvilo',
       });
     });
 
@@ -1516,13 +1516,13 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
 
   describe('Runtime Instance Creation', () => {
     it('should create instance with minimal options', () => {
-      const instance = new LobeNewAPIAI({ apiKey: 'test-key' });
+      const instance = new OrviloNewAPIAI({ apiKey: 'test-key' });
       expect(instance).toBeDefined();
-      expect(instance).toBeInstanceOf(LobeNewAPIAI);
+      expect(instance).toBeInstanceOf(OrviloNewAPIAI);
     });
 
     it('should create instance with custom baseURL', () => {
-      const instance = new LobeNewAPIAI({
+      const instance = new OrviloNewAPIAI({
         apiKey: 'test-key',
         baseURL: 'https://custom.com/v1',
       });
@@ -1530,7 +1530,7 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
     });
 
     it('should create instance with additional options', () => {
-      const instance = new LobeNewAPIAI({
+      const instance = new OrviloNewAPIAI({
         apiKey: 'test-key',
         baseURL: 'https://custom.com',
       });

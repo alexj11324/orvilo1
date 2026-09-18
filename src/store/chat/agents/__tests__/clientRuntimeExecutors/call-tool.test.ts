@@ -49,7 +49,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_call_1',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test query' }),
         type: 'default',
@@ -91,7 +91,7 @@ describe('call_tool executor', () => {
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test query' }),
         id: 'tool_call_usage',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         type: 'default',
       };
 
@@ -159,7 +159,7 @@ describe('call_tool executor', () => {
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test query' }),
         id: 'tool_call_no_intent',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         type: 'default',
       };
 
@@ -198,7 +198,7 @@ describe('call_tool executor', () => {
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test query' }),
         id: 'tool_call_blocking',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         type: 'default',
       };
 
@@ -255,7 +255,7 @@ describe('call_tool executor', () => {
           apiName: 'updateTaskStatus',
           arguments: JSON.stringify({ identifier: 'T-1', status: 'completed' }),
           id: 'tool_call_status',
-          identifier: 'lobe-task',
+          identifier: 'orvilo-task',
           type: 'default',
         },
         { parentMessageId: 'msg_parent' },
@@ -286,7 +286,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_call_abc',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'craw',
         arguments: JSON.stringify({ url: 'https://example.com' }),
         type: 'default',
@@ -363,7 +363,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_call_xyz',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'AI news' }),
         type: 'default',
@@ -574,7 +574,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_resume',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'resumed query' }),
         type: 'default',
@@ -666,7 +666,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_op_test',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -694,7 +694,7 @@ describe('call_tool executor', () => {
         }),
         parentOperationId: context.operationId,
         metadata: expect.objectContaining({
-          identifier: 'lobe-web-browsing',
+          identifier: 'orvilo-web-browsing',
           apiName: 'search',
           tool_call_id: 'tool_op_test',
         }),
@@ -711,7 +711,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_child_test',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -1138,7 +1138,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_usage',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -1161,7 +1161,7 @@ describe('call_tool executor', () => {
       expect(result.newState.usage.tools.totalTimeMs).toBeGreaterThanOrEqual(0);
       expect(result.newState.usage.tools.byTool).toHaveLength(1);
       expect(result.newState.usage.tools.byTool[0]).toMatchObject({
-        name: 'lobe-web-browsing/search',
+        name: 'orvilo-web-browsing/search',
         calls: 1,
       });
     });
@@ -1176,7 +1176,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_pricing_search',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -1194,7 +1194,7 @@ describe('call_tool executor', () => {
         context,
       });
 
-      // Then - TOOL_PRICING['lobe-web-browsing/search'] = 0.001
+      // Then - TOOL_PRICING['orvilo-web-browsing/search'] = 0.001
       expect(result.newState.cost?.total).toBeCloseTo(0.001, 5);
     });
 
@@ -1208,7 +1208,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_pricing_craw',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'craw',
         arguments: JSON.stringify({ url: 'https://example.com' }),
         type: 'default',
@@ -1226,7 +1226,7 @@ describe('call_tool executor', () => {
         context,
       });
 
-      // Then - TOOL_PRICING['lobe-web-browsing/craw'] = 0.002
+      // Then - TOOL_PRICING['orvilo-web-browsing/craw'] = 0.002
       expect(result.newState.cost?.total).toBeCloseTo(0.002, 5);
     });
 
@@ -1288,7 +1288,7 @@ describe('call_tool executor', () => {
 
       // Then
       const toolUsage = result.newState.usage.tools.byTool.find(
-        (t) => t.name === 'lobe-web-browsing/search',
+        (t) => t.name === 'orvilo-web-browsing/search',
       );
       expect(toolUsage).toBeDefined();
       expect(toolUsage?.calls).toBe(1);
@@ -1318,7 +1318,7 @@ describe('call_tool executor', () => {
 
       // Then
       const toolUsage = result.newState.usage.tools.byTool.find(
-        (t) => t.name === 'lobe-web-browsing/search',
+        (t) => t.name === 'orvilo-web-browsing/search',
       );
       expect(toolUsage).toBeDefined();
       expect(toolUsage?.calls).toBe(1);
@@ -1334,7 +1334,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_step_usage',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -1355,7 +1355,7 @@ describe('call_tool executor', () => {
       // Then
       expect(result.nextContext?.stepUsage).toEqual({
         cost: 0.001,
-        toolName: 'lobe-web-browsing/search',
+        toolName: 'orvilo-web-browsing/search',
         unitPrice: 0.001,
         usageCount: 1,
       });
@@ -1403,7 +1403,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_fail_create',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -1656,7 +1656,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_context_test',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'AI news' }),
         type: 'default',
@@ -2254,7 +2254,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_speak',
-        identifier: 'lobe-group-management',
+        identifier: 'orvilo-group-management',
         apiName: 'speak',
         arguments: JSON.stringify({ agentId: 'agent-1', instruction: 'Please respond' }),
         type: 'builtin',
@@ -2301,7 +2301,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_speak_2',
-        identifier: 'lobe-group-management',
+        identifier: 'orvilo-group-management',
         apiName: 'speak',
         arguments: JSON.stringify({ agentId: 'agent-2' }),
         type: 'builtin',
@@ -2342,7 +2342,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_broadcast',
-        identifier: 'lobe-group-management',
+        identifier: 'orvilo-group-management',
         apiName: 'broadcast',
         arguments: JSON.stringify({ agentIds: ['agent-1', 'agent-2'], instruction: 'Discuss' }),
         type: 'builtin',
@@ -2386,7 +2386,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_delegate',
-        identifier: 'lobe-group-management',
+        identifier: 'orvilo-group-management',
         apiName: 'delegate',
         arguments: JSON.stringify({ agentId: 'agent-3', reason: 'User requested' }),
         type: 'builtin',
@@ -2425,7 +2425,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_search',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -2501,7 +2501,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_usage_stop',
-        identifier: 'lobe-group-management',
+        identifier: 'orvilo-group-management',
         apiName: 'speak',
         arguments: JSON.stringify({ agentId: 'agent-1' }),
         type: 'builtin',
@@ -2523,7 +2523,7 @@ describe('call_tool executor', () => {
       // Should still track tool usage even when stopping
       expect(result.newState.usage.tools.totalCalls).toBe(1);
       expect(result.newState.usage.tools.byTool).toHaveLength(1);
-      expect(result.newState.usage.tools.byTool[0].name).toBe('lobe-group-management/speak');
+      expect(result.newState.usage.tools.byTool[0].name).toBe('orvilo-group-management/speak');
     });
 
     it('should complete operations even when stop=true', async () => {
@@ -2543,7 +2543,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_op_complete',
-        identifier: 'lobe-group-management',
+        identifier: 'orvilo-group-management',
         apiName: 'speak',
         arguments: JSON.stringify({ agentId: 'agent-1' }),
         type: 'builtin',
@@ -2583,7 +2583,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_sub_agent',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',
@@ -2626,7 +2626,7 @@ describe('call_tool executor', () => {
 
       const toolCall: ChatToolPayload = {
         id: 'tool_normal',
-        identifier: 'lobe-web-browsing',
+        identifier: 'orvilo-web-browsing',
         apiName: 'search',
         arguments: JSON.stringify({ query: 'test' }),
         type: 'default',

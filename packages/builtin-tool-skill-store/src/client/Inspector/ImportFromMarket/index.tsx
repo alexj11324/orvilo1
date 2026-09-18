@@ -29,7 +29,7 @@ export const ImportFromMarketInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-skill-store.apiName.importFromMarket')}
+          {t('builtins.orvilo-skill-store.apiName.importFromMarket')}
         </span>
       </div>
     );
@@ -41,7 +41,7 @@ export const ImportFromMarketInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-skill-store.apiName.importFromMarket')}:
+        {t('builtins.orvilo-skill-store.apiName.importFromMarket')}:
       </span>
       {displayName && <span className={highlightTextStyles.primary}>{displayName}</span>}
       {!isLoading &&

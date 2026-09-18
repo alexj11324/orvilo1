@@ -38,6 +38,6 @@ drops the communication styling — so profile-less channels keep working.
 ## Delegate ownership
 
 The addon takes over the process-global `UNUserNotificationCenter` delegate.
-Notifications whose identifier lacks the `lobehub-` prefix are forwarded to
+Notifications whose identifier lacks the `orvilo-` prefix are forwarded to
 whatever delegate was installed before (Electron's own `Notification`
 module), so the two paths can coexist during fallback.

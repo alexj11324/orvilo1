@@ -1,17 +1,17 @@
 // @vitest-environment node
 /**
- * Integration test for the server `lobe-agent-management.callAgent` deferred
+ * Integration test for the server `orvilo-agent-management.callAgent` deferred
  * execution flow.
  *
  * Verifies the full lifecycle end-to-end on the in-memory runtime:
- *   1. Parent op LLM emits a `lobe-agent-management____callAgent` tool call.
+ *   1. Parent op LLM emits a `orvilo-agent-management____callAgent` tool call.
  *   2. The real server executor parks the parent, creates a pending tool
  *      placeholder, and forks the target agent as a child op.
  *   3. The child op completes.
  *   4. The completion bridge backfills the placeholder and resumes the parent.
  *   5. The parent reaches `done`.
  */
-import { type LobeChatDatabase } from '@orvilo/database';
+import { type OrviloDatabase } from '@orvilo/database';
 import { agentOperations, agents, messagePlugins, messages } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
@@ -27,7 +27,7 @@ import { createMockResponsesStream, waitForOperationComplete } from './helpers';
 
 process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
 
-let testDB: LobeChatDatabase;
+let testDB: OrviloDatabase;
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(function () {
     return testDB;
@@ -45,7 +45,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 let mockResponsesCreate: any;
-let serverDB: LobeChatDatabase;
+let serverDB: OrviloDatabase;
 let userId: string;
 let parentAgentId: string;
 let targetAgentId: string;
@@ -68,7 +68,7 @@ const createCallAgentResponse = () => {
       timeout: 30_000,
     }),
     call_id: callId,
-    name: 'lobe-agent-management____callAgent',
+    name: 'orvilo-agent-management____callAgent',
     type: 'function_call',
   };
 
@@ -184,7 +184,7 @@ beforeEach(async () => {
       {
         chatConfig: {},
         model: 'gpt-5-pro',
-        plugins: ['lobe-agent-management'],
+        plugins: ['orvilo-agent-management'],
         provider: 'openai',
         systemRole: 'You are a supervisor that delegates work to other agents.',
         title: 'callAgent Supervisor',
@@ -274,7 +274,7 @@ describe('Server callAgent deferred execution', () => {
       .where(
         and(
           eq(messages.userId, userId),
-          eq(messagePlugins.identifier, 'lobe-agent-management'),
+          eq(messagePlugins.identifier, 'orvilo-agent-management'),
           eq(messagePlugins.apiName, 'callAgent'),
         ),
       );
@@ -283,7 +283,7 @@ describe('Server callAgent deferred execution', () => {
     expect(toolMessages[0]).toMatchObject({
       apiName: 'callAgent',
       content: TARGET_ANSWER,
-      identifier: 'lobe-agent-management',
+      identifier: 'orvilo-agent-management',
       role: 'tool',
       toolCallId: 'call_agent_1',
     });

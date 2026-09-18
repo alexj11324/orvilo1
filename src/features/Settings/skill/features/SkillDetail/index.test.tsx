@@ -6,20 +6,20 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LobehubSkillStatus } from '@/store/tool/slices/lobehubSkillStore/types';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import SkillDetail from './index';
 
 const mocks = vi.hoisted(() => {
   const toolState = {
     builtinSkills: [],
-    checkLobehubSkillStatus: vi.fn(),
+    checkOrviloSkillStatus: vi.fn(),
     composioServers: [] as Array<{ identifier: string; status: string }>,
     connectors: [] as Array<{ id: string; identifier: string }>,
     createComposioConnection: vi.fn(),
     deleteAgentSkill: vi.fn(),
     fetchConnectors: vi.fn(),
-    getLobehubSkillAuthorizeUrl: vi.fn(),
+    getOrviloSkillAuthorizeUrl: vi.fn(),
     installBuiltinTool: vi.fn(),
     installedBuiltinIds: [] as string[],
     installedPlugins: [] as Array<{
@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => {
       identifier: string;
       type: string;
     }>,
-    lobehubSkillServers: [] as Array<{
+    orviloSkillServers: [] as Array<{
       identifier: string;
       isConnected: boolean;
       name: string;
@@ -40,7 +40,7 @@ const mocks = vi.hoisted(() => {
     }>,
     refreshComposioConnectionStatus: vi.fn(),
     removeComposioConnection: vi.fn(),
-    revokeLobehubSkill: vi.fn(),
+    revokeOrviloSkill: vi.fn(),
     syncBuiltinTool: vi.fn(),
     syncPluginTools: vi.fn(),
     syncToolsFromClient: vi.fn(),
@@ -70,7 +70,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@orvilo/const', () => ({
   COMPOSIO_APP_TYPES: [],
   isDesktop: false,
-  getLobehubSkillProviderById: (identifier: string) =>
+  getOrviloSkillProviderById: (identifier: string) =>
     identifier === 'notion'
       ? {
           label: 'Notion',
@@ -87,10 +87,10 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string; name?: string } | string) => {
       const translations: Record<string, string> = {
-        'tools.lobehubSkill.connect': 'Connect',
-        'tools.lobehubSkill.disconnect': 'Disconnect',
-        'tools.lobehubSkill.disconnectConfirm.desc': `Disconnect ${(options as { name?: string })?.name}?`,
-        'tools.lobehubSkill.disconnectConfirm.title': `Disconnect ${(options as { name?: string })?.name}`,
+        'tools.orviloSkill.connect': 'Connect',
+        'tools.orviloSkill.disconnect': 'Disconnect',
+        'tools.orviloSkill.disconnectConfirm.desc': `Disconnect ${(options as { name?: string })?.name}?`,
+        'tools.orviloSkill.disconnectConfirm.title': `Disconnect ${(options as { name?: string })?.name}`,
         'tools.legacyConnector.configure': 'Configure',
         'tools.legacyConnector.upgradeDesc':
           'This connector still uses the legacy plugin format. Configure it to finish upgrading, then manage its tool permissions here.',
@@ -153,13 +153,13 @@ vi.mock('@/store/tool/selectors', () => ({
       ): (typeof mocks.toolState.composioServers)[number] | undefined =>
         state.composioServers.find((server) => server.identifier === identifier),
   },
-  lobehubSkillStoreSelectors: {
+  orviloSkillStoreSelectors: {
     getServerByIdentifier:
       (identifier: string) =>
       (
         state: typeof mocks.toolState,
-      ): (typeof mocks.toolState.lobehubSkillServers)[number] | undefined =>
-        state.lobehubSkillServers.find((server) => server.identifier === identifier),
+      ): (typeof mocks.toolState.orviloSkillServers)[number] | undefined =>
+        state.orviloSkillServers.find((server) => server.identifier === identifier),
   },
 }));
 
@@ -204,7 +204,7 @@ const connectedNotionServer = () => ({
   identifier: 'notion',
   isConnected: true,
   name: 'Notion',
-  status: LobehubSkillStatus.CONNECTED,
+  status: OrviloSkillStatus.CONNECTED,
 });
 
 describe('SkillDetail', () => {
@@ -216,7 +216,7 @@ describe('SkillDetail', () => {
     mocks.toolState.connectors = [];
     mocks.toolState.installedBuiltinIds = [];
     mocks.toolState.installedPlugins = [];
-    mocks.toolState.lobehubSkillServers = [];
+    mocks.toolState.orviloSkillServers = [];
   });
 
   it('offers a Configure migration action for an un-migrated legacy custom MCP', async () => {
@@ -244,10 +244,10 @@ describe('SkillDetail', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows a disconnect action for a connected LobeHub connector without configurable tools', async () => {
-    mocks.toolState.lobehubSkillServers = [connectedNotionServer()];
+  it('shows a disconnect action for a connected Orvilo connector without configurable tools', async () => {
+    mocks.toolState.orviloSkillServers = [connectedNotionServer()];
 
-    render(<SkillDetail identifier="notion" type="lobehub-connector" />);
+    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
 
     expect(
       await screen.findByText('This skill does not expose configurable tool permissions.'),
@@ -257,9 +257,9 @@ describe('SkillDetail', () => {
     expect(mocks.toolState.syncToolsFromClient).not.toHaveBeenCalled();
   });
 
-  it('syncs LobeHub tools and passes the disconnect action into connector permissions detail', async () => {
+  it('syncs Orvilo tools and passes the disconnect action into connector permissions detail', async () => {
     mocks.toolState.connectors = [{ id: 'connector-1', identifier: 'notion' }];
-    mocks.toolState.lobehubSkillServers = [
+    mocks.toolState.orviloSkillServers = [
       {
         ...connectedNotionServer(),
         tools: [
@@ -272,7 +272,7 @@ describe('SkillDetail', () => {
       },
     ];
 
-    render(<SkillDetail identifier="notion" type="lobehub-connector" />);
+    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
 
     expect(await screen.findByTestId('connector-detail')).toHaveTextContent('connector-1');
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
@@ -295,7 +295,7 @@ describe('SkillDetail', () => {
   it('only leaves connector permissions detail after disconnect actually succeeds', async () => {
     const user = userEvent.setup();
     mocks.toolState.connectors = [{ id: 'connector-1', identifier: 'notion' }];
-    mocks.toolState.lobehubSkillServers = [
+    mocks.toolState.orviloSkillServers = [
       {
         ...connectedNotionServer(),
         tools: [
@@ -309,9 +309,9 @@ describe('SkillDetail', () => {
     mocks.confirmModal.mockImplementation(({ onOk }: { onOk?: () => Promise<void> }) => {
       void onOk?.();
     });
-    mocks.toolState.revokeLobehubSkill.mockResolvedValue(undefined);
+    mocks.toolState.revokeOrviloSkill.mockResolvedValue(undefined);
 
-    render(<SkillDetail identifier="notion" type="lobehub-connector" />);
+    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
 
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
 
@@ -334,16 +334,16 @@ describe('SkillDetail', () => {
       ],
     };
     mocks.toolState.connectors = [{ id: 'connector-1', identifier: 'notion' }];
-    mocks.toolState.lobehubSkillServers = [server];
+    mocks.toolState.orviloSkillServers = [server];
     mocks.confirmModal.mockImplementation(({ onOk }: { onOk?: () => Promise<void> }) => {
       void onOk?.();
     });
-    mocks.toolState.revokeLobehubSkill.mockImplementation(async () => {
+    mocks.toolState.revokeOrviloSkill.mockImplementation(async () => {
       server.isConnected = false;
-      server.status = LobehubSkillStatus.NOT_CONNECTED;
+      server.status = OrviloSkillStatus.NOT_CONNECTED;
     });
 
-    render(<SkillDetail identifier="notion" type="lobehub-connector" />);
+    render(<SkillDetail identifier="notion" type="orvilo-connector" />);
 
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
 

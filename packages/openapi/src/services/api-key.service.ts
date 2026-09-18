@@ -1,7 +1,7 @@
 import { canUseWorkspaceApiKeys } from '@/business/server/workspaceApiKey';
 import { ApiKeyModel } from '@/database/models/apiKey';
 import type { ApiKeyItem } from '@/database/schemas';
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { BaseService } from '../common/base.service';
 import type {
@@ -25,7 +25,7 @@ const projectApiKey = (value: ApiKeyItem): ApiKeyResponse => ({
 export class ApiKeyService extends BaseService {
   private apiKeyModel: ApiKeyModel;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     super(db, userId, workspaceId);
     this.apiKeyModel = new ApiKeyModel(db, userId, workspaceId);
   }

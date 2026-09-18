@@ -821,7 +821,7 @@ describe('human assignee formatting', () => {
   it('formatWorkspaceMembers surfaces email and linked IM identities for exact matching', () => {
     const out = formatWorkspaceMembers([
       {
-        email: 'alice@lobehub.com',
+        email: 'alice@orvilo.aspectlylabs.com',
         id: 'usr_2',
         imAccounts: ['discord:@Neko(4521)', 'slack:U123'],
         name: 'Alice Chen',
@@ -830,7 +830,7 @@ describe('human assignee formatting', () => {
       },
     ]);
     expect(out).toContain(
-      '- Alice Chen  @alice  alice@lobehub.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
+      '- Alice Chen  @alice  alice@orvilo.aspectlylabs.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
     );
   });
 

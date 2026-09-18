@@ -1,13 +1,13 @@
 import { type PartialDeep } from 'type-fest';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { type LobeAgentChatConfig, type LobeAgentConfig } from '@/types/agent';
+import { type OrviloAgentChatConfig, type OrviloAgentConfig } from '@/types/agent';
 import { type MetaData } from '@/types/meta';
 import {
   type ChatSessionList,
-  type LobeAgentSession,
-  type LobeSessions,
-  type LobeSessionType,
+  type OrviloAgentSession,
+  type OrviloSessions,
+  type OrviloSessionType,
   type SessionGroupItem,
   type UpdateSessionParams,
 } from '@/types/session';
@@ -24,8 +24,8 @@ export class SessionService {
 
   /** @deprecated Use agentService.createAgent instead */
   createSession = async (
-    type: LobeSessionType,
-    data: Partial<LobeAgentSession>,
+    type: OrviloSessionType,
+    data: Partial<OrviloAgentSession>,
   ): Promise<string> => {
     const { config, group, meta, ...session } = data;
     return lambdaClient.session.createSession.mutate({
@@ -60,14 +60,14 @@ export class SessionService {
   };
 
   // TODO: Need to be fixed
-  getSessionConfig = async (id: string): Promise<LobeAgentConfig> => {
+  getSessionConfig = async (id: string): Promise<OrviloAgentConfig> => {
     // @ts-ignore
     return lambdaClient.agent.getAgentConfig.query({ sessionId: id });
   };
 
   updateSessionConfig = (
     id: string,
-    config: PartialDeep<LobeAgentConfig>,
+    config: PartialDeep<OrviloAgentConfig>,
     signal?: AbortSignal,
   ) => {
     return lambdaClient.session.updateSessionConfig.mutate(
@@ -85,13 +85,13 @@ export class SessionService {
 
   updateSessionChatConfig = (
     id: string,
-    value: Partial<LobeAgentChatConfig>,
+    value: Partial<OrviloAgentChatConfig>,
     signal?: AbortSignal,
   ) => {
     return lambdaClient.session.updateSessionChatConfig.mutate({ id, value }, { signal });
   };
 
-  searchSessions = (keywords: string): Promise<LobeSessions> => {
+  searchSessions = (keywords: string): Promise<OrviloSessions> => {
     return lambdaClient.session.searchSessions.query({ keywords });
   };
 

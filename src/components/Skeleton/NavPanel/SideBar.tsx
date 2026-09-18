@@ -134,11 +134,14 @@ export const NavSideBarSkeleton = ({
   );
 };
 
+// Keyed by the nav keys `resolveNavPanelKey` can actually return. `image` and
+// `video` stay even though their routes are gone: a stale deep link still
+// resolves to those keys on its way to the SPA, so the pane is not blank while
+// that happens. The eval workbench kept no such path — its nav key left the
+// resolver when the route was retired, so its shapes went with it.
 export const NAV_SKELETON_SHAPES: Record<string, NavSkeletonShape> = {
   'agent': { groups: [0, 12], headerVariant: 'title', navRows: 5 },
   'discover': { navRows: 6 },
-  'eval': { bodyGap: 8, groups: [3, 3], groupTitleHeight: 27, leadingRows: 1 },
-  'evalBench': { bodyGap: 8, groups: [3, 3], groupTitleHeight: 27, leadingRows: 1 },
   'group': { groups: [3, 8], headerVariant: 'title' },
   'home': { bodyGap: 1, groups: [5, 7, 3], headerVariant: 'title', leadingRows: 2, navRows: 2 },
   'image': { bodyGap: 1, groups: [4], groupTitleHeight: 40, navGap: 0, navRows: 2 },

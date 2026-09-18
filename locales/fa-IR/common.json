@@ -144,7 +144,7 @@
   "cmdk.askAIHeadingEmpty": "یک ویژگی هوش مصنوعی انتخاب کنید",
   "cmdk.askAgentHeading": "پرسیدن از نماینده",
   "cmdk.askAgentPlaceholder": "از {{agent}} چیزی بپرسید...",
-  "cmdk.askLobeAI": "پرسیدن از Orvilo AI",
+  "cmdk.askOrviloAI": "پرسیدن از Orvilo AI",
   "cmdk.community": "انجمن",
   "cmdk.communitySupport": "پشتیبانی انجمن",
   "cmdk.contactUs": "تماس با ما",

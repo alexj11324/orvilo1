@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { resolveElasticsearchTransport } from '../../../packages/database/src/repositories/ftsSearch/elasticsearch/url';
 
-const CONTROL_INDEX_MARKER = 'lobehub_fts_search_control';
+const CONTROL_INDEX_MARKER = 'orvilo_fts_search_control';
 const CONTROL_INDEX_SCHEMA_VERSION = 1;
 const LOCK_DOCUMENT_ID = 'migration-lock';
 const MAX_INDEX_NAME_BYTES = 255;
@@ -211,7 +211,7 @@ export class FtsSearchMigrationLockClient {
 
     if (!parsed.success || !isOwned || !isCompatible) {
       throw new FtsSearchMigrationLockError(
-        `Elasticsearch index ${this.controlIndex} is not a compatible LobeHub FTS migration control index; refusing to overwrite it`,
+        `Elasticsearch index ${this.controlIndex} is not a compatible Orvilo FTS migration control index; refusing to overwrite it`,
       );
     }
   }

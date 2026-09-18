@@ -176,7 +176,7 @@ vi.mock('react-i18next', () => ({
       (
         ({
           'heterogeneousStatus.account.label': 'Account',
-          'heterogeneousStatus.apiMode.defaultProvider': 'LobeHub',
+          'heterogeneousStatus.apiMode.defaultProvider': 'Orvilo',
           'heterogeneousStatus.apiMode.provider': 'Provider',
           'heterogeneousStatus.apiMode.providerPlaceholder': 'Select a provider',
           'heterogeneousStatus.auth.api': 'API',
@@ -228,7 +228,7 @@ vi.mock('@/components/ModelSelect', () => ({
     <span>{displayName || id}</span>
   ),
   ProviderItemRender: ({ name }: { name: string }) => <span>{name}</span>,
-  TAG_CLASSNAME: 'lobe-model-info-tags',
+  TAG_CLASSNAME: 'orvilo-model-info-tags',
 }));
 
 vi.mock('@/store/aiInfra', () => ({
@@ -551,7 +551,7 @@ describe('HeterogeneousAgentStatusCard', () => {
     });
     expect(screen.getByText('Auth Method')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'API' })).toBeEnabled();
-    expect(screen.queryByRole('button', { name: 'LobeHub Server' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Orvilo Server' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     expect(onAuthModeChange).toHaveBeenCalledWith('api', {
       model: 'claude-sonnet-4-6',
@@ -576,7 +576,7 @@ describe('HeterogeneousAgentStatusCard', () => {
     );
 
     expect(await screen.findByText('Auth Method')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'LobeHub' })).toBeEnabled();
+    expect(screen.getByRole('option', { name: 'Orvilo' })).toBeEnabled();
   });
 
   it('lists the deployment default alongside configured providers in API mode', async () => {
@@ -602,10 +602,10 @@ describe('HeterogeneousAgentStatusCard', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('option', { name: 'LobeHub' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Orvilo' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole('option', { name: 'LobeHub' }).closest('select')!, {
+    fireEvent.change(screen.getByRole('option', { name: 'Orvilo' }).closest('select')!, {
       target: { value: 'provider:anthropic' },
     });
     expect(onApiConfigChange).toHaveBeenCalledWith({

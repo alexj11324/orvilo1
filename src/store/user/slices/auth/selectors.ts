@@ -1,4 +1,4 @@
-import { type LobeUser, type SSOProvider } from '@orvilo/types';
+import { type OrviloUser, type SSOProvider } from '@orvilo/types';
 import { t } from 'i18next';
 
 import { type UserStore } from '@/store/user';
@@ -24,7 +24,7 @@ export const userProfileSelectors = {
   nickName,
   userAvatar: (s: UserStore): string => s.user?.avatar || '',
   userId: (s: UserStore) => s.user?.id,
-  userProfile: (s: UserStore): LobeUser | null | undefined => s.user,
+  userProfile: (s: UserStore): OrviloUser | null | undefined => s.user,
   username,
 };
 

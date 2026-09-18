@@ -10,10 +10,10 @@ import {
   verifyRubrics,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { VerifyCriterionModel } from '../verifyCriterion';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'verify-criterion-test-user';
 const otherUserId = 'verify-criterion-test-other-user';

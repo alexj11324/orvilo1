@@ -16,7 +16,7 @@ const sandboxWrite = (
 ): FileEditToolCallRecord => ({
   apiName: 'writeFile',
   arguments: extra.args === undefined ? JSON.stringify({ path }) : (extra.args as string),
-  identifier: 'lobe-cloud-sandbox',
+  identifier: 'orvilo-cloud-sandbox',
   state: { path, success: extra.success ?? true },
   toolCallId,
 });
@@ -28,7 +28,7 @@ const sandboxEdit = (
 ): FileEditToolCallRecord => ({
   apiName: 'editFile',
   arguments: JSON.stringify({ path, replace: 'b', search: 'a' }),
-  identifier: 'lobe-cloud-sandbox',
+  identifier: 'orvilo-cloud-sandbox',
   state: { path, replacements: 1, ...deltas },
   toolCallId,
 });
@@ -39,7 +39,7 @@ const sandboxMove = (
 ): FileEditToolCallRecord => ({
   apiName: 'moveFiles',
   arguments: JSON.stringify({ operations: results }),
-  identifier: 'lobe-cloud-sandbox',
+  identifier: 'orvilo-cloud-sandbox',
   state: {
     results,
     successCount: results.filter((r) => r.success).length,
@@ -75,7 +75,7 @@ const claudeCode = (
   toolCallId,
 });
 
-/** lobe-local-system structured file call (writeFile / editFile / moveFiles). */
+/** orvilo-local-system structured file call (writeFile / editFile / moveFiles). */
 const localFileCall = (
   toolCallId: string,
   apiName: 'writeFile' | 'editFile' | 'moveFiles',
@@ -84,12 +84,12 @@ const localFileCall = (
 ): FileEditToolCallRecord => ({
   apiName,
   arguments: JSON.stringify(args),
-  identifier: 'lobe-local-system',
+  identifier: 'orvilo-local-system',
   state,
   toolCallId,
 });
 
-/** lobe-local-system runCommand shell call. */
+/** orvilo-local-system runCommand shell call. */
 const localCommand = (
   toolCallId: string,
   command: string,
@@ -97,7 +97,7 @@ const localCommand = (
 ): FileEditToolCallRecord => ({
   apiName: 'runCommand',
   arguments: JSON.stringify({ command }),
-  identifier: 'lobe-local-system',
+  identifier: 'orvilo-local-system',
   state: { isBackground: false, success: extra.success ?? true, ...extra },
   toolCallId,
 });
@@ -123,7 +123,7 @@ const codexCommand = (
   toolCallId,
 });
 
-/** lobe-skills runCommand / execScript shell call (script body shares the `command` field). */
+/** orvilo-skills runCommand / execScript shell call (script body shares the `command` field). */
 const skillsCommand = (
   toolCallId: string,
   command: string,
@@ -136,7 +136,7 @@ const skillsCommand = (
 ): FileEditToolCallRecord => ({
   apiName: extra.apiName ?? 'execScript',
   arguments: JSON.stringify({ command, description: 'run a script' }),
-  identifier: 'lobe-skills',
+  identifier: 'orvilo-skills',
   state: {
     ...(extra.executionEnv === undefined ? {} : { executionEnv: extra.executionEnv }),
     exitCode: extra.exitCode ?? 0,
@@ -436,7 +436,7 @@ describe('scanOperationFileEdits', () => {
       const result = scanOperationFileEdits([
         {
           apiName: 'editFile',
-          identifier: 'lobe-cloud-sandbox',
+          identifier: 'orvilo-cloud-sandbox',
           state: { error: 'boom', path: '/a.txt' },
           toolCallId: 't1',
         },
@@ -450,7 +450,7 @@ describe('scanOperationFileEdits', () => {
           apiName: 'writeFile',
           arguments: JSON.stringify({ path: '/a.txt' }),
           error: 'plugin exploded',
-          identifier: 'lobe-cloud-sandbox',
+          identifier: 'orvilo-cloud-sandbox',
           state: { path: '/a.txt', success: true },
           toolCallId: 't1',
         },
@@ -482,7 +482,7 @@ describe('scanOperationFileEdits', () => {
       const result = scanOperationFileEdits([
         {
           apiName: 'runCommand',
-          identifier: 'lobe-cloud-sandbox',
+          identifier: 'orvilo-cloud-sandbox',
           state: { success: true },
           toolCallId: 't1',
         },
@@ -508,7 +508,7 @@ describe('scanOperationFileEdits', () => {
         {
           apiName: 'writeFile',
           arguments: '{not json',
-          identifier: 'lobe-cloud-sandbox',
+          identifier: 'orvilo-cloud-sandbox',
           state: { path: '/a.txt', success: true },
           toolCallId: 't1',
         },
@@ -583,7 +583,7 @@ describe('scanOperationFileEdits', () => {
       ]);
     });
 
-    it('detects an inline heredoc python `.save()` via lobe-local-system runCommand', () => {
+    it('detects an inline heredoc python `.save()` via orvilo-local-system runCommand', () => {
       const command = [
         "python3 - <<'EOF'",
         'from docx import Document',
@@ -720,12 +720,12 @@ describe('scanOperationFileEdits', () => {
       expect(scanOperationFileEdits([bashCommand('t2', 'mv a.pptx b.pptx')])).toEqual([]);
     });
 
-    it('ignores the same command run via lobe-cloud-sandbox runCommand (identifier gate)', () => {
+    it('ignores the same command run via orvilo-cloud-sandbox runCommand (identifier gate)', () => {
       const result = scanOperationFileEdits([
         {
           apiName: 'runCommand',
           arguments: JSON.stringify({ command: 'marp slides.md -o deck.pptx' }),
-          identifier: 'lobe-cloud-sandbox',
+          identifier: 'orvilo-cloud-sandbox',
           state: { isBackground: false, success: true },
           toolCallId: 't1',
         },
@@ -785,7 +785,7 @@ describe('scanOperationFileEdits', () => {
       ]);
     });
 
-    it('detects a DEVICE-routed lobe-skills execScript inline `.save()` as one modified entry', () => {
+    it('detects a DEVICE-routed orvilo-skills execScript inline `.save()` as one modified entry', () => {
       const command = [
         "python3 - <<'EOF'",
         'from pptx import Presentation',
@@ -808,7 +808,7 @@ describe('scanOperationFileEdits', () => {
       ]);
     });
 
-    it('detects a DEVICE-routed lobe-skills runCommand output flag too', () => {
+    it('detects a DEVICE-routed orvilo-skills runCommand output flag too', () => {
       const result = scanOperationFileEdits([
         skillsCommand('t1', 'marp slides.md -o deck.pptx', {
           apiName: 'runCommand',
@@ -818,7 +818,7 @@ describe('scanOperationFileEdits', () => {
       expect(result.map((r) => r.path)).toEqual(['deck.pptx']);
     });
 
-    it('ignores SANDBOX-routed and env-less lobe-skills shell calls (executionEnv gate)', () => {
+    it('ignores SANDBOX-routed and env-less orvilo-skills shell calls (executionEnv gate)', () => {
       const command = 'python -c "doc.save(\'/work/report.docx\')"';
       // Sandbox delivery rides exportFile registration — never the command scan.
       expect(
@@ -828,7 +828,7 @@ describe('scanOperationFileEdits', () => {
       expect(scanOperationFileEdits([skillsCommand('t2', command)])).toEqual([]);
     });
 
-    it('skips a failed DEVICE-routed lobe-skills call (non-zero exitCode)', () => {
+    it('skips a failed DEVICE-routed orvilo-skills call (non-zero exitCode)', () => {
       const result = scanOperationFileEdits([
         skillsCommand('t1', 'python -c "doc.save(\'/work/report.docx\')"', {
           executionEnv: 'device',
@@ -839,13 +839,13 @@ describe('scanOperationFileEdits', () => {
       expect(result).toEqual([]);
     });
 
-    it('ignores non-shell lobe-skills apiNames (exportFile / readReference)', () => {
+    it('ignores non-shell orvilo-skills apiNames (exportFile / readReference)', () => {
       expect(
         scanOperationFileEdits([
           {
             apiName: 'exportFile',
             arguments: JSON.stringify({ path: '/work/deck.pptx' }),
-            identifier: 'lobe-skills',
+            identifier: 'orvilo-skills',
             state: { executionEnv: 'device', success: true },
             toolCallId: 't1',
           },

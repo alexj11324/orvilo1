@@ -1,16 +1,16 @@
-export const LOBE_LINK_TAG = 'lobeLink';
+export const ORVILO_LINK_TAG = 'orviloLink';
 
-export type LobeLinkKind = 'github' | 'linear' | 'email' | 'generic';
+export type OrviloLinkKind = 'github' | 'linear' | 'email' | 'generic';
 
-export interface ParsedLobeLink {
+export interface ParsedOrviloLink {
   /**
    * Canonical label used when the link has no author-provided text, e.g.
-   * `lobehub/lobehub#15554` / `TST-10001` / `@lobehub/ui` / the full URL.
+   * `alexj11324/orvilo1#15554` / `TST-10001` / `@lobehub/ui` / the full URL.
    */
   canonicalLabel: string;
   /** Host for generic links, used to fetch a favicon. */
   domain?: string;
-  kind: LobeLinkKind;
+  kind: OrviloLinkKind;
 }
 
 const stripWww = (host: string) => host.replace(/^www\./, '');
@@ -45,7 +45,7 @@ const figmaFileName = (segments: string[]): string | undefined => {
  * - Citation links (`citation-1`), footnote refs, anchors and relative paths
  *   return `null` and keep the default link renderer untouched.
  */
-export const parseLobeLink = (href?: string): ParsedLobeLink | null => {
+export const parseOrviloLink = (href?: string): ParsedOrviloLink | null => {
   if (!href) return null;
 
   if (href.startsWith('/')) {

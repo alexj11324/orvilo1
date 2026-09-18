@@ -1,5 +1,5 @@
 /**
- * Lobe Group Management Executor
+ * Orvilo Group Management Executor
  *
  * Handles all group management tool calls for multi-agent orchestration.
  * Note: Member management (searchAgent, inviteAgent, createAgent, removeAgent)

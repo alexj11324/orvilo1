@@ -5,9 +5,9 @@ import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-buil
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
 import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
-import { LobeAgentApiName, LobeAgentManifest } from '@orvilo/builtin-tool-lobe-agent';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
+import { OrviloAgentApiName, OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { SkillsApiName, SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
@@ -220,7 +220,6 @@ describe('createServerToolsEngine', () => {
 });
 
 describe('createServerAgentToolsEngine', () => {
-  // https://github.com/lobehub/lobehub/pull/19051
   it('keeps Computer Use unloaded until activation on a supported device', () => {
     const engine = createServerAgentToolsEngine(createMockContext(), {
       agentConfig: { plugins: [] },
@@ -273,7 +272,6 @@ describe('createServerAgentToolsEngine', () => {
     ).toContain(AuvManifest.identifier);
   });
 
-  // https://github.com/lobehub/lobehub/pull/19051
   it('cannot explicitly activate Computer Use on an older device', () => {
     const engine = createServerAgentToolsEngine(createMockContext(), {
       agentConfig: { plugins: [AuvManifest.identifier] },
@@ -530,7 +528,7 @@ describe('createServerAgentToolsEngine', () => {
   it('should enable MultimodalUnderstanding when injected into runtime plugins', () => {
     const context = createMockContext();
     const engine = createServerAgentToolsEngine(context, {
-      agentConfig: { plugins: [LobeAgentManifest.identifier] },
+      agentConfig: { plugins: [OrviloAgentManifest.identifier] },
       model: 'deepseek-chat',
       provider: 'deepseek',
     });
@@ -538,13 +536,13 @@ describe('createServerAgentToolsEngine', () => {
     const result = engine.generateToolsDetailed({
       model: 'deepseek-chat',
       provider: 'deepseek',
-      toolIds: [LobeAgentManifest.identifier],
+      toolIds: [OrviloAgentManifest.identifier],
     });
 
-    expect(result.enabledToolIds).toContain(LobeAgentManifest.identifier);
+    expect(result.enabledToolIds).toContain(OrviloAgentManifest.identifier);
   });
 
-  it('should enable lobe-agent by default since it is always-on', () => {
+  it('should enable orvilo-agent by default since it is always-on', () => {
     const context = createMockContext();
     const engine = createServerAgentToolsEngine(context, {
       agentConfig: { plugins: [] },
@@ -558,21 +556,21 @@ describe('createServerAgentToolsEngine', () => {
       toolIds: [],
     });
 
-    // lobe-agent is in alwaysOnToolIds, so its core capabilities are on for every agent-mode turn.
-    expect(result.enabledToolIds).toContain(LobeAgentManifest.identifier);
+    // orvilo-agent is in alwaysOnToolIds, so its core capabilities are on for every agent-mode turn.
+    expect(result.enabledToolIds).toContain(OrviloAgentManifest.identifier);
 
     // Without a manifest context, the full static manifest is used — callSubAgent stays.
-    const lobeAgent = result.enabledManifests.find(
-      (m) => m.identifier === LobeAgentManifest.identifier,
+    const orviloAgent = result.enabledManifests.find(
+      (m) => m.identifier === OrviloAgentManifest.identifier,
     );
-    expect(lobeAgent?.api.map((a) => a.name)).toContain(LobeAgentApiName.callSubAgent);
+    expect(orviloAgent?.api.map((a) => a.name)).toContain(OrviloAgentApiName.callSubAgent);
   });
 
   it('should honor an explicit disabled policy for an always-on builtin tool', () => {
     const context = createMockContext();
     const engine = createServerAgentToolsEngine(context, {
       agentConfig: { plugins: [] },
-      disabledPluginIds: [LobeAgentManifest.identifier],
+      disabledPluginIds: [OrviloAgentManifest.identifier],
       model: 'deepseek-chat',
       provider: 'deepseek',
     });
@@ -583,13 +581,13 @@ describe('createServerAgentToolsEngine', () => {
       toolIds: [],
     });
 
-    expect(result.enabledToolIds).not.toContain(LobeAgentManifest.identifier);
+    expect(result.enabledToolIds).not.toContain(OrviloAgentManifest.identifier);
     expect(result.enabledManifests).not.toContainEqual(
-      expect.objectContaining({ identifier: LobeAgentManifest.identifier }),
+      expect.objectContaining({ identifier: OrviloAgentManifest.identifier }),
     );
   });
 
-  it('hides lobe-agent callSubAgent when manifestContext.isSubAgent is true', () => {
+  it('hides orvilo-agent callSubAgent when manifestContext.isSubAgent is true', () => {
     const context = createMockContext();
     const engine = createServerAgentToolsEngine(context, {
       agentConfig: { plugins: [] },
@@ -604,16 +602,16 @@ describe('createServerAgentToolsEngine', () => {
       toolIds: [],
     });
 
-    // lobe-agent's other capabilities (plan / todo / visual-media) stay on...
-    expect(result.enabledToolIds).toContain(LobeAgentManifest.identifier);
-    const lobeAgent = result.enabledManifests.find(
-      (m) => m.identifier === LobeAgentManifest.identifier,
+    // orvilo-agent's other capabilities (plan / todo / visual-media) stay on...
+    expect(result.enabledToolIds).toContain(OrviloAgentManifest.identifier);
+    const orviloAgent = result.enabledManifests.find(
+      (m) => m.identifier === OrviloAgentManifest.identifier,
     );
     // ...but callSubAgent is stripped so a nested sub-agent cannot recurse.
-    expect(lobeAgent?.api.map((a) => a.name)).not.toContain(LobeAgentApiName.callSubAgent);
+    expect(orviloAgent?.api.map((a) => a.name)).not.toContain(OrviloAgentApiName.callSubAgent);
   });
 
-  it('rewrites lobe-skills exec descriptions when manifestContext.executionEnv is device-unrouted', () => {
+  it('rewrites orvilo-skills exec descriptions when manifestContext.executionEnv is device-unrouted', () => {
     const context = createMockContext();
     const engine = createServerAgentToolsEngine(context, {
       agentConfig: { plugins: [] },
@@ -631,7 +629,7 @@ describe('createServerAgentToolsEngine', () => {
       toolIds: [],
     });
 
-    // lobe-skills is always-on, so the resolved manifest is what the model sees.
+    // orvilo-skills is always-on, so the resolved manifest is what the model sees.
     const skills = result.enabledManifests.find((m) => m.identifier === SkillsManifest.identifier);
     const runCommand = skills?.api.find((a) => a.name === SkillsApiName.runCommand);
     expect(runCommand?.description).toContain('local device but it is offline');
@@ -641,7 +639,7 @@ describe('createServerAgentToolsEngine', () => {
     ).not.toContain('offline');
   });
 
-  it('hides lobe-agent callSubAgent inside a group run (scope=group)', () => {
+  it('hides orvilo-agent callSubAgent inside a group run (scope=group)', () => {
     const context = createMockContext();
     const engine = createServerAgentToolsEngine(context, {
       agentConfig: { plugins: [] },
@@ -656,10 +654,10 @@ describe('createServerAgentToolsEngine', () => {
       toolIds: [],
     });
 
-    const lobeAgent = result.enabledManifests.find(
-      (m) => m.identifier === LobeAgentManifest.identifier,
+    const orviloAgent = result.enabledManifests.find(
+      (m) => m.identifier === OrviloAgentManifest.identifier,
     );
-    expect(lobeAgent?.api.map((a) => a.name)).not.toContain(LobeAgentApiName.callSubAgent);
+    expect(orviloAgent?.api.map((a) => a.name)).not.toContain(OrviloAgentApiName.callSubAgent);
   });
 
   it('should enable KnowledgeBase when hasEnabledKnowledgeBases is true', () => {
@@ -779,12 +777,12 @@ describe('createServerAgentToolsEngine', () => {
     const result = engine.generateToolsDetailed({
       model: 'gpt-4',
       provider: 'openai',
-      toolIds: ['test-plugin', LobeAgentManifest.identifier, WebBrowsingManifest.identifier],
+      toolIds: ['test-plugin', OrviloAgentManifest.identifier, WebBrowsingManifest.identifier],
     });
 
-    // Exactly the declared plugin — no always-on lobe-agent, no default web/KB.
+    // Exactly the declared plugin — no always-on orvilo-agent, no default web/KB.
     expect(result.enabledToolIds).toContain('test-plugin');
-    expect(result.enabledToolIds).not.toContain(LobeAgentManifest.identifier);
+    expect(result.enabledToolIds).not.toContain(OrviloAgentManifest.identifier);
     expect(result.enabledToolIds).not.toContain(WebBrowsingManifest.identifier);
     expect(result.enabledToolIds).not.toContain(KnowledgeBaseManifest.identifier);
   });

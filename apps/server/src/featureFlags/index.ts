@@ -20,7 +20,7 @@ import {
 } from '@/server/runtimeConfig';
 import { merge } from '@/utils/merge';
 
-const debug = createDebug('lobe:featureFlags');
+const debug = createDebug('orvilo:featureFlags');
 
 const FEATURE_FLAGS_DOMAIN: RuntimeConfigDomain<IFeatureFlags> = {
   cacheTtlMs: 5000,

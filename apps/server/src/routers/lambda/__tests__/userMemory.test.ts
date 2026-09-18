@@ -1,4 +1,3 @@
-import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -7,21 +6,17 @@ import {
 } from '@/database/models/userMemory/persona';
 import { userMemoryRouter } from '@/server/routers/lambda/userMemory';
 import { AsyncTaskErrorType, AsyncTaskStatus, AsyncTaskType } from '@/types/asyncTask';
-import { MemorySourceType } from '@/types/userMemory';
 
 const mockFindActiveByType = vi.fn();
-const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
-const mockFindById = vi.fn();
 
-const mockCountTopicsForMemoryExtractor = vi.fn();
 const mockDeleteAll = vi.fn();
 const mockDeletePersona = vi.fn();
 const mockListPersonaVersions = vi.fn();
-const mockResetMemoryExtractStatus = vi.fn();
 const mockRestorePersonaVersion = vi.fn();
-const { mockTriggerProcessUsers } = vi.hoisted(() => ({
-  mockTriggerProcessUsers: vi.fn(),
+const { mockCancelHatchetWorkflow, mockDisableUserMemoryExtraction } = vi.hoisted(() => ({
+  mockCancelHatchetWorkflow: vi.fn(),
+  mockDisableUserMemoryExtraction: vi.fn(),
 }));
 
 // Workspace membership is verified for real — callers carrying workspaceId
@@ -34,23 +29,12 @@ vi.mock('@/database/models/workspace', async (importOriginal) => ({
 vi.mock('@/database/models/asyncTask', () => ({
   AsyncTaskModel: vi.fn(function () {
     return {
-      create: mockCreate,
-      findById: mockFindById,
       findActiveByType: mockFindActiveByType,
       update: mockUpdate,
     };
   }),
   initUserMemoryExtractionMetadata: vi.fn(function (metadata) {
     return metadata;
-  }),
-}));
-
-vi.mock('@/database/models/topic', () => ({
-  TopicModel: vi.fn(function () {
-    return {
-      countTopicsForMemoryExtractor: mockCountTopicsForMemoryExtractor,
-      resetMemoryExtractStatus: mockResetMemoryExtractStatus,
-    };
   }),
 }));
 
@@ -89,28 +73,12 @@ vi.mock('@/database/models/userMemory/persona', () => ({
   }),
 }));
 
-vi.mock('@/envs/app', () => ({
-  appEnv: {
-    APP_URL: 'https://example.com',
-    INTERNAL_APP_URL: 'https://internal.example.com',
-  },
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  cancelHatchetWorkflow: mockCancelHatchetWorkflow,
 }));
 
-vi.mock('@/server/globalConfig/parseMemoryExtractionConfig', () => ({
-  parseMemoryExtractionConfig: vi.fn(function () {
-    return {
-      webhook: { baseUrl: 'https://internal.example.com' },
-      workflowExtraHeaders: { 'x-test': 'ok' },
-    };
-  }),
-}));
-
-vi.mock('@/server/services/memory/userMemory/extract', () => ({
-  MemoryExtractionWorkflowService: {
-    triggerProcessUsers: mockTriggerProcessUsers,
-  },
-  buildWorkflowPayloadInput: (payload: any) => payload,
-  normalizeMemoryExtractionPayload: (payload: any) => payload,
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  disableUserMemoryExtraction: mockDisableUserMemoryExtraction,
 }));
 
 const createCaller = (ctxOverrides: Partial<any> = {}) => {
@@ -123,223 +91,13 @@ const createCaller = (ctxOverrides: Partial<any> = {}) => {
   return userMemoryRouter.createCaller(ctx);
 };
 
-describe('userMemoryRouter.requestMemoryFromChatTopic', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockTriggerProcessUsers.mockResolvedValue({ workflowRunId: 'workflow-run-1' });
-  });
-
-  it('dedupes when an active task exists', async () => {
-    mockFindActiveByType.mockResolvedValue({
-      id: 'existing-task',
-      metadata: { progress: { completedTopics: 0, totalTopics: 1 } },
-      status: AsyncTaskStatus.Pending,
-    });
-
-    const caller = createCaller();
-    const result = await caller.requestMemoryFromChatTopic({});
-
-    expect(result).toEqual({
-      deduped: true,
-      id: 'existing-task',
-      metadata: { progress: { completedTopics: 0, totalTopics: 1 } },
-      status: AsyncTaskStatus.Pending,
-    });
-    expect(mockCreate).not.toHaveBeenCalled();
-    expect(mockTriggerProcessUsers).not.toHaveBeenCalled();
-  });
-
-  it('creates task and triggers workflow with user context and dates', async () => {
-    mockFindActiveByType.mockResolvedValue(undefined);
-    mockCreate.mockResolvedValue('new-task');
-    mockCountTopicsForMemoryExtractor.mockResolvedValue(2);
-
-    const caller = createCaller();
-    const result = await caller.requestMemoryFromChatTopic({
-      fromDate: new Date('2024-01-01'),
-      toDate: new Date('2024-02-01'),
-    });
-
-    expect(mockCreate).toHaveBeenCalledWith({
-      metadata: {
-        progress: { completedTopics: 0, totalTopics: 2 },
-        range: {
-          from: new Date('2024-01-01').toISOString(),
-          to: new Date('2024-02-01').toISOString(),
-        },
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Pending,
-      type: AsyncTaskType.UserMemoryExtractionWithChatTopic,
-    });
-    expect(mockTriggerProcessUsers).toHaveBeenCalledWith(
-      expect.objectContaining({
-        asyncTaskId: 'new-task',
-        baseUrl: 'https://internal.example.com',
-        fromDate: new Date('2024-01-01'),
-        sources: [MemorySourceType.ChatTopic],
-        toDate: new Date('2024-02-01'),
-        userIds: ['user-1'],
-        userInitiated: true,
-      }),
-      { extraHeaders: { 'x-test': 'ok' } },
-    );
-    expect(mockUpdate).toHaveBeenCalledWith('new-task', {
-      metadata: expect.objectContaining({
-        control: {
-          hatchet: {
-            workflowRunIds: ['workflow-run-1'],
-          },
-        },
-      }),
-    });
-    expect(result).toMatchObject({
-      deduped: false,
-      id: 'new-task',
-      status: AsyncTaskStatus.Pending,
-    });
-  });
-
-  it('returns success immediately when no topics', async () => {
-    mockFindActiveByType.mockResolvedValue(undefined);
-    mockCountTopicsForMemoryExtractor.mockResolvedValue(0);
-    mockCreate.mockResolvedValue('empty-task');
-
-    const caller = createCaller();
-    const result = await caller.requestMemoryFromChatTopic({});
-
-    expect(result).toEqual({
-      deduped: false,
-      id: 'empty-task',
-      metadata: {
-        progress: { completedTopics: 0, totalTopics: 0 },
-        range: { from: undefined, to: undefined },
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Success,
-    });
-    expect(mockTriggerProcessUsers).not.toHaveBeenCalled();
-  });
-
-  it('throws on invalid date range', async () => {
-    const caller = createCaller();
-    await expect(
-      caller.requestMemoryFromChatTopic({
-        fromDate: new Date('2024-02-02'),
-        toDate: new Date('2024-01-01'),
-      }),
-    ).rejects.toBeInstanceOf(TRPCError);
-  });
-});
-
-describe('userMemoryRouter.getMemoryExtractionTask', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useRealTimers();
-  });
-
-  it('returns null when no active task', async () => {
-    mockFindActiveByType.mockResolvedValue(undefined);
-
-    const caller = createCaller();
-    const result = await caller.getMemoryExtractionTask();
-
-    expect(result).toBeNull();
-  });
-
-  it('returns active task with normalized metadata', async () => {
-    mockFindActiveByType.mockResolvedValue({
-      id: 'task-1',
-      metadata: {
-        progress: { completedTopics: 1, totalTopics: 4 },
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Processing,
-      userId: 'user-1',
-    });
-
-    const caller = createCaller();
-    const result = await caller.getMemoryExtractionTask();
-
-    expect(result).toEqual({
-      error: undefined,
-      id: 'task-1',
-      metadata: {
-        progress: { completedTopics: 1, totalTopics: 4 },
-        range: undefined,
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Processing,
-    });
-  });
-
-  it('fetches by task id when provided', async () => {
-    mockFindActiveByType.mockResolvedValue(undefined);
-    mockFindById.mockResolvedValue({
-      id: 'a0a0a0a0-a0a0-4a0a-a0a0-a0a0a0a0a0a0',
-      metadata: {
-        progress: { completedTopics: 2, totalTopics: 8 },
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Pending,
-      userId: 'user-1',
-    });
-
-    const caller = createCaller();
-    const result = await caller.getMemoryExtractionTask({
-      taskId: 'a0a0a0a0-a0a0-4a0a-a0a0-a0a0a0a0a0a0',
-    });
-
-    expect(mockFindById).toHaveBeenCalledWith('a0a0a0a0-a0a0-4a0a-a0a0-a0a0a0a0a0a0');
-    expect(result?.id).toBe('a0a0a0a0-a0a0-4a0a-a0a0-a0a0a0a0a0a0');
-  });
-
-  it('marks active task as error when topic-based timeout is exceeded', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2024-03-01T01:00:00.000Z'));
-
-    mockFindActiveByType.mockResolvedValue({
-      createdAt: new Date('2024-03-01T00:00:00.000Z'),
-      id: 'task-timeout',
-      metadata: {
-        progress: { completedTopics: 1, totalTopics: 6 },
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Processing,
-      userId: 'user-1',
-    });
-
-    const caller = createCaller();
-    const result = await caller.getMemoryExtractionTask();
-
-    expect(mockUpdate).toHaveBeenCalledWith(
-      'task-timeout',
-      expect.objectContaining({
-        error: expect.objectContaining({
-          body: expect.objectContaining({
-            detail: expect.stringContaining('timed out after 30 minutes'),
-          }),
-          name: AsyncTaskErrorType.Timeout,
-        }),
-        status: AsyncTaskStatus.Error,
-      }),
-    );
-    expect(result).toEqual({
-      error: expect.objectContaining({
-        body: expect.objectContaining({
-          detail: expect.stringContaining('timed out after 30 minutes'),
-        }),
-        name: AsyncTaskErrorType.Timeout,
-      }),
-      id: 'task-timeout',
-      metadata: {
-        progress: { completedTopics: 1, totalTopics: 6 },
-        range: undefined,
-        source: 'chat_topic',
-      },
-      status: AsyncTaskStatus.Error,
-    });
-  });
+describe('userMemoryRouter retired bulk extraction entries', () => {
+  it.each(['requestMemoryFromChatTopic', 'getMemoryExtractionTask'])(
+    'does not expose %s',
+    (procedure) => {
+      expect(procedure in userMemoryRouter._def.procedures).toBe(false);
+    },
+  );
 });
 
 describe('userMemoryRouter.deleteAll', () => {
@@ -350,15 +108,105 @@ describe('userMemoryRouter.deleteAll', () => {
   it('purges all user memories through the aggregate model', async () => {
     mockDeleteAll.mockResolvedValue(undefined);
     mockDeletePersona.mockResolvedValue(undefined);
-    mockResetMemoryExtractStatus.mockResolvedValue(undefined);
+    mockFindActiveByType.mockResolvedValue(undefined);
 
     const caller = createCaller();
     const result = await caller.deleteAll();
 
     expect(mockDeleteAll).toHaveBeenCalledOnce();
     expect(mockDeletePersona).toHaveBeenCalledOnce();
-    expect(mockResetMemoryExtractStatus).toHaveBeenCalledOnce();
     expect(result).toEqual({ success: true });
+  });
+
+  it('opts the user out of memory production so in-flight workflows cannot rebuild the profile', async () => {
+    mockDeleteAll.mockResolvedValue(undefined);
+    mockDeletePersona.mockResolvedValue(undefined);
+    mockFindActiveByType.mockResolvedValue(undefined);
+    mockDisableUserMemoryExtraction.mockResolvedValue(undefined);
+
+    const caller = createCaller();
+    await caller.deleteAll();
+
+    // Hourly fan-out and persona-update steps are owned by the service user,
+    // so the ownership-scoped task lookup below can never see them. Flipping
+    // `memory.enabled` — the flag every production stage already checks — is
+    // what actually stops an already-running step from re-materializing the
+    // purged memories.
+    expect(mockDisableUserMemoryExtraction).toHaveBeenCalledWith('user-1', {});
+  });
+
+  it('does not re-open topics for re-extraction after purge', async () => {
+    mockDeleteAll.mockResolvedValue(undefined);
+    mockDeletePersona.mockResolvedValue(undefined);
+    mockFindActiveByType.mockResolvedValue(undefined);
+
+    const caller = createCaller();
+    await caller.deleteAll();
+
+    // The former resetMemoryExtractStatus loophole is gone: nothing in the
+    // purge path may mark historical topics as pending again, otherwise the
+    // hourly workflow would silently rebuild the deleted profile.
+    expect(mockFindActiveByType).toHaveBeenCalledWith(
+      AsyncTaskType.UserMemoryExtractionWithChatTopic,
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockCancelHatchetWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('cancels an in-flight extraction task and its workflow runs', async () => {
+    mockDeleteAll.mockResolvedValue(undefined);
+    mockDeletePersona.mockResolvedValue(undefined);
+    mockFindActiveByType.mockResolvedValue({
+      id: 'task-1',
+      metadata: {
+        control: {
+          hatchet: { workflowRunIds: ['run-1', 'run-2'] },
+        },
+        progress: { completedTopics: 1, totalTopics: 3 },
+        source: 'chat_topic',
+      },
+      status: AsyncTaskStatus.Processing,
+    });
+    mockCancelHatchetWorkflow.mockResolvedValue(undefined);
+
+    const caller = createCaller();
+    const result = await caller.deleteAll();
+
+    expect(result).toEqual({ success: true });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({
+        error: expect.objectContaining({
+          name: AsyncTaskErrorType.TaskCancelled,
+        }),
+        metadata: expect.objectContaining({
+          control: expect.objectContaining({
+            cancelledBy: 'user',
+            cancelRequestedAt: expect.any(String),
+          }),
+        }),
+        status: AsyncTaskStatus.Error,
+      }),
+    );
+    expect(mockCancelHatchetWorkflow).toHaveBeenCalledTimes(2);
+    expect(mockCancelHatchetWorkflow).toHaveBeenCalledWith('run-1');
+    expect(mockCancelHatchetWorkflow).toHaveBeenCalledWith('run-2');
+  });
+
+  it('still succeeds when workflow cancellation fails', async () => {
+    mockDeleteAll.mockResolvedValue(undefined);
+    mockDeletePersona.mockResolvedValue(undefined);
+    mockFindActiveByType.mockResolvedValue({
+      id: 'task-1',
+      metadata: {
+        control: { hatchet: { workflowRunIds: ['run-1'] } },
+      },
+      status: AsyncTaskStatus.Processing,
+    });
+    mockCancelHatchetWorkflow.mockRejectedValue(new Error('cancel failed'));
+
+    const caller = createCaller();
+    await expect(caller.deleteAll()).resolves.toEqual({ success: true });
   });
 });
 

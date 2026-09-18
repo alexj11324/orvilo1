@@ -33,10 +33,10 @@ export const UpdateConfigInspector = memo<
       const enabled = togglePlugin.enabled ?? pluginState?.togglePlugin?.enabled;
       const action =
         enabled === true
-          ? t('builtins.lobe-agent-builder.inspector.enablePlugin')
+          ? t('builtins.orvilo-agent-builder.inspector.enablePlugin')
           : enabled === false
-            ? t('builtins.lobe-agent-builder.inspector.disablePlugin')
-            : t('builtins.lobe-agent-builder.inspector.togglePlugin');
+            ? t('builtins.orvilo-agent-builder.inspector.disablePlugin')
+            : t('builtins.orvilo-agent-builder.inspector.togglePlugin');
       return `${action} ${togglePlugin.pluginId}`;
     }
 
@@ -63,7 +63,7 @@ export const UpdateConfigInspector = memo<
     return (
       <div className={inspectorTextStyles.root}>
         <span className={shinyTextStyles.shinyText}>
-          {t('builtins.lobe-agent-builder.apiName.updateConfig')}
+          {t('builtins.orvilo-agent-builder.apiName.updateConfig')}
         </span>
       </div>
     );
@@ -74,7 +74,7 @@ export const UpdateConfigInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-        {t('builtins.lobe-agent-builder.apiName.updateConfig')}
+        {t('builtins.orvilo-agent-builder.apiName.updateConfig')}
       </span>
       {displayText && (
         <>

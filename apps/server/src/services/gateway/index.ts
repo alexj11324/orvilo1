@@ -155,7 +155,7 @@ function mapGatewayStatusToRuntimeStatus(
   }
 }
 
-const log = debug('lobe-server:service:gateway');
+const log = debug('orvilo-server:service:gateway');
 
 /**
  * Derive edge-filtering capabilities for a bot-channel connection from its

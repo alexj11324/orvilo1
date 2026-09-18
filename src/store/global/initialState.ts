@@ -10,17 +10,12 @@ import { AsyncLocalStorage } from '@/utils/localStorage';
 export enum SidebarTabKey {
   Automations = 'automations',
   Chat = 'chat',
-  Community = 'community',
   Home = 'home',
-  Image = 'image',
   Knowledge = 'knowledge',
   Me = 'me',
-  Memory = 'memory',
-  Pages = 'pages',
   Resource = 'resource',
   Setting = 'settings',
   Tasks = 'tasks',
-  Video = 'video',
 }
 
 export enum ChatSettingsTabs {
@@ -29,6 +24,7 @@ export enum ChatSettingsTabs {
   Opening = 'opening',
   Plugin = 'plugin',
   Prompt = 'prompt',
+  Rules = 'rules',
   SelfIteration = 'selfIteration',
 }
 
@@ -310,7 +306,6 @@ export interface SystemStatus {
   showAgentBuilderPanel?: boolean;
   showCommandMenu?: boolean;
   showFilePanel?: boolean;
-  showHomePortrait?: boolean;
   /**
    * Visibility of the Home dashboard's activity and recommendations rail.
    * Independent from `showRightPanel` so Home preferences do not affect chat pages.
@@ -519,7 +514,9 @@ export const INITIAL_STATUS = {
   recentPageSize: 5,
   taskListViewOptions: {
     groupBy: 'status',
-    hideCompleted: true,
+    // Completed work is part of the default picture now that the task board is
+    // the product's front door; only `canceled` starts folded away.
+    hideCompleted: false,
     nestedSubTasks: true,
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
@@ -527,8 +524,11 @@ export const INITIAL_STATUS = {
     showSubTasks: false,
     subGroupBy: 'none',
   },
-  taskListViewMode: 'list' as const,
-  taskKanbanHiddenColumns: ['done', 'canceled'],
+  // The board, not the list, is what a user without a stored preference lands on.
+  // An existing `'list'` value is left alone on purpose: it is indistinguishable
+  // from a deliberate choice, and the plan is explicit that we do not guess.
+  taskListViewMode: 'kanban' as const,
+  taskKanbanHiddenColumns: ['canceled'],
   taskKanbanHiddenPanelCollapsed: false,
   disabledModelProvidersSortType: 'default',
   disabledModelsSortType: 'default',
@@ -563,7 +563,6 @@ export const INITIAL_STATUS = {
   resourceManagerColumnWidths: DEFAULT_RESOURCE_MANAGER_COLUMN_WIDTHS,
   showCommandMenu: false,
   showFilePanel: true,
-  showHomePortrait: true,
   showHotkeyHelper: false,
   showHomeRail: true,
   showImagePanel: true,
@@ -590,7 +589,7 @@ export const INITIAL_STATUS = {
   workingSidebarWidth: 360,
 } satisfies SystemStatus;
 
-const statusStorage = new AsyncLocalStorage<SystemStatus>('LOBE_SYSTEM_STATUS');
+const statusStorage = new AsyncLocalStorage<SystemStatus>('ORVILO_SYSTEM_STATUS');
 
 /**
  * Restore the shell-defining preferences before React's first render. The
@@ -612,10 +611,6 @@ export const createInitialSystemStatus = (): SystemStatus => {
       typeof persistedStatus.leftPanelWidth === 'number'
         ? persistedStatus.leftPanelWidth
         : INITIAL_STATUS.leftPanelWidth,
-    showHomePortrait:
-      typeof persistedStatus.showHomePortrait === 'boolean'
-        ? persistedStatus.showHomePortrait
-        : INITIAL_STATUS.showHomePortrait,
     showHomeRail:
       typeof persistedStatus.showHomeRail === 'boolean'
         ? persistedStatus.showHomeRail

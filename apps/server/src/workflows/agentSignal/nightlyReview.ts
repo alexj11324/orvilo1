@@ -3,7 +3,7 @@ import debug from 'debug';
 import { injectActiveTraceHeaders } from '@/libs/observability/traceparent';
 import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 
-const log = debug('lobe-server:workflows:agent-signal:nightly-review');
+const log = debug('orvilo-server:workflows:agent-signal:nightly-review');
 
 /**
  * Hard ceiling for every outbound publish in the nightly review chain.

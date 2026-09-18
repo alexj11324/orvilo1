@@ -180,7 +180,7 @@ describe('heteroCli executors', () => {
       call({
         params: { command: 'gh pr create --title "fix thing"' },
         result: {
-          content: 'https://github.com/lobehub/lobehub/pull/123',
+          content: 'https://github.com/alexj11324/orvilo1/pull/123',
           success: true,
         },
       }),
@@ -188,7 +188,7 @@ describe('heteroCli executors', () => {
 
     expect(detectMocks.recordGitCommandEffects).toHaveBeenCalledWith({
       command: 'gh pr create --title "fix thing"',
-      resultContent: 'https://github.com/lobehub/lobehub/pull/123',
+      resultContent: 'https://github.com/alexj11324/orvilo1/pull/123',
       topicId: 't1',
     });
   });

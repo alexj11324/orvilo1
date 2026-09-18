@@ -64,17 +64,19 @@ describe('tool display names', () => {
   });
 
   it('uses friendly labels for the in-app browser MCP tool names', () => {
-    // Title-casing the wire name yields "Mcp  lobe cc  browser navigate".
+    // Title-casing the wire name yields "Mcp  orvilo cc  browser navigate".
     // Past tense: the summary reports what already ran, not an offer to run it.
-    expect(getToolDisplayName('mcp__lobe_cc__browser_navigate')).toBe('Opened page');
-    expect(getToolDisplayName('mcp__lobe_cc__browser_screenshot')).toBe('Captured screenshot');
-    expect(getToolDisplayName('mcp__lobe_cc__browser_read_page')).toBe('Read page text');
+    expect(getToolDisplayName('mcp__orvilo_cc__browser_navigate')).toBe('Opened page');
+    expect(getToolDisplayName('mcp__orvilo_cc__browser_screenshot')).toBe('Captured screenshot');
+    expect(getToolDisplayName('mcp__orvilo_cc__browser_read_page')).toBe('Read page text');
     // `snapshot` returns the a11y tree — say what the agent got, not the wire name.
-    expect(getToolDisplayName('mcp__lobe_cc__browser_snapshot')).toBe('Read page elements');
+    expect(getToolDisplayName('mcp__orvilo_cc__browser_snapshot')).toBe('Read page elements');
   });
 
   it('leaves unknown MCP tools on the title-case fallback', () => {
-    expect(getToolDisplayName('mcp__lobe_cc__something_else')).toBe('Mcp__lobe_cc__something_else');
+    expect(getToolDisplayName('mcp__orvilo_cc__something_else')).toBe(
+      'Mcp__orvilo_cc__something_else',
+    );
   });
 });
 

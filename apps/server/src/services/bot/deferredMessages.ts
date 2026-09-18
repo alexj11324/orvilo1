@@ -3,7 +3,7 @@ import debug from 'debug';
 
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
 
-const log = debug('lobe-server:bot:deferred-messages');
+const log = debug('orvilo-server:bot:deferred-messages');
 
 /**
  * Cross-process queue for inbound bot messages that arrive while the thread's

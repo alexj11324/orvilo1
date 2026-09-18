@@ -53,7 +53,7 @@ import debug from 'debug';
 
 import { gatewayEnv } from '@/envs/gateway';
 
-const log = debug('lobe-server:device-gateway');
+const log = debug('orvilo-server:device-gateway');
 
 /**
  * Is `target` the same as, or nested inside, `root`?

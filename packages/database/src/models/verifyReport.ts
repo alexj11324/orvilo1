@@ -2,18 +2,18 @@ import type { VerifyReport } from '@orvilo/types';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { verifyReports, verifyRuns } from '../schemas/verify';
-import type { LobeChatDatabase } from '../type';
+import type { OrviloDatabase } from '../type';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 /** Caller-supplied fields when writing a report (ownership + timestamps are injected). */
 type CreateVerifyReport = Omit<VerifyReport, 'id' | 'createdAt' | 'generatedAt'>;
 
 export class VerifyReportModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
   private readonly workspaceId?: string;
 
-  constructor(db: LobeChatDatabase, userId: string, workspaceId?: string) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;

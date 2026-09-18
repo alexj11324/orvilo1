@@ -107,7 +107,7 @@ const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
 const taskListViewOptions = (s: GlobalState) =>
   s.status.taskListViewOptions || {
     groupBy: 'status',
-    hideCompleted: true,
+    hideCompleted: false,
     nestedSubTasks: true,
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
@@ -116,7 +116,7 @@ const taskListViewOptions = (s: GlobalState) =>
     subGroupBy: 'none',
   };
 
-const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list';
+const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'kanban';
 
 // Default the inline composer to collapsed so a populated task list keeps the
 // records at the top of the fold; the empty-state hero still shows the full
@@ -124,7 +124,9 @@ const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list'
 const taskCreateInlineCollapsed = (s: GlobalState): boolean =>
   s.status.taskCreateInlineCollapsed ?? true;
 
-export const DEFAULT_KANBAN_HIDDEN_COLUMNS: string[] = ['done', 'canceled'];
+/** `done` stays visible so finished work is part of the default picture;
+ * `canceled` starts folded away. A stored preference always wins. */
+export const DEFAULT_KANBAN_HIDDEN_COLUMNS: string[] = ['canceled'];
 
 const taskKanbanHiddenColumns = (s: GlobalState): string[] =>
   s.status.taskKanbanHiddenColumns ?? DEFAULT_KANBAN_HIDDEN_COLUMNS;
@@ -153,7 +155,7 @@ const hiddenSidebarSections =
       const overlay = s.status.workspace?.hiddenSidebarSections;
       // Once the user touches sidebar visibility in this workspace the overlay
       // owns the list — including an explicit empty array meaning "show all".
-      if (overlay !== undefined) return overlay;
+      if (overlay !== undefined) return withoutRetiredItems(overlay);
       // Untouched workspace: inherit any personal-mode hides and layer the
       // workspace defaults on top so `recents` starts collapsed.
       const personal = s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
@@ -161,35 +163,92 @@ const hiddenSidebarSections =
       for (const k of WORKSPACE_DEFAULT_HIDDEN_SECTIONS) {
         if (!merged.includes(k)) merged.push(k);
       }
-      return merged;
+      return withoutRetiredItems(merged);
     }
-    return s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
+    return withoutRetiredItems(s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS);
   };
 
 const sidebarExpandedKeys =
   (workspaceId: string | null) =>
   (s: GlobalState): string[] =>
-    readOverridableField(s.status, 'sidebarExpandedKeys', workspaceId) ??
-    DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS;
+    withoutRetiredItems(
+      readOverridableField(s.status, 'sidebarExpandedKeys', workspaceId) ??
+        DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
+    );
 
 /** Sentinel id representing the flex spacer slot. Its position in `sidebarItems`
  * determines where the sidebar pushes items to the bottom. */
 export const SIDEBAR_SPACER_ID = '__spacer__';
 
+/**
+ * The sidebar's default order, in one list split by the spacer sentinel into
+ * two groups: the primary working set above it, and secondary entries below.
+ *
+ * `resource` sits below the spacer on purpose (S50). It is a shared library,
+ * not a peer of Tasks and Automations, and in the top group it read as a third
+ * first-class destination competing with them. The registry already carries the
+ * same judgement — `resource` is the only `secondary` route in
+ * `NAVIGATION_ROUTES` — this is where that tier reaches the sidebar.
+ *
+ * Moving the key here only changes the default: `withAllKnownKeys` backfills
+ * missing defaults and never reorders, so a stored order keeps `resource` where
+ * its owner put it. That is deliberate — `reorderSidebarItems` exists so users
+ * can arrange this list, and a read-path re-anchor would silently undo their
+ * arrangement on every render. The default, the reset action and the unsaved
+ * baseline of the customizer all pick the new order up.
+ */
 export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'tasks',
   'automations',
-  'resource',
   'recents',
   'project',
   'private',
   'agent',
   SIDEBAR_SPACER_ID,
-  'image',
-  'memory',
+  'resource',
 ];
 
-const RETIRED_SIDEBAR_KEYS = new Set(['community', 'pages']);
+/**
+ * Sidebar keys whose product surface has been withdrawn by the task-first
+ * convergence. See docs/development/product-scope.md.
+ *
+ * This list exists because removing an entry from `DEFAULT_SIDEBAR_ITEMS` is not
+ * sufficient on its own: `withAllKnownKeys` only *backfills* missing defaults, it
+ * never strips anything. A user who already has `'image'` in their stored order
+ * keeps it after the default changes, and the sidebar keeps rendering it. The
+ * strip below runs on the read path so stored, overlaid, and re-synced state all
+ * pass through it.
+ *
+ * Both spellings of the documents key are listed: the sidebar stores `pages`
+ * (its `SidebarTabKey`), while the route registry uses `page`.
+ */
+export const RETIRED_SIDEBAR_KEYS = new Set(['community', 'image', 'memory', 'page', 'pages']);
+
+/**
+ * Drop retired keys from a stored sidebar order.
+ *
+ * Idempotent, and returns the original reference when there is nothing to strip.
+ * Reference stability matters because the result feeds a zustand selector: a
+ * freshly built array on every read breaks the store's snapshot bail-out in
+ * `useSyncExternalStore`, which costs a re-render per subscriber and can trip
+ * the "getSnapshot should be cached" warning. Keeping the same reference also
+ * makes a second pass a provable no-op.
+ *
+ * Note this only reaches the store on paths that hand the value straight back.
+ * `sidebarItems` additionally runs through `normalizeSpacerPosition`, which
+ * always builds a new array, so it bails out only on the `DEFAULT_SIDEBAR_ITEMS`
+ * fast path.
+ */
+const withoutRetiredItems = (items: string[]): string[] => {
+  let seen = false;
+  for (const item of items) {
+    if (RETIRED_SIDEBAR_KEYS.has(item)) {
+      seen = true;
+      break;
+    }
+  }
+  return seen ? items.filter((item) => !RETIRED_SIDEBAR_KEYS.has(item)) : items;
+};
 
 /** Items that must stay contiguous in the sidebar list (accordion block).
  * `private` sits above `agent` so workspace users see their personal items
@@ -235,7 +294,10 @@ const normalizeSpacerPosition = (order: string[]): string[] => {
 // default added in a future version would silently appear in the bottom group
 // for existing users.
 const withAllKnownKeys = (order: string[]): string[] => {
-  const activeOrder = order.filter((key) => !RETIRED_SIDEBAR_KEYS.has(key));
+  // Strip retired keys first. This function is the single choke point every
+  // stored order passes through — including the legacy `sidebarSectionOrder`
+  // migration path — so retiring here covers all of them at once.
+  const activeOrder = withoutRetiredItems(order);
   let nextOrder = activeOrder;
   if (!activeOrder.includes('project')) {
     const recentsIndex = activeOrder.indexOf('recents');
@@ -250,6 +312,10 @@ const withAllKnownKeys = (order: string[]): string[] => {
   const missingBottom: string[] = [];
   for (const k of DEFAULT_SIDEBAR_ITEMS) {
     if (k === SIDEBAR_SPACER_ID || present.has(k)) continue;
+    // The split keeps a bottom-group default landing below the spacer for a
+    // user who stored an order without it, instead of silently appearing in the
+    // top group and reading as primary. `resource` is the entry that exercises
+    // this today (S50 demoted it to the bottom group).
     (DEFAULT_BOTTOM_KEYS.has(k) ? missingBottom : missingTop).push(k);
   }
 
@@ -384,7 +450,6 @@ const mobileShowTopic = (s: GlobalState) => s.status.mobileShowTopic;
 const mobileShowPortal = (s: GlobalState) => s.status.mobileShowPortal;
 const showAgentBuilderPanel = (s: GlobalState) => s.status.showAgentBuilderPanel;
 const showHomeRail = (s: GlobalState) => s.status.showHomeRail ?? true;
-const showHomePortrait = (s: GlobalState) => s.status.showHomePortrait ?? true;
 const hiddenHomeWidgets = (s: GlobalState): string[] => s.status.hiddenHomeWidgets ?? [];
 const homeGoalsCollapsed = (s: GlobalState): boolean => s.status.homeGoalsCollapsed ?? false;
 const homeRecentsCount = (s: GlobalState): number => s.status.homeRecentsCount ?? 8;
@@ -397,8 +462,6 @@ const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;
 const terminalPanelHeight = (s: GlobalState) => s.status.terminalPanelHeight || 320;
 const showFilePanel = (s: GlobalState) => s.status.showFilePanel;
 const showVerifyReportPanel = (s: GlobalState) => s.status.showVerifyReportPanel ?? true;
-const showImagePanel = (s: GlobalState) => s.status.showImagePanel;
-const showImageTopicPanel = (s: GlobalState) => s.status.showImageTopicPanel;
 const hidePWAInstaller = (s: GlobalState) => s.status.hidePWAInstaller;
 const isShowCredit = (s: GlobalState) => s.status.isShowCredit;
 const language = (s: GlobalState) => s.status.language || 'auto';
@@ -420,20 +483,12 @@ const portalWidth = (s: GlobalState) => s.status.portalWidth || 400;
 const portalWidths = (s: GlobalState) => s.status.portalWidths;
 const filePanelWidth = (s: GlobalState) => s.status.filePanelWidth;
 const groupAgentBuilderPanelWidth = (s: GlobalState) => s.status.groupAgentBuilderPanelWidth || 360;
-const imagePanelWidth = (s: GlobalState) => s.status.imagePanelWidth;
 const agentListViewMode = (s: GlobalState) => s.status.agentListViewMode || 'list';
 const agentListViewOptions = (s: GlobalState) => s.status.agentListViewOptions;
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
-const imageTopicViewMode = (s: GlobalState) => s.status.imageTopicViewMode || 'grid';
-const imageTopicPanelWidth = (s: GlobalState) => s.status.imageTopicPanelWidth;
 const verifyReportPanelWidth = (s: GlobalState) => s.status.verifyReportPanelWidth || 300;
-const videoPanelWidth = (s: GlobalState) => s.status.videoPanelWidth;
-const videoTopicViewMode = (s: GlobalState) => s.status.videoTopicViewMode || 'grid';
-const videoTopicPanelWidth = (s: GlobalState) => s.status.videoTopicPanelWidth;
-const showVideoPanel = (s: GlobalState) => s.status.showVideoPanel;
-const showVideoTopicPanel = (s: GlobalState) => s.status.showVideoTopicPanel;
 const wideScreen = (s: GlobalState) => !s.status.noWideScreen;
 const chatInputHeight = (s: GlobalState) => s.status.chatInputHeight || 64;
 const expandInputActionbar = (s: GlobalState) => s.status.expandInputActionbar;
@@ -489,9 +544,6 @@ export const systemStatusSelectors = {
   homeRecentsCount,
   homeSelectedAgentId,
   homeTaskCount,
-  imagePanelWidth,
-  imageTopicViewMode,
-  imageTopicPanelWidth,
   isBannerDismissed,
   isNotificationRead,
   isShowCredit,
@@ -520,10 +572,7 @@ export const systemStatusSelectors = {
   sessionGroupKeys,
   showAgentBuilderPanel,
   showFilePanel,
-  showHomePortrait,
   showHomeRail,
-  showImagePanel,
-  showImageTopicPanel,
   showLeftPanel,
   showPageAgentPanel,
   showRightPanel,
@@ -531,17 +580,12 @@ export const systemStatusSelectors = {
   showTaskAgentPanel,
   showTerminalPanel,
   showVerifyReportPanel,
-  showVideoPanel,
-  showVideoTopicPanel,
   systemStatus,
   terminalPanelHeight,
   verifyReportPanelWidth,
   tokenDisplayFormatShort,
   collapsedTopicGroupKeys,
   topicPageSize,
-  videoPanelWidth,
-  videoTopicViewMode,
-  videoTopicPanelWidth,
   wideScreen,
   workingSidebarWidth,
 };

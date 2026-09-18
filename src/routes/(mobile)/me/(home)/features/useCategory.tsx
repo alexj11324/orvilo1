@@ -1,4 +1,4 @@
-import { LOBE_CHAT_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
+import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { DOWNLOAD_URL, OFFICIAL_URL } from '@orvilo/const';
 import {
   Book,
@@ -73,7 +73,7 @@ export const useCategory = () => {
     showCloudPromotion && {
       icon: Cloudy,
       key: 'cloud',
-      label: t('userPanel.cloud', { name: LOBE_CHAT_CLOUD }),
+      label: t('userPanel.cloud', { name: ORVILO_CLOUD }),
       onClick: () => window.open(`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}`, '__blank'),
     },
     {

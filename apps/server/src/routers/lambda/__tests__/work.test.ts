@@ -64,7 +64,7 @@ describe('workRouter — per-procedure write permission gates', () => {
       createCaller().registerDocument({
         changeType: 'created',
         documentId: 'doc-1',
-        toolIdentifier: 'lobe-agent-documents',
+        toolIdentifier: 'orvilo-agent-documents',
         toolName: 'tool',
       }),
     ).rejects.toThrow('GATE:document:update');
@@ -76,7 +76,7 @@ describe('workRouter — per-procedure write permission gates', () => {
     await expect(
       createCaller().registerTask({
         changeType: 'created',
-        toolIdentifier: 'lobe-task',
+        toolIdentifier: 'orvilo-task',
         toolName: 'tool',
       }),
     ).rejects.toThrow('GATE:agent:update');

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LobeChatDatabase } from '@/database/type';
+import type { OrviloDatabase } from '@/database/type';
 
 import { ChatService } from './chat.service';
 
@@ -70,7 +70,7 @@ vi.mock('@/server/modules/ModelRuntime', () => ({
 
 describe('ChatService payload construction', () => {
   const buildService = (workspaceId?: string) => {
-    const service = new ChatService({} as LobeChatDatabase, 'user-1', workspaceId);
+    const service = new ChatService({} as OrviloDatabase, 'user-1', workspaceId);
     // Bypass permission + credential resolution; only the payload is under test.
     (service as any).resolveOperationPermission = vi.fn().mockResolvedValue({ isPermitted: true });
     (service as any).getApiKey = vi.fn().mockResolvedValue(JSON.stringify({ apiKey: 'k' }));
@@ -149,7 +149,7 @@ describe('ChatService default model', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('falls back to the product defaults, not to this service’s own literals', async () => {
-    const service = new ChatService({} as LobeChatDatabase, 'user-1');
+    const service = new ChatService({} as OrviloDatabase, 'user-1');
     (service as any).resolveOperationPermission = vi.fn().mockResolvedValue({ isPermitted: true });
     (service as any).getApiKey = vi.fn().mockResolvedValue(JSON.stringify({ apiKey: 'k' }));
 

@@ -12,7 +12,7 @@ import {
   LOCAL_HETEROGENEOUS_AGENT_TYPES,
 } from '@orvilo/heterogeneous-agents';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
-import { LobeBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
+import { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
 import { HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV } from '@orvilo/heterogeneous-agents/protocol';
 import { resolveHeteroSpawnCommand } from '@orvilo/heterogeneous-agents/resolveCliCommand';
 import type {
@@ -466,7 +466,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
   const emitJsonl = options.render === 'jsonl' || (options.render === undefined && !serverIngest);
 
   // Build the ingest sink — no-op for standalone mode, real tRPC sink for
-  // server-ingest mode.  The tRPC client reads LOBEHUB_JWT (operation-scoped
+  // server-ingest mode.  The tRPC client reads ORVILO_JWT (operation-scoped
   // JWT injected by the server) for authentication.
   // Every downstream consumer (ingest sink, AskUser bridge, spawn, error
   // classification) works in CLI-family terms. The builtin `orvilo` harness
@@ -492,7 +492,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
       agentType,
       operationId,
       options.topic!,
-      process.env.LOBEHUB_ASSISTANT_MESSAGE_ID,
+      process.env.ORVILO_ASSISTANT_MESSAGE_ID,
     );
     serverIngester = new CoalescingBatchIngester(sink);
 
@@ -529,7 +529,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
 
   // ─── AskUserQuestion MCP — remote Human-in-the-loop ────────────────────────
   //
-  // Mount the same `lobe_cc` MCP server the desktop app uses, but resolve the
+  // Mount the same `orvilo_cc` MCP server the desktop app uses, but resolve the
   // bridge over the server's Redis stream instead of Electron IPC:
   //   - request out: `bridge.events()` ride the normal ingest sink → server
   //     `heteroIngest` → Redis stream → renderer shows the AskUserQuestion card.
@@ -539,7 +539,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // The bridge's own 5-min timeout is the backstop, so a dropped poll or an
   // absent user never strands CC.
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-  let askServer: LobeBuiltinMcpServer | undefined;
+  let askServer: OrviloBuiltinMcpServer | undefined;
   let askBridge: AskUserBridge | undefined;
   let askMcpConfigPath: string | undefined;
   const askPollAbort = new AbortController();
@@ -563,18 +563,18 @@ const exec = async (options: ExecOptions): Promise<void> => {
         provider: 'devin',
       });
     } else {
-      askServer = new LobeBuiltinMcpServer();
+      askServer = new OrviloBuiltinMcpServer();
       await askServer.start();
       askBridge = askServer.registerOperation(
         operationId,
         new AskUserBridge(operationId, { identifier: agentType, provider: agentType }),
       );
-      askMcpConfigPath = path.join(os.tmpdir(), `lobe-cc-mcp-${operationId}.json`);
+      askMcpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
       await writeFile(
         askMcpConfigPath,
         JSON.stringify({
           mcpServers: {
-            lobe_cc: {
+            orvilo_cc: {
               alwaysLoad: true,
               type: 'http',
               url: askServer.urlForOperation(operationId),
@@ -919,7 +919,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
     // Selector args (model/effort/speed) translate against the CLI family — for
     // orvilo the engine already resolved `agentType` to `claude-code`/`codex`.
     ...(buildExtraArgs({ ...options, type: agentType }) ?? []),
-    // Point the supported CLI at the lobe_cc AskUserQuestion MCP server we just mounted.
+    // Point the supported CLI at the orvilo_cc AskUserQuestion MCP server we just mounted.
     ...(askMcpConfigPath ? ['--mcp-config', askMcpConfigPath] : []),
   ];
   // Resolve the CLI binary once, up front, and reuse it for both the initial

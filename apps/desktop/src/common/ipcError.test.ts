@@ -53,6 +53,6 @@ describe('ipcError envelope', () => {
     expect(isIpcErrorEnvelope(undefined)).toBe(false);
     expect(isIpcErrorEnvelope('error')).toBe(false);
     expect(isIpcErrorEnvelope({ data: 'ok' })).toBe(false);
-    expect(isIpcErrorEnvelope({ __lobeIpcError__: false })).toBe(false);
+    expect(isIpcErrorEnvelope({ __orviloIpcError__: false })).toBe(false);
   });
 });

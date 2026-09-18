@@ -129,12 +129,12 @@ describe('scrollSnapshotStore', () => {
     });
 
     it('ignores unrelated localStorage keys', () => {
-      localStorage.setItem('LOBE_PREFERENCE', '{"theme":"dark"}');
+      localStorage.setItem('ORVILO_PREFERENCE', '{"theme":"dark"}');
       saveScrollSnapshot('topic', { atBottom: false, offset: 0, savedAt: Date.now() });
 
       pruneScrollSnapshots();
 
-      expect(localStorage.getItem('LOBE_PREFERENCE')).toBe('{"theme":"dark"}');
+      expect(localStorage.getItem('ORVILO_PREFERENCE')).toBe('{"theme":"dark"}');
     });
   });
 

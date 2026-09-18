@@ -9,12 +9,12 @@ describe('droidDriver', () => {
 
     await expect(
       droidDriver.buildSpawnPlan({
-        args: ['--tag', 'lobe'],
+        args: ['--tag', 'orvilo'],
         helpers: { buildAgentInput: async () => ({ args: [], stdin: '' }) },
         promptInput: 'hello',
       }),
     ).resolves.toEqual({
-      args: ['exec', '--output-format', 'acp', '--tag', 'lobe'],
+      args: ['exec', '--output-format', 'acp', '--tag', 'orvilo'],
     });
 
     await expect(

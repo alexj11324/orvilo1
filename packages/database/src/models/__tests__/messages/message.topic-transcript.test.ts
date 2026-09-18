@@ -13,10 +13,10 @@ import {
   users,
   workspaces,
 } from '../../../schemas';
-import type { LobeChatDatabase } from '../../../type';
+import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
 
-const serverDB: LobeChatDatabase = await getTestDB();
+const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'topic-transcript-user';
 const otherUserId = 'topic-transcript-other-user';
@@ -101,7 +101,7 @@ describe('MessageModel.queryTopicTranscript', () => {
         tools: [
           {
             apiName: 'search',
-            arguments: '{"query":"lobehub"}',
+            arguments: '{"query":"orvilo"}',
             id: 'topic-transcript-tool',
             identifier: 'web',
             type: 'default',

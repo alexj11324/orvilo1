@@ -7,7 +7,7 @@ import type {
   PollVideoStatusResult,
 } from '../../types/video';
 
-const log = createDebug('lobe-video:hunyuan');
+const log = createDebug('orvilo-video:hunyuan');
 const INFERENCE_ID_SEPARATOR = '::';
 
 interface HunyuanVideoSubmitResponse {

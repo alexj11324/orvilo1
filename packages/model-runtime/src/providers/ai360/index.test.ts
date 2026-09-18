@@ -3,10 +3,10 @@ import { ModelProvider } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
-import { LobeAi360AI, params } from './index';
+import { OrviloAi360AI, params } from './index';
 
 testProvider({
-  Runtime: LobeAi360AI,
+  Runtime: OrviloAi360AI,
   provider: ModelProvider.Ai360,
   defaultBaseURL: 'https://api.360.cn/v1',
   chatDebugEnv: 'DEBUG_AI360_CHAT_COMPLETION',
@@ -19,11 +19,11 @@ testProvider({
   },
 });
 
-describe('LobeAi360AI - custom features', () => {
-  let instance: InstanceType<typeof LobeAi360AI>;
+describe('OrviloAi360AI - custom features', () => {
+  let instance: InstanceType<typeof OrviloAi360AI>;
 
   beforeEach(() => {
-    instance = new LobeAi360AI({ apiKey: 'test_api_key' });
+    instance = new OrviloAi360AI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -359,7 +359,7 @@ describe('LobeAi360AI - custom features', () => {
       expect(model.reasoning).toBe(true);
     });
 
-    it('should merge with LOBE_DEFAULT_MODEL_LIST for known models', async () => {
+    it('should merge with ORVILO_DEFAULT_MODEL_LIST for known models', async () => {
       const mockClient = {
         models: {
           list: vi.fn().mockResolvedValue({
@@ -377,12 +377,12 @@ describe('LobeAi360AI - custom features', () => {
       const models = await params.models!({ client: mockClient as any });
       const model = models[0];
 
-      // Known models from LOBE_DEFAULT_MODEL_LIST should have displayName and enabled flag
+      // Known models from ORVILO_DEFAULT_MODEL_LIST should have displayName and enabled flag
       expect(model.displayName).toBeDefined();
       expect(model.enabled).toBeDefined();
     });
 
-    it('should handle models not in LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle models not in ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockClient = {
         models: {
           list: vi.fn().mockResolvedValue({
@@ -405,7 +405,7 @@ describe('LobeAi360AI - custom features', () => {
       expect(model.enabled).toBe(false);
     });
 
-    it('should inherit abilities from LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should inherit abilities from ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockClient = {
         models: {
           list: vi.fn().mockResolvedValue({
@@ -584,7 +584,7 @@ describe('LobeAi360AI - custom features', () => {
       expect(model.vision).toBe(false);
     });
 
-    it('should handle case-insensitive model ID matching with LOBE_DEFAULT_MODEL_LIST', async () => {
+    it('should handle case-insensitive model ID matching with ORVILO_DEFAULT_MODEL_LIST', async () => {
       const mockClient = {
         models: {
           list: vi.fn().mockResolvedValue({
@@ -602,7 +602,7 @@ describe('LobeAi360AI - custom features', () => {
       const models = await params.models!({ client: mockClient as any });
       const model = models[0];
 
-      // Should match case-insensitively with LOBE_DEFAULT_MODEL_LIST
+      // Should match case-insensitively with ORVILO_DEFAULT_MODEL_LIST
       expect(model.id).toBe('360GPT-PRO');
       expect(model.displayName).toBeDefined();
     });
@@ -775,7 +775,7 @@ describe('LobeAi360AI - custom features', () => {
       const models = await params.models!({ client: mockClient as any });
       const model = models[0];
 
-      // Should detect reasoning from keyword even if not in LOBE_DEFAULT_MODEL_LIST
+      // Should detect reasoning from keyword even if not in ORVILO_DEFAULT_MODEL_LIST
       expect(model.reasoning).toBe(true);
     });
 
@@ -824,7 +824,7 @@ describe('LobeAi360AI - custom features', () => {
     });
   });
 
-  describe('LobeAi360AI instance - integration tests', () => {
+  describe('OrviloAi360AI instance - integration tests', () => {
     it('should add web_search tool when enabledSearch is true', async () => {
       await instance.chat({
         messages: [{ content: 'Hello', role: 'user' }],
@@ -967,9 +967,9 @@ describe('LobeAi360AI - custom features', () => {
       expect(params.baseURL).toBe('https://api.360.cn/v1');
     });
 
-    it('should export LobeAi360AI class', () => {
-      expect(LobeAi360AI).toBeDefined();
-      expect(typeof LobeAi360AI).toBe('function');
+    it('should export OrviloAi360AI class', () => {
+      expect(OrviloAi360AI).toBeDefined();
+      expect(typeof OrviloAi360AI).toBe('function');
     });
 
     it('should export params with all required properties', () => {

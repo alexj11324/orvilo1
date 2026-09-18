@@ -113,7 +113,7 @@ export const notebookRouter = router({
           changeType: 'created',
           documentId: document.id,
           rootOperationId: rootOperation.id,
-          toolIdentifier: 'lobehub-notebook',
+          toolIdentifier: 'orvilo-notebook',
           toolName: 'createDocument',
           topicId: input.topicId,
         });

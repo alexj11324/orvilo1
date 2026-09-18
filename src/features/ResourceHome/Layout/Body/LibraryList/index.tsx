@@ -12,9 +12,9 @@ import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useKnowledgeBaseStore } from '@/store/library';
+import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
 import Item from './Item';
-import { getLibraryListAsyncState } from './state';
 
 /**
  * Show library list in the sidebar
@@ -86,9 +86,9 @@ const LibraryList = memo(() => {
             key={item.id}
             memberRestricted={(item as { memberRestricted?: boolean }).memberRestricted}
             name={item.name}
+            permissionManageable={(item as { permissionManageable?: boolean }).permissionManageable}
             userId={item.userId}
             visibility={item.visibility}
-            permissionManageable={(item as { permissionManageable?: boolean }).permissionManageable}
           />
         ))}
       </Flexbox>

@@ -11,10 +11,10 @@ import {
   users,
   workspaces,
 } from '../../schemas';
-import type { LobeChatDatabase } from '../../type';
+import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 
-const db: LobeChatDatabase = await getTestDB();
+const db: OrviloDatabase = await getTestDB();
 const userId = 'task-domain-user';
 const workspaceId = 'task-domain-workspace';
 

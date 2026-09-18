@@ -8,7 +8,7 @@ import type { WorkspaceInvitationItem } from '../schemas/workspace';
 import { workspaceInvitations } from '../schemas/workspace';
 import type { WorkspaceInvitationProjectItem } from '../schemas/workspaceInvitationProject';
 import { workspaceInvitationProjects } from '../schemas/workspaceInvitationProject';
-import type { LobeChatDatabase, Transaction } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 
 /**
  * Auth-system email normalization: lowercase + trim ONLY. Dots and `+tag`
@@ -40,10 +40,10 @@ export interface WorkspaceInvitationWithGrants {
  * race an accept.
  */
 export class WorkspaceInvitationModel {
-  private readonly db: LobeChatDatabase;
+  private readonly db: OrviloDatabase;
   private readonly userId: string;
 
-  constructor(db: LobeChatDatabase, userId: string) {
+  constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
   }
@@ -81,7 +81,7 @@ export class WorkspaceInvitationModel {
       params.expiresAt ?? new Date(Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
     const email = params.email ?? params.emailNormalized;
 
-    const run = async (executor: Transaction | LobeChatDatabase) => {
+    const run = async (executor: Transaction | OrviloDatabase) => {
       const [invitation] = await executor
         .insert(workspaceInvitations)
         .values({

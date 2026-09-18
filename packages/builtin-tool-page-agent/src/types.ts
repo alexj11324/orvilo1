@@ -1,7 +1,7 @@
 /**
  * Page Agent / Document Tool identifier
  */
-export const PageAgentIdentifier = 'lobe-page-agent';
+export const PageAgentIdentifier = 'orvilo-page-agent';
 
 export const DocumentApiName = {
   // Initialize

@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { testProvider } from '../../providerTestUtils';
 import type { VercelAIGatewayModelCard } from './index';
-import { formatPrice, LobeVercelAIGatewayAI, params } from './index';
+import { formatPrice, OrviloVercelAIGatewayAI, params } from './index';
 
 testProvider({
-  Runtime: LobeVercelAIGatewayAI,
+  Runtime: OrviloVercelAIGatewayAI,
   bizErrorType: 'ProviderBizError',
   chatDebugEnv: 'DEBUG_VERCELAIGATEWAY_CHAT_COMPLETION',
   chatModel: 'gpt-4o',
@@ -20,11 +20,11 @@ testProvider({
   },
 });
 
-describe('LobeVercelAIGatewayAI - custom features', () => {
-  let instance: InstanceType<typeof LobeVercelAIGatewayAI>;
+describe('OrviloVercelAIGatewayAI - custom features', () => {
+  let instance: InstanceType<typeof OrviloVercelAIGatewayAI>;
 
   beforeEach(() => {
-    instance = new LobeVercelAIGatewayAI({ apiKey: 'test_api_key' });
+    instance = new OrviloVercelAIGatewayAI({ apiKey: 'test_api_key' });
     vi.spyOn(instance['client'].chat.completions, 'create').mockResolvedValue(
       new ReadableStream() as any,
     );
@@ -40,8 +40,8 @@ describe('LobeVercelAIGatewayAI - custom features', () => {
     it('should have constructor options with default headers', () => {
       expect(params.constructorOptions).toBeDefined();
       expect(params.constructorOptions?.defaultHeaders).toEqual({
-        'http-referer': 'https://lobehub.com',
-        'x-title': 'LobeHub',
+        'http-referer': 'https://orvilo.aspectlylabs.com',
+        'x-title': 'Orvilo',
       });
     });
   });

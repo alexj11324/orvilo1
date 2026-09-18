@@ -10,6 +10,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # `secrets` is not an allowed context in step `if` conditions; map it once here.
+  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
 jobs:
   # Check for duplicate runs
   check-duplicate-run:
@@ -95,9 +99,7 @@ jobs:
           done
 
       - name: Upload coverage to Codecov
-        if: ${{ always() && secrets.CODECOV_TOKEN != '' }}
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        if: ${{ always() && env.CODECOV_TOKEN != '' }}
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
@@ -218,7 +220,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage
 
       - name: Upload App Coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -294,7 +296,7 @@ jobs:
         working-directory: apps/desktop
 
       - name: Upload Desktop App Coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -374,7 +376,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage --coverage.reportsDirectory=./apps/server/coverage
 
       - name: Upload Server coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -429,6 +431,7 @@ jobs:
           APP_URL: https://home.com
 
       - name: Upload Database coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

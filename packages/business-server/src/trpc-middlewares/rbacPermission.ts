@@ -5,12 +5,10 @@ import {
   PERSONAL_DEFAULT_PERMISSIONS,
 } from '@orvilo/const/rbac';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
-import { getServerDB } from '@/database/core/db-adaptor';
-import { permissions, rolePermissions, roles, userRoles } from '@/database/schemas';
 import { trpc } from '@/libs/trpc/lambda/init';
 
+import { type DbGrantContext, fetchDbGrantedCodes } from './dbGrants';
 import { resolveWorkspaceMembership, type WorkspaceMembership } from './workspaceAuth';
 
 /**
@@ -22,9 +20,11 @@ import { resolveWorkspaceMembership, type WorkspaceMembership } from './workspac
  *   `workspace_members.role` expanded through the in-code
  *   `WORKSPACE_ROLE_PERMISSIONS` matrix, plus globally-granted DB roles
  *   (`rbac_user_roles.workspace_id IS NULL`, e.g. `super_admin`) — the same
- *   union `RbacModel` applies on the OpenAPI surface. Non-members get a
- *   uniform FORBIDDEN (no workspace-existence leak), never a silent downgrade
- *   to personal scope.
+ *   union `RbacModel` applies on the OpenAPI surface. A non-member holding
+ *   such a global grant is evaluated on exactly those DB-granted codes — no
+ *   role matrix, never the personal baseline. A non-member without one gets
+ *   a uniform FORBIDDEN (no workspace-existence leak), never a silent
+ *   downgrade to personal scope.
  * - Personal mode (no `X-Workspace-Id`): `PERSONAL_DEFAULT_PERMISSIONS` plus
  *   every workspace-domain code — the caller is the implicit owner of their
  *   personal space, so personal export / credential / settings flows keep
@@ -68,57 +68,30 @@ const scopedCodesForAction = (action: string): string[] => {
   return scopes.map((scope) => `${action}:${scope.toLowerCase()}`);
 };
 
-interface RbacContext {
-  userId?: string | null;
-  workspaceId?: string | null;
-}
-
 /**
- * Permission codes from DB-assigned roles only, restricted to `codes`.
- * Mirrors `RbacModel`: workspace requests honor only globally-granted roles
- * (`userRoles.workspace_id IS NULL`); personal requests union every active
- * grant. Used as a fallback after the in-code set misses, so role-matrix hits
- * never pay for this query.
+ * Whether `granted` covers the required `codes` under `operator`.
  */
-const fetchDbGrantedCodes = async (ctx: RbacContext, codes: string[]): Promise<Set<string>> => {
-  if (!ctx.userId || codes.length === 0) return new Set();
-
-  const db = await getServerDB();
-  const rows = await db
-    .select({ code: permissions.code })
-    .from(userRoles)
-    .innerJoin(roles, eq(userRoles.roleId, roles.id))
-    .innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(
-      and(
-        eq(userRoles.userId, ctx.userId),
-        ctx.workspaceId ? isNull(userRoles.workspaceId) : undefined,
-        inArray(permissions.code, codes),
-        eq(roles.isActive, true),
-        eq(permissions.isActive, true),
-        sql`(${userRoles.expiresAt} IS NULL OR ${userRoles.expiresAt} > NOW())`,
-      ),
-    );
-
-  return new Set(rows.map((row) => row.code));
-};
+const coversRequiredCodes = (
+  granted: ReadonlySet<string>,
+  codes: string[],
+  operator: 'all' | 'any',
+) =>
+  operator === 'any'
+    ? codes.some((code) => granted.has(code))
+    : codes.every((code) => granted.has(code));
 
 const hasRequiredCodes = async (
-  ctx: RbacContext,
+  ctx: DbGrantContext,
   granted: ReadonlySet<string>,
   codes: string[],
   operator: 'all' | 'any',
 ): Promise<boolean> => {
   if (codes.length === 0) return operator === 'all';
 
-  const check = (set: ReadonlySet<string>) =>
-    operator === 'any' ? codes.some((code) => set.has(code)) : codes.every((code) => set.has(code));
-
-  if (check(granted)) return true;
+  if (coversRequiredCodes(granted, codes, operator)) return true;
 
   const dbGranted = await fetchDbGrantedCodes(ctx, codes);
-  return check(new Set([...granted, ...dbGranted]));
+  return coversRequiredCodes(new Set([...granted, ...dbGranted]), codes, operator);
 };
 
 const permissionMiddleware = (codes: string[], operator: 'all' | 'any') =>
@@ -132,7 +105,19 @@ const permissionMiddleware = (codes: string[], operator: 'all' | 'any') =>
       : null;
 
     if (ctx.workspaceId && !membership) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this workspace' });
+      // A non-member can still hold globally-granted DB roles (e.g.
+      // super_admin via `rbac_user_roles.workspace_id IS NULL`) that apply
+      // inside any workspace — the same contract RbacModel enforces on the
+      // OpenAPI surface. Evaluate exactly those grants: never the role
+      // matrix (there is no membership) and never the personal baseline
+      // (that would over-grant workspace-domain codes). Without a covering
+      // grant the caller is an ordinary non-member → uniform FORBIDDEN.
+      const globalGranted = await fetchDbGrantedCodes(ctx, codes);
+      if (globalGranted.size === 0 || !coversRequiredCodes(globalGranted, codes, operator)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this workspace' });
+      }
+
+      return opts.next({ ctx: { membership: null, workspaceRole: undefined } });
     }
 
     const granted: ReadonlySet<string> = membership

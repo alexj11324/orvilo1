@@ -1,0 +1,77 @@
+{
+  "acceptanceEvidence": [
+    "Scoped bun run check / vitest on this branch; not the 64-row ACCEPTANCE matrix",
+    "Push Test CI is the real suite; PR-event Required Quality Gate concurrent-skip is not a product failure",
+    "No approved Preview; N12 remains BLOCKED_EXTERNAL_VERIFICATION"
+  ],
+  "baseSha": "d02f13f11be08921014aa54e523ac3c23184680c",
+  "behaviorDelivered": [
+    "Unified routes /inbox /my-work /views /teams; Tasks/Projects/Automation kept",
+    "Migrations 0175_work_attention and 0176_work_attention_triage_bulk",
+    "Versioned inbox read/archive/snooze/bulk; independent event_consumer_receipts",
+    "ActionSourceRegistry decide path including ownership transfer and ACP intervention",
+    "My Work assigned/delegated/review/created/subscribed with server-side list/board",
+    "Saved views CAS, virtual builtins, visitor currentUser, AST redaction",
+    "Team triage CAS move/duplicate; historical Linear imports accepted",
+    "Favorite title hydration and reorder CAS API without reorder UI",
+    "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
+  ],
+  "blockingDependencies": [
+    "Approved isolated Preview for N12/END06-END08 real Linear/GitHub/ACP loops",
+    "Vercel free-plan deployment rate limit blocks Preview evidence"
+  ],
+  "checkoutStartSha": "d02f13f11be08921014aa54e523ac3c23184680c",
+  "constraints": [
+    "Do not rebase onto newer canary unless asked (canary has moved to 73257dff / #80)",
+    "Do not restore custom LLM providers or /settings/provider",
+    "Do not remount AgentTasks KanbanBoard",
+    "Do not invent a GitHub PR-without-task store",
+    "Do not add WorkQuery export",
+    "Do not mark the system goal complete without 64-AC evidence",
+    "Do not touch /Users/alexjiang/Desktop/vibe/orvilo1"
+  ],
+  "contractVersion": "nav-attention-v4.1",
+  "files": [
+    "docs/implementation/navigation-attention-v4/**",
+    "docs/development/navigation-attention-v4.md",
+    "docs/development/navigation-attention-v4-handoff.md",
+    "docs/development/navigation-attention-v4-handoff.json",
+    "packages/types/src/workAttention.ts",
+    "apps/server/src/services/workAttention/actionSources.ts",
+    "apps/server/src/services/workAttention/feedCard.ts"
+  ],
+  "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
+  "headSha": null,
+  "implementationHeadBeforeDocs": "b4136da664da5be87f17db03e5b83d18da6adfaf",
+  "leaseGeneration": 1,
+  "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
+  "n00Baseline": "docs/development/navigation-attention-v4.md",
+  "packetIntegrity": "SHA256SUMS verified at copy time; do not edit packet bytes",
+  "packetPath": "docs/implementation/navigation-attention-v4",
+  "pullRequest": {
+    "number": 95,
+    "url": "https://github.com/alexj11324/orvilo1/pull/95",
+    "draft": true,
+    "headBranch": "cursor/navigation-attention-v4-a544",
+    "mergeableStateAtHandoff": "behind"
+  },
+  "researchSha": "d2c522fd8bf37448dccd86eacc6442a580d55cbd",
+  "reviewer": null,
+  "role": "S+D+N+Q+U+V+T (one writer on this branch)",
+  "rollbackNotes": "Feature stays behind existing workAttention/notification procedures. Do not enable production shadow dual-write. Do not restore /settings/provider.",
+  "schemaVersion": 1,
+  "status": "IN_PROGRESS",
+  "targetBranch": "canary",
+  "unverified": [
+    "Inbox NotificationFeedPage envelope not returned by routers or WorkInboxPage",
+    "Live title overlay helper exists but is not bound to TaskModel/ProjectModel findByIds",
+    "Favorite reorder UI",
+    "NAV05 workAttention.search max still 50; TeamsPage has no search box",
+    "NAV03 NavItem hover:none force-visible actions",
+    "SEC02 inbox cache after ACL revoke",
+    "NAV02 Electron native notification click matrix",
+    "ACCEPTANCE.md 64 rows still NOT_RUN"
+  ],
+  "workPackage": "N00-N13 single-writer increment on one PR",
+  "worktreePath": "/workspace"
+}

@@ -1,0 +1,158 @@
+# Navigation Attention v4 — 会话交接（2026-09-18）
+
+给换到下一台机器 / 下一个 Agent 继续用的。合同原文在仓库里，不要再去 `/tmp` 或受保护 clone 里找。
+
+## 先读这些
+
+| 文件                                                                                         | 作用                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`docs/implementation/navigation-attention-v4/`](../implementation/navigation-attention-v4/) | 用户交付的 v4.1 执行包（`README` / `IMPLEMENTATION_SPEC` / `DECISIONS` / `ACCEPTANCE` / `work-packages.json` / `ownership.json` / `agents/*`）。已按 `SHA256SUMS` 原样入库。目录已加入 `.prettierignore` / `.remarkignore`，lint-staged 也会跳过，不要改包内字节。 |
+| [`docs/development/navigation-attention-v4.md`](./navigation-attention-v4.md)                | N00 基线：相对研究 SHA 的 canary 差异、复用清单、冻结决策、迁移号                                                                                                                                                                                                  |
+| 本文件                                                                                       | 实施进度、剩余 MUST-FIX、禁止事项、下一刀改哪些文件                                                                                                                                                                                                                |
+| Draft PR                                                                                     | <https://github.com/alexj11324/orvilo1/pull/95>                                                                                                                                                                                                                    |
+
+合同版本：`nav-attention-v4.1`。这是 **reuse-and-connect**，不是 v3 重做，也不是只改侧栏按钮。
+
+## 目标（不要缩小）
+
+完成 Orvilo Navigation Attention v4：Inbox / My Work / Views / Team Triage 统一个人工作面，事件 → 收件人 → 提示 → 真实动作 → 回执。64 项 AC 在 [`ACCEPTANCE.md`](../implementation/navigation-attention-v4/ACCEPTANCE.md)。**在每条都有证据之前，不要把系统目标标 complete。** 不要把范围缩成「侧栏有 Inbox」。
+
+## 仓库坐标
+
+| 项                               | 值                                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| Repo                             | `https://github.com/alexj11324/orvilo1`                                                     |
+| 分支                             | `cursor/navigation-attention-v4-a544`                                                       |
+| PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                |
+| 实施 HEAD（本交接提交之前）      | `b4136da6` `✨ feat(nav): resolve task, team, and project favorite titles`                  |
+| Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                      |
+| 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                          |
+| 远端 canary 现已走到             | `73257dff`（#80 quota）。PR `mergeable_state: behind`。**未授权 rebase，不要自行 rebase。** |
+| Cloud agent                      | <https://cursor.com/agents/bc-c18edf00-e213-4176-9c88-d3f33b4ea544>                         |
+| 写者租约                         | 全局最多 3 writer；**本分支是唯一写者**。不要碰 `/Users/alexjiang/Desktop/vibe/orvilo1`。   |
+
+## 用户澄清（仍然有效）
+
+> 「什么 API key 啊，不是模型的 API key 吧，我已经在退役自定义 provider 了」
+
+本 PR 里的 API key 工作是 **Orvilo 签名 TRPC key**（`api_keys`、`/settings/apikey`、`TRPC_NAMESPACE_API_KEY_RULES`），给受限 key 调 `workAttention` 等命名空间用，失败关闭。
+
+- **不是** 模型 / 自定义 provider 凭据
+- **不要** 恢复 `/settings/provider`（canary #94 已退役）
+- 任务 subscribe/unsubscribe 是可读任务上的 follow 行，不是模型 key，也不是聊天 mute
+
+## 已落地（相对 `canary@d02f13f1`）
+
+表面：`/inbox`、`/my-work`、`/views/:viewId`、`/teams`。Tasks / Projects / Automation 仍是一级。HomeInbox 只做聊天摘要。剩下来的 InboxModal 列表 UI 已删，opener 只跳 `/inbox`。
+
+迁移：**`0175_work_attention`**、**`0176_work_attention_triage_bulk`**。0174 被 #81 占用，不要复用。
+
+已接线的产品行为（ vitest/check 覆盖，**不是** 64× Preview 验收）：
+
+- Inbox：versioned read/archive、snooze 被更新活动打断（NOT08）、`archiveAll` 不藏未决动作卡、consume-once bulk archive/read、allowlisted `actionUrl`（SEC01）、源标题 i18n、J/K/Enter/Esc、铃铛与 `unreadBadgeCount` 共用
+- Decide：`workAttentionProcedure`（ACT01），不是 organize。ACP intervention OSS `{ handled: false }` → `outcome_unknown`。ownership transfer /withdraw outgoing。outgoing 占未读铃但不进 Needs-you（ACT08）
+- 独立 `event_consumer_receipts`（D09）。权限 `notification:read|organize` ALL-only（D14）
+- My Work：assigned / delegated=`execution_grants.initiatedBy` / review / created=`createdByUserId` 且排除 Linear 导入 null（WORK03）/subscribed。No-project chip（WORK07）。服务端 list/board（WORK08）。待审核列出非 task 的 pending approval，**不为填列表建 Task**（WORK05）
+- Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Linear-linked 不再绕 `task.update` 分类映射
+- Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）
+- Team Triage：accept/decline/duplicate/reassign + `moveToTeam` CAS（TRI02）；`duplicate_of_task_id`（TRI03）；历史 Linear import `triageStatus: accepted`（TRI01）；triage 事件 `task.scope.changed`（TRI08）；`cycleId` → `tasks.cycleRefId`（TRI07）；`teamId` 与可读团队求交（TRI05）
+- Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），**还没有** 重排 UI
+- CommandMenu sidecar 搜 task/team/project/savedView，不走 FTS `type:`（NAV07）
+- 签名 TRPC key catalog 登记 `workAttention`
+- 与 #94 合并：保留 `teams`/`views`/`my-work` 根，以及退役的 `acceptance`/`verify` 重定向
+
+精确 redirect 仅 `/tasks?collection=mine&scope=assigned|created`。
+
+## 本交接一并提交的 WIP（助手未接完）
+
+`settleSourceLoads` / `listPendingForActorSettled` / `overlayLiveTitles` / 类型 `NotificationFeedPage` / `WORK_SEARCH_MAX_PER_TYPE = 200` 已在代码里。
+
+**还没接到产品面上：**
+
+- `notification.feed` 与 `workAttention.feed` 仍返回 **卡片数组**，不是 `NotificationFeedPage`
+- `WorkInboxPage` 仍 `const { data: cards = [] }`，源失败时会把整页当成空成功
+- 活标题还没从 `TaskModel.findByIds` / `ProjectModel.findByIds` 打上去
+- `summarizeFeed` 已经走 settled pending（单个源挂了不会把 badge 打空），但 **不会** 把 `sourceUnavailable` 交给 UI
+
+下一刀从这里接着做，不要重开一条 Inbox 实现。
+
+## 剩余 MUST-FIX（无需 Preview 就能做）
+
+按建议顺序：
+
+1. **Inbox 包络 + 活标题（进行中）**
+   - 新建 `apps/server/src/services/workAttention/feedPage.ts`：`buildInboxFeed` 调 `listPendingForActorSettled` → `ensureActionCards` → `listFeed` → `mapFeedWithLiveActions` → `overlayLiveTitles`
+   - 两个 feed procedure 返回 `{ cards, lastReconciledAt, partial, sourceUnavailable }`
+   - `WorkInboxPage` 读 `data.cards`；`partial` 时用 base-ui `Alert`（`@lobehub/ui/base-ui`）
+   - **空列表 + partial 不是成功空态**
+   - i18n `inbox.sourceUnavailable`：写 `packages/locales/src/default/notification.ts`，并手改 `locales/en-US` + `locales/zh-CN`
+2. **收藏重排 UI** — `src/features/HomeSidebar/Body/WorkFavorites.tsx` 用始终可见的 `extra` 上 / 下箭头调已有 `favoriteReorder` CAS；CONFLICT 则 refetch。不要做成 hover-only。
+3. **NAV05 搜索到 200** — `workAttention.search` 的 zod 现在是 `.max(50)`；改成 `WORK_SEARCH_MAX_PER_TYPE`（200）。`src/features/CommandMenu/useCommandMenu.ts` 混合 = 5、带类型 = 50。给 `src/features/WorkTeams/TeamsPage.tsx` 加搜索框。工作类型不要传给 FTS `type:`。
+4. **NAV03 触屏** — `src/features/NavPanel/components/NavItem.tsx` 加 `@media (hover: none)` 让 `.nav-item-actions` 强制可见。纯 CSS 不必为选择器字符串写回归测试。
+5. **SEC02** — Inbox SWR 在 ACL 撤销后仍可能显示旧标题（pull-only，5 分钟 focus throttle）。需要在失权后的下一次读失效，而不是只靠本地 cache。
+6. CommandMenu 最近访问目前几乎是 task-only 侧栏 recents；包要求跨类型。
+
+NICE（可后做）：task/team/project 的 pin UI、favorites unpin/overflow、NAV02 原生通知矩阵、个人模式藏 Teams tab、CMDK SWR key 去掉 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
+
+## 阻塞 / 不要假装完成
+
+| 项                                               | 状态                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| N12 / END06–08 真实 Linear、GitHub、ACP 闭环     | **BLOCKED**，没有获准 Preview。Vercel 免费档日限额，Preview 没起来。不要用 mock 报 N12 完成。 |
+| N10 生产 shadow dual-write                       | 关掉，保持关                                                                                  |
+| ACCEPTANCE 64×                                   | 合同上仍是 `NOT_RUN`。scoped vitest ≠ 产品验收                                                |
+| PR-event「Required Quality Gate」concurrent-skip | **不是** 产品失败。看 **push** Test CI                                                        |
+| Vercel「Deployment rate limited」                | **不是** 产品失败                                                                             |
+
+## 明确不要做
+
+- 不要 rebase 到更新的 canary，除非用户要求
+- 不要恢复 `/settings/provider` / 自定义模型 provider
+- 不要把 AgentTasks `KanbanBoard` 再挂到 My Work / Team
+- 不要发明 GitHub PR-without-task 产品存储
+- 不要加 WorkQuery export
+- 不要开生产 shadow dual-write
+- 不要手改 migration `_journal.json`（`bun run db:generate` 后 rename / 幂等加固）
+- 不要跑 `bun run test`（全量套件）
+- 不要本机跑全仓 `bun run check --type`（CI-only，`scripts/type-check.mjs` 会 fail-fast）。本地：`pnpm type-check` 进对应 package，或 CI=true 的全仓脚本（会很吃内存）
+- 不要 UpdateGoal complete
+- 不要碰受保护 clone `/Users/alexjiang/Desktop/vibe/orvilo1`
+- SAFE-BY-ABSENCE，不要主动做：TRI06 AI 自动执行、SEC04 username mapping、SEC07 破坏性清理 job、TRI04 按团队复制 Project 导航器
+
+## 质量怎么跑
+
+```bash
+# 只对改动文件，不要 bun run test
+bun run check [changed-files...]
+
+# 单测
+bunx vitest run --silent='passed-only' <file>
+cd packages/database && bunx vitest run --silent='passed-only' <file>
+```
+
+本分支近期 scoped check（都不是 64× AC）：
+
+- `b4136da6` / `24df8830`：lint 干净，19 passed（workflow-state picker + favorite 标题）
+- `02d8191e` / `c5be180c` / `bd5209d9`：288 passed
+- `cfc06a6f`：66 passed；当时全仓 `tsgo --noEmit` 通过
+
+提交信息用 gitmoji。PR 正文英文。保持 draft。
+
+## 给下一刀的具体补丁（Inbox 包络）
+
+1. `apps/server/src/services/workAttention/feedPage.ts`（新）`buildInboxFeed`
+2. `apps/server/src/routers/lambda/notification.ts` `feed` 返回包络（现在 L121–135 返回数组）
+3. `apps/server/src/routers/lambda/workAttention.ts` `feed`（现在 L257–271 `{ data: card[] }`）
+4. `src/services/notification.ts` `feed` 的调用方
+5. `src/features/WorkInbox/WorkInboxPage.tsx`（现在 L94–97 把 data 当数组）
+6. 单测：`actionSources.test.ts` 的 `settleSourceLoads`、`feedCard.test.ts` 的 `overlayLiveTitles` 已有；再加 router / 页面契约测试时沿用现有 helper，不要新开组件测试套件
+7. i18n 三个文件（default + en-US + zh-CN），不要跑 `bun run i18n`
+
+`listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
+
+## i18n / 路由 /schema 备忘
+
+- 新文案：`packages/locales/src/default/`，并手改 en-US /zh-CN
+- 路由：先读 `spa-routes` skill。公共路径只注册在 `src/spa/router/desktopRouter.shared.tsx`
+- 组件：先读 `react` skill。Alert/Select/Modal 用 `@lobehub/ui/base-ui`
+- 验收：文档 /handoff 不需要新的产品 acceptance run。新的 Inbox 包络 UI **需要**，但在 Preview 限额解除之前只能用 vitest + 说清楚缺口

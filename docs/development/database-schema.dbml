@@ -79,6 +79,31 @@ table acceptance_flows {
   }
 }
 
+table action_approvals {
+  id text [pk, not null]
+  workspace_id text [not null]
+  action_type text [not null]
+  action_summary jsonb [not null, default: `{}`]
+  target_type text
+  target_id text
+  params_hash text
+  base_version integer
+  base_sha text
+  requested_by text
+  approver_user_id text
+  status text [not null, default: 'pending']
+  expires_at "timestamp with time zone"
+  decided_at "timestamp with time zone"
+  consumed_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    workspace_id [name: 'action_approvals_workspace_id_idx']
+    (workspace_id, status) [name: 'action_approvals_workspace_status_idx']
+    (target_type, target_id) [name: 'action_approvals_target_idx']
+  }
+}
+
 table agents {
   id text [pk, not null]
   slug varchar(100)
@@ -1337,6 +1362,56 @@ table document_shares {
     document_id [name: 'document_shares_document_id_unique', unique]
     user_id [name: 'document_shares_user_id_idx']
     workspace_id [name: 'document_shares_workspace_id_idx']
+  }
+}
+
+table event_outbox {
+  id text [pk, not null]
+  event_id text [not null]
+  workspace_id text
+  aggregate_type text [not null]
+  aggregate_id text [not null]
+  event_type text [not null]
+  payload jsonb [not null, default: `{}`]
+  status text [not null, default: 'pending']
+  attempts integer [not null, default: 0]
+  next_attempt_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  delivered_at "timestamp with time zone"
+
+  indexes {
+    event_id [name: 'event_outbox_event_id_unique', unique]
+    (status, next_attempt_at) [name: 'event_outbox_status_next_attempt_at_idx']
+    (workspace_id, aggregate_type, aggregate_id) [name: 'event_outbox_workspace_aggregate_idx']
+  }
+}
+
+table execution_grants {
+  id text [pk, not null]
+  workspace_id text [not null]
+  project_id text
+  task_id text
+  task_topic_id uuid
+  agent_id text [not null]
+  initiated_by text [not null]
+  delegation_subject_type text [not null, default: 'user']
+  delegation_subject_id text
+  allowed_actions jsonb [not null, default: `[]`]
+  credential_binding_ids jsonb [not null, default: `[]`]
+  execution_binding_id text
+  budget_reservation jsonb
+  authz_versions jsonb
+  status text [not null, default: 'active']
+  expires_at "timestamp with time zone"
+  revoked_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    workspace_id [name: 'execution_grants_workspace_id_idx']
+    task_id [name: 'execution_grants_task_id_idx']
+    task_topic_id [name: 'execution_grants_task_topic_id_idx']
+    agent_id [name: 'execution_grants_agent_id_idx']
   }
 }
 
@@ -3183,6 +3258,27 @@ table projects {
   }
 }
 
+table project_members {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text [not null]
+  project_id text [not null]
+  user_id text [not null]
+  role text [not null, default: 'contributor']
+  created_by text
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  deleted_at "timestamp with time zone"
+  suspended_at "timestamp with time zone"
+  authz_version integer [not null, default: 1]
+
+  indexes {
+    (project_id, user_id) [name: 'project_members_project_id_user_id_unique', unique]
+    
+    (workspace_id, user_id) [name: 'project_members_workspace_id_user_id_idx']
+    (workspace_id, project_id) [name: 'project_members_workspace_id_project_id_idx']
+  }
+}
+
 table project_works {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   project_id text [not null]
@@ -3919,6 +4015,8 @@ table task_topics {
   plan_revision integer
   execution_generation integer
   dispatch_fence integer
+  execution_epoch integer [not null, default: 0]
+  execution_grant_id text
   environment_snapshot jsonb
   trigger text
   handoff jsonb
@@ -4141,6 +4239,28 @@ table teams {
     workspace_id [name: 'teams_workspace_id_idx']
     (workspace_id, visibility) [name: 'teams_workspace_visibility_idx']
     status [name: 'teams_status_idx']
+  }
+}
+
+table task_inputs {
+  id text [pk, not null]
+  workspace_id text
+  task_id text [not null]
+  author_user_id text [not null]
+  sequence integer [not null]
+  base_task_version integer
+  intent_type text [not null]
+  payload jsonb [not null, default: `{}`]
+  status text [not null, default: 'pending']
+  idempotency_key text [unique]
+  decided_by text
+  decided_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (task_id, sequence) [name: 'task_inputs_task_id_sequence_unique', unique]
+    task_id [name: 'task_inputs_task_id_idx']
+    workspace_id [name: 'task_inputs_workspace_id_idx']
   }
 }
 
@@ -4969,10 +5089,19 @@ table workspace_invitations {
   workspace_id text [not null]
   inviter_id text [not null]
   email text
+  email_normalized text
   role text [not null, default: 'member']
-  token text [not null, unique]
+  token text [unique]
+  token_hash text
+  generation integer [not null, default: 1]
   status text [not null, default: 'pending']
   expires_at "timestamp with time zone" [not null]
+  accepted_by text
+  accepted_at "timestamp with time zone"
+  revoked_by text
+  revoked_at "timestamp with time zone"
+  last_sent_at "timestamp with time zone"
+  created_by_policy_version integer
   created_at "timestamp with time zone" [not null, default: `now()`]
   updated_at "timestamp with time zone" [not null, default: `now()`]
 
@@ -4980,6 +5109,7 @@ table workspace_invitations {
     workspace_id [name: 'workspace_invitations_workspace_id_idx']
     email [name: 'workspace_invitations_email_idx']
     token [name: 'workspace_invitations_token_idx']
+    token_hash [name: 'workspace_invitations_token_hash_idx', unique]
   }
 }
 
@@ -4990,6 +5120,8 @@ table workspace_members {
   joined_at "timestamp with time zone" [not null, default: `now()`]
   updated_at "timestamp with time zone" [not null, default: `now()`]
   deleted_at "timestamp with time zone"
+  suspended_at "timestamp with time zone"
+  authz_version integer [not null, default: 1]
 
   indexes {
     (workspace_id, user_id) [pk]
@@ -5023,12 +5155,25 @@ table workspaces {
   frozen boolean [default: false]
   frozen_reason text
   frozen_at "timestamp with time zone"
+  policy_version integer [not null, default: 1]
   created_at "timestamp with time zone" [not null, default: `now()`]
   updated_at "timestamp with time zone" [not null, default: `now()`]
 
   indexes {
     slug [name: 'workspaces_slug_idx', unique]
     primary_owner_id [name: 'workspaces_primary_owner_id_idx']
+  }
+}
+
+table workspace_invitation_projects {
+  id text [pk, not null]
+  invitation_id text [not null]
+  project_id text [not null]
+  role text [not null, default: 'contributor']
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (invitation_id, project_id) [name: 'workspace_invitation_projects_invitation_id_project_id_unique', unique]
   }
 }
 
@@ -5043,6 +5188,12 @@ ref: passkey.userId > users.id
 ref: auth_sessions.user_id > users.id
 
 ref: two_factor.user_id > users.id
+
+ref: action_approvals.workspace_id - workspaces.id
+
+ref: action_approvals.requested_by - users.id
+
+ref: action_approvals.approver_user_id - users.id
 
 ref: agent_eval_datasets.benchmark_id > agent_eval_benchmarks.id
 
@@ -5112,6 +5263,20 @@ ref: document_likes.workspace_id - workspaces.id
 
 ref: documents.file_id > files.id
 
+ref: event_outbox.workspace_id - workspaces.id
+
+ref: execution_grants.workspace_id - workspaces.id
+
+ref: execution_grants.project_id - projects.id
+
+ref: execution_grants.task_id - tasks.id
+
+ref: execution_grants.task_topic_id - task_topics.id
+
+ref: execution_grants.agent_id - agents.id
+
+ref: execution_grants.initiated_by - users.id
+
 ref: file_chunks.file_id - files.id
 
 ref: file_chunks.chunk_id - chunks.id
@@ -5158,7 +5323,23 @@ ref: threads.source_message_id - messages.id
 
 ref: messages.message_group_id > message_groups.id
 
+ref: project_members.workspace_id - workspaces.id
+
+ref: project_members.project_id - projects.id
+
+ref: project_members.user_id - users.id
+
+ref: project_members.(workspace_id, user_id) - workspace_members.(workspace_id, user_id)
+
 ref: sessions.group_id - session_groups.id
+
+ref: task_inputs.workspace_id - workspaces.id
+
+ref: task_inputs.task_id - tasks.id
+
+ref: task_inputs.author_user_id - users.id
+
+ref: task_inputs.decided_by - users.id
 
 ref: topic_comment_mentions.comment_id > topic_comments.id
 
@@ -5177,3 +5358,11 @@ ref: topic_documents.document_id > documents.id
 ref: topic_documents.topic_id > topics.id
 
 ref: topics.session_id - sessions.id
+
+ref: workspace_invitation_projects.invitation_id > workspace_invitations.id
+
+ref: workspace_invitation_projects.project_id - projects.id
+
+ref: workspace_invitations.workspace_id - workspaces.id
+
+ref: workspace_invitations.inviter_id - users.id

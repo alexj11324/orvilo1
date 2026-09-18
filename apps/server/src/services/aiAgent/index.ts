@@ -292,7 +292,8 @@ export class AiAgentService {
    * delegate wiring, graph-aware agent factory, share-visitor flag and
    * workspace scope — plus caller-supplied option overrides (e.g.
    * `queueService: null` or a custom stream/state manager for synchronous
-   * in-process driving).
+   * in-process driving). `delegate`/`includeShareVisitor`/`workspaceId` are
+   * pinned to this service's values and cannot be overridden.
    *
    * Runs that execute outside `execAgent`'s pipeline — synthetic agent runs
    * like the agent-signal memory writer, or synchronous drivers like the
@@ -306,6 +307,7 @@ export class AiAgentService {
     const { agentFactory: overrideAgentFactory, ...rest } = overrides;
     return new AgentRuntimeService(this.db, this.userId, {
       ...this.runtimeOptions,
+      ...rest,
       agentFactory: createGraphAwareAgentFactory(
         overrideAgentFactory ?? this.runtimeOptions?.agentFactory,
       ),
@@ -315,6 +317,8 @@ export class AiAgentService {
       // can't import us; instead we hand it the callbacks it needs to trigger
       // high-level pipelines mid-step. See AgentRuntimeDelegate. New high-level
       // capabilities the runtime calls into go in this `delegate` object.
+      // Pinned AFTER overrides — a caller override must not silently strip the
+      // delegate wiring this facade exists to preserve.
       //
       // Arrow fields are auto-bound, so no `.bind(this)`.
       delegate: {
@@ -325,7 +329,6 @@ export class AiAgentService {
       },
       includeShareVisitor: this.includeShareVisitor,
       workspaceId: this.workspaceId,
-      ...rest,
     });
   }
 

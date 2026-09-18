@@ -173,6 +173,21 @@ describe('AiAgentService.createIsolatedRuntime', () => {
     expect(options.delegate.execSubAgent).toEqual(expect.any(Function));
   });
 
+  it('pins delegate/workspaceId/includeShareVisitor even when overridden', () => {
+    const service = new AiAgentService(mockDb, userId, { workspaceId: 'ws-1' });
+
+    service.createIsolatedRuntime({
+      delegate: undefined,
+      includeShareVisitor: true,
+      workspaceId: 'other-ws',
+    } as any);
+
+    const options = getRuntimeOptions();
+    expect(options.workspaceId).toBe('ws-1');
+    expect(options.includeShareVisitor).toBe(false);
+    expect(options.delegate.execSubAgent).toEqual(expect.any(Function));
+  });
+
   it('still wraps an overriding agentFactory with the graph-aware factory', () => {
     const service = new AiAgentService(mockDb, userId);
     const upstreamAgent = { runner: vi.fn() };

@@ -383,7 +383,7 @@ jobs:
           files: ./apps/server/coverage/lcov.info
           flags: server
 
-  test-databsae:
+  test-database:
     needs: check-duplicate-run
     if: needs.check-duplicate-run.outputs.should_skip != 'true'
     name: Test Database
@@ -452,7 +452,7 @@ jobs:
       - test-windows-shell
       - test-desktop
       - test-server
-      - test-databsae
+      - test-database
       - merge-app-coverage
       - merge-server-coverage
     # always(): a failed upstream must not skip this job — its result IS the
@@ -480,7 +480,7 @@ jobs:
             test-windows-shell
             test-desktop
             test-server
-            test-databsae
+            test-database
             merge-app-coverage
             merge-server-coverage
           )

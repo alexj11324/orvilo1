@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { resolve } from 'node:path';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DEFAULT_REQUIRED_WORKFLOWS = ['Test CI', 'E2E CI'];
@@ -12,6 +12,20 @@ const DEFAULT_IGNORED_CHECK_RUNS = [
   'Deploy Vercel Preview',
 ];
 const DEFAULT_IGNORED_STATUS_CONTEXTS = ['Vercel'];
+const DEFAULT_GATE_TIMEOUT_MS = 60 * 60 * 1000;
+
+export class GitHubGateLookupError extends Error {
+  constructor(message, { retryable = false, status, cause } = {}) {
+    super(message);
+    this.name = 'GitHubGateLookupError';
+    this.retryable = retryable;
+    this.status = status;
+    this.cause = cause;
+  }
+}
+
+export const isRetryableGateError = (error) =>
+  error instanceof GitHubGateLookupError && error.retryable;
 
 export const parseList = (value, fallback = []) => {
   const parsed = String(value ?? '')
@@ -179,15 +193,32 @@ export const evaluateGateSnapshot = ({
 };
 
 const fetchJson = async (url, token) => {
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/vnd.github+json',
-      'Authorization': `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  } catch (error) {
+    throw new GitHubGateLookupError(
+      `GitHub gate lookup failed for ${url}: ${error instanceof Error ? error.message : error}`,
+      { retryable: true, cause: error },
+    );
+  }
   if (!response.ok) {
-    throw new Error(`GitHub gate lookup failed with HTTP ${response.status}: ${url}`);
+    const retryable =
+      [408, 425, 429].includes(response.status) ||
+      response.status >= 500 ||
+      (response.status === 403 &&
+        (response.headers?.get('retry-after') ||
+          response.headers?.get('x-ratelimit-remaining') === '0'));
+    throw new GitHubGateLookupError(
+      `GitHub gate lookup failed with HTTP ${response.status}: ${url}`,
+      { retryable, status: response.status },
+    );
   }
   return response.json();
 };
@@ -250,7 +281,7 @@ export const waitForGate = async ({
   ignoredCheckRuns = DEFAULT_IGNORED_CHECK_RUNS,
   ignoredStatusContexts = DEFAULT_IGNORED_STATUS_CONTEXTS,
   requiredEvent = 'push',
-  timeoutMs = 30 * 60 * 1000,
+  timeoutMs = DEFAULT_GATE_TIMEOUT_MS,
   intervalMs = 15 * 1000,
   now = () => Date.now(),
   sleep = (duration) => new Promise((resolveSleep) => setTimeout(resolveSleep, duration)),
@@ -258,14 +289,29 @@ export const waitForGate = async ({
 }) => {
   const deadline = now() + timeoutMs;
   while (true) {
-    const snapshot = await loadGateSnapshot({
-      apiBase,
-      repository,
-      token,
-      headSha,
-      requiredWorkflows,
-      requiredEvent,
-    });
+    let snapshot;
+    try {
+      snapshot = await loadGateSnapshot({
+        apiBase,
+        repository,
+        token,
+        headSha,
+        requiredWorkflows,
+        requiredEvent,
+      });
+    } catch (error) {
+      if (!isRetryableGateError(error)) throw error;
+      const remainingMs = deadline - now();
+      if (remainingMs <= 0) {
+        throw new Error(
+          `Vercel Preview gate timed out for ${headSha}: GitHub API remained unavailable`,
+          { cause: error },
+        );
+      }
+      log(`Vercel Preview gate retrying transient GitHub API error for ${headSha}`);
+      await sleep(Math.min(intervalMs, remainingMs));
+      continue;
+    }
     const evaluation = evaluateGateSnapshot({
       ...snapshot,
       headSha,
@@ -314,13 +360,13 @@ export const main = async () => {
       DEFAULT_IGNORED_STATUS_CONTEXTS,
     ),
     requiredEvent: process.env.REQUIRED_EVENT || 'push',
-    timeoutMs: Number(process.env.GATE_TIMEOUT_MS || 30 * 60 * 1000),
+    timeoutMs: Number(process.env.GATE_TIMEOUT_MS || DEFAULT_GATE_TIMEOUT_MS),
     intervalMs: Number(process.env.GATE_POLL_INTERVAL_MS || 15 * 1000),
   });
   console.log(`Vercel Preview gate passed for ${headSha}`);
 };
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

@@ -4,6 +4,7 @@ import {
   evaluateGateSnapshot,
   selectLatestCheckRun,
   selectLatestRun,
+  waitForGate,
 } from './vercelPreviewGate.mjs';
 
 const sha = '0123456789abcdef0123456789abcdef01234567';
@@ -151,5 +152,99 @@ describe('Vercel Preview gate', () => {
       },
     );
     expect(evaluateGateSnapshot(snapshot).state).toBe('passed');
+  });
+
+  it('retries a transient GitHub API failure before the gate deadline', async () => {
+    const originalFetch = globalThis.fetch;
+    let transientFailure = true;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (transientFailure && url.includes('/actions/runs?')) {
+        transientFailure = false;
+        return { ok: false, status: 503, headers: new Headers() } as Response;
+      }
+      if (url.includes('/actions/runs?')) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            workflow_runs: [
+              {
+                id: 1,
+                name: 'Test CI',
+                head_sha: sha,
+                event: 'push',
+                status: 'completed',
+                conclusion: 'success',
+              },
+              {
+                id: 2,
+                name: 'E2E CI',
+                head_sha: sha,
+                event: 'push',
+                status: 'completed',
+                conclusion: 'success',
+              },
+            ],
+          }),
+        } as Response;
+      }
+      if (url.includes('/check-runs?')) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            check_runs: [
+              { name: 'GitGuardian Security Checks', status: 'completed', conclusion: 'success' },
+            ],
+          }),
+        } as Response;
+      }
+      if (url.endsWith('/status')) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ statuses: [] }),
+        } as Response;
+      }
+      const runId = url.includes('/1/') ? 1 : 2;
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({
+          jobs: [
+            runId === 1
+              ? { name: 'Typecheck', status: 'completed', conclusion: 'success', steps: [{}] }
+              : { name: 'Test Web App', status: 'completed', conclusion: 'success', steps: [{}] },
+          ],
+        }),
+      } as Response;
+    }) as typeof fetch;
+
+    try {
+      await expect(
+        waitForGate({
+          apiBase: 'https://api.github.test',
+          repository: 'owner/repo',
+          token: 'fixture',
+          headSha: sha,
+          timeoutMs: 1000,
+          intervalMs: 1,
+          sleep: async () => {},
+          now: (() => {
+            let current = 0;
+            return () => current++;
+          })(),
+          log: () => {},
+        }),
+      ).resolves.toEqual({ state: 'passed', reasons: [] });
+      expect(transientFailure).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

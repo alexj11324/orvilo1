@@ -458,7 +458,8 @@ describe('buildTaskRunPrompt', () => {
     expect(result).toContain('include artifact paths, commands, and observed results');
     expect(result).toContain('an independent verifier decides whether this Task is complete');
     expect(result).toContain('Run the Acceptance inside this Task, not after it');
-    expect(result).toContain('lh acceptance install');
+    expect(result).not.toContain('lh acceptance install');
+    expect(result).toContain('.agents/skills/acceptance');
     expect(result).toContain('lh acceptance run result submit');
     expect(result).toContain('proved by a screenshot or recording');
     // The portable skill is pulled to disk by CLI builders and is absent from

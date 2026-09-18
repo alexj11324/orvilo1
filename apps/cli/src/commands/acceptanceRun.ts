@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { acceptanceSubjectTypes } from '@orvilo/const/verify';
@@ -8,11 +8,9 @@ import pc from 'picocolors';
 
 import { getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
-import { ensureAcceptanceDirIgnored, ensureAcceptanceDirIgnoredFor } from '../utils/acceptanceDir';
+import { ensureAcceptanceDirIgnoredFor } from '../utils/acceptanceDir';
 import { confirm, outputJson, printTable, timeAgo, truncate } from '../utils/format';
 import { log } from '../utils/logger';
-import type { LinkResult } from '../utils/skillWiring';
-import { linkHarnessSkills } from '../utils/skillWiring';
 import { uploadLocalFile } from '../utils/uploadLocalFile';
 import {
   type Decision,
@@ -56,115 +54,17 @@ interface InstallOptions {
   skill: string;
 }
 
-const listMaterializedFiles = (directory: string): string[] => {
-  if (!existsSync(directory)) return [];
-
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? listMaterializedFiles(entryPath) : [entryPath];
-  });
-};
-
-async function installAction(options: InstallOptions): Promise<void> {
-  const client = await getTrpcClient();
-  // Pulled live from the server's deployed builtin-skills — always the latest.
-  const bundle = await client.verify.getSkillBundle.query({ identifier: options.skill });
-
-  // The acceptance skeleton lands under `.agents/skills/<id>` — the harness dir
-  // the project's own `.agents/acceptance/` adapter sits beside. Invariant: this
-  // is a materialized artifact, re-installed to update, never hand-edited. It is
-  // meant to be COMMITTED: the consuming repo reviews skill changes like any
-  // other file, so install never writes an ignore entry for it.
-  const baseDir = options.dir ? path.resolve(options.dir) : process.cwd();
-  const skillDir = path.join(baseDir, '.agents', 'skills', bundle.identifier);
-
-  // path → content for SKILL.md plus every resource file.
-  const entries: [string, string][] = [
-    ['SKILL.md', bundle.content],
-    ...Object.entries(bundle.files),
-  ];
-
-  const written: string[] = [];
-  const skipped: string[] = [];
-  for (const [rel, content] of entries) {
-    const dest = path.join(skillDir, rel);
-    if (existsSync(dest) && !options.force) {
-      skipped.push(rel);
-      continue;
-    }
-    mkdirSync(path.dirname(dest), { recursive: true });
-    writeFileSync(dest, content, 'utf8');
-    written.push(rel);
-  }
-
-  // `acceptance update` is an explicit force-refresh of a materialized skill,
-  // not a merge into a hand-maintained directory. Remove files that belonged to
-  // an older bundle so renamed/split references cannot remain discoverable.
-  const removed: string[] = [];
-  if (options.force) {
-    const currentEntries = new Set(entries.map(([rel]) => path.normalize(rel)));
-    for (const file of listMaterializedFiles(skillDir)) {
-      const relativePath = path.relative(skillDir, file);
-      if (currentEntries.has(path.normalize(relativePath))) continue;
-
-      rmSync(file, { force: true });
-      removed.push(relativePath.split(path.sep).join('/'));
-    }
-  }
-
-  const link = linkHarnessSkills(baseDir, bundle.identifier);
-  // The skill is committed; its OUTPUT is not. Seed the artifact directory's own
-  // self-ignoring file now, so the first run's screenshots never land as
-  // untracked noise in a repo that has never heard of us.
-  const ignored = ensureAcceptanceDirIgnored(baseDir);
-
-  const result = {
-    dir: skillDir,
-    ignored,
-    link,
-    removed,
-    skill: bundle.identifier,
-    skipped,
-    // Recorded so a caller can tell which version now sits on disk; the
-    // installed SKILL.md carries the same value in its frontmatter.
-    version: bundle.version,
-    written,
-  };
-  if (options.json !== undefined) {
-    outputJson(result, typeof options.json === 'string' ? options.json : undefined);
-    return;
-  }
-  const versionLabel = bundle.version ? pc.dim(` v${bundle.version}`) : '';
-  console.log(
-    `${pc.green('✓')} ${pc.bold(bundle.name)}${versionLabel} skill → ${pc.dim(path.relative(process.cwd(), skillDir) || skillDir)}`,
+async function installAction(_options: InstallOptions): Promise<void> {
+  // Server-side skill distribution is retired: `verify.getSkillBundle` no
+  // longer serves bundles, so install/update/init cannot materialize a skill.
+  // The acceptance skill ships vendored in the repository under
+  // `.agents/skills/acceptance` — copy that directory into place instead.
+  // `lh acceptance run …` keeps working; it never depended on the pull.
+  throw new Error(
+    '`lh acceptance install` is retired — the server no longer distributes skill bundles. ' +
+      'The acceptance skill ships vendored in the repository under .agents/skills/acceptance; ' +
+      'copy that directory into your working repo instead.',
   );
-  console.log(
-    `  ${written.length} written${skipped.length ? `, ${skipped.length} skipped` : ''}${removed.length ? `, ${removed.length} stale removed` : ''}`,
-  );
-  if (skipped.length > 0) console.log(pc.dim(`  (skipped existing — pass --force to overwrite)`));
-  printWiring(link);
-}
-
-function printWiring(link: LinkResult): void {
-  const arrow = pc.dim('  ↳');
-  switch (link.kind) {
-    case 'linked':
-    case 'linked-single': {
-      console.log(`${arrow} linked ${link.link} → ${pc.dim(link.target)}`);
-      break;
-    }
-    case 'already': {
-      console.log(`${arrow} ${pc.dim(`${link.link} already linked`)}`);
-      break;
-    }
-    case 'skipped': {
-      console.log(`${arrow} ${pc.yellow(`skipped ${link.link}: ${link.reason}`)}`);
-      break;
-    }
-    default: {
-      break;
-    }
-  }
 }
 
 // ── run ──
@@ -1071,16 +971,14 @@ export function attachAcceptanceRunCommands(acceptance: Command): void {
     acceptance
       .command('install')
       .description(
-        'Install the acceptance skill skeleton into .agents/skills/acceptance (pulled from the server)',
+        'Retired — the server no longer distributes skill bundles; the acceptance skill ships vendored in-repo',
       ),
   ).action(installAction);
 
   withInstallOptions(
     acceptance
       .command('update')
-      .description(
-        'Re-pull the acceptance skill, replacing its materialized files and re-wiring harnesses',
-      ),
+      .description('Retired — the server no longer distributes skill bundles'),
   ).action((options: InstallOptions) => installAction({ ...options, force: true }));
 
   const run = acceptance
@@ -1185,18 +1083,15 @@ function deprecate(cmd: Command, replacement: string): Command {
  */
 export function attachDeprecatedVerifyRunAliases(verify: Command): void {
   // Both legacy spellings — `verify init` (server pull) and `verify install`
-  // (the old bundled-skill installer) — converge on `acceptance install`.
+  // (the old bundled-skill installer) — converge on `acceptance install`,
+  // which is itself retired now that skill bundles are no longer served.
   deprecate(
-    withInstallOptions(
-      verify.command('init').description('Deprecated — use `lh acceptance install`'),
-    ),
+    withInstallOptions(verify.command('init').description('Retired — no longer distributed')),
     'lh acceptance install',
   ).action(installAction);
 
   deprecate(
-    withInstallOptions(
-      verify.command('install').description('Deprecated — use `lh acceptance install`'),
-    ),
+    withInstallOptions(verify.command('install').description('Retired — no longer distributed')),
     'lh acceptance install',
   ).action(installAction);
 

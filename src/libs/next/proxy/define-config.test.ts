@@ -137,7 +137,9 @@ describe('Acceptance installation guide', () => {
     const guide = await readFile('public/acceptance/skill.md', 'utf8');
     expect(guide).toContain('npm install -g @orvilo/cli');
     expect(guide).toContain('lh login');
-    expect(guide).toContain('lh acceptance install');
+    // Server-side bundle distribution is retired — the guide must point at the
+    // vendored skill copy, not the removed `lh acceptance install` pull.
+    expect(guide).not.toContain('```sh\nlh acceptance install');
     expect(guide).toContain('.agents/skills/acceptance/SKILL.md');
   });
 });

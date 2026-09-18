@@ -236,7 +236,8 @@ const AcceptanceOnboarding = () => {
                     title: t('acceptance.workspace.onboarding.install.title'),
                   },
                   {
-                    command: 'lh acceptance install',
+                    command:
+                      'git clone --depth 1 https://github.com/alexj11324/orvilo1 /tmp/orvilo-skill && cp -R /tmp/orvilo-skill/.agents/skills/acceptance .agents/skills/',
                     description: t('acceptance.workspace.onboarding.enable.description'),
                     title: t('acceptance.workspace.onboarding.enable.title'),
                   },

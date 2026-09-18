@@ -421,7 +421,7 @@
   "acceptance.workspace.onboarding.agent.prompt": "Read https://orvilo.aspectlylabs.com/acceptance/skill.md and follow the instructions to install Acceptance.",
   "acceptance.workspace.onboarding.agent.title": "Install with an Agent",
   "acceptance.workspace.onboarding.description": "Add the Acceptance skill to your project, then start a review from your coding agent.",
-  "acceptance.workspace.onboarding.enable.description": "Run this from your project root.",
+  "acceptance.workspace.onboarding.enable.description": "The acceptance skill ships vendored in the Orvilo repository — copy it into your project root.",
   "acceptance.workspace.onboarding.enable.title": "Enable Acceptance",
   "acceptance.workspace.onboarding.example.command": "/acceptance Review the current changes, focusing on the core flow, empty states, and error states",
   "acceptance.workspace.onboarding.example.description": "After installation, send this example to your coding agent to create the first review.",

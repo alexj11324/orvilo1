@@ -23,16 +23,18 @@ Let the user complete the browser sign-in. Never request passwords or tokens in 
 
 ## 3. Install the Acceptance skill
 
-From the project root, run:
+The Acceptance skill ships vendored in the Orvilo repository — server-side
+bundle distribution (`lh acceptance install`) is retired. Copy it into the
+project root:
 
 ```sh
-lh acceptance install
+git clone --depth 1 https://github.com/alexj11324/orvilo1 /tmp/orvilo-skill
+mkdir -p .agents/skills
+cp -R /tmp/orvilo-skill/.agents/skills/acceptance .agents/skills/acceptance
 ```
 
-This downloads the deployed Acceptance skill and its companion resources into
-`.agents/skills/acceptance/` and wires supported coding-agent skill directories.
-Existing files are preserved by default. Use `lh acceptance update` only when the
-user wants to refresh an existing installation.
+The copy is a materialized artifact — commit it so the project's own reviews
+see skill changes like any other file.
 
 ## 4. Verify setup and start a review
 

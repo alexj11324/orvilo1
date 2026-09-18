@@ -553,7 +553,8 @@ export default {
   'acceptance.workspace.onboarding.agent.prompt':
     'Read https://orvilo.aspectlylabs.com/acceptance/skill.md and follow the instructions to install Acceptance.',
   'acceptance.workspace.onboarding.agent.title': 'Install with an Agent',
-  'acceptance.workspace.onboarding.enable.description': 'Run this from your project root.',
+  'acceptance.workspace.onboarding.enable.description':
+    'The acceptance skill ships vendored in the Orvilo repository — copy it into your project root.',
   'acceptance.workspace.onboarding.enable.title': 'Enable Acceptance',
   'acceptance.workspace.onboarding.install.description': 'Install the CLI once on this device.',
   'acceptance.workspace.onboarding.install.title': 'Install the Orvilo CLI',

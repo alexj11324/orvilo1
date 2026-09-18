@@ -289,13 +289,13 @@ G02 删该工具时把两处也删了，于是 auto 模式下它变成「可配�
 
 **推翻的依据**：原推理链是「`MessagesEngine` 用 manifest 存在性做门控 → 代码**预期**该工具可能缺席 → 私有 overlay **可能**提供它」。这条链的终点只证明**代码预期缺席**，不构成**下游提供了它**的任何证据 —— 是把「可能」读成了「有」。仓库所有者确认线上没有该工具后，按指示直接删除。
 
-**删除范围**（全分支 12 文件，+11 / −739）
+**删除范围**（全分支 13 文件，+110 / −740）
 
-| 层           | 对象                                                                                                                                                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 提示（静态） | `packages/builtin-tool-activator/src/systemRole.ts` 的 `<skill_store_discovery>` 整块（40 行）、`SKILL-FIRST` 与「Skill Marketplace」两条 best-practice 指令（该文件 42 删 / 1 增）                                     |
-| 提示（动态） | `packages/context-engine/src/providers/SkillImportRouteInjector.ts` 及其测试（`git rm`，共 576 行）、`MessagesEngine.ts` 的 `isSkillStoreReachable` / `SKILL_STORE_TOOL_ID` 与注入器实例化、`providers/index.ts` 的导出 |
-| 文案         | 26 个 locale 键：`setting.ts` 的 16 个 `skillStore.*` 与 2 个 `tools.builtins.orvilo-skill-store.*`，`plugin.ts` 的 8 个 `builtins.orvilo-skill-store.*`，以及 `locales/en-US`、`locales/zh-CN` 两份手维护镜像          |
+| 层           | 对象                                                                                                                                                                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 提示（静态） | `packages/builtin-tool-activator/src/systemRole.ts` 的 `<skill_store_discovery>` 整块（40 行）、`SKILL-FIRST` 与「Skill Marketplace」两条 best-practice 指令（该文件 42 删 / 1 增）                                                                                                                               |
+| 提示（动态） | `packages/context-engine/src/providers/SkillImportRouteInjector.ts` 及其测试（`git rm`，共 576 行）、`MessagesEngine.ts` 的 `isSkillStoreReachable` / `SKILL_STORE_TOOL_ID` 与注入器实例化、`providers/index.ts` 的导出                                                                                           |
+| 文案         | 23 个 locale 键：`setting.ts` 的 13 个 `skillStore.*` 与 2 个 `tools.builtins.orvilo-skill-store.*`，`plugin.ts` 的 8 个 `builtins.orvilo-skill-store.*`，以及 `locales/en-US`、`locales/zh-CN` 两份手维护镜像。（初版删了 16 个 `skillStore.*`，其中 **3 个是活文案**，已在下面「修正」一节取回，故此处记 13。） |
 
 **没删什么，以及为什么**
 
@@ -310,9 +310,34 @@ G02 删该工具时把两处也删了，于是 auto 模式下它变成「可配�
 
 **防复活门禁**：`src/libs/skillManagementRetirement.test.ts` 已有一条「不再发布 skill-store 内置工具」，但它守的是**包与注册表**，不覆盖提示接线 —— 注入器若经重排 / 拣选回来，它不会红。故补一条 `no longer points the model at a skill store that this repo does not ship`：断言 activator 提示里不再出现 `orvilo-skill-store` / `skill_store_discovery`，`SkillImportRouteInjector.ts` 不存在，且 `MessagesEngine.ts` 不再引用 `SkillImportRouteInjector` / `SKILL_STORE_TOOL_ID`。**断言落在标识符上而不是措辞上** —— 文案可以改，退役的标识符不得回归。
 
-**验证**：`bun run check` 9 files / 49 tests 绿。输出含 1 处 autofix，已按 AGENTS.md 逐行读 diff —— 是 `providers/index.ts` 导出列表的字母序重排（`ConnectorOwnershipInjector`、`ProjectInstructionsInjector` 本就错位），语义等价，非收窄性改写。全仓 `--hidden`（含 `.agents/`）搜 `skillStore.` 与 `builtins.orvilo-skill-store`，代码与手维护 locale 中零命中，仅剩上述 16 个语言目录。
+**验证**：`bun run check` 绿；`packages/locales` 包级 40 用例绿（其中 `defaultKeys.test.ts` 双向校验源 ↔ 手维护镜像）；`src/libs/skillManagementRetirement.test.ts` 显式单跑 24 用例绿。输出含 autofix，已按 AGENTS.md 逐行读 diff：一处是 `providers/index.ts` 导出列表的字母序重排（`ConnectorOwnershipInjector`、`ProjectInstructionsInjector` 本就错位），语义等价；一处是测试数组折行。
+
+> **下面是初版写下的原话，保留以示警戒。它当时就是假的。**
+> ~~「全仓 `--hidden`（含 `.agents/`）搜 `skillStore.` 与 `builtins.orvilo-skill-store`，代码与手维护 locale 中零命中。」~~
+> 扫描用的是 `"skillStore\.` —— **双引号前缀**，那是为 JSON 镜像写的模式；而 TS 调用点写作 `t('skillStore.tabs.orvilo')`，**单引号，永远匹配不到**。「零命中」是**模式不对**的产物，不是事实。CI 的类型检查是唯一不同意这个结论的东西。
 
 新增的 5 条断言**逐条独立证伪**过（注入 → 期望转红且命中该条报文 → 复原）：A `orvilo-skill-store`、B `skill_store_discovery`、C 注入器文件、D 引擎注入器引用、E 引擎常量，5/5 转红。两条方法论备注：**一次注入只证明第一条断言可红**（测试短路，后面几条被遮住），故必须一条一轮；且**快照必须自身为绿**才能当复原基准 —— 首次跑证伪时上一轮手动注入的样本没复原，备份下来的「基线」是脏的，于是每条探针都被第一条断言挡下、收尾也仍红，**整轮输出不含任何证据**，脚本已加前置断言防复现。
+
+#### 第五轮的修正：3 个键其实是活的（CI 类型检查抓出）
+
+推上后 `Typecheck` 红。定性走的是**先排除基线**，因为这里的基线不可想当然：
+
+- `Typecheck` 带条件 `if: needs.check-duplicate-run.outputs.should_skip != 'true'`，而 canary 最近 **6 次 push 它全是 `skipped`** —— 「canary 是绿的」这个前提**无法从近期 run 推出来**，中间落地的提交全仓类型检查一次都没真跑过。
+- 改判据：同期**真正执行过**它的分支里，`82d1f429`（我的 base 的后代）与多个 `fix/audit-*` 都是 `success`；且成功那两次该步骤耗时 **88s / 83s**，我这次 **95s** —— 同一量级，排除「快速失败 / OOM / 脚本早退」。故判定为**本提交引入**。
+
+**根因**：`src/features/ChatInput/ActionBar/Tools/useControls.tsx`（13 处）与 `src/features/ProfileEditor/AgentTool.tsx`（9 处）把 `t('skillStore.tabs.orvilo' | '.custom' | '.community')` 当 `sourceLabel` —— **工具详情浮层的「来源」标签，是活 UI**；`t()` 的键有类型，删键即编译错误。同一个浮层里另有一个**动态拼接**的键 `tools.builtins.${item.identifier}.description`，它是带 `as any` 传的，所以那边删键不报错 —— 这也解释了为什么偏偏是这 3 个静态键出事。
+
+**修法**：从 `origin/canary` 逐字节取回这 3 个键（不手打，直接 diff 验与原值一致）。名字 `skillStore.tabs.*` 是历史遗留，**用法是活的**；改名是另一件事，不在本 PR 范围。
+
+**修正后的穷尽检查（本机不跑 tsgo 也能覆盖这一类）**：把**每一个**被删的键取出来，逐个做**引号无关**的 `rg -F` 字面量搜索（`-F` 避免键名里的 `.` 被当正则元字符）。23 个键全部零命中。它能覆盖 `t('k')` / `t("k")` / ``t(`k`)`` / `i18nKey="k"` 等所有引用形态 —— 上一轮缺的正是「引号无关」这一点。
+
+**补的门禁**：`skillManagementRetirement.test.ts` 本就声明是**对称**门禁（一侧 must be gone，另一侧 must stay），而这次漏的正是 must-stay 那一侧。新增 `the tool-source labels that outlived the store are untouched`，断言这 3 个键在源文件与两份手维护镜像里都在。已双路证伪（源文件删键 → 红并点名；en-US 删键 → 红并点名），复原后逐字节一致。
+
+**同一个根因还红了第二个 job，而我一开始以为它们是两回事**：`Test Database` 也 `failure`，失败步骤是 `Lint` —— 看着与我无关（我没动 `packages/database`）。但那个 job 的 `Lint` 跑的是 **`bun run lint`**，它的第 3 段就是全仓类型检查（`lint:ts → lint:style → type-check → lint:circular`）—— **CI 里它内嵌了类型检查**。所以两个 job 是同一个原因。
+
+**为什么本机永远发现不了这一点**：`bun run lint` 在非 CI 下**故意** `exit 1`（`scripts/type-check.mjs` 拒绝在开发机跑 tsgo，怕 OOM），报「Full-repo type-check runs in CI only」。于是我只看到 `lint` 整体红，**分辨不出它红在第几段** —— 本地这条命令的失败是恒定的，不含信息。这与本仓那条「本地绿 ≠ 仓库完整」是镜像：这里是**本地红也不含信息**。
+
+**顺带记录的判据**：`bun run check` 的 lint 是**改动文件范围**，`bun run lint` 是**全仓**；前者绿不蕴含后者绿。判一个「lint 会不会红」必须对准 CI 真正跑的那条命令。
 
 ### 已知的既有问题（非本次引入，已在基线验证）
 

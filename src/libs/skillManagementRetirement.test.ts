@@ -312,4 +312,37 @@ describe('the platform Skill management chain stays retired', () => {
       ).toBe(true);
     });
   });
+
+  describe('the tool-source labels that outlived the store are untouched', () => {
+    it('keeps the three `skillStore.tabs.*` keys that live UI still reads', () => {
+      // These keys look uniformly dead. The store they are named after is gone,
+      // and a grep for the JSON spelling (`"skillStore.`) finds nothing at all.
+      // Three of them are not dead: the Tools panel and the agent profile pass
+      // them as `sourceLabel={t('skillStore.tabs.orvilo')}`, and `t()` keys are
+      // typed — so removing them is a compile error, not a missing string.
+      //
+      // That is how they were lost the first time: the sweep used a
+      // double-quote-prefixed pattern (correct for the JSON mirrors, blind to
+      // the single-quoted TS call sites), reported "no references anywhere",
+      // and the typecheck in CI was the only thing that disagreed. The name is
+      // a leftover from the store; the usage is not. Keep them.
+      const keys = [
+        'skillStore.tabs.community',
+        'skillStore.tabs.custom',
+        'skillStore.tabs.orvilo',
+      ];
+
+      const source = read('packages/locales/src/default/setting.ts');
+      for (const key of keys) {
+        expect(source, `${key} is gone from the locale source`).toContain(`'${key}':`);
+      }
+
+      for (const locale of ['en-US', 'zh-CN']) {
+        const mirror = read(`locales/${locale}/setting.json`);
+        for (const key of keys) {
+          expect(mirror, `${key} is gone from ${locale}`).toContain(`"${key}":`);
+        }
+      }
+    });
+  });
 });

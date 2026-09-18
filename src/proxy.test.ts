@@ -105,8 +105,8 @@ describe('SPA proxy route matching', () => {
     expect(doesMatch(pathname)).toBe(false);
   });
 
-  // The `/:workspaceSlug/<segment>` entries must not read backend, framework
-  // or asset namespaces as the slug — otherwise `/api/agent/**` invokes the
+  // The `/:workspaceSlug/<segment>` entries must not read namespaces that
+  // hard-own their paths as the slug — otherwise `/api/agent/**` invokes the
   // middleware on hot API traffic and `/_next/image` gets intercepted.
   it.each([
     '/api/agent',
@@ -121,6 +121,15 @@ describe('SPA proxy route matching', () => {
   ])('does not treat %s as a workspace slug', (pathname) => {
     expect(doesMatch(pathname)).toBe(false);
   });
+
+  // Asset-dir names are legal workspace slugs (the schema only checks format),
+  // so `/{slug}/<segment>` coverage must hold for them.
+  it.each(['/avatars/agent', '/images/tasks', '/videos/settings/members'])(
+    'keeps workspace slug %s routable despite the public dir namesake',
+    (pathname) => {
+      expect(doesMatch(pathname)).toBe(true);
+    },
+  );
 
   // `(/.*)?` tails only accept a `/`-separated suffix, so asset filenames that
   // merely *start with* a route segment can't attach mid-segment.

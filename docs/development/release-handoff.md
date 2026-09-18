@@ -24,7 +24,11 @@ LobeHub 式发布体系在这个仓库里**代码齐全，但 39 个 workflow �
 
 **已配置的 secrets**（不要再让用户配这些）：
 `APPLE_TEAM_ID` · `APPLE_CERTIFICATE_BASE64` · `APPLE_CERTIFICATE_PASSWORD` ·
-`RENDERER_OTA_PRIVATE_KEY` · `RENDERER_OTA_PUBLIC_KEY`
+`RENDERER_OTA_PRIVATE_KEY` · `RENDERER_OTA_PUBLIC_KEY` · `GH_TOKEN`
+
+`GH_TOKEN` 已于 2026-09-18 保存为本仓库 Actions secret，使用仅限
+`alexj11324/orvilo1` 的 fine-grained PAT：Contents 读写、Metadata 只读，
+到期日为 2026-10-18。尚未通过真实发布验证下游事件；到期前需要续期或替换。
 
 GSM 备份：`orvilo-apple-developer-id-p12`、`orvilo-apple-developer-id-password`、
 `orvilo-renderer-ota-private-key`（项目 `general-secrets-store`）。
@@ -83,20 +87,24 @@ done'
 **注意** `lighthouse.yml` 会误报为 READY —— 它用 `secrets[env.TOKEN_NAME]` **动态索引**，
 静态 grep 抓不到，它实际需要 `GH_TOKEN`。
 
-### 任务 4 —— canary ↔ main 冲突对账（大工程，需产品决策）
+### 任务 4 —— canary ↔ main 冲突对账
 
 2026-09-18 接手时实查两条线分叉：canary 领先 main 230 commit，main 领先 canary 29，
-`git merge-tree` 试算 **179 个冲突文件**。两边各自独立做了 branding 清除、S3 presign 修复等
+`git merge-tree` 试算 **180 个冲突文件**。两边各自独立做了 branding 清除、S3 presign 修复等
 （canary 走 PR #52，main 走 PR #73）。
 
-**这不是机械合并**—— 需要判断「哪边的实现是想要的」。**不要**在没搞清语义前批量解冲突。
+逐项对账与独立复核已完成，结果在 [PR #89](https://github.com/alexj11324/orvilo1/pull/89)。
+它保留当前 canary 产品实现，补回 main 独有的 Hatchet 并发、取消与 deferred replay 修复，
+再记录 main 的祖先关系。对账文档列出旧 branding 与已退役页面的排除理由。
+PR #89 必须保留 merge commit，不能 squash；当前仍为草稿，实际运行证据仍待补足。
 
 现状：`sync-main-to-canary` 通过 PR 同步。冲突时中止合并，将 main 的真实内容作为
 草稿 PR 分支；不能把冲突标记提交成一个看起来已完成的 merge commit。
 
-合并顺序还依赖 PR #82：当前 ruleset 要求 `Required Quality Gate`，
-必须等该检查实现合入并更新 #78 基线。维护者已授权取消无法满足的他人批准要求，
-必需 CI、最新基线和 review 线程解决要求仍保留。
+质量门禁实现由 PR #82 提供。2026-09-18 重新读取 ruleset 时，
+必需检查列表已被并行变更更新为仅 `Documentation Required`，尚无 `Required Quality Gate`。
+不能把规则允许合并等同于测试通过；交付仍需检查当前提交的实际 CI，
+并在 #82 合入后更新基线。维护者已授权取消无法满足的他人批准要求。
 
 ## 三、必须知道的坑（都实际踩过）
 

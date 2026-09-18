@@ -151,8 +151,9 @@ owner organization`。该能力只对 organization 级 ruleset 开放。
 `pull_request_target`，只读取 PR 的改动清单，并从受保护目标分支运行门禁脚本；
 PR 不能通过修改自身的 workflow 或脚本绕过它。
 
-`Required Quality Gate` 的实现由 PR #82 提供；在它合并前，已启用的保护规则会
-阻止没有该检查的 PR 合并。不要通过降级保护规则绕过这个依赖。
+`Required Quality Gate` 的实现由 PR #82 提供，合入后需把它与 `Documentation Required`
+共同设为必需检查。2026-09-18 并行修改期间，实查规则曾只剩文档门禁；
+合并前应核对实时规则和当前提交的实际 CI，不要把 “规则允许合并” 当作测试已通过。
 
 发布 tag 与 GitHub Release 使用 `GH_TOKEN`（PAT 或 GitHub App token），以触发下游
 发布工作流。回同步可以使用内置 `GITHUB_TOKEN`，但它创建的 PR 工作流需要维护者

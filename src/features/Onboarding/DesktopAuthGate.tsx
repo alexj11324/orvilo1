@@ -49,18 +49,26 @@ const DesktopAuthGate = memo<PropsWithChildren>(({ children }) => {
   }, [isAuthenticated, isInitRemoteServerConfig]);
 
   if (!isDesktop) return children;
-  if (!isInitRemoteServerConfig) return <Loading debugId="DesktopAuthGate" />;
-  if (isAuthenticated) return children;
 
+  // Every desktop state — remote-config loading, the signed-out login step,
+  // and the authenticated shared wizard alike — lives inside
+  // `OnboardingContainer`: the frameless (`frame: false`) onboarding window
+  // always needs its draggable title bar and Linux window controls.
   return (
     <OnboardingContainer>
-      <Flexbox style={{ maxWidth: 560, minHeight: '100%', width: '100%' }}>
-        <LoginStep
-          mode="onboarding"
-          onBack={() => navigate('/')}
-          onNext={() => window.location.reload()}
-        />
-      </Flexbox>
+      {!isInitRemoteServerConfig ? (
+        <Loading debugId="DesktopAuthGate" />
+      ) : isAuthenticated ? (
+        children
+      ) : (
+        <Flexbox style={{ maxWidth: 560, minHeight: '100%', width: '100%' }}>
+          <LoginStep
+            mode="onboarding"
+            onBack={() => navigate('/')}
+            onNext={() => window.location.reload()}
+          />
+        </Flexbox>
+      )}
     </OnboardingContainer>
   );
 });

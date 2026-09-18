@@ -12,6 +12,7 @@ import { PlusIcon } from 'lucide-react';
 import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { isDesktop } from '@/const/version';
 import ActionDropdown from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import ComposioServerItem from '@/features/ChatInput/ActionBar/Tools/ComposioServerItem';
 import ComposioSkillIcon, {
@@ -64,7 +65,9 @@ export interface AgentToolProps {
    */
   excludeAgentConnectors?: boolean;
   /**
-   * Whether to filter tools by availableInWeb property
+   * Whether to filter tools by availableInWeb property. Only applies on the
+   * web viewer — the desktop build can execute device-bound tools itself, so
+   * they stay visible/pinnable there regardless of this flag.
    * @default false
    */
   filterAvailableInWeb?: boolean;
@@ -279,6 +282,13 @@ const AgentTool = memo<AgentToolProps>(
       return ids;
     }, [installedBuiltinSkills, marketAgentSkills, userAgentSkills]);
 
+    // `availableInWeb` is a static "runs without a device" property, so the
+    // filter only makes sense on a viewer that has no device — the web build.
+    // On desktop the same device-bound tools are locally executable and must
+    // stay visible/pinnable (the viewer never decides execution; it does
+    // decide what its own surface can offer).
+    const effectiveFilterAvailableInWeb = filterAvailableInWeb && !isDesktop;
+
     // Filter out Composio tools and skills from profileBuiltinList (they are displayed separately)
     // Optionally filter out tools with availableInWeb: false based on config (e.g., LocalSystem is desktop-only)
     const filteredBuiltinList = useMemo(() => {
@@ -287,7 +297,7 @@ const AgentTool = memo<AgentToolProps>(
       let list: ListType = profileBuiltinList;
 
       // Filter by availableInWeb if requested (only makes sense when using allMetaList)
-      if (filterAvailableInWeb && useAllMetaList) {
+      if (effectiveFilterAvailableInWeb && useAllMetaList) {
         list = (list as OrviloToolMetaWithAvailability[]).filter(
           (item) => item.availableInWeb,
         ) as ListType;
@@ -303,7 +313,7 @@ const AgentTool = memo<AgentToolProps>(
     }, [
       profileBuiltinList,
       connectorIdentifiers,
-      filterAvailableInWeb,
+      effectiveFilterAvailableInWeb,
       useAllMetaList,
       allSkillIdentifiers,
     ]);
@@ -887,7 +897,7 @@ const AgentTool = memo<AgentToolProps>(
                 key={pluginId}
                 pluginId={pluginId}
                 showAuthor={showAuthor}
-                showDesktopOnlyLabel={filterAvailableInWeb}
+                showDesktopOnlyLabel={effectiveFilterAvailableInWeb}
                 useAllMetaList={useAllMetaList}
                 onRemove={handleRemovePlugin(pluginId)}
               />

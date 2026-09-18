@@ -851,7 +851,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should disable LocalSystem when no device context is provided', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [LocalSystemManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [LocalSystemManifest.identifier],
+        },
         canUseDevice: true,
         model: 'gpt-4',
         provider: 'openai',
@@ -869,7 +872,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should enable LocalSystem when gateway configured, device online AND auto-activated', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [LocalSystemManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [LocalSystemManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, deviceOnline: true, autoActivated: true },
         model: 'gpt-4',
@@ -888,7 +894,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should disable LocalSystem when device online but NOT auto-activated', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [LocalSystemManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [LocalSystemManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, deviceOnline: true },
         model: 'gpt-4',
@@ -907,7 +916,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should disable LocalSystem when gateway configured but device offline', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [LocalSystemManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [LocalSystemManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, deviceOnline: false, autoActivated: true },
         model: 'gpt-4',
@@ -1074,7 +1086,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should enable RemoteDevice when gateway configured and no device auto-activated', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true },
         model: 'gpt-4',
@@ -1093,7 +1108,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should disable RemoteDevice when gateway not configured', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: false },
         model: 'gpt-4',
@@ -1156,7 +1174,10 @@ describe('createServerAgentToolsEngine', () => {
     it('should disable RemoteDevice when device is already auto-activated', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, autoActivated: true },
         model: 'gpt-4',
@@ -1177,7 +1198,10 @@ describe('createServerAgentToolsEngine', () => {
       // activate-device tool is never offered, so the model cannot switch.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: {
           autoActivated: true,
@@ -1205,7 +1229,10 @@ describe('createServerAgentToolsEngine', () => {
       // The explicit selection must keep the run locked instead.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: {
           boundDeviceId: 'device-001',
@@ -1233,7 +1260,10 @@ describe('createServerAgentToolsEngine', () => {
       // bot threads, so it should surface.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true },
         isBotConversation: true,
@@ -1256,7 +1286,10 @@ describe('createServerAgentToolsEngine', () => {
       // by the `!autoActivated` clause, regardless of isBotConversation.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, deviceOnline: true, autoActivated: true },
         isBotConversation: true,
@@ -1279,6 +1312,7 @@ describe('createServerAgentToolsEngine', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
         agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
           plugins: [LocalSystemManifest.identifier, RemoteDeviceManifest.identifier],
         },
         canUseDevice: true,
@@ -1301,6 +1335,7 @@ describe('createServerAgentToolsEngine', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
         agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
           plugins: [LocalSystemManifest.identifier, RemoteDeviceManifest.identifier],
         },
         canUseDevice: true,
@@ -1326,7 +1361,10 @@ describe('createServerAgentToolsEngine', () => {
       // into the tool list even when every other gate would normally pass.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [LocalSystemManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [LocalSystemManifest.identifier],
+        },
         canUseDevice: false,
         deviceContext: { gatewayConfigured: true, deviceOnline: true, autoActivated: true },
         model: 'gpt-4',
@@ -1345,7 +1383,10 @@ describe('createServerAgentToolsEngine', () => {
     it('drops RemoteDevice when canUseDevice is false even with proxy configured', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: false,
         deviceContext: { gatewayConfigured: true },
         model: 'gpt-4',
@@ -1367,6 +1408,7 @@ describe('createServerAgentToolsEngine', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
         agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
           plugins: [LocalSystemManifest.identifier, RemoteDeviceManifest.identifier],
         },
         deviceContext: { gatewayConfigured: true, deviceOnline: true, autoActivated: true },
@@ -1447,7 +1489,10 @@ describe('createServerAgentToolsEngine', () => {
       // an auto-activated device must close the activator bypass the same way.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
-        agentConfig: { plugins: [RemoteDeviceManifest.identifier] },
+        agentConfig: {
+          agencyConfig: { executionTarget: 'local' },
+          plugins: [RemoteDeviceManifest.identifier],
+        },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, deviceOnline: true, autoActivated: true },
         model: 'gpt-4',

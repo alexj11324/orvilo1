@@ -8,7 +8,7 @@ import { resolvePostOnboardingTargetUrl } from '@/utils/onboardingRedirect';
  * source of truth. A failed repair must not block the navigation: the next
  * launch simply takes the `/onboarding` detour once and skips out again.
  */
-const repairDesktopOnboardingMarkers = async (): Promise<void> => {
+export const repairDesktopOnboardingMarkers = async (): Promise<void> => {
   const [{ electronSystemService }, storage] = await Promise.all([
     import('@/services/electron/system'),
     import('@/features/DesktopOnboarding/storage'),

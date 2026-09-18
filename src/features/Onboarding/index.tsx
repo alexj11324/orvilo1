@@ -12,6 +12,7 @@ import {
   ONBOARDING_INVITES_FAILED,
   type OnboardingFormValues,
 } from '@/components/blocks/onboarding-2/components/onboarding';
+import { isDesktop } from '@/const/version';
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
@@ -22,7 +23,7 @@ import {
 } from '@/utils/onboardingRedirect';
 
 import DesktopAuthGate from './DesktopAuthGate';
-import { finishOnboardingAndNavigate } from './finishOnboarding';
+import { finishOnboardingAndNavigate, repairDesktopOnboardingMarkers } from './finishOnboarding';
 
 const INVITE_ROLE_MAP: Record<InviteRoleValue, 'admin' | 'member' | 'viewer'> = {
   admin: 'admin',
@@ -83,7 +84,13 @@ const OnboardingPage = memo(() => {
   }, [pathname, search]);
 
   useEffect(() => {
-    if (onboardingFinished) navigate(resolvePostOnboardingTargetUrl(), { replace: true });
+    if (!onboardingFinished) return;
+    // The server record is authoritative, but the desktop boot path still
+    // reads local markers — repair them here too or `BrowserManager` keeps
+    // booting `/onboarding` on every launch. Fire-and-forget: a failed repair
+    // just means one more detour through this redirect.
+    if (isDesktop) void repairDesktopOnboardingMarkers();
+    navigate(resolvePostOnboardingTargetUrl(), { replace: true });
   }, [navigate, onboardingFinished]);
 
   const handleComplete = async (values: OnboardingFormValues) => {

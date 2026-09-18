@@ -1826,30 +1826,52 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       sql: string;
     }
 
+    /**
+     * pg_search's BM25 index can briefly hold ctids a concurrent test-file
+     * writer already removed — the `@@@` scan then crashes with XX000
+     * `item_pointer_is_valid` instead of returning rows. The inconsistency is
+     * transient: retrying the identical query re-reads a settled heap.
+     */
+    const isTransientBm25ScanError = (error: unknown): boolean => {
+      const err = error as { code?: string; message?: string } | undefined;
+      return err?.code === 'XX000' || err?.message?.includes('item_pointer_is_valid') === true;
+    };
+
     /** Runs a search against the test DB and returns every BM25 statement it emitted. */
     const captureScanSql = async (options?: {
       agentId?: string;
       workspaceId?: string;
     }): Promise<CapturedStatement[]> => {
-      const captured: CapturedStatement[] = [];
       loggingPool ??= new NodePool({ connectionString: process.env.DATABASE_TEST_URL });
-      const db = nodeDrizzle(loggingPool, {
-        logger: {
-          logQuery: (query: string, params: unknown[]) => captured.push({ params, sql: query }),
-        },
-        schema,
-      });
 
-      await new FtsSearchRepo(
-        db as unknown as OrviloDatabase,
-        userId,
-        options?.workspaceId,
-      ).search({
-        agentId: options?.agentId,
-        query: 'kubernetes',
-      });
+      const maxAttempts = 4;
+      for (let attempt = 1; ; attempt++) {
+        const captured: CapturedStatement[] = [];
+        const db = nodeDrizzle(loggingPool, {
+          logger: {
+            logQuery: (query: string, params: unknown[]) =>
+              captured.push({ params, sql: query }),
+          },
+          schema,
+        });
 
-      return captured.filter(({ sql }) => sql.includes('@@@'));
+        try {
+          await new FtsSearchRepo(
+            db as unknown as OrviloDatabase,
+            userId,
+            options?.workspaceId,
+          ).search({
+            agentId: options?.agentId,
+            query: 'kubernetes',
+          });
+        } catch (error) {
+          if (attempt === maxAttempts || !isTransientBm25ScanError(error)) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+          continue;
+        }
+
+        return captured.filter(({ sql }) => sql.includes('@@@'));
+      }
     };
 
     /** Body of the first parenthesised subquery, i.e. the isolated BM25 scan. */

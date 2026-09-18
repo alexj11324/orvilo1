@@ -638,6 +638,30 @@ describe('driveTaskFromVerify', () => {
     expect(deliverMock.mock.calls[0][0]).toMatchObject({ reason: 'error', taskId: 'task-1' });
   });
 
+  it('continues failed-result side effects after the pause commit consumes the reservation', async () => {
+    vi.useFakeTimers();
+    try {
+      runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'failed' });
+      taskUpdateStatusForExecutionContract.mockImplementationOnce(async () => {
+        taskRenewRunReservation.mockResolvedValue(false);
+        // Let the lease timer observe the reservation-clearing commit before
+        // the model call returns. That loss belongs to this successful local
+        // transition and must not retire the Verify drive.
+        await vi.advanceTimersByTimeAsync(60_000);
+        return { id: 'task-1', status: 'paused' };
+      });
+
+      await driveTaskFromVerify(db, 'u1', 'op-1');
+
+      expect(deliverMock).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'error', taskId: 'task-1' }),
+      );
+      expect(runCompleteTaskDrive).toHaveBeenCalledWith('run-1', 'drive-owner');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('errored → pauses without an inbox brief; never claims the delivery "did not pass"', async () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'errored' });
     await driveTaskFromVerify(db, 'u1', 'op-1');

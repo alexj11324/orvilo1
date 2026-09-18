@@ -511,6 +511,7 @@ export const driveTaskFromVerify = async (
           return;
         }
         completionReservationActive = false;
+        completionLeaseFailure = undefined;
         log(
           isErrored ? 'verify errored → task %s paused' : 'verify failed → task %s paused',
           taskOperation.taskId,

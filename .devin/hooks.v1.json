@@ -1,6 +1,16 @@
 {
   "PreToolUse": [
     {
+      "matcher": "^get_output$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "printf '%s\\n' '{\"decision\":\"block\",\"reason\":\"BLOCKED: get_output is banned — it hangs the turn waiting on background shells. Run gh pr checks / gh run list once in the foreground and move on.\"}'",
+          "timeout": 3
+        }
+      ]
+    },
+    {
       "matcher": "exec",
       "hooks": [
         {

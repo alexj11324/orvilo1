@@ -364,6 +364,14 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       requestIdRef.current = requestId;
 
       inFlightRef.current = true;
+      // Revalidate AND manual refreshes both consult upstream — stamp the
+      // consult here so a passive trigger landing right after a manual
+      // refresh doesn't re-hit the provider for the same window. The plain
+      // mount load is excluded: it may serve persisted data without ever
+      // touching the live endpoint.
+      if (options.revalidate || options.manual) {
+        lastRevalidateAtRef.current = Date.now();
+      }
       setRefreshError(null);
       setLoading(true);
 
@@ -440,7 +448,8 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
         return;
       }
 
-      lastRevalidateAtRef.current = currentTime;
+      // `loadQuota` stamps the consult time itself — single write site, and
+      // manual refreshes (which bypass this gate) count too.
       void loadQuota({ revalidate: true });
     },
     [loadQuota],

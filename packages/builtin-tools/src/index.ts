@@ -31,7 +31,6 @@ import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
 import { SkillMaintainerManifest } from '@orvilo/builtin-tool-skill-maintainer';
-import { SkillStoreManifest } from '@orvilo/builtin-tool-skill-store';
 import { resolveSkillsManifest, SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TaskManifest } from '@orvilo/builtin-tool-task';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
@@ -49,7 +48,6 @@ import { type OrviloBuiltinTool } from '@orvilo/types';
 export const defaultToolIds = [
   OrviloActivatorManifest.identifier,
   SkillsManifest.identifier,
-  SkillStoreManifest.identifier,
   WebBrowsingManifest.identifier,
   KnowledgeBaseManifest.identifier,
   MemoryManifest.identifier,
@@ -81,7 +79,6 @@ export const alwaysOnToolIds = [
   OrviloAgentManifest.identifier,
   OrviloActivatorManifest.identifier,
   SkillsManifest.identifier,
-  SkillStoreManifest.identifier,
 ];
 
 /**
@@ -95,10 +92,7 @@ export const activationModeControlledToolIds = [OrviloActivatorManifest.identifi
  * These are the tool/skill discovery tools that should be disabled when user wants precise control.
  * Other default tools (sandbox, web browsing, etc.) remain available if enabled externally.
  */
-export const manualModeExcludeToolIds = [
-  OrviloActivatorManifest.identifier,
-  SkillStoreManifest.identifier,
-];
+export const manualModeExcludeToolIds = [OrviloActivatorManifest.identifier];
 
 /**
  * Tool IDs allowed when the agent runs in chat mode
@@ -205,7 +199,7 @@ export const runtimeManagedToolIds = [
  * (`apps/server/src/services/toolExecution/serverRuntimes/*`), not just its
  * manifest. For the rationale behind every DENIED identifier
  * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`, `orvilo-message`,
- * `orvilo-skill-store`, `orvilo-agent-builder`, `orvilo-skills`,
+ * `orvilo-agent-builder`, `orvilo-skills`,
  * `orvilo-group-agent-builder`, `orvilo-group-management`, `agent-signal-review`,
  * `orvilo-user-interaction`, `orvilo-activator`,
  * `orvilo-local-system`, `orvilo-browser`, `orvilo-remote-device`,
@@ -294,12 +288,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     // actual execution environment (cloud sandbox as fallback / offline
     // degradation), so the model never assumes they run on the user's machine.
     resolveManifest: resolveSkillsManifest,
-    type: 'builtin',
-  },
-  {
-    hidden: true,
-    identifier: SkillStoreManifest.identifier,
-    manifest: SkillStoreManifest,
     type: 'builtin',
   },
   {

@@ -5,18 +5,23 @@ description: 'Use for real bot-channel acceptance in Discord, Slack, Telegram, W
 
 # Agent Testing — Bot Channels (Orvilo project skill)
 
-This skill **extends** the generic `acceptance` skill (installed alongside at
-`../acceptance/`) to the bot-channel surfaces. It does NOT replace the core
-process: the same three phases apply —
+This skill **extends** the repo's acceptance adapter (`.agents/acceptance/`) to
+the bot-channel surfaces. It does NOT replace the core process: the same three
+phases apply —
 
 ```text
 PLAN (Steps 0–2) → EXECUTE (Steps 3–6) → FINISH (Step 7)
 ```
 
-— and the same report + publish pipeline (`result.json` → `report-init.sh` →
-`lh acceptance run ingest … --source agent-testing`). Read the acceptance skill's
-`SKILL.md` for target grounding, the living logs, the Phase-1 approval gate, the
-report format, and teardown. This file only adds the bot-channel surface.
+— and the same report pipeline (`result.json` → `report-init.sh`). Read
+`.agents/acceptance/PROCESS.md` for target grounding, the living logs, the plan
+gate, the report format, and teardown. This file only adds the bot-channel
+surface.
+
+> The generic `acceptance` skill this used to extend (installed alongside at
+> `../acceptance/`, shipped as `AcceptanceSkill`) was retired with the standalone
+> acceptance platform, and its publish step went with it. Evidence now goes
+> through the retained channel described in `PROCESS.md` Step 5.
 
 For Orvilo environment/auth/probe specifics (dev server, seeded account, ports),
 the adapter is `.agents/acceptance/PROJECT.md`.
@@ -28,7 +33,7 @@ the adapter is `.agents/acceptance/PROJECT.md`.
 | **Bot channels** (Discord / WeChat / Lark / …) | Native app via osascript / bridge | Only way to exercise the real channel end-to-end |
 
 Route here only when the behavior under test is a bot channel. For CLI / Web /
-Electron changes, use the generic skill's surfaces.
+Electron changes, use the surfaces in `.agents/acceptance/PROCESS.md`.
 
 ## Platforms
 

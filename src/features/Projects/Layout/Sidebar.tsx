@@ -1,13 +1,7 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import {
-  ClipboardCheckIcon,
-  HouseIcon,
-  LibraryBigIcon,
-  ListTodoIcon,
-  TargetIcon,
-} from 'lucide-react';
+import { HouseIcon, LibraryBigIcon, ListTodoIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -21,7 +15,6 @@ import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import {
-  getProjectAcceptancePath,
   getProjectGoalsPath,
   getProjectOverviewPath,
   getProjectResourcesPath,
@@ -39,7 +32,6 @@ const ProjectSidebarContent = memo(() => {
   const projectOverviewPath = getProjectOverviewPath(projectId!);
   const projectTasksPath = getProjectTasksPath(projectId!);
   const projectGoalsPath = getProjectGoalsPath(projectId!);
-  const projectAcceptancePath = getProjectAcceptancePath(projectId!);
   const projectResourcesPath = getProjectResourcesPath(projectId!);
 
   const header = <ProjectHeader project={detail?.project} />;
@@ -82,12 +74,6 @@ const ProjectSidebarContent = memo(() => {
             icon={TargetIcon}
             title={t('sections.goals')}
             onClick={() => navigate(projectGoalsPath)}
-          />
-          <NavItem
-            active={pathname === projectAcceptancePath}
-            icon={ClipboardCheckIcon}
-            title={t('sections.acceptance')}
-            onClick={() => navigate(projectAcceptancePath)}
           />
         </Flexbox>
       }

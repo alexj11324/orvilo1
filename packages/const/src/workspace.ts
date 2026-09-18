@@ -10,6 +10,13 @@
 export const INVITATION_EXPIRY_DAYS = 7;
 
 /**
+ * Number of days a pending workspace-ownership transfer waits for the
+ * recipient before it expires. Same TTL as invitations — a hand-off is an
+ * invitation in reverse, and the recipient deserves the same week to decide.
+ */
+export const OWNERSHIP_TRANSFER_EXPIRY_DAYS = 7;
+
+/**
  * Most members that one "add collaborators" call may grant at a time. Shared
  * by the `addCollaborators` procedure (rejects longer arrays) and the member
  * picker (stops selecting past it), so the UI can never assemble a selection

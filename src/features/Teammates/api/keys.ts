@@ -9,6 +9,7 @@ export const teammatesKeys = {
   invitations: () => ['teammates:invitations'] as const,
   members: (includeDeleted?: boolean) =>
     ['teammates:members', { includeDeleted: !!includeDeleted }] as const,
+  ownershipTransfer: () => ['teammates:ownershipTransfer'] as const,
   projectMembers: (projectId: string) => ['teammates:projectMembers', projectId] as const,
   removalPreview: (userId: string) => ['teammates:removalPreview', userId] as const,
 } as const;

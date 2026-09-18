@@ -1,7 +1,6 @@
 'use client';
 
 import { type ModalInstance } from '@lobehub/ui/base-ui';
-import { AGENT_CHAT_URL } from '@orvilo/const';
 import {
   createContext,
   lazy,
@@ -135,20 +134,6 @@ const CreateModalRenderer = memo<CreateModalRendererProps>(
       }
     }, [type, storeCreateAgent, navigate, refreshAgentList, sendAsGroup, groupId, visibility]);
 
-    const handleOpenSkills = useCallback(
-      (identifier: string) => {
-        onClose();
-        navigate(`/settings/skill?skill=${encodeURIComponent(identifier)}`);
-      },
-      [navigate, onClose],
-    );
-
-    const handleTryInOrviloAI = useCallback(() => {
-      if (!inboxAgentId) return;
-
-      navigate(AGENT_CHAT_URL(inboxAgentId, false));
-    }, [inboxAgentId, navigate]);
-
     // Mounted only while the modal should be open, so the open/close bridge is
     // just this component's lifetime — the panel itself lives in the ModalHost.
     const openArgsRef = useRef<OpenCreateAgentModalOptions>(undefined);
@@ -157,9 +142,7 @@ const CreateModalRenderer = memo<CreateModalRendererProps>(
       type,
       onClosed: onClose,
       onCreateBlank: handleCreateBlank,
-      onOpenSkills: handleOpenSkills,
       onSubmit: handleSubmit,
-      onTryInOrviloAI: handleTryInOrviloAI,
     };
 
     useEffect(() => {

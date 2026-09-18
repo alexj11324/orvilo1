@@ -70,12 +70,12 @@ gh secret set APPLE_CERTIFICATE_PASSWORD --repo alexj11324/orvilo1 <<< "$PASS"
 
 > 交互式导出私钥必须有人的授权确认 —— 非交互环境会得到
 > `security: SecKeychainItemExport: User canceled the operation.`
+>
+> 证书有效期到 **2031-08-29**，五年内无需轮换。
 
 ## 二、仍需提供
 
 按「获取难度」排序。
-
-> 证书有效期到 **2031-08-29**，五年内无需轮换。
 
 ### 1. Notarization（公证）
 

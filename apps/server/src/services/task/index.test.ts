@@ -1913,17 +1913,24 @@ describe('TaskService', () => {
       mockTaskModel.updateStatusForExecutionContract.mockResolvedValue(null);
 
       await expect(
-        new TaskService(db, userId).updateStatus({
-          expectedContract: {
-            assigneeAgentId: null,
-            executionGeneration: 0,
-            policyRevision: 0,
-            requirementRevision: 0,
-            status: 'scheduled',
+        new TaskService(db, userId).updateStatus(
+          {
+            expectedContract: {
+              assigneeAgentId: null,
+              executionGeneration: 0,
+              policyRevision: 0,
+              requirementRevision: 0,
+              status: 'scheduled',
+            },
+            id: 'T-1',
+            status: 'completed' as any,
           },
-          id: 'T-1',
-          status: 'completed' as any,
-        }),
+          undefined,
+          {
+            currentStatus: 'scheduled' as any,
+            reservationId: 'completion:op-1:old',
+          },
+        ),
       ).rejects.toMatchObject({ code: 'CONFLICT' });
       expect(mockTaskModel.updateStatusForExecutionContract).toHaveBeenCalledWith(
         'task-1',
@@ -1933,6 +1940,7 @@ describe('TaskService', () => {
           executionGeneration: 0,
           policyRevision: 0,
           requirementRevision: 0,
+          runReservationId: 'completion:op-1:old',
           status: 'scheduled',
         }),
         expect.objectContaining({
@@ -1942,6 +1950,41 @@ describe('TaskService', () => {
         }),
       );
       expect(cascadeMock).not.toHaveBeenCalled();
+    });
+
+    it('uses the reservation CAS for a guarded status transition without a contract', async () => {
+      const prev = baseTask({
+        runReservationId: 'completion:op-1:owner',
+        status: 'scheduled',
+      });
+      const next = baseTask({ status: 'completed' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatusIfReservation.mockResolvedValue(next);
+      const onStatusCommitted = vi.fn();
+
+      await new TaskService(db, userId).updateStatus(
+        { id: 'T-1', status: 'completed' as any },
+        undefined,
+        {
+          currentStatus: 'scheduled' as any,
+          reservationId: 'completion:op-1:owner',
+        },
+        { onStatusCommitted },
+      );
+
+      expect(mockTaskModel.updateStatusIfReservation).toHaveBeenCalledWith(
+        'task-1',
+        'completion:op-1:owner',
+        'scheduled',
+        'completed',
+        expect.objectContaining({
+          completedAt: expect.any(Date),
+          runReservationExpiresAt: null,
+          runReservationId: null,
+        }),
+      );
+      expect(onStatusCommitted).toHaveBeenCalledTimes(1);
+      expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
     });
 
     it('stamps on user-initiated restart (paused → scheduled)', async () => {
@@ -2223,6 +2266,31 @@ describe('TaskService', () => {
       expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
       expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
       expect(cascadeManyMock).not.toHaveBeenCalled();
+    });
+
+    it('persists successful late interruptions before surfacing a sibling failure', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskTopicModel.findRunningByTaskIds
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { operationId: 'op-stopped', status: 'running', taskId: 'task-p', topicId: 'topic-1' },
+          { operationId: 'op-live', status: 'running', taskId: 'task-p', topicId: 'topic-2' },
+        ]);
+      mockTaskTopicModel.cancelIfRunning.mockResolvedValue(true);
+      interruptTaskMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false });
+
+      await expect(
+        new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+      ).rejects.toThrow('Task interruption was not confirmed');
+
+      expect(mockTaskTopicModel.cancelIfRunning).toHaveBeenCalledWith('task-p', 'topic-1');
+      expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalledWith('task-p', 'topic-2');
+      expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
     });
 
     it('preserves task state when a running cascade topic has no operation identity', async () => {

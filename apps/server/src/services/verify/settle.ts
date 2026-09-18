@@ -403,13 +403,18 @@ export const driveTaskFromVerify = async (
                   currentStatus: currentTask.status as TaskStatus,
                   reservationId: completionReservationId,
                 },
+                {
+                  onStatusCommitted: () => {
+                    completionReservationActive = false;
+                    completionLeaseFailure = undefined;
+                  },
+                },
               )
             : null;
           if (!completion) {
             await retireSupersededDrive();
             return;
           }
-          completionReservationActive = false;
           log('verify passed → capped schedule task %s completed', taskOperation.taskId);
         } else {
           log('verify passed → recurring task %s remains scheduled', taskOperation.taskId);
@@ -418,16 +423,30 @@ export const driveTaskFromVerify = async (
         // The verify → TaskService → aiAgent → agentRuntime completion → verify
         // cycle is safe statically since every use is call-time (inside this fn).
         if (!(await renewTaskDrive())) return;
-        const completion = await new TaskService(db, userId, workspaceId).updateStatus({
-          expectedContract,
-          id: taskOperation.taskId,
-          status: 'completed',
-        });
+        const completion = await new TaskService(db, userId, workspaceId).updateStatus(
+          {
+            expectedContract,
+            id: taskOperation.taskId,
+            status: 'completed',
+          },
+          undefined,
+          completionReservationId
+            ? {
+                currentStatus: currentTask.status as TaskStatus,
+                reservationId: completionReservationId,
+              }
+            : undefined,
+          {
+            onStatusCommitted: () => {
+              completionReservationActive = false;
+              completionLeaseFailure = undefined;
+            },
+          },
+        );
         if (!completion) {
           await retireSupersededDrive();
           return;
         }
-        completionReservationActive = false;
         log('verify passed → task %s completed', taskOperation.taskId);
       }
     } else {

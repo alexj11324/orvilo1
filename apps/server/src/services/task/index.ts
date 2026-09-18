@@ -130,6 +130,10 @@ export interface UpdateStatusResult {
   unlocked: string[];
 }
 
+interface UpdateStatusCommitOptions {
+  onStatusCommitted?: () => void;
+}
+
 export interface UpdateStatusCascadeResult {
   paused: string[];
   task: TaskItem;
@@ -702,6 +706,8 @@ export class TaskService {
      * activity feed.
      */
     actor?: { agentId?: string | null; userId?: string | null },
+    guard?: undefined,
+    options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult>;
   async updateStatus(
     input: {
@@ -718,6 +724,7 @@ export class TaskService {
     },
     actor: undefined,
     guard: { currentStatus: TaskStatus; reservationId: string },
+    options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult | null>;
   async updateStatus(
     input: {
@@ -734,6 +741,7 @@ export class TaskService {
     },
     actor?: { agentId?: string | null; userId?: string | null },
     guard?: { currentStatus: TaskStatus; reservationId: string },
+    options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult | null> {
     const { expectedContract, id, status, error: errorMsg } = input;
 
@@ -841,12 +849,26 @@ export class TaskService {
       ? await this.taskModel.updateStatusForExecutionContract(
           resolved.id,
           status,
-          expectedContract,
+          {
+            ...expectedContract,
+            ...(guard && {
+              runReservationId: guard.reservationId,
+              status: guard.currentStatus,
+            }),
+          },
           extra,
         )
       : actor
         ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-        : await this.taskModel.updateStatus(resolved.id, status, extra);
+        : guard
+          ? await this.taskModel.updateStatusIfReservation(
+              resolved.id,
+              guard.reservationId,
+              guard.currentStatus,
+              status,
+              extra,
+            )
+          : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) {
       if (guard) return null;
       throw new TRPCError({
@@ -856,6 +878,7 @@ export class TaskService {
           : 'Task not found',
       });
     }
+    options?.onStatusCommitted?.();
 
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
@@ -1074,7 +1097,24 @@ export class TaskService {
     const resnapshotFailure = [...resnapshotResults.values()].find(
       (result) => result.status === 'rejected',
     );
-    if (resnapshotFailure) throw resnapshotFailure.reason;
+    if (resnapshotFailure) {
+      // As with the first interruption pass, persist every operation that did
+      // stop before surfacing a sibling failure. Otherwise a physically dead
+      // operation remains recorded as running and can block the next run.
+      for (const topic of resnapshotTopics) {
+        if (
+          !topic.topicId ||
+          !topic.operationId ||
+          resnapshotResults.get(topic.operationId)?.status !== 'fulfilled'
+        ) {
+          continue;
+        }
+        await this.taskTopicModel
+          .cancelIfRunning(topic.taskId, topic.topicId)
+          .catch(() => undefined);
+      }
+      throw resnapshotFailure.reason;
+    }
     for (const [operationId, result] of resnapshotResults) {
       if (result.status === 'fulfilled') confirmedOperationIds.add(operationId);
     }

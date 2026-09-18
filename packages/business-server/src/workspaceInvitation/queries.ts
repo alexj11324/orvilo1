@@ -1,4 +1,4 @@
-import type { LobeChatDatabase } from '@orvilo/database';
+import type { OrviloDatabase } from '@orvilo/database';
 import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 
 import {
@@ -9,7 +9,7 @@ import {
 
 /** Project grants attached to a set of invitations, joined to the project name for display. */
 export const listInvitationProjectGrants = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   invitationIds: string[],
 ) => {
   if (invitationIds.length === 0) return [];
@@ -27,7 +27,7 @@ export const listInvitationProjectGrants = async (
 
 /** Bounded window of non-pending invitations so the admin list shows recent terminal states too. */
 export const listRecentTerminalInvitations = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   workspaceId: string,
   limit = 50,
 ) =>
@@ -46,7 +46,7 @@ export const listRecentTerminalInvitations = async (
  * a failed update must not fail the invite flow.
  */
 export const markInvitationSent = async (
-  db: LobeChatDatabase,
+  db: OrviloDatabase,
   invitationId: string,
   sentAt: Date,
 ) => {

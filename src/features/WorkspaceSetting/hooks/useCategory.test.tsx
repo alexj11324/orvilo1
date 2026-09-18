@@ -111,7 +111,10 @@ describe('workspace settings useCategory', () => {
     expect(getItemKeys()).not.toContain(WorkspaceSettingsTabs.OAuthApps);
   });
 
-  it('shows OAuth Apps when the Labs preference is enabled', () => {
+  it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
+    // The workspace tab pointed at the self-built console, which is retired; the
+    // stored `enableOAuthApps` preference must not bring the row (and with it a
+    // link to a route that no longer exists) back.
     useUserStore.setState({
       preference: {
         ...initialUserStoreState.preference,
@@ -123,14 +126,8 @@ describe('workspace settings useCategory', () => {
     const developerGroup = result.current.find(
       (group) => group.key === WorkspaceSettingsGroupKey.Developer,
     );
-    const agentGroup = result.current.find(
-      (group) => group.key === WorkspaceSettingsGroupKey.Agent,
-    );
 
-    expect(developerGroup?.items.map((item) => item.key)).toContain(
-      WorkspaceSettingsTabs.OAuthApps,
-    );
-    expect(agentGroup?.items.map((item) => item.key)).not.toContain(
+    expect(developerGroup?.items.map((item) => item.key)).not.toContain(
       WorkspaceSettingsTabs.OAuthApps,
     );
   });
@@ -173,28 +170,6 @@ describe('workspace settings useCategory', () => {
 
     expect(developerGroup?.items.map((item) => item.key)).toEqual([
       WorkspaceSettingsTabs.Advanced,
-      WorkspaceSettingsTabs.Labs,
-    ]);
-  });
-
-  it('adds OAuth Apps to the viewer Developer group when the Labs preference is enabled', () => {
-    mocks.canCreateContent = false;
-    mocks.canManageWorkspace = false;
-    useUserStore.setState({
-      preference: {
-        ...initialUserStoreState.preference,
-        lab: { ...initialUserStoreState.preference.lab, enableOAuthApps: true },
-      },
-    });
-
-    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
-    const developerGroup = result.current.find(
-      (group) => group.key === WorkspaceSettingsGroupKey.Developer,
-    );
-
-    expect(developerGroup?.items.map((item) => item.key)).toEqual([
-      WorkspaceSettingsTabs.Advanced,
-      WorkspaceSettingsTabs.OAuthApps,
       WorkspaceSettingsTabs.Labs,
     ]);
   });

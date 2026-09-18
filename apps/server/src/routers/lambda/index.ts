@@ -79,7 +79,6 @@ import { messengerRouter } from './messenger';
 import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
-import { oauthAppRouter } from './oauthApp';
 import { pluginRouter } from './plugin';
 import { projectRouter } from './project';
 import { pushTokenRouter } from './pushToken';
@@ -170,7 +169,6 @@ export const lambdaRouter = router({
   metric: metricRouter,
   notebook: notebookRouter,
   notification: notificationRouter,
-  oauthApp: oauthAppRouter,
   plugin: pluginRouter,
   project: projectRouter,
   projectMember: projectMemberRouter,

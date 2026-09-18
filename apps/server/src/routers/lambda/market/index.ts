@@ -22,7 +22,6 @@ import { agentRouter } from './agent';
 import { agentGroupRouter } from './agentGroup';
 import { credsRouter } from './creds';
 import { oidcRouter } from './oidc';
-import { skillRouter } from './skill';
 import { userRouter } from './user';
 
 const log = debug('lambda-router:market');
@@ -60,9 +59,6 @@ export const marketRouter = router({
 
   // ============================== Artifact Deployments (business) ==============================
   deployments: marketDeploymentsRouter,
-
-  // ============================== Skill Management ==============================
-  skill: skillRouter,
 
   getAgentsByPlugin: marketProcedure
     .input(

@@ -236,6 +236,35 @@ export const DEAD_ROUTE_PREFIXES: Set<string> = new Set(
 );
 
 /**
+ * Every path prefix owned by a retired surface.
+ *
+ * A retired root path is a **reserved word**: it has to keep resolving to
+ * something honest, and a dynamic segment must never claim it as an id. The
+ * routers sit below the root paths they must not shadow, but a retired root
+ * whose route was deleted along with the surface has nothing left to outrank
+ * `/:workspaceSlug` — `/video` used to resolve as workspace `video` and answer
+ * "no such workspace" instead of "this surface is gone". Both routers build one
+ * guard per prefix here, so retiring a route reserves its root in the same
+ * edit.
+ */
+export const RETIRED_ROUTE_PREFIXES: Set<string> = new Set(
+  NAVIGATION_ROUTES.filter((route) => route.tier === 'retired').map((route) => route.pathPrefix),
+);
+
+/**
+ * The retired roots the routers must guard explicitly, as bare path segments.
+ *
+ * Retired prefixes whose stored URLs still land on live product are excluded:
+ * `/memory` hosts the surviving preferences manager and `/apps` redirects into
+ * Settings > About, so both already own a route and a second one would shadow
+ * it. The rest are the dead ends from {@link DEAD_ROUTE_PREFIXES}, which is why
+ * this is derived from that set rather than listed again.
+ */
+export const RESERVED_RETIRED_ROOTS: readonly string[] = [...DEAD_ROUTE_PREFIXES].map((prefix) =>
+  prefix.replace(/^\//, ''),
+);
+
+/**
  * Get route configuration by id
  */
 export const getRouteById = (id: string): NavigationRoute | undefined =>

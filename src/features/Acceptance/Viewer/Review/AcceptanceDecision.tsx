@@ -5,11 +5,8 @@ import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 
 import { useIsHydrated } from '@/hooks/useIsHydrated';
-import { mutate as globalMutate } from '@/libs/swr';
-import { isAcceptanceListKey } from '@/libs/swr/keys';
 import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
@@ -17,7 +14,6 @@ import { checkFilterState, isException } from '../Checks/checkState';
 import { buildRepairPrompt } from '../Checks/checkWork';
 import { useAcceptanceComments } from '../Comments/hooks';
 import { flowPlanPhase } from '../Plan/planReview';
-import { acceptanceCheckPath } from '../routes';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { useAcceptanceTurn } from '../useAcceptanceTurn';
 import { formatAcceptanceCountsText, LIVE_ACCEPTANCE_STATUSES } from '../verdict';
@@ -32,7 +28,6 @@ interface AcceptanceDecisionProps {
 
 const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
   const { t } = useTranslation('verify');
-  const navigate = useNavigate();
   const hydrated = useIsHydrated();
   const { acceptanceId, embedded } = useAcceptanceScope();
   const { data, mutate } = useAcceptanceBundle(acceptanceId);
@@ -171,7 +166,6 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
     try {
       await action();
       await mutate();
-      void globalMutate(isAcceptanceListKey);
       return true;
     } catch (cause) {
       console.error('[acceptance:decision]', cause);
@@ -266,11 +260,9 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         onJumpToCheck={(checkId) => {
+          // The portal is the only host now (the standalone check page was
+          // retired), so a feedback entry always jumps to the row in place.
           setFeedbackOpen(false);
-          if (!embedded) {
-            navigate(acceptanceCheckPath(acceptanceId, checkId));
-            return;
-          }
           setTimeout(() => {
             document
               .querySelector(`[data-check-row="${checkId}"]`)

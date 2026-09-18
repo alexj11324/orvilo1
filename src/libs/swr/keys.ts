@@ -1052,44 +1052,10 @@ export const verifyKeys = {
       subjectId,
     ],
   ),
-  /** Statuses for a known subject set. Ids are sorted+joined so the key is order-free. */
-  acceptanceStatuses: def(
-    'verify:acceptanceStatuses',
-    (subjectType: string, subjectIds: string[]) => [
-      'verify:acceptanceStatuses',
-      subjectType,
-      [...subjectIds].sort().join(','),
-    ],
-  ),
-  /**
-   * One scroll page of the list panel. Keyed by workspace + the status split +
-   * the cursor, mirroring `reportSummaries` — the sibling paged feed.
-   */
   acceptancePurgePreview: def('verify:acceptancePurgePreview', (acceptanceId: string) => [
     'verify:acceptancePurgePreview',
     acceptanceId,
   ]),
-  acceptancePage: def(
-    'verify:acceptancePage',
-    (workspaceId: string | undefined, filter: string, projectId?: string, cursor?: string) => [
-      'verify:acceptancePage',
-      workspaceId ?? '',
-      filter,
-      projectId ?? '',
-      cursor ?? '',
-    ],
-  ),
-  /** Query inputs are part of the key so server-side list filtering never reuses stale rows. */
-  acceptances: def(
-    'verify:acceptances',
-    (limit?: number, q?: string, filter?: string, projectId?: string) => [
-      'verify:acceptances',
-      String(limit ?? ''),
-      q ?? '',
-      filter ?? '',
-      projectId ?? '',
-    ],
-  ),
   criteria: def('verify:criteria', () => ['verify:criteria']),
   instruction: def('verify:instruction', (documentId: string) => [
     'verify:instruction',
@@ -1118,15 +1084,6 @@ export const verifyKeys = {
   state: def('verify:state', (operationId: string) => ['verify:state', operationId]),
   tracing: def('verify:tracing', (tracingId: string) => ['verify:tracing', tracingId]),
 };
-
-/**
- * Match every cached Acceptance list read — the flat window's filter / limit /
- * search variants AND every loaded page of the panel's scroll feed. A write has
- * no idea how deep the panel has scrolled, so it invalidates the whole family.
- */
-export const isAcceptanceListKey = (key: unknown): boolean =>
-  Array.isArray(key) &&
-  (key[0] === verifyKeys.acceptances.root || key[0] === verifyKeys.acceptancePage.root);
 
 // ---- inbox / notifications ----------------------------------------------
 export const inboxKeys = {

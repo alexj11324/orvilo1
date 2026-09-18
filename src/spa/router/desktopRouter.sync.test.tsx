@@ -200,7 +200,7 @@ describe('desktop router shared definition', () => {
   });
 
   it.each(mainAreaVariants)(
-    '%s exposes the project overview, task, goal, resource, and acceptance workspaces',
+    '%s exposes the project overview, task, goal, and resource workspaces',
     (_, factory) => {
       const projectRoute = factory().find((route) => route.path === 'project/:projectId');
       const projectIndexRoute = projectRoute?.children?.find((route) => route.index);
@@ -208,7 +208,11 @@ describe('desktop router shared definition', () => {
         ?.map((route) => route.path)
         .filter((routePath): routePath is string => Boolean(routePath));
 
-      expect(projectPaths).toEqual(['tasks', 'goals', 'resources', 'library/:id', 'acceptance']);
+      // `acceptance` is gone from the project workspace: acceptances are objects
+      // under a task, and the project-level collection was a second, parentless
+      // way to browse them. The assertion follows the behavior change rather
+      // than being relaxed — the list is still compared exactly.
+      expect(projectPaths).toEqual(['tasks', 'goals', 'resources', 'library/:id']);
       expect(projectIndexRoute?.element).toBeTruthy();
       expect(
         (projectIndexRoute?.element as ReactElement<{ to?: string }> | undefined)?.props.to,
@@ -317,7 +321,11 @@ describe('desktop router shared definition', () => {
     expect(combinedSource).not.toContain(
       "import { ProviderDetailPage, ProviderLayout } from '@/routes/(main)/settings/provider'",
     );
-    expect(lazyRouteImports.length).toBeGreaterThan(100);
+    // The threshold guards against a refactor that pulls route modules back
+    // into eager imports; it is not a route count. Retiring the standalone
+    // acceptance pages removed their lazy boundaries, so the floor follows the
+    // smaller tree instead of being pinned to the pre-retirement number.
+    expect(lazyRouteImports.length).toBeGreaterThan(90);
   });
 
   it('owns prioritized preload registration only in the shared route definition', async () => {
@@ -359,7 +367,9 @@ describe('desktop router shared definition', () => {
     expect(webPaths).not.toContain('/a/:slugOrId/:topicId?');
     expect(electronPaths).not.toContain('/a/:slugOrId/:topicId?');
     expect(webPaths).not.toContain('/verify');
-    expect(webPaths).toContain('/acceptance');
+    // The standalone `/acceptance` tree was retired with the standalone
+    // platform; the root is now reserved and redirects into the task board.
+    expect(webPaths).not.toContain('/acceptance');
     expect(webPaths).toContain('/onboarding');
     expect(webPaths).not.toContain('/desktop-onboarding');
     expect(electronPaths).not.toContain('/verify-im');
@@ -369,6 +379,44 @@ describe('desktop router shared definition', () => {
     expect(electronPaths).not.toContain('/acceptance');
     expect(electronPaths).not.toContain('/onboarding');
     expect(electronPaths).toContain('/desktop-onboarding');
+  });
+
+  // The standalone Acceptance / Verify platform is retired. Its two roots must
+  // still resolve — not as 404s, and above all not through `/:workspaceSlug`,
+  // which would parse a stored `/acceptance/<id>` link as workspace
+  // `acceptance`. Both redirect into the main area instead.
+  it.each(mainAreaVariants)('%s redirects the retired acceptance/verify roots', (_, factory) => {
+    for (const pathname of [
+      '/acceptance',
+      '/acceptance/acceptance-1',
+      '/acceptance/acceptance-1/check/check-1',
+      '/verify',
+      '/verify/run-1',
+    ]) {
+      const matches = matchRoutes(createMainAreaRoutes(factory), pathname);
+      const last = matches?.at(-1);
+
+      expect(last?.route.path).toMatch(/^(acceptance|verify)\/\*$/);
+      expect(last?.params['*']).toBe(pathname.split('/').slice(2).join('/'));
+      expect(isValidElement(last?.route.element)).toBe(true);
+      expect((last?.route.element as ReactElement<{ to?: string }>).props.to).toBe('/tasks');
+    }
+  });
+
+  // The two `desktopRoutes` trees are thin platform adapters (Electron replaces
+  // its root children with per-tab stubs), so the content tree is read from the
+  // shared factory both of them build from.
+  it.each(mainAreaVariants)('%s no longer mounts an acceptance page segment', (_, factory) => {
+    const paths: string[] = [];
+    const walk = (list: RouteObject[]) => {
+      for (const route of list) {
+        if (typeof route.path === 'string') paths.push(route.path);
+        if (route.children) walk(route.children);
+      }
+    };
+    walk(factory());
+
+    expect(paths.filter((routePath) => routePath.includes('acceptance'))).toEqual(['acceptance/*']);
   });
 
   it.each([
@@ -496,8 +544,7 @@ describe('desktop router shared definition', () => {
       ['/resource/files', ResourceCategorySkeleton],
       ['/resource/images', ResourceCategorySkeleton],
       ['/resource/works', ResourceCategorySkeleton],
-      // The inbox is a thin route over the capability the old Home used to host;
-      // asserted here so it cannot be registered without a skeleton of its own.
+      // Work inbox / My Work / Views / Teams must keep their own list skeletons.
       ['/inbox', createSurfaceSkeleton('list')],
       ['/my-work', createSurfaceSkeleton('list')],
       ['/views', createSurfaceSkeleton('list')],
@@ -639,18 +686,19 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
-    '%s registers workspace OAuth app list and detail routes',
+    '%s no longer resolves the retired workspace OAuth app routes',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
-      const listMatches = matchRoutes(routes, '/acme/settings/oauth-apps');
-      const detailMatches = matchRoutes(routes, '/acme/settings/oauth-apps/client-1');
 
-      expect(listMatches?.at(-1)?.route.path).toBe('oauth-apps');
-      expect(detailMatches?.at(-1)?.route.path).toBe('oauth-apps/:sub');
-      expect(detailMatches?.at(-1)?.params).toMatchObject({
-        sub: 'client-1',
-        workspaceSlug: 'acme',
-      });
+      // The self-built OAuth app console was retired with its workspace mirror
+      // (hidden-surface-retirement HS-50). Deep links must stop matching a route
+      // of their own instead of landing on a page the product no longer ships.
+      for (const pathname of ['/acme/settings/oauth-apps', '/acme/settings/oauth-apps/client-1']) {
+        const paths = matchRoutes(routes, pathname)?.map((match) => match.route.path) ?? [];
+
+        expect(paths, `${pathname} still resolves the app list`).not.toContain('oauth-apps');
+        expect(paths, `${pathname} still resolves the app detail`).not.toContain('oauth-apps/:sub');
+      }
     },
   );
 

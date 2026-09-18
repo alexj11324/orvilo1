@@ -105,3 +105,22 @@ describe('mobile retired product routes', () => {
     },
   );
 });
+
+// The standalone Acceptance / Verify platform is retired. Its two roots must
+// stay reserved words on mobile too: without a route of their own, `/acceptance`
+// and `/verify` would be parsed as workspace slugs and `/acceptance/<id>` would
+// answer "no such workspace" instead of landing on the task board.
+describe('mobileRouter retired acceptance/verify roots', () => {
+  it.each([
+    '/acceptance',
+    '/acceptance/acceptance-1',
+    '/acceptance/acceptance-1/check/check-1',
+    '/verify',
+    '/verify/run-1',
+  ])('claims retired root %s with its own route, not the slug segment', (pathname) => {
+    const leaf = matchRoutes(mobileRoutes, pathname)?.at(-1)?.route;
+
+    expect(leaf?.path).toMatch(/^(acceptance|verify)\/\*$/);
+    expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('/tasks');
+  });
+});

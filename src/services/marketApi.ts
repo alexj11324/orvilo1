@@ -5,7 +5,6 @@ import {
 } from '@lobehub/market-sdk';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { discoverService } from '@/services/discover';
 import {
   type AgentForkBatchInput,
   type AgentForkSourceResponse,
@@ -14,7 +13,6 @@ import {
   type AgentGroupForkResponse,
   type AgentGroupForkSourceResponse,
   type AgentGroupForksResponse,
-  type SkillSorts,
 } from '@/types/discover';
 
 interface GetOwnAgentsParams {
@@ -174,34 +172,6 @@ export class MarketApiService {
    */
   async getAgentGroupForkSource(identifier: string): Promise<AgentGroupForkSourceResponse> {
     return lambdaClient.market.agentGroup.getAgentGroupForkSource.query({ identifier });
-  }
-
-  // ==================== Skills API ====================
-
-  /**
-   * Search for skills in the Orvilo Market
-   */
-  async searchSkill(params: {
-    category?: string;
-    locale?: string;
-    order?: 'asc' | 'desc';
-    page?: number;
-    pageSize?: number;
-    q?: string;
-    sort?: SkillSorts;
-  }) {
-    await discoverService.safeInjectMPToken();
-
-    return lambdaClient.market.skill.getSkillList.query(params);
-  }
-
-  /**
-   * Get skill download URL from market
-   */
-  getSkillDownloadUrl(identifier: string): string {
-    const marketBaseUrl =
-      process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.aspectlylabs.com';
-    return `${marketBaseUrl}/api/v1/skills/${identifier}/download`;
   }
 }
 

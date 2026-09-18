@@ -233,7 +233,7 @@ export const buildServerVirtualSubAgentRunner = (
   const parentEffectiveModel = state.modelRuntimeConfig ?? parentAgentConfig;
 
   return {
-    run: async ({ agentId: targetAgentId, description, instruction, timeout }) => {
+    run: async ({ agentId: targetAgentId, description, inheritMessages, instruction, timeout }) => {
       // This runner serves two tools, and only one of them may swap the model:
       //   - `callSubAgent` names no agent, so the child is an anonymous clone of
       //     the parent — it takes the parent's `agencyConfig.subagent` override,
@@ -276,6 +276,7 @@ export const buildServerVirtualSubAgentRunner = (
         agentId: targetAgentId ?? agentId,
         chatConfig: subAgentChatConfig,
         groupId: state.origin?.groupId ?? undefined,
+        inheritMessages,
         instruction,
         model: subAgentModel?.model,
         parentMessageId: placeholder.id,

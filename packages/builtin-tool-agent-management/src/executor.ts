@@ -224,9 +224,12 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
       // runtime is retired and the deferred afterCompletion callback's throw
       // would only be logged by buildRunLifecycle — the model would still get
       // `success: true` and the user would see no actionable failure.
+      // callAgent can only dispatch through the gateway runtime — a local
+      // heterogeneous binding on the target is not drivable from this tool
+      // context, so the error names gateway mode specifically.
       if (!useChatStore.getState().isGatewayModeEnabled(agentId)) {
         return {
-          content: `Cannot call agent "${agentId}": no execution binding is available. Enable gateway mode or bind a runtime for this agent, then retry.`,
+          content: `Cannot call agent "${agentId}": agent-to-agent dispatch requires gateway mode, which is not enabled for this deployment.`,
           success: false,
         };
       }

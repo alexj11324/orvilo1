@@ -834,11 +834,6 @@ export interface TriggerExecuteTaskParams extends GroupOrchestrationBaseParams {
    */
   instruction: string;
   /**
-   * Whether to run on the desktop client (for local file/shell access).
-   * MUST be true when task requires local-system tools. Default is false (server execution).
-   */
-  runInClient?: boolean;
-  /**
    * If true, the orchestration will end after the task completes,
    * without calling the supervisor again.
    */

@@ -694,11 +694,11 @@ executionTarget: 'local'` in `agencyConfig`) + one message per case asking CC to
   log via stdout); confirm the rebuilt bundle actually contains the probe string
   (`grep "<probe>" apps/desktop/dist/main/index.js`) before interpreting silence.
 
-### E18. Cloud-connected desktop routes even `local` agents to the SERVER runtime — force client with `disableGatewayMode`
+### E18. Desktop routes `local` agents to whichever runtime is bound — `disableGatewayMode` no longer forces a client runtime
 
-- **Situation**: verifying a **client-only** builtin tool (`executors: ['client']`) via a real agent turn on the desktop. The agent's `executionTarget` is `local` and the tool-enable gate (`isLocalSystemEnabled` = runtime `local`) passes, so it _looks_ like it will run client-side.
-- **Doesn't work**: sending the message as-is. On a cloud-connected desktop, gateway mode is on by default, so the run dispatches to `execServerAgentRuntime` (server/queue path) even for a `local` agent. The client-only tool isn't executable there — the model flails and returns a non-answer (e.g. "browser closed") with no real tool effect. Confirm the path by reading the running op's `type` in `window.__ORVILO_STORES.chat().operations` (`execServerAgentRuntime` = server; `executeToolCall` = client).
-- **Works**: set the agent's `chatConfig.disableGatewayMode = true` (via `agentStore.updateAgentChatConfigById(id, { disableGatewayMode: true })`) before sending. The run then goes through `executeToolCall` (client runtime); the composer's runtime chip flips to "Local device" and the client executor runs. The gate (`isLocalSystemEnabled`) and the transport (`disableGatewayMode`) are INDEPENDENT — enabling the tool does not force client execution.
+- **Situation**: verifying a desktop-local behavior via a real agent turn. The agent's `executionTarget` is `local`, so it _looks_ like it will run on-device.
+- **Doesn't work (post-P30)**: setting `chatConfig.disableGatewayMode = true`. The in-browser client runtime is retired — `selectRuntimeType` resolves only `gateway` (gateway mode on) or `hetero` (agent bound to a heterogeneous provider such as codex/claude-code). With gateway off and no hetero binding the send fails fast with `AGENT_BINDING_REQUIRED`; it no longer falls back to a client runtime.
+- **Works**: to drive a truly local run, bind a heterogeneous provider on the agent (`agencyConfig.heterogeneousProvider`, e.g. `{ type: 'codex', command: 'codex' }`) — then the op dispatches through `executeHeterogeneousAgent` regardless of the gateway flag. To keep the gateway path, leave the flag off. Confirm the path by reading the running op's `type` in `window.__ORVILO_STORES.chat().operations` (`execServerAgentRuntime`/`gateway` = server; hetero ops carry the provider type).
 
 ### E19. Desktop has no classic session store — reconfigure the existing agent, don't `createSession`
 

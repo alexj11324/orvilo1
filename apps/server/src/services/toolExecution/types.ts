@@ -25,6 +25,8 @@ export interface ServerSubAgentRunParams {
   agentId?: string;
   /** Short label shown in the UI (sub-agent thread title). */
   description: string;
+  /** Copy the parent's topic transcript into the child's isolation thread. */
+  inheritMessages?: boolean;
   /** Detailed instruction/prompt for the sub-agent run. */
   instruction: string;
   /** Optional per-run timeout in milliseconds. */

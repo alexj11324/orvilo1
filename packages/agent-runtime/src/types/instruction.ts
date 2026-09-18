@@ -164,21 +164,6 @@ export interface SubAgentTask {
   inheritMessages?: boolean;
   /** Detailed instruction/prompt for the sub-agent execution */
   instruction: string;
-  /**
-   * Whether to execute the sub-agent on the client side (desktop only).
-   * When true and running on desktop, the sub-agent runs locally with
-   * access to local tools (file system, shell commands, etc.).
-   *
-   * IMPORTANT: This MUST be set to true when the sub-agent requires:
-   * - Reading/writing local files via `local-system` tool
-   * - Executing shell commands
-   * - Any other desktop-only local tool operations
-   *
-   * If not specified or false, the sub-agent runs on the server (default behavior).
-   * On non-desktop platforms (web), this flag is ignored and sub-agents always
-   * run on the server.
-   */
-  runInClient?: boolean;
   /** Agent selected by callAgent; defaults to the current runtime agent when omitted */
   targetAgentId?: string;
   /** Timeout in milliseconds (optional, default 30 minutes) */

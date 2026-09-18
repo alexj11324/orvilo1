@@ -161,6 +161,8 @@ export interface ExecSubAgentTaskParams {
   /** Seed the isolation thread with the parent conversation transcript */
   inheritMessages?: boolean;
   instruction: string;
+  /** Mark the spawned run as a sub-agent (blocks nested callSubAgent) */
+  isSubAgent?: boolean;
   /** Sub-agent model override resolved at the spawn site */
   model?: string;
   parentMessageId: string;
@@ -345,8 +347,9 @@ class AiAgentService {
   /**
    * Create Thread for client-side task execution (desktop only, single agent mode)
    *
-   * This method is called when runInClient=true on desktop client.
-   * It creates the Thread but does NOT execute the task - execution happens locally.
+   * Used by desktop-local heterogeneous dispatch (e.g. direct-mention turns) to
+   * materialize the isolated thread + assistant placeholder before the local
+   * agent process starts streaming into it.
    */
   async createClientTaskThread(params: CreateClientTaskThreadParams) {
     return await lambdaClient.aiAgent.createClientTaskThread.mutate(params);

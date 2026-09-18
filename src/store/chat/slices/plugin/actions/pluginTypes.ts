@@ -175,6 +175,7 @@ export class PluginTypesActionImpl {
             chatConfig: getSubAgentChatConfigOverride(parentAgentConfig?.agencyConfig?.subagent),
             inheritMessages: runParams.inheritMessages,
             instruction: runParams.instruction,
+            isSubAgent: true,
             model: subAgentModel.model,
             parentMessageId: runParams.toolMessageId,
             parentOperationId: subAgentParentOperationId,

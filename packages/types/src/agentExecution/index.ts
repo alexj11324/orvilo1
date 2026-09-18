@@ -454,6 +454,12 @@ export interface ExecSubAgentParams {
   /** Instruction/prompt for the agent */
   instruction: string;
   /**
+   * Mark the spawned run as a sub-agent — trims the manifest (hides
+   * `callSubAgent`) and blocks nested sub-agent dispatch. `callSubAgent`
+   * transports set this; direct-mention and group `callAgent` spawns do not.
+   */
+  isSubAgent?: boolean;
+  /**
    * Model the spawned run should use, resolved by the spawn site from the
    * parent agent's `agencyConfig.subagent`. Passed explicitly so the execution
    * side never re-reads the parent config.

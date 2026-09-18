@@ -2,7 +2,6 @@ import { SkillsIcon } from '@lobehub/ui/icons';
 import {
   AppWindowIcon,
   Blocks,
-  Brain,
   BrainCircuit,
   ChartColumnBigIcon,
   Coins,
@@ -15,7 +14,6 @@ import {
   KeyRound,
   Map,
   PaletteIcon,
-  Sparkles,
   TagIcon,
   UserCircle,
 } from 'lucide-react';
@@ -57,14 +55,13 @@ export interface CategoryGroup {
 export const useCategory = (): CategoryGroup[] => {
   const navigate = useWorkspaceAwareNavigate();
   const { t } = useTranslation(['setting', 'auth', 'subscription']);
-  const { hideDocs, showApiKeyManage, showProvider } = useServerConfigStore(featureFlagsSelectors);
+  const { hideDocs, showApiKeyManage } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
   const enableOAuthApps = useUserStore(labPreferSelectors.enableOAuthApps);
 
   return useMemo(() => {
-    const navigateTo = (key: SettingsTabs) =>
-      navigate(key === SettingsTabs.Provider ? '/settings/provider/all' : `/settings/${key}`);
+    const navigateTo = (key: SettingsTabs) => navigate(`/settings/${key}`);
 
     const makeItem = (item: Omit<CategoryItem, 'onClick'>): CategoryItem => ({
       ...item,
@@ -116,15 +113,6 @@ export const useCategory = (): CategoryGroup[] => {
     ];
 
     const agent: CategoryItem[] = [
-      // Provider settings should not depend on Advanced tools: new users may need
-      // non-Orvilo providers, and desktop users often bring their own API keys.
-      showProvider &&
-        makeItem({ icon: Brain, key: SettingsTabs.Provider, label: t('setting:tab.provider') }),
-      makeItem({
-        icon: Sparkles,
-        key: SettingsTabs.ServiceModel,
-        label: t('setting:tab.serviceModel'),
-      }),
       makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
@@ -185,7 +173,6 @@ export const useCategory = (): CategoryGroup[] => {
     enableBusinessFeatures,
     hideDocs,
     showApiKeyManage,
-    showProvider,
     isDevMode,
     enableOAuthApps,
     navigate,

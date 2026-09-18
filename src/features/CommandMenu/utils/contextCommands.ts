@@ -1,7 +1,6 @@
 import { isDesktop } from '@orvilo/const';
 import { type LucideIcon } from 'lucide-react';
 import {
-  Brain,
   ChartColumnBigIcon,
   Coins,
   CreditCard,
@@ -111,16 +110,7 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       path: '/settings/common',
       subPath: 'common',
     },
-    {
-      icon: Brain,
-      keywords: ['provider', 'llm', 'model', 'ai'],
-      keywordsKey: 'cmdk.keywords.provider',
-      label: 'Model Provider',
-      labelKey: 'tab.provider',
-      labelNamespace: 'setting',
-      path: '/settings/provider',
-      subPath: 'provider',
-    },
+
     {
       icon: KeyboardIcon,
       keywords: ['hotkey', 'shortcut', 'keyboard'],

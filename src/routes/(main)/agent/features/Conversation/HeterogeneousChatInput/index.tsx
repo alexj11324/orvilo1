@@ -13,14 +13,12 @@ import { type ActionKeys } from '@/features/ChatInput';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
 import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
-import { useProviderBindingValidation } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import {
   isHeterogeneousSandboxExecutionAvailable,
   resolveExecutionTarget,
 } from '@/helpers/executionTarget';
-import { resolveProviderBindingGuard } from '@/helpers/providerBinding';
 import { useRemoteAgentDeviceGuard } from '@/hooks/useRemoteAgentDeviceGuard';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useChatStore } from '@/store/chat';
@@ -99,34 +97,24 @@ const HeterogeneousChatInput = memo(() => {
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
   const providerType = heterogeneousProvider?.type;
   const isApiAuth = heterogeneousProvider?.authMode === 'api';
-  const providerApiConfig =
-    isApiAuth &&
-    heterogeneousProvider.apiConfig &&
-    heterogeneousProvider.apiConfig.source !== 'server-default'
-      ? heterogeneousProvider.apiConfig
-      : undefined;
-  const apiConfigMissing = isApiAuth && !heterogeneousProvider.apiConfig;
   const executionTarget = resolveExecutionTarget(agencyConfig, {
     isHetero: !!providerType,
     clientExecutionAvailable: isDesktop,
     workspaceScoped,
   });
-  const { error: apiBindingValidationError, isReady: isApiBindingStateReady } =
-    useProviderBindingValidation(providerType, providerApiConfig);
   const deviceSelectionRequired =
     !!providerType &&
     !isHeterogeneousSandboxExecutionAvailable(providerType) &&
     executionTarget === 'none';
 
   const apiModeTargetUnsupported = isApiAuth && executionTarget !== 'local';
-  const validateProviderBinding =
-    (apiConfigMissing || !!providerApiConfig) && executionTarget === 'local';
-  const { blocked: apiModeBindingBlocked, error: apiModeBindingError } =
-    resolveProviderBindingGuard({
-      active: validateProviderBinding,
-      error: apiBindingValidationError,
-      isReady: isApiBindingStateReady,
-    });
+  // API auth mode resolves to the deployment-provided server-default binding
+  // only — a missing or legacy user-provider apiConfig blocks sending until the
+  // profile is reconfigured (the executor fails closed the same way).
+  const apiModeBindingBlocked =
+    isApiAuth &&
+    executionTarget === 'local' &&
+    heterogeneousProvider?.apiConfig?.source !== 'server-default';
   // The armed-schedule chip sits immediately after the `+` that armed it, so the
   // state and the control that produced it read as one unit.
   const extraActionItems = useMemo<ChatInputActionsProps['items']>(
@@ -234,18 +222,11 @@ const HeterogeneousChatInput = memo(() => {
   };
 
   const renderApiModeBindingGuard = () => {
-    if (!apiModeBindingError) return null;
-
-    const title =
-      apiModeBindingError.code === 'configMissing'
-        ? t('heteroAgent.apiMode.configMissing')
-        : apiModeBindingError.code === 'agentUnsupported'
-          ? t('heteroAgent.apiMode.agentUnsupported', { name: providerType })
-          : t(`heteroAgent.apiMode.${apiModeBindingError.code}`, apiModeBindingError);
+    if (!apiModeBindingBlocked) return null;
 
     return (
       <GuardBanner
-        title={title}
+        title={t('heteroAgent.apiMode.configMissing')}
         action={
           <Button size={'small'} type={'primary'} onClick={goToAgentProfile}>
             {t('platformAgent.deviceGuard.configure')}
@@ -281,7 +262,7 @@ const HeterogeneousChatInput = memo(() => {
     deviceBlocked;
   const hasGuard =
     apiModeTargetUnsupported ||
-    !!apiModeBindingError ||
+    apiModeBindingBlocked ||
     deviceSelectionRequired ||
     deviceBlocked ||
     (!isConfigured && !isDeviceExecution);

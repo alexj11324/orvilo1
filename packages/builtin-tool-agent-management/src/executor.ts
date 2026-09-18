@@ -15,12 +15,9 @@ import {
 
 import { agentService } from '@/services/agent';
 import { discoverService } from '@/services/discover';
-import { getAgentStoreState, useAgentStore } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors';
+import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
-import { dispatchNonHeteroSubAgent } from '@/store/chat/slices/agentRun/actions/dispatch/nonHeteroSubAgentDispatcher';
-import { dbMessageSelectors } from '@/store/chat/slices/message/selectors';
-import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { AGENT_BINDING_REQUIRED_ERROR } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
 
 import {
   AgentManagementApiName,
@@ -212,64 +209,39 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
         }
       }
 
-      // Register afterCompletion to execute the agent.
-      // Runtime routing is fully delegated to dispatchNonHeteroSubAgent ().
+      // Register afterCompletion to execute the agent via the gateway runtime.
+      // The in-browser client runtime is retired: without gateway mode there is
+      // no execution path, so surface an explicit binding-required error instead
+      // of silently falling back.
       ctx.registerAfterCompletion(async () => {
         const get = useChatStore.getState;
+
+        if (!get().isGatewayModeEnabled()) {
+          throw new Error(AGENT_BINDING_REQUIRED_ERROR);
+        }
 
         const conversationContext: ConversationContext = {
           agentId: ctx.agentId || '',
           topicId: ctx.topicId || null,
         };
 
-        // Get current messages for client-mode runner (gateway loads from DB).
-        const chatKey = messageMapKey(conversationContext);
-        const messages = dbMessageSelectors.getDbMessagesByKey(chatKey)(get());
-
-        if (messages.length === 0) {
-          console.error('[callAgent] No messages found in current conversation');
-          return;
-        }
-
-        // Inject a virtual instruction message so the sub-agent has clear direction.
-        // Only used by the client runner; gateway mode sends `instruction` as a real
-        // user message via dispatchNonHeteroSubAgent.
-        const now = Date.now();
-        const messagesWithInstruction = instruction
-          ? [
-              ...messages,
-              {
-                content: `<speaker name="Supervisor" />\n${instruction}`,
-                createdAt: now,
-                id: `virtual_speak_instruction_${now}`,
-                role: 'user' as const,
-                updatedAt: now,
-              },
-            ]
-          : messages;
-
-        const parentAgentConfig = conversationContext.agentId
-          ? agentSelectors.getAgentConfigById(conversationContext.agentId)(getAgentStoreState())
-          : undefined;
-
         try {
-          await dispatchNonHeteroSubAgent(
-            {
-              kind: 'callAgent',
-              targetAgentId: agentId,
-              instruction,
-              parentMessageId: ctx.messageId,
+          // Execute with the target agent, but route persisted/streamed messages
+          // to the parent conversation. This keeps speaker identity and
+          // conversation ownership separate instead of hiding cross-agent
+          // replies in another messageMap bucket.
+          await get().executeGatewayAgent({
+            context: {
+              ...conversationContext,
+              agentId,
+              scope: 'sub_agent',
+              subAgentId: agentId,
             },
-            {
-              conversationContext,
-              heterogeneousProvider: parentAgentConfig?.agencyConfig?.heterogeneousProvider,
-              isGatewayMode: get().isGatewayModeEnabled(),
-              messages: messagesWithInstruction,
-            },
-            get(),
-          );
+            message: instruction,
+            messageContext: conversationContext,
+          });
         } catch (error) {
-          console.error('[callAgent] dispatchNonHeteroSubAgent failed:', error);
+          console.error('[callAgent] executeGatewayAgent failed:', error);
           throw error;
         }
       });

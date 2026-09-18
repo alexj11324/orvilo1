@@ -619,20 +619,21 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
-    '%s keeps workspace provider deep-links inside the workspace',
+    '%s redirects retired workspace provider deep-links inside the workspace',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
       const listMatches = matchRoutes(routes, '/acme/settings/provider');
-      const detailMatches = matchRoutes(routes, '/acme/settings/provider/orvilo');
+      const detailMatches = matchRoutes(routes, '/acme/settings/provider/lobehub');
+      const serviceModelMatches = matchRoutes(routes, '/acme/settings/service-model');
 
-      expect(listMatches?.at(-1)?.route.path).toBe('provider');
-      // Before the redirect route existed, the detail path fell through to the
-      // root catch-all (`*`) and kicked the user out of the workspace.
-      expect(detailMatches?.at(-1)?.route.path).toBe('provider/:providerId');
-      expect(detailMatches?.at(-1)?.params).toMatchObject({
-        providerId: 'orvilo',
-        workspaceSlug: 'acme',
-      });
+      // The provider/service-model pages are retired — deep-links must land on
+      // the workspace settings root instead of the `*` catch-all.
+      for (const matches of [listMatches, detailMatches, serviceModelMatches]) {
+        const leaf = matches?.at(-1)?.route;
+        expect(
+          (leaf?.element as { props?: { to?: string } } | undefined)?.props?.to,
+        ).toBe('..');
+      }
     },
   );
 

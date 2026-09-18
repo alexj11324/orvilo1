@@ -7,6 +7,7 @@
   "agent.publishToWorkspace": "发布到工作区",
   "agent.publishToWorkspaceErrorFixedPrivateDevice": "将修复的设备发布到工作区，或者让成员选择设备后再发布此代理。",
   "agent.publishToWorkspaceSuccess": "已发布到工作区",
+  "agentBindingRequired": "该 Agent 尚未绑定执行运行时，请在 Agent 资料页绑定后发送消息。",
   "agentBuilder.installPlugin.authRequired": "云端 MCP 需要登录后才能继续",
   "agentBuilder.installPlugin.cancel": "取消",
   "agentBuilder.installPlugin.clickApproveToConnect": "点击「批准」连接并授权此连接器",

@@ -17,9 +17,13 @@ import { componentMap } from './componentMap';
 const REDIRECT_MAP: Record<string, string> = {
   [SettingsTabs.Common]: SettingsTabs.Appearance,
   [SettingsTabs.ChatAppearance]: SettingsTabs.Appearance,
-  [SettingsTabs.Agent]: SettingsTabs.ServiceModel,
-  [SettingsTabs.TTS]: SettingsTabs.ServiceModel,
-  [SettingsTabs.Image]: SettingsTabs.ServiceModel,
+  // Retired LLM Provider / service-model surfaces and their legacy aliases
+  // (`agent`, `tts`, `image`) land on the settings root tab.
+  [SettingsTabs.Agent]: SettingsTabs.Profile,
+  [SettingsTabs.TTS]: SettingsTabs.Profile,
+  [SettingsTabs.Image]: SettingsTabs.Profile,
+  [SettingsTabs.Provider]: SettingsTabs.Profile,
+  [SettingsTabs.ServiceModel]: SettingsTabs.Profile,
 };
 
 const COMPACT_HEADER_TABS = [
@@ -38,7 +42,6 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Plans,
   SettingsTabs.Profile,
   SettingsTabs.Referral,
-  SettingsTabs.ServiceModel,
   SettingsTabs.Stats,
   SettingsTabs.Storage,
 ] as const;
@@ -70,7 +73,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     [SettingsTabs.Plans]: t('subscription:tab.plans'),
     [SettingsTabs.Profile]: t('auth:profile.title'),
     [SettingsTabs.Referral]: t('subscription:tab.referral'),
-    [SettingsTabs.ServiceModel]: t('setting:tab.serviceModel'),
     [SettingsTabs.Stats]: t('auth:tab.stats'),
     [SettingsTabs.Storage]: t('setting:tab.storage'),
   };
@@ -97,8 +99,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     if (
       [
         SettingsTabs.About,
-        SettingsTabs.ServiceModel,
-        SettingsTabs.Provider,
         SettingsTabs.Profile,
         SettingsTabs.Stats,
         SettingsTabs.Usage,
@@ -125,7 +125,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     <>
       {Object.keys(componentMap).map((tabKey) => {
         const isFullWidth =
-          tabKey === SettingsTabs.Provider ||
           tabKey === SettingsTabs.Skill ||
           tabKey === SettingsTabs.Connector ||
           tabKey === SettingsTabs.Creds ||

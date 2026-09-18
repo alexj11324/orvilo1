@@ -45,6 +45,8 @@ export default {
   'audioPlayer.pause': 'Pause audio',
   'audioPlayer.play': 'Play audio',
   'audioPlayer.seek': 'Seek audio',
+  'agentBindingRequired':
+    'This agent has no execution binding. Bind an agent runtime in the agent profile to start sending messages.',
   'agentBuilder.installPlugin.authRequired': 'Cloud MCP requires sign-in to continue',
   'agentBuilder.installPlugin.cancel': 'Cancel',
   'agentBuilder.installPlugin.clickApproveToConnect':

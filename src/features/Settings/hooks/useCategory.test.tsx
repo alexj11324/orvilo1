@@ -20,16 +20,13 @@ vi.hoisted(() => {
   });
 });
 
-const createWrapper = (showProvider: boolean, extraFlags: Record<string, unknown> = {}) => {
+const createWrapper = (extraFlags: Record<string, unknown> = {}) => {
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <Provider
       createStore={() =>
         initServerConfigStore({
           featureFlags: {
-            ...mapFeatureFlagsEnvToState({
-              provider_settings: true,
-            }),
-            showProvider,
+            ...mapFeatureFlagsEnvToState({}),
             ...extraFlags,
           },
         })
@@ -44,7 +41,7 @@ const createWrapper = (showProvider: boolean, extraFlags: Record<string, unknown
 
 const getItemKeys = () => {
   const { result } = renderHook(() => useCategory(), {
-    wrapper: createWrapper(true),
+    wrapper: createWrapper(),
   });
 
   return result.current.flatMap((group) => group.items.map((item) => item.key));
@@ -63,7 +60,7 @@ describe('settings useCategory', () => {
   // it configures.
   it('leads with the account group', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(true),
+      wrapper: createWrapper(),
     });
     const accountGroup = result.current.find((group) => group.key === SettingsGroupKey.Account);
 
@@ -79,7 +76,7 @@ describe('settings useCategory', () => {
   // used to live. Messenger is a channel, Stats is usage, Storage/Devices are data.
   it('files each tab under the capability it configures', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(true),
+      wrapper: createWrapper(),
     });
     const keysOf = (key: SettingsGroupKey) =>
       result.current.find((group) => group.key === key)?.items.map((item) => item.key);
@@ -99,18 +96,11 @@ describe('settings useCategory', () => {
     ]);
   });
 
-  it('keeps Provider visible when provider settings are enabled', () => {
-    expect(getItemKeys()).toContain(SettingsTabs.Provider);
-  });
-
-  it('hides Provider when provider settings are disabled', () => {
-    const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(false),
-    });
-
-    const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
+  it('never lists the retired provider or service-model tabs', () => {
+    const keys = getItemKeys();
 
     expect(keys).not.toContain(SettingsTabs.Provider);
+    expect(keys).not.toContain(SettingsTabs.ServiceModel);
   });
 
   it('hides OAuth Apps by default', () => {
@@ -126,7 +116,7 @@ describe('settings useCategory', () => {
     });
 
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(true),
+      wrapper: createWrapper(),
     });
     const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
     const developerGroup = result.current.find((group) => group.key === SettingsGroupKey.Developer);
@@ -144,7 +134,7 @@ describe('settings useCategory', () => {
     });
 
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(true, { showApiKeyManage: true }),
+      wrapper: createWrapper({ showApiKeyManage: true }),
     });
     const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
 

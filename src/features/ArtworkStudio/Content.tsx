@@ -12,7 +12,6 @@ import {
   Avatar,
   Button,
   Text,
-  useModalContext,
 } from '@lobehub/ui/base-ui';
 import { imageUrl } from '@orvilo/const';
 import type { AgentArtworkComposition, AgentArtworkStyle } from '@orvilo/prompts';
@@ -23,7 +22,6 @@ import {
   Frame,
   ImagePlus,
   PersonStanding,
-  SettingsIcon,
   Trash2,
   UploadIcon,
   WandSparkles,
@@ -35,7 +33,6 @@ import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { avatarRemountKey, openFilePicker } from '@/features/AgentProfileArtwork/utils';
 import { CHIEF_AGENT_ARTWORKS, DEFAULT_CHIEF_AGENT_ARTWORK } from '@/features/ChiefAgent/artwork';
 import { HOME_PORTRAIT_VISIBLE_RATIO } from '@/features/Home/portraitFraming';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiProviderSelectors } from '@/store/aiInfra/selectors';
 
@@ -437,8 +434,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
     uploading,
   }) => {
     const { t } = useTranslation('setting');
-    const { close } = useModalContext();
-    const navigate = useWorkspaceAwareNavigate();
     const canGenerate = useAiInfraStore(
       (state) => aiProviderSelectors.enabledImageModelList(state).length > 0,
     );
@@ -763,16 +758,6 @@ const ArtworkStudioContent = memo<ArtworkStudioContentProps>(
             <Text className={styles.hint} style={{ textAlign: 'center' }}>
               {t('artworkStudio.noModel')}
             </Text>
-            <Button
-              icon={SettingsIcon}
-              type={'fill'}
-              onClick={() => {
-                close();
-                navigate('/settings/provider/all');
-              }}
-            >
-              {t('artworkStudio.enableModel')}
-            </Button>
           </Center>
         )}
 

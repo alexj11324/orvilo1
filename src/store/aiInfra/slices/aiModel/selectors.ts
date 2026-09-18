@@ -1,53 +1,17 @@
-import {
-  AiModelSourceEnum,
-  type ExtendParamsType,
-  MODEL_REASONING_EXTEND_PARAMS,
-} from 'model-bank/aiModel';
+import { type ExtendParamsType, MODEL_REASONING_EXTEND_PARAMS } from 'model-bank/aiModel';
 
 import { type AIProviderStoreState } from '@/store/aiInfra/initialState';
 import { ModelSearchImplement } from '@/types/search';
 
 import { modelReasoningConfigKey } from './initialState';
 
-const aiProviderChatModelListIds = (s: AIProviderStoreState) =>
-  s.aiProviderModelList.filter((item) => item.type === 'chat').map((item) => item.id);
-// List
-const enabledAiProviderModelList = (s: AIProviderStoreState) =>
-  s.aiProviderModelList.filter((item) => item.enabled);
-
-const disabledAiProviderModelList = (s: AIProviderStoreState) =>
-  s.aiProviderModelList.filter((item) => !item.enabled);
-
-const filteredAiProviderModelList = (s: AIProviderStoreState) => {
-  const keyword = s.modelSearchKeyword.toLowerCase().trim();
-
-  return s.aiProviderModelList.filter(
-    (model) =>
-      model.id.toLowerCase().includes(keyword) ||
-      model.displayName?.toLowerCase().includes(keyword),
-  );
-};
-
-const totalAiProviderModelList = (s: AIProviderStoreState) => s.aiProviderModelList.length;
-
-const isEmptyAiProviderModelList = (s: AIProviderStoreState) => totalAiProviderModelList(s) === 0;
-
 const getModelCard = (model: string, provider: string) => (s: AIProviderStoreState) =>
   s.enabledAiModels?.find(
     (item) => item.id === model && (provider ? item.providerId === provider : true),
   ) || s.builtinAiModelList.find((item) => item.id === model && item.providerId === provider);
 
-const hasRemoteModels = (s: AIProviderStoreState) =>
-  s.aiProviderModelList.some((m) => m.source === AiModelSourceEnum.Remote);
-
-const isModelEnabled = (id: string) => (s: AIProviderStoreState) =>
-  enabledAiProviderModelList(s).some((i) => i.id === id);
-
 const isModelLoading = (id: string) => (s: AIProviderStoreState) =>
   s.aiModelLoadingIds.includes(id);
-
-const getAiModelById = (id: string) => (s: AIProviderStoreState) =>
-  s.aiProviderModelList.find((i) => i.id === id);
 
 const getEnabledModelById = (id: string, provider: string) => (s: AIProviderStoreState) =>
   s.enabledAiModels?.find((i) => i.id === id && (provider ? provider === i.providerId : true));
@@ -56,12 +20,6 @@ const isModelSupportToolUse = (id: string, provider: string) => (s: AIProviderSt
   const model = getEnabledModelById(id, provider)(s);
 
   return model?.abilities?.functionCall || false;
-};
-
-const isModelSupportFiles = (id: string, provider: string) => (s: AIProviderStoreState) => {
-  const model = getEnabledModelById(id, provider)(s);
-
-  return model?.abilities?.files;
 };
 
 const isModelSupportVision = (id: string, provider: string) => (s: AIProviderStoreState) => {
@@ -205,17 +163,9 @@ const isModelHasBuiltinSearchConfig =
   };
 
 export const aiModelSelectors = {
-  aiProviderChatModelListIds,
-  disabledAiProviderModelList,
-  enabledAiProviderModelList,
-  filteredAiProviderModelList,
-  getAiModelById,
   getEnabledModelById,
   getModelCard,
-  hasRemoteModels,
-  isEmptyAiProviderModelList,
   isModelBuiltinSearchInternal,
-  isModelEnabled,
   isModelHasBuiltinSearch,
   isModelHasBuiltinSearchConfig,
   isModelHasContextWindowToken,
@@ -226,7 +176,6 @@ export const aiModelSelectors = {
   isModelReasoningConfigLoaded,
   isModelReasoningConfigUpdating,
   isModelSupportAudio,
-  isModelSupportFiles,
   isModelSupportImageOutput,
   isModelSupportReasoning,
   isModelSupportToolUse,
@@ -238,5 +187,4 @@ export const aiModelSelectors = {
   modelExtendParams,
   modelReasoningConfig,
   modelReasoningExtendParams,
-  totalAiProviderModelList,
 };

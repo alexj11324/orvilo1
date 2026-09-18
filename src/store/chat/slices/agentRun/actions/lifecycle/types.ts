@@ -1,8 +1,6 @@
-import type { AgentState } from '@orvilo/agent-runtime';
 import type { ConversationContext, UIChatMessage } from '@orvilo/types';
 
 import type { AgentRuntimeType } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
-import type { OperationStatus } from '@/store/chat/slices/operation/types';
 
 /**
  * Whether a run is the user-facing top-level run or a nested sub-agent run.
@@ -11,7 +9,7 @@ import type { OperationStatus } from '@/store/chat/slices/operation/types';
  */
 export type RunScope = 'sub_agent' | 'top_level';
 
-/** Terminal disposition, normalized across the three runtimes. */
+/** Terminal disposition, normalized across the remaining runtimes. */
 export type RunTerminalStatus = 'cancelled' | 'completed' | 'failed';
 
 /** The two non-terminal parked states a run can enter and later resume from. */
@@ -70,21 +68,12 @@ export interface RunCompleteEvent extends RunLifecycleEventBase {
    * Final assistant content (raw markdown) for transports whose reply lives in
    * executor memory rather than the store (hetero's `accContent`). When present,
    * {@link AgentRunLifecycle.afterRunComplete} feeds it to the notification body
-   * instead of deriving from `messagesMap`. The client adapter omits it (it reads
-   * the store); hetero supplies it.
+   * instead of deriving from `messagesMap`.
    */
   notification?: { content?: string };
-  operationStatus?: OperationStatus;
   /**
-   * Raw runtime terminal/parked status (client `AgentState['status']`), used to
-   * reproduce the exact per-status completion branch. Optional — gateway/hetero
-   * adapters that don't expose it rely on `status` instead.
-   */
-  runtimeStatus?: AgentState['status'];
-  /**
-   * Normalized cross-runtime terminal disposition. Optional: the client adapter
-   * drives completion off {@link runtimeStatus}; gateway/hetero adapters supply
-   * this instead.
+   * Normalized cross-runtime terminal disposition supplied by gateway/hetero
+   * adapters at their terminal boundary.
    */
   status?: RunTerminalStatus;
 }
@@ -123,9 +112,9 @@ export interface AgentRunLifecycle {
   afterUserMessagePersisted: (event: UserMessagePersistedEvent) => Promise<void>;
   beforeRunComplete: (event: RunCompleteEvent) => Promise<void>;
   /**
-   * Core completion, in a fixed order across all three runtimes:
-   * afterCompletion callbacks → completeOperation → markUnread → normalized
-   * `client.runtime.complete` signal → queue drain (success terminal only).
+   * Core completion, in a fixed order across the remaining runtimes:
+   * afterCompletion callbacks → completeOperation → markUnread →
+   * queue drain (success terminal only).
    * Returns whether a queued follow-up was scheduled (see {@link RunCompleteResult}).
    */
   completeRun: (event: RunCompleteEvent) => Promise<RunCompleteResult>;

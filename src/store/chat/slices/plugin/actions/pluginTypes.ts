@@ -11,6 +11,7 @@ import { type MCPToolCallResult } from '@/libs/mcp';
 import { mcpService } from '@/services/mcp';
 import { messageService } from '@/services/message';
 import { archiveToolResultViaServer } from '@/services/toolResultArchive';
+import { ClientSubAgentTransport } from '@/store/chat/agents/transports/ClientSubAgentTransport';
 import { operationSelectors } from '@/store/chat/slices/operation';
 import { type ChatStore } from '@/store/chat/store';
 import { useToolStore } from '@/store/tool';
@@ -131,29 +132,39 @@ export class PluginTypesActionImpl {
         groupId = getChatGroupStoreState().activeGroupId;
       }
 
-      // Get group orchestration callbacks if available (for group management tools)
-      const groupOrchestration = this.#get().getGroupOrchestrationCallbacks?.();
-
-      // Sub-agent runner injected for sub-agent-spawning tools (orvilo-agent.callSubAgent).
-      // Runs the sub-agent in an isolated thread using the current client runtime
-      // and resolves with its output, so the tool returns a normal tool result.
+      // Sub-agent runner injected for sub-agent-spawning tools
+      // (orvilo-agent.callSubAgent). Dispatches a server-backed sub-agent task and
+      // polls for completion via `ClientSubAgentTransport`, so the tool returns
+      // a normal tool result. The local browser runtime is retired.
       const subAgentParentOperationId = rootRuntimeOperationId ?? operationId;
       const subAgent: SubAgentCallbacks = {
-        run: (runParams) => {
+        run: async (runParams) => {
           if (!agentId || !topicId) {
-            return Promise.resolve({
+            return {
               error: 'No agent context available for sub-agent execution',
               result: 'No agent context available for sub-agent execution',
               success: false,
               threadId: '',
-            });
+            };
           }
-          return this.#get().runClientSubAgent({
-            ...runParams,
+          const result = await new ClientSubAgentTransport(
+            this.#get,
+            subAgentParentOperationId,
+          ).execSubAgent({
             agentId,
+            instruction: runParams.instruction,
+            parentMessageId: runParams.toolMessageId,
             parentOperationId: subAgentParentOperationId,
+            timeout: runParams.timeout,
+            title: runParams.description,
             topicId,
           });
+          return {
+            error: result.error,
+            result: result.result ?? '',
+            success: result.success,
+            threadId: result.threadId,
+          };
         },
       };
 
@@ -165,13 +176,12 @@ export class PluginTypesActionImpl {
         : undefined;
 
       log(
-        '[invokeBuiltinTool] Using Tool Store executor: %s/%s, messageId=%s, agentId=%s, groupId=%s, hasGroupOrchestration=%s, rootRuntimeOp=%s, stepContext=%O',
+        '[invokeBuiltinTool] Using Tool Store executor: %s/%s, messageId=%s, agentId=%s, groupId=%s, rootRuntimeOp=%s, stepContext=%O',
         payload.identifier,
         payload.apiName,
         id,
         agentId,
         groupId,
-        !!groupOrchestration,
         rootRuntimeOperationId,
         !!stepContext,
       );
@@ -199,7 +209,6 @@ export class PluginTypesActionImpl {
           anchorMessageId,
           documentId,
           groupId,
-          groupOrchestration,
           isSubAgent,
           // Only the in-process desktop path reaches here; gateway-routed runs
           // get the same decision from the server device-proxy. Both funnel

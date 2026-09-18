@@ -60,6 +60,9 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'oauth-apps',
   'plans',
   'profile',
+  // Retired LLM Provider / service-model surfaces — the routers keep redirect
+  // routes under the workspace settings subtree, so prefixed deep-links still
+  // land on `/:slug/settings` instead of escaping to personal settings.
   'provider',
   'service-model',
   'skill',

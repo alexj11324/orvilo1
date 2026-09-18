@@ -1,14 +1,8 @@
-import {
-  type AiModelReasoningConfig,
-  type AiProviderModelListItem,
-  type OrviloDefaultAiModelListItem,
-} from 'model-bank';
+import { type AiModelReasoningConfig, type OrviloDefaultAiModelListItem } from 'model-bank';
 
 export interface AIModelsState {
   aiModelLoadingIds: string[];
-  aiProviderModelList: AiProviderModelListItem[];
   builtinAiModelList: OrviloDefaultAiModelListItem[];
-  isAiModelListInit?: boolean;
   /**
    * The user's per-model-instance reasoning defaults, keyed by
    * `${providerId}/${modelId}` (personal scope, cross-workspace).
@@ -18,16 +12,13 @@ export interface AIModelsState {
    * `${providerId}/${modelId}` keys with an in-flight reasoning-config save.
    */
   modelReasoningConfigUpdatingKeys: string[];
-  modelSearchKeyword: string;
 }
 
 export const initialAIModelState: AIModelsState = {
   aiModelLoadingIds: [],
-  aiProviderModelList: [],
   builtinAiModelList: [],
   modelReasoningConfigMap: {},
   modelReasoningConfigUpdatingKeys: [],
-  modelSearchKeyword: '',
 };
 
 export const modelReasoningConfigKey = (provider: string, model: string) => `${provider}/${model}`;

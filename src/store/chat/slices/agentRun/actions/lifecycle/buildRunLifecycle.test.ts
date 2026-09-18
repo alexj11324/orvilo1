@@ -103,7 +103,7 @@ beforeEach(() => {
 describe('buildRunLifecycle.completeRun — transport-driven disposition', () => {
   it('client `runtimeStatus: done` completes the op, marks unread, and emits client.runtime.complete', async () => {
     const { get, store } = makeStore();
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { runtimeStatus: 'done' }));
 
     expect(store.completeOperation).toHaveBeenCalledWith(OP);
     expect(store.markTopicUnread).toHaveBeenCalledWith(
@@ -138,8 +138,8 @@ describe('buildRunLifecycle.completeRun — transport-driven disposition', () =>
       },
     } as any;
 
-    const { requeued } = await lifecycle('client', get).completeRun(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    const { requeued } = await lifecycle('gateway', get).completeRun(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(requeued).toBe(true);
@@ -179,8 +179,8 @@ describe('buildRunLifecycle.completeRun — transport-driven disposition', () =>
 
   it('client `runtimeStatus: interrupted` does NOT complete the op (cancel already moved it out of band)', async () => {
     const { get, store } = makeStore();
-    await lifecycle('client', get).completeRun(
-      completeEvent('client', { runtimeStatus: 'interrupted' }),
+    await lifecycle('gateway', get).completeRun(
+      completeEvent('gateway', { runtimeStatus: 'interrupted' }),
     );
 
     expect(store.completeOperation).not.toHaveBeenCalled();
@@ -204,7 +204,7 @@ describe('buildRunLifecycle.completeRun — transport-driven disposition', () =>
 describe('buildRunLifecycle.completeRun — client resets a viewed topic out of `running`', () => {
   it('client success while VIEWING the topic force-resets its status to `active`', async () => {
     const { get, store } = makeStore(); // activeTopicId === 't1' (viewing)
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { runtimeStatus: 'done' }));
 
     expect(store.updateTopicStatus).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: 'a1', status: 'active', topicId: 't1' }),
@@ -223,7 +223,7 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
       },
     });
 
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { runtimeStatus: 'done' }));
 
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
   });
@@ -244,14 +244,14 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
       parentMessageType: 'user',
       runId: OP,
       runScope: 'top_level',
-      runtimeType: 'client',
+      runtimeType: 'gateway',
     }).completeRun({
       context: groupContext,
       operationId: OP,
       runId: OP,
       runScope: 'top_level',
       runtimeStatus: 'done',
-      runtimeType: 'client',
+      runtimeType: 'gateway',
     });
 
     expect(store.updateTopicStatus).toHaveBeenCalledWith(
@@ -262,7 +262,7 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
   it('client success while NOT viewing leaves the reset to markTopicUnread (no `active` write)', async () => {
     const { get, store } = makeStore();
     store.activeTopicId = 'other-topic';
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'done' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { runtimeStatus: 'done' }));
 
     expect(store.markTopicUnread).toHaveBeenCalled();
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
@@ -271,7 +271,7 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
   it('client failure resets the topic to `active` even when not viewing (error is never left `running`)', async () => {
     const { get, store } = makeStore();
     store.activeTopicId = 'other-topic';
-    await lifecycle('client', get).completeRun(completeEvent('client', { runtimeStatus: 'error' }));
+    await lifecycle('gateway', get).completeRun(completeEvent('gateway', { runtimeStatus: 'error' }));
 
     expect(store.failOperation).toHaveBeenCalled();
     expect(store.updateTopicStatus).toHaveBeenCalledWith(
@@ -288,8 +288,8 @@ describe('buildRunLifecycle.completeRun — client resets a viewed topic out of 
 
   it('a client sub_agent success does NOT reset the shared topic (sub-agents never wrote `running`)', async () => {
     const { get, store } = makeStore();
-    await lifecycle('client', get, 'sub_agent').completeRun(
-      completeEvent('client', { runScope: 'sub_agent', runtimeStatus: 'done' }),
+    await lifecycle('gateway', get, 'sub_agent').completeRun(
+      completeEvent('gateway', { runScope: 'sub_agent', runtimeStatus: 'done' }),
     );
 
     expect(store.updateTopicStatus).not.toHaveBeenCalled();
@@ -394,8 +394,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
     store.messagesMap = { [KEY]: [prevTurnAssistant] } as any;
     store.dbMessagesMap = { [KEY]: [prevTurnAssistant, thisTurnAssistant] } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(desktopNotificationMock.notifyDesktopAgentCompleted).toHaveBeenCalledTimes(1);
@@ -412,8 +412,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
     const { get, store } = makeStore();
     store.messagesMap = { [KEY]: [prevTurnAssistant, thisTurnAssistant] } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(desktopNotificationMock.notifyDesktopAgentCompleted).toHaveBeenCalledWith(
@@ -428,8 +428,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       [KEY]: [{ ...thisTurnAssistant, content: 'partial', tools: [{ id: 'tool-1' }] }],
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(desktopNotificationMock.notifyDesktopAgentCompleted).not.toHaveBeenCalled();
@@ -452,8 +452,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       },
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
@@ -490,8 +490,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       },
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(store.summaryTopicTitle).toHaveBeenCalledWith('t1', messages);
@@ -521,7 +521,7 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
         },
       } as any;
 
-      await lifecycle('client', get).afterRunComplete(completeEvent('client', { runtimeStatus }));
+      await lifecycle('gateway', get).afterRunComplete(completeEvent('gateway', { runtimeStatus }));
 
       expect(store.summaryTopicTitle).not.toHaveBeenCalled();
       expect(desktopNotificationMock.notifyDesktopAgentCompleted).not.toHaveBeenCalled();
@@ -540,8 +540,8 @@ describe('buildRunLifecycle.afterRunComplete — client desktop notification bod
       },
     } as any;
 
-    await lifecycle('client', get).afterRunComplete(
-      completeEvent('client', { runtimeStatus: 'done' }),
+    await lifecycle('gateway', get).afterRunComplete(
+      completeEvent('gateway', { runtimeStatus: 'done' }),
     );
 
     expect(store.summaryTopicTitle).not.toHaveBeenCalled();
@@ -585,8 +585,8 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
         { content: '阅读下面的材料，根据要求写作。', id: 'm1', role: 'user' } as any,
       ];
 
-      await lifecycle('client', get, 'top_level').afterUserMessagePersisted(
-        persistedEvent('client', 'top_level', {
+      await lifecycle('gateway', get, 'top_level').afterUserMessagePersisted(
+        persistedEvent('gateway', 'top_level', {
           isCreateNewTopic: true,
           messages,
           topicId: 't1',
@@ -664,8 +664,8 @@ describe('buildRunLifecycle.afterUserMessagePersisted — topic title (all runti
   it('does NOT title for a sub_agent run', async () => {
     const { get, store } = makeStore();
 
-    await lifecycle('client', get, 'sub_agent').afterUserMessagePersisted(
-      persistedEvent('client', 'sub_agent', {
+    await lifecycle('gateway', get, 'sub_agent').afterUserMessagePersisted(
+      persistedEvent('gateway', 'sub_agent', {
         isCreateNewTopic: true,
         messages: [{ content: 'x', id: 'm1', role: 'user' } as any],
       }),
@@ -695,7 +695,7 @@ describe('buildRunLifecycle.onRunResumed — park → resume broadcast seam', ()
     runtimeType,
   });
 
-  it.each<AgentRuntimeType>(['client', 'gateway', 'hetero'])(
+  it.each<AgentRuntimeType>(['gateway', 'gateway', 'hetero'])(
     'is behavior-neutral for %s: fires NO terminal side effects and emits no completion signal',
     async (runtimeType) => {
       const { get, store } = makeStore();
@@ -718,7 +718,7 @@ describe('buildRunLifecycle.onRunResumed — park → resume broadcast seam', ()
     const { get, store } = makeStore();
 
     await expect(
-      lifecycle('client', get, 'sub_agent').onRunResumed(resumedEvent('client', 'sub_agent')),
+      lifecycle('gateway', get, 'sub_agent').onRunResumed(resumedEvent('gateway', 'sub_agent')),
     ).resolves.toBeUndefined();
 
     expect(store.completeOperation).not.toHaveBeenCalled();

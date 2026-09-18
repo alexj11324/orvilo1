@@ -810,29 +810,24 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       });
     };
 
-    it('passes only the provider reference to Desktop main', async () => {
+    it('rejects legacy user-provider (BYOK) bindings before spawn', async () => {
       configureDirectProvider();
 
+      // User-provider bindings are retired — only the `server-default` source is
+      // still a supported `authMode: 'api'` binding. A persisted BYOK config
+      // must surface the explicit configuration error instead of spawning.
       await runWithEvents([ccResult()], {
         params: { heterogeneousProvider: apiProvider },
       });
 
-      expect(mockStartSession).toHaveBeenCalledWith(
+      expect(mockStartSession).not.toHaveBeenCalled();
+      expect(mockUpdateMessageError).toHaveBeenCalledWith(
+        'ast-initial',
         expect.objectContaining({
-          args: ['--model', 'stale-arg-model', '--effort', 'high'],
-          env: expect.objectContaining({
-            KEEP_ME: 'yes',
-          }),
-          providerBinding: {
-            apiConfig: { model: 'api-primary', providerId: 'anthropic-direct' },
-            kind: 'provider',
-            resumeBindingKey: undefined,
-          },
+          message: expect.stringMatching(/configMissing|provider and model/),
         }),
+        expect.anything(),
       );
-      const serializedParams = JSON.stringify(mockStartSession.mock.calls[0][0]);
-      expect(serializedParams).not.toContain('direct-key');
-      expect(serializedParams).not.toContain('https://direct.example.com');
       expect(mockSelectAccountForAgent).not.toHaveBeenCalled();
       expect(mockGetClaudeCodeIdentity).not.toHaveBeenCalled();
     });
@@ -2163,10 +2158,13 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       );
     });
 
-    it('should leave TRAE model selection to the managed profile in API mode', async () => {
+    it('should reject TRAE legacy user-provider (BYOK) configs in API mode', async () => {
       const store = createMockStore();
       const get = vi.fn(() => store);
 
+      // `authMode: 'api'` without a `server-default` source is a retired BYOK
+      // binding — the run must fail with the explicit config error and never
+      // reach Desktop main.
       await executeHeterogeneousAgent(get, {
         ...defaultParams,
         heterogeneousProvider: {
@@ -2179,16 +2177,13 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
         },
       });
 
-      expect(mockStartSession).toHaveBeenCalledWith(
+      expect(mockStartSession).not.toHaveBeenCalled();
+      expect(mockUpdateMessageError).toHaveBeenCalledWith(
+        'ast-initial',
         expect.objectContaining({
-          agentType: 'trae',
-          initialModel: undefined,
-          providerBinding: {
-            apiConfig: { model: 'api-model', providerId: 'openai' },
-            kind: 'provider',
-            resumeBindingKey: undefined,
-          },
+          message: expect.stringMatching(/configMissing|provider and model/),
         }),
+        expect.anything(),
       );
     });
 

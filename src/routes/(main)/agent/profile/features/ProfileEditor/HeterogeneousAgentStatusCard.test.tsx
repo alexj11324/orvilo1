@@ -201,36 +201,6 @@ vi.mock('@/features/Electron/HeterogeneousAgent/StatusGuide', () => ({
   ),
 }));
 
-vi.mock('@/features/HeterogeneousAgent/hooks/useProviderBinding', () => ({
-  useProviderBindingCompatibleProviders: () => ({
-    modelsByProvider: {
-      anthropic: [{ id: 'claude-primary', providerId: 'anthropic' }],
-    },
-    providers: [{ id: 'anthropic', name: 'Anthropic' }],
-  }),
-}));
-
-vi.mock('@/features/ModelSelect', () => ({
-  default: ({ allowClear, onClear }: { allowClear?: boolean; onClear?: () => void }) => (
-    <div>
-      Model Select
-      {allowClear && (
-        <button type="button" onClick={onClear}>
-          Clear model
-        </button>
-      )}
-    </div>
-  ),
-}));
-
-vi.mock('@/components/ModelSelect', () => ({
-  ModelItemRender: ({ displayName, id }: { displayName?: string; id: string }) => (
-    <span>{displayName || id}</span>
-  ),
-  ProviderItemRender: ({ name }: { name: string }) => <span>{name}</span>,
-  TAG_CLASSNAME: 'orvilo-model-info-tags',
-}));
-
 vi.mock('@/store/aiInfra', () => ({
   useAiInfraStore: (selector: (state: { builtinAiModelList: never[] }) => unknown) =>
     selector({ builtinAiModelList: [] }),
@@ -537,7 +507,6 @@ describe('HeterogeneousAgentStatusCard', () => {
     const { rerender } = render(
       <MemoryRouter>
         <HeterogeneousAgentStatusCard
-          apiModeAvailable
           serverDefaultAvailable
           provider={provider}
           serverDefaultModels={claudeServerModels}
@@ -551,7 +520,6 @@ describe('HeterogeneousAgentStatusCard', () => {
     });
     expect(screen.getByText('Auth Method')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'API' })).toBeEnabled();
-    expect(screen.queryByRole('button', { name: 'Orvilo Server' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     expect(onAuthModeChange).toHaveBeenCalledWith('api', {
       model: 'claude-sonnet-4-6',
@@ -567,7 +535,6 @@ describe('HeterogeneousAgentStatusCard', () => {
     rerender(
       <MemoryRouter>
         <HeterogeneousAgentStatusCard
-          apiModeAvailable
           serverDefaultAvailable
           provider={apiProvider}
           serverDefaultModels={claudeServerModels}
@@ -576,15 +543,15 @@ describe('HeterogeneousAgentStatusCard', () => {
     );
 
     expect(await screen.findByText('Auth Method')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Orvilo' })).toBeEnabled();
+    expect(screen.getByRole('option', { name: 'claude-sonnet-4-6' })).toBeEnabled();
   });
 
-  it('lists the deployment default alongside configured providers in API mode', async () => {
+  it('rewrites a legacy user-provider binding to the deployment default', async () => {
     detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
     getClaudeAuthStatus.mockResolvedValue(null);
     const onApiConfigChange = vi.fn();
     const provider = {
-      apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' },
+      apiConfig: { model: 'claude-primary', providerId: 'anthropic' },
       authMode: 'api',
       command: 'claude',
       type: 'claude-code',
@@ -593,7 +560,6 @@ describe('HeterogeneousAgentStatusCard', () => {
     render(
       <MemoryRouter>
         <HeterogeneousAgentStatusCard
-          apiModeAvailable
           serverDefaultAvailable
           provider={provider}
           serverDefaultModels={claudeServerModels}
@@ -602,16 +568,11 @@ describe('HeterogeneousAgentStatusCard', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('option', { name: 'Orvilo' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument();
-
-    fireEvent.change(screen.getByRole('option', { name: 'Orvilo' }).closest('select')!, {
-      target: { value: 'provider:anthropic' },
-    });
-    expect(onApiConfigChange).toHaveBeenCalledWith({
-      model: 'claude-primary',
-      providerId: 'anthropic',
-      source: 'provider',
+    await waitFor(() => {
+      expect(onApiConfigChange).toHaveBeenCalledWith({
+        model: 'claude-sonnet-4-6',
+        source: 'server-default',
+      });
     });
   });
 
@@ -699,10 +660,10 @@ describe('HeterogeneousAgentStatusCard', () => {
     });
   });
 
-  it('shows provider configuration for an existing API-mode agent', async () => {
+  it('shows the auth switch for an existing API-mode agent without provider options', async () => {
     detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
     const provider = {
-      apiConfig: { model: 'claude-primary', providerId: 'anthropic' },
+      apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' },
       authMode: 'api',
       command: 'claude',
       type: 'claude-code',
@@ -710,45 +671,13 @@ describe('HeterogeneousAgentStatusCard', () => {
 
     render(
       <MemoryRouter>
-        <HeterogeneousAgentStatusCard apiModeAvailable provider={provider} />
+        <HeterogeneousAgentStatusCard provider={provider} />
       </MemoryRouter>,
     );
 
     expect(await screen.findByText('Auth Method')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'API' })).toBeEnabled();
-    expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument();
-  });
-
-  it('persists null when clearing the small-fast model', async () => {
-    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
-    const onApiConfigChange = vi.fn();
-    const provider = {
-      apiConfig: {
-        model: 'claude-primary',
-        providerId: 'anthropic',
-        smallFastModel: 'claude-fast',
-      },
-      authMode: 'api',
-      command: 'claude',
-      type: 'claude-code',
-    } satisfies HeterogeneousProviderConfig;
-
-    render(
-      <MemoryRouter>
-        <HeterogeneousAgentStatusCard
-          apiModeAvailable
-          provider={provider}
-          onApiConfigChange={onApiConfigChange}
-        />
-      </MemoryRouter>,
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Clear model' }));
-
-    expect(onApiConfigChange).toHaveBeenCalledWith({
-      model: 'claude-primary',
-      providerId: 'anthropic',
-      smallFastModel: null,
-    });
+    // User-provider (BYOK) selection is retired — no provider picker remains.
+    expect(screen.queryByRole('option', { name: 'Anthropic' })).not.toBeInTheDocument();
   });
 });

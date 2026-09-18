@@ -1,15 +1,9 @@
 import { getMessageError } from '@orvilo/fetch-sse';
 
 import { createHeaderWithAuth } from '@/services/_auth';
-import { aiProviderSelectors, getAiInfraStoreState } from '@/store/aiInfra';
 import { type ChatModelCard } from '@/types/llm';
 
 import { API_ENDPOINTS } from './_url';
-import { resolveRuntimeProvider } from './chat/helper';
-import { initializeWithClientStore } from './chat/mecha';
-
-const isEnableFetchOnClient = (provider: string) =>
-  aiProviderSelectors.isProviderFetchOnClient(provider)(getAiInfraStoreState());
 
 // Progress information interface
 export interface ModelProgressInfo {
@@ -32,19 +26,6 @@ export class ModelsService {
       headers: { 'Content-Type': 'application/json' },
       provider,
     });
-
-    const runtimeProvider = resolveRuntimeProvider(provider);
-    /**
-     * Use browser agent runtime
-     */
-    const enableFetchOnClient = isEnableFetchOnClient(provider);
-    if (enableFetchOnClient) {
-      const agentRuntime = await initializeWithClientStore({
-        provider,
-        runtimeProvider,
-      });
-      return agentRuntime.models();
-    }
 
     const res = await fetch(API_ENDPOINTS.models(provider), { headers });
     if (!res.ok) {
@@ -76,24 +57,12 @@ export class ModelsService {
         provider,
       });
 
-      const runtimeProvider = resolveRuntimeProvider(provider);
-      const enableFetchOnClient = isEnableFetchOnClient(provider);
-
-      let res: Response;
-      if (enableFetchOnClient) {
-        const agentRuntime = await initializeWithClientStore({
-          provider,
-          runtimeProvider,
-        });
-        res = (await agentRuntime.pullModel({ model }, { signal }))!;
-      } else {
-        res = await fetch(API_ENDPOINTS.modelPull(provider), {
-          body: JSON.stringify({ model }),
-          headers,
-          method: 'POST',
-          signal,
-        });
-      }
+      const res = await fetch(API_ENDPOINTS.modelPull(provider), {
+        body: JSON.stringify({ model }),
+        headers,
+        method: 'POST',
+        signal,
+      });
 
       if (!res.ok) {
         throw await getMessageError(res);

@@ -9,13 +9,21 @@ import { type DeviceExecutionTarget, type HeterogeneousProviderConfig } from '@o
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 
 /**
+ * Error thrown when no runtime can execute an agent: the agent has no
+ * heterogeneous (ACP) provider binding and gateway mode is not enabled.
+ * Surfaces as an explicit configuration failure — there is no in-browser
+ * LLM fallback anymore.
+ */
+export const AGENT_BINDING_REQUIRED_ERROR =
+  'AGENT_BINDING_REQUIRED: This agent has no execution binding. Bind an ACP/heterogeneous agent or enable gateway mode.';
+
+/**
  * Which agent runtime should handle an operation.
  *
- * - `client`: in-browser AgentRuntime (default)
  * - `gateway`: cloud sandbox via Gateway WebSocket
  * - `hetero`: heterogeneous CLI agent (Claude Code, Codex, …) via desktop IPC or sandbox
  */
-export type AgentRuntimeType = 'client' | 'gateway' | 'hetero';
+export type AgentRuntimeType = 'gateway' | 'hetero';
 
 /**
  * Unified intent for a non-hetero, non-group sub-agent invocation.
@@ -33,9 +41,8 @@ export type AgentRuntimeType = 'client' | 'gateway' | 'hetero';
 export interface AgentInvocationIntent {
   /**
    * Instruction delivered to the sub-agent.
-   * In client mode it is injected as a virtual user message prepended to the
-   * existing message history. In gateway mode it becomes the `message` param
-   * of `executeGatewayAgent` (i.e. a real user message on the server).
+   * In gateway mode it becomes the `message` param of `executeGatewayAgent`
+   * (i.e. a real user message on the server).
    */
   instruction: string;
   /**
@@ -108,7 +115,9 @@ interface SelectRuntimeTypeOptions {
  * resume, continue, sub-agent dispatch, …) so adding a new entry point does
  * not require re-deriving the routing rules.
  *
- * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway` > `client`.
+ * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway`. When none
+ * apply, it throws {@link AGENT_BINDING_REQUIRED_ERROR} instead of falling
+ * back to an in-browser runtime (retired).
  */
 export const selectRuntimeType = (
   ctx: RuntimeSelectionContext,
@@ -180,5 +189,5 @@ export const selectRuntimeType = (
     return target === 'local' ? 'hetero' : 'gateway';
   }
   if (ctx.isGatewayMode) return 'gateway';
-  return 'client';
+  throw new Error(AGENT_BINDING_REQUIRED_ERROR);
 };

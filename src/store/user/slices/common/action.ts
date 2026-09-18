@@ -69,10 +69,6 @@ export class CommonActionImpl {
     await this.#get().refreshUserState();
   };
 
-  updateKeyVaultConfig = async (provider: string, config: any): Promise<void> => {
-    await this.#get().setSettings({ keyVaults: { [provider]: config } });
-  };
-
   updateUsername = async (username: string): Promise<void> => {
     await userService.updateUsername(username);
     await this.#get().refreshUserState();

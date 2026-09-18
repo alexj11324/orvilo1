@@ -2012,6 +2012,19 @@ export class LinearSyncWorker {
     if (installation.status !== 'active') {
       throw new LinearSyncPausedError('Linear installation is not active');
     }
+    // A finished run is terminal: claiming again would flip `status` back to
+    // 'importing' and leak the lease without doing any work.
+    if (scope.importPhase === 'completed') {
+      return {
+        claimed: false,
+        completed: true,
+        failed: 0,
+        imported: 0,
+        pendingBinding: 0,
+        phase: 'completed',
+        processed: 0,
+      };
+    }
 
     const claimed = await this.model.claimScopeImport({
       leaseOwner: this.leaseOwner,
@@ -2295,6 +2308,7 @@ export class LinearSyncWorker {
           cursors: { issuesByTeam: {} },
           importCompletedAt: new Date(),
           importPhase: 'completed',
+          lastError: null,
           status: 'active',
         });
         await model.recordDomainEvent({

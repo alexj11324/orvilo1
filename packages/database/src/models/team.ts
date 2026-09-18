@@ -10,7 +10,7 @@ import type {
   TeamVisibility,
   TeamWorkflowStateItem,
 } from '@orvilo/types';
-import { and, asc, desc, eq, exists, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import { projectTeams, teamCycles, teamMembers, teams, teamWorkflowStates } from '../schemas/team';
 import type { LobeChatDatabase } from '../type';
@@ -237,6 +237,9 @@ export class TeamModel {
           position: params.position ?? null,
         },
         target: [teamWorkflowStates.teamId, teamWorkflowStates.remoteStateId],
+        // The backing unique index is partial (`WHERE remote_state_id IS NOT
+        // NULL`); Postgres only infers it when the predicate is repeated here.
+        targetWhere: isNotNull(teamWorkflowStates.remoteStateId),
       })
       .returning();
     return toWorkflowStateItem(state);
@@ -299,6 +302,9 @@ export class TeamModel {
           startsAt: params.startsAt ?? null,
         },
         target: [teamCycles.teamId, teamCycles.remoteCycleId],
+        // Partial unique index (`WHERE remote_cycle_id IS NOT NULL`) needs the
+        // predicate repeated for Postgres to infer it.
+        targetWhere: isNotNull(teamCycles.remoteCycleId),
       })
       .returning();
     return toCycleItem(cycle);

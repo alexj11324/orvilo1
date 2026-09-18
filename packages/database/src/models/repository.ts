@@ -11,7 +11,7 @@ import type {
   RepositoryResolution,
   RepositoryStatus,
 } from '@orvilo/types';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
 
 import {
   associationDecisions,
@@ -83,6 +83,9 @@ export class RepositoryModel {
           repositories.providerHost,
           repositories.remoteRepositoryId,
         ],
+        // Partial unique index (`WHERE remote_repository_id IS NOT NULL`)
+        // needs the predicate repeated for Postgres to infer it.
+        targetWhere: isNotNull(repositories.remoteRepositoryId),
       })
       .returning();
     return toRepositoryItem(row);
@@ -107,6 +110,9 @@ export class RepositoryModel {
       .onConflictDoUpdate({
         set: { coordinate: params.coordinate },
         target: [repositories.workspaceId, repositories.localOnlyKey],
+        // Partial unique index (`WHERE local_only_key IS NOT NULL`) needs the
+        // predicate repeated for Postgres to infer it.
+        targetWhere: isNotNull(repositories.localOnlyKey),
       })
       .returning();
     return toRepositoryItem(row);
@@ -186,6 +192,9 @@ export class RepositoryModel {
           status: 'active',
         },
         target: [repositoryCheckouts.deviceId, repositoryCheckouts.canonicalPath],
+        // Partial unique index (`WHERE device_id IS NOT NULL`) needs the
+        // predicate repeated for Postgres to infer it.
+        targetWhere: isNotNull(repositoryCheckouts.deviceId),
       })
       .returning();
     return row;

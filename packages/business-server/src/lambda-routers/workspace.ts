@@ -3,7 +3,12 @@ import type { WorkspaceItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { transferWorkspaceOwnership } from '@/business/server/membershipLifecycle';
+import {
+  cancelOwnershipTransfer,
+  getOwnershipTransferState,
+  requestOwnershipTransfer,
+  respondOwnershipTransfer,
+} from '@/business/server/membershipLifecycle/ownershipTransfer';
 import {
   wsAdminProcedure,
   wsCompatProcedure,
@@ -137,15 +142,90 @@ export const workspaceRouter = router({
       }
     }),
 
+  /**
+   * Owner retracts the still-pending hand-off. The invited member never had
+   * any rights conferred by the request, so cancellation needs no consent.
+   */
+  cancelOwnershipTransfer: wsOwnerProcedure.use(serverDatabase).mutation(async ({ ctx }) => {
+    try {
+      return await cancelOwnershipTransfer(ctx.serverDB, {
+        ipAddress: ctx.clientIp ?? undefined,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[workspace:cancelOwnershipTransfer]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel ownership transfer',
+      });
+    }
+  }),
+
+  /**
+   * The workspace's pending hand-off as seen by its parties (initiator or
+   * invited member); everyone else reads `null` so an in-flight transfer
+   * doesn't leak into the roster.
+   */
+  pendingOwnershipTransfer: wsProcedure.use(serverDatabase).query(async ({ ctx }) => {
+    try {
+      return await getOwnershipTransferState(ctx.serverDB, {
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[workspace:pendingOwnershipTransfer]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to load ownership transfer state',
+      });
+    }
+  }),
+
+  /**
+   * Recipient accepts or declines the pending hand-off. Accepting performs
+   * the atomic owner swap; declining keeps the current owner.
+   */
+  respondOwnershipTransfer: wsProcedure
+    .use(serverDatabase)
+    .input(z.object({ accept: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await respondOwnershipTransfer(ctx.serverDB, {
+          accept: input.accept,
+          ipAddress: ctx.clientIp ?? undefined,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[workspace:respondOwnershipTransfer]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to respond to ownership transfer',
+        });
+      }
+    }),
+
+  /**
+   * Ownership moves only with the recipient's explicit consent: this creates
+   * a pending request they must accept. The previous immediate-transfer
+   * semantics are retired — see `respondOwnershipTransfer`.
+   */
   transferOwnership: wsOwnerProcedure
     .use(serverDatabase)
     .input(z.object({ newOwnerUserId: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       try {
-        return await transferWorkspaceOwnership(ctx.serverDB, {
-          actorUserId: ctx.userId,
+        return await requestOwnershipTransfer(ctx.serverDB, {
           ipAddress: ctx.clientIp ?? undefined,
-          newOwnerUserId: input.newOwnerUserId,
+          ownerUserId: ctx.userId,
+          targetUserId: input.newOwnerUserId,
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
@@ -154,7 +234,7 @@ export const workspaceRouter = router({
         throw new TRPCError({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to transfer ownership',
+          message: 'Failed to request ownership transfer',
         });
       }
     }),

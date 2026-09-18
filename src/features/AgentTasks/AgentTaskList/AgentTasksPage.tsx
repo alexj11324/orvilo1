@@ -22,6 +22,7 @@ import {
   SCHEDULED_TASKS_PAGE_SIZE,
 } from '@/features/Automations/shared';
 import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPage';
+import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -457,161 +458,174 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
     </Flexbox>
   );
 
+  // Collaboration scope: a project board joins `project:{id}`; the global
+  // workspace task page joins `workspace:{id}`; personal mode joins nothing —
+  // there is no tenant to share presence with. Project rooms only exist under
+  // a workspace, so without an active workspace there is no room to join.
+  const collaborationRoom = activeWorkspaceId
+    ? projectId
+      ? { id: projectId, scope: 'project' as const }
+      : { id: activeWorkspaceId, scope: 'workspace' as const }
+    : null;
+
   return (
-    <LinearTaskSyncProvider
-      taskIds={
-        isMineCollection || isScheduledCollection
-          ? collectionTasks.map((task) => task.id)
-          : undefined
-      }
-    >
-      <Flexbox flex={1} height={'100%'}>
-        <NavHeader
-          left={headerLeft}
-          right={
-            <Flexbox horizontal align={'center'} gap={4}>
-              {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
-              {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
-                <ActionIcon
-                  disabled={createActionBehavior.disabled}
-                  icon={Plus}
-                  size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                  title={createActionBehavior.disabled ? reason : undefined}
-                  onClick={handleCreateTask}
-                />
-              )}
-              {!isScheduledCollection && headerVisibility.showViewOptions && (
-                <TasksGroupConfig
-                  options={viewOptions}
-                  pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
-                  setOptions={setViewOptions}
-                />
-              )}
-              {headerVisibility.showTaskAgentPanelToggle && (
-                <ToggleRightPanelButton
-                  hideWhenExpanded
-                  expand={showTaskAgentPanel}
-                  onToggle={() => toggleTaskAgentPanel()}
-                />
-              )}
-            </Flexbox>
-          }
-          styles={{
-            left: {
-              paddingLeft: 4,
-              gap: 8,
-            },
-          }}
-        />
-        {isMineBoard ? (
-          <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
-            <KanbanBoard
-              myTaskScope={myTaskScope}
-              options={viewOptions}
-              routeScope={routeScope}
-              emptyDescription={t(
-                myTaskScope === 'created'
-                  ? 'taskList.mine.emptyCreated'
-                  : 'taskList.mine.emptyAssigned',
-              )}
-            />
-          </Flexbox>
-        ) : isScheduledCollection ? (
-          <WideScreenContainer
-            fullWidth
-            gap={16}
-            paddingBlock={16}
-            paddingInline={16}
-            wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-          >
-            <AutomationScheduleList
-              error={collectionSWR.error}
-              hasSettled={isCollectionListInit}
-              isFiltered={automationStatusFilter !== 'all'}
-              isLoading={!isCollectionListInit && !collectionSWR.error}
-              page={collectionPage}
-              tasks={collectionTasks}
-              total={collectionTasksTotal}
-              emptyContent={
-                <Flexbox align={'center'} paddingBlock={48}>
-                  <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
-                </Flexbox>
-              }
-              onPageChange={setCollectionPage}
-              onRefetch={() => collectionSWR.mutate()}
-            />
-          </WideScreenContainer>
-        ) : isMineCollection ? (
-          <WideScreenContainer
-            fullWidth
-            gap={16}
-            paddingBlock={16}
-            paddingInline={16}
-            wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-          >
-            <TaskList
-              data={isCollectionListInit || undefined}
-              error={collectionSWR.error}
-              isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
-              items={collectionTasks}
-              options={myTaskViewOptions}
-              routeScope={routeScope}
-              emptyDescription={t(
-                myTaskScope === 'created'
-                  ? 'taskList.mine.emptyCreated'
-                  : 'taskList.mine.emptyAssigned',
-              )}
-              onRetry={() => collectionSWR.mutate()}
-            />
-            {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-              <Flexbox horizontal justify={'center'} paddingBlock={8}>
-                <Pagination
-                  current={collectionPage}
-                  pageSize={COLLECTION_PAGE_SIZE}
-                  showSizeChanger={false}
-                  total={collectionTasksTotal}
-                  onChange={setCollectionPage}
-                />
+    <CollaborationProvider room={collaborationRoom} viewKey="tasks">
+      <LinearTaskSyncProvider
+        taskIds={
+          isMineCollection || isScheduledCollection
+            ? collectionTasks.map((task) => task.id)
+            : undefined
+        }
+      >
+        <Flexbox flex={1} height={'100%'}>
+          <NavHeader
+            left={headerLeft}
+            right={
+              <Flexbox horizontal align={'center'} gap={4}>
+                {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
+                {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
+                  <ActionIcon
+                    disabled={createActionBehavior.disabled}
+                    icon={Plus}
+                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    title={createActionBehavior.disabled ? reason : undefined}
+                    onClick={handleCreateTask}
+                  />
+                )}
+                {!isScheduledCollection && headerVisibility.showViewOptions && (
+                  <TasksGroupConfig
+                    options={viewOptions}
+                    pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+                    setOptions={setViewOptions}
+                  />
+                )}
+                {headerVisibility.showTaskAgentPanelToggle && (
+                  <ToggleRightPanelButton
+                    hideWhenExpanded
+                    expand={showTaskAgentPanel}
+                    onToggle={() => toggleTaskAgentPanel()}
+                  />
+                )}
               </Flexbox>
-            )}
-          </WideScreenContainer>
-        ) : ordinarySurface === 'board' ? (
-          <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
-            <KanbanBoard
-              agentId={agentId}
-              options={viewOptions}
-              projectId={projectId}
-              routeScope={routeScope}
-            />
-          </Flexbox>
-        ) : (
-          <WideScreenContainer
-            fullWidth
-            gap={16}
-            paddingBlock={16}
-            paddingInline={16}
-            wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-          >
-            {!inlineCollapsed && (
-              <CreateTaskInlineEntry
-                agentId={agentId}
-                lockAssignee={!!agentId}
-                projectId={projectId}
+            }
+            styles={{
+              left: {
+                paddingLeft: 4,
+                gap: 8,
+              },
+            }}
+          />
+          {isMineBoard ? (
+            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+              <KanbanBoard
+                myTaskScope={myTaskScope}
+                options={viewOptions}
+                routeScope={routeScope}
+                emptyDescription={t(
+                  myTaskScope === 'created'
+                    ? 'taskList.mine.emptyCreated'
+                    : 'taskList.mine.emptyAssigned',
+                )}
               />
-            )}
-            <TaskList
-              data={isTaskListInit || undefined}
-              error={error}
-              isLoading={isLoading || (!isTaskListInit && !error)}
-              options={viewOptions}
-              routeScope={routeScope}
-              onRetry={() => mutate()}
-              onShowHiddenCompleted={handleShowHiddenCompleted}
-            />
-          </WideScreenContainer>
-        )}
-      </Flexbox>
-    </LinearTaskSyncProvider>
+            </Flexbox>
+          ) : isScheduledCollection ? (
+            <WideScreenContainer
+              fullWidth
+              gap={16}
+              paddingBlock={16}
+              paddingInline={16}
+              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+            >
+              <AutomationScheduleList
+                error={collectionSWR.error}
+                hasSettled={isCollectionListInit}
+                isFiltered={automationStatusFilter !== 'all'}
+                isLoading={!isCollectionListInit && !collectionSWR.error}
+                page={collectionPage}
+                tasks={collectionTasks}
+                total={collectionTasksTotal}
+                emptyContent={
+                  <Flexbox align={'center'} paddingBlock={48}>
+                    <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
+                  </Flexbox>
+                }
+                onPageChange={setCollectionPage}
+                onRefetch={() => collectionSWR.mutate()}
+              />
+            </WideScreenContainer>
+          ) : isMineCollection ? (
+            <WideScreenContainer
+              fullWidth
+              gap={16}
+              paddingBlock={16}
+              paddingInline={16}
+              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+            >
+              <TaskList
+                data={isCollectionListInit || undefined}
+                error={collectionSWR.error}
+                isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
+                items={collectionTasks}
+                options={myTaskViewOptions}
+                routeScope={routeScope}
+                emptyDescription={t(
+                  myTaskScope === 'created'
+                    ? 'taskList.mine.emptyCreated'
+                    : 'taskList.mine.emptyAssigned',
+                )}
+                onRetry={() => collectionSWR.mutate()}
+              />
+              {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
+                <Flexbox horizontal justify={'center'} paddingBlock={8}>
+                  <Pagination
+                    current={collectionPage}
+                    pageSize={COLLECTION_PAGE_SIZE}
+                    showSizeChanger={false}
+                    total={collectionTasksTotal}
+                    onChange={setCollectionPage}
+                  />
+                </Flexbox>
+              )}
+            </WideScreenContainer>
+          ) : ordinarySurface === 'board' ? (
+            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+              <KanbanBoard
+                agentId={agentId}
+                options={viewOptions}
+                projectId={projectId}
+                routeScope={routeScope}
+              />
+            </Flexbox>
+          ) : (
+            <WideScreenContainer
+              fullWidth
+              gap={16}
+              paddingBlock={16}
+              paddingInline={16}
+              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+            >
+              {!inlineCollapsed && (
+                <CreateTaskInlineEntry
+                  agentId={agentId}
+                  lockAssignee={!!agentId}
+                  projectId={projectId}
+                />
+              )}
+              <TaskList
+                data={isTaskListInit || undefined}
+                error={error}
+                isLoading={isLoading || (!isTaskListInit && !error)}
+                options={viewOptions}
+                routeScope={routeScope}
+                onRetry={() => mutate()}
+                onShowHiddenCompleted={handleShowHiddenCompleted}
+              />
+            </WideScreenContainer>
+          )}
+          <CollaborationOverlay />
+        </Flexbox>
+      </LinearTaskSyncProvider>
+    </CollaborationProvider>
   );
 });
 

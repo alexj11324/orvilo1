@@ -807,6 +807,14 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
     path: 'apps',
   },
 
+  // Workspace invitation landing (token-bound — never mirrored under /:workspaceSlug)
+  {
+    element: dynamicElement(() => import('@/routes/(main)/invite'), 'Desktop > Invite'),
+    errorElement: <ErrorBoundary />,
+    handle: { meta: routeMeta({ Skeleton: RouteSegmentSkeleton }) },
+    path: 'invite/:token',
+  },
+
   // Settings routes (personal-only — never mirrored under /:workspaceSlug)
   {
     children: [

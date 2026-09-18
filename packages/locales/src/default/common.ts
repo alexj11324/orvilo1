@@ -613,6 +613,12 @@ export default {
   'taskDock.status.running': 'In progress',
   'taskDock.status.success': 'All done',
   'taskDock.totalCount': '{{count}} items',
+  'teammates.activity.bubble': '{{name}} · {{action}}',
+  'teammates.activity.collapse': 'Show less',
+  'teammates.activity.expand': 'Show all',
+  'teammates.activity.more': '+{{count}} more',
+  'teammates.presence.actorTooltip': '{{name}} — {{count}} open tab',
+  'teammates.presence.actorTooltip_other': '{{name}} — {{count}} open tabs',
   'telemetry.allow': 'Allow',
   'telemetry.deny': 'Deny',
   'telemetry.desc':

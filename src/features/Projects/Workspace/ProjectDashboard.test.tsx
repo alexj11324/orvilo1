@@ -59,6 +59,25 @@ vi.mock('@/features/Projects/Layout/navigation', () => ({
   getProjectTasksPath: () => '/project/prj_1/tasks',
 }));
 
+vi.mock('@/business/client/hooks/useWorkspaceCapabilities', () => ({
+  useWorkspaceCapabilities: () => ({
+    canGrantAdmin: false,
+    canInvite: false,
+    canLeave: false,
+    canManageMembers: false,
+    isOwner: false,
+    role: null,
+  }),
+}));
+
+vi.mock('@/features/Teammates/api/hooks', () => ({
+  useProjectMembersQuery: () => ({ data: [], error: undefined, isLoading: false, mutate: vi.fn() }),
+}));
+
+vi.mock('@/features/Teammates/useTeammatesEnabled', () => ({
+  useTeammatesEnabled: () => false,
+}));
+
 vi.mock('@/features/Work/WorkSummaryCard', () => ({
   default: ({ item }: { item: { id: string } }) => <div data-work={item.id} />,
 }));

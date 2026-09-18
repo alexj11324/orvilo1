@@ -1,7 +1,7 @@
 'use client';
 
 import { Block, Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import { Button, SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, WorkSummaryItem } from '@orvilo/types';
 import { Progress } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -18,6 +18,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
@@ -28,6 +29,10 @@ import {
   getProjectTasksPath,
 } from '@/features/Projects/Layout/navigation';
 import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
+import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
+import { canInviteToProject } from '@/features/Teammates/api/roleCapabilities';
+import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
+import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 import { useOpenWork } from '@/features/WorkGallery/useOpenWork';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -36,6 +41,8 @@ import { workKeys } from '@/libs/swr/keys';
 import { workService } from '@/services/work';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 import type { ProjectDetail } from '@/store/project';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 const styles = createStaticStyles(({ css }) => ({
   attention: css`
@@ -141,6 +148,13 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
   const navigate = useWorkspaceAwareNavigate();
   const openWork = useOpenWork();
   const workspaceId = useActiveWorkspaceId();
+  const teammatesEnabled = useTeammatesEnabled();
+  const capabilities = useWorkspaceCapabilities();
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  // `projectMember.list` is a workspace-member procedure — in personal scope
+  // (no workspace) it would fail outright, so the query and its card stay off.
+  const membersEnabled = teammatesEnabled && !!workspaceId;
+  const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
   const goalScope = `project:${projectId}`;
   const goals = useGoalStore(goalSelectors.goalList(goalScope));
   const goalSWR = useGoalStore((s) => s.useFetchGoals)(undefined, projectId);
@@ -329,6 +343,41 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
             <Text>{detail.knowledgeBases?.length ?? 0}</Text>
           </Flexbox>
         </Flexbox>
+
+        {membersEnabled && (
+          <Flexbox className={styles.railCard} gap={12}>
+            <SectionTitle
+              count={membersSWR.data?.length}
+              title={t('sections.teammates', { defaultValue: 'Teammates' })}
+            />
+            {membersSWR.error ? (
+              <AsyncError
+                error={membersSWR.error}
+                variant={'inline'}
+                onRetry={() => void membersSWR.mutate()}
+              />
+            ) : membersSWR.isLoading ? (
+              <SkeletonText style={{ marginBottom: 0, width: '60%' }} />
+            ) : (
+              <Flexbox horizontal align={'center'} justify={'space-between'}>
+                <Text fontSize={13} type={'secondary'}>
+                  {t('sections.teammatesHint', {
+                    defaultValue: 'People collaborating in this project',
+                  })}
+                </Text>
+                {canInviteToProject(capabilities.canInvite, detail.project, currentUserId) && (
+                  <Button
+                    size={'small'}
+                    type={'text'}
+                    onClick={() => openInviteTeammateModal({ defaultProjectIds: [projectId] })}
+                  >
+                    {t('sections.invite', { defaultValue: 'Invite' })}
+                  </Button>
+                )}
+              </Flexbox>
+            )}
+          </Flexbox>
+        )}
       </Flexbox>
     </div>
   );

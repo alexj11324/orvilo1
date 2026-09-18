@@ -104,6 +104,7 @@ export const driveTaskFromVerify = async (
     const op = await operationModel.findById(operationId);
     const taskOperation = await resolveTaskOperation(operationModel, operationId);
     if (!op || !taskOperation?.taskId) return; // not a task-bound run — nothing to drive
+    const taskId = taskOperation.taskId;
 
     const taskModel = new TaskModel(db, userId, workspaceId);
     const task = await taskModel.findById(taskOperation.taskId);
@@ -189,7 +190,7 @@ export const driveTaskFromVerify = async (
     const renewCompletionReservation = async () => {
       const reservationId = completionReservationId;
       if (!reservationId || !completionReservationActive) return;
-      const renewed = await taskModel.renewRunReservation(taskOperation.taskId, reservationId);
+      const renewed = await taskModel.renewRunReservation(taskId, reservationId);
       if (!renewed && completionReservationActive) {
         throw new CompletionReservationLostError(
           'Task completion reservation ownership was lost',

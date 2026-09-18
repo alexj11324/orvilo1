@@ -215,6 +215,14 @@ const taskMutationEventType = (data: Partial<NewTask>): TaskDomainEventType | un
   ) {
     return 'task.status.changed';
   }
+  if (touchedColumns(data, TASK_REQUIREMENT_COLUMNS).length > 0) {
+    return 'task.requirement.changed';
+  }
+  // Admit / decline / duplicate must wake planning once without looking like a
+  // requirement edit that auto-apply can treat as new executable work.
+  if (data.triageStatus !== undefined || data.duplicateOfTaskId !== undefined) {
+    return 'task.scope.changed';
+  }
   return touchedColumns(data, TASK_DOMAIN_COLUMNS).length > 0
     ? 'task.requirement.changed'
     : undefined;

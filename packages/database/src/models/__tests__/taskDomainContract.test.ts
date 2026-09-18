@@ -338,6 +338,29 @@ describe('task domain contract', () => {
     expect(await model.findById(copy.id)).toMatchObject({ duplicateOfTaskId: canonical.id });
   });
 
+  it('does not classify triage-only updates as requirement changes', async () => {
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create(
+      { instruction: 'Intake' },
+      { mutation: { idempotencyKey: 'command:create:triage', source: 'user' } },
+    );
+    const accepted = await model.update(
+      task.id,
+      { triageStatus: 'accepted' },
+      { idempotencyKey: 'command:triage:accept', source: 'user' },
+    );
+    expect(accepted).toMatchObject({
+      requirementRevision: task.requirementRevision,
+      triageStatus: 'accepted',
+    });
+    const [event] = await db
+      .select()
+      .from(taskDomainEvents)
+      .where(eq(taskDomainEvents.idempotencyKey, 'command:triage:accept'));
+    expect(event).toMatchObject({ type: 'task.scope.changed' });
+    expect(event.payload).toMatchObject({ changedFields: ['triageStatus'] });
+  });
+
   it('rejects a stale triage update when expectedDomainRevision does not match', async () => {
     const model = new TaskModel(db, userId, workspaceId);
     const task = await model.create({ instruction: 'Triage me' });

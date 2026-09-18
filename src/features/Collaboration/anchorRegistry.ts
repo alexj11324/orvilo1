@@ -7,8 +7,9 @@ import { COLLAB_ID_ALT_ATTR, COLLAB_ID_ATTR, type RectLike } from './anchors';
  * Invalidation is event-driven, not polled: `getRect` reads
  * `getBoundingClientRect` at call time so scroll/resize never needs a scan —
  * only the *existence* map does, and that's maintained by a MutationObserver.
- * A `version` counter bumps whenever membership changes so subscribers can
- * re-render once per DOM change, not per pointermove.
+ * A `version` counter bumps whenever membership changes OR the viewport moves
+ * (scroll/resize) so subscribers re-resolve positions once per DOM change or
+ * frame, never per pointermove.
  */
 export class AnchorRegistry {
   /** Map from collab id to elements (usually one; mirrors share the id). */
@@ -16,7 +17,9 @@ export class AnchorRegistry {
   #listeners = new Set<() => void>();
   #observer?: MutationObserver;
   #root?: ParentNode;
-  /** Membership version — bump on any id-set change. */
+  #viewportRaf?: number;
+  #viewportTarget?: Window;
+  /** Membership + viewport version — bump when rects or the id-set may change. */
   version = 0;
 
   attach(root: ParentNode): () => void {
@@ -33,6 +36,19 @@ export class AnchorRegistry {
       childList: true,
       subtree: true,
     });
+
+    // Scroll does not bubble, so nested scrollers are caught on the window's
+    // capture phase; resize only fires on the window. Both move every anchor
+    // rect without touching membership, hence the shared version bump.
+    this.#viewportTarget =
+      'defaultView' in root ? ((root as Document).defaultView ?? undefined) : undefined;
+    if (this.#viewportTarget) {
+      this.#viewportTarget.addEventListener('scroll', this.#scheduleViewportBump, {
+        capture: true,
+        passive: true,
+      });
+      this.#viewportTarget.addEventListener('resize', this.#scheduleViewportBump);
+    }
     return () => this.detach();
   }
 
@@ -40,6 +56,17 @@ export class AnchorRegistry {
     this.#observer?.disconnect();
     this.#observer = undefined;
     this.#root = undefined;
+    if (this.#viewportTarget) {
+      this.#viewportTarget.removeEventListener('scroll', this.#scheduleViewportBump, {
+        capture: true,
+      });
+      this.#viewportTarget.removeEventListener('resize', this.#scheduleViewportBump);
+      this.#viewportTarget = undefined;
+    }
+    if (this.#viewportRaf !== undefined) {
+      cancelAnimationFrame(this.#viewportRaf);
+      this.#viewportRaf = undefined;
+    }
     if (this.#elements.size > 0) {
       this.#elements.clear();
       this.#bump();
@@ -107,6 +134,23 @@ export class AnchorRegistry {
     this.#elements = next;
     this.#bump();
   }
+
+  /**
+   * rAF-coalesced viewport bump: a scroll burst produces one version tick per
+   * frame, so every overlay re-reads its rects at display cadence instead of
+   * once per scroll event.
+   */
+  #scheduleViewportBump = (): void => {
+    if (typeof requestAnimationFrame !== 'function') {
+      this.#bump();
+      return;
+    }
+    if (this.#viewportRaf !== undefined) return;
+    this.#viewportRaf = requestAnimationFrame(() => {
+      this.#viewportRaf = undefined;
+      this.#bump();
+    });
+  };
 
   #bump(): void {
     this.version += 1;

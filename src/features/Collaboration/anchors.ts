@@ -14,6 +14,14 @@ const ANCHOR_NAMES = new Set(['assignee', 'card', 'delivery', 'dependencies', 's
 export const COLLAB_ID_ATTR = 'data-collab-id';
 /** Extra ids one element also answers to (e.g. task identifier vs uuid). */
 export const COLLAB_ID_ALT_ATTR = 'data-collab-id-alt';
+/**
+ * Marks a subtree whose anchors must never be broadcast: a collab id embeds the
+ * entity id, so hovering a private task and emitting `task:{id}` would leak the
+ * task's existence to every member of the room. The DOM marker stays — remote
+ * cursors from legitimate viewers can still resolve — but the local publisher
+ * treats the subtree as unanchored.
+ */
+export const COLLAB_PRIVATE_ATTR = 'data-collab-private';
 
 export const collabIdFor = (
   entityType: 'project' | 'task' | string,
@@ -88,4 +96,20 @@ export const pointToUV = (
     u: targetRect.width === 0 ? 0 : clamp((point.x - targetRect.left) / targetRect.width),
     v: targetRect.height === 0 ? 0 : clamp((point.y - targetRect.top) / targetRect.height),
   };
+};
+
+/**
+ * Pointer → anchor resolution for the cursor publisher. Returns the enclosing
+ * collab element + its id, or null when the pointer is over nothing anchored —
+ * including anything inside a `data-collab-private` subtree, which must never
+ * reach the wire (see the attribute's doc above).
+ */
+export const collabAnchorFor = (
+  target: EventTarget | null,
+): { anchorEl: Element; collabId: string } | null => {
+  const el = target instanceof Element ? target : null;
+  const anchorEl = el?.closest(`[${COLLAB_ID_ATTR}]`) ?? null;
+  if (!anchorEl || anchorEl.closest(`[${COLLAB_PRIVATE_ATTR}]`)) return null;
+  const collabId = anchorEl.getAttribute(COLLAB_ID_ATTR);
+  return collabId ? { anchorEl, collabId } : null;
 };

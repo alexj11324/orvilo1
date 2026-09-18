@@ -110,12 +110,12 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
       </Block>
     ) : null;
 
-  const privacyBadge =
-    task.visibility === 'private' ? (
-      <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-        <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
-      </Tooltip>
-    ) : null;
+  const isPrivate = task.visibility === 'private';
+  const privacyBadge = isPrivate ? (
+    <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
+      <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+    </Tooltip>
+  ) : null;
 
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
@@ -271,6 +271,7 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
         clickable
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
+        data-collab-private={isPrivate || undefined}
         gap={4}
         padding={12}
         variant={'borderless'}

@@ -9,6 +9,7 @@ import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { mergeWorkQueryPage, workQueryHasMore } from '@/features/MyWork/workQueryPaging';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -42,7 +43,14 @@ const SavedViewPage = memo(() => {
   );
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
-  const tasks = evaluation?.tasks ?? [];
+  const firstTasks = evaluation?.tasks ?? [];
+  const queryHash = evaluation?.queryHash;
+  const [tail, setTail] = useState<typeof firstTasks>([]);
+  useEffect(() => {
+    setTail([]);
+  }, [queryHash, viewId, workspaceId]);
+  const tasks = mergeWorkQueryPage(firstTasks, tail);
+  const hasMore = workQueryHasMore(tasks.length, evaluation?.total);
   const isOwner = Boolean(currentUserId && view && view.ownerUserId === currentUserId);
   const [name, setName] = useState('');
   const [queryDraft, setQueryDraft] = useState('');
@@ -97,6 +105,17 @@ const SavedViewPage = memo(() => {
     await mutate(workAttentionKeys.savedViews(workspaceId));
     await mutate(workAttentionKeys.favorites(workspaceId));
   }, [viewId, workspaceId]);
+
+  const loadMore = useCallback(async () => {
+    const last = tasks.at(-1);
+    if (!last || !queryHash || !viewId) return;
+    const next = await workAttentionService.savedViewEvaluate({
+      afterId: last.id,
+      id: viewId,
+      queryHash,
+    });
+    setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
+  }, [queryHash, tasks, viewId]);
 
   const toggleFavorite = useCallback(async () => {
     if (!viewId) return;
@@ -277,6 +296,11 @@ const SavedViewPage = memo(() => {
             </WorkspaceLink>
           ))
         )}
+        {hasMore ? (
+          <Button size="small" onClick={() => void loadMore()}>
+            {t('savedViews.loadMore')}
+          </Button>
+        ) : null}
       </Flexbox>
     </Flexbox>
   );

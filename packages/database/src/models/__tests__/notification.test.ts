@@ -314,6 +314,32 @@ describe('NotificationModel (integration)', () => {
         unreadUpdateCount: 0,
       });
     });
+
+    it('clears snooze when a newer episode arrives so the card returns to the badge', async () => {
+      const model = new NotificationModel(serverDB, userId);
+      const created = await model.create(
+        baseNotification({
+          episodeKey: 'ep-snooze',
+          title: 'Quiet for now',
+        }),
+      );
+      await model.snooze(
+        created!.id,
+        new Date(Date.now() + 4 * 60 * 60 * 1000),
+        created!.activityVersion,
+      );
+      await expect(model.getFeedSummary()).resolves.toMatchObject({ unreadBadgeCount: 0 });
+
+      await model.bumpEpisode(serverDB, {
+        episodeKey: 'ep-snooze',
+        feedRevision: 2,
+        recipientUserId: userId,
+        title: 'Needs you again',
+      });
+      await expect(model.getFeedSummary()).resolves.toMatchObject({ unreadBadgeCount: 1 });
+      const rows = await model.list();
+      expect(rows.find((row) => row.id === created!.id)?.snoozedUntil).toBeNull();
+    });
   });
 
   describe('getNavigationCounts', () => {

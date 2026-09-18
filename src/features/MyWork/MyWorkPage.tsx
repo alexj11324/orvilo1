@@ -11,7 +11,7 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import type { MyWorkMode } from '@orvilo/types';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -26,6 +26,7 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
+import { mergeWorkQueryPage, workQueryHasMore } from './workQueryPaging';
 
 const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
 const SECONDARY_TABS: MyWorkMode[] = ['created', 'subscribed'];
@@ -47,9 +48,30 @@ const MyWorkPage = memo(() => {
   const { data, isLoading } = useClientDataSWR(workAttentionKeys.myWork(workspaceId, mode), () =>
     workAttentionService.myWork({ mode }),
   );
-  const tasks = data?.data.tasks ?? [];
-  const subscribedTaskIds = data?.data.subscribedTaskIds ?? [];
+  const firstTasks = data?.data.tasks ?? [];
+  const queryHash = data?.data.queryHash;
+  const [tail, setTail] = useState<typeof firstTasks>([]);
+  const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
+  useEffect(() => {
+    setTail([]);
+    setExtraSubscribed([]);
+  }, [mode, queryHash, workspaceId]);
+  const tasks = mergeWorkQueryPage(firstTasks, tail);
+  const subscribedTaskIds = [...(data?.data.subscribedTaskIds ?? []), ...extraSubscribed];
   const canSaveAs = isMyWorkSaveableMode(mode);
+  const hasMore = workQueryHasMore(tasks.length, data?.data.total);
+
+  const loadMore = useCallback(async () => {
+    const last = tasks.at(-1);
+    if (!last || !queryHash) return;
+    const next = await workAttentionService.myWork({
+      afterId: last.id,
+      mode,
+      queryHash,
+    });
+    setTail((current) => mergeWorkQueryPage(current, next.data.tasks));
+    setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
+  }, [mode, queryHash, tasks]);
 
   const tabs = useMemo(
     () =>
@@ -143,6 +165,11 @@ const MyWorkPage = memo(() => {
             );
           })
         )}
+        {hasMore ? (
+          <Button size="small" onClick={() => void loadMore()}>
+            {t('myWork.loadMore')}
+          </Button>
+        ) : null}
       </Flexbox>
     </Flexbox>
   );

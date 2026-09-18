@@ -126,6 +126,7 @@ describe('toFeedCard', () => {
       sourceRevision: 'xfer_1',
     });
     expect(card.decisionVerbs).toEqual(['cancel']);
+    expect(card.outgoing).toBe(true);
   });
 
   it('asks for submit_input on acp_input cards instead of approve', () => {

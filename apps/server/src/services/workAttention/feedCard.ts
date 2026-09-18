@@ -121,6 +121,7 @@ export const toFeedCard = (
     kind: row.kind,
     lastActivityAt: (row.lastActivityAt ?? row.createdAt).toISOString(),
     notificationId: row.id,
+    outgoing: Boolean(live?.outgoing),
     read: row.isRead,
     readVersion: row.readVersion,
     resourceId: row.resourceId,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { nextInboxSelection } from './inboxListSelection';
+import { INBOX_LIST_HOTKEY_OPTIONS } from './useInboxListKeyboard';
 
 describe('nextInboxSelection', () => {
   it('starts at the first or last row when nothing is selected', () => {
@@ -16,5 +17,12 @@ describe('nextInboxSelection', () => {
 
   it('returns null for an empty list', () => {
     expect(nextInboxSelection([], 'a', 1)).toBeNull();
+  });
+});
+
+describe('INBOX_LIST_HOTKEY_OPTIONS', () => {
+  it('does not capture J/K inside form fields or contenteditable editors', () => {
+    expect(INBOX_LIST_HOTKEY_OPTIONS.enableOnFormTags).toBe(false);
+    expect(INBOX_LIST_HOTKEY_OPTIONS.enableOnContentEditable).toBe(false);
   });
 });

@@ -2,7 +2,7 @@
 
 import { Empty, Flexbox } from '@lobehub/ui';
 import { Button, Select, Text, toast } from '@lobehub/ui/base-ui';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -19,6 +19,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 import { duplicateCanonicalOptions } from './duplicateCanonicalOptions';
 import { otherTeamOptions } from './otherTeamOptions';
 import { reassignMemberOptions } from './reassignMemberOptions';
+import { ALL_TEAM_CYCLES, teamTaskQuery, teamTriageQuery } from './teamWorkQuery';
 
 type TeamTriageTask = {
   assigneeAgentId?: string | null;
@@ -168,6 +169,7 @@ const TeamPage = memo(() => {
   const { t } = useTranslation('common');
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useActiveWorkspaceId();
+  const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
   const { data: teamData } = useClientDataSWR(
     teamId && workspaceId ? ['team', workspaceId, teamId] : null,
     () => lambdaClient.team.team.query({ teamId: teamId! }),
@@ -177,30 +179,17 @@ const TeamPage = memo(() => {
     () => lambdaClient.team.teams.query(),
   );
   const { data: triageData, isLoading } = useClientDataSWR(
-    teamId && workspaceId ? ['team-triage', workspaceId, teamId] : null,
+    teamId && workspaceId ? ['team-triage', workspaceId, teamId, cycleId] : null,
     () =>
       workAttentionService.query({
-        query: {
-          entityType: 'task',
-          filter: {
-            all: [
-              { field: 'teamId', op: 'eq', value: teamId },
-              { field: 'triageStatus', op: 'eq', value: 'untriaged' },
-            ],
-          },
-          schemaVersion: 1,
-        },
+        query: teamTriageQuery(teamId!, cycleId),
       }),
   );
   const { data: teamTasksData } = useClientDataSWR(
-    teamId && workspaceId ? ['team-tasks', workspaceId, teamId] : null,
+    teamId && workspaceId ? ['team-tasks', workspaceId, teamId, cycleId] : null,
     () =>
       workAttentionService.query({
-        query: {
-          entityType: 'task',
-          filter: { all: [{ field: 'teamId', op: 'eq', value: teamId }] },
-          schemaVersion: 1,
-        },
+        query: teamTaskQuery(teamId!, cycleId),
       }),
   );
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
@@ -225,8 +214,8 @@ const TeamPage = memo(() => {
           ...(extra?.canonicalTaskId ? { canonicalTaskId: extra.canonicalTaskId } : {}),
         });
         await Promise.all([
-          mutate(['team-triage', workspaceId, teamId]),
-          mutate(['team-tasks', workspaceId, teamId]),
+          mutate(['team-triage', workspaceId, teamId, cycleId]),
+          mutate(['team-tasks', workspaceId, teamId, cycleId]),
         ]);
         toast.success(t('teams.triageUpdated'));
       } catch (error) {
@@ -237,15 +226,26 @@ const TeamPage = memo(() => {
         );
       }
     },
-    [t, teamId, workspaceId],
+    [cycleId, t, teamId, workspaceId],
   );
 
   const refreshTriage = useCallback(() => {
     void Promise.all([
-      mutate(['team-triage', workspaceId, teamId]),
-      mutate(['team-tasks', workspaceId, teamId]),
+      mutate(['team-triage', workspaceId, teamId, cycleId]),
+      mutate(['team-tasks', workspaceId, teamId, cycleId]),
     ]);
-  }, [teamId, workspaceId]);
+  }, [cycleId, teamId, workspaceId]);
+
+  const cycleOptions = useMemo(
+    () => [
+      { label: t('teams.cycleAll'), value: ALL_TEAM_CYCLES },
+      ...(teamData?.data.cycles ?? []).map((cycle) => ({
+        label: cycle.name || cycle.id,
+        value: cycle.id,
+      })),
+    ],
+    [t, teamData?.data.cycles],
+  );
 
   return (
     <Flexbox flex={1} height="100%">
@@ -257,6 +257,18 @@ const TeamPage = memo(() => {
         }
       />
       <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
+        {cycleOptions.length > 1 ? (
+          <Select
+            aria-label={t('teams.cycle')}
+            options={cycleOptions}
+            size="small"
+            style={{ maxWidth: 280 }}
+            value={cycleId}
+            onChange={(next) => {
+              if (typeof next === 'string') setCycleId(next);
+            }}
+          />
+        ) : null}
         <Text weight={500}>{t('teams.triage')}</Text>
         {isLoading ? (
           <Text type="secondary">{t('teams.loading')}</Text>

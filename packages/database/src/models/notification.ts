@@ -624,6 +624,7 @@ export class NotificationModel {
         isRead: false,
         lastActivityAt: now,
         latestFeedRevision: params.feedRevision,
+        snoozedUntil: null,
         ...(params.title !== undefined ? { title: params.title } : {}),
         updatedAt: now,
       })

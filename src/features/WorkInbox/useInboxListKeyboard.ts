@@ -10,6 +10,12 @@ interface UseInboxListKeyboardOptions {
   selectedId: string | null;
 }
 
+export const INBOX_LIST_HOTKEY_OPTIONS = {
+  enableOnContentEditable: false,
+  enableOnFormTags: false,
+  preventDefault: true,
+} as const;
+
 /**
  * Page-local Inbox list keys. Disabled inside inputs so the command palette
  * and editors keep J/K. Not registered as a global rebindable hotkey.
@@ -27,7 +33,7 @@ export const useInboxListKeyboard = ({
       const next = nextInboxSelection(ids, selectedId, 1);
       if (next) onSelect(next);
     },
-    { enableOnFormTags: false, preventDefault: true },
+    INBOX_LIST_HOTKEY_OPTIONS,
     [ids, onSelect, selectedId],
   );
   useHotkeys(
@@ -36,7 +42,7 @@ export const useInboxListKeyboard = ({
       const next = nextInboxSelection(ids, selectedId, -1);
       if (next) onSelect(next);
     },
-    { enableOnFormTags: false, preventDefault: true },
+    INBOX_LIST_HOTKEY_OPTIONS,
     [ids, onSelect, selectedId],
   );
   useHotkeys(
@@ -44,7 +50,7 @@ export const useInboxListKeyboard = ({
     () => {
       onOpen?.();
     },
-    { enableOnFormTags: false, preventDefault: true },
+    INBOX_LIST_HOTKEY_OPTIONS,
     [onOpen],
   );
   useHotkeys(
@@ -52,7 +58,7 @@ export const useInboxListKeyboard = ({
     () => {
       onBack?.();
     },
-    { enableOnFormTags: false, enabled: Boolean(onBack), preventDefault: true },
+    { ...INBOX_LIST_HOTKEY_OPTIONS, enabled: Boolean(onBack) },
     [onBack],
   );
 };

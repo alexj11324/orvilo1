@@ -24,6 +24,12 @@ describe('isMobileNavRoute', () => {
     expect(isMobileNavRoute('/lobe-team/me', 'lobe-team')).toBe(true);
   });
 
+  it('keeps the tab bar on My Work, Views and Teams', () => {
+    expect(isMobileNavRoute('/my-work', null)).toBe(true);
+    expect(isMobileNavRoute('/lobe-team/views/view-1', 'lobe-team')).toBe(true);
+    expect(isMobileNavRoute('/lobe-team/teams/team-1', 'lobe-team')).toBe(true);
+  });
+
   it('still hides the tab bar where it never belonged', () => {
     expect(isMobileNavRoute('/settings/profile', null)).toBe(false);
     expect(isMobileNavRoute('/settings/profile', 'lobe-team')).toBe(false);

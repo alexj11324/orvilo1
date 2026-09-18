@@ -107,6 +107,8 @@ export interface NotificationFeedCard {
   kind: NotificationFeedKind;
   lastActivityAt: string;
   notificationId: string;
+  /** True when this visitor initiated the request and can only withdraw. */
+  outgoing?: boolean;
   read: boolean;
   readVersion: number;
   resourceId?: string | null;

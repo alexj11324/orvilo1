@@ -24,7 +24,7 @@ const CloudBanner = dynamic(() => import('@/features/AlertBanner/CloudBanner'));
  * pathname would hide the tab bar inside a workspace — where it is the only
  * navigation a phone viewport gets.
  */
-const MOBILE_NAV_ROUTES = new Set(['/', '/inbox', '/me', '/tasks']);
+const MOBILE_NAV_ROUTES = ['/', '/inbox', '/me', '/my-work', '/tasks', '/teams', '/views'] as const;
 
 /**
  * Whether the tab bar belongs on this route.
@@ -35,7 +35,12 @@ const MOBILE_NAV_ROUTES = new Set(['/', '/inbox', '/me', '/tasks']);
 export const isMobileNavRoute = (
   pathname: string,
   activeSlug: string | null | undefined,
-): boolean => MOBILE_NAV_ROUTES.has(stripWorkspaceSlug(pathname, activeSlug));
+): boolean => {
+  const path = stripWorkspaceSlug(pathname, activeSlug);
+  return MOBILE_NAV_ROUTES.some((route) =>
+    route === '/' ? path === '/' : path === route || path.startsWith(`${route}/`),
+  );
+};
 
 const MobileMainLayout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);

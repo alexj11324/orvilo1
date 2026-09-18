@@ -25,6 +25,7 @@ import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
 
+import { inboxCardTitleKey } from './inboxCardCopy';
 import { versionedDecisionFromCard, visibleDecisionVerbs } from './inboxDecide';
 import {
   feedFilterForChip,
@@ -103,6 +104,10 @@ const WorkInboxPage = memo(() => {
     [cards, selectedId],
   );
   const decisionVerbs = selected ? visibleDecisionVerbs(selected) : [];
+  const titleFor = (card: NotificationFeedCard) => {
+    const key = inboxCardTitleKey(card);
+    return key ? t(key) : card.title;
+  };
 
   useEffect(() => {
     setInputDraft('');
@@ -344,7 +349,7 @@ const WorkInboxPage = memo(() => {
                 key={card.notificationId}
                 onClick={() => selectCard(card.notificationId, true)}
               >
-                <Text weight={card.read ? 400 : 600}>{card.title}</Text>
+                <Text weight={card.read ? 400 : 600}>{titleFor(card)}</Text>
                 <Text type="secondary">{card.content}</Text>
               </div>
             ))
@@ -358,7 +363,7 @@ const WorkInboxPage = memo(() => {
             <Empty description={t('inbox.selectItem')} />
           ) : (
             <>
-              <Text weight={600}>{selected.title}</Text>
+              <Text weight={600}>{titleFor(selected)}</Text>
               <Text>{selected.content}</Text>
               <Flexbox gap={8}>
                 {decisionVerbs.includes('submit_input') ? (

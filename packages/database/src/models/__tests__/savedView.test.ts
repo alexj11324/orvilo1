@@ -3,8 +3,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces } from '../../schemas';
+import { projects } from '../../schemas/project';
+import { teamMembers, teams } from '../../schemas/team';
 import type { OrviloDatabase } from '../../type';
-import { SavedViewBuiltinError, SavedViewConflictError, SavedViewModel } from '../savedView';
+import {
+  SavedViewBuiltinError,
+  SavedViewConflictError,
+  SavedViewModel,
+  SavedViewTeamError,
+} from '../savedView';
 import { TaskModel } from '../task';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -221,5 +228,47 @@ describe('SavedViewModel', () => {
     ).rejects.toBeInstanceOf(SavedViewBuiltinError);
     await expect(ownerViews.delete('builtin:all')).rejects.toBeInstanceOf(SavedViewBuiltinError);
     expect((await visitorViews.findById('builtin:all'))?.name).toBe('All tasks');
+  });
+
+  it('evaluates builtin projects as project rows, not an empty task list', async () => {
+    await serverDB.insert(projects).values({
+      id: 'view-proj',
+      identifier: 'VP',
+      name: 'Shown project',
+      userId: visitorId,
+      workspaceId,
+    });
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    const builtin = await visitorViews.findById('builtin:projects');
+    const result = await visitorViews.evaluate(builtin!);
+    expect(result.projects?.map((row) => row.name)).toEqual(['Shown project']);
+    expect(result.tasks ?? []).toEqual([]);
+    expect(result.total).toBe(1);
+  });
+
+  it('refuses to publish a team view for a team the owner cannot join', async () => {
+    await serverDB.insert(teams).values({
+      createdByUserId: ownerId,
+      id: 'view-private-team',
+      key: 'VT',
+      name: 'Private team',
+      visibility: 'private',
+      workspaceId,
+    });
+    await serverDB.insert(teamMembers).values({
+      teamId: 'view-private-team',
+      userId: ownerId,
+      workspaceId,
+    });
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    await expect(
+      visitorViews.create({
+        entityType: 'task',
+        name: 'Injected',
+        query: { entityType: 'task', schemaVersion: 1 },
+        teamId: 'view-private-team',
+        visibility: 'team',
+      }),
+    ).rejects.toBeInstanceOf(SavedViewTeamError);
   });
 });

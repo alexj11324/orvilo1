@@ -11,7 +11,7 @@ import type {
 import { builtinSavedViewKey, isBuiltinSavedViewId, notificationScopeKey } from '@orvilo/types';
 import { and, desc, eq, or, type SQL, sql } from 'drizzle-orm';
 
-import { teamMembers } from '../schemas/team';
+import { teamMembers, teams } from '../schemas/team';
 import type { NewSavedView, SavedViewItem } from '../schemas/workAttention';
 import { savedViews } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -22,6 +22,7 @@ import {
   WorkQueryError,
   WorkQueryModel,
 } from './workQuery';
+import { hasWorkspaceAdminAccess } from './workspace';
 
 export interface SavedViewEvaluation {
   groupBy?: Awaited<ReturnType<WorkQueryModel['queryTasks']>>['groupBy'];
@@ -58,6 +59,15 @@ export class SavedViewBuiltinError extends Error {
   constructor() {
     super('SAVED_VIEW_BUILTIN');
     this.name = 'SavedViewBuiltinError';
+  }
+}
+
+export class SavedViewTeamError extends Error {
+  readonly code = 'SAVED_VIEW_TEAM_FORBIDDEN' as const;
+
+  constructor() {
+    super('SAVED_VIEW_TEAM_FORBIDDEN');
+    this.name = 'SavedViewTeamError';
   }
 }
 
@@ -149,6 +159,29 @@ export class SavedViewModel {
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {}
+
+  private assertTeamShare = async (visibility: SavedViewVisibility, teamId: string | null) => {
+    if (visibility !== 'team') return;
+    if (!teamId || !this.workspaceId) throw new SavedViewTeamError();
+    const [team] = await this.db
+      .select({ id: teams.id })
+      .from(teams)
+      .where(and(eq(teams.id, teamId), eq(teams.workspaceId, this.workspaceId)))
+      .limit(1);
+    if (!team) throw new SavedViewTeamError();
+    const [member] = await this.db
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, this.userId)))
+      .limit(1);
+    if (member) return;
+    if (
+      await hasWorkspaceAdminAccess(this.db, { userId: this.userId, workspaceId: this.workspaceId })
+    ) {
+      return;
+    }
+    throw new SavedViewTeamError();
+  };
 
   private readable = (): SQL => {
     const owner = eq(savedViews.ownerUserId, this.userId);
@@ -244,6 +277,9 @@ export class SavedViewModel {
     if (params.query.entityType !== params.entityType) {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must match the query');
     }
+    const visibility = params.visibility ?? 'private';
+    const teamId = visibility === 'team' ? (params.teamId ?? null) : null;
+    await this.assertTeamShare(visibility, teamId);
     const [row] = await this.db
       .insert(savedViews)
       .values({
@@ -253,8 +289,8 @@ export class SavedViewModel {
         name: params.name,
         ownerUserId: this.userId,
         queryAst: params.query,
-        teamId: params.teamId ?? null,
-        visibility: params.visibility ?? 'private',
+        teamId,
+        visibility,
         workspaceId: this.workspaceId ?? null,
       } satisfies NewSavedView)
       .returning();
@@ -275,6 +311,12 @@ export class SavedViewModel {
   ): Promise<SavedViewItem | undefined> => {
     if (isBuiltinSavedViewId(id)) throw new SavedViewBuiltinError();
     if (patch.query) validateWorkQuery(patch.query);
+    const current = await this.findById(id);
+    if (!current || current.ownerUserId !== this.userId) return undefined;
+    const visibility = patch.visibility ?? current.visibility;
+    const teamId =
+      visibility === 'team' ? (patch.teamId !== undefined ? patch.teamId : current.teamId) : null;
+    await this.assertTeamShare(visibility, teamId);
     const [row] = await this.db
       .update(savedViews)
       .set({
@@ -282,7 +324,7 @@ export class SavedViewModel {
         ...(patch.layout !== undefined ? { layout: patch.layout } : {}),
         ...(patch.displayOptions !== undefined ? { displayOptions: patch.displayOptions } : {}),
         ...(patch.visibility !== undefined ? { visibility: patch.visibility } : {}),
-        ...(patch.teamId !== undefined ? { teamId: patch.teamId } : {}),
+        teamId,
         ...(patch.query !== undefined ? { queryAst: patch.query } : {}),
         definitionVersion: sql`${savedViews.definitionVersion} + 1`,
         updatedAt: new Date(),
@@ -324,7 +366,12 @@ export class SavedViewModel {
     try {
       validateWorkQuery(query);
       if (query.entityType === 'project') {
-        const result = await kernel.queryProjects({ limit: params.limit, query });
+        const result = await kernel.queryProjects({
+          afterId: params.afterId,
+          limit: params.limit,
+          query,
+          queryHash: params.queryHash,
+        });
         return {
           layout: 'list',
           needsRepair: false,

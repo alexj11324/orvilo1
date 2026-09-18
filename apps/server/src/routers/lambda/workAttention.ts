@@ -27,6 +27,7 @@ import {
   SavedViewBuiltinError,
   SavedViewConflictError,
   SavedViewModel,
+  SavedViewTeamError,
 } from '@/database/models/savedView';
 import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
@@ -401,10 +402,16 @@ export const workAttentionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.visibility === 'team' && !input.teamId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'team visibility requires teamId' });
+      }
       try {
         const row = await ctx.savedViewModel.create(input);
         return { data: row, message: 'View saved', success: true };
       } catch (error) {
+        if (error instanceof SavedViewTeamError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+        }
         return mapQueryError(error);
       }
     }),
@@ -569,6 +576,9 @@ export const workAttentionRouter = router({
         return { data: row, message: 'View updated', success: true };
       } catch (error) {
         if (error instanceof SavedViewBuiltinError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+        }
+        if (error instanceof SavedViewTeamError) {
           throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
         }
         if (error instanceof SavedViewConflictError) {

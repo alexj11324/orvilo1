@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { outboxRowToActivityEvent, projectOutboxEvent } from '../projection';
 import type { OutboxEventRow } from '../projection';
+import { outboxRowToActivityEvent, projectOutboxEvent } from '../projection';
 
 const row = (overrides: Partial<OutboxEventRow> = {}): OutboxEventRow => ({
   aggregateId: 'task_1',
@@ -41,11 +41,20 @@ describe('projectOutboxEvent', () => {
         aggregateId: 'ws-1',
         aggregateType: 'workspace',
         eventType: 'workspace.member.removed',
-        payload: { userId: 'user-9' },
+        payload: { authzVersion: 8, userId: 'user-9' },
       }),
     );
     expect(deliveries[0]).toEqual({
-      publish: { kind: 'kick', reason: 'workspace.member.removed', userId: 'user-9' },
+      publish: {
+        authzVersion: 8,
+        eventId: 'evt-1',
+        kind: 'kick',
+        reason: 'workspace.member.removed',
+        scope: 'workspace',
+        scopeId: 'ws-1',
+        userId: 'user-9',
+        workspaceId: 'ws-1',
+      },
       room: 'workspace:ws-1',
     });
     expect(deliveries[1]?.publish.kind).toBe('broadcast');
@@ -61,6 +70,72 @@ describe('projectOutboxEvent', () => {
       }),
     );
     expect(deliveries[0]?.publish.kind).toBe('kick');
+    expect(deliveries[0]?.publish).toMatchObject({ scope: 'workspace', scopeId: 'ws-1' });
+  });
+
+  it('kicks project-scoped on project_member.removed instead of a bare invalidate', () => {
+    const deliveries = projectOutboxEvent(
+      row({
+        aggregateId: 'prj_1',
+        aggregateType: 'project',
+        eventType: 'project_member.removed',
+        payload: { authzVersion: 12, userId: 'user-9' },
+        workspaceId: 'ws-1',
+      }),
+    );
+    expect(deliveries[0]).toEqual({
+      publish: {
+        authzVersion: 12,
+        eventId: 'evt-1',
+        kind: 'kick',
+        reason: 'project_member.removed',
+        scope: 'project',
+        scopeId: 'prj_1',
+        userId: 'user-9',
+        workspaceId: 'ws-1',
+      },
+      room: 'project:prj_1',
+    });
+    // The invalidate broadcast still follows so remaining members re-fetch.
+    expect(deliveries[1]?.publish.kind).toBe('broadcast');
+  });
+
+  it('scopes the project kick to the payload tenant when the row lacks one', () => {
+    const deliveries = projectOutboxEvent(
+      row({
+        aggregateId: 'prj_1',
+        aggregateType: 'project',
+        eventType: 'project_member.removed',
+        payload: { userId: 'user-9', workspaceId: 'ws-9' },
+      }),
+    );
+    expect(deliveries[0]?.publish).toMatchObject({ scope: 'project', workspaceId: 'ws-9' });
+  });
+
+  it('skips the project kick without a tenant but keeps the invalidate', () => {
+    const deliveries = projectOutboxEvent(
+      row({
+        aggregateId: 'prj_1',
+        aggregateType: 'project',
+        eventType: 'project_member.removed',
+        payload: { userId: 'user-9' },
+      }),
+    );
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]?.publish.kind).toBe('broadcast');
+  });
+
+  it('does not kick on project_member.added — grants never tear sockets down', () => {
+    const deliveries = projectOutboxEvent(
+      row({
+        aggregateId: 'prj_1',
+        aggregateType: 'project',
+        eventType: 'project_member.added',
+        payload: { userId: 'user-9' },
+        workspaceId: 'ws-1',
+      }),
+    );
+    expect(deliveries.every((d) => d.publish.kind === 'broadcast')).toBe(true);
   });
 
   it('passes collaboration.activity payloads through as activity messages', () => {
@@ -80,7 +155,10 @@ describe('projectOutboxEvent', () => {
       row({ eventType: 'collaboration.activity', payload: activity }),
     );
     expect(deliveries).toEqual([
-      { publish: { kind: 'broadcast', message: { event: activity, type: 'activity' } }, room: 'task:task_1' },
+      {
+        publish: { kind: 'broadcast', message: { event: activity, type: 'activity' } },
+        room: 'task:task_1',
+      },
     ]);
   });
 
@@ -119,7 +197,11 @@ describe('outboxRowToActivityEvent', () => {
     // not exist.
     expect(
       outboxRowToActivityEvent(
-        row({ aggregateId: 'ws-1', aggregateType: 'workspace', eventType: 'workspace.member.removed' }),
+        row({
+          aggregateId: 'ws-1',
+          aggregateType: 'workspace',
+          eventType: 'workspace.member.removed',
+        }),
       ),
     ).toBeNull();
   });

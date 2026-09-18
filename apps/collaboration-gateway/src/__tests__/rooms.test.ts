@@ -2,7 +2,7 @@
 import type { CollaborationServerMessage } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { PRESENCE_TTL_MS, RoomHub, type GatewayConnection } from '../rooms';
+import { type GatewayConnection, PRESENCE_TTL_MS, RoomHub } from '../rooms';
 
 const fakeConnection = (params: {
   connectionId: string;
@@ -111,7 +111,13 @@ describe('RoomHub', () => {
     });
     for (const c of [target1, target2, bystander, foreignWs]) hub.join(c.connection);
 
-    hub.kick('ws-1', 'user-9', 'workspace.member.suspended');
+    hub.kick({
+      reason: 'workspace.member.suspended',
+      scope: 'workspace',
+      scopeId: 'ws-1',
+      userId: 'user-9',
+      workspaceId: 'ws-1',
+    });
 
     for (const target of [target1, target2]) {
       expect(target.sent).toEqual([{ reason: 'workspace.member.suspended', type: 'revoked' }]);
@@ -132,10 +138,145 @@ describe('RoomHub', () => {
     hub.updatePresence('t1', 'task:task-1', { typing: true });
     bystander.sent.length = 0; // drop the presence broadcast itself
 
-    hub.kick('ws-1', 'user-9', 'workspace.member.removed');
+    hub.kick({
+      reason: 'workspace.member.removed',
+      scope: 'workspace',
+      scopeId: 'ws-1',
+      userId: 'user-9',
+      workspaceId: 'ws-1',
+    });
 
     // Peers stop rendering the kicked member immediately, not on TTL prune.
     expect(bystander.sent).toEqual([{ connectionId: 't1', type: 'presence-gone' }]);
+  });
+
+  it('a project-scoped kick drops the project room and its task rooms only', () => {
+    const hub = new RoomHub();
+    const projectRoom = fakeConnection({
+      connectionId: 'p1',
+      room: 'project:prj_1',
+      userId: 'user-9',
+    });
+    projectRoom.connection.projectId = 'prj_1';
+    const taskRoom = fakeConnection({
+      connectionId: 't1',
+      room: 'task:task-1',
+      userId: 'user-9',
+    });
+    taskRoom.connection.projectId = 'prj_1';
+    const otherProject = fakeConnection({
+      connectionId: 'p2',
+      room: 'project:other',
+      userId: 'user-9',
+    });
+    otherProject.connection.projectId = 'other';
+    const otherTask = fakeConnection({
+      connectionId: 't2',
+      room: 'task:task-2',
+      userId: 'user-9',
+    });
+    otherTask.connection.projectId = 'other';
+    const legacyTask = fakeConnection({
+      connectionId: 't3',
+      room: 'task:task-3',
+      userId: 'user-9',
+    }); // ticket minted before the project_id claim existed
+    for (const c of [projectRoom, taskRoom, otherProject, otherTask, legacyTask]) {
+      hub.join(c.connection);
+    }
+
+    hub.kick({
+      reason: 'project_member.removed',
+      scope: 'project',
+      scopeId: 'prj_1',
+      userId: 'user-9',
+      workspaceId: 'ws-1',
+    });
+
+    for (const dropped of [projectRoom, taskRoom]) {
+      expect(dropped.sent).toEqual([{ reason: 'project_member.removed', type: 'revoked' }]);
+      expect(dropped.wasClosed()).toBe(true);
+    }
+    // Other projects' rooms and pre-claim tickets keep their access.
+    for (const kept of [otherProject, otherTask, legacyTask]) {
+      expect(kept.sent).toHaveLength(0);
+      expect(kept.wasClosed()).toBe(false);
+    }
+  });
+
+  it('a task-scoped kick drops exactly that room', () => {
+    const hub = new RoomHub();
+    const taskConn = fakeConnection({ connectionId: 't1', room: 'task:task-1', userId: 'user-9' });
+    const projectConn = fakeConnection({
+      connectionId: 'p1',
+      room: 'project:prj_1',
+      userId: 'user-9',
+    });
+    projectConn.connection.projectId = 'prj_1';
+    hub.join(taskConn.connection);
+    hub.join(projectConn.connection);
+
+    hub.kick({
+      reason: 'task.delegation.revoked',
+      scope: 'task',
+      scopeId: 'task-1',
+      userId: 'user-9',
+      workspaceId: 'ws-1',
+    });
+
+    expect(taskConn.wasClosed()).toBe(true);
+    expect(projectConn.wasClosed()).toBe(false);
+  });
+
+  it('a versioned kick spares connections authorized at a newer version', () => {
+    const hub = new RoomHub();
+    const stale = fakeConnection({ connectionId: 'old', userId: 'user-9' });
+    stale.connection.authzVersion = 4;
+    const regranted = fakeConnection({
+      connectionId: 'new',
+      room: 'task:task-2',
+      userId: 'user-9',
+    });
+    regranted.connection.authzVersion = 8;
+    const unversioned = fakeConnection({
+      connectionId: 'legacy',
+      room: 'task:task-3',
+      userId: 'user-9',
+    });
+    for (const c of [stale, regranted, unversioned]) hub.join(c.connection);
+
+    hub.kick({
+      authzVersion: 6,
+      reason: 'workspace.member.removed',
+      scope: 'workspace',
+      scopeId: 'ws-1',
+      userId: 'user-9',
+      workspaceId: 'ws-1',
+    });
+
+    expect(stale.wasClosed()).toBe(true); // minted before the revoke
+    expect(unversioned.wasClosed()).toBe(true); // no version ⇒ predates the contract
+    expect(regranted.wasClosed()).toBe(false); // re-granted at v8 — the replayed v6 kick must not kill it
+  });
+
+  it('the sweep closes sockets whose ticket expired — expiry is not a revoke', () => {
+    const hub = new RoomHub();
+    const now = Date.now();
+    const expired = fakeConnection({ connectionId: 'e1', userId: 'user-9' });
+    expired.connection.ticketExpiresAt = now - 1;
+    const live = fakeConnection({ connectionId: 'l1', room: 'task:task-2', userId: 'user-9' });
+    live.connection.ticketExpiresAt = now + 60_000;
+    const noExpiry = fakeConnection({ connectionId: 'l2', room: 'task:task-3', userId: 'user-9' });
+    for (const c of [expired, live, noExpiry]) hub.join(c.connection);
+
+    hub.sweepExpired(now);
+
+    // Expired tickets close silently — no 'revoked' frame, so the client
+    // re-authorizes (and only parks when the grant itself is gone).
+    expect(expired.sent).toHaveLength(0);
+    expect(expired.wasClosed()).toBe(true);
+    expect(live.wasClosed()).toBe(false);
+    expect(noExpiry.wasClosed()).toBe(false);
   });
 
   it('ignores malformed presence payloads', () => {

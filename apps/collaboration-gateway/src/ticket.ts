@@ -18,6 +18,12 @@ export interface GatewayTicket {
   expiresAt: number;
   /** JWT id — unique per mint, used to correlate logs without payloads. */
   jti: string;
+  /**
+   * Project the room's resource belongs to (project rooms and their task
+   * rooms). Project-scoped kicks match on this claim; tickets minted before
+   * the claim existed simply lack it and die at expiry.
+   */
+  projectId?: string;
   /** Wire room key (`{scope}:{id}`) the ticket was minted for. */
   room: string;
   userId: string;
@@ -78,6 +84,7 @@ export const verifyRoomTicket = async (token: string): Promise<GatewayTicket | n
       typeof payload.workspace_id !== 'string' ||
       !isActor(payload.actor) ||
       (payload.authz_version !== undefined && typeof payload.authz_version !== 'number') ||
+      (payload.project_id !== undefined && typeof payload.project_id !== 'string') ||
       typeof payload.jti !== 'string' ||
       typeof payload.exp !== 'number'
     ) {
@@ -98,6 +105,7 @@ export const verifyRoomTicket = async (token: string): Promise<GatewayTicket | n
       authzVersion: payload.authz_version as number | undefined,
       expiresAt: payload.exp * 1000,
       jti: payload.jti,
+      projectId: payload.project_id as string | undefined,
       room: payload.room,
       userId: payload.sub,
       workspaceId: payload.workspace_id,

@@ -79,6 +79,13 @@ export interface RoomTicketClaims {
   actor: CollaborationActor;
   /** `workspace_members.authz_version` snapshot at issue time. */
   authzVersion?: number;
+  /**
+   * Project the room's resource belongs to: the project id for `project:*`
+   * rooms and the owning project for `task:*` rooms. Lets a project-scoped
+   * revocation reach the member's task-room sockets of the same project
+   * without the gateway needing a database lookup.
+   */
+  projectId?: string;
   /** Wire room key (`{scope}:{id}`). */
   room: string;
   workspaceId: string;
@@ -95,16 +102,37 @@ export interface RoomAuthorization {
 
 /**
  * What the server-side publish hook accepts. `broadcast` fans a room message
- * out verbatim; `kick` tears down every connection of one actor across the
- * workspace's rooms (revocation is workspace-scoped, not room-scoped).
+ * out verbatim; `kick` tears down the revoked member's live connections for
+ * one authorization scope — a workspace revoke drops every room of the
+ * tenant, a project revoke drops only that project's room plus its task
+ * rooms, a task revoke drops the single task room.
  */
 export type RoomPublishEnvelope =
   | { kind: 'broadcast'; message: CollaborationServerMessage }
-  | { kind: 'kick'; reason: string; userId: string };
+  | {
+      /**
+       * `workspace_members.authz_version` stamped by the revoking write. A
+       * connection re-authorized at a NEWER version was granted after this
+       * revoke and survives the kick — a late/replayed revoke must not tear
+       * down a fresh grant. Absent means "apply to every version" (legacy).
+       */
+      authzVersion?: number;
+      /** Originating outbox event id — observability/dedup correlation. */
+      eventId?: string;
+      kind: 'kick';
+      reason: string;
+      /** Resource scope the revocation applies to. */
+      scope: 'project' | 'task' | 'workspace';
+      /** Resource id inside the scope. */
+      scopeId: string;
+      userId: string;
+      /** Tenant the kick applies to — guards cross-workspace accidents. */
+      workspaceId: string;
+    };
 
 export interface RoomPublishRequest {
   publish: RoomPublishEnvelope;
-  /** Wire room key. Kicks still name the workspace room they were projected for. */
+  /** Wire room key — the room the event was projected for; the kick envelope itself carries the revocation scope. */
   room: string;
 }
 
@@ -122,6 +150,12 @@ export interface RoomSnapshotResult {
   /** Opaque server cursor; pass back as `cursor` for the next incremental page. */
   nextCursor?: string;
   presence: PresenceEntry[];
+  /**
+   * Set when the supplied cursor could not be decoded — the page is the
+   * newest history slice and the consumer should treat it as a fresh resync
+   * (re-baseline its dedup set), not as a continuation of the old position.
+   */
+  resyncRequired?: boolean;
 }
 
 /** Aggregate types the outbox projects onto rooms. */

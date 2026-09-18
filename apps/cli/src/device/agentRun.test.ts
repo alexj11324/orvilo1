@@ -7,25 +7,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { spawnHeteroAgentRun } from './agentRun';
 
-const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }));
+const { spawnMock, execFileSyncMock } = vi.hoisted(() => ({
+  execFileSyncMock: vi.fn(),
+  spawnMock: vi.fn(),
+}));
 const { saveTaskMock, getTaskMock, removeTaskMock } = vi.hoisted(() => ({
   getTaskMock: vi.fn(),
   removeTaskMock: vi.fn(),
   saveTaskMock: vi.fn(),
 }));
 
-vi.mock('node:child_process', () => ({ spawn: spawnMock }));
+vi.mock('node:child_process', () => ({
+  execFileSync: execFileSyncMock,
+  spawn: spawnMock,
+}));
 vi.mock('../daemon/taskRegistry', () => ({
   getTask: getTaskMock,
   removeTask: removeTaskMock,
   saveTask: saveTaskMock,
 }));
-const { cancelAgentRunMock, registerAgentRunMock } = vi.hoisted(() => ({
+const { cancelAgentRunMock, registerAgentRunMock, getAgentRunMock } = vi.hoisted(() => ({
   cancelAgentRunMock: vi.fn(),
+  getAgentRunMock: vi.fn(),
   registerAgentRunMock: vi.fn(),
 }));
 vi.mock('./agentRunRegistry', () => ({
   cancelAgentRun: cancelAgentRunMock,
+  getAgentRun: getAgentRunMock,
   registerAgentRun: registerAgentRunMock,
 }));
 // `resolveHeteroSpawnCwd` stats the candidate directories; treat every path as
@@ -65,13 +73,37 @@ describe('spawnHeteroAgentRun', () => {
     saveTaskMock.mockReset();
     getTaskMock.mockReset();
     removeTaskMock.mockReset();
+    getAgentRunMock.mockReset();
+    cancelAgentRunMock.mockReset();
+    // Unreadable leader cmdline → the conservative "still ours" kill path.
+    execFileSyncMock.mockReset().mockReturnValue('');
   });
 
   afterEach(() => {
     spawnMock.mockReset();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
+    vi.useRealTimers();
   });
+
+  /**
+   * `process.kill` double: each group probes alive until a real signal lands
+   * on ITS pid, then signal-0 probes report ESRCH — i.e. that writer is
+   * observed dead. Tracked per pid so a replacement spawn stays alive.
+   */
+  const mockGroupDeathOnKill = () => {
+    const dead = new Set<number>();
+    return vi.spyOn(process, 'kill').mockImplementation((pid, signal) => {
+      const target = Math.abs(pid as number);
+      if (signal !== 0) dead.add(target);
+      if (dead.has(target)) {
+        const gone = new Error('no such process') as NodeJS.ErrnoException;
+        gone.code = 'ESRCH';
+        throw gone;
+      }
+      return true;
+    });
+  };
 
   it('spawns `lh hetero exec` in server-ingest mode via the current CLI entry', async () => {
     const child = makeFakeChild();
@@ -197,28 +229,34 @@ describe('spawnHeteroAgentRun', () => {
     );
   });
 
-  it('appends --resume when resuming a session', () => {
+  it('appends --resume when resuming a session', async () => {
     const child = makeFakeChild();
     spawnMock.mockReturnValue(child);
 
-    void spawnHeteroAgentRun({ ...baseParams, resumeSessionId: 'sess-9' });
+    const ack = spawnHeteroAgentRun({ ...baseParams, resumeSessionId: 'sess-9' });
 
     const [, args] = spawnMock.mock.calls[0];
     expect(args).toContain('--resume');
     expect(args).toContain('sess-9');
+    // Admissions serialize per operation — settle this one so later tests
+    // sharing the operationId are not stuck behind a never-emitted child.
+    child.emit('spawn');
+    await ack;
   });
 
-  it('forwards resolved args to lh hetero exec', () => {
+  it('forwards resolved args to lh hetero exec', async () => {
     const child = makeFakeChild();
     spawnMock.mockReturnValue(child);
 
-    void spawnHeteroAgentRun({
+    const ack = spawnHeteroAgentRun({
       ...baseParams,
       args: ['--model', 'opus', '--effort', 'high'],
     });
 
     const [, args] = spawnMock.mock.calls[0];
     expect(args.slice(-4)).toEqual(['--model', 'opus', '--effort', 'high']);
+    child.emit('spawn');
+    await ack;
   });
 
   it('sends a content-block array to stdin when systemContext is provided', async () => {
@@ -380,7 +418,7 @@ describe('spawnHeteroAgentRun', () => {
 
   it('stops the stale writer and respawns when a retry carries a newer generation', async () => {
     getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
-    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
+    const killSpy = mockGroupDeathOnKill();
     const child = makeFakeChild();
     Object.defineProperty(child, 'pid', { value: 5555 });
     spawnMock.mockReturnValue(child);
@@ -395,7 +433,114 @@ describe('spawnHeteroAgentRun', () => {
 
     await expect(ackPromise).resolves.toEqual({ status: 'accepted' });
     expect(cancelAgentRunMock).toHaveBeenCalledWith('op', 'SIGINT');
+    // SIGKILL was delivered to the old group before the record was dropped.
+    expect(killSpy).toHaveBeenCalledWith(-4242, 'SIGKILL');
     expect(removeTaskMock).toHaveBeenCalledWith('op');
-    killSpy.mockRestore();
+  });
+
+  it('refuses to spawn a second writer when the forced kill is undeliverable', async () => {
+    // EPERM on SIGKILL: the old writer's fate is unknown — the admission must
+    // be rejected and the registry record kept for recovery, never dropped.
+    getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
+    vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+      if (signal === 'SIGKILL') {
+        const denied = new Error('operation not permitted') as NodeJS.ErrnoException;
+        denied.code = 'EPERM';
+        throw denied;
+      }
+      return true;
+    });
+
+    const ack = await spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 });
+
+    expect(ack).toEqual({ reason: 'previous run has not confirmed exit', status: 'rejected' });
+    expect(spawnMock).not.toHaveBeenCalled();
+    expect(removeTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps waiting when SIGKILL lands but the group lingers — no spawn until exit', async () => {
+    vi.useFakeTimers();
+    getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
+    // The group never dies: every probe reports alive, signals are accepted.
+    vi.spyOn(process, 'kill').mockReturnValue(true);
+
+    const ackPromise = spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 });
+    // Let the admission reach the post-SIGKILL wait loop, then run the whole
+    // confirm window out — the group is still alive at the deadline.
+    await vi.advanceTimersByTimeAsync(4000);
+    const ack = await ackPromise;
+
+    expect(ack).toEqual({ reason: 'previous run has not confirmed exit', status: 'rejected' });
+    expect(spawnMock).not.toHaveBeenCalled();
+    expect(removeTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('replaces only once when two superseding generations race', async () => {
+    getTaskMock
+      .mockReturnValueOnce({ operationId: 'op', pid: 4242, runGeneration: 1 }) // first admission
+      .mockReturnValue({ operationId: 'op', pid: 5555, runGeneration: 2 }); // second sees the fresh record
+    mockGroupDeathOnKill();
+    const child = makeFakeChild();
+    Object.defineProperty(child, 'pid', { value: 5555 });
+    spawnMock.mockReturnValue(child);
+
+    const [ackA, ackB] = await Promise.all([
+      (async () => {
+        const ackPromise = spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 });
+        await vi.waitFor(() => expect(spawnMock).toHaveBeenCalledTimes(1));
+        child.emit('spawn');
+        return ackPromise;
+      })(),
+      spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 }),
+    ]);
+
+    expect(ackA).toEqual({ status: 'accepted' });
+    expect(ackB).toEqual({ status: 'accepted' }); // deduped, not a second writer
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not signal a reused pid whose leader is a foreign process', async () => {
+    // PID reuse after a daemon restart: pid 4242 now belongs to an unrelated
+    // process. It must not be signaled — the record is stale, so the new run
+    // simply replaces it.
+    getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
+    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
+    execFileSyncMock.mockReturnValue('vim /tmp/notes.txt\n');
+    const child = makeFakeChild();
+    Object.defineProperty(child, 'pid', { value: 5555 });
+    spawnMock.mockReturnValue(child);
+
+    const ackPromise = spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 });
+    await vi.waitFor(() => expect(spawnMock).toHaveBeenCalledTimes(1));
+    child.emit('spawn');
+
+    await expect(ackPromise).resolves.toEqual({ status: 'accepted' });
+    // Only signal-0 liveness probes were sent — never a real signal.
+    expect(killSpy).not.toHaveBeenCalledWith(expect.anything(), 'SIGKILL');
+    expect(killSpy).not.toHaveBeenCalledWith(expect.anything(), 'SIGINT');
+    expect(cancelAgentRunMock).not.toHaveBeenCalled();
+    expect(removeTaskMock).toHaveBeenCalledWith('op');
+  });
+
+  it('trusts the in-process registry for pid identity without a cmdline probe', async () => {
+    // A run this daemon spawned: the pgid was minted by its own spawn, so no
+    // `ps`/PowerShell probe runs even when the exec shim would answer.
+    getTaskMock.mockReturnValue({ operationId: 'op', pid: 4242, runGeneration: 1 });
+    getAgentRunMock.mockReturnValue({ child: { pid: 4242 }, exited: false });
+    mockGroupDeathOnKill();
+    execFileSyncMock.mockImplementation(() => {
+      throw new Error('probe must not run');
+    });
+    const child = makeFakeChild();
+    Object.defineProperty(child, 'pid', { value: 5555 });
+    spawnMock.mockReturnValue(child);
+
+    const ackPromise = spawnHeteroAgentRun({ ...baseParams, runGeneration: 2 });
+    await vi.waitFor(() => expect(spawnMock).toHaveBeenCalledTimes(1));
+    child.emit('spawn');
+
+    await expect(ackPromise).resolves.toEqual({ status: 'accepted' });
+    expect(execFileSyncMock).not.toHaveBeenCalled();
+    expect(cancelAgentRunMock).toHaveBeenCalledWith('op', 'SIGINT');
   });
 });

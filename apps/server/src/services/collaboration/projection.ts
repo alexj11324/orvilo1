@@ -36,6 +36,12 @@ const payloadUserId = (payload: unknown): string | null => {
   return typeof candidate === 'string' ? candidate : null;
 };
 
+/** `workspace_members.authz_version` the revoking write stamped — drives the gateway's stale-kick guard. */
+const payloadAuthzVersion = (payload: unknown): number | undefined => {
+  if (!isRecord(payload)) return undefined;
+  return typeof payload.authzVersion === 'number' ? payload.authzVersion : undefined;
+};
+
 const isActivityEventPayload = (payload: unknown): payload is ServerActivityEvent =>
   isRecord(payload) &&
   typeof payload.eventId === 'string' &&
@@ -45,7 +51,8 @@ const isActivityEventPayload = (payload: unknown): payload is ServerActivityEven
   isRecord(payload.target);
 
 const invalidateNotice = (aggregateType: string, aggregateId: string): InvalidateNotice => ({
-  entity: aggregateType === 'project' ? 'project' : aggregateType === 'workspace' ? 'workspace' : 'task',
+  entity:
+    aggregateType === 'project' ? 'project' : aggregateType === 'workspace' ? 'workspace' : 'task',
   entityId: aggregateId,
   type: 'invalidate',
 });
@@ -67,13 +74,19 @@ const invalidateNotice = (aggregateType: string, aggregateId: string): Invalidat
  */
 export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
   if (!ROOM_SCOPES.has(event.aggregateType)) return [];
-  const room = roomKey({ id: event.aggregateId, scope: event.aggregateType as 'project' | 'task' | 'workspace' });
+  const room = roomKey({
+    id: event.aggregateId,
+    scope: event.aggregateType as 'project' | 'task' | 'workspace',
+  });
   const deliveries: RoomDelivery[] = [];
 
   // Revocation rides ahead of the notice so a connected-but-removed member
   // loses the socket before any further room traffic reaches them. A voluntary
   // leave kicks too — otherwise the departing member's sockets keep receiving
-  // room broadcasts until they close on their own.
+  // room broadcasts until they close on their own. The kick envelope carries
+  // the full revocation contract: the tenant, the revoked scope, the authz
+  // version the write stamped (so a stale kick never kills a re-granted
+  // connection) and the outbox event id for correlation.
   if (
     event.aggregateType === 'workspace' &&
     (event.eventType === 'workspace.member.removed' ||
@@ -83,7 +96,52 @@ export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
     const userId = payloadUserId(event.payload);
     if (userId) {
       deliveries.push({
-        publish: { kind: 'kick', reason: event.eventType, userId },
+        publish: {
+          authzVersion: payloadAuthzVersion(event.payload),
+          eventId: event.eventId,
+          kind: 'kick',
+          reason: event.eventType,
+          scope: 'workspace',
+          scopeId: event.aggregateId,
+          userId,
+          workspaceId: event.aggregateId,
+        },
+        room,
+      });
+    }
+  }
+
+  // Project-scoped revocation: losing a project grant must tear down the
+  // member's project room AND their task-room sockets inside that project —
+  // degrading to a plain invalidate would leave live subscriptions running
+  // past the revocation. The gateway matches scopeId against the ticket's
+  // `project_id` claim; the payload's authzVersion is the member's bumped
+  // `workspace_members.authz_version` so a re-grant outranks a replayed kick.
+  if (
+    event.aggregateType === 'project' &&
+    (event.eventType === 'project_member.removed' || event.eventType === 'project_member.suspended')
+  ) {
+    const userId = payloadUserId(event.payload);
+    const workspaceId =
+      typeof event.workspaceId === 'string'
+        ? event.workspaceId
+        : isRecord(event.payload) && typeof event.payload.workspaceId === 'string'
+          ? event.payload.workspaceId
+          : null;
+    // Without a tenant the kick cannot be scoped safely — the broadcast below
+    // still tells the room to re-fetch, and the ticket expiry bounds the leak.
+    if (userId && workspaceId) {
+      deliveries.push({
+        publish: {
+          authzVersion: payloadAuthzVersion(event.payload),
+          eventId: event.eventId,
+          kind: 'kick',
+          reason: event.eventType,
+          scope: 'project',
+          scopeId: event.aggregateId,
+          userId,
+          workspaceId,
+        },
         room,
       });
     }
@@ -100,7 +158,10 @@ export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
   deliveries.push({
     publish: {
       kind: 'broadcast',
-      message: invalidateNotice(event.aggregateType, event.aggregateId) as CollaborationServerMessage,
+      message: invalidateNotice(
+        event.aggregateType,
+        event.aggregateId,
+      ) as CollaborationServerMessage,
     },
     room,
   });

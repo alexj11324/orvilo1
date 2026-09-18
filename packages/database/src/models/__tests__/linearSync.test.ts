@@ -11,6 +11,7 @@ import {
   linearProjectBindings,
   linearSyncInbox,
   linearSyncOutbox,
+  linearSyncScopes,
   linearTeamLinks,
   projects,
   taskDomainEvents,
@@ -1515,5 +1516,97 @@ describe('LinearSyncModel', () => {
     await expect(
       new LinearSyncModel(db, otherWorkspaceId).upsertScope({ installationId }),
     ).rejects.toThrow('does not belong to this workspace');
+  });
+
+  it('fences scope import commits to owner, fence, run, revision and a live lease', async () => {
+    await createInstallation();
+    const model = new LinearSyncModel(db, workspaceId);
+    const scope = await model.upsertScope({ installationId });
+
+    const claimed = await model.claimScopeImport({ leaseOwner: 'worker-a', scopeId: scope.id });
+    expect(claimed).not.toBeNull();
+    const claimA = {
+      fence: claimed!.leaseFence,
+      importRunId: claimed!.importRunId,
+      owner: 'worker-a',
+      scopeRevision: claimed!.scopeRevision,
+    };
+
+    // The claimed worker commits progress.
+    const committed = await model.updateScopeImportState(
+      scope.id,
+      { importPhase: 'projects' },
+      claimA,
+    );
+    expect(committed?.importPhase).toBe('projects');
+
+    // Every mismatched claim dimension misses the update.
+    for (const bad of [
+      { ...claimA, owner: 'worker-b' },
+      { ...claimA, fence: claimA.fence + 1 },
+      { ...claimA, importRunId: 'other-run' },
+      { ...claimA, scopeRevision: claimA.scopeRevision + 1 },
+    ]) {
+      expect(
+        await model.updateScopeImportState(scope.id, { importPhase: 'issues' }, bad),
+      ).toBeNull();
+    }
+
+    // Takeover: the lease expires, worker-b claims, and worker-a's commits
+    // can no longer land stale progress on the new run.
+    await db
+      .update(linearSyncScopes)
+      .set({ lockedUntil: new Date(Date.now() - 1_000) })
+      .where(eq(linearSyncScopes.id, scope.id));
+    const claimedB = await model.claimScopeImport({ leaseOwner: 'worker-b', scopeId: scope.id });
+    expect(claimedB).not.toBeNull();
+    expect(claimedB!.leaseFence).toBe(claimA.fence + 1);
+
+    expect(
+      await model.updateScopeImportState(
+        scope.id,
+        { lastError: 'stale failure', status: 'failed' },
+        claimA,
+      ),
+    ).toBeNull();
+    const committedB = await model.updateScopeImportState(
+      scope.id,
+      { importPhase: 'issues' },
+      {
+        fence: claimedB!.leaseFence,
+        importRunId: claimedB!.importRunId,
+        owner: 'worker-b',
+        scopeRevision: claimedB!.scopeRevision,
+      },
+    );
+    expect(committedB?.importPhase).toBe('issues');
+
+    // A scope-revision bump (control-plane reset) also invalidates the claim.
+    await model.upsertScope({ installationId });
+    expect(
+      await model.updateScopeImportState(scope.id, { importPhase: 'teams' }, claimA),
+    ).toBeNull();
+
+    // An expired lease rejects even the matching owner's commit.
+    await db
+      .update(linearSyncScopes)
+      .set({ lockedUntil: new Date(Date.now() - 1_000) })
+      .where(eq(linearSyncScopes.id, scope.id));
+    expect(
+      await model.updateScopeImportState(
+        scope.id,
+        { importPhase: 'teams' },
+        {
+          fence: claimedB!.leaseFence,
+          importRunId: claimedB!.importRunId,
+          owner: 'worker-b',
+          scopeRevision: claimedB!.scopeRevision + 1,
+        },
+      ),
+    ).toBeNull();
+
+    // Control-plane commits without a claim stay unconditional.
+    const control = await model.updateScopeImportState(scope.id, { lastError: 'manual reset' });
+    expect(control?.lastError).toBe('manual reset');
   });
 });

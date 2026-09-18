@@ -145,7 +145,7 @@
   "agentDocuments.overwriteConfirm.warning": "Existing documents with the same filename will be replaced.",
   "agentDocuments.title": "Agent Documents",
   "agentEngine.effort.label": "Reasoning effort",
-  "agentEngine.engine.claudeSdk": "Claude Agent SDK",
+  "agentEngine.engine.claudeSdk": "Claude Code",
   "agentEngine.engine.codexAppServer": "Codex",
   "agentEngine.engine.label": "Engine",
   "agentEngine.engine.limitedCapabilities": "This engine cannot ask questions during a run or use Orvilo builtin tools yet.",

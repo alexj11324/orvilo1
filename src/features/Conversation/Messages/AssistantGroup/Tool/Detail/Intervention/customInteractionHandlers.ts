@@ -169,6 +169,15 @@ const HETERO_CUSTOM_INTERACTION_IDENTIFIERS = new Set<string>([
   DEVIN_IDENTIFIER,
   DROID_IDENTIFIER,
   QODER_IDENTIFIER,
+  // Standard-ACP providers — permission + elicitation requests surface the
+  // same AskUserQuestion-style inline form (submitted through the AskUser
+  // bridge rather than a synthetic user turn).
+  'amp',
+  'codebuddy',
+  'codex',
+  'kimi-code',
+  'opencode',
+  'pi',
 ]);
 
 export const isHeteroInteractionIdentifier = (identifier: string) =>

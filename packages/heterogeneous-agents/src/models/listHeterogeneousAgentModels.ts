@@ -11,9 +11,11 @@ import type {
 import { isRecord } from '@orvilo/utils/object';
 
 import { getHeterogeneousTypeLabel } from '../labels';
+import { ACP_RUNTIME_AGENT_TYPES } from '../spawn/acpRuntime';
 import { resolveCliSpawnPlan } from '../spawn/cliSpawn';
 import { listDroidAcpModels } from '../spawn/droidAcpSession';
 import { resolveHeteroSpawnCommand } from '../spawn/resolveCliCommand';
+import { listStandardAcpModels, resolveAcpSpawnTarget } from '../spawn/standardAcpAgents';
 import { listTraeAcpModels } from '../spawn/traeAcpSession';
 
 const execFilePromise = promisify(execFile);
@@ -273,6 +275,30 @@ export const listHeterogeneousAgentModels = async (
   };
 
   try {
+    // ACP-first discovery for the migrated runtimes: a throwaway
+    // `session/new` exposes the agent's model config option. When the runtime
+    // is missing or exposes no catalog, fall back to the vendor's legacy
+    // model-listing command below.
+    if (ACP_RUNTIME_AGENT_TYPES.has(params.type)) {
+      try {
+        const target = await resolveAcpSpawnTarget(
+          params.type,
+          resolved.command,
+          env as NodeJS.ProcessEnv,
+        );
+        const models = await listStandardAcpModels(params.type, {
+          args: params.args,
+          commandPath: target.commandPath,
+          cwd: params.cwd ?? process.cwd(),
+          env: target.env,
+          timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
+        });
+        if (models.length > 0) return { models, status: 'success', updatedAt };
+      } catch {
+        // Fall through to the legacy catalog probe below.
+      }
+    }
+
     if (params.type === 'droid') {
       const models = await listDroidAcpModels({
         args: params.args,

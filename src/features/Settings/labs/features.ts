@@ -14,8 +14,6 @@ export type LabStage = 'alpha' | 'beta';
 type LabFeatureI18nKey =
   | 'agentGraphConfig'
   | 'artifactDeployment'
-  | 'claudeCodeSdk'
-  | 'codexAppServer'
   | 'desktopSplitView'
   | 'evalCapture'
   | 'heteroSessionImport'
@@ -106,20 +104,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     flag: 'enableImessage',
     i18nKey: 'imessage',
     searchKeywords: ['imessage', 'bluebubbles'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableClaudeCodeSdk',
-    i18nKey: 'claudeCodeSdk',
-    searchKeywords: ['claude code', 'claude sdk'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableCodexAppServer',
-    i18nKey: 'codexAppServer',
-    searchKeywords: ['codex', 'app server'],
     stage: 'alpha',
   },
   // rides on the Claude Code hetero-agent stack: scans local CLI transcripts

@@ -3,45 +3,59 @@
  *
  * Maps agent type keys to their adapter constructors. New agents are added
  * by registering here — no other code changes needed.
+ *
+ * Every local agent now executes through an ACP v1 session, so the migrated
+ * types share `TraeAcpAdapter` — parameterized by the runtime spec's
+ * `provider` / `eventPrefix` — instead of a per-vendor stream-json adapter.
+ * The legacy adapters remain exported from `./adapters` for tests and for
+ * parsing archived traces, but are no longer registered for live traffic.
  */
 
 import {
-  AmpAdapter,
-  ClaudeCodeAdapter,
   ClaudeCodeSdkAdapter,
-  CodeBuddyAdapter,
-  CodexAdapter,
   CursorAcpAdapter,
   CursorAdapter,
-  DroidAcpAdapter,
   DevinAcpAdapter,
+  DroidAcpAdapter,
   GrokBuildAdapter,
-  KimiCodeAdapter,
-  OpenCodeAdapter,
-  PiAdapter,
-  QoderAdapter,
   TraeAcpAdapter,
 } from './adapters';
+import type { AcpSessionAdapterOptions } from './adapters/traeAcp';
 import type { LocalHeterogeneousAgentType } from './config';
+import { getAcpAgentRuntime } from './spawn/acpRuntime';
 import type { AgentEventAdapter } from './types';
 
 interface AgentRegistryEntry {
   createAdapter: () => AgentEventAdapter;
 }
 
+/**
+ * Build the `TraeAcpAdapter` options for a standard-ACP agent from its runtime
+ * spec — `provider` stamps events, `eventPrefix` selects the synthetic
+ * lifecycle payload names the session emits.
+ */
+const acpAdapterOptions = (agentType: string): AcpSessionAdapterOptions => {
+  const spec = getAcpAgentRuntime(agentType);
+  if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
+  return { eventPrefix: spec.eventPrefix, provider: spec.provider };
+};
+
 const localAgentRegistry = {
   'amp': {
-    createAdapter: () => new AmpAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('amp')),
   },
   'claude-code': {
-    createAdapter: () => new ClaudeCodeAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('claude-code')),
   },
   'codebuddy': {
-    createAdapter: () => new CodeBuddyAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('codebuddy')),
   },
   'codex': {
-    createAdapter: () => new CodexAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('codex')),
   },
+  // The Cursor ACP session feeds its pipeline with the 'cursor-acp' runtime
+  // key; the 'cursor' entry stays on the legacy adapter for archived-trace
+  // parsing (no live session resolves it anymore).
   'cursor': {
     createAdapter: () => new CursorAdapter(),
   },
@@ -55,16 +69,16 @@ const localAgentRegistry = {
     createAdapter: () => new GrokBuildAdapter(),
   },
   'kimi-code': {
-    createAdapter: () => new KimiCodeAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('kimi-code')),
   },
   'opencode': {
-    createAdapter: () => new OpenCodeAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('opencode')),
   },
   'pi': {
-    createAdapter: () => new PiAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('pi')),
   },
   'qoder': {
-    createAdapter: () => new QoderAdapter(),
+    createAdapter: () => new TraeAcpAdapter(acpAdapterOptions('qoder')),
   },
   'trae': {
     createAdapter: () => new TraeAcpAdapter(),

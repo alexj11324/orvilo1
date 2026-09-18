@@ -7,14 +7,7 @@
  * types are vendor-neutral.
  */
 export type HeterogeneousAgentRuntimeState =
-  | 'starting'
-  | 'running'
-  | 'monitoring'
-  | 'idle'
-  | 'stale'
-  | 'closing'
-  | 'closed'
-  | 'error';
+  'starting' | 'running' | 'monitoring' | 'idle' | 'stale' | 'closing' | 'closed' | 'error';
 
 export interface HeterogeneousAgentRuntimeTask {
   description?: string;
@@ -35,11 +28,19 @@ export interface HeterogeneousAgentRuntimeStatus {
   state: HeterogeneousAgentRuntimeState;
   transport:
     | 'acp-stdio'
+    | 'amp-acp'
+    | 'claude-code-acp'
     | 'claude-sdk'
     | 'cli-spawn'
+    | 'codebuddy-acp'
+    | 'codex-acp'
     | 'codex-app-server'
     | 'cursor-acp'
     | 'droid-acp'
     | 'devin-acp'
+    | 'kimi-code-acp'
+    | 'opencode-acp'
+    | 'pi-acp'
+    | 'qoder-acp'
     | 'trae-acp';
 }

@@ -2,39 +2,10 @@ import type {
   HeterogeneousProviderBindingReference,
   HeterogeneousProviderBindingResolution,
 } from '@orvilo/heterogeneous-agents';
-import type { AgentInputPlan, AgentPromptInput } from '@orvilo/heterogeneous-agents/spawn';
 
 export interface HeterogeneousAgentImageAttachment {
   id: string;
   url: string;
-}
-
-export interface HeterogeneousAgentBuildPlan {
-  args: string[];
-  /**
-   * Sensitive positional payload appended to `args` only at the spawn boundary.
-   * Keeping it separate prevents generic argv logging and trace metadata from
-   * persisting conversation content for CLIs that cannot read prompts on stdin.
-   */
-  argvPayload?: string;
-  stdinPayload?: string;
-}
-
-export interface HeterogeneousAgentBuildPlanHelpers {
-  buildAgentInput: (agentType: string, input: AgentPromptInput) => Promise<AgentInputPlan>;
-}
-
-export interface HeterogeneousAgentBuildPlanParams {
-  args: string[];
-  helpers: HeterogeneousAgentBuildPlanHelpers;
-  /**
-   * Optional path to an MCP config JSON written by the controller (e.g. for
-   * the local `orvilo_cc` AskUserQuestion server). Drivers that recognize the
-   * field append `--mcp-config <path>`; others ignore it.
-   */
-  mcpConfigPath?: string;
-  promptInput: AgentPromptInput;
-  resumeSessionId?: string;
 }
 
 export interface ProviderBindingFilePlan {
@@ -74,14 +45,13 @@ export interface ProviderBindingPlan {
 }
 
 /**
- * Per-agent CLI flag composition + stdin shape. Stream framing is no longer the
- * driver's concern — `AgentStreamPipeline` (`@orvilo/heterogeneous-agents/spawn`)
- * runs JSONL parsing + adapter conversion uniformly for every agent type.
+ * Per-agent provider/server-default binding composition. Every local agent
+ * executes through an ACP v1 session (`spawnAgent` / `StandardAcpSession`),
+ * so process argv + stream framing are no longer the driver's concern — a
+ * driver only translates a LobeHub binding reference into the env vars,
+ * profile files, and selector args the agent's ACP runtime understands.
  */
 export interface HeterogeneousAgentDriver {
-  buildSpawnPlan: (
-    params: HeterogeneousAgentBuildPlanParams,
-  ) => Promise<HeterogeneousAgentBuildPlan>;
   prepareProviderBinding?: (
     context: PrepareProviderBindingContext,
   ) => Promise<ProviderBindingPlan> | ProviderBindingPlan;

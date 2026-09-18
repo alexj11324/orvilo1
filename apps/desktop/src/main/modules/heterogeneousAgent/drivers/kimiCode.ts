@@ -1,8 +1,7 @@
-import { KIMI_CODE_BASE_ARGS } from '@orvilo/heterogeneous-agents/spawn';
 import { formatServerDefaultHeterogeneousModel } from '@orvilo/types';
 
 import { startProviderBindingProxy } from '../providerBindingProxy';
-import type { HeterogeneousAgentBuildPlanParams, HeterogeneousAgentDriver } from '../types';
+import type { HeterogeneousAgentDriver } from '../types';
 
 const KIMI_CODE_PROVIDER_BINDING_ENV_KEYS = [
   'KIMI_CODE_HOME',
@@ -50,23 +49,6 @@ const sanitizeKimiCodeProviderBindingEnv = (source: Record<string, string> | und
 };
 
 export const kimiCodeDriver: HeterogeneousAgentDriver = {
-  async buildSpawnPlan({
-    args,
-    helpers,
-    promptInput,
-    resumeSessionId,
-  }: HeterogeneousAgentBuildPlanParams) {
-    const inputPlan = await helpers.buildAgentInput('kimi-code', promptInput);
-    return {
-      args: [
-        ...KIMI_CODE_BASE_ARGS,
-        ...(resumeSessionId ? ['--session', resumeSessionId] : []),
-        ...args,
-        ...inputPlan.args,
-      ],
-      stdinPayload: inputPlan.stdin,
-    };
-  },
   async prepareProviderBinding({ args, env, profileDir, resolution }) {
     const protocol = resolution.protocol;
     if (protocol !== 'anthropic-messages' && protocol !== 'openai-chat-completions') {

@@ -168,6 +168,7 @@ import type {
   BuiltinStreaming,
 } from '@orvilo/types';
 
+import { BrowserIdentifier, BrowserRenders } from './browser';
 import { CodexInspectors, CodexRenders } from './codex';
 import { GithubIdentifier, GithubInspectors, GithubRenders } from './github';
 import { registerBuiltinInspectors } from './inspectors';
@@ -257,6 +258,9 @@ export const registerBuiltinToolSurfaces = (): void => {
     [AgentBuilderManifest.identifier]: AgentBuilderRenders as Record<string, BuiltinRender>,
     [AgentDocumentsManifest.identifier]: AgentDocumentsRenders as Record<string, BuiltinRender>,
     [AgentManagementManifest.identifier]: AgentManagementRenders as Record<string, BuiltinRender>,
+    // Retired `orvilo-browser`: render-only registration so persisted
+    // conversations keep displaying historical screenshots/page dumps.
+    [BrowserIdentifier]: BrowserRenders,
     [ClaudeCodeIdentifier]: ClaudeCodeRenders as Record<string, BuiltinRender>,
     [DROID_IDENTIFIER]: {
       [ClaudeCodeApiName.AskUserQuestion]: ClaudeCodeRenders[ClaudeCodeApiName.AskUserQuestion],

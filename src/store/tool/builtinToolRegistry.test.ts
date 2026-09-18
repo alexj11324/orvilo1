@@ -379,6 +379,25 @@ describe('builtin tool registry', () => {
     }
   });
 
+  it('keeps read-only renders for the retired orvilo-browser identifier', () => {
+    for (const apiName of [
+      'click',
+      'fill',
+      'navigate',
+      'press',
+      'readPage',
+      'screenshot',
+      'scroll',
+      'snapshot',
+    ]) {
+      expect(getBuiltinRender('orvilo-browser', apiName)).toBeDefined();
+    }
+
+    // No inspector/manifest/executor — the tool itself is retired.
+    expect(getBuiltinInspector('orvilo-browser', 'screenshot')).toBeUndefined();
+    expect(builtinToolIdentifiers).not.toContain('orvilo-browser');
+  });
+
   it('includes user interaction and web onboarding in web onboarding runtime plugins', () => {
     const runtime =
       typeof WEB_ONBOARDING.runtime === 'function'

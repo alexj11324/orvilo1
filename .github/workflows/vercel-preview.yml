@@ -1,43 +1,156 @@
-name: Vercel Preview Deploy (gated)
+name: Vercel Preview (gated)
 
-# Vercel Git integration only auto-deploys `canary`/`main` (see vercel.json
-# git.deploymentEnabled) so preview builds stop burning the daily quota on
-# every push. PR previews are instead triggered here — only after the whole
-# Test CI workflow (typecheck + all test shards) is green for the PR head.
+# PR branches are disabled in vercel.json so the Git integration cannot create
+# a deployment before the checks finish. This privileged workflow reads only
+# GitHub metadata, waits for the exact PR head's gates, and then creates the
+# exact same commit through the Vercel API.
 #
-# Setup: create a Vercel Deploy Hook in the project settings and store it as
-# the `VERCEL_PREVIEW_DEPLOY_HOOK` secret. While the secret is absent this
-# workflow no-ops.
-#
-# NOTE: `workflow_run` triggers register only once this file exists on the
-# default branch (main), so it activates after the next canary -> main sync.
+# The VERCEL_PREVIEW_DEPLOYMENT_GATE repository variable remains an explicit
+# quota circuit breaker. When it is closed, the gate still runs but the deploy
+# job is skipped; opening it never weakens the checks above.
 
 on:
-  workflow_run:
-    workflows: ['Test CI']
-    types: [completed]
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
 
 permissions:
   contents: read
+  actions: read
+  checks: read
+  statuses: read
+  pull-requests: read
+
+concurrency:
+  group: vercel-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  deploy-preview:
-    name: Trigger Vercel preview
-    runs-on: ubuntu-latest
+  gate:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    name: Check all PR gates before Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      REQUIRED_WORKFLOWS: Test CI,E2E CI
+      REQUIRED_CHECK_RUNS: GitGuardian Security Checks
+      IGNORED_CHECK_RUNS: Check Duplicate Run,Vercel Preview Comments,Check all PR gates before Vercel,Deploy Vercel Preview
+      IGNORED_STATUS_CONTEXTS: Vercel
+      REQUIRED_EVENT: push
+      GATE_TIMEOUT_MS: '3600000'
     steps:
-      - name: Call Vercel deploy hook
-        env:
-          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_PREVIEW_DEPLOY_HOOK }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      - name: Checkout gate implementation
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Wait for exact-head gates
+        run: node scripts/ci/vercelPreviewGate.mjs
+
+  deploy:
+    needs: gate
+    if: >-
+      needs.gate.result == 'success' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && vars.VERCEL_PREVIEW_DEPLOYMENT_GATE == 'open'
+    name: Deploy Vercel Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout deployment helper
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Create exact Vercel Preview deployment
+        id: deploy
         run: |
-          if [ -z "$VERCEL_DEPLOY_HOOK" ]; then
-            echo "::notice::VERCEL_PREVIEW_DEPLOY_HOOK secret not set - skipping preview deploy for $HEAD_BRANCH"
-            exit 0
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
+          : "${VERCEL_ORG_ID:?VERCEL_ORG_ID is required}"
+          : "${VERCEL_PROJECT_ID:?VERCEL_PROJECT_ID is required}"
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          [[ "$HEAD_BRANCH" != *$'\n'* && "$HEAD_BRANCH" != *$'\r'* ]]
+
+          current_pr=$(curl -fsS \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28')
+          if ! jq -e --arg sha "$HEAD_SHA" '.state == "open" and .merged == false and .head.sha == $sha' <<< "$current_pr" > /dev/null; then
+            echo "PR is closed, merged, or changed while waiting for gates; refusing a stale Vercel deployment" >&2
+            exit 1
           fi
-          echo "Deploying Vercel preview for $HEAD_BRANCH ($HEAD_SHA)"
-          curl -sf -X POST "$VERCEL_DEPLOY_HOOK?ref=$HEAD_BRANCH"
+
+          project=$(curl -fsS \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_ID}?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          project_name=$(jq -er '.name // empty' <<< "$project")
+          repository_id=$(jq -er '.link.repoId | select(type == "number")' <<< "$project")
+          payload=$(bun scripts/ci/createVercelPreviewDeploymentPayload.ts \
+            "$project_name" "$VERCEL_PROJECT_ID" "$repository_id" "$HEAD_BRANCH" "$HEAD_SHA" "$PR_NUMBER")
+
+          response_file=$(mktemp)
+          http_status=$(curl -sS -o "$response_file" -w '%{http_code}' -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}&forceNew=1" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "$payload")
+          response=$(<"$response_file")
+          rm -f "$response_file"
+          if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+            error_code=$(jq -r '.error.code // "unknown"' <<< "$response")
+            error_message=$(jq -r '.error.message // "no message"' <<< "$response")
+            echo "Vercel Preview deployment creation failed (HTTP $http_status, code=$error_code): $error_message" >&2
+            exit 1
+          fi
+          deployment_id=$(jq -er '.id // .uid // empty' <<< "$response")
+          deployment=$(curl -fsS \
+            "https://api.vercel.com/v13/deployments/${deployment_id}?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}")
+          if ! jq -e \
+            --arg branch "$HEAD_BRANCH" \
+            --arg project_id "$VERCEL_PROJECT_ID" \
+            --arg sha "$HEAD_SHA" \
+            --argjson repository_id "$repository_id" '
+              .projectId == $project_id
+              and .target == null
+              and .gitSource.type == "github"
+              and .gitSource.repoId == $repository_id
+              and .gitSource.ref == $branch
+              and .gitSource.sha == $sha
+            ' <<< "$deployment" > /dev/null; then
+            echo "Vercel did not confirm an exact deployment for branch=$HEAD_BRANCH sha=$HEAD_SHA" >&2
+            exit 1
+          fi
+          deployment_url=$(jq -er '.url // empty' <<< "$deployment")
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          echo "deployment_url=https://$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Publish deployment summary
+        env:
+          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: |
+          {
+            echo "### Vercel Preview deployed after all gates"
+            echo ""
+            echo "- Commit: ${HEAD_SHA}"
+            echo "- Deployment: ${DEPLOYMENT_ID}"
+            echo "- URL: ${DEPLOYMENT_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"

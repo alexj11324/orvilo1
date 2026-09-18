@@ -12,6 +12,7 @@ import {
   Tabs,
   Text,
   toast,
+  useModalContext,
 } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
@@ -39,6 +40,7 @@ import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PENDING_TRANSFERS_SWR_KEY } from '@/features/ResourceTransferRequest';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import dynamic from '@/libs/next/dynamic';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
@@ -150,7 +152,7 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   workspace: Building2Icon,
 };
 
-const InboxModalContent = memo(() => {
+export const InboxModalContent = memo(() => {
   const { i18n, t } = useTranslation('notification');
   const workspaceId = useActiveWorkspaceId();
   const [navigationFilter, setNavigationFilter] = useState(ALL_FILTER);
@@ -463,14 +465,30 @@ const InboxModalContent = memo(() => {
 
 InboxModalContent.displayName = 'InboxModalContent';
 
+const RedirectToWorkInbox = memo(() => {
+  const navigate = useWorkspaceAwareNavigate();
+  const { close } = useModalContext();
+
+  useEffect(() => {
+    navigate('/inbox');
+    close();
+  }, [close, navigate]);
+
+  return null;
+});
+
+RedirectToWorkInbox.displayName = 'RedirectToWorkInbox';
+
+/**
+ * Legacy opener. Bell, CMDK, and the mobile tab already land on `/inbox`.
+ * Keep this as a same-query redirect so leftover callers do not mount a
+ * second notification center.
+ */
 export const openInboxModal = () =>
   createModal({
-    content: <InboxModalContent />,
+    content: <RedirectToWorkInbox />,
     footer: null,
     maskClosable: true,
-    styles: {
-      content: { height: 'min(72dvh, 720px)', overflow: 'hidden', padding: 0 },
-    },
     title: false,
-    width: 'min(92vw, 920px)',
+    width: 1,
   });

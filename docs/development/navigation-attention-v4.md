@@ -65,4 +65,4 @@ Single implementation clone at `/workspace` on `cursor/navigation-attention-v4-a
 
 ## Not claimed complete
 
-N12 real Linear/GitHub/ACP installation loops stay `BLOCKED_EXTERNAL_VERIFICATION` until an approved Preview exists. Shadow dual-write is not enabled on production.
+N12 real Linear/GitHub/ACP installation loops stay `BLOCKED_EXTERNAL_VERIFICATION` until an approved Preview exists. Shadow dual-write is not enabled on production. Native human-approval banners click through to `/inbox` (workspace-prefixed when a slug is present), not a second chat inbox. Signed Orvilo API keys (`/settings/apikey`) stay; `/settings/provider` stays retired.

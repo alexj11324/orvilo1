@@ -4,6 +4,7 @@ import { nextInboxSelection } from './inboxListSelection';
 
 interface UseInboxListKeyboardOptions {
   ids: string[];
+  onBack?: () => void;
   onOpen?: () => void;
   onSelect: (id: string) => void;
   selectedId: string | null;
@@ -15,6 +16,7 @@ interface UseInboxListKeyboardOptions {
  */
 export const useInboxListKeyboard = ({
   ids,
+  onBack,
   onOpen,
   onSelect,
   selectedId,
@@ -44,5 +46,13 @@ export const useInboxListKeyboard = ({
     },
     { enableOnFormTags: false, preventDefault: true },
     [onOpen],
+  );
+  useHotkeys(
+    'esc',
+    () => {
+      onBack?.();
+    },
+    { enableOnFormTags: false, enabled: Boolean(onBack), preventDefault: true },
+    [onBack],
   );
 };

@@ -3,10 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { isMobileNavRoute } from './index';
 
 describe('isMobileNavRoute', () => {
-  it('keeps the tab bar on the task board, which is where the Tasks tab lands', () => {
-    // The tab bar is the only navigation a phone viewport gets; losing it on the
-    // destination its own tab points at would strand the user there.
-    expect(isMobileNavRoute('/tasks', null)).toBe(true);
+  it('keeps the tab bar on the work inbox, which is where the Inbox tab lands', () => {
+    expect(isMobileNavRoute('/inbox', null)).toBe(true);
+    expect(isMobileNavRoute('/lobe-team/inbox', 'lobe-team')).toBe(true);
   });
 
   it('keeps the tab bar on the personal destinations', () => {

@@ -11,7 +11,7 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import type { NotificationFeedCard } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,14 +19,22 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
 
+import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
 import { useInboxListKeyboard } from './useInboxListKeyboard';
 
 const styles = createStaticStyles(({ css }) => ({
+  stage: css`
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+  `,
   list: css`
     overflow: auto;
     flex: 1;
@@ -51,6 +59,12 @@ const styles = createStaticStyles(({ css }) => ({
     min-width: 0;
     padding: 24px;
   `,
+  keptMounted: css`
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+  `,
 }));
 
 const WorkInboxPage = memo(() => {
@@ -58,8 +72,10 @@ const WorkInboxPage = memo(() => {
   const { t: tCommon } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<'action' | 'activity'>('action');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const kind = tab === 'action' ? 'action' : 'update';
   const { data: cards = [], isLoading } = useClientDataSWR(
@@ -71,15 +87,30 @@ const WorkInboxPage = memo(() => {
   );
 
   const selected = useMemo(
-    () => cards.find((card) => card.notificationId === selectedId) ?? cards[0],
+    () => cards.find((card) => card.notificationId === selectedId) ?? null,
     [cards, selectedId],
   );
   const cardIds = useMemo(() => cards.map((card) => card.notificationId), [cards]);
+  const surface = inboxSurface(isMobile, detailOpen);
+  const markSelectedRead =
+    Boolean(selected) &&
+    shouldMarkInboxCardRead({
+      cardId: selected?.notificationId ?? '',
+      selectedId,
+      surface,
+    });
 
   useEffect(() => {
-    if (!selected) return;
+    if (selectedId && !cards.some((card) => card.notificationId === selectedId)) {
+      setSelectedId(null);
+      setDetailOpen(false);
+    }
+  }, [cards, selectedId]);
+
+  useEffect(() => {
+    if (!markSelectedRead || !selected) return;
     void notificationService.markReadObserved(selected.notificationId, selected.activityVersion);
-  }, [selected?.notificationId, selected?.activityVersion]);
+  }, [markSelectedRead, selected?.activityVersion, selected?.notificationId]);
 
   const refresh = useCallback(async () => {
     await Promise.all([
@@ -130,12 +161,22 @@ const WorkInboxPage = memo(() => {
     [navigate],
   );
 
+  const selectCard = useCallback((id: string, openDetail: boolean) => {
+    setSelectedId(id);
+    if (openDetail) setDetailOpen(true);
+  }, []);
+
   useInboxListKeyboard({
     ids: cardIds,
+    onBack: surface === 'detail' ? () => setDetailOpen(false) : undefined,
     onOpen: () => {
+      if (isMobile && selectedId && !detailOpen) {
+        setDetailOpen(true);
+        return;
+      }
       if (selected) openTarget(selected);
     },
-    onSelect: setSelectedId,
+    onSelect: (id) => selectCard(id, false),
     selectedId: selected?.notificationId ?? null,
   });
 
@@ -148,8 +189,8 @@ const WorkInboxPage = memo(() => {
           </Text>
         }
       />
-      <Flexbox horizontal flex={1} style={{ minHeight: 0 }}>
-        <Flexbox className={styles.list}>
+      <Flexbox horizontal className={styles.stage} flex={1}>
+        <Flexbox className={cx(styles.list, surface === 'detail' && styles.keptMounted)}>
           <TabsRoot value={tab} onValueChange={(value) => setTab(value as 'action' | 'activity')}>
             <TabsList>
               <TabsIndicator />
@@ -176,7 +217,7 @@ const WorkInboxPage = memo(() => {
                 data-active={card.notificationId === selected?.notificationId}
                 data-inbox-id={card.notificationId}
                 key={card.notificationId}
-                onClick={() => setSelectedId(card.notificationId)}
+                onClick={() => selectCard(card.notificationId, true)}
               >
                 <Text weight={card.read ? 400 : 600}>{card.title}</Text>
                 <Text type="secondary">{card.content}</Text>
@@ -184,7 +225,10 @@ const WorkInboxPage = memo(() => {
             ))
           )}
         </Flexbox>
-        <Flexbox className={styles.pane} gap={16}>
+        <Flexbox className={cx(styles.pane, surface === 'list' && styles.keptMounted)} gap={16}>
+          {surface === 'detail' ? (
+            <Button onClick={() => setDetailOpen(false)}>{tCommon('back')}</Button>
+          ) : null}
           {!selected ? (
             <Empty description={t('inbox.selectItem')} />
           ) : (

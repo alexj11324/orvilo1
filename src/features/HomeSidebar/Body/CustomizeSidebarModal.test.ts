@@ -26,10 +26,15 @@ describe('CustomizeSidebarModal', () => {
   it('still offers every surviving destination', () => {
     const ids = getAvailableSidebarItems(false).map((item) => item.id);
 
+    expect(ids).toContain('inbox');
+    expect(ids).toContain('my-work');
     expect(ids).toContain('tasks');
+    expect(ids).toContain('views');
     expect(ids).toContain('automations');
     expect(ids).toContain('resource');
     expect(ids).toContain('project');
+    expect(ids).not.toContain('teams');
+    expect(getAvailableSidebarItems(true).map((item) => item.id)).toContain('teams');
   });
 
   it('allows Projects to be reordered and hidden', () => {
@@ -47,5 +52,7 @@ describe('CustomizeSidebarModal', () => {
     // owner-private, so it is not offered there.
     expect(getSortableSidebarItemIds(false).has('private')).toBe(false);
     expect(getSortableSidebarItemIds(true).has('private')).toBe(true);
+    expect(getSortableSidebarItemIds(false).has('teams')).toBe(false);
+    expect(getSortableSidebarItemIds(true).has('teams')).toBe(true);
   });
 });

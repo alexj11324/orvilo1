@@ -565,8 +565,9 @@ describe('NotificationModel (integration)', () => {
       );
       await model.markReadObserved(created!.id, 5);
       const [row] = await model.list();
+      // Observed v5 is recorded; v6 stays unread because activityVersion is newer.
       expect(row.isRead).toBe(false);
-      expect(row.readVersion).toBe(0);
+      expect(row.readVersion).toBe(5);
 
       await model.markReadObserved(created!.id, 6);
       const [read] = await model.list();
@@ -628,6 +629,29 @@ describe('NotificationModel (integration)', () => {
       const rows = await model.list();
       expect(rows.find((row) => row.title === 'Old')?.isRead).toBe(true);
       expect(rows.find((row) => row.title === 'New')?.isRead).toBe(false);
+    });
+  });
+
+  describe('live resource ACL', () => {
+    it('does not keep leaking a task title after the resource is gone', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'gone-task',
+          resourceId: 'task_missing',
+          resourceType: 'task',
+          title: 'Secret task title',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          dedupeKey: 'system-card',
+          title: 'System card',
+        }),
+      );
+
+      expect((await model.list()).map((row) => row.title)).toEqual(['System card']);
+      expect((await model.listFeed()).map((row) => row.title)).toEqual(['System card']);
     });
   });
 });

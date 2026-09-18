@@ -105,7 +105,11 @@ export class NotificationModel {
   ) {
     const { cursor, limit = 20, category, isRead, unreadOnly } = opts;
 
-    const conditions = [...this.scope(), eq(notifications.isArchived, false)];
+    const conditions = [
+      ...this.scope(),
+      this.resourceReadable(),
+      eq(notifications.isArchived, false),
+    ];
 
     if (typeof isRead === 'boolean') {
       conditions.push(eq(notifications.isRead, isRead));
@@ -154,7 +158,7 @@ export class NotificationModel {
         isRead: notifications.isRead,
       })
       .from(notifications)
-      .where(and(...this.scope(), eq(notifications.isArchived, false)))
+      .where(and(...this.scope(), this.resourceReadable(), eq(notifications.isArchived, false)))
       .groupBy(notifications.category, notifications.isRead);
 
     const counts = new Map<

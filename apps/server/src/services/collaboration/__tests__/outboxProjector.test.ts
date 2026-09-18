@@ -134,7 +134,14 @@ describe('CollaborationOutboxProjector.projectPending', () => {
     markReceiptFailed.mockResolvedValue(undefined);
 
     const publish = vi.fn().mockRejectedValue(new Error('gateway down'));
-    const result = await projector(publish).projectPending();
+    const selectWithEvent = vi.fn(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [row('live')],
+        }),
+      }),
+    }));
+    const result = await projector(publish, { select: selectWithEvent }).projectPending();
 
     expect(result.projected).toBe(4);
     expect(result.realtime).toBe(0);

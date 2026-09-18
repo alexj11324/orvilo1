@@ -616,6 +616,7 @@ export class TaskModel {
           createdByUserId: options.creationSubject ? null : this.userId,
           identifier,
           seq: nextSeq,
+          triageStatus: rest.triageStatus ?? (rest.teamId ? 'untriaged' : rest.triageStatus),
           workspaceId: this.workspaceId ?? null,
         } as NewTask)
         .returning();

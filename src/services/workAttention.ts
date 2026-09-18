@@ -63,6 +63,12 @@ class WorkAttentionService {
     input: Parameters<typeof lambdaClient.workAttention.savedViewUpdate.mutate>[0],
   ) => lambdaClient.workAttention.savedViewUpdate.mutate(input);
 
+  search = (input: {
+    limitPerType?: number;
+    query: string;
+    type?: 'project' | 'savedView' | 'task' | 'team';
+  }) => lambdaClient.workAttention.search.query(input);
+
   subscribe = (taskId: string) => lambdaClient.workAttention.subscribe.mutate({ taskId });
 
   triage = (input: Parameters<typeof lambdaClient.workAttention.triage.mutate>[0]) =>

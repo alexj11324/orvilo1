@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import { SavedViewConflictError, SavedViewModel } from '../savedView';
+import { SavedViewBuiltinError, SavedViewConflictError, SavedViewModel } from '../savedView';
 import { TaskModel } from '../task';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -184,5 +184,42 @@ describe('SavedViewModel', () => {
     const asVisitor = await visitorViews.evaluate((await visitorViews.findById(view.id))!);
     expect(asVisitor.tasks?.map((row) => row.id)).toEqual([open.id]);
     expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Secret task');
+  });
+
+  it('lists virtual builtins that cannot be overwritten or deleted', async () => {
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    const listed = await visitorViews.list();
+    expect(listed.map((row) => row.id)).toEqual([
+      'builtin:all',
+      'builtin:blocked',
+      'builtin:in-progress',
+      'builtin:projects',
+      'builtin:review',
+    ]);
+
+    const review = await visitorViews.findById('builtin:review');
+    expect(review?.queryAst.filter).toEqual({
+      all: [{ field: 'reviewerUserId', op: 'eq', value: { ref: 'currentUser' } }],
+    });
+
+    const visitorTask = await new TaskModel(serverDB, visitorId, workspaceId).create({
+      instruction: 'Needs a look',
+      name: 'Visitor review',
+      reviewerUserId: visitorId,
+    });
+    await new TaskModel(serverDB, ownerId, workspaceId).create({
+      instruction: 'Owner review',
+      name: 'Owner review',
+      reviewerUserId: ownerId,
+    });
+    const asVisitor = await visitorViews.evaluate(review!);
+    expect(asVisitor.tasks?.map((row) => row.id)).toEqual([visitorTask.id]);
+
+    await expect(
+      ownerViews.update('builtin:all', { expectedDefinitionVersion: 1, name: 'Hijack' }),
+    ).rejects.toBeInstanceOf(SavedViewBuiltinError);
+    await expect(ownerViews.delete('builtin:all')).rejects.toBeInstanceOf(SavedViewBuiltinError);
+    expect((await visitorViews.findById('builtin:all'))?.name).toBe('All tasks');
   });
 });

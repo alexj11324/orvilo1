@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { tasks } from '../../schemas';
-import { agents, projects, teamCycles, teams, users, workspaces } from '../../schemas';
+import { agents, projects, teamCycles, teamMembers, teams, users, workspaces } from '../../schemas';
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { tasks as tasksTable } from '../../schemas/task';
@@ -376,5 +376,102 @@ describe('WorkQueryModel', () => {
     expect(reviews.map((row) => row.targetType)).toEqual(['github_pull_request']);
     expect(reviews[0]?.title).toBe('Review the checkout PR');
     expect(after.map((row) => row.id).sort()).toEqual(before.map((row) => row.id).sort());
+  });
+
+  it('does not list a private team or its public-visibility tasks to a non-member', async () => {
+    await serverDB.insert(teams).values({
+      createdByUserId: userId,
+      id: 'wq-private-team',
+      key: 'SEC',
+      name: 'Secret Squadron',
+      visibility: 'private',
+      workspaceId,
+    });
+    await serverDB.insert(teamMembers).values({
+      role: 'lead',
+      teamId: 'wq-private-team',
+      userId,
+      workspaceId,
+    });
+    const secret = await createTask(userId, {
+      name: 'Private-team work',
+      teamId: 'wq-private-team',
+      visibility: 'public',
+    });
+    const assigned = await createTask(userId, {
+      assigneeUserId: otherUserId,
+      name: 'Assigned on the private team',
+      teamId: 'wq-private-team',
+      visibility: 'public',
+    });
+
+    const asMember = new WorkQueryModel(serverDB, userId, workspaceId);
+    const asOutsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
+    const teamFilter = {
+      entityType: 'task' as const,
+      filter: { all: [{ field: 'teamId' as const, op: 'eq' as const, value: 'wq-private-team' }] },
+      schemaVersion: 1 as const,
+    };
+
+    const memberHits = await asMember.queryTasks({ query: teamFilter });
+    expect(memberHits.tasks.map((row) => row.id).sort()).toEqual([assigned.id, secret.id].sort());
+
+    const outsiderHits = await asOutsider.queryTasks({ query: teamFilter });
+    expect(outsiderHits.tasks).toEqual([]);
+    expect(outsiderHits.total).toBe(0);
+    expect(outsiderHits.tasks.map((row) => row.name)).not.toContain('Private-team work');
+    expect(outsiderHits.tasks.map((row) => row.teamId)).not.toContain('wq-private-team');
+
+    const outsiderIsNotNull = await asOutsider.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'teamId', op: 'isNotNull' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(outsiderIsNotNull.tasks.map((row) => row.id)).not.toContain(secret.id);
+    expect(outsiderIsNotNull.tasks.map((row) => row.teamId)).not.toContain('wq-private-team');
+
+    const assignedAnyway = await asOutsider.queryTasks({
+      query: myWorkQueryForMode('assigned'),
+    });
+    expect(assignedAnyway.tasks.map((row) => row.id)).toContain(assigned.id);
+  });
+
+  it('still finds a readable task by title while a guessed teamId stays empty', async () => {
+    await serverDB.insert(teams).values({
+      createdByUserId: userId,
+      id: 'wq-hidden-team',
+      key: 'HID',
+      name: 'Hidden Fleet',
+      visibility: 'private',
+      workspaceId,
+    });
+    await serverDB.insert(teamMembers).values({
+      role: 'lead',
+      teamId: 'wq-hidden-team',
+      userId,
+      workspaceId,
+    });
+    await createTask(userId, {
+      name: 'Fleet briefing',
+      teamId: 'wq-hidden-team',
+      visibility: 'public',
+    });
+
+    const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
+    const byTitle = await outsider.searchTasks('Fleet briefing');
+    expect(byTitle.map((row) => row.name)).toEqual(['Fleet briefing']);
+
+    const byTeam = await outsider.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'teamId', op: 'eq', value: 'wq-hidden-team' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(byTeam.tasks).toEqual([]);
+    expect(byTeam.total).toBe(0);
+    expect(byTeam.tasks.map((row) => row.teamId)).not.toContain('wq-hidden-team');
   });
 });

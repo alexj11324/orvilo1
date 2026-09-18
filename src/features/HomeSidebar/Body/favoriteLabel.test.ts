@@ -5,6 +5,12 @@ import { favoriteLabel } from './favoriteLabel';
 describe('favoriteLabel', () => {
   const t = (key: string) => key;
 
+  it('translates virtual builtin views instead of the English kernel name', () => {
+    expect(favoriteLabel('savedView', 'All tasks', t, 'builtin:all')).toBe(
+      'savedViews.builtinName.all',
+    );
+  });
+
   it('uses a resolved title when the caller can still read the target', () => {
     expect(favoriteLabel('savedView', 'Assigned to me', t)).toBe('Assigned to me');
   });

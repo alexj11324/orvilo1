@@ -16,7 +16,11 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { NavigationFavoriteModel } from '@/database/models/navigationFavorite';
 import { NotificationModel } from '@/database/models/notification';
-import { SavedViewConflictError, SavedViewModel } from '@/database/models/savedView';
+import {
+  SavedViewBuiltinError,
+  SavedViewConflictError,
+  SavedViewModel,
+} from '@/database/models/savedView';
 import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
@@ -134,8 +138,18 @@ const workAttentionProcedure = wsCompatProcedure.use(serverDatabase).use(async (
 const organizeProcedure = workAttentionProcedure.use(withScopedPermission('notification:organize'));
 const taskWriteProcedure = workAttentionProcedure.use(withScopedPermission('agent:update'));
 
+const searchRelevance = (query: string, title: string) => {
+  const needle = query.trim().toLowerCase();
+  const haystack = title.toLowerCase();
+  if (haystack === needle) return 1;
+  if (haystack.startsWith(needle)) return 2;
+  return 3;
+};
+
 export const workAttentionRouter = router({
-  decide: organizeProcedure
+  // Source-authorized human decisions. Organize is inbox housekeeping, not
+  // approve. getAuthorized still FORBIDDEN when the caller is not the actor.
+  decide: workAttentionProcedure
     .input(
       z.object({
         actionRef: z.object({
@@ -318,9 +332,16 @@ export const workAttentionRouter = router({
   savedViewDelete: taskWriteProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const deleted = await ctx.savedViewModel.delete(input.id);
-      if (!deleted) throw new TRPCError({ code: 'NOT_FOUND', message: 'View not found' });
-      return { message: 'View deleted', success: true };
+      try {
+        const deleted = await ctx.savedViewModel.delete(input.id);
+        if (!deleted) throw new TRPCError({ code: 'NOT_FOUND', message: 'View not found' });
+        return { message: 'View deleted', success: true };
+      } catch (error) {
+        if (error instanceof SavedViewBuiltinError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+        }
+        throw error;
+      }
     }),
 
   savedViewEvaluate: workAttentionProcedure
@@ -368,6 +389,79 @@ export const workAttentionRouter = router({
     };
   }),
 
+  search: workAttentionProcedure
+    .input(
+      z.object({
+        limitPerType: z.number().min(1).max(50).default(5),
+        query: z.string().trim().min(1).max(200),
+        type: z.enum(['project', 'savedView', 'task', 'team']).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input.limitPerType;
+      const needle = input.query;
+      const wants = (type: 'project' | 'savedView' | 'task' | 'team') =>
+        !input.type || input.type === type;
+      const matches = (value: string) => value.toLowerCase().includes(needle.toLowerCase());
+
+      const [taskRows, projectRows, views, teams] = await Promise.all([
+        wants('task') ? ctx.workQueryModel.searchTasks(needle, limit) : [],
+        wants('project') ? ctx.workQueryModel.searchProjects(needle, limit) : [],
+        wants('savedView') ? ctx.savedViewModel.list() : [],
+        wants('team') && ctx.teamModel ? ctx.teamModel.listReadable() : [],
+      ]);
+
+      const items = [
+        ...taskRows.map((row) => {
+          const title = row.name || row.identifier;
+          return {
+            createdAt: row.createdAt,
+            description: row.identifier,
+            id: row.id,
+            relevance: searchRelevance(needle, title),
+            title,
+            type: 'task' as const,
+            updatedAt: row.updatedAt,
+          };
+        }),
+        ...projectRows.map((row) => ({
+          createdAt: row.createdAt,
+          description: null,
+          id: row.id,
+          relevance: searchRelevance(needle, row.name),
+          title: row.name,
+          type: 'project' as const,
+          updatedAt: row.updatedAt,
+        })),
+        ...views
+          .filter((row) => matches(row.name) || matches(row.id))
+          .slice(0, limit)
+          .map((row) => ({
+            createdAt: row.createdAt,
+            description: null,
+            id: row.id,
+            relevance: searchRelevance(needle, row.name),
+            title: row.name,
+            type: 'savedView' as const,
+            updatedAt: row.updatedAt,
+          })),
+        ...teams
+          .filter((row) => matches(row.name) || matches(row.key))
+          .slice(0, limit)
+          .map((row) => ({
+            createdAt: row.createdAt,
+            description: row.key,
+            id: row.id,
+            relevance: searchRelevance(needle, row.name),
+            title: row.name,
+            type: 'team' as const,
+            updatedAt: row.updatedAt,
+          })),
+      ];
+
+      return { data: items, success: true };
+    }),
+
   savedViewUpdate: taskWriteProcedure
     .input(
       z.object({
@@ -394,6 +488,9 @@ export const workAttentionRouter = router({
         if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'View not found' });
         return { data: row, message: 'View updated', success: true };
       } catch (error) {
+        if (error instanceof SavedViewBuiltinError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+        }
         if (error instanceof SavedViewConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }

@@ -53,7 +53,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
             key={`${item.targetType}:${item.targetId}`}
             to={targetPath(item.targetType, item.targetId)}
           >
-            <NavItem title={favoriteLabel(item.targetType, item.title, t)} />
+            <NavItem title={favoriteLabel(item.targetType, item.title, t, item.targetId)} />
           </WorkspaceLink>
         ))}
       </AccordionPanel>

@@ -12,8 +12,11 @@ import {
   Brain,
   ChevronRight,
   FileText,
+  Filter,
   Folder,
+  FolderKanban,
   Library,
+  ListTodo,
   MessageCircle,
   MessageSquare,
   Sparkles,
@@ -24,14 +27,28 @@ import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
+import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import type { CommandMenuResultClick } from './analytics';
 import { CommandItem } from './components';
 import { styles } from './styles';
-import { type ValidSearchType } from './utils/queryParser';
+import { type CommandMenuWorkType, type ValidSearchType } from './utils/queryParser';
 import { createVisibleResultPositionMap } from './utils/visibleResultPosition';
+
+export interface CommandMenuWorkResult {
+  createdAt: Date;
+  description?: string | null;
+  id: string;
+  relevance: number;
+  title: string;
+  type: CommandMenuWorkType;
+  updatedAt: Date;
+}
+
+export type CommandMenuSearchResult = FtsSearchResult | CommandMenuWorkResult;
 
 interface SearchResultsProps {
   isLoading: boolean;
@@ -40,7 +57,7 @@ interface SearchResultsProps {
   onSetTypeFilter: (typeFilter: ValidSearchType | undefined) => void;
   onTypeFilterChange: () => void;
   onVisibleResultCountChange: (count: number) => void;
-  results: FtsSearchResult[];
+  results: CommandMenuSearchResult[];
   searchQuery: string;
   typeFilter: ValidSearchType | undefined;
 }
@@ -63,9 +80,25 @@ const SearchResults = memo<SearchResultsProps>(
     const { t } = useTranslation('common');
     const navigate = useWorkspaceAwareNavigate();
 
-    const handleNavigate = (result: FtsSearchResult, position: number) => {
+    const handleNavigate = (result: CommandMenuSearchResult, position: number) => {
       onResultClick({ position, resultType: result.type });
       switch (result.type) {
+        case 'task': {
+          navigate(taskDetailPath(result.id, undefined, result.title));
+          break;
+        }
+        case 'team': {
+          navigate(`/teams/${result.id}`);
+          break;
+        }
+        case 'project': {
+          navigate(`/project/${result.id}`);
+          break;
+        }
+        case 'savedView': {
+          navigate(`/views/${result.id}`);
+          break;
+        }
         case 'agent': {
           navigate(`/agent/${result.id}?agent=${result.id}`);
           break;
@@ -139,8 +172,20 @@ const SearchResults = memo<SearchResultsProps>(
       onClose();
     };
 
-    const getIcon = (type: FtsSearchResult['type']) => {
+    const getIcon = (type: CommandMenuSearchResult['type']) => {
       switch (type) {
+        case 'task': {
+          return <ListTodo size={16} />;
+        }
+        case 'team': {
+          return <Users size={16} />;
+        }
+        case 'project': {
+          return <FolderKanban size={16} />;
+        }
+        case 'savedView': {
+          return <Filter size={16} />;
+        }
         case 'agent': {
           return <Sparkles size={16} />;
         }
@@ -171,55 +216,34 @@ const SearchResults = memo<SearchResultsProps>(
       }
     };
 
-    const getTypeLabel = (type: FtsSearchResult['type']) => {
+    const getTypeLabel = (type: CommandMenuSearchResult['type']) => {
       switch (type) {
-        case 'agent': {
-          return t('cmdk.search.agent');
-        }
-        case 'chatGroup': {
-          return t('cmdk.search.chatGroup');
-        }
-        case 'topic': {
-          return t('cmdk.search.topic');
-        }
-        case 'message': {
-          return t('cmdk.search.message');
-        }
-        case 'file': {
-          return t('cmdk.search.file');
-        }
         case 'page': {
           return t('cmdk.search.file');
         }
-        case 'folder': {
-          return t('cmdk.search.folder');
-        }
-        case 'memory': {
-          return t('cmdk.search.memory');
-        }
-        case 'knowledgeBase': {
-          return t('cmdk.search.knowledgeBase');
+        default: {
+          return t(`cmdk.search.${type}`);
         }
       }
     };
 
-    const getItemValue = (result: FtsSearchResult) => {
-      const meta = [result.title, result.description].filter(Boolean).join(' ');
-      // Prefix with "search-result" to ensure these items rank after built-in commands
-      // Include ID to ensure uniqueness when multiple items have the same title
+    const resultTitle = (result: CommandMenuSearchResult) =>
+      result.type === 'savedView' ? savedViewTitle(result.id, result.title, t) : result.title;
+
+    const getItemValue = (result: CommandMenuSearchResult) => {
+      const meta = [resultTitle(result), result.description].filter(Boolean).join(' ');
       return `search-result ${result.type} ${result.id} ${meta}`.trim();
     };
 
-    const getDescription = (result: FtsSearchResult) => {
+    const getDescription = (result: CommandMenuSearchResult) => {
       if (!result.description) return null;
-      // Sanitize markdown content for message search results
       if (result.type === 'message') {
         return markdownToTxt(result.description);
       }
       return result.description;
     };
 
-    const getSubtitle = (result: FtsSearchResult): ReactNode => {
+    const getSubtitle = (result: CommandMenuSearchResult): ReactNode => {
       const description = getDescription(result);
 
       // Topic results: prefix with agent identity (avatar + title) so users can
@@ -277,6 +301,10 @@ const SearchResults = memo<SearchResultsProps>(
     const hasResults = availableResults.length > 0;
 
     // Group results by type
+    const taskResults = availableResults.filter((r) => r.type === 'task');
+    const teamResults = availableResults.filter((r) => r.type === 'team');
+    const projectResults = availableResults.filter((r) => r.type === 'project');
+    const savedViewResults = availableResults.filter((r) => r.type === 'savedView');
     const messageResults = availableResults.filter((r) => r.type === 'message');
     const chatGroupResults = availableResults.filter((r) => r.type === 'chatGroup');
     const agentResults = availableResults.filter((r) => r.type === 'agent');
@@ -286,8 +314,12 @@ const SearchResults = memo<SearchResultsProps>(
     const folderResults = availableResults.filter((r) => r.type === 'folder');
     const memoryResults = availableResults.filter((r) => r.type === 'memory');
     const knowledgeBaseResults = availableResults.filter((r) => r.type === 'knowledgeBase');
-    const visibleResultPositions = createVisibleResultPositionMap<FtsSearchResult>(
+    const visibleResultPositions = createVisibleResultPositionMap<CommandMenuSearchResult>(
       [
+        taskResults,
+        teamResults,
+        projectResults,
+        savedViewResults,
         messageResults,
         agentResults,
         chatGroupResults,
@@ -312,9 +344,10 @@ const SearchResults = memo<SearchResultsProps>(
     }
 
     // Render a single result item with type prefix (like "Message > content")
-    const renderResultItem = (result: FtsSearchResult) => {
+    const renderResultItem = (result: CommandMenuSearchResult) => {
       const typeLabel = getTypeLabel(result.type);
       const subtitle = getSubtitle(result);
+      const title = resultTitle(result);
 
       // Hide type prefix when filtering by specific type
       const showTypePrefix = !typeFilter;
@@ -332,10 +365,10 @@ const SearchResults = memo<SearchResultsProps>(
               verticalAlign: 'middle',
             }}
           />
-          {result.title}
+          {title}
         </>
       ) : (
-        result.title
+        title
       );
 
       return (
@@ -383,6 +416,34 @@ const SearchResults = memo<SearchResultsProps>(
     return (
       <>
         {/* Render search results grouped by type without headers */}
+        {taskResults.length > 0 && (
+          <Command.Group forceMount>
+            {taskResults.map((result) => renderResultItem(result))}
+            {renderSearchMore('task', taskResults.length)}
+          </Command.Group>
+        )}
+
+        {teamResults.length > 0 && (
+          <Command.Group forceMount>
+            {teamResults.map((result) => renderResultItem(result))}
+            {renderSearchMore('team', teamResults.length)}
+          </Command.Group>
+        )}
+
+        {projectResults.length > 0 && (
+          <Command.Group forceMount>
+            {projectResults.map((result) => renderResultItem(result))}
+            {renderSearchMore('project', projectResults.length)}
+          </Command.Group>
+        )}
+
+        {savedViewResults.length > 0 && (
+          <Command.Group forceMount>
+            {savedViewResults.map((result) => renderResultItem(result))}
+            {renderSearchMore('savedView', savedViewResults.length)}
+          </Command.Group>
+        )}
+
         {messageResults.length > 0 && (
           <Command.Group forceMount>
             {messageResults.map((result) => renderResultItem(result))}

@@ -43,6 +43,7 @@ import { projectTeams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { TeamModel } from './team';
 
 export class WorkQueryError extends Error {
   constructor(
@@ -73,6 +74,75 @@ const PROJECT_FIELDS = new Set<WorkQueryField>(['id', 'teamId']);
 
 const isPredicate = (node: WorkQueryFilter | WorkQueryPredicate): node is WorkQueryPredicate =>
   'field' in node && 'op' in node;
+
+const FALSE_SQL = sql`false`;
+const TRUE_SQL = sql`true`;
+
+const escapeLike = (value: string) => value.replaceAll(/[\\%_]/g, (char) => `\\${char}`);
+
+export const filterHasTeamId = (node: WorkQueryFilter | undefined): boolean => {
+  if (!node) return false;
+  for (const child of [...(node.all ?? []), ...(node.any ?? [])]) {
+    if (isPredicate(child)) {
+      if (child.field === 'teamId') return true;
+      continue;
+    }
+    if (filterHasTeamId(child)) return true;
+  }
+  return false;
+};
+
+type CompileCtx = {
+  currentUserId: string;
+  entityType: WorkQueryEntityType;
+  readableTeamIds: ReadonlySet<string>;
+};
+
+const compileTeamIdColumnPredicate = (
+  column: AnyPgColumn,
+  op: WorkQueryOp,
+  resolved: ReturnType<typeof resolveValue>,
+  readableTeamIds: ReadonlySet<string>,
+): SQL => {
+  const readable = [...readableTeamIds];
+  switch (op) {
+    case 'isNull': {
+      return isNull(column);
+    }
+    case 'isNotNull': {
+      return readable.length ? inArray(column, readable) : FALSE_SQL;
+    }
+    case 'eq': {
+      if (typeof resolved !== 'string' || !readableTeamIds.has(resolved)) return FALSE_SQL;
+      return eq(column, resolved as never);
+    }
+    case 'in': {
+      if (!Array.isArray(resolved) || resolved.length === 0) {
+        throw new WorkQueryError('INVALID_QUERY', 'in requires a non-empty array');
+      }
+      const kept = resolved.filter(
+        (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
+      );
+      return kept.length ? inArray(column, kept) : FALSE_SQL;
+    }
+    case 'neq': {
+      if (typeof resolved !== 'string' || !readableTeamIds.has(resolved)) return TRUE_SQL;
+      return ne(column, resolved as never);
+    }
+    case 'notIn': {
+      if (!Array.isArray(resolved) || resolved.length === 0) {
+        throw new WorkQueryError('INVALID_QUERY', 'notIn requires a non-empty array');
+      }
+      const kept = resolved.filter(
+        (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
+      );
+      return kept.length ? notInArray(column, kept) : TRUE_SQL;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
+    }
+  }
+};
 
 const countPredicates = (node: WorkQueryFilter | undefined, depth: number): number => {
   if (!node) return 0;
@@ -180,10 +250,7 @@ const compileColumnPredicate = (
   }
 };
 
-const compilePredicate = (
-  predicate: WorkQueryPredicate,
-  ctx: { currentUserId: string; entityType: WorkQueryEntityType },
-): SQL => {
+const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL => {
   const allowed = ctx.entityType === 'task' ? TASK_FIELDS : PROJECT_FIELDS;
   if (!allowed.has(predicate.field)) {
     throw new WorkQueryError('INVALID_QUERY', `Unknown field: ${predicate.field}`);
@@ -203,11 +270,14 @@ const compilePredicate = (
         return sql`not exists (select 1 from ${projectTeams} where ${projectTeams.projectId} = ${projects.id})`;
       }
       if (predicate.op === 'isNotNull') {
-        return sql`exists (select 1 from ${projectTeams} where ${projectTeams.projectId} = ${projects.id})`;
+        const readable = [...ctx.readableTeamIds];
+        if (readable.length === 0) return FALSE_SQL;
+        return sql`exists (select 1 from ${projectTeams} where ${projectTeams.projectId} = ${projects.id} and ${inArray(projectTeams.teamId, readable)})`;
       }
       if (predicate.op !== 'eq' || typeof resolved !== 'string') {
         throw new WorkQueryError('INVALID_QUERY', 'project teamId only supports eq / null checks');
       }
+      if (!ctx.readableTeamIds.has(resolved)) return FALSE_SQL;
       return sql`exists (select 1 from ${projectTeams} where ${projectTeams.projectId} = ${projects.id} and ${projectTeams.teamId} = ${resolved})`;
     }
     throw new WorkQueryError('INVALID_QUERY', `Unknown field: ${predicate.field}`);
@@ -232,6 +302,15 @@ const compilePredicate = (
     )!;
   }
 
+  if (predicate.field === 'teamId') {
+    return compileTeamIdColumnPredicate(
+      tasks.teamId,
+      predicate.op,
+      resolveValue(predicate.value, ctx.currentUserId),
+      ctx.readableTeamIds,
+    );
+  }
+
   const op: WorkQueryOp = predicate.op;
   const resolved = resolveValue(predicate.value, ctx.currentUserId);
   return compileColumnPredicate(taskColumn(predicate.field), op, resolved);
@@ -239,7 +318,7 @@ const compilePredicate = (
 
 const compileFilter = (
   node: WorkQueryFilter | undefined,
-  ctx: { currentUserId: string; entityType: WorkQueryEntityType },
+  ctx: CompileCtx,
   depth = 0,
 ): SQL | undefined => {
   if (!node) return undefined;
@@ -437,12 +516,28 @@ export class WorkQueryModel {
       },
     );
 
-  private taskConditions = (query: WorkQuery, mode?: MyWorkMode) => {
+  private listReadableTeamIds = async (): Promise<Set<string>> => {
+    if (!this.workspaceId) return new Set();
+    const rows = await new TeamModel(this.db, this.userId, this.workspaceId).listReadable();
+    return new Set(rows.map((row) => row.id));
+  };
+
+  private compileCtx = (
+    entityType: WorkQueryEntityType,
+    readableTeamIds: ReadonlySet<string>,
+  ): CompileCtx => ({
+    currentUserId: this.userId,
+    entityType,
+    readableTeamIds,
+  });
+
+  private taskConditions = (
+    query: WorkQuery,
+    mode: MyWorkMode | undefined,
+    readableTeamIds: ReadonlySet<string>,
+  ) => {
     const conditions: SQL[] = [this.ownership()];
-    const filterSql = compileFilter(query.filter, {
-      currentUserId: this.userId,
-      entityType: 'task',
-    });
+    const filterSql = compileFilter(query.filter, this.compileCtx('task', readableTeamIds));
     if (filterSql) conditions.push(filterSql);
     if (mode === 'subscribed') {
       conditions.push(
@@ -467,7 +562,10 @@ export class WorkQueryModel {
     }
 
     const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
-    const conditions = this.taskConditions(query, params.mode);
+    const readableTeamIds = filterHasTeamId(query.filter)
+      ? await this.listReadableTeamIds()
+      : new Set<string>();
+    const conditions = this.taskConditions(query, params.mode, readableTeamIds);
     const queryHash = hashQuery(query);
     const sort = normalizeTaskSort(query.sort);
     const groupBy = workQueryBoardGroupBy(query);
@@ -669,10 +767,13 @@ export class WorkQueryModel {
     if (this.workspaceId) conditions.push(eq(projects.workspaceId, this.workspaceId));
     else conditions.push(eq(projects.userId, this.userId), isNull(projects.workspaceId));
 
-    const filterSql = compileFilter(params.query.filter, {
-      currentUserId: this.userId,
-      entityType: 'project',
-    });
+    const readableTeamIds = filterHasTeamId(params.query.filter)
+      ? await this.listReadableTeamIds()
+      : new Set<string>();
+    const filterSql = compileFilter(
+      params.query.filter,
+      this.compileCtx('project', readableTeamIds),
+    );
     if (filterSql) conditions.push(filterSql);
 
     const [countRow] = await this.db
@@ -691,5 +792,56 @@ export class WorkQueryModel {
       queryHash: hashQuery(params.query),
       total: Number(countRow?.count ?? 0),
     };
+  };
+
+  /**
+   * Thin name/identifier match for CommandMenu. Not a new FTS entity.
+   * Task ACL stays ownership(); private-team names are not searched here.
+   */
+  searchTasks = async (needle: string, limit = 8) => {
+    const q = needle.trim();
+    if (!q) return [];
+    const pattern = `%${escapeLike(q)}%`;
+    return this.db
+      .select({
+        createdAt: tasks.createdAt,
+        id: tasks.id,
+        identifier: tasks.identifier,
+        name: tasks.name,
+        updatedAt: tasks.updatedAt,
+      })
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          or(
+            sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
+            sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,
+          ),
+        ),
+      )
+      .orderBy(desc(tasks.updatedAt), asc(tasks.id))
+      .limit(Math.min(Math.max(limit, 1), 50));
+  };
+
+  searchProjects = async (needle: string, limit = 8) => {
+    const q = needle.trim();
+    if (!q) return [];
+    const pattern = `%${escapeLike(q)}%`;
+    const conditions: SQL[] = [];
+    if (this.workspaceId) conditions.push(eq(projects.workspaceId, this.workspaceId));
+    else conditions.push(eq(projects.userId, this.userId), isNull(projects.workspaceId));
+    conditions.push(sql`${projects.name} ILIKE ${pattern} ESCAPE '\\'`);
+    return this.db
+      .select({
+        createdAt: projects.createdAt,
+        id: projects.id,
+        name: projects.name,
+        updatedAt: projects.updatedAt,
+      })
+      .from(projects)
+      .where(and(...conditions))
+      .orderBy(desc(projects.updatedAt), asc(projects.id))
+      .limit(Math.min(Math.max(limit, 1), 50));
   };
 }

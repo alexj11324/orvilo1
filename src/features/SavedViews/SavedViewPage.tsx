@@ -22,6 +22,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { stringifyWorkQueryDraft, workQueryFromDraft } from './savedViewQueryDraft';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
+import { savedViewTitle } from './savedViewTitle';
 
 const SavedViewPage = memo(() => {
   const { t } = useTranslation('common');
@@ -208,7 +209,7 @@ const SavedViewPage = memo(() => {
       const created = await workAttentionService.savedViewCreate({
         entityType: view.entityType,
         layout,
-        name: savedViewCopyName(name || view.name, t('copy')),
+        name: savedViewCopyName(savedViewTitle(view.id, name || view.name, t), t('copy')),
         query,
         visibility: 'private',
       });
@@ -236,7 +237,7 @@ const SavedViewPage = memo(() => {
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {view?.name ?? t('tab.views')}
+            {view ? savedViewTitle(view.id, view.name, t) : t('tab.views')}
           </Text>
         }
         right={

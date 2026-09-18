@@ -14,6 +14,8 @@ import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
+import { savedViewTitle } from './savedViewTitle';
+
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
@@ -56,7 +58,7 @@ const SavedViewsPage = memo(() => {
         ) : (
           views.map((view) => (
             <WorkspaceLink key={view.id} to={`/views/${view.id}`}>
-              <Text weight={500}>{view.name}</Text>
+              <Text weight={500}>{savedViewTitle(view.id, view.name, t)}</Text>
             </WorkspaceLink>
           ))
         )}

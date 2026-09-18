@@ -213,6 +213,29 @@ export type MyWorkMode = 'assigned' | 'created' | 'delegated' | 'review' | 'subs
 
 export type SavedViewVisibility = 'private' | 'team' | 'workspace';
 
+/** Virtual views. They are not rows — update/delete must reject these ids. */
+export const BUILTIN_SAVED_VIEW_KEYS = [
+  'all',
+  'blocked',
+  'in-progress',
+  'projects',
+  'review',
+] as const;
+
+export type BuiltinSavedViewKey = (typeof BUILTIN_SAVED_VIEW_KEYS)[number];
+
+export const builtinSavedViewId = (key: BuiltinSavedViewKey) => `builtin:${key}`;
+
+export const builtinSavedViewKey = (id: string): BuiltinSavedViewKey | undefined => {
+  if (!id.startsWith('builtin:')) return undefined;
+  const key = id.slice('builtin:'.length);
+  return (BUILTIN_SAVED_VIEW_KEYS as readonly string[]).includes(key)
+    ? (key as BuiltinSavedViewKey)
+    : undefined;
+};
+
+export const isBuiltinSavedViewId = (id: string): boolean => builtinSavedViewKey(id) !== undefined;
+
 export type SavedViewNeedsRepairReason = 'expired_status' | 'unknown_field' | 'unknown_operator';
 
 export interface SavedViewDefinition {

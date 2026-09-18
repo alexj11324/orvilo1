@@ -8,13 +8,14 @@ import type {
   WorkQueryLayout,
   WorkQueryPredicate,
 } from '@orvilo/types';
-import { notificationScopeKey } from '@orvilo/types';
+import { builtinSavedViewKey, isBuiltinSavedViewId, notificationScopeKey } from '@orvilo/types';
 import { and, desc, eq, or, type SQL, sql } from 'drizzle-orm';
 
 import { teamMembers } from '../schemas/team';
 import type { NewSavedView, SavedViewItem } from '../schemas/workAttention';
 import { savedViews } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
+import { listVirtualBuiltinSavedViews, virtualBuiltinSavedView } from './builtinSavedViews';
 import {
   applyWorkQueryLayout,
   validateWorkQuery,
@@ -48,6 +49,15 @@ export class SavedViewConflictError extends Error {
   constructor() {
     super('SAVED_VIEW_VERSION_CONFLICT');
     this.name = 'SavedViewConflictError';
+  }
+}
+
+export class SavedViewBuiltinError extends Error {
+  readonly code = 'SAVED_VIEW_BUILTIN' as const;
+
+  constructor() {
+    super('SAVED_VIEW_BUILTIN');
+    this.name = 'SavedViewBuiltinError';
   }
 }
 
@@ -156,14 +166,17 @@ export class SavedViewModel {
   };
 
   list = async (): Promise<SavedViewItem[]> => {
-    return this.db
+    const rows = await this.db
       .select()
       .from(savedViews)
       .where(this.readable())
       .orderBy(desc(savedViews.updatedAt), desc(savedViews.id));
+    return [...listVirtualBuiltinSavedViews(this.workspaceId), ...rows];
   };
 
   findById = async (id: string): Promise<SavedViewItem | undefined> => {
+    const builtin = builtinSavedViewKey(id);
+    if (builtin) return virtualBuiltinSavedView(builtin, this.workspaceId);
     const [row] = await this.db
       .select()
       .from(savedViews)
@@ -177,7 +190,7 @@ export class SavedViewModel {
    * Owners keep the stored AST so CAS updates still round-trip.
    */
   present = async (view: SavedViewItem): Promise<SavedViewItem> => {
-    if (view.ownerUserId === this.userId) return view;
+    if (isBuiltinSavedViewId(view.id) || view.ownerUserId === this.userId) return view;
     return { ...view, queryAst: await this.redactQuery(view.queryAst) };
   };
 
@@ -260,6 +273,7 @@ export class SavedViewModel {
       visibility?: SavedViewVisibility;
     },
   ): Promise<SavedViewItem | undefined> => {
+    if (isBuiltinSavedViewId(id)) throw new SavedViewBuiltinError();
     if (patch.query) validateWorkQuery(patch.query);
     const [row] = await this.db
       .update(savedViews)
@@ -293,6 +307,7 @@ export class SavedViewModel {
   };
 
   delete = async (id: string): Promise<boolean> => {
+    if (isBuiltinSavedViewId(id)) throw new SavedViewBuiltinError();
     const deleted = await this.db
       .delete(savedViews)
       .where(and(eq(savedViews.id, id), eq(savedViews.ownerUserId, this.userId)))

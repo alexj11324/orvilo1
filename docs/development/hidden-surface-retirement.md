@@ -232,6 +232,28 @@ agent/:aid/docs/:docId       → 与主应用重复（见下）
 | `src/**`、`packages/**` | 是（探针实测）                          | **0 错误**                                                                                                                                                                                                                                                                                                                                                           |
 | `apps/workbench/**`     | **否**（在根 tsconfig 的 `exclude` 里） | 其自身 `type-check`（`tsc --noEmit`）报 **295 个错误，但全部是既有问题**：该包的 `exclude: ["node_modules"]` **覆盖而非合并**根的 exclude，于是把 `apps/desktop/**` 也拉进来（255 条是 `Cannot find module 'electron'` 一类）。改为 `exclude` 继承根配置才可用，属于既有配置问题，不在本波次范围。**本次改的 `app/lib/seo.ts` 与 `app/root.tsx` 在其中报错数为 0。** |
 
+### CI 抓到的第 4 轮缺陷：既有套件断言了被退役的工具
+
+`Test App (shard 2/2)` 在 `aae497ff` 上报 **1 failed / 5862 passed**，唯一失败是
+`src/features/ProfileEditor/AgentUserTools/UserToolsSection.test.tsx` 的
+「does not count pinned Skill Store in auto activation mode」：期望 `· 0`，实得 `· 1`。
+
+**机制**：`isProfileConfigurableBuiltinTool`（`src/store/tool/slices/builtin/selectors.ts:91`）
+的判据是 `alwaysOnToolIds` 与 `manualModeExcludeToolIds`。canary 上 `orvilo-skill-store`
+**同时在这两个表里**，所以 auto 模式不计入、manual 模式计入 —— 这两条测试正是拿它当样例。
+G02 删该工具时把两处也删了，于是 auto 模式下它变成「可配置」而被计入。
+
+**注意这个失败的另一半**：manual 那条**仍然通过**（删除后它也变成「可配置」，恰好也是 1）。
+也就是说**一半的红是巧合式的绿**，只看「有没有红」会漏掉这一层。
+
+**修法**：样例换成 `orvilo-activator`（同样同时在两个表里），并加一条自检断言
+`alwaysOnToolIds` / `manualModeExcludeToolIds` 必须包含该样例 —— 以后样例再被退役会**先**报
+`expected [...] to include '<id>'`，而不是让人对着计数不符去猜。已证伪：换回
+`orvilo-skill-store` 时自检立即转红并点名。
+
+> 这与「判定为不做」表里 `orvilo-skill-store` 的 `NEEDS_TRACE` **不矛盾**：留的是**私有 overlay 可能提供**该工具这一事实（运行时按 manifest 条件启用），
+> 而**开源树自身的构建里它已不存在**，所以内置注册表、`alwaysOnToolIds` 这些**本仓自己的表**里不应再留着它，测试也不该再拿它当样例。
+
 ### 判定为「不做」并附理由
 
 | 项                                                                | 理由                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |

@@ -5,6 +5,7 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { runTaskDeliveryReviewSweep } from '@/server/services/taskDeliveryReview';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
@@ -29,8 +30,10 @@ export interface TaskWatchdogResult {
 
 /**
  * Scan heartbeat-expired tasks and reclaim them only after every live
- * operation confirms cancellation. The scheduled Hono endpoint calls this
- * without an owner filter; user/API callers pass their own creator scope.
+ * operation confirms cancellation. The same durable sweep also reconciles
+ * PR-bound tasks sitting at the review boundary: CI/review feedback dispatches
+ * a corrective run on the same delivery branch and a confirmed GitHub merge is
+ * the only event that lets the task complete.
  */
 export async function runTaskWatchdog(
   db: OrviloDatabase,
@@ -49,9 +52,6 @@ export async function runTaskWatchdog(
       (topic) => topic.status === 'running',
     );
     if (runningTopics.length > 0) {
-      // A heartbeat deadline does not prove the external writer exited. Stop
-      // every owned operation first; only an acknowledged interruption lets
-      // the watchdog cancel its topic and reclaim run-owned worktrees.
       const aiAgentService = new AiAgentService(db, task.createdByUserId, {
         workspaceId: wsId,
       });
@@ -80,9 +80,6 @@ export async function runTaskWatchdog(
             continue;
           }
 
-          // Persist each confirmed operation immediately. If a sibling
-          // operation remains live, the next sweep must see this topic as
-          // terminal instead of retrying an already-interrupted operation.
           for (const topic of runningTopics) {
             if (topic.operationId === operationId && topic.topicId) {
               await taskTopicModel.cancelIfRunning(task.id, topic.topicId);
@@ -99,9 +96,6 @@ export async function runTaskWatchdog(
         }
       }
       if (!cancellationConfirmed) {
-        // Preserve the live generation and its worktree for a retry. A later
-        // sweep can address the same operation while the device identity is
-        // still present in the topic metadata.
         cancellationRequired.push(task.identifier);
         continue;
       }
@@ -175,6 +169,23 @@ export async function runTaskWatchdog(
         error,
       );
     }
+  }
+
+  // Review reconciliation is intentionally best-effort relative to the stale
+  // run watchdog. A GitHub outage must not prevent cancellation/callback
+  // recovery; review state is durable and the next sweep can resume it.
+  try {
+    const delivery = await runTaskDeliveryReviewSweep(db, options);
+    log(
+      'Delivery review: checked=%d corrected=%d merged=%d waiting=%d paused=%d',
+      delivery.checked,
+      delivery.corrected.length,
+      delivery.merged.length,
+      delivery.waiting.length,
+      delivery.paused.length,
+    );
+  } catch (error) {
+    log('Delivery review sweep failed: %O', error);
   }
 
   log(

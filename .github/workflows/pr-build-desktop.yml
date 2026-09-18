@@ -369,8 +369,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    outputs:
-      artifact_path: ${{ steps.set_path.outputs.path }}
     steps:
       - uses: actions/checkout@v6
 
@@ -389,6 +387,11 @@ jobs:
       - name: Generate PR Release Body
         id: pr_release_body
         uses: actions/github-script@v8
+        env:
+          # Passed through the environment rather than interpolated into the
+          # script body: a PR author controls their own branch name, so a
+          # crafted one would break out of the string literal.
+          PR_BRANCH: ${{ github.head_ref }}
         with:
           result-encoding: string
           script: |
@@ -397,14 +400,14 @@ jobs:
             const body = generateReleaseBody({
               version: "${{ needs.version.outputs.version }}",
               prNumber: "${{ github.event.pull_request.number }}",
-              branch: "${{ github.head_ref }}"
+              branch: process.env.PR_BRANCH
             });
 
             return body;
 
       - name: Create Temporary Release for PR
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           name: PR Build v${{ needs.version.outputs.version }}
           tag_name: v${{ needs.version.outputs.version }}

@@ -100,6 +100,15 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ always() && env.CODECOV_TOKEN != '' }}
+        env:
+          # Event fields a PR author can influence are passed through the
+          # environment instead of being interpolated into the script body: a
+          # branch name may contain characters that would escape the quoting.
+          HEAD_LABEL: ${{ github.event.pull_request.head.label }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
@@ -108,14 +117,14 @@ jobs:
           COMMON_ARGS="--git-service github"
 
           # PR args setup
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            COMMON_ARGS="$COMMON_ARGS --pr ${{ github.event.pull_request.number }}"
-            COMMON_ARGS="$COMMON_ARGS --sha ${{ github.event.pull_request.head.sha }}"
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            COMMON_ARGS="$COMMON_ARGS --pr $PR_NUMBER"
+            COMMON_ARGS="$COMMON_ARGS --sha $HEAD_SHA"
             # Fork PR needs username:branch format for tokenless upload
-            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
-              COMMON_ARGS="$COMMON_ARGS --branch ${{ github.event.pull_request.head.label }}"
+            if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+              COMMON_ARGS="$COMMON_ARGS --branch $HEAD_LABEL"
             else
-              COMMON_ARGS="$COMMON_ARGS --branch ${{ github.event.pull_request.head.ref }}"
+              COMMON_ARGS="$COMMON_ARGS --branch $HEAD_REF"
             fi
           fi
 

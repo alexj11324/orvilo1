@@ -450,7 +450,7 @@ jobs:
         run: ls -R release
 
       - name: Create Canary Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.calculate-version.outputs.tag }}
           name: 'Desktop Canary ${{ needs.calculate-version.outputs.tag }}'

@@ -1,8 +1,14 @@
 import { execFileSync, execSync } from 'node:child_process';
+import * as fs from 'node:fs';
+import path from 'node:path';
 
 import { confirm, select } from '@inquirer/prompts';
 import { consola } from 'consola';
 import * as semver from 'semver';
+
+// Where the new version gets written. Note the *current* version is read from
+// origin/canary (see getCurrentVersion); this path is only the destination.
+const PACKAGE_JSON_PATH = path.join(process.cwd(), 'package.json');
 
 // Version type
 type VersionType = 'patch' | 'minor' | 'major';
@@ -142,6 +148,39 @@ function createReleaseBranch(version: string): void {
   }
 }
 
+// Write the version bump and the changelog onto the release branch.
+//
+// This used to happen inside auto-tag-release.yml, which then pushed the
+// result straight to main. main is covered by the `trunk-branches` ruleset and
+// refuses direct pushes, so the commit has to be carried by the release PR
+// instead — which also means the version becomes reviewable before it ships.
+function prepareReleaseCommit(version: string): void {
+  try {
+    consola.info('📝 Bumping version and generating changelog...');
+
+    const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, 'utf8')) as Record<string, unknown>;
+    fs.writeFileSync(PACKAGE_JSON_PATH, `${JSON.stringify({ ...pkg, version }, null, 2)}\n`);
+
+    execSync('bun run workflow:changelog:gen', { stdio: 'inherit' });
+    execSync('bun run workflow:changelog', { stdio: 'inherit' });
+
+    // execFileSync with an argv array rather than a shell string, matching
+    // createPullRequest below.
+    execFileSync('git', ['add', 'package.json', 'CHANGELOG.md', 'changelog/'], {
+      stdio: 'inherit',
+    });
+    execFileSync('git', ['commit', '-m', `🔖 chore(release): release version v${version}`], {
+      stdio: 'inherit',
+    });
+
+    consola.success(`✅ Release commit created for v${version}`);
+  } catch (error) {
+    consola.error('❌ Failed to prepare the release commit');
+    consola.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
 // Push branch to remote
 function pushBranch(version: string): void {
   const branchName = `release/v${version}`;
@@ -267,13 +306,16 @@ async function main(): Promise<void> {
   // 6. Create release branch
   createReleaseBranch(newVersion);
 
-  // 7. Push to remote
+  // 7. Commit the version bump and changelog on that branch
+  prepareReleaseCommit(newVersion);
+
+  // 8. Push to remote
   pushBranch(newVersion);
 
-  // 8. Create PR
+  // 9. Create PR
   createPullRequest(newVersion);
 
-  // 9. Show completion info
+  // 10. Show completion info
   showCompletion(newVersion);
 }
 

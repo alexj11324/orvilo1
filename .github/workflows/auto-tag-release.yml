@@ -1,7 +1,19 @@
 name: Auto Tag Release
 
+# Runs after a release or hotfix PR lands on main. It only *stamps* what the PR
+# already carries — it never writes to main.
+#
+# Why it no longer bumps the version: main is covered by the `trunk-branches`
+# ruleset, which forbids direct pushes. The version bump and the changelog are
+# produced on the release/hotfix branch instead (bun run release:branch,
+# bun run hotfix:branch), so that merging the PR is the only write to main.
+#
+# This also means the workflow needs no personal access token: tags are not
+# covered by the branch ruleset, so the built-in GITHUB_TOKEN can create them.
+
 permissions:
   contents: write
+  actions: write
 
 on:
   pull_request_target:
@@ -17,13 +29,6 @@ jobs:
     if: github.event.pull_request.merged == true
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          # Fetch full history for proper tagging
-          fetch-depth: 0
-
       - name: Detect release PR (version from title)
         id: release
         env:
@@ -59,181 +64,98 @@ jobs:
             exit 0
           fi
 
-          # Priority 2: fallback to PR title prefix gate (legacy behavior).
-          if echo "$PR_TITLE" | grep -qiE '^(💄[[:space:]]*)?style(\(.+\))?:|^(✨[[:space:]]*)?feat(\(.+\))?:|^(🐛[[:space:]]*)?fix(\(.+\))?:|^(♻️[[:space:]]*)?refactor(\(.+\))?:|^((🐛|🩹)[[:space:]]*)?hotfix(\(.+\))?:|^(👷[[:space:]]*)?build(\(.+\))?:'; then
-            echo "should_tag=true" >> $GITHUB_OUTPUT
-            echo "✅ Detected patch PR from title prefix gate"
-          else
-            echo "should_tag=false" >> $GITHUB_OUTPUT
-            echo "⏭️ Not a patch PR (neither hotfix/release branch nor style/feat/fix/refactor/hotfix/build title prefix)"
-          fi
+          echo "should_tag=false" >> $GITHUB_OUTPUT
+          echo "⏭️ Not a patch PR (not a hotfix/release branch)"
 
-      - name: Prepare main branch
+      - name: Checkout main
         if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          # Full history so the tag is created against a real ref and not a
+          # shallow boundary.
+          fetch-depth: 0
+
+      # The version is read, never written. A release/hotfix PR that reaches
+      # main without its version bump is a broken release, so it fails loudly
+      # instead of silently tagging whatever version happens to be there.
+      - name: Resolve and validate the version carried by the PR
+        id: version
+        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
+        env:
+          TITLE_VERSION: ${{ steps.release.outputs.version }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          git checkout main
-          git pull --rebase origin main
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          echo "package.json version: $PKG_VERSION"
 
-      - name: Setup environment
-        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
-        uses: ./.github/actions/setup-env
-
-      - name: Install deps
-        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
-        run: pnpm install
-
-      - name: Resolve patch version (patch bump)
-        id: patch-version
-        if: steps.patch.outputs.should_tag == 'true'
-        run: |
-          CURRENT_VERSION="$(node -p "require('./package.json').version")"
-          echo "Current version: ${CURRENT_VERSION}"
-
-          # Coerce to stable base (e.g. 2.0.0-beta.1 -> 2.0.0), then bump patch (-> 2.0.1)
-          BASE_VERSION="$(npx -y semver@7 "${CURRENT_VERSION}" -c)"
-          if [ -z "${BASE_VERSION}" ]; then
-            echo "❌ Invalid version in package.json: ${CURRENT_VERSION}"
+          if ! npx -y semver@7 "$PKG_VERSION" >/dev/null 2>&1; then
+            echo "::error::package.json holds a non-semver version: $PKG_VERSION"
             exit 1
           fi
 
-          NEXT_VERSION="$(npx -y semver@7 -i patch "${BASE_VERSION}")"
-          echo "📦 Patch version: ${NEXT_VERSION}"
-          echo "version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Set context (release)
-        if: steps.release.outputs.should_tag == 'true'
-        run: |
-          echo "SHOULD_TAG=true" >> $GITHUB_ENV
-          echo "KIND=release" >> $GITHUB_ENV
-          echo "VERSION=${{ steps.release.outputs.version }}" >> $GITHUB_ENV
-
-      - name: Set context (patch)
-        if: steps.patch.outputs.should_tag == 'true'
-        run: |
-          echo "SHOULD_TAG=true" >> $GITHUB_ENV
-          echo "KIND=patch" >> $GITHUB_ENV
-          echo "VERSION=${{ steps.patch-version.outputs.version }}" >> $GITHUB_ENV
-
-      - name: Check if tag already exists
-        if: env.SHOULD_TAG == 'true'
-        id: check-tag
-        run: |
-          VERSION="${{ env.VERSION }}"
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "⚠️ Tag v$VERSION already exists"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "✅ Tag v$VERSION does not exist, can create"
-          fi
-
-      - name: Bump package.json version
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        run: |
-          VERSION="${{ env.VERSION }}"
-          echo "📝 Bumping package.json version to: $VERSION"
-
-          # Validate VERSION is strict semver before writing
-          if ! npx -y semver@7 "$VERSION" >/dev/null 2>&1; then
-            echo "❌ Invalid semver version: $VERSION"
+          # A release PR states its version in the title; the branch must carry
+          # exactly that version, otherwise the tag would disagree with the PR.
+          if [ -n "$TITLE_VERSION" ] && [ "$TITLE_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::PR title announces v$TITLE_VERSION but package.json is $PKG_VERSION."
+            echo "::error::Bump the version on the release branch before merging."
             exit 1
           fi
 
-          # Update package.json using Node.js
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-            const target = '$VERSION';
-            if (pkg.version === target) {
-              console.log('✅ package.json already at version', target);
-              process.exit(0);
-            }
-            pkg.version = target;
-            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
-            console.log('✅ package.json updated to', target);
-          "
+          if git rev-parse "v$PKG_VERSION" >/dev/null 2>&1; then
+            echo "⚠️ Tag v$PKG_VERSION already exists — nothing to stamp."
+            echo "should_tag=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_tag=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Generate changelog
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        run: bun run workflow:changelog:gen
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Build static changelog
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        run: bun run workflow:changelog
-
-      - name: Commit release changes and push
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        id: bump-version
+      - name: Create tag
+        if: steps.version.outputs.should_tag == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          VERSION="${{ env.VERSION }}"
-
-          # Configure git
-          git config --global user.name "orvilobot"
-          git config --global user.email "i@orvilo.aspectlylabs.com"
-
-          # Commit changes (if any) and push
-          git add package.json CHANGELOG.md changelog/
-          COMMIT_MSG="🔖 chore(release): release version v$VERSION [skip ci]"
-          git commit -m "$COMMIT_MSG" || echo "Nothing to commit"
-          git push origin HEAD:main
-
-          # Output the SHA we will tag
-          echo "tag_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Create Tag
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        run: |
-          VERSION="${{ env.VERSION }}"
-          KIND="${{ env.KIND }}"
-          echo "🏷️ Creating tag: v$VERSION"
-
-          # Tag the bumped version commit SHA (not the PR merge commit SHA)
-          TAG_SHA="${{ steps.bump-version.outputs.tag_sha }}"
-
-          # Create annotated tag with single line message
-          git tag -a "v$VERSION" "$TAG_SHA" -m "🚀 release: v$VERSION | PR #${{ github.event.pull_request.number }} | Author: ${{ github.event.pull_request.user.login }}"
-
-          # Push tag
+          git config user.name "orvilobot"
+          git config user.email "i@orvilo.aspectlylabs.com"
+          git tag -a "v$VERSION" -m "🚀 release: v$VERSION | PR #$PR_NUMBER | Author: $PR_AUTHOR"
           git push origin "v$VERSION"
-
-          echo "✅ Tag v$VERSION created successfully!"
+          echo "✅ Tagged v$VERSION at $(git rev-parse --short HEAD)"
 
       - name: Create GitHub Release
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v1
+        if: steps.version.outputs.should_tag == 'true'
+        uses: softprops/action-gh-release@v3
         with:
-          tag_name: v${{ env.VERSION }}
-          name: 🚀 Release v${{ env.VERSION }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: 🚀 Release v${{ steps.version.outputs.version }}
           body: |
-            ## 📦 Release v${{ env.VERSION }}
+            ## 📦 Release v${{ steps.version.outputs.version }}
 
-            This release was automatically published from PR #${{ github.event.pull_request.number }}.
+            Published from PR #${{ github.event.pull_request.number }}.
 
             ### Changes
-            See PR description: ${{ github.event.pull_request.html_url }}
-
-            ### Commit Message
-            ${{ github.event.pull_request.body }}
+            See the PR description: ${{ github.event.pull_request.html_url }}
           draft: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync main to canary
-        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
+      - name: Sync main back to canary
+        if: steps.version.outputs.should_tag == 'true'
         run: |
           gh workflow run sync-main-to-canary.yaml --ref main
-          echo "✅ Dispatched sync-main-to-canary workflow"
+          echo "✅ Dispatched sync-main-to-canary"
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Output result
+      - name: Summary
+        env:
+          SHOULD_TAG: ${{ steps.version.outputs.should_tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if [ "${{ env.SHOULD_TAG }}" == "true" ]; then
-            if [ "${{ steps.check-tag.outputs.exists }}" == "true" ]; then
-              echo "⚠️ Result: Tag v${{ env.VERSION }} already exists, skipping creation"
-            else
-              echo "✅ Result: Tag v${{ env.VERSION }} created successfully!"
-            fi
+          if [ "$SHOULD_TAG" = "true" ]; then
+            echo "✅ Tagged and released v$VERSION"
           else
-            echo "ℹ️ Result: Not a release/patch PR, no tag created"
+            echo "ℹ️ No tag created (not a release/hotfix PR, or the tag already exists)"
           fi

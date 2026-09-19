@@ -30,6 +30,7 @@ import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
+  onStatusChange?: (status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
 }
@@ -47,7 +48,7 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
 const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
-const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
+const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 'agent' }) => {
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -57,6 +58,7 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
   const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } = useTaskItemContextMenu(
     task,
     routeScope,
+    onStatusChange,
   );
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -124,7 +126,7 @@ const AgentTaskItem = memo<TaskItemProps>(({ task, routeScope = 'agent' }) => {
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
       >
-        <TaskStatusTag status={status} taskIdentifier={task.identifier} />
+        <TaskStatusTag status={status} taskIdentifier={task.identifier} onChange={onStatusChange} />
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
       <TaskWorkflowBadge

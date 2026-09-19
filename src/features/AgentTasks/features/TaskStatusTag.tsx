@@ -39,7 +39,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface TaskStatusTagProps {
   children?: ReactNode;
   disableDropdown?: boolean;
-  onChange?: (status: TaskStatus) => void;
+  onChange?: (status: TaskStatus) => void | Promise<void>;
   size?: number;
   status?: TaskStatus;
   taskIdentifier?: string;
@@ -61,7 +61,12 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
         if (!canEditTask) return;
         if (nextStatus === displayStatus) return;
         if (onChange) {
-          onChange(nextStatus);
+          setLoading(true);
+          try {
+            await onChange(nextStatus);
+          } finally {
+            setLoading(false);
+          }
           return;
         }
         if (!taskIdentifier) return;

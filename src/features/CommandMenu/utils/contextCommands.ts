@@ -141,11 +141,13 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
     },
     {
       icon: KeyIcon,
-      keywords: ['apikey', 'api', 'key', 'token'],
+      keywords: ['apikey', 'api', 'key', 'token', 'signed'],
       keywordsKey: 'cmdk.keywords.apikey',
       label: 'API Keys',
       labelKey: 'tab.apikey',
       labelNamespace: 'auth',
+      // Signed Orvilo TRPC keys (`/settings/apikey`). Not model-provider
+      // credentials — `/settings/provider` stays retired.
       path: '/settings/apikey',
       subPath: 'apikey',
     },

@@ -2,7 +2,8 @@
 title: Inbox and My Work
 description: >-
   Find what needs a decision, the work assigned to you, saved views, and team
-  triage. Tasks, Projects, and Automation stay in the sidebar.
+  triage. The sidebar is Inbox, My Work, and Reviews, with Workspace and Teams
+  as sections.
 tags:
   - Inbox
   - My Work
@@ -14,21 +15,20 @@ tags:
 
 # Inbox and My Work
 
-Inbox, My Work, Views, and Teams sit next to **Tasks**, **Projects**, and **Automation** in the left sidebar. They are the personal work surface — what needs you, what you own, and what your team is triaging — not a second notification product.
+The left sidebar is a fixed personal work surface: **Inbox**, **My Work**, and **Reviews**, then **Workspace**, **Teams**, **Favorites**, and **Agents**. They are not a second notification product.
 
 The same tasks and approvals show up here. Opening Inbox does not create a parallel queue, and My Work does not replace the Tasks list you still use to create and schedule work.
 
 ## Where to look
 
-| Surface        | What it is for                                                                                          |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| **Inbox**      | Decide on approvals, transfers, and agent prompts. Scan later activity.                                 |
-| **My Work**    | Lists of work assigned to you, delegated by you, waiting on your review, created by you, or subscribed. |
-| **Views**      | Built-in and saved lists you can reopen, share, or pin.                                                 |
-| **Teams**      | Workspace teams, triage, and that team's work. Hidden when you are in personal (no-workspace) mode.     |
-| **Tasks**      | Create, assign, and schedule tasks. Unchanged.                                                          |
-| **Projects**   | Group work by project. Unchanged.                                                                       |
-| **Automation** | Recurring runs. Unchanged.                                                                              |
+| Surface       | What it is for                                                                                                                                                  |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Inbox**     | Decide on approvals, transfers, and agent prompts. Scan later activity.                                                                                         |
+| **My Work**   | Lists of work assigned to you, delegated by you, waiting on your review, created by you, or subscribed.                                                         |
+| **Reviews**   | The To-review tab of My Work (`/my-work?tab=review`).                                                                                                           |
+| **Workspace** | Projects, Views, Members, and More (Automations, Resource, workspace settings).                                                                                 |
+| **Teams**     | Workspace teams, triage, and that team's work. Hidden when you are in personal (no-workspace) mode.                                                             |
+| **Tasks**     | Create, assign, and schedule tasks. Reachable as `/tasks` and from My Work / Views — not a first-level sidebar item. The header search row also creates a task. |
 
 Click the bell or **Inbox** in the sidebar to open `/inbox`. Native desktop notification clicks open the same Inbox. Chat Home is still the conversation summary — it is not this work inbox.
 
@@ -148,7 +148,7 @@ Prefix a query with `type:task`, `type:project`, `type:team`, or `type:savedView
 
 ## What did not change
 
-- Creating a task, assigning an Agent, reviewing results, and scheduling still happen on the [Task](/docs/usage/getting-started/task) itself and on **Tasks** in the sidebar.
+- Creating a task, assigning an Agent, reviewing results, and scheduling still happen on the [Task](/docs/usage/getting-started/task) itself. Open `/tasks` from Command Menu or a deep link; the header search row also creates a task.
 - Chat notifications and Home conversation summaries are separate from Inbox.
 - There is no Pulse, Initiatives, or Customers sidebar in this increment.
 

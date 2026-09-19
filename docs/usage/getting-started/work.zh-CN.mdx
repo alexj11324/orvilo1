@@ -1,7 +1,7 @@
 ---
 title: Inbox 与 My Work
 description: >-
-  找到需要你拍板的事项、指派给你的工作、已保存的视图，以及团队分诊。Tasks、Projects、Automation 仍在侧栏。
+  找到需要你拍板的事项、指派给你的工作、已保存的视图，以及团队分诊。侧栏一级是 Inbox、My Work 和 Reviews，Workspace 与 Teams 是分区。
 tags:
   - Inbox
   - My Work
@@ -13,21 +13,20 @@ tags:
 
 # Inbox 与 My Work
 
-Inbox、My Work、Views、Teams 和侧栏里的 **Tasks**、**Projects**、**Automation** 并列。它们是个人工作面 —— 谁需要你决定、你手头有什么、团队正在分诊什么 —— 不是第二套通知产品。
+左侧栏是固定的个人工作面：**Inbox**、**My Work**、**Reviews**，然后是 **Workspace**、**Teams**、**Favorites** 和 **Agents**。它们不是第二套通知产品。
 
 出现在这里的仍是同一批任务和审批。打开 Inbox 不会另开一条队列；My Work 也不会取代你用来创建和调度任务的 Tasks 列表。
 
 ## 去哪里找
 
-| 表面             | 用来做什么                           |
-| -------------- | ------------------------------- |
-| **Inbox**      | 处理审批、转移和 Agent 追问；浏览后续动态。       |
-| **My Work**    | 指派给你、由你委派、等你审核、由你创建、或你订阅的工作列表。  |
-| **Views**      | 内置和已保存的列表，可再次打开、分享或钉选。          |
-| **Teams**      | 工作区团队、分诊和该团队的工作。个人模式（无工作区）下会隐藏。 |
-| **Tasks**      | 创建、指派和调度任务。没有改。                 |
-| **Projects**   | 按项目归组工作。没有改。                    |
-| **Automation** | 周期运行。没有改。                       |
+| 表面            | 用来做什么                                                       |
+| ------------- | ----------------------------------------------------------- |
+| **Inbox**     | 处理审批、转移和 Agent 追问；浏览后续动态。                                   |
+| **My Work**   | 指派给你、由你委派、等你审核、由你创建、或你订阅的工作列表。                              |
+| **Reviews**   | My Work 的待审核标签（`/my-work?tab=review`）。                      |
+| **Workspace** | Projects、Views、Members，以及 More（Automations、Resource、工作区设置）。 |
+| **Teams**     | 工作区团队、分诊和该团队的工作。个人模式（无工作区）下会隐藏。                             |
+| **Tasks**     | 创建、指派和调度任务。从 `/tasks`、My Work / Views 进入，不是一级侧栏。搜索行也有新建任务。  |
 
 点侧栏的 **Inbox** 或铃铛都会打开 `/inbox`。桌面端系统通知的点击也进入同一个 Inbox。聊天首页仍是对话摘要，不是这个工作收件箱。
 
@@ -147,7 +146,7 @@ Inbox 有两个标签：
 
 ## 什么没有变
 
-- 创建任务、指派 Agent、验收结果、设置周期，仍然发生在 [任务](/zh/docs/usage/getting-started/task) 本身和侧栏的 **Tasks**。
+- 创建任务、指派 Agent、验收结果、设置周期，仍然发生在 [任务](/zh/docs/usage/getting-started/task) 本身。从命令菜单或深链打开 `/tasks`；搜索行也可以新建任务。
 - 聊天通知和首页对话摘要与 Inbox 分开。
 - 这一版没有 Pulse、Initiatives 或 Customers 侧栏。
 

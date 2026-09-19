@@ -47,8 +47,8 @@ interface UseHomeAgentRowsOptions {
 /**
  * Rows for the home Agent switcher, bucketed the same way the sidebar and the
  * agent-detail switcher bucket theirs: private first, then workspace, each in
- * pinned → folders → ungrouped order, with the caller's sidebar-hidden agents
- * dropped. Kept out of the component so the bucketing is unit-testable.
+ * pinned → folders → ungrouped order. Kept out of the component so the
+ * bucketing is unit-testable.
  */
 export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRows => {
   const { t } = useTranslation(['chat', 'topic']);
@@ -70,9 +70,8 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
 
   const activeWorkspaceId = useActiveWorkspaceId();
 
-  // Drop the caller's "removed from my sidebar" items and folders, exactly like
-  // the sidebar lists and the agent-detail switcher do — a hidden agent (or an
-  // agent inside a hidden Category) must not resurface in the home switcher.
+  // Per-item sidebar membership was retired with the fixed IA — keep() is an
+  // identity seam shared with the other list-shaping call sites.
   const keep = useKeepSidebarListed();
   const keepGroups = useKeepSidebarGroupsListed();
 
@@ -144,8 +143,8 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
     return {
       privateRows,
       // Same rule as the agent-detail SwitchPanel: only split into 私人 / 工作区
-      // when there is a workspace AND private items survive the hidden filter —
-      // a lone header above an empty section is noise.
+      // when there is a workspace AND private items exist — a lone header
+      // above an empty section is noise.
       showPrivateSection: Boolean(activeWorkspaceId) && privateRows.length > 0,
       workspaceRows,
     };

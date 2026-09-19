@@ -1,7 +1,7 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
-import { Avatar, Button, DropdownMenu, Segmented, Text, toast } from '@lobehub/ui/base-ui';
+import { Avatar, Button, DropdownMenu, Segmented, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -14,9 +14,7 @@ import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
-import { useKeepSidebarGroupsListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
-import { useSidebarItemVisibility } from '@/features/HomeSidebar/Body/Agent/useSidebarItemVisibility';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -35,7 +33,6 @@ import AgentRow, { type AgentRowAuthor } from './AgentRow';
 import { flattenAgentBuckets } from './flattenBuckets';
 import ListConfig from './ListConfig';
 import { type AgentListViewOptions, normalizeAgentListViewOptions } from './listViewOptions';
-import SidebarAgentsSection from './SidebarAgentsSection';
 
 type SegmentValue = 'private' | 'workspace';
 type ViewMode = 'card' | 'list';
@@ -197,9 +194,6 @@ const AgentViewAllPage = memo(() => {
     isEqual,
   );
 
-  const { isSidebarItemVisible, setSidebarItemVisible } = useSidebarItemVisibility();
-  const keepGroups = useKeepSidebarGroupsListed();
-
   const workspaceItems = useMemo(
     () => flattenAgentBuckets(pinnedAgents, agentGroups, ungroupedAgents),
     [pinnedAgents, agentGroups, ungroupedAgents],
@@ -210,40 +204,6 @@ const AgentViewAllPage = memo(() => {
   );
 
   const items = activeWorkspaceId && segment === 'private' ? privateItems : workspaceItems;
-
-  // "In sidebar" overview data: everything visible in the sidebar across BOTH
-  // the workspace and private buckets — the block answers "what's in my
-  // sidebar right now", so it ignores the tab and the search keyword (it
-  // hides entirely while searching to keep results scannable).
-  const sidebarItems = useMemo(() => {
-    // Rebuilt from folder-filtered buckets rather than reusing the page's
-    // flattened lists: hiding a Category removes its whole section from the
-    // sidebar, so its agents are not "in sidebar" either. The page's own list
-    // deliberately keeps showing them — hiding is a sidebar-only preference.
-    const inSidebar = [
-      ...flattenAgentBuckets(pinnedAgents, keepGroups(agentGroups), ungroupedAgents),
-      ...flattenAgentBuckets(
-        privatePinnedAgents,
-        keepGroups(privateAgentGroups),
-        privateUngroupedAgents,
-      ),
-    ];
-    const seen = new Set<string>();
-    return inSidebar.filter((item) => {
-      if (seen.has(item.id) || !isSidebarItemVisible(item)) return false;
-      seen.add(item.id);
-      return true;
-    });
-  }, [
-    agentGroups,
-    isSidebarItemVisible,
-    keepGroups,
-    pinnedAgents,
-    privateAgentGroups,
-    privatePinnedAgents,
-    privateUngroupedAgents,
-    ungroupedAgents,
-  ]);
 
   // Author info (column, grouping, sorting) only means something on the
   // workspace tab — every private item is the viewer's own.
@@ -268,16 +228,14 @@ const AgentViewAllPage = memo(() => {
   // (picked on the workspace tab, then the user opens Private where the
   // author controls are hidden) — coerce back to visible defaults instead of
   // sorting by an invisible key with a select value that has no option.
-  const { orderDirection, showSidebarHidden } = viewOptions;
+  const { orderDirection } = viewOptions;
 
-  // Tab counts describe how big each bucket is, so they follow the persisted
-  // hidden-agent setting (what the tab would list) but ignore the keyword —
+  // Tab counts describe how big each bucket is, ignoring the keyword —
   // searching narrows the list below, it doesn't shrink the buckets.
-  const bucketCounts = useMemo(() => {
-    const count = (list: SidebarAgentItem[]) =>
-      showSidebarHidden ? list.length : list.filter(isSidebarItemVisible).length;
-    return { private: count(privateItems), workspace: count(workspaceItems) };
-  }, [workspaceItems, privateItems, showSidebarHidden, isSidebarItemVisible]);
+  const bucketCounts = useMemo(
+    () => ({ private: privateItems.length, workspace: workspaceItems.length }),
+    [workspaceItems, privateItems],
+  );
 
   // Label grouping works on every tab (labels exist in personal mode too);
   // author grouping only makes sense where the author column shows.
@@ -296,7 +254,7 @@ const AgentViewAllPage = memo(() => {
 
   const filteredItems = useMemo(() => {
     const query = keyword.trim().toLowerCase();
-    let matched = query
+    const matched = query
       ? items.filter(
           (item) =>
             item.name?.toLowerCase().includes(query) ||
@@ -304,10 +262,6 @@ const AgentViewAllPage = memo(() => {
             item.description?.toLowerCase().includes(query),
         )
       : items;
-
-    if (!showSidebarHidden) {
-      matched = matched.filter(isSidebarItemVisible);
-    }
 
     const authorName = (item: SidebarAgentItem) =>
       (item.userId && authorByUserId.get(item.userId)?.name) || '';
@@ -321,15 +275,7 @@ const AgentViewAllPage = memo(() => {
       if (orderBy === 'author') return direction * authorName(a).localeCompare(authorName(b));
       return direction * (dayjs(a.updatedAt).valueOf() - dayjs(b.updatedAt).valueOf());
     });
-  }, [
-    items,
-    keyword,
-    orderBy,
-    orderDirection,
-    showSidebarHidden,
-    isSidebarItemVisible,
-    authorByUserId,
-  ]);
+  }, [items, keyword, orderBy, orderDirection, authorByUserId]);
 
   // Author sections (workspace tab only — every private item is the viewer's
   // own, so author buckets would be a single redundant group): items are
@@ -419,21 +365,6 @@ const AgentViewAllPage = memo(() => {
     [expandedGroupKeys, expandedGroupSet, updateSystemStatus],
   );
 
-  const handleToggleSidebar = useCallback(
-    async (item: SidebarAgentItem) => {
-      try {
-        await setSidebarItemVisible(item.id, !isSidebarItemVisible(item));
-      } catch (error) {
-        // Personal mode writes the preference optimistically and never rolls
-        // back, workspace mode rolls back silently — either way the row's
-        // state stops matching what was saved, so say so.
-        console.error('Failed to toggle Agent sidebar visibility:', error);
-        toast.error(t('operationFailed'));
-      }
-    },
-    [isSidebarItemVisible, setSidebarItemVisible, t],
-  );
-
   const renderCard = useCallback(
     (item: SidebarAgentItem) => (
       <AgentCard
@@ -441,11 +372,9 @@ const AgentViewAllPage = memo(() => {
         item={item}
         key={item.id}
         showAuthor={showAuthor}
-        sidebarHidden={!isSidebarItemVisible(item)}
-        onToggleSidebar={handleToggleSidebar}
       />
     ),
-    [showAuthor, authorByUserId, handleToggleSidebar, isSidebarItemVisible],
+    [showAuthor, authorByUserId],
   );
 
   const renderRow = useCallback(
@@ -455,11 +384,9 @@ const AgentViewAllPage = memo(() => {
         item={item}
         key={item.id}
         showAuthor={showAuthor}
-        sidebarHidden={!isSidebarItemVisible(item)}
-        onToggleSidebar={handleToggleSidebar}
       />
     ),
-    [showAuthor, authorByUserId, handleToggleSidebar, isSidebarItemVisible],
+    [showAuthor, authorByUserId],
   );
 
   const { allowed: canCreate, reason: createBlockedReason } = usePermission('create_content');
@@ -510,9 +437,6 @@ const AgentViewAllPage = memo(() => {
         }
       />
       <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        {isInit && !keyword.trim() && sidebarItems.length > 0 && (
-          <SidebarAgentsSection items={sidebarItems} onToggleSidebar={handleToggleSidebar} />
-        )}
         <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
           {/* The workspace/private split only exists inside a workspace;
               personal mode leads with the search box instead. */}

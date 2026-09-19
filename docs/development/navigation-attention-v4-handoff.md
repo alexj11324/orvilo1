@@ -72,13 +72,13 @@
 - 收藏始终可见上 / 下箭头，走 `favoriteReorder` CAS，CONFLICT 则 refetch
 - `workAttention.search` / `searchTasks` / `searchProjects` 上限 `WORK_SEARCH_MAX_PER_TYPE`（200）；CommandMenu 仍混合 5 / 带类型 50；`TeamsPage` 搜索框走 sidecar，不传 FTS `type:`
 - `NavItem` `@media (hover: none)` 强制可见 `.nav-item-actions`
+- CommandMenu 跨类型 recents：`RecentModel.queryRecent` 加 project/savedView/team 三个 union arm，各按自己 readable 谓词（workspace+public /member grant /owner+team+workspace 可见性）；`recent.getAll` zod enum 与 routePath 补齐（`/project/`、`/views/`、`/teams/`）；`RECENT_SIDEBAR_TYPES` 变四类型，CommandMenu 主面板新增 Recents 组（开菜单时懒拉 `recentService.getAll(8)`）
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-1. CommandMenu 最近访问目前几乎是 task-only 侧栏 recents；包要求跨类型。
-2. NICE（可后做）：task/team/project 的 pin UI、favorites unpin/overflow、NAV02 原生通知矩阵、个人模式藏 Teams tab、CMDK SWR key 去掉 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
+**已全部落地。** 只剩 NICE（可后做）：task/team/project 的 pin UI、favorites unpin/overflow、NAV02 原生通知矩阵、个人模式藏 Teams tab、CMDK SWR key 去掉 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
 
 ## 阻塞 / 不要假装完成
 
@@ -122,15 +122,9 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `02d8191e` / `c5be180c` / `bd5209d9`：288 passed
 - `cfc06a6f`：66 passed；当时全仓 `tsgo --noEmit` 通过
 - 本增量（Inbox 包络 / 收藏重排 / 团队搜索 / 触屏）：lint 干净，42 passed。不是 64× AC。
+- `d6560eb7`（CommandMenu 跨类型 recents + `recent.test.ts` work-type arms）：lint 干净，38 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
-
-## 给下一刀的具体补丁（CommandMenu recents）
-
-1. 现有 Home recents（`packages/database/src/models/recent.ts`、`src/features/HomeSidebar` recents）几乎是 task/topic。包要求 CommandMenu 空查询时跨 task /team/project /savedView。
-2. 不要把工作类型塞进 FTS `type:`；继续走 `workAttention.search` sidecar。
-3. 不要新开组件测试套件；逻辑抽 hook /helper 再测。
-4. 不要跑 `bun run i18n`。
 
 `listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
 

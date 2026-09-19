@@ -315,7 +315,6 @@ const WorkSurfaceToolbar = memo<WorkSurfaceToolbarProps>(
               aria-label={asideLabel}
               className={styles.toolbarOverflowTrigger}
               icon={SlidersHorizontalIcon}
-              title={asideLabel}
             />
           </Popover>
         </>

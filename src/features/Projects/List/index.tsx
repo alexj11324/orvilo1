@@ -176,10 +176,10 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
         <span className={`${styles.actions} project-row-actions`}>
           <DropdownMenu items={menuItems} placement={'bottomRight'}>
             <ActionIcon
+              aria-label={t('list.moreActions')}
               icon={MoreHorizontalIcon}
               loading={deleting}
               size={'small'}
-              title={t('list.moreActions')}
             />
           </DropdownMenu>
         </span>

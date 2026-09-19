@@ -33,22 +33,10 @@ Feature: Agents 页面 Agent Group 管理
     Then 该项名称应该更新为 "Enter Confirmed"
 
   # ============================================
-  # 侧边栏显示/隐藏
+  # 侧边栏显示/隐藏 — 场景随固定侧边栏 IA 退役而移除
   # ============================================
-
-  @HOME-GROUP-PIN-001 @P1
-  Scenario: 将 Agent Group 加入侧边栏
-    Given 该 Agent Group 未显示在侧边栏
-    When 用户右键点击该 Agent Group
-    And 用户在菜单中选择加入侧边栏
-    Then Agent Group 应该显示在侧边栏分组中
-
-  @HOME-GROUP-PIN-002 @P1
-  Scenario: 将 Agent Group 移出侧边栏
-    Given 该 Agent Group 已显示在侧边栏
-    When 用户右键点击该 Agent Group
-    And 用户在菜单中选择移出侧边栏
-    Then Agent Group 不应该显示在侧边栏分组中
+  # 同 sidebarAgent.feature：主侧边栏不再渲染按 Agent Group 分组的列表，
+  # "在我的侧边栏显示/隐藏" 已退役。HOME-GROUP-PIN-001/002 为有意删除。
 
   # ============================================
   # 删除

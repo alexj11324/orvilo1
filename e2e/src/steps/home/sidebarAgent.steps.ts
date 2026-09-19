@@ -3,8 +3,10 @@
  *
  * Step definitions for Home page Agent management E2E tests
  * - Rename
- * - Pin/Unpin
  * - Delete
+ *
+ * The per-agent sidebar pin/show-hide scenarios were removed with the fixed
+ * sidebar IA (sidebarContract.ts) — see the matching feature file comment.
  */
 import { randomBytes } from 'node:crypto';
 
@@ -75,9 +77,37 @@ async function inputNewName(
   console.log(`   ✅ 已输入新名称 "${newName}"`);
 }
 
+type DbClient = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
+};
+
+/**
+ * Resolve the signed-in test user's auto-provisioned workspace.
+ * Every account runs inside a workspace now, and rows without workspace_id
+ * are treated as foreign by the workspace permission guards (they render in
+ * the list but get reduced menus / no config access), so fixtures must file
+ * into the caller's workspace to exercise the real row actions.
+ */
+async function getTestWorkspaceId(client: DbClient): Promise<string> {
+  const { rows } = await client.query(
+    `SELECT workspace_id FROM workspace_members
+     WHERE user_id = $1 AND deleted_at IS NULL
+     ORDER BY joined_at LIMIT 1`,
+    [TEST_USER.id],
+  );
+  const workspaceId = rows[0]?.workspace_id as string | undefined;
+  if (!workspaceId) {
+    throw new Error(
+      `no workspace membership for ${TEST_USER.id} — workspace was not provisioned before seeding`,
+    );
+  }
+  return workspaceId;
+}
+
 /**
  * Create a test agent directly in database
  */
+
 async function createTestAgent(title: string = 'Test Agent'): Promise<string> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL not set');
@@ -92,12 +122,13 @@ async function createTestAgent(title: string = 'Test Agent'): Promise<string> {
     const suffix = randomBytes(6).toString('hex');
     const agentId = `agent_e2e_test_${suffix}`;
     const slug = `test-agent-${suffix}`;
+    const workspaceId = await getTestWorkspaceId(client);
 
     await client.query(
-      `INSERT INTO agents (id, slug, title, user_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $5)
+      `INSERT INTO agents (id, slug, title, user_id, workspace_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $6)
        ON CONFLICT DO NOTHING`,
-      [agentId, slug, title, TEST_USER.id, now],
+      [agentId, slug, title, TEST_USER.id, workspaceId, now],
     );
 
     console.log(`   📍 Created test agent in DB: ${agentId}`);
@@ -157,81 +188,6 @@ Given('用户在 Agents 页面有一个 Agent', { timeout: 30_000 }, async funct
   this.testContext.targetType = 'agent';
 
   console.log(`   ✅ 找到 Agent: ${agentLabel}, id: ${agentId}`);
-});
-
-Given('该 Agent 未显示在侧边栏', { timeout: 30_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 检查 Agent 未显示在侧边栏...');
-  // The Agents page shows in-sidebar items inside the "In Sidebar" section.
-  // A freshly seeded item defaults to visible, so hide it via the row menu.
-  const inSidebar = this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .first();
-
-  if ((await inSidebar.count()) > 0) {
-    console.log('   📍 Agent 已在侧边栏，开始隐藏操作...');
-    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
-    await targetItem.hover();
-    await this.page.waitForTimeout(200);
-    await targetItem.click({ button: 'right', force: true });
-    await this.page.waitForTimeout(500);
-    const hideOption = this.page.getByRole('menuitem', {
-      name: /在我的侧边栏隐藏|hide from my sidebar/i,
-    });
-    await hideOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      console.log('   ⚠️ 隐藏选项未找到');
-    });
-    if ((await hideOption.count()) > 0) {
-      await hideOption.click();
-      await this.page.waitForTimeout(800);
-    }
-    // Close menu if still open
-    await this.page.keyboard.press('Escape');
-    await this.page.waitForTimeout(300);
-  }
-
-  const stillVisible = await this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .count();
-  console.log(`   ✅ Agent 未显示在侧边栏 (inSidebar=${stillVisible})`);
-});
-
-Given('该 Agent 已显示在侧边栏', { timeout: 30_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 确保 Agent 已显示在侧边栏...');
-  const inSidebar = this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .first();
-
-  if ((await inSidebar.count()) === 0) {
-    console.log('   📍 Agent 未在侧边栏，开始显示操作...');
-    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
-    await targetItem.hover();
-    await this.page.waitForTimeout(200);
-    await targetItem.click({ button: 'right', force: true });
-    await this.page.waitForTimeout(500);
-
-    const menuItems = await this.page.locator('[role="menuitem"]').count();
-    console.log(`   📍 Debug: 发现 ${menuItems} 个菜单项`);
-
-    const showOption = this.page.getByRole('menuitem', {
-      name: /在我的侧边栏显示|show in my sidebar/i,
-    });
-    await showOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      console.log('   ⚠️ 显示选项未找到');
-    });
-    if ((await showOption.count()) > 0) {
-      await showOption.click();
-      await this.page.waitForTimeout(800);
-      console.log('   ✅ 已点击显示选项');
-    }
-    // Close menu if still open
-    await this.page.keyboard.press('Escape');
-    await this.page.waitForTimeout(300);
-  }
-
-  const isVisible = await this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .count();
-  console.log(`   ✅ Agent 已显示在侧边栏: ${isVisible > 0}`);
 });
 
 // ============================================
@@ -303,32 +259,6 @@ When('用户在菜单中选择重命名', async function (this: CustomWorld) {
   console.log('   ✅ 已选择重命名选项');
 });
 
-When('用户在菜单中选择加入侧边栏', async function (this: CustomWorld) {
-  console.log('   📍 Step: 选择加入侧边栏选项...');
-
-  const showOption = this.page.getByRole('menuitem', {
-    name: /在我的侧边栏显示|show in my sidebar/i,
-  });
-  await expect(showOption).toBeVisible({ timeout: 5000 });
-  await showOption.click();
-  await this.page.waitForTimeout(800);
-
-  console.log('   ✅ 已选择加入侧边栏选项');
-});
-
-When('用户在菜单中选择移出侧边栏', async function (this: CustomWorld) {
-  console.log('   📍 Step: 选择移出侧边栏选项...');
-
-  const hideOption = this.page.getByRole('menuitem', {
-    name: /在我的侧边栏隐藏|hide from my sidebar/i,
-  });
-  await expect(hideOption).toBeVisible({ timeout: 5000 });
-  await hideOption.click();
-  await this.page.waitForTimeout(800);
-
-  console.log('   ✅ 已选择移出侧边栏选项');
-});
-
 When('用户在菜单中选择删除', async function (this: CustomWorld) {
   console.log('   📍 Step: 选择删除选项...');
 
@@ -395,30 +325,6 @@ Then('该项名称应该更新为 {string}', async function (this: CustomWorld, 
   }
 
   console.log(`   ✅ 名称已更新为 "${expectedName}"`);
-});
-
-Then('Agent 应该显示在侧边栏分组中', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证 Agent 显示在侧边栏分组中...');
-
-  await this.page.waitForTimeout(500);
-  const sectionItem = this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .first();
-  await expect(sectionItem).toBeVisible({ timeout: 5000 });
-
-  console.log('   ✅ Agent 已显示在侧边栏分组中');
-});
-
-Then('Agent 不应该显示在侧边栏分组中', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证 Agent 不在侧边栏分组中...');
-
-  await this.page.waitForTimeout(500);
-  const sectionItem = this.page.locator(
-    `[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`,
-  );
-  await expect(sectionItem).not.toBeVisible({ timeout: 5000 });
-
-  console.log('   ✅ Agent 不在侧边栏分组中');
 });
 
 Then('Agent 应该从列表中移除', async function (this: CustomWorld) {

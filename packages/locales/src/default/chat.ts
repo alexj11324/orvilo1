@@ -1826,6 +1826,11 @@ export default {
   'createGoal.roundBudgetHint':
     'If it runs out without reaching the goal, it stops and waits for you.',
   'createGoal.roundBudgetLabel': 'Round budget',
+  'createGoal.parallelismLabel': 'Parallel tasks',
+  'createGoal.parallelismPlaceholder': 'Auto',
+  'createGoal.parallelismUnit': 'tasks at once',
+  'createGoal.parallelismHint':
+    'Independent tasks run in parallel up to this many; leave blank for the default.',
   'createGoal.roundsUnit': 'rounds',
   'createGoal.roundBudgetUncappedHint':
     'It keeps going until the goal is reached — watch the cost.',
@@ -2115,6 +2120,8 @@ export default {
   'goalProcess.metricDetail.budget.tokensValue': '{{value}} tokens',
   'goalProcess.metricDetail.budget.raiseNote':
     'Raising a cap is what restarts a goal the coordinator parked on its budget \u2014 it starts moving again on its own, no Resume needed. Leave a field empty to run uncapped.',
+  'goalProcess.metricDetail.budget.parallelism': 'Parallel tasks',
+  'goalProcess.metricDetail.budget.parallelismAuto': 'Auto',
   'goalProcess.metricDetail.budget.rounds': 'Rounds',
   'goalProcess.metricDetail.budget.saveFailed': 'Could not update the budget',
   'goalProcess.metricDetail.budget.title': 'Cost',

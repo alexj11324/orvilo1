@@ -487,6 +487,8 @@
   "builtins.orvilo-task.goal.costBudget": "Total cost budget",
   "builtins.orvilo-task.goal.criteria": "Acceptance criteria",
   "builtins.orvilo-task.goal.editCriterion": "Edit criterion",
+  "builtins.orvilo-task.goal.parallelism": "Parallel tasks",
+  "builtins.orvilo-task.goal.parallelismAuto": "Auto",
   "builtins.orvilo-task.goal.phase.accepted": "Accepted",
   "builtins.orvilo-task.goal.phase.awaitingDecision": "Not passed — your call",
   "builtins.orvilo-task.goal.phase.awaitingReview": "Awaiting your review",

@@ -480,6 +480,8 @@ export default {
   'builtins.orvilo-task.goal.phase.repairing': 'Repairing',
   'builtins.orvilo-task.goal.phase.verifying': 'Verifying',
   'builtins.orvilo-task.goal.editCriterion': 'Edit criterion',
+  'builtins.orvilo-task.goal.parallelism': 'Parallel tasks',
+  'builtins.orvilo-task.goal.parallelismAuto': 'Auto',
   'builtins.orvilo-task.goal.roundBudget': 'Iteration budget',
   'builtins.orvilo-task.goal.roundsUnit': 'rounds',
   'builtins.orvilo-task.goal.sectionBudget': 'Budget',

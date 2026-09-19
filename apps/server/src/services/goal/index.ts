@@ -10,6 +10,7 @@ import type {
   GoalItem,
   GoalMetricCriterion,
   GoalNodeAcceptance,
+  GoalNodeIntegration,
   GoalNodeKind,
   GoalNodeStatus,
   GoalPauseReason,
@@ -561,13 +562,14 @@ export class GoalService {
 
   graph = async (goalId: string) => {
     const graph = await this.requireGraph(goalId);
-    const [runHeartbeats, deliveredAt, acceptances, spend] = await Promise.all([
+    const [runHeartbeats, deliveredAt, acceptances, integrations, spend] = await Promise.all([
       this.collectRunHeartbeats(graph),
       this.collectDeliveredAt(graph),
       this.collectAcceptances(graph),
+      this.collectIntegrations(graph),
       this.resolveSpend(graph),
     ]);
-    return { ...graph, acceptances, deliveredAt, runHeartbeats, spend };
+    return { ...graph, acceptances, deliveredAt, integrations, runHeartbeats, spend };
   };
 
   /**
@@ -600,6 +602,49 @@ export class GoalService {
       result[nodeId] = { id: row.id, status: row.status };
     }
     return Object.keys(result).length > 0 ? result : undefined;
+  };
+
+  /**
+   * Newest integration record per task node.
+   *
+   * `collectDeliveredAt` covers the acceptance wait; this covers what comes
+   * after — the run's branch making it back onto the base branch. A child
+   * completing is not its work landing: without these records the map reads a
+   * resolved node as delivered while its merge is still in flight, conflicted,
+   * or blocked, and "awaiting integration" has no evidence anywhere on the
+   * goal. `skipped` means the run had nothing to integrate, so it is the one
+   * state dropped; everything else (including `pending` on a run in flight)
+   * is a state a reader can act on.
+   */
+  private collectIntegrations = async (
+    graph: GoalGraphSnapshot,
+  ): Promise<Record<string, GoalNodeIntegration> | undefined> => {
+    const taskNodes = graph.nodes.filter(
+      (node): node is GoalGraphNode & { taskId: string } => node.kind === 'task' && !!node.taskId,
+    );
+    if (taskNodes.length === 0) return undefined;
+
+    const nodeByTaskId = new Map(taskNodes.map((node) => [node.taskId, node.id]));
+    // Newest run per task wins — `findWithHandoffByTaskIds` orders by seq
+    // desc, and an older run's record is history once a newer one exists.
+    const topics = await this.taskTopicModel.findWithHandoffByTaskIds(
+      taskNodes.map((n) => n.taskId),
+      taskNodes.length * 4,
+    );
+
+    const integrations: Record<string, GoalNodeIntegration> = {};
+    const seen = new Set<string>();
+    for (const topic of topics) {
+      const taskId = topic.sourceTaskId;
+      if (!taskId || seen.has(taskId)) continue;
+      seen.add(taskId);
+      const nodeId = nodeByTaskId.get(taskId);
+      const integration = topic.integration;
+      if (!nodeId || !integration || !topic.topicId || integration.state === 'skipped') continue;
+      integrations[nodeId] = { ...integration, topicId: topic.topicId };
+    }
+
+    return Object.keys(integrations).length > 0 ? integrations : undefined;
   };
 
   /**
@@ -1084,6 +1129,7 @@ export class GoalService {
     goalId: string,
     budget: {
       deadline?: string | null;
+      maxConcurrentTasks?: number | null;
       maxExperiments?: number;
       maxRounds?: number | null;
       maxTotalCost?: number | null;
@@ -1113,6 +1159,9 @@ export class GoalService {
     }
     if (budget.deadline !== undefined) {
       config.schedule = { ...config.schedule, deadline: budget.deadline };
+    }
+    if (budget.maxConcurrentTasks !== undefined) {
+      config.maxConcurrentTasks = budget.maxConcurrentTasks;
     }
 
     const goal = await this.goalModel.update(goalId, {

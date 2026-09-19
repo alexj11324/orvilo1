@@ -487,6 +487,8 @@
   "builtins.orvilo-task.goal.costBudget": "总成本预算",
   "builtins.orvilo-task.goal.criteria": "验收标准",
   "builtins.orvilo-task.goal.editCriterion": "编辑验收标准",
+  "builtins.orvilo-task.goal.parallelism": "并行任务",
+  "builtins.orvilo-task.goal.parallelismAuto": "自动",
   "builtins.orvilo-task.goal.phase.accepted": "已验收",
   "builtins.orvilo-task.goal.phase.awaitingDecision": "未通过 · 待你定夺",
   "builtins.orvilo-task.goal.phase.awaitingReview": "待你验收",

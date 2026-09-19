@@ -117,6 +117,7 @@ export class GoalActionImpl {
     goalId: string,
     budget: {
       deadline?: string | null;
+      maxConcurrentTasks?: number | null;
       maxRounds?: number | null;
       maxTotalCost?: number | null;
     },

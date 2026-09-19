@@ -12,6 +12,7 @@ import { goalService } from '@/services/goal';
 import {
   buildGoalRequirement,
   resolveGoalAttemptBudget,
+  resolveGoalConcurrency,
   resolveGoalScheduleConfig,
 } from '../../createGoalInput';
 import { GoalIdentifier } from '../../manifest';
@@ -56,10 +57,12 @@ class GoalExecutor extends BaseExecutor<typeof GoalApiName> {
 
     try {
       const scheduleConfig = resolveGoalScheduleConfig(params.deadline);
+      const maxConcurrentTasks = resolveGoalConcurrency(params.maxConcurrentTasks);
       const graph = await goalService.create({
         agentId: ctx.agentId,
         createdByAgentId: ctx.agentId,
         config: {
+          ...(maxConcurrentTasks !== undefined ? { maxConcurrentTasks } : {}),
           recovery: { maxAttemptsPerTask: resolveGoalAttemptBudget(params.maxIterations) },
           ...(scheduleConfig ? { schedule: scheduleConfig } : {}),
         },

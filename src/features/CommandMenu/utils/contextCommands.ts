@@ -5,7 +5,6 @@ import {
   Coins,
   CreditCard,
   EthernetPort,
-  Gift,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -69,16 +68,11 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
     path: '/settings/billing',
     subPath: 'billing',
   },
-  {
-    icon: Gift,
-    keywords: ['referral', 'rewards', 'invite', 'bonus'],
-    keywordsKey: 'cmdk.keywords.referral',
-    label: 'Referral Rewards',
-    labelKey: 'tab.referral',
-    labelNamespace: 'subscription',
-    path: '/settings/referral',
-    subPath: 'referral',
-  },
+  // There is deliberately no Referral entry here. That settings page was an
+  // empty shell and has been retired, so its URL now resolves to a not-found;
+  // a palette entry would advertise a destination the product no longer has.
+  // (Written without the URL on purpose — the retirement gate in
+  // `retiredSettingsSurfaces.test.ts` scans this file for it as text.)
 ];
 
 /**

@@ -699,6 +699,22 @@ export default {
   'devices.fallbackTooltip':
     "This device couldn't be identified by its machine ID, so reinstalling the app may create a duplicate entry.",
   'devices.lastSeen': 'Last connected {{time}}',
+  'devices.osPermissions.actions.grant': 'Grant Access',
+  'devices.osPermissions.actions.granted': 'Access Granted',
+  'devices.osPermissions.actions.openSettings': 'Open Settings',
+  'devices.osPermissions.items.accessibility.description':
+    'Enable system-level automation for seamless workflow execution across applications',
+  'devices.osPermissions.items.accessibility.title': 'Accessibility',
+  'devices.osPermissions.items.fileAccess.description':
+    'Access files and folders to enable document analysis, knowledge base creation, and file processing workflows',
+  'devices.osPermissions.items.fileAccess.title': 'File Access',
+  'devices.osPermissions.items.notifications.description':
+    'Receive notifications when tasks complete, Agents respond, or important updates arrive',
+  'devices.osPermissions.items.notifications.title': 'Notifications',
+  'devices.osPermissions.items.screenAudio.description':
+    'Capture screen content and audio for voice interactions, screen analysis, and multimodal assistance',
+  'devices.osPermissions.items.screenAudio.title': 'Screen & Audio',
+  'devices.osPermissions.title': 'System permissions',
   'devices.remove.confirm': 'Remove this device?',
   'devices.remove.confirmDesc':
     'This disconnects the device from your account. It does not sign the device out, and it can re-register on next connect.',
@@ -1714,6 +1730,8 @@ When I am ___, I need ___
   'tab.chatAppearance': 'Chat Appearance',
   'tab.common': 'Appearance',
   'tab.connector': 'Connectors',
+  'tab.connectorDesc': 'Manage the accounts your agents can act through',
+  'tab.connectorEmpty': 'No connectors available yet',
   'tab.creds': 'Credentials',
   'tab.devices': 'Devices',
   'tab.experiment': 'Experiment',
@@ -2394,6 +2412,13 @@ When I am ___, I need ___
   'workspace.auditLog.actions.workspace.deleted': 'Workspace deleted',
   'workspace.auditLog.actions.workspace.downgraded': 'Workspace downgraded',
   'workspace.auditLog.actions.workspace.frozen': 'Workspace frozen',
+  'workspace.auditLog.actions.workspace.ownership_transfer_accepted': 'Ownership transfer accepted',
+  'workspace.auditLog.actions.workspace.ownership_transfer_cancelled':
+    'Ownership transfer cancelled',
+  'workspace.auditLog.actions.workspace.ownership_transfer_declined': 'Ownership transfer declined',
+  'workspace.auditLog.actions.workspace.ownership_transfer_expired': 'Ownership transfer expired',
+  'workspace.auditLog.actions.workspace.ownership_transfer_requested':
+    'Ownership transfer requested',
   'workspace.auditLog.actions.workspace.primary_ownership_transferred':
     'Primary ownership transferred',
   'workspace.auditLog.actions.workspace.settings_reset': 'Workspace settings reset',
@@ -2517,6 +2542,9 @@ When I am ___, I need ___
   'workspace.auditLog.filters.startDate': 'Start date',
   'workspace.auditLog.loadFailed': 'Failed to load audit logs',
   'workspace.auditLog.loadMore': 'Load more',
+  'workspace.loadFailed': 'Failed to load workspaces',
+  'workspace.loadFailedHint':
+    'Your workspace list could not be loaded. Check your connection and retry.',
   'workspace.auditLog.resourceTypes.api_key': 'API key',
   'workspace.auditLog.resourceTypes.agent': 'Agent',
   'workspace.auditLog.resourceTypes.auto_top_up': 'Auto top-up',
@@ -3678,9 +3706,13 @@ When I am ___, I need ___
   'workspaceSetting.invitations.status.pending': 'Pending',
   'workspaceSetting.invitations.status.revoked': 'Revoked',
   'workspaceSetting.members.actionFailed': 'Action failed. Please try again.',
+  'workspaceSetting.members.columnJoined': 'Joined',
   'workspaceSetting.members.columnMember': 'Member',
+  'workspaceSetting.members.columnProjects': 'Projects',
+  'workspaceSetting.members.columnReviewing': 'Reviewing',
   'workspaceSetting.members.columnRole': 'Role',
   'workspaceSetting.members.columnStatus': 'Status',
+  'workspaceSetting.members.columnTasks': 'Tasks',
   'workspaceSetting.members.emailCount': '{{count}} recipient',
   'workspaceSetting.members.emailCount_other': '{{count}} recipients',
   'workspaceSetting.members.emailsLabel': 'Email addresses',
@@ -3742,6 +3774,23 @@ When I am ___, I need ___
   'workspaceSetting.members.status.suspended': 'Suspended',
   'workspaceSetting.members.suspend': 'Suspend',
   'workspaceSetting.members.tabAgents': 'Agents',
+  'workspaceSetting.members.transferAccept': 'Accept ownership',
+  'workspaceSetting.members.transferAccepted': 'You are now the owner of this workspace.',
+  'workspaceSetting.members.transferBannerIncoming':
+    '{{name}} wants to make you the owner of this workspace.',
+  'workspaceSetting.members.transferBannerOutgoing':
+    'Waiting for {{name}} to accept ownership of this workspace.',
+  'workspaceSetting.members.transferCancel': 'Cancel transfer',
+  'workspaceSetting.members.transferCancelled': 'Transfer request cancelled.',
+  'workspaceSetting.members.transferConfirmContent':
+    '{{name}} must accept before ownership moves. Until then you stay the owner.',
+  'workspaceSetting.members.transferConfirmTitle': 'Transfer ownership to {{name}}?',
+  'workspaceSetting.members.transferDecline': 'Decline',
+  'workspaceSetting.members.transferDeclined': 'Transfer request declined.',
+  'workspaceSetting.members.transferLoadFailed': "Couldn't load the pending ownership transfer.",
+  'workspaceSetting.members.transferOwnership': 'Transfer ownership',
+  'workspaceSetting.members.transferRequested':
+    'Transfer request sent — it expires if not answered in time.',
   'workspaceSetting.members.tabInvitations': 'Invitations',
   'workspaceSetting.members.tabMembers': 'Members',
   'workspaceSetting.members.title': 'Members',
@@ -3757,7 +3806,6 @@ When I am ___, I need ___
   'workspaceSetting.tab.connector': 'Connectors',
   'workspaceSetting.tab.skill': 'Skills',
   'tools.add': 'Add Skill',
-  'tools.addSkillOrConnector': 'Add Skills / Connectors',
   'tools.noConfigurablePermissions': 'This skill does not expose configurable tool permissions.',
   'tools.legacyConnector.configure': 'Configure',
   'tools.legacyConnector.upgradeDesc':

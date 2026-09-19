@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react';
 
-import { isDesktop } from '@/const/version';
 import { onboardingSelectors } from '@/store/user/selectors';
 import { type UserInitializationState } from '@/types/user';
 import { buildOnboardingRedirectUrl } from '@/utils/onboardingRedirect';
@@ -13,6 +12,7 @@ const DEFER_REDIRECT_PREFIXES = ['/invite'];
 // user who followed a share link should reach the shared agent, not be
 // bounced into onboarding first.
 const RESERVED_FIRST_SEGMENTS = new Set([
+  'acceptance',
   'agent',
   'apps',
   'desktop-onboarding',
@@ -34,6 +34,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'subscription',
   'task',
   'tasks',
+  'verify',
   'video',
 ]);
 
@@ -62,20 +63,25 @@ export const shouldDeferOnboardingRedirect = (pathname: string): boolean => {
   return !!first && !RESERVED_FIRST_SEGMENTS.has(first);
 };
 
+const ONBOARDING_PATH_PREFIXES = ['/onboarding', '/desktop-onboarding'];
+
 const redirectToOnboarding = (currentPath: string, search: string) => {
-  if (!currentPath.startsWith('/onboarding')) {
-    // Thread the page the user was on so onboarding finish points return there
-    window.location.href = buildOnboardingRedirectUrl(currentPath + search);
-  }
+  // Onboarding surfaces themselves never redirect and never become the
+  // callback target — `/desktop-onboarding` is the retired flow's compat
+  // redirect, so threading it would bounce the finished user right back.
+  if (ONBOARDING_PATH_PREFIXES.some((prefix) => currentPath.startsWith(prefix))) return;
+
+  // Thread the page the user was on so onboarding finish points return there
+  window.location.href = buildOnboardingRedirectUrl(currentPath + search);
 };
 
-export const useDesktopUserStateRedirect = () => {
-  // Desktop onboarding redirect is now handled by main process (BrowserManager)
-  // No need to check localStorage here
-  return useCallback(() => {}, []);
-};
-
-export const useWebUserStateRedirect = () =>
+/**
+ * One onboarding rule for every client: the server-side `finishedAt` decides,
+ * not the viewing platform. Desktop still has a main-process boot gate for the
+ * signed-out first paint, but once the user state resolves the renderer
+ * applies the same redirect as Web.
+ */
+export const useUserStateRedirect = () =>
   useCallback((state: UserInitializationState) => {
     const { pathname, search } = window.location;
 
@@ -84,16 +90,3 @@ export const useWebUserStateRedirect = () =>
 
     redirectToOnboarding(pathname, search);
   }, []);
-
-export const useUserStateRedirect = () => {
-  const desktopRedirect = useDesktopUserStateRedirect();
-  const webRedirect = useWebUserStateRedirect();
-
-  return useCallback(
-    (state: UserInitializationState) => {
-      const redirect = isDesktop ? desktopRedirect : webRedirect;
-      redirect(state);
-    },
-    [desktopRedirect, webRedirect],
-  );
-};

@@ -90,27 +90,21 @@ const errorHandlingLink: TRPCLink<LambdaRouter> = () => {
                     });
                   }
                 } else {
-                  // Non-market 401: handle as before (Orvilo session expired)
+                  // Non-market 401: the Orvilo session expired. Emit the shared
+                  // event — each platform's session-auth adapter owns the
+                  // recovery (web redirects to /signin, the desktop modal
+                  // restarts the system-browser OIDC round trip).
                   const now = Date.now();
                   if (now - last401Time > MIN_401_INTERVAL) {
                     last401Time = now;
-                    // Desktop app doesn't have the web auth routes like `/signin`,
-                    // so skip the login redirect/notification there.
-                    if (!isDesktop) {
-                      const { getUserStoreState } = await import('@/store/user/store');
-                      const { isSignedIn, logout } = getUserStoreState();
-                      // If user is still marked as signed in but got 401,
-                      // session is invalid - clear client state first
-                      if (isSignedIn) {
-                        const params = new URLSearchParams({ callbackUrl: location.toString() });
-                        params.set('reason', 'sessionExpired');
-                        await logout({ redirectTo: `/signin?${params.toString()}` });
-                      } else {
-                        const { loginRequired } =
-                          await import('@/components/Error/loginRequiredNotification');
-                        loginRequired.redirect({ reason: 'sessionExpired' });
-                      }
-                    }
+                    const { sessionAuthEvents } =
+                      await import('@/layout/AuthProvider/SessionAuth/events');
+                    sessionAuthEvents.emit('session-auth-expired', {
+                      path: op.path,
+                      reason: `trpc ${op.path} -> 401`,
+                      source: 'trpc',
+                      timestamp: now,
+                    });
                   }
                 }
                 // Mark error as non-retryable to prevent SWR infinite retry loop

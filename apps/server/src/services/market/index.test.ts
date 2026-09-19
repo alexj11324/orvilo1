@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { MarketSDK } from '@lobehub/market-sdk';
-import { CacheRevalidate, CacheTag } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateTrustedClientToken, getTrustedClientTokenForSession } from '@/libs/trusted-client';
@@ -767,73 +766,11 @@ describe('MarketService', () => {
     });
   });
 
-  describe('skill comments & ratings', () => {
-    it('getSkillComments delegates to marketSkills.getComments with params', async () => {
-      const service = new MarketService();
-      const response = { currentPage: 1, items: [], pageSize: 10, totalCount: 0, totalPages: 0 };
-      (service.market.marketSkills.getComments as any).mockResolvedValue(response);
-
-      const result = await service.getSkillComments('github.acme.skill-a', {
-        page: 2,
-        sort: 'upvotes',
-      });
-
-      expect(service.market.marketSkills.getComments).toHaveBeenCalledWith('github.acme.skill-a', {
-        page: 2,
-        sort: 'upvotes',
-      });
-      expect(result).toEqual(response);
-    });
-
-    it('getSkillRatingDistribution delegates to marketSkills.getRatingDistribution', async () => {
-      const service = new MarketService();
-      const distribution = { 1: 0, 2: 0, 3: 1, 4: 2, 5: 3, totalCount: 6 };
-      (service.market.marketSkills.getRatingDistribution as any).mockResolvedValue(distribution);
-
-      const result = await service.getSkillRatingDistribution('github.acme.skill-a');
-
-      expect(service.market.marketSkills.getRatingDistribution).toHaveBeenCalledWith(
-        'github.acme.skill-a',
-      );
-      expect(result).toEqual(distribution);
-    });
-  });
-
   describe('getSDK', () => {
     it('should return the underlying MarketSDK instance', () => {
       const service = new MarketService();
       const sdk = service.getSDK();
       expect(sdk).toBe((service as any).market);
     });
-  });
-});
-
-describe('MarketService.searchSkill', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  /**
-   * The skill store was the one browse surface hitting Market on every open and
-   * every page, so it alone went down when the upstream was throttled or a
-   * credential went stale — the MCP tab looked healthy through the same
-   * incidents only because it was served from this cache.
-   */
-  it('caches the catalogue like every other discover list', async () => {
-    const service = new MarketService();
-    const getSkillList = service.market.marketSkills.getSkillList as ReturnType<typeof vi.fn>;
-    getSkillList.mockResolvedValue({ currentPage: 1, items: [], totalPages: 1 });
-
-    await service.searchSkill({ page: 1, sort: 'installCount' });
-
-    expect(getSkillList).toHaveBeenCalledWith(
-      { page: 1, sort: 'installCount' },
-      expect.objectContaining({
-        next: expect.objectContaining({
-          revalidate: CacheRevalidate.List,
-          tags: expect.arrayContaining([CacheTag.Discover, CacheTag.Skills]),
-        }),
-      }),
-    );
   });
 });

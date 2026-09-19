@@ -1,8 +1,8 @@
+import type { CollaborationRoom, RoomAuthorization, RoomSnapshotResult } from '@orvilo/types';
+import { roomKey } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
-import type { CollaborationRoom, RoomAuthorization, RoomSnapshotResult } from '@orvilo/types';
-import { roomKey } from '@orvilo/types';
 import type { OrviloDatabase } from '@/database/type';
 
 import { users, WorkspaceMemberModel } from './contractTables';
@@ -44,7 +44,11 @@ export class CollaborationService {
       });
     }
 
-    await assertRoomAccess(this.db, { userId: this.userId, workspaceId: this.workspaceId }, room);
+    const grant = await assertRoomAccess(
+      this.db,
+      { userId: this.userId, workspaceId: this.workspaceId },
+      room,
+    );
 
     const [profile] = await this.db
       .select({ avatar: users.avatar, fullName: users.fullName, username: users.username })
@@ -68,6 +72,7 @@ export class CollaborationService {
           : {}),
       },
       authzVersion: member?.authzVersion ?? undefined,
+      projectId: grant.projectId,
       room: roomKey(room),
       workspaceId: this.workspaceId,
     });

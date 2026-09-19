@@ -23,42 +23,26 @@ import {
 } from '@/server/services/githubRepo';
 
 const log = debug('task-workspace');
-
-/** Max hops up the parentTaskId chain when inheriting a workspace binding. */
 const WORKSPACE_INHERIT_DEPTH = 10;
 
 export interface ProvisionedWorkspace {
   baseBranch: string;
   branch: string;
-  /**
-   * Device hosting the worktree. Absent on remote provisions — the workspace
-   * lives inside the ephemeral cloud sandbox instead.
-   */
   deviceId?: string;
-  /** Seed record the runner persists on `task_topics.integration`. */
   integration: TaskTopicIntegration;
-  /**
-   * Contract appended to the task prompt (remote provisions only): the
-   * branch/push/PR instructions the sandbox agent must follow for the
-   * integration run to be able to land the work later.
-   */
+  /** Branch/push/PR delivery contract appended to the task prompt. */
   prompt?: string;
-  /**
-   * GitHub repos the run's topic must carry (`initialTopicMetadata.repos`) so
-   * the cloud sandbox pre-clones them — remote provisions only.
-   */
+  /** Repos a cloud sandbox must pre-clone. */
   repos?: string[];
   workingDirectory: string;
   workingDirectoryConfig: WorkingDirConfig;
 }
 
 /**
- * TaskWorkspaceService — resolves a task's `config.workspace` repo binding and
- * provisions an isolated git worktree on the bound device for each fresh run
- * (branch `task/<identifier>`), so parallel runs never share one checkout.
- * Once a workspace binding exists, provisioning is mandatory. Missing devices,
- * invalid repo coordinates, and incompatible execution targets fail the run so
- * the user never gets an unisolated execution that only looks repo-bound.
+ * Resolve a Task's repo binding and give every fresh run an isolated checkout.
+ * A binding with a GitHub `repo` also carries the PR-first delivery contract:
+ * the run may push only its task branch and must leave the base branch for the
+ * review controller to merge after CI/comments/review gates settle.
  */
 export class TaskWorkspaceService {
   private agentModel: AgentModel;
@@ -75,11 +59,6 @@ export class TaskWorkspaceService {
     this.taskModel = new TaskModel(db, userId, workspaceId);
   }
 
-  /**
-   * Remove a device worktree that was provisioned but never made durable on a
-   * task_topics row. This closes the startup gap where prompt construction or
-   * agent dispatch can fail after `git worktree add` succeeds.
-   */
   async discardUnregistered(workspace: ProvisionedWorkspace): Promise<boolean> {
     const { deviceId, repoPath, worktreePath } = workspace.integration;
     if (!deviceId || !repoPath || !worktreePath || worktreePath === repoPath) return true;
@@ -101,11 +80,6 @@ export class TaskWorkspaceService {
     return removed.success;
   }
 
-  /**
-   * Read `config.workspace` off the task or its nearest ancestor. Subtasks of
-   * a workspace-bound root share the repo binding — they get their own
-   * branch/worktree rather than each needing the config repeated.
-   */
   async resolveWorkspaceConfig(task: TaskItem): Promise<TaskWorkspaceConfig | undefined> {
     let current: TaskItem | null = task;
     for (let depth = 0; current && depth < WORKSPACE_INHERIT_DEPTH; depth += 1) {
@@ -165,34 +139,18 @@ export class TaskWorkspaceService {
     return undefined;
   }
 
-  /**
-   * Provision the run's workspace and return the topic working directory +
-   * integration seed. Returns `undefined` when the task carries no workspace
-   * binding. A configured binding that cannot be provisioned throws.
-   *
-   * Two modes:
-   * - **device** — `repoPath` + a resolvable device → `addGitWorktree` RPC.
-   *   Throws when the RPC fails (the caller pauses the task), since silently
-   *   running in the source checkout would corrupt the isolation guarantee.
-   * - **remote** — `repo` set, no device, and the assignee's execution target
-   *   resolves to `sandbox` → the cloud sandbox pre-clones the repo and the
-   *   contract prompt has the agent push `task/<id>` + open a PR; a later
-   *   integrator run lands it (CAID branch-and-merge without a device).
-   */
   async provision(params: {
     seq: number;
     task: TaskItem;
   }): Promise<ProvisionedWorkspace | undefined> {
     const { task, seq } = params;
-
     const config = await this.resolveWorkspaceConfig(task);
     if (!config) return undefined;
 
-    // The agent lookup is only needed for its bound-device fallback, or to
-    // resolve the execution target when a remote (`repo`) binding exists —
-    // a device-pinned, repoPath-only binding needs neither. Not-found agents
-    // come back `null`; a real lookup failure propagates so the run pauses
-    // loudly instead of silently degrading to an unprovisioned run.
+    if (config.repo && !parseGithubRepo(config.repo)) {
+      throw new Error(`Workspace repository is not a valid GitHub coordinate: ${config.repo}`);
+    }
+
     const needsAgent = !config.deviceId || !!config.repo;
     const agent =
       needsAgent && task.assigneeAgentId
@@ -200,14 +158,8 @@ export class TaskWorkspaceService {
         : null;
     const deviceId = config.deviceId ?? agent?.agencyConfig?.boundDeviceId;
 
-    // Follow where the run actually executes: a sandbox-resolved run takes the
-    // remote contract (a bound device is irrelevant to it), everything else
-    // falls back to the device worktree path. A `repo` that doesn't parse as a
-    // GitHub coordinate can only produce a broken contract — treat it like no
-    // provisionable target rather than emitting bad instructions.
     if (
       config.repo &&
-      parseGithubRepo(config.repo) &&
       runsInSandbox(agent?.agencyConfig ?? undefined, config.deviceId)
     ) {
       return this.provisionOnRemote({
@@ -222,17 +174,14 @@ export class TaskWorkspaceService {
       return this.provisionOnDevice({ config, deviceId, seq, task });
     }
 
-    const reason =
-      config.repo && !parseGithubRepo(config.repo)
-        ? `Workspace repository is not a valid GitHub coordinate: ${config.repo}`
-        : config.repoPath && !deviceId
-          ? 'Workspace device is unavailable or not configured'
-          : 'Workspace binding does not match the selected execution target';
+    const reason = config.repoPath && !deviceId
+      ? 'Workspace device is unavailable or not configured'
+      : 'Workspace binding does not match the selected execution target';
     log('provision: %s cannot provision workspace — %s', task.identifier, reason);
     throw new Error(reason);
   }
 
-  /** Create the run's worktree on the bound device. */
+  /** Create a run-owned worktree. When `repo` is present it is also PR-bound. */
   private async provisionOnDevice(params: {
     config: TaskWorkspaceConfig;
     deviceId: string;
@@ -241,14 +190,10 @@ export class TaskWorkspaceService {
   }): Promise<ProvisionedWorkspace> {
     const { config, deviceId, seq, task } = params;
     const repoPath = config.repoPath!;
-
     const { baseBranch, forkRef } = await this.resolveBase(task, config, repoPath, deviceId);
 
-    // Retried runs get their own branch so an earlier attempt's commits stay
-    // inspectable and the fresh worktree never collides with a leftover one.
     const branch = taskBranchName(task.identifier, seq);
     const worktreePath = deriveWorktreePath(repoPath, branch);
-
     const added = await deviceGateway.addGitWorktree({
       branch,
       deviceId,
@@ -269,12 +214,12 @@ export class TaskWorkspaceService {
       path: worktreePath,
       repoType: 'git',
     };
-
     const integration: TaskTopicIntegration = {
       attempts: 0,
       baseBranch,
       branch,
       deviceId,
+      repo: config.repo,
       repoPath,
       role: 'task',
       state: 'pending',
@@ -286,24 +231,21 @@ export class TaskWorkspaceService {
       branch,
       deviceId,
       integration,
+      prompt: config.repo
+        ? buildRemoteContractPrompt({
+            baseBranch,
+            branch,
+            repo: config.repo,
+            workingDirectory: worktreePath,
+          })
+        : undefined,
       workingDirectory: worktreePath,
       workingDirectoryConfig,
     };
   }
 
-  /**
-   * Bind the run to the repo's remote: the sandbox pre-clones `config.repo`
-   * (via topic `repos` metadata) and the contract prompt has the agent isolate
-   * work on `task/<id>`, push it, and open a PR. The merge itself is deferred
-   * to a later integrator run — the sandbox is gone by then.
-   */
   private async provisionOnRemote(params: {
     config: TaskWorkspaceConfig;
-    /**
-     * Assignee's `env.GITHUB_CRED_KEY` override — the same credential the
-     * sandbox run pushes under, so the default-branch lookup queries the
-     * right account.
-     */
     credKey?: string;
     seq: number;
     task: TaskItem;
@@ -324,7 +266,6 @@ export class TaskWorkspaceService {
 
     const branch = taskBranchName(task.identifier, seq);
     const workingDirectory = cloudSandboxRepoPath(repo);
-
     const integration: TaskTopicIntegration = {
       attempts: 0,
       baseBranch,
@@ -349,12 +290,6 @@ export class TaskWorkspaceService {
     };
   }
 
-  /**
-   * The branch the task branch must merge back into. Explicit
-   * `config.baseBranch` wins; otherwise the remote default when `origin/HEAD`
-   * resolves, else the source checkout's current branch. The fork ref prefers
-   * the remote-tracking ref so worktrees start from the published tip.
-   */
   private async resolveBase(
     task: TaskItem,
     config: TaskWorkspaceConfig,
@@ -389,16 +324,13 @@ export class TaskWorkspaceService {
 const parseWorkspaceConfig = (config: unknown): TaskWorkspaceConfig | undefined => {
   if (!isRecord(config)) return undefined;
   const workspace = config.workspace;
-  if (!isRecord(workspace)) return undefined;
-  if (workspace.provider !== 'git') return undefined;
+  if (!isRecord(workspace) || workspace.provider !== 'git') return undefined;
   const repoPath =
     typeof workspace.repoPath === 'string' && workspace.repoPath.trim()
       ? workspace.repoPath
       : undefined;
   const repo =
     typeof workspace.repo === 'string' && workspace.repo.trim() ? workspace.repo : undefined;
-  // A binding must identify the repo somehow: a device path for worktree
-  // provisioning, or a remote coordinate for the sandbox contract.
   if (!repoPath && !repo) return undefined;
   return {
     baseBranch: typeof workspace.baseBranch === 'string' ? workspace.baseBranch : undefined,
@@ -409,26 +341,10 @@ const parseWorkspaceConfig = (config: unknown): TaskWorkspaceConfig | undefined 
   };
 };
 
-/** Branch a run works on: `task/<identifier>` (+ `-r<n>` on retry attempts). */
+/** A fresh delivery attempt owns a fresh worktree/branch; review fixes reuse it. */
 const taskBranchName = (identifier: string, seq: number): string =>
   seq > 1 ? `task/${identifier}-r${seq}` : `task/${identifier}`;
 
-/**
- * Whether a run by this assignee lands in the cloud sandbox — the only place
- * the remote contract can bind to. Reproduces the local-CLI hetero resolution
- * in `dispatchHeteroAgent` rather than guessing from the stored target:
- * `clientExecutionAvailable` is hardcoded `false` there (the server never
- * counts itself as the client, so a stored `local`/`none`/`unset` coerces to
- * sandbox exactly as it will at run time), the sandbox allowlist is
- * `supportsCloudHeterogeneousSandbox` (claude-code/codex), and the task's
- * `deviceId` pin plays the role of the request-level device override.
- *
- * Plain (non-hetero) agents never reach `spawnHeteroSandbox` — `repos`
- * pre-cloning, `GITHUB_TOKEN` and the contract itself are hetero-only — so a
- * non-hetero or sandbox-incapable assignee returns false here and the binding
- * falls back to the device path or no provision. `canUseDevice` stays at its
- * first-party default: server-initiated task runs are never denied senders.
- */
 const runsInSandbox = (
   agencyConfig: OrviloAgentAgencyConfig | undefined,
   requestedDeviceId?: string,
@@ -447,7 +363,6 @@ const runsInSandbox = (
   );
 };
 
-/** Branch/push/PR contract appended to the task prompt for remote runs. */
 const buildRemoteContractPrompt = (params: {
   baseBranch: string;
   branch: string;
@@ -455,10 +370,11 @@ const buildRemoteContractPrompt = (params: {
   workingDirectory: string;
 }): string =>
   [
-    '[Workspace contract] This task runs against an isolated branch of a bound repository.',
-    `- Repository: \`${params.repo}\` — when pre-cloned it lives at \`${params.workingDirectory}\`; if the directory is missing, clone the repo there first.`,
-    `- Before editing, create the task branch off the base: \`git fetch origin ${params.baseBranch}\` then \`git checkout -B ${params.branch} origin/${params.baseBranch}\`.`,
-    `- Commit your changes on \`${params.branch}\` and push with \`git push -u origin ${params.branch}\`. Do NOT commit to or push \`${params.baseBranch}\` directly.`,
-    `- Open a pull request targeting the base branch: \`gh pr create --base ${params.baseBranch} --head ${params.branch}\`.`,
-    'A separate integration run merges the branch back — work that is not pushed is permanently lost when the sandbox is reclaimed.',
+    '[Workspace contract] This code task is delivered through one GitHub pull request.',
+    `- Repository: \`${params.repo}\`; working directory: \`${params.workingDirectory}\`.`,
+    `- Before editing, fetch \`origin/${params.baseBranch}\` and work only on \`${params.branch}\`. If the branch does not exist yet, create it from \`origin/${params.baseBranch}\`.`,
+    `- Commit changes on \`${params.branch}\` and push with \`git push -u origin ${params.branch}\`. Never push directly to \`${params.baseBranch}\`.`,
+    `- Ensure exactly one pull request exists from \`${params.branch}\` to \`${params.baseBranch}\` (create it with \`gh pr create\` if needed).`,
+    '- Leave the PR open. Do not merge it yourself. Orvilo will move the task into review, process CI and review comments on the same PR, and merge only after the gates pass.',
+    '- A run is not a delivery until its commits are pushed. Preserve the branch/PR identity across review fixes.',
   ].join('\n');

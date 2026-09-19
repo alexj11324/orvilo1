@@ -970,6 +970,15 @@ export class LinearSyncModel {
     return row ?? null;
   }
 
+  /**
+   * Commit one step of import progress. When `claim` is given the write is
+   * fenced to it: owner + fence + run + scope revision must still match AND
+   * the lease must still be live under the database clock — a worker that
+   * lost its lease (expired, taken over, or reset) gets `null` back instead
+   * of silently landing stale cursors, counters or failure states on top of
+   * the new owner's run. Callers treating `null` as "claim lost" must stop;
+   * control-plane paths (reset/trigger) omit the claim on purpose.
+   */
   async updateScopeImportState(
     id: string,
     patch: {
@@ -983,12 +992,74 @@ export class LinearSyncModel {
       status?: LinearSyncScopeStatus;
       teamsLinked?: number;
     },
+    claim?: {
+      fence: number;
+      importRunId: string | null;
+      owner: string;
+      scopeRevision: number;
+    },
   ) {
     const [row] = await this.db
       .update(linearSyncScopes)
       .set({ ...patch, updatedAt: new Date() })
-      .where(and(eq(linearSyncScopes.id, id), eq(linearSyncScopes.workspaceId, this.workspaceId)))
+      .where(
+        and(
+          eq(linearSyncScopes.id, id),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+          claim ? eq(linearSyncScopes.leaseOwner, claim.owner) : undefined,
+          claim ? eq(linearSyncScopes.leaseFence, claim.fence) : undefined,
+          claim
+            ? claim.importRunId === null
+              ? isNull(linearSyncScopes.importRunId)
+              : eq(linearSyncScopes.importRunId, claim.importRunId)
+            : undefined,
+          claim ? eq(linearSyncScopes.scopeRevision, claim.scopeRevision) : undefined,
+          claim ? gt(linearSyncScopes.lockedUntil, sql`now()`) : undefined,
+        ),
+      )
       .returning();
+    return row ?? null;
+  }
+
+  /**
+   * Extend the live claim's lease without touching progress fields. Phases do
+   * unbounded work — teams/projects/issue pages — against a fixed-duration
+   * lease, so the owner must renew or its own commits start failing the
+   * `lockedUntil > now()` fence. Same predicates as
+   * `updateScopeImportState`: a renewal that no longer matches owner/fence/
+   * run/revision, or whose lease already lapsed on the database clock,
+   * returns null and the caller treats it as lease loss.
+   */
+  async renewScopeImportLease(
+    id: string,
+    claim: {
+      fence: number;
+      importRunId: string | null;
+      owner: string;
+      scopeRevision: number;
+    },
+    lockMs: number = LINEAR_SYNC_DEFAULT_LEASE_MS,
+  ) {
+    const [row] = await this.db
+      .update(linearSyncScopes)
+      .set({
+        lockedUntil: sql`now() + ${lockMs} * interval '1 millisecond'`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(linearSyncScopes.id, id),
+          eq(linearSyncScopes.workspaceId, this.workspaceId),
+          eq(linearSyncScopes.leaseOwner, claim.owner),
+          eq(linearSyncScopes.leaseFence, claim.fence),
+          claim.importRunId === null
+            ? isNull(linearSyncScopes.importRunId)
+            : eq(linearSyncScopes.importRunId, claim.importRunId),
+          eq(linearSyncScopes.scopeRevision, claim.scopeRevision),
+          gt(linearSyncScopes.lockedUntil, sql`now()`),
+        ),
+      )
+      .returning({ lockedUntil: linearSyncScopes.lockedUntil });
     return row ?? null;
   }
 

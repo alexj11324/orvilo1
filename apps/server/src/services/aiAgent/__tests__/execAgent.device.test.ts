@@ -472,7 +472,7 @@ describe('AiAgentService.execAgent - device auto-activation', () => {
       vi.mocked(AgentService).mockImplementation(function () {
         return {
           getAgentConfig: vi.fn().mockResolvedValue({
-            agencyConfig: { boundDeviceId: 'device-001' },
+            agencyConfig: { boundDeviceId: 'device-001', executionTarget: 'device' },
             chatConfig: {},
             files: [],
             id: 'agent-1',
@@ -505,7 +505,7 @@ describe('AiAgentService.execAgent - device auto-activation', () => {
       vi.mocked(AgentService).mockImplementation(function () {
         return {
           getAgentConfig: vi.fn().mockResolvedValue({
-            agencyConfig: { boundDeviceId: 'device-001' },
+            agencyConfig: { boundDeviceId: 'device-001', executionTarget: 'device' },
             chatConfig: {},
             files: [],
             id: 'agent-1',
@@ -833,7 +833,7 @@ describe('AiAgentService.execAgent - device auto-activation', () => {
       vi.mocked(AgentService).mockImplementation(function () {
         return {
           getAgentConfig: vi.fn().mockResolvedValue({
-            agencyConfig: { boundDeviceId: 'device-001' },
+            agencyConfig: { boundDeviceId: 'device-001', executionTarget: 'device' },
             chatConfig: {},
             files: [],
             id: 'agent-1',

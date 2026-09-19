@@ -43,8 +43,10 @@ export interface ResolveExecutionTargetOptions {
    *   - a server with a device gateway (`!!DEVICE_GATEWAY_URL`), which tunnels
    *     the run to a registered device — the client lives at the other end.
    * When false (plain web / a server with no gateway) there is no client to run
-   * on, so a `local` target coerces to `sandbox` (cloud) or the default is
-   * `none` (plain chat). Each layer passes the value that means this for it:
+   * on, so a `local` target degrades to `none` — a pending state that must be
+   * resolved by an explicit device/sandbox selection, never by silently
+   * re-routing to the cloud sandbox or to whichever machine renders the page.
+   * Each layer passes the value that means this for it:
    * `isDesktop` (build const) in the UI, `gatewayConfigured` on the server,
    * `hasDeviceProxy` in the tools engine.
    *
@@ -74,10 +76,10 @@ export interface ResolveExecutionTargetOptions {
    */
   deviceRoutingAvailable?: boolean;
   /**
-   * Heterogeneous agents bring their own toolchain and must execute somewhere,
-   * so `'none'` normally coerces to `'local'` on desktop and `'sandbox'` on
-   * web. A provider without sandbox support keeps `'none'` as a pending device
-   * selection instead.
+   * Heterogeneous agents bring their own toolchain and must execute somewhere.
+   * An unresolved (`'none'`) hetero target is a pending state — the UI prompts
+   * for a device (or cloud sandbox, when supported) and dispatch fails loudly
+   * — it never silently picks the viewing client or the cloud sandbox.
    */
   isHetero?: boolean;
   /**
@@ -146,31 +148,37 @@ export const isHeterogeneousSandboxExecutionAvailable = (type: string | undefine
  * to use is the user's observability/latency trade-off — never auto-collapse
  * `device(currentDeviceId)` into the in-process path.
  *
- * Defaults: desktop → `local`, web → `none`. On web `local` isn't available
- * (no local filesystem). A desktop `local` pick pins that desktop's own
- * `deviceId` as `boundDeviceId` (see `useSelectExecutionTarget`), and the
- * server routes such a config to that bound device — so on web we resolve it
- * to `device`, surfacing honestly that it runs on the user's machine (via
- * `lh connect`) instead of masquerading as `sandbox`. This applies to plain
- * agents too, not just heterogeneous CLI agents (plain agents used
- * to leak here, showing "cloud sandbox" while the server ran on the device).
+ * An unset target resolves to `none` — a pending state, identical on every
+ * client. There is no viewer-derived default: the machine displaying the page
+ * never silently becomes the execution host, and no implicit cloud-sandbox
+ * fallback fills the gap. Desktop surfaces that CAN prove this machine's
+ * device identity (the registered gateway `deviceId`) persist an explicit
+ * `local` + `boundDeviceId` binding instead (see `useSelectExecutionTarget`).
+ *
+ * A desktop `local` pick pins that desktop's own `deviceId` as
+ * `boundDeviceId`, and the server routes such a config to that bound device —
+ * so on web we resolve it to `device`, surfacing honestly that it runs on the
+ * user's machine (via `lh connect`) instead of masquerading as `sandbox`. This
+ * applies to plain agents too, not just heterogeneous CLI agents (plain agents
+ * used to leak here, showing "cloud sandbox" while the server ran on the
+ * device).
  *
  * This upgrade is gated on `deviceRoutingAvailable` (or `isHetero`): the run
  * can only reach the bound device if a device-gateway exists to route it. Web
  * display sites pass `!!serverConfig.agentGatewayUrl` (cloud always has one);
- * a no-gateway self-host has no route, so its bound `local` stays `sandbox`
- * when the provider supports it. An UNBOUND `local` (no `boundDeviceId`) falls
- * back to `sandbox` on web, or to the pending `none` state for device-only
- * providers.
+ * a no-gateway self-host has no route, so its bound `local` degrades to the
+ * pending `none` state. An UNBOUND `local` (no `boundDeviceId`) degrades to
+ * `none` everywhere it can't run in-process — never silently to the sandbox.
  * Server callers leave `deviceRoutingAvailable` unset — with a gateway they
  * already pass `clientExecutionAvailable: true` and skip this branch, so it is
- * inert server-side and never diverts a no-gateway run away from `sandbox`.
+ * inert server-side.
  *
  * Bot triggers (`trigger === bot`) upgrade a `local` target (a bot has no UI
  * to pick a device and `local` in-process IPC is unreachable from the cloud
  * bot server): to `device` when a `boundDeviceId` pins a specific machine,
  * otherwise to `auto` to auto-activate an online device. `none` / `sandbox`
- * are explicit opt-outs and stay.
+ * are explicit opt-outs and stay. The upgrade runs before the no-client
+ * `local`→`none` coercion so a gateway-less host still honours the pin.
  */
 export const resolveExecutionTarget = (
   agencyConfig: OrviloAgentAgencyConfig | undefined,
@@ -200,7 +208,7 @@ export const resolveExecutionTarget = (
   ) {
     return 'device';
   }
-  let effective = stored ?? (clientAvailable ? 'local' : 'none');
+  const effective = stored ?? 'none';
   if (
     !clientAvailable &&
     (isHetero || deviceRoutingAvailable) &&
@@ -209,26 +217,25 @@ export const resolveExecutionTarget = (
   ) {
     return 'device';
   }
-  if (isHetero && effective === 'none') {
-    if (clientAvailable) effective = 'local';
-    else if (sandboxAvailable) effective = 'sandbox';
-  }
   // Never leave an unsupported sandbox target active. `none` is a pending
-  // selection for hetero providers without cloud execution: the UI blocks the
-  // run and prompts for a local or connected device.
-  if (!sandboxAvailable && effective === 'sandbox') effective = 'none';
-  if (!clientAvailable && effective === 'local') return sandboxAvailable ? 'sandbox' : 'none';
+  // selection: the UI blocks the run and prompts for a local or connected
+  // device (or an explicit cloud-sandbox choice when supported).
+  if (!sandboxAvailable && effective === 'sandbox') return 'none';
   // Bot trigger: a `local` target can't run in-process from the cloud bot
   // server, so it has to reach a real device. If the user pinned a specific
   // machine (the switcher persists that desktop's own `deviceId` as
   // `boundDeviceId` for a `local` pick), honour it as `device` — `auto` would
   // ignore the binding and could grab a different online device, or go
-  // ambiguous with several. Only an UNBOUND `local` auto-activates. Sits after
-  // the web→sandbox coercion, so `effective` is only still `local` when a
-  // client/device can actually run it here.
+  // ambiguous with several. Only an UNBOUND `local` auto-activates. Runs
+  // before the no-client `local`→`none` coercion so a gateway-less host still
+  // honours the pin / the auto-activation policy instead of dropping to chat.
   if (trigger === RequestTrigger.Bot && effective === 'local') {
     return agencyConfig?.boundDeviceId ? 'device' : 'auto';
   }
+  // A `local` target only exists where in-process execution is real. Anywhere
+  // else it degrades to `none` (a pending selection) — never silently to the
+  // cloud sandbox and never to whichever machine renders the page.
+  if (!clientAvailable && effective === 'local') return 'none';
   return effective;
 };
 
@@ -472,10 +479,14 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
 
   if (!wantsDevice || !canUseDevice) {
     if (target === 'sandbox') return { kind: 'sandbox', target: 'sandbox' };
-    // Hetero agents that support cloud execution fall back to the sandbox when
-    // no device can run. Device-only providers stay pending at `none` so the
-    // caller can require an explicit local/connected-device selection.
-    if (isHetero && sandboxAvailable) return { kind: 'sandbox', target: 'sandbox' };
+    // Device access DENIED (external bot sender): a sandbox-capable hetero
+    // provider still runs in the cloud — the sandbox never touches the
+    // owner's machines, and the denied sender has no device UI to pick one.
+    // This is an access-policy degradation, not a target fallback: a
+    // first-party `none` target stays `none` below.
+    if (!canUseDevice && isHetero && sandboxAvailable) {
+      return { kind: 'sandbox', target: 'sandbox' };
+    }
     // Share-visitor runs granted the cloud sandbox land here for every
     // device-capable target (visitors never pass `canUseDevice`); the grant
     // is honoured with the sandbox rather than dropped with `none`.

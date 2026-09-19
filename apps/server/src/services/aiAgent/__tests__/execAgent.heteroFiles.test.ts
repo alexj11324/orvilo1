@@ -102,7 +102,10 @@ vi.mock('@/database/models/message', () => ({
 }));
 
 const heteroAgentConfig = {
-  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+  agencyConfig: {
+    executionTarget: 'sandbox',
+    heterogeneousProvider: { type: 'claude-code' },
+  },
   chatConfig: {},
   files: [],
   id: 'agent-1',
@@ -285,7 +288,10 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     mockCreateOperationMetadata.mockResolvedValue(undefined);
     mockIngestAttachment.mockReset();
-    heteroAgentConfig.agencyConfig = { heterogeneousProvider: { type: 'claude-code' } } as any;
+    heteroAgentConfig.agencyConfig = {
+      executionTarget: 'sandbox',
+      heterogeneousProvider: { type: 'claude-code' },
+    } as any;
     heteroAgentConfig.model = 'claude-code';
     heteroAgentConfig.provider = 'anthropic';
     delete (heteroAgentConfig as any).userId;
@@ -507,6 +513,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   it('applies an Orvilo topic pin before resolving the CLI family for sandbox dispatch', async () => {
     heteroAgentConfig.agencyConfig = {
+      executionTarget: 'sandbox',
       heterogeneousProvider: {
         engine: 'claude-sdk',
         model: 'agent-model',
@@ -1525,6 +1532,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('seeds the gateway runtime init for a sandbox-dispatched local hetero run', async () => {
       heteroAgentConfig.agencyConfig = {
+        executionTarget: 'sandbox',
         heterogeneousProvider: { type: 'claude-code' },
       } as any;
 
@@ -1561,6 +1569,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('forwards the topic workspace into the cloud sandbox hetero spawn', async () => {
       heteroAgentConfig.agencyConfig = {
+        executionTarget: 'sandbox',
         heterogeneousProvider: { type: 'claude-code' },
       } as any;
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });

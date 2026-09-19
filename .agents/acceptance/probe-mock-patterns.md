@@ -1,9 +1,11 @@
 # Orvilo Probe & Mock Guide
 
-This is the project-layer entry point for Orvilo acceptance probes. Read it
-together with the agent-testing skill's generic `references/probe-mock-patterns.md`.
-Product-independent rules belong upstream; Orvilo routes, stores, services, env
-variables, and fixtures belong here.
+This is the entry point for Orvilo acceptance probes. It used to sit on top of a
+generic `references/probe-mock-patterns.md` in the agent-testing skill; that skill
+was retired with the standalone acceptance platform, so this file now carries the
+whole catalogue. Product-independent rules still belong upstream (in the skill
+that replaces it), not here; Orvilo routes, stores, services, env variables, and
+fixtures belong here.
 
 ## Index
 
@@ -18,7 +20,7 @@ rg -n '^#{2,4} ' "$P"     # every heading, to find the next bound
 
 `applies-to` filters a round: **surface** = web / electron / cli / any; **runtime** = client /
 gateway / hetero / any (the agent runtime the recipe depends on); **phase** = env / auth / fixture /
-drive / probe / capture / publish. Skip a row only when its surface AND runtime both miss yours.
+drive / probe / capture. Skip a row only when its surface AND runtime both miss yours.
 
 | id  | surface       | runtime         | phase          | situation                                                                                                                                      |
 | --- | ------------- | --------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,7 +43,6 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 | P17 | web           | any             | drive          | Goals live at `/agent/:aid/goals` behind the Labs toggle `enableTopicAcceptance`                                                               |
 | P18 | electron      | hetero          | fixture        | Local-execution CC agent plus a four-table ledger fixture keyed to the live CLI identity                                                       |
 | P19 | web           | any             | auth           | Seed a second user and sign in from inside a run-specific session; a signed-out context hits `/signin`                                         |
-| P20 | cli           | any             | fixture        | Strip ambient topic/agent/operation ids for a LOCAL ingest; keep them for the production publish                                               |
 | P21 | web           | any             | drive          | Upload through the Add-menu input, poll `dockUploadFileList`, A/B the hashing worker with `window.Worker = undefined`                          |
 | P22 | web, electron | any             | drive          | `keyboard type` emits no keydown; fire `/` (and any menu trigger) with `press`                                                                 |
 | P23 | web, electron | any             | drive          | Tag `svg.lucide-<rendered-name>` and click through agent-browser; `el.click()` on the wrapper does nothing                                     |
@@ -71,7 +72,6 @@ drive / probe / capture / publish. Skip a row only when its surface AND runtime 
 | P47 | web, electron | any             | capture        | Sample opacity in-page at 8 ms and use `Page.startScreencast`; `data-ending-style` is never set                                                |
 | P48 | web           | any             | capture        | `localStorage.theme` + reload; assert `dataset.theme`; restore before stopping the server                                                      |
 | P49 | electron      | any             | capture        | Prove the hosted URL (curl + open it), not the in-app preview                                                                                  |
-| P50 | any           | any             | publish        | Re-running `ingest` mints a duplicate round; re-read with `run list` / `run get` / `view`                                                      |
 | P51 | electron      | any             | probe          | Read the loaded entry script per run; never assume `entry.desktop.tsx`                                                                         |
 | P52 | electron      | any             | capture        | `DESKTOP_RENDERER_STATIC=1` pool instance; prove the build via modulepreload hashes                                                            |
 | P53 | electron      | any             | drive          | Open via `openTopicInNewWindow` and attach raw CDP to the popup target                                                                         |
@@ -285,8 +285,9 @@ the proxy can remain on the development loading shell without a useful page erro
 its screenshot is blank except for the debug marker.
 
 **Works:** visually reject the loading-shell screenshot, then use the adapter's
-isolated local full stack. Seed the test user, ingest a representative public
-Acceptance fixture through the local CLI, and capture the same route in separate
+isolated local full stack. Seed the test user, create a representative public
+Acceptance fixture locally (in-app acceptance panel / `orvilo-acceptance-evidence`
+tool), and capture the same route in separate
 authenticated and storage-empty browser contexts. This proves both owner and
 shared-viewer rendering without depending on production browser cookies.
 
@@ -360,9 +361,13 @@ ran" — the button spins, no card, no error.
 
 **Works:** (1) temporarily pin the constants to `gpt-4o` / `openai` with an
 `[AGENT-TEST]` marker (snapshot the file first, restore byte-identically at teardown —
-the model-bank vision test guards the real value), then
+the model-bank vision test guards the real value), then point the openai provider at
+the stub. **The wiring step this recipe used to give —
 `aiInfra().updateAiProviderConfig('openai', { keyVaults: { apiKey: 'sk-stub', baseURL:
-'http://localhost:41100/v1' } })`; (2) start the dev server with
+'http://localhost:41100/v1' } })` — is RETIRED: the provider store action went away with
+the provider surface (P50), and agent runs go through ACP instead. A replacement
+server-side lever has not been re-derived, so treat this step as open, not settled.**
+(2) start the dev server with
 `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1`; (3) set `STUB_TEXT` to a `ReviewPredictionSchema`
 JSON (`{"action":"reject","regions":[{"imageIndex":0,...}]}`) — the runtime sends
 `response_format: json_schema` with `stream: false`, which the stub answers as a plain
@@ -631,25 +636,6 @@ await fetch('/api/auth/sign-in/email', {
 
 Reload and assert identity with `app-probe.sh auth` before capturing. Use a
 run-specific session name, never `orvilo-dev` (that one is the owner).
-
-#### P20 · Ambient `ORVILO_TOPIC_ID` hijacks a local CLI ingest — strip it for fixture creation
-
-**applies-to:** surface=cli · runtime=any · phase=fixture
-
-**Situation:** creating a fixture acceptance on the LOCAL dev server with
-`bun src/index.ts acceptance run ingest` while running inside a Orvilo conversation
-(Claude Code sessions launched from a Topic export `ORVILO_TOPIC_ID` /
-`ORVILO_AGENT_ID` / `ORVILO_OPERATION_ID`).
-
-**Doesn't work:** plain ingest. The CLI auto-attaches to the ambient conversation, and
-that topic id belongs to PRODUCTION — the local server answers
-`topic "tpc_…" not found in the current workspace`, which reads like broken fixture
-data rather than an env leak.
-
-**Works:** strip the ambient ids only for the local fixture ingest
-(`env -u ORVILO_TOPIC_ID -u ORVILO_AGENT_ID -u ORVILO_OPERATION_ID …`) so it lands
-standalone. Keep them for the final PRODUCTION publish of the verification round —
-there the auto-attach to the current conversation is exactly what you want.
 
 ### Driving the UI
 
@@ -1417,7 +1403,7 @@ Assert structure with `get count '.react-flow__node-flowGroup'` /
 from the proxy in the same session and viewport, and rely on a top-bar string that exists
 only in the worktree as the visible identity marker of every `after` screenshot.
 
-### Capturing and publishing evidence
+### Capturing evidence
 
 #### P43 · Reading a transitioned CSS property immediately after focus/hover
 
@@ -1615,25 +1601,6 @@ Electron absolute path (on macOS often `/private/tmp/...`). After publish,
 open that URL and assert computed CSS plus `img.naturalWidth > 0`. If the hosted
 `<img>` is a data URI with `text/plain`, the image is broken even though it is
 not a 404.
-
-#### P50 · `acceptance run ingest` is creative — re-running it to re-read its output mints a duplicate round
-
-**applies-to:** surface=any · runtime=any · phase=publish
-
-**Situation:** after a successful ingest, wanting to re-check a field from its JSON
-output (evidence count, acceptanceId).
-
-**Doesn't work:** running the same `ingest` command again "just to see the output".
-Every invocation creates a new immutable round on the acceptance — the re-run
-publishes a byte-identical duplicate round that reviewers then see twice.
-
-**Works:** re-read state with the read-only commands — `acceptance run list`,
-`acceptance run get <runId>`, `acceptance view <id> --json`. If a duplicate was
-minted by mistake, `acceptance run delete <runId> --yes` (newest timestamp = the
-accident) restores the round history; this is data correction of an operator
-error, distinct from the forbidden overwrite-a-real-round.
-
-### Electron and the desktop shell
 
 #### P51 · Which entry the dev Electron main window loads is NOT stable — measure it, never assume
 
@@ -1967,20 +1934,19 @@ repair lifecycle.
 
 **Doesn't work:** `lh task run <id> --follow` switches to `/webapi/*`, which
 requires OIDC and rejects API-key auth after the task has already started.
-Likewise, `lh acceptance view task:T-N` does not currently resolve a task
-identifier to its internal subject id.
+Subject ids do not resolve by task identifier either — `task:T-N` is not a
+subject key the aggregate accepts.
 
-**Works:** Start the task without `--follow`, poll with `lh task view T-N`, and
-query the aggregate with `lh acceptance view task:<internal-task-id>`. The start
-response and task activity expose the operation and topic ids; the Acceptance
-bundle exposes the repair round and final rollup.
+**Works:** Start the task without `--follow` and poll with `lh task view T-N`.
+The start response and task activity expose the operation and topic ids; the
+acceptance bundle for the internal subject id is read from the in-app acceptance
+panel on the task detail page.
 
-The same identifier/internal-id gap exists on the WRITE path: a local
-`acceptance run ingest --subject task:T-N` stores the literal `T-N` as
-`acceptance_subjects.subject_id`, while task/goal detail pages resolve the
-acceptance by the task's INTERNAL id — the page then renders an empty state even
-though ingest succeeded. Use the internal id in `--subject` (or fix the
-`subject_id` row afterwards) when the evidence must render in the local app UI.
+The same identifier/internal-id gap exists on the WRITE path: evidence
+submitted through `orvilo-acceptance-evidence` (`submitEvidence`) lands on the
+run's criteria — which live under the task's INTERNAL id, not the `T-N`
+identifier. Read the criteria with `listCriteria` and never invent a `T-N`-keyed
+subject row, or the detail page renders an empty state.
 
 #### P64 · Production-backend web runs have no seeded agent-browser session
 

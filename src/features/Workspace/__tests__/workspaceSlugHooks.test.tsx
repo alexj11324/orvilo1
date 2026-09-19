@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as useActiveWorkspaceIdModule from '@/business/client/hooks/useActiveWorkspaceId';
+import * as useFetchWorkspacesModule from '@/business/client/hooks/useFetchWorkspaces';
 import * as useIsWorkspaceLoadingModule from '@/business/client/hooks/useIsWorkspaceLoading';
 import * as useSwitchWorkspaceModule from '@/business/client/hooks/useSwitchWorkspace';
 import * as useWorkspacesModule from '@/business/client/hooks/useWorkspaces';
@@ -30,6 +31,12 @@ const createState = (overrides: Partial<WorkspaceStateMock> = {}): WorkspaceStat
 
 const mockWorkspaceStore = (state: WorkspaceStateMock) => {
   vi.spyOn(useWorkspacesModule, 'useWorkspaces').mockReturnValue(state.workspaces as any);
+  // The URL sync reads the resolved list (not just the array) so it can tell
+  // "membership is gone" apart from "list never loaded".
+  vi.spyOn(useFetchWorkspacesModule, 'useFetchWorkspaces').mockReturnValue({
+    data: state.workspaces,
+    isLoading: state.isWorkspaceLoading,
+  } as any);
   vi.spyOn(useIsWorkspaceLoadingModule, 'useIsWorkspaceLoading').mockReturnValue(
     state.isWorkspaceLoading,
   );
@@ -144,6 +151,33 @@ describe('useWorkspaceUrlSync', () => {
     });
 
     expect(state.switchToPersonal).toHaveBeenCalled();
+    expect(state.switchWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('drops the stale selection when the active workspace leaves the membership list', () => {
+    // Revocation while its slug URL is still open: the workspace is absent
+    // from the resolved list, so the store must not keep scoping requests to
+    // a membership the server would now reject.
+    const state = createState({ activeWorkspaceId: 'ws-1', workspaces: [] });
+    mockWorkspaceStore(state);
+
+    renderHook(() => useWorkspaceUrlSync(), {
+      wrapper: createRouteWrapper('/acme/agent/inbox', '*'),
+    });
+
+    expect(state.switchToPersonal).toHaveBeenCalled();
+    expect(state.switchWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('keeps the active workspace when the URL slug is unknown but membership is intact', () => {
+    const state = createState({ activeWorkspaceId: 'ws-1' });
+    mockWorkspaceStore(state);
+
+    renderHook(() => useWorkspaceUrlSync(), {
+      wrapper: createRouteWrapper('/typo-slug/agent/inbox', '*'),
+    });
+
+    expect(state.switchToPersonal).not.toHaveBeenCalled();
     expect(state.switchWorkspace).not.toHaveBeenCalled();
   });
 });

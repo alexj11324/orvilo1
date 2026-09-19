@@ -16,8 +16,16 @@ const doneState = {
   status: 'done' as const,
 };
 
+// The runtime mock must accept every state shape a real run can return —
+// parked, running, done, error, interrupted — not just the parked shape
+// `makeService` defaults to.
+type MockRuntime = {
+  executeSync: ReturnType<typeof vi.fn>;
+  getCoordinator: () => { loadAgentState: (opId: string) => Promise<any> };
+};
+
 const makeService = (loadAgentState: (opId: string) => Promise<any>) => {
-  const runtime = {
+  const runtime: MockRuntime = {
     executeSync: vi.fn(async () => parkedState),
     getCoordinator: () => ({ loadAgentState }),
   };
@@ -26,12 +34,14 @@ const makeService = (loadAgentState: (opId: string) => Promise<any>) => {
 };
 
 vi.mock('@/server/modules/AgentExecution/InMemoryStreamEventManager', () => ({
-  InMemoryStreamEventManager: class {},
+  InMemoryStreamEventManager: class {
+    subscribe = vi.fn(() => () => {});
+  },
 }));
 vi.mock('@/server/modules/AgentExecution/StreamEventManager', () => ({}));
 vi.mock('@/server/services/agentRuntime', () => ({ AgentRuntimeService: class {} }));
 
-const lastRuntime: { current?: ReturnType<typeof makeService>['runtime'] } = {};
+const lastRuntime: { current?: MockRuntime } = {};
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: class {
     createIsolatedRuntime = vi.fn(() => lastRuntime.current);
@@ -111,5 +121,123 @@ describe('ResponsesService delegated-run handling', () => {
     expect(loadAgentState).not.toHaveBeenCalled();
     expect(res.status).toBe('incomplete');
     expect(res.incomplete_details).toEqual({ reason: 'client_tool_execution' });
+  });
+
+  it('keeps waiting through running and completes only on the real terminal state', async () => {
+    vi.useFakeTimers();
+    try {
+      const runningState = {
+        messages: [{ content: 'partial', role: 'assistant' }],
+        status: 'running' as const,
+      };
+      const loadAgentState = vi
+        .fn()
+        .mockResolvedValueOnce(runningState)
+        .mockResolvedValueOnce(runningState)
+        .mockResolvedValue(doneState);
+      const { runtime, svc } = makeService(loadAgentState);
+      lastRuntime.current = runtime;
+
+      const promise = createResponse(svc);
+      await vi.runAllTimersAsync();
+      const res = await promise;
+
+      // Every non-terminal poll kept waiting; completion came only after `done`.
+      expect(loadAgentState.mock.calls.length).toBeGreaterThanOrEqual(3);
+      expect(res.status).toBe('completed');
+      expect(res.completed_at).not.toBeNull();
+      expect(res.output_text).toBe('final answer');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('maps parked → running → error to failed, not completed', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadAgentState = vi
+        .fn()
+        .mockResolvedValueOnce({ status: 'running' })
+        .mockResolvedValue({ messages: [], status: 'error' });
+      const { runtime, svc } = makeService(loadAgentState);
+      lastRuntime.current = runtime;
+
+      const promise = createResponse(svc);
+      await vi.runAllTimersAsync();
+      const res = await promise;
+
+      expect(res.status).toBe('failed');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports incomplete when the run is still running at the wait deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadAgentState = vi.fn(async () => ({ status: 'running' }));
+      const { runtime, svc } = makeService(loadAgentState);
+      lastRuntime.current = runtime;
+
+      const promise = createResponse(svc);
+      await vi.runAllTimersAsync();
+      const res = await promise;
+
+      expect(res.status).toBe('incomplete');
+      expect(res.completed_at).toBeNull();
+      expect(res.incomplete_details).toEqual({ reason: 'running' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('maps an interrupted run to incomplete (cancelled), never completed', async () => {
+    const interruptedState = { messages: [], status: 'interrupted' as const };
+    const loadAgentState = vi.fn(async () => interruptedState);
+    const runtime = {
+      executeSync: vi.fn(async () => interruptedState),
+      getCoordinator: () => ({ loadAgentState }),
+    };
+    const svc = new (ResponsesService as any)(null, 'user_1');
+    lastRuntime.current = runtime;
+
+    const res = await createResponse(svc);
+
+    expect(res.status).toBe('incomplete');
+    expect(res.completed_at).toBeNull();
+    expect(res.incomplete_details).toEqual({ reason: 'interrupted' });
+  });
+
+  it('streaming emits the terminal event only after the resumed parent settles', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadAgentState = vi
+        .fn()
+        .mockResolvedValueOnce({ status: 'running' })
+        .mockResolvedValue(doneState);
+      const { runtime, svc } = makeService(loadAgentState);
+      lastRuntime.current = runtime;
+
+      const events: Array<{ response?: any; type: string }> = [];
+      const drive = (async () => {
+        for await (const event of svc.createStreamingResponse({
+          input: 'hi',
+          model: 'agent_1',
+        } as any)) {
+          events.push(event);
+        }
+      })();
+      await vi.runAllTimersAsync();
+      await drive;
+
+      const last = events.at(-1)!;
+      expect(last.type).toBe('response.completed');
+      expect(last.response.status).toBe('completed');
+      expect(last.response.output_text).toBe('final answer');
+      // No completed event may precede the real terminal state.
+      expect(events.filter((e) => e.type === 'response.completed')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

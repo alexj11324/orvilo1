@@ -35,7 +35,6 @@ import { agentDocumentsExecutor } from './orvilo-agent-documents';
 import { messageExecutor } from './orvilo-message';
 import { notebookExecutor } from './orvilo-notebook';
 import { pageAgentExecutor } from './orvilo-page-agent';
-import { skillStoreExecutor } from './orvilo-skill-store';
 import { skillsExecutor } from './orvilo-skills';
 import { topicReferenceExecutor } from './orvilo-topic-reference';
 import { userInteractionExecutor } from './orvilo-user-interaction';
@@ -75,7 +74,6 @@ export const builtinToolExecutors = [
   messageExecutor,
   notebookExecutor,
   pageAgentExecutor,
-  skillStoreExecutor,
   skillsExecutor,
   taskExecutor,
   activatorExecutor,

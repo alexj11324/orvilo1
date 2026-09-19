@@ -42,12 +42,25 @@ export const desktopRoutes: RouteObject[] = createSharedDesktopRoutes({
     { element: null, index: true },
     { element: null, path: '*' },
   ],
+  // The unified `/onboarding` flow is shared with Web; a `DesktopAuthGate`
+  // inside it supplies the system-browser sign-in step when no remote server
+  // is configured yet.
   onboardingRoute: {
-    element: dynamicElement(
-      () => import('@/routes/(desktop)/desktop-onboarding'),
-      'Desktop > Desktop Onboarding',
-    ),
+    element: dynamicElement(() => import('@/routes/onboarding'), 'Desktop > Onboarding'),
     errorElement: <ErrorBoundary />,
-    path: '/desktop-onboarding',
+    path: '/onboarding',
   },
+  // `/desktop-onboarding` is the retired pre-unification flow: the path stays
+  // registered for legacy links but only ever forwards to `/onboarding` (or
+  // `/settings/devices` for the moved OS-permission screen).
+  platformRoutes: [
+    {
+      element: dynamicElement(
+        () => import('@/routes/(desktop)/desktop-onboarding'),
+        'Desktop > Desktop Onboarding Redirect',
+      ),
+      errorElement: <ErrorBoundary />,
+      path: '/desktop-onboarding',
+    },
+  ],
 });

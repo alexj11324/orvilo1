@@ -1,8 +1,7 @@
 import { Blocks } from 'lucide-react';
-import { memo, Suspense, useCallback } from 'react';
+import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { createSkillStoreModal } from '@/features/SkillStore';
 import { useModelSupportToolUse } from '@/hooks/useModelSupportToolUse';
 
 import { useAgentId } from '../../hooks/useAgentId';
@@ -19,10 +18,6 @@ const Tools = memo(() => {
   const { model, provider } = useEffectiveModel(agentId);
 
   const enableFC = useModelSupportToolUse(model, provider);
-
-  const handleOpenStore = useCallback(() => {
-    createSkillStoreModal();
-  }, []);
 
   if (!enableFC)
     return (
@@ -42,7 +37,6 @@ const Tools = memo(() => {
               detailPopoverDisabled={isPolicyMenuOpen}
               items={marketItems}
               pinnedCount={pinnedCount}
-              onOpenStore={handleOpenStore}
             />
           ),
           maxWidth: 320,

@@ -280,7 +280,11 @@ export class BrowserManager {
     pendingRestoreRoute: string,
     lastWorkspaceSlug: string,
   ): string {
-    if (!isOnboardingCompleted) return '/desktop-onboarding';
+    // The unified `/onboarding` flow owns both the signed-out journey (its
+    // desktop auth gate restarts the system-browser OIDC round trip) and the
+    // shared account wizard — the retired `/desktop-onboarding` path only
+    // exists as a compat redirect.
+    if (!isOnboardingCompleted) return '/onboarding';
     if (pendingRestoreRoute) return pendingRestoreRoute;
     // Shape guard: a corrupted store value must not produce an unloadable path.
     if (lastWorkspaceSlug && /^[a-z0-9-]+$/.test(lastWorkspaceSlug)) {

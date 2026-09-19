@@ -109,6 +109,24 @@ describe('AgentOperationModel', () => {
       expect(row?.metadata).toEqual({ agentSignal });
     });
 
+    it('stamps executionEngine into metadata so traces can prove which engine ran', async () => {
+      const model = new AgentOperationModel(serverDB, userId);
+      const operationId = 'op-start-engine';
+
+      await model.recordStart({
+        // Caller metadata must merge with (and never override) the engine stamp.
+        executionEngine: 'hetero',
+        metadata: { assistantMessageId: 'msg-x', executionEngine: 'forged' },
+        operationId,
+      });
+
+      const row = await model.findById(operationId);
+      expect(row?.metadata).toEqual({
+        assistantMessageId: 'msg-x',
+        executionEngine: 'hetero',
+      });
+    });
+
     it('is idempotent on the primary key', async () => {
       const model = new AgentOperationModel(serverDB, userId);
       const operationId = 'op-start-2';

@@ -7,10 +7,12 @@ skill reads it — it never guesses Orvilo's commands.
 Its two siblings:
 
 - [`PROCESS.md`](./PROCESS.md) — the run process (plan gate, execution rules,
-  publishing, teardown).
-- `.agents/skills/acceptance/` — the portable skill: what a check, evidence,
-  report, and round are. In this repository that path is a symlink onto the
-  skill's source, `packages/builtin-skills/src/acceptance/`.
+  evidence, teardown).
+- `.agents/skills/acceptance/` — **retired.** It was a symlink onto
+  `packages/builtin-skills/src/acceptance/`, the portable skill that defined what
+  a check, evidence, report, and round are; both went with the standalone
+  acceptance platform (`docs/development/hidden-surface-retirement.md`). What a
+  check, evidence, report, and round are is now `PROCESS.md` itself.
 
 Every script referenced below lives under `.agents/acceptance/scripts/`, including
 the generic capture toolchain (`report-init.sh`, `cdp-screenshot.sh`,
@@ -184,14 +186,9 @@ stale standalone install: a recently added workspace package fails to resolve �
   `ORVILO_CLI_API_KEY`, `ORVILO_SERVER=http://localhost:3010`, and
   `ORVILO_CLI_HOME=.orvilo-dev` for isolated settings.
 
-- **Local-run vs publish env distinction:** those seeded overrides are for
-  _running_ the local backend test. They are WRONG for _publishing_ — a localhost
-  run yields a verify URL nobody else can open, and the local stub S3 makes
-  evidence upload fail. Strip the local credentials and CLI home for the publish
-  step, while pinning Orvilo explicitly (the skill's Step 6 does
-  `env -u ORVILO_API_KEY -u ORVILO_CLI_API_KEY -u ORVILO_CLI_HOME ORVILO_SERVER=https://orvilo.aspectlylabs.com lh verify ingest-report …`
-  so `lh` cannot fall back to an upstream host and still uses the user's real
-  `~/.orvilo` login).
+- **Seeded CLI overrides are for _running_ the local backend test only.** Keep
+  them out of anything that talks to the real deployment (they pin
+  `ORVILO_SERVER=http://localhost:3010` and a stub S3).
 
 - Standalone install: `cd apps/cli && pnpm install` (root install does not cover it).
 

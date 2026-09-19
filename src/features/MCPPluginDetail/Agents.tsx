@@ -9,15 +9,15 @@ import { useTranslation } from 'react-i18next';
 import { VirtuosoGrid } from 'react-virtuoso';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
-import AgentItem from '@/features/SkillStore/SkillDetail/AgentItem';
-import { agentListStyles as styles } from '@/features/SkillStore/SkillDetail/style';
-import VirtuosoLoading from '@/features/SkillStore/SkillList/VirtuosoLoading';
 import { useClientDataSWR } from '@/libs/swr';
 import { discoverKeys } from '@/libs/swr/keys';
 import { discoverService } from '@/services/discover';
 import { type DiscoverAssistantItem } from '@/types/discover';
 
+import AgentItem from './AgentItem';
 import { useDetailContext } from './DetailProvider';
+import { agentListStyles as styles } from './style';
+import VirtuosoLoading from './VirtuosoLoading';
 
 const PAGE_SIZE = 12;
 

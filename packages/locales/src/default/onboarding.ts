@@ -207,8 +207,6 @@ export default {
   'reui.goal.sprints.label': 'Engineering sprints',
   'reui.goal.selectOneOrMore': 'Select one or more',
   'reui.invite.addAnother': 'Add another',
-  'reui.invite.digestDescription': 'Include workspace details.',
-  'reui.invite.digestLabel': 'Send invitation summary',
   'reui.invite.email': 'Email',
   'reui.invite.emailLabel': 'Invitee {{number}} email',
   'reui.invite.emailPlaceholder': 'teammate@company.com',

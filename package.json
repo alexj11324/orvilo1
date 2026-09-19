@@ -277,7 +277,6 @@
     "@orvilo/builtin-tool-remote-device": "workspace:*",
     "@orvilo/builtin-tool-self-iteration": "workspace:*",
     "@orvilo/builtin-tool-skill-maintainer": "workspace:*",
-    "@orvilo/builtin-tool-skill-store": "workspace:*",
     "@orvilo/builtin-tool-skills": "workspace:*",
     "@orvilo/builtin-tool-task": "workspace:*",
     "@orvilo/builtin-tool-topic-reference": "workspace:*",

@@ -24,7 +24,6 @@ import orviloKnowledgeBase from './orvilo-knowledge-base';
 import orviloLocalSystem from './orvilo-local-system';
 import orviloNotebook from './orvilo-notebook';
 import orviloPageAgent from './orvilo-page-agent';
-import orviloSkillStore from './orvilo-skill-store';
 import orviloSkills from './orvilo-skills';
 import orviloTask from './orvilo-task';
 import orviloUserInteraction from './orvilo-user-interaction';
@@ -101,7 +100,6 @@ const toolsetModules: ToolsetFixtureModule[] = [
   orviloLocalSystem,
   orviloNotebook,
   orviloPageAgent,
-  orviloSkillStore,
   orviloSkills,
   orviloTask,
   orviloUserInteraction,

@@ -3,7 +3,12 @@ import type { WorkspaceItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { transferWorkspaceOwnership } from '@/business/server/membershipLifecycle';
+import {
+  cancelOwnershipTransfer,
+  getOwnershipTransferState,
+  requestOwnershipTransfer,
+  respondOwnershipTransfer,
+} from '@/business/server/membershipLifecycle/ownershipTransfer';
 import {
   wsAdminProcedure,
   wsCompatProcedure,
@@ -50,12 +55,18 @@ const cloudOnly = (feature: string): never => {
   });
 };
 
-const isUniqueViolation = (error: unknown) => {
+const PG_UNIQUE_VIOLATION = '23505';
+
+// Drizzle wraps the raw pg error as `.cause` (sometimes more than once), so a
+// unique violation only surfaces by walking the chain — a top-level
+// code/message check always misses and maps real conflicts to 500s.
+const isUniqueViolation = (error: unknown): boolean => {
   if (typeof error !== 'object' || error === null) return false;
-  const code = (error as { code?: string }).code;
-  if (code === '23505') return true;
+  if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) return true;
   const message = error instanceof Error ? error.message : '';
-  return message.includes('duplicate key value') || message.includes('workspaces_slug');
+  if (message.includes('duplicate key value') || message.includes('workspaces_slug')) return true;
+  const cause = (error as { cause?: unknown }).cause;
+  return cause !== error && isUniqueViolation(cause);
 };
 
 // The stub list/create/checkSlugAvailable are now real; cloud-only surfaces
@@ -77,15 +88,27 @@ export const workspaceRouter = router({
       z.object({
         avatar: z.string().optional(),
         description: z.string().max(1000).optional(),
+        // Idempotency key: onboarding checkpoints this id before calling, so
+        // a retried create targets the same row instead of relying on an
+        // uncorrelated slug match to find a lost response.
+        id: z.string().min(1).max(64).optional(),
         name: z.string().min(1).max(255),
         slug: workspaceSlugSchema,
       }),
     )
     .mutation(async ({ input, ctx }): Promise<WorkspaceItem> => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
       try {
-        return await new WorkspaceModel(ctx.serverDB, ctx.userId).create(input);
+        return await model.create(input);
       } catch (error) {
         if (isUniqueViolation(error)) {
+          // Idempotent recovery: a retried create (double submit, onboarding
+          // replay, a second control client firing the same request) must land
+          // on the workspace the first call made — not on a hard failure. Only
+          // reuse when the caller actually owns the conflicting row; a slug
+          // taken by someone else stays a real CONFLICT.
+          const existing = await model.findBySlug(input.slug);
+          if (existing?.primaryOwnerId === ctx.userId) return existing;
           throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
         }
         console.error('[workspace:create]', error);
@@ -137,15 +160,90 @@ export const workspaceRouter = router({
       }
     }),
 
+  /**
+   * Owner retracts the still-pending hand-off. The invited member never had
+   * any rights conferred by the request, so cancellation needs no consent.
+   */
+  cancelOwnershipTransfer: wsOwnerProcedure.use(serverDatabase).mutation(async ({ ctx }) => {
+    try {
+      return await cancelOwnershipTransfer(ctx.serverDB, {
+        ipAddress: ctx.clientIp ?? undefined,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[workspace:cancelOwnershipTransfer]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel ownership transfer',
+      });
+    }
+  }),
+
+  /**
+   * The workspace's pending hand-off as seen by its parties (initiator or
+   * invited member); everyone else reads `null` so an in-flight transfer
+   * doesn't leak into the roster.
+   */
+  pendingOwnershipTransfer: wsProcedure.use(serverDatabase).query(async ({ ctx }) => {
+    try {
+      return await getOwnershipTransferState(ctx.serverDB, {
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[workspace:pendingOwnershipTransfer]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to load ownership transfer state',
+      });
+    }
+  }),
+
+  /**
+   * Recipient accepts or declines the pending hand-off. Accepting performs
+   * the atomic owner swap; declining keeps the current owner.
+   */
+  respondOwnershipTransfer: wsProcedure
+    .use(serverDatabase)
+    .input(z.object({ accept: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await respondOwnershipTransfer(ctx.serverDB, {
+          accept: input.accept,
+          ipAddress: ctx.clientIp ?? undefined,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[workspace:respondOwnershipTransfer]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to respond to ownership transfer',
+        });
+      }
+    }),
+
+  /**
+   * Ownership moves only with the recipient's explicit consent: this creates
+   * a pending request they must accept. The previous immediate-transfer
+   * semantics are retired — see `respondOwnershipTransfer`.
+   */
   transferOwnership: wsOwnerProcedure
     .use(serverDatabase)
     .input(z.object({ newOwnerUserId: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       try {
-        return await transferWorkspaceOwnership(ctx.serverDB, {
-          actorUserId: ctx.userId,
+        return await requestOwnershipTransfer(ctx.serverDB, {
           ipAddress: ctx.clientIp ?? undefined,
-          newOwnerUserId: input.newOwnerUserId,
+          ownerUserId: ctx.userId,
+          targetUserId: input.newOwnerUserId,
           workspaceId: ctx.workspaceId!,
         });
       } catch (error) {
@@ -154,7 +252,7 @@ export const workspaceRouter = router({
         throw new TRPCError({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to transfer ownership',
+          message: 'Failed to request ownership transfer',
         });
       }
     }),

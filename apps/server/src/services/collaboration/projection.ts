@@ -36,6 +36,26 @@ const payloadUserId = (payload: unknown): string | null => {
   return typeof candidate === 'string' ? candidate : null;
 };
 
+/** `workspace_members.authz_version` the revoking write stamped — drives the gateway's stale-kick guard. */
+const payloadAuthzVersion = (payload: unknown): number | undefined => {
+  if (!isRecord(payload)) return undefined;
+  return typeof payload.authzVersion === 'number' ? payload.authzVersion : undefined;
+};
+
+/**
+ * Project visibilities where room access is gated on an explicit
+ * project_members row — must match `assertRoomAccess` in roomAuthz.ts.
+ * Anything else (including values this codebase does not emit) reads as
+ * publicly reachable to any workspace member, so dropping the row alone does
+ * not revoke access.
+ */
+const MEMBERSHIP_GATED_PROJECT_VISIBILITIES = new Set(['private', 'restricted']);
+
+const payloadProjectVisibility = (payload: unknown): string | undefined => {
+  if (!isRecord(payload)) return undefined;
+  return typeof payload.projectVisibility === 'string' ? payload.projectVisibility : undefined;
+};
+
 const isActivityEventPayload = (payload: unknown): payload is ServerActivityEvent =>
   isRecord(payload) &&
   typeof payload.eventId === 'string' &&
@@ -45,7 +65,8 @@ const isActivityEventPayload = (payload: unknown): payload is ServerActivityEven
   isRecord(payload.target);
 
 const invalidateNotice = (aggregateType: string, aggregateId: string): InvalidateNotice => ({
-  entity: aggregateType === 'project' ? 'project' : aggregateType === 'workspace' ? 'workspace' : 'task',
+  entity:
+    aggregateType === 'project' ? 'project' : aggregateType === 'workspace' ? 'workspace' : 'task',
   entityId: aggregateId,
   type: 'invalidate',
 });
@@ -67,13 +88,19 @@ const invalidateNotice = (aggregateType: string, aggregateId: string): Invalidat
  */
 export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
   if (!ROOM_SCOPES.has(event.aggregateType)) return [];
-  const room = roomKey({ id: event.aggregateId, scope: event.aggregateType as 'project' | 'task' | 'workspace' });
+  const room = roomKey({
+    id: event.aggregateId,
+    scope: event.aggregateType as 'project' | 'task' | 'workspace',
+  });
   const deliveries: RoomDelivery[] = [];
 
   // Revocation rides ahead of the notice so a connected-but-removed member
   // loses the socket before any further room traffic reaches them. A voluntary
   // leave kicks too — otherwise the departing member's sockets keep receiving
-  // room broadcasts until they close on their own.
+  // room broadcasts until they close on their own. The kick envelope carries
+  // the full revocation contract: the tenant, the revoked scope, the authz
+  // version the write stamped (so a stale kick never kills a re-granted
+  // connection) and the outbox event id for correlation.
   if (
     event.aggregateType === 'workspace' &&
     (event.eventType === 'workspace.member.removed' ||
@@ -83,7 +110,61 @@ export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
     const userId = payloadUserId(event.payload);
     if (userId) {
       deliveries.push({
-        publish: { kind: 'kick', reason: event.eventType, userId },
+        publish: {
+          authzVersion: payloadAuthzVersion(event.payload),
+          eventId: event.eventId,
+          kind: 'kick',
+          reason: event.eventType,
+          scope: 'workspace',
+          scopeId: event.aggregateId,
+          userId,
+          workspaceId: event.aggregateId,
+        },
+        room,
+      });
+    }
+  }
+
+  // Project-scoped revocation: losing a project grant must tear down the
+  // member's project room AND their task-room sockets inside that project —
+  // degrading to a plain invalidate would leave live subscriptions running
+  // past the revocation. The gateway matches scopeId against the ticket's
+  // `project_id` claim; the payload's authzVersion is the member's bumped
+  // `workspace_members.authz_version` so a re-grant outranks a replayed kick.
+  if (
+    event.aggregateType === 'project' &&
+    (event.eventType === 'project_member.removed' || event.eventType === 'project_member.suspended')
+  ) {
+    const userId = payloadUserId(event.payload);
+    const workspaceId =
+      typeof event.workspaceId === 'string'
+        ? event.workspaceId
+        : isRecord(event.payload) && typeof event.payload.workspaceId === 'string'
+          ? event.payload.workspaceId
+          : null;
+    // Kick only when the removed row was the member's basis of access. On a
+    // publicly visible project the room stays reachable without the row —
+    // a terminal kick would sever sockets for nothing; the invalidate below
+    // still makes every connection re-authorize on its next ticket refresh.
+    // Events without visibility (pre-field in-flight rows) kick anyway —
+    // failing closed is cheaper than leaking a revoked private room.
+    const visibility = payloadProjectVisibility(event.payload);
+    if (
+      userId &&
+      workspaceId &&
+      (visibility === undefined || MEMBERSHIP_GATED_PROJECT_VISIBILITIES.has(visibility))
+    ) {
+      deliveries.push({
+        publish: {
+          authzVersion: payloadAuthzVersion(event.payload),
+          eventId: event.eventId,
+          kind: 'kick',
+          reason: event.eventType,
+          scope: 'project',
+          scopeId: event.aggregateId,
+          userId,
+          workspaceId,
+        },
         room,
       });
     }
@@ -100,7 +181,10 @@ export const projectOutboxEvent = (event: OutboxEventRow): RoomDelivery[] => {
   deliveries.push({
     publish: {
       kind: 'broadcast',
-      message: invalidateNotice(event.aggregateType, event.aggregateId) as CollaborationServerMessage,
+      message: invalidateNotice(
+        event.aggregateType,
+        event.aggregateId,
+      ) as CollaborationServerMessage,
     },
     room,
   });

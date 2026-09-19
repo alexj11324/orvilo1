@@ -1,6 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
+import { alwaysOnToolIds, manualModeExcludeToolIds } from '@orvilo/builtin-tools';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,6 +65,27 @@ vi.mock('@/store/agent', () => ({
 vi.mock('@/store/agent/selectors', () => ({
   agentSelectors: { getAgentConfigById: () => () => mocks.agentConfig },
 }));
+
+/**
+ * The behaviour under test is "an always-on builtin is excluded from this count
+ * in auto mode, and counted in manual mode because manual mode excludes it".
+ * That needs a tool that is in BOTH lists, so the sample is pinned to the real
+ * constants rather than to a literal: when the sample is retired the two
+ * assertions below fail and say so, instead of the count silently flipping and
+ * the tests failing with an unexplained `· 1`.
+ *
+ * This is not hypothetical — these two cases used to name `orvilo-skill-store`,
+ * which the hidden-surface retirement deleted out of both lists. They kept
+ * passing the manual case and started failing the auto one.
+ */
+const SAMPLE_BUILTIN_TOOL_ID = 'orvilo-activator';
+
+const builtinToolState = (identifier: string) => ({
+  hidden: true,
+  identifier,
+  manifest: { api: [], identifier, meta: { title: identifier }, systemRole: '' },
+  type: 'builtin' as const,
+});
 
 const renderSection = () =>
   render(
@@ -143,48 +165,29 @@ describe('UserToolsSection — Workspace/User tool count', () => {
     expect(labelText()).toContain('· 1');
   });
 
-  it('does not count pinned Skill Store in auto activation mode', () => {
+  it('uses a sample tool that still satisfies the invariant under test', () => {
+    expect(alwaysOnToolIds).toContain(SAMPLE_BUILTIN_TOOL_ID);
+    expect(manualModeExcludeToolIds).toContain(SAMPLE_BUILTIN_TOOL_ID);
+  });
+
+  it('does not count a pinned always-on builtin in auto activation mode', () => {
     mocks.agentConfig = {
       chatConfig: { skillActivateMode: 'auto' },
-      plugins: [{ identifier: 'orvilo-skill-store', mode: 'pinned' }],
+      plugins: [{ identifier: SAMPLE_BUILTIN_TOOL_ID, mode: 'pinned' }],
     };
-    mocks.toolState.builtinTools = [
-      {
-        hidden: true,
-        identifier: 'orvilo-skill-store',
-        manifest: {
-          api: [],
-          identifier: 'orvilo-skill-store',
-          meta: { title: 'Skill Store' },
-          systemRole: '',
-        },
-        type: 'builtin',
-      },
-    ];
+    mocks.toolState.builtinTools = [builtinToolState(SAMPLE_BUILTIN_TOOL_ID)];
 
     renderSection();
 
     expect(labelText()).toContain('· 0');
   });
 
-  it('counts pinned Skill Store in manual activation mode', () => {
+  it('counts a pinned always-on builtin in manual mode once manual mode excludes it', () => {
     mocks.agentConfig = {
       chatConfig: { skillActivateMode: 'manual' },
-      plugins: [{ identifier: 'orvilo-skill-store', mode: 'pinned' }],
+      plugins: [{ identifier: SAMPLE_BUILTIN_TOOL_ID, mode: 'pinned' }],
     };
-    mocks.toolState.builtinTools = [
-      {
-        hidden: true,
-        identifier: 'orvilo-skill-store',
-        manifest: {
-          api: [],
-          identifier: 'orvilo-skill-store',
-          meta: { title: 'Skill Store' },
-          systemRole: '',
-        },
-        type: 'builtin',
-      },
-    ];
+    mocks.toolState.builtinTools = [builtinToolState(SAMPLE_BUILTIN_TOOL_ID)];
 
     renderSection();
 

@@ -2,15 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 import {
-  parseRoomKey,
+  COLLABORATION_GATEWAY_PROTOCOL_VERSION,
   type CollaborationClientMessage,
   type CollaborationServerMessage,
+  GATEWAY_PROTOCOL_VERSION_HEADER,
+  parseRoomKey,
   type RoomPublishRequest,
 } from '@orvilo/types';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { type WebSocket, WebSocketServer } from 'ws';
 
-import { PRESENCE_SWEEP_MS, RoomHub, type GatewayConnection } from './rooms';
-import { verifyPublishToken, verifyRoomTicket, type GatewayTicket } from './ticket';
+import { type GatewayConnection, PRESENCE_SWEEP_MS, RoomHub } from './rooms';
+import { type GatewayTicket, verifyPublishToken, verifyRoomTicket } from './ticket';
 
 export interface GatewayOptions {
   hub?: RoomHub;
@@ -42,7 +44,12 @@ const readBody = async (req: IncomingMessage): Promise<unknown> => {
 };
 
 const sendJson = (res: ServerResponse, status: number, body: unknown) => {
-  res.writeHead(status, { 'content-type': 'application/json' });
+  res.writeHead(status, {
+    'content-type': 'application/json',
+    // The projector treats a scoped kick acked without this marker as
+    // undelivered — see `RoomPublisher` in apps/server.
+    [GATEWAY_PROTOCOL_VERSION_HEADER]: String(COLLABORATION_GATEWAY_PROTOCOL_VERSION),
+  });
   res.end(JSON.stringify(body));
 };
 
@@ -55,11 +62,56 @@ const bearerToken = (req: IncomingMessage): string | null => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
+const KICK_SCOPES = new Set(['project', 'task', 'workspace']);
+
 const isPublishRequest = (value: unknown): value is RoomPublishRequest =>
   isRecord(value) &&
   typeof value.room === 'string' &&
   isRecord(value.publish) &&
   (value.publish.kind === 'broadcast' || value.publish.kind === 'kick');
+
+/**
+ * Normalize a kick envelope into hub parameters. New-style kicks carry the
+ * revocation contract explicitly — scope/scopeId, tenant and the authz
+ * version the revoking write stamped. The legacy `{reason,userId}` shape
+ * coerces to a workspace kick only when published to a workspace room, so a
+ * stale projector can never project-kick by accident. Returns null on any
+ * malformed field — a kick that cannot be scoped must not fire at all.
+ */
+const kickParams = (publish: Record<string, unknown>, room: string) => {
+  if (typeof publish.userId !== 'string' || typeof publish.reason !== 'string') return null;
+  if (
+    publish.scope !== undefined ||
+    publish.scopeId !== undefined ||
+    publish.workspaceId !== undefined
+  ) {
+    if (
+      !KICK_SCOPES.has(publish.scope as string) ||
+      typeof publish.scopeId !== 'string' ||
+      typeof publish.workspaceId !== 'string' ||
+      (publish.authzVersion !== undefined && typeof publish.authzVersion !== 'number')
+    ) {
+      return null;
+    }
+    return {
+      authzVersion: publish.authzVersion as number | undefined,
+      reason: publish.reason,
+      scope: publish.scope as 'project' | 'task' | 'workspace',
+      scopeId: publish.scopeId,
+      userId: publish.userId,
+      workspaceId: publish.workspaceId,
+    };
+  }
+  const parsed = parseRoomKey(room);
+  if (parsed?.scope !== 'workspace') return null;
+  return {
+    reason: publish.reason,
+    scope: 'workspace' as const,
+    scopeId: parsed.id,
+    userId: publish.userId,
+    workspaceId: parsed.id,
+  };
+};
 
 const isClientMessage = (value: unknown): value is CollaborationClientMessage =>
   isRecord(value) && (value.type === 'presence' || value.type === 'ping');
@@ -81,7 +133,11 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
 
     if (req.method === 'GET' && url.pathname === '/health') {
-      sendJson(res, 200, { connections: hub.connectionCount, ok: true });
+      sendJson(res, 200, {
+        connections: hub.connectionCount,
+        ok: true,
+        protocol: COLLABORATION_GATEWAY_PROTOCOL_VERSION,
+      });
       return;
     }
 
@@ -105,11 +161,14 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
           return;
         }
         if (body.publish.kind === 'kick') {
-          // Kick scope is the workspace room the notice was projected for.
-          const room = parseRoomKey(body.room);
-          if (room?.scope === 'workspace') {
-            hub.kick(room.id, body.publish.userId, body.publish.reason);
+          const kick = kickParams(body.publish, body.room);
+          // A kick that cannot be scoped to an explicit revocation contract
+          // must not fire at all — closing "something" is worse than 400.
+          if (!kick) {
+            sendJson(res, 400, { error: 'invalid kick envelope' });
+            return;
           }
+          hub.kick(kick);
         } else {
           hub.broadcast(body.room, body.publish.message);
         }
@@ -131,8 +190,11 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
 
     const connection: GatewayConnection = {
       actor: ticket.actor,
+      authzVersion: ticket.authzVersion,
       connectionId,
+      projectId: ticket.projectId,
       room: ticket.room,
+      ticketExpiresAt: ticket.expiresAt,
       userId: ticket.userId,
       workspaceId: ticket.workspaceId,
       close: (code, reason) => ws.close(code, reason),

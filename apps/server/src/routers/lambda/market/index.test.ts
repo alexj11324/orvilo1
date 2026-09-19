@@ -50,8 +50,11 @@ describe('marketRouter', () => {
   });
 
   it('keeps the remaining market sub-routers mounted', () => {
-    for (const key of ['agent', 'agentGroup', 'creds', 'deployments', 'oidc', 'skill', 'user']) {
+    for (const key of ['agent', 'agentGroup', 'creds', 'deployments', 'oidc', 'user']) {
       expect(marketRouter._def.record).toHaveProperty(key);
     }
+
+    // The platform skill market was retired with the Skill-management chain.
+    expect(marketRouter._def.record).not.toHaveProperty('skill');
   });
 });

@@ -153,7 +153,12 @@ const setupHeteroRuntime = (
 ) => {
   mockConstEnv.isDesktop = true;
   setupMockSelectors({
-    agentConfig: { agencyConfig: { heterogeneousProvider: provider } },
+    agentConfig: {
+      // An unset execution target resolves to pending `none` on every client —
+      // the in-process `hetero` runtime now requires the explicit `local`
+      // selection the device switcher persists (mount default / user pick).
+      agencyConfig: { executionTarget: 'local', heterogeneousProvider: provider },
+    },
   });
 };
 
@@ -646,6 +651,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -1880,6 +1886,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -3777,6 +3784,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
             model: 'claude-sonnet-4-6',
@@ -3831,6 +3839,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: {
                 args: ['--model', 'global-model', '--mode', 'plan'],
                 model: 'global-model',
@@ -3903,7 +3912,12 @@ describe('ConversationLifecycle actions', () => {
 
       it('routes a legacy bare Qoder model to the desktop heterogeneous runtime without gateway mode', async () => {
         mockConstEnv.isDesktop = true;
-        setupMockSelectors({ agentConfig: { agencyConfig: undefined, model: 'qoder' } });
+        // `executionTarget: 'local'` is the explicit desktop-local selection the
+        // device switcher persists; the legacy provider still comes from the
+        // bare `model` field because `heterogeneousProvider` is unset.
+        setupMockSelectors({
+          agentConfig: { agencyConfig: { executionTarget: 'local' }, model: 'qoder' },
+        });
 
         const executeGatewayAgent = vi.fn();
         act(() => {
@@ -4273,6 +4287,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -4349,6 +4364,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -4415,6 +4431,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -4539,6 +4556,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -4590,6 +4608,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },
@@ -4672,6 +4691,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
             plugins: ['orvilo-local-system'],
@@ -5002,6 +5022,7 @@ describe('ConversationLifecycle actions', () => {
         setupMockSelectors({
           agentConfig: {
             agencyConfig: {
+              executionTarget: 'local',
               heterogeneousProvider: { command: 'codex', type: 'codex' },
             },
           },

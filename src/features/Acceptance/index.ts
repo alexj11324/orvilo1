@@ -30,5 +30,3 @@ export {
   type OriginTopicPanelProps,
 } from './Viewer/Conversation/originConversation';
 export { FocusedCheckDetails } from './Viewer/Focus/FocusedCheckDetails';
-export { default as AcceptanceWorkspace } from './Workspace';
-export { default as AcceptanceEmptyDetail } from './Workspace/EmptyDetail';

@@ -3,7 +3,6 @@ import type { OrviloDatabase } from '@orvilo/database';
 import type { WorkspaceMemberItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 
-import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 
 import { emitWorkspaceEvent, recordAudit } from './audit';
@@ -11,6 +10,7 @@ import {
   bumpAuthzVersion,
   countActiveDelegations,
   countMemberBoundDevices,
+  countMemberWorkload,
   countOpenTasksAssignedTo,
   countOpenTasksReviewedBy,
   findMembershipRow,
@@ -23,6 +23,12 @@ import {
 import { canGrantWorkspaceRole, canManageMember, type WorkspaceRoleName } from './roles';
 
 export interface MemberSummary extends WorkspaceMemberItem {
+  /** Open tasks the member currently owns — drives the roster's work column. */
+  openAssignedCount: number;
+  /** Open tasks awaiting the member's review. */
+  openReviewingCount: number;
+  /** Project memberships the member holds inside this workspace. */
+  projectCount: number;
   user: {
     avatar: string | null;
     email: string | null;
@@ -50,9 +56,15 @@ export const listMemberSummaries = async (
   db: OrviloDatabase,
   params: { includeDeleted: boolean; viewerIsAdmin: boolean; workspaceId: string },
 ): Promise<MemberSummary[]> => {
-  const rows = await listMembersWithProfiles(db, params.workspaceId, params.includeDeleted);
+  const [rows, workload] = await Promise.all([
+    listMembersWithProfiles(db, params.workspaceId, params.includeDeleted),
+    countMemberWorkload(db, params.workspaceId),
+  ]);
   return rows.map(({ member, user }) => ({
     ...member,
+    openAssignedCount: workload.get(member.userId)?.openAssignedCount ?? 0,
+    openReviewingCount: workload.get(member.userId)?.openReviewingCount ?? 0,
+    projectCount: workload.get(member.userId)?.projectCount ?? 0,
     user: user
       ? {
           avatar: user.avatar,
@@ -113,7 +125,7 @@ export const changeMemberRole = async (
     if (target.role === params.role) return { changed: false as const, role: target.role };
 
     await memberModel.updateMemberRole(params.workspaceId, params.targetUserId, params.role);
-    await bumpAuthzVersion(tx, params.workspaceId, params.targetUserId);
+    const authzVersion = await bumpAuthzVersion(tx, params.workspaceId, params.targetUserId);
     await recordAudit(tx, {
       action: 'member.role_updated',
       ipAddress: params.ipAddress,
@@ -127,7 +139,7 @@ export const changeMemberRole = async (
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: 'workspace.member.role_changed',
-      payload: { role: params.role, userId: params.targetUserId },
+      payload: { authzVersion, role: params.role, userId: params.targetUserId },
       workspaceId: params.workspaceId,
     });
     return { changed: true as const, role: params.role };
@@ -176,6 +188,11 @@ const setMemberSuspended = async (
     } else {
       await memberModel.resumeMember(params.workspaceId, params.targetUserId);
     }
+    // The kick projection stamps this version as the revocation barrier —
+    // connections re-authorized at a newer version (a re-grant) outrank a
+    // replayed revoke.
+    const authzVersion = (await findMembershipRow(tx, params.workspaceId, params.targetUserId))
+      ?.authzVersion;
     const action = params.suspended ? 'member.suspended' : 'member.resumed';
     await recordAudit(tx, {
       action,
@@ -189,7 +206,7 @@ const setMemberSuspended = async (
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: `workspace.${action}`,
-      payload: { userId: params.targetUserId },
+      payload: { authzVersion, userId: params.targetUserId },
       workspaceId: params.workspaceId,
     });
     return { changed: true as const, suspended: params.suspended };
@@ -331,11 +348,15 @@ export const removeMember = async (
       userId: params.actorUserId,
       workspaceId: params.workspaceId,
     });
+    // The model's inner write bumped authzVersion with the soft delete — the
+    // kick projection stamps it as the barrier re-granted connections outrank.
+    const authzVersion = (await findMembershipRow(tx, params.workspaceId, params.targetUserId))
+      ?.authzVersion;
     await emitWorkspaceEvent(tx, {
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: 'workspace.member.removed',
-      payload: { userId: params.targetUserId },
+      payload: { authzVersion, userId: params.targetUserId },
       workspaceId: params.workspaceId,
     });
 
@@ -371,88 +392,15 @@ export const leaveWorkspace = async (
       userId: params.userId,
       workspaceId: params.workspaceId,
     });
+    const authzVersion = (await findMembershipRow(tx, params.workspaceId, params.userId))
+      ?.authzVersion;
     await emitWorkspaceEvent(tx, {
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: 'workspace.member.left',
-      payload: { userId: params.userId },
+      payload: { authzVersion, userId: params.userId },
       workspaceId: params.workspaceId,
     });
     return { left: true as const };
   });
-};
-
-export const transferWorkspaceOwnership = async (
-  db: OrviloDatabase,
-  params: {
-    actorUserId: string;
-    ipAddress?: string;
-    newOwnerUserId: string;
-    workspaceId: string;
-  },
-) => {
-  if (params.newOwnerUserId === params.actorUserId) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'You already own this workspace' });
-  }
-  const target = await new WorkspaceMemberModel(db, params.actorUserId).getMember(
-    params.workspaceId,
-    params.newOwnerUserId,
-  );
-  if (!target || target.role === 'owner') {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'The new owner must be an active non-owner member',
-    });
-  }
-
-  try {
-    await db.transaction(async (tx) => {
-      const result = await new WorkspaceModel(tx, params.actorUserId).transferPrimaryOwnership(
-        params.workspaceId,
-        params.newOwnerUserId,
-      );
-      await recordAudit(tx, {
-        action: 'workspace.primary_ownership_transferred',
-        ipAddress: params.ipAddress,
-        metadata: {
-          newOwnerUserId: result.newPrimaryOwnerUserId,
-          previousOwnerUserId: result.previousPrimaryOwnerUserId,
-        },
-        resourceId: params.workspaceId,
-        resourceType: 'workspace',
-        userId: params.actorUserId,
-        workspaceId: params.workspaceId,
-      });
-      await emitWorkspaceEvent(tx, {
-        aggregateId: params.workspaceId,
-        aggregateType: 'workspace',
-        eventType: 'workspace.ownership.transferred',
-        payload: {
-          newOwnerUserId: result.newPrimaryOwnerUserId,
-          previousOwnerUserId: result.previousPrimaryOwnerUserId,
-        },
-        workspaceId: params.workspaceId,
-      });
-      return result;
-    });
-  } catch (error) {
-    if (error instanceof TRPCError) throw error;
-    const message = error instanceof Error ? error.message : '';
-    if (message.includes('Only the workspace owner')) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Only the workspace owner can transfer ownership',
-      });
-    }
-    if (message.includes('must already be')) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message });
-    }
-    throw new TRPCError({
-      cause: error,
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to transfer ownership',
-    });
-  }
-
-  return { transferred: true as const };
 };

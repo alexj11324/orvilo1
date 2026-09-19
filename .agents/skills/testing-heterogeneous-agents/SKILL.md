@@ -6,12 +6,14 @@ disable-model-invocation: true
 
 # Testing Heterogeneous Agents
 
-This project skill extends `acceptance` with one scenario: proving that every
+This project skill extends the repo's acceptance adapter (`.agents/acceptance/`)
+with one scenario: proving that every
 server-advertised official model completes through each supported external CLI
 agent and Orvilo's `server-default` provider binding.
 
-It does not replace Acceptance. Use Acceptance for the plan, approval gate,
-evidence contract, immutable rounds, publishing, and teardown. Use
+It does not replace the acceptance process. Use
+`.agents/acceptance/PROCESS.md` for the plan, approval gate, evidence contract,
+immutable rounds, and teardown, and
 `.agents/acceptance/PROJECT.md` for Orvilo's Electron launch, auth, CDP, and
 multi-instance commands. This skill owns only the compatibility-matrix semantics
 and its executable harness.
@@ -71,7 +73,7 @@ Exit codes:
 
 ### 1. Load the parent contract and project adapter
 
-Read the `acceptance` skill, `.agents/acceptance/PROCESS.md`, and
+Read `.agents/acceptance/PROCESS.md` and
 `.agents/acceptance/PROJECT.md`. Follow their approval and teardown rules. This
 scenario makes billable requests and creates server operation records, so never
 infer permission to run it from a request to inspect or list the matrix.
@@ -127,10 +129,10 @@ artifact per cell, and a structured matrix table under:
 ```
 
 Unless `--report-dir` selects another location. Inspect the report and evidence;
-do not infer success from the process exit code alone. Publish it with the clean
-production `lh acceptance run ingest` environment required by
-`.agents/acceptance/PROCESS.md`. Confirm that every matrix cell has its required
-text evidence and return only the stable Acceptance URL.
+do not infer success from the process exit code alone. Confirm that every matrix
+cell has its required text evidence, then attach the report to the PR (or publish
+it as a CI artifact) and name the commit SHA it was produced on. There is no
+standalone acceptance platform to publish to.
 
 ### 7. Diagnose failures at the owning layer
 

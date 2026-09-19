@@ -36,7 +36,7 @@ Common false positives (do NOT merge):
 
 - `db-migrations` vs `drizzle` — distinct workflows (migration files vs schema authoring).
 - `agent-runtime-hooks` vs `agent-tracing` vs `agent-signal` — different surfaces of the agent system.
-- `testing` vs `acceptance` — different test types.
+- `testing` vs `.agents/acceptance/` — different test types.
 
 ### 3 — Description and invocation boundaries
 
@@ -60,9 +60,10 @@ If the underlying surface is gone and the skill hasn't been edited in 3+ months 
 
 ### 4b — Living-log freshness (`common-mistakes.md`, `probe-mock-patterns.md`)
 
-Both layers (`.agents/skills/acceptance/references/` generic, `.agents/acceptance/`
-project) are injected into every acceptance round, so a stale entry is a stale
-instruction. For each entry:
+`.agents/acceptance/` is injected into every acceptance round, so a stale entry is
+a stale instruction. (The generic layer that used to sit beside it at
+`.agents/skills/acceptance/references/` was retired with the standalone acceptance
+platform, so the project layer is now the only one.) For each entry:
 
 ```bash
 rg -n '^`since|holds-while' .agents/acceptance/common-mistakes.md        # every entry must carry both
@@ -70,7 +71,7 @@ rg -n 'holds-while: (?!always)' -P .agents/acceptance/common-mistakes.md # the m
 ```
 
 - Missing `since` / `holds-while` → the entry predates the admission rule; either add them or move it to field-notes.
-- For every non-`always` `holds-while`, check whether the named mechanism still exists (the script default, the ingest gap, the platform behavior). Gone → delete the entry (PROCESS.md Step 0 exit rule); the field notes keep history.
+- For every non-`always` `holds-while`, check whether the named mechanism still exists (the script default, the check gap, the platform behavior). Gone → delete the entry (PROCESS.md Step 0 exit rule); the field notes keep history.
 - An entry that names a project script from the generic layer, or a product noun, is in the wrong layer.
 - Duplicate ids (`rg -o '^### [ML]-?[A-Z]?\d+' | sort | uniq -d`).
 

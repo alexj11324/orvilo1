@@ -13,7 +13,6 @@ import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import { isDesktop } from '@/const/version';
 import { BANNER_HEIGHT } from '@/features/AlertBanner/CloudBanner';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
-import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
@@ -33,8 +32,10 @@ const CloudBanner = dynamic(() => import('@/features/AlertBanner/CloudBanner'));
 const GlobalApprovalNotification = dynamic(() => import('@/features/GlobalApprovalNotification'));
 
 // The Electron shell (title bar, tab bridges, overlays, zoom HUD) lives in
-// index.desktop.tsx; only the auth recovery pair stays here so a desktop build
-// that falls back to this layout can still re-login.
+// index.desktop.tsx; only the first-open OIDC boot hook stays here so a
+// desktop build that falls back to this layout can still auto-connect. The
+// session-auth recovery adapters moved up to SPAGlobalProvider so every route
+// (including the top-level /onboarding) has a subscriber.
 const Layout: FC = () => {
   const { isPWA } = usePlatform();
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
@@ -47,7 +48,6 @@ const Layout: FC = () => {
     <GlobalOverlayHostContext value={true}>
       <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
         {isDesktop && <DesktopAutoOidcOnFirstOpen />}
-        {isDesktop && <AuthRequiredModal />}
         <WorkspaceContextSlot>
           <RouteMetaBridge />
           <Suspense fallback={null}>{showCloudPromotion && <CloudBanner />}</Suspense>

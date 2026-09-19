@@ -5132,6 +5132,22 @@ table workspace_members {
   }
 }
 
+table workspace_ownership_transfers {
+  id text [pk, not null]
+  workspace_id text [not null]
+  from_user_id text [not null]
+  to_user_id text [not null]
+  status text [not null, default: 'pending']
+  expires_at "timestamp with time zone" [not null]
+  decided_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    workspace_id [name: 'workspace_ownership_transfers_pending_workspace_idx', unique]
+    (to_user_id, status) [name: 'workspace_ownership_transfers_to_user_idx']
+  }
+}
+
 table workspace_user_settings {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
@@ -5368,3 +5384,9 @@ ref: workspace_invitation_projects.project_id - projects.id
 ref: workspace_invitations.workspace_id - workspaces.id
 
 ref: workspace_invitations.inviter_id - users.id
+
+ref: workspace_ownership_transfers.workspace_id - workspaces.id
+
+ref: workspace_ownership_transfers.from_user_id - users.id
+
+ref: workspace_ownership_transfers.to_user_id - users.id

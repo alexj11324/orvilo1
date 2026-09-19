@@ -49,7 +49,15 @@ async function inputNewName(
       // swatch list can render its own lucide-check marks inside the popover.
       const saveButton = this.page.locator('[data-testid="editing-popover-save"]').first();
       if ((await saveButton.count()) > 0) {
-        await saveButton.click({ force: true, timeout: 5000 });
+        // Let the popover positioner settle — a force click at stale
+        // coordinates lands outside and dismisses the popover without saving.
+        await this.page.waitForTimeout(400);
+        try {
+          await saveButton.click({ timeout: 5000 });
+        } catch {
+          // Coordinates may still be off — dispatch directly on the node.
+          await saveButton.dispatchEvent('click');
+        }
       } else {
         // Fallback: press Enter to save
         await renameInput.press('Enter', { timeout: 5000 });

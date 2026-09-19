@@ -62,6 +62,7 @@ import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
+import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { LinearSyncModel } from './linearSync';
 import { TaskDependencyError } from './taskDependency';
@@ -297,8 +298,12 @@ export const isTaskIdentifierUniqueViolation = (error: unknown): boolean => {
  * ┌────────────────────┬──────────────────────────────────────────────┬────────────────────────┐
  * │ Helper             │ Use for                                      │ Visibility-aware?      │
  * ├────────────────────┼──────────────────────────────────────────────┼────────────────────────┤
- * │ ownership()        │ list / read / per-row find on `tasks`        │ YES — public OR owner  │
+ * │ ownership()        │ list / read / per-row find on `tasks`        │ YES — public OR owner, │
+ * │                    │                                              │ AND private-team ACL   │
  * │ ownershipSql()     │ raw-SQL CTEs that need the same predicate    │ YES — public OR owner  │
+ * │                    │ (subtree walks from a readable root; keep    │                        │
+ * │                    │ workspace visibility so an assignee can see  │                        │
+ * │                    │ their descendants without team membership)   │                        │
  * │ childOwnership()   │ task_dependencies / task_documents /         │ YES when caller passes │
  * │                    │ task_comments etc. (per-child-table)         │ the visibility column  │
  * │ seqOwnership()     │ identifier / seq allocation on `tasks`       │ NO — workspace-wide    │
@@ -423,14 +428,17 @@ export class TaskModel {
   }
 
   /**
-   * Compat-mode ownership predicate for the `tasks` table — **visibility-aware**.
-   * `tasks` uses `createdByUserId` instead of `userId`. Workspace mode applies
-   * visibility-aware filtering: public tasks are visible to every member,
-   * private tasks only to their creator. Use this for every list/read path.
-   * For identifier / seq allocation, use `seqOwnership` instead.
+   * Compat-mode ownership predicate for the `tasks` table — **visibility-aware**
+   * and **team-readable**. `tasks` uses `createdByUserId` instead of `userId`.
+   * Workspace mode applies visibility-aware filtering: public tasks are
+   * visible to every member, private tasks only to their creator. Private-team
+   * tasks additionally require team membership, workspace admin/owner, or a
+   * personal assignee/reviewer/creator exception (TRI05 / SEC06). Use this for
+   * every list/read path. For identifier / seq allocation, use `seqOwnership`
+   * instead — that helper stays workspace-wide and must not AND team ACL.
    */
-  private ownership = () =>
-    buildWorkspaceWhere(
+  private ownership = () => {
+    const workspaceVisible = buildWorkspaceWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       {
         userId: tasks.createdByUserId,
@@ -438,6 +446,9 @@ export class TaskModel {
         workspaceId: tasks.workspaceId,
       },
     );
+    if (!this.workspaceId) return workspaceVisible;
+    return and(workspaceVisible, buildTaskTeamReadableWhere(this.db, this.userId))!;
+  };
 
   /**
    * Ownership predicate for task child tables (deps / docs / comments) that
@@ -3466,6 +3477,7 @@ export class TaskModel {
   }
 
   async getComments(taskId: string): Promise<TaskCommentItem[]> {
+    if (!(await this.findById(taskId))) return [];
     return this.db
       .select()
       .from(taskComments)

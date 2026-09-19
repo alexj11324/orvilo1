@@ -21,12 +21,17 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'group',
   'image',
   'invite',
+  'inbox',
   'me',
+  'members',
+  'my-issues',
+  'my-work',
   'memory',
   'next-auth',
   'onboarding',
   'projects',
   'resource',
+  'reviews',
   'settings',
   'share',
   'signin',
@@ -34,8 +39,10 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'subscription',
   'task',
   'tasks',
+  'teams',
   'verify',
   'video',
+  'views',
 ]);
 
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;

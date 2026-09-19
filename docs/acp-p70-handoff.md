@@ -22,29 +22,28 @@
 
 - 已提交：P70a（`fb3fe193` 共享类型脱离垂死引擎树）+ P70b-core（`e3ba8a8e`
   execAgent 全量走 ACP 绑定）+ 本次推送的 P70c 系列 commit。
-- CI：`Test Server (shard 1/2)` FAIL = **21 个未迁移的旧循环测试文件**（见下）；
-  `Test Web App` FAIL = 无关滚动 E2E flake（`关闭流式自动滚动后…`），重跑即可。
+- CI（push run `902ce0e8`）：`Test Server (shard 1/2)` FAIL = 4 个 router 集成
+  文件走真 dispatch 撞 `JWKS_KEY`（已由 `aae2a6be` stub 到边界）；`Typecheck`/`Test
+Database` FAIL = functionTools/safeParse/as-cast 三类（同 commit 修复）；
+  `Test Web App` FAIL = 无关滚动 E2E flake（`关闭流式自动滚动后…`），重跑即可；
+  `Required Quality Gate` = #98 修法的镜像逻辑，上游绿后会自动转绿。
 - 分支 BEHIND canary，合并前需要 `gh update-branch`。
 - ⚠️ 注意：同一 SHA 的 `pull_request` run 会被 `concurrent_skipping` 全部 skip
   （push run 拥有真实测试）——rollup 里的 `success` 是空跑，**以 push run 为准**。
 
-### #82 `fix/audit-r0-quality-gate`（独立 PR，不是本分支）
+### #82 `fix/audit-r0-quality-gate`（独立 PR，不是本分支）✅ 已解决
 
-- `e7afd2b7` 已含完整修复：`skip_reason` → `reason` 输出名修正 + check-runs API
-  瞬时失败重试。
-- **已知缺陷（分析完成，待修）**：`concurrent_skipping: 'same_content_newer'` 下，
+- **已由上游修复**：PR #98（`7525f524`）把 poll-and-mirror 修法内联进 test.yml
+  并加 `checks: read` 权限，已并入 canary；#82 以 `3f172b9a` squash 合入。
+- 历史分析（存档）：`concurrent_skipping: 'same_content_newer'` 下，
   同 SHA 的 push run 先起跑拥有真实测试、PR run 被 skip；gate job 对
   `concurrent_skipping` fail-closed → PR run 的 `Required Quality Gate` 红。
   GitHub 按 check 名取**最新完成**的 run → PR run 的红盖掉 push run 的绿 →
   mergeable=BLOCKED。e7afd2b7 上实证：push gate success 17:59:47Z，PR gate
   failure 18:03:15Z，后者赢。
-- **建议修法**：gate job 在 `should_skip && reason != skip_after_successful_duplicate`
-  时不直接 `exit 1`，而是复用 `.github/actions/require-quality-gate` 的轮询逻辑
-  （已存在，poll `commits/SHA/check-runs` 里最新完成的同名 check），等拥有 run 的
-  gate 出结果后镜像。注意 pull\_request 事件 `github.sha` 是 merge ref，轮询目标
-  要用 head SHA（`github.event.pull_request.head.sha`）。备选：PR 事件加入
-  `do_not_skip`（正确但 push+PR 双跑浪费算力）。
-- 处理 codex 的 P1 review thread 时说明此修复。
+- 存档修法说明：#98 采用的正是这里的 poll-and-mirror——`should_skip && reason
+!= skip_after_successful_duplicate` 时不 `exit 1`，复用 require-quality-gate
+  轮询 head SHA 的同名 check 镜像结果。
 
 ### #76 `feat/acp-P60-browser-use`（独立 PR，P60）
 
@@ -160,6 +159,27 @@ device'}`。denied-sender（`!canUseDevice`）与 sandboxFallback/share-visitor
   orvilo-agent 媒体缺口自动注入已退役（host 自带工具面）；pinned-skill body
   不再 inline（lazy skills runtime）；SELF\_FEEDBACK\_INTENT 改为 caller-pinned
   - `!disableSelfFeedbackIntentTool` 挂载（workflows/agentSignal/run.ts:530）。
+- **`autoStart` 已失效**：`InternalExecAgentParams.autoStart` 仍在签名里但不再
+  透传 dispatch input——ACP dispatch 即启动，"先建行后启动" 的契约没了。测试断言
+  已改为恒 `autoStarted:true`。`packages/openapi` Responses API 路径
+  （`execAgent(autoStart:false)` → `AgentRuntimeService.executeSync` 驱动退役引擎）
+  **运行时实质已断**，本次仅删除 `functionTools` 参数修 typecheck—— 需要单独的
+  P70e/A 接 重写（executeSync 无法驱动 host 下发的 op；function tools 在 ACP 下
+  尚无 client-execution 等价物，`tool-calling` 合规测试 ORVILO-5860 会断）。
+- **lint autofix 陷阱**：`as null | typeof X` 会被 lint-staged 当 "多余断言" 剥掉
+  → 变成非法按位或表达式（TS1361/TS18050/TS2363）。ref 存真实现请用 IIFE 定型：
+  `realDispatchRef: (() => { const ref: { current: typeof dispatchHeteroAgent | null }  = { current: null }; return ref; })()`。
+- **router 集成测试（`aae2a6be`）**：`execAgent/execAgents/execGroupAgent`
+  integration 三个文件 stub 到 `heteroDispatch` 边界（`vi.mock` 相对路径
+  `../../../../../services/aiAgent/pipeline/heteroDispatch`），断言收敛到
+  路由→服务层（topic/message 落库、response 形状）；`serverCallAgent.integration.
+test.ts` 删除（callAgent park/resume 生命周期已退役，deferred 编排现在 host 侧
+  `heteroAwaitBuiltinToolChildren`）。旧 LLM Execution / Tool Calling / Stream
+  Events describes 一并删除 ——OpenAI Responses mock 边界在退役引擎内部。
+- **#82 已由上游解决**：PR #98（`7525f524`，已并入 canary）在 test.yml 内联实现
+  了 poll-and-mirror 修法（GH\_TOKEN + GATE\_MIRROR\_TIMEOUT:2700 + head SHA），#82
+  以 `3f172b9a` squash 合入。/tmp/orvilo-qgate 里那个 `72f5da0a` disposition-job
+  重写是冗余提交，留在已合并分支上不开 PR。
 
 ### 2. 排空旧入口 ✅（2026-09-19 审计结论）
 

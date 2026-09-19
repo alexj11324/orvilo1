@@ -13,16 +13,20 @@ import {
   buildNotificationBody,
   buildNotificationSender,
   notifyDesktopAgentCompleted,
+  notifyDesktopHumanApprovalRequired,
   resolveNotificationNavigate,
   resolveNotificationNavigatePath,
   resolveNotificationTitle,
+  resolveWorkInboxNavigate,
+  resolveWorkInboxNavigatePath,
 } from './desktopNotification';
 import { renderAvatarToDataUrl } from './notificationAvatar';
 import { topicMapKey } from './topicMapKey';
 
-const { getNotificationSoundFile, playSound, showNotification } = vi.hoisted(() => ({
+const { getNotificationSoundFile, playSound, setBadgeCount, showNotification } = vi.hoisted(() => ({
   getNotificationSoundFile: vi.fn(),
   playSound: vi.fn(),
+  setBadgeCount: vi.fn(),
   showNotification: vi.fn(),
 }));
 vi.mock('@orvilo/const', async (importOriginal) => ({
@@ -33,7 +37,7 @@ vi.mock('@/services/electron/completionSound', () => ({
   completionSoundService: { getNotificationSoundFile, play: playSound },
 }));
 vi.mock('@/services/electron/desktopNotification', () => ({
-  desktopNotificationService: { showNotification },
+  desktopNotificationService: { setBadgeCount, showNotification },
 }));
 
 vi.mock('@/store/agent', () => ({ getAgentStoreState: () => ({}) }));
@@ -53,6 +57,7 @@ describe('completion sound and desktop banner', () => {
   beforeEach(() => {
     getNotificationSoundFile.mockReset().mockResolvedValue(undefined);
     playSound.mockReset().mockResolvedValue(undefined);
+    setBadgeCount.mockReset().mockResolvedValue(undefined);
     showNotification.mockReset().mockResolvedValue({ success: true });
   });
 
@@ -151,6 +156,34 @@ describe('resolveNotificationNavigatePath', () => {
       escape: true,
       path: '/team/agent/a1/t1',
     });
+  });
+});
+
+describe('resolveWorkInboxNavigatePath', () => {
+  it('opens the personal work inbox when there is no workspace slug', () => {
+    expect(resolveWorkInboxNavigatePath()).toBe('/inbox');
+    expect(resolveWorkInboxNavigate()).toEqual({ escape: true, path: '/inbox' });
+  });
+
+  it('keeps the originating workspace on the work inbox path', () => {
+    expect(resolveWorkInboxNavigatePath('team')).toBe('/team/inbox');
+    expect(resolveWorkInboxNavigate('team')).toEqual({ escape: true, path: '/team/inbox' });
+  });
+});
+
+describe('notifyDesktopHumanApprovalRequired', () => {
+  it('clicks through to the work inbox rather than the agent chat', async () => {
+    await notifyDesktopHumanApprovalRequired(() => ({}) as ChatStore, {
+      agentId: 'a1',
+      topicId: 't1',
+      workspaceSlug: 'team',
+    });
+
+    expect(showNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        navigate: { escape: true, path: '/team/inbox' },
+      }),
+    );
   });
 });
 

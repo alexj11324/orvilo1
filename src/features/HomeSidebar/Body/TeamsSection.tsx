@@ -6,13 +6,24 @@ import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
+  AccordionRoot,
   accordionStyles,
   AccordionTrigger,
   ActionIcon,
   Text,
 } from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
-import { ArrowRight, EyeOffIcon, SlidersHorizontalIcon, UsersIcon } from 'lucide-react';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ArrowRight,
+  EyeOffIcon,
+  FolderKanbanIcon,
+  House,
+  InboxIcon,
+  Layers,
+  ListChecksIcon,
+  SlidersHorizontalIcon,
+} from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -23,36 +34,102 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+import { usePathname, useSearchParams } from '@/libs/router/navigation';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
+import { mergeSidebarExpandedKeys } from './index';
+
+const styles = createStaticStyles(({ css }) => ({
+  teamGlyph: css`
+    flex: none;
+
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 16px;
+    color: ${cssVar.colorBgLayout};
+    text-align: center;
+
+    background: ${cssVar.colorTextTertiary};
+  `,
+  teamHeader: css`
+    display: flex;
+    align-items: center;
+  `,
+  teamLink: css`
+    flex: 1;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  `,
+  teamTrigger: css`
+    flex: none;
+    padding: 2px;
+  `,
+}));
+
+interface TeamSubItem {
+  icon: LucideIcon;
+  key: string;
+  tab: string;
+  titleKey: string;
+}
+
+/** Linear's per-team sub-navigation. Every entry lands on a real surface of
+ * the team page — the `tab` query selects which section renders. */
+const TEAM_SUB_ITEMS: TeamSubItem[] = [
+  { icon: House, key: 'home', tab: 'home', titleKey: 'teams.subNav.home' },
+  { icon: InboxIcon, key: 'triage', tab: 'triage', titleKey: 'teams.subNav.triage' },
+  { icon: ListChecksIcon, key: 'issues', tab: 'issues', titleKey: 'teams.subNav.issues' },
+  { icon: FolderKanbanIcon, key: 'projects', tab: 'projects', titleKey: 'teams.subNav.projects' },
+  { icon: Layers, key: 'views', tab: 'views', titleKey: 'teams.subNav.views' },
+];
+
+const teamAccordionKey = (teamId: string) => `team:${teamId}`;
 
 interface TeamsSectionProps {
   itemKey: string;
 }
 
 /**
- * "Your teams" group of the fixed IA. Renders the teams the caller can read;
- * each row deep-links into the team detail surface. Sub-navigation per team
- * (home / issues / projects / views) lands with the team sub-pages workstream —
- * until then a flat row keeps every entry a real destination.
+ * "Your teams" group of the fixed IA. Each readable team is an expandable row
+ * (Linear's Your teams): the chevron toggles the sub-navigation, the name
+ * deep-links to the team's home tab.
  */
 const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const tab = useActiveTabKey();
+  const pathname = usePathname();
+  const [searchParams] = useSearchParams();
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
   const hiddenSections = useGlobalStore(
     systemStatusSelectors.hiddenSidebarSections(activeWorkspaceId),
   );
+  const sidebarExpandedKeys = useGlobalStore(
+    systemStatusSelectors.sidebarExpandedKeys(activeWorkspaceId),
+  );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
-  const { data } = useSWR('sidebar-teams', () => lambdaClient.team.teams.query(), {
-    revalidateOnFocus: false,
-  });
-  const teams = data?.data ?? [];
+  const { data } = useSWR(
+    activeWorkspaceId ? 'sidebar-teams' : null,
+    () => lambdaClient.team.teams.query(),
+    {
+      revalidateOnFocus: false,
+    },
+  );
+  const teams = useMemo(() => data?.data ?? [], [data]);
+  const teamKeys = useMemo(() => teams.map((team) => teamAccordionKey(team.id)), [teams]);
+  const expandedTeams = useMemo(
+    () => teamKeys.filter((key) => sidebarExpandedKeys.includes(key)),
+    [sidebarExpandedKeys, teamKeys],
+  );
 
   const contextMenu = useMemo(() => {
     const items: NativeContextMenuItem[] = [
@@ -81,6 +158,28 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
       navigate('/teams');
     },
     [navigate],
+  );
+
+  const handleTeamsExpandedChange = useCallback(
+    (keys: unknown) => {
+      updateSystemStatus({
+        sidebarExpandedKeys: mergeSidebarExpandedKeys(
+          sidebarExpandedKeys,
+          teamKeys,
+          (keys as (string | number)[]).map(String),
+        ),
+      });
+    },
+    [sidebarExpandedKeys, teamKeys, updateSystemStatus],
+  );
+
+  const activeTeamTab = useCallback(
+    (teamId: string) => {
+      const base = pathname.replace(/\/+$/, '');
+      if (!base.endsWith(`/teams/${teamId}`)) return null;
+      return searchParams.get('tab') ?? 'home';
+    },
+    [pathname, searchParams],
   );
 
   if (!activeWorkspaceId) return null;
@@ -114,18 +213,65 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
         </AccordionHeader>
       </ContextMenuTrigger>
       <AccordionPanel>
-        <Flexbox gap={1} paddingBlock={1}>
-          {teams.map((team) => (
-            <WorkspaceLink key={team.id} to={`/teams/${team.id}`}>
-              <NavItem icon={UsersIcon} title={team.name} />
-            </WorkspaceLink>
-          ))}
-          {teams.length === 0 && (
-            <WorkspaceLink to="/teams">
-              <NavItem active={tab === 'teams'} icon={UsersIcon} title={t('tab.teams')} />
-            </WorkspaceLink>
-          )}
-        </Flexbox>
+        <AccordionRoot
+          indicatorPlacement="start"
+          style={{ gap: 1 }}
+          value={expandedTeams}
+          onValueChange={handleTeamsExpandedChange}
+        >
+          {teams.map((team) => {
+            const activeTab = activeTeamTab(team.id);
+            return (
+              <AccordionItem key={team.id} value={teamAccordionKey(team.id)}>
+                <AccordionHeader className={styles.teamHeader}>
+                  <AccordionTrigger
+                    aria-label={t('navPanel.yourTeams')}
+                    className={styles.teamTrigger}
+                  />
+                  <WorkspaceLink className={styles.teamLink} to={`/teams/${team.id}`}>
+                    <NavItem
+                      active={tab === 'teams' && activeTab === 'home'}
+                      icon={undefined}
+                      title={team.name}
+                      slots={{
+                        titlePrefix: (
+                          <span aria-hidden className={styles.teamGlyph}>
+                            {(team.key || team.name).slice(0, 1).toUpperCase()}
+                          </span>
+                        ),
+                      }}
+                    />
+                  </WorkspaceLink>
+                </AccordionHeader>
+                <AccordionPanel>
+                  <Flexbox gap={1} paddingBlock={1} paddingInlineStart={20}>
+                    {TEAM_SUB_ITEMS.map((sub) => (
+                      <WorkspaceLink
+                        key={sub.key}
+                        to={
+                          sub.tab === 'home'
+                            ? `/teams/${team.id}`
+                            : `/teams/${team.id}?tab=${sub.tab}`
+                        }
+                      >
+                        <NavItem
+                          active={activeTab === sub.tab}
+                          icon={sub.icon}
+                          title={t(sub.titleKey)}
+                        />
+                      </WorkspaceLink>
+                    ))}
+                  </Flexbox>
+                </AccordionPanel>
+              </AccordionItem>
+            );
+          })}
+        </AccordionRoot>
+        {teams.length === 0 && (
+          <WorkspaceLink to="/teams">
+            <NavItem active={tab === 'teams'} icon={Layers} title={t('tab.teams')} />
+          </WorkspaceLink>
+        )}
       </AccordionPanel>
     </AccordionItem>
   );

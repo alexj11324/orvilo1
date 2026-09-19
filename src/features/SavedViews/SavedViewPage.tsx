@@ -82,7 +82,7 @@ interface SavedViewProjectRowData {
   updatedAt?: Date | string | null;
 }
 
-const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({ project }) => {
+export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({ project }) => {
   const { t } = useTranslation('project');
   const status = resolveProjectStatus(project.status);
   const statusVisual = PROJECT_STATUS_VISUALS[status];

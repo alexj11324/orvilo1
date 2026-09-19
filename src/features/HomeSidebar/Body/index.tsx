@@ -2,7 +2,7 @@
 
 import type { MenuProps } from '@lobehub/ui';
 import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { AccordionRoot, ActionIcon } from '@lobehub/ui/base-ui';
+import { AccordionRoot, ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { EyeOffIcon, MoreHorizontalIcon, SlidersHorizontalIcon } from 'lucide-react';
 import type { Key, ReactElement } from 'react';
 import { memo, useCallback, useMemo } from 'react';
@@ -23,6 +23,7 @@ import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
 import { useUserStore } from '@/store/user';
 import { isModifierClick } from '@/utils/navigation';
 
+import { useInboxUnreadCount } from '../Header/components/useInboxUnreadCount';
 import Agent from './Agent';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import TeamsSection from './TeamsSection';
@@ -58,7 +59,9 @@ const accordionComponents: Record<string, (key: string) => ReactElement> = {
   [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
 };
 
-const mergeSidebarExpandedKeys = (
+/** Exported for TeamsSection — each expanded `team:<id>` accordion shares
+ * the same persisted `sidebarExpandedKeys` bucket. */
+export const mergeSidebarExpandedKeys = (
   currentKeys: string[],
   accordionKeys: string[],
   expandedKeys: Key[],
@@ -94,6 +97,7 @@ const Body = memo(() => {
     systemStatusSelectors.hiddenSidebarSections(activeWorkspaceId),
   );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+  const { unreadCount: inboxUnreadCount } = useInboxUnreadCount();
 
   const hideSection = useCallback(
     (key: string) => {
@@ -187,11 +191,18 @@ const Body = memo(() => {
                 <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
               </DropdownMenu>
             }
+            extra={
+              key === 'inbox' && inboxUnreadCount > 0 ? (
+                <Text fontSize={12} type={'secondary'}>
+                  {inboxUnreadCount}
+                </Text>
+              ) : undefined
+            }
           />
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, searchParams, getContextMenuItems, navigate],
+    [navLinkItems, tab, searchParams, getContextMenuItems, navigate, inboxUnreadCount],
   );
 
   const handleAccordionExpandedChange = useCallback(

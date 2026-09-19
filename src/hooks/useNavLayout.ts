@@ -1,8 +1,7 @@
-import { GitPullRequestIcon, InboxIcon, SearchIcon, SquareUserIcon } from 'lucide-react';
+import { GitPullRequestIcon, InboxIcon, SquareUserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useGlobalStore } from '@/store/global';
 import { SidebarTabKey } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
@@ -33,22 +32,16 @@ export interface NavLayout {
 
 export const useNavLayout = (): NavLayout => {
   const { t } = useTranslation('common');
-  const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
 
   // Fixed primary IA (see features/Navigation/sidebarContract): the header
-  // renders search; the body renders inbox/my-work/reviews as core links and
-  // the accordion sections (agent, workspace, favorites, teams) separately.
-  // Retired surfaces keep their routes for deep links but no sidebar entry.
+  // carries the workspace switcher + search/new-issue icons; the body renders
+  // inbox/my-work/reviews as core links and the accordion sections (agent,
+  // workspace, favorites, teams) separately. Retired surfaces keep their
+  // routes for deep links but no sidebar entry.
   const topNavItems = useMemo(
     () =>
       [
-        {
-          icon: SearchIcon,
-          key: 'search',
-          onClick: () => toggleCommandMenu(true),
-          title: t('tab.search'),
-        },
         {
           icon: InboxIcon,
           key: SidebarTabKey.Inbox,
@@ -68,7 +61,7 @@ export const useNavLayout = (): NavLayout => {
           url: '/my-work?tab=review',
         },
       ] as NavItem[],
-    [t, toggleCommandMenu],
+    [t],
   );
 
   // Every destination that used to live here has been retired by the task-first

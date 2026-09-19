@@ -106,6 +106,10 @@ vi.mock('./useSyncWorkspaceSidebarPreference', () => ({
   useSyncWorkspaceSidebarPreference: vi.fn(),
 }));
 
+vi.mock('../Header/components/useInboxUnreadCount', () => ({
+  useInboxUnreadCount: () => ({ enabled: false, unreadCount: 0 }),
+}));
+
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: MockGlobalState) => unknown) => selector(mocks.globalState),
 }));

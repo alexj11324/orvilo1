@@ -101,6 +101,31 @@ describe('the platform Skill management chain stays retired', () => {
 
       expect(items).not.toContain('SettingsTabs.Skill');
     });
+
+    it('no longer points the model at a skill store that this repo does not ship', () => {
+      // The activator prompt carried a `<skill_store_discovery>` block whose
+      // first instruction was "CRITICAL: Always activate `orvilo-skill-store`
+      // FIRST". It was static text, so it kept ordering the model to call a tool
+      // that no longer exists — the call could only ever come back "not found".
+      // The dynamic twin was `SkillImportRouteInjector`, which gated itself on
+      // the tool appearing in the run's manifests; with the tool gone that gate
+      // was permanently false, i.e. dead code wearing the shape of a safeguard.
+      //
+      // Asserted on the identifier rather than on the surrounding prose: the
+      // wording is free to change, but the retired identifier may not come back
+      // through a rebase, a cherry-pick or an upstream sync.
+      const activatorPrompt = read('packages/builtin-tool-activator/src/systemRole.ts');
+      expect(activatorPrompt).not.toContain('orvilo-skill-store');
+      expect(activatorPrompt).not.toContain('skill_store_discovery');
+
+      expect(exists('packages/context-engine/src/providers/SkillImportRouteInjector.ts')).toBe(
+        false,
+      );
+
+      const messagesEngine = read('packages/context-engine/src/engine/messages/MessagesEngine.ts');
+      expect(messagesEngine).not.toContain('SkillImportRouteInjector');
+      expect(messagesEngine).not.toContain('SKILL_STORE_TOOL_ID');
+    });
   });
 
   describe('the skill write APIs are gone', () => {
@@ -285,6 +310,39 @@ describe('the platform Skill management chain stays retired', () => {
       expect(
         exists('apps/server/src/services/agentDocumentVfs/mounts/skills/createSkillMount.ts'),
       ).toBe(true);
+    });
+  });
+
+  describe('the tool-source labels that outlived the store are untouched', () => {
+    it('keeps the three `skillStore.tabs.*` keys that live UI still reads', () => {
+      // These keys look uniformly dead. The store they are named after is gone,
+      // and a grep for the JSON spelling (`"skillStore.`) finds nothing at all.
+      // Three of them are not dead: the Tools panel and the agent profile pass
+      // them as `sourceLabel={t('skillStore.tabs.orvilo')}`, and `t()` keys are
+      // typed — so removing them is a compile error, not a missing string.
+      //
+      // That is how they were lost the first time: the sweep used a
+      // double-quote-prefixed pattern (correct for the JSON mirrors, blind to
+      // the single-quoted TS call sites), reported "no references anywhere",
+      // and the typecheck in CI was the only thing that disagreed. The name is
+      // a leftover from the store; the usage is not. Keep them.
+      const keys = [
+        'skillStore.tabs.community',
+        'skillStore.tabs.custom',
+        'skillStore.tabs.orvilo',
+      ];
+
+      const source = read('packages/locales/src/default/setting.ts');
+      for (const key of keys) {
+        expect(source, `${key} is gone from the locale source`).toContain(`'${key}':`);
+      }
+
+      for (const locale of ['en-US', 'zh-CN']) {
+        const mirror = read(`locales/${locale}/setting.json`);
+        for (const key of keys) {
+          expect(mirror, `${key} is gone from ${locale}`).toContain(`"${key}":`);
+        }
+      }
     });
   });
 });

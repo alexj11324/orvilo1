@@ -5,7 +5,7 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
-import { TaskModel } from '@/database/models/task';
+import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TeamModel } from '@/database/models/team';
 import { hasActiveWorkspaceMembership, hasWorkspaceAdminAccess } from '@/database/models/workspace';
 import { router } from '@/libs/trpc/lambda';
@@ -58,7 +58,17 @@ const orchestrationPolicySchema = z.object({
 
 export const teamRouter = router({
   teams: teamProcedure.query(async ({ ctx }) => {
-    return { data: await ctx.teamModel.listReadable(), success: true };
+    // Annotate membership so "Your teams" can list joined teams without
+    // turning the sidebar into a whole-workspace directory.
+    const [teams, memberTeamIds] = await Promise.all([
+      ctx.teamModel.listReadable(),
+      ctx.teamModel.listMemberTeamIds(),
+    ]);
+    const joined = new Set(memberTeamIds);
+    return {
+      data: teams.map((team) => ({ ...team, joined: joined.has(team.id) })),
+      success: true,
+    };
   }),
 
   team: teamProcedure.input(teamIdInput).query(async ({ ctx, input }) => {
@@ -233,7 +243,13 @@ export const teamRouter = router({
    * The model dirties the old and new planning scopes in one transaction.
    */
   moveTaskToTeam: teamWriteProcedure
-    .input(z.object({ taskId: z.string().min(1), teamId: z.string().min(1).nullable() }))
+    .input(
+      z.object({
+        expectedDomainRevision: z.number().int().min(1),
+        taskId: z.string().min(1),
+        teamId: z.string().min(1).nullable(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       // PERMISSIONS: the target team must be visible and writable, and moving
       // out of the current team requires write access there too.
@@ -252,10 +268,18 @@ export const teamRouter = router({
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });
         }
       }
-      const task = await ctx.taskModel.moveToTeam(input.taskId, input.teamId, {
-        source: 'user',
-      });
-      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-      return { data: task, message: 'Task moved', success: true };
+      try {
+        const task = await ctx.taskModel.moveToTeam(input.taskId, input.teamId, {
+          expectedDomainRevision: input.expectedDomainRevision,
+          source: 'user',
+        });
+        if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+        return { data: task, message: 'Task moved', success: true };
+      } catch (error) {
+        if (error instanceof TaskRevisionConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        throw error;
+      }
     }),
 });

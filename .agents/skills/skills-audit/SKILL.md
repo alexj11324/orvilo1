@@ -36,7 +36,7 @@ Common false positives (do NOT merge):
 
 - `db-migrations` vs `drizzle` — distinct workflows (migration files vs schema authoring).
 - `agent-runtime-hooks` vs `agent-tracing` vs `agent-signal` — different surfaces of the agent system.
-- `testing` vs `acceptance` — different test types.
+- `testing` vs `.agents/acceptance/` — different test types.
 
 ### 3 — Description and invocation boundaries
 
@@ -71,7 +71,7 @@ rg -n 'holds-while: (?!always)' -P .agents/acceptance/common-mistakes.md # the m
 ```
 
 - Missing `since` / `holds-while` → the entry predates the admission rule; either add them or move it to field-notes.
-- For every non-`always` `holds-while`, check whether the named mechanism still exists (the script default, the ingest gap, the platform behavior). Gone → delete the entry (PROCESS.md Step 0 exit rule); the field notes keep history.
+- For every non-`always` `holds-while`, check whether the named mechanism still exists (the script default, the check gap, the platform behavior). Gone → delete the entry (PROCESS.md Step 0 exit rule); the field notes keep history.
 - An entry that names a project script from the generic layer, or a product noun, is in the wrong layer.
 - Duplicate ids (`rg -o '^### [ML]-?[A-Z]?\d+' | sort | uniq -d`).
 

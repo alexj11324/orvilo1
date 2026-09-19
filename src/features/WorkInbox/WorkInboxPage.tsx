@@ -2,6 +2,7 @@
 
 import { Empty, Flexbox, Input } from '@lobehub/ui';
 import {
+  Alert,
   Button,
   TabsIndicator,
   TabsList,
@@ -27,6 +28,7 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { inboxCardTitleKey } from './inboxCardCopy';
 import { versionedDecisionFromCard, visibleDecisionVerbs } from './inboxDecide';
+import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedState';
 import {
   feedFilterForChip,
   INBOX_FILTER_CHIPS,
@@ -91,10 +93,18 @@ const WorkInboxPage = memo(() => {
 
   const kind = tab === 'action' ? 'action' : 'update';
   const filter = feedFilterForChip(filterChip);
-  const { data: cards = [], isLoading } = useClientDataSWR(
+  const { data, isLoading } = useClientDataSWR(
     inboxKeys.feed(workspaceId, kind, filter, undefined),
     () => notificationService.feed({ filter, kind, limit: 50 }),
+    { focusThrottleInterval: INBOX_FEED_FOCUS_THROTTLE_MS },
   );
+  const cards = useMemo(() => data?.cards ?? [], [data?.cards]);
+  const partial = Boolean(data?.partial);
+  const listMode = inboxFeedListMode({
+    cardCount: cards.length,
+    isLoading,
+    partial,
+  });
   const { data: summary } = useClientDataSWR(inboxKeys.feedSummary(workspaceId), () =>
     notificationService.feedSummary(),
   );
@@ -334,13 +344,21 @@ const WorkInboxPage = memo(() => {
               {t('inbox.archiveAll')}
             </Button>
           </Flexbox>
-          {isLoading ? (
+          {partial ? (
+            <Alert
+              showIcon
+              description={t('inbox.sourceUnavailable')}
+              style={{ margin: 8 }}
+              type="warning"
+            />
+          ) : null}
+          {listMode === 'loading' ? (
             <Text style={{ padding: 16 }} type="secondary">
               {t('inbox.loading')}
             </Text>
-          ) : cards.length === 0 ? (
+          ) : listMode === 'empty' ? (
             <Empty description={t('inbox.empty')} />
-          ) : (
+          ) : listMode === 'partial-empty' ? null : (
             cards.map((card) => (
               <div
                 className={styles.row}

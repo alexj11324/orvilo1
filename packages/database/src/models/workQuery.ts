@@ -22,6 +22,7 @@ import {
   WORK_QUERY_MAX_PREDICATES,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
+  WORK_SEARCH_MAX_PER_TYPE,
 } from '@orvilo/types';
 import {
   and,
@@ -982,7 +983,7 @@ export class WorkQueryModel {
         ),
       )
       .orderBy(desc(tasks.updatedAt), asc(tasks.id))
-      .limit(Math.min(Math.max(limit, 1), 50));
+      .limit(Math.min(Math.max(limit, 1), WORK_SEARCH_MAX_PER_TYPE));
   };
 
   searchProjects = async (needle: string, limit = 8) => {
@@ -1003,6 +1004,6 @@ export class WorkQueryModel {
       .from(projects)
       .where(and(...conditions))
       .orderBy(desc(projects.updatedAt), asc(projects.id))
-      .limit(Math.min(Math.max(limit, 1), 50));
+      .limit(Math.min(Math.max(limit, 1), WORK_SEARCH_MAX_PER_TYPE));
   };
 }

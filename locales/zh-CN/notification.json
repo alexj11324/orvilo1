@@ -101,6 +101,7 @@
   "inbox.source.taskReview": "需要审核",
   "inbox.source.workspaceOwnershipTransfer": "工作区所有权转移请求",
   "inbox.source.workspaceOwnershipTransferOutgoing": "发出的所有权转移",
+  "inbox.sourceUnavailable": "部分收件箱来源暂时不可用。其余卡片仍是当前状态，不是空收件箱。",
   "inbox.submitInput": "发送回复",
   "inbox.title": "通知",
   "inbox.unread": "未读",

@@ -101,6 +101,7 @@
   "inbox.source.taskReview": "Review required",
   "inbox.source.workspaceOwnershipTransfer": "Workspace ownership transfer request",
   "inbox.source.workspaceOwnershipTransferOutgoing": "Outgoing ownership transfer",
+  "inbox.sourceUnavailable": "Some inbox sources could not be loaded. Remaining cards are still current — this is not an empty inbox.",
   "inbox.submitInput": "Send reply",
   "inbox.title": "Notifications",
   "inbox.unread": "Unread",

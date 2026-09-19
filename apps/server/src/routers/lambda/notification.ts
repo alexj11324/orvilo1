@@ -4,10 +4,12 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { NotificationBulkError, NotificationModel } from '@/database/models/notification';
+import { ProjectModel } from '@/database/models/project';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
+import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { ActionSourceRegistry, mapFeedWithLiveActions } from '@/server/services/workAttention';
+import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAttention';
 
 const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -26,6 +28,8 @@ const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (o
       notificationModel: new NotificationModel(ctx.serverDB, ctx.userId, {
         workspaceId: ctx.workspaceId ?? null,
       }),
+      projectModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
+      taskModel: new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
     },
   });
 });
@@ -128,10 +132,13 @@ export const notificationRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const pending = await ctx.actionSources.listPendingForActor();
-      await ctx.notificationModel.ensureActionCards(pending);
-      const rows = await ctx.notificationModel.listFeed(input);
-      return mapFeedWithLiveActions(rows, pending);
+      return buildInboxFeed({
+        actionSources: ctx.actionSources,
+        input,
+        notificationModel: ctx.notificationModel,
+        projectModel: ctx.projectModel,
+        taskModel: ctx.taskModel,
+      });
     }),
 
   feedSummary: notificationReadProcedure.query(async ({ ctx }) => {

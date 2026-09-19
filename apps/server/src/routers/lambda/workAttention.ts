@@ -8,6 +8,7 @@ import {
   WORK_QUERY_MAX_IN_VALUES,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
+  WORK_SEARCH_MAX_PER_TYPE,
   WORKFLOW_STATE_REQUIRED,
   type WorkQuery,
   type WorkQueryFilter,
@@ -23,6 +24,7 @@ import {
   NavigationFavoriteModel,
 } from '@/database/models/navigationFavorite';
 import { NotificationModel } from '@/database/models/notification';
+import { ProjectModel } from '@/database/models/project';
 import {
   SavedViewBuiltinError,
   SavedViewConflictError,
@@ -42,7 +44,7 @@ import {
 } from '@/database/models/workQuery';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { ActionSourceRegistry, mapFeedWithLiveActions } from '@/server/services/workAttention';
+import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAttention';
 
 const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.object({
   field: z.enum([
@@ -135,6 +137,7 @@ const workAttentionProcedure = wsCompatProcedure.use(serverDatabase).use(async (
       notificationModel: new NotificationModel(ctx.serverDB, ctx.userId, {
         workspaceId: ctx.workspaceId ?? null,
       }),
+      projectModel: new ProjectModel(ctx.serverDB, ctx.userId, workspaceId),
       savedViewModel: new SavedViewModel(ctx.serverDB, ctx.userId, workspaceId),
       subscriptionModel: new TaskSubscriptionModel(ctx.serverDB, ctx.userId, workspaceId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, workspaceId),
@@ -265,10 +268,16 @@ export const workAttentionRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const pending = await ctx.actionSources.listPendingForActor();
-      await ctx.notificationModel.ensureActionCards(pending);
-      const rows = await ctx.notificationModel.listFeed(input);
-      return { data: mapFeedWithLiveActions(rows, pending), success: true };
+      return {
+        data: await buildInboxFeed({
+          actionSources: ctx.actionSources,
+          input,
+          notificationModel: ctx.notificationModel,
+          projectModel: ctx.projectModel,
+          taskModel: ctx.taskModel,
+        }),
+        success: true,
+      };
     }),
 
   feedSummary: workAttentionProcedure.query(async ({ ctx }) => {
@@ -479,7 +488,7 @@ export const workAttentionRouter = router({
   search: workAttentionProcedure
     .input(
       z.object({
-        limitPerType: z.number().min(1).max(50).default(5),
+        limitPerType: z.number().min(1).max(WORK_SEARCH_MAX_PER_TYPE).default(5),
         query: z.string().trim().min(1).max(200),
         type: z.enum(['project', 'savedView', 'task', 'team']).optional(),
       }),

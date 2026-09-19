@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `a705b45c` `💄 style(nav): restyle saved project view results`                                                                                                                                                             |
+| 实施 HEAD（本交接提交之前）      | `b4c1ab09` `💄 style(nav): restyle team triage with list chrome and overflow`                                                                                                                                              |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -85,6 +85,8 @@
 - `task.groupList` scope 增 `delegated`（`executionGrants` active + initiatedBy = 当前用户的 EXISTS，与 `workQuery.delegatedByUserId` 同一谓词）；`projectId` 接受 `null`（`isNull(tasks.projectId)`）。SWR key 编进 scope+project 后缀，`projectIdFromListKey` 会解码 MINE `:` 后缀与 `no-project`
 - 看板对齐 Cordy 现行版：隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
 - My Work「待审核」无 Task 的 PR 行：`queryExternalReviews` 写出 allowlist 后的 `openUrl`（https `github.com` / `linear.app`，与 Inbox `safeInboxActionUrl` 同一主机表）；javascript / 站外主机为 null。列表行用 PR 图标 + identifier；客户端再过 `inboxUrlOpenMode` 才 `target=_blank`。不为填列表建 Task，不用应用 token 代批
+- Push Typecheck 在 `a96c6aa4` 失败：`KanbanBoard` 把 My Work 的 `projectId: null`（No-project 过滤）传进 `createTaskModal`（只要 `string | undefined`）。`kanbanCreateTaskProjectId` 把 `null` 收成 `undefined`；grouped query 仍带 `null` 做 IS NULL
+- Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。**不要**在 Team 页挂 AgentTasks `KanbanBoard`
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
@@ -153,6 +155,8 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `dde9ef1f` Push Typecheck / Test Database lint 失败：`WorkQueryResults.tsx` `task.status` 不能赋给 `TaskStatus`。已用 `resolveTaskStatus`（未知 / 空 → `backlog`）修好；`ExecutionStatus.test.ts` 覆盖。不是 64× AC。
 - 本增量：项目 Saved View 结果行对齐 Projects 列表 chrome；`savedViewProjectPath` 优先 slug。`bun run check` 改动文件 lint 干净，6 passed。不是 64× AC。
 - 本增量：My Work 无 Task PR 行 allowlist `openUrl` + 列表 chrome。lint 干净；identifier/openUrl 单测 + `workQuery` 19 passed。不是 64× AC。
+- `1cb3e114`：看板 create-task 丢掉 `null` No-project id。lint 干净；`kanbanBoardModel` 回归覆盖 grouped query 仍带 `null`、弹窗拿到 `undefined`。不是 64× AC。
+- `b4c1ab09`：Team 分诊列表 chrome + overflow + 失败先于空态。lint 干净，`bun run check` 改动文件 47 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

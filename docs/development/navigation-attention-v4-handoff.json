@@ -27,6 +27,8 @@
     "WorkQueryResults status icons go through resolveTaskStatus (null/unknown → backlog)",
     "Project saved-view results use Projects-list chrome (status, identifier, relative time, slug path)",
     "My Work To-review PR rows expose allowlisted GitHub/Linear openUrl; javascript and off-host jumps stay null",
+    "Kanban create-task strips null No-project filter ids; grouped query still IS NULL filters",
+    "Team triage uses work-list chrome, error-before-empty, and overflow for duplicate/transfer/reassign",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -64,11 +66,15 @@
     "src/features/SavedViews/savedViewProjectPath.ts",
     "src/features/SavedViews/SavedViewPage.tsx",
     "src/features/MyWork/externalReviewOpen.ts",
-    "src/features/MyWork/WorkQueryResults.tsx"
+    "src/features/MyWork/WorkQueryResults.tsx",
+    "src/features/AgentTasks/AgentTaskList/kanbanBoardModel.ts",
+    "src/features/WorkTeams/TeamPage.tsx",
+    "src/features/WorkTeams/teamSurfaceState.ts",
+    "src/features/WorkTeams/teamTriageOverflow.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "a705b45c",
-  "implementationHeadBeforeDocs": "a705b45c",
+  "headSha": "b4c1ab09",
+  "implementationHeadBeforeDocs": "b4c1ab09",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

@@ -34,7 +34,7 @@ export interface ProviderBindingPlan {
  * Per-agent server-default binding composition. Every local agent executes
  * through an ACP v1 session (`spawnAgent` / `StandardAcpSession`), so process
  * argv + stream framing are no longer the driver's concern — a driver only
- * translates a LobeHub binding reference into the env vars, profile files, and
+ * translates an Orvilo binding reference into the env vars, profile files, and
  * selector args the agent's ACP runtime understands. User-provider (BYOK)
  * bindings are retired; the deployment-owned server-default relay is the only
  * supported binding.

@@ -56,7 +56,7 @@
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
-  "implementationHeadBeforeDocs": "55a6f853",
+  "implementationHeadBeforeDocs": "b554e2cc",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

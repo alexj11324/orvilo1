@@ -143,6 +143,13 @@ const noteVerificationPollFailure = async (params: {
   topicModel: TaskTopicModel;
 }): Promise<'blocked' | 'waiting'> => {
   const { detail, record, row, task, taskModel, topicModel } = params;
+  // A row with no topicId cannot be patched — the failure stays a waiting
+  // outcome on the task's error field rather than a counter that cannot
+  // persist.
+  if (!row.topicId) {
+    await taskModel.update(task.id, { error: detail });
+    return 'waiting';
+  }
   const failures = (record.verificationPollFailures ?? 0) + 1;
   const lastError = `${detail} (verification poll ${failures}/${MAX_VERIFICATION_POLL_FAILURES})`;
   if (failures >= MAX_VERIFICATION_POLL_FAILURES) {

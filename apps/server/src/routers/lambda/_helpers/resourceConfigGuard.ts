@@ -4,6 +4,7 @@ import {
   canPerformResourceAction,
   getResourceMeta,
   isCollaborativeBuiltinAgent,
+  isWorkspaceScopedMeta,
   type ResourceMeta,
 } from '@/server/services/resourcePermission';
 
@@ -32,7 +33,7 @@ const getSingleResourceConfigAccess = async (
 ): Promise<ResourceConfigAccess> => {
   const workspaceId = ctx.workspaceId!;
   const meta = knownMeta ?? (await getResourceMeta(ctx.db, resourceType, resourceId));
-  if (!meta || meta.workspaceId !== workspaceId) return 'none';
+  if (!meta || !isWorkspaceScopedMeta(meta, workspaceId, ctx.userId)) return 'none';
 
   const permissionParams = {
     db: ctx.db,

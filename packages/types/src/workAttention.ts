@@ -169,7 +169,11 @@ export interface NotificationFeedSummary {
  */
 export interface NotificationFeedPage {
   cards: NotificationFeedCard[];
+  /** True when another page exists behind `nextCursor`. */
+  hasMore: boolean;
   lastReconciledAt: string;
+  /** Notification id the next page continues after — null when exhausted. */
+  nextCursor: string | null;
   partial: boolean;
   sourceUnavailable: ActionSourceKind[];
 }

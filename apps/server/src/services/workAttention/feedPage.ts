@@ -80,8 +80,13 @@ export const collectLiveTitles = async (
 export const buildInboxFeed = async (deps: InboxFeedDeps): Promise<NotificationFeedPage> => {
   const { pending, unavailable } = await deps.actionSources.listPendingForActorSettled();
   await deps.notificationModel.ensureActionCards(pending);
-  const rows = await deps.notificationModel.listFeed(deps.input);
-  const cards = mapFeedWithLiveActions(rows, pending);
+  // Over-fetch one row so the envelope can say whether a next page exists —
+  // the extra row never leaves the server.
+  const limit = Math.min(Math.max(deps.input?.limit ?? 20, 1), 50);
+  const rows = await deps.notificationModel.listFeed({ ...deps.input, limit: limit + 1 });
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const cards = mapFeedWithLiveActions(pageRows, pending);
   let titles = new Map<string, string>();
   try {
     titles = await collectLiveTitles(cards, deps.taskModel, deps.projectModel);
@@ -90,7 +95,9 @@ export const buildInboxFeed = async (deps: InboxFeedDeps): Promise<NotificationF
   }
   return {
     cards: overlayLiveTitles(cards, titles),
+    hasMore,
     lastReconciledAt: new Date().toISOString(),
+    nextCursor: hasMore ? (pageRows.at(-1)?.id ?? null) : null,
     partial: unavailable.length > 0,
     sourceUnavailable: unavailable,
   };

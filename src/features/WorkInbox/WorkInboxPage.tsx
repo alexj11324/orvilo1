@@ -39,6 +39,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncError from '@/components/AsyncError';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -188,12 +189,42 @@ const WorkInboxPage = memo(() => {
 
   const kind = tab === 'action' ? 'action' : 'update';
   const filter = feedFilterForChip(filterChip);
-  const { data, isLoading } = useClientDataSWR(
+  const { data, error, isLoading } = useClientDataSWR(
     inboxKeys.feed(workspaceId, kind, filter, undefined),
     () => notificationService.feed({ filter, kind, limit: 50 }),
     { focusThrottleInterval: INBOX_FEED_FOCUS_THROTTLE_MS },
   );
-  const cards = useMemo(() => data?.cards ?? [], [data?.cards]);
+  // Pages beyond the first stay client-side so a focus-triggered refetch of
+  // page one never reorders rows the user already paged through.
+  const [tail, setTail] = useState<{
+    cards: NotificationFeedCard[];
+    hasMore: boolean;
+    nextCursor: string | null;
+  } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  useEffect(() => {
+    setTail(null);
+  }, [filter, kind, workspaceId]);
+  const cards = useMemo(
+    () => [...(data?.cards ?? []), ...(tail?.cards ?? [])],
+    [data?.cards, tail],
+  );
+  const hasMore = tail ? tail.hasMore : (data?.hasMore ?? false);
+  const loadMore = useCallback(async () => {
+    const cursor = tail ? tail.nextCursor : (data?.nextCursor ?? null);
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await notificationService.feed({ cursor, filter, kind, limit: 50 });
+      setTail((prev) => ({
+        cards: [...(prev?.cards ?? []), ...next.cards],
+        hasMore: next.hasMore,
+        nextCursor: next.nextCursor,
+      }));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [data?.nextCursor, filter, kind, loadingMore, tail]);
   const partial = Boolean(data?.partial);
   const listMode = inboxFeedListMode({
     cardCount: cards.length,
@@ -457,43 +488,69 @@ const WorkInboxPage = memo(() => {
               type="warning"
             />
           ) : null}
+          {error ? (
+            <Alert
+              showIcon
+              description={t('inbox.loadFailed')}
+              style={{ margin: 8 }}
+              type="error"
+              action={
+                <Button size={'small'} type={'text'} onClick={() => void refresh()}>
+                  {tCommon('retry')}
+                </Button>
+              }
+            />
+          ) : null}
           {listMode === 'loading' ? (
             <SkeletonList padding={12} rows={8} />
+          ) : error && cards.length === 0 ? (
+            <Center flex={1} padding={24}>
+              <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />
+            </Center>
           ) : listMode === 'empty' ? (
             <Center flex={1} padding={48}>
               <Empty description={t('inbox.empty')} icon={InboxIcon} />
             </Center>
           ) : listMode === 'partial-empty' ? null : (
-            cards.map((card) => (
-              <div
-                className={styles.row}
-                data-active={card.notificationId === selected?.notificationId}
-                data-inbox-id={card.notificationId}
-                key={card.notificationId}
-                onClick={() => selectCard(card.notificationId, true)}
-              >
-                <Flexbox horizontal align={'center'} gap={10}>
-                  <span className={styles.typeGlyph}>
-                    <Icon icon={inboxCardIcon(card)} size={14} />
-                  </span>
-                  {card.read ? null : <span className={styles.unreadDot} />}
-                  <Flexbox flex={1} style={{ minWidth: 0 }}>
-                    <Text ellipsis weight={card.read ? 400 : 600}>
-                      {titleFor(card)}
+            <>
+              {cards.map((card) => (
+                <div
+                  className={styles.row}
+                  data-active={card.notificationId === selected?.notificationId}
+                  data-inbox-id={card.notificationId}
+                  key={card.notificationId}
+                  onClick={() => selectCard(card.notificationId, true)}
+                >
+                  <Flexbox horizontal align={'center'} gap={10}>
+                    <span className={styles.typeGlyph}>
+                      <Icon icon={inboxCardIcon(card)} size={14} />
+                    </span>
+                    {card.read ? null : <span className={styles.unreadDot} />}
+                    <Flexbox flex={1} style={{ minWidth: 0 }}>
+                      <Text ellipsis weight={card.read ? 400 : 600}>
+                        {titleFor(card)}
+                      </Text>
+                    </Flexbox>
+                    <Text className={styles.time} fontSize={12}>
+                      {dayjs(card.lastActivityAt).fromNow()}
                     </Text>
                   </Flexbox>
-                  <Text className={styles.time} fontSize={12}>
-                    {dayjs(card.lastActivityAt).fromNow()}
-                  </Text>
-                </Flexbox>
-                <Flexbox horizontal gap={8}>
-                  <span style={{ width: 38, flex: 'none' }} />
-                  <Text className={styles.snippet} fontSize={12}>
-                    {card.content}
-                  </Text>
-                </Flexbox>
-              </div>
-            ))
+                  <Flexbox horizontal gap={8}>
+                    <span style={{ width: 38, flex: 'none' }} />
+                    <Text className={styles.snippet} fontSize={12}>
+                      {card.content}
+                    </Text>
+                  </Flexbox>
+                </div>
+              ))}
+              {hasMore ? (
+                <Center padding={12}>
+                  <Button loading={loadingMore} size={'small'} onClick={() => void loadMore()}>
+                    {t('inbox.loadMore')}
+                  </Button>
+                </Center>
+              ) : null}
+            </>
           )}
         </Flexbox>
         <Flexbox className={cx(styles.pane, surface === 'list' && styles.keptMounted)} gap={16}>

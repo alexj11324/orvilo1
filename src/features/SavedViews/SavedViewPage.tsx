@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncError from '@/components/AsyncError';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
@@ -125,7 +126,7 @@ const SavedViewPage = memo(() => {
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const currentUserId = useUserStore(userProfileSelectors.userId);
-  const { data, isLoading } = useClientDataSWR(
+  const { data, error, isLoading } = useClientDataSWR(
     viewId ? workAttentionKeys.savedView(workspaceId, viewId) : null,
     () => workAttentionService.savedViewEvaluate({ id: viewId! }),
   );
@@ -417,7 +418,14 @@ const SavedViewPage = memo(() => {
             </Flexbox>
           </Flexbox>
         ) : null}
-        {evaluation?.needsRepair ? (
+        {error ? (
+          <AsyncError
+            error={error}
+            variant={view ? 'inline' : 'block'}
+            onRetry={() => void refreshView()}
+          />
+        ) : null}
+        {error && !view ? null : evaluation?.needsRepair ? (
           <Alert
             showIcon
             description={t('savedViews.needsRepairDesc')}

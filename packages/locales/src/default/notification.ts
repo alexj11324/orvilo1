@@ -88,6 +88,8 @@ export default {
   'inbox.filterUnread': 'Show unread only',
   'inbox.inputPlaceholder': 'Reply to the agent',
   'inbox.loading': 'Loading inbox…',
+  'inbox.loadFailed': 'The inbox could not be loaded.',
+  'inbox.loadMore': 'Load more',
   'inbox.markAllRead': 'Mark all as read',
   'inbox.markUnread': 'Mark unread',
   'inbox.moreActions': 'More actions',

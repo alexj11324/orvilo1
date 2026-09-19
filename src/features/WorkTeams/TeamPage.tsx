@@ -272,7 +272,12 @@ const TeamPage = memo(() => {
         query: teamTaskQuery(teamId!, cycleId, noProject, layout),
       }),
   );
-  const { data: teamProjectsData, isLoading: isTeamProjectsLoading } = useClientDataSWR(
+  const {
+    data: teamProjectsData,
+    error: teamProjectsError,
+    isLoading: isTeamProjectsLoading,
+    mutate: revalidateTeamProjects,
+  } = useClientDataSWR(
     teamTab === 'projects' && teamId && workspaceId ? ['team-projects', workspaceId, teamId] : null,
     () =>
       workAttentionService.query({
@@ -283,7 +288,12 @@ const TeamPage = memo(() => {
         },
       }),
   );
-  const { data: teamViewsData, isLoading: isTeamViewsLoading } = useClientDataSWR(
+  const {
+    data: teamViewsData,
+    error: teamViewsError,
+    isLoading: isTeamViewsLoading,
+    mutate: revalidateTeamViews,
+  } = useClientDataSWR(
     teamTab === 'views' && workspaceId ? workAttentionKeys.savedViews(workspaceId) : null,
     () => workAttentionService.savedViewList(),
   );
@@ -506,12 +516,21 @@ const TeamPage = memo(() => {
           {teamTab === 'projects' ? (
             isTeamProjectsLoading ? (
               <SkeletonList aria-label={t('teams.loading')} rows={4} />
+            ) : teamProjectsError && teamProjects.length === 0 ? (
+              <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
             ) : teamProjects.length === 0 ? (
               <Center flex={1} padding={48}>
                 <Empty description={t('teams.projectsEmpty')} icon={FolderXIcon} />
               </Center>
             ) : (
               <Flexbox gap={2}>
+                {teamProjectsError ? (
+                  <AsyncError
+                    error={teamProjectsError}
+                    variant={'inline'}
+                    onRetry={() => revalidateTeamProjects()}
+                  />
+                ) : null}
                 {teamProjects.map((project) => (
                   <SavedViewProjectRow key={project.id} project={project} />
                 ))}
@@ -521,12 +540,21 @@ const TeamPage = memo(() => {
           {teamTab === 'views' ? (
             isTeamViewsLoading ? (
               <SkeletonList aria-label={t('teams.loading')} rows={4} />
+            ) : teamViewsError && teamViews.length === 0 ? (
+              <AsyncError error={teamViewsError} onRetry={() => revalidateTeamViews()} />
             ) : teamViews.length === 0 ? (
               <Center flex={1} padding={48}>
                 <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
               </Center>
             ) : (
               <Flexbox gap={2}>
+                {teamViewsError ? (
+                  <AsyncError
+                    error={teamViewsError}
+                    variant={'inline'}
+                    onRetry={() => revalidateTeamViews()}
+                  />
+                ) : null}
                 {teamViews.map((view) => (
                   <WorkspaceLink className={styles.link} key={view.id} to={`/views/${view.id}`}>
                     <Flexbox horizontal align="center" className={styles.row} gap={8}>

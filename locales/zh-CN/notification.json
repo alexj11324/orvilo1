@@ -85,6 +85,8 @@
   "inbox.filterSnoozed": "稍后",
   "inbox.filterUnread": "仅显示未读",
   "inbox.inputPlaceholder": "回复给 Agent",
+  "inbox.loadFailed": "收件箱加载失败。",
+  "inbox.loadMore": "加载更多",
   "inbox.loading": "正在加载收件箱…",
   "inbox.markAllRead": "全部标为已读",
   "inbox.markUnread": "标为未读",

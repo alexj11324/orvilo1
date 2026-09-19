@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncError from '@/components/AsyncError';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -59,7 +60,7 @@ const MyWorkPage = memo(() => {
 
   // One feed powers both layouts: list rows and the board's external groups
   // come from the same work query, so the two never disagree.
-  const { data, isLoading } = useClientDataSWR(
+  const { data, error, isLoading } = useClientDataSWR(
     workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
     () => workAttentionService.myWork({ layout, mode, noProject }),
   );
@@ -213,22 +214,33 @@ const MyWorkPage = memo(() => {
             ) : null}
           </Flexbox>
         </Flexbox>
-        <WorkQueryResults
-          emptyLabel={t('myWork.empty')}
-          externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
-          groupBy={data?.data.groupBy}
-          groups={groups}
-          isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
-          layout={layout}
-          loadMoreLabel={t('myWork.loadMore')}
-          loading={isLoading}
-          loadingLabel={t('myWork.loading')}
-          tasks={tasks}
-          total={data?.data.total}
-          onLoadMoreGroup={(key) => void loadMoreGroup(key)}
-          onMoved={() => void refresh()}
-          onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
-        />
+        {/* A failed fetch must never render as a confident empty list —
+            loaded data stays visible with an inline failure marker. */}
+        {error && tasks.length === 0 ? (
+          <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />
+        ) : (
+          <>
+            {error ? (
+              <AsyncError error={error} variant={'inline'} onRetry={() => void refresh()} />
+            ) : null}
+            <WorkQueryResults
+              emptyLabel={t('myWork.empty')}
+              externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
+              groupBy={data?.data.groupBy}
+              groups={groups}
+              isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
+              layout={layout}
+              loadMoreLabel={t('myWork.loadMore')}
+              loading={isLoading}
+              loadingLabel={t('myWork.loading')}
+              tasks={tasks}
+              total={data?.data.total}
+              onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+              onMoved={() => void refresh()}
+              onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
+            />
+          </>
+        )}
       </WideScreenContainer>
     </Flexbox>
   );

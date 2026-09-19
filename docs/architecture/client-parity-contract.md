@@ -100,8 +100,11 @@ assertLocalTargetTransport(); // 非 Desktop 构建抛 TargetRequiredError
 - DataMode 的 telemetry → 统一 onboarding 的 `telemetryEnabled`（`updateGeneralConfig`）。
 - macOS/OS 权限 → `Settings/devices` 设备设置面（shell 能力，不进业务完成态）。
 - 401：统一 `sessionAuthEvents` 事件；Web 适配器 = 既有 logout→`/signin` /
-  `loginRequired`；Desktop 适配器 = `AuthRequiredModal`（主进程代理
-  `X-Auth-Required` 广播之外，renderer 侧 401 也触发同一恢复面）。单飞去重保留。
+  `loginRequired`；Desktop 适配器 = 按会话是否存活分流：`dataSyncConfig.active`
+  为真（会话中途失效）→ `AuthRequiredModal` 过期弹窗；无存活会话（首启 / 已登出）
+  → 直接跳转 `/onboarding` 登录面（`buildOnboardingRedirectUrl` 携带当前位置作为
+  回跳），不弹「会话过期」。主进程代理 `X-Auth-Required` 广播之外，renderer 侧 401
+  也触发同一恢复面。单飞去重保留。
 
 ## 6. 能力驱动展示
 

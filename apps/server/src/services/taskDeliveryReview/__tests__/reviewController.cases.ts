@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+
 import { vi } from 'vitest';
 
 import {
@@ -22,10 +23,12 @@ type Row = {
     branch: string;
     expectedHeadSha?: string;
     integratedSha?: string;
+    lastErrorCode?: string;
     prNumber?: number;
     repo: string;
     role: string;
     state: string;
+    verificationPollFailures?: number;
   };
   seq: number;
   status: string;
@@ -79,6 +82,7 @@ function setup(
     liveTopic?: boolean;
     missingPr?: boolean;
     missingRemote?: boolean;
+    pollFailures?: number;
     runningTask?: boolean;
     noMatchingRowsAtConfirmation?: boolean;
     otherRepositoryRow?: boolean;
@@ -102,6 +106,7 @@ function setup(
       repo: 'acme/widgets',
       role: 'task',
       state: options.rowState ?? 'verification_pending',
+      verificationPollFailures: options.pollFailures,
     },
     seq: 1,
     status: options.liveTopic ? 'running' : 'completed',
@@ -404,17 +409,14 @@ add(
   },
 );
 
-add(
-  'a delivered-but-unbound row is adopted into review by establishing its PR',
-  async (load) => {
-    const f = setup({ missingPr: true, rowState: 'pending', runningTask: true });
-    const result = await (await load(f.mocks))(f.db);
-    assert.ok(f.state.events.includes('create-pr'));
-    assert.equal(f.state.merges.length, 1);
-    assert.equal(f.state.completed.length, 1);
-    assert.deepEqual(result.merged, ['T-1']);
-  },
-);
+add('a delivered-but-unbound row is adopted into review by establishing its PR', async (load) => {
+  const f = setup({ missingPr: true, rowState: 'pending', runningTask: true });
+  const result = await (await load(f.mocks))(f.db);
+  assert.ok(f.state.events.includes('create-pr'));
+  assert.equal(f.state.merges.length, 1);
+  assert.equal(f.state.completed.length, 1);
+  assert.deepEqual(result.merged, ['T-1']);
+});
 
 add('the sweep stops taking new candidates once its time budget is spent', async (load) => {
   const f = setup({ taskCount: 50 });
@@ -513,5 +515,40 @@ add(
   },
   false,
 );
+
+add(
+  'a failed verification poll is counted and still waits below the cap',
+  async (load) => {
+    const f = setup({ unavailable: true });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.waiting, ['T-1']);
+    assert.equal(f.state.rows[0].integration.verificationPollFailures, 1);
+    assert.equal(f.state.rows[0].integration.state, 'verification_pending');
+    assert.equal(f.state.merges.length, 0);
+  },
+  false,
+);
+
+add(
+  'a permanently unreadable remote bounds the delivery into blocked',
+  async (load) => {
+    const f = setup({ pollFailures: 9, unavailable: true });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.paused, ['T-1']);
+    assert.equal(f.state.rows[0].integration.state, 'blocked');
+    assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
+    assert.equal(f.state.rows[0].integration.verificationPollFailures, 10);
+    assert.equal(f.state.merges.length, 0);
+    assert.equal(f.state.completed.length, 0);
+  },
+  false,
+);
+
+add('a successful remote read resets the verification poll counter', async (load) => {
+  const f = setup({ pollFailures: 3 });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.merged, ['T-1']);
+  assert.equal(f.state.rows[0].integration.verificationPollFailures, 0);
+});
 
 export { cases as reviewControllerCases };

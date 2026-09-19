@@ -6,6 +6,8 @@ import type {
 } from '@orvilo/types';
 import { and, asc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
 
+import { goals } from '../schemas/goal';
+import { goalNodes } from '../schemas/goalGraph';
 import { projectAgents, projects } from '../schemas/project';
 import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
@@ -38,6 +40,15 @@ const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
 ];
 
 const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
+
+/**
+ * Goal statuses that fence automated dispatch for a goal-owned Task. Pausing,
+ * canceling or finishing a goal is the stop boundary for every not-yet-running
+ * dispatch behind its nodes: nothing queued may execute while the stop stands.
+ * 'planning'/'verifying'/'review' keep dispatching — a goal still driving its
+ * plan or its acceptance needs its own recovery/corrective runs.
+ */
+const GOAL_DISPATCH_BLOCKED_STATUSES = ['paused', 'canceled', 'failed', 'achieved'] as const;
 
 const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
   task.assigneeAgentId === dispatch.agentId ||
@@ -211,6 +222,36 @@ export class TaskDispatchModel {
   }
 
   /**
+   * Automated dispatch on a Task owned by a stopped goal must not proceed:
+   * pausing/canceling the goal is the stop-intent boundary, and a queued
+   * dispatch resuming through a stray trigger would restart paid work the user
+   * already stopped. Returns `goal_<status>` when a blocking owner exists —
+   * the reason doubles as the durable `waitingReason`, resumable by the next
+   * request once the goal runs again. A 'manual' trigger is the user's own act
+   * on the Task and bypasses this gate, the same way it bypasses project
+   * policy.
+   */
+  private async goalDispatchWaitingReason(
+    db: OrviloDatabase,
+    task: TaskItem,
+    trigger: TaskRunTrigger,
+  ): Promise<string | null> {
+    if (trigger === 'manual') return null;
+    const [blocked] = await db
+      .select({ status: goals.status })
+      .from(goalNodes)
+      .innerJoin(goals, eq(goalNodes.goalId, goals.id))
+      .where(
+        and(
+          eq(goalNodes.taskId, task.id),
+          inArray(goals.status, [...GOAL_DISPATCH_BLOCKED_STATUSES]),
+        ),
+      )
+      .limit(1);
+    return blocked ? `goal_${blocked.status}` : null;
+  }
+
+  /**
    * Discover durable stop intents whose worker lease is available. The global
    * watchdog uses this read-only scan, then each workspace-scoped model claims
    * one row with compare-and-set before doing any remote interruption.
@@ -343,10 +384,26 @@ export class TaskDispatchModel {
             return { dispatch: waiting ?? existing, state: 'existing' as const, task };
           }
         }
+        // A goal stop fences queued dispatches too: when project policy passes
+        // (or does not apply), a waiting row still must not resume while an
+        // owning goal is paused/canceled/done.
+        if (!resumedWaitingReason && existing.phase === 'waiting' && input.trigger !== 'manual') {
+          const goalWaitingReason = await this.goalDispatchWaitingReason(tx, task, input.trigger);
+          if (goalWaitingReason) {
+            const [waiting] = await tx
+              .update(taskDispatches)
+              .set({ waitingReason: goalWaitingReason })
+              .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
+              .returning();
+            return { dispatch: waiting ?? existing, state: 'existing' as const, task };
+          }
+        }
         if (
           existing.phase === 'waiting' &&
           task.assigneeAgentId &&
-          (existing.waitingReason === 'no_eligible_agent' || resumedWaitingReason === null)
+          (existing.waitingReason === 'no_eligible_agent' ||
+            existing.waitingReason === 'goal_paused' ||
+            resumedWaitingReason === null)
         ) {
           const [resumed] = await tx
             .update(taskDispatches)
@@ -388,7 +445,9 @@ export class TaskDispatchModel {
           active.id,
         );
         const waitingReason =
-          policyWaitingReason ?? (task.assigneeAgentId ? null : 'no_eligible_agent');
+          policyWaitingReason ??
+          (await this.goalDispatchWaitingReason(tx, task, activeTrigger)) ??
+          (task.assigneeAgentId ? null : 'no_eligible_agent');
         if (waitingReason) {
           const [waiting] = await tx
             .update(taskDispatches)
@@ -413,7 +472,9 @@ export class TaskDispatchModel {
       }
       if (active) return { active, state: 'busy' as const, task };
 
-      const waitingReason = await this.projectDispatchWaitingReason(tx, task, input.trigger);
+      const waitingReason =
+        (await this.projectDispatchWaitingReason(tx, task, input.trigger)) ??
+        (await this.goalDispatchWaitingReason(tx, task, input.trigger));
       const generation = task.executionGeneration + 1;
       const [dispatch] = await tx
         .insert(taskDispatches)
@@ -485,6 +546,27 @@ export class TaskDispatchModel {
             leaseOwner: null,
             phase: 'canceled',
             waitingReason: 'superseded_before_claim',
+          })
+          .where(eq(taskDispatches.id, dispatch.id));
+        return null;
+      }
+
+      // A goal stop between request and claim parks the dispatch back to
+      // 'waiting' rather than canceling it — the next request resumes the same
+      // durable intent once the goal runs again.
+      const goalWaitingReason = await this.goalDispatchWaitingReason(
+        tx,
+        task,
+        dispatch.requestedBy.split(':', 1)[0] as TaskRunTrigger,
+      );
+      if (goalWaitingReason) {
+        await tx
+          .update(taskDispatches)
+          .set({
+            leaseExpiresAt: null,
+            leaseOwner: null,
+            phase: 'waiting',
+            waitingReason: goalWaitingReason,
           })
           .where(eq(taskDispatches.id, dispatch.id));
         return null;
@@ -648,6 +730,29 @@ export class TaskDispatchModel {
           currentContract && task && automatedTrigger
             ? await this.projectDispatchWaitingReason(tx, task, automatedTrigger, dispatch.id)
             : null;
+        const goalWaitingReason =
+          currentContract && task && requestedTrigger !== 'manual'
+            ? await this.goalDispatchWaitingReason(tx, task, requestedTrigger as TaskRunTrigger)
+            : null;
+        if (goalWaitingReason) {
+          await tx
+            .update(taskDispatches)
+            .set({
+              leaseExpiresAt: null,
+              leaseOwner: null,
+              phase: 'waiting',
+              waitingReason: goalWaitingReason,
+            })
+            .where(
+              and(
+                eq(taskDispatches.id, dispatch.id),
+                eq(taskDispatches.fence, input.fence),
+                eq(taskDispatches.leaseOwner, input.owner),
+                inArray(taskDispatches.phase, input.expected),
+              ),
+            );
+          return null;
+        }
         if (!currentContract || policyWaitingReason) {
           await tx
             .update(taskDispatches)

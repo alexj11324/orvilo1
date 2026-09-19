@@ -353,6 +353,12 @@ export interface TaskTopicIntegration {
     | 'blocked'
     | 'skipped';
   /**
+   * Consecutive sweep passes that could not read the delivery's remote state
+   * (auth/permission/network). Bounded by the review sweep — reaching the cap
+   * marks the record 'blocked' instead of waiting silently forever.
+   */
+  verificationPollFailures?: number;
+  /**
    * Original verified delivery waiting for this corrective integration chain.
    * Once the chain settles, the lifecycle re-drives that Verify run so task
    * completion and the creator callback still use the accepted delivery.

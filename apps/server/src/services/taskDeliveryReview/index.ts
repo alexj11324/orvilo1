@@ -22,6 +22,13 @@ import { TaskRunnerService } from '@/server/services/taskRunner';
 
 const log = debug('task-delivery-review');
 const MAX_REVIEW_CORRECTIVE_ATTEMPTS = 5;
+/**
+ * Consecutive remote-read failures a pending delivery may accumulate before it
+ * stops waiting and goes to 'blocked' for human attention. Auth, permission
+ * and quota failures do not self-heal inside the sweep, and each pass would
+ * otherwise burn the sweep budget re-reading the same doomed credential.
+ */
+const MAX_VERIFICATION_POLL_FAILURES = 10;
 const REVIEW_SCAN_LIMIT = 50;
 // The sweep runs inside the 15-minute watchdog execution window alongside the
 // heartbeat/cancellation scans. A sequential pass of GitHub reads (each with
@@ -117,6 +124,42 @@ const persistReviewContext = async (
   patch: DeliveryReviewContext,
 ): Promise<void> => {
   await taskModel.updateContext(taskId, { deliveryReview: patch });
+};
+
+/**
+ * Bounded handling for "we cannot observe the remote truth" outcomes: a
+ * missing branch/PR read, a snapshot that cannot be verified, a merge
+ * decision or confirmation that comes back unreadable, or an exception thrown
+ * mid-review. Each pass increments `verificationPollFailures` on the durable
+ * record; reaching the cap parks the delivery at 'blocked' instead of waiting
+ * silently forever — auth, permission and quota failures do not self-heal.
+ */
+const noteVerificationPollFailure = async (params: {
+  detail: string;
+  record: TaskTopicIntegration;
+  row: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>[number];
+  task: TaskItem;
+  taskModel: TaskModel;
+  topicModel: TaskTopicModel;
+}): Promise<'blocked' | 'waiting'> => {
+  const { detail, record, row, task, taskModel, topicModel } = params;
+  const failures = (record.verificationPollFailures ?? 0) + 1;
+  const lastError = `${detail} (verification poll ${failures}/${MAX_VERIFICATION_POLL_FAILURES})`;
+  if (failures >= MAX_VERIFICATION_POLL_FAILURES) {
+    await topicModel.updateIntegration(task.id, row.topicId, {
+      lastError,
+      lastErrorCode: 'remote_verification_unavailable',
+      state: 'blocked',
+      verificationPollFailures: failures,
+    });
+  } else {
+    await topicModel.updateIntegration(task.id, row.topicId, {
+      lastError,
+      verificationPollFailures: failures,
+    });
+  }
+  await taskModel.update(task.id, { error: lastError });
+  return failures >= MAX_VERIFICATION_POLL_FAILURES ? 'blocked' : 'waiting';
 };
 
 const markDeliveryMerged = async (params: {
@@ -408,10 +451,15 @@ export const runTaskDeliveryReviewSweep = async (
       if (!prNumber) {
         const remoteHead = await getRemoteBranchSha(repo, record.branch, token);
         if (!remoteHead) {
-          await taskModel.update(task.id, {
-            error: 'Delivery branch is not published to GitHub yet; review has not started.',
+          const outcome = await noteVerificationPollFailure({
+            detail: 'Delivery branch is not published to GitHub yet; review has not started.',
+            record,
+            row,
+            task,
+            taskModel,
+            topicModel,
           });
-          result.waiting.push(task.identifier);
+          result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
           continue;
         }
         const existing = await findBranchPr(repo, record.branch, record.baseBranch, token);
@@ -439,10 +487,15 @@ export const runTaskDeliveryReviewSweep = async (
       }
 
       if (!prNumber) {
-        await taskModel.update(task.id, {
-          error: 'Pull request could not be established; review has not started.',
+        const outcome = await noteVerificationPollFailure({
+          detail: 'Pull request could not be established; review has not started.',
+          record,
+          row,
+          task,
+          taskModel,
+          topicModel,
         });
-        result.waiting.push(task.identifier);
+        result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
       }
 
@@ -452,12 +505,23 @@ export const runTaskDeliveryReviewSweep = async (
         sameRepository: true,
       });
       if (!snapshot) {
-        await taskModel.update(task.id, {
-          error:
+        const outcome = await noteVerificationPollFailure({
+          detail:
             'GitHub PR identity or revision could not be verified; review remains blocked and will retry.',
+          record,
+          row,
+          task,
+          taskModel,
+          topicModel,
         });
-        result.waiting.push(task.identifier);
+        result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
+      }
+      if (record.verificationPollFailures) {
+        await topicModel.updateIntegration(task.id, row.topicId, {
+          verificationPollFailures: 0,
+        });
+        deliveryRecord = { ...deliveryRecord, verificationPollFailures: 0 };
       }
 
       // Read the canonical PR even when its head moved, then reject the moved
@@ -603,11 +667,16 @@ export const runTaskDeliveryReviewSweep = async (
         sameRepository: true,
       });
       if (!decision) {
-        await taskModel.update(task.id, {
-          error:
+        const outcome = await noteVerificationPollFailure({
+          detail:
             'GitHub PR state could not be re-verified at the merge boundary; the next sweep will retry.',
+          record: deliveryRecord,
+          row,
+          task,
+          taskModel,
+          topicModel,
         });
-        result.waiting.push(task.identifier);
+        result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
       }
       if (decision.merged) {
@@ -659,10 +728,15 @@ export const runTaskDeliveryReviewSweep = async (
         sameRepository: true,
       });
       if (!confirmed?.merged) {
-        await taskModel.update(task.id, {
-          error: 'GitHub accepted the merge request, but merge confirmation is pending.',
+        const outcome = await noteVerificationPollFailure({
+          detail: 'GitHub accepted the merge request, but merge confirmation is pending.',
+          record: deliveryRecord,
+          row,
+          task,
+          taskModel,
+          topicModel,
         });
-        result.waiting.push(task.identifier);
+        result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
       }
 
@@ -679,10 +753,15 @@ export const runTaskDeliveryReviewSweep = async (
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log('review sweep failed for %s — %s', task.identifier, message);
-      await taskModel
-        .update(task.id, { error: `PR review orchestration: ${message}` })
-        .catch(() => null);
-      result.waiting.push(task.identifier);
+      const outcome = await noteVerificationPollFailure({
+        detail: `PR review orchestration: ${message}`,
+        record,
+        row,
+        task,
+        taskModel,
+        topicModel,
+      }).catch(() => 'waiting' as const);
+      result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
     }
   }
 

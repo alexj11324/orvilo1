@@ -466,7 +466,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Verify every required job succeeded for this commit
+      - name: Resolve duplicate-skip disposition
+        id: disposition
         env:
           NEEDS: ${{ toJson(needs) }}
         run: |
@@ -477,18 +478,50 @@ jobs:
           # (`same_content*`/`outdated_*`) mean the real run is still in flight
           # — recording a synthetic success here would let a later
           # `skip_after_successful_duplicate` reuse it even if the real run
-          # then fails. Fail closed and let the newer run own the gate.
+          # then fails. Instead of failing closed, poll-and-mirror the owning
+          # run's gate on the head SHA: GitHub keeps the LATEST completed
+          # same-name check per commit, so an immediate `exit 1` here would
+          # overwrite the owning run's green once it lands (observed: PR-run
+          # gate red at 18:03 masked push-run gate green at 17:59 →
+          # mergeable=BLOCKED). Mirroring keeps this run's check red while the
+          # real evidence is pending and settles to whatever the owner
+          # produced.
           if [ "$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.should_skip')" = "true" ]; then
             reason="$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.skip_reason')"
             echo "Duplicate skip reason: ${reason:-unknown}"
             if [ "$reason" = "skip_after_successful_duplicate" ]; then
               echo "An identical run already executed green for this SHA's tree — reusing its gate."
+              echo "decision=reuse" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "::error::Concurrent duplicate skip — the newer in-flight run owns the gate for this SHA."
-            exit 1
+            echo "Concurrent duplicate skip — mirroring the owning run's gate on the head SHA."
+            echo "decision=mirror" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "decision=verify" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout
+        if: steps.disposition.outputs.decision == 'mirror'
+        uses: actions/checkout@v6
+
+      # The owning run's gate is a same-name check on the PR head commit —
+      # PR-triggered check runs always attach to `pull_request.head.sha`, never
+      # to this job's `github.sha` merge ref. Poll until it concludes, then
+      # adopt its conclusion verbatim. wait_seconds bounds the mirror so a
+      # never-concluding owner still fails closed.
+      - name: Mirror the owning run's gate result
+        if: steps.disposition.outputs.decision == 'mirror'
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          wait_seconds: '5400'
+
+      - name: Verify every required job succeeded for this commit
+        if: steps.disposition.outputs.decision == 'verify'
+        env:
+          NEEDS: ${{ toJson(needs) }}
+        run: |
+          set -euo pipefail
           required=(
             typecheck
             test-packages

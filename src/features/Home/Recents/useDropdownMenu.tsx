@@ -2,13 +2,14 @@ import { type MenuProps } from '@lobehub/ui';
 import { Icon } from '@lobehub/ui';
 import { confirmModal } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
-import { PencilLineIcon, Trash } from 'lucide-react';
+import { PencilLineIcon, Pin, PinOff, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
+import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
 import { usePermission } from '@/hooks/usePermission';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
@@ -16,6 +17,8 @@ import { documentService } from '@/services/document';
 import { taskService } from '@/services/task';
 import { topicService } from '@/services/topic';
 import { useHomeStore } from '@/store/home';
+
+import { isRecentItemManageable, recentPinTargetType } from './recentOverflow';
 
 export const useRecentItemDropdownMenu = (
   item: RecentItem,
@@ -38,11 +41,20 @@ export const useRecentItemDropdownMenu = (
   );
   const taskTransferItems = useTaskTransferMenuItem(item.type === 'task' ? item.id : undefined);
   const transferMenuItems = documentTransferItems ?? taskTransferItems;
+  const pinType = recentPinTargetType(item.type);
+  const { pinned, toggle: togglePin } = useWorkFavoriteToggle(
+    pinType ?? 'task',
+    pinType ? item.id : undefined,
+  );
 
   const handleRename = useCallback(
     (newTitle: string) => renameRecent({ id: item.id, scope, title: newTitle, type: item.type }),
     [item.id, item.type, renameRecent, scope],
   );
+
+  // Team/project/savedView recents have no rename or delete flow in this menu —
+  // those entities are managed on their own surfaces. Pin still applies.
+  const manageable = isRecentItemManageable(item.type);
 
   const handleDelete = useCallback(() => {
     if (item.type === 'topic') {
@@ -85,28 +97,59 @@ export const useRecentItemDropdownMenu = (
 
   const dropdownMenu = useCallback((): MenuProps['items'] => {
     const items: NativeContextMenuItem[] = [
-      {
-        disabled: !canEdit,
-        icon: <Icon icon={PencilLineIcon} />,
-        key: 'rename',
-        label: t('rename'),
-        onClick: () => toggleEditing(true),
-        sfSymbol: 'pencil',
-      },
+      ...(pinType
+        ? ([
+            {
+              icon: <Icon icon={pinned ? PinOff : Pin} />,
+              key: 'pin',
+              label: pinned ? t('pinOff') : t('pin'),
+              onClick: () => void togglePin(),
+              sfSymbol: 'pin',
+            },
+          ] satisfies NativeContextMenuItem[])
+        : []),
+      ...(manageable
+        ? ([
+            {
+              disabled: !canEdit,
+              icon: <Icon icon={PencilLineIcon} />,
+              key: 'rename',
+              label: t('rename'),
+              onClick: () => toggleEditing(true),
+              sfSymbol: 'pencil',
+            },
+          ] satisfies NativeContextMenuItem[])
+        : []),
       ...(transferMenuItems ?? []),
-      ...(transferMenuItems?.length ? [{ type: 'divider' as const }] : []),
-      {
-        danger: true,
-        disabled: !canEdit,
-        icon: <Icon icon={Trash} />,
-        key: 'delete',
-        label: t('delete'),
-        onClick: handleDelete,
-        sfSymbol: 'trash',
-      },
+      ...(transferMenuItems?.length
+        ? ([{ type: 'divider' as const }] satisfies NativeContextMenuItem[])
+        : []),
+      ...(manageable
+        ? ([
+            {
+              danger: true,
+              disabled: !canEdit,
+              icon: <Icon icon={Trash} />,
+              key: 'delete',
+              label: t('delete'),
+              onClick: handleDelete,
+              sfSymbol: 'trash',
+            },
+          ] satisfies NativeContextMenuItem[])
+        : []),
     ];
     return items as MenuProps['items'];
-  }, [canEdit, t, toggleEditing, handleDelete, transferMenuItems]);
+  }, [
+    canEdit,
+    handleDelete,
+    manageable,
+    pinType,
+    pinned,
+    t,
+    toggleEditing,
+    togglePin,
+    transferMenuItems,
+  ]);
 
   return { dropdownMenu, handleRename };
 };

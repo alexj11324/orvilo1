@@ -1,6 +1,7 @@
 import { closestCenter, type CollisionDetection, pointerWithin } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { TaskMoveScope, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import { WORK_QUERY_STATUS_COLUMNS, WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
 
 import type {
   TaskGroupItem,
@@ -21,7 +22,7 @@ export interface KanbanColumnDefinition {
   droppable: boolean;
   groupMeta?: TaskGroupMeta;
   key: string;
-  targetStatus: 'backlog' | 'canceled' | 'completed' | 'paused' | null;
+  targetStatus: TaskStatus | null;
   targetWorkflowCategory?: TaskWorkflowCategory;
   workflowCategories?: TaskWorkflowCategory[];
 }
@@ -98,6 +99,12 @@ export const STATUS_KANBAN_COLUMNS: KanbanColumnDefinition[] = [
   },
 ];
 
+/** Glyph / context-menu statuses that land on a shared kanban column. */
+export const kanbanColumnForSelectableStatus = (
+  status: TaskStatus,
+): KanbanColumnDefinition | undefined =>
+  STATUS_KANBAN_COLUMNS.find((column) => column.targetStatus === status);
+
 /** Raw statuses bucketed inside each merged status column. */
 export const KANBAN_COLUMN_STATUSES: Record<string, TaskStatus[]> = {
   backlog: ['backlog'],
@@ -132,9 +139,13 @@ export interface KanbanGroupQueryInput {
   agentId?: string;
   excludeStatuses?: readonly TaskStatus[];
   groupBy: TaskKanbanGroupBy;
-  /** Set on the "My tasks" board; mutually exclusive with the other scopes. */
-  myTaskScope?: 'assigned' | 'created';
-  projectId?: string;
+  /**
+   * Set on the "My tasks" board; mutually exclusive with the other scopes.
+   * 'delegated' = tasks the caller delegated to agents (active grant).
+   */
+  myTaskScope?: 'assigned' | 'created' | 'delegated';
+  /** `null` narrows to tasks with no project — the "No project" chip. */
+  projectId?: string | null;
 }
 
 export interface KanbanGroupQuery {
@@ -143,8 +154,8 @@ export interface KanbanGroupQuery {
   automated?: boolean;
   excludeStatuses?: readonly TaskStatus[];
   groupBy: TaskKanbanGroupBy;
-  projectId?: string;
-  scope?: 'assigned' | 'created';
+  projectId?: string | null;
+  scope?: 'assigned' | 'created' | 'delegated';
 }
 
 /**
@@ -164,12 +175,21 @@ export const buildKanbanGroupQuery = ({
   myTaskScope,
   projectId,
 }: KanbanGroupQueryInput): KanbanGroupQuery => {
-  if (myTaskScope) return { excludeStatuses, groupBy, scope: myTaskScope };
+  // A project filter (id or `null` = "No project") composes with the "My
+  // tasks" scope — My Work's chip narrows the caller's slice, not the board.
+  if (myTaskScope) return { excludeStatuses, groupBy, projectId, scope: myTaskScope };
   if (projectId) return { automated: false, excludeStatuses, groupBy, projectId };
   if (agentId) return { agentId, automated: false, excludeStatuses, groupBy };
 
   return { allAgents: true, automated: false, excludeStatuses, groupBy };
 };
+
+/**
+ * Create-task only accepts a concrete project id. `null` is the board's
+ * "No project" filter and must not be forwarded as a locked project.
+ */
+export const kanbanCreateTaskProjectId = (projectId?: string | null): string | undefined =>
+  projectId ?? undefined;
 
 export const buildKanbanColumns = (
   taskGroups: TaskGroupItem[],
@@ -194,6 +214,88 @@ export const buildKanbanColumns = (
     targetStatus: null,
   }));
 };
+
+/**
+ * Work-query board columns — one column per business workflow category, the
+ * `wf:` prefix keeps the key space apart from the execution-status columns
+ * the task store boards use. `in_review` is its own column here; it never
+ * folds into a run-state bucket.
+ */
+export const WORKFLOW_KANBAN_COLUMNS: KanbanColumnDefinition[] = WORK_QUERY_WORKFLOW_COLUMNS.map(
+  (category) => ({
+    droppable: true,
+    key: `wf:${category}`,
+    targetStatus: null,
+    targetWorkflowCategory: category,
+    workflowCategories: [category],
+  }),
+);
+
+/** Same for raw execution-status groups — `st:` columns keep `paused` and
+ * `failed` (and `scheduled` vs `running`) visibly distinct. */
+export const RAW_STATUS_KANBAN_COLUMNS: KanbanColumnDefinition[] = WORK_QUERY_STATUS_COLUMNS.map(
+  (status) => ({
+    droppable: true,
+    key: `st:${status}`,
+    targetStatus: status,
+    workflowCategories: undefined,
+  }),
+);
+
+export type WorkQueryBoardGroupBy = 'status' | 'workflowCategory';
+
+export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanColumnDefinition[] =>
+  groupBy === 'workflowCategory' ? WORKFLOW_KANBAN_COLUMNS : RAW_STATUS_KANBAN_COLUMNS;
+
+/** The work-query group key a column represents — strips the `wf:`/`st:` prefix. */
+export const workQueryKeyForKanbanColumn = (columnKey: string): string =>
+  columnKey.replace(/^(?:wf|st):/, '');
+
+/** The column a work-query task belongs in for the given grouping. */
+export const externalTaskColumnKey = (
+  task: Pick<TaskListItem, 'status' | 'workflowCategory'>,
+  groupBy: WorkQueryBoardGroupBy,
+): string =>
+  groupBy === 'workflowCategory'
+    ? `wf:${task.workflowCategory ?? 'backlog'}`
+    : `st:${task.status ?? 'backlog'}`;
+
+/** Membership predicate for externally-supplied (work-query) columns. */
+export const taskMatchesExternalColumn = (
+  task: TaskListItem,
+  groupBy: WorkQueryBoardGroupBy,
+  columnKey: string,
+): boolean => externalTaskColumnKey(task, groupBy) === columnKey;
+
+/** Drop-target rules for external columns: a work-query board accepts every
+ * task in either dimension (status writes and workflow-category writes are
+ * both legal on unlinked tasks). */
+export const canDropTaskIntoExternalColumn = (
+  _task: TaskListItem,
+  column: KanbanColumnDefinition,
+): boolean => column.droppable;
+
+/** Card-override patch for a cross-column work-query drop. */
+export const externalKanbanTaskPatch = (
+  groupBy: WorkQueryBoardGroupBy,
+  column: KanbanColumnDefinition,
+): Partial<TaskListItem> | undefined =>
+  groupBy === 'workflowCategory'
+    ? { workflowCategory: column.targetWorkflowCategory }
+    : column.targetStatus
+      ? { status: column.targetStatus }
+      : undefined;
+
+/** Move scope for an external column's membership dimension. */
+export const externalKanbanColumnMoveScope = (
+  groupBy: WorkQueryBoardGroupBy,
+  column: KanbanColumnDefinition,
+): TaskMoveScope | undefined =>
+  groupBy === 'workflowCategory'
+    ? { workflowCategories: column.workflowCategories ?? [] }
+    : column.targetStatus
+      ? { statuses: [column.targetStatus] }
+      : undefined;
 
 export const getKanbanAssigneeUpdate = (
   task: TaskListItem,
@@ -401,10 +503,16 @@ export const resolveKanbanDropColumn = (
   overId: string,
   columnKeys: ReadonlySet<string>,
   columnDefs: ReadonlyMap<string, KanbanColumnDefinition>,
+  externalGroupBy?: WorkQueryBoardGroupBy,
 ): string | null => {
   const overCol = findKanbanColumn(columns, overId, columnKeys);
   const def = overCol ? columnDefs.get(overCol) : undefined;
   if (!overCol || !def) return null;
+  if (externalGroupBy) {
+    if (taskMatchesExternalColumn(task, externalGroupBy, overCol)) return overCol;
+    if (!canDropTaskIntoExternalColumn(task, def)) return null;
+    return overCol;
+  }
   if (taskMatchesKanbanColumn(task, groupBy, overCol)) return overCol;
   if (!def.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, def)) return null;
   return overCol;

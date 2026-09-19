@@ -1824,6 +1824,10 @@ export const aiAgentRouter = router({
       const model = new AgentOperationModel(ctx.serverDB, ctx.userId, workspaceId);
       await model.recordStart({
         agentId: input.agentId,
+        // This admission row belongs to a heterogeneous run minting a
+        // model-invoke token — the run itself executes through the hetero/ACP
+        // path, never the in-process runtime loop.
+        executionEngine: 'hetero',
         metadata: { agentType: input.agentType, serverDefaultHeterogeneous: true },
         model: selection.model,
         operationId: input.operationId,

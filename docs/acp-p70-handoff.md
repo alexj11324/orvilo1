@@ -107,10 +107,10 @@ MCP server（`orvilo_cc`）挂载 → 调用经 operation-scoped JWT 回打 tRPC
 
 ## P70c 剩余工作（首要任务）
 
-### 1. 迁移剩余 21 个测试文件到 `dispatchHeteroAgent` 边界
+### 1. 迁移剩余 21 个测试文件到 `dispatchHeteroAgent` 边界 ✅（2026-09-19 完成）
 
-CI `Test Server (shard 1/2)` 失败的根因。这些文件还在 mock / 断言旧
-`createOperation` 入口：
+全部迁移完毕并推送到 `feat/acp-P70-cleanup`（含 canary merge `902ce0e8`）。
+原清单（全部已处理）：
 
 ```
 execAgent.builtinRuntime.test.ts      execAgent.clientIds.test.ts
@@ -140,12 +140,57 @@ execAgent.userTimezone.test.ts        execSubAgent.test.ts
   dispatch resume 参数。
 - `execSubAgent.test.ts`：mock `dispatchHeteroAgent` 断言 `isSubAgent`/ 父 op 字段。
 
-### 2. 排空旧入口
+接手期间落地的新事项：
 
-- queue/cron/callback 唤醒路径确认全部走 dispatch；`skillManagement`、
-  `goalSupervisor`、`verifier` 等 execAgent 调用方验证在 ACP 下工具面可用
-  （`orvilo-agent`/`orvilo-group-management` 依赖 deferred 编排，桥接已覆盖）。
-- `runStep` hono handler 未注册任何路由，确认后随引擎删除。
+- **真回归修复** `94aacfad`：legacy（非 `approvalResolutionRequestId`）approval
+  claim 在退役 createOperation 不再接收 `approvalClaim` 后无人置
+  `continuationPrepared` → execAgent 成功后 finally 守卫把已 claim 的审批行回滚
+  成 pending。修法：dispatch resolve 即标记（index.ts \~1113）。回归测试在
+  resumeApproval（'leaves parked-operation retirement to the caller'）。
+- **canary 执行目标契约（merge `902ce0e8` 起生效）**：`resolveExecutionPlan`
+  无隐式 cloud-sandbox fallback —— `none`/ 未设置 → `{kind:'none'}` pending；
+  `sandbox` 显式 → sandbox；`local`+bound → device，unbound → `none`；
+  `auto` 需要 onlineDeviceIds（heteroDispatch 不传 → 恒 `device-unrouted`）。
+  unrouted → dispatch 返回 `{success:false, autoStarted:false, error:'No bound
+device'}`。denied-sender（`!canUseDevice`）与 sandboxFallback/share-visitor
+  仍可达 sandbox。device.test.ts 三个测试已改为断言 fail-loud；深 harness 文件
+  （resume/topicHistory 等跑真 dispatch 的）需在 agencyConfig 声明
+  `executionTarget: 'sandbox'`（同 canary 对 heteroFiles 的改法）。
+- **语义收窄（PR body 需标注）**：`memory.enabled` 只剩后台提取闸门；
+  orvilo-agent 媒体缺口自动注入已退役（host 自带工具面）；pinned-skill body
+  不再 inline（lazy skills runtime）；SELF\_FEEDBACK\_INTENT 改为 caller-pinned
+  - `!disableSelfFeedbackIntentTool` 挂载（workflows/agentSignal/run.ts:530）。
+
+### 2. 排空旧入口 ✅（2026-09-19 审计结论）
+
+- **execAgent 调用方全部收敛到 dispatch**：`execAgent`/`execSubAgent`/
+  `execAgentMember`/`execAgentTasks`/`execVirtualSubAgent` 内部统一走
+  `dispatchHeteroAgent`。调用方清单：routers/lambda/aiAgent.ts
+  （execAgent/execAgents/agentTasks/composer 桥）、agentNotify.ts（notify/resume
+  唤醒）、approvalResume.ts（审批 resume）、shareChat.ts（visitor 拒跑）、
+  verify/{agentVerifier,repairService,evidenceSubmission}、goal/supervisor、
+  taskResultBridge、bot/AgentBridgeService + messenger、agentEvalRun、
+  task/index.ts、agentSignal workflows —— 无一绕过门面。
+- **工具面验证**：goalSupervisor /skillManagement/agentSignal {Review,
+  Reflection,SkillManagement,FeedbackIntent} / AcceptanceEvidence 等
+  server-run builtin 全部注册于 `toolExecution/serverRuntimes`，ACP 下经
+  `builtinToolSpecs` 序列化下发宿主、回打 `heteroExecBuiltinTool` 执行；
+  deferred 编排（orvilo-agent callSubAgent /orvilo-group-management）走
+  `heteroAwaitBuiltinToolChildren` 宿主侧轮询，**父 run 不再 server-side
+  park** —— `waiting_for_async_tool`/`tryResumeParentFromAsyncTool` 是旧
+  引擎专属状态，ACP 父 run 阻塞在宿主 MCP 工具调用内。
+- **queue 唤醒路径**：Hatchet `agentStep` task → `runStep` handler →
+  `AgentRuntimeService.executeStep`。`/api/agent/run` 无 HTTP 路由注册，
+  agentStep 消息的唯一生产者在 `AgentRuntimeService` 内部（下一步调度 /
+  scheduleContinuation /parked-resume CAS）——**纯旧引擎自产自销**，ACP
+  run 永不产生。保留至 P70d 随引擎删除（legacy in-flight ops 兜底）。
+- **callback 唤醒路径**：`webhooks/{subagent,group-member,thread-run,
+bot}-callback` 经 Hatchet workflow task → `invokeHonoHandler`。ACP 子 op
+  settle 仍经 CompletionLifecycle.onComplete 触发（锚点消息回填 + 用量归属
+  保留）；父 resume CAS 对 ACP 父必然 miss（非 waiting\_for\_async\_tool）→
+  verify watchdog 有限次重试后耗尽，无害但可在 P70d 一并清理。
+- **cron**：gatewayCron /agentSignalNightlySchedule/memory cron 跑自己的
+  workflow，不经 agentStep。
 
 ### 3. P70d 删除引擎
 

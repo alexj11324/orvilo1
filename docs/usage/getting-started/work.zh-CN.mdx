@@ -111,9 +111,11 @@ Inbox 有两个标签：
 - **Review**
 - **All projects**
 
-打开任务视图时，列表 / 看板和 My issues 同一套样式。打开项目视图（包括 **All projects**）会列出匹配项目，行上是状态、标识符和最近更新时间，和 **Projects** 列表同一套语言。
+打开任务视图时，列表 / 看板和 My issues 同一套样式。打开项目视图（包括 **All projects**）会列出匹配项目，行上是状态、标识符和最近更新时间，和 **Projects** 列表同一套语言。项目视图也可以切到看板。
 
-从 My issues 点 **Save as view** 会生成一份私人副本，之后可以改名。你拥有的视图，**Sharing** 可以是 **Only me**、**This workspace** 或 **This team**（团队分享需要先选团队）。访问者会按自己的 `currentUser` 求值 —— 一份共享的「指派给我」列表显示的是访问者的指派，不是作者的。
+**New view** 会打开对话框：选任务或项目、从字段列表加筛选（状态、负责人、团队、项目等注册字段）、选列表或看板分组、起名、再分享。构建器表达不了的条件会原样留在已存查询里，保存时不会丢掉。你拥有的视图，同一套编辑器在 **Edit view**。**Sharing** 可以是 **Only me**、**This workspace** 或 **This team**（团队分享需要先选团队）。访问者会按自己的 `currentUser` 求值 —— 一份共享的「指派给我」列表显示的是访问者的指派，不是作者的。分享出去的定义不会带上访问者读不到的标识符。
+
+从 My issues 的 Assigned / Created 点 **Save as view** 会生成一份私人副本。Subscribed 和 Activity 不能这样保存。
 
 需要修复的视图会明确说修完才能出结果，不会默默丢掉坏条件后把整个工作区倒出来。
 

@@ -113,9 +113,11 @@ Built-in views (they cannot be overwritten or deleted):
 - **Review**
 - **All projects**
 
-Opening a task view uses the same list/board chrome as My issues. Opening a project view (including **All projects**) lists matching projects with status, identifier, and last-updated — the same row language as **Projects**.
+Opening a task view uses the same list/board chrome as My issues. Opening a project view (including **All projects**) lists matching projects with status, identifier, and last-updated — the same row language as **Projects**. Project views can also switch to a board.
 
-From My issues, **Save as view** creates a private copy you can rename. On a view you own, **Sharing** is **Only me**, **This workspace**, or **This team** (team requires choosing a team). Visitors evaluate `currentUser` as themselves — a shared "assigned to me" list shows the visitor's assignments, not the author's.
+**New view** opens a dialog: pick tasks or projects, add filters from the field list (status, assignee, team, project, and the rest of the registry), choose list or board grouping, name it, and share. Filters you cannot express in that builder stay in the saved query — they are not dropped on save. On a view you own, the same editor lives in **Edit view**. Sharing is **Only me**, **This workspace**, or **This team** (team requires choosing a team). Visitors evaluate `currentUser` as themselves — a shared "assigned to me" list shows the visitor's assignments, not the author's. Shared definitions do not include identifiers the visitor cannot read.
+
+From My issues, **Save as view** creates a private copy of Assigned or Created. Subscribed and Activity cannot be saved that way.
 
 A view that needs repair shows that it must be fixed before it can return results. It will not silently drop a broken condition and dump the whole workspace.
 

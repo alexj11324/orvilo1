@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `b4c1ab09` `💄 style(nav): restyle team triage with list chrome and overflow`                                                                                                                                              |
+| 实施 HEAD（本交接提交之前）      | `753d0df0` Devin：view editor 折叠、列表按状态分组、Inbox glyph。本增量在其上接回 VIEW08。                                                                                                                                 |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -53,7 +53,7 @@
 - Decide：`workAttentionProcedure`（ACT01），不是 organize。ACP intervention OSS `{ handled: false }` → `outcome_unknown`。ownership transfer /withdraw outgoing。outgoing 占未读铃但不进 Needs-you（ACT08）
 - 独立 `event_consumer_receipts`（D09）。权限 `notification:read|organize` ALL-only（D14）
 - My Work：assigned / delegated=`execution_grants.initiatedBy` / review / created=`createdByUserId` 且排除 Linear 导入 null（WORK03）/subscribed。No-project chip（WORK07）。服务端 list/board（WORK08）。待审核列出非 task 的 pending approval，**不为填列表建 Task**（WORK05）
-- Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Linear-linked 不再绕 `task.update` 分类映射
+- Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Saved View / Team 的统一 `KanbanBoard` `external` 拖放走这条路径，不再用 `task.update` 分类映射；My Work assigned/delegated 仍走 store `task.update`
 - Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）
 - Team Triage：accept/decline/duplicate/reassign + `moveToTeam` CAS（TRI02）；`duplicate_of_task_id`（TRI03）；历史 Linear import `triageStatus: accepted`（TRI01）；triage 事件 `task.scope.changed`（TRI08）；`cycleId` → `tasks.cycleRefId`（TRI07）；`teamId` 与可读团队求交（TRI05）
 - Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），侧栏始终可见上 / 下箭头
@@ -81,7 +81,7 @@
 - Electron 原生通知 click 对 `/inbox` 与 `/{workspace}/inbox` 走同一 `openNotificationTarget` broadcast
 - My Work / 任务视图行用 `resolveTaskStatus` 再交给 `TaskStatusIcon`（`task.status` 是 `string | null | undefined`；`dde9ef1f` 的 Push Typecheck / Database lint 因此失败）
 - 项目 entity 的 Saved View 结果行与 Projects 列表同一套 chrome：状态图标、identifier、相对时间、Skeleton / 空态图标；链接走 `slug` 否则 `id`
-- My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。Saved View / Team 页的 work-query board 也统一进同一个 `KanbanBoard`：新增 `external` 数据源 prop（groups 由 `workQueryBoardGroups` 把 status/workflowCategory 键折进 7 个共享列键，`onRefresh` 换原 store 刷新，`onLoadMoreGroup` 接管列尾分页）；手写拖放 + `moveBoard` CAS + workflow-state picker 弹窗全部删除，拖拽统一走 `task.update`（歧义时服务端错误变 toast）。
+- My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。Saved View / Team 页的 work-query board 也统一进同一个 `KanbanBoard`：`external` 数据源 prop（groups 由 `workQueryBoardGroups` 把 status/workflowCategory 键折进 7 个共享列键）。跨列拖放走 `workAttention.moveBoard` + `WORKFLOW_STATE_REQUIRED` picker（VIEW08）；同列重排不写 position。`onLoadMoreGroup` 把 Cordy 列键反解回 work-query group key（`needsInput`→`in_review` / `paused`+`failed`）。不要再写第二套看板。
 - `task.groupList` scope 增 `delegated`（`executionGrants` active + initiatedBy = 当前用户的 EXISTS，与 `workQuery.delegatedByUserId` 同一谓词）；`projectId` 接受 `null`（`isNull(tasks.projectId)`）。SWR key 编进 scope+project 后缀，`projectIdFromListKey` 会解码 MINE `:` 后缀与 `no-project`
 - 看板对齐 Cordy/Linear 现行版：列头图标用共享状态图标族（backlog 空心点灰 /todo 空心环蓝 /running 点琥珀 /needsInput 钟紫 /done 勾绿 /canceled 暂停橙 /triage 虚线圈）；计数是纯灰字非 chip；空列留空白落区不再写 "No tasks"；隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
 - My Work「待审核」无 Task 的 PR 行：`queryExternalReviews` 写出 allowlist 后的 `openUrl`（https `github.com` / `linear.app`，与 Inbox `safeInboxActionUrl` 同一主机表）；javascript / 站外主机为 null。列表行用 PR 图标 + identifier；客户端再过 `inboxUrlOpenMode` 才 `target=_blank`。不为填列表建 Task，不用应用 token 代批
@@ -93,7 +93,9 @@
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-**已全部落地。** 只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。
+VIEW08 客户端路径已接回统一看板（`commitWorkQueryBoardMove` / `moveBoardMaybePickingState`）。**不要**再把 Saved View / Team 拖放送进 `task.update` 分类映射。
+
+只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。PR 行 allowlist `openUrl` 已在 `bbc8c268` 从 Devin unify 的纯标题回归里救回。
 
 用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx`；`task` / `command-menu` / `start` / `shortcuts` 已改到新 IA。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
@@ -158,6 +160,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 本增量：My Work 无 Task PR 行 allowlist `openUrl` + 列表 chrome。lint 干净；identifier/openUrl 单测 + `workQuery` 19 passed。不是 64× AC。
 - `1cb3e114`：看板 create-task 丢掉 `null` No-project id。lint 干净；`kanbanBoardModel` 回归覆盖 grouped query 仍带 `null`、弹窗拿到 `undefined`。不是 64× AC。
 - `b4c1ab09`：Team 分诊列表 chrome + overflow + 失败先于空态。lint 干净，`bun run check` 改动文件 47 passed。不是 64× AC。
+- 本增量：VIEW08 在统一 `KanbanBoard` `external` 板上恢复 `moveBoard` CAS + 精确状态 picker；Cordy `needsInput`/`running` 映射回 `in_review`/`in_progress`（workflow）或 `paused`/`running`（status）；load-more 反解列键。lint 干净，21 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

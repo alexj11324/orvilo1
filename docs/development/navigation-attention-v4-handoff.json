@@ -29,6 +29,7 @@
     "My Work To-review PR rows expose allowlisted GitHub/Linear openUrl; javascript and off-host jumps stay null",
     "Kanban create-task strips null No-project filter ids; grouped query still IS NULL filters",
     "Team triage uses work-list chrome, error-before-empty, and overflow for duplicate/transfer/reassign",
+    "Saved View / Team KanbanBoard external drops go through moveBoard CAS + WORKFLOW_STATE_REQUIRED picker (VIEW08); store-scoped My Work/Tasks keep task.update",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -72,14 +73,15 @@
     "src/features/WorkTeams/teamSurfaceState.ts",
     "src/features/WorkTeams/teamTriageOverflow.ts",
     "src/features/MyWork/workQueryBoard.ts",
+    "src/features/MyWork/workQueryBoardMove.ts",
     "src/features/MyWork/workQueryPaging.ts",
     "src/features/AgentTasks/AgentTaskList/KanbanBoard.tsx",
     "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
     "src/features/SavedViews/SavedViewsPage.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "b4c1ab09",
-  "implementationHeadBeforeDocs": "b4c1ab09",
+  "headSha": "ebc87284",
+  "implementationHeadBeforeDocs": "ebc87284",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

@@ -67,6 +67,7 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
+        agencyConfig: { executionTarget: 'sandbox' },
         chatConfig: {},
         id: 'agent-1',
         knowledgeBases: [],

@@ -1,0 +1,26 @@
+---
+title: Collaboration & Sync Hardening
+description: >-
+  Realtime revocation now scopes kicks to the affected resource, gateway
+  rollouts verify capability before acking, Linear imports renew their lease
+  during long phases, and onboarding workspace creation is idempotent.
+tags:
+  - Collaboration
+  - Linear
+  - Onboarding
+  - Security
+---
+
+# Collaboration & Sync Hardening
+
+## Improvements
+
+- **Revocations reach exactly the right sockets.** Removing a project member now tears down only that project's room and its task rooms, while a workspace-level removal still drops every room of the tenant — and stale or replayed revocations can no longer kick a connection that was re-authorized afterwards.
+- **Members of public projects keep their seats.** Losing an explicit seat on a project you can still see through public visibility no longer severs your live connections — the terminal kick is reserved for revocations that actually close the room.
+- **Gateway upgrades roll out safely.** The collaboration gateway stamps a protocol version on internal publish responses, so scoped revocations are retried instead of silently dropped while an older gateway fleet is still draining.
+
+## Fixes
+
+- **Linear imports survive long phases.** The workspace-scope import now renews its lease mid-run, so a large team or issue sweep can no longer expire the lock underneath a still-working importer and strand its progress commits.
+- **Onboarding no longer adopts a stranger's workspace.** Creating the onboarding workspace now runs under a checkpointed id: a retried or lost create response resolves by identity, never by matching a slug someone else may already own.
+- **The Responses API reports delegated runs faithfully.** A run parked on a sub-Agent call now stays `incomplete` until the child finishes, instead of reporting a truncated `completed`.

@@ -19,13 +19,19 @@ export const PRESENCE_SWEEP_MS = 5_000;
  */
 export interface GatewayConnection {
   actor: CollaborationActor;
+  /** `workspace_members.authz_version` stamped into the ticket at mint time. */
+  authzVersion?: number;
+  close: (code?: number, reason?: string) => void;
   connectionId: string;
+  /** Project the room's resource belongs to — matches project-scoped kicks. */
+  projectId?: string;
   /** Wire room key (`{scope}:{id}`) — immutable for the connection's life. */
   room: string;
+  send: (message: CollaborationServerMessage) => void;
+  /** Absolute ticket expiry (ms epoch) — the sweep closes the socket past it. */
+  ticketExpiresAt?: number;
   userId: string;
   workspaceId: string;
-  close(code?: number, reason?: string): void;
-  send(message: CollaborationServerMessage): void;
 }
 
 interface ConnState {
@@ -207,45 +213,101 @@ export class RoomHub {
   };
 
   /**
-   * Revocation: drop EVERY connection of `userId` inside `workspaceId`'s rooms
-   * (kicks are workspace-scoped, not room-scoped). Sends `revoked` first so
-   * clients can distinguish a kick from a network drop before `close`.
+   * Revocation: drop the member's live connections for one authorization
+   * scope. `scope: 'workspace'` drops every room of the tenant; `'project'`
+   * drops the project room plus its task rooms (matched on the ticket's
+   * `projectId` claim — rooms of other projects keep their access);
+   * `'task'` drops the single task room. `authzVersion` is the version the
+   * revoking write stamped: a connection authorized at a NEWER version was
+   * re-granted after this revoke and is left alone, so a late or replayed
+   * kick can never tear down a fresh grant. Sends `revoked` first so clients
+   * can distinguish a kick from a network drop before `close`.
    */
-  kick = (workspaceId: string, userId: string, reason: string) => {
+  kick = (params: {
+    authzVersion?: number;
+    reason: string;
+    scope: 'project' | 'task' | 'workspace';
+    scopeId: string;
+    userId: string;
+    workspaceId: string;
+  }) => {
     for (const [room, conns] of this.rooms) {
       for (const [connectionId, conn] of conns) {
         const { connection } = conn;
-        if (connection.userId !== userId || connection.workspaceId !== workspaceId) continue;
-        this.safeSend(conn, { reason, type: 'revoked' });
-        try {
-          connection.close(4401, 'authorization revoked');
-        } catch {
-          // A half-dead socket must not abort the remaining kicks.
+        if (connection.userId !== params.userId || connection.workspaceId !== params.workspaceId) {
+          continue;
         }
-        conns.delete(connectionId);
-        // Same as `leave`: peers must not keep rendering the kicked member's
-        // presence until the TTL sweep prunes it.
-        if (conn.lastPresenceAt !== undefined) {
-          this.broadcast(room, { connectionId, type: 'presence-gone' });
+        if (
+          params.authzVersion !== undefined &&
+          connection.authzVersion !== undefined &&
+          connection.authzVersion > params.authzVersion
+        ) {
+          continue;
         }
+        if (params.scope === 'project' && connection.projectId !== params.scopeId) continue;
+        if (params.scope === 'task' && connection.room !== `task:${params.scopeId}`) continue;
+        this.dropConn(room, conns, connectionId, conn, {
+          code: 4401,
+          message: { reason: params.reason, type: 'revoked' },
+          reason: 'authorization revoked',
+        });
       }
       if (conns.size === 0) this.rooms.delete(room);
     }
   };
 
   /**
+   * Drop one connection: notify (when a message is given), close, detach, and
+   * clear the peer's rendered presence immediately — shared by `kick` and the
+   * ticket-expiry sweep.
+   */
+  private dropConn = (
+    room: string,
+    conns: Map<string, ConnState>,
+    connectionId: string,
+    conn: ConnState,
+    params: { code: number; message?: CollaborationServerMessage; reason: string },
+  ) => {
+    if (params.message) this.safeSend(conn, params.message);
+    try {
+      conn.connection.close(params.code, params.reason);
+    } catch {
+      // A half-dead socket must not abort the remaining teardowns.
+    }
+    conns.delete(connectionId);
+    // Same as `leave`: peers must not keep rendering the dropped member's
+    // presence until the TTL sweep prunes it.
+    if (conn.lastPresenceAt !== undefined) {
+      this.broadcast(room, { connectionId, type: 'presence-gone' });
+    }
+  };
+
+  /**
    * Presence TTL sweep: expired entries broadcast `presence-gone` but keep the
    * socket — a client that stopped moving its cursor is still connected.
+   * Sockets whose room ticket expired are CLOSED instead: a ticket is the
+   * whole grant, so past its `exp` the connection must re-authorize (a silent
+   * close lets the client mint a fresh ticket; if the grant is gone the
+   * authorize call fails and the client parks the room itself).
    */
   sweepExpired = (now = Date.now()) => {
     for (const [room, conns] of this.rooms) {
       for (const [connectionId, conn] of conns) {
+        const { connection } = conn;
+        if (connection.ticketExpiresAt !== undefined && now >= connection.ticketExpiresAt) {
+          this.dropConn(room, conns, connectionId, conn, {
+            code: 4408,
+            reason: 'ticket expired',
+          });
+          continue;
+        }
         if (conn.lastPresenceAt !== undefined && now - conn.lastPresenceAt > PRESENCE_TTL_MS) {
           conn.lastPresenceAt = undefined;
           conn.state = undefined;
           this.broadcast(room, { connectionId, type: 'presence-gone' });
         }
       }
+      if (conns.size === 0) this.rooms.delete(room);
     }
   };
 

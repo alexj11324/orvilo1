@@ -12,15 +12,19 @@ import {
   ONBOARDING_INVITES_FAILED,
   type OnboardingFormValues,
 } from '@/components/blocks/onboarding-2/components/onboarding';
-import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
+import { isDesktop } from '@/const/version';
+import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import {
   clearStaleOnboardingCallbackUrl,
+  resolvePostOnboardingTargetUrl,
   stashOnboardingCallbackUrl,
 } from '@/utils/onboardingRedirect';
 
-import { finishOnboardingAndNavigate } from './finishOnboarding';
+import DesktopAuthGate from './DesktopAuthGate';
+import { finishOnboardingAndNavigate, repairDesktopOnboardingMarkers } from './finishOnboarding';
+import { resolveOnboardingWorkspace } from './workspaceResolution';
 
 const INVITE_ROLE_MAP: Record<InviteRoleValue, 'admin' | 'member' | 'viewer'> = {
   admin: 'admin',
@@ -41,7 +45,7 @@ const fileToDataUrl = (file: File): Promise<string> =>
 
 const persistOnboardingSetup = async (
   values: OnboardingFormValues,
-  workspaceId: string,
+  workspace: { id: string; slug: string },
   updateOnboarding: (input: Partial<{ setup: UserOnboardingSetup }>) => Promise<void>,
 ) => {
   await updateOnboarding({
@@ -52,9 +56,9 @@ const persistOnboardingSetup = async (
       jobTitle: values.jobTitle.trim() || undefined,
       role: values.role,
       teamSize: values.teamSize,
-      workspaceId,
+      workspaceId: workspace.id,
       workspaceName: values.workspaceName.trim(),
-      workspaceSlug: values.workspaceSlug.trim(),
+      workspaceSlug: workspace.slug,
     },
   });
 };
@@ -69,28 +73,56 @@ const OnboardingPage = memo(() => {
   const updateOnboarding = useUserStore((s) => s.updateOnboarding);
   const initialFullName = useUserStore((s) => s.user?.fullName ?? '');
   const initialTelemetry = useUserStore(userGeneralSettingsSelectors.telemetry) ?? true;
+  const initialTimezone = useUserStore(userGeneralSettingsSelectors.currentTimezone) ?? '';
   const createdWorkspaceRef = useRef<{ id: string; slug: string } | null>(null);
+  // Server-authoritative completion: `finishedAt` on the user record, shared by
+  // every client. A finished user landing here (stale bookmark, desktop boot
+  // racing the marker repair) skips straight to the post-onboarding target.
+  const onboardingFinished = useUserStore((s) => !!s.onboarding?.finishedAt);
 
   useEffect(() => {
     stashOnboardingCallbackUrl(search);
     clearStaleOnboardingCallbackUrl(pathname, search);
   }, [pathname, search]);
 
+  useEffect(() => {
+    if (!onboardingFinished) return;
+    // The server record is authoritative, but the desktop boot path still
+    // reads local markers — repair them here too or `BrowserManager` keeps
+    // booting `/onboarding` on every launch. Fire-and-forget: a failed repair
+    // just means one more detour through this redirect.
+    if (isDesktop) void repairDesktopOnboardingMarkers();
+    navigate(resolvePostOnboardingTargetUrl(), { replace: true });
+  }, [navigate, onboardingFinished]);
+
   const handleComplete = async (values: OnboardingFormValues) => {
     await updateFullName(values.fullName.trim());
-    await updateGeneralConfig({ telemetry: values.telemetryEnabled });
+    await updateGeneralConfig({
+      telemetry: values.telemetryEnabled,
+      ...(values.timezone ? { timezone: values.timezone } : {}),
+    });
 
     if (values.avatarFile) {
       await updateAvatar(await fileToDataUrl(values.avatarFile));
     }
 
-    const workspace =
-      createdWorkspaceRef.current ??
-      (await lambdaClient.workspace.create.mutate({
-        name: values.workspaceName.trim(),
-        slug: values.workspaceSlug.trim(),
-      }));
+    const workspace = await resolveOnboardingWorkspace(
+      values,
+      useUserStore.getState().onboarding?.setup?.workspaceId,
+      createdWorkspaceRef,
+      // Persist the candidate workspace id before the create call — a lost
+      // response then resumes by identity on the next attempt instead of
+      // matching by slug.
+      async (candidate) => {
+        await persistOnboardingSetup(values, candidate, updateOnboarding);
+      },
+    );
     createdWorkspaceRef.current = { id: workspace.id, slug: workspace.slug };
+
+    // Checkpoint the resolved workspace into the server-side onboarding record
+    // BEFORE invites: a reload or crash after this write resumes the same
+    // workspace instead of minting a second one.
+    await persistOnboardingSetup(values, workspace, updateOnboarding);
 
     const invitesByRole = new Map<'admin' | 'member' | 'viewer', string[]>();
     for (const invite of values.invites) {
@@ -109,7 +141,7 @@ const OnboardingPage = memo(() => {
       }
     }
 
-    await persistOnboardingSetup(values, workspace.id, updateOnboarding);
+    await persistOnboardingSetup(values, workspace, updateOnboarding);
 
     return { workspaceId: workspace.id, workspaceSlug: workspace.slug };
   };
@@ -119,12 +151,15 @@ const OnboardingPage = memo(() => {
   };
 
   return (
-    <Onboarding
-      initialFullName={initialFullName}
-      initialTelemetry={initialTelemetry}
-      onComplete={handleComplete}
-      onOpen={handleOpen}
-    />
+    <DesktopAuthGate>
+      <Onboarding
+        initialFullName={initialFullName}
+        initialTelemetry={initialTelemetry}
+        initialTimezone={initialTimezone}
+        onComplete={handleComplete}
+        onOpen={handleOpen}
+      />
+    </DesktopAuthGate>
   );
 });
 

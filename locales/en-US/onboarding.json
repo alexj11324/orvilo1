@@ -149,8 +149,6 @@
   "reui.goal.sprints.description": "Keep issues, cycles, and reviews moving.",
   "reui.goal.sprints.label": "Engineering sprints",
   "reui.invite.addAnother": "Add another",
-  "reui.invite.digestDescription": "Include workspace details.",
-  "reui.invite.digestLabel": "Send invitation summary",
   "reui.invite.email": "Email",
   "reui.invite.emailLabel": "Invitee {{number}} email",
   "reui.invite.emailPlaceholder": "teammate@company.com",

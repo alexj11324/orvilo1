@@ -68,41 +68,43 @@ import { OnboardingPageBackground } from './onboarding-background';
 import { OnboardingHeader } from './onboarding-header';
 import { OnboardingStepper, OnboardingStepperCompact } from './onboarding-stepper';
 
-type TimezoneGroup = { items: string[]; value: string };
+/** A selectable timezone: the IANA id is the stable value, the label is display-only. */
+type TimezoneOption = { label: string; value: string };
+type TimezoneGroup = { items: TimezoneOption[]; value: string };
 
-function createTimezoneGroups(t: TFunction<'onboarding'>): TimezoneGroup[] {
+export function createTimezoneGroups(t: TFunction<'onboarding'>): TimezoneGroup[] {
   return [
     {
       value: t('reui.timezone.americas'),
       items: [
-        t('reui.timezone.newYork'),
-        t('reui.timezone.losAngeles'),
-        t('reui.timezone.chicago'),
-        t('reui.timezone.toronto'),
-        t('reui.timezone.vancouver'),
-        t('reui.timezone.saoPaulo'),
+        { label: t('reui.timezone.newYork'), value: 'America/New_York' },
+        { label: t('reui.timezone.losAngeles'), value: 'America/Los_Angeles' },
+        { label: t('reui.timezone.chicago'), value: 'America/Chicago' },
+        { label: t('reui.timezone.toronto'), value: 'America/Toronto' },
+        { label: t('reui.timezone.vancouver'), value: 'America/Vancouver' },
+        { label: t('reui.timezone.saoPaulo'), value: 'America/Sao_Paulo' },
       ],
     },
     {
       value: t('reui.timezone.europe'),
       items: [
-        t('reui.timezone.london'),
-        t('reui.timezone.paris'),
-        t('reui.timezone.berlin'),
-        t('reui.timezone.rome'),
-        t('reui.timezone.madrid'),
-        t('reui.timezone.amsterdam'),
+        { label: t('reui.timezone.london'), value: 'Europe/London' },
+        { label: t('reui.timezone.paris'), value: 'Europe/Paris' },
+        { label: t('reui.timezone.berlin'), value: 'Europe/Berlin' },
+        { label: t('reui.timezone.rome'), value: 'Europe/Rome' },
+        { label: t('reui.timezone.madrid'), value: 'Europe/Madrid' },
+        { label: t('reui.timezone.amsterdam'), value: 'Europe/Amsterdam' },
       ],
     },
     {
       value: t('reui.timezone.asiaPacific'),
       items: [
-        t('reui.timezone.tokyo'),
-        t('reui.timezone.shanghai'),
-        t('reui.timezone.singapore'),
-        t('reui.timezone.dubai'),
-        t('reui.timezone.sydney'),
-        t('reui.timezone.seoul'),
+        { label: t('reui.timezone.tokyo'), value: 'Asia/Tokyo' },
+        { label: t('reui.timezone.shanghai'), value: 'Asia/Shanghai' },
+        { label: t('reui.timezone.singapore'), value: 'Asia/Singapore' },
+        { label: t('reui.timezone.dubai'), value: 'Asia/Dubai' },
+        { label: t('reui.timezone.sydney'), value: 'Australia/Sydney' },
+        { label: t('reui.timezone.seoul'), value: 'Asia/Seoul' },
       ],
     },
   ];
@@ -123,21 +125,34 @@ function ProfileStep({
   fullName,
   jobTitle,
   telemetryEnabled,
+  timezone,
   onAvatarChange,
   onFullNameChange,
   onJobTitleChange,
   onTelemetryChange,
+  onTimezoneChange,
 }: {
   fullName: string;
   jobTitle: string;
   telemetryEnabled: boolean;
+  timezone: string;
   onAvatarChange: (file: File | null) => void;
   onFullNameChange: (name: string) => void;
   onJobTitleChange: (title: string) => void;
   onTelemetryChange: (checked: boolean) => void;
+  onTimezoneChange: (timezone: string) => void;
 }) {
   const { t } = useTranslation('onboarding');
   const timezoneGroups = useMemo(() => createTimezoneGroups(t), [t]);
+  // The stored value is an IANA id — resolve it back to its option (or show
+  // the raw id when the detected zone sits outside the curated list).
+  const selectedTimezone = useMemo<TimezoneOption | null>(() => {
+    if (!timezone) return null;
+    const match = timezoneGroups
+      .flatMap((group) => group.items)
+      .find((option) => option.value === timezone);
+    return match ?? { label: timezone, value: timezone };
+  }, [timezone, timezoneGroups]);
 
   return (
     <FieldSet>
@@ -179,7 +194,16 @@ function ProfileStep({
 
           <Field className="gap-2">
             <FieldLabel htmlFor="onboarding-2-timezone">{t('reui.profile.timezone')}</FieldLabel>
-            <Combobox items={timezoneGroups}>
+            <Combobox
+              isItemEqualToValue={(a, b) => a.value === b.value}
+              itemToStringLabel={(option) => option.label}
+              itemToStringValue={(option) => option.value}
+              items={timezoneGroups}
+              value={selectedTimezone}
+              onValueChange={(option) => {
+                if (option) onTimezoneChange(option.value);
+              }}
+            >
               <ComboboxInput
                 className="w-full"
                 id="onboarding-2-timezone"
@@ -193,8 +217,8 @@ function ProfileStep({
                       <ComboboxLabel>{group.value}</ComboboxLabel>
                       <ComboboxCollection>
                         {(item) => (
-                          <ComboboxItem key={item} value={item}>
-                            {item}
+                          <ComboboxItem key={item.value} value={item}>
+                            {item.label}
                           </ComboboxItem>
                         )}
                       </ComboboxCollection>
@@ -514,18 +538,14 @@ function InviteRoleSelect({
 
 function InviteStep({
   invites,
-  sendInviteDigest,
   onAddInvite,
   onInviteEmailChange,
   onInviteRoleChange,
-  onSendInviteDigestChange,
 }: {
   invites: InviteRow[];
-  sendInviteDigest: boolean;
   onAddInvite: () => void;
   onInviteEmailChange: (inviteId: string, email: string) => void;
   onInviteRoleChange: (inviteId: string, role: InviteRoleValue) => void;
-  onSendInviteDigestChange: (checked: boolean) => void;
 }) {
   const { t } = useTranslation('onboarding');
 
@@ -585,20 +605,6 @@ function InviteStep({
             </Button>
           </div>
         </div>
-
-        <Field className="gap-3" orientation="horizontal">
-          <FieldContent className="gap-0.5">
-            <FieldLabel htmlFor="onboarding-2-send-digest">
-              {t('reui.invite.digestLabel')}
-            </FieldLabel>
-            <FieldDescription>{t('reui.invite.digestDescription')}</FieldDescription>
-          </FieldContent>
-          <Switch
-            checked={sendInviteDigest}
-            id="onboarding-2-send-digest"
-            onCheckedChange={onSendInviteDigestChange}
-          />
-        </Field>
       </FieldGroup>
     </FieldSet>
   );
@@ -708,9 +714,10 @@ export interface OnboardingFormValues {
   invites: InviteRow[];
   jobTitle: string;
   role: RoleValue;
-  sendInviteDigest: boolean;
   teamSize: TeamSizeValue;
   telemetryEnabled: boolean;
+  /** IANA timezone id (e.g. `Europe/Berlin`) — stable across locales. */
+  timezone: string;
   workspaceName: string;
   workspaceSlug: string;
 }
@@ -725,11 +732,14 @@ export const ONBOARDING_INVITES_FAILED = 'onboardingInvitesFailed';
 export function Onboarding({
   initialFullName = '',
   initialTelemetry = true,
+  initialTimezone = '',
   onComplete,
   onOpen,
 }: {
   initialFullName?: string;
   initialTelemetry?: boolean;
+  /** Existing IANA timezone from user settings; the picker keeps it unless changed. */
+  initialTimezone?: string;
   onComplete?: (values: OnboardingFormValues) => Promise<OnboardingCompletion | void>;
   onOpen?: () => void;
 } = {}) {
@@ -749,8 +759,8 @@ export function Onboarding({
   const [teamSize, setTeamSize] = useState<TeamSizeValue>('team');
   const [goals, setGoals] = useState<GoalValue[]>(['roadmaps', 'sprints']);
   const [invites, setInvites] = useState<InviteRow[]>(DEFAULT_INVITES);
-  const [sendInviteDigest, setSendInviteDigest] = useState(true);
   const [telemetryEnabled, setTelemetryEnabled] = useState(initialTelemetry);
+  const [timezone, setTimezone] = useState(initialTimezone);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
@@ -854,9 +864,9 @@ export function Onboarding({
         invites,
         jobTitle,
         role,
-        sendInviteDigest,
         teamSize,
         telemetryEnabled,
+        timezone,
         workspaceName,
         workspaceSlug,
       });
@@ -1034,10 +1044,12 @@ export function Onboarding({
                           fullName={fullName}
                           jobTitle={jobTitle}
                           telemetryEnabled={telemetryEnabled}
+                          timezone={timezone}
                           onAvatarChange={setAvatarFile}
                           onFullNameChange={setFullName}
                           onJobTitleChange={setJobTitle}
                           onTelemetryChange={setTelemetryEnabled}
+                          onTimezoneChange={setTimezone}
                         />
                       ) : null}
 
@@ -1078,11 +1090,9 @@ export function Onboarding({
                       {currentStepMeta.id === 'invite' ? (
                         <InviteStep
                           invites={invites}
-                          sendInviteDigest={sendInviteDigest}
                           onAddInvite={handleAddInvite}
                           onInviteEmailChange={handleInviteEmailChange}
                           onInviteRoleChange={handleInviteRoleChange}
-                          onSendInviteDigestChange={setSendInviteDigest}
                         />
                       ) : null}
                     </div>

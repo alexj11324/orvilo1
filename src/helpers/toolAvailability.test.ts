@@ -10,7 +10,7 @@ describe('toolAvailability', () => {
   it('should hide desktop-only builtin skills in web', () => {
     expect(
       filterToolIdsByCurrentEnv(['orvilo-agent-browser', 'orvilo-web-browsing'], {
-        isDesktop: false,
+        canExecuteOnDevice: false,
       }),
     ).toEqual(['orvilo-web-browsing']);
   });
@@ -24,13 +24,13 @@ describe('toolAvailability', () => {
             identifier: 'local-mcp',
           },
         ],
-        isDesktop: false,
+        canExecuteOnDevice: false,
       }),
     ).toEqual(['remote-mcp']);
   });
 
   it('should keep deprecated tool ids visible for cleanup', () => {
-    expect(filterToolIdsByCurrentEnv(['deleted-plugin'], { isDesktop: false })).toEqual([
+    expect(filterToolIdsByCurrentEnv(['deleted-plugin'], { canExecuteOnDevice: false })).toEqual([
       'deleted-plugin',
     ]);
   });
@@ -39,7 +39,7 @@ describe('toolAvailability', () => {
     expect(
       isInstalledPluginAvailableInCurrentEnv(
         { customParams: { mcp: { type: 'stdio' } }, identifier: 'local-mcp' },
-        { isDesktop: false },
+        { canExecuteOnDevice: false },
       ),
     ).toBe(false);
   });
@@ -48,7 +48,7 @@ describe('toolAvailability', () => {
     expect(
       isToolAvailableInCurrentEnv('orvilo-agent-browser', {
         installedPlugins: [],
-        isDesktop: false,
+        canExecuteOnDevice: false,
       }),
     ).toBe(false);
     expect(isToolAvailableInCurrentEnv('orvilo-computer-use')).toBe(false);

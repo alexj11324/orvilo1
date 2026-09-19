@@ -125,7 +125,7 @@ export const changeMemberRole = async (
     if (target.role === params.role) return { changed: false as const, role: target.role };
 
     await memberModel.updateMemberRole(params.workspaceId, params.targetUserId, params.role);
-    await bumpAuthzVersion(tx, params.workspaceId, params.targetUserId);
+    const authzVersion = await bumpAuthzVersion(tx, params.workspaceId, params.targetUserId);
     await recordAudit(tx, {
       action: 'member.role_updated',
       ipAddress: params.ipAddress,
@@ -139,7 +139,7 @@ export const changeMemberRole = async (
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: 'workspace.member.role_changed',
-      payload: { role: params.role, userId: params.targetUserId },
+      payload: { authzVersion, role: params.role, userId: params.targetUserId },
       workspaceId: params.workspaceId,
     });
     return { changed: true as const, role: params.role };
@@ -188,6 +188,11 @@ const setMemberSuspended = async (
     } else {
       await memberModel.resumeMember(params.workspaceId, params.targetUserId);
     }
+    // The kick projection stamps this version as the revocation barrier —
+    // connections re-authorized at a newer version (a re-grant) outrank a
+    // replayed revoke.
+    const authzVersion = (await findMembershipRow(tx, params.workspaceId, params.targetUserId))
+      ?.authzVersion;
     const action = params.suspended ? 'member.suspended' : 'member.resumed';
     await recordAudit(tx, {
       action,
@@ -201,7 +206,7 @@ const setMemberSuspended = async (
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: `workspace.${action}`,
-      payload: { userId: params.targetUserId },
+      payload: { authzVersion, userId: params.targetUserId },
       workspaceId: params.workspaceId,
     });
     return { changed: true as const, suspended: params.suspended };
@@ -343,11 +348,15 @@ export const removeMember = async (
       userId: params.actorUserId,
       workspaceId: params.workspaceId,
     });
+    // The model's inner write bumped authzVersion with the soft delete — the
+    // kick projection stamps it as the barrier re-granted connections outrank.
+    const authzVersion = (await findMembershipRow(tx, params.workspaceId, params.targetUserId))
+      ?.authzVersion;
     await emitWorkspaceEvent(tx, {
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: 'workspace.member.removed',
-      payload: { userId: params.targetUserId },
+      payload: { authzVersion, userId: params.targetUserId },
       workspaceId: params.workspaceId,
     });
 
@@ -383,11 +392,13 @@ export const leaveWorkspace = async (
       userId: params.userId,
       workspaceId: params.workspaceId,
     });
+    const authzVersion = (await findMembershipRow(tx, params.workspaceId, params.userId))
+      ?.authzVersion;
     await emitWorkspaceEvent(tx, {
       aggregateId: params.workspaceId,
       aggregateType: 'workspace',
       eventType: 'workspace.member.left',
-      payload: { userId: params.userId },
+      payload: { authzVersion, userId: params.userId },
       workspaceId: params.workspaceId,
     });
     return { left: true as const };

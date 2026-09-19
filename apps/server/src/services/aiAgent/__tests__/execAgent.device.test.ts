@@ -316,15 +316,20 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     senderExternalUserId: 'owner-id',
   } as any;
 
-  describe('default and sandbox targets reach the cloud sandbox', () => {
-    it('dispatches the default agent to the cloud sandbox', async () => {
-      // No agencyConfig → the synthesized 'orvilo' binding resolves `none` →
-      // sandbox because the harness supports cloud execution.
+  describe('default and sandbox targets', () => {
+    it('fails a default (unset-target) run loudly — no silent cloud-sandbox fallback', async () => {
+      // No agencyConfig → the synthesized binding resolves `none` — a pending
+      // selection under the unified execution-target contract. Dispatch must
+      // surface it instead of silently routing to whichever host is handy.
       const result = await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
 
-      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
-      expect(result.success).toBe(true);
+      expect(result).toMatchObject({
+        autoStarted: false,
+        error: 'No bound device',
+        success: false,
+      });
     });
 
     it('routes an explicit sandbox target to the cloud sandbox', async () => {
@@ -336,13 +341,18 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
     });
 
-    it('coerces a `none` target to the cloud sandbox for sandbox-capable bindings', async () => {
+    it('leaves an explicit `none` target pending instead of falling back to the sandbox', async () => {
       await useAgencyConfig({ executionTarget: 'none' });
 
-      await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
 
-      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        autoStarted: false,
+        error: 'No bound device',
+        success: false,
+      });
     });
 
     it('keeps a bound device unrouted when the fixed target is sandbox', async () => {
@@ -406,10 +416,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       );
     });
 
-    it('degrades an unbound `local` bot run to the cloud sandbox', async () => {
-      // The server has no client to run `local` on, so the target coerces to
-      // `sandbox` before the bot's `local→auto` upgrade can engage (that
-      // upgrade only fires when a client/device can run the run here).
+    it('fails an unbound `local` bot run loudly (auto has no online-device visibility)', async () => {
+      // Bot + unbound `local` upgrades to `auto`, but hetero dispatch carries
+      // no onlineDeviceIds — auto can never resolve, so the run stays
+      // unrouted rather than silently landing on the cloud sandbox.
       await useAgencyConfig({ executionTarget: 'local' });
 
       const result = await service.execAgent({
@@ -419,8 +429,12 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
 
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
-      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
-      expect(result.success).toBe(true);
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        autoStarted: false,
+        error: 'No bound device',
+        success: false,
+      });
     });
 
     it('honours an explicit deviceId request over the stored sandbox target', async () => {

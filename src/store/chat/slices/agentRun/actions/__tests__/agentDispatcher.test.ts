@@ -66,13 +66,19 @@ describe('selectRuntimeType', () => {
   describe('on desktop (isDesktop = true)', () => {
     const opts = { isDesktop: true };
 
-    it('returns hetero for local CLI agents (claude-code, codex)', () => {
+    it('returns gateway for unconfigured local CLI agents — pending target resolves server-side', () => {
+      // An unset execution target resolves to `none` on every client now — the
+      // viewing desktop never silently becomes the execution host. Interactive
+      // surfaces persist an explicit `local` + boundDeviceId binding first
+      // (device switcher mount default); a truly unconfigured hetero run goes
+      // to Gateway where the server plan fails loudly with a pick-a-device
+      // error.
       expect(
         selectRuntimeType({ heterogeneousProvider: heteroProvider, isGatewayMode: true }, opts),
-      ).toBe('hetero');
+      ).toBe('gateway');
       expect(
         selectRuntimeType({ heterogeneousProvider: heteroProvider, isGatewayMode: false }, opts),
-      ).toBe('hetero');
+      ).toBe('gateway');
     });
 
     it('routes remote platform agents (openclaw/hermes) to gateway even on desktop', () => {
@@ -313,13 +319,15 @@ describe('selectRuntimeType', () => {
       ).toBe('gateway');
     });
 
-    it('preserves legacy default when executionTarget is unset (desktop → hetero, web → gateway)', () => {
+    it('keeps an unset executionTarget pending → gateway on every client', () => {
+      // no viewer-derived default anymore: desktop does not silently take the
+      // in-process `hetero` transport for an unconfigured agent either
       expect(
         selectRuntimeType(
           { heterogeneousProvider: heteroProvider, isGatewayMode: false },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
       expect(
         selectRuntimeType(
           { heterogeneousProvider: heteroProvider, isGatewayMode: false },

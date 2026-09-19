@@ -1,0 +1,139 @@
+import {
+  COLLABORATION_GATEWAY_PROTOCOL_VERSION,
+  GATEWAY_PROTOCOL_VERSION_HEADER,
+} from '@orvilo/types';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { createRoomPublisher, LOCAL_ROOM_BUS_KEY } from '../roomPublisher';
+
+vi.mock('../ticket', () => ({
+  signGatewayPublishToken: vi.fn(async () => 'publish-token'),
+}));
+
+const kick = (scope: 'project' | 'task' | 'workspace') =>
+  ({
+    kind: 'kick' as const,
+    reason: 'project_member.removed',
+    scope,
+    scopeId: 'prj_1',
+    userId: 'user-9',
+    workspaceId: 'ws-1',
+  }) as const;
+
+const respond = (status: number, headers: Record<string, string> = {}) =>
+  new Response('{}', { headers, status });
+
+const v2Headers = {
+  [GATEWAY_PROTOCOL_VERSION_HEADER]: String(COLLABORATION_GATEWAY_PROTOCOL_VERSION),
+};
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  delete (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY];
+});
+
+describe('httpRoomPublisher capability handshake', () => {
+  it('delivers a project kick to a v2 gateway', async () => {
+    const fetchMock = vi.fn(async () => respond(202, v2Headers));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(publisher.publish('project:prj_1', kick('project'))).resolves.toBeUndefined();
+  });
+
+  it('treats a scoped-kick 202 without the version marker as undelivered — retryable', async () => {
+    // A pre-v2 gateway acks the envelope but only executes workspace kicks —
+    // throwing here is what keeps the outbox row pending until the fleet
+    // upgrades instead of silently dropping the revocation.
+    const fetchMock = vi.fn(async () => respond(202));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(publisher.publish('project:prj_1', kick('project'))).rejects.toThrow(
+      'does not support project-scoped kicks',
+    );
+  });
+
+  it.each(['1', 'abc'])('rejects a scoped-kick ack stamped with protocol %s', async (stamped) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond(202, { [GATEWAY_PROTOCOL_VERSION_HEADER]: stamped })),
+    );
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(publisher.publish('task:task_1', kick('task'))).rejects.toThrow(
+      'task-scoped kicks',
+    );
+  });
+
+  it('lets workspace kicks through ungated — pre-v2 gateways executed them', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond(202)),
+    );
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(publisher.publish('workspace:ws-1', kick('workspace'))).resolves.toBeUndefined();
+  });
+
+  it('broadcasts need no capability check', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond(202)),
+    );
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(
+      publisher.publish('project:prj_1', {
+        kind: 'broadcast',
+        message: { type: 'pong' },
+      }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe('localRoomPublisher scoped kicks', () => {
+  it('delivers scoped kicks through kickScoped when the bus supports it', async () => {
+    const kickScoped = vi.fn();
+    (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY] = {
+      kick: vi.fn(),
+      kickScoped,
+      presence: () => [],
+      publish: vi.fn(),
+    };
+
+    await createRoomPublisher('').publish('project:prj_1', kick('project'));
+
+    expect(kickScoped).toHaveBeenCalledWith(
+      'project:prj_1',
+      expect.objectContaining({ scope: 'project', scopeId: 'prj_1', userId: 'user-9' }),
+    );
+  });
+
+  it('fails a project kick closed when the bus lacks kickScoped — retryable, not silent', async () => {
+    const legacyKick = vi.fn();
+    (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY] = {
+      kick: legacyKick,
+      presence: () => [],
+      publish: vi.fn(),
+    };
+
+    await expect(createRoomPublisher('').publish('project:prj_1', kick('project'))).rejects.toThrow(
+      'project-scoped kicks',
+    );
+    expect(legacyKick).not.toHaveBeenCalled();
+  });
+
+  it('keeps workspace kicks on the legacy bus kick signature', async () => {
+    const legacyKick = vi.fn();
+    (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY] = {
+      kick: legacyKick,
+      presence: () => [],
+      publish: vi.fn(),
+    };
+
+    await createRoomPublisher('').publish('workspace:ws-1', kick('workspace'));
+
+    expect(legacyKick).toHaveBeenCalledWith('workspace:ws-1', 'user-9', 'project_member.removed');
+  });
+});

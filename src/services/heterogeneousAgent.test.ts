@@ -7,6 +7,13 @@ const mocks = vi.hoisted(() => ({
   remoteListModels: vi.fn(),
 }));
 
+// The Electron IPC leg is the desktop-local transport — the test stands in
+// for the desktop build, where `isDesktop` lets the guard pass.
+vi.mock('@orvilo/const', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  isDesktop: true,
+}));
+
 vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
     device: {

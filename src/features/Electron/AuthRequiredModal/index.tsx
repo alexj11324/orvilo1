@@ -9,6 +9,7 @@ import { AlertCircle, LogIn } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
 import { useElectronStore } from '@/store/electron';
 
 const log = debug('orvilo-client:auth-required-modal');
@@ -148,6 +149,9 @@ const AuthRequiredModal = memo(() => {
     void refreshServerConfig();
   });
 
+  // The main-process proxy spots auth failures at the transport layer; the
+  // tRPC error link spots them as 401 responses. Both funnel into the shared
+  // session-auth event — the modal below is the desktop recovery adapter.
   useWatchBroadcast('authorizationRequired', (payload) => {
     const reason = payload?.reason ?? 'unknown';
     const state = useElectronStore.getState();
@@ -166,9 +170,22 @@ const AuthRequiredModal = memo(() => {
       return;
     }
 
-    log('authorizationRequired: opening modal. reason=%s', reason);
-    open();
+    sessionAuthEvents.emit('session-auth-expired', {
+      reason,
+      source: 'desktop-proxy',
+      timestamp: Date.now(),
+    });
   });
+
+  useEffect(() => {
+    return sessionAuthEvents.on('session-auth-expired', ({ reason, source }) => {
+      // The desktop adapter only owns signals raised on this machine — a web
+      // client never mounts this component anyway, and the tRPC path is
+      // identical on both.
+      log('session-auth-expired: opening modal. source=%s reason=%s', source, reason);
+      open();
+    });
+  }, [open]);
 
   return null;
 });

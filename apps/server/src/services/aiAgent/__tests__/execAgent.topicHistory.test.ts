@@ -63,6 +63,7 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
+        agencyConfig: { executionTarget: 'sandbox' },
         chatConfig: {},
         files: [],
         id: 'agent-1',
@@ -81,6 +82,7 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
+        agencyConfig: { executionTarget: 'sandbox' },
         chatConfig: {},
         files: [],
         id: 'agent-1',

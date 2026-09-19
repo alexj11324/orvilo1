@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 
 import {
   buildHeteroExecStdinPayload,
@@ -7,9 +7,10 @@ import {
 } from '@orvilo/heterogeneous-agents/protocol';
 import { resolveHeteroSpawnCwd } from '@orvilo/heterogeneous-agents/workingDirectory';
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
+import { sleep } from '@orvilo/utils/sleep';
 
-import { getTask, removeTask, saveTask } from '../daemon/taskRegistry';
-import { cancelAgentRun, registerAgentRun } from './agentRunRegistry';
+import { getTask, removeTask, saveTask, type TaskEntry } from '../daemon/taskRegistry';
+import { cancelAgentRun, getAgentRun, registerAgentRun } from './agentRunRegistry';
 
 /** Liveness probe for a detached run — the wrapper pid is a process-group leader. */
 function isProcessGroupAlive(pid: number): boolean {
@@ -20,6 +21,106 @@ function isProcessGroupAlive(pid: number): boolean {
     return (err as NodeJS.ErrnoException).code !== 'ESRCH';
   }
 }
+
+/** Poll interval while confirming a killed process group is really gone. */
+const PROCESS_GROUP_POLL_MS = 50;
+/** Bounded window to observe the exit after the forced kill — same contract as `lh task cancel`. */
+const KILL_CONFIRM_TIMEOUT_MS = 3000;
+
+const waitForProcessGroupExit = async (pid: number, timeoutMs: number): Promise<boolean> => {
+  const deadline = Date.now() + timeoutMs;
+  while (isProcessGroupAlive(pid)) {
+    if (Date.now() >= deadline) return false;
+    await sleep(PROCESS_GROUP_POLL_MS);
+  }
+  return true;
+};
+
+/**
+ * Best-effort read of the recorded group leader's command line. A registry
+ * entry can outlive its writer (daemon restart): if the pid now belongs to an
+ * unrelated process, signaling its group would kill innocent processes.
+ * Returns null when the leader is gone or the platform probe is unavailable —
+ * an unreadable cmdline keeps the conservative kill path (a foreign process
+ * cannot realistically inherit the pgid of a leader that never existed).
+ */
+const readLeaderCommandLine = (pid: number): string | null => {
+  try {
+    const output =
+      process.platform === 'win32'
+        ? execFileSync(
+            'powershell',
+            [
+              '-NoProfile',
+              '-Command',
+              `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`,
+            ],
+            { encoding: 'utf8', timeout: 5000 },
+          )
+        : execFileSync('ps', ['-p', String(pid), '-o', 'args='], { encoding: 'utf8' });
+    return output.trim() || null;
+  } catch {
+    return null;
+  }
+};
+
+const killWindowsProcessTree = (pid: number): Promise<boolean> =>
+  new Promise((resolve) => {
+    const killer = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    killer.once('error', () => resolve(false));
+    killer.once('exit', (code) => resolve(code === 0));
+  });
+
+/**
+ * Forced kill of the whole process group (POSIX) or tree (Windows). Returns
+ * false when the signal itself could not be delivered for a reason other than
+ * "already gone" (EPERM, taskkill denied) — an undelivered kill can never
+ * confirm exit, so the caller must refuse the replacement.
+ */
+const forceKillGroup = async (
+  pid: number,
+  logger?: SpawnHeteroAgentRunLogger,
+): Promise<boolean> => {
+  if (process.platform === 'win32') {
+    const killed = await killWindowsProcessTree(pid);
+    if (!killed && isProcessGroupAlive(pid)) {
+      logger?.error?.(`taskkill failed for old run pid=${pid}`);
+      return false;
+    }
+    return true;
+  }
+  try {
+    process.kill(-pid, 'SIGKILL');
+    return true;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ESRCH') return true; // the group exited between probe and kill
+    logger?.error?.(`SIGKILL failed for old run group pid=${pid}: ${code ?? String(err)}`);
+    return false;
+  }
+};
+
+/**
+ * Stop the recorded writer and CONFIRM its exit before returning true.
+ * Graceful drain first (`cancelAgentRun` lets an in-process wrapper forward
+ * SIGINT and drain terminal callbacks), then a forced group kill with a
+ * bounded exit wait. False means the old writer's fate is unknown — the
+ * caller must keep its record and refuse to spawn a second writer.
+ */
+const stopTrackedRun = async (
+  entry: TaskEntry,
+  operationId: string,
+  logger?: SpawnHeteroAgentRunLogger,
+): Promise<boolean> => {
+  await cancelAgentRun(operationId, 'SIGINT');
+  if (!isProcessGroupAlive(entry.pid)) return true;
+
+  if (!(await forceKillGroup(entry.pid, logger))) return false;
+  return waitForProcessGroupExit(entry.pid, KILL_CONFIRM_TIMEOUT_MS);
+};
 
 export interface SpawnHeteroAgentRunParams {
   agentType: string;
@@ -78,7 +179,35 @@ interface SpawnHeteroAgentRunLogger {
  * is handled inside `lh hetero exec`, which can classify it and emit
  * `heteroFinish`; other wrapper spawn failures flow back as rejected dispatches.
  */
+/**
+ * One in-flight admission per operation. Two dispatches racing the same
+ * operationId must not interleave between the liveness probe, the kill
+ * confirm, and the respawn — each sees the predecessor's outcome as the
+ * "existing" record, so concurrent same-generation retries dedupe and
+ * concurrent superseding generations replace exactly once.
+ */
+const admissions = new Map<string, Promise<AgentRunAckResult>>();
+
 export async function spawnHeteroAgentRun(
+  params: SpawnHeteroAgentRunParams,
+  logger?: SpawnHeteroAgentRunLogger,
+): Promise<AgentRunAckResult> {
+  const previous = admissions.get(params.operationId);
+  const run = () => admitHeteroAgentRun(params, logger);
+  // A free slot admits synchronously (the dispatch ack path expects spawn to
+  // start inside the call); a busy slot chains behind the in-flight
+  // admission — a failed predecessor never blocks the next one.
+  const next: Promise<AgentRunAckResult> =
+    previous === undefined ? run() : previous.catch(() => undefined).then(run);
+  admissions.set(params.operationId, next);
+  try {
+    return await next;
+  } finally {
+    if (admissions.get(params.operationId) === next) admissions.delete(params.operationId);
+  }
+}
+
+async function admitHeteroAgentRun(
   params: SpawnHeteroAgentRunParams,
   logger?: SpawnHeteroAgentRunLogger,
 ): Promise<AgentRunAckResult> {
@@ -115,20 +244,34 @@ export async function spawnHeteroAgentRun(
       existing.runGeneration != null &&
       runGeneration > existing.runGeneration;
     const existingAlive = isProcessGroupAlive(existing.pid);
-    if (existingAlive && !superseded) {
-      logger?.info?.(
-        `hetero exec dedupe (op=${operationId}): run already active pid=${existing.pid}`,
-      );
-      return { status: 'accepted' };
-    }
-    if (existingAlive) {
-      await cancelAgentRun(operationId, 'SIGINT');
-      if (isProcessGroupAlive(existing.pid)) {
-        try {
-          process.kill(process.platform === 'win32' ? existing.pid : -existing.pid, 'SIGKILL');
-        } catch {
-          // The group exited between the graceful cancel and the escalation.
-        }
+    // A record restored from disk can outlive its writer: the pid may have
+    // been recycled by an unrelated process. Runs this daemon spawned need
+    // no probe (their pgid was minted at spawn); anything else verifies the
+    // group leader's cmdline — a foreign pid is a stale record, not a writer
+    // to kill. An unverifiable cmdline keeps the conservative kill path.
+    const foreign =
+      existingAlive &&
+      !getAgentRun(operationId) &&
+      readLeaderCommandLine(existing.pid)?.includes(operationId) === false;
+
+    if (existingAlive && !foreign) {
+      if (!superseded) {
+        logger?.info?.(
+          `hetero exec dedupe (op=${operationId}): run already active pid=${existing.pid}`,
+        );
+        return { status: 'accepted' };
+      }
+      // Replacing a live writer is allowed only once its process group is
+      // CONFIRMED gone. An undelivered kill or a group that never reports
+      // exit leaves the writer's fate unknown — refuse the admission and
+      // keep the record so a later dispatch can retry instead of spawning a
+      // second writer over a live one.
+      const stopped = await stopTrackedRun(existing, operationId, logger);
+      if (!stopped) {
+        logger?.error?.(
+          `hetero exec replace blocked (op=${operationId}): previous run pid=${existing.pid} has not confirmed exit`,
+        );
+        return { reason: 'previous run has not confirmed exit', status: 'rejected' };
       }
     }
     removeTask(operationId);
@@ -257,6 +400,14 @@ export async function spawnHeteroAgentRun(
     child.once('error', (err) => {
       logger?.error?.(`hetero exec spawn failed (op=${operationId}): ${err.message}`);
       settle({ reason: err.message, status: 'rejected' });
+    });
+
+    child.once('exit', () => {
+      // A child that dies before either 'spawn' or 'error' would leave this
+      // admission pending forever — every later dispatch for the operation
+      // chains behind it. Settle it rejected so the slot frees up; the
+      // registry-cleanup 'exit' listener below still runs independently.
+      settle({ reason: 'process exited before spawn completed', status: 'rejected' });
     });
 
     child.on('exit', (code, signal) => {

@@ -107,6 +107,104 @@ describe('buildRoomSnapshot', () => {
     expect(snapshot.activities.map((event) => event.eventId)).toEqual(['evt_1', 'evt_2']);
     expect(decodeCursor(snapshot.nextCursor)).toMatchObject({ i: 'evt_2' });
   });
+
+  it('keeps advancing when a dense overlap window overflows one page (N07)', async () => {
+    // Regression: the old union query let ≥50 already-served overlap rows
+    // consume the whole LIMIT, so the cursor never reached the new event.
+    const now = Date.now();
+    const cursorTime = now - 10_000;
+    const overlapRows = Array.from({ length: 60 }, (_, index) => ({
+      createdAt: new Date(cursorTime - 4_000 + index),
+      eventId: `evt_overlap_${String(index).padStart(3, '0')}`,
+    }));
+    await seedEvents(db, [
+      ...overlapRows,
+      { createdAt: new Date(now - 6_000), eventId: 'evt_new' },
+    ]);
+
+    const cursor = encodeCursor({ i: 'evt_prev', t: cursorTime });
+    const snapshot = await buildRoomSnapshot(db, {
+      aggregateId: AGGREGATE_ID,
+      aggregateType: 'task',
+      cursor,
+      room: 'task:x',
+    });
+
+    const served = snapshot.activities.map((event) => event.eventId);
+    // The overlap rows still replay (dedup'd client-side) AND the new row
+    // appears — the forward page is no longer starved.
+    expect(served.filter((id) => id.startsWith('evt_overlap_'))).toHaveLength(60);
+    expect(served.at(-1)).toBe('evt_new');
+    expect(decodeCursor(snapshot.nextCursor)).toMatchObject({
+      i: 'evt_new',
+      t: now - 6_000,
+    });
+  });
+
+  it('paginates same-millisecond bursts by the eventId keyset without stalling', async () => {
+    const now = Date.now();
+    const stamp = new Date(now - 6_000);
+    await seedEvents(
+      db,
+      Array.from({ length: 120 }, (_, index) => ({
+        createdAt: stamp,
+        eventId: `evt_burst_${String(index).padStart(3, '0')}`,
+      })),
+    );
+
+    // First incremental page after an empty cursor position — all rows are
+    // strictly forward of it.
+    const first = await buildRoomSnapshot(db, {
+      aggregateId: AGGREGATE_ID,
+      aggregateType: 'task',
+      cursor: encodeCursor({ i: 'evt_aaa', t: now - 10_000 }),
+      room: 'task:x',
+    });
+    expect(first.activities).toHaveLength(50);
+    const firstCursor = decodeCursor(first.nextCursor);
+    expect(firstCursor?.i).toBe('evt_burst_049');
+
+    // Same-millisecond rows behind the boundary replay as overlap (dedup'd
+    // client-side) while the keyset keeps walking the burst forward.
+    const second = await buildRoomSnapshot(db, {
+      aggregateId: AGGREGATE_ID,
+      aggregateType: 'task',
+      cursor: first.nextCursor,
+      room: 'task:x',
+    });
+    expect(second.activities.map((event) => event.eventId)).toEqual(
+      Array.from({ length: 100 }, (_, index) => `evt_burst_${String(index).padStart(3, '0')}`),
+    );
+
+    const third = await buildRoomSnapshot(db, {
+      aggregateId: AGGREGATE_ID,
+      aggregateType: 'task',
+      cursor: second.nextCursor,
+      room: 'task:x',
+    });
+    expect(third.activities).toHaveLength(120);
+    expect(third.activities.at(-1)?.eventId).toBe('evt_burst_119');
+
+    // Forward exhausted — the whole window replays, cursor stays parked.
+    const fourth = await buildRoomSnapshot(db, {
+      aggregateId: AGGREGATE_ID,
+      aggregateType: 'task',
+      cursor: third.nextCursor,
+      room: 'task:x',
+    });
+    expect(fourth.activities).toHaveLength(120);
+    expect(fourth.nextCursor).toBe(third.nextCursor);
+  });
+
+  it('flags an undecodable cursor as a resync instead of a silent first page', async () => {
+    const snapshot = await buildRoomSnapshot(db, {
+      aggregateId: AGGREGATE_ID,
+      aggregateType: 'task',
+      cursor: '!!!not-a-cursor!!!',
+      room: 'task:x',
+    });
+    expect(snapshot.resyncRequired).toBe(true);
+  });
 });
 
 describe('snapshot cursor codec', () => {

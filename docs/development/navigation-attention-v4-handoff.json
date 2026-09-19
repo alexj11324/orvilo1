@@ -47,8 +47,9 @@
     "Inbox, CommandMenu search, and project work-query lists drop private project titles/names unless ProjectModel.readable (visibility or an active membership grant) still holds",
     "Unfiltered queryTasks and CommandMenu searchTasks hide public-visibility tasks on private teams from non-members (TRI05); assignees/reviewers/creators still find their rows",
     "TaskModel findById/list/update hide public-visibility private-team tasks from non-members (TRI05 page/API); assignees/reviewers/creators/admins still find their rows; comments require a readable parent",
-    "Usage docs describe Agent as a first-level row, Inbox snooze presets, and joined-only Your teams",
+    "Usage docs describe Inbox / My issues / Reviews / Agent, snooze presets, and joined-only Your teams",
     "Sidebar Your teams lists joined teams only; readable-but-unjoined public teams stay on /teams; triageEnabled=false hides triage (Devin 2f22b262)",
+    "My issues tabs are assigned/created/subscribed/activity; delegated is a filter; /reviews is its own page; /my-work redirects (Devin 443ccec4)",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -108,8 +109,8 @@
     "packages/database/src/models/__tests__/task.test.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "f73ea845",
-  "implementationHeadBeforeDocs": "f73ea845",
+  "headSha": "bbd67f20",
+  "implementationHeadBeforeDocs": "bbd67f20",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

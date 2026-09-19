@@ -235,34 +235,40 @@ bot}-callback` 经 Hatchet workflow task → `invokeHonoHandler`。ACP 子 op
 - **cron**：gatewayCron /agentSignalNightlySchedule/memory cron 跑自己的
   workflow，不经 agentStep。
 
-### 3. P70d 删除引擎（2026-09-19 依赖盘点，不可整树 rm）
+### 3. P70d 删除引擎 —— **已完成**（分支 `feat/acp-P70d-engine-deletion`，PR #107 draft，叠在 #90 上）
 
-`modules/AgentExecution`（state manager / StreamEventManager / factory）**保留**
-——ACP `heteroDispatch` 仍在用（stream init/end 发布、operation 状态）。要删的是
-引擎执行树三块，各自有存活依赖需先摘出：
+\~52k 行已删：`modules/AgentRuntime` 整树（coordinator/executors/adapters）、
+`packages/agent-runtime` 裁到 `types`/`transport`/`utils`/`audit`、
+Hatchet `agentStep` task 与 `/api/agent/run` 映射、hono `runStep` handler。
 
-- `modules/AgentRuntime`（\~7.3k 行含 adapters/tests）：
-  - 活引用：`executorHelpers.ts`（`buildServerAgentMemberRunner` /
-    `buildServerVirtualSubAgentRunner` / `registerWorkFromIntent` → 被
-    `acpBuiltinToolExec` 用）；`AgentRuntimeCoordinator.getOperationMetadata`
-    → `services/goal/index.ts:1960` 单次调用（只是 stateManager 透传）。
-  - 摘法：executorHelpers 三个函数搬到 AgentExecution 或 acpBuiltinToolExec
-    邻近文件；goal 直接调 stateManager。其余（coordinator 主体、adapters、
-    executors、ToolResultWaiter、buildHost、dispatchClientTool 等）整树删。
-- `services/agentRuntime`：facade 仍接 tRPC ctx（`createIsolatedRuntime`）。
-  存活入口：`getOperationStatus` / `getPendingInterventions` /
-  `getSubAgentTaskStatus` 的 realtime 分支 / `processHumanIntervention`（前端
-  `runAgent.internal_handleHumanIntervention` 仍调）/ `startExecution`
-  （autoStart 已死，语义同步退役）。决定项：这几个 procedure 是删还是改读
-  `agentOperations`/approval 表 —— 删 = API break，要在 PR 标注。
-  `subAgentRuns`/`approvalResume`/`threadRunHooks`/`InterventionController`/
-  `agentEvalRun`/`responses.service` 对其有类型或调用引用，逐个摘。
-- `packages/agent-runtime`：外部～69 个 import，多数 `import type`（`AgentState`
-  等）—— 类型需落到 AgentExecution 或独立 types 文件后 repoint；core/executors
-  整删。
-- hono `agent/handlers/{runStep,threadRunCallback,subAgentCallback,
-groupMemberCallback}`：引擎 plumbing，随 AgentRuntimeService 删除一起删
-  （agentStep task 的 Hatchet 注册也要一并摘）。
+**与本节原盘点的两处出入（以代码为准）**：
+
+- **四个 callback handler 不是死代码，全部保留**：hetero 派发把
+  `delivery:'hatchet'` 的钩子序列化到 op 行 `metadata._hooks`
+  （`heteroDispatch.ts` \~572），`heteroFinish` 终端路径经 `deliverWebhook` →
+  `triggerHatchetWorkflow` → `workflowTasks.ts` runners → `invokeHonoHandler`
+  送回 —— 所以 `subAgentCallback` / `groupMemberCallback` / `threadRunCallback`
+  及对应 `HATCHET_WORKFLOW_PATHS` 与 `threadRunHooks` 工厂全存活。
+  `finalizeAbandoned` 同理（gateway DO 不活跃看门狗收 silent hetero run）。
+  这些 handler 的引擎依赖（`AgentRuntimeCoordinator`）改接
+  `createAgentStateManager()`（hetero 派发仍写 `createOperationMetadata`
+  供 callback 授权父 resume；`finalizeAbandoned` 的子代理父恢复改走
+  `AiAgentService.completeSubAgentBridge` 内联执行）。
+- **lobehub 接口面保留**（用户钦定规则：lobehub 原生接口保留 API shape，
+  内部实现换 ACP 数据源）：`getOperationStatus` / `getPendingInterventions`
+  改读 `agent_operations` / `agent_interventions` + 远程 admission ledger
+  （`loadRemoteExecutionStatus`）；`processHumanIntervention` 转进
+  `resolveAgentInterventionBySource` → `dispatchClaimedAgentIntervention`
+  （ACP claim 链路）；`startExecution` 为校验型 no-op（`{scheduled:false}`，
+  autoStart 早已失效）。
+
+**已知收窄**（PR 描述同样标注）：`scheduleGroupMemberTimeout` 专属看门狗随引擎
+删除 ——K=N 完成屏障仍工作，永不终止的组员改由通用不活跃看门狗兜底。
+
+**esbuild 分块陷阱**：删引擎后 fts `observability.ts` 落到没有 otel init wrapper
+的 chunk，模块级 `metrics.getMeter` 先于 `init_esm()` 求值 → Hatchet worker bundle
+启动即崩（dockerComposeDeploy 冒烟测试抓住）。修法：instruments 惰性初始化
+（`instruments()` 首次调用才建 meter/tracer），对 chunk 求值顺序免疫。
 
 ### 4. P80 dry-run 迁移 + 回滚演练
 

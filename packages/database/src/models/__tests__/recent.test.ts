@@ -1068,6 +1068,93 @@ describe('RecentModel', () => {
           ]);
         });
 
+        it('does not surface public-visibility private-team task titles to a non-member', async () => {
+          await serverDB.insert(teams).values([
+            {
+              createdByUserId: userId,
+              id: 'recent-task-private-team',
+              key: 'RTP',
+              name: 'Secret recents team',
+              visibility: 'private',
+              workspaceId,
+            },
+            {
+              createdByUserId: userId,
+              id: 'recent-task-public-team',
+              key: 'RTU',
+              name: 'Public recents team',
+              visibility: 'public',
+              workspaceId,
+            },
+          ]);
+          await serverDB.insert(teamMembers).values({
+            teamId: 'recent-task-private-team',
+            userId,
+            workspaceId,
+          });
+          await serverDB.insert(tasks).values([
+            {
+              createdByUserId: userId,
+              id: 'recent-task-secret',
+              identifier: 'RT-SECRET',
+              instruction: 'Keep this off CommandMenu recents',
+              name: 'Secret recents task',
+              seq: 11,
+              teamId: 'recent-task-private-team',
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              assigneeUserId: otherUserId,
+              createdByUserId: userId,
+              id: 'recent-task-assigned',
+              identifier: 'RT-ASSIGNED',
+              instruction: 'Assigned on the private team',
+              name: 'Assigned recents task',
+              seq: 12,
+              teamId: 'recent-task-private-team',
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              createdByUserId: userId,
+              id: 'recent-task-public-team-work',
+              identifier: 'RT-PUBLIC',
+              instruction: 'Public-team recents work',
+              name: 'Public-team recents task',
+              seq: 13,
+              teamId: 'recent-task-public-team',
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              createdByUserId: userId,
+              id: 'recent-task-private-vis',
+              identifier: 'RT-PRIV',
+              instruction: 'Private visibility recents work',
+              name: 'Private-visibility recents task',
+              seq: 14,
+              visibility: 'private',
+              workspaceId,
+            },
+          ]);
+
+          const member = await workspaceModel.queryRecent(20, ['task']);
+          expect(member.map((row) => row.title).sort()).toEqual([
+            'Assigned recents task',
+            'Private-visibility recents task',
+            'Public-team recents task',
+            'Secret recents task',
+          ]);
+
+          const outsider = new RecentModel(serverDB, otherUserId, workspaceId);
+          const outsiderRows = await outsider.queryRecent(20, ['task']);
+          expect(outsiderRows.map((row) => row.title).sort()).toEqual([
+            'Assigned recents task',
+            'Public-team recents task',
+          ]);
+        });
+
         it('keeps work-type rows out of the personal-mode feed', async () => {
           await serverDB.insert(projects).values({
             id: 'recent-proj-personal',

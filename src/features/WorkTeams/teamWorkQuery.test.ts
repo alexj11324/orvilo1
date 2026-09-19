@@ -28,7 +28,8 @@ describe('teamWorkQuery', () => {
       groupBy: 'workflowCategory',
       layout: 'board',
     });
-    expect(teamTaskQuery('team-1').layout).toBeUndefined();
+    expect(teamTaskQuery('team-1').layout).toBe('list');
+    expect(teamTaskQuery('team-1').groupBy).toBe('status');
   });
 
   it('adds a cycleId eq predicate for an existing cycle', () => {

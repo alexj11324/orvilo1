@@ -348,13 +348,13 @@ const TeamPage = memo(() => {
       const next = await workAttentionService.query({
         afterId: last.id,
         groupKey,
-        query: teamTaskQuery(teamId, cycleId, noProject, 'board'),
+        query: teamTaskQuery(teamId, cycleId, noProject, layout),
         queryHash: teamQueryHash,
       });
       const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
       setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
     },
-    [cycleId, noProject, teamGroups, teamId, teamQueryHash],
+    [cycleId, layout, noProject, teamGroups, teamId, teamQueryHash],
   );
 
   const cycleOptions = useMemo(
@@ -484,10 +484,8 @@ const TeamPage = memo(() => {
                   : undefined
               }
               onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
+              onLoadMoreGroup={(key) => void loadMoreTeamGroup(key)}
               onMoved={refreshTriage}
-              onLoadMoreGroup={
-                layout === 'board' ? (key) => void loadMoreTeamGroup(key) : undefined
-              }
             />
           )}
         </WideScreenContainer>

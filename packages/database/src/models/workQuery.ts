@@ -417,10 +417,13 @@ export const applyWorkQueryLayout = (
 ): WorkQuery => {
   const nextLayout = layout ?? query.layout ?? 'list';
   if (nextLayout !== 'board') {
-    if (!layout && !groupBy && query.layout !== 'board') return query;
+    const nextGroupBy = groupBy ?? query.groupBy;
+    if (nextGroupBy === 'none') {
+      return { ...query, groupBy: 'none', layout: 'list' };
+    }
     return {
       ...query,
-      ...(groupBy ? { groupBy } : {}),
+      groupBy: nextGroupBy === 'workflowCategory' ? 'workflowCategory' : 'status',
       layout: 'list',
     };
   }
@@ -434,8 +437,13 @@ export const applyWorkQueryLayout = (
 export const workQueryBoardGroupBy = (
   query: WorkQuery,
 ): 'status' | 'workflowCategory' | undefined => {
-  if (query.layout !== 'board') return undefined;
-  return query.groupBy === 'status' ? 'status' : 'workflowCategory';
+  if (query.layout === 'board') {
+    return query.groupBy === 'status' ? 'status' : 'workflowCategory';
+  }
+  if (query.groupBy === 'status' || query.groupBy === 'workflowCategory') {
+    return query.groupBy;
+  }
+  return undefined;
 };
 
 const boardColumnFor = (groupBy: 'status' | 'workflowCategory') =>
@@ -443,6 +451,56 @@ const boardColumnFor = (groupBy: 'status' | 'workflowCategory') =>
 
 const stableBoardKeys = (groupBy: 'status' | 'workflowCategory'): readonly string[] =>
   groupBy === 'status' ? WORK_QUERY_STATUS_COLUMNS : WORK_QUERY_WORKFLOW_COLUMNS;
+
+/**
+ * Cordy column keys for a grouped *list*. Same membership as
+ * `workQueryTaskColumnKey` / `taskKanbanColumnKey`: Linear-linked rows follow
+ * workflow even on a status list, so In-review is needsInput, not Running.
+ */
+const WORK_QUERY_DISPLAY_COLUMNS = [
+  'triage',
+  'backlog',
+  'todo',
+  'running',
+  'needsInput',
+  'done',
+  'canceled',
+] as const;
+
+const taskListMembershipSql = (groupBy: 'status' | 'workflowCategory'): SQL<string> => {
+  if (groupBy === 'workflowCategory') {
+    return sql<string>`(case ${tasks.workflowCategory}
+      when 'in_progress' then 'running'
+      when 'in_review' then 'needsInput'
+      when 'todo' then 'todo'
+      when 'triage' then 'triage'
+      when 'done' then 'done'
+      when 'canceled' then 'canceled'
+      else 'backlog' end)`;
+  }
+  return sql<string>`(case
+    when ${tasks.workflowStateId} is not null then
+      case ${tasks.workflowCategory}
+        when 'in_progress' then 'running'
+        when 'in_review' then 'needsInput'
+        when 'todo' then 'todo'
+        when 'triage' then 'triage'
+        when 'done' then 'done'
+        when 'canceled' then 'canceled'
+        else 'backlog' end
+    else
+      case ${tasks.status}
+        when 'scheduled' then 'running'
+        when 'paused' then 'needsInput'
+        when 'failed' then 'needsInput'
+        when 'completed' then 'done'
+        when 'canceled' then 'canceled'
+        when 'running' then 'running'
+        when 'todo' then 'todo'
+        when 'triage' then 'triage'
+        else coalesce(${tasks.status}, 'backlog') end
+  end)`;
+};
 
 const externalReviewTitle = (summary: unknown, actionType: string) => {
   if (summary && typeof summary === 'object' && 'title' in summary) {
@@ -617,6 +675,7 @@ export class WorkQueryModel {
         conditions,
         groupBy,
         groupKey: params.groupKey,
+        layout: query.layout === 'board' ? 'board' : 'list',
         limit,
         queryHash,
         requestedHash: params.queryHash,
@@ -678,6 +737,7 @@ export class WorkQueryModel {
     conditions: SQL[];
     groupBy: 'status' | 'workflowCategory';
     groupKey?: string;
+    layout: WorkQueryLayout;
     limit: number;
     queryHash: string;
     requestedHash?: string;
@@ -690,7 +750,11 @@ export class WorkQueryModel {
       throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
     }
 
-    const column = boardColumnFor(params.groupBy);
+    const displayColumns = params.layout !== 'board';
+    const membership = displayColumns ? taskListMembershipSql(params.groupBy) : undefined;
+    const column = membership ?? boardColumnFor(params.groupBy);
+    const matchesKey = (key: string): SQL =>
+      membership ? sql`${membership} = ${key}` : eq(boardColumnFor(params.groupBy), key as never);
     const countRows = await this.db
       .select({ count: sql<number>`count(*)`, key: column })
       .from(tasks)
@@ -703,7 +767,7 @@ export class WorkQueryModel {
     }
     const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
 
-    const stable = stableBoardKeys(params.groupBy);
+    const stable = displayColumns ? WORK_QUERY_DISPLAY_COLUMNS : stableBoardKeys(params.groupBy);
     const extra = [...countByKey.keys()]
       .filter((key) => !(stable as readonly string[]).includes(key))
       .sort();
@@ -720,7 +784,7 @@ export class WorkQueryModel {
           return { hasMore: groupTotal > 0, key, tasks: [], total: groupTotal };
         }
 
-        const groupConditions: SQL[] = [...params.conditions, eq(column, key as never)];
+        const groupConditions: SQL[] = [...params.conditions, matchesKey(key)];
         if (params.afterId) {
           const [cursor] = await this.db
             .select()
@@ -752,7 +816,7 @@ export class WorkQueryModel {
     return {
       groupBy: params.groupBy,
       groups,
-      layout: 'board' as const,
+      layout: params.layout,
       queryHash: params.queryHash,
       tasks: groups.flatMap((group) => group.tasks),
       total,

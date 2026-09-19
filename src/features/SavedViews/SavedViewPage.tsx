@@ -463,14 +463,10 @@ const SavedViewPage = memo(() => {
             movable={(evaluation?.layout ?? viewLayout) === 'board'}
             tasks={tasks}
             total={evaluation?.total}
+            onLoadMoreGroup={(key) => void loadMoreGroup(key)}
             onMoved={() => void refreshView()}
             onLoadMore={
               (evaluation?.layout ?? viewLayout) === 'list' ? () => void loadMore() : undefined
-            }
-            onLoadMoreGroup={
-              (evaluation?.layout ?? viewLayout) === 'board'
-                ? (key) => void loadMoreGroup(key)
-                : undefined
             }
           />
         )}

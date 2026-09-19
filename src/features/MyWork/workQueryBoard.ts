@@ -126,6 +126,33 @@ export const workQueryListGroups = (
   })).filter((group) => group.tasks.length > 0);
 };
 
+/**
+ * Prefer the server's grouped page (full-set totals, per-column cursors).
+ * Client rebucketing is only a fallback when the query is still a flat list.
+ */
+export const workQueryListSections = (
+  groups: readonly WorkQueryGroupPage<WorkQueryResultTask>[] | undefined,
+  tasks: readonly WorkQueryResultTask[],
+  groupBy: 'status' | 'workflowCategory',
+): {
+  hasMore?: boolean;
+  key: string;
+  tasks: WorkQueryResultTask[];
+  total?: number;
+}[] => {
+  if (groups && groups.length > 0) {
+    return groups
+      .filter((group) => group.total > 0 || group.tasks.length > 0)
+      .map((group) => ({
+        hasMore: group.hasMore,
+        key: group.key,
+        tasks: group.tasks,
+        total: group.total,
+      }));
+  }
+  return workQueryListGroups(tasks, groupBy);
+};
+
 export const cascadeStatusForBoardKey = (
   groupBy: 'status' | 'workflowCategory',
   key: string,

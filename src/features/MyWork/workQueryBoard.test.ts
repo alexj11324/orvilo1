@@ -9,6 +9,7 @@ import {
   workQueryBoardGroups,
   workQueryListGroupBy,
   workQueryListGroups,
+  workQueryListSections,
   workQueryMovePlan,
   workQuerySourceKeysForKanbanColumn,
   workQueryTargetKeyFromKanbanColumn,
@@ -247,5 +248,26 @@ describe('workQueryListGroups', () => {
     expect(groups.find((group) => group.key === 'running')?.tasks.map((item) => item.id)).toEqual([
       'b',
     ]);
+  });
+
+  it('prefers server group totals instead of rearranging the loaded page', () => {
+    const sections = workQueryListSections(
+      [
+        {
+          hasMore: true,
+          key: 'running',
+          tasks: [task({ id: 'page-1', status: 'running' })],
+          total: 3,
+        },
+      ],
+      [task({ id: 'page-1', status: 'running' }), task({ id: 'other', status: 'backlog' })],
+      'status',
+    );
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.key).toBe('running');
+    expect(sections[0]?.total).toBe(3);
+    expect(sections[0]?.hasMore).toBe(true);
+    expect(sections[0]?.tasks.map((item) => item.id)).toEqual(['page-1']);
   });
 });

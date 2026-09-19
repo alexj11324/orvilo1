@@ -40,7 +40,9 @@ export const teamTaskQuery = (
   layout: WorkQueryLayout = 'list',
 ): WorkQuery => {
   const query = withTeamScope(teamId, [], cycleId, noProject);
-  if (layout !== 'board') return query;
+  if (layout !== 'board') {
+    return { ...query, groupBy: 'status', layout: 'list' };
+  }
   return { ...query, groupBy: 'workflowCategory', layout: 'board' };
 };
 

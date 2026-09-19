@@ -27,7 +27,7 @@ import { externalReviewIdentifier, externalReviewOpenHref } from './externalRevi
 import {
   workQueryBoardGroups,
   workQueryListGroupBy,
-  workQueryListGroups,
+  workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
 import {
@@ -174,50 +174,63 @@ WorkQueryTaskRow.displayName = 'WorkQueryTaskRow';
  */
 const WorkQueryStatusGroup = memo<{
   columnKey: string;
+  hasMore?: boolean;
   isFollowed?: (taskId: string) => boolean;
+  loadMoreLabel?: string;
+  onLoadMore?: () => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
   tasks: WorkQueryResultTask[];
-}>(({ columnKey, isFollowed, onToggleFollow, tasks }) => {
-  const { t } = useTranslation('chat');
-  const [collapsed, setCollapsed] = useState(false);
-  const visual = COLUMN_STATUS_VISUAL[columnKey];
-  const labelKey = COLUMN_I18N_KEYS[columnKey];
+  total?: number;
+}>(
+  ({ columnKey, hasMore, isFollowed, loadMoreLabel, onLoadMore, onToggleFollow, tasks, total }) => {
+    const { t } = useTranslation('chat');
+    const [collapsed, setCollapsed] = useState(false);
+    const visual = COLUMN_STATUS_VISUAL[columnKey];
+    const labelKey = COLUMN_I18N_KEYS[columnKey];
 
-  return (
-    <Flexbox>
-      <button
-        aria-expanded={!collapsed}
-        className={styles.groupHeader}
-        type="button"
-        onClick={() => setCollapsed((current) => !current)}
-      >
-        <ChevronDownIcon
-          className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
-          size={14}
-        />
-        {visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
-        <Text fontSize={12} weight={500}>
-          {labelKey ? t(labelKey as never) : columnKey}
-        </Text>
-        <Text fontSize={12} type={'secondary'}>
-          {tasks.length}
-        </Text>
-      </button>
-      {collapsed ? null : (
-        <Flexbox>
-          {tasks.map((task) => (
-            <WorkQueryTaskRow
-              followed={isFollowed?.(task.id)}
-              key={task.id}
-              task={task}
-              onToggleFollow={onToggleFollow}
-            />
-          ))}
-        </Flexbox>
-      )}
-    </Flexbox>
-  );
-});
+    return (
+      <Flexbox>
+        <button
+          aria-expanded={!collapsed}
+          className={styles.groupHeader}
+          type="button"
+          onClick={() => setCollapsed((current) => !current)}
+        >
+          <ChevronDownIcon
+            className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
+            size={14}
+          />
+          {visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
+          <Text fontSize={12} weight={500}>
+            {labelKey ? t(labelKey as never) : columnKey}
+          </Text>
+          <Text fontSize={12} type={'secondary'}>
+            {total ?? tasks.length}
+          </Text>
+        </button>
+        {collapsed ? null : (
+          <Flexbox>
+            {tasks.map((task) => (
+              <WorkQueryTaskRow
+                followed={isFollowed?.(task.id)}
+                key={task.id}
+                task={task}
+                onToggleFollow={onToggleFollow}
+              />
+            ))}
+            {hasMore && onLoadMore && loadMoreLabel ? (
+              <Flexbox horizontal justify={'center'}>
+                <Button size="small" onClick={() => void onLoadMore()}>
+                  {loadMoreLabel}
+                </Button>
+              </Flexbox>
+            ) : null}
+          </Flexbox>
+        )}
+      </Flexbox>
+    );
+  },
+);
 
 WorkQueryStatusGroup.displayName = 'WorkQueryStatusGroup';
 
@@ -287,6 +300,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const { t } = useTranslation(['common', 'chat']);
     const boardGroupBy = groupBy === 'status' ? 'status' : 'workflowCategory';
     const listGroupBy = workQueryListGroupBy(groupBy);
+    const listSections = workQueryListSections(groups, tasks, listGroupBy);
+    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
 
     const reviewBlock = externalReviews ? (
       <Flexbox gap={8}>
@@ -341,24 +356,30 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     return (
       <Flexbox gap={16}>
         {reviewBlock}
-        {tasks.length === 0 ? (
+        {listSections.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty description={emptyLabel} icon={ListTodoIcon} />
           </Center>
         ) : (
           <Flexbox gap={8}>
-            {workQueryListGroups(tasks, listGroupBy).map((group) => (
+            {listSections.map((group) => (
               <WorkQueryStatusGroup
                 columnKey={group.key}
+                hasMore={pageGroupPaging ? group.hasMore : false}
                 isFollowed={isFollowed}
                 key={group.key}
+                loadMoreLabel={loadMoreLabel}
                 tasks={group.tasks}
+                total={group.total}
                 onToggleFollow={onToggleFollow}
+                onLoadMore={
+                  pageGroupPaging && onLoadMoreGroup ? () => onLoadMoreGroup(group.key) : undefined
+                }
               />
             ))}
           </Flexbox>
         )}
-        {onLoadMore && workQueryHasMore(tasks.length, total) ? (
+        {onLoadMore && !pageGroupPaging && workQueryHasMore(tasks.length, total) ? (
           <Flexbox horizontal justify={'center'}>
             <Button size="small" onClick={() => void onLoadMore()}>
               {loadMoreLabel}

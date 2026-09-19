@@ -12,7 +12,13 @@ import { tasks as tasksTable } from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskSubscriptionModel } from '../taskSubscription';
-import { myWorkQueryForMode, WorkQueryError, WorkQueryModel } from '../workQuery';
+import {
+  applyWorkQueryLayout,
+  myWorkQueryForMode,
+  workQueryBoardGroupBy,
+  WorkQueryError,
+  WorkQueryModel,
+} from '../workQuery';
 
 const serverDB: OrviloDatabase = await getTestDB();
 
@@ -39,6 +45,29 @@ const createTask = async (owner: string, values: Partial<typeof tasks.$inferInse
   const model = new TaskModel(serverDB, owner, workspaceId);
   return model.create({ instruction: values.instruction ?? 'Do the work', ...values });
 };
+
+describe('applyWorkQueryLayout', () => {
+  it('defaults a list to server status groups and keeps an explicit none flat', () => {
+    const assigned = myWorkQueryForMode('assigned');
+    expect(applyWorkQueryLayout(assigned, 'list')).toMatchObject({
+      groupBy: 'status',
+      layout: 'list',
+    });
+    expect(applyWorkQueryLayout(assigned, 'list', 'none')).toMatchObject({
+      groupBy: 'none',
+      layout: 'list',
+    });
+    expect(applyWorkQueryLayout(assigned, 'board')).toMatchObject({
+      groupBy: 'workflowCategory',
+      layout: 'board',
+    });
+    expect(workQueryBoardGroupBy(applyWorkQueryLayout(assigned, 'list'))).toBe('status');
+    expect(workQueryBoardGroupBy({ ...assigned, groupBy: 'none', layout: 'list' })).toBeUndefined();
+    expect(workQueryBoardGroupBy({ ...assigned, groupBy: 'none', layout: 'board' })).toBe(
+      'workflowCategory',
+    );
+  });
+});
 
 describe('validateWorkQuery', () => {
   it('rejects unknown fields instead of silently widening', async () => {
@@ -403,6 +432,58 @@ describe('WorkQueryModel', () => {
     expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[0]!.id);
     expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[1]!.id);
     expect(second.groups?.find((group) => group.key === 'done')?.total).toBe(1);
+  });
+
+  it('groups a list in the database so status sections are not a page rearrange', async () => {
+    const stamp = new Date('2026-09-18T16:00:00Z');
+    const parent = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Parent running',
+      status: 'running',
+    });
+    const child = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Child in review',
+      parentTaskId: parent.id,
+      status: 'running',
+      workflowCategory: 'in_review',
+      workflowStateId: 'linear-state-review',
+    });
+    const extraRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Another running',
+      status: 'running',
+    });
+    await serverDB
+      .update(tasksTable)
+      .set({ updatedAt: stamp })
+      .where(inArray(tasksTable.id, [parent.id, child.id, extraRunning.id]));
+
+    const query = applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list');
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const first = await model.queryTasks({ limit: 1, query });
+
+    expect(query.groupBy).toBe('status');
+    expect(first.layout).toBe('list');
+    expect(first.total).toBe(3);
+    const byKey = new Map(first.groups?.map((group) => [group.key, group]));
+    expect(byKey.get('running')?.total).toBe(2);
+    expect(byKey.get('running')?.tasks).toHaveLength(1);
+    expect(byKey.get('needsInput')?.total).toBe(1);
+    expect(byKey.get('needsInput')?.tasks.map((row) => row.id)).toEqual([child.id]);
+
+    const second = await model.queryTasks({
+      afterId: byKey.get('running')!.tasks[0]!.id,
+      groupKey: 'running',
+      limit: 1,
+      query,
+      queryHash: first.queryHash,
+    });
+    const runningPage = second.groups?.find((group) => group.key === 'running');
+    expect(runningPage?.total).toBe(2);
+    expect(runningPage?.tasks).toHaveLength(1);
+    expect(runningPage?.tasks[0]!.id).not.toBe(byKey.get('running')!.tasks[0]!.id);
+    expect(second.groups?.find((group) => group.key === 'needsInput')?.total).toBe(1);
   });
 
   it('lists a readable PR review without creating a Task', async () => {

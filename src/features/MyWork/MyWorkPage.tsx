@@ -31,7 +31,7 @@ import { workAttentionService } from '@/services/workAttention';
 import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
 import { isMyWorkBoardMode } from './workQueryBoard';
-import { mergeWorkQueryPage } from './workQueryPaging';
+import { mergeWorkQueryGroups } from './workQueryPaging';
 import WorkQueryResults from './WorkQueryResults';
 
 const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
@@ -67,14 +67,16 @@ const MyWorkPage = memo(() => {
     () => workAttentionService.myWork({ layout: 'list', mode, noProject }),
   );
   const firstTasks = data?.data.tasks ?? [];
+  const firstGroups = data?.data.groups ?? [];
   const queryHash = data?.data.queryHash;
-  const [tail, setTail] = useState<typeof firstTasks>([]);
+  const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
   useEffect(() => {
-    setTail([]);
+    setGroupTail([]);
     setExtraSubscribed([]);
   }, [layout, mode, noProject, queryHash, workspaceId]);
-  const tasks = mergeWorkQueryPage(firstTasks, tail);
+  const tasks = firstTasks;
+  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   const boardViewOptions = useMemo(() => getMyTaskViewOptions(DEFAULT_TASK_LIST_VIEW_OPTIONS), []);
   const subscribedTaskIds = [...(data?.data.subscribedTaskIds ?? []), ...extraSubscribed];
   const canSaveAs = isMyWorkSaveableMode(mode);
@@ -83,19 +85,24 @@ const MyWorkPage = memo(() => {
     await mutate(workAttentionKeys.myWork(workspaceId, mode, layout, noProject));
   }, [layout, mode, noProject, workspaceId]);
 
-  const loadMore = useCallback(async () => {
-    const last = tasks.at(-1);
-    if (!last || !queryHash) return;
-    const next = await workAttentionService.myWork({
-      afterId: last.id,
-      layout: canBoard ? layout : 'list',
-      mode,
-      noProject,
-      queryHash,
-    });
-    setTail((current) => mergeWorkQueryPage(current, next.data.tasks));
-    setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
-  }, [canBoard, layout, mode, noProject, queryHash, tasks]);
+  const loadMoreGroup = useCallback(
+    async (groupKey: string) => {
+      const column = groups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      if (!last || !queryHash) return;
+      const next = await workAttentionService.myWork({
+        afterId: last.id,
+        groupKey,
+        layout: 'list',
+        mode,
+        noProject,
+        queryHash,
+      });
+      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
+      setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
+    },
+    [groups, mode, noProject, queryHash],
+  );
 
   const tabs = useMemo(
     () =>
@@ -213,13 +220,15 @@ const MyWorkPage = memo(() => {
           <WorkQueryResults
             emptyLabel={t('myWork.empty')}
             externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
+            groupBy={data?.data.groupBy}
+            groups={groups}
             isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
             loadMoreLabel={t('myWork.loadMore')}
             loading={isLoading}
             loadingLabel={t('myWork.loading')}
             tasks={tasks}
             total={data?.data.total}
-            onLoadMore={layout === 'list' ? () => void loadMore() : undefined}
+            onLoadMoreGroup={(key) => void loadMoreGroup(key)}
             onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
           />
         )}

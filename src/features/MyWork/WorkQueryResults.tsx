@@ -16,10 +16,6 @@ import { useTranslation } from 'react-i18next';
 
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
 import {
-  KANBAN_STATUS_COLUMN_KEY,
-  STATUS_KANBAN_COLUMNS,
-} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
-import {
   COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
 } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
@@ -28,7 +24,12 @@ import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
-import { workQueryBoardGroups, workQuerySourceKeysForKanbanColumn } from './workQueryBoard';
+import {
+  workQueryBoardGroups,
+  workQueryListGroupBy,
+  workQueryListGroups,
+  workQuerySourceKeysForKanbanColumn,
+} from './workQueryBoard';
 import {
   type WorkQueryGroupPage,
   workQueryHasMore,
@@ -166,9 +167,10 @@ const WorkQueryTaskRow = memo(
 WorkQueryTaskRow.displayName = 'WorkQueryTaskRow';
 
 /**
- * Linear's default list is status-grouped with collapsible headers. Bucket the
- * flat result set into board column order so a view reads the same whether it
- * renders as a list or a board.
+ * Collapsible status headers in Linear's list order. Membership uses the
+ * same Cordy column keys as the board (`workQueryListGroups`) so a Linear
+ * In-review card does not sit under Running in the list and Needs input
+ * on the board.
  */
 const WorkQueryStatusGroup = memo<{
   columnKey: string;
@@ -218,22 +220,6 @@ const WorkQueryStatusGroup = memo<{
 });
 
 WorkQueryStatusGroup.displayName = 'WorkQueryStatusGroup';
-
-const groupTasksByStatusColumn = (
-  tasks: WorkQueryResultTask[],
-): { key: string; tasks: WorkQueryResultTask[] }[] => {
-  const buckets = new Map<string, WorkQueryResultTask[]>();
-  for (const task of tasks) {
-    const key = KANBAN_STATUS_COLUMN_KEY[task.status ?? ''] ?? 'backlog';
-    const bucket = buckets.get(key);
-    if (bucket) bucket.push(task);
-    else buckets.set(key, [task]);
-  }
-  return STATUS_KANBAN_COLUMNS.map((col) => ({
-    key: col.key,
-    tasks: buckets.get(col.key) ?? [],
-  })).filter((group) => group.tasks.length > 0);
-};
 
 const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ review }) => {
   const href = externalReviewOpenHref(review.openUrl);
@@ -300,6 +286,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
   }) => {
     const { t } = useTranslation(['common', 'chat']);
     const boardGroupBy = groupBy === 'status' ? 'status' : 'workflowCategory';
+    const listGroupBy = workQueryListGroupBy(groupBy);
 
     const reviewBlock = externalReviews ? (
       <Flexbox gap={8}>
@@ -360,7 +347,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           </Center>
         ) : (
           <Flexbox gap={8}>
-            {groupTasksByStatusColumn(tasks).map((group) => (
+            {workQueryListGroups(tasks, listGroupBy).map((group) => (
               <WorkQueryStatusGroup
                 columnKey={group.key}
                 isFollowed={isFollowed}

@@ -7,9 +7,12 @@ import {
   cascadeStatusForBoardKey,
   isMyWorkBoardMode,
   workQueryBoardGroups,
+  workQueryListGroupBy,
+  workQueryListGroups,
   workQueryMovePlan,
   workQuerySourceKeysForKanbanColumn,
   workQueryTargetKeyFromKanbanColumn,
+  workQueryTaskColumnKey,
 } from './workQueryBoard';
 import type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -184,5 +187,58 @@ describe('cascadeStatusForBoardKey', () => {
     expect(cascadeStatusForBoardKey('workflowCategory', 'done')).toBe('completed');
     expect(cascadeStatusForBoardKey('status', 'canceled')).toBe('canceled');
     expect(cascadeStatusForBoardKey('workflowCategory', 'todo')).toBeNull();
+  });
+});
+
+describe('workQueryTaskColumnKey', () => {
+  it('puts Linear-linked In review cards in needsInput, matching the board', () => {
+    expect(
+      workQueryTaskColumnKey(
+        { status: 'running', workflowCategory: 'in_review', workflowStateId: 'state-1' },
+        'status',
+      ),
+    ).toBe('needsInput');
+  });
+
+  it('keeps unlinked execution status on a status list', () => {
+    expect(workQueryTaskColumnKey({ status: 'running', workflowCategory: 'todo' }, 'status')).toBe(
+      'running',
+    );
+  });
+
+  it('groups a workflow view by category even without a linked state', () => {
+    expect(
+      workQueryTaskColumnKey({ status: 'running', workflowCategory: 'todo' }, 'workflowCategory'),
+    ).toBe('todo');
+  });
+});
+
+describe('workQueryListGroups', () => {
+  it('defaults ungrouped lists to the status board, not workflow', () => {
+    expect(workQueryListGroupBy(undefined)).toBe('status');
+    expect(workQueryListGroupBy('none')).toBe('status');
+    expect(workQueryListGroupBy('workflowCategory')).toBe('workflowCategory');
+  });
+
+  it('does not park a Linear In-review card under Running', () => {
+    const groups = workQueryListGroups(
+      [
+        task({
+          id: 'a',
+          status: 'running',
+          workflowCategory: 'in_review',
+          workflowStateId: 'state-1',
+        }),
+        task({ id: 'b', status: 'running' }),
+      ],
+      'status',
+    );
+
+    expect(
+      groups.find((group) => group.key === 'needsInput')?.tasks.map((item) => item.id),
+    ).toEqual(['a']);
+    expect(groups.find((group) => group.key === 'running')?.tasks.map((item) => item.id)).toEqual([
+      'b',
+    ]);
   });
 });

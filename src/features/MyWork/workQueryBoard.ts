@@ -5,6 +5,7 @@ import {
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
   type KanbanColumnDefinition,
+  STATUS_KANBAN_COLUMNS,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import type { TaskGroupItem } from '@/store/task/slices/list/initialState';
 
@@ -73,6 +74,49 @@ export const workQueryBoardGroups = (
     }
   }
   return [...byColumn.values()];
+};
+
+/**
+ * The Cordy column a work-query row belongs in — same membership rule the
+ * shared board uses. Linear-linked cards (`workflowStateId`) follow the
+ * workflow category (`in_review`→needsInput) even on a status-grouped list,
+ * so list headers and the board do not disagree.
+ */
+export const workQueryTaskColumnKey = (
+  task: Pick<WorkQueryBoardTask, 'status' | 'workflowCategory' | 'workflowStateId'>,
+  groupBy: 'status' | 'workflowCategory',
+): string => {
+  if (groupBy === 'workflowCategory' || task.workflowStateId) {
+    return KANBAN_WORKFLOW_COLUMN_KEY[task.workflowCategory as TaskWorkflowCategory] ?? 'backlog';
+  }
+  return KANBAN_STATUS_COLUMN_KEY[(task.status ?? 'backlog') as TaskStatus] ?? 'backlog';
+};
+
+/**
+ * Ungrouped / status lists keep execution-status buckets; a view that
+ * grouped by workflow category keeps that dimension. `none` and missing
+ * `groupBy` follow the status board so My Work's list matches its kanban.
+ */
+export const workQueryListGroupBy = (
+  groupBy: 'none' | 'status' | 'workflowCategory' | undefined,
+): 'status' | 'workflowCategory' =>
+  groupBy === 'workflowCategory' ? 'workflowCategory' : 'status';
+
+export const workQueryListGroups = (
+  tasks: readonly WorkQueryResultTask[],
+  groupBy: 'status' | 'workflowCategory',
+): { key: string; tasks: WorkQueryResultTask[] }[] => {
+  const buckets = new Map<string, WorkQueryResultTask[]>();
+  for (const task of tasks) {
+    const key = workQueryTaskColumnKey(task, groupBy);
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(task);
+    else buckets.set(key, [task]);
+  }
+  return STATUS_KANBAN_COLUMNS.map((column) => ({
+    key: column.key,
+    tasks: buckets.get(column.key) ?? [],
+  })).filter((group) => group.tasks.length > 0);
 };
 
 export const cascadeStatusForBoardKey = (

@@ -39,6 +39,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
     addGitWorktree: vi.fn(),
     isConfigured: false,
     listGitRemoteBranches: vi.fn(),
+    listGitWorktrees: vi.fn(),
     removeGitWorktree: vi.fn(),
   },
 }));
@@ -103,6 +104,7 @@ describe('TaskWorkspaceService', () => {
     vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
       { isDefault: true, name: 'origin/main' },
     ]);
+    vi.mocked(deviceGateway.listGitWorktrees).mockResolvedValue([]);
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
   });
@@ -203,6 +205,10 @@ describe('TaskWorkspaceService', () => {
     });
 
     it('prefers an explicit baseBranch and deviceId over inferred ones', async () => {
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main' },
+        { isDefault: false, name: 'origin/canary' },
+      ]);
       const task = baseTask({
         config: {
           workspace: { ...workspaceConfig, baseBranch: 'canary', deviceId: 'dev-explicit' },
@@ -231,6 +237,86 @@ describe('TaskWorkspaceService', () => {
         'Workspace device is unavailable',
       );
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('fails an explicit baseBranch that does not exist on the device repo', async () => {
+      const task = baseTask({
+        config: { workspace: { ...workspaceConfig, baseBranch: 'release-9' } },
+      });
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow('origin/release-9');
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('rejects a relative repoPath before touching the device', async () => {
+      const task = baseTask({
+        config: { workspace: { provider: 'git', repoPath: 'repos/orvilo' } },
+      });
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow('absolute path');
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('reuses the same-path worktree when an identical provision replays after a crash', async () => {
+      vi.mocked(deviceGateway.listGitWorktrees).mockResolvedValue([
+        {
+          branch: 'task/T-1',
+          current: false,
+          path: '/repos/orvilo-task-T-1',
+        },
+      ]);
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      const result = await service.provision({ seq: 1, task });
+
+      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('clears a stale same-path leftover before re-provisioning', async () => {
+      vi.mocked(deviceGateway.listGitWorktrees).mockResolvedValue([
+        {
+          branch: 'task/T-9',
+          current: false,
+          path: '/repos/orvilo-task-T-1',
+        },
+      ]);
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      const result = await service.provision({ seq: 1, task });
+
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ force: true, worktreePath: '/repos/orvilo-task-T-1' }),
+      );
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(1);
+      expect(result?.branch).toBe('task/T-1');
+    });
+
+    it('clears an unlisted leftover directory once after a crashed worktree add', async () => {
+      vi.mocked(deviceGateway.addGitWorktree)
+        .mockResolvedValueOnce({ error: 'path already exists', success: false })
+        .mockResolvedValueOnce({ success: true });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      const result = await service.provision({ seq: 1, task });
+
+      expect(result?.branch).toBe('task/T-1');
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(1);
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(2);
+    });
+
+    it('surfaces the add failure when recovery cannot clear it', async () => {
+      vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({
+        error: 'permission denied',
+        success: false,
+      });
+      vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({
+        error: 'permission denied',
+        success: false,
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'Failed to provision task workspace',
+      );
     });
 
     it('throws when the worktree RPC fails', async () => {

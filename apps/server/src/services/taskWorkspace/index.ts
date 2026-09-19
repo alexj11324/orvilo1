@@ -1,4 +1,6 @@
 import type {
+  DeviceGitAddWorktreeResult,
+  DeviceGitRemoteBranchListItem,
   OrviloAgentAgencyConfig,
   TaskItem,
   TaskTopicIntegration,
@@ -158,10 +160,7 @@ export class TaskWorkspaceService {
         : null;
     const deviceId = config.deviceId ?? agent?.agencyConfig?.boundDeviceId;
 
-    if (
-      config.repo &&
-      runsInSandbox(agent?.agencyConfig ?? undefined, config.deviceId)
-    ) {
+    if (config.repo && runsInSandbox(agent?.agencyConfig ?? undefined, config.deviceId)) {
       return this.provisionOnRemote({
         config,
         credKey: agent?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY,
@@ -174,9 +173,10 @@ export class TaskWorkspaceService {
       return this.provisionOnDevice({ config, deviceId, seq, task });
     }
 
-    const reason = config.repoPath && !deviceId
-      ? 'Workspace device is unavailable or not configured'
-      : 'Workspace binding does not match the selected execution target';
+    const reason =
+      config.repoPath && !deviceId
+        ? 'Workspace device is unavailable or not configured'
+        : 'Workspace binding does not match the selected execution target';
     log('provision: %s cannot provision workspace — %s', task.identifier, reason);
     throw new Error(reason);
   }
@@ -190,19 +190,84 @@ export class TaskWorkspaceService {
   }): Promise<ProvisionedWorkspace> {
     const { config, deviceId, seq, task } = params;
     const repoPath = config.repoPath!;
+    // `deriveWorktreePath` composes a sibling directory of the repo path; a
+    // relative or bare name would silently land somewhere else on the device.
+    const looksAbsolute =
+      repoPath.startsWith('/') || /^[a-z]:[\\/]/i.test(repoPath) || repoPath.startsWith('\\\\');
+    if (!looksAbsolute) {
+      throw new Error(`Workspace repoPath must be an absolute path on the device: ${repoPath}`);
+    }
     const { baseBranch, forkRef } = await this.resolveBase(task, config, repoPath, deviceId);
 
     const branch = taskBranchName(task.identifier, seq);
     const worktreePath = deriveWorktreePath(repoPath, branch);
-    const added = await deviceGateway.addGitWorktree({
-      branch,
+
+    // Recovery from an interrupted provisioning: the convention-derived path
+    // is only ever created by this service and nothing has ever run inside it
+    // (topic registration happens after the add), so reusing an identical one
+    // or clearing a stale same-path leftover is idempotent — never a user
+    // worktree.
+    const existing = await deviceGateway.listGitWorktrees({
       deviceId,
       path: repoPath,
-      ref: forkRef,
       userId: this.userId,
       workspaceId: this.workspaceId,
-      worktreePath,
     });
+    const leftover = existing?.find((worktree) => worktree.path === worktreePath);
+    let added: DeviceGitAddWorktreeResult;
+    if (leftover?.branch === branch) {
+      // Identical provision call replayed after a crash between add and
+      // registration; the worktree is already ours.
+      added = { success: true };
+    } else {
+      if (leftover) {
+        const removed = await deviceGateway.removeGitWorktree({
+          deviceId,
+          force: true,
+          path: repoPath,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+          worktreePath,
+        });
+        if (!removed.success) {
+          throw new Error(
+            `Failed to provision task workspace: stale worktree at ${worktreePath} could not be removed`,
+          );
+        }
+      }
+      added = await deviceGateway.addGitWorktree({
+        branch,
+        deviceId,
+        path: repoPath,
+        ref: forkRef,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+        worktreePath,
+      });
+      if (!added.success && !leftover) {
+        // A crashed `worktree add` can leave a directory git no longer lists.
+        // Clearing our own convention path once is the bounded recovery.
+        const removed = await deviceGateway.removeGitWorktree({
+          deviceId,
+          force: true,
+          path: repoPath,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+          worktreePath,
+        });
+        if (removed.success) {
+          added = await deviceGateway.addGitWorktree({
+            branch,
+            deviceId,
+            path: repoPath,
+            ref: forkRef,
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+            worktreePath,
+          });
+        }
+      }
+    }
     if (!added.success) {
       throw new Error(
         `Failed to provision task workspace: ${added.error ?? 'worktree add failed'}`,
@@ -296,23 +361,35 @@ export class TaskWorkspaceService {
     repoPath: string,
     deviceId: string,
   ): Promise<{ baseBranch: string; forkRef?: string }> {
-    if (config.baseBranch)
-      return { baseBranch: config.baseBranch, forkRef: `origin/${config.baseBranch}` };
-
+    // The listing doubles as the availability preflight: a repo that cannot
+    // answer it cannot provision a worktree either, and an explicit baseBranch
+    // must name a real `origin/<base>` ref instead of failing mid-add.
+    let remotes: DeviceGitRemoteBranchListItem[] | undefined;
     try {
-      const remotes = await deviceGateway.listGitRemoteBranches({
+      remotes = await deviceGateway.listGitRemoteBranches({
         deviceId,
         path: repoPath,
         userId: this.userId,
         workspaceId: this.workspaceId,
       });
-      const defaultRemote = remotes?.find((b) => b.isDefault)?.name;
-      if (defaultRemote) {
-        const baseBranch = defaultRemote.replace(/^origin\//, '');
-        return { baseBranch, forkRef: defaultRemote };
-      }
     } catch (error) {
       log('resolveBase: remote lookup failed for %s — %O', task.identifier, error);
+    }
+
+    if (config.baseBranch) {
+      const forkRef = `origin/${config.baseBranch}`;
+      if (remotes && remotes.length > 0 && !remotes.some((b) => b.name === forkRef)) {
+        throw new Error(
+          `Workspace base branch "${forkRef}" does not exist on the device repository`,
+        );
+      }
+      return { baseBranch: config.baseBranch, forkRef };
+    }
+
+    const defaultRemote = remotes?.find((b) => b.isDefault)?.name;
+    if (defaultRemote) {
+      const baseBranch = defaultRemote.replace(/^origin\//, '');
+      return { baseBranch, forkRef: defaultRemote };
     }
 
     throw new Error(

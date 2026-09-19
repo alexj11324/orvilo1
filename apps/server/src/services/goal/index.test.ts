@@ -29,7 +29,7 @@ import {
   users,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
-import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime/AgentRuntimeCoordinator';
+import { InMemoryAgentStateManager } from '@/server/modules/AgentExecution/InMemoryAgentStateManager';
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
@@ -2108,7 +2108,7 @@ describe('GoalService', () => {
       { operationId: 'op-stale-cost', topicId: 'topic-stale-cost' } as never,
     ]);
     vi.spyOn(TaskTopicModel.prototype, 'updateStatus').mockResolvedValue(undefined);
-    vi.spyOn(AgentRuntimeCoordinator.prototype, 'getOperationMetadata').mockResolvedValue({
+    vi.spyOn(InMemoryAgentStateManager.prototype, 'getOperationMetadata').mockResolvedValue({
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       status: 'running',

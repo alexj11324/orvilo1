@@ -222,6 +222,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `2f22b262`：Devin joined-only Your teams + `triageEnabled` 门控。不要回滚。
 - `443ccec4`：Devin F01 My issues 标签（assigned/created/subscribed/activity）+ delegated 筛选 + `/reviews` 独立页。`/my-work` 重定向。不要回滚。
 - `bbd67f20`：TRI05 任务详情 /list/update。`TaskModel.ownership()` AND `buildTaskTeamReadableWhere`。回归先失败后通过：非成员 `findById` 曾返回整行。`bun run check` 改动文件 lint 干净，`task.test.ts` 202 passed；连同 `taskDomainContract` / `workQuery` / `notification` 共 291 passed。不是 64× AC。不要把团队 ACL 接到 `seqOwnership()`。
+- `75aadde6`：END04 用法文档对齐 My issues / `/reviews` / `/my-work` 重定向。lint 干净。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

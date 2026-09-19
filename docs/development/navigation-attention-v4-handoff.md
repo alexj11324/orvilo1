@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                     |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                       |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                |
-| 实施 HEAD（本交接提交之前）      | `b4136da6` `✨ feat(nav): resolve task, team, and project favorite titles`                  |
+| 实施 HEAD（本交接提交之前）      | `ad838850` `🐛 fix(nav): show project views and page past null sorts`                       |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                      |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                          |
 | 远端 canary 现已走到             | `73257dff`（#80 quota）。PR `mergeable_state: behind`。**未授权 rebase，不要自行 rebase。** |
@@ -56,43 +56,29 @@
 - Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Linear-linked 不再绕 `task.update` 分类映射
 - Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）
 - Team Triage：accept/decline/duplicate/reassign + `moveToTeam` CAS（TRI02）；`duplicate_of_task_id`（TRI03）；历史 Linear import `triageStatus: accepted`（TRI01）；triage 事件 `task.scope.changed`（TRI08）；`cycleId` → `tasks.cycleRefId`（TRI07）；`teamId` 与可读团队求交（TRI05）
-- Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），**还没有** 重排 UI
+- Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），侧栏始终可见上 / 下箭头
 - CommandMenu sidecar 搜 task/team/project/savedView，不走 FTS `type:`（NAV07）
 - 签名 TRPC key catalog 登记 `workAttention`
 - 与 #94 合并：保留 `teams`/`views`/`my-work` 根，以及退役的 `acceptance`/`verify` 重定向
 
 精确 redirect 仅 `/tasks?collection=mine&scope=assigned|created`。
 
-## 本交接一并提交的 WIP（助手未接完）
+## 本交接之后又接上的产品面（相对 `ad838850`）
 
-`settleSourceLoads` / `listPendingForActorSettled` / `overlayLiveTitles` / 类型 `NotificationFeedPage` / `WORK_SEARCH_MAX_PER_TYPE = 200` 已在代码里。
+- `buildInboxFeed`：`listPendingForActorSettled` → `ensureActionCards` → `listFeed` → `mapFeedWithLiveActions` → `overlayLiveTitles`（`TaskModel` / `ProjectModel.findByIds`）
+- `notification.feed` 返回 `NotificationFeedPage`；`workAttention.feed` 返回 `{ data: NotificationFeedPage, success }`
+- `WorkInboxPage` 读 `data.cards`；`partial` 时 base-ui `Alert`；空列表 + partial **不是** 成功空态
+- Inbox SWR `focusThrottleInterval: 0`（SEC02：失权后下一次窗口聚焦会重拉，不再等 5 分钟）
+- 收藏始终可见上 / 下箭头，走 `favoriteReorder` CAS，CONFLICT 则 refetch
+- `workAttention.search` / `searchTasks` / `searchProjects` 上限 `WORK_SEARCH_MAX_PER_TYPE`（200）；CommandMenu 仍混合 5 / 带类型 50；`TeamsPage` 搜索框走 sidecar，不传 FTS `type:`
+- `NavItem` `@media (hover: none)` 强制可见 `.nav-item-actions`
 
-**还没接到产品面上：**
-
-- `notification.feed` 与 `workAttention.feed` 仍返回 **卡片数组**，不是 `NotificationFeedPage`
-- `WorkInboxPage` 仍 `const { data: cards = [] }`，源失败时会把整页当成空成功
-- 活标题还没从 `TaskModel.findByIds` / `ProjectModel.findByIds` 打上去
-- `summarizeFeed` 已经走 settled pending（单个源挂了不会把 badge 打空），但 **不会** 把 `sourceUnavailable` 交给 UI
-
-下一刀从这里接着做，不要重开一条 Inbox 实现。
+`summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-按建议顺序：
-
-1. **Inbox 包络 + 活标题（进行中）**
-   - 新建 `apps/server/src/services/workAttention/feedPage.ts`：`buildInboxFeed` 调 `listPendingForActorSettled` → `ensureActionCards` → `listFeed` → `mapFeedWithLiveActions` → `overlayLiveTitles`
-   - 两个 feed procedure 返回 `{ cards, lastReconciledAt, partial, sourceUnavailable }`
-   - `WorkInboxPage` 读 `data.cards`；`partial` 时用 base-ui `Alert`（`@lobehub/ui/base-ui`）
-   - **空列表 + partial 不是成功空态**
-   - i18n `inbox.sourceUnavailable`：写 `packages/locales/src/default/notification.ts`，并手改 `locales/en-US` + `locales/zh-CN`
-2. **收藏重排 UI** — `src/features/HomeSidebar/Body/WorkFavorites.tsx` 用始终可见的 `extra` 上 / 下箭头调已有 `favoriteReorder` CAS；CONFLICT 则 refetch。不要做成 hover-only。
-3. **NAV05 搜索到 200** — `workAttention.search` 的 zod 现在是 `.max(50)`；改成 `WORK_SEARCH_MAX_PER_TYPE`（200）。`src/features/CommandMenu/useCommandMenu.ts` 混合 = 5、带类型 = 50。给 `src/features/WorkTeams/TeamsPage.tsx` 加搜索框。工作类型不要传给 FTS `type:`。
-4. **NAV03 触屏** — `src/features/NavPanel/components/NavItem.tsx` 加 `@media (hover: none)` 让 `.nav-item-actions` 强制可见。纯 CSS 不必为选择器字符串写回归测试。
-5. **SEC02** — Inbox SWR 在 ACL 撤销后仍可能显示旧标题（pull-only，5 分钟 focus throttle）。需要在失权后的下一次读失效，而不是只靠本地 cache。
-6. CommandMenu 最近访问目前几乎是 task-only 侧栏 recents；包要求跨类型。
-
-NICE（可后做）：task/team/project 的 pin UI、favorites unpin/overflow、NAV02 原生通知矩阵、个人模式藏 Teams tab、CMDK SWR key 去掉 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
+1. CommandMenu 最近访问目前几乎是 task-only 侧栏 recents；包要求跨类型。
+2. NICE（可后做）：task/team/project 的 pin UI、favorites unpin/overflow、NAV02 原生通知矩阵、个人模式藏 Teams tab、CMDK SWR key 去掉 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
 
 ## 阻塞 / 不要假装完成
 
@@ -135,18 +121,16 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `b4136da6` / `24df8830`：lint 干净，19 passed（workflow-state picker + favorite 标题）
 - `02d8191e` / `c5be180c` / `bd5209d9`：288 passed
 - `cfc06a6f`：66 passed；当时全仓 `tsgo --noEmit` 通过
+- 本增量（Inbox 包络 / 收藏重排 / 团队搜索 / 触屏）：lint 干净，42 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 
-## 给下一刀的具体补丁（Inbox 包络）
+## 给下一刀的具体补丁（CommandMenu recents）
 
-1. `apps/server/src/services/workAttention/feedPage.ts`（新）`buildInboxFeed`
-2. `apps/server/src/routers/lambda/notification.ts` `feed` 返回包络（现在 L121–135 返回数组）
-3. `apps/server/src/routers/lambda/workAttention.ts` `feed`（现在 L257–271 `{ data: card[] }`）
-4. `src/services/notification.ts` `feed` 的调用方
-5. `src/features/WorkInbox/WorkInboxPage.tsx`（现在 L94–97 把 data 当数组）
-6. 单测：`actionSources.test.ts` 的 `settleSourceLoads`、`feedCard.test.ts` 的 `overlayLiveTitles` 已有；再加 router / 页面契约测试时沿用现有 helper，不要新开组件测试套件
-7. i18n 三个文件（default + en-US + zh-CN），不要跑 `bun run i18n`
+1. 现有 Home recents（`packages/database/src/models/recent.ts`、`src/features/HomeSidebar` recents）几乎是 task/topic。包要求 CommandMenu 空查询时跨 task /team/project /savedView。
+2. 不要把工作类型塞进 FTS `type:`；继续走 `workAttention.search` sidecar。
+3. 不要新开组件测试套件；逻辑抽 hook /helper 再测。
+4. 不要跑 `bun run i18n`。
 
 `listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
 

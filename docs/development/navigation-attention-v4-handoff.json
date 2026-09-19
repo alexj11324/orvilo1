@@ -13,7 +13,9 @@
     "My Work assigned/delegated/review/created/subscribed with server-side list/board",
     "Saved views CAS, virtual builtins, visitor currentUser, AST redaction",
     "Team triage CAS move/duplicate; historical Linear imports accepted",
-    "Favorite title hydration and reorder CAS API without reorder UI",
+    "Favorite title hydration and always-visible reorder UI over favoriteReorder CAS",
+    "Inbox NotificationFeedPage envelope with live titles and partial Alert",
+    "workAttention.search max 200, TeamsPage search box, NavItem hover:none",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -38,11 +40,12 @@
     "docs/development/navigation-attention-v4-handoff.json",
     "packages/types/src/workAttention.ts",
     "apps/server/src/services/workAttention/actionSources.ts",
-    "apps/server/src/services/workAttention/feedCard.ts"
+    "apps/server/src/services/workAttention/feedCard.ts",
+    "apps/server/src/services/workAttention/feedPage.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
-  "implementationHeadBeforeDocs": "b4136da664da5be87f17db03e5b83d18da6adfaf",
+  "implementationHeadBeforeDocs": "ad838850a25ee24fdcf7cad6fea3841d6cfd3174",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",
@@ -63,14 +66,10 @@
   "status": "IN_PROGRESS",
   "targetBranch": "canary",
   "unverified": [
-    "Inbox NotificationFeedPage envelope not returned by routers or WorkInboxPage",
-    "Live title overlay helper exists but is not bound to TaskModel/ProjectModel findByIds",
-    "Favorite reorder UI",
-    "NAV05 workAttention.search max still 50; TeamsPage has no search box",
-    "NAV03 NavItem hover:none force-visible actions",
-    "SEC02 inbox cache after ACL revoke",
+    "CommandMenu recent visits are still mostly task/topic Home recents",
     "NAV02 Electron native notification click matrix",
-    "ACCEPTANCE.md 64 rows still NOT_RUN"
+    "ACCEPTANCE.md 64 rows still NOT_RUN",
+    "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"
   ],
   "workPackage": "N00-N13 single-writer increment on one PR",
   "worktreePath": "/workspace"

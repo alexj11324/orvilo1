@@ -271,6 +271,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // membership listing is readable; grant/revoke mutations stay off-limits to
   // restricted keys, like workspaceMember
   projectMember: rw('workspace:read', null),
+  // GitHub PR review queue + review submission, proxied through the member's
+  // own GitHub OAuth — same tier as task/agent work.
+  pullRequest: rw('agent:read', 'agent:write'),
   pushToken: 'blocked',
   ragEval: 'blocked',
   recent: rw('chat:read', null),

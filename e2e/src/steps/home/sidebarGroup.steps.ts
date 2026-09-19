@@ -68,13 +68,13 @@ async function waitForGroupItem(this: CustomWorld, groupId: string) {
 // Given Steps
 // ============================================
 
-Given('用户在 Home 页面有一个 Agent Group', async function (this: CustomWorld) {
+Given('用户在 Agents 页面有一个 Agent Group', async function (this: CustomWorld) {
   console.log('   📍 Step: 在数据库中创建测试 Agent Group...');
   const groupId = await createTestGroup('E2E Test Group');
   this.testContext.createdGroupId = groupId;
 
-  console.log('   📍 Step: 导航到 Home 页面...');
-  await this.page.goto('/');
+  console.log('   📍 Step: 导航到 Agents 页面...');
+  await this.page.goto('/agents');
   await this.page.waitForLoadState('domcontentloaded', { timeout: 15_000 });
   await this.page.waitForTimeout(1000);
 
@@ -89,42 +89,49 @@ Given('用户在 Home 页面有一个 Agent Group', async function (this: Custom
   console.log(`   ✅ 找到 Agent Group: ${groupLabel}, id: ${groupId}`);
 });
 
-Given('该 Agent Group 未被置顶', { timeout: 30_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 检查 Agent Group 未被置顶...');
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
-  // Pin icon uses lucide-react which adds class "lucide lucide-pin"
-  const pinIcon = targetItem.locator('svg[class*="lucide-pin"]');
+Given('该 Agent Group 未显示在侧边栏', { timeout: 30_000 }, async function (this: CustomWorld) {
+  console.log('   📍 Step: 检查 Agent Group 未显示在侧边栏...');
+  const inSidebar = this.page
+    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
+    .first();
 
-  if ((await pinIcon.count()) > 0) {
-    console.log('   📍 Agent Group 已置顶，开始取消置顶操作...');
+  if ((await inSidebar.count()) > 0) {
+    console.log('   📍 Agent Group 已在侧边栏，开始隐藏操作...');
+    const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
     await targetItem.hover();
     await this.page.waitForTimeout(200);
     await targetItem.click({ button: 'right', force: true });
     await this.page.waitForTimeout(500);
-    const unpinOption = this.page.getByRole('menuitem', { name: /取消置顶|unpin/i });
-    await unpinOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      console.log('   ⚠️ 取消置顶选项未找到');
+    const hideOption = this.page.getByRole('menuitem', {
+      name: /在我的侧边栏隐藏|hide from my sidebar/i,
     });
-    if ((await unpinOption.count()) > 0) {
-      await unpinOption.click();
-      await this.page.waitForTimeout(500);
+    await hideOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
+      console.log('   ⚠️ 隐藏选项未找到');
+    });
+    if ((await hideOption.count()) > 0) {
+      await hideOption.click();
+      await this.page.waitForTimeout(800);
     }
     // Close menu if still open
     await this.page.keyboard.press('Escape');
     await this.page.waitForTimeout(300);
   }
 
-  console.log('   ✅ Agent Group 未被置顶');
+  const stillVisible = await this.page
+    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
+    .count();
+  console.log(`   ✅ Agent Group 未显示在侧边栏 (inSidebar=${stillVisible})`);
 });
 
-Given('该 Agent Group 已被置顶', { timeout: 30_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 确保 Agent Group 已被置顶...');
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
-  // Pin icon uses lucide-react which adds class "lucide lucide-pin"
-  const pinIcon = targetItem.locator('svg[class*="lucide-pin"]');
+Given('该 Agent Group 已显示在侧边栏', { timeout: 30_000 }, async function (this: CustomWorld) {
+  console.log('   📍 Step: 确保 Agent Group 已显示在侧边栏...');
+  const inSidebar = this.page
+    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
+    .first();
 
-  if ((await pinIcon.count()) === 0) {
-    console.log('   📍 Agent Group 未置顶，开始置顶操作...');
+  if ((await inSidebar.count()) === 0) {
+    console.log('   📍 Agent Group 未在侧边栏，开始显示操作...');
+    const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
     await targetItem.hover();
     await this.page.waitForTimeout(200);
     await targetItem.click({ button: 'right', force: true });
@@ -133,25 +140,26 @@ Given('该 Agent Group 已被置顶', { timeout: 30_000 }, async function (this:
     const menuItems = await this.page.locator('[role="menuitem"]').count();
     console.log(`   📍 Debug: 发现 ${menuItems} 个菜单项`);
 
-    const pinOption = this.page.getByRole('menuitem', { name: /置顶|pin/i });
-    await pinOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      console.log('   ⚠️ 置顶选项未找到');
+    const showOption = this.page.getByRole('menuitem', {
+      name: /在我的侧边栏显示|show in my sidebar/i,
     });
-    if ((await pinOption.count()) > 0) {
-      await pinOption.click();
-      await this.page.waitForTimeout(500);
-      console.log('   ✅ 已点击置顶选项');
+    await showOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
+      console.log('   ⚠️ 显示选项未找到');
+    });
+    if ((await showOption.count()) > 0) {
+      await showOption.click();
+      await this.page.waitForTimeout(800);
+      console.log('   ✅ 已点击显示选项');
     }
     // Close menu if still open
     await this.page.keyboard.press('Escape');
     await this.page.waitForTimeout(300);
   }
 
-  // Verify pin is now visible
-  await this.page.waitForTimeout(500);
-  const pinIconAfter = targetItem.locator('svg[class*="lucide-pin"]');
-  const isPinned = (await pinIconAfter.count()) > 0;
-  console.log(`   ✅ Agent Group 已被置顶: ${isPinned}`);
+  const isVisible = await this.page
+    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
+    .count();
+  console.log(`   ✅ Agent Group 已显示在侧边栏: ${isVisible > 0}`);
 });
 
 // ============================================
@@ -197,28 +205,28 @@ When('用户悬停在该 Agent Group 上', async function (this: CustomWorld) {
 // Then Steps
 // ============================================
 
-Then('Agent Group 应该显示置顶图标', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证显示置顶图标...');
+Then('Agent Group 应该显示在侧边栏分组中', async function (this: CustomWorld) {
+  console.log('   📍 Step: 验证 Agent Group 显示在侧边栏分组中...');
 
   await this.page.waitForTimeout(500);
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
-  // Pin icon uses lucide-react which adds class "lucide lucide-pin"
-  const pinIcon = targetItem.locator('svg[class*="lucide-pin"]');
-  await expect(pinIcon).toBeVisible({ timeout: 5000 });
+  const sectionItem = this.page
+    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
+    .first();
+  await expect(sectionItem).toBeVisible({ timeout: 5000 });
 
-  console.log('   ✅ 置顶图标已显示');
+  console.log('   ✅ Agent Group 已显示在侧边栏分组中');
 });
 
-Then('Agent Group 不应该显示置顶图标', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证不显示置顶图标...');
+Then('Agent Group 不应该显示在侧边栏分组中', async function (this: CustomWorld) {
+  console.log('   📍 Step: 验证 Agent Group 不在侧边栏分组中...');
 
   await this.page.waitForTimeout(500);
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
-  // Pin icon uses lucide-react which adds class "lucide lucide-pin"
-  const pinIcon = targetItem.locator('svg[class*="lucide-pin"]');
-  await expect(pinIcon).not.toBeVisible({ timeout: 5000 });
+  const sectionItem = this.page.locator(
+    `[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`,
+  );
+  await expect(sectionItem).not.toBeVisible({ timeout: 5000 });
 
-  console.log('   ✅ 置顶图标未显示');
+  console.log('   ✅ Agent Group 不在侧边栏分组中');
 });
 
 Then('Agent Group 应该从列表中移除', async function (this: CustomWorld) {

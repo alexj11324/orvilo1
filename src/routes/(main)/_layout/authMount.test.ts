@@ -29,7 +29,15 @@ vi.mock('@/features/ResourceManager/DndContextWrapper', () => ({ DndContextWrapp
 vi.mock('@/features/AlertBanner/CloudBanner', () => ({ BANNER_HEIGHT: 0, default: () => null }));
 vi.mock('@/features/RouteMeta', () => ({ RouteMetaBridge: () => null }));
 vi.mock('./style', () => ({ styles: {} }));
-vi.mock('react-router', () => ({ Outlet: () => null }));
+vi.mock('react-router', () => ({
+  Outlet: () => null,
+  useLocation: () => ({ pathname: '/' }),
+}));
+// The layout body calls useWorkspaceUrlSync synchronously; invoking the
+// layout as a plain function means hooks must be stubbed at the module level.
+vi.mock('@/features/Workspace/useWorkspaceUrlSync', () => ({
+  useWorkspaceUrlSync: () => undefined,
+}));
 
 vi.mock('@/components/Skeleton/RouteSegment', nullComponent);
 vi.mock('@/features/DesktopBrowserGatewayBridge', nullComponent);

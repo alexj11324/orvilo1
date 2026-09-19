@@ -185,7 +185,7 @@ const SidebarAgentsSection = memo<SidebarAgentsSectionProps>(({ items, onToggleS
   );
 
   return (
-    <Flexbox className={styles.container} gap={12}>
+    <Flexbox className={styles.container} data-testid={'sidebar-agents-section'} gap={12}>
       <Flexbox
         horizontal
         align={'center'}

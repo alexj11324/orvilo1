@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [
-    // Importing `@orvilo/agent-execution` pulls in `@orvilo/context-engine`,
+    // Importing `@orvilo/agent-runtime` pulls in `@orvilo/context-engine`,
     // which reaches `@orvilo/agent-templates` and its `.md` prompt files.
     // Vitest would otherwise try to parse the Markdown as JavaScript. Mirrors
     // the root config's `raw-md` plugin; the content is irrelevant to the CLI.

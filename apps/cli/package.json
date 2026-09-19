@@ -29,7 +29,6 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@orvilo/agent-execution": "workspace:*",
     "@orvilo/agent-gateway-client": "workspace:*",
     "@orvilo/agent-tracing": "workspace:*",
     "@orvilo/const": "workspace:*",

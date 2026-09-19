@@ -340,7 +340,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const { t } = useTranslation(['common', 'chat']);
     const boardGroupBy = groupBy === 'status' ? 'status' : 'workflowCategory';
     const listGroupBy = workQueryListGroupBy(groupBy);
-    const listSections = workQueryListSections(groups, tasks, listGroupBy);
+    const listSections =
+      listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
 
     const reviewBlock = externalReviews ? (
@@ -396,7 +397,28 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     return (
       <Flexbox gap={16}>
         {reviewBlock}
-        {listSections.length === 0 ? (
+        {listGroupBy === 'none' ? (
+          /* `none` grouping stays a flat list in the query's own sort order —
+             no status headers are re-imposed. */
+          tasks.length === 0 ? (
+            <Center flex={1} padding={48}>
+              <Empty description={emptyLabel} icon={ListTodoIcon} />
+            </Center>
+          ) : (
+            <Flexbox gap={2}>
+              {tasks.map((task) => (
+                <WorkQueryTaskRow
+                  followed={isFollowed?.(task.id)}
+                  groupBy={'status'}
+                  key={task.id}
+                  task={task}
+                  onMoved={onMoved}
+                  onToggleFollow={onToggleFollow}
+                />
+              ))}
+            </Flexbox>
+          )
+        ) : listSections.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty description={emptyLabel} icon={ListTodoIcon} />
           </Center>

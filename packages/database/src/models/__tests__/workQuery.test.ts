@@ -477,11 +477,22 @@ describe('WorkQueryModel', () => {
     expect(query.groupBy).toBe('status');
     expect(first.layout).toBe('list');
     expect(first.total).toBe(3);
+    // Raw execution-status sections: the in-review issue is a `running` row
+    // here — business categories only separate on the workflowCategory axis.
     const byKey = new Map(first.groups?.map((group) => [group.key, group]));
-    expect(byKey.get('running')?.total).toBe(2);
+    expect(byKey.get('running')?.total).toBe(3);
     expect(byKey.get('running')?.tasks).toHaveLength(1);
-    expect(byKey.get('needsInput')?.total).toBe(1);
-    expect(byKey.get('needsInput')?.tasks.map((row) => row.id)).toEqual([child.id]);
+    expect(byKey.get('needsInput')).toBeUndefined();
+
+    const wfQuery = applyWorkQueryLayout(
+      myWorkQueryForMode('assigned'),
+      'list',
+      'workflowCategory',
+    );
+    const wfFirst = await model.queryTasks({ limit: 5, query: wfQuery });
+    const wfByKey = new Map(wfFirst.groups?.map((group) => [group.key, group]));
+    expect(wfByKey.get('in_review')?.total).toBe(1);
+    expect(wfByKey.get('in_review')?.tasks.map((row) => row.id)).toEqual([child.id]);
 
     const second = await model.queryTasks({
       afterId: byKey.get('running')!.tasks[0]!.id,
@@ -491,10 +502,9 @@ describe('WorkQueryModel', () => {
       queryHash: first.queryHash,
     });
     const runningPage = second.groups?.find((group) => group.key === 'running');
-    expect(runningPage?.total).toBe(2);
+    expect(runningPage?.total).toBe(3);
     expect(runningPage?.tasks).toHaveLength(1);
     expect(runningPage?.tasks[0]!.id).not.toBe(byKey.get('running')!.tasks[0]!.id);
-    expect(second.groups?.find((group) => group.key === 'needsInput')?.total).toBe(1);
   });
 
   it('lists a readable PR review without creating a Task', async () => {

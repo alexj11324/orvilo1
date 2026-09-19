@@ -240,13 +240,33 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 export const COLUMN_I18N_KEYS: Record<string, string> = {
-  backlog: 'taskList.kanban.backlog',
-  canceled: 'taskList.kanban.canceled',
-  done: 'taskList.kanban.done',
-  needsInput: 'taskList.kanban.needsInput',
-  running: 'taskList.kanban.running',
-  todo: 'taskList.kanban.todo',
-  triage: 'taskList.kanban.triage',
+  'backlog': 'taskList.kanban.backlog',
+  'canceled': 'taskList.kanban.canceled',
+  'completed': 'taskList.kanban.done',
+  'done': 'taskList.kanban.done',
+  'failed': 'taskList.kanban.failed',
+  'in_progress': 'taskList.kanban.inProgress',
+  'in_review': 'taskList.kanban.inReview',
+  'needsInput': 'taskList.kanban.needsInput',
+  'paused': 'taskList.kanban.paused',
+  'running': 'taskList.kanban.running',
+  'scheduled': 'taskList.kanban.scheduled',
+  'st:backlog': 'taskList.kanban.backlog',
+  'st:canceled': 'taskList.kanban.canceled',
+  'st:completed': 'taskList.kanban.done',
+  'st:failed': 'taskList.kanban.failed',
+  'st:paused': 'taskList.kanban.paused',
+  'st:running': 'taskList.kanban.running',
+  'st:scheduled': 'taskList.kanban.scheduled',
+  'todo': 'taskList.kanban.todo',
+  'triage': 'taskList.kanban.triage',
+  'wf:backlog': 'taskList.kanban.backlog',
+  'wf:canceled': 'taskList.kanban.canceled',
+  'wf:done': 'taskList.kanban.done',
+  'wf:in_progress': 'taskList.kanban.inProgress',
+  'wf:in_review': 'taskList.kanban.inReview',
+  'wf:todo': 'taskList.kanban.todo',
+  'wf:triage': 'taskList.kanban.triage',
 };
 
 /**
@@ -257,13 +277,37 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
  * reads "not yet categorized".
  */
 export const COLUMN_STATUS_VISUAL: Record<string, ExecutionStatusVisual> = {
-  backlog: TASK_STATUS_VISUALS.backlog,
-  canceled: TASK_STATUS_VISUALS.canceled,
-  done: TASK_STATUS_VISUALS.completed,
-  needsInput: TASK_STATUS_VISUALS.paused,
-  running: TASK_STATUS_VISUALS.running,
-  todo: { color: cssVar.blue, icon: Circle },
-  triage: { color: cssVar.colorTextQuaternary, icon: CircleDashed },
+  'backlog': TASK_STATUS_VISUALS.backlog,
+  'canceled': TASK_STATUS_VISUALS.canceled,
+  'completed': TASK_STATUS_VISUALS.completed,
+  'done': TASK_STATUS_VISUALS.completed,
+  'failed': TASK_STATUS_VISUALS.failed,
+  'in_progress': TASK_STATUS_VISUALS.running,
+  'in_review': TASK_STATUS_VISUALS.paused,
+  'needsInput': TASK_STATUS_VISUALS.paused,
+  'paused': TASK_STATUS_VISUALS.paused,
+  'running': TASK_STATUS_VISUALS.running,
+  'scheduled': TASK_STATUS_VISUALS.scheduled,
+  // Raw execution-status columns (`st:`) — each run state keeps its own
+  // glyph instead of merging into a shared column.
+  'st:backlog': TASK_STATUS_VISUALS.backlog,
+  'st:canceled': TASK_STATUS_VISUALS.canceled,
+  'st:completed': TASK_STATUS_VISUALS.completed,
+  'st:failed': TASK_STATUS_VISUALS.failed,
+  'st:paused': TASK_STATUS_VISUALS.paused,
+  'st:running': TASK_STATUS_VISUALS.running,
+  'st:scheduled': TASK_STATUS_VISUALS.scheduled,
+  'todo': { color: cssVar.blue, icon: Circle },
+  'triage': { color: cssVar.colorTextQuaternary, icon: CircleDashed },
+  // Business workflow columns (`wf:`) — Linear's issue categories; in_review
+  // keeps the violet review clock and stays distinct from run states.
+  'wf:backlog': TASK_STATUS_VISUALS.backlog,
+  'wf:canceled': TASK_STATUS_VISUALS.canceled,
+  'wf:done': TASK_STATUS_VISUALS.completed,
+  'wf:in_progress': TASK_STATUS_VISUALS.running,
+  'wf:in_review': TASK_STATUS_VISUALS.paused,
+  'wf:todo': { color: cssVar.blue, icon: Circle },
+  'wf:triage': { color: cssVar.colorTextQuaternary, icon: CircleDashed },
 };
 
 interface CollapsedKanbanColumnProps {

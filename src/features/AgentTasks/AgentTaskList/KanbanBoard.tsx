@@ -44,9 +44,13 @@ import {
   buildKanbanColumnMap,
   buildKanbanColumns,
   buildKanbanGroupQuery,
+  canDropTaskIntoExternalColumn,
   canDropTaskIntoKanbanColumn,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalKanbanColumnMoveScope,
+  externalKanbanColumns,
+  externalKanbanTaskPatch,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanMoveAnchors,
@@ -61,7 +65,9 @@ import {
   preserveKanbanColumnOrder,
   resolveKanbanDragTask,
   resolveKanbanDropColumn,
+  taskMatchesExternalColumn,
   taskMatchesKanbanColumn,
+  type WorkQueryBoardGroupBy,
 } from './kanbanBoardModel';
 import KanbanColumn, {
   CollapsedKanbanColumn,
@@ -128,9 +134,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
  * Externally-sourced board data for surfaces whose queries can't map to the
  * task store's groupList scopes (saved views, team boards — arbitrary
  * work-query ASTs). `groups` must already be bucketed under the board's
- * column keys. Cross-column drops commit through `workAttention.moveBoard`
- * (VIEW08 CAS + exact-state picker). Same-column reorder is visual-only
- * because the work-query board has no position write. `onRefresh` is the
+ * column keys (`wf:<category>` / `st:<status>` — one column per raw
+ * dimension member, no folding). Cross-column drops commit through
+ * `workAttention.moveBoard` (VIEW08 CAS + exact-state picker); same-column
+ * reorders persist through the task position anchors. `onRefresh` is the
  * caller's refetch so the settled write can resync the columns.
  */
 export interface KanbanExternalGroups {
@@ -142,9 +149,8 @@ export interface KanbanExternalGroups {
   onLoadMoreGroup?: (columnKey: string) => void;
   onRefresh?: () => Promise<unknown> | void;
   /**
-   * Work-query grouping the supplied `groups` were fetched with. The shared
-   * board still renders Cordy status columns; this selects the `moveBoard`
-   * `targetKey` (workflow category vs execution status).
+   * Work-query grouping the supplied `groups` were fetched with. Selects
+   * both the column set (`wf:` / `st:`) and the `moveBoard` `targetKey`.
    */
   queryGroupBy?: 'status' | 'workflowCategory';
   /** AsyncBoundary settle flag — defaults to `groups` being defined. */
@@ -180,6 +186,10 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const canEditTask = canEditTaskPerm && (external?.movable ?? true);
   const groupBy = normalizeKanbanGroupBy(options.groupBy);
   const excludeStatuses = options.hideCompleted ? HIDDEN_WHEN_COMPLETED_STATUSES : undefined;
+  /** External (work-query) boards render the query's own dimension —
+   * `wf:` business categories or `st:` raw execution statuses. */
+  const externalGroupBy: WorkQueryBoardGroupBy =
+    external?.queryGroupBy === 'status' ? 'status' : 'workflowCategory';
 
   const useFetchTaskGroupList = useTaskStore((s) => s.useFetchTaskGroupList);
   // Keep the SWR handle only for `error` + `mutate` (the error/Retry state).
@@ -236,13 +246,21 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const [cardOverrides, setCardOverrides] = useState<Record<string, Partial<TaskListItem>>>({});
 
   const allColumns = useMemo(() => {
+    if (external) {
+      const fixed = externalKanbanColumns(externalGroupBy);
+      const covered = new Set(fixed.map((column) => column.key));
+      const extras = currentTaskGroups
+        .filter((group) => !covered.has(group.key))
+        .map((group) => ({ droppable: false, key: group.key, targetStatus: null }));
+      return [...fixed, ...extras];
+    }
     const filteredOut = kanbanStatusColumnsExcludedBy(
       groupBy === 'status' ? excludeStatuses : undefined,
     );
     return buildKanbanColumns(currentTaskGroups, groupBy).filter(
       (column) => !filteredOut.has(column.key),
     );
-  }, [currentTaskGroups, excludeStatuses, groupBy]);
+  }, [currentTaskGroups, excludeStatuses, external, externalGroupBy, groupBy]);
   const columnDefMap = useMemo(
     () => new Map(allColumns.map((column) => [column.key, column])),
     [allColumns],
@@ -346,20 +364,27 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       // The column's membership fields ride with the anchors so the server can
       // find the true neighbour past the loaded page and respace the column
       // when fractional positions collapse.
-      const moveScope = kanbanColumnMoveScope(groupBy, column);
+      const moveScope = external
+        ? externalKanbanColumnMoveScope(externalGroupBy, column)
+        : kanbanColumnMoveScope(groupBy, column);
       const anchors = {
         afterId: move.afterId,
         beforeId: move.beforeId,
         moveScope,
         position: move.position,
       };
-      const memberAlready = taskMatchesKanbanColumn(task, groupBy, column.key);
+      const memberAlready = external
+        ? taskMatchesExternalColumn(task, externalGroupBy, column.key)
+        : taskMatchesKanbanColumn(task, groupBy, column.key);
 
       if (external) {
-        // Membership is the Cordy column (paused+failed share needsInput).
-        // Rewriting a `failed` card to `paused` would be a silent status
-        // change; same-column reorder also has no work-query position write.
-        if (memberAlready) return true;
+        if (memberAlready) {
+          // Same-column reorder persists through the position anchors —
+          // `task.update` resolves them server-side, so a refresh or another
+          // client sees the same manual order.
+          await taskService.update(task.identifier, anchors);
+          return true;
+        }
         return commitWorkQueryBoardMove({
           column,
           groupBy: external.queryGroupBy ?? 'workflowCategory',
@@ -436,7 +461,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
       return true;
     },
-    [external, groupBy, internalRefreshTaskDetail, t, updateTask],
+    [external, externalGroupBy, groupBy, internalRefreshTaskDetail, t, updateTask],
   );
 
   // ── Drag handlers ──────────────────────────────────────────────
@@ -474,7 +499,15 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         const overCol = findKanbanColumn(prev, overId, columnKeySet);
         if (!activeCol || !overCol || activeCol === overCol) return prev;
         const overDef = columnDefMap.get(overCol);
-        if (!overDef?.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, overDef)) {
+        const canDrop = external
+          ? canDropTaskIntoExternalColumn(
+              task,
+              overDef ?? { droppable: false, key: '', targetStatus: null },
+            )
+          : overDef
+            ? canDropTaskIntoKanbanColumn(task, groupBy, overDef)
+            : false;
+        if (!overDef || !canDrop) {
           return prev;
         }
         recentlyMovedRef.current = true;
@@ -485,7 +518,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return { ...prev, [activeCol]: nextSource, [overCol]: nextTarget };
       });
     },
-    [columnDefMap, columnKeySet, groupBy, recentlyMovedRef, setColumns],
+    [columnDefMap, columnKeySet, external, groupBy, recentlyMovedRef, setColumns],
   );
 
   const handleDragEnd = useCallback(
@@ -523,13 +556,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         overId,
         columnKeySet,
         columnDefMap,
+        external ? externalGroupBy : undefined,
       );
       if (!overCol) {
         resetColumns();
         return;
       }
       const finalDef = columnDefMap.get(overCol)!;
-      const sameColumn = taskMatchesKanbanColumn(frozenTask, groupBy, overCol);
+      const sameColumn = external
+        ? taskMatchesExternalColumn(frozenTask, externalGroupBy, overCol)
+        : taskMatchesKanbanColumn(frozenTask, groupBy, overCol);
 
       // Order the release column the way the pointer left it: a same-column
       // sort sits at its old index until moved to the released-on card, and a
@@ -548,7 +584,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return;
       }
 
-      const patch = getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {};
+      const patch = external
+        ? (externalKanbanTaskPatch(externalGroupBy, finalDef) ?? {})
+        : (getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {});
       const assigneeUpdate =
         groupBy === 'assignee' || groupBy === 'member'
           ? getKanbanAssigneeUpdate(frozenTask, patch)
@@ -612,6 +650,8 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       columnKeySet,
       columnsRef,
       commitMove,
+      external,
+      externalGroupBy,
       groupBy,
       handleHideColumn,
       handleRestoreColumn,

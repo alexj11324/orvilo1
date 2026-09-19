@@ -340,8 +340,10 @@ export const workAttentionRouter = router({
       try {
         if (input.query.entityType === 'project') {
           const result = await ctx.workQueryModel.queryProjects({
+            afterId: input.afterId,
             limit: input.limit,
             query: input.query,
+            queryHash: input.queryHash,
           });
           return { data: result, success: true };
         }

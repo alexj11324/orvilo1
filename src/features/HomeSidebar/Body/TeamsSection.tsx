@@ -37,6 +37,8 @@ import { usePathname, useSearchParams } from '@/libs/router/navigation';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import { mergeSidebarExpandedKeys } from './index';
@@ -109,8 +111,10 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
+  const userId = useUserStore(userProfileSelectors.userId);
+
   const { data } = useSWR(
-    activeWorkspaceId ? 'sidebar-teams' : null,
+    activeWorkspaceId && userId ? ['sidebar-teams', userId, activeWorkspaceId] : null,
     () => lambdaClient.team.teams.query(),
     {
       revalidateOnFocus: false,

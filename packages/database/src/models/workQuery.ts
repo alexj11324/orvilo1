@@ -53,6 +53,7 @@ import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
+import { taskEffectivePosition } from './task';
 import { TeamModel } from './team';
 
 export class WorkQueryError extends Error {
@@ -453,54 +454,19 @@ const boardColumnFor = (groupBy: 'status' | 'workflowCategory') =>
 const stableBoardKeys = (groupBy: 'status' | 'workflowCategory'): readonly string[] =>
   groupBy === 'status' ? WORK_QUERY_STATUS_COLUMNS : WORK_QUERY_WORKFLOW_COLUMNS;
 
-/**
- * Cordy column keys for a grouped *list*. Same membership as
- * `workQueryTaskColumnKey` / `taskKanbanColumnKey`: Linear-linked rows follow
- * workflow even on a status list, so In-review is needsInput, not Running.
- */
-const WORK_QUERY_DISPLAY_COLUMNS = [
-  'triage',
-  'backlog',
-  'todo',
-  'running',
-  'needsInput',
-  'done',
-  'canceled',
-] as const;
-
-const taskListMembershipSql = (groupBy: 'status' | 'workflowCategory'): SQL<string> => {
-  if (groupBy === 'workflowCategory') {
-    return sql<string>`(case ${tasks.workflowCategory}
-      when 'in_progress' then 'running'
-      when 'in_review' then 'needsInput'
-      when 'todo' then 'todo'
-      when 'triage' then 'triage'
-      when 'done' then 'done'
-      when 'canceled' then 'canceled'
-      else 'backlog' end)`;
-  }
-  return sql<string>`(case
-    when ${tasks.workflowStateId} is not null then
-      case ${tasks.workflowCategory}
-        when 'in_progress' then 'running'
-        when 'in_review' then 'needsInput'
-        when 'todo' then 'todo'
-        when 'triage' then 'triage'
-        when 'done' then 'done'
-        when 'canceled' then 'canceled'
-        else 'backlog' end
-    else
-      case ${tasks.status}
-        when 'scheduled' then 'running'
-        when 'paused' then 'needsInput'
-        when 'failed' then 'needsInput'
-        when 'completed' then 'done'
-        when 'canceled' then 'canceled'
-        when 'running' then 'running'
-        when 'todo' then 'todo'
-        when 'triage' then 'triage'
-        else coalesce(${tasks.status}, 'backlog') end
-  end)`;
+/** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
+ * the same total order TASK_BOARD_ORDER applies on the task-store board. */
+const keysetAfterBoardPosition = (cursor: typeof tasks.$inferSelect): SQL => {
+  const curPos = cursor.position ?? -(new Date(cursor.createdAt).getTime() / 1000);
+  return or(
+    sql`${taskEffectivePosition} > ${curPos}`,
+    and(sql`${taskEffectivePosition} = ${curPos}`, lt(tasks.createdAt, cursor.createdAt)),
+    and(
+      sql`${taskEffectivePosition} = ${curPos}`,
+      eq(tasks.createdAt, cursor.createdAt),
+      lt(tasks.seq, cursor.seq),
+    ),
+  )!;
 };
 
 const externalReviewTitle = (summary: unknown, actionType: string) => {
@@ -751,11 +717,10 @@ export class WorkQueryModel {
       throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
     }
 
-    const displayColumns = params.layout !== 'board';
-    const membership = displayColumns ? taskListMembershipSql(params.groupBy) : undefined;
-    const column = membership ?? boardColumnFor(params.groupBy);
-    const matchesKey = (key: string): SQL =>
-      membership ? sql`${membership} = ${key}` : eq(boardColumnFor(params.groupBy), key as never);
+    // Raw dimension keys everywhere — no folding into Cordy columns, so an
+    // in-review issue never lands in a needs-input run-state bucket.
+    const column = boardColumnFor(params.groupBy);
+    const matchesKey = (key: string): SQL => eq(column, key as never);
     const countRows = await this.db
       .select({ count: sql<number>`count(*)`, key: column })
       .from(tasks)
@@ -768,15 +733,20 @@ export class WorkQueryModel {
     }
     const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
 
-    const stable = displayColumns ? WORK_QUERY_DISPLAY_COLUMNS : stableBoardKeys(params.groupBy);
+    const stable = stableBoardKeys(params.groupBy);
     const extra = [...countByKey.keys()]
       .filter((key) => !(stable as readonly string[]).includes(key))
       .sort();
     const totalsKeys = [...stable, ...extra];
 
-    const orderBy = params.sort.map((item) =>
-      item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
-    );
+    // Board ordering is manual (position) so a same-column drop persists
+    // exactly where the user left it; lists keep the query's own sort.
+    const boardOrdered = params.layout === 'board';
+    const orderBy = boardOrdered
+      ? [sql`${taskEffectivePosition} asc`, desc(tasks.createdAt), desc(tasks.seq)]
+      : params.sort.map((item) =>
+          item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
+        );
 
     const groups = await Promise.all(
       totalsKeys.map(async (key) => {
@@ -795,7 +765,9 @@ export class WorkQueryModel {
           if (!cursor) {
             throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
           }
-          groupConditions.push(keysetAfter(params.sort, cursor));
+          groupConditions.push(
+            boardOrdered ? keysetAfterBoardPosition(cursor) : keysetAfter(params.sort, cursor),
+          );
         }
 
         const rows = await this.db

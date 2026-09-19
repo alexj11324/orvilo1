@@ -345,7 +345,7 @@ const RUNNABLE_AUTOMATION = and(
  * slot between its neighbours. `createdAt`/`seq` tiebreaks keep the order
  * total when two rows share one key.
  */
-const taskEffectivePosition = sql`coalesce(${tasks.position}, -extract(epoch from ${tasks.createdAt}))`;
+export const taskEffectivePosition = sql`coalesce(${tasks.position}, -extract(epoch from ${tasks.createdAt}))`;
 const TASK_BOARD_ORDER = [
   sql`${taskEffectivePosition} asc`,
   desc(tasks.createdAt),

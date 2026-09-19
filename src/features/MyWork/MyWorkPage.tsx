@@ -18,9 +18,6 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { getMyTaskViewOptions } from '@/features/AgentTasks/AgentTaskList/AgentTasksPage';
-import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
-import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -60,11 +57,11 @@ const MyWorkPage = memo(() => {
   const canBoard = isMyWorkBoardMode(mode);
   const boardActive = canBoard && layout === 'board';
 
-  // The board surface is the shared KanbanBoard, which fetches through the
-  // task store — the work-query feed only powers list layout (and Review).
+  // One feed powers both layouts: list rows and the board's external groups
+  // come from the same work query, so the two never disagree.
   const { data, isLoading } = useClientDataSWR(
-    boardActive ? null : workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
-    () => workAttentionService.myWork({ layout: 'list', mode, noProject }),
+    workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
+    () => workAttentionService.myWork({ layout, mode, noProject }),
   );
   const firstTasks = data?.data.tasks ?? [];
   const firstGroups = data?.data.groups ?? [];
@@ -77,7 +74,6 @@ const MyWorkPage = memo(() => {
   }, [layout, mode, noProject, queryHash, workspaceId]);
   const tasks = firstTasks;
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
-  const boardViewOptions = useMemo(() => getMyTaskViewOptions(DEFAULT_TASK_LIST_VIEW_OPTIONS), []);
   const subscribedTaskIds = [...(data?.data.subscribedTaskIds ?? []), ...extraSubscribed];
   const canSaveAs = isMyWorkSaveableMode(mode);
 
@@ -94,7 +90,7 @@ const MyWorkPage = memo(() => {
       const next = await workAttentionService.myWork({
         afterId: last.id,
         groupKey,
-        layout: 'list',
+        layout,
         mode,
         noProject,
         queryHash,
@@ -102,7 +98,7 @@ const MyWorkPage = memo(() => {
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
       setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
     },
-    [groups, mode, noProject, queryHash],
+    [groups, layout, mode, noProject, queryHash],
   );
 
   const tabs = useMemo(
@@ -217,38 +213,23 @@ const MyWorkPage = memo(() => {
             ) : null}
           </Flexbox>
         </Flexbox>
-        {boardActive ? null : (
-          <WorkQueryResults
-            emptyLabel={t('myWork.empty')}
-            externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
-            groupBy={data?.data.groupBy}
-            groups={groups}
-            isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
-            loadMoreLabel={t('myWork.loadMore')}
-            loading={isLoading}
-            loadingLabel={t('myWork.loading')}
-            tasks={tasks}
-            total={data?.data.total}
-            onLoadMoreGroup={(key) => void loadMoreGroup(key)}
-            onMoved={() => void refresh()}
-            onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
-          />
-        )}
+        <WorkQueryResults
+          emptyLabel={t('myWork.empty')}
+          externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
+          groupBy={data?.data.groupBy}
+          groups={groups}
+          isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
+          layout={layout}
+          loadMoreLabel={t('myWork.loadMore')}
+          loading={isLoading}
+          loadingLabel={t('myWork.loading')}
+          tasks={tasks}
+          total={data?.data.total}
+          onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+          onMoved={() => void refresh()}
+          onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
+        />
       </WideScreenContainer>
-      {boardActive ? (
-        /* The same Cordy-ported board /tasks mounts — myTaskScope narrows
-           the grouped query to the caller's slice ('delegated' = tasks the
-           caller handed to agents). */
-        <Flexbox flex={1} style={{ minHeight: 0, overflowX: 'auto', overflowY: 'hidden' }}>
-          <KanbanBoard
-            emptyDescription={t('myWork.empty')}
-            myTaskScope={mode === 'delegated' ? 'delegated' : 'assigned'}
-            options={boardViewOptions}
-            projectId={noProject ? null : undefined}
-            routeScope={'global'}
-          />
-        </Flexbox>
-      ) : null}
     </Flexbox>
   );
 });

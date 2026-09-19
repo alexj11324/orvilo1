@@ -1,7 +1,10 @@
 import type { TaskListItem } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { STATUS_KANBAN_COLUMNS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import {
+  RAW_STATUS_KANBAN_COLUMNS,
+  WORKFLOW_KANBAN_COLUMNS,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 
 import {
   cascadeStatusForBoardKey,
@@ -39,14 +42,15 @@ const boardTask = {
 };
 
 const column = (key: string) => {
-  const found = STATUS_KANBAN_COLUMNS.find((item) => item.key === key);
+  const found = [...WORKFLOW_KANBAN_COLUMNS, ...RAW_STATUS_KANBAN_COLUMNS].find(
+    (item) => item.key === key,
+  );
   if (!found) throw new Error(`missing column ${key}`);
   return found;
 };
 
 describe('workQueryBoardGroups', () => {
-  it('merges raw-status groups into the shared board columns', () => {
-    // paused + failed both land in needsInput; completed lands in done.
+  it('keeps raw execution statuses in their own columns — paused never folds into failed', () => {
     const groups = workQueryBoardGroups(
       [
         { hasMore: false, key: 'paused', tasks: [task({ id: 'a' })], total: 1 },
@@ -56,70 +60,62 @@ describe('workQueryBoardGroups', () => {
       'status',
     );
 
-    expect(groups).toHaveLength(2);
-    const needsInput = groups.find((group) => group.key === 'needsInput');
-    expect(needsInput?.tasks.map((item) => item.id)).toEqual(['a', 'b']);
-    expect(needsInput?.total).toBe(3);
-    expect(needsInput?.hasMore).toBe(true);
+    expect(groups.map((group) => group.key)).toEqual(['st:paused', 'st:failed', 'st:completed']);
+    const paused = groups.find((group) => group.key === 'st:paused');
+    expect(paused?.tasks.map((item) => item.id)).toEqual(['a']);
+    expect(groups.find((group) => group.key === 'st:failed')?.hasMore).toBe(true);
     // TaskGroupItem (groupList) requires the loaded window; KanbanBoard's
     // external path pages via onLoadMoreGroup, but the object still has to
     // type-check (Push Typecheck 2cd067ae failed without these).
-    expect(needsInput?.limit).toBe(2);
-    expect(needsInput?.offset).toBe(0);
-    expect(groups.find((group) => group.key === 'done')?.total).toBe(1);
-    expect(groups.find((group) => group.key === 'done')?.limit).toBe(1);
-    expect(groups.find((group) => group.key === 'done')?.offset).toBe(0);
+    expect(paused?.limit).toBe(1);
+    expect(paused?.offset).toBe(0);
   });
 
-  it('maps workflow-category keys by name', () => {
+  it('keeps business categories in their own wf: columns — in_review is never needsInput', () => {
     const groups = workQueryBoardGroups(
       [{ hasMore: false, key: 'in_review', tasks: [task()], total: 1 }],
       'workflowCategory',
     );
 
-    expect(groups.map((group) => group.key)).toEqual(['needsInput']);
+    expect(groups.map((group) => group.key)).toEqual(['wf:in_review']);
   });
 
-  it('drops columns the board does not know and survives empty input', () => {
+  it('passes unknown keys through prefixed and survives empty input', () => {
+    // An out-of-contract group key still surfaces as its own column key — the
+    // board renders it non-droppable rather than silently dropping the rows.
     expect(
       workQueryBoardGroups([{ hasMore: false, key: 'bogus', tasks: [task()], total: 1 }], 'status'),
-    ).toEqual([]);
+    ).toMatchObject([{ key: 'st:bogus' }]);
     expect(workQueryBoardGroups(undefined, 'status')).toEqual([]);
   });
 });
 
 describe('workQueryTargetKeyFromKanbanColumn', () => {
-  it('maps Cordy columns onto work-query workflow keys', () => {
-    expect(workQueryTargetKeyFromKanbanColumn('workflowCategory', column('needsInput'))).toBe(
+  it('maps wf: columns onto workflow-category targets', () => {
+    expect(workQueryTargetKeyFromKanbanColumn('workflowCategory', column('wf:in_review'))).toBe(
       'in_review',
     );
-    expect(workQueryTargetKeyFromKanbanColumn('workflowCategory', column('running'))).toBe(
+    expect(workQueryTargetKeyFromKanbanColumn('workflowCategory', column('wf:in_progress'))).toBe(
       'in_progress',
     );
-    expect(workQueryTargetKeyFromKanbanColumn('workflowCategory', column('done'))).toBe('done');
+    expect(workQueryTargetKeyFromKanbanColumn('workflowCategory', column('wf:done'))).toBe('done');
   });
 
-  it('uses the representative status for merged Cordy columns', () => {
-    expect(workQueryTargetKeyFromKanbanColumn('status', column('needsInput'))).toBe('paused');
-    expect(workQueryTargetKeyFromKanbanColumn('status', column('running'))).toBe('running');
-    expect(workQueryTargetKeyFromKanbanColumn('status', column('done'))).toBe('completed');
-    expect(workQueryTargetKeyFromKanbanColumn('status', column('todo'))).toBeNull();
+  it('maps st: columns onto the raw status', () => {
+    expect(workQueryTargetKeyFromKanbanColumn('status', column('st:paused'))).toBe('paused');
+    expect(workQueryTargetKeyFromKanbanColumn('status', column('st:running'))).toBe('running');
+    expect(workQueryTargetKeyFromKanbanColumn('status', column('st:completed'))).toBe('completed');
+    expect(workQueryTargetKeyFromKanbanColumn('status', column('st:failed'))).toBe('failed');
   });
 });
 
 describe('workQuerySourceKeysForKanbanColumn', () => {
-  it('reverses merged columns so load-more talks in work-query group keys', () => {
-    expect(workQuerySourceKeysForKanbanColumn('workflowCategory', 'needsInput')).toEqual([
+  it('strips the column prefix so load-more talks in work-query group keys', () => {
+    expect(workQuerySourceKeysForKanbanColumn('workflowCategory', 'wf:in_review')).toEqual([
       'in_review',
     ]);
-    expect(workQuerySourceKeysForKanbanColumn('status', 'needsInput')).toEqual([
-      'failed',
-      'paused',
-    ]);
-    expect(workQuerySourceKeysForKanbanColumn('status', 'running')).toEqual([
-      'running',
-      'scheduled',
-    ]);
+    expect(workQuerySourceKeysForKanbanColumn('status', 'st:failed')).toEqual(['failed']);
+    expect(workQuerySourceKeysForKanbanColumn('status', 'st:running')).toEqual(['running']);
   });
 });
 
@@ -179,7 +175,7 @@ describe('workQueryMovePlan', () => {
     });
   });
 
-  it('ignores Cordy keys that are not work-query columns', () => {
+  it('ignores keys that are not work-query columns', () => {
     expect(
       workQueryMovePlan({
         groupBy: 'status',
@@ -199,36 +195,36 @@ describe('cascadeStatusForBoardKey', () => {
 });
 
 describe('workQueryTaskColumnKey', () => {
-  it('puts Linear-linked In review cards in needsInput, matching the board', () => {
+  it('puts a Linear In-review card in the wf:in_review column, not needsInput', () => {
     expect(
       workQueryTaskColumnKey(
         { status: 'running', workflowCategory: 'in_review', workflowStateId: 'state-1' },
-        'status',
+        'workflowCategory',
       ),
-    ).toBe('needsInput');
+    ).toBe('wf:in_review');
   });
 
-  it('keeps unlinked execution status on a status list', () => {
-    expect(workQueryTaskColumnKey({ status: 'running', workflowCategory: 'todo' }, 'status')).toBe(
-      'running',
+  it('keeps run states distinct on a status board — paused, failed and running differ', () => {
+    expect(workQueryTaskColumnKey({ status: 'paused', workflowCategory: 'todo' }, 'status')).toBe(
+      'st:paused',
     );
-  });
-
-  it('groups a workflow view by category even without a linked state', () => {
-    expect(
-      workQueryTaskColumnKey({ status: 'running', workflowCategory: 'todo' }, 'workflowCategory'),
-    ).toBe('todo');
+    expect(workQueryTaskColumnKey({ status: 'failed', workflowCategory: 'todo' }, 'status')).toBe(
+      'st:failed',
+    );
+    expect(workQueryTaskColumnKey({ status: 'running', workflowCategory: 'todo' }, 'status')).toBe(
+      'st:running',
+    );
   });
 });
 
 describe('workQueryListGroups', () => {
-  it('defaults ungrouped lists to the status board, not workflow', () => {
+  it('honours an explicit `none` — the list stays flat, nothing re-groups it', () => {
     expect(workQueryListGroupBy(undefined)).toBe('status');
-    expect(workQueryListGroupBy('none')).toBe('status');
+    expect(workQueryListGroupBy('none')).toBe('none');
     expect(workQueryListGroupBy('workflowCategory')).toBe('workflowCategory');
   });
 
-  it('does not park a Linear In-review card under Running', () => {
+  it('keeps business categories and run states apart in grouped lists', () => {
     const groups = workQueryListGroups(
       [
         task({
@@ -242,10 +238,28 @@ describe('workQueryListGroups', () => {
       'status',
     );
 
-    expect(
-      groups.find((group) => group.key === 'needsInput')?.tasks.map((item) => item.id),
-    ).toEqual(['a']);
+    // Both are `running` run-state now — an in-review issue only separates on
+    // the business (workflowCategory) dimension.
     expect(groups.find((group) => group.key === 'running')?.tasks.map((item) => item.id)).toEqual([
+      'a',
+      'b',
+    ]);
+    const wfGroups = workQueryListGroups(
+      [
+        task({
+          id: 'a',
+          status: 'running',
+          workflowCategory: 'in_review',
+          workflowStateId: 'state-1',
+        }),
+        task({ id: 'b', status: 'running', workflowCategory: 'todo' }),
+      ],
+      'workflowCategory',
+    );
+    expect(
+      wfGroups.find((group) => group.key === 'in_review')?.tasks.map((item) => item.id),
+    ).toEqual(['a']);
+    expect(wfGroups.find((group) => group.key === 'todo')?.tasks.map((item) => item.id)).toEqual([
       'b',
     ]);
   });

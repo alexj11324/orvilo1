@@ -350,6 +350,7 @@ export class NotificationModel {
       filter?: NotificationPresentationFilter;
       kind?: NotificationFeedBucket;
       limit?: number;
+      lookahead?: boolean;
     } = {},
   ) {
     const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
@@ -383,16 +384,20 @@ export class NotificationModel {
       }
     }
 
-    return this.db
-      .select()
-      .from(notifications)
-      .where(and(...conditions))
-      .orderBy(
-        desc(notifications.lastActivityAt),
-        desc(notifications.createdAt),
-        desc(notifications.id),
-      )
-      .limit(limit);
+    return (
+      this.db
+        .select()
+        .from(notifications)
+        .where(and(...conditions))
+        .orderBy(
+          desc(notifications.lastActivityAt),
+          desc(notifications.createdAt),
+          desc(notifications.id),
+        )
+        // `lookahead` is the internal over-fetch — one row past the capped page
+        // size so a caller can detect a next page without lifting the cap.
+        .limit(opts.lookahead ? limit + 1 : limit)
+    );
   }
 
   /**

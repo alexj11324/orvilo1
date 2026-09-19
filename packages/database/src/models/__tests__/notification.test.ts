@@ -770,6 +770,20 @@ describe('NotificationModel (integration)', () => {
       });
     });
 
+    it('lookahead returns one row past the capped page size', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await serverDB.insert(notifications).values(
+        Array.from({ length: 51 }, (_, i) => ({
+          ...baseNotification({ title: `N${i}` }),
+          lastActivityAt: new Date(1_700_000_000_000 + i),
+          userId,
+        })),
+      );
+
+      expect(await model.listFeed({ limit: 50 })).toHaveLength(50);
+      expect(await model.listFeed({ limit: 50, lookahead: true })).toHaveLength(51);
+    });
+
     it('does not mark later feed revisions read during mark-all', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       await model.create(

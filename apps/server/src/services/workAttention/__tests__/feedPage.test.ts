@@ -120,6 +120,33 @@ describe('buildInboxFeed', () => {
     expect(page.cards[0]?.title).toBe('Stored name');
     expect(page.partial).toBe(false);
   });
+
+  it('reports hasMore at the page cap by looking one row past it', async () => {
+    const seen: Array<{ lookahead?: boolean; limit?: number }> = [];
+    const page = await buildInboxFeed({
+      actionSources: {
+        listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+      },
+      input: { limit: 50 },
+      notificationModel: {
+        ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
+        listFeed: async (input) => {
+          seen.push(input ?? {});
+          return Array.from({ length: 51 }, (_, i) => row({ id: `n${i}` }));
+        },
+      },
+      projectModel: { findByIds: async () => [] },
+      taskModel: { findByIds: async () => [] },
+    });
+
+    // The 50-row cap must apply to the page size, not the lookahead fetch —
+    // asking for limit+1 hits the model's own clamp and hasMore stays false.
+    expect(seen).toEqual([{ limit: 50, lookahead: true }]);
+    expect(page.hasMore).toBe(true);
+    expect(page.cards).toHaveLength(50);
+    expect(page.nextCursor).toBe('n49');
+  });
 });
 
 describe('buildInboxFeedCard', () => {

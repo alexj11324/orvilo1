@@ -12,6 +12,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import {
   AlarmClock,
+  BotIcon,
   EyeOffIcon,
   FolderKanbanIcon,
   LayoutList,
@@ -74,6 +75,12 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
   const moreMenu = useMemo(
     () =>
       [
+        {
+          icon: <Icon icon={BotIcon} />,
+          key: 'agents',
+          label: t('agentViewAll.title'),
+          onClick: () => navigate('/agents'),
+        },
         {
           icon: <Icon icon={AlarmClock} />,
           key: 'automations',

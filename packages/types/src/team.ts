@@ -64,6 +64,8 @@ export interface TeamOrchestrationPolicy {
  * identifiers — never `max(seq)+1` computed across rows.
  */
 export interface TeamItem {
+  /** Team accent color (hex) used for its identity glyph. Null → palette fallback. */
+  color?: string | null;
   coordinatorAgentId?: string | null;
   createdAt: Date;
   createdBySnapshot?: {

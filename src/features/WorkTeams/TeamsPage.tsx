@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
+import { Center, Empty, Flexbox, SearchBar } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { WORK_SEARCH_MAX_PER_TYPE } from '@orvilo/types';
 import { useDebounce } from 'ahooks';
@@ -20,6 +20,8 @@ import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
+
+import TeamIdentity from './TeamIdentity';
 
 const styles = createStaticStyles(({ css }) => ({
   key: css`
@@ -64,6 +66,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface TeamRowData {
+  color?: string | null;
   id: string;
   key?: string;
   name: string;
@@ -73,7 +76,12 @@ interface TeamRowData {
 const TeamRow = memo<{ team: TeamRowData }>(({ team }) => (
   <Flexbox horizontal align={'center'} className={styles.row}>
     <WorkspaceLink className={styles.link} to={`/teams/${team.id}`}>
-      <Icon color={cssVar.colorTextSecondary} icon={UsersIcon} size={16} />
+      <TeamIdentity
+        color={team.color}
+        id={team.id}
+        letter={(team.key || team.name).slice(0, 1)}
+        size={18}
+      />
       <Flexbox flex={1} style={{ minWidth: 0 }}>
         <Text ellipsis weight={500}>
           {team.name}

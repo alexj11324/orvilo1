@@ -52,6 +52,10 @@ describe('useNavLayout', () => {
       '/my-issues',
     );
     expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe('/reviews');
-    expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe('/agents');
+    // Agent lands on the workspace session (builtin inbox agent), not the
+    // agents view-all list — `/agent` alone has no index and redirects away.
+    expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe(
+      '/agent/inbox',
+    );
   });
 });

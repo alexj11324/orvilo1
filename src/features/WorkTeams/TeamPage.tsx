@@ -205,7 +205,7 @@ const TeamTriageRow = memo<{
           ) : null}
         </WorkspaceLink>
         <Flexbox horizontal align="center" className={styles.actions} gap={4}>
-          <Button size="small" type="primary" onClick={() => onAccept(task.id)}>
+          <Button size="small" onClick={() => onAccept(task.id)}>
             {t('teams.accept')}
           </Button>
           <Button size="small" onClick={() => onDecline(task.id)}>
@@ -259,6 +259,8 @@ const TeamPage = memo(() => {
   const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
   const wantsTriage = triageCapable && teamTab === 'triage';
   const wantsTasks = teamTab === 'issues';
+  // Board mode escapes the centered column — same WorkSurface frame as My issues.
+  const boardActive = wantsTasks && layout === 'board';
   const {
     data: triageData,
     error: triageError,
@@ -453,9 +455,11 @@ const TeamPage = memo(() => {
         </WideScreenContainer>
       ) : (
         <WideScreenContainer
+          fullWidth={boardActive}
           gap={16}
           paddingBlock={16}
-          wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+          paddingInline={boardActive ? 16 : undefined}
+          wrapperStyle={boardActive ? undefined : { flex: 1, overflowY: 'auto' }}
         >
           {/* Issues toolbar: cycle / no-project filters, the All–Active–Backlog
               workflow scope, and the list/board switch. Triage never shows the

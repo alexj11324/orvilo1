@@ -205,10 +205,14 @@ const MyWorkPage = memo(() => {
         }
       />
       {/* Board mode breaks out of the centered container — a kanban needs
-          full-width horizontal scroll, not a letterboxed column. */}
+          full-width horizontal scroll, not a letterboxed column. fullWidth keeps
+          the 16px gutters so the toolbar stays aligned while columns span the
+          canvas (same WorkSurface frame as Team issues and saved views). */}
       <WideScreenContainer
+        fullWidth={boardActive}
         gap={12}
         paddingBlock={16}
+        paddingInline={boardActive ? 16 : undefined}
         wrapperStyle={boardActive ? undefined : { flex: 1, overflowY: 'auto' }}
       >
         <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>

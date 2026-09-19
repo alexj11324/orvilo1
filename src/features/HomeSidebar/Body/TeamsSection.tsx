@@ -12,7 +12,7 @@ import {
   ActionIcon,
   Text,
 } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import {
   ArrowRight,
   EyeOffIcon,
@@ -31,6 +31,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { usePathname, useSearchParams } from '@/libs/router/navigation';
@@ -44,21 +45,6 @@ import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import { mergeSidebarExpandedKeys } from './index';
 
 const styles = createStaticStyles(({ css }) => ({
-  teamGlyph: css`
-    flex: none;
-
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-
-    font-size: 9px;
-    font-weight: 600;
-    line-height: 16px;
-    color: ${cssVar.colorBgLayout};
-    text-align: center;
-
-    background: ${cssVar.colorTextTertiary};
-  `,
   teamHeader: css`
     display: flex;
     align-items: center;
@@ -233,9 +219,11 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
                       title={team.name}
                       slots={{
                         titlePrefix: (
-                          <span aria-hidden className={styles.teamGlyph}>
-                            {(team.key || team.name).slice(0, 1).toUpperCase()}
-                          </span>
+                          <TeamIdentity
+                            color={team.color}
+                            id={team.id}
+                            letter={(team.key || team.name).slice(0, 1)}
+                          />
                         ),
                       }}
                     />

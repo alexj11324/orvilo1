@@ -56,17 +56,21 @@ const RecentListItem = memo<RecentItem>((item) => {
   }, [type, agentId, id, prefetchAgent, prefetchPage]);
 
   const { dropdownMenu, handleRename } = useRecentItemDropdownMenu(item, toggleEditing);
+  const menuItems = dropdownMenu();
+  const hasOverflowMenu = (menuItems?.length ?? 0) > 0;
 
   return (
     <Flexbox style={{ position: 'relative' }}>
       <NavItem
-        contextMenuItems={dropdownMenu}
+        contextMenuItems={hasOverflowMenu ? dropdownMenu : undefined}
         disabled={editing}
         title={title}
         actions={
-          <DropdownMenu items={dropdownMenu()}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
-          </DropdownMenu>
+          hasOverflowMenu ? (
+            <DropdownMenu items={menuItems}>
+              <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
+            </DropdownMenu>
+          ) : undefined
         }
         icon={(() => {
           if (type === 'task') {

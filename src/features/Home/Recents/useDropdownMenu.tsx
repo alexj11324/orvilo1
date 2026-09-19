@@ -44,6 +44,10 @@ export const useRecentItemDropdownMenu = (
     [item.id, item.type, renameRecent, scope],
   );
 
+  // Team/project/savedView recents have no rename or delete flow in this menu —
+  // those entities are managed on their own surfaces.
+  const manageable = item.type === 'document' || item.type === 'task' || item.type === 'topic';
+
   const handleDelete = useCallback(() => {
     if (item.type === 'topic') {
       void confirmRemoveTopic({
@@ -85,28 +89,36 @@ export const useRecentItemDropdownMenu = (
 
   const dropdownMenu = useCallback((): MenuProps['items'] => {
     const items: NativeContextMenuItem[] = [
-      {
-        disabled: !canEdit,
-        icon: <Icon icon={PencilLineIcon} />,
-        key: 'rename',
-        label: t('rename'),
-        onClick: () => toggleEditing(true),
-        sfSymbol: 'pencil',
-      },
+      ...(manageable
+        ? [
+            {
+              disabled: !canEdit,
+              icon: <Icon icon={PencilLineIcon} />,
+              key: 'rename',
+              label: t('rename'),
+              onClick: () => toggleEditing(true),
+              sfSymbol: 'pencil',
+            },
+          ]
+        : []),
       ...(transferMenuItems ?? []),
       ...(transferMenuItems?.length ? [{ type: 'divider' as const }] : []),
-      {
-        danger: true,
-        disabled: !canEdit,
-        icon: <Icon icon={Trash} />,
-        key: 'delete',
-        label: t('delete'),
-        onClick: handleDelete,
-        sfSymbol: 'trash',
-      },
+      ...(manageable
+        ? [
+            {
+              danger: true,
+              disabled: !canEdit,
+              icon: <Icon icon={Trash} />,
+              key: 'delete',
+              label: t('delete'),
+              onClick: handleDelete,
+              sfSymbol: 'trash',
+            },
+          ]
+        : []),
     ];
     return items as MenuProps['items'];
-  }, [canEdit, t, toggleEditing, handleDelete, transferMenuItems]);
+  }, [canEdit, t, toggleEditing, handleDelete, transferMenuItems, manageable]);
 
   return { dropdownMenu, handleRename };
 };

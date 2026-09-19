@@ -23,6 +23,7 @@ import { topicSelectors } from '@/store/chat/selectors';
 import { useCommandMenuContext } from './CommandMenuContext';
 import { CommandItem } from './components';
 import ContextCommands from './ContextCommands';
+import RecentsCommands from './RecentsCommands';
 import { useCommandMenu } from './useCommandMenu';
 
 const MainMenu = memo(() => {
@@ -131,6 +132,8 @@ const MainMenu = memo(() => {
           {t('cmdk.theme')}
         </CommandItem>
       </Command.Group>
+
+      <RecentsCommands />
 
       <Command.Group heading={t('cmdk.navigate')}>
         {getNavigableRoutes().map((route) => {

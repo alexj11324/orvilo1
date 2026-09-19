@@ -103,8 +103,8 @@
     "packages/database/src/utils/taskTeamReadable.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "9f30cfb4",
-  "implementationHeadBeforeDocs": "9f30cfb4",
+  "headSha": "6c80f4ac",
+  "implementationHeadBeforeDocs": "6c80f4ac",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

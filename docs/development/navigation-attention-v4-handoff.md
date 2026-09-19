@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `9f30cfb4` 未过滤 work-query / CommandMenu `searchTasks` 对私有团队任务走 Inbox 同一套可读性（TRI05/SEC06）。叠在 `09ab2664` 私有项目标题与 Devin `0331f0f4` OSS workspace 激活之上。                                      |
+| 实施 HEAD（本交接提交之前）      | `6c80f4ac` 未过滤 work-query / CommandMenu `searchTasks` 对私有团队任务走 Inbox 同一套可读性（TRI05/SEC06）。叠在 Devin `8aa4f7cb` Inbox 分页、`b16936c2` 看板维度与 `09ab2664` 私有项目标题之上。                         |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -218,7 +218,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `0331f0f4`：OSS workspace 激活链接上真链路 ——`useActiveWorkspaceId`/`Slug` 不再是 null stub，改成模块 store + `useWorkspaceUrlSync`（已挂进 web/desktop/mobile 三个主 layout）；`getBusinessTrpcHeaders` 发 `X-Workspace-Id`，`team.teams`/workspace settings 的 wsCompat 在 OSS 真能跑通（本地建 ws `orvilo-dev` + team `Engineering` 实测：`/orvilo-dev/teams/:id?tab=` 与 `/orvilo-dev/settings/members` 全真）。`WORKSPACE_MIRRORED_FIRST_SEGMENTS` 补齐 inbox/my-work/views/teams/automations/goal（此前 sidebar 链在 workspace 模式丢 slug 前缀掉回个人态）。Agent 改成扁平行 → `/agents`（`SidebarTabKey.Agent` 新增，旧 agent 手风琴退役出 SIDEBAR\_ACCORDION\_KEYS）。Workspace ▸ "More" 改成可见行（Linear 形状，不再是 hover ⋯）。`useActiveIdentity` 实装：workspace 模式头部显示 workspace 名 / 头像。lint 干净，104 passed。不是 64× AC。
 - `67de7007`：SEC06 退出私有团队后 Inbox 丢掉任务标题。lint 干净，`notification.test.ts` 53 passed。不是 64× AC。
 - `09ab2664`：SEC06 私有项目走 `ProjectModel.readable`。Inbox / `searchProjects` / `queryProjects` / Recents 共用 `buildProjectReadableWhere`。lint 干净，`notification` + `workQuery` + `project` + `recent` 139 passed。不是 64× AC。
-- `9f30cfb4`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。lint 干净，`workQuery` + `notification` 77 passed。不是 64× AC。
+- `9f30cfb4` / 变基后 `6c80f4ac`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。叠在 Devin `8aa4f7cb`（Inbox 分页 + 工作面错误态）与 `b16936c2`（看板 raw 维度 + 持久重排）之上。lint 干净，rebase 后 `workQuery` + `notification` 77 passed。不是 64× AC。不要回滚 Devin 这两刀。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

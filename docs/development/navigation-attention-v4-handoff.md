@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `da1dcc0a` 看板卡右键改状态走 `applyWorkQueryStatusChange`（Linear `moveBoard`）。叠在 `ecaaa108` 列表 refetch 与 Devin `c2d90a23` Linear 侧栏解剖之上。                                                                   |
+| 实施 HEAD（本交接提交之前）      | `0331f0f4` OSS workspace 激活链真实化 + 侧栏增量（Agent 扁平行 / More 行 / 镜像段补齐）。叠在 Cursor `69f9aa3c`（看板 `moveBoard` 文档）之上。                                                                             |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -211,6 +211,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `c2d90a23`：Linear 侧栏解剖（workspace 头部 / 团队子导航 / 底栏头像）。不要回滚。
 - `ecaaa108`：列表改状态 refetch + Linear `moveBoard`。lint 干净，67 passed。不是 64× AC。
 - `da1dcc0a`：看板卡右键改状态走 `applyWorkQueryStatusChange`。lint 干净，27 passed。不是 64× AC。
+- `0331f0f4`：OSS workspace 激活链接上真链路 ——`useActiveWorkspaceId`/`Slug` 不再是 null stub，改成模块 store + `useWorkspaceUrlSync`（已挂进 web/desktop/mobile 三个主 layout）；`getBusinessTrpcHeaders` 发 `X-Workspace-Id`，`team.teams`/workspace settings 的 wsCompat 在 OSS 真能跑通（本地建 ws `orvilo-dev` + team `Engineering` 实测：`/orvilo-dev/teams/:id?tab=` 与 `/orvilo-dev/settings/members` 全真）。`WORKSPACE_MIRRORED_FIRST_SEGMENTS` 补齐 inbox/my-work/views/teams/automations/goal（此前 sidebar 链在 workspace 模式丢 slug 前缀掉回个人态）。Agent 改成扁平行 → `/agents`（`SidebarTabKey.Agent` 新增，旧 agent 手风琴退役出 SIDEBAR\_ACCORDION\_KEYS）。Workspace ▸ "More" 改成可见行（Linear 形状，不再是 hover ⋯）。`useActiveIdentity` 实装：workspace 模式头部显示 workspace 名 / 头像。lint 干净，104 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

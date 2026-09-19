@@ -86,6 +86,20 @@ export const isAccessLevelAllowed = (
 ) => isResourceAccessLevelAllowed(resourceType, accessLevel);
 
 /**
+ * Workspace-scope admission for one row — mirrors `buildWorkspaceWhere`'s
+ * union semantics in the database layer: the caller's own unfiled rows
+ * (`workspace_id IS NULL`) follow them into workspace scope, so activating a
+ * workspace never locks the owner out of their pre-provisioning data. A
+ * teammate's unfiled rows and any foreign-workspace row still fail.
+ */
+export const isWorkspaceScopedMeta = (
+  meta: Pick<ResourceMeta, 'userId' | 'workspaceId'>,
+  workspaceId: string,
+  userId: string,
+): boolean =>
+  meta.workspaceId === workspaceId || (meta.workspaceId === null && meta.userId === userId);
+
+/**
  * Fetch creator/visibility/workspace of a permission-capable resource,
  * without caller scoping. Authorization is applied by the action evaluator.
  */
@@ -233,7 +247,7 @@ export const canPerformResourceAction = async (params: {
     userId,
     workspaceId,
   } = params;
-  if (meta.workspaceId !== workspaceId) return false;
+  if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
 
   const isCreator = meta.userId === userId;
   const isPrivate = meta.visibility === 'private';
@@ -350,7 +364,7 @@ export const assertCanPerformResourceAction = async (
 ): Promise<void> => {
   const meta =
     params.meta ?? (await getResourceMeta(params.db, params.resourceType, params.resourceId));
-  if (!meta || meta.workspaceId !== params.workspaceId) {
+  if (!meta || !isWorkspaceScopedMeta(meta, params.workspaceId, params.userId)) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
   }
 
@@ -389,7 +403,7 @@ export const isResourceAuthorOrAdmin = async (params: {
   workspaceId: string;
 }): Promise<boolean> => {
   const { db, grantedPermissions, meta, resourceType, userId, workspaceId } = params;
-  if (meta.workspaceId !== workspaceId) return false;
+  if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
   if (meta.userId === userId) return true;
   if (meta.visibility === 'private') return false;
 

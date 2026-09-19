@@ -1,0 +1,18 @@
+---
+title: 'Onboarding Keeps Your Saved Settings'
+description: >-
+  The onboarding wizard now waits for your saved profile to load before
+  opening, so a cold refresh can no longer overwrite your stored timezone.
+tags:
+  - Onboarding
+  - Settings
+---
+
+# Onboarding Keeps Your Saved Settings
+
+Opening the onboarding wizard on a cold reload could briefly capture browser-detected defaults before your saved profile arrived, and submitting in that window could overwrite your stored timezone with the detected zone. The wizard now waits for your settings to finish loading — or for the load to fail — before showing the first step.
+
+## Improvements and fixes
+
+- **Persisted profile fields survive a cold reload.** The wizard holds a brief loading state until the saved full name, timezone, and telemetry preference are available, instead of seeding the form with detected defaults.
+- **A failed settings load no longer blocks the wizard.** If the user-state fetch fails, onboarding still opens with defaults rather than hanging on a spinner.

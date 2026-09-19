@@ -9,7 +9,7 @@ standalone acceptance platform, so this file is now the whole checklist.
 
 Only judgment rules live here. Every entry carries `since` and `holds-while` —
 the mechanism it depends on. When that mechanism moves into a script default or
-an ingest check, the entry is deleted the same day (admission and exit rules:
+another gate — or the mechanism itself is retired — the entry is deleted the same day (admission and exit rules:
 [PROCESS.md](./PROCESS.md) Step 0). Rules an agent skips under pressure are
 PROCESS.md, not here. Incident narratives, feature-spec facts, and retired
 entries live in [the field notes](./references/common-mistakes-field-notes.md).
@@ -28,18 +28,16 @@ the next free number of that prefix.
 - **L-E4** Verify in the requested product container at representative scale, on both sides of every behavior-changing threshold; a harness is supporting evidence only.
 - **L-E5** Every criterion maps to its verifier, its own inspectable evidence, and a verdict — never an aggregate "all passed".
 - **L-E6** When the Task requires a durable document, create and pin the real artifact; evidence explains a verdict, it is not the deliverable.
-- **L-E9** Check the acceptance's status before ingest; new scoped work on an accepted acceptance goes to a new subject.
+- **L-E9** Check the acceptance's status before recording a round; new scoped work on an accepted acceptance goes to a new subject.
 - **L-E10** After any Agent assignment or Task edit, verify the persisted provider/model and the first completed message's metadata before judging quality.
-- **L-E11** Reconcile the evidence count in `result.json` against the ingest JSON; any `[WARN] evidence upload failed` is a failed publish — republish a fresh round.
-- **L-E13** Uncommitted work on a branch that owns a PR: decide provenance explicitly (open the real PR, or say in `report.md` there is none) and re-read `branch`/`commit` at publish time.
+- **L-E13** Uncommitted work on a branch that owns a PR: decide provenance explicitly (open the real PR, or say in `report.md` there is none) and record the commit SHA the evidence was produced on.
 - **L-E14** After an insertion affordance, continue the user's action in the same case and assert node order in persisted `editor_data`; send the payload through the same entry point.
 - **L-E15** A conversation-branch regression is verified by sending the next message through the real composer: DB row, parent on the active spine, render before and after cold reload.
 - **L-E16** Streaming is proven by timestamped intermediate samples and a GIF whose frames progress — a terminal reply after exit proves persistence only.
 - **L-E17** Direct-mention routing is verified with a real tool call and the full persisted tree; no owner assistant, `callAgent`, or synthetic target-user row.
 - **L-E19** Markdown evidence: one paragraph per physical line; newline only where it is content.
-- **L-E20** Build fixtures through the same composition the product uses; compare an entity page against a canary-created sibling before publishing it as evidence.
+- **L-E20** Build fixtures through the same composition the product uses; compare an entity page against a canary-created sibling before attaching it as evidence.
 - **L-E21** Evidence for "A is unaffected by B" must be able to tell A from B: distinct content and the target echoed in the request line.
-- **L-E21** Publish against production even when the subject exists only locally; a local ingest may supplement, never replace.
 
 **Product and interaction contracts**
 
@@ -50,7 +48,7 @@ the next free number of that prefix.
 
 **Environment safety**
 
-- **L-S1** Prove the ingest target from effective CLI settings or an environment-distinguishing probe, never from `lh whoami` alone.
+- **L-S1** Prove which environment a CLI call targets from effective settings or an environment-distinguishing probe, never from `lh whoami` alone.
 - **L-S2** Green Vite/Vitest/lint/tsc is not boot insurance: boot the real surface and read `agent-browser console` on an ErrorBoundary.
 - **L-S3** Fetch `origin canary`, record the SHA, and confirm it is an ancestor of the branch before starting the evidence environment.
 - **L-S5** Before driving CDP 9222 or a pool port, prove who owns it: Electron `Browser` string on `/json/version`, a Orvilo renderer marker, and _your_ worktree's absolute source path.
@@ -60,7 +58,7 @@ the next free number of that prefix.
 - **L-S14** An image property (alpha, aspect, no text) is asserted from the decoded bytes, never from the prompt that asked for it.
 - **L-S16** Every long-run health probe has connect and total timeouts; a listening socket is not health.
 - **L-S17** Empty reads plus failing writes: check `select id from users` in the DB the running server uses before debugging the feature.
-- **L-S19** `plan[]` holds only what the user accepts or rejects, each id fulfilled by a case; a clean ingest prints `plan: N item(s)` with nothing after it.
+- **L-S19** `plan[]` holds only what the user accepts or rejects, each id fulfilled by a case in the same round.
 - **L-S20** Read the managed containers' host ports from `docker ps` and pass `DB_PORT`/`REDIS_PORT` to every `init-dev-env.sh` subcommand; `auth_failed` on migrate is a port mismatch.
 - **L-S21** In a worktree, invoke scripts by absolute path and prove the SPA's identity (Vite pid cwd, changed module from the Vite origin) before trusting any gate or evidence.
 - **L-S22** A per-account cap that a round consumes (artifact deployments) is cleared for the account the surface actually authenticates as, and re-cleared between rounds.
@@ -93,7 +91,7 @@ probes stay as supporting text; restore the DOM before any passing screenshot.
 
 `since 2026-07-24` · `holds-while: always`
 
-**Trap:** an entry button plus source-level evidence is published as proof that
+**Trap:** an entry button plus source-level evidence is attached as proof that
 manual check creation works.
 
 **Rule:** verify entry, completed input and preview, and the created item in its
@@ -113,7 +111,7 @@ evidence only.
 
 ### L-E5 — Replacing per-check evidence with a verification summary
 
-`since 2026-07-30` · `holds-while: ingest accepts a pass/fail case with no evidence`
+`since 2026-07-30` · `holds-while: always`
 
 **Trap:** an aggregate checklist or transcript saying everything passed.
 
@@ -132,13 +130,13 @@ proving its content and association.
 
 ### L-E9 — Appending a new delivery to a terminally accepted Acceptance
 
-`since 2026-07-30` · `holds-while: ingest does not refuse a round on an accepted acceptance`
+`since 2026-07-30` · `holds-while: always`
 
-**Trap:** separately scoped work is published as a new round on an acceptance
+**Trap:** separately scoped work is recorded as a new round on an acceptance
 whose delivery was already accepted, so the closed audit record no longer matches
 what was decided.
 
-**Rule:** inspect the acceptance status before ingest. New Task or subject for a
+**Rule:** inspect the acceptance status before recording. New Task or subject for a
 materially new delivery; reopen only on explicit user request.
 
 ### L-E10 — Judging agent quality without proving the runtime model
@@ -155,32 +153,19 @@ actually executes on; the LLM provider/model surface is retired (P50), so
 those fields no longer tell you what ran — and the first completed assistant
 message metadata; attach that identity to the round.
 
-### L-E11 — Declaring an ingest done without reconciling its evidence count
-
-`since 2026-07-31` · `holds-while: ingest exits 0 after "[WARN] evidence upload failed, skipping <file>"`
-
-**Trap:** the success JSON shows an `acceptanceId` and a round index, the WARN
-above it is read as noise. One skipped half of a `comparison` pair renders alone
-— a lone `before` reads as "the fix never landed".
-
-**Rule:** count evidence items in `result.json` against the ingest JSON's
-`evidence` field; any WARN is a failed publish. Do not retro-attach with
-`acceptance run evidence upload` (no `comparison` metadata → unpaired). Publish
-a fresh round with the complete set and say in `report.md` that it republishes
-the same observations.
-
 ### L-E13 — Publishing uncommitted work onto the branch's unrelated PR
 
-`since 2026-08-10` · `holds-while: ingest resolves the PR from branch when pullRequest is absent OR null`
+`since 2026-08-10` · `holds-while: always`
 
-**Trap:** working-tree changes with no PR are ingested on a long-lived branch
-that owns one; every round is stamped with that PR and re-ingesting reproduces
-it.
+**Trap:** evidence produced from an uncommitted working tree on a long-lived
+branch is attached to that branch's unrelated PR; a reviewer cannot tell which
+revision the evidence proves.
 
-**Rule:** decide provenance before publishing — commit and open the real PR, or
-state in `report.md` that this round has no PR and any PR shown belongs to other
-work. Re-read `branch` / `commit` at publish time; `report-init.sh` fills them
-from whatever was checked out when it ran.
+**Rule:** decide provenance before attaching evidence — commit and open the real
+PR, or state in `report.md` that this round has no PR and any PR shown belongs to
+other work. Record the commit SHA the evidence was produced on;
+`report-init.sh` fills `branch` / `commit` from whatever was checked out when it
+ran.
 
 ### L-E14 — Verifying an insertion affordance without the user's next action
 
@@ -244,7 +229,7 @@ reflows.
 newline only on list items, table rows, fenced code, and literal transcripts.
 Never run a proseWrap formatter over `assets/`.
 
-### L-E20 — Seeding an entity below its composing layer, then publishing its page as evidence
+### L-E20 — Seeding an entity below its composing layer, then attaching its page as evidence
 
 `since 2026-09-03` · `holds-while: goal/task services accept decomposed inputs without a server-side guard re-deriving the composed field`
 
@@ -255,20 +240,9 @@ under-composed data faithfully and the reviewer reads it as a regression in an
 untouched block.
 
 **Rule:** drive fixtures through the real creation surface or the same shaping
-helpers the callers invoke; before publishing an entity page, compare its
+helpers the callers invoke; before attaching an entity page as evidence, compare its
 populated fields against a canary-created sibling. Prefer a server-side guard so
 no API caller can create the under-composed shape.
-
-### L-E21 — Publishing locally because the subject exists only locally
-
-`since 2026-09-03` · `holds-while: always`
-
-**Trap:** the primary report is ingested into a local instance because its Task
-or Topic is absent from production; the link dies with the environment.
-
-**Rule:** create a production Task or Topic as the anchor and publish in a clean
-environment against `orvilo.aspectlylabs.com`. A local ingest may supplement, never
-replace.
 
 ### L-D6 — Giving a master-detail page ambiguous scroll ownership
 
@@ -334,16 +308,16 @@ instead of erroring, so click and navigation both look successful.
 link in the running app by reading `location.pathname` and `document.title` — a
 landing on a list page is the tell.
 
-### L-S1 — Publishing to an assumed server target
+### L-S1 — Calling an assumed server target
 
 `since 2026-07-24` · `holds-while: lh whoami does not print the effective serverUrl`
 
-**Trap:** stripping a server env var and taking `lh whoami` as proof the ingest
+**Trap:** stripping a server env var and taking `lh whoami` as proof a CLI call
 targets production; `lh login` persists `serverUrl` in CLI settings and a local
 DB may hold the synchronized profile.
 
 **Rule:** inspect the effective CLI settings or run a data probe that
-distinguishes environments. For production publishing without touching a local
+distinguishes environments. To talk to production without touching a local
 login, use an isolated `ORVILO_CLI_HOME`.
 
 ### L-S2 — Trusting green gates as proof the app boots
@@ -493,17 +467,16 @@ redirects to `/signin` after the row is recreated.
 
 ### L-S19 — Putting your own work plan into `result.json` `plan[]`
 
-`since 2026-09-02` · `holds-while: ingest prints "N planned but not executed" as a summary line and still publishes`
+`since 2026-09-02` · `holds-while: the report format has a `plan\[]` field`
 
 **Trap:** `plan[]` filled with the agent's task list ("find the root cause",
 "fix and add a test"); items without `id` are numbered `case-N` and render as
 permanent **未执行** rows on the user's board.
 
 **Rule:** `plan[]` holds only what the user would accept or reject, each with a
-stable `id` a case in the same round fulfills; one criterion → one item. Read
-the ingest summary line: clean is `plan: N item(s)` with nothing after. Repair by
-folding bogus ids into the real check with `supersedes: ['case-1', …]` in the
-next round — never `run delete`, which destroys the round's real evidence too.
+stable `id` a case in the same round fulfills; one criterion → one item. Repair
+by folding bogus ids into the real check the next time the plan is corrected —
+never delete the record to hide them, which destroys the real evidence too.
 
 ### L-S20 — Bootstrapping the isolated stack on the script's default DB port
 

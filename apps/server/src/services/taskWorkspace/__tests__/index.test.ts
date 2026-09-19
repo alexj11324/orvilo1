@@ -297,9 +297,10 @@ describe('TaskWorkspaceService', () => {
 
       const result = await service.provision({ seq: 1, task });
 
-      expect(result?.prompt).toContain('git checkout -B task/T-1 origin/main');
+      expect(result?.prompt).toContain('fetch `origin/main` and work only on `task/T-1`');
       expect(result?.prompt).toContain('git push -u origin task/T-1');
-      expect(result?.prompt).toContain('gh pr create --base main --head task/T-1');
+      expect(result?.prompt).toContain('gh pr create');
+      expect(result?.prompt).toContain('Do not merge it yourself');
     });
 
     it('suffixes the remote branch with the run seq on retries', async () => {

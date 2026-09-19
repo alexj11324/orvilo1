@@ -46,9 +46,10 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { actionApprovals } from '../schemas/actionApproval';
 import { executionGrants } from '../schemas/executionGrant';
+import { notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
 import { tasks } from '../schemas/task';
-import { projectTeams } from '../schemas/team';
+import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
@@ -401,6 +402,9 @@ export const validateWorkQuery = (query: WorkQuery) => {
   if (total > WORK_QUERY_MAX_PREDICATES) {
     throw new WorkQueryError('QUERY_TOO_COMPLEX', 'Query exceeded maximum predicates');
   }
+  if (query.sortMode !== undefined && query.sortMode !== 'field' && query.sortMode !== 'manual') {
+    throw new WorkQueryError('INVALID_QUERY', `Unknown sortMode: ${String(query.sortMode)}`);
+  }
 };
 
 export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
@@ -422,6 +426,10 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
         entityType: 'task',
         filter: { all: [{ field: 'createdByUserId', op: 'eq', value: current }] },
         schemaVersion: 1,
+        sort: [
+          { direction: 'desc', field: 'createdAt' },
+          { direction: 'asc', field: 'id' },
+        ],
       };
     }
     case 'delegated': {
@@ -445,10 +453,9 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       };
     }
     case 'activity': {
-      // "Activity" = every task the current user touches — assignee,
-      // creator, delegator, reviewer or subscriber. The mode-specific OR
-      // lives in taskConditions (delegated/reviewer/subscribed are virtual
-      // fields resolved to EXISTS subqueries).
+      // "Activity" = tasks with real activity for the caller — notification
+      // episodes carry actor/verb/subject. The EXISTS lives in taskConditions;
+      // the list path orders by the episode's `lastActivityAt`.
       return {
         entityType: 'task',
         schemaVersion: 1,
@@ -658,6 +665,22 @@ const normalizeProjectSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[
   return next;
 };
 
+const projectValueOf =
+  (cursor: typeof projects.$inferSelect) =>
+  (field: WorkQuerySort['field']): Date | number | string | null => {
+    if (field === 'createdAt') return cursor.createdAt;
+    if (field === 'id') return cursor.id;
+    if (field === 'name') return cursor.name;
+    if (field === 'status') return cursor.status;
+    if (field === 'updatedAt') return cursor.updatedAt;
+    return null;
+  };
+
+const PROJECT_OPTION_SORT: WorkQuerySort[] = [
+  { direction: 'desc', field: 'updatedAt' },
+  { direction: 'asc', field: 'id' },
+];
+
 const projectSortColumn = (field: WorkQuerySort['field']) => {
   switch (field) {
     case 'createdAt': {
@@ -728,18 +751,20 @@ export class WorkQueryModel {
     }
     if (mode === 'activity') {
       conditions.push(
-        sql`(
-          ${tasks.assigneeUserId} = ${this.userId}
-          or ${tasks.createdByUserId} = ${this.userId}
-          or ${tasks.reviewerUserId} = ${this.userId}
-          or exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${this.userId} and ${taskSubscriptions.unsubscribedAt} is null)
-          or exists (select 1 from ${executionGrants} where ${executionGrants.taskId} = ${tasks.id} and ${executionGrants.initiatedBy} = ${this.userId} and ${executionGrants.status} = 'active')
-          or exists (select 1 from ${actionApprovals} where ${actionApprovals.targetId} = ${tasks.id} and ${actionApprovals.status} = 'pending' and ${actionApprovals.approverUserId} = ${this.userId})
-        )`,
+        sql`exists (select 1 from ${notifications} where ${notifications.userId} = ${this.userId} and ${notifications.resourceType} = 'task' and ${notifications.resourceId} = ${tasks.id})`,
       );
     }
     return conditions;
   };
+
+  /**
+   * Latest real activity on a task for the caller — the notification episode's
+   * `lastActivityAt` (actor/verb/subject live on the notification row). Falls
+   * back to the row's createdAt when a legacy notification has no activity
+   * stamp; the EXISTS in `taskConditions` guarantees at least one row.
+   */
+  private taskActivityAt = () =>
+    sql`(select max(coalesce(${notifications.lastActivityAt}, ${notifications.createdAt})) from ${notifications} where ${notifications.userId} = ${this.userId} and ${notifications.resourceType} = 'task' and ${notifications.resourceId} = ${tasks.id})`;
 
   queryTasks = async (params: {
     afterId?: string;
@@ -775,10 +800,15 @@ export class WorkQueryModel {
         queryHash,
         requestedHash: params.queryHash,
         sort,
+        sortMode: query.sortMode ?? 'manual',
       });
     }
 
     const listConditions = [...conditions];
+    // Activity mode lists by real activity recency — the latest notification
+    // episode on the task — not by the row's updatedAt.
+    const activityOrdered = params.mode === 'activity';
+    const activityExpr = this.taskActivityAt();
 
     if (params.afterId) {
       if (!params.queryHash || params.queryHash !== queryHash) {
@@ -792,12 +822,31 @@ export class WorkQueryModel {
       if (!cursor) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
-      listConditions.push(keysetAfter(sort, sortColumn, (f) => sortValue(cursor, f)));
+      if (activityOrdered) {
+        const [activityCursor] = await this.db
+          .select({ at: sql<Date | null>`${activityExpr}` })
+          .from(tasks)
+          .where(eq(tasks.id, cursor.id))
+          .limit(1);
+        const at = activityCursor?.at ?? null;
+        listConditions.push(
+          at
+            ? or(
+                sql`${activityExpr} < ${at}`,
+                and(sql`${activityExpr} = ${at}`, gt(tasks.id, cursor.id)),
+              )!
+            : and(sql`${activityExpr} is null`, gt(tasks.id, cursor.id))!,
+        );
+      } else {
+        listConditions.push(keysetAfter(sort, sortColumn, (f) => sortValue(cursor, f)));
+      }
     }
 
-    const orderBy = sort.map((item) =>
-      item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
-    );
+    const orderBy = activityOrdered
+      ? [desc(activityExpr), asc(tasks.id)]
+      : sort.map((item) =>
+          item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
+        );
 
     const [countRow] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -837,6 +886,7 @@ export class WorkQueryModel {
     queryHash: string;
     requestedHash?: string;
     sort: WorkQuerySort[];
+    sortMode: 'field' | 'manual';
   }) => {
     if (params.afterId && !params.groupKey) {
       throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
@@ -867,9 +917,10 @@ export class WorkQueryModel {
       .sort();
     const totalsKeys = [...stable, ...extra];
 
-    // Board ordering is manual (position) so a same-column drop persists
-    // exactly where the user left it; lists keep the query's own sort.
-    const boardOrdered = params.layout === 'board';
+    // `manual` board ordering keeps position so a same-column drop persists
+    // where the user left it; `field` orders each column by the query's own
+    // sort — switching to board never silently overrides it.
+    const boardOrdered = params.layout === 'board' && params.sortMode === 'manual';
     const orderBy = boardOrdered
       ? [sql`${taskEffectivePosition} asc`, desc(tasks.createdAt), desc(tasks.seq)]
       : params.sort.map((item) =>
@@ -1012,17 +1063,6 @@ export class WorkQueryModel {
         ? desc(projectSortColumn(item.field))
         : asc(projectSortColumn(item.field)),
     );
-    const projectValueOf =
-      (cursor: typeof projects.$inferSelect) =>
-      (field: WorkQuerySort['field']): Date | number | string | null => {
-        if (field === 'createdAt') return cursor.createdAt;
-        if (field === 'id') return cursor.id;
-        if (field === 'name') return cursor.name;
-        if (field === 'status') return cursor.status;
-        if (field === 'updatedAt') return cursor.updatedAt;
-        return null;
-      };
-
     const isBoard = params.query.layout === 'board' || params.query.groupBy === 'status';
     if (isBoard) {
       if (params.afterId && !params.groupKey) {
@@ -1289,5 +1329,104 @@ export class WorkQueryModel {
       .where(and(...conditions))
       .orderBy(desc(projects.updatedAt), asc(projects.id))
       .limit(Math.min(Math.max(limit, 1), WORK_SEARCH_MAX_PER_TYPE));
+  };
+
+  /**
+   * Picker options for `projectId` filter rows: authorized name search with
+   * keyset pagination (`afterId`), or an authorized id lookup (`ids`) to
+   * hydrate already-selected values that are not on the current page.
+   */
+  searchProjectOptions = async (params: {
+    afterId?: string;
+    ids?: string[];
+    limit?: number;
+    needle?: string;
+  }) => {
+    const limit = Math.min(Math.max(params.limit ?? 25, 1), WORK_SEARCH_MAX_PER_TYPE);
+    const readable = buildProjectReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (params.ids?.length) {
+      const rows = await this.db
+        .select({ id: projects.id, name: projects.name })
+        .from(projects)
+        .where(and(readable, inArray(projects.id, params.ids.slice(0, 50))))
+        .orderBy(desc(projects.updatedAt), asc(projects.id));
+      return { items: rows, nextCursor: null };
+    }
+
+    const conditions: SQL[] = [readable];
+    const needle = params.needle?.trim();
+    if (needle) {
+      conditions.push(sql`${projects.name} ILIKE ${`%${escapeLike(needle)}%`} ESCAPE '\\'`);
+    }
+    if (params.afterId) {
+      const [cursor] = await this.db
+        .select()
+        .from(projects)
+        .where(and(readable, eq(projects.id, params.afterId)))
+        .limit(1);
+      if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      conditions.push(keysetAfter(PROJECT_OPTION_SORT, projectSortColumn, projectValueOf(cursor)));
+    }
+    const rows = await this.db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(and(...conditions))
+      .orderBy(desc(projects.updatedAt), asc(projects.id))
+      .limit(limit + 1);
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? (items.at(-1)?.id ?? null) : null };
+  };
+
+  /**
+   * Cycle picker options in a single authorized query — never a per-team
+   * fan-out. `teamId` narrows to one readable team (an unreadable or foreign
+   * team returns nothing rather than leaking); `ids` hydrates selected values.
+   */
+  listCycleOptions = async (params: {
+    ids?: string[];
+    limit?: number;
+    needle?: string;
+    teamId?: string;
+  }) => {
+    if (!this.workspaceId) return [];
+    const readableTeamIds = await this.listReadableTeamIds();
+    const teamIds = params.teamId
+      ? readableTeamIds.has(params.teamId)
+        ? [params.teamId]
+        : []
+      : [...readableTeamIds];
+    if (teamIds.length === 0) return [];
+
+    const conditions: SQL[] = [
+      eq(teamCycles.workspaceId, this.workspaceId),
+      inArray(teamCycles.teamId, teamIds),
+    ];
+    if (params.ids?.length) {
+      conditions.push(inArray(teamCycles.id, params.ids.slice(0, 50)));
+    } else {
+      const needle = params.needle?.trim();
+      if (needle) {
+        conditions.push(sql`${teamCycles.name} ILIKE ${`%${escapeLike(needle)}%`} ESCAPE '\\'`);
+      }
+    }
+    const limit = Math.min(Math.max(params.limit ?? 100, 1), WORK_SEARCH_MAX_PER_TYPE);
+    return this.db
+      .select({
+        endsAt: teamCycles.endsAt,
+        id: teamCycles.id,
+        name: teamCycles.name,
+        number: teamCycles.number,
+        startsAt: teamCycles.startsAt,
+        teamId: teamCycles.teamId,
+        teamName: teams.name,
+      })
+      .from(teamCycles)
+      .leftJoin(teams, eq(teams.id, teamCycles.teamId))
+      .where(and(...conditions))
+      .orderBy(asc(teams.name), desc(teamCycles.startsAt), asc(teamCycles.id))
+      .limit(limit);
   };
 }

@@ -38,3 +38,22 @@ only merge after the ones below it.
   builder, team sub-navigation, the members directory, and the PR review
   workspace live here; routes register under both bare paths and
   `/{workspaceSlug}` mirrors.
+
+## v6 — data/query repairs (wave-2 repair package)
+
+- Saved-view filter round-trip preserves the boolean tree: `filter.any`
+  round-trips verbatim, `filter.all` keeps a positional slot blueprint so
+  non-renderable nodes survive edits, and a pure rename never recompiles
+  the AST. The router input schema tries the predicate shape before the
+  all-optional filter object (`strictObject`) so predicates are not
+  key-stripped to `{}` on save.
+- Board layout honors the saved sort via explicit
+  `sortMode: manual | field`; layout, grouping, and sort are independent
+  dimensions.
+- Project/cycle pickers call `projectOptions`/`cycleOptions` — authorized
+  server-side search, keyset pagination, `ids` hydration for selected
+  values; cycle options are scoped to the team pinned by a `teamId`
+  filter row instead of fanning out per team.
+- My issues "Activity" filters on real notification episodes
+  (`notifications` rows keyed by `resourceType='task'`) ordered by
+  `lastActivityAt`/`createdAt`; "Created" sorts by `createdAt`.

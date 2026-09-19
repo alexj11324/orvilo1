@@ -814,6 +814,7 @@ export default {
   'savedViews.share': 'Sharing',
   'savedViews.sort.createdAsc': 'Oldest created',
   'savedViews.sort.createdDesc': 'Newest created',
+  'savedViews.sort.manual': 'Manual (drag order)',
   'savedViews.sort.nameAsc': 'Name A–Z',
   'savedViews.sort.nameDesc': 'Name Z–A',
   'savedViews.sort.updatedAsc': 'Oldest updated',

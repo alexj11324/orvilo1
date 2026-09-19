@@ -20,8 +20,8 @@ describe('resolveNavPanelKey', () => {
     ['/orvilo-team/resource/library', 'orvilo-team', 'resourceLibrary'],
     ['/orvilo-team/memory', 'orvilo-team', 'memory'],
     ['/orvilo-team/page/page-1', 'orvilo-team', 'page'],
-    ['/project/project-1', null, 'project'],
-    ['/orvilo-team/project/project-1/library/kb-1', 'orvilo-team', 'project'],
+    ['/project/project-1', null, 'home'],
+    ['/orvilo-team/project/project-1/library/kb-1', 'orvilo-team', 'home'],
     ['/orvilo-team/image', 'orvilo-team', 'image'],
     ['/orvilo-team/video', 'orvilo-team', 'video'],
   ])('maps %s to %s', (pathname, activeWorkspaceSlug, expected) => {

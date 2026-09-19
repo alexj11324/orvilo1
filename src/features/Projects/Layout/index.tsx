@@ -16,12 +16,12 @@ const ProjectLayout = memo(() => {
   if (!enabled) return <ProjectDisabled />;
 
   return (
-    <>
+    <Flexbox horizontal height="100%" style={{ minWidth: 0 }}>
       <ProjectSidebar />
       <Flexbox flex={1} height="100%" style={{ minWidth: 0 }}>
         <Outlet />
       </Flexbox>
-    </>
+    </Flexbox>
   );
 });
 

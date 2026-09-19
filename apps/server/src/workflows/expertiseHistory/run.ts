@@ -1,9 +1,9 @@
 import { getServerDB } from '@/database/server';
 import { ExpertiseIngestionService } from '@/server/services/expertise/ingestion';
+import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
 
-import { ExpertiseHistoryWorkflow } from '.';
 import type { ExpertiseHistoryWorkflowPayload } from './types';
 
 export const runExpertiseHistoryWorkflow = async (
@@ -29,7 +29,7 @@ export const runExpertiseHistoryWorkflow = async (
 
   for (const topic of topics) {
     await runStep(context, `expertise-history:schedule:${topic.topicId}`, () =>
-      ExpertiseHistoryWorkflow.triggerTopic({
+      triggerHatchetWorkflow('/api/workflows/expertise-history/topic', {
         agentId: payload.agentId,
         topicId: topic.topicId,
         userId: payload.userId,

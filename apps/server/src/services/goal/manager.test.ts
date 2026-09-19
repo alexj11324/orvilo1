@@ -1046,7 +1046,16 @@ describe('takeover and dependent work', () => {
 });
 
 describe('CAID incremental plan patches', () => {
-  const patchPlan = (patches: unknown[], expectedPlanRevision = 0) => ({
+  type PatchOp =
+    | {
+        dependsOn?: string[];
+        key?: string;
+        op: 'append';
+        task: { title: string; description: string };
+      }
+    | { nodeId: string; op: 'replace'; description?: string; title?: string }
+    | { nodeId: string; op: 'retire' };
+  const patchPlan = (patches: PatchOp[], expectedPlanRevision = 0) => ({
     action: 'patch' as const,
     expectedPlanRevision,
     patches,

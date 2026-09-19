@@ -81,6 +81,9 @@
 - Electron 原生通知 click 对 `/inbox` 与 `/{workspace}/inbox` 走同一 `openNotificationTarget` broadcast
 - My Work / 任务视图行用 `resolveTaskStatus` 再交给 `TaskStatusIcon`（`task.status` 是 `string | null | undefined`；`dde9ef1f` 的 Push Typecheck / Database lint 因此失败）
 - 项目 entity 的 Saved View 结果行与 Projects 列表同一套 chrome：状态图标、identifier、相对时间、Skeleton / 空态图标；链接走 `slug` 否则 `id`
+- My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。work-query board 只留给 Saved View / Team 页（它们的 query AST 映不进 task store scope）
+- `task.groupList` scope 增 `delegated`（`executionGrants` active + initiatedBy = 当前用户的 EXISTS，与 `workQuery.delegatedByUserId` 同一谓词）；`projectId` 接受 `null`（`isNull(tasks.projectId)`）。SWR key 编进 scope+project 后缀，`projectIdFromListKey` 会解码 MINE `:` 后缀与 `no-project`
+- 看板对齐 Cordy 现行版：隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
@@ -110,7 +113,7 @@ Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 
 
 - 不要 rebase 到更新的 canary，除非用户要求
 - 不要恢复 `/settings/provider` / 自定义模型 provider
-- 不要把 AgentTasks `KanbanBoard` 再挂到 My Work / Team
+- Team 页不要挂 AgentTasks `KanbanBoard`（team 的 query AST 映不进 task store scope；My Work 已由用户要求改为直挂）
 - 不要发明 GitHub PR-without-task 产品存储
 - 不要加 WorkQuery export
 - 不要开生产 shadow dual-write

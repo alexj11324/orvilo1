@@ -39,7 +39,7 @@
   "constraints": [
     "Do not rebase onto newer canary unless asked; if Devin pushed, rebase onto origin/cursor/navigation-attention-v4-a544",
     "Do not restore custom LLM providers or /settings/provider",
-    "Do not remount AgentTasks KanbanBoard on the Team page",
+    "Do not build a second kanban: all boards reuse AgentTasks KanbanBoard — direct mount when a task-store scope expresses the query, external groups prop for work-query surfaces (Saved View / Team)",
     "Do not invent a GitHub PR-without-task store",
     "Do not add WorkQuery export",
     "Do not mark the system goal complete without 64-AC evidence",
@@ -70,7 +70,12 @@
     "src/features/AgentTasks/AgentTaskList/kanbanBoardModel.ts",
     "src/features/WorkTeams/TeamPage.tsx",
     "src/features/WorkTeams/teamSurfaceState.ts",
-    "src/features/WorkTeams/teamTriageOverflow.ts"
+    "src/features/WorkTeams/teamTriageOverflow.ts",
+    "src/features/MyWork/workQueryBoard.ts",
+    "src/features/MyWork/workQueryPaging.ts",
+    "src/features/AgentTasks/AgentTaskList/KanbanBoard.tsx",
+    "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
+    "src/features/SavedViews/SavedViewsPage.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": "b4c1ab09",

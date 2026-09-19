@@ -81,12 +81,12 @@
 - Electron 原生通知 click 对 `/inbox` 与 `/{workspace}/inbox` 走同一 `openNotificationTarget` broadcast
 - My Work / 任务视图行用 `resolveTaskStatus` 再交给 `TaskStatusIcon`（`task.status` 是 `string | null | undefined`；`dde9ef1f` 的 Push Typecheck / Database lint 因此失败）
 - 项目 entity 的 Saved View 结果行与 Projects 列表同一套 chrome：状态图标、identifier、相对时间、Skeleton / 空态图标；链接走 `slug` 否则 `id`
-- My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。work-query board 只留给 Saved View / Team 页（它们的 query AST 映不进 task store scope）
+- My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。Saved View / Team 页的 work-query board 也统一进同一个 `KanbanBoard`：新增 `external` 数据源 prop（groups 由 `workQueryBoardGroups` 把 status/workflowCategory 键折进 7 个共享列键，`onRefresh` 换原 store 刷新，`onLoadMoreGroup` 接管列尾分页）；手写拖放 + `moveBoard` CAS + workflow-state picker 弹窗全部删除，拖拽统一走 `task.update`（歧义时服务端错误变 toast）。
 - `task.groupList` scope 增 `delegated`（`executionGrants` active + initiatedBy = 当前用户的 EXISTS，与 `workQuery.delegatedByUserId` 同一谓词）；`projectId` 接受 `null`（`isNull(tasks.projectId)`）。SWR key 编进 scope+project 后缀，`projectIdFromListKey` 会解码 MINE `:` 后缀与 `no-project`
-- 看板对齐 Cordy 现行版：隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
+- 看板对齐 Cordy/Linear 现行版：列头图标用共享状态图标族（backlog 空心点灰 /todo 空心环蓝 /running 点琥珀 /needsInput 钟紫 /done 勾绿 /canceled 暂停橙 /triage 虚线圈）；计数是纯灰字非 chip；空列留空白落区不再写 "No tasks"；隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
 - My Work「待审核」无 Task 的 PR 行：`queryExternalReviews` 写出 allowlist 后的 `openUrl`（https `github.com` / `linear.app`，与 Inbox `safeInboxActionUrl` 同一主机表）；javascript / 站外主机为 null。列表行用 PR 图标 + identifier；客户端再过 `inboxUrlOpenMode` 才 `target=_blank`。不为填列表建 Task，不用应用 token 代批
 - Push Typecheck 在 `a96c6aa4` 失败：`KanbanBoard` 把 My Work 的 `projectId: null`（No-project 过滤）传进 `createTaskModal`（只要 `string | undefined`）。`kanbanCreateTaskProjectId` 把 `null` 收成 `undefined`；grouped query 仍带 `null` 做 IS NULL
-- Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。**不要**在 Team 页挂 AgentTasks `KanbanBoard`
+- Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。Team 看板走 `WorkQueryResults` → `KanbanBoard` `external` prop（与其它页同一个组件，不自建）
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
@@ -116,7 +116,7 @@ Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 
 
 - 不要 rebase 到更新的 canary，除非用户要求
 - 不要恢复 `/settings/provider` / 自定义模型 provider
-- Team 页不要挂 AgentTasks `KanbanBoard`（team 的 query AST 映不进 task store scope；My Work 已由用户要求改为直挂）
+- 不要新写第二套看板：所有 board 复用 `AgentTasks` 的 `KanbanBoard`——store scope 能表达的直接挂（My Work），不能的走 `external` groups prop（Saved View / Team work-query）
 - 不要发明 GitHub PR-without-task 产品存储
 - 不要加 WorkQuery export
 - 不要开生产 shadow dual-write

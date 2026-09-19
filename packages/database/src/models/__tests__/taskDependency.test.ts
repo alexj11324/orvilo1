@@ -163,6 +163,27 @@ describe('task prerequisite invariants', () => {
     await expect(model.addDependency(b.id, a.id)).rejects.toThrow('unavailable');
   });
 
+  it("keeps edges on the caller's own unfiled tasks visible in workspace mode", async () => {
+    const workspaceId = 'prerequisite-unfiled-workspace';
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Unfiled prerequisites',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    // Rows written before workspaces became mandatory carry no workspace_id;
+    // the workspace-scoped read must still see their dependency edges.
+    const upstream = await create('Unfiled upstream');
+    const dependent = await create('Unfiled dependent');
+    await model.addDependency(dependent.id, upstream.id);
+    const scoped = new TaskModel(db, userId, workspaceId);
+    expect(await scoped.findById(dependent.id)).not.toBeNull();
+    expect(await scoped.getDependencies(dependent.id)).toHaveLength(1);
+    expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(false);
+    await scoped.updateStatus(upstream.id, 'completed');
+    expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(true);
+  });
+
   it('fails closed after visibility changes while allowing the dependent owner to remove the edge', async () => {
     const workspaceId = 'prerequisite-workspace';
     await db.insert(workspaces).values({

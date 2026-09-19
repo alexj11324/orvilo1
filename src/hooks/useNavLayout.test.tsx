@@ -1,6 +1,14 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+const mocks = vi.hoisted(() => ({
+  activeWorkspaceId: 'ws-1' as string | null,
+}));
+
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
+  useActiveWorkspaceId: () => mocks.activeWorkspaceId,
+}));
+
 vi.mock('@/config/routes', () => ({
   getRouteById: (id: string) => ({ icon: () => id }),
 }));
@@ -31,10 +39,12 @@ const renderedKeys = async () => {
 
 describe('useNavLayout', () => {
   it.each(RETIRED_SIDEBAR_KEYS)('never renders the retired "%s" destination', async (key) => {
+    mocks.activeWorkspaceId = 'ws-1';
     expect(await renderedKeys()).not.toContain(key);
   });
 
   it('keeps inbox, my work, tasks and automation reachable', async () => {
+    mocks.activeWorkspaceId = 'ws-1';
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
 
@@ -46,5 +56,10 @@ describe('useNavLayout', () => {
       '/automations',
     );
     expect(result.current.topNavItems.find((item) => item.key === 'teams')?.url).toBe('/teams');
+  });
+
+  it('hides Teams in personal mode', async () => {
+    mocks.activeWorkspaceId = null;
+    expect(await renderedKeys()).not.toContain('teams');
   });
 });

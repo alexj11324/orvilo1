@@ -9,6 +9,7 @@ import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
@@ -304,12 +305,15 @@ const TeamPage = memo(() => {
           </Text>
         }
         right={
-          <Button
-            size="small"
-            onClick={() => setLayout((current) => (current === 'board' ? 'list' : 'board'))}
-          >
-            {layout === 'board' ? t('teams.layoutList') : t('teams.layoutBoard')}
-          </Button>
+          <Flexbox horizontal gap={8}>
+            <WorkFavoriteButton targetId={teamId} targetType="team" />
+            <Button
+              size="small"
+              onClick={() => setLayout((current) => (current === 'board' ? 'list' : 'board'))}
+            >
+              {layout === 'board' ? t('teams.layoutList') : t('teams.layoutBoard')}
+            </Button>
+          </Flexbox>
         }
       />
       <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>

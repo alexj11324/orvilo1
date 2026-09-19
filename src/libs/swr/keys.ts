@@ -1136,6 +1136,10 @@ export const workAttentionKeys = {
       noProject,
     ],
   ),
+  recentWork: def('workAttention:recentWork', (workspaceId: string | null) => [
+    'workAttention:recentWork',
+    workspaceId,
+  ]),
   savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [
     'workAttention:savedView',
     workspaceId,

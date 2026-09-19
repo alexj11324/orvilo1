@@ -10,12 +10,11 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, PinOff } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -25,18 +24,11 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { favoriteLabel } from './favoriteLabel';
 import { favoriteReorderSwap } from './favoriteReorder';
+import { workTargetPath } from './workTargetPath';
 
 interface WorkFavoritesProps {
   itemKey: string;
 }
-
-const targetPath = (targetType: string, targetId: string) => {
-  if (targetType === 'task') return taskDetailPath(targetId);
-  if (targetType === 'project') return `/project/${targetId}`;
-  if (targetType === 'savedView') return `/views/${targetId}`;
-  if (targetType === 'team') return `/teams/${targetId}`;
-  return '/';
-};
 
 const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
@@ -67,6 +59,18 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
     [items, refresh, t],
   );
 
+  const unpin = useCallback(
+    async (targetId: string, targetType: (typeof items)[number]['targetType']) => {
+      try {
+        await workAttentionService.favoriteUnpin({ targetId, targetType });
+      } catch {
+        toast.error(t('savedViews.favoriteFailed'));
+      }
+      await refresh();
+    },
+    [refresh, t],
+  );
+
   if (items.length === 0) return null;
 
   return (
@@ -78,10 +82,18 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
         {items.map((item, index) => (
           <WorkspaceLink
             key={`${item.targetType}:${item.targetId}`}
-            to={targetPath(item.targetType, item.targetId)}
+            to={workTargetPath(item.targetType, item.targetId, item.title)}
           >
             <NavItem
               title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
+              actions={
+                <ActionIcon
+                  icon={PinOff}
+                  size="small"
+                  title={t('pinOff')}
+                  onClick={() => void unpin(item.targetId, item.targetType)}
+                />
+              }
               extra={
                 <>
                   <ActionIcon

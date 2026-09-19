@@ -429,6 +429,7 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'workAttention.savedViewGet': ['agent:read'],
   'workAttention.savedViewList': ['agent:read'],
   'workAttention.search': ['agent:read'],
+  'workAttention.recentWork': ['agent:read'],
   'workAttention.savedViewCreate': ['agent:write'],
   'workAttention.savedViewDelete': ['agent:write'],
   'workAttention.savedViewUpdate': ['agent:write'],

@@ -3,12 +3,14 @@ import { useTheme as useNextThemesTheme } from 'next-themes';
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { isDesktop } from '@/const/version';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
+import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 import { electronSystemService } from '@/services/electron/system';
 import { workAttentionService } from '@/services/workAttention';
@@ -52,6 +54,7 @@ export const useCommandMenu = () => {
   } = useCommandMenuContext();
 
   const navigate = useWorkspaceAwareNavigate();
+  const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const createAgent = useAgentStore((s) => s.createAgent);
@@ -109,6 +112,23 @@ export const useCommandMenu = () => {
           : Promise.resolve([]),
       ]);
       return [...work, ...fts] as CommandMenuSearchResult[];
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  );
+
+  const { data: recentWork } = useSWR(
+    open && !hasSearch ? workAttentionKeys.recentWork(workspaceId) : null,
+    async () => {
+      try {
+        const response = await workAttentionService.recentWork();
+        return response.data;
+      } catch (error: unknown) {
+        console.error('[commandMenu.recentWork]', error);
+        return [];
+      }
     },
     {
       revalidateOnFocus: false,
@@ -267,6 +287,7 @@ export const useCommandMenu = () => {
     page,
     pages,
     pathname,
+    recentWork: recentWork ?? [],
     search,
     searchError,
     searchQuery,

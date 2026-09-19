@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
@@ -38,9 +39,6 @@ const SavedViewPage = memo(() => {
   const { data, isLoading } = useClientDataSWR(
     viewId ? workAttentionKeys.savedView(workspaceId, viewId) : null,
     () => workAttentionService.savedViewEvaluate({ id: viewId! }),
-  );
-  const { data: favoritesData } = useClientDataSWR(workAttentionKeys.favorites(workspaceId), () =>
-    workAttentionService.favoriteList(),
   );
   const { data: teamsData } = useClientDataSWR(
     workspaceId ? workAttentionKeys.teams(workspaceId) : null,
@@ -94,16 +92,6 @@ const SavedViewPage = memo(() => {
     viewVisibility,
   ]);
 
-  const pinned = useMemo(
-    () =>
-      Boolean(
-        viewId &&
-        favoritesData?.data?.some(
-          (item) => item.targetType === 'savedView' && item.targetId === viewId,
-        ),
-      ),
-    [favoritesData?.data, viewId],
-  );
   const teamOptions = useMemo(
     () => (teamsData?.data ?? []).map((team) => ({ label: team.name, value: team.id })),
     [teamsData?.data],
@@ -174,20 +162,6 @@ const SavedViewPage = memo(() => {
     },
     [groups, queryHash, viewId],
   );
-
-  const toggleFavorite = useCallback(async () => {
-    if (!viewId) return;
-    try {
-      if (pinned) {
-        await workAttentionService.favoriteUnpin({ targetId: viewId, targetType: 'savedView' });
-      } else {
-        await workAttentionService.favoritePin({ targetId: viewId, targetType: 'savedView' });
-      }
-      await mutate(workAttentionKeys.favorites(workspaceId));
-    } catch {
-      toast.error(t('savedViews.favoriteFailed'));
-    }
-  }, [pinned, t, viewId, workspaceId]);
 
   const saveView = useCallback(async () => {
     if (!viewId || !view || !shareReady) return;
@@ -276,9 +250,7 @@ const SavedViewPage = memo(() => {
             <Button size="small" onClick={() => void saveCopy()}>
               {t('savedViews.saveAs')}
             </Button>
-            <Button size="small" onClick={() => void toggleFavorite()}>
-              {pinned ? t('savedViews.unfavorite') : t('savedViews.favorite')}
-            </Button>
+            <WorkFavoriteButton targetId={viewId} targetType="savedView" />
             {isOwner ? (
               <Button size="small" onClick={() => void deleteView()}>
                 {t('savedViews.delete')}

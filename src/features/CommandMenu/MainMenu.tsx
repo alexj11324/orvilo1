@@ -1,21 +1,28 @@
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
+import type { RecentWorkItem } from '@orvilo/types';
 import { Command } from 'cmdk';
 import {
   Bot,
   FeatherIcon,
+  Filter,
+  FolderKanban,
   LibraryBig,
   ListTodo,
   MessageSquarePlusIcon,
   Monitor,
   Star,
+  Users,
 } from 'lucide-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
+import { workTargetPath } from '@/features/HomeSidebar/Body/workTargetPath';
+import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -26,9 +33,17 @@ import ContextCommands from './ContextCommands';
 import RecentsCommands from './RecentsCommands';
 import { useCommandMenu } from './useCommandMenu';
 
+const recentWorkIcon = (type: RecentWorkItem['type']): ReactNode => {
+  if (type === 'task') return <ListTodo />;
+  if (type === 'team') return <Users />;
+  if (type === 'project') return <FolderKanban />;
+  return <Filter />;
+};
+
 const MainMenu = memo(() => {
-  const { pathname, menuContext, setPages, pages, onClose } = useCommandMenuContext();
+  const { pathname, menuContext, search, setPages, pages, onClose } = useCommandMenuContext();
   const { t } = useTranslation('common');
+  const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   // While the first send from the new-topic view is still creating the real
   // topic, openNewTopicOrSaveTopic is a no-op — disable the command instead of
@@ -43,11 +58,35 @@ const MainMenu = memo(() => {
     handleNavigate,
     handleExternalLink,
     handleCreateAgentTeam,
+    recentWork,
   } = useCommandMenu();
+  const showRecentWork = !search.trim() && recentWork.length > 0;
+  const navigableRoutes = getNavigableRoutes().filter(
+    (route) => route.id !== 'teams' || workspaceId,
+  );
 
   return (
     <>
       <ContextCommands />
+
+      {showRecentWork && (
+        <Command.Group heading={t('cmdk.recentWork')}>
+          {recentWork.map((item) => {
+            const title =
+              item.type === 'savedView' ? savedViewTitle(item.id, item.title, t) : item.title;
+            return (
+              <CommandItem
+                icon={recentWorkIcon(item.type)}
+                key={`${item.type}:${item.id}`}
+                value={`search-result recent ${item.type} ${item.id} ${title}`}
+                onSelect={() => handleNavigate(workTargetPath(item.type, item.id, item.title))}
+              >
+                {title}
+              </CommandItem>
+            );
+          })}
+        </Command.Group>
+      )}
 
       <Command.Group>
         {/* Creating a task leads the list: the product's default working surface
@@ -136,7 +175,7 @@ const MainMenu = memo(() => {
       <RecentsCommands />
 
       <Command.Group heading={t('cmdk.navigate')}>
-        {getNavigableRoutes().map((route) => {
+        {navigableRoutes.map((route) => {
           const RouteIcon = route.icon;
           const keywords = route.keywordsKey
             ? t(route.keywordsKey as any).split(' ')

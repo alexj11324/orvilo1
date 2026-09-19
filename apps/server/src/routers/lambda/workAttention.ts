@@ -1,7 +1,10 @@
 import {
   ACTION_SOURCE_KINDS,
   applyNoProjectFilter,
+  isBuiltinSavedViewId,
   type MyWorkMode,
+  RECENT_WORK_LIMIT,
+  RECENT_WORK_PER_TYPE,
   type TaskStatus,
   type TaskWorkflowCategory,
   WORK_QUERY_FACET_FIELDS,
@@ -44,7 +47,11 @@ import {
 } from '@/database/models/workQuery';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAttention';
+import {
+  ActionSourceRegistry,
+  buildInboxFeed,
+  recentWorkFromSources,
+} from '@/server/services/workAttention';
 
 const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.object({
   field: z.enum([
@@ -484,6 +491,52 @@ export const workAttentionRouter = router({
       success: true,
     };
   }),
+
+  // Recently updated readable work for CommandMenu's empty query. Not a visit
+  // log and not FTS `type:` — same ACL as search/list.
+  recentWork: workAttentionProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(WORK_SEARCH_MAX_PER_TYPE).default(RECENT_WORK_LIMIT),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const emptyTaskQuery = { entityType: 'task' as const, schemaVersion: 1 as const };
+        const emptyProjectQuery = { entityType: 'project' as const, schemaVersion: 1 as const };
+        const [taskPage, projectPage, views, teams] = await Promise.all([
+          ctx.workQueryModel.queryTasks({ limit: RECENT_WORK_PER_TYPE, query: emptyTaskQuery }),
+          ctx.workQueryModel.queryProjects({
+            limit: RECENT_WORK_PER_TYPE,
+            query: emptyProjectQuery,
+          }),
+          ctx.savedViewModel.list(),
+          ctx.teamModel ? ctx.teamModel.listReadable() : Promise.resolve([]),
+        ]);
+
+        return {
+          data: recentWorkFromSources({
+            limit: input?.limit ?? RECENT_WORK_LIMIT,
+            perType: RECENT_WORK_PER_TYPE,
+            projects: projectPage.projects,
+            savedViews: views.filter((row) => !isBuiltinSavedViewId(row.id)),
+            tasks: taskPage.tasks ?? [],
+            teams,
+          }),
+          success: true,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[workAttention:recentWork]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to load recent work',
+        });
+      }
+    }),
 
   search: workAttentionProcedure
     .input(

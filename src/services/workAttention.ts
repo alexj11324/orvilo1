@@ -71,6 +71,8 @@ class WorkAttentionService {
 
   savedViewList = () => lambdaClient.workAttention.savedViewList.query();
 
+  recentWork = (input?: { limit?: number }) => lambdaClient.workAttention.recentWork.query(input);
+
   savedViewUpdate = (
     input: Parameters<typeof lambdaClient.workAttention.savedViewUpdate.mutate>[0],
   ) => lambdaClient.workAttention.savedViewUpdate.mutate(input);

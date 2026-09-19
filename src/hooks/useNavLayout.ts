@@ -9,6 +9,7 @@ import {
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { getRouteById } from '@/config/routes';
 import { useGlobalStore } from '@/store/global';
 import { SidebarTabKey } from '@/store/global/initialState';
@@ -43,6 +44,7 @@ export const useNavLayout = (): NavLayout => {
   const { t } = useTranslation('common');
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
+  const activeWorkspaceId = useActiveWorkspaceId();
 
   const topNavItems = useMemo(
     () =>
@@ -89,12 +91,16 @@ export const useNavLayout = (): NavLayout => {
           title: t('tab.automations'),
           url: '/automations',
         },
-        {
-          icon: UsersIcon,
-          key: SidebarTabKey.Teams,
-          title: t('tab.teams'),
-          url: '/teams',
-        },
+        ...(activeWorkspaceId
+          ? [
+              {
+                icon: UsersIcon,
+                key: SidebarTabKey.Teams,
+                title: t('tab.teams'),
+                url: '/teams',
+              },
+            ]
+          : []),
         {
           icon: getRouteById('resource')!.icon,
           key: SidebarTabKey.Resource,
@@ -102,7 +108,7 @@ export const useNavLayout = (): NavLayout => {
           url: '/resource',
         },
       ] as NavItem[],
-    [t, toggleCommandMenu],
+    [activeWorkspaceId, t, toggleCommandMenu],
   );
 
   // Every destination that used to live here has been retired by the task-first

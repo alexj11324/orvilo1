@@ -1780,6 +1780,25 @@ export class GoalService {
         currentGraph.decisions.some((item) => item.status === 'pending')
       )
         return 'stopped' as const;
+
+      // The frontier was ranked off a snapshot that is already stale: a plan
+      // patch or a resolved decision can land between the tick's read and this
+      // claim. Readiness is re-derived under the lock from the CURRENT graph —
+      // a node that gained an unsatisfied depends_on edge, or was retired,
+      // since the decision must not dispatch on the old receipt.
+      const currentNode = currentGraph.nodes.find((node) => node.id === nodeId);
+      if (!currentNode || TERMINAL_NODE_STATUSES.has(currentNode.status)) return 'stopped' as const;
+      const resolvedNodeIds = new Set(
+        currentGraph.nodes.filter((node) => node.status === 'resolved').map((node) => node.id),
+      );
+      const blockedBy = currentGraph.edges.filter(
+        (edge) =>
+          edge.kind === 'depends_on' &&
+          edge.sourceNodeId === nodeId &&
+          !resolvedNodeIds.has(edge.targetNodeId),
+      );
+      if (blockedBy.length > 0) return 'blocked' as const;
+
       const currentBudget = await new GoalService(tx, this.userId, this.workspaceId).evaluateBudget(
         currentGoal,
         currentGraph,
@@ -1811,6 +1830,15 @@ export class GoalService {
         taskId: task.id,
       };
 
+    if (claimed === 'blocked') {
+      return {
+        goalId,
+        message: `Task ${task.identifier} was blocked by a newer plan revision before it could dispatch`,
+        nodeId,
+        outcome: 'waiting_external',
+        taskId: task.id,
+      };
+    }
     if (claimed === 'at-capacity') {
       return {
         goalId,

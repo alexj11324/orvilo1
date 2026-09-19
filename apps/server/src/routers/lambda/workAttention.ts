@@ -77,14 +77,23 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.object({
     .optional(),
 });
 
+// `strictObject` — a node carrying foreign keys (e.g. a predicate whose field
+// failed the enum) must not fall back to the all-optional filter shape and get
+// key-stripped into a silent `{}` node.
 const workQueryFilterSchema: z.ZodType<WorkQueryFilter> = z.lazy(() =>
-  z.object({
-    all: z.array(z.union([workQueryFilterSchema, workQueryPredicateSchema])).optional(),
-    any: z.array(z.union([workQueryFilterSchema, workQueryPredicateSchema])).optional(),
+  z.strictObject({
+    all: z.array(workQueryNodeSchema).optional(),
+    any: z.array(workQueryNodeSchema).optional(),
   }),
 );
 
-const workQuerySchema: z.ZodType<WorkQuery> = z.object({
+// Predicate must be tried before the all-optional filter object — otherwise
+// zod's default key-stripping reduces every predicate node to `{}` on save.
+const workQueryNodeSchema: z.ZodType<WorkQueryFilter | WorkQueryPredicate> = z.lazy(() =>
+  z.union([workQueryPredicateSchema, workQueryFilterSchema]),
+);
+
+export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   entityType: z.enum(['project', 'task']),
   filter: workQueryFilterSchema.optional(),
   groupBy: z.enum(['none', 'status', 'workflowCategory']).optional(),

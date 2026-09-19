@@ -81,6 +81,7 @@ import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
 import { pluginRouter } from './plugin';
 import { projectRouter } from './project';
+import { pullRequestRouter } from './pullRequest';
 import { pushTokenRouter } from './pushToken';
 import { ragEvalRouter } from './ragEval';
 import { recentRouter } from './recent';
@@ -172,6 +173,7 @@ export const lambdaRouter = router({
   plugin: pluginRouter,
   project: projectRouter,
   projectMember: projectMemberRouter,
+  pullRequest: pullRequestRouter,
   pushToken: pushTokenRouter,
   ragEval: ragEvalRouter,
   recent: recentRouter,

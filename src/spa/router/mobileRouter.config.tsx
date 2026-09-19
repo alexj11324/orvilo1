@@ -220,6 +220,14 @@ export const sharedMainAreaChildren: RouteObject[] = [
             }),
             index: true,
           },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/reviews/[reviewId]'),
+              'Mobile > Pull Request Review',
+              { preloadId: 'mobile-reviews' },
+            ),
+            path: ':reviewId',
+          },
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'reviews',

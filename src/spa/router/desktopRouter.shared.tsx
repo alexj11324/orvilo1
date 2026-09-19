@@ -746,6 +746,15 @@ export const sharedMainAreaChildren: RouteObject[] = [
             handle: { meta: reviewsRouteMeta },
             index: true,
           },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/reviews/[reviewId]'),
+              'Desktop > Pull Request Review',
+              { preloadId: 'reviews' },
+            ),
+            handle: { meta: reviewsRouteMeta },
+            path: ':reviewId',
+          },
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'reviews',

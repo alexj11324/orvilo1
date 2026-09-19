@@ -1172,6 +1172,20 @@ export const workAttentionKeys = {
   ]),
 };
 
+// ---- pull request reviews (/reviews GitHub surface) -----------------------
+export const pullRequestKeys = {
+  detail: def('pullRequest:detail', (workspaceId: string | null, id: string) => [
+    'pullRequest:detail',
+    workspaceId,
+    id,
+  ]),
+  queue: def('pullRequest:queue', (workspaceId: string | null, tab: 'created' | 'for-me') => [
+    'pullRequest:queue',
+    workspaceId,
+    tab,
+  ]),
+};
+
 // ---- share (shared agent / topic / page) ---------------------------------
 export const shareKeys = {
   agentInfo: def('share:agentInfo', (slugOrId: string) => ['share:agentInfo', slugOrId]),
@@ -1475,5 +1489,6 @@ export const swrKeys = {
   userMemory: userMemoryKeys,
   verify: verifyKeys,
   video: videoKeys,
+  pullRequest: pullRequestKeys,
   workAttention: workAttentionKeys,
 };

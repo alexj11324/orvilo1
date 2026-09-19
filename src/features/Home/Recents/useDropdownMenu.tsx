@@ -90,7 +90,7 @@ export const useRecentItemDropdownMenu = (
   const dropdownMenu = useCallback((): MenuProps['items'] => {
     const items: NativeContextMenuItem[] = [
       ...(manageable
-        ? [
+        ? ([
             {
               disabled: !canEdit,
               icon: <Icon icon={PencilLineIcon} />,
@@ -99,12 +99,14 @@ export const useRecentItemDropdownMenu = (
               onClick: () => toggleEditing(true),
               sfSymbol: 'pencil',
             },
-          ]
+          ] satisfies NativeContextMenuItem[])
         : []),
       ...(transferMenuItems ?? []),
-      ...(transferMenuItems?.length ? [{ type: 'divider' as const }] : []),
+      ...(transferMenuItems?.length
+        ? ([{ type: 'divider' as const }] satisfies NativeContextMenuItem[])
+        : []),
       ...(manageable
-        ? [
+        ? ([
             {
               danger: true,
               disabled: !canEdit,
@@ -114,7 +116,7 @@ export const useRecentItemDropdownMenu = (
               onClick: handleDelete,
               sfSymbol: 'trash',
             },
-          ]
+          ] satisfies NativeContextMenuItem[])
         : []),
     ];
     return items as MenuProps['items'];

@@ -5,7 +5,7 @@ import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
-import { EyeOff, Plus } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -53,6 +53,66 @@ const SortableTaskCard = memo<{ routeScope?: TaskItemRouteScope; task: TaskListI
 );
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
+  /**
+   * Cordy rail: a collapsed column folds into a 40px vertical card at the
+   * board's end — icon, rotated title, count — and stays a live drop target.
+   */
+  collapsed: css`
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+
+    width: 40px;
+    max-height: 100%;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: ${cssVar.borderRadiusLG};
+
+    background: ${cssVar.colorBgContainer};
+  `,
+  collapsedButton: css`
+    cursor: pointer;
+
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+
+    padding-block: 10px;
+    padding-inline: 0;
+    border: none;
+    border-radius: ${cssVar.borderRadiusLG};
+
+    color: ${cssVar.colorText};
+
+    background: transparent;
+
+    transition: background 0.2s;
+
+    &:hover {
+      background: ${cssVar.colorFillQuaternary};
+    }
+  `,
+  collapsedCount: css`
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: ${cssVar.colorTextTertiary};
+  `,
+  collapsedDropOver: css`
+    border-color: ${cssVar.colorPrimary};
+    background: ${cssVar.colorPrimaryBg};
+    box-shadow: 0 0 0 1px ${cssVar.colorPrimary};
+  `,
+  collapsedLabel: css`
+    writing-mode: vertical-rl;
+    font-size: 12px;
+    font-weight: 500;
+  `,
+  /* Same flip as Cordy: LTR rails read bottom-to-top, upright scripts don't. */
+  collapsedLabelRotated: css`
+    transform: rotate(180deg);
+  `,
   addPill: css`
     cursor: pointer;
 
@@ -195,6 +255,59 @@ export const COLUMN_STATUS_ICON: Record<string, TaskStatus> = {
   triage: 'backlog',
 };
 
+interface CollapsedKanbanColumnProps {
+  columnKey: string;
+  /** Rails stay live drop targets unless the view filtered the column out. */
+  droppable: boolean;
+  label: string;
+  onExpand: () => void;
+  statusIcon?: TaskStatus;
+  total: number;
+}
+
+/**
+ * The Cordy collapsed rail — a hidden column folded into a slim vertical card
+ * at the board's end. Click restores it; dropping a card on it lands the drop
+ * in that column (the board reveals it on a successful drop).
+ */
+export const CollapsedKanbanColumn = memo<CollapsedKanbanColumnProps>(
+  ({ columnKey, droppable, label, onExpand, statusIcon, total }) => {
+    const { t, i18n } = useTranslation('chat');
+    const { isOver, setNodeRef } = useDroppable({ disabled: !droppable, id: columnKey });
+    const upright = /^(?:zh|ja|ko)/.test(i18n.language);
+
+    return (
+      <div
+        data-no-board-pan
+        className={cx(styles.collapsed, isOver && styles.collapsedDropOver)}
+        data-board-collapsed-column={columnKey}
+        data-hidden-column-drop-target={columnKey}
+        ref={setNodeRef}
+      >
+        <button
+          aria-expanded={false}
+          aria-label={t('taskList.kanban.showColumn')}
+          className={styles.collapsedButton}
+          title={t('taskList.kanban.showColumn')}
+          type="button"
+          onClick={onExpand}
+        >
+          {statusIcon && <TaskStatusIcon size={16} status={statusIcon} />}
+          <span
+            className={cx(styles.collapsedLabel, !upright && styles.collapsedLabelRotated)}
+            style={{ flex: 1, minHeight: 0 }}
+          >
+            {label}
+          </span>
+          <span className={styles.collapsedCount}>{total}</span>
+        </button>
+      </div>
+    );
+  },
+);
+
+CollapsedKanbanColumn.displayName = 'CollapsedKanbanColumn';
+
 interface KanbanColumnProps {
   columnKey: string;
   droppable: boolean;
@@ -282,7 +395,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
           <div className={cx(styles.headerActions, 'kanban-col-action')}>
             {onHide && (
               <ActionIcon
-                icon={EyeOff}
+                icon={ChevronLeft}
                 size={'small'}
                 title={t('taskList.kanban.hideColumn')}
                 onClick={onHide}

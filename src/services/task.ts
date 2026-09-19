@@ -50,9 +50,13 @@ class TaskService {
       workflowCategories?: TaskWorkflowCategory[];
     }>;
     parentTaskId?: string | null;
-    projectId?: string;
-    /** "My tasks" narrowing: assigned to the caller, or created by them. */
-    scope?: 'assigned' | 'created';
+    /** `null` narrows to tasks with no project — the board's "No project" chip. */
+    projectId?: string | null;
+    /**
+     * "My tasks" narrowing: assigned to the caller, created by them, or
+     * delegated by them to an agent.
+     */
+    scope?: 'assigned' | 'created' | 'delegated';
     visibility?: 'private' | 'public';
   }) =>
     lambdaClient.task.groupList.query({

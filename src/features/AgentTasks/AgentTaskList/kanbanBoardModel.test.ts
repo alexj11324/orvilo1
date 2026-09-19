@@ -405,7 +405,9 @@ describe('kanbanBoardModel', () => {
       });
     });
 
-    it('prefers the My tasks scope over the other scopes', () => {
+    it('prefers the My tasks scope over the agent scopes, but keeps the project filter', () => {
+      // My Work's board composes scope + project: "Delegated × No project" is a
+      // real query, so projectId rides along while agentId is dropped.
       const query = buildKanbanGroupQuery({
         agentId: 'agt_1',
         groupBy: 'status',
@@ -416,6 +418,7 @@ describe('kanbanBoardModel', () => {
       expect(query).toEqual({
         excludeStatuses: undefined,
         groupBy: 'status',
+        projectId: 'proj_1',
         scope: 'created',
       });
     });

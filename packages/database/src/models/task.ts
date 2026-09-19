@@ -41,6 +41,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { merge } from '@/utils/merge';
 
 import { agentOperations } from '../schemas/agentOperations';
+import { executionGrants } from '../schemas/executionGrant';
 import { documents } from '../schemas/file';
 import type {
   NewTaskActivity,
@@ -364,8 +365,15 @@ interface TaskListFilterOptions {
   automated?: boolean;
   /** Only tasks created by this user. */
   createdByUserId?: string;
+  /**
+   * Only tasks with an active execution grant this user initiated — the
+   * "delegated to agents by me" slice. Mirrors the workQuery
+   * `delegatedByUserId` predicate.
+   */
+  delegatedByUserId?: string;
   parentTaskId?: string | null;
-  projectId?: string;
+  /** `null` narrows to tasks with no project — the board's "No project" chip. */
+  projectId?: string | null;
   visibility?: 'private' | 'public';
 }
 
@@ -475,6 +483,7 @@ export class TaskModel {
     assigneeUserId,
     automated,
     createdByUserId,
+    delegatedByUserId,
     parentTaskId,
     projectId,
     visibility,
@@ -484,11 +493,20 @@ export class TaskModel {
     if (assigneeAgentId) conditions.push(eq(tasks.assigneeAgentId, assigneeAgentId));
     if (assigneeUserId) conditions.push(eq(tasks.assigneeUserId, assigneeUserId));
     if (createdByUserId) conditions.push(eq(tasks.createdByUserId, createdByUserId));
+    if (delegatedByUserId) {
+      conditions.push(
+        sql`exists (select 1 from ${executionGrants} where ${executionGrants.taskId} = ${tasks.id} and ${executionGrants.initiatedBy} = ${delegatedByUserId} and ${executionGrants.status} = 'active')`,
+      );
+    }
     if (automated === true) conditions.push(RUNNABLE_AUTOMATION);
     // `IS NOT TRUE`, not `NOT (…)`: nullable automation fields make the
     // runnable expression NULL for manual tasks, and WHERE would drop them.
     if (automated === false) conditions.push(sql`${RUNNABLE_AUTOMATION} IS NOT TRUE`);
-    if (projectId) conditions.push(eq(tasks.projectId, projectId));
+    if (projectId === null) {
+      conditions.push(isNull(tasks.projectId));
+    } else if (projectId) {
+      conditions.push(eq(tasks.projectId, projectId));
+    }
     if (visibility) conditions.push(eq(tasks.visibility, visibility));
 
     if (parentTaskId === null) {

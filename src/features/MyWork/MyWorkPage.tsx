@@ -18,6 +18,9 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { getMyTaskViewOptions } from '@/features/AgentTasks/AgentTaskList/AgentTasksPage';
+import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
+import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -28,7 +31,7 @@ import { workAttentionService } from '@/services/workAttention';
 import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
 import { isMyWorkBoardMode } from './workQueryBoard';
-import { mergeWorkQueryGroups, mergeWorkQueryPage } from './workQueryPaging';
+import { mergeWorkQueryPage } from './workQueryPaging';
 import WorkQueryResults from './WorkQueryResults';
 
 const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
@@ -55,24 +58,24 @@ const MyWorkPage = memo(() => {
   const layout = resolveLayout(mode, searchParams.get('layout'));
   const noProject = searchParams.get('noProject') === '1';
   const canBoard = isMyWorkBoardMode(mode);
+  const boardActive = canBoard && layout === 'board';
 
+  // The board surface is the shared KanbanBoard, which fetches through the
+  // task store — the work-query feed only powers list layout (and Review).
   const { data, isLoading } = useClientDataSWR(
-    workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
-    () => workAttentionService.myWork({ layout: canBoard ? layout : 'list', mode, noProject }),
+    boardActive ? null : workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
+    () => workAttentionService.myWork({ layout: 'list', mode, noProject }),
   );
   const firstTasks = data?.data.tasks ?? [];
-  const firstGroups = data?.data.groups ?? [];
   const queryHash = data?.data.queryHash;
   const [tail, setTail] = useState<typeof firstTasks>([]);
-  const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
   useEffect(() => {
     setTail([]);
-    setGroupTail([]);
     setExtraSubscribed([]);
   }, [layout, mode, noProject, queryHash, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
-  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
+  const boardViewOptions = useMemo(() => getMyTaskViewOptions(DEFAULT_TASK_LIST_VIEW_OPTIONS), []);
   const subscribedTaskIds = [...(data?.data.subscribedTaskIds ?? []), ...extraSubscribed];
   const canSaveAs = isMyWorkSaveableMode(mode);
 
@@ -93,25 +96,6 @@ const MyWorkPage = memo(() => {
     setTail((current) => mergeWorkQueryPage(current, next.data.tasks));
     setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
   }, [canBoard, layout, mode, noProject, queryHash, tasks]);
-
-  const loadMoreGroup = useCallback(
-    async (groupKey: string) => {
-      const column = groups.find((group) => group.key === groupKey);
-      const last = column?.tasks.at(-1);
-      if (!last || !queryHash) return;
-      const next = await workAttentionService.myWork({
-        afterId: last.id,
-        groupKey,
-        layout: 'board',
-        mode,
-        noProject,
-        queryHash,
-      });
-      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
-      setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
-    },
-    [groups, mode, noProject, queryHash],
-  );
 
   const tabs = useMemo(
     () =>
@@ -219,24 +203,33 @@ const MyWorkPage = memo(() => {
             ) : null}
           </Flexbox>
         </Flexbox>
-        <WorkQueryResults
-          emptyLabel={t('myWork.empty')}
-          externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
-          groupBy={data?.data.groupBy}
-          groups={groups}
-          isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
-          layout={layout}
-          loadMoreLabel={t('myWork.loadMore')}
-          loading={isLoading}
-          loadingLabel={t('myWork.loading')}
-          movable={canBoard && layout === 'board'}
-          tasks={tasks}
-          total={data?.data.total}
-          onLoadMore={layout === 'list' ? () => void loadMore() : undefined}
-          onLoadMoreGroup={layout === 'board' ? (key) => void loadMoreGroup(key) : undefined}
-          onMoved={() => void refresh()}
-          onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
-        />
+        {boardActive ? (
+          /* The same Cordy-ported board /tasks mounts — myTaskScope narrows
+             the grouped query to the caller's slice ('delegated' = tasks the
+             caller handed to agents). */
+          <Flexbox flex={1} style={{ minHeight: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+            <KanbanBoard
+              emptyDescription={t('myWork.empty')}
+              myTaskScope={mode === 'delegated' ? 'delegated' : 'assigned'}
+              options={boardViewOptions}
+              projectId={noProject ? null : undefined}
+              routeScope={'global'}
+            />
+          </Flexbox>
+        ) : (
+          <WorkQueryResults
+            emptyLabel={t('myWork.empty')}
+            externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
+            isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
+            loadMoreLabel={t('myWork.loadMore')}
+            loading={isLoading}
+            loadingLabel={t('myWork.loading')}
+            tasks={tasks}
+            total={data?.data.total}
+            onLoadMore={layout === 'list' ? () => void loadMore() : undefined}
+            onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
+          />
+        )}
       </WideScreenContainer>
     </Flexbox>
   );

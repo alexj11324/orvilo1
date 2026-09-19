@@ -387,16 +387,19 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       groupBy: 'assignee' | 'member' | 'priority' | 'status' = 'status',
       excludeStatuses?: string,
-      projectId?: string,
+      projectId?: string | null,
       automated?: boolean,
     ) => {
+      // `null` = the "No project" filter; it must key differently from an
+      // unfiltered board, so it collapses to a readable marker segment.
+      const projectKey = projectId === null ? 'no-project' : projectId;
       const hasBoardFilter = groupBy !== 'status' || excludeStatuses !== undefined;
       const key = hasBoardFilter
-        ? projectId
-          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectId]
+        ? projectKey
+          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectKey]
           : ['task:groupList', agentKey, visibility, groupBy, excludeStatuses]
-        : projectId
-          ? ['task:groupList', agentKey, visibility, projectId]
+        : projectKey
+          ? ['task:groupList', agentKey, visibility, projectKey]
           : ['task:groupList', agentKey, visibility];
 
       return automated === undefined ? key : [...key, { automated }];

@@ -33,7 +33,6 @@ import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
 import { getOpenSubtasks } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import HiddenColumnsPanel from './HiddenColumnsPanel';
 import {
   buildKanbanColumnMap,
   buildKanbanColumns,
@@ -56,7 +55,12 @@ import {
   resolveKanbanDropColumn,
   taskMatchesKanbanColumn,
 } from './kanbanBoardModel';
-import KanbanColumn, { COLUMN_I18N_KEYS, COLUMN_STATUS_ICON, COLUMN_WIDTH } from './KanbanColumn';
+import KanbanColumn, {
+  CollapsedKanbanColumn,
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_ICON,
+  COLUMN_WIDTH,
+} from './KanbanColumn';
 import type { TaskListViewOptions } from './listViewOptions';
 import { HIDDEN_WHEN_COMPLETED_STATUSES } from './listViewOptions';
 import TaskBoardCard from './TaskBoardCard';
@@ -120,11 +124,13 @@ interface KanbanBoardProps {
   /**
    * "My tasks" board: narrows the server groups to the caller's own slice of
    * the workspace, matching what that tab's list view fetches — including its
-   * lack of an automation filter.
+   * lack of an automation filter. 'delegated' covers tasks the caller handed
+   * to agents (active execution grant) — My Work's Delegated tab.
    */
-  myTaskScope?: 'assigned' | 'created';
+  myTaskScope?: 'assigned' | 'created' | 'delegated';
   options: TaskListViewOptions;
-  projectId?: string;
+  /** `null` narrows to tasks with no project — My Work's "No project" chip. */
+  projectId?: string | null;
   routeScope?: TaskItemRouteScope;
 }
 
@@ -162,7 +168,6 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const internalRefreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
 
   const hiddenColumns = useGlobalStore(systemStatusSelectors.taskKanbanHiddenColumns);
-  const hiddenPanelCollapsed = useGlobalStore(systemStatusSelectors.taskKanbanHiddenPanelCollapsed);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
   const [activeTask, setActiveTask] = useState<TaskListItem | null>(null);
@@ -252,13 +257,6 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       updateSystemStatus({ taskKanbanHiddenColumns: next }, 'restoreKanbanColumn');
     },
     [hiddenColumns, updateSystemStatus],
-  );
-
-  const handleToggleHiddenPanel = useCallback(
-    (collapsed: boolean) => {
-      updateSystemStatus({ taskKanbanHiddenPanelCollapsed: collapsed }, 'toggleKanbanHiddenPanel');
-    },
-    [updateSystemStatus],
   );
 
   // ── Drop commit ────────────────────────────────────────────────
@@ -702,16 +700,20 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
             />
           );
         })}
-        {groupBy === 'status' && (
-          <HiddenColumnsPanel
-            // A drag force-expands the rail so its hidden-column rows mount
-            // and register as drop targets; collapsed keeps them unmounted.
-            collapsed={hiddenPanelCollapsed && !activeTask}
-            columns={hiddenColumnEntries}
-            onRestore={handleRestoreColumn}
-            onToggleCollapsed={handleToggleHiddenPanel}
-          />
-        )}
+        {/* Hidden columns fold into Cordy's in-flow rails at the board's end:
+            always mounted, each stays a live drop target, click restores. */}
+        {groupBy === 'status' &&
+          hiddenColumnEntries.map((entry) => (
+            <CollapsedKanbanColumn
+              columnKey={entry.columnKey}
+              droppable={entry.droppable}
+              key={entry.columnKey}
+              label={entry.label}
+              statusIcon={entry.statusIcon}
+              total={entry.total}
+              onExpand={() => handleRestoreColumn(entry.columnKey)}
+            />
+          ))}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
@@ -738,7 +740,10 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       empty={emptyState}
       error={error}
       errorVariant={'block'}
-      isEmpty={totalTasks === 0}
+      // Status boards always have their columns — an empty workspace still
+      // renders the empty board (Cordy's behavior), not a centered empty state.
+      // Only dynamic groupings with zero groups fall back to `empty`.
+      isEmpty={totalTasks === 0 && groupBy !== 'status'}
       isLoading={isLoading || (!isQueryScopeCurrent && !error) || (!isTaskGroupListInit && !error)}
       loading={skeletonBoard}
       onRetry={() => mutate()}

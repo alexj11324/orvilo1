@@ -269,10 +269,11 @@ const groupListSchema = z
       .max(10)
       .optional(),
     parentTaskId: z.string().nullish(),
-    projectId: z.string().optional(),
+    // `null` narrows to tasks with no project — the board's "No project" chip.
+    projectId: z.string().nullish(),
     // Same "My tasks" narrowing as `listSchema.scope`, so the board renders the
     // exact set its list view does. Always resolved against `ctx.userId`.
-    scope: z.enum(['assigned', 'created']).optional(),
+    scope: z.enum(['assigned', 'created', 'delegated']).optional(),
     visibility: z.enum(['private', 'public']).optional(),
   })
   .refine(({ groupBy, groups }) => Boolean(groupBy) !== Boolean(groups), {
@@ -1217,6 +1218,7 @@ export const taskRouter = router({
         ...query,
         ...(scope === 'assigned' ? { assigneeUserId: ctx.userId } : {}),
         ...(scope === 'created' ? { createdByUserId: ctx.userId } : {}),
+        ...(scope === 'delegated' ? { delegatedByUserId: ctx.userId } : {}),
       });
       return { data: groups, success: true };
     } catch (error) {

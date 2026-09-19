@@ -520,10 +520,16 @@ export const dispatchHeteroAgent = async (
     agentId: persistAgentId,
     appContext: { ...appContext, sourceMessageId: userMessageId },
     chatGroupId: appContext?.groupId ?? null,
+    // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
+    // runtime loop — owns this operation. `heteroAgentType` records the CLI
+    // family actually spawned (`orvilo` resolves to its engine's family), so a
+    // trace can prove which adapter drove the run.
+    executionEngine: 'hetero',
     maxSteps,
     metadata: {
       _hooks: serializedHooks,
       assistantMessageId,
+      heteroAgentType: heteroCliAgentType,
     },
     operationId,
     parentOperationId,

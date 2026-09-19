@@ -77,7 +77,7 @@ const setupHappyPath = (task: TaskItem, execResult: unknown) => {
 };
 
 const newRunner = (overrides: {
-  assertExecutionEpoch?: ReturnType<typeof vi.fn>;
+  assertMayCommit?: ReturnType<typeof vi.fn>;
   claimExecutionEpoch?: ReturnType<typeof vi.fn>;
   db?: unknown;
   getAgentModelConfig?: ReturnType<typeof vi.fn>;
@@ -94,7 +94,7 @@ const newRunner = (overrides: {
     getBuiltinAgent: overrides.getBuiltinAgent ?? vi.fn(),
   };
   const delegationService = {
-    assertExecutionEpoch: overrides.assertExecutionEpoch ?? vi.fn().mockResolvedValue(undefined),
+    assertMayCommit: overrides.assertMayCommit ?? vi.fn().mockResolvedValue(undefined),
     claimExecutionEpoch: overrides.claimExecutionEpoch ?? vi.fn().mockResolvedValue(7),
   };
   (service as unknown as { agentModel: unknown }).agentModel = agentModel;
@@ -140,7 +140,7 @@ describe('TaskRunnerService delegated runs', () => {
       },
       expect.anything(),
     );
-    expect(delegationService.assertExecutionEpoch).toHaveBeenCalledWith({
+    expect(delegationService.assertMayCommit).toHaveBeenCalledWith({
       epoch: 7,
       grantId: 'grant-1',
       taskId: 'task-1',
@@ -174,12 +174,12 @@ describe('TaskRunnerService delegated runs', () => {
       success: true,
       topicId: 'tpc_1',
     });
-    const assertExecutionEpoch = vi
+    const assertMayCommit = vi
       .fn()
       .mockRejectedValue(
         new TRPCError({ code: 'CONFLICT', message: 'Execution superseded by a newer delegation epoch' }),
       );
-    const { service } = newRunner({ assertExecutionEpoch });
+    const { service } = newRunner({ assertMayCommit });
     const updateHeartbeat = vi.mocked(TaskModel.prototype.updateHeartbeat);
 
     await expect(service.runTask(runParams)).rejects.toMatchObject({ code: 'CONFLICT' });

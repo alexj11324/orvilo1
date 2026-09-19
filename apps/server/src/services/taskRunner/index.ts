@@ -643,11 +643,22 @@ export class TaskRunnerService {
           trigger,
         });
         if (delegation) {
-          delegatedEpoch = await this.delegationService.claimExecutionEpoch({
-            grantId: delegation.grantId,
-            taskId: task.id,
-            topicId: result.topicId,
-          });
+          try {
+            delegatedEpoch = await this.delegationService.claimExecutionEpoch({
+              grantId: delegation.grantId,
+              taskId: task.id,
+              topicId: result.topicId,
+            });
+          } catch (claimError) {
+            // The topic row already says 'running' — a grant that died
+            // between validateGrantForRun and registration must still settle
+            // it, or the row lingers until the watchdog reaps it. Dispatch
+            // settle/reservation bookkeeping stays with the outer catch.
+            await this.taskTopicModel
+              .updateStatus(task.id, result.topicId, 'failed')
+              .catch(() => {});
+            throw claimError;
+          }
         }
         provisionedRegistered = true;
         if (!continueTopicId) await this.taskModel.incrementTopicCount(task.id);
@@ -751,14 +762,16 @@ export class TaskRunnerService {
         provisionedRegistered = true;
       }
       // Commit fence for delegated runs: the epoch claimed on this run's
-      // task_topics row must still be current before the registration becomes
-      // durable — a superseding delegation (newer claim on the row) fences
-      // this dispatch off here, and the catch below interrupts the orphan.
+      // task_topics row must still be current AND the grant still live before
+      // the registration becomes durable — a superseding delegation fences
+      // this dispatch off here, and a revoke/expiry/membership loss that
+      // landed after the claim is caught by the grant revalidation inside
+      // assertMayCommit. The catch below interrupts the orphan.
       if (delegation) {
         if (delegatedEpoch === undefined || !dispatchedTopicId) {
           throw new Error('Delegated run registered no execution epoch');
         }
-        await this.delegationService.assertExecutionEpoch({
+        await this.delegationService.assertMayCommit({
           epoch: delegatedEpoch,
           grantId: delegation.grantId,
           taskId: task.id,

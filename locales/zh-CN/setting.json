@@ -1909,6 +1909,8 @@
   "workspace.auditLog.filters.startDate": "开始日期",
   "workspace.auditLog.loadFailed": "加载审计日志失败",
   "workspace.auditLog.loadMore": "加载更多",
+  "workspace.loadFailed": "加载工作区失败",
+  "workspace.loadFailedHint": "无法加载你的工作区列表，请检查网络后重试。",
   "workspace.auditLog.resourceTypes.agent": "Agent",
   "workspace.auditLog.resourceTypes.api_key": "API Key",
   "workspace.auditLog.resourceTypes.auto_top_up": "自动充值",

@@ -13,6 +13,8 @@ import { projects } from '@/database/schemas/project';
 import { workspaceMembers } from '@/database/schemas/workspace';
 import type { OrviloDatabase } from '@/database/type';
 
+import { linearCreateTriageStatus } from './linearCreateTriageStatus';
+
 const LINEAR_INTEGRATION_SUBJECT_PREFIX = 'linear-installation:';
 
 export const linearIntegrationPrincipal = (installationId: string) =>
@@ -191,6 +193,7 @@ export class LinearIntegrationTaskService {
         priority: issue.priority ?? 0,
         projectId: binding.projectId,
         teamId: input.localTeamId ?? null,
+        triageStatus: linearCreateTriageStatus(Boolean(input.mutation.suppressDomainEvent)),
         visibility: 'public',
         workflowCategory: workflowMapping?.workflowCategory ?? 'backlog',
         workflowStateId: issue.stateId ?? null,
@@ -254,6 +257,7 @@ export class LinearIntegrationTaskService {
         priority: issue.priority ?? 0,
         projectId: input.projectId ?? null,
         teamId: input.localTeamId,
+        triageStatus: linearCreateTriageStatus(Boolean(mutation.suppressDomainEvent)),
         visibility: input.visibility ?? 'public',
         // Prefer the synced team state's category; fall back to the project
         // binding's status mappings, then backlog.

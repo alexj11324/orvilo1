@@ -1,7 +1,12 @@
+import { EVENT_CONSUMERS } from '@orvilo/types';
 import debug from 'debug';
+import { eq } from 'drizzle-orm';
 
+import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceipt';
 import { EventOutboxModel } from '@/database/models/eventOutbox';
+import { eventOutbox } from '@/database/schemas/eventOutbox';
 import type { OrviloDatabase } from '@/database/type';
+import { NotificationProjectionService } from '@/server/services/workAttention';
 
 import { projectOutboxEvent } from './projection';
 import { getRoomPublisher, type RoomPublisher } from './roomPublisher';
@@ -19,34 +24,40 @@ const RETRY_DELAY_MS = 30_000;
 const VISIBILITY_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
- * Durable fan-out half of the room contract: business writes commit outbox
- * rows in the same transaction, and this projector drains them into room
- * deliveries. Publishing is at-least-once — a row is only marked delivered
- * after every delivery it projected has been accepted by the publisher, so a
- * gateway outage pauses the tail instead of dropping events. Rows that keep
- * failing stay 'pending' with a deferred `nextAttemptAt` until the model's
- * attempt ceiling parks them 'failed' (reordering is acceptable: clients
- * converge through `snapshot`, not the stream).
+ * Durable dispatcher + per-consumer ACK (D09). Claiming an outbox row fans out
+ * one receipt per registered consumer and then marks the parent delivered so
+ * the next scanner never races on the same `delivered` flag. Collaboration
+ * realtime and notification projection ACK independently; a gateway outage
+ * retries only the realtime receipt.
  */
 export class CollaborationOutboxProjector {
   private readonly db: OrviloDatabase;
   private readonly outbox: EventOutboxModel;
   private readonly publisher: RoomPublisher;
+  private readonly receipts: EventConsumerReceiptModel;
+  private readonly notifications: NotificationProjectionService;
 
   constructor(db: OrviloDatabase, publisher: RoomPublisher = getRoomPublisher()) {
     this.db = db;
     this.outbox = new EventOutboxModel(db);
     this.publisher = publisher;
+    this.receipts = new EventConsumerReceiptModel(db);
+    this.notifications = new NotificationProjectionService(db);
   }
 
   /**
-   * Drain due pending rows in claimed pages of `limit` until a short page —
-   * a backlog larger than one page still fully drains inside the same tick.
-   * Each claim stamps a visibility timeout, so an overlapping sweep partitions
-   * the backlog instead of racing on the same rows.
+   * Fan-out pending outbox rows, then drain each consumer. A backlog larger
+   * than one page still fully drains inside the same tick.
    */
   projectPending = async (limit = 200) => {
-    let drained = 0;
+    const dispatched = await this.dispatchFanOut(limit);
+    const realtime = await this.drainCollaboration(limit);
+    const projected = await this.notifications.drainPending(limit);
+    return { dispatched, projected, realtime };
+  };
+
+  private dispatchFanOut = async (limit: number) => {
+    let dispatched = 0;
     for (;;) {
       const rows = await this.outbox.claimPending({
         limit,
@@ -54,20 +65,46 @@ export class CollaborationOutboxProjector {
       });
       for (const row of rows) {
         try {
-          for (const delivery of projectOutboxEvent(row)) {
-            await this.publisher.publish(delivery.room, delivery.publish);
-          }
+          await this.receipts.fanOut(this.db, { eventId: row.eventId, outboxId: row.id });
           await this.outbox.markDelivered(row.id);
-          drained += 1;
+          dispatched += 1;
         } catch (error) {
-          // Deferred retry — the next sweep picks the row up once its backoff
-          // lapses. Log without payload so private room content never lands in
-          // logs.
           await this.outbox.markFailed(row.id, { retryDelayMs: RETRY_DELAY_MS });
-          log('projection failed for outbox %s: %O', row.id, error);
+          log('fan-out failed for outbox %s: %O', row.id, error);
         }
       }
-      if (rows.length < limit) return drained;
+      if (rows.length < limit) return dispatched;
+    }
+  };
+
+  private drainCollaboration = async (limit: number) => {
+    let drained = 0;
+    for (;;) {
+      const claimed = await this.receipts.claimPending({
+        consumer: EVENT_CONSUMERS.COLLABORATION_REALTIME,
+        limit,
+        visibilityTimeoutMs: VISIBILITY_TIMEOUT_MS,
+      });
+      for (const receipt of claimed) {
+        try {
+          const [row] = await this.db
+            .select()
+            .from(eventOutbox)
+            .where(eq(eventOutbox.eventId, receipt.eventId))
+            .limit(1);
+          if (row) {
+            for (const delivery of projectOutboxEvent(row)) {
+              await this.publisher.publish(delivery.room, delivery.publish);
+            }
+          }
+          await this.receipts.markDelivered(receipt.id);
+          drained += 1;
+        } catch (error) {
+          await this.receipts.markFailed(receipt.id, { retryDelayMs: RETRY_DELAY_MS });
+          log('collaboration receipt failed for event %s: %O', receipt.eventId, error);
+        }
+      }
+      if (claimed.length < limit) return drained;
     }
   };
 }

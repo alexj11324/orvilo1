@@ -41,6 +41,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { merge } from '@/utils/merge';
 
 import { agentOperations } from '../schemas/agentOperations';
+import { executionGrants } from '../schemas/executionGrant';
 import { documents } from '../schemas/file';
 import type {
   NewTaskActivity,
@@ -79,7 +80,8 @@ const TRACKED_TASK_COLUMNS = [
   'schedulePattern',
   'scheduleTimezone',
   'status',
-] as const;
+  'triageStatus',
+] as const satisfies readonly (keyof NewTask)[];
 
 /** Task fields that must wake a linked Linear issue even without an activity row. */
 const LINEAR_SYNC_TASK_COLUMNS = [
@@ -106,6 +108,7 @@ const TASK_DOMAIN_COLUMNS = [
   'config',
   'cycleRefId',
   'description',
+  'duplicateOfTaskId',
   'editorData',
   'heartbeatInterval',
   'heartbeatTimeout',
@@ -125,6 +128,7 @@ const TASK_DOMAIN_COLUMNS = [
   'sortOrder',
   'status',
   'teamId',
+  'triageStatus',
   'visibility',
   'workflowCategory',
   'workflowLocked',
@@ -161,6 +165,11 @@ const TASK_POLICY_COLUMNS = [
 export interface TaskMutationContext {
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
+  /**
+   * When set, `moveToTeam` only writes if `domainRevision` still matches.
+   * Inbound Linear sync omits this; the Team UI must send it.
+   */
+  expectedDomainRevision?: number;
   /** Stable caller key when the write is a replayable command or delivery. */
   idempotencyKey?: string;
   source?: TaskDomainEventSource;
@@ -168,6 +177,15 @@ export interface TaskMutationContext {
   suppressDomainEvent?: boolean;
   /** Prevent a provider-originated reconciliation from echoing back out. */
   suppressLinearOutbox?: boolean;
+}
+
+export class TaskRevisionConflictError extends Error {
+  readonly code = 'TASK_REVISION_CONFLICT' as const;
+
+  constructor() {
+    super('TASK_REVISION_CONFLICT');
+    this.name = 'TaskRevisionConflictError';
+  }
 }
 
 const relationKey = (
@@ -197,6 +215,14 @@ const taskMutationEventType = (data: Partial<NewTask>): TaskDomainEventType | un
     data.workflowStateId !== undefined
   ) {
     return 'task.status.changed';
+  }
+  if (touchedColumns(data, TASK_REQUIREMENT_COLUMNS).length > 0) {
+    return 'task.requirement.changed';
+  }
+  // Admit / decline / duplicate must wake planning once without looking like a
+  // requirement edit that auto-apply can treat as new executable work.
+  if (data.triageStatus !== undefined || data.duplicateOfTaskId !== undefined) {
+    return 'task.scope.changed';
   }
   return touchedColumns(data, TASK_DOMAIN_COLUMNS).length > 0
     ? 'task.requirement.changed'
@@ -339,8 +365,15 @@ interface TaskListFilterOptions {
   automated?: boolean;
   /** Only tasks created by this user. */
   createdByUserId?: string;
+  /**
+   * Only tasks with an active execution grant this user initiated — the
+   * "delegated to agents by me" slice. Mirrors the workQuery
+   * `delegatedByUserId` predicate.
+   */
+  delegatedByUserId?: string;
   parentTaskId?: string | null;
-  projectId?: string;
+  /** `null` narrows to tasks with no project — the board's "No project" chip. */
+  projectId?: string | null;
   visibility?: 'private' | 'public';
 }
 
@@ -450,6 +483,7 @@ export class TaskModel {
     assigneeUserId,
     automated,
     createdByUserId,
+    delegatedByUserId,
     parentTaskId,
     projectId,
     visibility,
@@ -459,11 +493,20 @@ export class TaskModel {
     if (assigneeAgentId) conditions.push(eq(tasks.assigneeAgentId, assigneeAgentId));
     if (assigneeUserId) conditions.push(eq(tasks.assigneeUserId, assigneeUserId));
     if (createdByUserId) conditions.push(eq(tasks.createdByUserId, createdByUserId));
+    if (delegatedByUserId) {
+      conditions.push(
+        sql`exists (select 1 from ${executionGrants} where ${executionGrants.taskId} = ${tasks.id} and ${executionGrants.initiatedBy} = ${delegatedByUserId} and ${executionGrants.status} = 'active')`,
+      );
+    }
     if (automated === true) conditions.push(RUNNABLE_AUTOMATION);
     // `IS NOT TRUE`, not `NOT (…)`: nullable automation fields make the
     // runnable expression NULL for manual tasks, and WHERE would drop them.
     if (automated === false) conditions.push(sql`${RUNNABLE_AUTOMATION} IS NOT TRUE`);
-    if (projectId) conditions.push(eq(tasks.projectId, projectId));
+    if (projectId === null) {
+      conditions.push(isNull(tasks.projectId));
+    } else if (projectId) {
+      conditions.push(eq(tasks.projectId, projectId));
+    }
     if (visibility) conditions.push(eq(tasks.visibility, visibility));
 
     if (parentTaskId === null) {
@@ -615,6 +658,7 @@ export class TaskModel {
           createdByUserId: options.creationSubject ? null : this.userId,
           identifier,
           seq: nextSeq,
+          triageStatus: rest.triageStatus ?? (rest.teamId ? 'untriaged' : rest.triageStatus),
           workspaceId: this.workspaceId ?? null,
         } as NewTask)
         .returning();
@@ -742,6 +786,27 @@ export class TaskModel {
     await this.assertDependenciesForStatus([id], data.status);
 
     const eventType = taskMutationEventType(data);
+    const updateWhere = [eq(tasks.id, id), this.ownership()];
+    if (mutation.expectedDomainRevision !== undefined) {
+      updateWhere.push(eq(tasks.domainRevision, mutation.expectedDomainRevision));
+    }
+
+    const resolveUpdate = async (
+      runner: OrviloDatabase,
+      updated: TaskItem | undefined,
+    ): Promise<TaskItem | null> => {
+      if (updated) return updated;
+      if (mutation.expectedDomainRevision !== undefined) {
+        const [current] = await runner
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(and(eq(tasks.id, id), this.ownership()))
+          .limit(1);
+        if (current) throw new TaskRevisionConflictError();
+      }
+      return null;
+    };
+
     if (!eventType) {
       const updated = await this.db
         .update(tasks)
@@ -750,9 +815,9 @@ export class TaskModel {
           ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
           updatedAt: new Date(),
         })
-        .where(and(eq(tasks.id, id), this.ownership()))
+        .where(and(...updateWhere))
         .returning();
-      return updated[0] || null;
+      return resolveUpdate(this.db, updated[0]);
     }
 
     const changedFields = touchedColumns(data, TASK_DOMAIN_COLUMNS).map(String);
@@ -761,7 +826,7 @@ export class TaskModel {
 
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
-      const [task] = await runner
+      const [updated] = await runner
         .update(tasks)
         .set({
           ...data,
@@ -773,8 +838,9 @@ export class TaskModel {
             : {}),
           updatedAt: new Date(),
         })
-        .where(and(eq(tasks.id, id), this.ownership()))
+        .where(and(...updateWhere))
         .returning();
+      const task = await resolveUpdate(runner, updated);
       if (!task) return null;
 
       if (this.workspaceId && !mutation.suppressDomainEvent) {
@@ -832,6 +898,11 @@ export class TaskModel {
         .limit(1);
       if (!before || before.teamId === teamId) return before ?? null;
 
+      const moveWhere = [eq(tasks.id, id), this.ownership()];
+      if (mutation.expectedDomainRevision !== undefined) {
+        moveWhere.push(eq(tasks.domainRevision, mutation.expectedDomainRevision));
+      }
+
       const [task] = await runner
         .update(tasks)
         .set({
@@ -839,9 +910,19 @@ export class TaskModel {
           teamId,
           updatedAt: new Date(),
         })
-        .where(and(eq(tasks.id, id), this.ownership()))
+        .where(and(...moveWhere))
         .returning();
-      if (!task) return null;
+      if (!task) {
+        if (mutation.expectedDomainRevision !== undefined) {
+          const [current] = await runner
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(and(eq(tasks.id, id), this.ownership()))
+            .limit(1);
+          if (current) throw new TaskRevisionConflictError();
+        }
+        return null;
+      }
 
       if (this.workspaceId && !mutation.suppressDomainEvent) {
         const model = new LinearSyncModel(runner, this.workspaceId);

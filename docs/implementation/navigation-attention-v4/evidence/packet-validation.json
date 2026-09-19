@@ -1,0 +1,36 @@
+{
+  "kind": "PACKET_STRUCTURE_VALIDATION_ONLY",
+  "applicationTestsRun": false,
+  "applicationRepositoryModified": false,
+  "productUiVerified": false,
+  "researchDate": "2026-09-18",
+  "checks": {
+    "jsonParsed": true,
+    "dagAcyclic": true,
+    "workPackages": 14,
+    "rolePrompts": 7,
+    "acceptanceCases": 64,
+    "allCasesNotRun": true,
+    "allWorkPackagesPlanned": true,
+    "uniqueOwnershipPatterns": true,
+    "markdownFencesBalanced": true,
+    "sourceReferencesResolved": true
+  },
+  "topologicalOrder": [
+    "N00",
+    "N01",
+    "N02",
+    "N06",
+    "N03",
+    "N04",
+    "N08",
+    "N05",
+    "N07",
+    "N10",
+    "N09",
+    "N11",
+    "N12",
+    "N13"
+  ],
+  "limits": "Only syntax, cross references and packaging have been checked. Pattern ownership is not a security boundary; S must instantiate actual paths and leases in N00."
+}

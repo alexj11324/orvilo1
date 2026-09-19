@@ -1,10 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/config/routes', () => ({
-  getRouteById: (id: string) => ({ icon: () => id }),
-}));
-
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: { toggleCommandMenu: () => void }) => unknown) =>
     selector({ toggleCommandMenu: vi.fn() }),
@@ -16,12 +12,23 @@ vi.mock('@/store/serverConfig', () => ({
 }));
 
 /**
- * Sidebar keys whose product surface has been withdrawn by the task-first
- * convergence. They must not render from any code path, and they must not come
- * back through a persisted preference either — the preference side is covered by
- * the system-status normalizer tests.
+ * Keys retired from the primary sidebar by the Linear IA convergence. They must
+ * not render from any code path — routes stay reachable, the sidebar does not.
  */
-const RETIRED_SIDEBAR_KEYS = ['community', 'image', 'memory', 'pages'];
+const RETIRED_SIDEBAR_KEYS = [
+  'community',
+  'image',
+  'memory',
+  'pages',
+  'home',
+  'tasks',
+  'automations',
+  'resource',
+  'recents',
+  'private',
+  'project',
+  'views',
+];
 
 const renderedKeys = async () => {
   const { useNavLayout } = await import('./useNavLayout');
@@ -34,23 +41,16 @@ describe('useNavLayout', () => {
     expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps the task destination reachable', async () => {
+  it('keeps the fixed primary entries: search, inbox, my work, reviews', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
+    const keys = result.current.topNavItems.map((item) => item.key);
 
-    const tasksItem = result.current.topNavItems.find((item) => item.key === 'tasks');
-
-    expect(tasksItem).toBeDefined();
-    expect(tasksItem?.url).toBe('/tasks');
-  });
-
-  it('keeps the automation destination reachable', async () => {
-    const { useNavLayout } = await import('./useNavLayout');
-    const { result } = renderHook(() => useNavLayout());
-
-    const automationsItem = result.current.topNavItems.find((item) => item.key === 'automations');
-
-    expect(automationsItem).toBeDefined();
-    expect(automationsItem?.url).toBe('/automations');
+    expect(keys).toEqual(['search', 'inbox', 'my-work', 'reviews']);
+    expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
+    expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe('/my-work');
+    expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe(
+      '/my-work?tab=review',
+    );
   });
 });

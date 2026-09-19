@@ -9,7 +9,6 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import Recents from '@/features/Home/Recents';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -17,33 +16,36 @@ import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
 import { useNavLayout } from '@/hooks/useNavLayout';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+import { useSearchParams } from '@/libs/router/navigation';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { isModifierClick } from '@/utils/navigation';
 
 import Agent from './Agent';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
-import Private from './Private';
-import Project from './Project';
+import TeamsSection from './TeamsSection';
 import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPreference';
+import WorkFavorites from './WorkFavorites';
+import WorkspaceSection from './WorkspaceSection';
 
 export enum GroupKey {
   Agent = 'agent',
-  Private = 'private',
-  Project = 'project',
-  Recents = 'recents',
-  Resource = 'resource',
+  Favorites = 'favorites',
+  Teams = 'teams',
+  Workspace = 'workspace',
 }
 
 const ACCORDION_KEYS = new Set<string>([
-  GroupKey.Project,
-  GroupKey.Recents,
   GroupKey.Agent,
-  GroupKey.Private,
+  GroupKey.Workspace,
+  GroupKey.Favorites,
+  GroupKey.Teams,
 ]);
+
+/** Core links can never be hidden — the fixed IA keeps them always mounted. */
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
@@ -51,9 +53,9 @@ const HEADER_KEYS = new Set<string>(['home', 'search']);
 
 const accordionComponents: Record<string, (key: string) => ReactElement> = {
   [GroupKey.Agent]: (key) => <Agent itemKey={key} key={key} />,
-  [GroupKey.Private]: (key) => <Private itemKey={key} key={key} />,
-  [GroupKey.Project]: (key) => <Project itemKey={key} key={key} />,
-  [GroupKey.Recents]: (key) => <Recents itemKey={key} key={key} />,
+  [GroupKey.Favorites]: (key) => <WorkFavorites itemKey={key} key={key} />,
+  [GroupKey.Teams]: (key) => <TeamsSection itemKey={key} key={key} />,
+  [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
 };
 
 const mergeSidebarExpandedKeys = (
@@ -75,17 +77,13 @@ const mergeSidebarExpandedKeys = (
 const Body = memo(() => {
   const { t } = useTranslation('common');
   const tab = useActiveTabKey();
+  const [searchParams] = useSearchParams();
   const navigate = useWorkspaceAwareNavigate();
   const { topNavItems, bottomMenuItems } = useNavLayout();
-  // Personal mode has no notion of "private vs workspace-public" — every row
-  // is implicitly the owner's. Hide the Private section entirely there so the
-  // sidebar doesn't sprout an empty accordion users can't populate.
   const activeWorkspaceId = useActiveWorkspaceId();
-  // The Agent/Private sections subtract the caller's sidebar-hidden items,
-  // and the section layout syncs per-member — both live in the workspace
-  // user preference, so load it alongside the sidebar.
+  // The section layout syncs per-member via the workspace user preference, so
+  // load it alongside the sidebar.
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
-  const enableProjects = useUserStore(labPreferSelectors.enableProjects);
   useFetchWorkspaceUserPreference();
   useSyncWorkspaceSidebarPreference(activeWorkspaceId);
   const sidebarItems = useGlobalStore(systemStatusSelectors.sidebarItems(activeWorkspaceId));
@@ -107,14 +105,19 @@ const Body = memo(() => {
   const getContextMenuItems = useCallback(
     (key: string): MenuProps['items'] => {
       const items: NativeContextMenuItem[] = [
-        {
-          icon: <Icon icon={EyeOffIcon} />,
-          key: 'hideSection',
-          label: t('navPanel.hideSection'),
-          onClick: () => hideSection(key),
-          sfSymbol: 'eye.slash',
-        },
-        { type: 'divider' as const },
+        // Core destinations are part of the fixed IA — no hide affordance.
+        ...(CORE_KEYS.has(key)
+          ? []
+          : [
+              {
+                icon: <Icon icon={EyeOffIcon} />,
+                key: 'hideSection' as const,
+                label: t('navPanel.hideSection'),
+                onClick: () => hideSection(key),
+                sfSymbol: 'eye.slash' as const,
+              },
+              { type: 'divider' as const },
+            ]),
         {
           icon: <Icon icon={SlidersHorizontalIcon} />,
           key: 'customizeSidebar',
@@ -139,14 +142,11 @@ const Body = memo(() => {
   // Items that must always be visible regardless of hiddenSections
   const isVisible = useCallback(
     (k: string) => {
-      // Private accordion is workspace-only. In personal mode every row is
-      // implicitly owner-private, so a dedicated bucket would be a noisy
-      // empty section.
-      if (k === GroupKey.Private && !activeWorkspaceId) return false;
-      if (k === GroupKey.Project && !enableProjects) return false;
-      return k === GroupKey.Agent || k === SIDEBAR_SPACER_ID || !hiddenSections.includes(k);
+      // Your teams is a workspace concept — personal mode has no teams to list.
+      if (k === GroupKey.Teams && !activeWorkspaceId) return false;
+      return CORE_KEYS.has(k) || k === SIDEBAR_SPACER_ID || !hiddenSections.includes(k);
     },
-    [hiddenSections, activeWorkspaceId, enableProjects],
+    [hiddenSections, activeWorkspaceId],
   );
 
   const visibleKeys = useMemo(
@@ -158,6 +158,15 @@ const Body = memo(() => {
     (key: string) => {
       const navItem = navLinkItems.get(key);
       if (!navItem || navItem.hidden) return null;
+      // Reviews lives under /my-work?tab=review — resolve active against the
+      // query so the two entries never light up together.
+      const onReviewTab = tab === 'my-work' && searchParams.get('tab') === 'review';
+      const active =
+        key === 'reviews'
+          ? onReviewTab
+          : key === 'my-work'
+            ? tab === 'my-work' && !onReviewTab
+            : tab === key;
       return (
         <WorkspaceLink
           key={key}
@@ -169,7 +178,7 @@ const Body = memo(() => {
           }}
         >
           <NavItem
-            active={tab === key}
+            active={active}
             contextMenuItems={getContextMenuItems(key)}
             icon={navItem.icon}
             title={navItem.title}
@@ -182,7 +191,7 @@ const Body = memo(() => {
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, getContextMenuItems, navigate],
+    [navLinkItems, tab, searchParams, getContextMenuItems, navigate],
   );
 
   const handleAccordionExpandedChange = useCallback(

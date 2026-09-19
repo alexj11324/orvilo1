@@ -5,9 +5,11 @@ import { SearchIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import SideBarDrawer from '@/features/NavPanel/SideBarDrawer';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
+import { omitPersonalTeamItems } from '@/services/recent';
 import { useHomeStore } from '@/store/home';
 import { homeRecentSelectors } from '@/store/home/selectors';
 import { createRecentQueryKey } from '@/store/home/slices/recent/initialState';
@@ -23,6 +25,7 @@ const AllRecentsDrawer = memo<AllRecentsDrawerProps>(({ open, onClose }) => {
   const { t } = useTranslation('common');
   const [searchKeyword, setSearchKeyword] = useState('');
   const scope = useCacheScope();
+  const workspaceId = useActiveWorkspaceId();
   const useFetchAllRecents = useHomeStore((s) => s.useFetchAllRecents);
   const queryKey = createRecentQueryKey(50);
   const query = useHomeStore(homeRecentSelectors.query(scope, queryKey));
@@ -31,10 +34,11 @@ const AllRecentsDrawer = memo<AllRecentsDrawerProps>(({ open, onClose }) => {
   const { isLoading } = useFetchAllRecents(open, scope);
 
   const filteredItems = useMemo(() => {
+    const visible = omitPersonalTeamItems(items ?? [], workspaceId);
     const keyword = searchKeyword.trim().toLowerCase();
-    if (!keyword) return items ?? [];
-    return items?.filter((item) => item.title.toLowerCase().includes(keyword)) ?? [];
-  }, [items, searchKeyword]);
+    if (!keyword) return visible;
+    return visible.filter((item) => item.title.toLowerCase().includes(keyword));
+  }, [items, searchKeyword, workspaceId]);
 
   return (
     <SideBarDrawer

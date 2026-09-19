@@ -1,8 +1,7 @@
-import { HomeIcon, SearchIcon } from 'lucide-react';
+import { GitPullRequestIcon, InboxIcon, SearchIcon, SquareUserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { getRouteById } from '@/config/routes';
 import { useGlobalStore } from '@/store/global';
 import { SidebarTabKey } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -37,6 +36,10 @@ export const useNavLayout = (): NavLayout => {
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
 
+  // Fixed primary IA (see features/Navigation/sidebarContract): the header
+  // renders search; the body renders inbox/my-work/reviews as core links and
+  // the accordion sections (agent, workspace, favorites, teams) separately.
+  // Retired surfaces keep their routes for deep links but no sidebar entry.
   const topNavItems = useMemo(
     () =>
       [
@@ -47,28 +50,22 @@ export const useNavLayout = (): NavLayout => {
           title: t('tab.search'),
         },
         {
-          icon: HomeIcon,
-          key: SidebarTabKey.Home,
-          title: t('tab.home'),
-          url: '/',
+          icon: InboxIcon,
+          key: SidebarTabKey.Inbox,
+          title: t('tab.inbox'),
+          url: '/inbox',
         },
         {
-          icon: getRouteById('tasks')!.icon,
-          key: SidebarTabKey.Tasks,
-          title: t('tab.tasks'),
-          url: '/tasks',
+          icon: SquareUserIcon,
+          key: SidebarTabKey.MyWork,
+          title: t('tab.myWork'),
+          url: '/my-work',
         },
         {
-          icon: getRouteById('automations')!.icon,
-          key: SidebarTabKey.Automations,
-          title: t('tab.automations'),
-          url: '/automations',
-        },
-        {
-          icon: getRouteById('resource')!.icon,
-          key: SidebarTabKey.Resource,
-          title: t('tab.resource'),
-          url: '/resource',
+          icon: GitPullRequestIcon,
+          key: SidebarTabKey.Reviews,
+          title: t('tab.reviews'),
+          url: '/my-work?tab=review',
         },
       ] as NavItem[],
     [t, toggleCommandMenu],

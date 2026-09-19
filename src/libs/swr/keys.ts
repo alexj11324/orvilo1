@@ -387,16 +387,19 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       groupBy: 'assignee' | 'member' | 'priority' | 'status' = 'status',
       excludeStatuses?: string,
-      projectId?: string,
+      projectId?: string | null,
       automated?: boolean,
     ) => {
+      // `null` = the "No project" filter; it must key differently from an
+      // unfiltered board, so it collapses to a readable marker segment.
+      const projectKey = projectId === null ? 'no-project' : projectId;
       const hasBoardFilter = groupBy !== 'status' || excludeStatuses !== undefined;
       const key = hasBoardFilter
-        ? projectId
-          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectId]
+        ? projectKey
+          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectKey]
           : ['task:groupList', agentKey, visibility, groupBy, excludeStatuses]
-        : projectId
-          ? ['task:groupList', agentKey, visibility, projectId]
+        : projectKey
+          ? ['task:groupList', agentKey, visibility, projectKey]
           : ['task:groupList', agentKey, visibility];
 
       return automated === undefined ? key : [...key, { automated }];
@@ -1106,6 +1109,58 @@ export const inboxKeys = {
     'inbox:unreadCount',
     workspaceId,
   ]),
+  feed: def(
+    'inbox:feed',
+    (
+      workspaceId: string | null,
+      kind: string | undefined,
+      filter: string | undefined,
+      cursor: string | undefined,
+    ) => ['inbox:feed', workspaceId, kind, filter, cursor],
+  ),
+  feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
+    'inbox:feedSummary',
+    workspaceId,
+  ]),
+};
+
+export const workAttentionKeys = {
+  favorites: def('workAttention:favorites', (workspaceId: string | null) => [
+    'workAttention:favorites',
+    workspaceId,
+  ]),
+  myWork: def(
+    'workAttention:myWork',
+    (workspaceId: string | null, mode: string, layout = 'list', noProject = false) => [
+      'workAttention:myWork',
+      workspaceId,
+      mode,
+      layout,
+      noProject,
+    ],
+  ),
+  savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [
+    'workAttention:savedView',
+    workspaceId,
+    viewId,
+  ]),
+  savedViews: def('workAttention:savedViews', (workspaceId: string | null) => [
+    'workAttention:savedViews',
+    workspaceId,
+  ]),
+  search: def(
+    'workAttention:search',
+    (workspaceId: string | null, query: string, type: string | undefined) => [
+      'workAttention:search',
+      workspaceId,
+      query,
+      type,
+    ],
+  ),
+  teams: def('workAttention:teams', (workspaceId: string | null) => [
+    'workAttention:teams',
+    workspaceId,
+  ]),
 };
 
 // ---- share (shared agent / topic / page) ---------------------------------
@@ -1411,4 +1466,5 @@ export const swrKeys = {
   userMemory: userMemoryKeys,
   verify: verifyKeys,
   video: videoKeys,
+  workAttention: workAttentionKeys,
 };

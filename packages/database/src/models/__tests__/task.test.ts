@@ -3677,6 +3677,7 @@ describe('TaskModel', () => {
 
       expect(imported.identifier).toBe('ENG-4');
       expect(imported.seq).toBe(4);
+      expect(imported.triageStatus).toBe('untriaged');
     });
   });
 

@@ -2,7 +2,14 @@ import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { FileTextIcon, HashIcon, MoreHorizontalIcon } from 'lucide-react';
+import {
+  BookmarkIcon,
+  FileTextIcon,
+  FolderKanbanIcon,
+  HashIcon,
+  MoreHorizontalIcon,
+  UsersIcon,
+} from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 
 import InlineRename from '@/components/InlineRename';
@@ -15,8 +22,11 @@ import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
 
 import { useRecentItemDropdownMenu } from './useDropdownMenu';
 
-const TYPE_ICON_MAP: Partial<Record<'document' | 'task' | 'topic', typeof FileTextIcon>> = {
+const TYPE_ICON_MAP: Partial<Record<RecentItem['type'], typeof FileTextIcon>> = {
   document: FileTextIcon,
+  project: FolderKanbanIcon,
+  savedView: BookmarkIcon,
+  team: UsersIcon,
   topic: HashIcon,
 };
 
@@ -46,17 +56,21 @@ const RecentListItem = memo<RecentItem>((item) => {
   }, [type, agentId, id, prefetchAgent, prefetchPage]);
 
   const { dropdownMenu, handleRename } = useRecentItemDropdownMenu(item, toggleEditing);
+  const menuItems = dropdownMenu();
+  const hasOverflowMenu = (menuItems?.length ?? 0) > 0;
 
   return (
     <Flexbox style={{ position: 'relative' }}>
       <NavItem
-        contextMenuItems={dropdownMenu}
+        contextMenuItems={hasOverflowMenu ? dropdownMenu : undefined}
         disabled={editing}
         title={title}
         actions={
-          <DropdownMenu items={dropdownMenu()}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
-          </DropdownMenu>
+          hasOverflowMenu ? (
+            <DropdownMenu items={menuItems}>
+              <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
+            </DropdownMenu>
+          ) : undefined
         }
         icon={(() => {
           if (type === 'task') {

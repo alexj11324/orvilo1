@@ -1,10 +1,14 @@
+import { NOTIFICATION_BULK_PREPARE_LIMIT } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { NotificationModel } from '../../models/notification';
+import { NotificationBulkError, NotificationModel } from '../../models/notification';
+import { TaskModel } from '../../models/task';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
+import { tasks as tasksTable } from '../../schemas/task';
 import { users } from '../../schemas/user';
+import { notificationBulkSnapshots, notificationFeedState } from '../../schemas/workAttention';
 import { workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 
@@ -259,6 +263,86 @@ describe('NotificationModel (integration)', () => {
       const model = new NotificationModel(serverDB, userId);
       expect(await model.getUnreadCount()).toBe(0);
     });
+
+    it('does not count an outgoing transfer as a pending-for-me action', async () => {
+      const model = new NotificationModel(serverDB, userId);
+      await model.create(
+        baseNotification({
+          actionRequestId: 'xfer_in',
+          category: 'pending',
+          dedupeKey: 'action-in',
+          kind: 'action',
+          title: 'Incoming transfer',
+          type: 'resource_transfer',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          actionRequestId: 'xfer_out',
+          category: 'pending',
+          dedupeKey: 'action-out',
+          kind: 'action',
+          title: 'Outgoing transfer',
+          type: 'resource_transfer',
+        }),
+      );
+
+      await expect(
+        model.getFeedSummary({ excludePendingActionRequestIds: ['xfer_out'] }),
+      ).resolves.toMatchObject({
+        pendingActionCount: 1,
+        unreadBadgeCount: 2,
+      });
+    });
+
+    it('keeps a read but unresolved action on the badge with feedSummary', async () => {
+      const model = new NotificationModel(serverDB, userId);
+      const action = await model.create(
+        baseNotification({
+          actionRequestId: 'apr_badge',
+          category: 'pending',
+          dedupeKey: 'action-badge',
+          kind: 'action',
+          title: 'Approve this',
+          type: 'acp_permission',
+        }),
+      );
+
+      await model.markAsRead([action!.id]);
+
+      expect(await model.getUnreadCount()).toBe(1);
+      await expect(model.getFeedSummary()).resolves.toMatchObject({
+        pendingActionCount: 1,
+        unreadBadgeCount: 1,
+        unreadUpdateCount: 0,
+      });
+    });
+
+    it('clears snooze when a newer episode arrives so the card returns to the badge', async () => {
+      const model = new NotificationModel(serverDB, userId);
+      const created = await model.create(
+        baseNotification({
+          episodeKey: 'ep-snooze',
+          title: 'Quiet for now',
+        }),
+      );
+      await model.snooze(
+        created!.id,
+        new Date(Date.now() + 4 * 60 * 60 * 1000),
+        created!.activityVersion,
+      );
+      await expect(model.getFeedSummary()).resolves.toMatchObject({ unreadBadgeCount: 0 });
+
+      await model.bumpEpisode(serverDB, {
+        episodeKey: 'ep-snooze',
+        feedRevision: 2,
+        recipientUserId: userId,
+        title: 'Needs you again',
+      });
+      await expect(model.getFeedSummary()).resolves.toMatchObject({ unreadBadgeCount: 1 });
+      const rows = await model.list();
+      expect(rows.find((row) => row.id === created!.id)?.snoozedUntil).toBeNull();
+    });
   });
 
   describe('getNavigationCounts', () => {
@@ -336,6 +420,20 @@ describe('NotificationModel (integration)', () => {
       });
       expect(await model.countLinkedToTransfers(['req-2'])).toEqual({ total: 1, unread: 0 });
       expect(await model.countLinkedToTransfers([])).toEqual({ total: 0, unread: 0 });
+    });
+
+    it('does not count a linked row whose resource is no longer readable', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          category: 'pending',
+          metadata: { transfer: { requestId: 'req-secret' } },
+          resourceId: 'task_missing',
+          resourceType: 'task',
+          title: 'Secret task title',
+        }),
+      );
+      expect(await model.countLinkedToTransfers(['req-secret'])).toEqual({ total: 0, unread: 0 });
     });
   });
 
@@ -548,6 +646,372 @@ describe('NotificationModel (integration)', () => {
       await scoped.archive(personalRow.id);
 
       expect((await personal.list()).map((row) => row.title)).toEqual(['personal']);
+    });
+  });
+
+  describe('versioned read and archive', () => {
+    it('keeps a newer activityVersion unread when the caller marks an older one', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          activityVersion: 6,
+          dedupeKey: 'v-read',
+          latestFeedRevision: 6,
+          readVersion: 0,
+        }),
+      );
+      await model.markReadObserved(created!.id, 5);
+      const [row] = await model.list();
+      // Observed v5 is recorded; v6 stays unread because activityVersion is newer.
+      expect(row.isRead).toBe(false);
+      expect(row.readVersion).toBe(5);
+
+      await model.markReadObserved(created!.id, 6);
+      const [read] = await model.list();
+      expect(read.isRead).toBe(true);
+      expect(read.readVersion).toBe(6);
+    });
+
+    it('does not archive a newer version via archiveObserved', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          activityVersion: 2,
+          dedupeKey: 'archive-cas',
+          title: 'Stay visible',
+        }),
+      );
+      expect(created).toBeDefined();
+      await model.archiveObserved(created!.id, 1);
+      const [row] = await model.list();
+      expect(row.isArchived).toBe(false);
+
+      await model.archiveObserved(created!.id, 2);
+      const archived = await model.listFeed({ filter: 'archived' });
+      expect(archived.map((item) => item.title)).toEqual(['Stay visible']);
+    });
+
+    it('does not archive unresolved action cards in archiveAll', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'update-1',
+          kind: 'update',
+          title: 'Just an update',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          actionRequestId: 'apr_1',
+          category: 'pending',
+          dedupeKey: 'action-1',
+          kind: 'action',
+          title: 'Approve this',
+          type: 'acp_permission',
+        }),
+      );
+
+      await model.archiveAll();
+      const remaining = await model.list();
+      expect(remaining.map((row) => row.title)).toEqual(['Approve this']);
+    });
+
+    it('keeps an individually archived unresolved action on the action feed', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          actionRequestId: 'apr_archive',
+          category: 'pending',
+          dedupeKey: 'action-archived',
+          kind: 'action',
+          title: 'Still needs a decision',
+          type: 'acp_permission',
+        }),
+      );
+      expect(created).toBeDefined();
+      await model.archive(created!.id);
+
+      const actionFeed = await model.listFeed({ kind: 'action' });
+      expect(actionFeed.map((row) => row.title)).toEqual(['Still needs a decision']);
+      expect(actionFeed[0]?.isArchived).toBe(true);
+
+      const activityFeed = await model.listFeed({ kind: 'update' });
+      expect(activityFeed.map((row) => row.title)).not.toContain('Still needs a decision');
+    });
+
+    it('repairs a missing live-source card without duplicating an existing one', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.ensureActionCards([
+        {
+          actionKind: 'resource_transfer',
+          content: 'Resource transfer request',
+          requestId: 'rtr_missing',
+          title: 'Resource transfer request',
+        },
+      ]);
+      await model.ensureActionCards([
+        {
+          actionKind: 'resource_transfer',
+          content: 'Should not clone',
+          requestId: 'rtr_missing',
+          title: 'Should not clone',
+        },
+      ]);
+
+      const actionFeed = await model.listFeed({ kind: 'action' });
+      expect(actionFeed).toHaveLength(1);
+      expect(actionFeed[0]).toMatchObject({
+        actionKind: 'resource_transfer',
+        actionRequestId: 'rtr_missing',
+        title: 'Resource transfer request',
+      });
+    });
+
+    it('does not mark later feed revisions read during mark-all', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'old-rev',
+          isRead: false,
+          latestFeedRevision: 5,
+          title: 'Old',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          dedupeKey: 'new-rev',
+          isRead: false,
+          latestFeedRevision: 7,
+          title: 'New',
+        }),
+      );
+
+      await serverDB.insert(notificationFeedState).values({
+        revision: 5,
+        scopeKey: 'personal',
+        userId,
+      });
+
+      await model.markAllAsRead();
+      const rows = await model.list();
+      expect(rows.find((row) => row.title === 'Old')?.isRead).toBe(true);
+      expect(rows.find((row) => row.title === 'New')?.isRead).toBe(false);
+    });
+  });
+
+  describe('prepareBulk and applyBulk', () => {
+    it('does not archive a card that landed after the snapshot cutoff', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'seen-archive',
+          kind: 'update',
+          latestFeedRevision: 3,
+          title: 'Seen',
+        }),
+      );
+
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:all',
+      });
+      expect(prepared.cutoffRevision).toBeGreaterThanOrEqual(3);
+
+      await model.create(
+        baseNotification({
+          dedupeKey: 'unseen-archive',
+          kind: 'update',
+          latestFeedRevision: prepared.cutoffRevision + 1,
+          title: 'Unseen',
+        }),
+      );
+
+      await model.applyBulk(prepared.token);
+      const remaining = await model.list();
+      expect(remaining.map((row) => row.title)).toEqual(['Unseen']);
+    });
+
+    it('does not mark-read a card that landed after the snapshot cutoff', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'seen-read',
+          isRead: false,
+          latestFeedRevision: 4,
+          title: 'Seen',
+        }),
+      );
+
+      const prepared = await model.prepareBulk({
+        action: 'mark_read',
+        queryFingerprint: 'mark_read:all',
+      });
+
+      await model.create(
+        baseNotification({
+          dedupeKey: 'unseen-read',
+          isRead: false,
+          latestFeedRevision: prepared.cutoffRevision + 1,
+          title: 'Unseen',
+        }),
+      );
+
+      await model.applyBulk(prepared.token);
+      const rows = await model.list();
+      expect(rows.find((row) => row.title === 'Seen')?.isRead).toBe(true);
+      expect(rows.find((row) => row.title === 'Unseen')?.isRead).toBe(false);
+    });
+
+    it('consumes a snapshot token only once', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(baseNotification({ dedupeKey: 'once', kind: 'update', title: 'Once' }));
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:all',
+      });
+
+      await expect(model.applyBulk(prepared.token)).resolves.toMatchObject({ success: true });
+      await expect(model.applyBulk(prepared.token)).rejects.toBeInstanceOf(NotificationBulkError);
+      await expect(model.applyBulk(prepared.token)).rejects.toMatchObject({ code: 'CONSUMED' });
+    });
+
+    it('archives only cards that match the prepared filter', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          category: 'mention',
+          dedupeKey: 'mention-keep-scope',
+          kind: 'update',
+          latestFeedRevision: 2,
+          title: 'Mentioned',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          category: 'workspace',
+          dedupeKey: 'plain-keep-scope',
+          kind: 'update',
+          latestFeedRevision: 2,
+          title: 'Ordinary',
+        }),
+      );
+
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:mentions:update',
+      });
+      await model.applyBulk(prepared.token);
+
+      const remaining = await model.list();
+      expect(remaining.map((row) => row.title)).toEqual(['Ordinary']);
+    });
+
+    it('does not let another user consume a snapshot', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const other = new NotificationModel(serverDB, otherUserId, { workspaceId: null });
+      await model.create(baseNotification({ dedupeKey: 'mine', kind: 'update', title: 'Mine' }));
+      const prepared = await model.prepareBulk({
+        action: 'archive',
+        queryFingerprint: 'archive:all',
+      });
+
+      await expect(other.applyBulk(prepared.token)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect((await model.list()).map((row) => row.title)).toEqual(['Mine']);
+    });
+
+    it('rejects an expired snapshot without touching the feed', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(baseNotification({ dedupeKey: 'keep', kind: 'update', title: 'Keep' }));
+      const [snapshot] = await serverDB
+        .insert(notificationBulkSnapshots)
+        .values({
+          action: 'archive',
+          cutoffRevision: 99,
+          expiresAt: new Date(Date.now() - 1000),
+          queryFingerprint: 'archive:all',
+          scopeKey: 'personal',
+          userId,
+        })
+        .returning();
+
+      await expect(model.applyBulk(snapshot.id)).rejects.toMatchObject({ code: 'EXPIRED' });
+      expect((await model.list()).map((row) => row.title)).toEqual(['Keep']);
+    });
+
+    it('rate-limits prepareBulk in a sliding window', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await serverDB.insert(notificationBulkSnapshots).values(
+        Array.from({ length: NOTIFICATION_BULK_PREPARE_LIMIT }, (_, index) => ({
+          action: 'archive' as const,
+          cutoffRevision: index + 1,
+          expiresAt: new Date(Date.now() + 60_000),
+          queryFingerprint: 'archive:all',
+          scopeKey: 'personal',
+          userId,
+        })),
+      );
+      await expect(
+        model.prepareBulk({ action: 'archive', queryFingerprint: 'archive:all' }),
+      ).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+    });
+  });
+
+  describe('live resource ACL', () => {
+    it('does not keep leaking a task title after the resource is gone', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(
+        baseNotification({
+          dedupeKey: 'gone-task',
+          resourceId: 'task_missing',
+          resourceType: 'task',
+          title: 'Secret task title',
+        }),
+      );
+      await model.create(
+        baseNotification({
+          dedupeKey: 'system-card',
+          title: 'System card',
+        }),
+      );
+
+      expect((await model.list()).map((row) => row.title)).toEqual(['System card']);
+      expect((await model.listFeed()).map((row) => row.title)).toEqual(['System card']);
+    });
+
+    it('stops listing a title after workspace visibility is revoked', async () => {
+      const workspaceId = 'notification-acl-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'ACL WS',
+        primaryOwnerId: userId,
+        slug: 'acl-ws',
+      });
+      const task = await new TaskModel(serverDB, userId, workspaceId).create({
+        instruction: 'Hidden later',
+        name: 'Hidden later',
+        visibility: 'public',
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'revoked-title',
+          resourceId: task.id,
+          resourceType: 'task',
+          title: 'Hidden later',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Hidden later']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
+
+      await serverDB
+        .update(tasksTable)
+        .set({ visibility: 'private' })
+        .where(eq(tasksTable.id, task.id));
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
     });
   });
 });

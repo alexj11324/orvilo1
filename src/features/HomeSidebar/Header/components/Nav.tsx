@@ -1,10 +1,12 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
+import { SquarePenIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { type NavItemProps } from '@/features/NavPanel/components/NavItem';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -42,6 +44,19 @@ const Nav = memo(() => {
               hidden={item.hidden}
               icon={item.icon as NavItemProps['icon']}
               title={item.title}
+              actions={
+                item.key === 'search' ? (
+                  <ActionIcon
+                    icon={SquarePenIcon}
+                    size={'small'}
+                    title={t('navPanel.newTask')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      createTaskModal();
+                    }}
+                  />
+                ) : undefined
+              }
               onClick={item.onClick}
             />
           );

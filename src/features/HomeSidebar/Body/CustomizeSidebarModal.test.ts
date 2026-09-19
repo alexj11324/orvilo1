@@ -1,51 +1,61 @@
 import { describe, expect, it } from 'vitest';
 
-import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
-
-import { getAvailableSidebarItems, getSortableSidebarItemIds } from './CustomizeSidebarModal';
+import { getVisibleSidebarSections } from './CustomizeSidebarModal';
 
 /**
- * Sidebar ids whose product surface has been withdrawn. Offering one in this
- * dialog is worse than useless: confirming writes the selection into
- * `sidebarItems`, the read path strips retired keys straight back out, and the
- * user sees a switch that flips and then silently reverts on the next open.
+ * The fixed IA retires the old drag-sort customizer: core destinations stay
+ * pinned and only optional sections can be hidden. This suite guards the
+ * offer list the dialog is built from.
  */
-const RETIRED_IDS = ['community', 'image', 'memory', 'pages'];
-
 describe('CustomizeSidebarModal', () => {
-  it.each(RETIRED_IDS)('never offers the retired "%s" item', (id) => {
-    expect(getAvailableSidebarItems(false).some((item) => item.id === id)).toBe(false);
-    expect(getAvailableSidebarItems(true).some((item) => item.id === id)).toBe(false);
+  it('offers the fixed-IA sections in contract order', () => {
+    expect(getVisibleSidebarSections(true).map((section) => section.id)).toEqual([
+      'inbox',
+      'my-work',
+      'reviews',
+      'agent',
+      'workspace',
+      'favorites',
+      'teams',
+    ]);
   });
 
-  it.each(RETIRED_IDS)('leaves the retired "%s" id out of the sortable set', (id) => {
-    expect(getSortableSidebarItemIds(false).has(id)).toBe(false);
-    expect(getSortableSidebarItemIds(true).has(id)).toBe(false);
+  it('keeps core destinations pinned (not hideable)', () => {
+    const pinned = getVisibleSidebarSections(true)
+      .filter((section) => section.alwaysVisible)
+      .map((section) => section.id);
+
+    expect(pinned).toEqual(['inbox', 'my-work', 'reviews']);
   });
 
-  it('still offers every surviving destination', () => {
-    const ids = getAvailableSidebarItems(false).map((item) => item.id);
+  it('never offers retired sidebar keys', () => {
+    const retired = [
+      'home',
+      'tasks',
+      'automations',
+      'resource',
+      'recents',
+      'private',
+      'project',
+      'views',
+      'community',
+      'image',
+      'memory',
+      'page',
+      'pages',
+    ];
+    const offered = new Set(
+      [...getVisibleSidebarSections(false), ...getVisibleSidebarSections(true)].map(
+        (section) => section.id,
+      ),
+    );
 
-    expect(ids).toContain('tasks');
-    expect(ids).toContain('automations');
-    expect(ids).toContain('resource');
-    expect(ids).toContain('project');
+    for (const id of retired) expect(offered.has(id)).toBe(false);
   });
 
-  it('allows Projects to be reordered and hidden', () => {
-    expect(getAvailableSidebarItems(false).some((item) => item.id === 'project')).toBe(true);
-    expect(getSortableSidebarItemIds(false).has('project')).toBe(true);
-  });
-
-  it('keeps the spacer in the sortable item set', () => {
-    expect(getSortableSidebarItemIds(false).has(SIDEBAR_SPACER_ID)).toBe(true);
-    expect(getSortableSidebarItemIds(true).has(SIDEBAR_SPACER_ID)).toBe(true);
-  });
-
-  it('keeps the remaining workspace-only exclusions in the sortable item set', () => {
-    // `private` is workspace-only: in personal mode every row is implicitly
-    // owner-private, so it is not offered there.
-    expect(getSortableSidebarItemIds(false).has('private')).toBe(false);
-    expect(getSortableSidebarItemIds(true).has('private')).toBe(true);
+  it('excludes the workspace-only Your teams group in personal mode', () => {
+    const ids = getVisibleSidebarSections(false).map((section) => section.id);
+    expect(ids).not.toContain('teams');
+    expect(getVisibleSidebarSections(true).map((section) => section.id)).toContain('teams');
   });
 });

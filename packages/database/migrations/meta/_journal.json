@@ -1225,6 +1225,20 @@
       "when": 1789742804948,
       "tag": "0174_workspace_ownership_transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1789756856707,
+      "tag": "0175_work_attention",
+      "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1789764489788,
+      "tag": "0176_work_attention_triage_bulk",
+      "breakpoints": true
     }
   ],
   "version": "6"

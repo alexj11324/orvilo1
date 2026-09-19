@@ -15,14 +15,14 @@ export const useInboxUnreadCount = () => {
   const workspaceId = useActiveWorkspaceId();
   const enabled = enableBusinessFeatures && isLogin === true;
 
-  const { data: unreadCount = 0 } = useClientPollingSWR<number>(
-    enabled ? inboxKeys.unreadCount(workspaceId) : null,
-    () => notificationService.getUnreadCount(),
+  const { data: summary } = useClientPollingSWR(
+    enabled ? inboxKeys.feedSummary(workspaceId) : null,
+    () => notificationService.feedSummary(),
     {
       dedupingInterval: INBOX_UNREAD_COUNT_DEDUPING_INTERVAL,
       refreshInterval: INBOX_UNREAD_COUNT_REFRESH_INTERVAL,
     },
   );
 
-  return { enabled, unreadCount };
+  return { enabled, unreadCount: summary?.unreadBadgeCount ?? 0 };
 };

@@ -1,6 +1,11 @@
 /**
  * API Key Scopes
  *
+ * These scopes belong to **Orvilo signed TRPC keys** stored in `api_keys`
+ * and enforced by `TRPC_NAMESPACE_API_KEY_RULES`. They are not model /
+ * custom-provider credentials, and this catalog must not resurrect the
+ * retired `/settings/provider` surface.
+ *
  * A scope describes what a signed API key is allowed to do. The effective
  * permission of a request is always the intersection of the issuer's own
  * permissions (RBAC / workspace role) and the key's scopes — scopes can only
@@ -303,6 +308,13 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   waitlist: 'blocked',
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),
+  // Inbox / My Work / saved views: personal attention is the `notification`
+  // domain (`user:*`) on **signed Orvilo TRPC keys**, not model-provider
+  // credentials. Task-shaped queries and mutations stack `agent:*`
+  // via TRPC_PROCEDURE_EXTRA_SCOPES. `workAttention.decide` is blocked
+  // below — ACP permits, PR review, and ownership transfer are interactive
+  // human decisions, same class as `resourceTransferRequest`.
+  workAttention: rw('user:read', 'user:write'),
   workspace: rw('workspace:read', 'workspace:write'),
   // Agent roster is a read-only listing inside the caller's membership
   workspaceAgent: rw('workspace:read', null),
@@ -406,6 +418,21 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'user.startOnboardingUnderstanding': ['model:invoke'],
   // persists crawled pages as `documents` rows — a knowledge write
   'webBrowsing.upsertCrawledDocument': ['knowledge:write'],
+  // My Work / Views / Team Triage query the task contract, not just the
+  // caller's notification inbox. A user-only key must not enumerate or
+  // mutate workspace work items through this surface.
+  'workAttention.myWork': ['agent:read'],
+  'workAttention.query': ['agent:read'],
+  'workAttention.count': ['agent:read'],
+  'workAttention.facet': ['agent:read'],
+  'workAttention.savedViewEvaluate': ['agent:read'],
+  'workAttention.savedViewGet': ['agent:read'],
+  'workAttention.savedViewList': ['agent:read'],
+  'workAttention.search': ['agent:read'],
+  'workAttention.savedViewCreate': ['agent:write'],
+  'workAttention.savedViewDelete': ['agent:write'],
+  'workAttention.savedViewUpdate': ['agent:write'],
+  'workAttention.triage': ['agent:write'],
 };
 
 /**
@@ -428,6 +455,9 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   'market.creds.',
   // marketplace OIDC auth flows carry tokens
   'market.oidc.',
+  // Inbox decide consumes live ACP permits, review requests, and ownership
+  // transfers — an interactive human decision, not a restricted-key action
+  'workAttention.decide',
 ];
 
 export type TrpcScopeDecision = { scopes: ApiKeyScope[] } | { open: true } | { blocked: true };

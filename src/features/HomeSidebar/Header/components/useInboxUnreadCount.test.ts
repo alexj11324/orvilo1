@@ -1,3 +1,4 @@
+import type { NotificationFeedSummary } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,7 +15,9 @@ const mocks = vi.hoisted(() => ({
     enableBusinessFeatures: true,
     isSignedIn: false,
   },
-  useClientPollingSWR: vi.fn(() => ({ data: undefined })),
+  useClientPollingSWR: vi.fn((): { data: NotificationFeedSummary | undefined } => ({
+    data: undefined,
+  })),
 }));
 
 vi.mock('@/libs/swr', () => ({
@@ -23,7 +26,7 @@ vi.mock('@/libs/swr', () => ({
 
 vi.mock('@/services/notification', () => ({
   notificationService: {
-    getUnreadCount: vi.fn(),
+    feedSummary: vi.fn(),
   },
 }));
 
@@ -66,20 +69,36 @@ describe('useInboxUnreadCount', () => {
     });
   });
 
-  it('requests unread count when business features are enabled and user is logged in', () => {
+  it('requests the feed summary badge when business features are enabled and user is logged in', () => {
     mocks.state.isSignedIn = true;
 
     const { result } = renderHook(() => useInboxUnreadCount());
 
     expect(result.current.enabled).toBe(true);
     expect(mocks.useClientPollingSWR).toHaveBeenCalledWith(
-      inboxKeys.unreadCount(null),
+      inboxKeys.feedSummary(null),
       expect.any(Function),
       {
         dedupingInterval: INBOX_UNREAD_COUNT_DEDUPING_INTERVAL,
         refreshInterval: INBOX_UNREAD_COUNT_REFRESH_INTERVAL,
       },
     );
+  });
+
+  it('exposes unreadBadgeCount from the shared feed summary', () => {
+    mocks.state.isSignedIn = true;
+    mocks.useClientPollingSWR.mockReturnValue({
+      data: {
+        pendingActionCount: 1,
+        snoozedPendingCount: 0,
+        unreadBadgeCount: 3,
+        unreadUpdateCount: 2,
+      },
+    });
+
+    const { result } = renderHook(() => useInboxUnreadCount());
+
+    expect(result.current.unreadCount).toBe(3);
   });
 
   it('polls unread count once per minute while deduping repeated requests', () => {

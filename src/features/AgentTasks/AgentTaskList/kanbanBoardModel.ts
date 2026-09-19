@@ -132,9 +132,13 @@ export interface KanbanGroupQueryInput {
   agentId?: string;
   excludeStatuses?: readonly TaskStatus[];
   groupBy: TaskKanbanGroupBy;
-  /** Set on the "My tasks" board; mutually exclusive with the other scopes. */
-  myTaskScope?: 'assigned' | 'created';
-  projectId?: string;
+  /**
+   * Set on the "My tasks" board; mutually exclusive with the other scopes.
+   * 'delegated' = tasks the caller delegated to agents (active grant).
+   */
+  myTaskScope?: 'assigned' | 'created' | 'delegated';
+  /** `null` narrows to tasks with no project — the "No project" chip. */
+  projectId?: string | null;
 }
 
 export interface KanbanGroupQuery {
@@ -143,8 +147,8 @@ export interface KanbanGroupQuery {
   automated?: boolean;
   excludeStatuses?: readonly TaskStatus[];
   groupBy: TaskKanbanGroupBy;
-  projectId?: string;
-  scope?: 'assigned' | 'created';
+  projectId?: string | null;
+  scope?: 'assigned' | 'created' | 'delegated';
 }
 
 /**
@@ -164,12 +168,21 @@ export const buildKanbanGroupQuery = ({
   myTaskScope,
   projectId,
 }: KanbanGroupQueryInput): KanbanGroupQuery => {
-  if (myTaskScope) return { excludeStatuses, groupBy, scope: myTaskScope };
+  // A project filter (id or `null` = "No project") composes with the "My
+  // tasks" scope — My Work's chip narrows the caller's slice, not the board.
+  if (myTaskScope) return { excludeStatuses, groupBy, projectId, scope: myTaskScope };
   if (projectId) return { automated: false, excludeStatuses, groupBy, projectId };
   if (agentId) return { agentId, automated: false, excludeStatuses, groupBy };
 
   return { allAgents: true, automated: false, excludeStatuses, groupBy };
 };
+
+/**
+ * Create-task only accepts a concrete project id. `null` is the board's
+ * "No project" filter and must not be forwarded as a locked project.
+ */
+export const kanbanCreateTaskProjectId = (projectId?: string | null): string | undefined =>
+  projectId ?? undefined;
 
 export const buildKanbanColumns = (
   taskGroups: TaskGroupItem[],

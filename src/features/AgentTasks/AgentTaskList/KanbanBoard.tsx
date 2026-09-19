@@ -266,7 +266,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       const covered = new Set(fixed.map((column) => column.key));
       const extras = currentTaskGroups
         .filter((group) => !covered.has(group.key))
-        .map((group) => ({ droppable: false, key: group.key, targetStatus: null }));
+        .map((group) => ({
+          droppable: false,
+          groupMeta: undefined,
+          key: group.key,
+          targetStatus: null,
+        }));
       return [...fixed, ...extras];
     }
     const filteredOut = kanbanStatusColumnsExcludedBy(

@@ -85,9 +85,10 @@ const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) 
           }
           const items = 'tasks' in data ? (data.tasks ?? []) : (data.projects ?? []);
           setPreview({
-            titles: items
-              .slice(0, 5)
-              .map((item) => ('title' in item ? item.title : item.name) ?? ''),
+            titles: items.slice(0, 5).map((item) => {
+              const label = 'title' in item ? item.title : 'name' in item ? item.name : null;
+              return typeof label === 'string' ? label : '';
+            }),
             total: data.total ?? items.length,
           });
         })

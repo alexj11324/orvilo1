@@ -70,7 +70,11 @@ export const filterToBuilder = (
   const rows: FilterRow[] = [];
   const retained: BuilderState['retained'] = [];
   for (const node of filter?.all ?? []) {
-    const spec = isPredicate(node) ? workQueryFieldSpec(entityType, node.field) : undefined;
+    if (!isPredicate(node)) {
+      retained.push(node);
+      continue;
+    }
+    const spec = workQueryFieldSpec(entityType, node.field);
     if (spec && spec.ops.includes(node.op) && isRenderableValue(spec, node)) {
       rows.push({ field: node.field, id: nextRowId(), op: node.op, value: node.value });
     } else {

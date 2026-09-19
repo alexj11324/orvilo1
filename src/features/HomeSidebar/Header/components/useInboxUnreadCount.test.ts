@@ -92,6 +92,8 @@ describe('useInboxUnreadCount', () => {
         pendingActionCount: 1,
         snoozedPendingCount: 0,
         unreadBadgeCount: 3,
+        unreadMentionCount: 0,
+        unreadOtherCount: 1,
         unreadUpdateCount: 2,
       },
     });

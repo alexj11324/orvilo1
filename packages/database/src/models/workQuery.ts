@@ -566,7 +566,7 @@ const normalizeTaskSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] =
 const sortColumn = (field: WorkQuerySort['field']) => {
   if (field === 'updatedAt') return tasks.updatedAt;
   if (field === 'createdAt') return tasks.createdAt;
-  if (field === 'name') return tasks.title;
+  if (field === 'name') return tasks.name;
   if (field === 'id') return tasks.id;
   return taskColumn(field);
 };
@@ -577,7 +577,7 @@ const sortValue = (
 ): Date | number | string | null => {
   if (field === 'updatedAt') return row.updatedAt;
   if (field === 'createdAt') return row.createdAt;
-  if (field === 'name') return row.title;
+  if (field === 'name') return row.name;
   if (field === 'id') return row.id;
   if (field === 'cycleId') return row.cycleRefId;
   if (

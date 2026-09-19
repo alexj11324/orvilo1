@@ -2,7 +2,8 @@
 
 import { Center, Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Alert, Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
-import type { SavedViewItem, WorkQuery } from '@orvilo/types';
+import type { SavedViewItem } from '@orvilo/database/schemas';
+import type { WorkQuery } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { EllipsisIcon, FolderClosedIcon, SlidersHorizontalIcon } from 'lucide-react';

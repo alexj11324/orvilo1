@@ -125,7 +125,7 @@ const MyWorkPage = memo(() => {
     () =>
       MY_ISSUES_TABS.map((item) => ({
         key: item,
-        label: t(`myWork.${item}`),
+        label: String(t(`myWork.${item}` as never)),
       })),
     [t],
   );

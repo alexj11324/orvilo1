@@ -9,12 +9,14 @@ import { AsyncLocalStorage } from '@/utils/localStorage';
 
 export enum SidebarTabKey {
   Agent = 'agent',
+  Agents = 'agents',
   Automations = 'automations',
   Chat = 'chat',
   Home = 'home',
   Inbox = 'inbox',
   Knowledge = 'knowledge',
   Me = 'me',
+  MyIssues = 'my-issues',
   MyWork = 'my-work',
   Resource = 'resource',
   Reviews = 'reviews',

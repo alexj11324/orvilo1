@@ -50,7 +50,8 @@ const ProjectValueSelect = memo<{
     }),
   );
 
-  const options = (data?.data?.projects ?? []).map((project) => ({
+  const projects = data?.data && 'projects' in data.data ? (data.data.projects ?? []) : [];
+  const options = projects.map((project: { id: string; name?: string | null }) => ({
     label: project.name ?? project.id,
     value: project.id,
   }));
@@ -78,11 +79,14 @@ const useCycleOptions = (teamIds: string[], needed: boolean, workspaceId: string
       : null,
     async () => {
       const details = await Promise.all(
-        teamIds.map((teamId) => lambdaClient.team.team.query({ teamId })),
+        teamIds.map(async (id) => ({
+          detail: await lambdaClient.team.team.query({ teamId: id }),
+          id,
+        })),
       );
-      return details.flatMap((detail) =>
+      return details.flatMap(({ detail, id }) =>
         (detail.data?.cycles ?? []).map((cycle) => ({
-          label: `${detail.data?.team.name ?? teamId} · ${cycle.name}`,
+          label: `${detail.data?.team.name ?? id} · ${cycle.name}`,
           value: cycle.id,
         })),
       );
@@ -256,8 +260,8 @@ const FilterRowEditor = memo<{
           const nextValue =
             next === 'in' || next === 'notIn'
               ? Array.isArray(row.value)
-                ? row.value
-                : row.value !== undefined
+                ? row.value.filter((v): v is string => typeof v === 'string')
+                : typeof row.value === 'string'
                   ? [row.value]
                   : []
               : row.value;

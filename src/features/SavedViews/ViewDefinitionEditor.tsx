@@ -175,7 +175,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
             options={[
               { label: t('savedViews.sortDefault'), value: 'default' },
               ...Object.keys(SORT_PRESETS).map((key) => ({
-                label: t(`savedViews.sort.${key}`),
+                label: t(`savedViews.sort.${key}` as never),
                 value: key,
               })),
             ]}

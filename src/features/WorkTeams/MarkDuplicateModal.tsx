@@ -1,7 +1,7 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { Button, Modal, Select, Text } from '@lobehub/ui/base-ui';
+import { AutoComplete, Button, Modal, Text } from '@lobehub/ui/base-ui';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +43,7 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
       void workAttentionService
         .search({ limitPerType: 10, query: needle.trim(), type: 'task' })
         .then((result) => {
-          const items = result?.data?.items ?? [];
+          const items = result?.data ?? [];
           setOptions(
             items
               .filter((item) => item.type === 'task' && item.id !== taskId)
@@ -85,21 +85,18 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
         <Text fontSize={13} type="secondary">
           {t('teams.markDuplicateHint')}
         </Text>
-        <Select
-          showSearch
-          filterOption={false}
+        <AutoComplete
           options={options}
           placeholder={t('teams.markDuplicatePlaceholder')}
           style={{ width: '100%' }}
-          value={selected}
-          notFoundContent={
+          emptyText={
             needle.trim()
               ? searching
                 ? t('teams.loading')
                 : t('teams.markDuplicateEmpty')
               : t('teams.markDuplicatePrompt')
           }
-          onChange={(value) => setSelected(value as string)}
+          onChange={(value) => setSelected(value)}
           onSearch={setNeedle}
         />
       </Flexbox>

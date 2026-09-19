@@ -158,7 +158,7 @@ export class NotificationModel {
       )!;
       conditions.push(eq(notifications.isArchived, false));
       conditions.push(opts.kind === 'priority' ? priorityClause : not(priorityClause));
-      if (opts.filter && opts.filter !== 'all') {
+      if (opts.filter) {
         conditions.push(...this.presentationWhere(opts.filter));
       }
     } else if (opts.kind === 'action') {

@@ -85,11 +85,11 @@ import {
   normalizeCompletionMessages,
 } from '../agentExecution/CompletionLifecycle';
 import { type AgentHook, hookDispatcher } from '../agentExecution/hooks';
+import { OperationTraceRecorder } from '../agentExecution/OperationTraceRecorder';
 import { createDefaultSnapshotStore } from '../agentExecution/snapshotStore';
 import { loadRemoteExecutionStatus } from '../heterogeneousAgent/runAdmission';
 import { logToolCallPc } from './formalObservation';
 import { HumanInterventionHandler } from './HumanInterventionHandler';
-import { OperationTraceRecorder } from './OperationTraceRecorder';
 import { buildStepPresentation, formatTokenCount } from './stepPresentation';
 import {
   type AgentExecutionParams,

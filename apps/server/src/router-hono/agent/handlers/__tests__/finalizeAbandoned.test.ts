@@ -12,7 +12,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution/AbandonOperationService', () => ({
   AbandonOperationService: vi.fn().mockImplementation(function () {
     return { finalizeAbandoned: mockFinalizeAbandoned };
   }),

@@ -626,9 +626,19 @@ describe('WorkQueryModel', () => {
       query: myWorkQueryForMode('assigned'),
     });
     expect(assignedAnyway.tasks.map((row) => row.id)).toContain(assigned.id);
+
+    const outsiderAll = await asOutsider.queryTasks({
+      query: { entityType: 'task', schemaVersion: 1 },
+    });
+    expect(outsiderAll.tasks.map((row) => row.id)).not.toContain(secret.id);
+    expect(outsiderAll.tasks.map((row) => row.name)).not.toContain('Private-team work');
+    expect((await asOutsider.searchTasks('Private-team work')).map((row) => row.name)).toEqual([]);
+    expect(
+      (await asOutsider.searchTasks('Assigned on the private team')).map((row) => row.name),
+    ).toEqual(['Assigned on the private team']);
   });
 
-  it('still finds a readable task by title while a guessed teamId stays empty', async () => {
+  it('still finds a readable assigned task by title while a guessed teamId stays empty', async () => {
     await serverDB.insert(teams).values({
       createdByUserId: userId,
       id: 'wq-hidden-team',
@@ -648,10 +658,18 @@ describe('WorkQueryModel', () => {
       teamId: 'wq-hidden-team',
       visibility: 'public',
     });
+    await createTask(userId, {
+      assigneeUserId: otherUserId,
+      name: 'Assigned fleet note',
+      teamId: 'wq-hidden-team',
+      visibility: 'public',
+    });
 
     const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
-    const byTitle = await outsider.searchTasks('Fleet briefing');
-    expect(byTitle.map((row) => row.name)).toEqual(['Fleet briefing']);
+    expect((await outsider.searchTasks('Fleet briefing')).map((row) => row.name)).toEqual([]);
+    expect((await outsider.searchTasks('Assigned fleet note')).map((row) => row.name)).toEqual([
+      'Assigned fleet note',
+    ]);
 
     const byTeam = await outsider.queryTasks({
       query: {

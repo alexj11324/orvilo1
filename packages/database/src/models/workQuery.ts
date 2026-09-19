@@ -51,6 +51,7 @@ import { projectTeams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
+import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
@@ -602,7 +603,7 @@ export class WorkQueryModel {
     mode: MyWorkMode | undefined,
     readableTeamIds: ReadonlySet<string>,
   ) => {
-    const conditions: SQL[] = [this.ownership()];
+    const conditions: SQL[] = [this.ownership(), buildTaskTeamReadableWhere(this.db, this.userId)];
     const filterSql = compileFilter(query.filter, this.compileCtx('task', readableTeamIds));
     if (filterSql) conditions.push(filterSql);
     if (mode === 'subscribed') {
@@ -1019,7 +1020,7 @@ export class WorkQueryModel {
 
   /**
    * Thin name/identifier match for CommandMenu. Not a new FTS entity.
-   * Task ACL stays ownership(); private-team names are not searched here.
+   * Task ACL matches list/Inbox: ownership plus private-team readability.
    */
   searchTasks = async (needle: string, limit = 8) => {
     const q = needle.trim();
@@ -1037,6 +1038,7 @@ export class WorkQueryModel {
       .where(
         and(
           this.ownership(),
+          buildTaskTeamReadableWhere(this.db, this.userId),
           or(
             sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
             sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,

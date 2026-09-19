@@ -15,7 +15,6 @@ import {
   count,
   desc,
   eq,
-  exists,
   gt,
   inArray,
   isNull,
@@ -30,11 +29,10 @@ import type { NewNotification, NewNotificationDelivery } from '../schemas/notifi
 import { notificationDeliveries, notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
 import { tasks } from '../schemas/task';
-import { teamMembers, teams } from '../schemas/team';
 import { notificationBulkSnapshots, notificationEventReceipts } from '../schemas/workAttention';
-import { workspaceMembers, workspaces } from '../schemas/workspace';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
+import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
 
@@ -84,43 +82,7 @@ export class NotificationModel {
    * (assignee / reviewer / creator). Leaving the team must drop stored titles
    * (SEC06) even when `tasks.visibility` is public.
    */
-  private taskTeamReadable = (): SQL =>
-    or(
-      isNull(tasks.teamId),
-      exists(
-        this.db
-          .select({ one: sql`1` })
-          .from(teams)
-          .where(and(eq(teams.id, tasks.teamId), eq(teams.visibility, 'public'))),
-      ),
-      exists(
-        this.db
-          .select({ one: sql`1` })
-          .from(teamMembers)
-          .where(and(eq(teamMembers.teamId, tasks.teamId), eq(teamMembers.userId, this.userId))),
-      ),
-      exists(
-        this.db
-          .select({ one: sql`1` })
-          .from(workspaceMembers)
-          .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
-          .where(
-            and(
-              eq(workspaceMembers.workspaceId, tasks.workspaceId),
-              eq(workspaceMembers.userId, this.userId),
-              isNull(workspaceMembers.deletedAt),
-              isNull(workspaceMembers.suspendedAt),
-              or(
-                eq(workspaceMembers.role, 'admin'),
-                and(eq(workspaceMembers.role, 'owner'), eq(workspaces.primaryOwnerId, this.userId)),
-              ),
-            ),
-          ),
-      ),
-      eq(tasks.assigneeUserId, this.userId),
-      eq(tasks.reviewerUserId, this.userId),
-      eq(tasks.createdByUserId, this.userId),
-    )!;
+  private taskTeamReadable = (): SQL => buildTaskTeamReadableWhere(this.db, this.userId);
 
   /**
    * Live ACL: a historical delivery is not proof the recipient can still read

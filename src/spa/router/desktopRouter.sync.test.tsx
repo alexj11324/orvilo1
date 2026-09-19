@@ -305,6 +305,33 @@ describe('desktop router shared definition', () => {
     );
   });
 
+  it.each(mainAreaVariants)(
+    '%s matches work attention surfaces instead of a splat 404',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+
+      for (const [pathname, parent] of [
+        ['/inbox', 'inbox'],
+        ['/my-work', 'my-work'],
+        ['/views', 'views'],
+        ['/views/builtin:all', 'views'],
+        ['/teams', 'teams'],
+        ['/teams/team-1', 'teams'],
+        ['/acme/inbox', 'inbox'],
+        ['/acme/my-work', 'my-work'],
+        ['/acme/views/view-1', 'views'],
+        ['/acme/teams/team-1', 'teams'],
+      ] as const) {
+        const matches = matchRoutes(routes, pathname);
+        const paths = matches?.map((match) => match.route.path) ?? [];
+
+        expect(matches, pathname).toBeTruthy();
+        expect(paths, pathname).toContain(parent);
+        expect(paths, pathname).not.toContain('*');
+      }
+    },
+  );
+
   it('keeps all route modules behind lazy import boundaries', async () => {
     const sources = await readRouterSources();
     const combinedSource = sources.join('\n');

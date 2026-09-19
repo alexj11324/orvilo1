@@ -51,6 +51,7 @@ const mockWorkspaceStore = (state: WorkspaceStateMock) => {
     state.activeWorkspaceSlug,
   );
   vi.spyOn(useSwitchWorkspaceModule, 'useSilentSwitchWorkspace').mockReturnValue({
+    switchToPersonal: vi.fn(async () => {}),
     switchWorkspace: state.switchWorkspace as any,
   });
 };

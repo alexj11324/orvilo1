@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Odśwież",
   "workingPanel.browser.actions.stop": "Zatrzymaj ładowanie",
   "workingPanel.browser.addressPlaceholder": "Wyszukaj lub wpisz adres",
-  "workingPanel.browser.agentControlling": "Agent korzysta z przeglądarki",
-  "workingPanel.browser.agentCursor": "Agent",
   "workingPanel.browser.context.elementAdded": "Element dodany do kontekstu czatu",
   "workingPanel.browser.context.elementTitle": "Element",
   "workingPanel.browser.context.failed": "Nie udało się dodać kontekstu elementu",

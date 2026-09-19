@@ -24,10 +24,7 @@ import {
 } from '@orvilo/heterogeneous-agents';
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
-import type {
-  McpToolResult,
-  OrviloBuiltinMcpServer,
-} from '@orvilo/heterogeneous-agents/builtinMcp';
+import type { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
 import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
 import type {
   HeteroExecImageRef,
@@ -131,7 +128,6 @@ import type { HeterogeneousAgentImageAttachment } from '@/modules/heterogeneousA
 import { buildProxyEnv } from '@/modules/networkProxy/envBuilder';
 import { createLogger } from '@/utils/logger';
 
-import BrowserControlCtr from './BrowserControlCtr';
 import RemoteServerConfigCtr from './RemoteServerConfigCtr';
 
 const logger = createLogger('controllers:HeterogeneousAgentCtr');
@@ -254,12 +250,6 @@ interface StartSessionParams {
 export interface StartSessionResult {
   providerBindingKey?: string;
   sessionId: string;
-}
-
-/** Run identity the browser MCP tools need to reach the right in-app page. */
-interface BrowserRunBinding {
-  agentId?: string;
-  topicId?: string;
 }
 
 interface SendPromptParams {
@@ -472,12 +462,6 @@ export default class HeterogeneousAgentCtr {
    * fire many ops over its lifetime).
    */
   private opIdToIntervention = new Map<string, InterventionSlot>();
-  /**
-   * Op → run identity for browser MCP tool session resolution. The main process
-   * otherwise has no idea which topic an operation belongs to, and the browser
-   * session is keyed by topic (`topic:<topicId>`).
-   */
-  private opIdToBrowserBinding = new Map<string, BrowserRunBinding>();
   /** Lazy single MCP server, started on first claude-code prompt. */
   private builtinMcpServer?: OrviloBuiltinMcpServer;
   private builtinMcpStartPromise?: Promise<OrviloBuiltinMcpServer>;
@@ -1156,17 +1140,8 @@ export default class HeterogeneousAgentCtr {
     if (this.builtinMcpServer) return this.builtinMcpServer;
     if (!this.builtinMcpStartPromise) {
       this.builtinMcpStartPromise = (async () => {
-        const [{ OrviloBuiltinMcpServer }, { buildBrowserMcpTools }] = await Promise.all([
-          import('@orvilo/heterogeneous-agents/builtinMcp'),
-          import('@/modules/heterogeneousAgent/browserMcpTools'),
-        ]);
-        const server = new OrviloBuiltinMcpServer({
-          // In-app browser control tools ride the same per-op MCP server so
-          // CC can drive the browser sidebar ( M3, hetero path).
-          extraTools: buildBrowserMcpTools((operationId, apiName, args) =>
-            this.runBrowserMcpTool(operationId, apiName, args),
-          ),
-        });
+        const { OrviloBuiltinMcpServer } = await import('@orvilo/heterogeneous-agents/builtinMcp');
+        const server = new OrviloBuiltinMcpServer();
         await server.start();
         this.builtinMcpServer = server;
         logger.info('AskUserQuestion MCP server started:', server.url);
@@ -1190,7 +1165,6 @@ export default class HeterogeneousAgentCtr {
   private async setupStandardAcpInterventionForOp(
     operationId: string,
     session: AgentSession,
-    browserBinding?: BrowserRunBinding,
   ): Promise<{
     bridge: AskUserBridge;
     cleanup: () => Promise<void>;
@@ -1198,10 +1172,10 @@ export default class HeterogeneousAgentCtr {
   }> {
     const provider = session.agentType as NonNullable<AskUserBridgeOptions['provider']>;
     // claude-code / qoder mount the lobe_cc MCP server for the
-    // `ask_user_question` tool + in-app browser tools (the builtin Orvilo
-    // claude-sdk engine resolves to the claude-code family, so it is covered
-    // here; the codex engine historically exposes no builtin tools). Other
-    // agents only need the native permission/elicitation bridge.
+    // `ask_user_question` tool (the builtin Orvilo claude-sdk engine resolves
+    // to the claude-code family, so it is covered here; the codex engine
+    // historically exposes no builtin tools). Other agents only need the
+    // native permission/elicitation bridge.
     const mountsBuiltinMcp = session.agentType === 'claude-code' || session.agentType === 'qoder';
     if (!mountsBuiltinMcp) {
       return this.setupAcpInterventionForOp(operationId, session.sessionId, provider);
@@ -1212,9 +1186,6 @@ export default class HeterogeneousAgentCtr {
       operationId,
       new AskUserBridge(operationId, { identifier: provider, provider }),
     );
-    if (browserBinding?.agentId || browserBinding?.topicId) {
-      this.opIdToBrowserBinding.set(operationId, browserBinding);
-    }
     const pumpDone = (async () => {
       for await (const event of bridge.events()) {
         this.broadcast('heteroAgentEvent', { event, sessionId: session.sessionId });
@@ -1233,7 +1204,6 @@ export default class HeterogeneousAgentCtr {
         this.builtinMcpServer?.unregisterOperation(operationId);
         await pumpDone;
         this.opIdToIntervention.delete(operationId);
-        this.opIdToBrowserBinding.delete(operationId);
       },
       mcpServers: [
         {
@@ -1243,52 +1213,6 @@ export default class HeterogeneousAgentCtr {
         },
       ],
     };
-  }
-
-  /**
-   * Execute one in-app browser api call on behalf of a CC MCP tool. Forwards
-   * through `BrowserControlCtr.runGatewayToolCall` — the same funnel cloud
-   * gateway calls use — so the renderer-side `browserExecutor` (webview
-   * mount, snapshot refs, cursor overlay) stays the single source of truth.
-   */
-  private async runBrowserMcpTool(
-    operationId: string,
-    apiName: string,
-    args: Record<string, unknown>,
-  ): Promise<McpToolResult> {
-    const binding = this.opIdToBrowserBinding.get(operationId);
-    if (!binding?.agentId || !binding.topicId) {
-      return {
-        content: [
-          {
-            text: 'The in-app browser is not available for this run (no topic binding). Continue without it.',
-            type: 'text',
-          },
-        ],
-        isError: true,
-      };
-    }
-
-    const result = await this.app.getController(BrowserControlCtr).runGatewayToolCall(apiName, {
-      ...args,
-      __agentId: binding.agentId,
-      __topicId: binding.topicId,
-    });
-
-    const text =
-      result.content ?? result.error?.message ?? (result.success ? 'OK' : 'Browser action failed');
-    const content: McpToolResult['content'] = [{ text, type: 'text' }];
-
-    // Screenshot: hand the image back as an MCP image block so CC can
-    // actually see the page (unlike the homogeneous runtime's text-only echo).
-    if (apiName === 'screenshot') {
-      const dataUrl = (result.state as { dataUrl?: string } | undefined)?.dataUrl;
-      const match =
-        typeof dataUrl === 'string' ? dataUrl.match(/^data:(image\/[\w.+-]+);base64,(.+)$/) : null;
-      if (match) content.push({ data: match[2], mimeType: match[1], type: 'image' });
-    }
-
-    return { content, isError: !result.success };
   }
 
   // ─── File cache ───
@@ -2142,10 +2066,7 @@ export default class HeterogeneousAgentCtr {
     }
 
     const stderrChunks: string[] = [];
-    const intervention = await this.setupStandardAcpInterventionForOp(params.operationId, session, {
-      agentId: params.agentId,
-      topicId: params.topicId,
-    });
+    const intervention = await this.setupStandardAcpInterventionForOp(params.operationId, session);
 
     const acpSession = createStandardAcpSession(agentType, {
       args: selectors.args,

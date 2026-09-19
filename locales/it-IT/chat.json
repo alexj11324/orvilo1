@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Ricarica",
   "workingPanel.browser.actions.stop": "Interrompi caricamento",
   "workingPanel.browser.addressPlaceholder": "Cerca o inserisci indirizzo",
-  "workingPanel.browser.agentControlling": "L'agente sta utilizzando il browser",
-  "workingPanel.browser.agentCursor": "Agente",
   "workingPanel.browser.context.elementAdded": "Elemento aggiunto al contesto della chat",
   "workingPanel.browser.context.elementTitle": "Elemento",
   "workingPanel.browser.context.failed": "Impossibile aggiungere il contesto dell’elemento",

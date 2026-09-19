@@ -11,7 +11,6 @@ import { agentSignalReviewRuntime } from '../agentSignalReview';
 import { agentSignalSkillManagementRuntime } from '../agentSignalSkillManagement';
 import { auvRuntime } from '../auv';
 import { briefRuntime } from '../brief';
-import { browserRuntime } from '../browser';
 import { calculatorRuntime } from '../calculator';
 import { cloudSandboxRuntime } from '../cloudSandbox';
 import { credsRuntime } from '../creds';
@@ -54,7 +53,6 @@ const ALL_REGISTRATIONS = [
   agentSignalSkillManagementRuntime,
   auvRuntime,
   briefRuntime,
-  browserRuntime,
   calculatorRuntime,
   cloudSandboxRuntime,
   credsRuntime,

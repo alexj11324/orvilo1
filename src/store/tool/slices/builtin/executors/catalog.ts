@@ -1,7 +1,6 @@
 import { agentBuilderExecutor } from '@orvilo/builtin-tool-agent-builder/executor';
 import { agentManagementExecutor } from '@orvilo/builtin-tool-agent-management/executor';
 import { auvExecutor } from '@orvilo/builtin-tool-auv/client/executor';
-import { browserExecutor } from '@orvilo/builtin-tool-browser/client/executor';
 import { calculatorExecutor } from '@orvilo/builtin-tool-calculator/executor';
 import { cloudSandboxExecutor } from '@orvilo/builtin-tool-cloud-sandbox/executor';
 import { credsExecutor } from '@orvilo/builtin-tool-creds/executor';
@@ -70,7 +69,6 @@ export const builtinToolExecutors = [
   goalExecutor,
   imageGenerationExecutor,
   knowledgeBaseExecutor,
-  browserExecutor,
   localSystemExecutorWithGitEffects,
   memoryExecutor,
   messageExecutor,

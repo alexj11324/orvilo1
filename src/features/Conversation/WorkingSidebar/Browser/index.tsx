@@ -180,15 +180,6 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
     onMetadataChange?.({ faviconUrl: state.faviconUrl, title: state.title, url: state.url });
   }, [onMetadataChange, state.faviconUrl, state.title, state.url]);
 
-  // The automation overlay is drawn inside the guest page — hand the copy over.
-  useEffect(() => {
-    if (!isDesktop) return;
-    void electronBrowserSidebarService.setOverlayLabels({
-      controlling: t('workingPanel.browser.agentControlling'),
-      cursor: t('workingPanel.browser.agentCursor'),
-    });
-  }, [t]);
-
   // The guest stays alive in a hidden renderer host when this pane unmounts.
   // Moving the same DOM node into this viewport keeps its browsing context while
   // allowing ordinary React portals to paint above it.

@@ -2,7 +2,6 @@
  * Tools Engineering - Unified tools processing using ToolsEngine
  */
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
@@ -266,9 +265,6 @@ export const createAgentToolsEngine = (
     // Always-on builtin tools
     ...Object.fromEntries(alwaysOnToolIds.map((id) => [id, true])),
     // System-level rules (may override user selection for specific tools)
-    // Browser rides the same local-runtime gate as local-system because the
-    // control IPC only exists in the desktop main process.
-    [BrowserManifest.identifier]: agentChatConfigSelectors.isLocalSystemEnabled(agentState),
     [CloudSandboxManifest.identifier]: agentChatConfigSelectors.isCloudSandboxEnabled(agentState),
     [KnowledgeBaseManifest.identifier]: kbEnabled,
     [LocalSystemManifest.identifier]: agentChatConfigSelectors.isLocalSystemEnabled(agentState),

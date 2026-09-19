@@ -2374,8 +2374,6 @@
   "workingPanel.browser.actions.reload": "刷新",
   "workingPanel.browser.actions.stop": "停止加载",
   "workingPanel.browser.addressPlaceholder": "搜索或输入网址",
-  "workingPanel.browser.agentControlling": "智能体正在使用浏览器",
-  "workingPanel.browser.agentCursor": "Agent",
   "workingPanel.browser.context.elementAdded": "元素已添加到对话上下文",
   "workingPanel.browser.context.elementTitle": "元素",
   "workingPanel.browser.context.failed": "无法添加元素上下文",

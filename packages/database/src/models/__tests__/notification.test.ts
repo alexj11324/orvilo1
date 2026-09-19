@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
+import { ProjectModel } from '../../models/project';
 import { TaskModel } from '../../models/task';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
+import { projectMembers } from '../../schemas/projectMember';
 import { tasks as tasksTable } from '../../schemas/task';
 import { teamMembers, teams } from '../../schemas/team';
 import { users } from '../../schemas/user';
@@ -1107,6 +1109,81 @@ describe('NotificationModel (integration)', () => {
 
       expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Still yours']);
       expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
+    });
+
+    it('does not list a private-project title to a workspace member without a grant', async () => {
+      const workspaceId = 'notification-project-acl-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Project ACL WS',
+        primaryOwnerId: userId,
+        slug: 'project-acl-ws',
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const project = await new ProjectModel(serverDB, userId, workspaceId).create({
+        identifier: 'SEC06',
+        name: 'Secret Project',
+        visibility: 'private',
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'private-project-no-grant',
+          resourceId: project.id,
+          resourceType: 'project',
+          title: 'Secret Project',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+    });
+
+    it('stops listing a private-project title after the viewer loses the grant', async () => {
+      const workspaceId = 'notification-project-grant-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Project Grant WS',
+        primaryOwnerId: userId,
+        slug: 'project-grant-ws',
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const project = await new ProjectModel(serverDB, userId, workspaceId).create({
+        identifier: 'GRANT',
+        name: 'Granted Project',
+        visibility: 'private',
+      });
+      await serverDB.insert(projectMembers).values({
+        projectId: project.id,
+        role: 'contributor',
+        userId: otherUserId,
+        workspaceId,
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'private-project-grant',
+          resourceId: project.id,
+          resourceType: 'project',
+          title: 'Granted Project',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Granted Project']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
+
+      await serverDB.delete(projectMembers).where(eq(projectMembers.userId, otherUserId));
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
     });
   });
 });

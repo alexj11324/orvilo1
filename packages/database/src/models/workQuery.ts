@@ -50,6 +50,7 @@ import { tasks } from '../schemas/task';
 import { projectTeams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
 import { TeamModel } from './team';
@@ -874,9 +875,12 @@ export class WorkQueryModel {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must be project');
     }
     const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
-    const conditions: SQL[] = [];
-    if (this.workspaceId) conditions.push(eq(projects.workspaceId, this.workspaceId));
-    else conditions.push(eq(projects.userId, this.userId), isNull(projects.workspaceId));
+    const conditions: SQL[] = [
+      buildProjectReadableWhere(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }),
+    ];
 
     const readableTeamIds = filterHasTeamId(params.query.filter)
       ? await this.listReadableTeamIds()
@@ -1071,14 +1075,18 @@ export class WorkQueryModel {
       .limit(Math.min(Math.max(limit, 1), WORK_SEARCH_MAX_PER_TYPE));
   };
 
+  /** Name match for CommandMenu. Project ACL matches `ProjectModel.readable`. */
   searchProjects = async (needle: string, limit = 8) => {
     const q = needle.trim();
     if (!q) return [];
     const pattern = `%${escapeLike(q)}%`;
-    const conditions: SQL[] = [];
-    if (this.workspaceId) conditions.push(eq(projects.workspaceId, this.workspaceId));
-    else conditions.push(eq(projects.userId, this.userId), isNull(projects.workspaceId));
-    conditions.push(sql`${projects.name} ILIKE ${pattern} ESCAPE '\\'`);
+    const conditions: SQL[] = [
+      buildProjectReadableWhere(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }),
+      sql`${projects.name} ILIKE ${pattern} ESCAPE '\\'`,
+    ];
     return this.db
       .select({
         createdAt: projects.createdAt,

@@ -7,12 +7,14 @@ import { getTestDB } from '../../core/getTestDB';
 import type { tasks } from '../../schemas';
 import {
   agents,
+  projectMembers,
   projects,
   projectTeams,
   teamCycles,
   teamMembers,
   teams,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import { actionApprovals } from '../../schemas/actionApproval';
@@ -790,5 +792,55 @@ describe('WorkQueryModel', () => {
     });
     expect(fromA.projects.map((row) => row.id)).toEqual(['wq-shared-project']);
     expect(fromB.projects.map((row) => row.id)).toEqual(['wq-shared-project']);
+  });
+
+  it('hides private projects from search and lists unless the viewer has a grant', async () => {
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
+    await serverDB.insert(projects).values([
+      {
+        id: 'wq-public-project',
+        identifier: 'WQP',
+        name: 'Public fleet',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        id: 'wq-secret-project',
+        identifier: 'WQS',
+        name: 'Secret fleet',
+        userId,
+        visibility: 'private',
+        workspaceId,
+      },
+    ]);
+
+    const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
+    const emptyQuery = { entityType: 'project' as const, schemaVersion: 1 as const };
+    expect((await outsider.searchProjects('fleet')).map((row) => row.id)).toEqual([
+      'wq-public-project',
+    ]);
+    expect(
+      (await outsider.queryProjects({ query: emptyQuery })).projects.map((row) => row.id),
+    ).toEqual(['wq-public-project']);
+    expect((await outsider.queryProjects({ query: emptyQuery })).total).toBe(1);
+
+    await serverDB.insert(projectMembers).values({
+      projectId: 'wq-secret-project',
+      role: 'contributor',
+      userId: otherUserId,
+      workspaceId,
+    });
+
+    expect((await outsider.searchProjects('fleet')).map((row) => row.id).sort()).toEqual([
+      'wq-public-project',
+      'wq-secret-project',
+    ]);
+    expect(
+      (await outsider.queryProjects({ query: emptyQuery })).projects.map((row) => row.id).sort(),
+    ).toEqual(['wq-public-project', 'wq-secret-project']);
   });
 });

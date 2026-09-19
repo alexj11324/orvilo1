@@ -34,6 +34,7 @@ import { teamMembers, teams } from '../schemas/team';
 import { notificationBulkSnapshots, notificationEventReceipts } from '../schemas/workAttention';
 import { workspaceMembers, workspaces } from '../schemas/workspace';
 import type { OrviloDatabase, Transaction } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
 
@@ -124,6 +125,7 @@ export class NotificationModel {
   /**
    * Live ACL: a historical delivery is not proof the recipient can still read
    * the object. Missing/unknown resource types stay visible (system cards).
+   * Projects reuse `ProjectModel.readable` (visibility plus membership grant).
    */
   private resourceReadable = (): SQL => {
     const taskVisible = buildWorkspaceWhere(
@@ -134,9 +136,10 @@ export class NotificationModel {
         workspaceId: tasks.workspaceId,
       },
     );
-    const projectVisible = this.workspaceId
-      ? eq(projects.workspaceId, this.workspaceId)
-      : and(eq(projects.userId, this.userId), isNull(projects.workspaceId))!;
+    const projectVisible = buildProjectReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId ?? undefined,
+    });
     return or(
       isNull(notifications.resourceType),
       sql`${notifications.resourceType} not in ('task', 'project')`,

@@ -9,7 +9,6 @@ import {
   DOCUMENT_FOLDER_TYPE,
   documents,
   messages,
-  projectMembers,
   projects,
   savedViews,
   tasks,
@@ -18,6 +17,7 @@ import {
   topics,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
@@ -128,29 +128,10 @@ export class RecentModel {
           .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, this.userId))),
       );
 
-    // Mirrors `ProjectModel.readable`: workspace scope plus visibility, or an
-    // ACTIVE project_members row granting read on that project.
-    const projectReadable = or(
-      buildWorkspaceWhere(scope, projects),
-      this.workspaceId
-        ? and(
-            eq(projects.workspaceId, this.workspaceId),
-            exists(
-              this.db
-                .select({ one: sql`1` })
-                .from(projectMembers)
-                .where(
-                  and(
-                    eq(projectMembers.projectId, projects.id),
-                    eq(projectMembers.userId, this.userId),
-                    isNull(projectMembers.deletedAt),
-                    isNull(projectMembers.suspendedAt),
-                  ),
-                ),
-            ),
-          )
-        : undefined,
-    );
+    const projectReadable = buildProjectReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
 
     // Mirrors `TeamModel.readable`: public teams plus private teams the viewer
     // belongs to. Teams are workspace-only — personal mode yields no rows.

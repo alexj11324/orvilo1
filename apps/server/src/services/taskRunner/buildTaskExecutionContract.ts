@@ -1,0 +1,73 @@
+import type { TaskRunPromptGoalLoop } from '@orvilo/prompts';
+import type {
+  TaskExecutionContract,
+  TaskExecutionEnvironmentSnapshot,
+  TaskItem,
+} from '@orvilo/types';
+
+export interface BuildTaskExecutionContractInput {
+  acceptanceEnabled: boolean;
+  /** Version pins snapshotted on the dispatch row at claim time. */
+  dispatch: {
+    generation: number;
+    planRevision: number | null;
+    policyRevision: number;
+    requirementRevision: number;
+    taskRevision: number;
+  };
+  environment: TaskExecutionEnvironmentSnapshot;
+  goalLoop?: TaskRunPromptGoalLoop;
+  grantId?: string;
+  integration?: {
+    baseBranch?: string;
+    branch?: string;
+    expectedBaseSha?: string;
+    expectedHeadSha?: string;
+    repo?: string;
+  } | null;
+  /** Tool identifiers mounted for the run (builtin required-tool set). */
+  tools: string[];
+}
+
+/**
+ * Pure assembler: freezes the versions, environment, tools, acceptance gate
+ * and budget a task run was dispatched under into a `TaskExecutionContract`.
+ * The contract is persisted on the run row so retries/continuations bind to
+ * the same prohibitions instead of re-deriving them from mutable task config.
+ */
+export function buildTaskExecutionContract(
+  task: TaskItem,
+  input: BuildTaskExecutionContractInput,
+): TaskExecutionContract {
+  const contract: TaskExecutionContract = {
+    acceptance: { enabled: input.acceptanceEnabled },
+    budget: {
+      maxRounds: input.goalLoop?.maxRounds ?? null,
+      round: input.goalLoop?.round ?? (task.totalTopics || 0) + 1,
+    },
+    environment: input.environment,
+    schemaVersion: 1,
+    tools: [...input.tools],
+    versions: {
+      executionGeneration: input.dispatch.generation,
+      planRevision: input.dispatch.planRevision,
+      policyRevision: input.dispatch.policyRevision,
+      requirementRevision: input.dispatch.requirementRevision,
+      taskRevision: input.dispatch.taskRevision,
+    },
+  };
+
+  if (input.grantId) contract.delegation = { grantId: input.grantId };
+
+  if (input.integration) {
+    contract.integration = {
+      baseBranch: input.integration.baseBranch,
+      branch: input.integration.branch,
+      expectedBaseSha: input.integration.expectedBaseSha,
+      expectedHeadSha: input.integration.expectedHeadSha,
+      repo: input.integration.repo,
+    };
+  }
+
+  return contract;
+}

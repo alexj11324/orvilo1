@@ -1232,6 +1232,13 @@
       "when": 1789770502747,
       "tag": "0175_task_pr_delivery_gate",
       "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1789857483828,
+      "tag": "0176_task_topics_contract",
+      "breakpoints": true
     }
   ],
   "version": "6"

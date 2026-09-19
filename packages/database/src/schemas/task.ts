@@ -7,6 +7,7 @@ import type {
   TaskCreationSubjectKind,
   TaskCreationSubjectSnapshot,
   TaskDispatchPhase,
+  TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskHumanLock,
   TaskLockField,
@@ -403,6 +404,13 @@ export const taskTopics = pgTable(
     // this run — a direct FK would make the two schemas mutually recursive).
     executionGrantId: text('execution_grant_id'),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
+    /**
+     * Frozen TaskExecutionContract for this run — the versioned binding of
+     * revisions, environment, mounted tools, acceptance gate and budget that
+     * the run was dispatched under. Retries/continuations rebind to it rather
+     * than re-deriving constraints from mutable task config.
+     */
+    contract: jsonb('contract').$type<TaskExecutionContract>(),
 
     // What triggered this run: 'manual' (ad-hoc run-now / agent tool call),
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   BriefDecision,
+  TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskTopicHandoff,
   TaskTopicIntegration,
@@ -134,6 +135,7 @@ export class TaskTopicModel {
     taskId: string,
     topicId: string,
     params: {
+      contract?: TaskExecutionContract;
       dispatch: {
         fence: number;
         generation: number;
@@ -152,6 +154,7 @@ export class TaskTopicModel {
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
     const run = {
+      contract: params.contract,
       dispatchFence: params.dispatch.fence,
       dispatchId: params.dispatch.id,
       environmentSnapshot: params.environmentSnapshot,

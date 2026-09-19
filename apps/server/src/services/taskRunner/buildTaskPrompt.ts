@@ -101,6 +101,11 @@ export interface BuiltTaskPrompt {
   /** Merged, deduplicated list of fileIds (task instruction + all comments)
    * to forward to execAgent so files arrive as multimodal inputs. */
   fileIds: string[];
+  /**
+   * Goal-loop context rendered into the prompt (round + attempt budget),
+   * surfaced so the run contract freezes the same budget the agent saw.
+   */
+  goalLoop?: TaskRunPromptGoalLoop;
   prompt: string;
 }
 
@@ -385,5 +390,10 @@ export async function buildTaskPrompt(
     }),
   });
 
-  return { acceptanceEnabled: verifyEnabled, fileIds: allFileIds, prompt };
+  return {
+    acceptanceEnabled: verifyEnabled,
+    fileIds: allFileIds,
+    ...(goalLoop ? { goalLoop } : {}),
+    prompt,
+  };
 }

@@ -70,6 +70,51 @@ export interface TaskExecutionEnvironmentSnapshot {
   workingDirectoryId?: string;
 }
 
+/**
+ * The versioned run contract frozen onto a `task_topics` row when the run is
+ * registered. Once persisted it is the single source of truth for what this
+ * run was authorized and required to do — retries, continuations and
+ * corrective merge runs rebind to the persisted contract rather than
+ * re-deriving it from mutable task config.
+ *
+ * Every field is assembled from authoritative inputs (task revisions, the
+ * provisioned workspace, the mounted tool surface, acceptance config, the
+ * delegation grant) — never re-synthesized by the model.
+ */
+export interface TaskExecutionContract {
+  /** Acceptance gate the run must satisfy (required evidence exists). */
+  acceptance: { enabled: boolean };
+  /** Frozen budget: goal-loop round and attempt cap (`null` = unbounded). */
+  budget: { maxRounds: number | null; round: number };
+  /** Delegated-execution grant bound at registration, when delegated. */
+  delegation?: { grantId: string };
+  /** Frozen execution environment (repo/branch/workdir/device identity). */
+  environment: TaskExecutionEnvironmentSnapshot;
+  /** Workspace-integration binding (base/head SHAs + branches) when provisioned. */
+  integration?: {
+    baseBranch?: string;
+    branch?: string;
+    expectedBaseSha?: string;
+    expectedHeadSha?: string;
+    repo?: string;
+  };
+  /**
+   * Contract schema version. Bumped on incompatible shape changes so readers
+   * can tell which assembler produced a persisted row.
+   */
+  schemaVersion: 1;
+  /** Tool identifiers mounted for this run (builtin required-tool set). */
+  tools: string[];
+  /** Version pins the run was dispatched under. */
+  versions: {
+    executionGeneration: number;
+    planRevision: number | null;
+    policyRevision: number;
+    requirementRevision: number;
+    taskRevision: number;
+  };
+}
+
 export type TaskPriority = 0 | 1 | 2 | 3 | 4;
 
 export type TaskActivityType =

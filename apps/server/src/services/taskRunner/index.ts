@@ -33,6 +33,7 @@ import {
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
+import { buildTaskExecutionContract } from './buildTaskExecutionContract';
 import { buildTaskPrompt } from './buildTaskPrompt';
 import { taskRunIdempotencyKey } from './idempotency';
 
@@ -381,6 +382,7 @@ export class TaskRunnerService {
       const {
         acceptanceEnabled,
         fileIds: attachmentFileIds,
+        goalLoop,
         prompt,
       } = await buildTaskPrompt(
         task,
@@ -478,6 +480,19 @@ export class TaskRunnerService {
         workingDirectory: initialWorkingDirectory ?? initialWorkingDirectoryConfig?.path,
       };
 
+      // Freeze the run contract alongside the environment snapshot — retries,
+      // continuations and corrective runs rebind to this persisted row rather
+      // than re-deriving constraints from mutable task config.
+      const executionContract = buildTaskExecutionContract(task, {
+        acceptanceEnabled,
+        dispatch: preparedDispatch!.dispatch,
+        environment: environmentSnapshot,
+        goalLoop,
+        grantId: delegation?.grantId,
+        integration: runIntegration,
+        tools: pluginIds,
+      });
+
       log('runTask: %s (continue=%s)', taskIdentifier, continueTopicId);
 
       await this.taskDispatch.transition(preparedDispatch!, {
@@ -523,6 +538,7 @@ export class TaskRunnerService {
               phase: 'running',
             });
             await taskTopicModel.startRun(task.id, topicId, {
+              contract: executionContract,
               dispatch: {
                 ...preparedDispatch!.dispatch,
                 fence: preparedDispatch!.fence,
@@ -632,6 +648,7 @@ export class TaskRunnerService {
         if (!result.topicId || taskTopicStarted) return;
         await this.taskModel.updateCurrentTopic(task.id, result.topicId);
         await this.taskTopicModel.startRun(task.id, result.topicId, {
+          contract: executionContract,
           dispatch: {
             ...preparedDispatch!.dispatch,
             fence: preparedDispatch!.fence,

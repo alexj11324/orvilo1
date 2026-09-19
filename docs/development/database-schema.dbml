@@ -4020,6 +4020,7 @@ table task_topics {
   execution_epoch integer [not null, default: 0]
   execution_grant_id text
   environment_snapshot jsonb
+  contract jsonb
   trigger text
   handoff jsonb
   integration jsonb
@@ -5384,9 +5385,3 @@ ref: workspace_invitation_projects.project_id - projects.id
 ref: workspace_invitations.workspace_id - workspaces.id
 
 ref: workspace_invitations.inviter_id - users.id
-
-ref: workspace_ownership_transfers.workspace_id - workspaces.id
-
-ref: workspace_ownership_transfers.from_user_id - users.id
-
-ref: workspace_ownership_transfers.to_user_id - users.id

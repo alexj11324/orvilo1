@@ -304,10 +304,21 @@ export interface WorkQueryCountResult {
   total: number;
 }
 
+export const WORK_ATTENTION_ALLOWED_HTTPS_HOSTS = ['github.com', 'linear.app'] as const;
+
+export const isWorkAttentionAllowedHttpsHost = (hostname: string): boolean => {
+  const host = hostname.toLowerCase();
+  return WORK_ATTENTION_ALLOWED_HTTPS_HOSTS.some(
+    (allowed) => host === allowed || host.endsWith(`.${allowed}`),
+  );
+};
+
 /** Pending review that is not a Task — never materialized as a Task just to fill My Work. */
 export interface WorkQueryExternalReview {
   actionType: string;
   id: string;
+  /** Allowlisted https GitHub/Linear URL when `targetId` is a safe jump target. */
+  openUrl?: string | null;
   targetId: string | null;
   targetType: string;
   title: string;

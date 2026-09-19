@@ -16,6 +16,7 @@ import type {
   WorkQuerySort,
 } from '@orvilo/types';
 import {
+  isWorkAttentionAllowedHttpsHost,
   WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_MAX_DEPTH,
   WORK_QUERY_MAX_IN_VALUES,
@@ -451,6 +452,25 @@ const externalReviewTitle = (summary: unknown, actionType: string) => {
   return actionType;
 };
 
+/** Same allowlist as Inbox action URLs: https GitHub / Linear only. */
+export const externalReviewOpenUrl = (targetId: string | null | undefined): string | null => {
+  if (!targetId) return null;
+  const trimmed = targetId.trim();
+  if (!trimmed) return null;
+  for (const char of trimmed) {
+    const code = char.charCodeAt(0);
+    if (code <= 0x1f || code === 0x7f || char === '\\') return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return null;
+    if (!isWorkAttentionAllowedHttpsHost(parsed.hostname)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
 const DEFAULT_TASK_SORT: WorkQuerySort[] = [
   { direction: 'desc', field: 'updatedAt' },
   { direction: 'asc', field: 'id' },
@@ -770,6 +790,7 @@ export class WorkQueryModel {
         {
           actionType: row.actionType,
           id: row.id,
+          openUrl: externalReviewOpenUrl(row.targetId),
           targetId: row.targetId,
           targetType: row.targetType,
           title: externalReviewTitle(row.actionSummary, row.actionType),

@@ -26,6 +26,7 @@
     "Usage docs for Inbox/My Work/Views/Teams (EN/ZH) plus task/command-menu/start/shortcuts IA updates",
     "WorkQueryResults status icons go through resolveTaskStatus (null/unknown → backlog)",
     "Project saved-view results use Projects-list chrome (status, identifier, relative time, slug path)",
+    "My Work To-review PR rows expose allowlisted GitHub/Linear openUrl; javascript and off-host jumps stay null",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -36,7 +37,7 @@
   "constraints": [
     "Do not rebase onto newer canary unless asked; if Devin pushed, rebase onto origin/cursor/navigation-attention-v4-a544",
     "Do not restore custom LLM providers or /settings/provider",
-    "Do not remount AgentTasks KanbanBoard",
+    "Do not remount AgentTasks KanbanBoard on the Team page",
     "Do not invent a GitHub PR-without-task store",
     "Do not add WorkQuery export",
     "Do not mark the system goal complete without 64-AC evidence",
@@ -61,7 +62,9 @@
     "src/components/ExecutionStatus.ts",
     "src/features/MyWork/WorkQueryResults.tsx",
     "src/features/SavedViews/savedViewProjectPath.ts",
-    "src/features/SavedViews/SavedViewPage.tsx"
+    "src/features/SavedViews/SavedViewPage.tsx",
+    "src/features/MyWork/externalReviewOpen.ts",
+    "src/features/MyWork/WorkQueryResults.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": "a705b45c",

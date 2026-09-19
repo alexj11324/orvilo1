@@ -2,6 +2,7 @@ import {
   ACTION_SOURCE_KINDS,
   type ActionSourceKind,
   type DecisionVerb,
+  isWorkAttentionAllowedHttpsHost,
   type NotificationFeedCard,
   type TypedNavigationTarget,
 } from '@orvilo/types';
@@ -12,15 +13,6 @@ const ACTION_KINDS = new Set<ActionSourceKind>(ACTION_SOURCE_KINDS);
 
 const asActionKind = (value: string | null | undefined): ActionSourceKind | null =>
   value && ACTION_KINDS.has(value as ActionSourceKind) ? (value as ActionSourceKind) : null;
-
-const ALLOWED_HTTPS_HOSTS = new Set(['github.com', 'linear.app']);
-
-const isAllowedHttpsHost = (hostname: string) => {
-  const host = hostname.toLowerCase();
-  return [...ALLOWED_HTTPS_HOSTS].some(
-    (allowed) => host === allowed || host.endsWith(`.${allowed}`),
-  );
-};
 
 const hasUnsafeUrlChar = (value: string) => {
   for (const char of value) {
@@ -54,7 +46,7 @@ export const safeInboxActionUrl = (raw: string | null | undefined): string | nul
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return null;
-    if (!isAllowedHttpsHost(parsed.hostname)) return null;
+    if (!isWorkAttentionAllowedHttpsHost(parsed.hostname)) return null;
     return parsed.toString();
   } catch {
     return null;

@@ -72,17 +72,17 @@ These keys are page-local. They do not fire while you type in an editor, a comme
 
 Open **My Work** in the sidebar (`/my-work`). Tabs:
 
-| Tab                 | What you see                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------- |
-| **Assigned to me**  | Tasks whose assignee is you. Independent of whether you have a notification.                      |
-| **Delegated by me** | Tasks you explicitly handed off (an execution grant you started). Owning the Agent is not enough. |
-| **To review**       | Tasks waiting on you as reviewer, plus readable pull-request approvals that are not tasks.        |
-| **Created by me**   | Tasks you created. Imported work with no creator does not pretend you filed it.                   |
-| **Subscribed**      | Tasks you chose to follow. Unsubscribe does not drop you as assignee or reviewer.                 |
+| Tab                 | What you see                                                                                                                                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Assigned to me**  | Tasks whose assignee is you. Independent of whether you have a notification.                                                                                                                                         |
+| **Delegated by me** | Tasks you explicitly handed off (an execution grant you started). Owning the Agent is not enough.                                                                                                                    |
+| **To review**       | Tasks waiting on you as reviewer, plus readable pull-request approvals that are not tasks. Opening a PR uses an allowlisted GitHub or Linear URL; it does not create a Task and does not approve with the app token. |
+| **Created by me**   | Tasks you created. Imported work with no creator does not pretend you filed it.                                                                                                                                      |
+| **Subscribed**      | Tasks you chose to follow. Unsubscribe does not drop you as assignee or reviewer.                                                                                                                                    |
 
 **No project** limits the list to work that is not in a project. It does not assign a default project.
 
-**Assigned to me** and **Delegated by me** can switch **List** / **Board** from the toolbar. Dragging on the board uses the team's workflow. If a column has more than one state, you pick the exact one. Blocked work cannot be moved to Done until the blockers finish.
+**Assigned to me** and **Delegated by me** can switch **List** / **Board** from the toolbar. The board is the same Kanban as Tasks, narrowed to your assigned or delegated slice. Hidden columns collapse in place. Completing a parent with open subtasks still asks whether to cascade. Saved views and team boards still use the work-query board: dragging follows the team's workflow, and a column with more than one state asks you to pick the exact one. Blocked work cannot be moved to Done until the blockers finish.
 
 **Save as view** (on Assigned, Delegated, Created, and To review) stores a private copy of that list and opens it under Views. Subscribed cannot be saved that way because it is a follow list, not a query.
 

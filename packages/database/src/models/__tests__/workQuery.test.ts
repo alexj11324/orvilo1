@@ -434,7 +434,36 @@ describe('WorkQueryModel', () => {
 
     expect(reviews.map((row) => row.targetType)).toEqual(['github_pull_request']);
     expect(reviews[0]?.title).toBe('Review the checkout PR');
+    expect(reviews[0]?.openUrl).toBe('https://github.com/orvilo/app/pull/12');
     expect(after.map((row) => row.id).sort()).toEqual(before.map((row) => row.id).sort());
+  });
+
+  it('does not expose a javascript or off-allowlist review jump', async () => {
+    await serverDB.insert(actionApprovals).values({
+      actionSummary: { title: 'Phish' },
+      actionType: 'github.pull_request.review',
+      approverUserId: userId,
+      id: 'apr_pr_phish',
+      status: 'pending',
+      targetId: 'javascript:alert(1)',
+      targetType: 'github_pull_request',
+      workspaceId,
+    });
+    await serverDB.insert(actionApprovals).values({
+      actionSummary: { title: 'Evil host' },
+      actionType: 'github.pull_request.review',
+      approverUserId: userId,
+      id: 'apr_pr_evil',
+      status: 'pending',
+      targetId: 'https://evil.example/phish',
+      targetType: 'github_pull_request',
+      workspaceId,
+    });
+
+    const reviews = await new WorkQueryModel(serverDB, userId, workspaceId).queryExternalReviews();
+    const byId = new Map(reviews.map((row) => [row.id, row]));
+    expect(byId.get('apr_pr_phish')?.openUrl ?? null).toBeNull();
+    expect(byId.get('apr_pr_evil')?.openUrl ?? null).toBeNull();
   });
 
   it('does not list a private team or its public-visibility tasks to a non-member', async () => {

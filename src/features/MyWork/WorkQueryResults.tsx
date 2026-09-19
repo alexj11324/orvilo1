@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import {
   type TaskWorkflowCategory,
@@ -12,7 +12,7 @@ import {
   type WorkQueryLayout,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { BellOffIcon, BellPlusIcon, ListTodoIcon } from 'lucide-react';
+import { BellOffIcon, BellPlusIcon, GitPullRequestIcon, ListTodoIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,11 +22,13 @@ import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { inboxUrlOpenMode } from '@/features/WorkInbox/inboxOrganize';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 
+import { externalReviewIdentifier } from './externalReviewOpen';
 import { createWorkflowStatePickerModal } from './WorkflowStatePickerModal';
 import {
   parseWorkQueryBoardPayload,
@@ -112,6 +114,7 @@ const styles = createStaticStyles(({ css }) => ({
     min-width: 0;
 
     color: inherit;
+    text-decoration: none;
   `,
   row: css`
     padding-block: 7px;
@@ -252,6 +255,41 @@ const WorkQueryTaskRow = memo(
 
 WorkQueryTaskRow.displayName = 'WorkQueryTaskRow';
 
+const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ review }) => {
+  const openUrl = review.openUrl;
+  const canOpen = Boolean(openUrl && inboxUrlOpenMode(openUrl) === 'external');
+  const identifier = externalReviewIdentifier(canOpen ? openUrl : null);
+  const body = (
+    <>
+      <Icon color={cssVar.colorTextSecondary} icon={GitPullRequestIcon} size={16} />
+      <Flexbox flex={1} style={{ minWidth: 0 }}>
+        <Text ellipsis weight={500}>
+          {review.title}
+        </Text>
+      </Flexbox>
+      {identifier ? (
+        <Text className={styles.identifier} fontSize={12}>
+          {identifier}
+        </Text>
+      ) : null}
+    </>
+  );
+
+  return (
+    <Flexbox horizontal align="center" className={styles.row}>
+      {canOpen && openUrl ? (
+        <a className={styles.link} href={openUrl} rel="noopener noreferrer" target="_blank">
+          {body}
+        </a>
+      ) : (
+        <div className={styles.link}>{body}</div>
+      )}
+    </Flexbox>
+  );
+});
+
+WorkQueryExternalReviewRow.displayName = 'WorkQueryExternalReviewRow';
+
 const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
@@ -360,13 +398,15 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       <Flexbox gap={8}>
         <Text weight={500}>{t('myWork.externalReviews')}</Text>
         {externalReviews.length === 0 ? (
-          <Empty description={t('myWork.externalReviewsEmpty')} icon={ListTodoIcon} />
+          <Center flex={1} padding={48}>
+            <Empty description={t('myWork.externalReviewsEmpty')} icon={GitPullRequestIcon} />
+          </Center>
         ) : (
-          externalReviews.map((review) => (
-            <Text key={review.id} weight={500}>
-              {review.title}
-            </Text>
-          ))
+          <Flexbox gap={2}>
+            {externalReviews.map((review) => (
+              <WorkQueryExternalReviewRow key={review.id} review={review} />
+            ))}
+          </Flexbox>
         )}
       </Flexbox>
     ) : null;

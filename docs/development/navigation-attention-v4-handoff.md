@@ -84,6 +84,7 @@
 - My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。work-query board 只留给 Saved View / Team 页（它们的 query AST 映不进 task store scope）
 - `task.groupList` scope 增 `delegated`（`executionGrants` active + initiatedBy = 当前用户的 EXISTS，与 `workQuery.delegatedByUserId` 同一谓词）；`projectId` 接受 `null`（`isNull(tasks.projectId)`）。SWR key 编进 scope+project 后缀，`projectIdFromListKey` 会解码 MINE `:` 后缀与 `no-project`
 - 看板对齐 Cordy 现行版：隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
+- My Work「待审核」无 Task 的 PR 行：`queryExternalReviews` 写出 allowlist 后的 `openUrl`（https `github.com` / `linear.app`，与 Inbox `safeInboxActionUrl` 同一主机表）；javascript / 站外主机为 null。列表行用 PR 图标 + identifier；客户端再过 `inboxUrlOpenMode` 才 `target=_blank`。不为填列表建 Task，不用应用 token 代批
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
@@ -151,6 +152,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 本增量：END04 用户文档 Inbox/My Work/Views/Teams（EN/ZH）及 task/command-menu/start/shortcuts IA。lint 干净，tests none。不是 64× AC。
 - `dde9ef1f` Push Typecheck / Test Database lint 失败：`WorkQueryResults.tsx` `task.status` 不能赋给 `TaskStatus`。已用 `resolveTaskStatus`（未知 / 空 → `backlog`）修好；`ExecutionStatus.test.ts` 覆盖。不是 64× AC。
 - 本增量：项目 Saved View 结果行对齐 Projects 列表 chrome；`savedViewProjectPath` 优先 slug。`bun run check` 改动文件 lint 干净，6 passed。不是 64× AC。
+- 本增量：My Work 无 Task PR 行 allowlist `openUrl` + 列表 chrome。lint 干净；identifier/openUrl 单测 + `workQuery` 19 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

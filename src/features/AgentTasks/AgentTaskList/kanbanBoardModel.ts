@@ -98,6 +98,12 @@ export const STATUS_KANBAN_COLUMNS: KanbanColumnDefinition[] = [
   },
 ];
 
+/** Glyph / context-menu statuses that land on a shared kanban column. */
+export const kanbanColumnForSelectableStatus = (
+  status: TaskStatus,
+): KanbanColumnDefinition | undefined =>
+  STATUS_KANBAN_COLUMNS.find((column) => column.targetStatus === status);
+
 /** Raw statuses bucketed inside each merged status column. */
 export const KANBAN_COLUMN_STATUSES: Record<string, TaskStatus[]> = {
   backlog: ['backlog'],

@@ -1,11 +1,14 @@
 'use client';
 
 import { toast } from '@lobehub/ui/base-ui';
-import type { TaskWorkflowCategory } from '@orvilo/types';
+import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { WORKFLOW_STATE_REQUIRED } from '@orvilo/types';
 import { t } from 'i18next';
 
-import type { KanbanColumnDefinition } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import {
+  type KanbanColumnDefinition,
+  kanbanColumnForSelectableStatus,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { createTaskStatusCascadeModal } from '@/features/AgentTasks/features/TaskStatusCascadeModal';
 import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskService } from '@/services/task';
@@ -168,4 +171,26 @@ export const commitWorkQueryBoardMove = async (input: {
     toastWorkQueryBoardMoveError(error);
     throw error;
   }
+};
+
+export type WorkQueryListStatusResult = 'cancelled' | 'local' | 'moved';
+
+/**
+ * List glyph/context-menu status on a work-query row. Linear-linked cards
+ * go through `moveBoard` (VIEW08 picker); unlinked cards stay on `task.update`.
+ */
+export const commitWorkQueryListStatus = async (input: {
+  groupBy: 'status' | 'workflowCategory';
+  status: TaskStatus;
+  task: WorkQueryBoardTask;
+}): Promise<WorkQueryListStatusResult> => {
+  if (!input.task.workflowStateId) return 'local';
+  const column = kanbanColumnForSelectableStatus(input.status);
+  if (!column) return 'local';
+  const moved = await commitWorkQueryBoardMove({
+    column,
+    groupBy: input.groupBy,
+    task: input.task,
+  });
+  return moved ? 'moved' : 'cancelled';
 };

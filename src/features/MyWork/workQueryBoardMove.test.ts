@@ -5,6 +5,7 @@ import { STATUS_KANBAN_COLUMNS } from '@/features/AgentTasks/AgentTaskList/kanba
 
 import {
   commitWorkQueryBoardMove,
+  commitWorkQueryListStatus,
   moveBoardMaybePickingState,
   storeKanbanUsesWorkflowMove,
   workQueryBoardMoveToastKey,
@@ -249,6 +250,58 @@ describe('commitWorkQueryBoardMove', () => {
       targetKey: 'paused',
       taskId: 'tsk_1',
     });
+  });
+});
+
+describe('commitWorkQueryListStatus', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.moveBoard.mockResolvedValue({ success: true });
+  });
+
+  it('sends a Linear list glyph through moveBoard instead of a local status patch', async () => {
+    await expect(
+      commitWorkQueryListStatus({
+        groupBy: 'status',
+        status: 'paused',
+        task,
+      }),
+    ).resolves.toBe('moved');
+
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'in_review',
+      taskId: 'tsk_1',
+    });
+  });
+
+  it('leaves unlinked list rows on the local task.update path', async () => {
+    await expect(
+      commitWorkQueryListStatus({
+        groupBy: 'status',
+        status: 'paused',
+        task: { ...task, workflowStateId: null },
+      }),
+    ).resolves.toBe('local');
+    expect(mocks.moveBoard).not.toHaveBeenCalled();
+  });
+
+  it('does not fall through to a local patch when the picker is cancelled', async () => {
+    mocks.moveBoard.mockRejectedValueOnce(precondition);
+    mocks.createPicker.mockResolvedValueOnce(undefined);
+
+    await expect(
+      commitWorkQueryListStatus({
+        groupBy: 'status',
+        status: 'completed',
+        task,
+      }),
+    ).resolves.toBe('cancelled');
   });
 });
 

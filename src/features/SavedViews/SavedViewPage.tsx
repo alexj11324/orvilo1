@@ -211,6 +211,9 @@ const SavedViewPage = memo(() => {
 
   const refreshView = useCallback(async () => {
     if (!viewId) return;
+    setTail([]);
+    setProjectTail([]);
+    setGroupTail([]);
     await mutate(workAttentionKeys.savedView(workspaceId, viewId));
     await mutate(workAttentionKeys.savedViews(workspaceId));
     await mutate(workAttentionKeys.favorites(workspaceId));

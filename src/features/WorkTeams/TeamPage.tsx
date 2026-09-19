@@ -356,6 +356,8 @@ const TeamPage = memo(() => {
   );
 
   const refreshTriage = useCallback(() => {
+    setTeamTail([]);
+    setTeamGroupTail([]);
     void Promise.all([
       mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
       mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout]),

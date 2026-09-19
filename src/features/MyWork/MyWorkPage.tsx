@@ -82,6 +82,7 @@ const MyWorkPage = memo(() => {
   const canSaveAs = isMyWorkSaveableMode(mode);
 
   const refresh = useCallback(async () => {
+    setGroupTail([]);
     await mutate(workAttentionKeys.myWork(workspaceId, mode, layout, noProject));
   }, [layout, mode, noProject, workspaceId]);
 
@@ -229,6 +230,7 @@ const MyWorkPage = memo(() => {
             tasks={tasks}
             total={data?.data.total}
             onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+            onMoved={() => void refresh()}
             onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
           />
         )}

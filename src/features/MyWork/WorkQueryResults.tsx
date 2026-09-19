@@ -2,7 +2,12 @@
 
 import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
-import type { WorkQueryExternalReview, WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
+import type {
+  TaskStatus,
+  WorkQueryExternalReview,
+  WorkQueryGroupBy,
+  WorkQueryLayout,
+} from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   BellOffIcon,
@@ -11,7 +16,7 @@ import {
   GitPullRequestIcon,
   ListTodoIcon,
 } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
@@ -21,6 +26,7 @@ import {
 } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
+import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
@@ -30,6 +36,7 @@ import {
   workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
+import { commitWorkQueryListStatus } from './workQueryBoardMove';
 import {
   type WorkQueryGroupPage,
   workQueryHasMore,
@@ -131,14 +138,31 @@ interface WorkQueryResultsProps {
 const WorkQueryTaskRow = memo(
   ({
     followed,
+    groupBy,
+    onMoved,
     onToggleFollow,
     task,
   }: {
     followed?: boolean;
+    groupBy: 'status' | 'workflowCategory';
+    onMoved?: () => void;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
     task: WorkQueryResultTask;
   }) => {
     const { t } = useTranslation('common');
+    const changeTaskStatus = useTaskStatusChange();
+    const handleStatusChange = useCallback(
+      async (status: TaskStatus) => {
+        const result = await commitWorkQueryListStatus({ groupBy, status, task });
+        if (result === 'cancelled') return;
+        if (result === 'local') {
+          const applied = await changeTaskStatus(task.identifier, status);
+          if (!applied) return;
+        }
+        onMoved?.();
+      },
+      [changeTaskStatus, groupBy, onMoved, task],
+    );
     // The same rich row /tasks renders — identifier, status glyph, title,
     // chips, assignee, date — instead of a second, thinner task row.
     return (
@@ -147,6 +171,7 @@ const WorkQueryTaskRow = memo(
           <AgentTaskItem
             routeScope={'global'}
             task={{ ...task, participants: task.participants ?? [] }}
+            onStatusChange={handleStatusChange}
           />
         </Flexbox>
         {onToggleFollow ? (
@@ -174,15 +199,28 @@ WorkQueryTaskRow.displayName = 'WorkQueryTaskRow';
  */
 const WorkQueryStatusGroup = memo<{
   columnKey: string;
+  groupBy: 'status' | 'workflowCategory';
   hasMore?: boolean;
   isFollowed?: (taskId: string) => boolean;
   loadMoreLabel?: string;
   onLoadMore?: () => void;
+  onMoved?: () => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
   tasks: WorkQueryResultTask[];
   total?: number;
 }>(
-  ({ columnKey, hasMore, isFollowed, loadMoreLabel, onLoadMore, onToggleFollow, tasks, total }) => {
+  ({
+    columnKey,
+    groupBy,
+    hasMore,
+    isFollowed,
+    loadMoreLabel,
+    onLoadMore,
+    onMoved,
+    onToggleFollow,
+    tasks,
+    total,
+  }) => {
     const { t } = useTranslation('chat');
     const [collapsed, setCollapsed] = useState(false);
     const visual = COLUMN_STATUS_VISUAL[columnKey];
@@ -213,8 +251,10 @@ const WorkQueryStatusGroup = memo<{
             {tasks.map((task) => (
               <WorkQueryTaskRow
                 followed={isFollowed?.(task.id)}
+                groupBy={groupBy}
                 key={task.id}
                 task={task}
+                onMoved={onMoved}
                 onToggleFollow={onToggleFollow}
               />
             ))}
@@ -365,12 +405,14 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             {listSections.map((group) => (
               <WorkQueryStatusGroup
                 columnKey={group.key}
+                groupBy={listGroupBy}
                 hasMore={pageGroupPaging ? group.hasMore : false}
                 isFollowed={isFollowed}
                 key={group.key}
                 loadMoreLabel={loadMoreLabel}
                 tasks={group.tasks}
                 total={group.total}
+                onMoved={onMoved}
                 onToggleFollow={onToggleFollow}
                 onLoadMore={
                   pageGroupPaging && onLoadMoreGroup ? () => onLoadMoreGroup(group.key) : undefined

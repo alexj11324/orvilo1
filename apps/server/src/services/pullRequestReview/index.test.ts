@@ -286,11 +286,43 @@ describe('pullRequest detail (RV01/RV05/RV06)', () => {
     expect(detail.snapshotId).toBeTruthy();
     expect(detail.threads.items[0]?.diffSide).toBe('RIGHT');
     expect(detail.threads.items[0]?.comments.items[0]?.side).toBe('RIGHT');
+    // GitHub's patch is hunk-only; the service synthesizes the file headers
+    // diff renderers require (--- a/… +++ b/…).
+    expect(detail.files.items[0]?.patch).toBe(
+      '--- a/src/app.ts\n+++ b/src/app.ts\n@@ -1,2 +1,3 @@',
+    );
     // Queued checks summarize as pending — never "passing".
     expect(detail.checks.summary.state).toBe('pending');
     expect(detail.checks.items[0]?.status).toBe('pending');
     expect(detail.files.completeness).toBe('complete');
     expect(detail.reviewSession.pendingReviewId).toBeNull();
+  });
+
+  it('keeps existing patch headers and honors renames', async () => {
+    const transport = createTransport({ PullRequestDetail: () => detailResponse() });
+    const market = createMarket([
+      {
+        additions: 1,
+        deletions: 1,
+        filename: 'src/new.ts',
+        patch: '--- a/src/old.ts\n+++ b/src/new.ts\n@@ -1 +1 @@',
+        previousFilename: 'src/old.ts',
+        status: 'renamed',
+      },
+      {
+        additions: 1,
+        deletions: 0,
+        filename: 'src/added.ts',
+        patch: '@@ -0,0 +1 @@',
+        status: 'added',
+      },
+    ]);
+    const detail = await service({ market, transport }).pullRequest(REVIEW_ID);
+
+    expect(detail.files.items[0]?.patch).toBe('--- a/src/old.ts\n+++ b/src/new.ts\n@@ -1 +1 @@');
+    expect(detail.files.items[1]?.patch).toBe(
+      '--- a/src/added.ts\n+++ b/src/added.ts\n@@ -0,0 +1 @@',
+    );
   });
 
   it('fails instead of returning an empty detail when the PR is not found', async () => {

@@ -157,13 +157,20 @@ const ReviewsPage = memo(() => {
   );
   const notConnected = isTrpcErrorCode(queue.error, 'PRECONDITION_FAILED');
   const pullRequests: QueueItem[] = useMemo(() => queue.data?.data.items ?? [], [queue.data]);
-  const queueHasMore = queue.data?.data.hasMore ?? false;
-  const queueEndCursor = queue.data?.data.endCursor ?? null;
   const queueTotal = queue.data?.data.total ?? null;
   const [queueTail, setQueueTail] = useState<QueueItem[]>([]);
   const [queueLoadingMore, setQueueLoadingMore] = useState(false);
+  // Cursor for the NEXT page — advanced by every load-more response; falls
+  // back to the first page's cursor before any tail has been fetched.
+  const [queuePaging, setQueuePaging] = useState<{
+    endCursor: string | null;
+    hasMore: boolean;
+  } | null>(null);
+  const queueHasMore = queuePaging?.hasMore ?? queue.data?.data.hasMore ?? false;
+  const queueEndCursor = queuePaging?.endCursor ?? queue.data?.data.endCursor ?? null;
   useEffect(() => {
     setQueueTail([]);
+    setQueuePaging(null);
   }, [tab, workspaceId]);
   const allPullRequests = useMemo(() => [...pullRequests, ...queueTail], [pullRequests, queueTail]);
   const loadMoreQueue = useCallback(async () => {
@@ -175,6 +182,10 @@ const ReviewsPage = memo(() => {
         ...current,
         ...((next?.data?.items as QueueItem[] | undefined) ?? []),
       ]);
+      setQueuePaging({
+        endCursor: next?.data?.endCursor ?? null,
+        hasMore: next?.data?.hasMore ?? false,
+      });
     } catch (loadError) {
       console.error('[reviews:queueMore]', loadError);
     } finally {

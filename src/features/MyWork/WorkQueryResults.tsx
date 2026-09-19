@@ -4,7 +4,13 @@ import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryExternalReview, WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { BellOffIcon, BellPlusIcon, GitPullRequestIcon, ListTodoIcon } from 'lucide-react';
+import {
+  BellOffIcon,
+  BellPlusIcon,
+  ChevronDownIcon,
+  GitPullRequestIcon,
+  ListTodoIcon,
+} from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -60,6 +66,14 @@ const styles = createStaticStyles(({ css }) => ({
 
     color: inherit;
     text-decoration: none;
+  `,
+  chevron: css`
+    flex: none;
+    color: ${cssVar.colorTextTertiary};
+    transition: transform ${cssVar.motionDurationFast};
+  `,
+  chevronCollapsed: css`
+    transform: rotate(-90deg);
   `,
   groupHeader: css`
     cursor: pointer;
@@ -175,6 +189,10 @@ const WorkQueryStatusGroup = memo<{
         type="button"
         onClick={() => setCollapsed((current) => !current)}
       >
+        <ChevronDownIcon
+          className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
+          size={14}
+        />
         {visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
         <Text fontSize={12} weight={500}>
           {labelKey ? t(labelKey as never) : columnKey}

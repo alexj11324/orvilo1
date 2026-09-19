@@ -19,17 +19,17 @@
 
 ## 仓库坐标
 
-| 项                               | 值                                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------- |
-| Repo                             | `https://github.com/alexj11324/orvilo1`                                                     |
-| 分支                             | `cursor/navigation-attention-v4-a544`                                                       |
-| PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                |
-| 实施 HEAD（本交接提交之前）      | `40cd74b3` `✨ feat(nav): show recent work in command menu and pin favorites`               |
-| Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                      |
-| 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                          |
-| 远端 canary 现已走到             | `73257dff`（#80 quota）。PR `mergeable_state: behind`。**未授权 rebase，不要自行 rebase。** |
-| Cloud agent                      | <https://cursor.com/agents/bc-c18edf00-e213-4176-9c88-d3f33b4ea544>                         |
-| 写者租约                         | 全局最多 3 writer；**本分支是唯一写者**。不要碰 `/Users/alexjiang/Desktop/vibe/orvilo1`。   |
+| 项                               | 值                                                                                                                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
+| 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
+| PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
+| 实施 HEAD（本交接提交之前）      | `4ab22fd2` `♻️ refactor(nav): keep visit recents as the only command-menu source`                                                                                                                                          |
+| Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
+| 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
+| 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
+| Cloud agent                      | <https://cursor.com/agents/bc-c18edf00-e213-4176-9c88-d3f33b4ea544>                                                                                                                                                        |
+| 写者租约                         | 全局最多 3 writer。本分支上 Cursor agent 与 Devin 都推过；**先 `git pull --rebase origin cursor/navigation-attention-v4-a544`，不要 rebase 到 canary，不要 force-push。** 不要碰 `/Users/alexjiang/Desktop/vibe/orvilo1`。 |
 
 ## 用户澄清（仍然有效）
 
@@ -72,15 +72,15 @@
 - 收藏始终可见上 / 下箭头，走 `favoriteReorder` CAS，CONFLICT 则 refetch
 - `workAttention.search` / `searchTasks` / `searchProjects` 上限 `WORK_SEARCH_MAX_PER_TYPE`（200）；CommandMenu 仍混合 5 / 带类型 50；`TeamsPage` 搜索框走 sidecar，不传 FTS `type:`
 - `NavItem` `@media (hover: none)` 强制可见 `.nav-item-actions`
-- CommandMenu 跨类型 recents：`RecentModel.queryRecent` 加 project/savedView/team 三个 union arm；`recent.getAll` 与 `RECENT_SIDEBAR_TYPES` 覆盖四类型；主面板 `RecentsCommands` 开菜单时懒拉 `recentService.getAll(8)`
-- 个人模式 CommandMenu Navigate 与 `useNavLayout` 不再露出 Teams（侧栏原先已藏）
+- CommandMenu 最近访问只走访问记录：`RecentModel.queryRecent` 的 project/savedView/team/task union；`RecentsCommands` 开菜单时懒拉 `recentService.getAll(8)`。**不要**再渲染 `workAttention.recentWork`（最近更新）第二组；该 TRPC /helper 已删
+- 个人模式（`!useActiveWorkspaceId()`）`recentTypesForWorkspace` 不含 `team`；Navigate 与 `useNavLayout` 也不再露出 Teams（侧栏原先已藏）
 - Task / Team / Project / Saved View 共用 `WorkFavoriteButton`；侧栏收藏可 unpin
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-**已全部落地。** 只剩 NICE（可后做）：NAV02 原生通知矩阵、收藏列表 overflow 折叠、CMDK 搜索 SWR key 已不含 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
+**已全部落地。** 只剩 NICE（可后做）：NAV02 原生通知矩阵、收藏列表 overflow 折叠、Home recents 轨道仍按 `RECENT_SIDEBAR_TYPES` 拉 team（个人模式 CommandMenu 已滤掉）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。
 
 ## 给下一刀
 
@@ -132,6 +132,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 本增量（Inbox 包络 / 收藏重排 / 团队搜索 / 触屏）：lint 干净，42 passed。不是 64× AC。
 - `d6560eb7`（CommandMenu 跨类型 recents + `recent.test.ts` work-type arms）：lint 干净，38 passed。不是 64× AC。
 - pin / 个人模式藏 Teams：lint 干净，`bun run check` 改动文件 55 passed。不是 64× AC。
+- `4ab22fd2`：CommandMenu 只保留访问 recents；个人模式不含 team；删 `workAttention.recentWork`。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

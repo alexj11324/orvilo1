@@ -16,8 +16,8 @@
     "Favorite title hydration and always-visible reorder UI over favoriteReorder CAS",
     "Inbox NotificationFeedPage envelope with live titles and partial Alert",
     "workAttention.search max 200, TeamsPage search box, NavItem hover:none",
-    "CommandMenu recents via RecentModel project/savedView/team/task visit feed",
-    "Personal-mode hides Teams in CommandMenu Navigate and useNavLayout",
+    "CommandMenu recents via RecentModel visit feed only; workAttention.recentWork removed",
+    "Personal-mode omits team recents and hides Teams in CommandMenu Navigate and useNavLayout",
     "Pin/unpin on task, team, project, saved view; favorites list can unpin",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
@@ -27,7 +27,7 @@
   ],
   "checkoutStartSha": "d02f13f11be08921014aa54e523ac3c23184680c",
   "constraints": [
-    "Do not rebase onto newer canary unless asked (canary has moved to 73257dff / #80)",
+    "Do not rebase onto newer canary unless asked; if Devin pushed, rebase onto origin/cursor/navigation-attention-v4-a544",
     "Do not restore custom LLM providers or /settings/provider",
     "Do not remount AgentTasks KanbanBoard",
     "Do not invent a GitHub PR-without-task store",
@@ -45,11 +45,11 @@
     "apps/server/src/services/workAttention/actionSources.ts",
     "apps/server/src/services/workAttention/feedCard.ts",
     "apps/server/src/services/workAttention/feedPage.ts",
-    "apps/server/src/services/workAttention/recentWork.ts"
+    "src/services/recent/recentTypes.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
-  "implementationHeadBeforeDocs": "40cd74b3",
+  "implementationHeadBeforeDocs": "4ab22fd2",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",
@@ -64,13 +64,14 @@
   },
   "researchSha": "d2c522fd8bf37448dccd86eacc6442a580d55cbd",
   "reviewer": null,
-  "role": "S+D+N+Q+U+V+T (one writer on this branch)",
+  "role": "S+D+N+Q+U+V+T (Cursor agent + Devin both write this branch; rebase onto the branch remote, never canary)",
   "rollbackNotes": "Feature stays behind existing workAttention/notification procedures. Do not enable production shadow dual-write. Do not restore /settings/provider.",
   "schemaVersion": 1,
   "status": "IN_PROGRESS",
   "targetBranch": "canary",
   "unverified": [
     "NAV02 Electron native notification click matrix",
+    "Home recents rail still requests team types in personal mode",
     "ACCEPTANCE.md 64 rows still NOT_RUN",
     "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"
   ],

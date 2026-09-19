@@ -303,6 +303,7 @@ export class TaskDetailSliceActionImpl {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    teamId?: string;
     visibility?: 'private' | 'public';
   }): Promise<CreatedTask | null> => {
     this.#set({ isCreatingTask: true }, false, 'createTask/start');

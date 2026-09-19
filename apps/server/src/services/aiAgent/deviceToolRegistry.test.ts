@@ -1,5 +1,4 @@
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { builtinTools } from '@orvilo/builtin-tools';
@@ -12,12 +11,11 @@ import {
 } from './deviceToolRegistry';
 
 describe('deviceToolRegistry', () => {
-  it('pins the device tool set to local-system, AUV, remote-device, and browser', () => {
+  it('pins the device tool set to local-system, AUV, and remote-device', () => {
     expect([...DEVICE_TOOL_IDENTIFIERS].sort()).toEqual(
       [
         LocalSystemManifest.identifier,
         RemoteDeviceManifest.identifier,
-        BrowserManifest.identifier,
         AuvManifest.identifier,
       ].sort(),
     );
@@ -26,7 +24,6 @@ describe('deviceToolRegistry', () => {
   it('isDeviceToolIdentifier recognises the device tools', () => {
     expect(isDeviceToolIdentifier(LocalSystemManifest.identifier)).toBe(true);
     expect(isDeviceToolIdentifier(RemoteDeviceManifest.identifier)).toBe(true);
-    expect(isDeviceToolIdentifier(BrowserManifest.identifier)).toBe(true);
     expect(isDeviceToolIdentifier(AuvManifest.identifier)).toBe(true);
     expect(isDeviceToolIdentifier('web-browsing')).toBe(false);
     expect(isDeviceToolIdentifier('')).toBe(false);

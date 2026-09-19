@@ -1,4 +1,4 @@
-import type { BrowserScreenshotState } from '../../types';
+import type { BrowserScreenshotState } from './types';
 
 /**
  * The image source for a capture, whichever shape produced it.

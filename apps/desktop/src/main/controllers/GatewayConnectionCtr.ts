@@ -21,7 +21,6 @@ import ImessageBridgeService from '@/services/imessageBridgeSrv';
 import { createLogger } from '@/utils/logger';
 import { setDesktopUserAgentHeader } from '@/utils/user-agent';
 
-import BrowserControlCtr from './BrowserControlCtr';
 import HeterogeneousAgentCtr from './HeterogeneousAgentCtr';
 import { ControllerModule, createProtocolHandler, IpcMethod } from './index';
 import LocalFileCtr from './LocalFileCtr';
@@ -34,10 +33,9 @@ const deviceProtocolHandler = createProtocolHandler('device');
 
 type AvailableRemotePlatformRuntime = Extract<RemotePlatformCommandRuntime, { available: true }>;
 
-// Mirror of `BrowserManifest.identifier` from `@orvilo/builtin-tool-browser`.
+// Mirror of `AuvManifest.identifier` from `@orvilo/builtin-tool-auv`.
 // Hardcoded (not imported) so the desktop main process keeps zero builtin-tool
 // package deps — importing one risks the @orvilo/types stub runtime leak.
-const BrowserIdentifier = 'orvilo-browser';
 const AuvIdentifier = 'orvilo-computer-use';
 const PLATFORM_CANCEL_GRACE_MS = 2000;
 const PLATFORM_CANCEL_FORCE_MS = 3000;
@@ -490,20 +488,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     args: unknown,
   ): Promise<BuiltinServerRuntimeOutput> {
     if (identifier === AuvIdentifier) return this.executeAuvToolCall(apiName, args);
-
-    // Browser is a renderer-resident tool: forward to the client executor via
-    // BrowserControlCtr instead of the local-system apiName switch below.
-    if (identifier === BrowserIdentifier) {
-      const result = await this.app
-        .getController(BrowserControlCtr)
-        .runGatewayToolCall(apiName, (args ?? {}) as Record<string, unknown>);
-      return {
-        content: result.content ?? '',
-        error: result.error,
-        state: result.state,
-        success: result.success,
-      };
-    }
 
     // Local-system tools: one dispatch through the shared runtime entry, which
     // owns legacy alias normalization and IPC field mapping. The server runtime

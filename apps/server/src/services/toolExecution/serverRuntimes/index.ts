@@ -34,7 +34,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-agent-documents': async () => (await import('./agentDocuments')).agentDocumentsRuntime,
   'orvilo-agent-management': async () => (await import('./agentManagement')).agentManagementRuntime,
   'orvilo-brief': async () => (await import('./brief')).briefRuntime,
-  'orvilo-browser': async () => (await import('./browser')).browserRuntime,
   'orvilo-calculator': async () => (await import('./calculator')).calculatorRuntime,
   'orvilo-cloud-sandbox': async () => (await import('./cloudSandbox')).cloudSandboxRuntime,
   'orvilo-computer-use': async () => (await import('./auv')).auvRuntime,

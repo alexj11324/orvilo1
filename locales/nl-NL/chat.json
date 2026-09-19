@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Herladen",
   "workingPanel.browser.actions.stop": "Stoppen met laden",
   "workingPanel.browser.addressPlaceholder": "Zoeken of adres invoeren",
-  "workingPanel.browser.agentControlling": "Agent gebruikt de browser",
-  "workingPanel.browser.agentCursor": "Agent",
   "workingPanel.browser.context.elementAdded": "Element toegevoegd aan chatcontext",
   "workingPanel.browser.context.elementTitle": "Element",
   "workingPanel.browser.context.failed": "Kan elementcontext niet toevoegen",

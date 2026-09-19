@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "새로 고침",
   "workingPanel.browser.actions.stop": "로딩 중지",
   "workingPanel.browser.addressPlaceholder": "주소를 입력하거나 검색",
-  "workingPanel.browser.agentControlling": "에이전트가 브라우저를 사용 중입니다",
-  "workingPanel.browser.agentCursor": "에이전트",
   "workingPanel.browser.context.elementAdded": "요소가 채팅 컨텍스트에 추가되었습니다",
   "workingPanel.browser.context.elementTitle": "요소",
   "workingPanel.browser.context.failed": "요소 컨텍스트를 추가할 수 없습니다",

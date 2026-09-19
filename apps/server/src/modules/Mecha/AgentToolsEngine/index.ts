@@ -10,7 +10,6 @@
  * - No dependency on frontend stores (useToolStore, useAgentStore, etc.)
  */
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
@@ -322,13 +321,6 @@ export const createServerAgentToolsEngine = (
     // `canUseDevice=false` turns.
     [LocalSystemManifest.identifier]:
       !disableLocalSystem &&
-      runtimeMode === 'local' &&
-      hasDeviceProxy &&
-      !!deviceContext?.deviceOnline &&
-      !!deviceContext?.autoActivated,
-    // Browser drives the device's in-app browser — same device gate as
-    // local-system: local runtime routed to an online, auto-activated device.
-    [BrowserManifest.identifier]:
       runtimeMode === 'local' &&
       hasDeviceProxy &&
       !!deviceContext?.deviceOnline &&

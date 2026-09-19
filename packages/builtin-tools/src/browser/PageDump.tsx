@@ -4,7 +4,7 @@ import { Highlighter } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import type { BrowserReadPageState, BrowserSnapshotState } from '../../types';
+import type { BrowserReadPageState, BrowserSnapshotState } from './types';
 
 type BrowserPageDumpState = BrowserReadPageState | BrowserSnapshotState;
 

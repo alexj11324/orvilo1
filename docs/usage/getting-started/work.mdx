@@ -2,8 +2,8 @@
 title: Inbox and My Work
 description: >-
   Find what needs a decision, the work assigned to you, saved views, and team
-  triage. The sidebar is Inbox, My Work, and Reviews, with Workspace and Teams
-  as sections.
+  triage. The sidebar is Inbox, My Work, Reviews, and Agent, with Workspace
+  and Teams as sections.
 tags:
   - Inbox
   - My Work
@@ -15,7 +15,7 @@ tags:
 
 # Inbox and My Work
 
-The left sidebar is a fixed personal work surface: **Inbox**, **My Work**, and **Reviews**, then **Workspace**, **Teams**, **Favorites**, and **Agents**. They are not a second notification product.
+The left sidebar is a fixed personal work surface: **Inbox**, **My Work**, **Reviews**, and **Agent**, then **Workspace**, **Teams**, and **Favorites**. They are not a second notification product.
 
 The same tasks and approvals show up here. Opening Inbox does not create a parallel queue, and My Work does not replace the Tasks list you still use to create and schedule work.
 
@@ -26,8 +26,9 @@ The same tasks and approvals show up here. Opening Inbox does not create a paral
 | **Inbox**     | Decide on approvals, transfers, and agent prompts. Scan later activity.                                                                                         |
 | **My Work**   | Lists of work assigned to you, delegated by you, waiting on your review, created by you, or subscribed.                                                         |
 | **Reviews**   | The To-review tab of My Work (`/my-work?tab=review`).                                                                                                           |
+| **Agent**     | Opens `/agents`. A first-level row, not an accordion.                                                                                                           |
 | **Workspace** | Projects, Views, Members, and More (Automations, Resource, workspace settings).                                                                                 |
-| **Teams**     | Workspace teams, triage, and that team's work. Hidden when you are in personal (no-workspace) mode.                                                             |
+| **Teams**     | Workspace teams you have joined, plus that team's work. Hidden when you are in personal (no-workspace) mode.                                                    |
 | **Tasks**     | Create, assign, and schedule tasks. Reachable as `/tasks` and from My Work / Views — not a first-level sidebar item. The header search row also creates a task. |
 
 Click the bell or **Inbox** in the sidebar to open `/inbox`. Native desktop notification clicks open the same Inbox. Chat Home is still the conversation summary — it is not this work inbox.
@@ -48,7 +49,7 @@ Open a card to preview it. Depending on the source you may see:
 - **Send reply** — give an agent the extra input it asked for.
 - **Open** — jump to the task, or to an allowlisted GitHub / Linear URL.
 
-**Archive**, **Snooze 4 hours**, and **Mark unread** live on the card's **More actions** menu. Snoozing hides the item for four hours; newer activity on the same item brings it back and does not extend any source deadline.
+**Archive**, **Snooze**, and **Mark unread** live on the card's **More actions** menu. Snooze offers **1 hour**, **Later today** (18:00), **Tomorrow** (09:00), and **Next week** (Monday 09:00). Newer activity on the same item brings it back and does not extend any source deadline.
 
 **Mark all as read** and **Archive all** apply to the current tab and filter. Archive all can clear ordinary activity; it does not make a pending Needs-you request disappear or change the underlying task.
 
@@ -114,16 +115,16 @@ Pin a view with the favorite control on the view page. Use **Save as** on an exi
 
 **Teams** is a workspace surface. In personal mode the sidebar hides it, Command Menu recents and work search omit teams, and the Teams page asks you to switch to a workspace.
 
-In a workspace, search the team list and open a team. The team page has:
+In a workspace, the sidebar **Your teams** list is teams you have joined. Public teams you have not joined stay on the `/teams` directory. Search that directory and open a team. The team page has:
 
-- **Triage** — inbound work waiting for a human. **Accept** and **Decline** stay on the row. **Mark duplicate**, **Reassign**, and **Move to team** live under **More actions**. Accepting triage keeps the task on the team; it does not start an Agent run by itself.
+- **Triage** — inbound work waiting for a human. Shown only when the team allows triage. **Accept** and **Decline** stay on the row. **Mark duplicate**, **Reassign**, and **Move to team** live under **More actions**. Accepting triage keeps the task on the team; it does not start an Agent run by itself.
 - **Team work** — the team's current tasks, as a list or a board (the same Kanban as Tasks, filled from the team's query), with the same **No project** chip as My Work.
 
 If the team already has cycles, a **Cycle** filter is available. There is no separate Cycles manager in this increment.
 
 Linear-linked issues must be moved between teams in Linear. Orvilo will tell you that instead of rewriting the external issue.
 
-Private teams you are not a member of do not appear in the list, search, or Command Menu.
+Private teams you are not a member of do not appear in the sidebar, the directory, search, or Command Menu. Guessing a private team's URL does not reveal that it exists.
 
 ## Recents and Favorites
 

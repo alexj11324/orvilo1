@@ -1,7 +1,7 @@
 ---
 title: Inbox 与 My Work
 description: >-
-  找到需要你拍板的事项、指派给你的工作、已保存的视图，以及团队分诊。侧栏一级是 Inbox、My Work 和 Reviews，Workspace 与 Teams 是分区。
+  找到需要你拍板的事项、指派给你的工作、已保存的视图，以及团队分诊。侧栏一级是 Inbox、My Work、Reviews 和 Agent，Workspace 与 Teams 是分区。
 tags:
   - Inbox
   - My Work
@@ -13,7 +13,7 @@ tags:
 
 # Inbox 与 My Work
 
-左侧栏是固定的个人工作面：**Inbox**、**My Work**、**Reviews**，然后是 **Workspace**、**Teams**、**Favorites** 和 **Agents**。它们不是第二套通知产品。
+左侧栏是固定的个人工作面：**Inbox**、**My Work**、**Reviews** 和 **Agent**，然后是 **Workspace**、**Teams** 和 **Favorites**。它们不是第二套通知产品。
 
 出现在这里的仍是同一批任务和审批。打开 Inbox 不会另开一条队列；My Work 也不会取代你用来创建和调度任务的 Tasks 列表。
 
@@ -24,8 +24,9 @@ tags:
 | **Inbox**     | 处理审批、转移和 Agent 追问；浏览后续动态。                                   |
 | **My Work**   | 指派给你、由你委派、等你审核、由你创建、或你订阅的工作列表。                              |
 | **Reviews**   | My Work 的待审核标签（`/my-work?tab=review`）。                      |
+| **Agent**     | 打开 `/agents`。一级行，不是手风琴。                                     |
 | **Workspace** | Projects、Views、Members，以及 More（Automations、Resource、工作区设置）。 |
-| **Teams**     | 工作区团队、分诊和该团队的工作。个人模式（无工作区）下会隐藏。                             |
+| **Teams**     | 你已加入的工作区团队，以及该团队的工作。个人模式（无工作区）下会隐藏。                         |
 | **Tasks**     | 创建、指派和调度任务。从 `/tasks`、My Work / Views 进入，不是一级侧栏。搜索行也有新建任务。  |
 
 点侧栏的 **Inbox** 或铃铛都会打开 `/inbox`。桌面端系统通知的点击也进入同一个 Inbox。聊天首页仍是对话摘要，不是这个工作收件箱。
@@ -46,7 +47,7 @@ Inbox 有两个标签：
 - **Send reply** —— 把 Agent 要的补充信息发回去。
 - **Open** —— 跳到任务，或打开白名单内的 GitHub / Linear 链接。
 
-**Archive**、**Snooze 4 hours**、**Mark unread** 在卡片的 **More actions** 菜单里。延后四小时隐藏；同一条有更新会重新出现，且不会延长来源的截止时间。
+**Archive**、**Snooze**、**Mark unread** 在卡片的 **More actions** 菜单里。延后可选 **1 hour**、**Later today**（当天 18:00）、**Tomorrow**（次日 09:00）、**Next week**（下周一 09:00）。同一条有更新会重新出现，且不会延长来源的截止时间。
 
 **Mark all as read** 和 **Archive all** 作用于当前标签和筛选。Archive all 可以清掉普通动态，但不会让尚未决定的 Needs-you 请求消失，也不会改任务状态。
 
@@ -112,16 +113,16 @@ Inbox 有两个标签：
 
 **Teams** 是工作区表面。个人模式下侧栏会藏起它，命令菜单的最近访问和工作搜索也不含团队，Teams 页会提示你切换到工作区。
 
-在工作区里可以搜索团队列表并打开某个团队。团队页包含：
+在工作区里，侧栏 **Your teams** 只列出你已加入的团队。还没加入的公开团队仍在 `/teams` 目录里。可以在目录里搜索并打开某个团队。团队页包含：
 
-- **Triage** —— 等人处理的进线。行上保留 **Accept** / **Decline**。**Mark duplicate**、**Reassign** 和 **Move to team** 放在 **更多分诊操作** 里。接受分诊只是把任务留在团队里，不会因此启动一次 Agent 运行。
+- **Triage** —— 等人处理的进线。只有团队允许分诊时才显示。行上保留 **Accept** / **Decline**。**Mark duplicate**、**Reassign** 和 **Move to team** 放在 **更多分诊操作** 里。接受分诊只是把任务留在团队里，不会因此启动一次 Agent 运行。
 - **Team work** —— 该团队当前任务，列表或看板（和 Tasks 同一套 Kanban，数据来自团队查询），以及和 My Work 一样的 **No project**。
 
 如果团队已经有 cycle，可以用 **Cycle** 筛选。这一版没有单独的 Cycles 管理页。
 
 关联了 Linear 的 issue 要在 Linear 里跨团队移动。Orvilo 会这样提示，而不是改写外部 issue。
 
-你不是成员的私密团队不会出现在列表、搜索或命令菜单里。
+你不是成员的私密团队不会出现在侧栏、目录、搜索或命令菜单里。猜私密团队的 URL 也不会暴露它是否存在。
 
 ## Recents 与 Favorites
 

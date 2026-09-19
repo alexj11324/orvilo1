@@ -3,8 +3,10 @@
  *
  * Step definitions for Home page Agent Group management E2E tests
  * - Rename
- * - Pin/Unpin
  * - Delete
+ *
+ * The per-group sidebar pin/show-hide scenarios were removed with the fixed
+ * sidebar IA (sidebarContract.ts) — see the matching feature file comment.
  */
 import { randomBytes } from 'node:crypto';
 
@@ -14,6 +16,30 @@ import { expect } from '@playwright/test';
 import { TEST_USER } from '../../support/seedTestUser';
 import type { CustomWorld } from '../../support/world';
 import { WAIT_TIMEOUT } from '../../support/world';
+
+type DbClient = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
+};
+
+/**
+ * Resolve the signed-in test user's auto-provisioned workspace — see
+ * sidebarAgent.steps.ts for why fixtures must file into the workspace.
+ */
+async function getTestWorkspaceId(client: DbClient): Promise<string> {
+  const { rows } = await client.query(
+    `SELECT workspace_id FROM workspace_members
+     WHERE user_id = $1 AND deleted_at IS NULL
+     ORDER BY joined_at LIMIT 1`,
+    [TEST_USER.id],
+  );
+  const workspaceId = rows[0]?.workspace_id as string | undefined;
+  if (!workspaceId) {
+    throw new Error(
+      `no workspace membership for ${TEST_USER.id} — workspace was not provisioned before seeding`,
+    );
+  }
+  return workspaceId;
+}
 
 /**
  * Create a test chat group directly in database
@@ -30,12 +56,13 @@ async function createTestGroup(title: string = 'Test Group'): Promise<string> {
 
     const now = new Date().toISOString();
     const groupId = `group_e2e_test_${randomBytes(6).toString('hex')}`;
+    const workspaceId = await getTestWorkspaceId(client);
 
     await client.query(
-      `INSERT INTO chat_groups (id, title, user_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $4)
+      `INSERT INTO chat_groups (id, title, user_id, workspace_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT DO NOTHING`,
-      [groupId, title, TEST_USER.id, now],
+      [groupId, title, TEST_USER.id, workspaceId, now, now],
     );
 
     console.log(`   📍 Created test group in DB: ${groupId}`);
@@ -93,79 +120,6 @@ Given('用户在 Agents 页面有一个 Agent Group', async function (this: Cust
   console.log(`   ✅ 找到 Agent Group: ${groupLabel}, id: ${groupId}`);
 });
 
-Given('该 Agent Group 未显示在侧边栏', { timeout: 30_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 检查 Agent Group 未显示在侧边栏...');
-  const inSidebar = this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .first();
-
-  if ((await inSidebar.count()) > 0) {
-    console.log('   📍 Agent Group 已在侧边栏，开始隐藏操作...');
-    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
-    await targetItem.hover();
-    await this.page.waitForTimeout(200);
-    await targetItem.click({ button: 'right', force: true });
-    await this.page.waitForTimeout(500);
-    const hideOption = this.page.getByRole('menuitem', {
-      name: /在我的侧边栏隐藏|hide from my sidebar/i,
-    });
-    await hideOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      console.log('   ⚠️ 隐藏选项未找到');
-    });
-    if ((await hideOption.count()) > 0) {
-      await hideOption.click();
-      await this.page.waitForTimeout(800);
-    }
-    // Close menu if still open
-    await this.page.keyboard.press('Escape');
-    await this.page.waitForTimeout(300);
-  }
-
-  const stillVisible = await this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .count();
-  console.log(`   ✅ Agent Group 未显示在侧边栏 (inSidebar=${stillVisible})`);
-});
-
-Given('该 Agent Group 已显示在侧边栏', { timeout: 30_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 确保 Agent Group 已显示在侧边栏...');
-  const inSidebar = this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .first();
-
-  if ((await inSidebar.count()) === 0) {
-    console.log('   📍 Agent Group 未在侧边栏，开始显示操作...');
-    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
-    await targetItem.hover();
-    await this.page.waitForTimeout(200);
-    await targetItem.click({ button: 'right', force: true });
-    await this.page.waitForTimeout(500);
-
-    const menuItems = await this.page.locator('[role="menuitem"]').count();
-    console.log(`   📍 Debug: 发现 ${menuItems} 个菜单项`);
-
-    const showOption = this.page.getByRole('menuitem', {
-      name: /在我的侧边栏显示|show in my sidebar/i,
-    });
-    await showOption.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-      console.log('   ⚠️ 显示选项未找到');
-    });
-    if ((await showOption.count()) > 0) {
-      await showOption.click();
-      await this.page.waitForTimeout(800);
-      console.log('   ✅ 已点击显示选项');
-    }
-    // Close menu if still open
-    await this.page.keyboard.press('Escape');
-    await this.page.waitForTimeout(300);
-  }
-
-  const isVisible = await this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .count();
-  console.log(`   ✅ Agent Group 已显示在侧边栏: ${isVisible > 0}`);
-});
-
 // ============================================
 // When Steps
 // ============================================
@@ -208,30 +162,6 @@ When('用户悬停在该 Agent Group 上', async function (this: CustomWorld) {
 // ============================================
 // Then Steps
 // ============================================
-
-Then('Agent Group 应该显示在侧边栏分组中', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证 Agent Group 显示在侧边栏分组中...');
-
-  await this.page.waitForTimeout(500);
-  const sectionItem = this.page
-    .locator(`[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`)
-    .first();
-  await expect(sectionItem).toBeVisible({ timeout: 5000 });
-
-  console.log('   ✅ Agent Group 已显示在侧边栏分组中');
-});
-
-Then('Agent Group 不应该显示在侧边栏分组中', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证 Agent Group 不在侧边栏分组中...');
-
-  await this.page.waitForTimeout(500);
-  const sectionItem = this.page.locator(
-    `[data-testid="sidebar-agents-section"] ${this.testContext.targetItemSelector}`,
-  );
-  await expect(sectionItem).not.toBeVisible({ timeout: 5000 });
-
-  console.log('   ✅ Agent Group 不在侧边栏分组中');
-});
 
 Then('Agent Group 应该从列表中移除', async function (this: CustomWorld) {
   console.log('   📍 Step: 验证 Agent Group 已移除...');

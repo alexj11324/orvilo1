@@ -2070,6 +2070,7 @@ export class LinearSyncWorker {
         processed: 0,
       };
     }
+    const claim = this.scopeImportClaim(claimed);
 
     try {
       const phase = claimed.importPhase ?? 'teams';
@@ -2088,11 +2089,11 @@ export class LinearSyncWorker {
       };
 
       if (phase === 'teams' || phase === 'workflow_states') {
-        await this.importScopeTeams(provider, claimed, installation);
+        await this.importScopeTeams(provider, claimed, installation, claim);
         return { ...result, phase: 'projects' };
       }
       if (phase === 'projects') {
-        await this.importScopeProjects(provider, claimed, installation);
+        await this.importScopeProjects(provider, claimed, installation, claim);
         return { ...result, phase: 'issues' };
       }
       if (phase === 'issues' || phase === 'reconciliation' || phase === 'relations') {
@@ -2102,6 +2103,7 @@ export class LinearSyncWorker {
           installation,
           limit,
           phase === 'issues' ? 'initial' : 'reconciliation',
+          claim,
         );
         return {
           ...result,
@@ -2115,11 +2117,19 @@ export class LinearSyncWorker {
       }
       return { ...result, completed: true, phase: 'completed' };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await this.model.updateScopeImportState(scope.id, {
-        lastError: message.slice(0, 2_000),
-        status: error instanceof LinearRemoteAuthError ? 'paused' : 'failed',
-      });
+      // A stale worker must not stamp its failure over the new owner's run —
+      // the error state is committed only while this claim still holds.
+      if (!(error instanceof LinearSyncLeaseLostError)) {
+        const message = error instanceof Error ? error.message : String(error);
+        try {
+          await this.commitScopeImport(scope.id, claim, {
+            lastError: message.slice(0, 2_000),
+            status: error instanceof LinearRemoteAuthError ? 'paused' : 'failed',
+          });
+        } catch (commitError) {
+          if (!(commitError instanceof LinearSyncLeaseLostError)) throw commitError;
+        }
+      }
       throw error;
     } finally {
       await this.model.releaseScopeImport({
@@ -2130,11 +2140,67 @@ export class LinearSyncWorker {
     }
   }
 
+  /**
+   * The fencing contract every progress commit re-verifies against the row.
+   * `leaseDeadlineMs` tracks the lease the claim observed (and each renewal
+   * refreshes) so `renewScopeImport` can skip the write while half the lock
+   * window still remains.
+   */
+  private scopeImportClaim(scope: {
+    importRunId: string | null;
+    leaseFence: number;
+    lockedUntil: Date | null;
+    scopeRevision: number;
+  }) {
+    return {
+      fence: scope.leaseFence,
+      importRunId: scope.importRunId,
+      leaseDeadlineMs: scope.lockedUntil?.getTime() ?? 0,
+      owner: this.leaseOwner,
+      scopeRevision: scope.scopeRevision,
+    };
+  }
+
+  /**
+   * Keep the claim's lease ahead of long-running phase work. No-ops until
+   * half the lock window has elapsed, then issues the same fenced
+   * conditional write commits use — a missed renewal is a lease loss, not a
+   * silent success. Without this the fixed 60s lease can expire mid-phase,
+   * and the owner's own progress commit then gets rejected on
+   * `lockedUntil > now()` even though no replacement exists.
+   */
+  private async renewScopeImport(
+    scopeId: string,
+    claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
+  ) {
+    if (Date.now() < claim.leaseDeadlineMs - LINEAR_SYNC_DEFAULT_LEASE_MS / 2) return;
+    const renewed = await this.model.renewScopeImportLease(scopeId, claim);
+    if (!renewed?.lockedUntil) throw new LinearSyncLeaseLostError();
+    claim.leaseDeadlineMs = renewed.lockedUntil.getTime();
+  }
+
+  /**
+   * Commit import progress under the active claim. The update's WHERE still
+   * matches owner/fence/run/revision and a live lease — a commit that no
+   * longer holds is a lease loss, not a silent success.
+   */
+  private async commitScopeImport(
+    scopeId: string,
+    claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
+    patch: Parameters<LinearSyncModel['updateScopeImportState']>[1],
+  ) {
+    await this.renewScopeImport(scopeId, claim);
+    const row = await this.model.updateScopeImportState(scopeId, patch, claim);
+    if (!row) throw new LinearSyncLeaseLostError();
+    return row;
+  }
+
   /** Teams phase: link every approved remote team and mirror its states. */
   private async importScopeTeams(
     provider: LinearIssueProvider,
     scope: NonNullable<Awaited<ReturnType<LinearSyncModel['findScopeById']>>>,
     installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
+    claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
   ) {
     const remoteTeams = await provider.listTeams();
     const settings = scope.settings ?? {};
@@ -2147,6 +2213,10 @@ export class LinearSyncWorker {
     const teamModel = installer ? new TeamModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
     for (const remote of linkable) {
+      // Team work is unbounded — remote lookups, workflow-state mirrors, link
+      // upserts — so the lease must be renewed ahead of each unit or the
+      // closing progress commit would fail on an expired `lockedUntil`.
+      await this.renewScopeImport(scope.id, claim);
       const existingLink = await this.model.findTeamLinkByLinearTeamId(remote.id);
       let localTeamId = existingLink?.teamId;
       if (!localTeamId && teamModel) {
@@ -2225,7 +2295,7 @@ export class LinearSyncWorker {
       }
     });
 
-    await this.model.updateScopeImportState(scope.id, {
+    await this.commitScopeImport(scope.id, claim, {
       importPhase: 'projects',
       teamsLinked: linked,
     });
@@ -2236,6 +2306,7 @@ export class LinearSyncWorker {
     provider: LinearIssueProvider,
     scope: NonNullable<Awaited<ReturnType<LinearSyncModel['findScopeById']>>>,
     installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
+    claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
   ) {
     const remoteProjects = await provider.listProjects();
     const approved = scope.settings?.approvedTeamIds;
@@ -2259,6 +2330,7 @@ export class LinearSyncWorker {
     const projectModel = installer ? new ProjectModel(this.db, installer, this.workspaceId) : null;
     let linked = 0;
     for (const remote of eligible) {
+      await this.renewScopeImport(scope.id, claim);
       const allowedTeamIds = remote.teamIds.filter((teamId) => teamLinks.has(teamId));
       // A project whose only teams were filtered out must not create an empty
       // binding. Keeping it pending would make every continuation retry the
@@ -2289,7 +2361,7 @@ export class LinearSyncWorker {
       linked += 1;
     }
 
-    await this.model.updateScopeImportState(scope.id, {
+    await this.commitScopeImport(scope.id, claim, {
       importPhase: 'issues',
       projectsLinked: linked,
     });
@@ -2348,6 +2420,7 @@ export class LinearSyncWorker {
     installation: NonNullable<Awaited<ReturnType<LinearSyncModel['findInstallationById']>>>,
     limit: number,
     sweep: 'initial' | 'reconciliation',
+    claim: ReturnType<LinearSyncWorker['scopeImportClaim']>,
   ) {
     const result = {
       completed: false,
@@ -2367,20 +2440,28 @@ export class LinearSyncWorker {
       if (sweep === 'initial') {
         // Fresh cursor map: a second sweep catches issues that changed while
         // the first pass was running.
-        await this.model.updateScopeImportState(scope.id, {
+        await this.commitScopeImport(scope.id, claim, {
           cursors: { issuesByTeam: {} },
           importPhase: 'reconciliation',
         });
         return { ...result, phase: 'reconciliation' };
       }
+      await this.renewScopeImport(scope.id, claim);
       await this.model.transaction(async (model) => {
-        await model.updateScopeImportState(scope.id, {
-          cursors: { issuesByTeam: {} },
-          importCompletedAt: new Date(),
-          importPhase: 'completed',
-          lastError: null,
-          status: 'active',
-        });
+        // The completion write and its event must commit under the same
+        // claim — a stale worker must never mark another owner's run done.
+        const completed = await model.updateScopeImportState(
+          scope.id,
+          {
+            cursors: { issuesByTeam: {} },
+            importCompletedAt: new Date(),
+            importPhase: 'completed',
+            lastError: null,
+            status: 'active',
+          },
+          claim,
+        );
+        if (!completed) throw new LinearSyncLeaseLostError();
         await model.recordDomainEvent({
           idempotencyKey: `linear:import-completed:${scope.id}:${scope.importRunId ?? ''}`,
           payload: {
@@ -2411,6 +2492,10 @@ export class LinearSyncWorker {
     let pageBlocked = false;
     const seenIssueIds = new Set<string>();
     for (const issue of page.issues) {
+      // Per-issue remote fetches can stretch a bounded page past the lock
+      // window — renew before each unit so the closing cursor commit still
+      // owns the lease.
+      await this.renewScopeImport(scope.id, claim);
       if (seenIssueIds.has(issue.id)) continue;
       seenIssueIds.add(issue.id);
       if (scope.settings?.includeProjectlessIssues === false && !issue.projectId) continue;
@@ -2450,7 +2535,7 @@ export class LinearSyncWorker {
     if (!pageBlocked) {
       issuesByTeam[pending.linearTeamId] = page.hasNextPage ? page.endCursor : null;
     }
-    await this.model.updateScopeImportState(scope.id, {
+    await this.commitScopeImport(scope.id, claim, {
       cursors: { issuesByTeam },
       issuesFailed: scope.issuesFailed + result.failed,
       issuesImported: scope.issuesImported + result.imported,

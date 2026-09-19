@@ -9,6 +9,11 @@ interface AgentRun {
 
 const runs = new Map<string, AgentRun>();
 
+/** Live/observed run this process spawned — identity is certain without a pid probe. */
+export function getAgentRun(operationId: string) {
+  return runs.get(operationId);
+}
+
 /** Gateway-dispatched wrappers must be reachable by the same operation's stop request. */
 export function registerAgentRun(operationId: string, child: ChildProcess) {
   const run: AgentRun = {

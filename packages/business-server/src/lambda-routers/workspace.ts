@@ -82,6 +82,10 @@ export const workspaceRouter = router({
       z.object({
         avatar: z.string().optional(),
         description: z.string().max(1000).optional(),
+        // Idempotency key: onboarding checkpoints this id before calling, so
+        // a retried create targets the same row instead of relying on an
+        // uncorrelated slug match to find a lost response.
+        id: z.string().min(1).max(64).optional(),
         name: z.string().min(1).max(255),
         slug: workspaceSlugSchema,
       }),

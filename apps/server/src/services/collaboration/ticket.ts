@@ -66,6 +66,7 @@ export const signRoomTicket = async (
   const token = await new SignJWT({
     actor: claims.actor,
     ...(claims.authzVersion !== undefined ? { authz_version: claims.authzVersion } : {}),
+    ...(claims.projectId !== undefined ? { project_id: claims.projectId } : {}),
     purpose: COLLABORATION_TICKET_PURPOSE,
     room: claims.room,
     workspace_id: claims.workspaceId,
@@ -116,6 +117,7 @@ export const verifyRoomTicket = async (token: string): Promise<VerifiedRoomTicke
       typeof payload.workspace_id !== 'string' ||
       !isActor(payload.actor) ||
       (payload.authz_version !== undefined && typeof payload.authz_version !== 'number') ||
+      (payload.project_id !== undefined && typeof payload.project_id !== 'string') ||
       typeof payload.jti !== 'string' ||
       typeof payload.exp !== 'number'
     ) {
@@ -136,6 +138,7 @@ export const verifyRoomTicket = async (token: string): Promise<VerifiedRoomTicke
       authzVersion: payload.authz_version as number | undefined,
       connectionKey: payload.jti,
       expiresAt: payload.exp * 1000,
+      projectId: payload.project_id as string | undefined,
       room: payload.room,
       userId: payload.sub,
       workspaceId: payload.workspace_id,

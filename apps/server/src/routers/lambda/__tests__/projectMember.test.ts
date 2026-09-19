@@ -38,6 +38,7 @@ const { memberModel, projectMemberModel, queries, audit } = vi.hoisted(() => ({
     listMembersWithProfiles: vi.fn(),
     listOpenAssignedTaskTitles: vi.fn(),
     lockMembershipForUpdate: vi.fn(),
+    lockProjectMembershipForUpdate: vi.fn(),
     lockWorkspaceForUpdate: vi.fn(),
     reassignOpenAssignedTasks: vi.fn(),
   },
@@ -111,12 +112,37 @@ const activeTarget = (role = 'member') => ({
   userId: 'u-target',
 });
 
+/**
+ * Writes re-resolve the caller inside the transaction: the locked workspace
+ * membership row supplies the authoritative workspace role and the locked
+ * project_members row the project role — `ctx.workspaceRole` is never trusted.
+ */
+const mockCallerAccess = (
+  workspaceRole: 'admin' | 'member' | 'owner' | 'viewer' | null,
+  projectRole: string | null,
+  overrides: { callerDeleted?: boolean; callerSuspended?: boolean } = {},
+) => {
+  queries.lockMembershipForUpdate.mockResolvedValue(
+    workspaceRole === null
+      ? undefined
+      : {
+          deletedAt: overrides.callerDeleted ? new Date() : null,
+          role: workspaceRole,
+          suspendedAt: overrides.callerSuspended ? new Date() : null,
+        },
+  );
+  queries.lockProjectMembershipForUpdate.mockResolvedValue(
+    projectRole === null ? undefined : { deletedAt: null, role: projectRole, suspendedAt: null },
+  );
+};
+
 describe('projectMemberRouter.add', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fakeDb.transaction = vi.fn(async (cb: any) => cb(fakeDb));
     queries.findProjectsByIds.mockResolvedValue([workspaceProject]);
     // Caller holds 'manager' on the project — enough for a plain member.
+    mockCallerAccess('member', 'manager');
     projectMemberModel.getRole.mockResolvedValue('manager');
     projectMemberModel.add.mockResolvedValue({});
     memberModel.getMember.mockResolvedValue(activeTarget());
@@ -146,8 +172,8 @@ describe('projectMemberRouter.add', () => {
     );
   });
 
-  it('lets a workspace admin add regardless of project role', async () => {
-    projectMemberModel.getRole.mockResolvedValue(null);
+  it('lets a workspace admin add on a public project regardless of project role', async () => {
+    mockCallerAccess('admin', null);
     const result = await createCaller('admin').add({
       projectId: 'proj-1',
       role: 'manager',
@@ -157,6 +183,7 @@ describe('projectMemberRouter.add', () => {
   });
 
   it('caps the granted role at commenter for workspace viewers', async () => {
+    mockCallerAccess('admin', null);
     memberModel.getMember.mockResolvedValue(activeTarget('viewer'));
 
     const result = await createCaller('admin').add({
@@ -172,7 +199,7 @@ describe('projectMemberRouter.add', () => {
   });
 
   it('denies a plain member who is not the project manager', async () => {
-    projectMemberModel.getRole.mockResolvedValue('contributor');
+    mockCallerAccess('member', 'contributor');
 
     await expect(
       createCaller('member').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
@@ -181,7 +208,7 @@ describe('projectMemberRouter.add', () => {
   });
 
   it('denies a workspace viewer even with a project manager row', async () => {
-    projectMemberModel.getRole.mockResolvedValue('manager');
+    mockCallerAccess('viewer', 'manager');
 
     await expect(
       createCaller('viewer').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
@@ -189,6 +216,7 @@ describe('projectMemberRouter.add', () => {
   });
 
   it('rejects targets that are not active workspace members', async () => {
+    mockCallerAccess('admin', null);
     memberModel.getMember.mockResolvedValue(undefined);
 
     await expect(
@@ -197,6 +225,7 @@ describe('projectMemberRouter.add', () => {
   });
 
   it('rejects suspended workspace members as targets', async () => {
+    mockCallerAccess('admin', null);
     memberModel.getMember.mockResolvedValue({ ...activeTarget(), suspendedAt: new Date() });
 
     await expect(
@@ -211,6 +240,49 @@ describe('projectMemberRouter.add', () => {
       createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
+
+  it('denies a suspended caller even when ctx still carries admin', async () => {
+    mockCallerAccess('admin', null, { callerSuspended: true });
+
+    await expect(
+      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(projectMemberModel.add).not.toHaveBeenCalled();
+    expect(audit.recordAudit).not.toHaveBeenCalled();
+  });
+
+  it('denies a caller whose membership row is deleted', async () => {
+    mockCallerAccess('admin', null, { callerDeleted: true });
+
+    await expect(
+      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(projectMemberModel.add).not.toHaveBeenCalled();
+  });
+
+  it('hides a private project from a workspace admin with no grant', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    mockCallerAccess('admin', null);
+
+    await expect(
+      createCaller('admin').add({ projectId: 'proj-1', role: 'manager', userId: 'u-target' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(projectMemberModel.add).not.toHaveBeenCalled();
+    expect(audit.recordAudit).not.toHaveBeenCalled();
+    expect(audit.emitWorkspaceEvent).not.toHaveBeenCalled();
+  });
+
+  it('lets a granted project member who is also a workspace admin manage a private project', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    mockCallerAccess('admin', 'viewer');
+
+    const result = await createCaller('admin').add({
+      projectId: 'proj-1',
+      role: 'contributor',
+      userId: 'u-target',
+    });
+    expect(result).toEqual({ added: true, role: 'contributor' });
+  });
 });
 
 describe('projectMemberRouter.changeRole / remove / list', () => {
@@ -218,6 +290,7 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
     vi.clearAllMocks();
     fakeDb.transaction = vi.fn(async (cb: any) => cb(fakeDb));
     queries.findProjectsByIds.mockResolvedValue([workspaceProject]);
+    mockCallerAccess('member', 'manager');
     projectMemberModel.getRole.mockResolvedValue('manager');
     projectMemberModel.changeRole.mockResolvedValue([{}]);
     projectMemberModel.remove.mockResolvedValue([{}]);
@@ -240,6 +313,7 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
   });
 
   it('caps role changes for workspace viewers at commenter', async () => {
+    mockCallerAccess('admin', null);
     memberModel.getMember.mockResolvedValue(activeTarget('viewer'));
 
     const result = await createCaller('admin').changeRole({
@@ -252,6 +326,7 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
   });
 
   it('removes a member via the soft-delete model write', async () => {
+    mockCallerAccess('admin', null);
     const result = await createCaller('admin').remove({ projectId: 'proj-1', userId: 'u-target' });
 
     expect(result).toEqual({ removed: true });
@@ -260,14 +335,75 @@ describe('projectMemberRouter.changeRole / remove / list', () => {
       fakeDb,
       expect.objectContaining({ action: 'project_member.removed' }),
     );
+    // The projection gates the terminal kick on this field — dropping the row
+    // is only a revocation when the project no longer admits the member via
+    // visibility.
+    expect(audit.emitWorkspaceEvent).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({
+        eventType: 'project_member.removed',
+        payload: expect.objectContaining({ projectVisibility: 'public' }),
+      }),
+    );
   });
 
   it('requires manage rights to remove', async () => {
-    projectMemberModel.getRole.mockResolvedValue(null);
+    mockCallerAccess('member', null);
 
     await expect(
       createCaller('member').remove({ projectId: 'proj-1', userId: 'u-target' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(projectMemberModel.remove).not.toHaveBeenCalled();
+  });
+
+  it('hides a private project from a workspace admin changing roles without a grant', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    mockCallerAccess('admin', null);
+
+    await expect(
+      createCaller('admin').changeRole({
+        projectId: 'proj-1',
+        role: 'manager',
+        userId: 'u-target',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(projectMemberModel.changeRole).not.toHaveBeenCalled();
+    expect(audit.recordAudit).not.toHaveBeenCalled();
+  });
+
+  it('hides a private project from a workspace admin removing members without a grant', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    mockCallerAccess('admin', null);
+
+    await expect(
+      createCaller('admin').remove({ projectId: 'proj-1', userId: 'u-target' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(projectMemberModel.remove).not.toHaveBeenCalled();
+    expect(audit.recordAudit).not.toHaveBeenCalled();
+  });
+
+  it('lets the private project creator remove a member without a member row', async () => {
+    queries.findProjectsByIds.mockResolvedValue([
+      { ...workspaceProject, userId: 'u-admin', visibility: 'private' },
+    ]);
+    mockCallerAccess('admin', null);
+
+    const result = await createCaller('admin').remove({ projectId: 'proj-1', userId: 'u-target' });
+    expect(result).toEqual({ removed: true });
+  });
+
+  it('treats a soft-deleted caller grant as no grant on a private project', async () => {
+    queries.findProjectsByIds.mockResolvedValue([{ ...workspaceProject, visibility: 'private' }]);
+    mockCallerAccess('admin', null);
+    queries.lockProjectMembershipForUpdate.mockResolvedValue({
+      deletedAt: new Date(),
+      role: 'manager',
+      suspendedAt: null,
+    });
+
+    await expect(
+      createCaller('admin').add({ projectId: 'proj-1', role: 'viewer', userId: 'u-target' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('lists members with their public profile and project role', async () => {

@@ -54,6 +54,24 @@ export const findMembershipRow = (db: OrviloDatabase, workspaceId: string, userI
     .then((rows) => rows[0]);
 
 /**
+ * Lock the caller's project_members row for update regardless of lifecycle
+ * state — mirroring `lockMembershipForUpdate`. Project-membership mutations
+ * serialize on this row so a concurrent removal or downgrade of the caller
+ * cannot slip a grant through after the permission check.
+ */
+export const lockProjectMembershipForUpdate = (
+  db: OrviloDatabase,
+  projectId: string,
+  userId: string,
+) =>
+  db
+    .select()
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+    .for('update')
+    .then((rows) => rows[0]);
+
+/**
  * Lock the workspace row first in every membership mutation — the fixed lock
  * order is workspace → invitation → membership.
  */
@@ -68,15 +86,23 @@ export const lockWorkspaceForUpdate = (db: OrviloDatabase, workspaceId: string) 
 /**
  * Monotonic bump of the member's authorization version: revocation, suspend
  * and role-change paths all invalidate cached grants through this counter.
+ * Returns the post-bump version (undefined when no membership row matched) so
+ * emitted events can stamp the revocation barrier tickets compare against.
  */
-export const bumpAuthzVersion = async (db: OrviloDatabase, workspaceId: string, userId: string) => {
-  await db
+export const bumpAuthzVersion = async (
+  db: OrviloDatabase,
+  workspaceId: string,
+  userId: string,
+): Promise<number | undefined> => {
+  const [row] = await db
     .update(workspaceMembers)
     .set({
       authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
       updatedAt: new Date(),
     })
-    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)));
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
+    .returning({ authzVersion: workspaceMembers.authzVersion });
+  return row?.authzVersion;
 };
 
 export interface MemberWithProfile {

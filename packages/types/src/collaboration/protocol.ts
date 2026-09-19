@@ -79,6 +79,13 @@ export interface RoomTicketClaims {
   actor: CollaborationActor;
   /** `workspace_members.authz_version` snapshot at issue time. */
   authzVersion?: number;
+  /**
+   * Project the room's resource belongs to: the project id for `project:*`
+   * rooms and the owning project for `task:*` rooms. Lets a project-scoped
+   * revocation reach the member's task-room sockets of the same project
+   * without the gateway needing a database lookup.
+   */
+  projectId?: string;
   /** Wire room key (`{scope}:{id}`). */
   room: string;
   workspaceId: string;
@@ -94,17 +101,55 @@ export interface RoomAuthorization {
 // ── Outbox → gateway publish envelope ──────────────────
 
 /**
+ * Internal publish-protocol version. v1 gateways answered every
+ * `/internal/publish` POST with 202 but only executed `workspace`-scoped
+ * kicks; v2 additionally honors `project`/`task` scopes. The gateway stamps
+ * `GATEWAY_PROTOCOL_VERSION_HEADER` on publish responses so a projector can
+ * treat a scoped kick delivered to a pre-v2 gateway as retryable instead of
+ * silently delivered — a silently-acked kick leaves stale task-room sockets
+ * subscribed past the revocation.
+ */
+export const COLLABORATION_GATEWAY_PROTOCOL_VERSION = 2;
+export const GATEWAY_PROTOCOL_VERSION_HEADER = 'x-orvilo-gateway-protocol-version';
+
+/**
+ * The normalized revocation contract a kick carries end to end: projector →
+ * `/internal/publish` envelope → `RoomHub.kick`. Shared so the gateway's
+ * parser, the projector's emit and the in-process bus agree on one shape.
+ */
+export interface RoomKickParams {
+  /**
+   * `workspace_members.authz_version` stamped by the revoking write. A
+   * connection re-authorized at a NEWER version was granted after this
+   * revoke and survives the kick — a late/replayed revoke must not tear
+   * down a fresh grant. Absent means "apply to every version" (legacy).
+   */
+  authzVersion?: number;
+  /** Originating outbox event id — observability/dedup correlation. */
+  eventId?: string;
+  reason: string;
+  /** Resource scope the revocation applies to. */
+  scope: 'project' | 'task' | 'workspace';
+  /** Resource id inside the scope. */
+  scopeId: string;
+  userId: string;
+  /** Tenant the kick applies to — guards cross-workspace accidents. */
+  workspaceId: string;
+}
+
+/**
  * What the server-side publish hook accepts. `broadcast` fans a room message
- * out verbatim; `kick` tears down every connection of one actor across the
- * workspace's rooms (revocation is workspace-scoped, not room-scoped).
+ * out verbatim; `kick` tears down the revoked member's live connections for
+ * one authorization scope — a workspace revoke drops every room of the
+ * tenant, a project revoke drops only that project's room plus its task
+ * rooms, a task revoke drops the single task room.
  */
 export type RoomPublishEnvelope =
-  | { kind: 'broadcast'; message: CollaborationServerMessage }
-  | { kind: 'kick'; reason: string; userId: string };
+  { kind: 'broadcast'; message: CollaborationServerMessage } | (RoomKickParams & { kind: 'kick' });
 
 export interface RoomPublishRequest {
   publish: RoomPublishEnvelope;
-  /** Wire room key. Kicks still name the workspace room they were projected for. */
+  /** Wire room key — the room the event was projected for; the kick envelope itself carries the revocation scope. */
   room: string;
 }
 
@@ -122,6 +167,12 @@ export interface RoomSnapshotResult {
   /** Opaque server cursor; pass back as `cursor` for the next incremental page. */
   nextCursor?: string;
   presence: PresenceEntry[];
+  /**
+   * Set when the supplied cursor could not be decoded — the page is the
+   * newest history slice and the consumer should treat it as a fresh resync
+   * (re-baseline its dedup set), not as a continuation of the old position.
+   */
+  resyncRequired?: boolean;
 }
 
 /** Aggregate types the outbox projects onto rooms. */

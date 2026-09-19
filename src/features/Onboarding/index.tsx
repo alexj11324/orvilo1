@@ -12,6 +12,7 @@ import {
   ONBOARDING_INVITES_FAILED,
   type OnboardingFormValues,
 } from '@/components/blocks/onboarding-2/components/onboarding';
+import { Spinner } from '@/components/ui/spinner';
 import { isDesktop } from '@/const/version';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
@@ -24,6 +25,7 @@ import {
 
 import DesktopAuthGate from './DesktopAuthGate';
 import { finishOnboardingAndNavigate, repairDesktopOnboardingMarkers } from './finishOnboarding';
+import { useOnboardingUserStateReady } from './useOnboardingUserStateReady';
 import { resolveOnboardingWorkspace } from './workspaceResolution';
 
 const INVITE_ROLE_MAP: Record<InviteRoleValue, 'admin' | 'member' | 'viewer'> = {
@@ -74,6 +76,7 @@ const OnboardingPage = memo(() => {
   const initialFullName = useUserStore((s) => s.user?.fullName ?? '');
   const initialTelemetry = useUserStore(userGeneralSettingsSelectors.telemetry) ?? true;
   const initialTimezone = useUserStore(userGeneralSettingsSelectors.currentTimezone) ?? '';
+  const userStateReady = useOnboardingUserStateReady();
   const createdWorkspaceRef = useRef<{ id: string; slug: string } | null>(null);
   // Server-authoritative completion: `finishedAt` on the user record, shared by
   // every client. A finished user landing here (stale bookmark, desktop boot
@@ -149,6 +152,14 @@ const OnboardingPage = memo(() => {
   const handleOpen = () => {
     void finishOnboardingAndNavigate(finishOnboarding, navigate);
   };
+
+  if (!userStateReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner className="size-6" />
+      </div>
+    );
+  }
 
   return (
     <DesktopAuthGate>

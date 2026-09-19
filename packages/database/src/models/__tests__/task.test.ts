@@ -3817,6 +3817,35 @@ describe('TaskModel', () => {
       expect(await alice.getComments(secret.id)).toHaveLength(1);
       expect(await bob.getComments(secret.id)).toEqual([]);
     });
+
+    it('does not list dependencies or activities on a private-team task the viewer cannot find', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team graph',
+        name: 'Private-team graph',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const blocker = await alice.create({
+        instruction: 'Private-team blocker',
+        name: 'Private-team blocker',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      await alice.addDependency(secret.id, blocker.id);
+      await alice.addActivity({
+        actorUserId: userId,
+        payload: { fromId: null, toId: userId },
+        taskId: secret.id,
+        type: 'assignee_user',
+      });
+
+      expect(await alice.getDependencies(secret.id)).toHaveLength(1);
+      expect(await alice.getActivities(secret.id)).toHaveLength(1);
+      expect(await bob.getDependencies(secret.id)).toEqual([]);
+      expect(await bob.getActivities(secret.id)).toEqual([]);
+    });
   });
 
   describe('my tasks filters', () => {

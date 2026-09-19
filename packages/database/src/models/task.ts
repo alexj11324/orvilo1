@@ -3041,6 +3041,7 @@ export class TaskModel {
   }
 
   async getDependencies(taskId: string) {
+    if (!(await this.findById(taskId))) return [];
     return this.db
       .select()
       .from(taskDependencies)
@@ -3731,6 +3732,7 @@ export class TaskModel {
    * every detail poll; the table itself is the full audit trail.
    */
   async getActivities(taskId: string, limit?: number): Promise<TaskActivityItem[]> {
+    if (!(await this.findById(taskId))) return [];
     const where = and(eq(taskActivities.taskId, taskId), this.activitiesOwnership());
     if (limit === undefined) {
       return this.db.select().from(taskActivities).where(where).orderBy(taskActivities.createdAt);

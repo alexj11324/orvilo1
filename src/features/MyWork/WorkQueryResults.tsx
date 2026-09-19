@@ -118,10 +118,11 @@ const styles = createStaticStyles(({ css }) => ({
 
 interface WorkQueryResultsProps {
   /**
-   * Where the board's create entry should file a new card. Absent means the
-   * surface is ambiguous (a cross-team saved view) and create stays hidden.
+   * Where the board's create entry should file a new card. `teamId` files it
+   * directly; `teamOptions` makes the create modal ask the one ambiguous
+   * choice (a cross-team view). Neither means create stays hidden.
    */
-  createContext?: { teamId?: string };
+  createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
   groupBy?: WorkQueryGroupBy;

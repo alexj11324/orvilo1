@@ -9,6 +9,7 @@ import { EllipsisIcon, FolderClosedIcon, SlidersHorizontalIcon } from 'lucide-re
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
+import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
@@ -27,6 +28,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
+import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -220,6 +222,20 @@ const SavedViewPage = memo(() => {
   );
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
+  // A cross-team view can't guess which team a new card belongs to — pass the
+  // caller's joined teams so the board's create entry asks exactly that.
+  const { data: teamsData } = useSWR(
+    workspaceId && currentUserId ? ['savedview-joined-teams', currentUserId, workspaceId] : null,
+    () => lambdaClient.team.teams.query(),
+    { revalidateOnFocus: false },
+  );
+  const joinedTeamOptions = useMemo(
+    () =>
+      (teamsData?.data ?? [])
+        .filter((team) => team.joined === true)
+        .map((team) => ({ id: team.id, name: team.name })),
+    [teamsData],
+  );
   const firstTasks = evaluation?.tasks ?? [];
   const firstProjects = evaluation?.projects ?? [];
   const firstGroups = evaluation?.groups ?? [];
@@ -582,6 +598,11 @@ const SavedViewPage = memo(() => {
             movable={(evaluation?.layout ?? view?.layout) === 'board'}
             tasks={tasks}
             total={evaluation?.total}
+            createContext={
+              workspaceId && joinedTeamOptions.length > 0
+                ? { teamOptions: joinedTeamOptions }
+                : undefined
+            }
             onLoadMoreGroup={(key) => void loadMoreGroup(key)}
             onMoved={() => void refreshView()}
             onLoadMore={

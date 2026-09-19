@@ -2,7 +2,7 @@
 
 import { useEditor } from '@lobehub/editor/react';
 import { Block, Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
+import { ActionIcon, Button, Select, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Minimize2, Paperclip, X } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -49,10 +49,24 @@ export interface CreateTaskContentProps {
   /** Owning team for workspace tasks — create entry points on a team surface
    *  pass it so the issue lands on that team (Linear parity). */
   teamId?: string;
+  /**
+   * Joined teams the user may file the issue into. Rendered as a picker only
+   *  when `teamId` is unset — a cross-team surface asks the one necessary
+   *  choice instead of silently picking a team or hiding create entirely.
+   */
+  teamOptions?: { id: string; name: string }[];
 }
 
 const CreateTaskContent = memo<CreateTaskContentProps>(
-  ({ agentId, lockAssignee, onCreated, projectId, showInlineToggle = true, teamId }) => {
+  ({
+    agentId,
+    lockAssignee,
+    onCreated,
+    projectId,
+    showInlineToggle = true,
+    teamId,
+    teamOptions,
+  }) => {
     const { t } = useTranslation('chat');
     const { close } = useModalContext();
     const { allowed: canCreateTask, reason } = usePermission('create_content');
@@ -71,6 +85,8 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     // and going private stays one click away. In personal mode the field is
     // irrelevant and the chip is hidden anyway.
     const [visibility, setVisibility] = useState<'private' | 'public'>('public');
+    const [pickedTeamId, setPickedTeamId] = useState<string | undefined>(teamId);
+    useEffect(() => setPickedTeamId(teamId), [teamId]);
 
     const assigneeVisibility = useAgentVisibility(assigneeAgentId);
     const isPrivateAgent = assigneeVisibility === 'private';
@@ -137,7 +153,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           name: title.trim() || undefined,
           priority: priority || undefined,
           projectId,
-          teamId,
+          teamId: pickedTeamId,
           // Only send visibility in workspace mode; personal mode ignores it.
           visibility: activeWorkspaceId ? visibility : undefined,
         });
@@ -165,7 +181,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       priority,
       projectId,
       t,
-      teamId,
+      pickedTeamId,
       title,
       visibility,
     ]);
@@ -329,6 +345,17 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   )}
                 </Block>
               </AssigneeAgentSelector>
+            )}
+
+            {!teamId && activeWorkspaceId && (teamOptions?.length ?? 0) > 0 && (
+              <Select
+                options={teamOptions?.map((team) => ({ label: team.name, value: team.id }))}
+                placeholder={t('createTask.team')}
+                size={'small'}
+                style={{ width: 160 }}
+                value={pickedTeamId}
+                onChange={(value) => setPickedTeamId(value as string | undefined)}
+              />
             )}
 
             {activeWorkspaceId && (

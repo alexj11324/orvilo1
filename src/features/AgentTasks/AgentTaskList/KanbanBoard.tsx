@@ -166,7 +166,7 @@ interface KanbanBoardProps {
    * it an external board keeps the create entry hidden (an ambiguous
    * multi-team view must not silently pick one).
    */
-  createContext?: { teamId?: string };
+  createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
   /** Overrides the generic "no tasks" copy with the collection's own line. */
   emptyDescription?: string;
   /** Externally-supplied groups — bypasses the task-store fetch entirely. */
@@ -709,12 +709,13 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       lockAssignee: !!agentId,
       projectId: kanbanCreateTaskProjectId(projectId),
       teamId: createContext?.teamId,
+      teamOptions: createContext?.teamOptions,
       onCreated: (task) => {
         navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
       },
       showInlineToggle: false,
     });
-  }, [agentId, canEditTask, createContext?.teamId, navigate, projectId]);
+  }, [agentId, canEditTask, createContext, navigate, projectId]);
 
   // ── Derived layout ─────────────────────────────────────────────
 
@@ -857,7 +858,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                 groupBy === 'status' &&
                 col.key === 'backlog' &&
                 !myTaskScope &&
-                (!external || Boolean(createContext?.teamId))
+                (!external ||
+                  Boolean(createContext?.teamId) ||
+                  (createContext?.teamOptions?.length ?? 0) > 0)
                   ? handleCreateTask
                   : undefined
               }

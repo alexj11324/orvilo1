@@ -1061,7 +1061,7 @@ describe('HeterogeneousAgentCtr', () => {
       ]);
     });
 
-    it('mounts the lobe_cc MCP server through session/new mcpServers', async () => {
+    it('mounts the orvilo_cc MCP server through session/new mcpServers', async () => {
       const operationId = 'op-mcp-mount';
       const ctr = new HeterogeneousAgentCtr({
         appStoragePath,
@@ -1082,7 +1082,7 @@ describe('HeterogeneousAgentCtr', () => {
 
       const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
       expect(options.mcpServers).toEqual([
-        expect.objectContaining({ name: 'lobe_cc', type: 'http' }),
+        expect.objectContaining({ name: 'orvilo_cc', type: 'http' }),
       ]);
       expect(options.mcpServers[0].url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\//);
       expect(options.askUserBridge).toBeDefined();

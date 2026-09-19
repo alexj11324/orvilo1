@@ -50,7 +50,7 @@ interface ResolveRunToolSurfaceInput {
  *
  * The retired server-side loop mounted these as live tool definitions; under
  * ACP the agent harness owns its own tool loop, so Orvilo builtin tools ride a
- * per-run MCP server the host exposes (`lobe_cc` / `orvilo_cc`), and builtin
+ * per-run MCP server the host exposes (`orvilo_cc`), and builtin
  * skills ship their instructions inline in the system context.
  *
  * Identifier classes are split by what can actually run on the wire:

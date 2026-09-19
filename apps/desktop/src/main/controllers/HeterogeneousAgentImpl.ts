@@ -23,7 +23,7 @@ import {
   resolveHeterogeneousAgentCommand,
 } from '@orvilo/heterogeneous-agents';
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
-import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
+import { ASK_USER_MCP_SERVER_NAME, AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import type { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
 import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
 import type {
@@ -1159,7 +1159,7 @@ export default class HeterogeneousAgentCtr {
   /**
    * Register a per-op bridge for a standard-ACP session. The bridge answers
    * `session/request_permission` + `elicitation/create` directly and also
-   * backs the `lobe_cc` MCP server when the agent mounts it (`session/new`'s
+   * backs the `orvilo_cc` MCP server when the agent mounts it (`session/new`'s
    * `mcpServers` carries the per-op HTTP URL — no temp `mcp.json` file).
    */
   private async setupStandardAcpInterventionForOp(
@@ -1171,7 +1171,7 @@ export default class HeterogeneousAgentCtr {
     mcpServers?: Record<string, unknown>[];
   }> {
     const provider = session.agentType as NonNullable<AskUserBridgeOptions['provider']>;
-    // claude-code / qoder mount the lobe_cc MCP server for the
+    // claude-code / qoder mount the orvilo_cc MCP server for the
     // `ask_user_question` tool (the builtin Orvilo claude-sdk engine resolves
     // to the claude-code family, so it is covered here; the codex engine
     // historically exposes no builtin tools). Other agents only need the
@@ -1207,7 +1207,7 @@ export default class HeterogeneousAgentCtr {
       },
       mcpServers: [
         {
-          name: 'lobe_cc',
+          name: ASK_USER_MCP_SERVER_NAME,
           type: 'http',
           url: server.urlForOperation(operationId),
         },

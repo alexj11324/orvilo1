@@ -80,6 +80,34 @@ describe('triggerHatchetWorkflow', () => {
     expect(JSON.stringify(mocks.enqueueHatchetTask.mock.calls[0])).not.toContain('user-1');
   });
 
+  it('shares a five-slot user lane while separating memory topic dispatches', async () => {
+    const path = '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic';
+    mocks.insertReturning
+      .mockResolvedValueOnce([{ id: '00000000-0000-4000-8000-000000000010', status: 'pending' }])
+      .mockResolvedValueOnce([{ id: '00000000-0000-4000-8000-000000000011', status: 'pending' }])
+      .mockResolvedValueOnce([{ id: '00000000-0000-4000-8000-000000000012', status: 'pending' }]);
+    for (const [userId, topicId] of [
+      ['user-1', 'topic-a'],
+      ['user-1', 'topic-b'],
+      ['user-2', 'topic-c'],
+    ]) {
+      await triggerHatchetWorkflow(
+        path,
+        { userId, topicId },
+        {
+          concurrencyKey: `memory-user-memory.process-topic.${userId}`,
+          workflowRunId: topicId,
+        },
+      );
+    }
+    const inputs = mocks.enqueueHatchetTask.mock.calls.map(([, input]) => input);
+    expect(inputs[0].laneKey).toBe(inputs[1].laneKey);
+    expect(inputs[0].serialKey).not.toBe(inputs[1].serialKey);
+    expect(inputs[0].serialKey).toBe(inputs[0].dispatchId);
+    expect(inputs[2].laneKey).not.toBe(inputs[0].laneKey);
+    expect(JSON.stringify(inputs)).not.toContain('user-1');
+  });
+
   it('does not move a dispatch backwards when the worker wins the publish race', async () => {
     mocks.updateReturning.mockResolvedValueOnce([]);
     mocks.selectLimit.mockResolvedValueOnce([{ status: 'completed' }]);
@@ -134,9 +162,36 @@ describe('triggerHatchetWorkflow', () => {
 
     await expect(
       cancelHatchetWorkflow('hatchet-dispatch:00000000-0000-4000-8000-000000000010'),
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ status: 'already-terminal' });
 
     expect(mocks.cancelHatchetTask).not.toHaveBeenCalled();
     expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
+  });
+
+  it.each(['running', 'cancelled'] as const)(
+    'propagates the real provider failure from a %s dispatch',
+    async (status) => {
+      mocks.selectLimit.mockResolvedValue([{ providerRunId: 'hatchet-run:provider-run', status }]);
+      mocks.updateReturning.mockResolvedValue(
+        status === 'running' ? [{ providerRunId: 'hatchet-run:provider-run' }] : [],
+      );
+      const error = new Error('provider cancellation unavailable');
+      mocks.cancelHatchetTask.mockRejectedValueOnce(error);
+      await expect(
+        cancelHatchetWorkflow('hatchet-dispatch:00000000-0000-4000-8000-000000000010'),
+      ).rejects.toBe(error);
+      expect(mocks.cancelHatchetTask).toHaveBeenCalledWith('hatchet-run:provider-run');
+    },
+  );
+
+  it('retries a previously failed provider cancellation without moving the dispatch backwards', async () => {
+    mocks.selectLimit.mockResolvedValue([
+      { providerRunId: 'hatchet-run:provider-run', status: 'cancelled' },
+    ]);
+    mocks.updateReturning.mockResolvedValue([]);
+    await expect(
+      cancelHatchetWorkflow('hatchet-dispatch:00000000-0000-4000-8000-000000000010'),
+    ).resolves.toEqual({ status: 'cancelled' });
+    expect(mocks.cancelHatchetTask).toHaveBeenCalledExactlyOnceWith('hatchet-run:provider-run');
   });
 });

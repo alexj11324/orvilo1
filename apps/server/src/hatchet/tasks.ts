@@ -89,6 +89,35 @@ const deferredReplayTarget = z.object({
 const isDeferredReplayTarget = (value: unknown): value is DeferredReplayTarget =>
   deferredReplayTarget.safeParse(value).success;
 
+const MAX_DEFERRED_REPLAY_RETRY_DELAY_MS = 10 * 60 * 1000;
+
+export const parseDeferredReplayRetryDelay = (value?: string): number => {
+  if (!value) return 0;
+  const delay = Number(value);
+  if (!Number.isFinite(delay) || delay < 0 || delay > MAX_DEFERRED_REPLAY_RETRY_DELAY_MS) {
+    throw new NonRetryableError(
+      `Invalid deferred replay retryDelay '${value}'. Expected milliseconds between 0 and ${MAX_DEFERRED_REPLAY_RETRY_DELAY_MS}.`,
+    );
+  }
+  return Math.floor(delay);
+};
+
+export const waitForDeferredReplayRetry = async (
+  retryCount: number,
+  retryDelay?: string,
+  releaseSlot?: () => Promise<void>,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+) => {
+  if (retryCount <= 0) return;
+  const delay = parseDeferredReplayRetryDelay(retryDelay);
+  if (delay <= 0) return;
+  // Hatchet's backoff is task-definition-wide, while QueueMessage.retryDelay is
+  // per message. Release the worker slot, then honor that per-message delay on
+  // retry attempts instead of silently discarding the caller's contract.
+  await releaseSlot?.();
+  await sleep(delay);
+};
+
 export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
   const agentSignalNightlySchedule = hatchet.task({
     name: HATCHET_TASK_NAMES.agentSignalNightlySchedule,
@@ -102,10 +131,13 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     name: HATCHET_TASK_NAMES.botReplay,
     backoff: { factor: 2, maxSeconds: 60 },
     executionTimeout: '15m',
-    fn: async (input: HatchetAgentStepInput & InputType) => {
+    fn: async (input: HatchetAgentStepInput & InputType, context) => {
       if (!isDeferredReplayTarget(input.payload)) {
         throw new NonRetryableError('Invalid deferred replay payload');
       }
+      await waitForDeferredReplayRetry(context.retryCount(), input.retryDelay, () =>
+        context.releaseSlot(),
+      );
       await runDeferredReplay(input.payload);
       return { success: true };
     },

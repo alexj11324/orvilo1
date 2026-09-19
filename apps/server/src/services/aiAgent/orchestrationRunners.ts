@@ -18,7 +18,7 @@ import { type OrviloDatabase } from '@/database/type';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
-} from '@/server/services/agentRuntime/types';
+} from '@/server/services/agentExecution/types';
 import {
   type ServerAgentMemberRunner,
   type ServerSubAgentRunner,

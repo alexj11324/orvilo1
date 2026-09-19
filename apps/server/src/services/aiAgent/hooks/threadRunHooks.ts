@@ -9,11 +9,11 @@ import type {
   StepCompletionReason,
   StepLifecycleCallbacks,
 } from '@/server/services/agentExecution/stepTypes';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import type {
   GroupActionMemberMode,
   GroupActionOnComplete,
-} from '@/server/services/agentRuntime/types';
+} from '@/server/services/agentExecution/types';
+import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 
 import { formatErrorForMetadata } from '../helpers/groupContext';
 

@@ -54,6 +54,12 @@ export const TASK_STATUS_VISUALS: Record<TaskStatus, ExecutionStatusVisual> = {
   scheduled: VISUALS.scheduled,
 };
 
+const TASK_STATUS_SET = new Set<string>(Object.keys(TASK_STATUS_VISUALS));
+
+/** Normalize untrusted persisted/API values before rendering a task status. */
+export const resolveTaskStatus = (status: null | string | undefined): TaskStatus =>
+  status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
+
 export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual> = {
   active: VISUALS.running,
   archived: VISUALS.archived,

@@ -16,6 +16,7 @@ import { BellOffIcon, BellPlusIcon, ListTodoIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import { createTaskStatusCascadeModal } from '@/features/AgentTasks/features/TaskStatusCascadeModal';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
@@ -222,7 +223,7 @@ const WorkQueryTaskRow = memo(
           className={styles.link}
           to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
         >
-          <TaskStatusIcon size={16} status={task.status} />
+          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
           <Flexbox flex={1} style={{ minWidth: 0 }}>
             <Text ellipsis weight={500}>
               {task.name ?? task.instruction}

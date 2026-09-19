@@ -238,7 +238,7 @@ export interface GoalManagerState {
   snapshot: string;
   startedAt: string;
   submitted?: {
-    action: 'tasks' | 'verify' | 'retry' | 'escalate';
+    action: 'tasks' | 'verify' | 'retry' | 'escalate' | 'patch';
     reason: string;
     taskId?: string;
   };
@@ -250,6 +250,12 @@ export interface GoalManagerState {
 export interface GoalConfig {
   acceptance?: GoalAcceptancePolicy;
 
+  /**
+   * CAID incremental-plan bookkeeping. `revision` is the compare-and-swap
+   * counter `patch` submissions must name via `expectedPlanRevision`; it only
+   * ever moves forward inside the plan-commit transaction.
+   */
+  caidPlan?: { revision: number };
   exploration?: GoalExplorationConfig;
   manager?: GoalManagerPolicy;
   managerState?: GoalManagerState;

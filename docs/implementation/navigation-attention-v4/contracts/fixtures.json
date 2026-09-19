@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "notice": "Artificial contract examples, not real users, approvals, remote IDs or deployed responses. S/D freeze actual names in N01.",
+  "scopeExamples": [
+    {
+      "kind": "workspace",
+      "workspaceId": "w-test-a",
+      "userId": "u-test-alex"
+    },
+    {
+      "kind": "personal",
+      "userId": "u-test-alex"
+    }
+  ],
+  "view": {
+    "schemaVersion": 1,
+    "entityType": "task",
+    "filter": {
+      "all": [
+        {
+          "field": "assigneeUserId",
+          "op": "eq",
+          "value": {
+            "ref": "currentUser"
+          }
+        },
+        {
+          "field": "projectId",
+          "op": "isNull"
+        }
+      ]
+    },
+    "layout": "board",
+    "groupBy": "workflowCategory"
+  },
+  "feedCard": {
+    "notificationId": "n-example",
+    "activityVersion": 6,
+    "readVersion": 5,
+    "kind": "action",
+    "actionRef": {
+      "kind": "acp_permission",
+      "requestId": "req-example",
+      "sourceRevision": 3,
+      "executionGeneration": 2
+    },
+    "availableActions": [
+      "open",
+      "decide"
+    ],
+    "safeNavigation": {
+      "kind": "task",
+      "taskId": "task-example",
+      "workspaceId": "w-test-a"
+    },
+    "read": false
+  },
+  "decision": {
+    "actionRef": {
+      "kind": "acp_permission",
+      "requestId": "req-example"
+    },
+    "expectedSourceRevision": 3,
+    "expectedExecutionGeneration": 2,
+    "decision": "reject",
+    "idempotencyKey": "client-operation-example"
+  },
+  "decisionReceipt": {
+    "status": "source_confirmed",
+    "sourceState": "rejected",
+    "executionStarted": false
+  },
+  "invalidQueries": [
+    {
+      "field": "raw_sql",
+      "op": "execute",
+      "value": "REJECT THIS INPUT"
+    },
+    {
+      "field": "projectId",
+      "op": "unknown",
+      "value": "anything"
+    }
+  ]
+}

@@ -103,6 +103,10 @@ vi.mock('@/hooks/useSyncRecents', () => ({ useSyncRecents: vi.fn() }));
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Outlet: () => mocks.outlet.page(),
+  // The layout's workspace URL sync reads the router pathname and a navigate
+  // handle; this tree is rendered without a Router, so feed both stubs.
+  useLocation: () => ({ pathname: '/' }),
+  useNavigate: () => () => undefined,
 }));
 
 // --- the real `TopicChatDrawer`'s leaves -----------------------------------

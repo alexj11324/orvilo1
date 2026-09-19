@@ -1,10 +1,10 @@
 @journey @home @sidebar @agent
-Feature: Home 页面 Agent 管理
-  作为用户，我希望能够在 Home 页面管理 Agent
+Feature: Agents 页面 Agent 管理
+  作为用户，我希望能够在 Agents 页面管理 Agent
 
   Background:
     Given 用户已登录系统
-    And 用户在 Home 页面有一个 Agent
+    And 用户在 Agents 页面有一个 Agent
 
   # ============================================
   # 重命名
@@ -33,22 +33,22 @@ Feature: Home 页面 Agent 管理
     Then 该项名称应该更新为 "Enter Confirmed"
 
   # ============================================
-  # 置顶
+  # 侧边栏显示/隐藏
   # ============================================
 
   @HOME-AGENT-PIN-001 @P1
-  Scenario: 置顶 Agent
-    Given 该 Agent 未被置顶
+  Scenario: 将 Agent 加入侧边栏
+    Given 该 Agent 未显示在侧边栏
     When 用户右键点击该 Agent
-    And 用户在菜单中选择置顶
-    Then Agent 应该显示置顶图标
+    And 用户在菜单中选择加入侧边栏
+    Then Agent 应该显示在侧边栏分组中
 
   @HOME-AGENT-PIN-002 @P1
-  Scenario: 取消置顶 Agent
-    Given 该 Agent 已被置顶
+  Scenario: 将 Agent 移出侧边栏
+    Given 该 Agent 已显示在侧边栏
     When 用户右键点击该 Agent
-    And 用户在菜单中选择取消置顶
-    Then Agent 不应该显示置顶图标
+    And 用户在菜单中选择移出侧边栏
+    Then Agent 不应该显示在侧边栏分组中
 
   # ============================================
   # 删除

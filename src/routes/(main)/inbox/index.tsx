@@ -1,3 +1,3 @@
 'use client';
 
-export { default } from '@/features/HomeInbox/InboxPage';
+export { default } from '@/features/WorkInbox/WorkInboxPage';

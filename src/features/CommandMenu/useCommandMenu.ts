@@ -3,8 +3,8 @@ import { useTheme as useNextThemesTheme } from 'next-themes';
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { isDesktop } from '@/const/version';
-import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -12,6 +12,8 @@ import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
 import { lambdaClient } from '@/libs/trpc/client';
 import { electronSystemService } from '@/services/electron/system';
+import { omitPersonalTeamItems } from '@/services/recent';
+import { workAttentionService } from '@/services/workAttention';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelectors';
 import { useChatStore } from '@/store/chat';
@@ -21,7 +23,13 @@ import { globalHelpers } from '@/store/global/helpers';
 import { useHomeStore } from '@/store/home';
 
 import { useCommandMenuContext } from './CommandMenuContext';
+import type { CommandMenuSearchResult } from './SearchResults';
 import { type ThemeMode } from './types';
+import { isCommandMenuFtsType, isCommandMenuWorkType } from './utils/queryParser';
+
+/** Mixed palette stays small; a typed filter may request up to 50 of that type. */
+const COMMAND_MENU_MIXED_LIMIT_PER_TYPE = 5;
+const COMMAND_MENU_TYPED_LIMIT_PER_TYPE = 50;
 
 /**
  * Shared methods for CommandMenu
@@ -46,6 +54,7 @@ export const useCommandMenu = () => {
   } = useCommandMenuContext();
 
   const navigate = useWorkspaceAwareNavigate();
+  const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const createAgent = useAgentStore((s) => s.createAgent);
@@ -67,21 +76,44 @@ export const useCommandMenu = () => {
     error: searchError,
     isLoading: isSearching,
     isValidating: isSearchValidating,
-  } = useSWR<FtsSearchResult[]>(
-    hasSearch ? ['search', searchQuery, agentId, typeFilter] : null,
+  } = useSWR<CommandMenuSearchResult[]>(
+    hasSearch ? ['search', searchQuery, agentId, typeFilter, workspaceId] : null,
     async () => {
       const locale = globalHelpers.getCurrentLanguage();
-      return lambdaClient.search.query.query({
-        agentId,
-        // Keep the aggregate response DB-only: marketplace results are reached
-        // through the permanent typed-search entries instead of gating every
-        // keystroke on three remote marketplace round-trips.
-        includeMarketplace: false,
-        limitPerType: typeFilter ? 50 : 5, // Show more results when filtering by type
-        locale,
-        query: searchQuery,
-        type: typeFilter,
-      });
+      const limitPerType = typeFilter
+        ? COMMAND_MENU_TYPED_LIMIT_PER_TYPE
+        : COMMAND_MENU_MIXED_LIMIT_PER_TYPE;
+      const ftsType = isCommandMenuFtsType(typeFilter) ? typeFilter : undefined;
+      const wantsFts = !typeFilter || Boolean(ftsType);
+      const wantsWork =
+        (!typeFilter || isCommandMenuWorkType(typeFilter)) &&
+        (Boolean(workspaceId) || typeFilter !== 'team');
+      const [fts, work] = await Promise.all([
+        wantsFts
+          ? lambdaClient.search.query.query({
+              agentId,
+              includeMarketplace: false,
+              limitPerType,
+              locale,
+              query: searchQuery,
+              type: ftsType,
+            })
+          : Promise.resolve([]),
+        wantsWork
+          ? workAttentionService
+              .search({
+                limitPerType,
+                query: searchQuery,
+                type: isCommandMenuWorkType(typeFilter) ? typeFilter : undefined,
+              })
+              .then((response) => omitPersonalTeamItems(response.data, workspaceId))
+              .catch((error: unknown) => {
+                console.error('[commandMenu.workSearch]', error);
+                return [];
+              })
+          : Promise.resolve([]),
+      ]);
+      return [...work, ...fts] as CommandMenuSearchResult[];
     },
     {
       revalidateOnFocus: false,
@@ -243,7 +275,7 @@ export const useCommandMenu = () => {
     search,
     searchError,
     searchQuery,
-    searchResults: searchResults || ([] as FtsSearchResult[]),
+    searchResults: searchResults || ([] as CommandMenuSearchResult[]),
     selectedAgent,
     setSearch,
     setSelectedAgent,

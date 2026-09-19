@@ -30,3 +30,11 @@ only merge after the ones below it.
 - `workspaceContextStore` feeds the `X-Workspace-Id` lambda header and SWR
   cache scoping; silent switches reconcile the store without navigating.
 
+## Layer 3 — work surfaces
+
+- One `KanbanBoard` (Cordy port) serves every board surface; hidden columns
+  render as inline rails and empty boards still render all columns.
+- Inbox pagination, URL-driven selection, saved views with a visual filter
+  builder, team sub-navigation, the members directory, and the PR review
+  workspace live here; routes register under both bare paths and
+  `/{workspaceSlug}` mirrors.

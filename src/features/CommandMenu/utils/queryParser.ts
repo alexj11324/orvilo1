@@ -11,8 +11,8 @@ export interface ParsedQuery {
 
 // Valid types for search filtering
 // Note: 'pageContent' is excluded as it's not yet integrated in the backend
-/** Exported so the parser's own test derives from it instead of restating it. */
-export const VALID_TYPES = [
+/** FTS-backed types. Work types are a sidecar over existing list APIs. */
+export const COMMAND_MENU_FTS_TYPES = [
   'agent',
   'chatGroup',
   'topic',
@@ -23,7 +23,21 @@ export const VALID_TYPES = [
   'knowledgeBase',
 ] as const;
 
+export const COMMAND_MENU_WORK_TYPES = ['project', 'savedView', 'task', 'team'] as const;
+
+/** Exported so the parser's own test derives from it instead of restating it. */
+export const VALID_TYPES = [...COMMAND_MENU_FTS_TYPES, ...COMMAND_MENU_WORK_TYPES] as const;
+
 export type ValidSearchType = (typeof VALID_TYPES)[number];
+export type CommandMenuWorkType = (typeof COMMAND_MENU_WORK_TYPES)[number];
+
+export const isCommandMenuWorkType = (type: string | undefined): type is CommandMenuWorkType =>
+  Boolean(type && (COMMAND_MENU_WORK_TYPES as readonly string[]).includes(type));
+
+export const isCommandMenuFtsType = (
+  type: string | undefined,
+): type is (typeof COMMAND_MENU_FTS_TYPES)[number] =>
+  Boolean(type && (COMMAND_MENU_FTS_TYPES as readonly string[]).includes(type));
 
 /**
  * Parse search query to extract type filters and clean query

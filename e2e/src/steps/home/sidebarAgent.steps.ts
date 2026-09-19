@@ -27,8 +27,14 @@ async function inputNewName(
 
   // The rename EditingPopover mounts anchored to the row; while its positioner
   // animates, a click can wait on actionability indefinitely — fill only needs
-  // the input to be visible and editable.
-  const renameInput = this.page.locator('[data-testid="editing-popover"] input').first();
+  // the input to be visible and editable. The EmojiPicker upload renders a
+  // hidden file input before the title input, so target the title input
+  // explicitly.
+  const renameInput = this.page
+    .locator(
+      '[data-testid="editing-popover-title-input"], [data-testid="editing-popover"] input:not([type="file"])',
+    )
+    .first();
 
   await renameInput.waitFor({ state: 'visible', timeout: 5000 });
   await renameInput.fill(newName);

@@ -187,6 +187,7 @@ const GroupContent = memo<GroupContentProps>(
           />
         )}
         <Input
+          data-testid="editing-popover-title-input"
           defaultValue={title}
           ref={inputRef}
           style={{ flex: 1 }}

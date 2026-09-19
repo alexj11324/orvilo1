@@ -159,6 +159,7 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
         onUpload={handleAvatarUpload}
       />
       <Input
+        data-testid="editing-popover-title-input"
         defaultValue={title}
         ref={inputRef}
         style={{ flex: 1 }}

@@ -3,9 +3,7 @@ import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/core/db-adaptor';
 import { AbandonOperationService } from '@/server/services/agentExecution/AbandonOperationService';
-import { deliverWebhook } from '@/server/services/agentExecution/hooks/HookDispatcher';
 import { AiAgentService } from '@/server/services/aiAgent';
-import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';
 
 const log = debug('orvilo-server:agent:finalize-abandoned');
 
@@ -65,32 +63,20 @@ export async function finalizeAbandoned(c: Context): Promise<Response> {
         threadId,
         toolMessageId,
       };
-      if (isQueueAgentRuntimeEnabled()) {
-        await deliverWebhook(
-          { delivery: 'hatchet', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
-          bridgeBody,
-        );
-        log('[%s] queued durable parent-resume for %s', operationId, parentOperationId);
-      } else {
-        // No durable queue configured: run the CAS-guarded, idempotent bridge
-        // inline through AiAgentService so the runtime's models stay
-        // workspace-scoped.
-        // Mirror the queue-mode `subagent-callback`: opt into visitor rows only
-        // when the parent op is a shared-agent visitor run (surfaced via
-        // `streamOwnerUserId`). Ordinary creator runs keep the default
-        // exclusion.
-        const aiAgentService = new AiAgentService(serverDB, userId, {
-          includeShareVisitor: Boolean(streamOwnerUserId),
-          workspaceId,
-        });
-        const won = await aiAgentService.completeSubAgentBridge(bridgeBody);
-        log(
-          '[%s] resumed parent %s inline (local mode, won=%s)',
-          operationId,
-          parentOperationId,
-          won,
-        );
-      }
+      // Run the CAS-guarded, idempotent bridge inline through AiAgentService
+      // so the runtime's models stay workspace-scoped. (P70d: the step queue
+      // and the `subagent-callback` webhook are gone — this call is the whole
+      // resume path for a surviving parked parent.)
+      //
+      // Opt into visitor rows only when the parent op is a shared-agent
+      // visitor run (surfaced via `streamOwnerUserId`). Ordinary creator runs
+      // keep the default exclusion.
+      const aiAgentService = new AiAgentService(serverDB, userId, {
+        includeShareVisitor: Boolean(streamOwnerUserId),
+        workspaceId,
+      });
+      const won = await aiAgentService.completeSubAgentBridge(bridgeBody);
+      log('[%s] resumed parent %s inline (won=%s)', operationId, parentOperationId, won);
     }
 
     const executionTime = Date.now() - startTime;

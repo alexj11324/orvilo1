@@ -28,7 +28,6 @@ import {
 } from '@/business/server/agent-run/agentInterventionIdentity';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { AgentShareModel } from '@/database/models/agentShare';
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
 import { DeviceModel } from '@/database/models/device';
@@ -42,10 +41,7 @@ import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
 import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
-  AgentExecutionParams,
-  AgentExecutionResult,
   AgentRuntimeServiceOptions,
-  AgentStepContinuation,
   SubAgentBridgeParams,
 } from '@/server/services/agentRuntime';
 import { AgentRuntimeService } from '@/server/services/agentRuntime';
@@ -58,7 +54,6 @@ import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
-import { createGraphAwareAgentFactory } from './helpers/agentFactory';
 import { createGroupActionMemberBridgeHook } from './hooks/threadRunHooks';
 import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
@@ -274,76 +269,25 @@ export class AiAgentService {
   }
 
   /**
-   * Execute a single agent step against this service's runtime.
-   *
-   * Delegates to the internal AgentRuntimeService, which is already wired with
-   * the agent-invocation fork callbacks. The QStash step worker drives stepping
-   * through here so `orvilo-agent.callSubAgent` can fork virtual sub-agents —
-   * building a bare runtime there would lose the callback and fail with
-   * SUB_AGENT_UNAVAILABLE.
-   */
-  executeStep(params: AgentExecutionParams): Promise<AgentExecutionResult> {
-    return this.agentRuntimeService.executeStep(params);
-  }
-
-  /**
    * Build an isolated {@link AgentRuntimeService} that shares this service's
-   * delegate wiring, graph-aware agent factory, share-visitor flag and
-   * workspace scope — plus caller-supplied option overrides (e.g.
-   * `queueService: null` or a custom stream/state manager for synchronous
-   * in-process driving). `delegate`/`includeShareVisitor`/`workspaceId` are
-   * pinned to this service's values and cannot be overridden.
+   * share-visitor flag and workspace scope — plus caller-supplied option
+   * overrides (e.g. a custom stream/state manager for tests or synchronous
+   * drivers). `includeShareVisitor`/`workspaceId` are pinned to this service's
+   * values and cannot be overridden.
    *
-   * Runs that execute outside `execAgent`'s pipeline — synthetic agent runs
-   * like the agent-signal memory writer, or synchronous drivers like the
-   * OpenResponses `executeSync` path — must come through here. A bare
-   * `new AgentRuntimeService` loses the delegate, silently degrading
-   * callAgent/callSubAgent to their no-delegate fallbacks mid-run.
+   * Callers that operate on an operation outside `execAgent`'s pipeline —
+   * the OpenResponses wait-for-completion path, or the durable intervention
+   * bridges — must come through here so their models stay workspace-scoped.
+   * A bare `new AgentRuntimeService` would be personal-scoped and the
+   * tool-message backfill / resume barrier could miss workspace rows.
    */
   createIsolatedRuntime(overrides: AgentRuntimeServiceOptions = {}): AgentRuntimeService {
-    // An overriding agentFactory still goes through the graph-aware wrapper —
-    // it must never bypass graph context propagation.
-    const { agentFactory: overrideAgentFactory, ...rest } = overrides;
     return new AgentRuntimeService(this.db, this.userId, {
       ...this.runtimeOptions,
-      ...rest,
-      agentFactory: createGraphAwareAgentFactory(
-        overrideAgentFactory ?? this.runtimeOptions?.agentFactory,
-      ),
-      // ── Runtime delegate ─────────────────────────────────────────────────
-      // Operations the runtime delegates back UP to this layer. The dependency
-      // arrow is one-way (AiAgentService → AgentRuntimeService), so the runtime
-      // can't import us; instead we hand it the callbacks it needs to trigger
-      // high-level pipelines mid-step. See AgentRuntimeDelegate. New high-level
-      // capabilities the runtime calls into go in this `delegate` object.
-      // Pinned AFTER overrides — a caller override must not silently strip the
-      // delegate wiring this facade exists to preserve.
-      //
-      // Arrow fields are auto-bound, so no `.bind(this)`.
-      delegate: {
-        execGroupMember: this.execGroupMember,
-        execSubAgent: this.execSubAgent,
-        execVirtualSubAgent: this.execVirtualSubAgent,
-        verifyShareRunStillAuthorized: this.verifyShareRunStillAuthorized,
-      },
+      ...overrides,
       includeShareVisitor: this.includeShareVisitor,
       workspaceId: this.workspaceId,
     });
-  }
-
-  /** Mint a lock owner that spans a whole inline step loop. */
-  createOperationLockOwner(operationId: string): string {
-    return this.agentRuntimeService.createOperationLockOwner(operationId);
-  }
-
-  /** Publish a step that an inline loop deferred instead of running. */
-  scheduleContinuation(continuation: AgentStepContinuation): Promise<void> {
-    return this.agentRuntimeService.scheduleContinuation(continuation);
-  }
-
-  /** Release a lock retained across an inline step loop. */
-  releaseOperationLock(operationId: string, stepLockOwner: string): Promise<void> {
-    return this.agentRuntimeService.releaseOperationLock(operationId, stepLockOwner);
   }
 
   /**
@@ -698,7 +642,6 @@ export class AiAgentService {
       slug,
       prompt,
       appContext,
-      autoStart = true,
       botContext,
       botSender,
       beforeOperationStart,
@@ -707,9 +650,6 @@ export class AiAgentService {
       userAgent,
       deviceId: requestedDeviceId,
       localDeviceId,
-      botPlatformContext,
-      discordContext,
-      existingMessageIds = [],
       fileIds: attachedFileIds,
       files,
       hooks,
@@ -718,22 +658,17 @@ export class AiAgentService {
       toolModeOverride,
       model: modelOverride,
       provider: providerOverride,
-      stream,
       title,
       trigger,
       cronJobId,
       taskId,
       evalContext,
-      evalRuntime,
       maxSteps,
       disableLocalSystem,
       disableSelfFeedbackIntentTool,
       disableTools,
-      initialStepCount,
       signal,
       skipTaskVerification,
-      queueRetries,
-      queueRetryDelay,
       parentMessageId,
       parentOperationId,
       resume,
@@ -743,9 +678,7 @@ export class AiAgentService {
       approvalResolutionRequestId: providedApprovalResolutionRequestId,
       approvalSourceOperationId: providedApprovalSourceOperationId,
       selectedToolIds,
-      mentionedAgents,
       suppressUserMessage,
-      ephemeralUserMessage,
     } = params;
 
     // Honour client-minted row ids on a FRESH send only. Resume / regeneration
@@ -823,7 +756,6 @@ export class AiAgentService {
       assistantAgentId,
       canManageAgent,
       conversationAgentId,
-      disabledPluginIds,
       isPublicWorkspaceAgent,
       memberDeviceOverride,
       persistAgentId,
@@ -908,27 +840,21 @@ export class AiAgentService {
 
     // Stages 2.6–2.7 — claim the human decision(s) before anything below reads
     // message history (see `pipeline/approvalResume`).
-    const {
-      approvalOwnerAssistantId,
-      approvalSourceOperationId,
-      approvalSourceToolMessageIds,
-      approvedToolEntries,
-      batchApprovalAnchorId,
-      resumeApprovalPlugin,
-    } = await claimApprovalResume(
-      { messageModel: this.messageModel },
-      {
-        appContext,
-        approvalClaim,
-        approvalDecisions,
-        parentMessageId,
-        providedApprovalResolutionRequestId,
-        providedApprovalSourceOperationId,
-        resumeApprovals,
-        resumeParentMessage,
-        resumeToolResult,
-      },
-    );
+    const { approvalSourceOperationId, approvalSourceToolMessageIds, batchApprovalAnchorId } =
+      await claimApprovalResume(
+        { messageModel: this.messageModel },
+        {
+          appContext,
+          approvalClaim,
+          approvalDecisions,
+          parentMessageId,
+          providedApprovalResolutionRequestId,
+          providedApprovalSourceOperationId,
+          resumeApprovals,
+          resumeParentMessage,
+          resumeToolResult,
+        },
+      );
 
     // Deterministic continuation identity for a generic (v2) approval claim.
     // Also consumed by the turn setup below: a crash-safe re-entry must find
@@ -1196,27 +1122,6 @@ export class AiAgentService {
   }
 
   /**
-   * `AgentRuntimeDelegate.verifyShareRunStillAuthorized` implementation — see
-   * `AgentShareModel.isRunStillAuthorized`'s JSDoc for what "authorized" means
-   * and why a per-step recheck (not only at step 0) is what actually stops a
-   * revoked share's run: nothing tears down an operation that already exists,
-   * and the visitor's own Stop button breaks the instant the share goes
-   * private, so the step loop has to re-prove authorization itself.
-   *
-   * A plain top-level `db` read (not scoped to `this.userId`/workspace):
-   * `agent_shares` has no ownership predicate applicable here — this call runs
-   * from inside the CREATOR's own runtime step, so `this.db` is already the
-   * correct connection.
-   *
-   * Arrow field (not a method) so it stays bound when handed to
-   * AgentRuntimeService.
-   */
-  verifyShareRunStillAuthorized = async (params: {
-    agentId: string;
-    shareId: string;
-  }): Promise<boolean> => AgentShareModel.isRunStillAuthorized(this.db, params);
-
-  /**
    * Execute an agent in an isolated Thread context.
    *
    * Group/callAgent, direct-mention, and client `callSubAgent` transports use
@@ -1302,24 +1207,6 @@ export class AiAgentService {
           resumeParentOnComplete: true,
         },
       );
-
-      // Enforce the requested timeout: if the member op is still running when the
-      // deadline passes, the watchdog interrupts it and bridges a `timeout`
-      // completion so the supervisor doesn't stay parked indefinitely.
-      if (result.success && result.operationId && params.timeout && params.timeout > 0) {
-        await this.agentRuntimeService.scheduleGroupMemberTimeout(
-          {
-            anchorMessageId: params.anchorMessageId,
-            expectedMembers: params.expectedMembers,
-            groupToolMessageId: params.groupToolMessageId,
-            memberOperationId: result.operationId,
-            mode: 'isolated',
-            onComplete: params.onComplete,
-            parentOperationId: params.parentOperationId,
-          },
-          params.timeout,
-        );
-      }
 
       return {
         error: result.error,

@@ -3,41 +3,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
-const {
-  mockConnectorQueryByIdentifiers,
-  mockConnectorToolQueryAll,
-  mockCreateOperation,
-  mockCreateServerAgentToolsEngine,
-  mockGetAgentConfig,
-  mockGetComposioManifests,
-  mockGetOrviloSkillManifests,
-  mockMessageCreate,
-  mockPluginQuery,
-} = vi.hoisted(() => ({
-  mockConnectorQueryByIdentifiers: vi.fn().mockResolvedValue([]),
-  mockConnectorToolQueryAll: vi.fn().mockResolvedValue([]),
-  mockCreateOperation: vi.fn(),
-  mockCreateServerAgentToolsEngine: vi.fn().mockReturnValue({
-    generateToolsDetailed: vi.fn().mockReturnValue({ enabledToolIds: [], tools: [] }),
-    getEnabledPluginManifests: vi.fn().mockReturnValue(new Map()),
-  }),
-  mockGetAgentConfig: vi.fn(),
-  mockGetComposioManifests: vi.fn().mockResolvedValue([]),
-  mockGetOrviloSkillManifests: vi.fn().mockResolvedValue([]),
-  mockMessageCreate: vi.fn(),
-  mockPluginQuery: vi.fn().mockResolvedValue([]),
-}));
+// The three-state plugin config (legacy string = pinned, { mode: 'pinned' },
+// { mode: 'disabled' }) used to feed Mecha's tools engine; under ACP it feeds
+// `resolveRunToolSurface`, whose output rides the dispatch input as
+// builtinToolSpecs/capabilityContext. Non-builtin plugins (market, composio,
+// custom, DB skills) have no server executor to mount, so the boundary sees
+// only builtin identifiers — the matrix itself is covered in
+// runToolSurface.test.ts; these tests pin the execAgent → surface plumbing.
+const { mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate, mockPluginQuery } =
+  vi.hoisted(() => ({
+    mockDispatchHeteroAgent: vi.fn(),
+    mockGetAgentConfig: vi.fn(),
+    mockMessageCreate: vi.fn(),
+    mockPluginQuery: vi.fn().mockResolvedValue([]),
+  }));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
   getTrustedClientTokenForSession: vi.fn().mockResolvedValue(undefined),
   isTrustedClientEnabled: vi.fn().mockReturnValue(false),
-}));
-
-vi.mock('@/server/modules/KeyVaultsEncrypt', () => ({
-  KeyVaultsGateKeeper: {
-    initWithEnvKey: vi.fn().mockResolvedValue({ decrypt: vi.fn(), encrypt: vi.fn() }),
-  },
 }));
 
 vi.mock('@/database/models/message', () => ({
@@ -73,33 +57,13 @@ vi.mock('@/database/models/plugin', () => ({
   }),
 }));
 
-vi.mock('@/database/models/connector', () => ({
-  ConnectorModel: vi.fn().mockImplementation(function () {
-    return {
-      queryByIdentifiers: mockConnectorQueryByIdentifiers,
-      resolveByIdentifiers: mockConnectorQueryByIdentifiers,
-    };
-  }),
-}));
-
-vi.mock('@/database/models/connectorTool', () => ({
-  ConnectorToolModel: vi.fn().mockImplementation(function () {
-    return {
-      queryAllByConnectorIds: mockConnectorToolQueryAll,
-      queryByConnector: vi.fn().mockResolvedValue([]),
-      queryByConnectorIds: vi.fn().mockResolvedValue([]),
-    };
-  }),
-}));
-
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
-      findById: vi.fn().mockResolvedValue(null),
-      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -116,14 +80,27 @@ vi.mock('@/database/models/thread', () => ({
 
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
-    return { createOperation: mockCreateOperation };
+    return {
+      createOperation: vi.fn().mockResolvedValue({
+        autoStarted: true,
+        messageId: 'queue-msg-1',
+        operationId: 'op-123',
+        success: true,
+      }),
+    };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary and
+// assert on the tool surface carried into it.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getOrviloSkillManifests: mockGetOrviloSkillManifests,
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -131,7 +108,7 @@ vi.mock('@/server/services/market', () => ({
 vi.mock('@/server/services/composio', () => ({
   ComposioService: vi.fn().mockImplementation(function () {
     return {
-      getComposioManifests: mockGetComposioManifests,
+      getComposioManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -142,16 +119,9 @@ vi.mock('@/server/services/file', () => ({
   }),
 }));
 
-vi.mock('@/server/modules/Mecha', () => ({
-  createServerAgentToolsEngine: mockCreateServerAgentToolsEngine,
-  serverMessagesEngine: vi.fn().mockResolvedValue([{ content: 'test', role: 'user' }]),
-}));
-
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: { isConfigured: false, queryDeviceList: vi.fn().mockResolvedValue([]) },
 }));
-
-vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDB: vi.fn() }));
 
 vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
@@ -163,32 +133,20 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
-const pluginManifest = (identifier: string) => ({
-  customParams: {},
-  identifier,
-  manifest: { api: [{ description: 'x', name: 'x', parameters: {} }], identifier },
+const baseAgentConfig = (plugins: unknown[], overrides: Record<string, unknown> = {}) => ({
+  chatConfig: {},
+  id: 'agent-1',
+  model: 'gpt-4',
+  plugins,
+  provider: 'openai',
+  systemRole: 'You are a helper',
+  ...overrides,
 });
 
-const toolManifest = (identifier: string) => ({
-  api: [{ description: 'x', name: 'x', parameters: {} }],
-  identifier,
-  meta: { description: 'x', title: identifier },
-});
-
-const installedPluginsArg = () =>
-  mockCreateServerAgentToolsEngine.mock.calls[0][0].installedPlugins as any[];
-
-const agentConfigPluginsArg = () =>
-  mockCreateServerAgentToolsEngine.mock.calls[0][1].agentConfig.plugins as string[];
-
-const disabledPluginIdsArg = () =>
-  mockCreateServerAgentToolsEngine.mock.calls[0][1].disabledPluginIds as string[];
-
-const generateToolsArg = () =>
-  mockCreateServerAgentToolsEngine.mock.results[0].value.generateToolsDetailed.mock.calls[0][0];
-
-const toolManifestMapArg = () =>
-  mockCreateOperation.mock.calls[0][0].toolSet.manifestMap as Record<string, unknown>;
+const builtinSpecIds = () =>
+  mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs.map(
+    (spec: { identifier: string }) => spec.identifier,
+  );
 
 describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disabled)', () => {
   let service: AiAgentService;
@@ -196,135 +154,53 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
-    mockPluginQuery.mockResolvedValue([
-      pluginManifest('plugin-a'),
-      pluginManifest('plugin-b'),
-      pluginManifest('plugin-c'),
-    ]);
     service = new AiAgentService({} as any, 'test-user-id');
   });
 
-  it('excludes a disabled entry from the installed-plugins auto-discovery pool, in a mixed-shape array', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      // legacy string (implicit pinned) + explicit disabled object + untouched auto (plugin-c absent)
-      plugins: ['plugin-a', { identifier: 'plugin-b', mode: 'disabled' }],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+  it('excludes a disabled builtin from builtinToolSpecs in a mixed-shape array', async () => {
+    mockGetAgentConfig.mockResolvedValue(
+      baseAgentConfig(['orvilo-task', { identifier: 'orvilo-agent', mode: 'disabled' }]),
+    );
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    const installed = installedPluginsArg().map((p) => p.identifier);
-    expect(installed).toContain('plugin-a');
-    expect(installed).toContain('plugin-c');
-    expect(installed).not.toContain('plugin-b');
-  });
-
-  it('only feeds pinned identifiers into the engine agentConfig.plugins, excluding disabled', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: [
-        { identifier: 'plugin-a', mode: 'pinned' },
-        { identifier: 'plugin-b', mode: 'disabled' },
-      ],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
-
-    expect(agentConfigPluginsArg()).toEqual(['plugin-a']);
-    expect(disabledPluginIdsArg()).toEqual(['plugin-b']);
+    expect(builtinSpecIds()).toContain('orvilo-task');
+    expect(builtinSpecIds()).not.toContain('orvilo-agent');
   });
 
   it('behaves identically to a pure string array when no entry is disabled', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: ['plugin-a'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+    mockGetAgentConfig.mockResolvedValue(baseAgentConfig(['orvilo-task', 'orvilo-agent']));
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    const installed = installedPluginsArg().map((p) => p.identifier);
-    expect(installed).toEqual(['plugin-a', 'plugin-b', 'plugin-c']);
-    expect(agentConfigPluginsArg()).toEqual(['plugin-a']);
+    expect(builtinSpecIds()).toEqual(expect.arrayContaining(['orvilo-task', 'orvilo-agent']));
   });
 
   it('restricts an orchestration turn to the exclusive plugin set', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: ['plugin-a'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+    mockGetAgentConfig.mockResolvedValue(baseAgentConfig(['orvilo-task']));
 
     await service.execAgent({
       agentId: 'agent-1',
-      exclusivePluginIds: ['evidence-only'],
+      exclusivePluginIds: ['orvilo-goal'],
       prompt: 'Submit evidence',
     } as any);
 
-    expect(agentConfigPluginsArg()).toEqual(['evidence-only']);
-    expect(generateToolsArg()).toMatchObject({
-      skipDefaultTools: true,
-      toolIds: ['evidence-only'],
-    });
+    expect(builtinSpecIds()).toEqual(['orvilo-goal']);
   });
 
-  it('excludes a disabled composio/orvilo-skill manifest from the activator-discovery toolManifestMap', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: [
-        { identifier: 'composio-disabled', mode: 'disabled' },
-        { identifier: 'skill-disabled', mode: 'disabled' },
-      ],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-    mockGetComposioManifests.mockResolvedValue([toolManifest('composio-disabled')]);
-    mockGetOrviloSkillManifests.mockResolvedValue([toolManifest('skill-disabled')]);
+  it('mounts nothing for non-builtin identifiers regardless of mode', async () => {
+    mockGetAgentConfig.mockResolvedValue(
+      baseAgentConfig(['custom-plugin-xyz', { identifier: 'composio-disabled', mode: 'disabled' }]),
+    );
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    // The disabled entries must not resurface in the map the activator uses
-    // to build <available_tools> — even though they're excluded from the
-    // actual invocation pool (additionalManifests), a separate ingest loop
-    // used to re-add them here from the raw (unfiltered) manifest arrays.
-    expect(toolManifestMapArg()).not.toHaveProperty('composio-disabled');
-    expect(toolManifestMapArg()).not.toHaveProperty('skill-disabled');
-  });
-
-  it('excludes a disabled builtin from the activator-discovery toolManifestMap', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: [{ identifier: 'orvilo-agent', mode: 'disabled' }],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
-
-    expect(toolManifestMapArg()).not.toHaveProperty('orvilo-agent');
+    expect(builtinSpecIds()).toHaveLength(0);
   });
 });

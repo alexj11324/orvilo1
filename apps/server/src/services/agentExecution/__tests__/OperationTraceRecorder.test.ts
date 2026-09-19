@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OperationTraceRecorder } from '../OperationTraceRecorder';
-import type { StepPresentationData } from '../types';
+import type { StepPresentationData } from '../stepTypes';
 
 const buildStore = () => ({
   get: vi.fn(),

@@ -4,7 +4,6 @@ export {
   ClaudeCodeSdkAdapter,
   CodeBuddyAdapter,
   CodexAdapter,
-  CodexAppServerAdapter,
   CursorAdapter,
   GrokBuildAdapter,
   KimiCodeAdapter,
@@ -84,6 +83,8 @@ export {
   isUserSideHeteroError,
 } from './errors';
 export { getHeterogeneousTypeLabel, HETEROGENEOUS_TYPE_LABELS } from './labels';
+// `acpRuntime` is a leaf (os/path only, no fs) — safe for the server bundle;
+// do NOT re-export the `/spawn` barrel here (see sandboxRunner's warning).
 export type {
   CreateAssistantIntent,
   MainAgentIntent,
@@ -120,6 +121,7 @@ export {
 } from './providerBinding';
 export { createAdapter, listAgentTypes, listLocalAgentTypes } from './registry';
 export type { HeterogeneousAgentScanMap, HeterogeneousAgentScanStatus } from './scan/types';
+export { ACP_RUNTIME_AGENT_TYPES } from './spawn/acpRuntime';
 export {
   classifyHeteroProcessFailure,
   isHeteroStatusGuideErrorData,

@@ -1,19 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  getActiveWorkspaceId,
-  useActiveWorkspaceId,
-} from './hooks/useActiveWorkspaceId';
-import {
-  getActiveWorkspaceSlug,
-  useActiveWorkspaceSlug,
-} from './hooks/useActiveWorkspaceSlug';
+import { getActiveWorkspaceId, useActiveWorkspaceId } from './hooks/useActiveWorkspaceId';
+import { getActiveWorkspaceSlug, useActiveWorkspaceSlug } from './hooks/useActiveWorkspaceSlug';
 import { getBusinessTrpcHeaders } from './trpc-headers';
-import {
-  getWorkspaceContextState,
-  useWorkspaceContextStore,
-} from './workspaceContextStore';
+import { getWorkspaceContextState, useWorkspaceContextStore } from './workspaceContextStore';
 
 beforeEach(() => {
   getWorkspaceContextState().setActiveWorkspace(null);
@@ -47,9 +38,7 @@ describe('workspaceContextStore', () => {
     expect(result.current).toEqual({ id: null, slug: null });
 
     act(() => {
-      useWorkspaceContextStore
-        .getState()
-        .setActiveWorkspace({ id: 'ws-9', slug: 'team' });
+      useWorkspaceContextStore.getState().setActiveWorkspace({ id: 'ws-9', slug: 'team' });
     });
     expect(result.current).toEqual({ id: 'ws-9', slug: 'team' });
   });

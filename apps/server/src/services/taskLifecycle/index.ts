@@ -44,7 +44,6 @@ import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
-import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
 
@@ -278,6 +277,7 @@ export class TaskLifecycleService {
     let verifySettled = false;
     let lifecycleFailed = false;
     try {
+      const { TaskIntegrationService } = await import('@/server/services/taskIntegration');
       const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
 
       // Whether a confirmed verify plan owns this run's delivery acceptance. Set in

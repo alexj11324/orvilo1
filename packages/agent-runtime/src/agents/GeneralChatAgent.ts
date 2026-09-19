@@ -7,7 +7,7 @@ import {
 } from '@orvilo/types';
 
 import { createDefaultGlobalAudits, DEFAULT_SECURITY_BLACKLIST } from '../audit';
-import { InterventionChecker } from '../core';
+import { InterventionChecker } from '../audit/InterventionChecker';
 import {
   type Agent,
   type AgentInstruction,

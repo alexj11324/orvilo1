@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 const {
-  mockCreateOperation,
+  mockDispatchHeteroAgent,
   mockFindById,
   mockFindMessagePlugin,
   mockMessageCreate,
@@ -17,7 +17,7 @@ const {
   mockUpdatePluginState,
   mockUpdateToolMessage,
 } = vi.hoisted(() => ({
-  mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockFindById: vi.fn(),
   mockFindMessagePlugin: vi.fn(),
   mockMessageCreate: vi.fn(),
@@ -128,11 +128,20 @@ vi.mock('@/database/models/userMemory/persona', () => ({
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
-      createOperation: mockCreateOperation,
+      createOperation: vi.fn(),
       ensureInterventionContinuationStarted: vi.fn().mockResolvedValue('scheduled'),
       loadInterventionContinuationState: mockLoadInterventionContinuationState,
     };
   }),
+}));
+
+// Under ACP the continuation re-dispatches through `dispatchHeteroAgent` — the
+// retired `tool_result`/`human_approved_tool` phases were model-loop internals.
+// What survives at the boundary: the row-locking approval resolution happens
+// before dispatch, and the run carries `parentMessageId` (no re-execution of
+// the answered tool call, which already holds the human's content).
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -209,11 +218,11 @@ describe('AiAgentService.execAgent - resumeToolResult', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
     mockFindById.mockImplementation(async (id: string) =>
       id === pendingToolMessage.id ? pendingToolMessage : undefined,
@@ -237,7 +246,7 @@ describe('AiAgentService.execAgent - resumeToolResult', () => {
     prompt: '',
   };
 
-  it('writes the human answer as tool content, marks approved, and resumes from tool_result (no re-execution)', async () => {
+  it('writes the human answer as tool content, marks approved, and re-dispatches anchored on the tool row (no re-execution)', async () => {
     await service.execAgent({
       ...baseParams,
       resumeToolResult: {
@@ -260,21 +269,12 @@ describe('AiAgentService.execAgent - resumeToolResult', () => {
       }),
     ]);
 
-    // Resumes from `tool_result` — NOT `human_approved_tool` (which would
-    // re-dispatch the tool and overwrite the answer).
-    expect(mockCreateOperation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        initialContext: expect.objectContaining({
-          payload: expect.objectContaining({
-            assistantMessageId: 'assistant-msg-new',
-            parentMessageId: 'tool-msg-1',
-          }),
-          phase: 'tool_result',
-        }),
-      }),
-    );
-    const call = mockCreateOperation.mock.calls[0][0];
-    expect(call.initialContext.phase).not.toBe('human_approved_tool');
+    // The continuation re-dispatches with the tool row as its anchor — the
+    // host resumes from history rather than re-running the answered call.
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const ctx = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(ctx.parentMessageId).toBe('tool-msg-1');
+    expect(ctx.assistantMessageId).toBe('assistant-msg-new');
   });
 
   it('persists pluginState when provided', async () => {

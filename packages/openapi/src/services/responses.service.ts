@@ -59,22 +59,6 @@ export class ResponsesService extends BaseService {
   }
 
   /**
-   * Extract function tool definitions from tools array
-   */
-  private extractFunctionTools(
-    tools?: Tool[] | null,
-  ): Array<{ description?: string; name: string; parameters?: Record<string, any> }> {
-    if (!tools) return [];
-    return tools
-      .filter((t): t is Tool & { type: 'function' } => t.type === 'function')
-      .map((t) => ({
-        description: (t as any).description,
-        name: (t as any).name,
-        parameters: (t as any).parameters,
-      }));
-  }
-
-  /**
    * Check if input contains function_call_output items (resume flow)
    */
   private hasFunctionCallOutputs(input: string | InputItem[]): boolean {
@@ -376,7 +360,6 @@ export class ResponsesService extends BaseService {
       // 1. Create agent operation without auto-start
       // model field is used as agentId
       const additionalPluginIds = this.extractHostedToolIds(params.tools);
-      const functionTools = this.extractFunctionTools(params.tools);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
@@ -385,7 +368,6 @@ export class ResponsesService extends BaseService {
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
         autoStart: false,
-        functionTools: functionTools.length > 0 ? functionTools : undefined,
         instructions,
         prompt,
         stream: false,
@@ -476,7 +458,6 @@ export class ResponsesService extends BaseService {
       // 1. Create agent operation (before generating responseId so we have topicId)
       // model field is used as agentId
       const additionalPluginIds = this.extractHostedToolIds(params.tools);
-      const functionTools = this.extractFunctionTools(params.tools);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
@@ -485,7 +466,6 @@ export class ResponsesService extends BaseService {
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
         autoStart: false,
-        functionTools: functionTools.length > 0 ? functionTools : undefined,
         instructions,
         prompt,
         stream: true,

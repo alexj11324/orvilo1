@@ -8,6 +8,7 @@ const {
   mockConnectorToolQueryAll,
   mockCreateOperation,
   mockCreateServerAgentToolsEngine,
+  mockDispatchHeteroAgent,
   mockGetAgentConfig,
   mockMessageCreate,
   mockPluginQuery,
@@ -19,6 +20,7 @@ const {
     generateToolsDetailed: vi.fn().mockReturnValue({ enabledToolIds: [], tools: [] }),
     getEnabledPluginManifests: vi.fn().mockReturnValue(new Map()),
   }),
+  mockDispatchHeteroAgent: vi.fn(),
   mockGetAgentConfig: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn().mockResolvedValue([]),
@@ -116,6 +118,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — stub the dispatch boundary and
+// assert on the tool surface carried into it (`builtinToolSpecs`).
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
@@ -181,8 +189,12 @@ const connectorOf = (over: Record<string, unknown>) => ({
   ...over,
 });
 
-const installedPluginsArg = () =>
-  mockCreateServerAgentToolsEngine.mock.calls[0][0].installedPlugins as any[];
+// Under ACP the run's tool surface is `builtinToolSpecs` on the dispatch
+// input; connector-backed plugins are no longer resolved into it at all.
+const builtinSpecIds = () =>
+  (mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs as any[]).map(
+    (spec) => spec.identifier,
+  );
 
 describe('AiAgentService.execAgent - connector/plugin overlap', () => {
   let service: AiAgentService;
@@ -205,10 +217,16 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
       systemRole: 'You are a helper',
     });
     mockPluginQuery.mockResolvedValue([pluginA]);
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
     service = new AiAgentService({} as any, 'test-user-id');
   });
 
-  it('keeps a same-named plugin when the connector is disabled', async () => {
+  it('ignores a same-named connector that is disabled', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: false })]);
     mockConnectorToolQueryAll.mockResolvedValue([
       { permission: 'auto', toolName: 'x', userConnectorId: 'c1' },
@@ -216,19 +234,24 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(installedPluginsArg().some((p) => p.identifier === 'plugin-a')).toBe(true);
+    // 'plugin-a' is not a builtin tool — nothing mounts on the ACP surface.
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    expect(builtinSpecIds()).not.toContain('plugin-a');
+    expect(mockConnectorQueryByIdentifiers).not.toHaveBeenCalled();
+    expect(mockConnectorToolQueryAll).not.toHaveBeenCalled();
   });
 
-  it('keeps a same-named plugin when the connector has no synced tools', async () => {
+  it('ignores a same-named connector with no synced tools', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: true })]);
     mockConnectorToolQueryAll.mockResolvedValue([]);
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(installedPluginsArg().some((p) => p.identifier === 'plugin-a')).toBe(true);
+    expect(builtinSpecIds()).not.toContain('plugin-a');
+    expect(mockConnectorQueryByIdentifiers).not.toHaveBeenCalled();
   });
 
-  it('replaces the plugin when the connector actually produces tools', async () => {
+  it('ignores a same-named connector even when it has synced tools', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: true })]);
     mockConnectorToolQueryAll.mockResolvedValue([
       { permission: 'auto', toolName: 'x', userConnectorId: 'c1' },
@@ -236,6 +259,10 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(installedPluginsArg().some((p) => p.identifier === 'plugin-a')).toBe(false);
+    // Connector-produced tools never enter the ACP builtin surface — a
+    // connector row can no longer shadow or replace the plugin entry.
+    expect(builtinSpecIds()).not.toContain('plugin-a');
+    expect(mockConnectorQueryByIdentifiers).not.toHaveBeenCalled();
+    expect(mockConnectorToolQueryAll).not.toHaveBeenCalled();
   });
 });

@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 const {
+  mockDispatchHeteroAgent,
   mockGetLatestNonToolMessageId,
   mockGetLatestSpineMessageId,
   mockMessageCreate,
   mockReleaseReservation,
   mockTryReserve,
 } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
   mockGetLatestNonToolMessageId: vi.fn(),
   mockGetLatestSpineMessageId: vi.fn(),
   mockMessageCreate: vi.fn(),
@@ -123,6 +125,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise spine anchoring without touching the gateway.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
@@ -204,6 +212,12 @@ describe('AiAgentService.execAgent - user turn spine anchoring', () => {
     mockGetLatestNonToolMessageId.mockResolvedValue(undefined);
     mockTryReserve.mockResolvedValue(true);
     mockReleaseReservation.mockResolvedValue(undefined);
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
 
     service = new AiAgentService(mockDb, 'test-user-id');
   });

@@ -1,148 +1,182 @@
-// @vitest-environment node
-/**
- * Integration tests for memory enabled priority in execAgent.
- *
- * Verifies that agent-level memory config takes priority over user-level setting,
- * and falls back to user setting when agent config is absent.
- */
-import type { OrviloDatabase } from '@orvilo/database';
-import { agents, userSettings } from '@orvilo/database/schemas';
-import { getTestDB } from '@orvilo/database/test-utils';
-import { eq } from 'drizzle-orm';
-import OpenAI from 'openai';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as ModelBankModule from 'model-bank';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { inMemoryAgentStateManager } from '@/server/modules/AgentExecution/InMemoryAgentStateManager';
-import { inMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
+import { AiAgentService } from '../index';
 
-import {
-  createMockResponsesAPIStream,
-  waitForOperationComplete,
-} from '../../../routers/lambda/__tests__/integration/aiAgent/helpers';
-import {
-  cleanupTestUser,
-  createTestUser,
-} from '../../../routers/lambda/__tests__/integration/setup';
-import { aiAgentRouter } from '../../../routers/lambda/aiAgent';
+// Under the retired model loop `memory.enabled` (agent chatConfig over
+// userSettings) decided whether the `orvilo-user-memory` tool list reached the
+// model. Under ACP the tool mounts iff the agent pins it — the dispatch input
+// carries the spec — and `memory.enabled` now gates only background memory
+// EXTRACTION (`memory/userMemory/gate.ts`), not the per-run tool surface.
+// These tests pin that contract so the semantic change is explicit.
+const { mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate, mockPluginQuery } =
+  vi.hoisted(() => ({
+    mockDispatchHeteroAgent: vi.fn(),
+    mockGetAgentConfig: vi.fn(),
+    mockMessageCreate: vi.fn(),
+    mockPluginQuery: vi.fn().mockResolvedValue([]),
+  }));
 
-process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
-
-let testDB: OrviloDatabase;
-vi.mock('@/database/core/db-adaptor', () => ({
-  getServerDB: vi.fn(function () {
-    return testDB;
-  }),
+vi.mock('@/libs/trusted-client', () => ({
+  generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
+  getTrustedClientTokenForSession: vi.fn().mockResolvedValue(undefined),
+  isTrustedClientEnabled: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock('@/server/services/file', () => ({
-  FileService: vi.fn().mockImplementation(function () {
+vi.mock('@/database/models/message', () => ({
+  MessageModel: vi.fn().mockImplementation(function () {
     return {
-      getFullFileUrl: vi.fn().mockImplementation((path: string) => (path ? `/files${path}` : null)),
+      create: mockMessageCreate,
+      getLatestNonToolMessageId: vi.fn().mockResolvedValue(undefined),
+      getLatestSpineMessageId: vi.fn().mockResolvedValue(undefined),
+      query: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue({}),
     };
   }),
 }));
 
-let mockResponsesCreate: any;
-let serverDB: OrviloDatabase;
-let userId: string;
+vi.mock('@/database/models/agent', () => ({
+  AgentModel: vi.fn().mockImplementation(function () {
+    return {
+      getAgentConfig: vi.fn(),
+      queryAgents: vi.fn().mockResolvedValue([]),
+    };
+  }),
+}));
 
-const createTestContext = () => ({
-  jwtPayload: { userId },
-  userId,
+vi.mock('@/server/services/agent', () => ({
+  AgentService: vi.fn().mockImplementation(function () {
+    return { getAgentConfig: mockGetAgentConfig };
+  }),
+}));
+
+vi.mock('@/database/models/plugin', () => ({
+  PluginModel: vi.fn().mockImplementation(function () {
+    return { query: mockPluginQuery };
+  }),
+}));
+
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: vi.fn().mockImplementation(function () {
+    return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
+      releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
+      tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
+      create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
+    };
+  }),
+}));
+
+vi.mock('@/database/models/thread', () => ({
+  ThreadModel: vi.fn().mockImplementation(function () {
+    return {
+      create: vi.fn(),
+      findById: vi.fn(),
+      update: vi.fn(),
+    };
+  }),
+}));
+
+vi.mock('@/server/services/agentRuntime', () => ({
+  AgentRuntimeService: vi.fn().mockImplementation(function () {
+    return {
+      createOperation: vi.fn().mockResolvedValue({
+        autoStarted: true,
+        messageId: 'queue-msg-1',
+        operationId: 'op-123',
+        success: true,
+      }),
+    };
+  }),
+}));
+
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
+vi.mock('@/server/services/deviceGateway', () => ({
+  deviceGateway: { isConfigured: false, queryDeviceList: vi.fn().mockResolvedValue([]) },
+}));
+
+vi.mock('@/server/services/file', () => ({
+  FileService: vi.fn().mockImplementation(function () {
+    return { uploadFromUrl: vi.fn() };
+  }),
+}));
+
+vi.mock('model-bank', async (importOriginal) => {
+  const actual = await importOriginal<typeof ModelBankModule>();
+  return {
+    ...actual,
+    ORVILO_DEFAULT_MODEL_LIST: [
+      { abilities: { functionCall: true }, id: 'gpt-4', providerId: 'openai' },
+    ],
+  };
 });
 
-const hasMemoryTools = (tools: Array<{ name?: string; function?: { name: string } }>) =>
-  tools?.some((t) => (t.name || t.function?.name)?.includes('orvilo-user-memory'));
-
-const setUserMemorySettings = async (enabled: boolean) => {
-  // Try update first, then insert if no row exists
-  const result = await serverDB
-    .update(userSettings)
-    .set({ memory: { enabled } })
-    .where(eq(userSettings.id, userId))
-    .returning();
-
-  if (result.length === 0) {
-    await serverDB.insert(userSettings).values({ id: userId, memory: { enabled } });
-  }
-};
-
-beforeEach(async () => {
-  serverDB = await getTestDB();
-  testDB = serverDB;
-  userId = await createTestUser(serverDB);
-  mockResponsesCreate = vi.spyOn(OpenAI.Responses.prototype, 'create');
-  mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Hello') as any);
+const baseAgentConfig = (overrides: Record<string, unknown> = {}) => ({
+  chatConfig: {},
+  id: 'agent-1',
+  model: 'gpt-4',
+  plugins: ['orvilo-user-memory'],
+  provider: 'openai',
+  systemRole: 'You are a helper',
+  ...overrides,
 });
 
-afterEach(async () => {
-  await cleanupTestUser(serverDB, userId);
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
-  inMemoryAgentStateManager.clear();
-  inMemoryStreamEventManager.clear();
-});
+const builtinSpecIds = () =>
+  mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs.map(
+    (spec: { identifier: string }) => spec.identifier,
+  );
 
-const createTestAgent = async (chatConfig: Record<string, any> = {}) => {
-  const [agent] = await serverDB
-    .insert(agents)
-    .values({
-      chatConfig: chatConfig as any,
-      model: 'gpt-5-pro',
-      provider: 'openai',
-      systemRole: 'test',
-      title: 'Test',
-      userId,
-    })
-    .returning();
-  return agent;
-};
+describe('execAgent - memory tool surface', () => {
+  let service: AiAgentService;
 
-describe('execAgent - memory enabled priority', () => {
-  it('should disable memory tools when agent config sets memory.enabled = false, even if user enables it', async () => {
-    await setUserMemorySettings(true);
-    const agent = await createTestAgent({ memory: { enabled: false } });
-
-    const caller = aiAgentRouter.createCaller(createTestContext());
-    const result = await caller.execAgent({ agentId: agent.id, prompt: 'Hello' });
-    await waitForOperationComplete(inMemoryAgentStateManager, result.operationId);
-
-    const callArgs = mockResponsesCreate.mock.calls[0][0] as { tools?: any[] };
-    expect(hasMemoryTools(callArgs.tools ?? [])).toBe(false);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
+    service = new AiAgentService({} as any, 'test-user-id');
   });
 
-  it('should enable memory tools when agent config sets memory.enabled = true, even if user disables it', async () => {
-    await setUserMemorySettings(false);
-    const agent = await createTestAgent({ memory: { enabled: true } });
+  it('mounts the memory tool when the agent pins orvilo-user-memory', async () => {
+    mockGetAgentConfig.mockResolvedValue(baseAgentConfig());
 
-    const caller = aiAgentRouter.createCaller(createTestContext());
-    const result = await caller.execAgent({ agentId: agent.id, prompt: 'Hello' });
-    await waitForOperationComplete(inMemoryAgentStateManager, result.operationId);
+    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    const callArgs = mockResponsesCreate.mock.calls[0][0] as { tools?: any[] };
-    expect(hasMemoryTools(callArgs.tools ?? [])).toBe(true);
+    expect(builtinSpecIds()).toContain('orvilo-user-memory');
   });
 
-  it('should fallback to user setting when agent has no memory config', async () => {
-    await setUserMemorySettings(false);
-    const agent = await createTestAgent();
+  it('still mounts when chatConfig.memory.enabled is false — the toggle gates extraction, not mounting', async () => {
+    mockGetAgentConfig.mockResolvedValue(
+      baseAgentConfig({ chatConfig: { memory: { enabled: false } } }),
+    );
 
-    const caller = aiAgentRouter.createCaller(createTestContext());
-    const result = await caller.execAgent({ agentId: agent.id, prompt: 'Hello' });
-    await waitForOperationComplete(inMemoryAgentStateManager, result.operationId);
+    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    const callArgs = mockResponsesCreate.mock.calls[0][0] as { tools?: any[] };
-    expect(hasMemoryTools(callArgs.tools ?? [])).toBe(false);
+    expect(builtinSpecIds()).toContain('orvilo-user-memory');
   });
 
-  it('should enable memory by default when neither agent nor user configures it', async () => {
-    const agent = await createTestAgent();
+  it('mounts nothing when the agent does not pin the memory tool', async () => {
+    mockGetAgentConfig.mockResolvedValue(baseAgentConfig({ plugins: [] }));
 
-    const caller = aiAgentRouter.createCaller(createTestContext());
-    const result = await caller.execAgent({ agentId: agent.id, prompt: 'Hello' });
-    await waitForOperationComplete(inMemoryAgentStateManager, result.operationId);
+    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    const callArgs = mockResponsesCreate.mock.calls[0][0] as { tools?: any[] };
-    expect(hasMemoryTools(callArgs.tools ?? [])).toBe(true);
+    expect(builtinSpecIds()).not.toContain('orvilo-user-memory');
+  });
+
+  it('honours a disabled entry for the pinned memory tool', async () => {
+    mockGetAgentConfig.mockResolvedValue(
+      baseAgentConfig({ plugins: [{ identifier: 'orvilo-user-memory', mode: 'disabled' }] }),
+    );
+
+    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
+
+    expect(builtinSpecIds()).not.toContain('orvilo-user-memory');
   });
 });

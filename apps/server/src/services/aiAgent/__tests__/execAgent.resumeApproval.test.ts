@@ -11,7 +11,7 @@ import {
 import { AiAgentService } from '../index';
 
 const {
-  mockCreateOperation,
+  mockDispatchHeteroAgent,
   mockFindById,
   mockFindMessagePlugin,
   mockMessageCreate,
@@ -38,7 +38,7 @@ const {
   mockInterruptOperation: vi.fn(),
   mockLoadInterventionContinuationState: vi.fn(),
   mockReleaseTaskCallbackReservation: vi.fn(),
-  mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockFindById: vi.fn(),
   mockFindMessagePlugin: vi.fn(),
   mockListMessagePluginsByTopic: vi.fn(),
@@ -149,12 +149,24 @@ vi.mock('@/database/models/userMemory/persona', () => ({
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
-      createOperation: mockCreateOperation,
+      createOperation: vi.fn(),
       ensureInterventionContinuationStarted: mockEnsureInterventionContinuationStarted,
       interruptOperation: mockInterruptOperation,
       loadInterventionContinuationState: mockLoadInterventionContinuationState,
     };
   }),
+}));
+
+// Under ACP the continuation re-dispatches through `dispatchHeteroAgent`: the
+// retired `human_approved_tool`/`tool_result` phases and the initialContext
+// payload were model-loop internals. What survives at the boundary: the
+// row-locking claim + fences still run inside execAgent, and the run carries
+// the tool-row anchor via ctx.parentMessageId. Retiring the parked source
+// operation moved OUT of execAgent to the router's shared dispatch boundary
+// (`dispatchClaimedAgentIntervention` → retirePendingApprovalOperation), so
+// `interruptOperation`/`recordCompletion` are never called from here.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/database/models/agentOperation', () => ({
@@ -243,11 +255,11 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
     mockFindById.mockImplementation(async (id: string) =>
       id === pendingToolMessage.id ? pendingToolMessage : undefined,
@@ -279,7 +291,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
   };
 
   describe('decision=approved', () => {
-    it('persists intervention=approved and seeds initialContext for human_approved_tool', async () => {
+    it('persists intervention=approved and re-dispatches anchored on the tool row', async () => {
       await service.execAgent({
         ...baseParams,
         resumeApproval: {
@@ -299,26 +311,15 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
         },
       ]);
       // `approved` decision never writes tool content — the content arrives
-      // when the approved tool actually executes.
+      // when the approved tool actually executes on the host.
       expect(mockUpdateToolMessage).not.toHaveBeenCalled();
 
-      expect(mockCreateOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          initialContext: expect.objectContaining({
-            payload: expect.objectContaining({
-              approvedToolCall: expect.objectContaining({
-                apiName: 'runCommand',
-                arguments: '{"command":"echo"}',
-                id: 'call_xyz',
-                identifier: 'orvilo-local-system',
-              }),
-              parentMessageId: 'tool-msg-1',
-              skipCreateToolMessage: true,
-            }),
-            phase: 'human_approved_tool',
-          }),
-        }),
-      );
+      // The continuation re-dispatches through ACP with the tool row as the
+      // anchor; the host replays the (now-claimed) history and runs the call.
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+      const ctx = mockDispatchHeteroAgent.mock.calls[0][1];
+      expect(ctx.parentMessageId).toBe('tool-msg-1');
+      expect(ctx.assistantMessageId).toBe('assistant-msg-new');
     });
 
     it('stamps the server-authored generic resolution id for retry detection', async () => {
@@ -343,7 +344,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       expect(mockUpdateTopicMetadata).not.toHaveBeenCalled();
     });
 
-    it('retires the authoritative parked operation only after scheduling its continuation', async () => {
+    it('leaves parked-operation retirement to the caller (interrupt/record are never called here)', async () => {
       mockFindMessagePlugin.mockResolvedValue({
         ...pendingToolPlugin,
         intervention: {
@@ -359,7 +360,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       mockInterruptOperation.mockResolvedValue(true);
       mockRecordCompletion.mockResolvedValue(true);
 
-      await service.execAgent({
+      const result = await service.execAgent({
         ...baseParams,
         approvalSourceOperationId: 'op-parked',
         resumeApproval: {
@@ -369,15 +370,13 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
         },
       });
 
-      expect(mockCreateOperation.mock.invocationCallOrder[0]).toBeLessThan(
-        mockInterruptOperation.mock.invocationCallOrder[0],
-      );
-      expect(mockInterruptOperation).toHaveBeenCalledWith('op-parked');
-      expect(mockRecordCompletion).toHaveBeenCalledWith('op-parked', {
-        completedAt: expect.any(Date),
-        completionReason: 'done',
-        status: 'done',
-      });
+      // The continuation is dispatched; retiring `op-parked` is the router's
+      // post-dispatch step (`dispatchClaimedAgentIntervention`), so no
+      // interrupt/recordCompletion happens inside execAgent.
+      expect(result.success).toBe(true);
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+      expect(mockInterruptOperation).not.toHaveBeenCalled();
+      expect(mockRecordCompletion).not.toHaveBeenCalled();
       expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
     });
 
@@ -403,41 +402,17 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCreateOperation).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
       expect(mockInterruptOperation).not.toHaveBeenCalled();
       expect(mockRecordCompletion).not.toHaveBeenCalled();
       expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
     });
 
-    it('does not restore an executed claim when old-operation retirement must be retried', async () => {
-      mockFindMessagePlugin.mockResolvedValue({
-        ...pendingToolPlugin,
-        intervention: { operationId: 'op-parked', status: 'pending' },
-      });
-      mockFindOperationById.mockResolvedValue({
-        id: 'op-parked',
-        status: 'waiting_for_human',
-      });
-      mockInterruptOperation.mockResolvedValue(true);
-      mockRecordCompletion.mockResolvedValue(false);
-
-      const result = await service.execAgent({
-        ...baseParams,
-        approvalSourceOperationId: 'op-parked',
-        resumeApproval: {
-          decision: 'approved',
-          parentMessageId: 'tool-msg-1',
-          toolCallId: 'call_xyz',
-        },
-      });
-
-      expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-      expect(result).toMatchObject({
-        error: 'retirePendingApprovalOperation: failed to settle op-parked',
-        success: false,
-      });
-      expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
-    });
+    // The retired test 'does not restore an executed claim when old-operation
+    // retirement must be retried' is gone: execAgent no longer retires the
+    // source operation at all — that call moved to the router's
+    // `dispatchClaimedAgentIntervention` boundary, whose own tests cover the
+    // settle-failure path.
   });
 
   // Both rejection variants persist a tool result and enter the pending-sibling
@@ -469,16 +444,11 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
         },
       ]);
 
-      expect(mockCreateOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          initialContext: expect.objectContaining({
-            payload: expect.objectContaining({
-              parentMessageId: 'tool-msg-1',
-            }),
-            phase: 'tool_result',
-          }),
-        }),
-      );
+      // The host resumes from the persisted (rejected) tool result anchored on
+      // the tool row — the old `phase: 'tool_result'` initialContext field is
+      // a retired model-loop internal.
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent.mock.calls[0][1].parentMessageId).toBe('tool-msg-1');
     });
   });
 
@@ -505,8 +475,10 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
     ]);
   });
 
-  it('restores the claimed rows when preparation fails before the continuation starts', async () => {
-    mockMessageQuery.mockRejectedValueOnce(new Error('history unavailable'));
+  it('restores the claimed rows when the continuation fails before it starts', async () => {
+    // No `approvalResolutionRequestId` → not a durable generic claim, so the
+    // rollback guard restores the pending rows on any dispatch failure.
+    mockDispatchHeteroAgent.mockRejectedValueOnce(new Error('history unavailable'));
 
     await expect(
       service.execAgent({
@@ -530,7 +502,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
         replacePluginState: true,
       },
     ]);
-    expect(mockCreateOperation).not.toHaveBeenCalled();
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
   });
 
   it('rebuilds an incomplete idle continuation instead of scheduling it without hooks', async () => {
@@ -566,14 +538,16 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       },
     });
 
+    // The incomplete state is NOT reusable, so a fresh continuation
+    // dispatches instead of `ensureInterventionContinuationStarted`.
     expect(mockEnsureInterventionContinuationStarted).not.toHaveBeenCalled();
-    expect(mockCreateOperation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        interventionResolution: expect.objectContaining({
-          resolutionRequestId: approvalResolutionRequestId,
-        }),
-        operationId: expect.stringMatching(/^op_intervention_/),
-      }),
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    // The deterministic continuation assistant id anchors the re-entry: a
+    // crash-safe retry must find the SAME turn instead of minting a second.
+    const ctx = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(ctx.parentMessageId).toBe('tool-msg-1');
+    expect(ctx.appContext).toEqual(
+      expect.objectContaining({ sessionId: 'session-1', topicId: 'topic-1' }),
     );
   });
 
@@ -640,7 +614,8 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
     });
 
     expect(mockEnsureInterventionContinuationStarted).toHaveBeenCalledWith(continuationOperationId);
-    expect(mockCreateOperation).not.toHaveBeenCalled();
+    // A ready continuation requeues without a fresh dispatch.
+    expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
   });
 
   it('uses a non-reentrant short fence for a thread continuation without replacing the main anchor', async () => {
@@ -769,7 +744,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
     expect(mockRepairAgentInterventionContinuation).not.toHaveBeenCalled();
   });
 
-  it('keeps a concurrent same-request thread initializer out of createOperation', async () => {
+  it('keeps a concurrent same-request thread initializer out of the dispatch boundary', async () => {
     vi.useFakeTimers();
     const approvalResolutionRequestId = '018fbd8e-7baf-7c6d-8000-000000000094';
     const reservationId = deriveAgentInterventionContinuationOperationId({
@@ -780,12 +755,13 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       autoStarted: boolean;
       operationId: string;
       success: boolean;
+      topicId: string;
     }) => void;
     let markInitializerStarted!: () => void;
     const initializerStarted = new Promise<void>((resolve) => {
       markInitializerStarted = resolve;
     });
-    mockCreateOperation.mockImplementationOnce(function () {
+    mockDispatchHeteroAgent.mockImplementationOnce(function () {
       markInitializerStarted();
       return new Promise((resolve) => {
         finishInitializer = resolve;
@@ -812,39 +788,50 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
     let initializerFinished = false;
     try {
       await initializerStarted;
-      expect(mockCreateOperation).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
       const concurrentRetry = service.execAgent(input);
       const retryExpectation = expect(concurrentRetry).rejects.toThrow(/remained busy/);
       await vi.runAllTimersAsync();
       await retryExpectation;
-      finishInitializer({ autoStarted: true, operationId: 'op-continuation', success: true });
+      finishInitializer({
+        autoStarted: true,
+        operationId: 'op-continuation',
+        success: true,
+        topicId: 'topic-1',
+      });
       initializerFinished = true;
       await expect(initializer).resolves.toMatchObject({ success: true });
 
-      expect(mockCreateOperation).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
       expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
     } finally {
       if (!initializerFinished && finishInitializer) {
-        finishInitializer({ autoStarted: true, operationId: 'op-continuation', success: true });
+        finishInitializer({
+          autoStarted: true,
+          operationId: 'op-continuation',
+          success: true,
+          topicId: 'topic-1',
+        });
         await initializer.catch(() => undefined);
       }
       vi.useRealTimers();
     }
   });
 
-  it('keeps a concurrent same-request main initializer out of createOperation', async () => {
+  it('keeps a concurrent same-request main initializer out of the dispatch boundary', async () => {
     vi.useFakeTimers();
     const approvalResolutionRequestId = '018fbd8e-7baf-7c6d-8000-000000000093';
     let finishInitializer!: (result: {
       autoStarted: boolean;
       operationId: string;
       success: boolean;
+      topicId: string;
     }) => void;
     let markInitializerStarted!: () => void;
     const initializerStarted = new Promise<void>((resolve) => {
       markInitializerStarted = resolve;
     });
-    mockCreateOperation.mockImplementationOnce(function () {
+    mockDispatchHeteroAgent.mockImplementationOnce(function () {
       markInitializerStarted();
       return new Promise((resolve) => {
         finishInitializer = resolve;
@@ -878,15 +865,25 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       const retryExpectation = expect(concurrentRetry).rejects.toThrow(/remained busy/);
       await vi.runAllTimersAsync();
       await retryExpectation;
-      finishInitializer({ autoStarted: true, operationId: 'op-continuation', success: true });
+      finishInitializer({
+        autoStarted: true,
+        operationId: 'op-continuation',
+        success: true,
+        topicId: 'topic-1',
+      });
       initializerFinished = true;
       await expect(initializer).resolves.toMatchObject({ success: true });
 
-      expect(mockCreateOperation).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
       expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
     } finally {
       if (!initializerFinished && finishInitializer) {
-        finishInitializer({ autoStarted: true, operationId: 'op-continuation', success: true });
+        finishInitializer({
+          autoStarted: true,
+          operationId: 'op-continuation',
+          success: true,
+          topicId: 'topic-1',
+        });
         await initializer.catch(() => undefined);
       }
       vi.useRealTimers();
@@ -900,22 +897,20 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       ...pendingToolPlugin,
       intervention: { operationId: 'op-parked', status: 'pending' },
     });
-    let rejectFirstHistory!: (error: Error) => void;
-    let markFirstHistoryStarted!: () => void;
-    const firstHistoryStarted = new Promise<void>((resolve) => {
-      markFirstHistoryStarted = resolve;
+    let rejectFirstDispatch!: (error: Error) => void;
+    let markFirstDispatchStarted!: () => void;
+    const firstDispatchStarted = new Promise<void>((resolve) => {
+      markFirstDispatchStarted = resolve;
     });
-    const firstHistory = new Promise<never>((_, reject) => {
-      rejectFirstHistory = reject;
+    const firstDispatch = new Promise<never>((_, reject) => {
+      rejectFirstDispatch = reject;
     });
     mockResolveHumanApproval.mockResolvedValueOnce('applied').mockResolvedValueOnce('idempotent');
     mockTryReserveTaskCallback.mockResolvedValueOnce(true).mockResolvedValue(false);
-    mockMessageQuery
-      .mockImplementationOnce(function () {
-        markFirstHistoryStarted();
-        return firstHistory;
-      })
-      .mockResolvedValueOnce([{ content: 'hi', id: 'history-1', role: 'user' }]);
+    mockDispatchHeteroAgent.mockImplementationOnce(function () {
+      markFirstDispatchStarted();
+      return firstDispatch;
+    });
     const input = {
       ...baseParams,
       approvalResolutionRequestId,
@@ -930,24 +925,26 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
     const appliedAttempt = service.execAgent(input);
     let firstSettled = false;
     try {
-      await firstHistoryStarted;
+      await firstDispatchStarted;
       const busyRetry = service.execAgent(input);
       const busyExpectation = expect(busyRetry).rejects.toThrow(/remained busy/);
       await vi.runAllTimersAsync();
       await busyExpectation;
 
-      rejectFirstHistory(new Error('first attempt crashed before ready'));
+      rejectFirstDispatch(new Error('first attempt crashed before ready'));
       await expect(appliedAttempt).rejects.toThrow('first attempt crashed before ready');
       firstSettled = true;
       expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
 
       mockTryReserveTaskCallback.mockResolvedValue(true);
       await expect(service.execAgent(input)).resolves.toMatchObject({ success: true });
-      expect(mockCreateOperation).toHaveBeenCalledTimes(1);
+      // First dispatch rejected; the rebuild dispatches once more — and the
+      // durable generic claim is never restored locally.
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(2);
       expect(mockRestoreHumanApproval).not.toHaveBeenCalled();
     } finally {
       if (!firstSettled) {
-        rejectFirstHistory(new Error('test cleanup'));
+        rejectFirstDispatch(new Error('test cleanup'));
         await appliedAttempt.catch(() => undefined);
       }
       vi.useRealTimers();
@@ -1029,7 +1026,7 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
       // refused batch cannot leave half its tools marked approved with no run
       // to execute them.
       expect(mockUpdateMessagePlugin).not.toHaveBeenCalled();
-      expect(mockCreateOperation).not.toHaveBeenCalled();
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
     });
 
     it('accepts a batch whose targets share one assistant turn', async () => {
@@ -1075,19 +1072,13 @@ describe('AiAgentService.execAgent - resumeApproval', () => {
           },
         },
       ]);
-      expect(mockCreateOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          initialContext: expect.objectContaining({
-            payload: expect.objectContaining({ parentMessageId: 'assistant-new' }),
-            phase: 'human_approved_tool',
-          }),
-        }),
-      );
-      expect(mockInterruptOperation).toHaveBeenCalledWith('op-parked');
-      expect(mockRecordCompletion).toHaveBeenCalledWith(
-        'op-parked',
-        expect.objectContaining({ completionReason: 'done', status: 'done' }),
-      );
+      // Both rows resolve against the shared assistant anchor and the
+      // continuation dispatches once; retiring the parked source op belongs
+      // to the caller's post-dispatch step.
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent.mock.calls[0][1].parentMessageId).toBe('tool-msg-1');
+      expect(mockInterruptOperation).not.toHaveBeenCalled();
+      expect(mockRecordCompletion).not.toHaveBeenCalled();
     });
   });
 });
@@ -1208,8 +1199,8 @@ describe('AiAgentService.stopPendingApproval', () => {
     });
 
     // A stop is not a rejection: a rejection resumes the model so it can
-    // respond, a stop ends the turn outright.
-    expect(mockCreateOperation).not.toHaveBeenCalled();
+    // respond, a stop ends the turn outright — no continuation dispatches.
+    expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
   });
 
   it('rejects a target from another topic before writing anything', async () => {

@@ -4,13 +4,15 @@ import debug from 'debug';
 
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import type {
+  StepCompletionReason,
+  StepLifecycleCallbacks,
+} from '@/server/services/agentExecution/stepTypes';
+import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import type {
   GroupActionMemberMode,
   GroupActionOnComplete,
-  StepCompletionReason,
-  StepLifecycleCallbacks,
 } from '@/server/services/agentRuntime/types';
 
 import { formatErrorForMetadata } from '../helpers/groupContext';

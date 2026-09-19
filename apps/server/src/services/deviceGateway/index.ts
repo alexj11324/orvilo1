@@ -14,6 +14,7 @@ import {
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/heterogeneous-agents/quota';
 import type {
+  AcpBuiltinToolSpec,
   DeviceCopyAssetForPublishResult,
   DeviceDirectoryBrowseResult,
   DeviceExternalAssetForPublishResult,
@@ -1603,6 +1604,12 @@ export class DeviceGateway {
     assistantMessageId: string;
     /** Resolved `lh hetero exec` wrapper args. */
     args?: string[];
+    /**
+     * Server-backed builtin tools resolved for this run. The device mounts
+     * each api on the per-run `orvilo_cc` MCP server; invocations call back
+     * to `execBuiltinTool` with `jwt` + `operationId`.
+     */
+    builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     deviceId?: string;
     /** Admission idempotency key (always the operationId), relayed to the device. */

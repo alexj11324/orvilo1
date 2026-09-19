@@ -41,10 +41,14 @@ export const runExpertiseHistoryWorkflow = async (
   const last = topics.at(-1);
   if (topics.length === 50 && last?.lastActivityAt) {
     await runStep(context, `expertise-history:next:${last.topicId}`, () =>
-      ExpertiseHistoryWorkflow.trigger({
-        ...payload,
-        cursor: { lastActivityAt: String(last.lastActivityAt), topicId: last.topicId },
-      }),
+      triggerHatchetWorkflow(
+        '/api/workflows/expertise-history/run',
+        {
+          ...payload,
+          cursor: { lastActivityAt: String(last.lastActivityAt), topicId: last.topicId },
+        },
+        { concurrencyKey: `expertise-history.${payload.userId}.${payload.agentId}` },
+      ),
     );
   }
 

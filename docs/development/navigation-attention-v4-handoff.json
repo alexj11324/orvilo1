@@ -29,10 +29,12 @@
     "My Work To-review PR rows expose allowlisted GitHub/Linear openUrl; javascript and off-host jumps stay null",
     "Kanban create-task strips null No-project filter ids; grouped query still IS NULL filters",
     "Team triage uses work-list chrome, error-before-empty, and overflow for duplicate/transfer/reassign",
-    "Saved View / Team KanbanBoard external drops go through moveBoard CAS + WORKFLOW_STATE_REQUIRED picker (VIEW08); store-scoped My Work/Tasks keep task.update",
+    "Saved View / Team KanbanBoard external drops go through moveBoard CAS + WORKFLOW_STATE_REQUIRED picker (VIEW08); store-scoped My Work/Tasks Linear cards use the same path, unlinked cards keep task.update",
     "Work-query list headers use the same Cordy column keys as the board (Linear in_review → needsInput, not Running)",
     "workQueryBoardGroups fills TaskGroupItem limit/offset so KanbanBoard external groups type-check (Push Typecheck 2cd067ae)",
     "Usage docs describe Team/Saved View boards as the shared Tasks Kanban with work-query groups, not a second board",
+    "Work-query lists group in the database (WORK08); Linear-linked rows follow workflow membership; per-column totals and cursors",
+    "My Work / Tasks store kanban Linear drops go through moveBoard + WORKFLOW_STATE_REQUIRED picker (VIEW08)",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -83,8 +85,8 @@
     "src/features/SavedViews/SavedViewsPage.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "475fb8bd",
-  "implementationHeadBeforeDocs": "475fb8bd",
+  "headSha": "c24608a4",
+  "implementationHeadBeforeDocs": "c24608a4",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

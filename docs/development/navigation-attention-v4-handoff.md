@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `475fb8bd` Push Typecheck 修复：`workQueryBoardGroups` 给 `TaskGroupItem` 补上 `limit`/`offset`。再前是 `2cd067ae` 列表 / 看板列键对齐、`ebc87284` VIEW08 接回。                                                           |
+| 实施 HEAD（本交接提交之前）      | `c24608a4` VIEW08：My Work/Tasks store 看板的 Linear 拖放改走 `moveBoard`。再前 `fa0c58ad` WORK08 列表服务端分组。                                                                                                         |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -43,7 +43,7 @@
 
 ## 已落地（相对 `canary@d02f13f1`）
 
-表面：`/inbox`、`/my-work`、`/views/:viewId`、`/teams`。Tasks / Projects / Automation 仍是一级。HomeInbox 只做聊天摘要。剩下来的 InboxModal 列表 UI 已删，opener 只跳 `/inbox`。
+表面：`/inbox`、`/my-work`、`/views/:viewId`、`/teams`。一级侧栏是固定 `inbox / my-work / reviews` + 手风琴；Tasks / Projects / Automation / Views 走 Workspace 与深链，不再是可重排一级。HomeInbox 只做聊天摘要。剩下来的 InboxModal 列表 UI 已删，opener 只跳 `/inbox`。
 
 迁移：**`0175_work_attention`**、**`0176_work_attention_triage_bulk`**。0174 被 #81 占用，不要复用。
 
@@ -53,7 +53,7 @@
 - Decide：`workAttentionProcedure`（ACT01），不是 organize。ACP intervention OSS `{ handled: false }` → `outcome_unknown`。ownership transfer /withdraw outgoing。outgoing 占未读铃但不进 Needs-you（ACT08）
 - 独立 `event_consumer_receipts`（D09）。权限 `notification:read|organize` ALL-only（D14）
 - My Work：assigned / delegated=`execution_grants.initiatedBy` / review / created=`createdByUserId` 且排除 Linear 导入 null（WORK03）/subscribed。No-project chip（WORK07）。服务端 list/board（WORK08）。待审核列出非 task 的 pending approval，**不为填列表建 Task**（WORK05）
-- Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Saved View / Team 的统一 `KanbanBoard` `external` 拖放走这条路径，不再用 `task.update` 分类映射；My Work assigned/delegated 仍走 store `task.update`
+- Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Saved View / Team 的统一 `KanbanBoard` `external` 拖放走这条路径。My Work assigned/delegated 的 Linear 卡（有 `workflowStateId`）跨列拖放也走 `moveBoard`；同列重排和无 Linear 绑定的卡仍走 store `task.update`
 - Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）
 - Team Triage：accept/decline/duplicate/reassign + `moveToTeam` CAS（TRI02）；`duplicate_of_task_id`（TRI03）；历史 Linear import `triageStatus: accepted`（TRI01）；triage 事件 `task.scope.changed`（TRI08）；`cycleId` → `tasks.cycleRefId`（TRI07）；`teamId` 与可读团队求交（TRI05）
 - Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），侧栏始终可见上 / 下箭头
@@ -89,12 +89,14 @@
 - 视图 / 列表面再对齐 Linear：SavedView 详情页不再裸露 query JSON——owner 的名称 / 查询 / 布局 / 可见性表单收进 header 的「Edit view」折叠面板（结果页是默认态）；`WorkQueryResults` 列表行换成共享 `AgentTaskItem` 富行（identifier + 状态图标 + 标题 + chips + 头像 + 日期），平铺结果按与看板相同的 Cordy 列键分组（Linear 关联 `in_review` 进 needsInput，不进 Running；`workflowCategory` 视图跟 workflow 列）。Inbox 行加类型圆形 glyph（mention→AtSign、task\_assigned→CircleUserRound、acp\_permission→KeyRound、transfer→ArrowLeftRight、review→GitPullRequest、默认 Bell），替代 Linear 的 avatar+type badge 角色
 - Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。Team 看板走 `WorkQueryResults` → `KanbanBoard` `external` prop（与其它页同一个组件，不自建）
 - Linear IA 收敛（`623f670c`）：一级侧栏改成固定合同 `inbox / my-work / reviews` + 手风琴 `agent / workspace / favorites / teams` + spacer（`DEFAULT_SIDEBAR_ITEMS`，`sidebarItems` selector 直接返回常量，stored/overlay 顺序完全不再生效 —— 旧 preference 无法复活 retired keys）。`RETIRED_SIDEBAR_KEYS` 扩到 home/tasks/automations/resource/recents/private/project/views（一级退役，路由深链保留）。新 `WorkspaceSection`（Projects / Views / Members→`/settings/members` / More 下拉：Automations、Resource、工作区设置）与 `TeamsSection`（`team.teams` 扁平行→`/teams/:id`，仅 workspace 模式渲染；TeamPage 无 Home/Issues 子 tab，不做展开子导航）。Reviews 一级指向 `/my-work?tab=review`（v4 合同已冻结 `/my-work`，没有另建 `/reviews` 路由），Body 用 `useSearchParams` 拆开两个高亮。CustomizeSidebarModal 收窄为只能隐藏可选 section（核心 pin 住，不可重排）。Header 搜索行 hover 出新建任务铅笔（`createTaskModal`）。User 弹层补 `UserPanelWorkspaceSection`（个人空间 ✓ + workspace 列表切换）。移动端 NavBar 第三栏 Tasks→My Work。`sidebarContract.ts` 登记 SCHEMA\_VERSION=2 / FIXED\_PRIMARY\_KEYS / LEGACY\_PRIMARY\_KEYS。**deviation**：spec 写 `/my-issues`，按 v4 合同保留 `/my-work`。lint 干净，89 passed。不是 64× AC。
+- WORK08：list 布局在数据库里按列分组（Linear `workflowStateId` 跟 workflow 列，本地任务跟 status 列），`total` 是全集不是当前页；每列独立 cursor。客户端 `workQueryListSections` 优先用服务端 groups，不再把一页扁列表重排成章节。My Work / Team / Saved View 列表的 load-more 走 `groupKey`
+- VIEW08：My Work / Tasks 的 store `KanbanBoard` 对 `workflowStateId` 任务跨列拖放走 `commitWorkQueryBoardMove`（`moveBoard` + 精确状态 picker），不再 `updateTask({ workflowCategory })`。同列重排仍写 position
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-VIEW08 客户端路径已接回统一看板（`commitWorkQueryBoardMove` / `moveBoardMaybePickingState`）。**不要**再把 Saved View / Team 拖放送进 `task.update` 分类映射。
+VIEW08 客户端路径已接回统一看板，并且 My Work store 看板的 Linear 卡也走 `moveBoard`。WORK08 列表不再只重排当前页。
 
 只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。PR 行 allowlist `openUrl` 已在 `bbc8c268` 从 Devin unify 的纯标题回归里救回。
 
@@ -164,6 +166,8 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 本增量：VIEW08 在统一 `KanbanBoard` `external` 板上恢复 `moveBoard` CAS + 精确状态 picker；Cordy `needsInput`/`running` 映射回 `in_review`/`in_progress`（workflow）或 `paused`/`running`（status）；load-more 反解列键。lint 干净，21 passed。不是 64× AC。
 - 本增量：work-query 列表分组与看板共用列键（Linear `in_review` 不再进 Running）。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
 - `475fb8bd`：Push Typecheck `2cd067ae` 失败（`workQueryBoard.ts` 构造 `TaskGroupItem` 缺 `limit`/`offset`）。external 组用已加载条数当 `limit`、合并列 `offset: 0`。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
+- `fa0c58ad`：WORK08 列表服务端分组 + 全集 total + 列 cursor。lint 干净，`bun run check` 改动文件 52 passed。不是 64× AC。
+- `c24608a4`：My Work store 看板 Linear 跨列拖放走 `moveBoard`。lint 干净。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

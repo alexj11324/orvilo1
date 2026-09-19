@@ -20,8 +20,8 @@ const mocks = vi.hoisted(() => ({
     bottomMenuItems: [] as { key: string; title: string; url: string }[],
     topNavItems: [
       { key: 'inbox', title: 'Inbox', url: '/inbox' },
-      { key: 'my-work', title: 'My Work', url: '/my-work' },
-      { key: 'reviews', title: 'Reviews', url: '/my-work?tab=review' },
+      { key: 'my-work', title: 'My issues', url: '/my-issues' },
+      { key: 'reviews', title: 'Reviews', url: '/reviews' },
       { key: 'agent', title: 'Agent', url: '/agents' },
     ],
   },
@@ -152,7 +152,7 @@ describe('Home sidebar body', () => {
     // (recents/tasks/image) can neither reorder nor resurrect. Agent is a
     // flat row now; the old agent accordion is retired.
     expect(texts[0]).toBe('Inbox');
-    expect(texts[1]).toBe('My Work');
+    expect(texts[1]).toBe('My issues');
     expect(texts[2]).toBe('Reviews');
     expect(texts[3]).toBe('Agent');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();

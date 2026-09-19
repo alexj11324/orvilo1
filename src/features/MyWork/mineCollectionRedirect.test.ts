@@ -5,10 +5,10 @@ import { resolveMineCollectionRedirect } from './mineCollectionRedirect';
 describe('resolveMineCollectionRedirect', () => {
   it('maps only the exact personal collection URLs', () => {
     expect(resolveMineCollectionRedirect({ collection: 'mine', scope: 'assigned' })).toBe(
-      '/my-work?tab=assigned',
+      '/my-issues?tab=assigned',
     );
     expect(resolveMineCollectionRedirect({ collection: 'mine', scope: 'created' })).toBe(
-      '/my-work?tab=created',
+      '/my-issues?tab=created',
     );
   });
 

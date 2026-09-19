@@ -259,6 +259,34 @@ export const NO_PROJECT_PREDICATE = {
 const isNoProjectPredicate = (node: WorkQueryFilter | WorkQueryPredicate): boolean =>
   'field' in node && node.field === 'projectId' && node.op === 'isNull';
 
+export const DELEGATED_PREDICATE = {
+  field: 'delegatedByUserId',
+  op: 'eq',
+  value: { ref: 'currentUser' },
+} as const satisfies WorkQueryPredicate;
+
+const isDelegatedPredicate = (node: WorkQueryFilter | WorkQueryPredicate): boolean =>
+  'field' in node && node.field === 'delegatedByUserId';
+
+/** AND `delegatedByUserId = currentUser` onto a query — delegation is a filter, not a tab. */
+export const applyDelegatedFilter = (query: WorkQuery, enabled: boolean): WorkQuery => {
+  const any = query.filter?.any;
+  const all = (query.filter?.all ?? []).filter((node) => !isDelegatedPredicate(node));
+  if (enabled) all.push(DELEGATED_PREDICATE);
+  if (all.length === 0 && (!any || any.length === 0)) {
+    if (!query.filter) return query;
+    const { filter: _omit, ...rest } = query;
+    return rest;
+  }
+  return {
+    ...query,
+    filter: {
+      ...(any && any.length > 0 ? { any } : {}),
+      ...(all.length > 0 ? { all } : {}),
+    },
+  };
+};
+
 /** AND `projectId isNull` onto a query. Does not assign a default project. */
 export const applyNoProjectFilter = (query: WorkQuery, enabled: boolean): WorkQuery => {
   const any = query.filter?.any;
@@ -401,7 +429,13 @@ export const NOTIFICATION_BULK_PREPARE_WINDOW_MS = 60_000;
  */
 export const WORKFLOW_STATE_REQUIRED = 'WORKFLOW_STATE_REQUIRED';
 
-export type MyWorkMode = 'assigned' | 'created' | 'delegated' | 'review' | 'subscribed';
+/**
+ * `assigned` / `created` / `subscribed` / `activity` are the My issues tabs.
+ * `delegated` is a filter flag on those tabs, and `review` moved to Reviews —
+ * both stay accepted server-side so older clients and deep links keep working.
+ */
+export type MyWorkMode =
+  'activity' | 'assigned' | 'created' | 'delegated' | 'review' | 'subscribed';
 
 export type SavedViewVisibility = 'private' | 'team' | 'workspace';
 

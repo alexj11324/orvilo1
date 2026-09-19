@@ -1,5 +1,6 @@
 import {
   ACTION_SOURCE_KINDS,
+  applyDelegatedFilter,
   applyNoProjectFilter,
   type MyWorkMode,
   type TaskStatus,
@@ -292,7 +293,8 @@ export const workAttentionRouter = router({
         groupKey: z.string().min(1).optional(),
         layout: z.enum(['board', 'list']).optional(),
         limit: z.number().min(1).max(100).default(50),
-        mode: z.enum(['assigned', 'created', 'delegated', 'review', 'subscribed']),
+        delegated: z.boolean().optional(),
+        mode: z.enum(['activity', 'assigned', 'created', 'delegated', 'review', 'subscribed']),
         noProject: z.boolean().optional(),
         queryHash: z.string().min(1).optional(),
       }),
@@ -300,10 +302,13 @@ export const workAttentionRouter = router({
     .query(async ({ ctx, input }) => {
       try {
         const query = applyNoProjectFilter(
-          applyWorkQueryLayout(
-            myWorkQueryForMode(input.mode as MyWorkMode),
-            input.layout,
-            input.groupBy,
+          applyDelegatedFilter(
+            applyWorkQueryLayout(
+              myWorkQueryForMode(input.mode as MyWorkMode),
+              input.layout,
+              input.groupBy,
+            ),
+            Boolean(input.delegated),
           ),
           Boolean(input.noProject),
         );
@@ -321,6 +326,62 @@ export const workAttentionRouter = router({
         const externalReviews =
           input.mode === 'review' ? await ctx.workQueryModel.queryExternalReviews() : [];
         return { data: { ...result, externalReviews, subscribedTaskIds }, success: true };
+      } catch (error) {
+        return mapQueryError(error);
+      }
+    }),
+
+  /**
+   * Reviews surface — `/reviews?tab=for-me|created`. 'for-me' returns tasks
+   * awaiting my review plus non-task approvals addressed to me; 'created'
+   * returns approvals I requested plus tasks I created that carry a reviewer.
+   */
+  reviews: workAttentionProcedure
+    .input(
+      z.object({
+        afterId: z.string().min(1).optional(),
+        groupKey: z.string().min(1).optional(),
+        layout: z.enum(['board', 'list']).optional(),
+        limit: z.number().min(1).max(100).default(50),
+        queryHash: z.string().min(1).optional(),
+        tab: z.enum(['created', 'for-me']).default('for-me'),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const me = { ref: 'currentUser' } as const;
+        const filter: WorkQueryFilter =
+          input.tab === 'for-me'
+            ? { all: [{ field: 'reviewerUserId', op: 'eq', value: me }] }
+            : {
+                all: [
+                  { field: 'createdByUserId', op: 'eq', value: me },
+                  { field: 'reviewerUserId', op: 'isNotNull' },
+                ],
+              };
+        const query = applyWorkQueryLayout(
+          {
+            entityType: 'task',
+            filter,
+            schemaVersion: 1,
+            sort: [
+              { direction: 'desc', field: 'updatedAt' },
+              { direction: 'asc', field: 'id' },
+            ],
+          },
+          input.layout,
+        );
+        const [result, externalReviews] = await Promise.all([
+          ctx.workQueryModel.queryTasks({
+            afterId: input.afterId,
+            groupKey: input.groupKey,
+            limit: input.limit,
+            query,
+            queryHash: input.queryHash,
+          }),
+          ctx.workQueryModel.queryExternalReviews(input.tab),
+        ]);
+        return { data: { ...result, externalReviews }, success: true };
       } catch (error) {
         return mapQueryError(error);
       }

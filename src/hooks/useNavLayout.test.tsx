@@ -48,10 +48,10 @@ describe('useNavLayout', () => {
 
     expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent']);
     expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
-    expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe('/my-work');
-    expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe(
-      '/my-work?tab=review',
+    expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
+      '/my-issues',
     );
+    expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe('/reviews');
     expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe('/agents');
   });
 });

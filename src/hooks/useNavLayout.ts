@@ -53,13 +53,13 @@ export const useNavLayout = (): NavLayout => {
           icon: SquareUserIcon,
           key: SidebarTabKey.MyWork,
           title: t('tab.myWork'),
-          url: '/my-work',
+          url: '/my-issues',
         },
         {
           icon: GitPullRequestIcon,
           key: SidebarTabKey.Reviews,
           title: t('tab.reviews'),
-          url: '/my-work?tab=review',
+          url: '/reviews',
         },
         {
           icon: BotIcon,

@@ -52,6 +52,7 @@ import {
   projectResourcesRouteMeta,
   projectsRouteMeta,
 } from '@/features/Projects/routeMeta';
+import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
 import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
 import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
@@ -706,6 +707,25 @@ export const sharedMainAreaChildren: RouteObject[] = [
       {
         children: [
           {
+            element: dynamicElement(
+              () => import('@/routes/(main)/my-issues'),
+              'Desktop > My Issues',
+              {
+                preloadId: 'my-work',
+              },
+            ),
+            handle: { meta: myWorkRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-issues',
+      },
+      {
+        children: [
+          {
+            // Legacy `/my-work` deep links land on this redirect — it maps the
+            // old tab params onto /my-issues and /reviews.
             element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Desktop > My Work', {
               preloadId: 'my-work',
             }),
@@ -715,6 +735,19 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'my-work',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
+              preloadId: 'reviews',
+            }),
+            handle: { meta: reviewsRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'reviews',
       },
       {
         children: [

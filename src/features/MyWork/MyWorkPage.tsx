@@ -11,17 +11,24 @@ import {
   Text,
   toast,
 } from '@lobehub/ui/base-ui';
-import { applyNoProjectFilter, type MyWorkMode, type WorkQueryLayout } from '@orvilo/types';
-import { BookmarkPlusIcon, FolderXIcon } from 'lucide-react';
+import {
+  applyDelegatedFilter,
+  applyNoProjectFilter,
+  type MyWorkMode,
+  type WorkQueryLayout,
+} from '@orvilo/types';
+import { BookmarkPlusIcon, BotIcon, FolderXIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
@@ -32,11 +39,17 @@ import { isMyWorkBoardMode } from './workQueryBoard';
 import { mergeWorkQueryGroups } from './workQueryPaging';
 import WorkQueryResults from './WorkQueryResults';
 
-const PRIMARY_TABS: MyWorkMode[] = ['assigned', 'delegated', 'review'];
-const SECONDARY_TABS: MyWorkMode[] = ['created', 'subscribed'];
+/**
+ * My issues tabs (v5 contract): Assigned / Created / Subscribed / Activity.
+ * Delegation is a filter chip (`?delegated=1`), never a tab; review work
+ * lives on `/reviews` — the `/my-work` route redirect already maps the old
+ * `tab=delegated|review` deep links.
+ */
+const MY_ISSUES_TABS: MyWorkMode[] = ['assigned', 'created', 'subscribed', 'activity'];
 
 const resolveMode = (value: string | null): MyWorkMode => {
-  if (value && [...PRIMARY_TABS, ...SECONDARY_TABS].includes(value as MyWorkMode)) {
+  if (value === 'delegated') return 'activity';
+  if (value && (MY_ISSUES_TABS as readonly string[]).includes(value)) {
     return value as MyWorkMode;
   }
   return 'assigned';
@@ -50,19 +63,24 @@ const resolveLayout = (mode: MyWorkMode, value: string | null): WorkQueryLayout 
 const MyWorkPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
+  const workspaceSlug = useActiveWorkspaceSlug();
   const navigate = useWorkspaceAwareNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const mode = resolveMode(searchParams.get('tab'));
+  const rawTab = searchParams.get('tab');
+  const mode = resolveMode(rawTab);
   const layout = resolveLayout(mode, searchParams.get('layout'));
   const noProject = searchParams.get('noProject') === '1';
+  // `tab=delegated` implies the delegated filter even when `delegated=1` is
+  // absent — the redirect writes both, this keeps hand-built URLs honest.
+  const delegated = searchParams.get('delegated') === '1' || rawTab === 'delegated';
   const canBoard = isMyWorkBoardMode(mode);
   const boardActive = canBoard && layout === 'board';
 
   // One feed powers both layouts: list rows and the board's external groups
   // come from the same work query, so the two never disagree.
   const { data, error, isLoading } = useClientDataSWR(
-    workAttentionKeys.myWork(workspaceId, mode, layout, noProject),
-    () => workAttentionService.myWork({ layout, mode, noProject }),
+    workAttentionKeys.myWork(workspaceId, mode, layout, noProject, delegated),
+    () => workAttentionService.myWork({ delegated, layout, mode, noProject }),
   );
   const firstTasks = data?.data.tasks ?? [];
   const firstGroups = data?.data.groups ?? [];
@@ -80,8 +98,8 @@ const MyWorkPage = memo(() => {
 
   const refresh = useCallback(async () => {
     setGroupTail([]);
-    await mutate(workAttentionKeys.myWork(workspaceId, mode, layout, noProject));
-  }, [layout, mode, noProject, workspaceId]);
+    await mutate(workAttentionKeys.myWork(workspaceId, mode, layout, noProject, delegated));
+  }, [delegated, layout, mode, noProject, workspaceId]);
 
   const loadMoreGroup = useCallback(
     async (groupKey: string) => {
@@ -90,6 +108,7 @@ const MyWorkPage = memo(() => {
       if (!last || !queryHash) return;
       const next = await workAttentionService.myWork({
         afterId: last.id,
+        delegated,
         groupKey,
         layout,
         mode,
@@ -99,12 +118,12 @@ const MyWorkPage = memo(() => {
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
       setExtraSubscribed((current) => [...current, ...(next.data.subscribedTaskIds ?? [])]);
     },
-    [groups, layout, mode, noProject, queryHash],
+    [delegated, groups, layout, mode, noProject, queryHash],
   );
 
   const tabs = useMemo(
     () =>
-      [...PRIMARY_TABS, ...SECONDARY_TABS].map((item) => ({
+      MY_ISSUES_TABS.map((item) => ({
         key: item,
         label: t(`myWork.${item}`),
       })),
@@ -134,7 +153,10 @@ const MyWorkPage = memo(() => {
         entityType: 'task',
         layout: canBoard ? layout : 'list',
         name: t(`myWork.${mode}`),
-        query: applyNoProjectFilter(myWorkSaveAsQuery(mode, canBoard ? layout : 'list'), noProject),
+        query: applyDelegatedFilter(
+          applyNoProjectFilter(myWorkSaveAsQuery(mode, canBoard ? layout : 'list'), noProject),
+          delegated,
+        ),
         visibility: 'private',
       });
       await mutate(workAttentionKeys.savedViews(workspaceId));
@@ -142,12 +164,18 @@ const MyWorkPage = memo(() => {
     } catch {
       toast.error(t('myWork.saveAsFailed'));
     }
-  }, [canBoard, layout, mode, navigate, noProject, t, workspaceId]);
+  }, [canBoard, delegated, layout, mode, navigate, noProject, t, workspaceId]);
 
-  const writeParams = (patch: { layout?: WorkQueryLayout; noProject?: boolean; tab?: string }) => {
+  const writeParams = (patch: {
+    delegated?: boolean;
+    layout?: WorkQueryLayout;
+    noProject?: boolean;
+    tab?: string;
+  }) => {
     const nextTab = patch.tab ?? mode;
     const nextLayout = patch.layout ?? layout;
     const nextNoProject = patch.noProject ?? noProject;
+    const nextDelegated = patch.delegated ?? delegated;
     setSearchParams(
       {
         tab: nextTab,
@@ -155,10 +183,17 @@ const MyWorkPage = memo(() => {
           ? { layout: 'board' }
           : {}),
         ...(nextNoProject ? { noProject: '1' } : {}),
+        ...(nextDelegated ? { delegated: '1' } : {}),
       },
       { replace: true },
     );
   };
+
+  // `?tab=review` on the new surface is a mistyped deep link — send it to
+  // Reviews rather than silently rendering Assigned.
+  if (rawTab === 'review') {
+    return <Navigate replace to={buildWorkspaceAwarePath('/reviews?tab=for-me', workspaceSlug)} />;
+  }
 
   return (
     <Flexbox flex={1} height="100%">
@@ -187,14 +222,24 @@ const MyWorkPage = memo(() => {
           </TabsList>
         </TabsRoot>
         <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <Button
-            icon={FolderXIcon}
-            size={'small'}
-            type={noProject ? 'primary' : 'default'}
-            onClick={() => writeParams({ noProject: !noProject })}
-          >
-            {t('myWork.noProject')}
-          </Button>
+          <Flexbox horizontal align={'center'} gap={8}>
+            <Button
+              icon={FolderXIcon}
+              size={'small'}
+              type={noProject ? 'primary' : 'default'}
+              onClick={() => writeParams({ noProject: !noProject })}
+            >
+              {t('myWork.noProject')}
+            </Button>
+            <Button
+              icon={BotIcon}
+              size={'small'}
+              type={delegated ? 'primary' : 'default'}
+              onClick={() => writeParams({ delegated: !delegated })}
+            >
+              {t('myWork.delegated')}
+            </Button>
+          </Flexbox>
           <Flexbox horizontal align={'center'} gap={8}>
             {canBoard ? (
               <Segmented
@@ -225,7 +270,6 @@ const MyWorkPage = memo(() => {
             ) : null}
             <WorkQueryResults
               emptyLabel={t('myWork.empty')}
-              externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
               groupBy={data?.data.groupBy}
               groups={groups}
               isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}

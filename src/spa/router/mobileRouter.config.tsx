@@ -187,6 +187,22 @@ export const sharedMainAreaChildren: RouteObject[] = [
       {
         children: [
           {
+            element: dynamicElement(
+              () => import('@/routes/(main)/my-issues'),
+              'Mobile > My Issues',
+              {
+                preloadId: 'mobile-my-work',
+              },
+            ),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-issues',
+      },
+      {
+        children: [
+          {
             element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Mobile > My Work', {
               preloadId: 'mobile-my-work',
             }),

@@ -29,6 +29,7 @@ class WorkAttentionService {
 
   myWork = (input: {
     afterId?: string;
+    delegated?: boolean;
     groupBy?: 'none' | 'status' | 'workflowCategory';
     groupKey?: string;
     layout?: 'board' | 'list';
@@ -37,6 +38,15 @@ class WorkAttentionService {
     noProject?: boolean;
     queryHash?: string;
   }) => lambdaClient.workAttention.myWork.query(input);
+
+  reviews = (input: {
+    afterId?: string;
+    groupKey?: string;
+    layout?: 'board' | 'list';
+    limit?: number;
+    queryHash?: string;
+    tab: 'created' | 'for-me';
+  }) => lambdaClient.workAttention.reviews.query(input);
 
   count = (input: { query: WorkQuery }) => lambdaClient.workAttention.count.query(input);
 

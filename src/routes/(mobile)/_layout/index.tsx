@@ -25,7 +25,15 @@ const CloudBanner = dynamic(() => import('@/features/AlertBanner/CloudBanner'));
  * pathname would hide the tab bar inside a workspace — where it is the only
  * navigation a phone viewport gets.
  */
-const MOBILE_NAV_ROUTES = ['/', '/inbox', '/me', '/my-work', '/tasks', '/teams', '/views'] as const;
+const MOBILE_NAV_ROUTES = [
+  '/',
+  '/inbox',
+  '/me',
+  '/my-issues',
+  '/tasks',
+  '/teams',
+  '/views',
+] as const;
 
 /**
  * Whether the tab bar belongs on this route.

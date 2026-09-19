@@ -1,5 +1,9 @@
 // @vitest-environment node
-import { applyNoProjectFilter, WORK_QUERY_MAX_IN_VALUES } from '@orvilo/types';
+import {
+  applyDelegatedFilter,
+  applyNoProjectFilter,
+  WORK_QUERY_MAX_IN_VALUES,
+} from '@orvilo/types';
 import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -156,6 +160,82 @@ describe('WorkQueryModel', () => {
 
     expect(result.tasks.map((row) => row.id)).toEqual([granted.id]);
     expect(result.tasks.map((row) => row.id)).not.toContain(someoneElses.id);
+  });
+
+  it('activity unions every user relationship, including delegation and subscription', async () => {
+    await serverDB.insert(agents).values({ id: 'agt_act', slug: 'act', userId });
+    const assigned = await createTask(otherUserId, { assigneeUserId: userId, name: 'A' });
+    const created = await createTask(userId, { name: 'C' });
+    const reviewed = await createTask(otherUserId, { name: 'R', reviewerUserId: userId });
+    const delegated = await createTask(otherUserId, { name: 'D' });
+    await serverDB.insert(executionGrants).values({
+      agentId: 'agt_act',
+      id: 'grant-act',
+      initiatedBy: userId,
+      status: 'active',
+      taskId: delegated.id,
+      workspaceId,
+    });
+    const followed = await createTask(otherUserId, { name: 'F' });
+    await new TaskSubscriptionModel(serverDB, userId, workspaceId).subscribe(followed.id);
+    const unrelated = await createTask(otherUserId, { name: 'Not mine' });
+
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      mode: 'activity',
+      query: myWorkQueryForMode('activity'),
+    });
+
+    const ids = result.tasks.map((row) => row.id);
+    expect(ids).toEqual(
+      expect.arrayContaining([assigned.id, created.id, reviewed.id, delegated.id, followed.id]),
+    );
+    expect(ids).not.toContain(unrelated.id);
+  });
+
+  it('activity scoped by the delegated filter matches the old delegated tab', async () => {
+    await serverDB.insert(agents).values({ id: 'agt_delf', slug: 'delf', userId });
+    const delegated = await createTask(otherUserId, { name: 'Delegated' });
+    await serverDB.insert(executionGrants).values({
+      agentId: 'agt_delf',
+      id: 'grant-delf',
+      initiatedBy: userId,
+      status: 'active',
+      taskId: delegated.id,
+      workspaceId,
+    });
+    const assignedOnly = await createTask(otherUserId, {
+      assigneeUserId: userId,
+      name: 'Assigned not delegated',
+    });
+
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      mode: 'activity',
+      query: applyDelegatedFilter(myWorkQueryForMode('activity'), true),
+    });
+
+    const ids = result.tasks.map((row) => row.id);
+    expect(ids).toEqual([delegated.id]);
+    expect(ids).not.toContain(assignedOnly.id);
+  });
+
+  it('reviewerUserId isNotNull lists any task in review, for the created tab', async () => {
+    const inReview = await createTask(userId, { name: 'I asked', reviewerUserId: otherUserId });
+    await createTask(userId, { name: 'Plain mine' });
+
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      query: {
+        entityType: 'task',
+        filter: {
+          all: [
+            { field: 'createdByUserId', op: 'eq', value: { ref: 'currentUser' } },
+            { field: 'reviewerUserId', op: 'isNotNull' },
+          ],
+        },
+        schemaVersion: 1,
+      },
+    });
+
+    expect(result.tasks.map((row) => row.id)).toEqual([inReview.id]);
   });
 
   it('keeps review responsibility even when the inbox row is gone', async () => {

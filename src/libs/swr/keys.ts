@@ -1131,12 +1131,21 @@ export const workAttentionKeys = {
   ]),
   myWork: def(
     'workAttention:myWork',
-    (workspaceId: string | null, mode: string, layout = 'list', noProject = false) => [
-      'workAttention:myWork',
+    (
+      workspaceId: string | null,
+      mode: string,
+      layout = 'list',
+      noProject = false,
+      delegated = false,
+    ) => ['workAttention:myWork', workspaceId, mode, layout, noProject, delegated],
+  ),
+  reviews: def(
+    'workAttention:reviews',
+    (workspaceId: string | null, tab: 'created' | 'for-me', layout = 'list') => [
+      'workAttention:reviews',
       workspaceId,
-      mode,
+      tab,
       layout,
-      noProject,
     ],
   ),
   savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [

@@ -63,7 +63,7 @@ const NavBar = memo(() => {
           ),
           key: SidebarTabKey.MyWork,
           onClick: () => {
-            navigate('/my-work');
+            navigate('/my-issues');
           },
           title: t('tab.myWork'),
         },

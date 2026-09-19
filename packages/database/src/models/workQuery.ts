@@ -302,6 +302,14 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
   }
 
   if (predicate.field === 'reviewerUserId') {
+    // `isNotNull` = "task is in review" — has a reviewer or a pending
+    // task-targeted approval, whoever they are for.
+    if (predicate.op === 'isNotNull') {
+      return or(
+        isNotNull(tasks.reviewerUserId),
+        sql`exists (select 1 from ${actionApprovals} where ${actionApprovals.targetId} = ${tasks.id} and ${actionApprovals.targetType} = 'task' and ${actionApprovals.status} = 'pending')`,
+      )!;
+    }
     const resolved = resolveValue(predicate.value, ctx.currentUserId);
     if (predicate.op !== 'eq' || typeof resolved !== 'string') {
       throw new WorkQueryError('INVALID_QUERY', 'reviewerUserId only supports eq currentUser');
@@ -406,6 +414,20 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         schemaVersion: 1,
+      };
+    }
+    case 'activity': {
+      // "Activity" = every task the current user touches — assignee,
+      // creator, delegator, reviewer or subscriber. The mode-specific OR
+      // lives in taskConditions (delegated/reviewer/subscribed are virtual
+      // fields resolved to EXISTS subqueries).
+      return {
+        entityType: 'task',
+        schemaVersion: 1,
+        sort: [
+          { direction: 'desc', field: 'updatedAt' },
+          { direction: 'asc', field: 'id' },
+        ],
       };
     }
   }
@@ -611,6 +633,18 @@ export class WorkQueryModel {
         sql`exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${this.userId} and ${taskSubscriptions.unsubscribedAt} is null)`,
       );
     }
+    if (mode === 'activity') {
+      conditions.push(
+        sql`(
+          ${tasks.assigneeUserId} = ${this.userId}
+          or ${tasks.createdByUserId} = ${this.userId}
+          or ${tasks.reviewerUserId} = ${this.userId}
+          or exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${this.userId} and ${taskSubscriptions.unsubscribedAt} is null)
+          or exists (select 1 from ${executionGrants} where ${executionGrants.taskId} = ${tasks.id} and ${executionGrants.initiatedBy} = ${this.userId} and ${executionGrants.status} = 'active')
+          or exists (select 1 from ${actionApprovals} where ${actionApprovals.targetId} = ${tasks.id} and ${actionApprovals.status} = 'pending' and ${actionApprovals.approverUserId} = ${this.userId})
+        )`,
+      );
+    }
     return conditions;
   };
 
@@ -800,8 +834,16 @@ export class WorkQueryModel {
   /**
    * Readable pending reviews that are not Tasks. Never inserts a Task row.
    */
-  queryExternalReviews = async (): Promise<WorkQueryExternalReview[]> => {
+  /**
+   * 'for-me' lists pending reviews where I am the approver; 'created' lists
+   * pending reviews I requested. Neither inserts a Task row.
+   */
+  queryExternalReviews = async (
+    scope: 'created' | 'for-me' = 'for-me',
+  ): Promise<WorkQueryExternalReview[]> => {
     if (!this.workspaceId) return [];
+    const scopeColumn =
+      scope === 'created' ? actionApprovals.requestedBy : actionApprovals.approverUserId;
     const rows = await this.db
       .select({
         actionSummary: actionApprovals.actionSummary,
@@ -814,7 +856,7 @@ export class WorkQueryModel {
       .where(
         and(
           eq(actionApprovals.workspaceId, this.workspaceId),
-          eq(actionApprovals.approverUserId, this.userId),
+          eq(scopeColumn, this.userId),
           eq(actionApprovals.status, 'pending'),
           isNotNull(actionApprovals.targetType),
           ne(actionApprovals.targetType, 'task'),

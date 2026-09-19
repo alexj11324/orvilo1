@@ -16,7 +16,6 @@ import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
 import { useNavLayout } from '@/hooks/useNavLayout';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
-import { useSearchParams } from '@/libs/router/navigation';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
@@ -73,7 +72,6 @@ export const mergeSidebarExpandedKeys = (
 const Body = memo(() => {
   const { t } = useTranslation('common');
   const tab = useActiveTabKey();
-  const [searchParams] = useSearchParams();
   const navigate = useWorkspaceAwareNavigate();
   const { topNavItems, bottomMenuItems } = useNavLayout();
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -155,17 +153,14 @@ const Body = memo(() => {
     (key: string) => {
       const navItem = navLinkItems.get(key);
       if (!navItem || navItem.hidden) return null;
-      // Reviews lives under /my-work?tab=review — resolve active against the
-      // query so the two entries never light up together.
-      const onReviewTab = tab === 'my-work' && searchParams.get('tab') === 'review';
+      // The My issues key keeps resolving the legacy `/my-work` segment so the
+      // entry stays lit while the route redirect runs; Reviews is its own page.
       const active =
-        key === 'reviews'
-          ? onReviewTab
-          : key === 'my-work'
-            ? tab === 'my-work' && !onReviewTab
-            : key === 'agent'
-              ? tab === 'agent' || tab === 'agents'
-              : tab === key;
+        key === 'my-work'
+          ? tab === 'my-issues' || tab === 'my-work'
+          : key === 'agent'
+            ? tab === 'agent' || tab === 'agents'
+            : tab === key;
       return (
         <WorkspaceLink
           key={key}
@@ -197,7 +192,7 @@ const Body = memo(() => {
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, searchParams, getContextMenuItems, navigate, inboxUnreadCount],
+    [navLinkItems, tab, getContextMenuItems, navigate, inboxUnreadCount],
   );
 
   const handleAccordionExpandedChange = useCallback(

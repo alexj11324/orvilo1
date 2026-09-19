@@ -11,7 +11,13 @@ import type { TaskGroupItem } from '@/store/task/slices/list/initialState';
 
 import type { WorkQueryGroupPage, WorkQueryResultTask } from './workQueryPaging';
 
-export const MY_WORK_BOARD_MODES = ['assigned', 'delegated'] as const;
+export const MY_WORK_BOARD_MODES = [
+  'activity',
+  'assigned',
+  'created',
+  'delegated',
+  'subscribed',
+] as const;
 
 export const isMyWorkBoardMode = (mode: string): boolean =>
   (MY_WORK_BOARD_MODES as readonly string[]).includes(mode);

@@ -24,8 +24,8 @@ describe('isMobileNavRoute', () => {
     expect(isMobileNavRoute('/lobe-team/me', 'lobe-team')).toBe(true);
   });
 
-  it('keeps the tab bar on My Work, Views and Teams', () => {
-    expect(isMobileNavRoute('/my-work', null)).toBe(true);
+  it('keeps the tab bar on My issues, Views and Teams', () => {
+    expect(isMobileNavRoute('/my-issues', null)).toBe(true);
     expect(isMobileNavRoute('/lobe-team/views/view-1', 'lobe-team')).toBe(true);
     expect(isMobileNavRoute('/lobe-team/teams/team-1', 'lobe-team')).toBe(true);
   });

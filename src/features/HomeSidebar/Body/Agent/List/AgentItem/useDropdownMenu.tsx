@@ -42,7 +42,6 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { getDeleteErrorMessageKey } from '@/utils/forbiddenError';
 
 import { useRevealSidebarSection } from '../../../../hooks';
-import { useSidebarItemVisibility } from '../../useSidebarItemVisibility';
 import { getAgentPublishErrorKey } from './agentMenuVisibility';
 
 const BUILTIN_SLUGS = new Set<string>(Object.values(BUILTIN_AGENT_SLUGS));
@@ -123,8 +122,7 @@ export const useAgentDropdownMenu = ({
   // a backstop.
   const activeWorkspaceId = useActiveWorkspaceId();
   const currentUserId = useUserStore(userProfileSelectors.userId);
-  const { isSidebarItemVisible, setSidebarItemVisible } = useSidebarItemVisibility();
-  const isShownInSidebar = isSidebarItemVisible({ id, slug, type: 'agent', userId });
+
   const isPrivate = visibility === 'private';
   const isBuiltin = !!slug && BUILTIN_SLUGS.has(slug);
   const showPublishAction = Boolean(activeWorkspaceId) && isPrivate;
@@ -190,25 +188,6 @@ export const useAgentDropdownMenu = ({
                 label: t(pinned ? 'pinOff' : 'pin'),
                 onClick: () => pinAgent(id, !pinned),
                 sfSymbol: pinned ? 'pin.slash' : 'pin',
-              },
-            ]
-          : []),
-        ...(isShownInSidebar
-          ? [
-              {
-                icon: <Icon icon={EyeOffIcon} />,
-                key: 'hideFromSidebar',
-                label: t('agentViewAll.removeFromSidebar', { ns: 'common' }),
-                onClick: async ({ domEvent }: any) => {
-                  domEvent?.stopPropagation();
-                  try {
-                    await setSidebarItemVisible(id, false);
-                  } catch (error) {
-                    console.error('Failed to hide Agent from sidebar:', error);
-                    toast.error(t('operationFailed', { ns: 'common' }));
-                  }
-                },
-                sfSymbol: 'sidebar.left',
               },
             ]
           : []),
@@ -586,8 +565,6 @@ export const useAgentDropdownMenu = ({
       transferToMemberItem,
       showPublishAction,
       showMakePrivateAction,
-      isShownInSidebar,
-      setSidebarItemVisible,
       refreshAgentList,
       revealSidebarSection,
       t,

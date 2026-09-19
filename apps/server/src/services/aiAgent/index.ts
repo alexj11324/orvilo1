@@ -1065,7 +1065,7 @@ export class AiAgentService {
       ),
     });
 
-    return dispatchHeteroAgent(
+    const dispatchResult = await dispatchHeteroAgent(
       {
         bindTopicWorkingDirectory: (p) => this.bindTopicWorkingDirectory(p),
         db: this.db,
@@ -1079,8 +1079,10 @@ export class AiAgentService {
       },
       runContext,
       {
+        beforeOperationStart,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
         canManageAgent,
+        clientIp,
         effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
         // Skill content, mounted-tool usage guidance and eval env prompts all
         // ride the ACP system-context channel — the retired loop consumed them
@@ -1104,8 +1106,17 @@ export class AiAgentService {
         selfMessageIds,
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
+        userAgent,
       },
     );
+
+    // A resolved dispatch means the continuation durably exists — the op row
+    // was persisted inside `dispatchHeteroAgent`. Mark it so the approval
+    // rollback guard restores claimed rows only when the run never started;
+    // legacy (non-generic) claims have no other marker after the retired
+    // createOperation path stopped receiving `approvalClaim`.
+    approvalClaim.continuationPrepared = true;
+    return dispatchResult;
   }
 
   /**

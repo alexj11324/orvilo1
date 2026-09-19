@@ -417,12 +417,21 @@ const settleRemoteDispatchOutcome = async (
 
 export interface HeteroDispatchInput {
   /**
+   * Runs inside the operation's commit window — after the id is minted,
+   * before the durable row exists. Task runners use it to revalidate their
+   * reservation and bind the operationId transactionally; the post-return
+   * registration path covers callers that don't.
+   */
+  beforeOperationStart?: (input: { operationId: string; topicId: string }) => Promise<void>;
+  /**
    * Server-backed builtin tools resolved for this run. The execution host
    * (desktop, device daemon, cloud sandbox) mounts each spec on its per-run
    * MCP server; invocations call back to the server with the operation JWT.
    */
   builtinToolSpecs?: AcpBuiltinToolSpec[];
   canManageAgent: boolean;
+  /** Source attribution persisted onto the operation row's appContext. */
+  clientIp?: string;
   effectiveRequestedDeviceId?: string;
   /**
    * Extra caller-supplied context appended after the persona/provider system
@@ -447,6 +456,8 @@ export interface HeteroDispatchInput {
   selfMessageIds: Set<string>;
   skipTaskVerification?: boolean;
   topicStartOwnerOperationId?: string;
+  /** Source attribution persisted onto the operation row's appContext. */
+  userAgent?: string;
 }
 
 /**
@@ -481,8 +492,10 @@ export const dispatchHeteroAgent = async (
     userMessageId,
   } = ctx;
   const {
+    beforeOperationStart,
     builtinToolSpecs,
     canManageAgent,
+    clientIp,
     effectiveRequestedDeviceId,
     extraSystemContext,
     heteroType,
@@ -501,6 +514,7 @@ export const dispatchHeteroAgent = async (
     selfMessageIds,
     skipTaskVerification,
     topicStartOwnerOperationId,
+    userAgent,
   } = input;
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
@@ -522,6 +536,16 @@ export const dispatchHeteroAgent = async (
   if (hooks?.length) hookDispatcher.register(operationId, hooks);
   const serializedHooks = hookDispatcher.getSerializedHooks(operationId);
 
+  // Caller persistence (taskRunner's reservation revalidation + operation
+  // registration) runs in the commit window — after the id is minted, before
+  // the durable row exists, same slot the retired loop's startOperation used.
+  try {
+    await beforeOperationStart?.({ operationId, topicId });
+  } catch (error) {
+    hookDispatcher.unregister(operationId);
+    throw error;
+  }
+
   // Persist a first-class agent_operations row for the hetero run. The id is
   // generated here (authoritative) and flows through to heteroIngest /
   // heteroFinish unchanged. Without this row the run is invisible to the
@@ -536,7 +560,7 @@ export const dispatchHeteroAgent = async (
     deps.workspaceId,
   ).recordStart({
     agentId: persistAgentId,
-    appContext: { ...appContext, sourceMessageId: userMessageId },
+    appContext: { ...appContext, clientIp, sourceMessageId: userMessageId, userAgent },
     chatGroupId: appContext?.groupId ?? null,
     // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
     // runtime loop — owns this operation. `heteroAgentType` records the CLI

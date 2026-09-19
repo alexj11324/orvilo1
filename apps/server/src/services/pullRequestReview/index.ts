@@ -662,6 +662,22 @@ const toCollection = <T>(
   };
 };
 
+/**
+ * GitHub REST `files[].patch` is hunk-only (`@@ …`); diff renderers parse the
+ * `--- a/…` / `+++ b/…` file headers, so synthesize them around the hunk.
+ * Patches that already carry headers (or `diff --git`) pass through.
+ */
+const FILE_PATCH_HEADER = /^(?:diff --git|---\s)/;
+const withPatchHeaders = (
+  filename: string,
+  previousFilename: string | null | undefined,
+  patch: string | null | undefined,
+): string | null => {
+  if (!patch) return null;
+  if (FILE_PATCH_HEADER.test(patch)) return patch;
+  return `--- a/${previousFilename ?? filename}\n+++ b/${filename}\n${patch}`;
+};
+
 const mapThreadComment = (
   comment: z.infer<typeof threadCommentSchema>,
   side: 'LEFT' | 'RIGHT' | null,
@@ -945,7 +961,7 @@ export class PullRequestReviewService {
           additions: file.additions ?? 0,
           deletions: file.deletions ?? 0,
           filename: file.filename,
-          patch: file.patch ?? null,
+          patch: withPatchHeaders(file.filename, file.previousFilename ?? null, file.patch),
           previousFilename: file.previousFilename ?? null,
           status: file.status ?? 'modified',
         })),
@@ -1027,7 +1043,7 @@ export class PullRequestReviewService {
         additions: file.additions ?? 0,
         deletions: file.deletions ?? 0,
         filename: file.filename,
-        patch: file.patch ?? null,
+        patch: withPatchHeaders(file.filename, file.previousFilename ?? null, file.patch),
         previousFilename: file.previousFilename ?? null,
         status: file.status ?? 'modified',
       }));

@@ -923,10 +923,15 @@ function bindGatewayClientHandlers(
           agentType: request.agentType,
           assistantMessageId: request.assistantMessageId,
           args: request.args,
+          builtinTools: request.builtinTools,
           cwd: request.cwd,
           imageList: request.imageList,
           jwt: request.jwt,
           operationId: request.operationId,
+          // `request.jwt` IS the operation token on this path (no user-token
+          // substitution like the desktop does) — forwarded under the explicit
+          // key so the exec-side env contract matches the other two hosts.
+          operationJwt: request.jwt,
           prompt: request.prompt,
           resumeFallbackSystemContext: request.resumeFallbackSystemContext,
           resumeSessionId: request.resumeSessionId,

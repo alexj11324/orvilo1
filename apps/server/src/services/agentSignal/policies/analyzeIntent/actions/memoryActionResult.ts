@@ -44,15 +44,16 @@ const MEMORY_WRITE_TOOL_NAMES = new Set(
 );
 
 const MEMORY_WRITE_API_NAME_SET = new Set<string>(MEMORY_WRITE_API_NAMES);
-const MEMORY_WRITE_TARGET_BY_API_NAME: Record<string, { idKey: string; layer: LayersEnum }> = {
-  [MemoryApiName.addActivityMemory]: { idKey: 'activityId', layer: LayersEnum.Activity },
-  [MemoryApiName.addContextMemory]: { idKey: 'contextId', layer: LayersEnum.Context },
-  [MemoryApiName.addExperienceMemory]: { idKey: 'experienceId', layer: LayersEnum.Experience },
-  [MemoryApiName.addIdentityMemory]: { idKey: 'identityId', layer: LayersEnum.Identity },
-  [MemoryApiName.addPreferenceMemory]: { idKey: 'preferenceId', layer: LayersEnum.Preference },
-  [MemoryApiName.removeIdentityMemory]: { idKey: 'identityId', layer: LayersEnum.Identity },
-  [MemoryApiName.updateIdentityMemory]: { idKey: 'identityId', layer: LayersEnum.Identity },
-};
+export const MEMORY_WRITE_TARGET_BY_API_NAME: Record<string, { idKey: string; layer: LayersEnum }> =
+  {
+    [MemoryApiName.addActivityMemory]: { idKey: 'activityId', layer: LayersEnum.Activity },
+    [MemoryApiName.addContextMemory]: { idKey: 'contextId', layer: LayersEnum.Context },
+    [MemoryApiName.addExperienceMemory]: { idKey: 'experienceId', layer: LayersEnum.Experience },
+    [MemoryApiName.addIdentityMemory]: { idKey: 'identityId', layer: LayersEnum.Identity },
+    [MemoryApiName.addPreferenceMemory]: { idKey: 'preferenceId', layer: LayersEnum.Preference },
+    [MemoryApiName.removeIdentityMemory]: { idKey: 'identityId', layer: LayersEnum.Identity },
+    [MemoryApiName.updateIdentityMemory]: { idKey: 'identityId', layer: LayersEnum.Identity },
+  };
 const TOOL_NAME_SEPARATOR = '____';
 const DEFAULT_MEMORY_TARGET_TITLE = 'Memory saved';
 

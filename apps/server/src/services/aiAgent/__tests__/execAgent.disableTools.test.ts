@@ -6,6 +6,7 @@ import { AiAgentService } from '../index';
 const {
   mockCreateOperation,
   mockCreateServerAgentToolsEngine,
+  mockDispatchHeteroAgent,
   mockGetAgentConfig,
   mockGetComposioManifests,
   mockGetOrviloSkillManifests,
@@ -13,6 +14,7 @@ const {
   mockPluginQuery,
 } = vi.hoisted(() => ({
   mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockCreateServerAgentToolsEngine: vi.fn().mockReturnValue({
     generateToolsDetailed: vi.fn().mockReturnValue({ enabledToolIds: [], tools: [] }),
     getEnabledPluginManifests: vi.fn().mockReturnValue(new Map()),
@@ -116,6 +118,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — stub the dispatch boundary and
+// assert on the tool surface carried into it (`builtinToolSpecs`).
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
@@ -188,9 +196,15 @@ describe('AiAgentService.execAgent - disableTools', () => {
       chatConfig: {},
       id: 'agent-1',
       model: 'gpt-4',
-      plugins: ['plugin-a'],
+      plugins: ['orvilo-task'],
       provider: 'openai',
       systemRole: 'You are a helper',
+    });
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
     });
     service = new AiAgentService(mockDb, userId);
   });
@@ -212,22 +226,24 @@ describe('AiAgentService.execAgent - disableTools', () => {
     // ToolsEngine should NOT be created
     expect(mockCreateServerAgentToolsEngine).not.toHaveBeenCalled();
 
-    // createOperation should still be called with tools=undefined
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.tools).toBeUndefined();
+    // The run still dispatches, with an empty builtin tool surface.
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
+    expect(dispatchInput.builtinToolSpecs).toEqual([]);
   });
 
-  it('should perform full tool discovery when disableTools is not set', async () => {
+  it('should mount server-runnable builtin tools when disableTools is not set', async () => {
     await service.execAgent({
       agentId: 'agent-1',
       prompt: 'Hello',
     });
 
-    // All tool discovery steps should be called
-    expect(mockPluginQuery).toHaveBeenCalledTimes(1);
-    expect(mockGetOrviloSkillManifests).toHaveBeenCalledTimes(1);
-    expect(mockGetComposioManifests).toHaveBeenCalledTimes(1);
-    expect(mockCreateServerAgentToolsEngine).toHaveBeenCalledTimes(1);
+    // ACP runs carry the builtin tool surface on the dispatch input — no
+    // server-side tools engine / manifest fetch runs in the exec path.
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
+    expect(
+      dispatchInput.builtinToolSpecs.map((spec: { identifier: string }) => spec.identifier),
+    ).toContain('orvilo-task');
   });
 });

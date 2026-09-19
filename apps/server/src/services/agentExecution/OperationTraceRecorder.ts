@@ -2,7 +2,7 @@ import type { ISnapshotStore, StepSnapshot } from '@orvilo/agent-tracing';
 import type { ChatMessageErrorAttribution, ChatMessageErrorSeverity } from '@orvilo/types';
 import debug from 'debug';
 
-import type { StepCompletionReason, StepPresentationData } from './types';
+import type { StepCompletionReason, StepPresentationData } from './stepTypes';
 
 const log = debug('orvilo-server:operation-trace-recorder');
 

@@ -1,6 +1,7 @@
+import { randomUUID } from 'node:crypto';
+
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, lt, sql } from 'drizzle-orm';
-import { randomUUID } from 'node:crypto';
 
 import type { OrviloDatabase, Transaction } from '@/database/type';
 
@@ -19,8 +20,9 @@ import {
   type DelegationSubjectType,
 } from './types';
 
-const ACTIVE_MEMBER_STATUSES = (member: { deletedAt: Date | null; suspendedAt?: Date | null } | undefined | null) =>
-  !!member && !member.deletedAt && !member.suspendedAt;
+const ACTIVE_MEMBER_STATUSES = (
+  member: { deletedAt: Date | null; suspendedAt?: Date | null } | undefined | null,
+) => !!member && !member.deletedAt && !member.suspendedAt;
 
 export interface CreateGrantInput {
   agentId: string;
@@ -321,12 +323,7 @@ export class AgentDelegationService {
     const expired = await this.db
       .update(executionGrants)
       .set({ status: 'expired', updatedAt: now })
-      .where(
-        and(
-          eq(executionGrants.status, 'active'),
-          lt(executionGrants.expiresAt, now),
-        ),
-      )
+      .where(and(eq(executionGrants.status, 'active'), lt(executionGrants.expiresAt, now)))
       .returning({ id: executionGrants.id });
     return expired.length;
   };
@@ -384,9 +381,7 @@ export class AgentDelegationService {
           executionEpoch: sql`coalesce(${taskTopics.executionEpoch}, 0) + 1`,
           executionGrantId: params.grantId,
         })
-        .where(
-          and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
-        )
+        .where(and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)))
         .returning({ executionEpoch: taskTopics.executionEpoch });
 
       if (!row) {
@@ -426,9 +421,7 @@ export class AgentDelegationService {
       })
       .from(taskTopics)
       .leftJoin(executionGrants, eq(executionGrants.id, taskTopics.executionGrantId))
-      .where(
-        and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)),
-      )
+      .where(and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)))
       .limit(1);
 
     if (!row || !isEpochCurrent(row, { epoch: params.epoch, grantId: params.grantId })) {

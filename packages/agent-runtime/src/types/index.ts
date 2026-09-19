@@ -4,4 +4,5 @@ export * from './hooks';
 export * from './instruction';
 export * from './runtime';
 export * from './state';
+export * from './tool';
 export * from './usage';

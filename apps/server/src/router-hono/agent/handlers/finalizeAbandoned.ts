@@ -2,7 +2,7 @@ import debug from 'debug';
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/core/db-adaptor';
-import { AbandonOperationService } from '@/server/services/agentRuntime';
+import { AbandonOperationService } from '@/server/services/agentExecution/AbandonOperationService';
 import { deliverWebhook } from '@/server/services/agentExecution/hooks/HookDispatcher';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { isQueueAgentRuntimeEnabled } from '@/server/services/queue/impls';

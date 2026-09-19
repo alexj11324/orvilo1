@@ -124,16 +124,16 @@ const resolveCanManage = async (
   }
 };
 
-const loadUserLocale = async (
+const loadUserInfoForAIGeneration = async (
   deps: ResolveRunAgentConfigDeps,
   userId: string,
-): Promise<string | undefined> => {
+): Promise<{ userLocale?: string; userTimezone?: string }> => {
   try {
     const userInfo = await UserModel.getInfoForAIGeneration(deps.db, userId);
-    return userInfo.responseLanguage;
+    return { userLocale: userInfo.responseLanguage, userTimezone: userInfo.timezone };
   } catch (error) {
-    log('execAgent: failed to load user locale for agent config resolution: %O', error);
-    return undefined;
+    log('execAgent: failed to load user info for agent config resolution: %O', error);
+    return {};
   }
 };
 
@@ -170,10 +170,10 @@ export const resolveRunAgentConfig = async (
   const agentWorkspaceId = row.workspaceId ?? deps.workspaceId;
   const isPublicWorkspaceAgent = !!agentWorkspaceId && row.visibility !== 'private';
 
-  const [overrides, canManageAgent, userLocale] = await Promise.all([
+  const [overrides, canManageAgent, userInfo] = await Promise.all([
     loadWorkspaceMemberOverrides(deps, resolvedAgentId),
     resolveCanManage(deps, row, agentWorkspaceId, isPublicWorkspaceAgent),
-    loadUserLocale(deps, deps.userId),
+    loadUserInfoForAIGeneration(deps, deps.userId),
   ]);
 
   // The caller's device preference layers onto the shared row BEFORE the
@@ -202,7 +202,8 @@ export const resolveRunAgentConfig = async (
     memberModeOverride: overrides.mode,
     memberModelOverride: overrides.model,
     slug: row.slug ?? undefined,
-    userLocale,
+    userLocale: userInfo.userLocale,
+    userTimezone: userInfo.userTimezone,
   };
 
   // --- shared rules ---

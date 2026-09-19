@@ -53,6 +53,7 @@ export type ListUsersForHourlyMemoryExtractorOptions = ListUsersForMemoryExtract
 
 export interface UserInfoForAIGeneration {
   responseLanguage: string;
+  timezone?: string;
   userName: string;
 }
 
@@ -669,6 +670,7 @@ export class UserModel {
 
     return {
       responseLanguage: general?.responseLanguage || 'en-US',
+      timezone: general?.timezone,
       userName: user?.fullName || user?.firstName || 'User',
     };
   };

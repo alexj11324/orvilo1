@@ -5,7 +5,7 @@ import { MessageModel } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
 
 import { AbandonOperationService } from '../AbandonOperationService';
-import { CompletionLifecycle } from '../../agentExecution/CompletionLifecycle';
+import { CompletionLifecycle } from '../CompletionLifecycle';
 
 const buildStore = () => ({
   get: vi.fn(),
@@ -18,7 +18,7 @@ const buildStore = () => ({
   savePartial: vi.fn().mockResolvedValue(undefined),
 });
 
-const buildCoordinator = (
+const buildStateManager = (
   overrides: Partial<{
     loadAgentState: ReturnType<typeof vi.fn>;
     deleteAgentOperation: ReturnType<typeof vi.fn>;
@@ -48,7 +48,7 @@ vi.mock('@/database/models/agentOperation', () => ({
 }));
 
 const dispatchHooksMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('../../agentExecution/CompletionLifecycle', () => ({
+vi.mock('../CompletionLifecycle', () => ({
   CompletionLifecycle: vi.fn().mockImplementation(function () {
     return {
       dispatchHooks: dispatchHooksMock,
@@ -115,11 +115,11 @@ describe('AbandonOperationService', () => {
       .mockResolvedValue({ assistantMessageId: undefined, status: 'missing' });
   });
 
-  it('returns found:false when coordinator has no state', async () => {
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+  it('returns found:false when state manager has no state', async () => {
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const store = buildStore();
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -135,7 +135,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('marks a no-state running operation as abandoned and errors the placeholder', async () => {
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const store = buildStore();
     const db = buildDb({
       operationRow: {
@@ -155,7 +155,7 @@ describe('AbandonOperationService', () => {
     });
 
     const svc = new AbandonOperationService(db, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -187,7 +187,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('keeps no-state terminal operations classified as completed phantom timeouts', async () => {
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const store = buildStore();
     const db = buildDb({
       operationRow: {
@@ -198,7 +198,7 @@ describe('AbandonOperationService', () => {
     });
 
     const svc = new AbandonOperationService(db, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -210,7 +210,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('does not touch a newer runningOperation when abandoning an old no-state op', async () => {
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const store = buildStore();
     const db = buildDb({
       assistantRow: { id: 'msg_old_placeholder' },
@@ -225,7 +225,7 @@ describe('AbandonOperationService', () => {
       },
     });
     const svc = new AbandonOperationService(db, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -238,7 +238,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('does not settle a running topic when operation ownership is no longer provable', async () => {
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const store = buildStore();
     const db = buildDb({
       assistantRow: { id: 'msg_assist_1' },
@@ -254,7 +254,7 @@ describe('AbandonOperationService', () => {
       },
     });
     const svc = new AbandonOperationService(db, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -265,7 +265,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('cleans up a no-state child marker and errors its own placeholder', async () => {
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const db = buildDb({
       operationRow: {
         id: 'op_child',
@@ -282,7 +282,7 @@ describe('AbandonOperationService', () => {
     });
 
     const result = await new AbandonOperationService(db, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: buildStore() as any,
     }).finalizeAbandoned('op_child', 'inactivity_watchdog');
 
@@ -295,7 +295,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('finalizes snapshot and marks assistant message errored when state + partial exist', async () => {
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(stateWith()),
     });
     const store = buildStore();
@@ -309,7 +309,7 @@ describe('AbandonOperationService', () => {
       ],
     });
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -356,20 +356,20 @@ describe('AbandonOperationService', () => {
       { skipErrorMessageWrite: true },
     );
 
-    // Coordinator state cleaned
-    expect(coord.deleteAgentOperation).toHaveBeenCalledWith('op_x');
+    // Persisted state cleaned
+    expect(stateManager.deleteAgentOperation).toHaveBeenCalledWith('op_x');
   });
 
   it.each(['done', 'error', 'interrupted'])(
-    'skips abandoned lifecycle dispatch for terminal coordinator state %s',
+    'skips abandoned lifecycle dispatch for terminal persisted state %s',
     async (status) => {
-      const coord = buildCoordinator({
+      const stateManager = buildStateManager({
         loadAgentState: vi.fn().mockResolvedValue(stateWith({ status })),
       });
       const store = buildStore();
       store.loadPartial.mockResolvedValue(null);
       const svc = new AbandonOperationService({} as any, {
-        coordinator: coord as any,
+        stateManager: stateManager as any,
         snapshotStore: store as any,
       });
 
@@ -382,14 +382,14 @@ describe('AbandonOperationService', () => {
   );
 
   it('skips snapshot finalize when no partial exists but still updates message', async () => {
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(stateWith()),
     });
     const store = buildStore();
     store.loadPartial.mockResolvedValue(null);
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -403,14 +403,14 @@ describe('AbandonOperationService', () => {
   });
 
   it('synthesizes failedStep at index 0 when partial has zero steps', async () => {
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(stateWith()),
     });
     const store = buildStore();
     store.loadPartial.mockResolvedValue({ steps: [], startedAt: 1 });
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -422,7 +422,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('does not crash when state has no metadata.assistantMessageId', async () => {
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi
         .fn()
         .mockResolvedValue(stateWith({ metadata: {}, origin: { userId: 'user_x' } })),
@@ -431,7 +431,7 @@ describe('AbandonOperationService', () => {
     store.loadPartial.mockResolvedValue({ steps: [{ stepIndex: 0 }], startedAt: 1 });
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -444,7 +444,7 @@ describe('AbandonOperationService', () => {
   });
 
   it('treats non-fatal errors during message update / coordinator cleanup as best-effort', async () => {
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(stateWith()),
       deleteAgentOperation: vi.fn().mockRejectedValue(new Error('redis down')),
     });
@@ -453,7 +453,7 @@ describe('AbandonOperationService', () => {
     messageUpdateMock.mockRejectedValueOnce(new Error('db down'));
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -472,7 +472,7 @@ describe('AbandonOperationService', () => {
     });
     findThreadMock.mockResolvedValue({ sourceMessageId: 'msg_tool_placeholder' });
 
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(
         stateWith({
           metadata: {
@@ -491,7 +491,7 @@ describe('AbandonOperationService', () => {
     store.loadPartial.mockResolvedValue(null);
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -505,9 +505,9 @@ describe('AbandonOperationService', () => {
       workspaceId: 'ws_1',
     });
     expect(dispatchHooksMock).not.toHaveBeenCalled();
-    // Coordinator state is kept alive so the durable parent-resume can still
+    // Persisted state is kept alive so the durable parent-resume can still
     // resolve this op's userId; it expires via its own Redis TTL.
-    expect(coord.deleteAgentOperation).not.toHaveBeenCalled();
+    expect(stateManager.deleteAgentOperation).not.toHaveBeenCalled();
   });
 
   it('omits subAgentResume for an isolated group member (orchestrationRole=member)', async () => {
@@ -517,7 +517,7 @@ describe('AbandonOperationService', () => {
     });
     findThreadMock.mockResolvedValue({ sourceMessageId: 'msg_group_anchor' });
 
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(
         stateWith({
           metadata: {
@@ -537,7 +537,7 @@ describe('AbandonOperationService', () => {
     store.loadPartial.mockResolvedValue(null);
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 
@@ -545,11 +545,11 @@ describe('AbandonOperationService', () => {
 
     // Group members are resumed via the group K=N bridge (their own timeout),
     // not the sub-agent bridge — so we must NOT surface subAgentResume, and the
-    // coordinator state is cleaned up normally.
+    // persisted state is cleaned up normally.
     expect(result.subAgentResume).toBeUndefined();
     expect(findOperationMock).not.toHaveBeenCalled();
     expect(topicSettleRunningOperationMock).toHaveBeenCalledWith('tpc_x', 'op_member');
-    expect(coord.deleteAgentOperation).toHaveBeenCalledWith('op_member');
+    expect(stateManager.deleteAgentOperation).toHaveBeenCalledWith('op_member');
   });
 
   it('opts message/topic/lifecycle models into visitor rows for a visitor run (streamOwnerUserId present)', async () => {
@@ -562,7 +562,7 @@ describe('AbandonOperationService', () => {
     (TopicModel as unknown as ReturnType<typeof vi.fn>).mockClear();
     (CompletionLifecycle as unknown as ReturnType<typeof vi.fn>).mockClear();
 
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(
         stateWith({
           metadata: {
@@ -582,7 +582,7 @@ describe('AbandonOperationService', () => {
     store.loadPartial.mockResolvedValue(null);
 
     await new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     }).finalizeAbandoned('op_visitor', 'inactivity_5m');
 
@@ -602,14 +602,14 @@ describe('AbandonOperationService', () => {
     (TopicModel as unknown as ReturnType<typeof vi.fn>).mockClear();
     (CompletionLifecycle as unknown as ReturnType<typeof vi.fn>).mockClear();
 
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(stateWith()),
     });
     const store = buildStore();
     store.loadPartial.mockResolvedValue(null);
 
     await new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     }).finalizeAbandoned('op_x', 'inactivity_5m');
 
@@ -632,7 +632,7 @@ describe('AbandonOperationService', () => {
     (MessageModel as unknown as ReturnType<typeof vi.fn>).mockClear();
     (TopicModel as unknown as ReturnType<typeof vi.fn>).mockClear();
 
-    const coord = buildCoordinator({ loadAgentState: vi.fn().mockResolvedValue(null) });
+    const stateManager = buildStateManager({ loadAgentState: vi.fn().mockResolvedValue(null) });
     const store = buildStore();
     const db = buildDb({
       operationRow: {
@@ -652,7 +652,7 @@ describe('AbandonOperationService', () => {
     });
 
     await new AbandonOperationService(db, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     }).finalizeAbandoned('op_ns', 'inactivity_watchdog');
 
@@ -665,14 +665,14 @@ describe('AbandonOperationService', () => {
   });
 
   it('omits subAgentResume for a non-sub-agent abandoned op', async () => {
-    const coord = buildCoordinator({
+    const stateManager = buildStateManager({
       loadAgentState: vi.fn().mockResolvedValue(stateWith()),
     });
     const store = buildStore();
     store.loadPartial.mockResolvedValue(null);
 
     const svc = new AbandonOperationService({} as any, {
-      coordinator: coord as any,
+      stateManager: stateManager as any,
       snapshotStore: store as any,
     });
 

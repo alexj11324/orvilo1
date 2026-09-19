@@ -1,3 +1,5 @@
+import type { AcpBuiltinToolSpec } from '@orvilo/types';
+
 // ─── Device Info ───
 
 /** A single live gateway WebSocket connection belonging to a device. */
@@ -239,6 +241,12 @@ export interface AgentRunRequestMessage {
   args?: string[];
   /** Seed assistant message that receives terminal state from the CLI run. */
   assistantMessageId?: string;
+  /**
+   * Server-backed builtin tools for this run. The device mounts each spec on
+   * its per-run MCP server (`orvilo_cc`); invocations call back to the
+   * server with `jwt` + `operationId`. Optional for older servers.
+   */
+  builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
   /**
    * Server-side idempotency key for admission. Always equals `operationId`

@@ -1,6 +1,6 @@
 import type { ChatErrorBudgetContext } from '@orvilo/types';
 
-import type { StepPresentationData } from '../agentRuntime/types';
+import type { StepPresentationData } from '../agentExecution/stepTypes';
 import { getExtremeAck } from './ackPhrases';
 // Import from the leaf modules (`const` / `utils`) instead of the
 // `./platforms` barrel: the barrel instantiates every platform definition

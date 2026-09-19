@@ -27,6 +27,28 @@ import { type RuntimeExecutorContext } from './context';
 export const log = debug('orvilo-server:agent-runtime:streaming-executors');
 export const timing = debug('orvilo-server:agent-runtime:timing');
 
+/**
+ * The slice of {@link RuntimeExecutorContext} the sub-agent / group-member
+ * runner builders actually read. Narrowed so the ACP builtin-tool bridge
+ * (`services/aiAgent/acpBuiltinToolExec`) can construct it from a persisted
+ * operation row without fabricating stream/step plumbing the builders never
+ * touch — and so these builders survive the `modules/AgentRuntime` teardown
+ * with their real dependency surface explicit.
+ */
+export type OrchestrationRunnerContext = Pick<
+  RuntimeExecutorContext,
+  | 'agentShareVisitor'
+  | 'execGroupMember'
+  | 'execSubAgent'
+  | 'execVirtualSubAgent'
+  | 'messageModel'
+  | 'operationId'
+  | 'topicId'
+>;
+
+/** The slice of `AgentState` the runner builders read (origin + world + model). */
+export type OrchestrationRunnerState = Pick<AgentState, 'modelRuntimeConfig' | 'origin' | 'world'>;
+
 // Tool pricing configuration (USD per call)
 export const TOOL_PRICING: Record<string, number> = {
   'orvilo-web-browsing/craw': 0,
@@ -131,7 +153,13 @@ export const registerWorkFromIntent = async ({
   sourceToolIdentifier: string;
   /** Runtime event's concrete tool name; skills may override it with their own toolName. */
   sourceToolName: string;
-  state: Pick<AgentState, 'cost' | 'usage'>;
+  /**
+   * Run cost/usage snapshot for cumulative stamping. Optional: the ACP
+   * builtin-tool callback has no in-memory state — the run's totals only exist
+   * on the operation row at finish — so Work versions registered through that
+   * path carry `cumulativeUsage: null` rather than a fabricated snapshot.
+   */
+  state?: Partial<Pick<AgentState, 'cost' | 'usage'>>;
   threadId?: string | null;
   topicId?: string;
   userId?: string;
@@ -139,7 +167,7 @@ export const registerWorkFromIntent = async ({
 }) => {
   if (!userId) return;
 
-  const cumulative = buildWorkVersionCumulativeUsage({ cost: state.cost, usage: state.usage });
+  const cumulative = buildWorkVersionCumulativeUsage({ cost: state?.cost, usage: state?.usage });
 
   try {
     const workModel = new WorkModel(serverDB, userId, workspaceId);
@@ -207,8 +235,8 @@ export const buildPostProcessUrl = (
  * context).
  */
 export const buildServerVirtualSubAgentRunner = (
-  ctx: RuntimeExecutorContext,
-  state: AgentState,
+  ctx: OrchestrationRunnerContext,
+  state: OrchestrationRunnerState,
   chatToolPayload: ChatToolPayload,
   parentMessageId: string,
 ): ServerSubAgentRunner | undefined => {
@@ -341,8 +369,8 @@ export const buildServerVirtualSubAgentRunner = (
  * `execGroupMember` callback, or missing agent/topic/group context).
  */
 export const buildServerAgentMemberRunner = (
-  ctx: RuntimeExecutorContext,
-  state: AgentState,
+  ctx: OrchestrationRunnerContext,
+  state: OrchestrationRunnerState,
   chatToolPayload: ChatToolPayload,
   parentMessageId: string,
 ): ServerAgentMemberRunner | undefined => {

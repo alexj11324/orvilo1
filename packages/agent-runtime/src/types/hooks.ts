@@ -1,6 +1,6 @@
 import type { ChatErrorBudgetContext } from '@orvilo/types';
 
-import type { ToolRunResult } from '../transport/tool';
+import type { ToolRunResult } from './tool';
 
 /**
  * Agent Runtime Hook Types

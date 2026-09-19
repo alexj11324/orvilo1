@@ -77,12 +77,14 @@
 - Task / Team / Project / Saved View 共用 `WorkFavoriteButton`；侧栏收藏可 unpin
 - 侧栏收藏按 `favoritePageSize`（默认 5）切片，多出来的走 More + `AllFavoritesDrawer`；上 / 下箭头按**完整列表**下标重排，最后一行可见项可以和下一项（overflow）对调。个人模式不从收藏里丢掉 team pin（`favoriteReorder` CAS 会重写整表）
 - Web / Electron 主区 `matchRoutes` 覆盖 `/inbox` `/my-work` `/views` `/teams` 及其 workspace 镜像，叶子不是 splat `*`（NAV02 路由半边；原生通知完整点击矩阵仍是 CI\_E2E）
+- Recents 的 project/savedView/team 不再打开空 ⋯：可 pin 的类型走 `useWorkFavoriteToggle`；菜单长度为 0 时不渲染 ⋯ /context menu
+- Electron 原生通知 click 对 `/inbox` 与 `/{workspace}/inbox` 走同一 `openNotificationTarget` broadcast
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-**已全部落地。** 只剩 NICE（可后做）：NAV02 原生通知完整点击矩阵（路由已 Web+Electron 对齐，`resolveWorkInboxNavigate` → `/inbox`）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。
+**已全部落地。** 只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。
 
 ## 给下一刀
 
@@ -137,6 +139,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `4ab22fd2`：CommandMenu 只保留访问 recents；个人模式不含 team；删 `workAttention.recentWork`。不是 64× AC。
 - `e88f0359`：个人模式 Home recents / CommandMenu 工作搜索不拉 team。不是 64× AC。
 - 本增量：收藏 overflow + Web/Electron work-route match。lint 干净，128 passed。不是 64× AC。
+- Recents 空 ⋯ /pin + Electron `/inbox` click：lint 干净，11 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

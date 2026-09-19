@@ -21,6 +21,8 @@
     "Pin/unpin on task, team, project, saved view; favorites list can unpin",
     "Sidebar favorites fold after favoritePageSize (default 5) into a More drawer; reorder uses full-list indices",
     "Web and Electron main-area match /inbox /my-work /views /teams instead of splat 404",
+    "Recents project/savedView/team pin from overflow; empty ⋯ is hidden",
+    "Electron native notification click broadcasts /inbox and /{workspace}/inbox",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -49,7 +51,8 @@
     "apps/server/src/services/workAttention/feedPage.ts",
     "src/services/recent/recentTypes.ts",
     "src/features/HomeSidebar/Body/favoriteOverflow.ts",
-    "src/features/HomeSidebar/Body/WorkFavorites.tsx"
+    "src/features/HomeSidebar/Body/WorkFavorites.tsx",
+    "src/features/Home/Recents/recentOverflow.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
@@ -74,7 +77,7 @@
   "status": "IN_PROGRESS",
   "targetBranch": "canary",
   "unverified": [
-    "NAV02 Electron native notification click matrix (routes aligned; OS click path still CI_E2E)",
+    "NAV02 Electron native notification click matrix (routes aligned; human-approval /inbox click covered in unit tests; full OS matrix still CI_E2E)",
     "ACCEPTANCE.md 64 rows still NOT_RUN",
     "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"
   ],

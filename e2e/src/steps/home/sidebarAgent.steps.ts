@@ -25,14 +25,12 @@ async function inputNewName(
 ): Promise<void> {
   await this.page.waitForTimeout(300);
 
-  // Primary: find input inside EditingPopover (data-testid) or antd Popover
-  const renameInput = this.page
-    .locator('[data-testid="editing-popover"] input, .ant-popover input')
-    .first();
+  // The rename EditingPopover mounts anchored to the row; while its positioner
+  // animates, a click can wait on actionability indefinitely — fill only needs
+  // the input to be visible and editable.
+  const renameInput = this.page.locator('[data-testid="editing-popover"] input').first();
 
   await renameInput.waitFor({ state: 'visible', timeout: 5000 });
-  await renameInput.click();
-  await renameInput.clear();
   await renameInput.fill(newName);
 
   if (pressEnter) {
@@ -40,12 +38,11 @@ async function inputNewName(
   } else {
     // Click the save button (ActionIcon with Check icon) next to the input
     const saveButton = this.page
-      .locator('[data-testid="editing-popover"] svg.lucide-check, .ant-popover svg.lucide-check')
+      .locator('[data-testid="editing-popover"] svg.lucide-check')
       .first();
-    try {
-      await saveButton.waitFor({ state: 'visible', timeout: 2000 });
+    if ((await saveButton.count()) > 0) {
       await saveButton.click();
-    } catch {
+    } else {
       // Fallback: press Enter to save
       await renameInput.press('Enter');
     }
@@ -88,22 +85,25 @@ async function createTestAgent(title: string = 'Test Agent'): Promise<string> {
 }
 
 async function waitForAgentItem(this: CustomWorld, agentId: string) {
+  // The sidebar "In Sidebar" section duplicates the same href — scope row
+  // interactions to the main Agents list via [data-agent-list].
   const selector = `a[href$="/agent/${agentId}"]`;
-  const agentItem = this.page.locator(selector).first();
+  const rowSelector = `[data-agent-list] ${selector}`;
+  const agentItem = this.page.locator(rowSelector).first();
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       await expect(agentItem).toBeVisible({ timeout: WAIT_TIMEOUT });
-      return { agentItem, selector };
+      return { agentItem, selector, rowSelector };
     } catch (error) {
       if (attempt === 2) throw error;
-      console.log(`   ↻ Agent ${agentId} not visible yet, reloading Home page...`);
+      console.log(`   ↻ Agent ${agentId} not visible yet, reloading Agents page...`);
       await this.page.reload({ waitUntil: 'domcontentloaded' });
       await this.page.waitForTimeout(1000);
     }
   }
 
-  return { agentItem, selector };
+  return { agentItem, selector, rowSelector };
 }
 
 // ============================================
@@ -124,12 +124,13 @@ Given('用户在 Agents 页面有一个 Agent', { timeout: 30_000 }, async funct
   // Look for the newly created agent in the sidebar by its specific ID. Use a
   // suffix match so workspace-prefixed links (e.g. /:workspaceSlug/agent/:id)
   // are accepted as well.
-  const { agentItem, selector } = await waitForAgentItem.call(this, agentId);
+  const { agentItem, selector, rowSelector } = await waitForAgentItem.call(this, agentId);
 
   // Store agent reference for later use
   const agentLabel = await agentItem.getAttribute('aria-label');
   this.testContext.targetItemId = agentLabel || agentId;
   this.testContext.targetItemSelector = selector;
+  this.testContext.targetRowSelector = rowSelector;
   this.testContext.targetType = 'agent';
 
   console.log(`   ✅ 找到 Agent: ${agentLabel}, id: ${agentId}`);
@@ -145,7 +146,7 @@ Given('该 Agent 未显示在侧边栏', { timeout: 30_000 }, async function (th
 
   if ((await inSidebar.count()) > 0) {
     console.log('   📍 Agent 已在侧边栏，开始隐藏操作...');
-    const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
     await targetItem.hover();
     await this.page.waitForTimeout(200);
     await targetItem.click({ button: 'right', force: true });
@@ -179,7 +180,7 @@ Given('该 Agent 已显示在侧边栏', { timeout: 30_000 }, async function (th
 
   if ((await inSidebar.count()) === 0) {
     console.log('   📍 Agent 未在侧边栏，开始显示操作...');
-    const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
     await targetItem.hover();
     await this.page.waitForTimeout(200);
     await targetItem.click({ button: 'right', force: true });
@@ -217,7 +218,7 @@ Given('该 Agent 已显示在侧边栏', { timeout: 30_000 }, async function (th
 When('用户右键点击该 Agent', { timeout: 30_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击 Agent...');
 
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+  const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
 
   // Hover first to ensure element is interactive
   await targetItem.hover();
@@ -243,7 +244,7 @@ When('用户右键点击该 Agent', { timeout: 30_000 }, async function (this: C
 When('用户悬停在该 Agent 上', async function (this: CustomWorld) {
   console.log('   📍 Step: 悬停在 Agent 上...');
 
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+  const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
   await targetItem.hover();
   await this.page.waitForTimeout(500);
 
@@ -253,22 +254,16 @@ When('用户悬停在该 Agent 上', async function (this: CustomWorld) {
 When('用户点击更多操作按钮', async function (this: CustomWorld) {
   console.log('   📍 Step: 点击更多操作按钮...');
 
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
-  const moreButton = targetItem.locator('svg.lucide-ellipsis, svg.lucide-more-horizontal').first();
+  // The "…" trigger is a sibling of the row anchor (inside the row's trailing
+  // cluster), never inside the <a> itself — scope via the row parent.
+  const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
+  const row = targetItem.locator('xpath=..');
+  const moreButton = row.locator('svg.lucide-ellipsis').first();
 
-  if ((await moreButton.count()) > 0) {
-    await moreButton.click();
-  } else {
-    // Fallback: find any visible ellipsis button
-    const allEllipsis = this.page.locator('svg.lucide-ellipsis');
-    for (let i = 0; i < (await allEllipsis.count()); i++) {
-      const ellipsis = allEllipsis.nth(i);
-      if (await ellipsis.isVisible()) {
-        await ellipsis.click();
-        break;
-      }
-    }
-  }
+  await moreButton.waitFor({ state: 'visible', timeout: 5000 });
+  // Hover activates the lazily-mounted dropdown trigger before clicking.
+  await moreButton.hover();
+  await moreButton.click();
 
   await this.page.waitForTimeout(500);
   console.log('   ✅ 已点击更多操作按钮');

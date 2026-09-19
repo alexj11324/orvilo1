@@ -46,22 +46,25 @@ async function createTestGroup(title: string = 'Test Group'): Promise<string> {
 }
 
 async function waitForGroupItem(this: CustomWorld, groupId: string) {
+  // The sidebar "In Sidebar" section duplicates the same href — scope row
+  // interactions to the main Agents list via [data-agent-list].
   const selector = `a[href$="/group/${groupId}"]`;
-  const groupItem = this.page.locator(selector).first();
+  const rowSelector = `[data-agent-list] ${selector}`;
+  const groupItem = this.page.locator(rowSelector).first();
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       await expect(groupItem).toBeVisible({ timeout: WAIT_TIMEOUT });
-      return { groupItem, selector };
+      return { groupItem, selector, rowSelector };
     } catch (error) {
       if (attempt === 2) throw error;
-      console.log(`   ↻ Agent Group ${groupId} not visible yet, reloading Home page...`);
+      console.log(`   ↻ Agent Group ${groupId} not visible yet, reloading Agents page...`);
       await this.page.reload({ waitUntil: 'domcontentloaded' });
       await this.page.waitForTimeout(1000);
     }
   }
 
-  return { groupItem, selector };
+  return { groupItem, selector, rowSelector };
 }
 
 // ============================================
@@ -79,11 +82,12 @@ Given('用户在 Agents 页面有一个 Agent Group', async function (this: Cust
   await this.page.waitForTimeout(1000);
 
   console.log('   📍 Step: 查找新创建的 Agent Group...');
-  const { groupItem, selector } = await waitForGroupItem.call(this, groupId);
+  const { groupItem, selector, rowSelector } = await waitForGroupItem.call(this, groupId);
 
   const groupLabel = await groupItem.getAttribute('aria-label');
   this.testContext.targetItemId = groupLabel || groupId;
   this.testContext.targetItemSelector = selector;
+  this.testContext.targetRowSelector = rowSelector;
   this.testContext.targetType = 'group';
 
   console.log(`   ✅ 找到 Agent Group: ${groupLabel}, id: ${groupId}`);
@@ -97,7 +101,7 @@ Given('该 Agent Group 未显示在侧边栏', { timeout: 30_000 }, async functi
 
   if ((await inSidebar.count()) > 0) {
     console.log('   📍 Agent Group 已在侧边栏，开始隐藏操作...');
-    const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
     await targetItem.hover();
     await this.page.waitForTimeout(200);
     await targetItem.click({ button: 'right', force: true });
@@ -131,7 +135,7 @@ Given('该 Agent Group 已显示在侧边栏', { timeout: 30_000 }, async functi
 
   if ((await inSidebar.count()) === 0) {
     console.log('   📍 Agent Group 未在侧边栏，开始显示操作...');
-    const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+    const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
     await targetItem.hover();
     await this.page.waitForTimeout(200);
     await targetItem.click({ button: 'right', force: true });
@@ -169,7 +173,7 @@ Given('该 Agent Group 已显示在侧边栏', { timeout: 30_000 }, async functi
 When('用户右键点击该 Agent Group', { timeout: 30_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击 Agent Group...');
 
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+  const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
 
   // Hover first to ensure element is interactive
   await targetItem.hover();
@@ -194,7 +198,7 @@ When('用户右键点击该 Agent Group', { timeout: 30_000 }, async function (t
 When('用户悬停在该 Agent Group 上', async function (this: CustomWorld) {
   console.log('   📍 Step: 悬停在 Agent Group 上...');
 
-  const targetItem = this.page.locator(this.testContext.targetItemSelector).first();
+  const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
   await targetItem.hover();
   await this.page.waitForTimeout(500);
 

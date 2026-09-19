@@ -46,6 +46,7 @@ import {
   getKanbanTaskPatch,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
   normalizeKanbanGroupBy,
@@ -550,7 +551,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     createTaskModal({
       agentId,
       lockAssignee: !!agentId,
-      projectId,
+      projectId: kanbanCreateTaskProjectId(projectId),
       onCreated: (task) => {
         navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
       },

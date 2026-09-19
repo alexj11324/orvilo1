@@ -177,6 +177,13 @@ export const buildKanbanGroupQuery = ({
   return { allAgents: true, automated: false, excludeStatuses, groupBy };
 };
 
+/**
+ * Create-task only accepts a concrete project id. `null` is the board's
+ * "No project" filter and must not be forwarded as a locked project.
+ */
+export const kanbanCreateTaskProjectId = (projectId?: string | null): string | undefined =>
+  projectId ?? undefined;
+
 export const buildKanbanColumns = (
   taskGroups: TaskGroupItem[],
   groupBy: TaskKanbanGroupBy,

@@ -18,6 +18,7 @@ import {
   KANBAN_WORKFLOW_COLUMN_KEY,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
   placeKanbanCardInColumn,
@@ -421,6 +422,27 @@ describe('kanbanBoardModel', () => {
         projectId: 'proj_1',
         scope: 'created',
       });
+    });
+
+    it('keeps a null No-project filter on My tasks without locking create-task', () => {
+      // Regression: My Work passes projectId: null into KanbanBoard. The grouped
+      // query must keep that IS NULL filter, but createTaskModal only accepts a
+      // concrete id (`string | undefined`) — forwarding null failed typecheck.
+      expect(
+        buildKanbanGroupQuery({
+          groupBy: 'status',
+          myTaskScope: 'assigned',
+          projectId: null,
+        }),
+      ).toEqual({
+        excludeStatuses: undefined,
+        groupBy: 'status',
+        projectId: null,
+        scope: 'assigned',
+      });
+      expect(kanbanCreateTaskProjectId(null)).toBeUndefined();
+      expect(kanbanCreateTaskProjectId(undefined)).toBeUndefined();
+      expect(kanbanCreateTaskProjectId('proj_1')).toBe('proj_1');
     });
 
     it('carries the status exclusions through every scope', () => {

@@ -7,9 +7,10 @@ import { NotificationBulkError, NotificationModel } from '../../models/notificat
 import { TaskModel } from '../../models/task';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
 import { tasks as tasksTable } from '../../schemas/task';
+import { teamMembers, teams } from '../../schemas/team';
 import { users } from '../../schemas/user';
 import { notificationBulkSnapshots, notificationFeedState } from '../../schemas/workAttention';
-import { workspaces } from '../../schemas/workspace';
+import { workspaceMembers, workspaces } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 
 describe('NotificationModel', () => {
@@ -1012,6 +1013,100 @@ describe('NotificationModel (integration)', () => {
 
       expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
       expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+    });
+
+    it('stops listing a private-team task title after the viewer leaves the team', async () => {
+      const workspaceId = 'notification-team-acl-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Team ACL WS',
+        primaryOwnerId: userId,
+        slug: 'team-acl-ws',
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      await serverDB.insert(teams).values({
+        createdByUserId: userId,
+        id: 'notif-private-team',
+        key: 'SEC',
+        name: 'Secret Squadron',
+        visibility: 'private',
+        workspaceId,
+      });
+      await serverDB.insert(teamMembers).values({
+        role: 'member',
+        teamId: 'notif-private-team',
+        userId: otherUserId,
+        workspaceId,
+      });
+      const task = await new TaskModel(serverDB, userId, workspaceId).create({
+        instruction: 'Secret title',
+        name: 'Secret title',
+        teamId: 'notif-private-team',
+        visibility: 'public',
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'private-team-title',
+          resourceId: task.id,
+          resourceType: 'task',
+          title: 'Secret title',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Secret title']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
+
+      await serverDB.delete(teamMembers).where(eq(teamMembers.userId, otherUserId));
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+    });
+
+    it('keeps a private-team task title for an assignee who is not a team member', async () => {
+      const workspaceId = 'notification-team-assignee-ws';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Team Assignee WS',
+        primaryOwnerId: userId,
+        slug: 'team-assignee-ws',
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      await serverDB.insert(teams).values({
+        createdByUserId: userId,
+        id: 'notif-private-assigned-team',
+        key: 'ASG',
+        name: 'Assigned Squadron',
+        visibility: 'private',
+        workspaceId,
+      });
+      const task = await new TaskModel(serverDB, userId, workspaceId).create({
+        assigneeUserId: otherUserId,
+        instruction: 'Still yours',
+        name: 'Still yours',
+        teamId: 'notif-private-assigned-team',
+        visibility: 'public',
+      });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
+      await viewer.create(
+        baseNotification({
+          dedupeKey: 'private-team-assigned',
+          resourceId: task.id,
+          resourceType: 'task',
+          title: 'Still yours',
+          workspaceId,
+        }),
+      );
+
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Still yours']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
     });
   });
 });

@@ -15,6 +15,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   gt,
   inArray,
   isNull,
@@ -29,7 +30,9 @@ import type { NewNotification, NewNotificationDelivery } from '../schemas/notifi
 import { notificationDeliveries, notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
 import { tasks } from '../schemas/task';
+import { teamMembers, teams } from '../schemas/team';
 import { notificationBulkSnapshots, notificationEventReceipts } from '../schemas/workAttention';
+import { workspaceMembers, workspaces } from '../schemas/workspace';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { allocateFeedRevision, currentFeedRevision } from './notificationFeed';
@@ -75,6 +78,50 @@ export class NotificationModel {
   };
 
   /**
+   * Private-team tasks stay readable in Inbox only when the viewer can still
+   * see the team, administer the workspace, or personally own the work
+   * (assignee / reviewer / creator). Leaving the team must drop stored titles
+   * (SEC06) even when `tasks.visibility` is public.
+   */
+  private taskTeamReadable = (): SQL =>
+    or(
+      isNull(tasks.teamId),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(teams)
+          .where(and(eq(teams.id, tasks.teamId), eq(teams.visibility, 'public'))),
+      ),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(teamMembers)
+          .where(and(eq(teamMembers.teamId, tasks.teamId), eq(teamMembers.userId, this.userId))),
+      ),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(workspaceMembers)
+          .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, tasks.workspaceId),
+              eq(workspaceMembers.userId, this.userId),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+              or(
+                eq(workspaceMembers.role, 'admin'),
+                and(eq(workspaceMembers.role, 'owner'), eq(workspaces.primaryOwnerId, this.userId)),
+              ),
+            ),
+          ),
+      ),
+      eq(tasks.assigneeUserId, this.userId),
+      eq(tasks.reviewerUserId, this.userId),
+      eq(tasks.createdByUserId, this.userId),
+    )!;
+
+  /**
    * Live ACL: a historical delivery is not proof the recipient can still read
    * the object. Missing/unknown resource types stay visible (system cards).
    */
@@ -93,7 +140,7 @@ export class NotificationModel {
     return or(
       isNull(notifications.resourceType),
       sql`${notifications.resourceType} not in ('task', 'project')`,
-      sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${taskVisible}))`,
+      sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${taskVisible} and ${this.taskTeamReadable()}))`,
       sql`(${notifications.resourceType} = 'project' and exists (select 1 from ${projects} where ${projects.id} = ${notifications.resourceId} and ${projectVisible}))`,
     )!;
   };

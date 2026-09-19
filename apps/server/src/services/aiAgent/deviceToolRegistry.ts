@@ -20,7 +20,6 @@
  *      the rule-layer gate denied it).
  */
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { builtinTools } from '@orvilo/builtin-tools';
@@ -28,7 +27,6 @@ import { builtinTools } from '@orvilo/builtin-tools';
 export const DEVICE_TOOL_MANIFESTS = [
   LocalSystemManifest,
   RemoteDeviceManifest,
-  BrowserManifest,
   AuvManifest,
 ] as const;
 

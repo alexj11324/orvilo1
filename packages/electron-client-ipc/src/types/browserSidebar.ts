@@ -19,12 +19,6 @@ export interface BrowserSidebarRect {
   y: number;
 }
 
-/** The agent overlay is drawn inside the page, so its copy has to come from the renderer. */
-export interface BrowserSidebarOverlayLabelsParams {
-  controlling: string;
-  cursor: string;
-}
-
 export interface BrowserSidebarState {
   attached: boolean;
   canGoBack: boolean;

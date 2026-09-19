@@ -5,7 +5,7 @@ import { createStaticStyles } from 'antd-style';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
-import type { BrowserPageState } from '../../types';
+import type { BrowserPageState } from './types';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`

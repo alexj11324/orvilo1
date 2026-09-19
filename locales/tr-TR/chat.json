@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Yeniden yükle",
   "workingPanel.browser.actions.stop": "Yüklemeyi durdur",
   "workingPanel.browser.addressPlaceholder": "Adres girin veya arama yapın",
-  "workingPanel.browser.agentControlling": "Ajan tarayıcıyı kullanıyor",
-  "workingPanel.browser.agentCursor": "Ajan",
   "workingPanel.browser.context.elementAdded": "Öğe sohbet bağlamına eklendi",
   "workingPanel.browser.context.elementTitle": "Öğe",
   "workingPanel.browser.context.failed": "Öğe bağlamı eklenemedi",

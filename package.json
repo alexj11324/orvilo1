@@ -259,7 +259,6 @@
     "@orvilo/builtin-tool-agent-signal": "workspace:*",
     "@orvilo/builtin-tool-auv": "workspace:*",
     "@orvilo/builtin-tool-brief": "workspace:*",
-    "@orvilo/builtin-tool-browser": "workspace:*",
     "@orvilo/builtin-tool-calculator": "workspace:*",
     "@orvilo/builtin-tool-claude-code": "workspace:*",
     "@orvilo/builtin-tool-cloud-sandbox": "workspace:*",

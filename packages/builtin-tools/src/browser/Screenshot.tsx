@@ -2,8 +2,8 @@ import { Block, Image } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 
-import type { BrowserScreenshotState } from '../../types';
 import { resolveScreenshotSrc } from './screenshotSrc';
+import type { BrowserScreenshotState } from './types';
 
 /** Screenshot: render the capture inline for the user. */
 const Screenshot = memo<BuiltinRenderProps<unknown, BrowserScreenshotState, string>>(

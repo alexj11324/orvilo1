@@ -118,7 +118,6 @@ const mockQuotaService = vi.hoisted(() => ({
   getLatestReadings: vi.fn(async (): Promise<unknown[]> => []),
   ingestClaudeSnapshot: vi.fn(async () => undefined),
   listAccounts: vi.fn(async (): Promise<unknown[]> => []),
-  listBindings: vi.fn(async (): Promise<unknown[]> => []),
 }));
 
 vi.mock('@/services/agentQuota', () => ({ agentQuotaService: mockQuotaService }));
@@ -276,7 +275,6 @@ beforeEach(() => {
   mockQuotaService.getLatestReadings.mockResolvedValue([]);
   mockQuotaService.ingestClaudeSnapshot.mockClear();
   mockQuotaService.listAccounts.mockResolvedValue([]);
-  mockQuotaService.listBindings.mockResolvedValue([]);
 });
 
 describe('HeteroControlBar', () => {

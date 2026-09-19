@@ -87,14 +87,12 @@ vi.mock('@/services/electron/heterogeneousAgent', () => ({
   },
 }));
 
-// agentQuotaService — account routing (pre-spawn) + usage ledger (per turn).
-// Unmocked, both fire REAL trpc fetches from inside the executor.
-const mockSelectAccountForAgent = vi.fn(async (..._args: any[]): Promise<unknown> => null);
+// agentQuotaService — usage ledger (per turn). Unmocked, it fires REAL trpc
+// fetches from inside the executor.
 const mockRecordQuotaUsage = vi.fn(async (..._args: any[]) => undefined);
 vi.mock('@/services/agentQuota', () => ({
   agentQuotaService: {
     recordUsage: (...args: any[]) => mockRecordQuotaUsage(...args),
-    selectAccountForAgent: (...args: any[]) => mockSelectAccountForAgent(...args),
   },
 }));
 

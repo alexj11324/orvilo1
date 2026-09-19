@@ -74,6 +74,8 @@
 | `ingestSnapshot`/`recordUsage`/`getWindows`/`getLatestReadings`/`listSnapshots`/`listUsageTurns` | router + `device-control/claudeCodeQuota` + `heterogeneous-agents/quota/snapshot` | **KEEP\_SHARED**：绑定执行设备 + 原生 identity，unknown≠0                 |
 | `agentQuota` schema/models/types                                                                 | `packages/database`                                                               | **DEFER→P09**：先去 credential/control 语义，字段收敛在审计 FK 后另行授权 |
 
+- **状态**：✅ 完成（见 `docs/development/quota-control-plane-retirement.md`）。`listAccounts` 保留为只读观测模型；存量 binding 行无读者，字段收敛待 P09 审计。
+
 ## G. Desktop 宿主 Provider/serverDefault 残留（P05/P06）
 
 `apps/desktop/src/main/controllers/HeterogeneousAgentImpl.ts` 及 `modules/heterogeneousAgent/{types,providerBindingHost,providerBindingPort}.ts`：`prepareHostedServerDefaultBinding`/`beginServerDefaultOperation`/`settleServerDefaultOperation`/`getServerDefaultEndpoint`/`providerBinding`/`serverDefaultApiConfig`/`resumeBindingKey`。

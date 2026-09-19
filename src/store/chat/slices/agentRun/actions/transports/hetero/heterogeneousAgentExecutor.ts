@@ -81,7 +81,6 @@ import { createGatewayEventHandler, isCompletedRuntimeEnd } from '../gateway/gat
 import { getNativeHeteroSessionBindingKey } from './heteroResume';
 import { createMessageWriteBatcher, type ToolMessageUpdateOperation } from './messageWriteBatcher';
 import { createPendingCreateLedger } from './pendingCreateLedger';
-import { resolveQuotaAccountSpawnPlan } from './resolveQuotaAccountEnv';
 import { buildResumeReplayMessages } from './resumeReplay';
 import { buildOrviloSessionEnv } from './sessionEnv';
 
@@ -1830,11 +1829,6 @@ export const executeHeterogeneousAgent = async (
   await rehydrateClientSubagentRuns();
 
   try {
-    // Account routing: realize the pinned/balanced account choice as spawn env
-    // (CLAUDE_CONFIG_DIR profile). Unbound agents get {} and spawn exactly as
-    // before; a quota-service failure must never block the run.
-    const quotaAccountPlan = await resolveQuotaAccountSpawnPlan(context.agentId, adapterType);
-
     const sessionEnv = {
       // Tell the CLI which Orvilo conversation it is running inside. The child
       // (and every subprocess it spawns, e.g. `lh`) inherits these, so a tool
@@ -1846,9 +1840,8 @@ export const executeHeterogeneousAgent = async (
         operationId,
         topicId: context.topicId,
       }),
-      ...quotaAccountPlan.env,
       // The agent's own env is the most specific choice and keeps winning —
-      // over both provenance and account routing.
+      // over provenance.
       ...heterogeneousProvider.env,
     };
 
@@ -1873,17 +1866,15 @@ export const executeHeterogeneousAgent = async (
     activeSessionBindingKey = getNativeHeteroSessionBindingKey(adapterType);
 
     // Attribute the run to the login the FINAL env actually resolves to (an
-    // agent-env CLAUDE_CONFIG_DIR beats routing, and unbound agents use the
-    // default login). Falls back to the routed choice when the file read fails.
+    // agent-env CLAUDE_CONFIG_DIR selects a different CLI profile than the
+    // default login).
     if (adapterType === 'claude-code') {
       heterogeneousAgentService
         .getClaudeCodeIdentity({ env: sessionEnv })
         .then((identity) => {
-          runExternalAccountId = identity?.externalAccountId ?? quotaAccountPlan.externalAccountId;
+          runExternalAccountId = identity?.externalAccountId;
         })
-        .catch(() => {
-          runExternalAccountId = quotaAccountPlan.externalAccountId;
-        });
+        .catch(() => {});
     }
     ipcRunSessionId = result.sessionId;
     if (!ipcRunSessionId) throw new Error('Agent session returned no sessionId');

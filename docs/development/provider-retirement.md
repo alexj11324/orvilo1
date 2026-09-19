@@ -21,7 +21,7 @@ provider /keyVault 的通道（server-default relay、BYOK binding、direct mode
 | `claudeCodeDirectEnv.ts`（sanitize + `HETEROGENEOUS_PROVIDER_BINDING_*` 错误常量）                                                                          | **RETIRE**                                           | binding 专用，无其他消费者                                                                                                                                                                                              |
 | `modelPicker.tsx`、ProfileEditor 的 auth/api-mode UI、`HeteroControlBar` 的 `ChatInputCredits`、dispatcher 的 `authMode==='api'` 拦截                       | **RETIRE**                                           | 配额 chip 改为按解析出的 CLI 类型常驻，不再看 authMode                                                                                                                                                                  |
 | `heteroSessionBindingKey` 的 `provider-binding:v1:*` 历史值                                                                                                 | **KEEP\_COMPAT（拒绝式）**                           | 保留 `heteroSessionBindingKey` 元数据（仍用于识别 engine 切换）；旧 binding key 与当前 `native:v1:*` 不等 → 恒判 `binding_changed`，会话**不能**在原生凭据下静默续跑，语义正确                                          |
-| OpenAPI 直模型端点（chat /translate/generate-reply /replies post）                                                                                          | **RETIRE**                                           | route + service + spec 同步删除，spec 测试钉住「不存在」                                                                                                                                                                |
+| OpenAPI 直模型端点（chat /translate/generate-reply/replies post）                                                                                           | **RETIRE**                                           | route + service + spec 同步删除，spec 测试钉住「不存在」                                                                                                                                                                |
 | `initModelRuntimeFromDB`（读 user keyVaults/baseURL + OAuth 刷新）                                                                                          | **REPLACE → `initModelRuntimeFromDeploymentConfig`** | 全调用点迁移：async 路由（image/video/file/ragEval）、lambda（video/chunk/asr/userMemories）、agentSignal、userMemory、systemAgent、toolExecution serverRuntimes、verify、webapi/chat。旁路逐项追过，无残留模型循环后门 |
 | `/webapi/chat/[provider]` provider 参数                                                                                                                     | **KEEP + 校验**                                      | `initModelRuntimeFromDeploymentConfig` 内对 `ModelProvider` 枚举白名单校验，非部署托管 provider 直接 BadRequest                                                                                                         |
 | 导入器 `aiProviders`/`aiModels` 表                                                                                                                          | **RETIRE**                                           | 从 `IMPORT_TABLE_CONFIG` 移除；测试钉住「导入 payload 中这两表被整体忽略」                                                                                                                                              |
@@ -32,7 +32,8 @@ provider /keyVault 的通道（server-default relay、BYOK binding、direct mode
 
 - 持久化 `heterogeneousProvider.authMode/apiConfig` 旧值**不清理**，下次保存被字段白名单自然丢弃；期间被忽略而非报错。
 - `provider-binding:v1:*` 的存量会话 key 使得相关 topic 下次发送走「新建会话」路径而非续跑 —— 预期行为，非回归。
-- 未触碰 quota 账号体系（P06 范围）与 OIDC / 凭据 vault。
+- 未触碰 OIDC / 凭据 vault。quota 账号体系在 P06 收口，见
+  [quota-control-plane-retirement.md](./quota-control-plane-retirement.md)。
 
 ## 验证
 

@@ -21,6 +21,19 @@ const styles = createStaticStyles(({ css }) => ({
     overflow: hidden;
     min-width: 32px;
 
+    /* Overlay instead of in-flow so revealing the actions never re-truncates the title. */
+    .${ACTION_CLASS_NAME} {
+      pointer-events: none;
+
+      position: absolute;
+      inset-block: 0;
+      inset-inline-end: 0;
+
+      padding-inline-end: 6px;
+
+      opacity: 0;
+    }
+
     /* focus-visible, not focus-within: closing a dropdown hands focus back to its
        trigger, which would pin the actions open after the pointer has left. */
     &:hover,
@@ -42,17 +55,19 @@ const styles = createStaticStyles(({ css }) => ({
       }
     }
 
-    /* Overlay instead of in-flow so revealing the actions never re-truncates the title. */
-    .${ACTION_CLASS_NAME} {
-      pointer-events: none;
+    @media (hover: none) {
+      .${ACTION_CLASS_NAME} {
+        pointer-events: auto;
+        opacity: 1;
+      }
 
-      position: absolute;
-      inset-block: 0;
-      inset-inline-end: 0;
-
-      padding-inline-end: 6px;
-
-      opacity: 0;
+      .${CONTENT_CLASS_NAME} {
+        mask-image: linear-gradient(
+          to right,
+          #000 calc(100% - 56px),
+          transparent calc(100% - 28px)
+        );
+      }
     }
   `,
 }));
@@ -65,11 +80,12 @@ export interface NavItemSlots {
 export interface NavItemProps extends Omit<BlockProps, 'children' | 'title'> {
   /**
    * Pass a thunk to defer mounting until the row is first pointed at or focused.
-   * Actions are invisible until `:hover` anyway, and an overlay-bearing action (a
-   * dropdown, a popover) costs a dozen fibers per row — enough to matter in a
-   * list. Focus counts as well as the pointer: a keyboard user tabs to the row
-   * and must still find the actions in the tab order. Once mounted it stays
-   * mounted, so an open popup survives the pointer leaving the row.
+   * Hover-capable pointers keep actions invisible until `:hover`; `@media (hover: none)`
+   * keeps them visible. An overlay-bearing action (a dropdown, a popover) costs a
+   * dozen fibers per row — enough to matter in a list. Focus counts as well as the
+   * pointer: a keyboard user tabs to the row and must still find the actions in the
+   * tab order. Once mounted it stays mounted, so an open popup survives the pointer
+   * leaving the row.
    */
   actions?: LazyActions;
   active?: boolean;

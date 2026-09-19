@@ -1,4 +1,4 @@
-# Navigation Attention v4 — 会话交接（2026-09-18）
+# Navigation Attention v4 — 会话交接（2026-09-19）
 
 给换到下一台机器 / 下一个 Agent 继续用的。合同原文在仓库里，不要再去 `/tmp` 或受保护 clone 里找。
 
@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `6c80f4ac` 未过滤 work-query / CommandMenu `searchTasks` 对私有团队任务走 Inbox 同一套可读性（TRI05/SEC06）。叠在 Devin `8aa4f7cb` Inbox 分页、`b16936c2` 看板维度与 `09ab2664` 私有项目标题之上。                         |
+| 实施 HEAD（本交接提交之前）      | `f73ea845` TaskModel `findById` /list/update 对私有团队任务走 Inbox 同一套可读性（TRI05 页面 / API）。叠在 Devin `2f22b262` joined-only Your teams、`68a35a4d` Inbox URL 状态与 `6c80f4ac` 未过滤搜索之上。                |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -123,7 +123,7 @@
 
 - TRI04：`queryProjects` 对跨两个团队的同一项目返回一行；vitest 覆盖 isNotNull 与分别按 team A/B 导航
 
-- END04 用户文档已改成固定一级 IA（Inbox / My Work / Reviews + Workspace / Teams），Tasks 是深链不是可重排一级
+- END04 用户文档已改成固定一级 IA（Inbox / My Work / Reviews / Agent + Workspace / Teams / Favorites），Tasks 是深链不是可重排一级；Inbox snooze 写清 hour /laterToday/tomorrow /nextWeek；侧栏 Your teams 只列出已加入的团队
 
 - WORK08/VIEW08 列表状态：My Work / Saved View / Team 列表改状态后走 `commitWorkQueryListStatus`（Linear → `moveBoard` + picker；本地 → `task.update`），再 `onMoved` refetch 并清空分页 tails，行会换分组而不是钉在旧章节
 
@@ -131,15 +131,15 @@
 
 - SEC06：Inbox `resourceReadable` 对挂了私有团队的任务再要求团队成员 / 工作区 admin / 负责人 / 审核人 / 创建人。退出私有团队后，即使 `tasks.visibility` 仍是 public，历史通知也不再列出标题，未读铃也不计。指派给非成员的任务标题仍可见（与 work-query assigned 一致）。私有项目复用 `ProjectModel.readable`（可见性 + 有效 `project_members` 授权）：没有授权的工作区成员看不到历史 Inbox 标题，CommandMenu `searchProjects` 与 `queryProjects` 也不再返回项目名；授权被收回后标题和搜索一并消失
 
-- TRI05：未过滤的 `queryTasks` / CommandMenu `searchTasks` 也套同一套 `buildTaskTeamReadableWhere`。非成员不能靠「全部任务」或标题搜索捞到私有团队上的公开任务；负责人 / 审核人 / 创建人仍能搜到自己的行。`teamId` 过滤本来就会与可读团队求交
+- TRI05：未过滤的 `queryTasks` / CommandMenu `searchTasks` 也套同一套 `buildTaskTeamReadableWhere`。非成员不能靠「全部任务」或标题搜索捞到私有团队上的公开任务；负责人 / 审核人 / 创建人仍能搜到自己的行。`teamId` 过滤本来就会与可读团队求交。`TaskModel.ownership()` 在工作区模式下同样 AND 这套谓词，所以 `findById` / `findByIdentifier` / `list` / `update` 以及 `task.detail` 对猜到的 UUID 返回空，而不是把私有团队上的公开任务交给任意工作区成员。`seqOwnership()` 仍是工作区范围，不要把团队 ACL 接到编号分配上。`getComments` 先要求父任务可读。负责人和审核人仍能打开并改自己的行；工作区 admin 仍能读
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表与标题搜索，都已挡住。不要主动做 TRI04 产品复制。
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表、标题搜索、任务详情 API，都已挡住。不要主动做 TRI04 产品复制。不要回滚 Devin `2f22b262`（joined-only Your teams + `triageEnabled` 门控）。
 
-用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA 和共享 Kanban。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
+用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA（含 Agent 一级行）、snooze 预设、joined-only Your teams。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
 ## 给下一刀
 
@@ -219,6 +219,9 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `67de7007`：SEC06 退出私有团队后 Inbox 丢掉任务标题。lint 干净，`notification.test.ts` 53 passed。不是 64× AC。
 - `09ab2664`：SEC06 私有项目走 `ProjectModel.readable`。Inbox / `searchProjects` / `queryProjects` / Recents 共用 `buildProjectReadableWhere`。lint 干净，`notification` + `workQuery` + `project` + `recent` 139 passed。不是 64× AC。
 - `9f30cfb4` / 变基后 `6c80f4ac`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。叠在 Devin `8aa4f7cb`（Inbox 分页 + 工作面错误态）与 `b16936c2`（看板 raw 维度 + 持久重排）之上。lint 干净，rebase 后 `workQuery` + `notification` 77 passed。不是 64× AC。不要回滚 Devin 这两刀。
+- `2f22b262`：Devin joined-only Your teams + `triageEnabled` 门控。不要回滚。
+- `f73ea845`：TRI05 任务详情 /list/update。`TaskModel.ownership()` AND `buildTaskTeamReadableWhere`。回归先失败后通过：非成员 `findById` 曾返回整行。`bun run check` 改动文件 lint 干净，`task.test.ts` 202 passed；连同 `taskDomainContract` / `workQuery` / `notification` 共 291 passed。不是 64× AC。
+- `92f0e5fd`：END04 用法文档对齐 Agent 一级行、snooze 预设、joined-only Your teams。lint 干净。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

@@ -26,32 +26,42 @@ async function inputNewName(
   await this.page.waitForTimeout(300);
 
   // The rename EditingPopover mounts anchored to the row; while its positioner
-  // animates, a click can wait on actionability indefinitely — fill only needs
-  // the input to be visible and editable. The EmojiPicker upload renders a
-  // hidden file input before the title input, so target the title input
-  // explicitly.
+  // animates, click/fill can wait on actionability indefinitely. Type via the
+  // keyboard instead — pressSequentially only needs the input to be editable.
+  // The EmojiPicker upload renders a hidden file input before the title input,
+  // so target the title input explicitly.
   const renameInput = this.page
     .locator(
-      '[data-testid="editing-popover-title-input"], [data-testid="editing-popover"] input:not([type="file"])',
+      'input[data-testid="editing-popover-title-input"], [data-testid="editing-popover"] input:not([type="file"])',
     )
     .first();
 
-  await renameInput.waitFor({ state: 'visible', timeout: 5000 });
-  await renameInput.fill(newName);
+  try {
+    await renameInput.waitFor({ state: 'visible', timeout: 5000 });
+    await renameInput.focus({ timeout: 3000 });
+    await this.page.keyboard.press(`${this.modKey}+a`);
+    await renameInput.pressSequentially(newName, { timeout: 5000 });
 
-  if (pressEnter) {
-    await renameInput.press('Enter');
-  } else {
-    // Click the save button (ActionIcon with Check icon) next to the input
-    const saveButton = this.page
-      .locator('[data-testid="editing-popover"] svg.lucide-check')
-      .first();
-    if ((await saveButton.count()) > 0) {
-      await saveButton.click();
+    if (pressEnter) {
+      await renameInput.press('Enter', { timeout: 5000 });
     } else {
-      // Fallback: press Enter to save
-      await renameInput.press('Enter');
+      // Click the save button (ActionIcon with Check icon) next to the input
+      const saveButton = this.page
+        .locator('[data-testid="editing-popover"] svg.lucide-check')
+        .first();
+      if ((await saveButton.count()) > 0) {
+        await saveButton.click({ force: true, timeout: 5000 });
+      } else {
+        // Fallback: press Enter to save
+        await renameInput.press('Enter', { timeout: 5000 });
+      }
     }
+  } catch (error) {
+    const popoverHtml = await this.page
+      .evaluate(() => document.querySelector('[data-testid="editing-popover"]')?.outerHTML)
+      .catch(() => undefined);
+    console.log(`   🔴 editing-popover DOM: ${(popoverHtml ?? 'NO POPOVER').slice(0, 2000)}`);
+    throw error;
   }
 
   await this.page.waitForTimeout(1000);

@@ -45,10 +45,9 @@ async function inputNewName(
     if (pressEnter) {
       await renameInput.press('Enter', { timeout: 5000 });
     } else {
-      // Click the save button (ActionIcon with Check icon) next to the input
-      const saveButton = this.page
-        .locator('[data-testid="editing-popover"] svg.lucide-check')
-        .first();
+      // Click the save ActionIcon — scoped by testid because the EmojiPicker
+      // swatch list can render its own lucide-check marks inside the popover.
+      const saveButton = this.page.locator('[data-testid="editing-popover-save"]').first();
       if ((await saveButton.count()) > 0) {
         await saveButton.click({ force: true, timeout: 5000 });
       } else {
@@ -365,7 +364,27 @@ Then('该项名称应该更新为 {string}', async function (this: CustomWorld, 
 
   await this.page.waitForTimeout(1000);
   const renamedItem = this.page.getByText(expectedName, { exact: true }).first();
-  await expect(renamedItem).toBeVisible({ timeout: 5000 });
+  try {
+    await expect(renamedItem).toBeVisible({ timeout: 5000 });
+  } catch (error) {
+    // Dump the target row + popover state so the failure shows whether the
+    // rename saved a different value, the popover stayed open, or the list
+    // simply didn't refresh.
+    const rowText = this.testContext.targetRowSelector
+      ? await this.page
+          .locator(this.testContext.targetRowSelector)
+          .first()
+          .textContent()
+          .catch(() => 'ROW NOT FOUND')
+      : 'no row selector';
+    const popoverOpen = await this.page
+      .locator('[data-testid="editing-popover"]')
+      .count()
+      .catch(() => -1);
+    console.log(`   🔴 row text: ${rowText}`);
+    console.log(`   🔴 editing-popover still mounted: ${popoverOpen}`);
+    throw error;
+  }
 
   console.log(`   ✅ 名称已更新为 "${expectedName}"`);
 });

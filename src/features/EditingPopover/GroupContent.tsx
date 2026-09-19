@@ -194,7 +194,12 @@ const GroupContent = memo<GroupContentProps>(
           onChange={(e) => setNewTitle(e.target.value)}
           onPressEnter={handleUpdate}
         />
-        <ActionIcon icon={Check} size={'small'} onClick={handleUpdate} />
+        <ActionIcon
+          data-testid="editing-popover-save"
+          icon={Check}
+          size={'small'}
+          onClick={handleUpdate}
+        />
       </Flexbox>
     );
   },

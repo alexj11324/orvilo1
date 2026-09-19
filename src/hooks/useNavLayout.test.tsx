@@ -1,6 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('@/config/routes', () => ({
+  getRouteById: (id: string) => ({ icon: () => id }),
+}));
+
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: { toggleCommandMenu: () => void }) => unknown) =>
     selector({ toggleCommandMenu: vi.fn() }),
@@ -12,23 +16,12 @@ vi.mock('@/store/serverConfig', () => ({
 }));
 
 /**
- * Keys retired from the primary sidebar by the Linear IA convergence. They must
- * not render from any code path — routes stay reachable, the sidebar does not.
+ * Sidebar keys whose product surface has been withdrawn by the task-first
+ * convergence. They must not render from any code path, and they must not come
+ * back through a persisted preference either — the preference side is covered by
+ * the system-status normalizer tests.
  */
-const RETIRED_SIDEBAR_KEYS = [
-  'community',
-  'image',
-  'memory',
-  'pages',
-  'home',
-  'tasks',
-  'automations',
-  'resource',
-  'recents',
-  'private',
-  'project',
-  'views',
-];
+const RETIRED_SIDEBAR_KEYS = ['community', 'image', 'memory', 'pages'];
 
 const renderedKeys = async () => {
   const { useNavLayout } = await import('./useNavLayout');
@@ -41,21 +34,23 @@ describe('useNavLayout', () => {
     expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps the fixed primary entries: inbox, my work, reviews, agent', async () => {
+  it('keeps the task destination reachable', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
-    const keys = result.current.topNavItems.map((item) => item.key);
 
-    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent']);
-    expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
-    expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
-      '/my-issues',
-    );
-    expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe('/reviews');
-    // Agent lands on the workspace session (builtin inbox agent), not the
-    // agents view-all list — `/agent` alone has no index and redirects away.
-    expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe(
-      '/agent/inbox',
-    );
+    const tasksItem = result.current.topNavItems.find((item) => item.key === 'tasks');
+
+    expect(tasksItem).toBeDefined();
+    expect(tasksItem?.url).toBe('/tasks');
+  });
+
+  it('keeps the automation destination reachable', async () => {
+    const { useNavLayout } = await import('./useNavLayout');
+    const { result } = renderHook(() => useNavLayout());
+
+    const automationsItem = result.current.topNavItems.find((item) => item.key === 'automations');
+
+    expect(automationsItem).toBeDefined();
+    expect(automationsItem?.url).toBe('/automations');
   });
 });

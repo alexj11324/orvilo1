@@ -20,10 +20,17 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import {
   ArchiveIcon,
+  ArrowLeftRightIcon,
+  AtSignIcon,
+  BellIcon,
   CheckCheckIcon,
   ChevronLeftIcon,
+  CircleUserRoundIcon,
   ExternalLinkIcon,
+  GitPullRequestIcon,
   InboxIcon,
+  KeyRoundIcon,
+  type LucideIcon,
   MailOpenIcon,
   MoreHorizontalIcon,
   TimerOffIcon,
@@ -94,6 +101,20 @@ const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillTertiary};
     }
   `,
+  typeGlyph: css`
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+
+    color: ${cssVar.colorTextSecondary};
+
+    background: ${cssVar.colorFillQuaternary};
+  `,
   unreadDot: css`
     flex: none;
 
@@ -136,6 +157,22 @@ const styles = createStaticStyles(({ css }) => ({
     visibility: hidden;
   `,
 }));
+
+/* Notification-type glyph standing in for Linear's avatar+type badge: the
+   feed model doesn't carry an actor yet, so the badge shape alone carries the
+   "what happened" read. */
+const INBOX_TYPE_ICON: Record<string, LucideIcon> = {
+  acp_permission: KeyRoundIcon,
+  mention: AtSignIcon,
+  resource_transfer: ArrowLeftRightIcon,
+  task_assigned: CircleUserRoundIcon,
+  workspace_ownership_transfer: ArrowLeftRightIcon,
+};
+
+const inboxCardIcon = (card: NotificationFeedCard): LucideIcon => {
+  if (card.type.includes('review')) return GitPullRequestIcon;
+  return INBOX_TYPE_ICON[card.type] ?? BellIcon;
+};
 
 const WorkInboxPage = memo(() => {
   const { t } = useTranslation('notification');
@@ -435,7 +472,10 @@ const WorkInboxPage = memo(() => {
                 key={card.notificationId}
                 onClick={() => selectCard(card.notificationId, true)}
               >
-                <Flexbox horizontal align={'center'} gap={8}>
+                <Flexbox horizontal align={'center'} gap={10}>
+                  <span className={styles.typeGlyph}>
+                    <Icon icon={inboxCardIcon(card)} size={14} />
+                  </span>
                   {card.read ? null : <span className={styles.unreadDot} />}
                   <Flexbox flex={1} style={{ minWidth: 0 }}>
                     <Text ellipsis weight={card.read ? 400 : 600}>
@@ -447,7 +487,7 @@ const WorkInboxPage = memo(() => {
                   </Text>
                 </Flexbox>
                 <Flexbox horizontal gap={8}>
-                  <span style={{ width: card.read ? 0 : 8, flex: 'none' }} />
+                  <span style={{ width: 38, flex: 'none' }} />
                   <Text className={styles.snippet} fontSize={12}>
                     {card.content}
                   </Text>

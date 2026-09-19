@@ -1,8 +1,6 @@
 import type * as ModelBankModule from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as modelHints from '@/server/modules/AgentRuntime/adapters/serverCallLlmContextHints';
-
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
@@ -295,7 +293,6 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     const runSpy = vi
       .spyOn(service, 'execAgent')
       .mockResolvedValue({} as Awaited<ReturnType<AiAgentService['execAgent']>>);
-    const hintsSpy = vi.spyOn(modelHints, 'resolveModelExtendParamsForUser');
     await service.execGroupAgent({
       agentId: 'agent-1',
       groupId: 'group-1',
@@ -303,8 +300,6 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       message: 'Continue',
     });
     expect(mockTopicCreate).not.toHaveBeenCalled();
-    expect(hintsSpy).not.toHaveBeenCalled();
-    hintsSpy.mockRestore();
     runSpy.mockRestore();
   });
 

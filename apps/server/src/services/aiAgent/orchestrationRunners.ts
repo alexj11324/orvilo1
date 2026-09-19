@@ -1,42 +1,48 @@
 import { type AgentState } from '@orvilo/agent-runtime';
-import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { dispatchWorkRegistrationIntent } from '@orvilo/builtin-tools/workRegistration';
 import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
-import { type OperationToolSet } from '@orvilo/context-engine';
-import { type ToolType } from '@orvilo/observability-otel/modules/agent-runtime';
 import {
+  type AgentShareVisitorContext,
   type ChatToolPayload,
+  type ExecSubAgentParams,
+  type ExecSubAgentResult,
+  type ExecVirtualSubAgentParams,
   type OrviloAgentConfig,
   type WorkRegistrationIntent,
 } from '@orvilo/types';
 import debug from 'debug';
 
+import { type MessageModel } from '@/database/models/message';
 import { WorkModel } from '@/database/models/work';
 import { type OrviloDatabase } from '@/database/type';
-import { FileService } from '@/server/services/file';
+import type {
+  ExecGroupMemberParams,
+  ExecGroupMemberResult,
+} from '@/server/services/agentRuntime/types';
 import {
   type ServerAgentMemberRunner,
   type ServerSubAgentRunner,
-  type ToolExecutionResultResponse,
 } from '@/server/services/toolExecution';
-import { archiveToolResultIfNeeded } from '@/server/services/toolExecution/archiveToolResult';
 import { buildWorkVersionCumulativeUsage } from '@/utils/workCumulativeUsage';
 
-import { type RuntimeExecutorContext } from './context';
-
 export const log = debug('orvilo-server:agent-runtime:streaming-executors');
-export const timing = debug('orvilo-server:agent-runtime:timing');
 
 /**
- * The slice of {@link RuntimeExecutorContext} the sub-agent / group-member
- * runner builders actually read. Narrowed so the ACP builtin-tool bridge
- * (`services/aiAgent/acpBuiltinToolExec`) can construct it from a persisted
- * operation row without fabricating stream/step plumbing the builders never
- * touch — and so these builders survive the `modules/AgentRuntime` teardown
- * with their real dependency surface explicit.
+ * The slice of the executor context the sub-agent / group-member runner
+ * builders actually read. Narrowed so the ACP builtin-tool bridge
+ * (`acpBuiltinToolExec`) can construct it from a persisted operation row
+ * without fabricating stream/step plumbing the builders never touch.
  */
 export type OrchestrationRunnerContext = Pick<
-  RuntimeExecutorContext,
+  {
+    agentShareVisitor?: AgentShareVisitorContext;
+    execGroupMember?: (params: ExecGroupMemberParams) => Promise<ExecGroupMemberResult>;
+    execSubAgent?: (params: ExecSubAgentParams) => Promise<ExecSubAgentResult>;
+    execVirtualSubAgent?: (params: ExecVirtualSubAgentParams) => Promise<ExecSubAgentResult>;
+    messageModel: MessageModel;
+    operationId: string;
+    topicId?: string;
+  },
   | 'agentShareVisitor'
   | 'execGroupMember'
   | 'execSubAgent'
@@ -48,16 +54,6 @@ export type OrchestrationRunnerContext = Pick<
 
 /** The slice of `AgentState` the runner builders read (origin + world + model). */
 export type OrchestrationRunnerState = Pick<AgentState, 'modelRuntimeConfig' | 'origin' | 'world'>;
-
-// Tool pricing configuration (USD per call)
-export const TOOL_PRICING: Record<string, number> = {
-  'orvilo-web-browsing/craw': 0,
-  'orvilo-web-browsing/search': 0,
-};
-
-export const TOOL_MAX_RETRIES = 2;
-
-export const GEN_AI_FUNCTION_TOOL_TYPE: ToolType = 'function';
 
 /**
  * Models occasionally select a member by its displayed name even though group
@@ -72,43 +68,6 @@ export const resolveGroupMemberId = (
 
   const matches = Object.entries(agentMap).filter(([, member]) => member.name === requestedAgentId);
   return matches.length === 1 ? matches[0][0] : requestedAgentId;
-};
-
-export const archiveRuntimeToolResult = async (
-  result: ToolExecutionResultResponse,
-  {
-    agentId,
-    identifier,
-    limit,
-    serverDB,
-    toolCallId,
-    topicId,
-    userId,
-    workspaceId,
-  }: {
-    agentId?: string | null;
-    identifier?: string;
-    limit?: number;
-    serverDB: OrviloDatabase;
-    toolCallId?: string;
-    topicId?: string | null;
-    userId?: string;
-    workspaceId?: string;
-  },
-): Promise<ToolExecutionResultResponse> => {
-  const archive = await archiveToolResultIfNeeded({
-    agentId,
-    content: result.content,
-    identifier,
-    limit,
-    serverDB,
-    toolCallId,
-    topicId,
-    userId,
-    workspaceId,
-  });
-
-  return archive.content === result.content ? result : { ...result, content: archive.content };
 };
 
 /**
@@ -196,29 +155,6 @@ export const registerWorkFromIntent = async ({
   } catch (error) {
     log('registerWorkFromIntent failed for toolCallId=%s: %O', sourceToolCallId, error);
   }
-};
-
-// Builds a postProcessUrl callback that resolves keys in file-backed fields
-// (imageList, videoList, fileList) to externally accessible URLs. Must be
-// passed to every messageModel.query() call whose output is later fed to the
-// LLM — otherwise the provider layer receives raw keys like
-// `files/user_xxx/icon.png` and rejects them.
-//
-// FileService is constructed lazily so environments without S3 config (unit
-// tests) don't fail at context-build time; failure returns undefined, which
-// leaves URLs as raw keys — same behavior as before this helper existed.
-export const buildPostProcessUrl = (
-  ctx: Pick<RuntimeExecutorContext, 'serverDB' | 'userId' | 'workspaceId'>,
-) => {
-  if (!ctx.userId || !ctx.serverDB) return undefined;
-  let fileService: FileService | undefined;
-  try {
-    fileService = new FileService(ctx.serverDB, ctx.userId, ctx.workspaceId);
-  } catch {
-    return undefined;
-  }
-  return (path: string | null, file: { id?: string | null }) =>
-    fileService!.getFileAccessUrl({ id: file.id, url: path });
 };
 
 /**
@@ -518,49 +454,4 @@ export const buildServerAgentMemberRunner = (
       return { started: true, startedCount };
     },
   };
-};
-
-export const resolveRuntimeHistoryCount = (historyCount?: number) => {
-  if (historyCount === undefined) return undefined;
-
-  // Agent config stores historical message count, excluding the current turn.
-  // Runtime executors already pass the current user/tool turn in `llmPayload.messages`;
-  // without this +1, `historyCount: 0` truncates the current message too and sends
-  // `messages: []` to providers.
-  return historyCount + 1;
-};
-
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export const isOperationInterrupted = async (ctx: RuntimeExecutorContext) => {
-  if (!ctx.loadAgentState) return false;
-
-  try {
-    const latestState = await ctx.loadAgentState(ctx.operationId);
-    return latestState?.status === 'interrupted';
-  } catch (error) {
-    console.error('[RuntimeExecutors] Failed to load operation state for retry guard:', error);
-    return false;
-  }
-};
-
-export const buildToolDiscoveryConfig = (
-  operationToolSet: OperationToolSet,
-  enabledToolIds: string[],
-) => {
-  const enabledToolSet = new Set(enabledToolIds);
-
-  if (!enabledToolSet.has(OrviloActivatorIdentifier)) return undefined;
-
-  const availableTools = Object.entries(operationToolSet.manifestMap)
-    .filter(([identifier]) => !enabledToolSet.has(identifier))
-    .map(([identifier, manifest]) => ({
-      description: manifest.meta?.description || '',
-      identifier,
-      name: manifest.meta?.title || identifier,
-    }));
-
-  if (availableTools.length === 0) return undefined;
-
-  return { availableTools };
 };

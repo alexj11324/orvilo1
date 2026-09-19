@@ -19,7 +19,7 @@ vi.mock('@/server/services/toolExecution/builtin', () => ({
   }),
 }));
 
-vi.mock('@/server/modules/AgentRuntime/executorHelpers', () => ({
+vi.mock('../orchestrationRunners', () => ({
   buildServerAgentMemberRunner: vi.fn().mockReturnValue(mockMemberRunner),
   buildServerVirtualSubAgentRunner: vi.fn().mockReturnValue(mockSubAgentRunner),
   registerWorkFromIntent: mockRegisterWork,

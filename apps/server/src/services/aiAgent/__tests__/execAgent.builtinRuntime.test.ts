@@ -1,11 +1,8 @@
-import { GeneralChatAgent, GraphAgent } from '@orvilo/agent-runtime';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { SELF_FEEDBACK_INTENT_IDENTIFIER } from '@orvilo/builtin-tool-self-iteration';
 import { RequestTrigger } from '@orvilo/types';
 import type * as ModelBankModule from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
 
 import { AiAgentService } from '../index';
 
@@ -226,13 +223,6 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
   let service: AiAgentService;
   const mockDb = {} as any;
   const userId = 'test-user-id';
-  const minimalGraph = {
-    edges: [{ from: '__root__', instruction: 'Answer with the graph runtime.', to: 'answer' }],
-    fields: {},
-    name: 'answer-graph',
-    nodes: { answer: { type: 'llm' } },
-    terminal: 'answer',
-  };
 
   const lastDispatchCall = () => {
     const calls = mockDispatchHeteroAgent.mock.calls;
@@ -258,91 +248,6 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     });
     mockGetBuiltinAgent.mockResolvedValue(null);
     service = new AiAgentService(mockDb, userId);
-  });
-
-  describe('graph runtime factory', () => {
-    const getLatestAgentFactory = () => {
-      const options = vi.mocked(AgentRuntimeService).mock.calls.at(-1)?.[2] as any;
-      const agentFactory = options?.agentFactory;
-
-      expect(agentFactory).toEqual(expect.any(Function));
-
-      return agentFactory as (config: any) => unknown;
-    };
-
-    it('creates GraphAgent when graph mode is enabled with a valid graph snapshot', () => {
-      service = new AiAgentService(mockDb, userId);
-
-      const agent = getLatestAgentFactory()({
-        agentConfig: {
-          agencyConfig: {
-            enableGraphMode: true,
-            graph: minimalGraph,
-          },
-        },
-        operationId: 'op-graph',
-      });
-
-      expect(agent).toBeInstanceOf(GraphAgent);
-    });
-
-    it('falls back to GeneralChatAgent when the graph snapshot is invalid', () => {
-      service = new AiAgentService(mockDb, userId);
-
-      const agent = getLatestAgentFactory()({
-        agentConfig: {
-          agencyConfig: {
-            enableGraphMode: true,
-            graph: { ...minimalGraph, edges: [] },
-          },
-        },
-        operationId: 'op-invalid-graph',
-      });
-
-      expect(agent).toBeInstanceOf(GeneralChatAgent);
-    });
-
-    it('falls back to a legacy chatConfig graph snapshot', () => {
-      service = new AiAgentService(mockDb, userId);
-
-      const agent = getLatestAgentFactory()({
-        agentConfig: {
-          chatConfig: {
-            enableGraphMode: true,
-            graph: minimalGraph,
-          },
-        },
-        operationId: 'op-legacy-graph',
-      });
-
-      expect(agent).toBeInstanceOf(GraphAgent);
-    });
-
-    it('keeps an upstream runtime agent factory authoritative', () => {
-      const upstreamAgent = { runner: vi.fn() };
-      const upstreamFactory = vi.fn(function () {
-        return upstreamAgent;
-      });
-      service = new AiAgentService(mockDb, userId, {
-        runtimeOptions: {
-          agentFactory: upstreamFactory,
-        },
-      } as any);
-
-      const config = {
-        agentConfig: {
-          chatConfig: {
-            enableGraphMode: true,
-            graph: minimalGraph,
-          },
-        },
-        operationId: 'op-upstream',
-      };
-      const agent = getLatestAgentFactory()(config);
-
-      expect(agent).toBe(upstreamAgent);
-      expect(upstreamFactory).toHaveBeenCalledWith(config);
-    });
   });
 
   it('materializes a builtin agent addressed by slug when no row exists yet', async () => {

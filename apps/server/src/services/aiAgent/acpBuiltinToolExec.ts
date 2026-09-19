@@ -13,13 +13,6 @@ import { ChatGroupModel } from '@/database/models/chatGroup';
 import { MessageModel } from '@/database/models/message';
 import { agentOperations, agents, messagePlugins } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
-import {
-  buildServerAgentMemberRunner,
-  buildServerVirtualSubAgentRunner,
-  type OrchestrationRunnerContext,
-  type OrchestrationRunnerState,
-  registerWorkFromIntent,
-} from '@/server/modules/AgentRuntime/executorHelpers';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
@@ -31,6 +24,13 @@ import type {
 } from '@/server/services/toolExecution/types';
 
 import { buildGroupAgentContext } from './helpers/groupContext';
+import {
+  buildServerAgentMemberRunner,
+  buildServerVirtualSubAgentRunner,
+  type OrchestrationRunnerContext,
+  type OrchestrationRunnerState,
+  registerWorkFromIntent,
+} from './orchestrationRunners';
 
 const log = debug('orvilo-server:ai-agent:acp-builtin-tool');
 

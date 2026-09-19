@@ -15,12 +15,10 @@ const mocks = vi.hoisted(() => ({
   updateThreadRunProgress: vi.fn(),
 }));
 
-vi.mock('@/server/modules/AgentRuntime', () => ({
-  AgentRuntimeCoordinator: vi.fn().mockImplementation(function () {
-    return {
-      loadAgentState: mocks.loadAgentState,
-    };
-  }),
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
+  createAgentStateManager: vi.fn(() => ({
+    loadAgentState: mocks.loadAgentState,
+  })),
 }));
 
 vi.mock('@/database/models/agentOperation', () => ({

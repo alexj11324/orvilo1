@@ -34,7 +34,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
-import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime/AgentRuntimeCoordinator';
+import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
@@ -1957,7 +1957,7 @@ export class GoalService {
       };
     }
 
-    const latestUsage = await new AgentRuntimeCoordinator().getOperationMetadata(operationId);
+    const latestUsage = await createAgentStateManager().getOperationMetadata(operationId);
     const reclaimed = await this.db.transaction(async (tx) => {
       const settled = await new AgentOperationModel(
         tx,

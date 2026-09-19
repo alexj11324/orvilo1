@@ -1,12 +1,11 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { finalizeAbandoned } from '../finalizeAbandoned';
 
 const mockFinalizeAbandoned = vi.hoisted(() => vi.fn());
-const mockDeliverWebhook = vi.hoisted(() => vi.fn());
-const mockIsQueueAgentRuntimeEnabled = vi.hoisted(() => vi.fn());
 const mockCompleteSubAgentBridge = vi.hoisted(() => vi.fn());
+const aiAgentServiceCtor = vi.hoisted(() => vi.fn());
 
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn().mockResolvedValue({}),
@@ -18,18 +17,10 @@ vi.mock('@/server/services/agentExecution/AbandonOperationService', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentExecution/hooks/HookDispatcher', () => ({
-  deliverWebhook: mockDeliverWebhook,
-}));
-
 vi.mock('@/server/services/aiAgent', () => ({
-  AiAgentService: vi.fn().mockImplementation(function () {
+  AiAgentService: aiAgentServiceCtor.mockImplementation(function () {
     return { completeSubAgentBridge: mockCompleteSubAgentBridge };
   }),
-}));
-
-vi.mock('@/server/services/queue/impls', () => ({
-  isQueueAgentRuntimeEnabled: mockIsQueueAgentRuntimeEnabled,
 }));
 
 const subAgentResume = {
@@ -52,29 +43,25 @@ function buildContext() {
 describe('finalizeAbandoned handler', () => {
   beforeEach(() => {
     mockFinalizeAbandoned.mockReset();
-    mockDeliverWebhook.mockReset().mockResolvedValue(undefined);
     mockCompleteSubAgentBridge.mockReset().mockResolvedValue(true);
-    mockIsQueueAgentRuntimeEnabled.mockReset();
+    aiAgentServiceCtor.mockClear();
     mockFinalizeAbandoned.mockResolvedValue({
       assistantMessageUpdated: false,
       finalized: false,
       found: true,
       subAgentResume,
     });
-    process.env.HATCHET_CLIENT_TOKEN = 'token-present';
   });
 
-  afterEach(() => {
-    delete process.env.HATCHET_CLIENT_TOKEN;
-  });
-
-  it('does not queue a Hatchet callback in local mode even when a token is present', async () => {
-    mockIsQueueAgentRuntimeEnabled.mockReturnValue(false);
-
+  it('resumes the parked parent inline through the CAS-guarded bridge', async () => {
     const response = await finalizeAbandoned(buildContext());
 
     expect(response.status).toBe(200);
-    expect(mockDeliverWebhook).not.toHaveBeenCalled();
+    expect(aiAgentServiceCtor).toHaveBeenCalledWith(
+      {},
+      'user-1',
+      expect.objectContaining({ includeShareVisitor: false, workspaceId: 'workspace-1' }),
+    );
     expect(mockCompleteSubAgentBridge).toHaveBeenCalledWith({
       operationId: 'child-1',
       parentOperationId: 'parent-1',
@@ -84,22 +71,16 @@ describe('finalizeAbandoned handler', () => {
     });
   });
 
-  it('queues the durable callback when the queue runtime is enabled', async () => {
-    mockIsQueueAgentRuntimeEnabled.mockReturnValue(true);
+  it('skips the bridge when the abandoned op has no parked parent', async () => {
+    mockFinalizeAbandoned.mockResolvedValue({
+      assistantMessageUpdated: false,
+      finalized: true,
+      found: true,
+    });
 
     const response = await finalizeAbandoned(buildContext());
 
     expect(response.status).toBe(200);
-    expect(mockDeliverWebhook).toHaveBeenCalledWith(
-      { delivery: 'hatchet', fallback: 'none', url: '/api/agent/webhooks/subagent-callback' },
-      {
-        operationId: 'child-1',
-        parentOperationId: 'parent-1',
-        reason: 'error',
-        threadId: 'thread-1',
-        toolMessageId: 'tool-1',
-      },
-    );
     expect(mockCompleteSubAgentBridge).not.toHaveBeenCalled();
   });
 });

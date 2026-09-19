@@ -9,7 +9,6 @@ import type { GoalAdvanceTrigger } from '@orvilo/agent-tracing';
 import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';
 
-import { runStep } from '@/server/router-hono/agent/handlers/runStep';
 import { runScheduleNightlyReview } from '@/server/router-hono/workflows/agent-signal/handlers/scheduleNightlyReview';
 import { runGoalSweep } from '@/server/router-hono/workflows/goal/handlers/sweep';
 import { sweep as linearSyncSweepHandler } from '@/server/router-hono/workflows/linear-sync/handlers/sweep';
@@ -65,25 +64,6 @@ const agentStepInput = z.object({
   timestamp: z.number(),
 });
 
-const createRunStepContext = (
-  input: HatchetAgentStepInput,
-  retryCount: number,
-  runId: string,
-): HonoContext =>
-  ({
-    json: (body: unknown, status = 200, headers?: HeadersInit) =>
-      Response.json(body, { headers, status }),
-    req: {
-      header: (name: string) => {
-        const normalized = name.toLowerCase();
-        if (normalized === 'retry-count') return String(retryCount);
-        if (normalized === 'message-id') return runId;
-        return undefined;
-      },
-      json: async () => input,
-    },
-  }) as unknown as HonoContext;
-
 const runInternalHandler = async (handler: (context: HonoContext) => Promise<Response>) => {
   const response = await handler({
     json: (body: unknown, status = 200, headers?: HeadersInit) =>
@@ -99,17 +79,6 @@ const readResponseBody = async (response: Response): Promise<JsonObject> => {
   return body && typeof body === 'object' ? (body as JsonObject) : { body: String(body) };
 };
 
-const throwDeliveryFailure = (
-  input: HatchetAgentStepInput,
-  retryCount: number,
-  status: number,
-  body: JsonObject,
-): never => {
-  const message = `Hatchet delivery failed with HTTP ${status}: ${JSON.stringify(body)}`;
-  if (retryCount >= input.retries) throw new NonRetryableError(message);
-  throw new Error(message);
-};
-
 const deferredReplayTarget = z.object({
   applicationId: z.string().min(1),
   messengerInstallationKey: z.string().min(1).optional(),
@@ -121,33 +90,6 @@ const isDeferredReplayTarget = (value: unknown): value is DeferredReplayTarget =
   deferredReplayTarget.safeParse(value).success;
 
 export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
-  const agentStep = hatchet.task({
-    name: HATCHET_TASK_NAMES.agentStep,
-    backoff: { factor: 2, maxSeconds: 300 },
-    concurrency: {
-      expression: 'input.operationId',
-      limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
-      maxRuns: 1,
-    },
-    executionTimeout: '15m',
-    fn: async (input: HatchetAgentStepInput & InputType, context) => {
-      const retryCount = context.retryCount();
-      const response = await runStep(
-        createRunStepContext(input, retryCount, context.workflowRunId()),
-      );
-      const body = await readResponseBody(response);
-      if (!response.ok) throwDeliveryFailure(input, retryCount, response.status, body);
-      return body;
-    },
-    idempotency: {
-      expression: 'input.deduplicationKey',
-      fallbackTtlMs: 24 * 60 * 60 * 1000,
-      strategy: 'status',
-    },
-    inputValidator: agentStepInput,
-    retries: 12,
-  });
-
   const agentSignalNightlySchedule = hatchet.task({
     name: HATCHET_TASK_NAMES.agentSignalNightlySchedule,
     executionTimeout: '15m',
@@ -269,7 +211,6 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
   });
 
   return [
-    agentStep,
     agentSignalNightlySchedule,
     botReplay,
     goalAdvance,

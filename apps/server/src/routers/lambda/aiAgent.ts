@@ -54,7 +54,7 @@ import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/mode
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import { agentOperations, topics, workspaceMembers } from '@/database/schemas';
+import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
@@ -3750,14 +3750,6 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
-      // Build intervention parameters
-      const interventionParams: any = {
-        action,
-        operationId,
-        stepIndex,
-        toolMessageId,
-      };
-
       switch (action) {
         case 'approve': {
           if (!data?.approvedToolCall) {
@@ -3766,17 +3758,6 @@ export const aiAgentRouter = router({
               message: 'approvedToolCall is required for approve action',
             });
           }
-          interventionParams.approvedToolCall = data.approvedToolCall;
-          // toolMessageId is required for the server to persist the
-          // intervention + short-circuit into call_tool; the handler itself
-          // no-ops when missing, so keep the schema permissive for legacy
-          // callers that haven't been updated yet.
-          break;
-        }
-        case 'reject':
-        case 'reject_continue': {
-          interventionParams.rejectionReason = reason || 'Tool call rejected by user';
-          interventionParams.rejectAndContinue = action === 'reject_continue';
           break;
         }
         case 'input': {
@@ -3786,7 +3767,6 @@ export const aiAgentRouter = router({
               message: 'input is required for input action',
             });
           }
-          interventionParams.humanInput = { response: data.input };
           break;
         }
         case 'select': {
@@ -3796,19 +3776,114 @@ export const aiAgentRouter = router({
               message: 'selection is required for select action',
             });
           }
-          interventionParams.humanInput = { selection: data.selection };
           break;
         }
       }
 
-      // Process human intervention using AgentRuntimeService
-      const result = await ctx.agentRuntimeService.processHumanIntervention(interventionParams);
+      // ACP-era internals: the durable `agent_interventions` batch is the
+      // authoritative claim surface. When a pending batch exists for this op,
+      // resolve + dispatch it through the same source bridge the Web approval
+      // cards use. Otherwise publish the answer onto the op's event stream so
+      // a hetero producer's intervention long-poll resolves, mirroring
+      // `submitHeteroIntervention`.
+      const pendingRows = await ctx.serverDB
+        .select()
+        .from(agentInterventions)
+        .where(
+          and(
+            eq(agentInterventions.operationId, operationId),
+            eq(agentInterventions.status, 'pending'),
+          ),
+        );
+
+      const batchId =
+        pendingRows.find((row) => row.toolMessageId === toolMessageId)?.batchId ??
+        pendingRows[0]?.batchId;
+      const targets = pendingRows
+        .filter((row) => row.batchId === batchId && row.toolMessageId !== null)
+        .map((row) => ({ toolCallId: row.toolCallId, toolMessageId: row.toolMessageId! }));
+
+      if (batchId && targets.length > 0) {
+        const sourceAction: AgentInterventionSourceAction =
+          action === 'approve'
+            ? { scope: 'once', type: 'approve_tool' }
+            : action === 'reject'
+              ? { scope: 'operation', type: 'stop' }
+              : action === 'reject_continue'
+                ? { reason: reason || 'Tool call rejected by user', type: 'reject_continue' }
+                : action === 'input'
+                  ? { result: { response: data!.input as string }, type: 'submit_answers' }
+                  : { result: { selection: data!.selection as string }, type: 'submit_answers' };
+
+        const resolution = await resolveAgentInterventionBySource({
+          action: sourceAction,
+          actorUserId: ctx.userId,
+          batchId,
+          operationId,
+          resolutionRequestId: randomUUID(),
+          targets,
+          workspaceId: ctx.workspaceId ?? undefined,
+        }).catch((error: unknown) => {
+          throw mapAgentInterventionTRPCError(error);
+        });
+
+        if (resolution.handled) {
+          if (resolution.state === 'already_resolved') {
+            return {
+              action,
+              message: 'Intervention already resolved.',
+              operationId,
+              success: true,
+              timestamp: new Date().toISOString(),
+            };
+          }
+          const dispatch = await dispatchClaimedAgentIntervention(resolution, ctx);
+          return {
+            action,
+            message: `Human intervention processed successfully. Execution resumed.`,
+            operationId,
+            scheduledMessageId: dispatch.execution?.operationId,
+            success: true,
+            timestamp: new Date().toISOString(),
+          };
+        }
+      }
+
+      // No durable batch claimed: publish the answer onto the op's event
+      // stream. A hetero producer's `waitInterventionResponse` resolves it by
+      // toolCallId — recovered from the tool message plugin when the caller
+      // supplied toolMessageId.
+      if (toolMessageId) {
+        const plugin = await ctx.messageModel.findMessagePlugin(toolMessageId);
+        if (plugin?.toolCallId) {
+          const cancelled = action === 'reject';
+          const result =
+            action === 'approve'
+              ? data?.approvedToolCall
+              : action === 'reject_continue'
+                ? (reason ?? 'Tool call rejected by user')
+                : action === 'input'
+                  ? data?.input
+                  : data?.selection;
+          await createStreamEventManager().publishStreamEvent(operationId, {
+            data: {
+              cancelReason: cancelled ? 'user_cancelled' : undefined,
+              cancelled,
+              producerAck: false,
+              result: cancelled ? undefined : result,
+              resolutionRequestId: randomUUID(),
+              toolCallId: plugin.toolCallId,
+            },
+            stepIndex,
+            type: 'agent_intervention_response',
+          });
+        }
+      }
 
       return {
         action,
         message: `Human intervention processed successfully. Execution resumed.`,
         operationId,
-        scheduledMessageId: result.messageId,
         success: true,
         timestamp: new Date().toISOString(),
       };

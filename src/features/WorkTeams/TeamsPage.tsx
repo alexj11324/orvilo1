@@ -14,8 +14,8 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -154,7 +154,7 @@ const TeamsPage = memo(() => {
   const revalidate = searching ? revalidateSearch : revalidateList;
 
   return (
-    <Flexbox flex={1} height="100%">
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
@@ -167,18 +167,19 @@ const TeamsPage = memo(() => {
           <Empty description={t('teams.personal')} icon={UsersIcon} />
         </Center>
       ) : (
-        <WideScreenContainer
-          gap={16}
-          paddingBlock={16}
-          wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+        <WorkSurfaceCollection
+          toolbar={
+            <WorkSurfaceToolbar>
+              <SearchBar
+                allowClear
+                placeholder={t('teams.searchPlaceholder')}
+                style={{ maxWidth: 280 }}
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+              />
+            </WorkSurfaceToolbar>
+          }
         >
-          <SearchBar
-            allowClear
-            placeholder={t('teams.searchPlaceholder')}
-            style={{ maxWidth: 280 }}
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
           {error ? (
             <AsyncError error={error} onRetry={() => revalidate()} />
           ) : isLoading ? (
@@ -197,9 +198,9 @@ const TeamsPage = memo(() => {
               ))}
             </Flexbox>
           )}
-        </WideScreenContainer>
+        </WorkSurfaceCollection>
       )}
-    </Flexbox>
+    </WorkSurface>
   );
 });
 

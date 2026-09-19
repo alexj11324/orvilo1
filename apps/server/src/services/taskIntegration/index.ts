@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
+import { sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
@@ -30,6 +31,13 @@ const log = debug('task-integration');
 /** Corrective merge runs dispatched per task run before the task blocks. */
 const MAX_CORRECTIVE_ATTEMPTS = 3;
 const INTEGRATION_CLAIM_TTL_MS = 15 * 60 * 1000;
+/**
+ * Advisory-lock namespace serializing the merge+publish critical section per
+ * target repo/ref ('intg'). Distinct from the goal dispatch namespace.
+ */
+const REPO_REF_INTEGRATION_LOCK_NAMESPACE = 0x69_6e_74_67;
+/** Push rejections that mean the recorded merge commit's base moved. */
+const NON_FAST_FORWARD_PUSH = /non-fast-forward|fetch first|stale info|\[rejected\]/i;
 
 /**
  * What the integration gate concluded for a completed run:
@@ -239,21 +247,31 @@ export class TaskIntegrationService {
 
       let outcome: IntegrationOutcome;
       try {
-        // Close the query/claim race: a child may be inserted after the first
-        // successor read but before this invocation acquires the chain lease.
-        if (
-          activeRecord.role === 'integrate' &&
-          this.hasCorrectiveSuccessor(
-            topicId,
-            activeRecord,
-            await this.taskTopicModel.findByTaskId(task.id),
-          )
-        ) {
-          return 'hold';
-        }
-        outcome =
-          activeRecord.state === 'publish_failed'
-            ? await this.retryLocalPublish(task, topicId, activeRecord)
+        // Serializing per repo/ref keeps engineer runs parallel while
+        // integrations onto the same base queue up: the next merge
+        // re-baselines onto the ref this section just published instead of
+        // producing an unpublishable non-fast-forward commit.
+        outcome = await this.withRepoRefLease(activeRecord, async () => {
+          // Close the query/claim race: a child may be inserted after the
+          // first successor read but before this invocation acquires the
+          // chain lease.
+          if (
+            activeRecord.role === 'integrate' &&
+            this.hasCorrectiveSuccessor(
+              topicId,
+              activeRecord,
+              await this.taskTopicModel.findByTaskId(task.id),
+            )
+          ) {
+            return 'hold';
+          }
+          return activeRecord.state === 'publish_failed'
+            ? await this.retryLocalPublish(
+                task,
+                topicId,
+                activeRecord,
+                params.completionReservationId,
+              )
             : activeRecord.role === 'task'
               ? activeRecord.state === 'merging'
                 ? activeRecord.repo
@@ -297,6 +315,7 @@ export class TaskIntegrationService {
                     activeRecord,
                     params.completionReservationId,
                   );
+        });
       } finally {
         await this.taskTopicModel
           .releaseIntegration(task.id, integrationOwnerTopicId, claimToken)
@@ -339,6 +358,26 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
+  }
+
+  /**
+   * Serialize the merge+publish critical section per target repo/ref. The
+   * transaction-scoped advisory lock is held across the device/GitHub calls so
+   * two completed runs can never merge onto the same base concurrently — the
+   * loser waits, then re-baselines onto the ref the winner just published.
+   */
+  private async withRepoRefLease<T>(
+    record: TaskTopicIntegration,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    const target = record.repo ?? `${record.deviceId}:${record.repoPath}`;
+    const key = `caid-integration:${target}#${record.baseBranch}`;
+    return this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(${REPO_REF_INTEGRATION_LOCK_NAMESPACE}, hashtext(${key}))`,
+      );
+      return run();
+    });
   }
 
   /** Resolve the task/topic dispatch owner before accepting an integration result. */
@@ -632,6 +671,9 @@ export class TaskIntegrationService {
       baseRef: this.baseRef(record),
       branch: record.branch,
       deviceId: record.deviceId,
+      // Refresh the tracking ref so the serialized merge re-baselines onto the
+      // published tip rather than a stale `origin/<base>`.
+      fetchBase: record.baseBranch !== 'HEAD',
       path: integrationWorktreePath,
       userId: this.userId,
       workspaceId: this.workspaceId,
@@ -1028,10 +1070,21 @@ export class TaskIntegrationService {
     return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : outcome;
   }
 
+  /**
+   * Retry publishing a recorded local merge commit. A transient failure
+   * re-pushes the same SHA; a non-fast-forward rejection means the base moved
+   * under the (serialized) merge — for the original task row re-enter the
+   * merge stage so `mergeGitBranch` re-baselines onto the refreshed
+   * `origin/<base>` and produces a new merge commit instead of re-pushing an
+   * unpublishable one forever. Corrective-row records keep the plain re-push:
+   * their merge state lives inside the integration worktree and re-merging
+   * would discard the resolved content.
+   */
   private async retryLocalPublish(
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
+    completionReservationId?: string,
   ): Promise<IntegrationOutcome> {
     if (record.repo || !record.integratedSha) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
@@ -1040,7 +1093,23 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
-    return this.landMerge(task, topicId, record, record.integratedSha);
+    const outcome = await this.landMerge(task, topicId, record, record.integratedSha);
+    if (outcome !== 'hold' || record.role !== 'task') return outcome;
+
+    const latest = (await this.taskTopicModel.findByTopicId(topicId))?.integration;
+    if (
+      !latest ||
+      latest.state !== 'publish_failed' ||
+      !NON_FAST_FORWARD_PUSH.test(latest.lastError ?? '')
+    ) {
+      return outcome;
+    }
+    return this.integrateTaskRun(
+      task,
+      topicId,
+      { ...record, integratedSha: latest.integratedSha },
+      completionReservationId,
+    );
   }
 
   private async publishAndCleanup(

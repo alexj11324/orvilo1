@@ -164,6 +164,7 @@ export default class GitController extends ControllerModule {
   async mergeGitBranch(payload: {
     baseRef?: string;
     branch: string;
+    fetchBase?: boolean;
     path: string;
   }): Promise<GitMergeResult> {
     const { mergeGitBranch: runMergeGitBranch } = await loadGit();

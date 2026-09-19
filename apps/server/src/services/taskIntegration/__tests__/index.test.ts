@@ -45,6 +45,18 @@ const mockWorkspaceService = {
 };
 const { mockAfter } = vi.hoisted(() => ({ mockAfter: vi.fn() }));
 
+const mockTxExecute = vi.fn();
+/**
+ * Minimal `OrviloDatabase` stand-in: the service only uses `db.transaction` to
+ * pin the repo/ref advisory lease, so the mock runs the callback against a
+ * fake tx and (optionally) serializes transactions like the real lock.
+ */
+const mockDb = {
+  transaction: vi.fn(async (run: (tx: { execute: typeof mockTxExecute }) => unknown) =>
+    run({ execute: mockTxExecute }),
+  ),
+};
+
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
 }));
@@ -176,7 +188,12 @@ describe('TaskIntegrationService', () => {
       taskRevision: 1,
     });
     mockTaskTopicModel.updateIntegration.mockResolvedValue(true);
-    service = new TaskIntegrationService({} as any, 'user-1', 'ws-1');
+    mockTxExecute.mockResolvedValue([]);
+    mockDb.transaction.mockImplementation(
+      async (run: (tx: { execute: typeof mockTxExecute }) => unknown) =>
+        run({ execute: mockTxExecute }),
+    );
+    service = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1');
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.pushGitBranch).mockImplementation(async ({ sourceRef }) => ({
       pushedSourceRef: sourceRef,
@@ -1431,6 +1448,174 @@ describe('TaskIntegrationService', () => {
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith('task_1', 'topic_1', {
         worktreeCleaned: false,
       });
+    });
+  });
+
+  describe('repo/ref serialization', () => {
+    it('holds the advisory lease across merge and publish', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merge-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' });
+
+      expect(mockDb.transaction).toHaveBeenCalledTimes(1);
+      expect(mockTxExecute).toHaveBeenCalledTimes(1);
+      expect(mockTxExecute.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(deviceGateway.mergeGitBranch).mock.invocationCallOrder[0],
+      );
+      expect(mockTxExecute.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(deviceGateway.pushGitBranch).mock.invocationCallOrder[0],
+      );
+    });
+
+    it('serializes concurrent integrations onto the same repo/base', async () => {
+      // Serialize transactions like the real advisory lock does.
+      let tail = Promise.resolve();
+      mockDb.transaction.mockImplementation(async (run) => {
+        const result = tail.then(() => run({ execute: mockTxExecute }));
+        tail = result.then(
+          () => undefined,
+          () => undefined,
+        );
+        return result;
+      });
+
+      const events: string[] = [];
+      vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(async () => {
+        events.push('merge:start');
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        events.push('merge:end');
+        return { sha: `sha-${events.length}`, state: 'merged', success: true };
+      });
+      vi.mocked(deviceGateway.pushGitBranch).mockImplementation(async ({ sourceRef }) => {
+        events.push('push');
+        return { pushedSourceRef: sourceRef, success: true };
+      });
+
+      const topics = {
+        topic_a: asTopic(seedRecord({ worktreePath: '/repos/orvilo-task-a' }), 'topic_a'),
+        topic_b: asTopic(seedRecord({ worktreePath: '/repos/orvilo-task-b' }), 'topic_b'),
+      };
+      mockTaskTopicModel.findByTopicId.mockImplementation(async (topicId: string) => {
+        return topics[topicId as keyof typeof topics];
+      });
+      mockTaskTopicModel.findByTaskId.mockImplementation(async () => Object.values(topics));
+
+      const [outcomeA, outcomeB] = await Promise.all([
+        service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_a' }),
+        service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_b' }),
+      ]);
+
+      expect(outcomeA).toBe('settled');
+      expect(outcomeB).toBe('settled');
+      // The second merge may only begin after the first merge+push completed.
+      expect(events).toEqual([
+        'merge:start',
+        'merge:end',
+        'push',
+        'merge:start',
+        'merge:end',
+        'push',
+      ]);
+    });
+
+    it('asks the device to refresh origin/<base> before merging', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merge-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' });
+
+      expect(deviceGateway.mergeGitBranch).toHaveBeenCalledWith(
+        expect.objectContaining({ baseRef: 'origin/main', fetchBase: true }),
+      );
+    });
+
+    it('does not fetch when the base is the local HEAD', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ baseBranch: 'HEAD' })),
+      );
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merge-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' });
+
+      expect(deviceGateway.mergeGitBranch).toHaveBeenCalledWith(
+        expect.objectContaining({ baseRef: 'HEAD', fetchBase: false }),
+      );
+    });
+
+    it('re-merges onto the advanced base when the publish retry is non-fast-forward', async () => {
+      const failed = seedRecord({
+        integratedSha: 'old-sha',
+        lastError:
+          'Merged locally; push to origin/main failed: ! [rejected] main -> main (non-fast-forward)',
+        state: 'publish_failed',
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(failed));
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(failed)]);
+      vi.mocked(deviceGateway.pushGitBranch)
+        .mockResolvedValueOnce({ error: '! [rejected] non-fast-forward', success: false })
+        .mockImplementation(async ({ sourceRef }) => ({
+          pushedSourceRef: sourceRef,
+          success: true,
+        }));
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        headSha: 'head-sha',
+        sha: 'new-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      expect(deviceGateway.mergeGitBranch).toHaveBeenCalledTimes(1);
+      expect(deviceGateway.pushGitBranch).toHaveBeenCalledTimes(2);
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ integratedSha: 'new-sha', state: 'integrated' }),
+      );
+    });
+
+    it('keeps a plain re-push for corrective-row publish failures', async () => {
+      const failed = seedRecord({
+        integratedSha: 'old-sha',
+        integrationWorktreePath: '/repos/orvilo-integration-main-topic_1',
+        lastError: 'Merged locally; push to origin/main failed: non-fast-forward',
+        role: 'integrate',
+        runTopicId: 'topic_0',
+        state: 'publish_failed',
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(failed));
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(failed)]);
+      vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({
+        error: 'non-fast-forward',
+        success: false,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(deviceGateway.pushGitBranch).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -312,13 +312,21 @@ const readRevisionSha = async (dirPath: string, revision: string): Promise<strin
  * in progress and reports the unmerged paths — the caller hands resolution to
  * an engineer run rather than aborting. An already-running merge is reported
  * as 'in-progress' and never touched.
+ *
+ * `fetchBase` refreshes the remote-tracking ref (`git fetch origin <base>`)
+ * before the reset so a serialized merge rebases onto the published tip rather
+ * than a stale `origin/<base>`. The fetch is best-effort: the merge proceeds on
+ * the last known tracking ref, and the publish step remains the authority on
+ * whether the result is a fast-forward over the real remote.
  */
 export const mergeGitBranch = async (payload: {
   baseRef?: string;
   branch: string;
+  /** Fetch the base from `origin` before re-baselining (remote-tracking refs). */
+  fetchBase?: boolean;
   path: string;
 }): Promise<GitMergeResult> => {
-  const { path: dirPath, branch, baseRef } = payload;
+  const { path: dirPath, branch, baseRef, fetchBase } = payload;
   if (!dirPath?.trim())
     return { error: 'Working directory is required', state: 'conflict', success: false };
   if (!branch?.trim())
@@ -350,6 +358,24 @@ export const mergeGitBranch = async (payload: {
     }
 
     if (baseRef) {
+      if (fetchBase && baseRef.startsWith('origin/')) {
+        const remoteBranch = baseRef.slice('origin/'.length);
+        if (!isInvalidBranchRef(remoteBranch)) {
+          // Explicit refspec so the tracking ref refreshes even when
+          // remote.origin.fetch is customized. Failure keeps the merge on the
+          // last known tracking ref — push remains the authority.
+          await execFileAsync(
+            'git',
+            ['fetch', 'origin', `+refs/heads/${remoteBranch}:refs/remotes/origin/${remoteBranch}`],
+            { cwd: dirPath, timeout: 60_000 },
+          ).catch((error) =>
+            log.debug('[mergeGitBranch] base fetch failed', {
+              baseRef,
+              stderr: (error?.stderr ?? error?.message ?? '').toString().trim(),
+            }),
+          );
+        }
+      }
       await execFileAsync('git', ['reset', '--hard', baseRef], {
         cwd: dirPath,
         timeout: 30_000,

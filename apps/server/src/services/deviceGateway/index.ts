@@ -847,12 +847,22 @@ export class DeviceGateway {
     baseRef?: string;
     branch: string;
     deviceId: string;
+    fetchBase?: boolean;
     path: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
   }): Promise<DeviceGitMergeResult> {
-    const { userId, deviceId, branch, path, baseRef, timeout = 150_000, workspaceId } = params;
+    const {
+      userId,
+      deviceId,
+      branch,
+      path,
+      baseRef,
+      fetchBase,
+      timeout = 150_000,
+      workspaceId,
+    } = params;
     const client = this.getClient();
     if (!client)
       return { error: 'Device gateway not configured', state: 'conflict', success: false };
@@ -860,7 +870,7 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitMergeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'mergeGitBranch', params: { baseRef, branch, path } },
+        { method: 'mergeGitBranch', params: { baseRef, branch, fetchBase, path } },
       );
 
       if (!result.success || !result.data) {

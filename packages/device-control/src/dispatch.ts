@@ -267,7 +267,9 @@ export const executeDeviceRpc = async (
     }
 
     case 'mergeGitBranch': {
-      return mergeGitBranch(params as { baseRef?: string; branch: string; path: string });
+      return mergeGitBranch(
+        params as { baseRef?: string; branch: string; fetchBase?: boolean; path: string },
+      );
     }
 
     case 'finalizeGitMerge': {

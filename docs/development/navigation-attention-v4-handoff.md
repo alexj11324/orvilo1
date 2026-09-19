@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `09ab2664` Inbox / CommandMenu /project work-query 对私有项目走 `ProjectModel.readable`（SEC06）。叠在 `67de7007` 退出私有团队任务标题与 Devin `0331f0f4` OSS workspace 激活之上。                                         |
+| 实施 HEAD（本交接提交之前）      | `9f30cfb4` 未过滤 work-query / CommandMenu `searchTasks` 对私有团队任务走 Inbox 同一套可读性（TRI05/SEC06）。叠在 `09ab2664` 私有项目标题与 Devin `0331f0f4` OSS workspace 激活之上。                                      |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -131,11 +131,13 @@
 
 - SEC06：Inbox `resourceReadable` 对挂了私有团队的任务再要求团队成员 / 工作区 admin / 负责人 / 审核人 / 创建人。退出私有团队后，即使 `tasks.visibility` 仍是 public，历史通知也不再列出标题，未读铃也不计。指派给非成员的任务标题仍可见（与 work-query assigned 一致）。私有项目复用 `ProjectModel.readable`（可见性 + 有效 `project_members` 授权）：没有授权的工作区成员看不到历史 Inbox 标题，CommandMenu `searchProjects` 与 `queryProjects` 也不再返回项目名；授权被收回后标题和搜索一并消失
 
+- TRI05：未过滤的 `queryTasks` / CommandMenu `searchTasks` 也套同一套 `buildTaskTeamReadableWhere`。非成员不能靠「全部任务」或标题搜索捞到私有团队上的公开任务；负责人 / 审核人 / 创建人仍能搜到自己的行。`teamId` 过滤本来就会与可读团队求交
+
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 退出私有团队后的任务标题、以及无私有项目授权时的 Inbox / 搜索标题，都已挡住。不要主动做 TRI04 产品复制。
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表与标题搜索，都已挡住。不要主动做 TRI04 产品复制。
 
 用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA 和共享 Kanban。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
@@ -216,6 +218,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `0331f0f4`：OSS workspace 激活链接上真链路 ——`useActiveWorkspaceId`/`Slug` 不再是 null stub，改成模块 store + `useWorkspaceUrlSync`（已挂进 web/desktop/mobile 三个主 layout）；`getBusinessTrpcHeaders` 发 `X-Workspace-Id`，`team.teams`/workspace settings 的 wsCompat 在 OSS 真能跑通（本地建 ws `orvilo-dev` + team `Engineering` 实测：`/orvilo-dev/teams/:id?tab=` 与 `/orvilo-dev/settings/members` 全真）。`WORKSPACE_MIRRORED_FIRST_SEGMENTS` 补齐 inbox/my-work/views/teams/automations/goal（此前 sidebar 链在 workspace 模式丢 slug 前缀掉回个人态）。Agent 改成扁平行 → `/agents`（`SidebarTabKey.Agent` 新增，旧 agent 手风琴退役出 SIDEBAR\_ACCORDION\_KEYS）。Workspace ▸ "More" 改成可见行（Linear 形状，不再是 hover ⋯）。`useActiveIdentity` 实装：workspace 模式头部显示 workspace 名 / 头像。lint 干净，104 passed。不是 64× AC。
 - `67de7007`：SEC06 退出私有团队后 Inbox 丢掉任务标题。lint 干净，`notification.test.ts` 53 passed。不是 64× AC。
 - `09ab2664`：SEC06 私有项目走 `ProjectModel.readable`。Inbox / `searchProjects` / `queryProjects` / Recents 共用 `buildProjectReadableWhere`。lint 干净，`notification` + `workQuery` + `project` + `recent` 139 passed。不是 64× AC。
+- `9f30cfb4`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。lint 干净，`workQuery` + `notification` 77 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

@@ -771,7 +771,6 @@ export default {
   'savedViews.filters.cyclePlaceholder': 'Choose a cycle',
   'savedViews.filters.empty': 'No filters — matches all readable items',
   'savedViews.filters.label': 'Filters',
-  'savedViews.filters.loadMore': 'Load more',
   'savedViews.filters.me': 'Me',
   'savedViews.filters.projectPlaceholder': 'Search projects…',
   'savedViews.filters.remove': 'Remove filter',

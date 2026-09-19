@@ -33,7 +33,7 @@ const optionToUserValue = (option: string): WorkQueryValue =>
   option === SELF_VALUE ? { ref: 'currentUser' } : option;
 
 const PROJECT_PAGE_SIZE = 25;
-const PROJECT_LOAD_MORE = '__load_more__';
+const PROJECT_MAX_PAGES = 10;
 
 const toProjectOption = (item: { id: string; name?: string | null }) => ({
   label: item.name ?? item.id,
@@ -43,11 +43,12 @@ const toProjectOption = (item: { id: string; name?: string | null }) => ({
 /**
  * Project picker backed by the authorized `projectOptions` search: the first
  * page loads lazily when the popup opens, keystrokes re-search server-side,
- * and a trailing "load more" row walks the keyset cursor — so projects past
- * the first page are findable. The selected value hydrates by id separately
- * since it may sit beyond the loaded pages. base-ui Select has no
- * remote-search hook, so the wrapping div captures `input` events from the
- * popup's search box (React events bubble through the portal).
+ * and later pages stream in behind it while the popup stays open — a Select
+ * option cannot itself act as a "load more" row because picking it closes the
+ * popup. The selected value hydrates by id separately since it may sit beyond
+ * the loaded pages. base-ui Select has no remote-search hook, so the wrapping
+ * div captures `input` events from the popup's search box (React events bubble
+ * through the portal).
  */
 const ProjectValueSelect = memo<{
   onChange: (value: string | undefined) => void;
@@ -58,41 +59,46 @@ const ProjectValueSelect = memo<{
   const [open, setOpen] = useState(false);
   const [needle, setNeedle] = useState('');
   const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setLoading(true);
     const timer = setTimeout(() => {
-      void workAttentionService
-        .projectOptions({ limit: PROJECT_PAGE_SIZE, query: needle || undefined })
-        .then((result) => {
-          const items = result?.data?.items ?? [];
-          setOptions(items.map(toProjectOption));
-          setNextCursor(result?.data?.nextCursor ?? null);
-        })
-        .catch(() => setOptions([]))
-        .finally(() => setLoading(false));
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [needle, open]);
-
-  const loadMore = useCallback(() => {
-    if (!nextCursor || loading) return;
-    setLoading(true);
-    void workAttentionService
-      .projectOptions({ afterId: nextCursor, limit: PROJECT_PAGE_SIZE, query: needle || undefined })
-      .then((result) => {
+      const fetchPage = async (afterId?: string) => {
+        const result = await workAttentionService.projectOptions({
+          afterId,
+          limit: PROJECT_PAGE_SIZE,
+          query: needle || undefined,
+        });
+        if (cancelled) return null;
         const items = result?.data?.items ?? [];
         setOptions((current) => {
           const seen = new Set(current.map((option) => option.value));
           return [...current, ...items.filter((item) => !seen.has(item.id)).map(toProjectOption)];
         });
-        setNextCursor(result?.data?.nextCursor ?? null);
-      })
-      .finally(() => setLoading(false));
-  }, [loading, needle, nextCursor]);
+        return result?.data?.nextCursor ?? null;
+      };
+      void (async () => {
+        try {
+          setOptions([]);
+          let cursor = await fetchPage();
+          for (let page = 1; cursor && page < PROJECT_MAX_PAGES; page += 1) {
+            cursor = await fetchPage(cursor);
+          }
+        } catch {
+          if (!cancelled) setOptions([]);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [needle, open]);
 
   const { data: selectedData } = useClientDataSWR(
     value ? `view-builder-project:${workspaceId ?? 'personal'}:${value}` : null,
@@ -102,12 +108,8 @@ const ProjectValueSelect = memo<{
   const mergedOptions = useMemo(() => {
     const selected = (selectedData?.data?.items ?? []).map(toProjectOption);
     const seen = new Set(options.map((option) => option.value));
-    const merged = [...selected.filter((option) => !seen.has(option.value)), ...options];
-    if (nextCursor) {
-      merged.push({ label: t('savedViews.filters.loadMore'), value: PROJECT_LOAD_MORE });
-    }
-    return merged;
-  }, [nextCursor, options, selectedData, t]);
+    return [...selected.filter((option) => !seen.has(option.value)), ...options];
+  }, [options, selectedData]);
 
   return (
     // The popup's search input lives in a portal; its `input` events still
@@ -126,14 +128,8 @@ const ProjectValueSelect = memo<{
         size="small"
         style={{ minWidth: 160 }}
         value={value}
+        onChange={(next) => onChange(typeof next === 'string' ? next : undefined)}
         onOpenChange={setOpen}
-        onChange={(next) => {
-          if (next === PROJECT_LOAD_MORE) {
-            loadMore();
-            return;
-          }
-          onChange(typeof next === 'string' ? next : undefined);
-        }}
       />
     </div>
   );

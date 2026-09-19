@@ -623,6 +623,7 @@
   "teams.layoutList": "List",
   "teams.loading": "Loading teams…",
   "teams.markDuplicate": "Mark duplicate",
+  "teams.moreActions": "More triage actions",
   "teams.noProject": "No project",
   "teams.personal": "Switch to a workspace to see teams",
   "teams.reassign": "Reassign",

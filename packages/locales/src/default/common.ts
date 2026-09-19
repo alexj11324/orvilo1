@@ -699,6 +699,7 @@ export default {
   'teams.layoutList': 'List',
   'teams.loading': 'Loading teams…',
   'teams.markDuplicate': 'Mark duplicate',
+  'teams.moreActions': 'More triage actions',
   'teams.noProject': 'No project',
   'teams.canonical': 'Canonical task',
   'teams.personal': 'Switch to a workspace to see teams',

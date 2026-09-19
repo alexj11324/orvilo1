@@ -1,18 +1,34 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Button, Select, Text, toast } from '@lobehub/ui/base-ui';
+import { Center, Empty, Flexbox } from '@lobehub/ui';
+import {
+  ActionIcon,
+  Button,
+  type DropdownItem,
+  DropdownMenu,
+  Segmented,
+  Select,
+  Text,
+  toast,
+} from '@lobehub/ui/base-ui';
 import type { WorkQueryLayout } from '@orvilo/types';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { FolderXIcon, ListChecksIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncError from '@/components/AsyncError';
+import { resolveTaskStatus } from '@/components/ExecutionStatus';
+import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -23,7 +39,49 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 import { duplicateCanonicalOptions } from './duplicateCanonicalOptions';
 import { otherTeamOptions } from './otherTeamOptions';
 import { reassignMemberOptions } from './reassignMemberOptions';
+import { teamSurfaceState } from './teamSurfaceState';
+import {
+  TEAM_TRIAGE_OVERFLOW_I18N,
+  type TeamTriageOverflowItem,
+  teamTriageOverflowItems,
+} from './teamTriageOverflow';
 import { ALL_TEAM_CYCLES, teamTaskQuery, teamTriageQuery } from './teamWorkQuery';
+
+const styles = createStaticStyles(({ css }) => ({
+  actions: css`
+    flex: none;
+  `,
+  identifier: css`
+    flex: none;
+
+    min-width: 64px;
+
+    font-family: ${cssVar.fontFamilyCode};
+    color: ${cssVar.colorTextTertiary};
+    text-align: end;
+  `,
+  link: css`
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    align-items: center;
+
+    min-width: 0;
+
+    color: inherit;
+    text-decoration: none;
+  `,
+  row: css`
+    padding-block: 7px;
+    padding-inline: 4px 12px;
+    border-radius: ${cssVar.borderRadiusLG};
+    color: inherit;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+}));
 
 type TeamTriageTask = {
   assigneeAgentId?: string | null;
@@ -33,6 +91,7 @@ type TeamTriageTask = {
   identifier?: string | null;
   instruction?: string | null;
   name?: string | null;
+  status?: string | null;
 };
 
 const TeamTriageRow = memo<{
@@ -58,110 +117,100 @@ const TeamTriageRow = memo<{
     task,
   }) => {
     const { t } = useTranslation('common');
-    const [destination, setDestination] = useState<string | undefined>();
-    const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>();
-    const [canonicalTaskId, setCanonicalTaskId] = useState<string | undefined>();
-    const selected = destination ?? destinations[0]?.value;
     const memberOptions = reassignMemberOptions(members, task.assigneeUserId);
-    const selectedAssignee = assigneeUserId ?? memberOptions[0]?.value;
-    const selectedCanonical = canonicalTaskId ?? canonicals[0]?.value;
+    const overflowItems = teamTriageOverflowItems({
+      canonicals,
+      destinations,
+      members: memberOptions,
+    });
 
-    const transfer = useCallback(async () => {
-      if (!selected || task.domainRevision === undefined) return;
-      try {
-        await lambdaClient.team.moveTaskToTeam.mutate({
-          expectedDomainRevision: task.domainRevision,
-          taskId: task.id,
-          teamId: selected,
-        });
-        onTransferred();
-        toast.success(t('teams.transferUpdated'));
-      } catch (error) {
-        toast.error(
-          isTrpcErrorCode(error, 'CONFLICT')
-            ? t('teams.transferConflict')
-            : isTrpcErrorCode(error, 'PRECONDITION_FAILED')
-              ? t('teams.transferLinear')
-              : t('teams.transferFailed'),
-        );
-      }
-    }, [onTransferred, selected, t, task.domainRevision, task.id]);
+    const transfer = useCallback(
+      async (teamId: string) => {
+        if (!teamId || task.domainRevision === undefined) return;
+        try {
+          await lambdaClient.team.moveTaskToTeam.mutate({
+            expectedDomainRevision: task.domainRevision,
+            taskId: task.id,
+            teamId,
+          });
+          onTransferred();
+          toast.success(t('teams.transferUpdated'));
+        } catch (error) {
+          toast.error(
+            isTrpcErrorCode(error, 'CONFLICT')
+              ? t('teams.transferConflict')
+              : isTrpcErrorCode(error, 'PRECONDITION_FAILED')
+                ? t('teams.transferLinear')
+                : t('teams.transferFailed'),
+          );
+        }
+      },
+      [onTransferred, t, task.domainRevision, task.id],
+    );
+
+    const runOverflow = useCallback(
+      (kind: TeamTriageOverflowItem['kind'], value: string) => {
+        if (kind === 'duplicate') onDuplicate(task.id, value);
+        else if (kind === 'reassign') onReassign(task.id, value);
+        else void transfer(value);
+      },
+      [onDuplicate, onReassign, task.id, transfer],
+    );
+
+    const overflowMenuItems = useMemo<DropdownItem[]>(
+      () =>
+        overflowItems.map((item) =>
+          item.type === 'leaf'
+            ? {
+                key: item.kind,
+                label: t(TEAM_TRIAGE_OVERFLOW_I18N[item.kind]),
+                onClick: () => runOverflow(item.kind, item.value),
+              }
+            : {
+                children: item.options.map((option) => ({
+                  key: `${item.kind}-${option.value}`,
+                  label: option.label,
+                  onClick: () => runOverflow(item.kind, option.value),
+                })),
+                key: item.kind,
+                label: t(TEAM_TRIAGE_OVERFLOW_I18N[item.kind]),
+                type: 'submenu',
+              },
+        ),
+      [overflowItems, runOverflow, t],
+    );
 
     return (
-      <Flexbox horizontal align="center" gap={8} wrap="wrap">
-        <WorkspaceLink to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}>
-          <Text weight={500}>{task.name ?? task.instruction}</Text>
+      <Flexbox horizontal align="center" className={styles.row} gap={8}>
+        <WorkspaceLink
+          className={styles.link}
+          to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+        >
+          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
+          <Flexbox flex={1} style={{ minWidth: 0 }}>
+            <Text ellipsis weight={500}>
+              {task.name ?? task.instruction}
+            </Text>
+          </Flexbox>
+          {task.identifier ? (
+            <Text className={styles.identifier} fontSize={12}>
+              {task.identifier}
+            </Text>
+          ) : null}
         </WorkspaceLink>
-        <Button size="small" type="primary" onClick={() => onAccept(task.id)}>
-          {t('teams.accept')}
-        </Button>
-        <Button size="small" onClick={() => onDecline(task.id)}>
-          {t('teams.decline')}
-        </Button>
-        {canonicals.length > 0 ? (
-          <>
-            <Select
-              aria-label={t('teams.canonical')}
-              options={canonicals}
-              placeholder={t('teams.canonical')}
-              size="small"
-              style={{ minWidth: 160 }}
-              value={selectedCanonical}
-              onChange={(next) => {
-                if (typeof next === 'string') setCanonicalTaskId(next);
-              }}
-            />
-            <Button
-              size="small"
-              onClick={() => {
-                if (selectedCanonical) onDuplicate(task.id, selectedCanonical);
-              }}
-            >
-              {t('teams.markDuplicate')}
-            </Button>
-          </>
-        ) : null}
-        {destinations.length > 0 ? (
-          <>
-            <Select
-              aria-label={t('teams.transferTo')}
-              options={destinations}
-              placeholder={t('teams.transferTo')}
-              size="small"
-              style={{ minWidth: 140 }}
-              value={selected}
-              onChange={(next) => {
-                if (typeof next === 'string') setDestination(next);
-              }}
-            />
-            <Button size="small" onClick={() => void transfer()}>
-              {t('teams.transfer')}
-            </Button>
-          </>
-        ) : null}
-        {memberOptions.length > 0 ? (
-          <>
-            <Select
-              aria-label={t('teams.reassignTo')}
-              options={memberOptions}
-              placeholder={t('teams.reassignTo')}
-              size="small"
-              style={{ minWidth: 140 }}
-              value={selectedAssignee}
-              onChange={(next) => {
-                if (typeof next === 'string') setAssigneeUserId(next);
-              }}
-            />
-            <Button
-              size="small"
-              onClick={() => {
-                if (selectedAssignee) onReassign(task.id, selectedAssignee);
-              }}
-            >
-              {t('teams.reassign')}
-            </Button>
-          </>
-        ) : null}
+        <Flexbox horizontal align="center" className={styles.actions} gap={4}>
+          <Button size="small" type="primary" onClick={() => onAccept(task.id)}>
+            {t('teams.accept')}
+          </Button>
+          <Button size="small" onClick={() => onDecline(task.id)}>
+            {t('teams.decline')}
+          </Button>
+          {overflowMenuItems.length > 0 ? (
+            <DropdownMenu items={overflowMenuItems} placement="bottomRight">
+              <ActionIcon icon={MoreHorizontalIcon} size="small" title={t('teams.moreActions')} />
+            </DropdownMenu>
+          ) : null}
+        </Flexbox>
       </Flexbox>
     );
   },
@@ -176,22 +225,35 @@ const TeamPage = memo(() => {
   const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
   const [noProject, setNoProject] = useState(false);
   const [layout, setLayout] = useState<WorkQueryLayout>('list');
-  const { data: teamData } = useClientDataSWR(
-    teamId && workspaceId ? ['team', workspaceId, teamId] : null,
-    () => lambdaClient.team.team.query({ teamId: teamId! }),
+  const {
+    data: teamData,
+    error: teamError,
+    mutate: revalidateTeam,
+  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
+    lambdaClient.team.team.query({ teamId: teamId! }),
   );
   const { data: teamsData } = useClientDataSWR(
     workspaceId ? workAttentionKeys.teams(workspaceId) : null,
     () => lambdaClient.team.teams.query(),
   );
-  const { data: triageData, isLoading } = useClientDataSWR(
+  const {
+    data: triageData,
+    error: triageError,
+    isLoading,
+    mutate: revalidateTriage,
+  } = useClientDataSWR(
     teamId && workspaceId ? ['team-triage', workspaceId, teamId, cycleId, noProject] : null,
     () =>
       workAttentionService.query({
         query: teamTriageQuery(teamId!, cycleId, noProject),
       }),
   );
-  const { data: teamTasksData, isLoading: isTeamTasksLoading } = useClientDataSWR(
+  const {
+    data: teamTasksData,
+    error: teamTasksError,
+    isLoading: isTeamTasksLoading,
+    mutate: revalidateTeamTasks,
+  } = useClientDataSWR(
     teamId && workspaceId ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout] : null,
     () =>
       workAttentionService.query({
@@ -216,6 +278,16 @@ const TeamPage = memo(() => {
   const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
+  const triageState = teamSurfaceState({
+    error: triageError,
+    isLoading,
+    itemCount: tasks.length,
+  });
+  const workState = teamSurfaceState({
+    error: teamTasksError,
+    isLoading: isTeamTasksLoading,
+    itemCount: teamTasks.length + teamGroups.reduce((sum, group) => sum + group.tasks.length, 0),
+  });
 
   const act = useCallback(
     async (
@@ -299,93 +371,127 @@ const TeamPage = memo(() => {
   return (
     <Flexbox flex={1} height="100%">
       <NavHeader
+        right={<WorkFavoriteButton targetId={teamId} targetType="team" />}
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {teamData?.data.team.name ?? t('tab.teams')}
           </Text>
         }
-        right={
-          <Flexbox horizontal gap={8}>
-            <WorkFavoriteButton targetId={teamId} targetType="team" />
-            <Button
-              size="small"
-              onClick={() => setLayout((current) => (current === 'board' ? 'list' : 'board'))}
-            >
-              {layout === 'board' ? t('teams.layoutList') : t('teams.layoutBoard')}
-            </Button>
-          </Flexbox>
-        }
       />
-      <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
-        <Flexbox horizontal gap={8} wrap="wrap">
-          {cycleOptions.length > 1 ? (
-            <Select
-              aria-label={t('teams.cycle')}
-              options={cycleOptions}
+      {!workspaceId ? (
+        <Center flex={1}>
+          <Empty description={t('teams.personal')} icon={UsersIcon} />
+        </Center>
+      ) : teamError ? (
+        <WideScreenContainer
+          gap={16}
+          paddingBlock={16}
+          wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+        >
+          <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
+        </WideScreenContainer>
+      ) : (
+        <WideScreenContainer
+          gap={16}
+          paddingBlock={16}
+          wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+        >
+          <Flexbox horizontal align="center" gap={12} justify="space-between" wrap="wrap">
+            <Flexbox horizontal gap={8} wrap="wrap">
+              {cycleOptions.length > 1 ? (
+                <Select
+                  aria-label={t('teams.cycle')}
+                  options={cycleOptions}
+                  size="small"
+                  style={{ maxWidth: 280 }}
+                  value={cycleId}
+                  onChange={(next) => {
+                    if (typeof next === 'string') setCycleId(next);
+                  }}
+                />
+              ) : null}
+              <Button
+                icon={FolderXIcon}
+                size="small"
+                type={noProject ? 'primary' : 'default'}
+                onClick={() => setNoProject((current) => !current)}
+              >
+                {t('teams.noProject')}
+              </Button>
+            </Flexbox>
+            <Segmented
               size="small"
-              style={{ maxWidth: 280 }}
-              value={cycleId}
-              onChange={(next) => {
-                if (typeof next === 'string') setCycleId(next);
-              }}
+              value={layout}
+              options={[
+                { label: t('teams.layoutList'), value: 'list' },
+                { label: t('teams.layoutBoard'), value: 'board' },
+              ]}
+              onChange={(value) => setLayout(value as WorkQueryLayout)}
             />
-          ) : null}
-          <Button
-            size="small"
-            type={noProject ? 'primary' : undefined}
-            onClick={() => setNoProject((current) => !current)}
-          >
-            {t('teams.noProject')}
-          </Button>
-        </Flexbox>
-        <Text weight={500}>{t('teams.triage')}</Text>
-        {isLoading ? (
-          <Text type="secondary">{t('teams.loading')}</Text>
-        ) : tasks.length === 0 ? (
-          <Empty description={t('teams.triageEmpty')} />
-        ) : (
-          tasks.map((task) => (
-            <TeamTriageRow
-              canonicals={duplicateCanonicalOptions(teamTasks, task.id)}
-              destinations={destinations}
-              key={task.id}
-              members={teamData?.data.members ?? []}
-              task={task}
-              onAccept={() => void act(task, 'accept')}
-              onDecline={() => void act(task, 'decline')}
-              onReassign={(_id, assigneeUserId) => void act(task, 'reassign', { assigneeUserId })}
-              onTransferred={refreshTriage}
-              onDuplicate={(_id, canonicalTaskId) =>
-                void act(task, 'duplicate', { canonicalTaskId })
+          </Flexbox>
+          <Text weight={500}>{t('teams.triage')}</Text>
+          {triageState === 'error' ? (
+            <AsyncError error={triageError} onRetry={() => revalidateTriage()} />
+          ) : triageState === 'loading' ? (
+            <SkeletonList aria-label={t('teams.loading')} rows={4} />
+          ) : triageState === 'empty' ? (
+            <Center flex={1} padding={48}>
+              <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
+            </Center>
+          ) : (
+            <Flexbox gap={2}>
+              {tasks.map((task) => (
+                <TeamTriageRow
+                  canonicals={duplicateCanonicalOptions(teamTasks, task.id)}
+                  destinations={destinations}
+                  key={task.id}
+                  members={teamData?.data.members ?? []}
+                  task={task}
+                  onAccept={() => void act(task, 'accept')}
+                  onDecline={() => void act(task, 'decline')}
+                  onTransferred={refreshTriage}
+                  onDuplicate={(_id, canonicalTaskId) =>
+                    void act(task, 'duplicate', { canonicalTaskId })
+                  }
+                  onReassign={(_id, assigneeUserId) =>
+                    void act(task, 'reassign', { assigneeUserId })
+                  }
+                />
+              ))}
+            </Flexbox>
+          )}
+          <Text weight={500}>{t('teams.work')}</Text>
+          {workState === 'error' ? (
+            <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
+          ) : (
+            <WorkQueryResults
+              emptyLabel={t('teams.workEmpty')}
+              groups={teamGroups}
+              layout={layout}
+              loadMoreLabel={t('myWork.loadMore')}
+              loading={workState === 'loading'}
+              loadingLabel={t('teams.loading')}
+              movable={layout === 'board'}
+              tasks={teamTasks}
+              groupBy={
+                teamTasksData?.data && 'groupBy' in teamTasksData.data
+                  ? teamTasksData.data.groupBy
+                  : undefined
+              }
+              total={
+                teamTasksData?.data && 'total' in teamTasksData.data
+                  ? teamTasksData.data.total
+                  : undefined
+              }
+              onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
+              onMoved={refreshTriage}
+              onLoadMoreGroup={
+                layout === 'board' ? (key) => void loadMoreTeamGroup(key) : undefined
               }
             />
-          ))
-        )}
-        <Text weight={500}>{t('teams.work')}</Text>
-        <WorkQueryResults
-          emptyLabel={t('teams.workEmpty')}
-          groups={teamGroups}
-          layout={layout}
-          loadMoreLabel={t('myWork.loadMore')}
-          loading={isTeamTasksLoading}
-          loadingLabel={t('teams.loading')}
-          movable={layout === 'board'}
-          tasks={teamTasks}
-          groupBy={
-            teamTasksData?.data && 'groupBy' in teamTasksData.data
-              ? teamTasksData.data.groupBy
-              : undefined
-          }
-          total={
-            teamTasksData?.data && 'total' in teamTasksData.data
-              ? teamTasksData.data.total
-              : undefined
-          }
-          onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
-          onLoadMoreGroup={layout === 'board' ? (key) => void loadMoreTeamGroup(key) : undefined}
-          onMoved={refreshTriage}
-        />
-      </Flexbox>
+          )}
+        </WideScreenContainer>
+      )}
     </Flexbox>
   );
 });

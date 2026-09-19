@@ -3,54 +3,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
-// Verifies that a PINNED skill (DB `agent_skills` row or agent-document bundle)
-// has its SKILL.md body eagerly injected into the operation's skill set — so
-// downstream SkillResolver/SkillContextProvider inject the content directly
-// instead of requiring the model to call `activateSkill`. Non-pinned (auto)
-// skills stay content-less here and remain lazily activatable.
-const {
-  mockConnectorResolveByIdentifiers,
-  mockConnectorToolQueryAll,
-  mockCreateOperation,
-  mockCreateServerAgentToolsEngine,
-  mockGetAgentConfig,
-  mockGetAgentSkills,
-  mockGetComposioManifests,
-  mockGetOrviloSkillManifests,
-  mockHasDocuments,
-  mockMessageCreate,
-  mockPluginQuery,
-  mockSkillFindAll,
-  mockSkillFindByIds,
-} = vi.hoisted(() => ({
-  mockConnectorResolveByIdentifiers: vi.fn().mockResolvedValue([]),
-  mockConnectorToolQueryAll: vi.fn().mockResolvedValue([]),
-  mockCreateOperation: vi.fn(),
-  mockCreateServerAgentToolsEngine: vi.fn().mockReturnValue({
-    generateToolsDetailed: vi.fn().mockReturnValue({ enabledToolIds: [], tools: [] }),
-    getEnabledPluginManifests: vi.fn().mockReturnValue(new Map()),
-  }),
-  mockGetAgentConfig: vi.fn(),
-  mockGetAgentSkills: vi.fn().mockResolvedValue([]),
-  mockGetComposioManifests: vi.fn().mockResolvedValue([]),
-  mockGetOrviloSkillManifests: vi.fn().mockResolvedValue([]),
-  mockHasDocuments: vi.fn().mockResolvedValue(false),
-  mockMessageCreate: vi.fn(),
-  mockPluginQuery: vi.fn().mockResolvedValue([]),
-  mockSkillFindAll: vi.fn().mockResolvedValue({ data: [], total: 0 }),
-  mockSkillFindByIds: vi.fn().mockResolvedValue([]),
-}));
+// Under ACP there is no per-run operation skill set: builtin tools mount as
+// `builtinToolSpecs` on the dispatch input and builtin skills ride
+// `capabilityContext`/`extraSystemContext`; DB agent_skills and
+// agent-document skills are lazily activated by the `skills` runtime on the
+// execution host instead of being eagerly inlined here. `exclusivePluginIds`
+// is the caller-driven isolation channel (e.g. a direct /goal prompt from the
+// skill-management layer).
+const { mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate, mockPluginQuery } =
+  vi.hoisted(() => ({
+    mockDispatchHeteroAgent: vi.fn(),
+    mockGetAgentConfig: vi.fn(),
+    mockMessageCreate: vi.fn(),
+    mockPluginQuery: vi.fn().mockResolvedValue([]),
+  }));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
   getTrustedClientTokenForSession: vi.fn().mockResolvedValue(undefined),
   isTrustedClientEnabled: vi.fn().mockReturnValue(false),
-}));
-
-vi.mock('@/server/modules/KeyVaultsEncrypt', () => ({
-  KeyVaultsGateKeeper: {
-    initWithEnvKey: vi.fn().mockResolvedValue({ decrypt: vi.fn(), encrypt: vi.fn() }),
-  },
 }));
 
 vi.mock('@/database/models/message', () => ({
@@ -80,46 +51,9 @@ vi.mock('@/server/services/agent', () => ({
   }),
 }));
 
-vi.mock('@/database/models/agentSkill', () => ({
-  AgentSkillModel: vi.fn().mockImplementation(function () {
-    return {
-      findAll: mockSkillFindAll,
-      findByIds: mockSkillFindByIds,
-    };
-  }),
-}));
-
-vi.mock('@/server/services/agentDocuments', () => ({
-  AgentDocumentsService: vi.fn().mockImplementation(function () {
-    return {
-      findRowByDocumentId: vi.fn().mockResolvedValue(undefined),
-      getAgentSkills: mockGetAgentSkills,
-      hasDocuments: mockHasDocuments,
-    };
-  }),
-}));
-
 vi.mock('@/database/models/plugin', () => ({
   PluginModel: vi.fn().mockImplementation(function () {
     return { query: mockPluginQuery };
-  }),
-}));
-
-vi.mock('@/database/models/connector', () => ({
-  ConnectorModel: vi.fn().mockImplementation(function () {
-    return {
-      resolveByIdentifiers: mockConnectorResolveByIdentifiers,
-    };
-  }),
-}));
-
-vi.mock('@/database/models/connectorTool', () => ({
-  ConnectorToolModel: vi.fn().mockImplementation(function () {
-    return {
-      queryAllByConnectorIds: mockConnectorToolQueryAll,
-      queryByConnector: vi.fn().mockResolvedValue([]),
-      queryByConnectorIds: vi.fn().mockResolvedValue([]),
-    };
   }),
 }));
 
@@ -146,14 +80,27 @@ vi.mock('@/database/models/thread', () => ({
 
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
-    return { createOperation: mockCreateOperation };
+    return {
+      createOperation: vi.fn().mockResolvedValue({
+        autoStarted: true,
+        messageId: 'queue-msg-1',
+        operationId: 'op-123',
+        success: true,
+      }),
+    };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary and
+// assert on the tool surface carried into it.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
-      getOrviloSkillManifests: mockGetOrviloSkillManifests,
+      getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -161,7 +108,7 @@ vi.mock('@/server/services/market', () => ({
 vi.mock('@/server/services/composio', () => ({
   ComposioService: vi.fn().mockImplementation(function () {
     return {
-      getComposioManifests: mockGetComposioManifests,
+      getComposioManifests: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -172,16 +119,9 @@ vi.mock('@/server/services/file', () => ({
   }),
 }));
 
-vi.mock('@/server/modules/Mecha', () => ({
-  createServerAgentToolsEngine: mockCreateServerAgentToolsEngine,
-  serverMessagesEngine: vi.fn().mockResolvedValue([{ content: 'test', role: 'user' }]),
-}));
-
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: { isConfigured: false, queryDeviceList: vi.fn().mockResolvedValue([]) },
 }));
-
-vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDB: vi.fn() }));
 
 vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
@@ -193,236 +133,84 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
-// SKILL.md bodies live in the `content` column already (frontmatter stripped),
-// so `findByIds` returns them with no zip unpack. `resources` is carried by
-// `skillItemColumns` too (used by the eager resource-tree injection).
-const DB_SKILL_ROWS = [
-  { content: 'PINNED SKILL BODY', id: 'sk-1', identifier: 'db-skill-pinned', resources: {} },
-  { content: 'AUTO SKILL BODY', id: 'sk-2', identifier: 'db-skill-auto', resources: {} },
-  {
-    content: 'ZIP SKILL BODY',
-    id: 'sk-3',
-    identifier: 'db-skill-with-resources',
-    resources: { 'refs/guide.md': { fileHash: 'abc', size: 10 } },
-  },
-];
+const baseAgentConfig = (overrides: Record<string, unknown> = {}) => ({
+  chatConfig: {},
+  id: 'agent-1',
+  model: 'gpt-4',
+  plugins: [],
+  provider: 'openai',
+  systemRole: 'You are a helper',
+  ...overrides,
+});
 
-const operationSkillSetArg = () =>
-  mockCreateOperation.mock.calls[0][0].operationSkillSet as
-    | {
-        enabledPluginIds: string[];
-        skills: Array<{ content?: string; identifier: string; name: string }>;
-      }
-    | undefined;
+const dispatchInput = () => mockDispatchHeteroAgent.mock.calls[0][2];
+const builtinSpecIds = () =>
+  dispatchInput().builtinToolSpecs.map((spec: { identifier: string }) => spec.identifier);
 
-const toolsEngineConfigArg = () =>
-  mockCreateServerAgentToolsEngine.mock.calls[0][1] as
-    | {
-        agentConfig: {
-          chatConfig?: { toolMode?: string };
-          plugins: string[];
-        };
-      }
-    | undefined;
-
-const skillById = (identifier: string) =>
-  operationSkillSetArg()?.skills.find((s) => s.identifier === identifier);
-
-describe('AiAgentService.execAgent - pinned skill content injection', () => {
+describe('AiAgentService.execAgent - run tool surface', () => {
   let service: AiAgentService;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
-    // `findAll` uses `skillListColumns` — it never returns `content`.
-    mockSkillFindAll.mockResolvedValue({
-      data: DB_SKILL_ROWS.map(({ id, identifier }) => ({
-        description: 'd',
-        id,
-        identifier,
-        name: identifier,
-      })),
-      total: DB_SKILL_ROWS.length,
-    });
-    // `findByIds` uses `skillItemColumns` — it carries `content`.
-    mockSkillFindByIds.mockImplementation(async (ids: string[]) =>
-      DB_SKILL_ROWS.filter((r) => ids.includes(r.id)),
-    );
-    mockGetAgentSkills.mockResolvedValue([]);
-    mockHasDocuments.mockResolvedValue(false);
     service = new AiAgentService({} as any, 'test-user-id');
   });
 
-  it('injects a pinned DB skill body into the operation skill set, leaving auto skills content-less', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      // db-skill-pinned is pinned; db-skill-auto is absent from plugins → auto.
-      plugins: ['db-skill-pinned'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+  it('mounts pinned builtin tools as builtinToolSpecs on the dispatch input', async () => {
+    mockGetAgentConfig.mockResolvedValue(baseAgentConfig({ plugins: ['orvilo-task'] }));
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(operationSkillSetArg()?.enabledPluginIds).toContain('db-skill-pinned');
-    expect(skillById('db-skill-pinned')?.content).toBe('PINNED SKILL BODY');
-    // The auto skill is still listed (activatable) but carries no body.
-    expect(skillById('db-skill-auto')?.content).toBeUndefined();
+    expect(builtinSpecIds()).toContain('orvilo-task');
+    // The tool's usage guidance also reaches the run via extraSystemContext.
+    expect(dispatchInput().extraSystemContext).toBeDefined();
   });
 
-  it('fetches bodies only for the pinned subset to keep the op-param payload bounded', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: ['db-skill-pinned'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
-
-    // Only the pinned skill's row id is fetched — not the auto skill (sk-2).
-    expect(mockSkillFindByIds).toHaveBeenCalledWith(['sk-1']);
-  });
-
-  it('injects a pinned agent-document skill body without an extra fetch', async () => {
-    mockGetAgentSkills.mockResolvedValue([
-      {
-        content: 'AGENT DOC SKILL BODY',
-        description: 'd',
-        filename: 'foo.md',
-        identifier: 'agent-skills:foo',
-        name: 'agent-skills:foo',
-        title: null,
-      },
-    ]);
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: ['agent-skills:foo'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
-
-    expect(skillById('agent-skills:foo')?.content).toBe('AGENT DOC SKILL BODY');
-    // Agent-document bodies come from `getAgentSkills`, never the DB skill fetch.
-    expect(mockSkillFindByIds).toHaveBeenCalledWith([]);
-  });
-
-  it('does not attach content when no skill is pinned', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: [],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
-
-    expect(skillById('db-skill-pinned')?.content).toBeUndefined();
-    expect(skillById('db-skill-auto')?.content).toBeUndefined();
-    expect(mockSkillFindByIds).toHaveBeenCalledWith([]);
-  });
-
-  it('enables the goal tool for a direct server /goal prompt', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: [],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: '/goal ship it' } as any);
-
-    expect(operationSkillSetArg()?.enabledPluginIds).toContain('orvilo-goal');
-    expect(operationSkillSetArg()?.enabledPluginIds).not.toContain('orvilo-task');
-    expect(toolsEngineConfigArg()?.agentConfig).toEqual({
-      chatConfig: { toolMode: 'custom' },
-      plugins: ['orvilo-goal'],
-    });
-  });
-
-  it('isolates a direct server /goal prompt from pinned and selected tools', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: { toolMode: 'agent' },
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: ['orvilo-agent', 'pinned-tool'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+  it('restricts the surface to exclusivePluginIds (the /goal isolation channel)', async () => {
+    mockGetAgentConfig.mockResolvedValue(
+      baseAgentConfig({ plugins: ['orvilo-agent', 'orvilo-task'] }),
+    );
 
     await service.execAgent({
       agentId: 'agent-1',
+      exclusivePluginIds: ['orvilo-goal'],
       prompt: '/goal ship it',
       selectedToolIds: ['selected-tool'],
     } as any);
 
-    expect(operationSkillSetArg()?.enabledPluginIds).toEqual(['orvilo-goal']);
-    expect(toolsEngineConfigArg()?.agentConfig).toEqual({
-      chatConfig: { toolMode: 'custom' },
-      plugins: ['orvilo-goal'],
-    });
+    expect(builtinSpecIds()).toEqual(['orvilo-goal']);
   });
 
-  it('does not eager-inject an auto skill whose identifier collides with a turn-scoped tool id', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      // Nothing pinned — db-skill-auto is in auto mode.
-      plugins: [],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+  it('merges turn-scoped selectedToolIds into the surface', async () => {
+    mockGetAgentConfig.mockResolvedValue(baseAgentConfig({ plugins: ['orvilo-agent'] }));
 
-    // db-skill-auto lands in the expanded operation tool list (`agentPlugins`)
-    // via a turn-scoped @-mention pick, but it is NOT pinned on the agent.
     await service.execAgent({
       agentId: 'agent-1',
       prompt: 'Hello',
-      selectedToolIds: ['db-skill-auto'],
+      selectedToolIds: ['orvilo-task'],
     } as any);
 
-    // Eager injection must gate on the pinned set, not the expanded tool list,
-    // so the colliding auto skill stays content-less (lazily activatable).
-    expect(skillById('db-skill-auto')?.content).toBeUndefined();
-    expect(mockSkillFindByIds).toHaveBeenCalledWith([]);
+    expect(builtinSpecIds()).toContain('orvilo-task');
+    expect(builtinSpecIds()).toContain('orvilo-agent');
   });
 
-  it('appends the resource tree to a pinned skill body, mirroring activateSkill', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-1',
-      model: 'gpt-4',
-      plugins: ['db-skill-with-resources'],
-      provider: 'openai',
-      systemRole: 'You are a helper',
-    });
+  it('mounts no spec for DB or document skills — they activate lazily on the host', async () => {
+    // 'db-skill-pinned' is not a builtin tool identifier: nothing crosses the
+    // dispatch boundary for it. The `skills` runtime resolves and injects it
+    // host-side when the model calls activateSkill.
+    mockGetAgentConfig.mockResolvedValue(
+      baseAgentConfig({ plugins: ['db-skill-pinned', 'agent-skills:foo'] }),
+    );
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    const injected = skillById('db-skill-with-resources')?.content;
-    // Body plus the readReference resource tree — so a pinned ZIP/GitHub skill
-    // keeps its resource paths even though it's removed from <available_skills>.
-    expect(injected).toContain('ZIP SKILL BODY');
-    expect(injected).toContain('Available Resources');
-    expect(injected).toContain('guide.md');
+    expect(builtinSpecIds()).not.toContain('db-skill-pinned');
+    expect(builtinSpecIds()).not.toContain('agent-skills:foo');
   });
 });

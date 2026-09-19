@@ -7,6 +7,7 @@ import { AiAgentService } from '../index';
 const {
   mockIsResourceAuthorOrAdmin,
   mockCreateOperation,
+  mockDispatchHeteroAgent,
   mockGetAgentConfig,
   mockGetPreference,
   mockMessageCreate,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   mockIsResourceAuthorOrAdmin: vi.fn(),
   mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockGetAgentConfig: vi.fn(),
   mockGetPreference: vi.fn(),
   mockMessageCreate: vi.fn(),
@@ -137,6 +139,13 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — the dispatch mock's second
+// argument is the ExecRunContext (resolved agentConfig + effective
+// model/provider), so model/mode resolution is asserted at that boundary.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
@@ -213,11 +222,11 @@ describe('AiAgentService.execAgent - model/provider override', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
     mockGetPreference.mockResolvedValue({});
     mockIsResourceAuthorOrAdmin.mockResolvedValue(false);
@@ -233,14 +242,17 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       prompt: 'Hello',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('gpt-4');
-    expect(callArgs.agentConfig.provider).toBe('openai');
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('gpt-4');
+    expect(runContext.agentConfig.provider).toBe('openai');
   });
 
+  // Under ACP the topic pin is the execution binding (CLI family + selector
+  // model), not the member's chat-model pick — the binding resolves at
+  // precreate time from the member-selected config.
   it.each(['group', 'scheduled'])(
-    'pins the member-selected model when precreating a %s topic',
+    'pins the member-selected execution binding when precreating a %s topic',
     async (kind) => {
       mockGetAgentConfig.mockResolvedValue({
         ...defaultAgentConfig,
@@ -266,8 +278,8 @@ describe('AiAgentService.execAgent - model/provider override', () => {
         });
       }
       expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-        model: 'claude-sonnet-4-6',
-        provider: 'anthropic',
+        model: 'default',
+        provider: 'claude-code',
       });
       runSpy.mockRestore();
     },
@@ -282,10 +294,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       prompt: 'Hello',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(callArgs.agentConfig.provider).toBe('openai'); // provider unchanged
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
+    expect(runContext.agentConfig.provider).toBe('openai'); // provider unchanged
   });
 
   it('should override provider when provider param is provided', async () => {
@@ -297,10 +309,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       provider: 'anthropic',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('gpt-4'); // model unchanged
-    expect(callArgs.agentConfig.provider).toBe('anthropic');
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('gpt-4'); // model unchanged
+    expect(runContext.agentConfig.provider).toBe('anthropic');
   });
 
   it('should override both model and provider when both params are provided', async () => {
@@ -313,10 +325,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       provider: 'anthropic',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(callArgs.agentConfig.provider).toBe('anthropic');
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
+    expect(runContext.agentConfig.provider).toBe('anthropic');
   });
 
   it('keeps group members on their own model instead of the supervisor topic pin', async () => {
@@ -340,7 +352,7 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       prompt: 'Hello',
     });
 
-    expect(mockCreateOperation.mock.calls[0][0].agentConfig).toMatchObject({
+    expect(mockDispatchHeteroAgent.mock.calls[0][1].agentConfig).toMatchObject({
       model: 'gpt-4',
       provider: 'openai',
     });
@@ -358,14 +370,11 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       provider: 'stepfun',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('step-3.7-flash');
-    expect(callArgs.agentConfig.provider).toBe('stepfun');
-    expect(callArgs.modelRuntimeConfig).toEqual({
-      mediaCapabilities: { video: true, vision: true },
-      model: 'step-3.7-flash',
-      provider: 'stepfun',
-    });
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('step-3.7-flash');
+    expect(runContext.agentConfig.provider).toBe('stepfun');
+    expect(runContext.model).toBe('step-3.7-flash');
+    expect(runContext.provider).toBe('stepfun');
   });
 
   it('keeps the topic provider when only the model is overridden', async () => {
@@ -379,12 +388,9 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.modelRuntimeConfig).toEqual({
-      mediaCapabilities: { video: true, vision: true },
-      model: 'step-3.7-flash',
-      provider: 'stepfun',
-    });
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.model).toBe('step-3.7-flash');
+    expect(runContext.provider).toBe('stepfun');
   });
 
   it('uses the caller model preference when the workspace Agent allows member selection', async () => {
@@ -404,10 +410,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(callArgs.agentConfig.provider).toBe('anthropic');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(false);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
+    expect(runContext.agentConfig.provider).toBe('anthropic');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(false);
   });
 
   // Model / mode overrides stay member-only, but the caller's own DEVICE
@@ -440,8 +446,8 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig).toMatchObject({
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig).toMatchObject({
       agencyConfig: { boundDeviceId: 'member-device', executionTarget: 'local' },
       chatConfig: { enableAgentMode: true },
       model: 'gpt-4',
@@ -470,10 +476,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('gpt-4');
-    expect(callArgs.agentConfig.provider).toBe('openai');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(true);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('gpt-4');
+    expect(runContext.agentConfig.provider).toBe('openai');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(true);
     expect(mockIsResourceAuthorOrAdmin).toHaveBeenCalledWith(
       expect.objectContaining({ userId, workspaceId: 'workspace-1' }),
     );
@@ -504,10 +510,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(callArgs.agentConfig.provider).toBe('anthropic');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(true);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
+    expect(runContext.agentConfig.provider).toBe('anthropic');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(true);
   });
 
   it('ignores the caller model preference when the workspace Agent is private', async () => {
@@ -525,9 +531,9 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('gpt-4');
-    expect(callArgs.agentConfig.provider).toBe('openai');
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('gpt-4');
+    expect(runContext.agentConfig.provider).toBe('openai');
   });
 
   it("applies the owner's own device override while the workspace Agent is private, stripping the policy", async () => {
@@ -549,11 +555,14 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.agencyConfig).toEqual({
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.agencyConfig).toMatchObject({
       boundDeviceId: 'owner-desktop',
       executionTarget: 'local',
     });
+    // The 'fixed' selection policy is stripped so the owner's pick cannot be
+    // overridden by later member writes.
+    expect(runContext.agentConfig.agencyConfig.executionTargetSelectionPolicy).toBeUndefined();
   });
 
   it('uses a retained caller preference when a legacy workspace model policy is missing', async () => {
@@ -567,9 +576,9 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(callArgs.agentConfig.provider).toBe('anthropic');
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
+    expect(runContext.agentConfig.provider).toBe('anthropic');
   });
 
   it('ignores a retained caller preference when the workspace model policy is fixed', async () => {
@@ -587,9 +596,9 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('gpt-4');
-    expect(callArgs.agentConfig.provider).toBe('openai');
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('gpt-4');
+    expect(runContext.agentConfig.provider).toBe('openai');
   });
 
   it('keeps an explicit per-run model/provider above the caller workspace preference', async () => {
@@ -611,9 +620,9 @@ describe('AiAgentService.execAgent - model/provider override', () => {
       provider: 'anthropic',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(callArgs.agentConfig.provider).toBe('anthropic');
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
+    expect(runContext.agentConfig.provider).toBe('anthropic');
   });
 });
 
@@ -635,11 +644,11 @@ describe('AiAgentService.execAgent - toolModeOverride (/mode command)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
     mockGetPreference.mockResolvedValue({});
     mockIsResourceAuthorOrAdmin.mockResolvedValue(false);
@@ -655,11 +664,11 @@ describe('AiAgentService.execAgent - toolModeOverride (/mode command)', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello', toolModeOverride: 'chat' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.chatConfig.toolMode).toBe('chat');
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.chatConfig.toolMode).toBe('chat');
     // The context engine gates agentic-only injectors on enableAgentMode, so
     // the override must flip it too — not just toolMode.
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(false);
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(false);
   });
 
   it('/mode agent on a chat-default agent enables agent mode and its context', async () => {
@@ -670,9 +679,9 @@ describe('AiAgentService.execAgent - toolModeOverride (/mode command)', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello', toolModeOverride: 'agent' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.chatConfig.toolMode).toBe('agent');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(true);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.chatConfig.toolMode).toBe('agent');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(true);
   });
 
   it('/mode agent preserves a custom toolMode (hand-picked toolset stays)', async () => {
@@ -683,11 +692,11 @@ describe('AiAgentService.execAgent - toolModeOverride (/mode command)', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello', toolModeOverride: 'agent' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
     // `custom` is agent-side; widening it to `agent` would silently grant
     // tools the agent deliberately excluded.
-    expect(callArgs.agentConfig.chatConfig.toolMode).toBe('custom');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(true);
+    expect(runContext.agentConfig.chatConfig.toolMode).toBe('custom');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(true);
   });
 
   it('/mode chat still disables tools on a custom-toolMode agent', async () => {
@@ -698,9 +707,9 @@ describe('AiAgentService.execAgent - toolModeOverride (/mode command)', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello', toolModeOverride: 'chat' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.chatConfig.toolMode).toBe('chat');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(false);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.chatConfig.toolMode).toBe('chat');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(false);
   });
 
   it('wins over the workspace member-mode override', async () => {
@@ -714,8 +723,8 @@ describe('AiAgentService.execAgent - toolModeOverride (/mode command)', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello', toolModeOverride: 'agent' });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.chatConfig.toolMode).toBe('agent');
-    expect(callArgs.agentConfig.chatConfig.enableAgentMode).toBe(true);
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.chatConfig.toolMode).toBe('agent');
+    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(true);
   });
 });

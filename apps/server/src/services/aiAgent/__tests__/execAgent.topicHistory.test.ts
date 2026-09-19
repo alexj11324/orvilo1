@@ -1,21 +1,38 @@
 import type * as ModelBankModule from 'model-bank';
+import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+
 import { AiAgentService } from '../index';
+import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
 const {
+  mockDispatchAgentRun,
+  mockDispatchHeteroAgent,
   mockFindShareVisitorTopicIds,
+  mockGetHeterogeneousResumeSessionId,
   mockMessageCreate,
   mockMessageQuery,
-  mockCreateOperation,
+  mockSpawnHeteroSandbox,
   mockTopicFindById,
+  realDispatchRef,
 } = vi.hoisted(() => ({
-  mockCreateOperation: vi.fn(),
+  mockDispatchAgentRun: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockFindShareVisitorTopicIds: vi.fn(),
+  mockGetHeterogeneousResumeSessionId: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockMessageQuery: vi.fn(),
+  mockSpawnHeteroSandbox: vi.fn(),
   mockTopicFindById: vi.fn(),
+  // The unmocked dispatch, captured by the factory below; the mock delegates
+  // to it so tests observe the call AND the real pipeline runs.
+  realDispatchRef: {
+    current: null | typeof dispatchHeteroAgent,
+  },
 }));
 
 // Mock trusted client to avoid server-side env access
@@ -23,6 +40,11 @@ vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
   getTrustedClientTokenForSession: vi.fn().mockResolvedValue(undefined),
   isTrustedClientEnabled: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('@/libs/trpc/utils/internalJwt', () => ({
+  signHeteroOperationJWT: vi.fn().mockResolvedValue('op-jwt'),
+  signUserJWT: vi.fn().mockResolvedValue('user-jwt'),
 }));
 
 vi.mock('@/database/models/message', () => ({
@@ -80,14 +102,25 @@ vi.mock('@/database/models/plugin', () => ({
   }),
 }));
 
+vi.mock('@/database/models/device', () => ({
+  DeviceModel: vi.fn().mockImplementation(function () {
+    return {
+      findByDeviceId: vi.fn().mockResolvedValue(undefined),
+      findWorkspaceDeviceById: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+}));
+
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
+      appendRunningOperationChild: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-new' }),
       findById: mockTopicFindById,
       findShareVisitorTopicIds: mockFindShareVisitorTopicIds,
+      patchRunningOperation: vi.fn().mockResolvedValue(true),
       updateMetadata: vi.fn().mockResolvedValue(undefined),
     };
   }),
@@ -106,15 +139,47 @@ vi.mock('@/database/models/thread', () => ({
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
-      createOperation: mockCreateOperation,
+      createOperation: vi.fn().mockResolvedValue({
+        autoStarted: true,
+        messageId: 'queue-msg-1',
+        operationId: 'op-123',
+        success: true,
+      }),
     };
   }),
+}));
+
+// Wrap the real dispatch: the mock still captures the ExecRunContext +
+// dispatch input, while the real function runs far enough to reach the cloud
+// sandbox spawn — where the conversation history lands.
+vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  realDispatchRef.current = actual.dispatchHeteroAgent as typeof dispatchHeteroAgent;
+  return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
+});
+
+vi.mock('@/server/services/heterogeneousAgent', () => ({
+  HeterogeneousAgentService: vi.fn().mockImplementation(function () {
+    return {
+      getHeterogeneousResumeSessionId: mockGetHeterogeneousResumeSessionId,
+    };
+  }),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
+  spawnHeteroSandbox: mockSpawnHeteroSandbox,
 }));
 
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
       getOrviloSkillManifests: vi.fn().mockResolvedValue([]),
+      market: {
+        creds: {
+          get: vi.fn(),
+          list: vi.fn().mockResolvedValue({ data: [] }),
+        },
+      },
     };
   }),
 }));
@@ -145,8 +210,10 @@ vi.mock('@/server/services/file', () => ({
 
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
+    dispatchAgentRun: mockDispatchAgentRun,
     isConfigured: false,
     queryDeviceList: vi.fn().mockResolvedValue([]),
+    resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -166,23 +233,24 @@ vi.mock('model-bank', async (importOriginal) => {
 
 describe('AiAgentService.execAgent - topic history loading', () => {
   let service: AiAgentService;
+  let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
   const mockDb = {} as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockMessageCreate.mockClear();
-    mockMessageQuery.mockClear();
-    mockCreateOperation.mockClear();
-    mockTopicFindById.mockClear();
+    // Restore the delegate-to-real implementation cleared by clearAllMocks.
+    mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
+      realDispatchRef.current!(deps, ctx, input),
+    );
+    vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
+    vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
+    recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
 
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
-    mockCreateOperation.mockResolvedValue({
-      autoStarted: true,
-      messageId: 'queue-msg-1',
-      operationId: 'op-123',
-      success: true,
-    });
+    mockDispatchAgentRun.mockResolvedValue({ success: true });
+    mockSpawnHeteroSandbox.mockResolvedValue(undefined);
+    mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockTopicFindById.mockResolvedValue(undefined);
     mockFindShareVisitorTopicIds.mockResolvedValue([]);
 
@@ -190,10 +258,8 @@ describe('AiAgentService.execAgent - topic history loading', () => {
   });
 
   afterEach(() => {
-    mockMessageCreate.mockClear();
-    mockMessageQuery.mockClear();
-    mockCreateOperation.mockClear();
-    mockTopicFindById.mockClear();
+    recordStartSpy.mockRestore();
+    vi.restoreAllMocks();
   });
 
   it('keeps a continued topic on its snapshotted execution target', async () => {
@@ -208,14 +274,15 @@ describe('AiAgentService.execAgent - topic history loading', () => {
       prompt: 'Continue',
       deviceId: 'another-desktop',
     });
-    expect(mockCreateOperation).toHaveBeenCalled();
-    expect(mockCreateOperation.mock.calls[0][0].agentConfig.agencyConfig).toMatchObject({
+    expect(mockDispatchHeteroAgent).toHaveBeenCalled();
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.agencyConfig).toMatchObject({
       executionTarget: 'none',
     });
   });
 
   describe('when topicId is provided (follow-up message in existing thread)', () => {
-    it('should load history messages from the topic and include them in initialMessages', async () => {
+    it('loads topic history into the sandbox context for the run', async () => {
       // Simulate existing conversation history in the topic
       const existingMessages = [
         { content: '你看得见这个引用吗', id: 'msg-prev-1', role: 'user' },
@@ -229,50 +296,37 @@ describe('AiAgentService.execAgent - topic history loading', () => {
         prompt: '你能复述我说的第一句话吗',
       });
 
-      // Verify messageModel.query was called to load history for the topic.
-      // `allowShareVisitor` must be false for a non-share run — the history
-      // loader must not opt out of the creator-facing agent-share exclusion.
+      // The history load moved inside dispatchHeteroAgent: it queries the run's
+      // own topic directly. `allowShareVisitor` is intentionally true — the
+      // topic was already resolved and authorized upstream, and an agent-share
+      // visitor run executes under the creator's identity, so the
+      // creator-facing default would hand the agent an empty history.
       expect(mockMessageQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ topicId: 'topic-existing' }),
-        expect.objectContaining({
-          allowShareVisitor: false,
-          postProcessUrl: expect.any(Function),
-        }),
+        { pageSize: 200, topicId: 'topic-existing' },
+        { allowShareVisitor: true },
       );
 
-      // Verify createOperation received all history messages + the new user message
-      expect(mockCreateOperation).toHaveBeenCalled();
-      const createOperationArgs = mockCreateOperation.mock.calls[0][0];
-      const initialMessages = createOperationArgs.initialMessages;
-
-      // Should contain the 2 history messages + 1 new user message = 3 total
-      expect(initialMessages.length).toBe(3);
-      expect(initialMessages[0]).toMatchObject({ content: '你看得见这个引用吗', role: 'user' });
-      expect(initialMessages[1]).toMatchObject({
-        content: '你好！是的，我可以看到你的消息。',
-        role: 'assistant',
-      });
-      expect(initialMessages[2]).toMatchObject({
-        content: '你能复述我说的第一句话吗',
-        role: 'user',
-      });
+      // The spawned sandbox receives the history turns (the just-persisted
+      // user turn is excluded via selfMessageIds).
+      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
+      const spawnArgs = mockSpawnHeteroSandbox.mock.calls[0][0];
+      expect(spawnArgs.systemContext).toContain('你看得见这个引用吗');
+      expect(spawnArgs.systemContext).toContain('你好！是的，我可以看到你的消息。');
     });
   });
 
   describe('when no topicId is provided (first message, new conversation)', () => {
-    it('should only include the current user message in initialMessages', async () => {
+    it('dispatches with an empty conversation history', async () => {
+      mockMessageQuery.mockResolvedValue([]);
+
       await service.execAgent({
         agentId: 'agent-1',
         prompt: 'Hello',
       });
 
-      // createOperation should receive only the new user message
-      expect(mockCreateOperation).toHaveBeenCalled();
-      const createOperationArgs = mockCreateOperation.mock.calls[0][0];
-      const initialMessages = createOperationArgs.initialMessages;
-
-      expect(initialMessages.length).toBe(1);
-      expect(initialMessages[0]).toMatchObject({ content: 'Hello', role: 'user' });
+      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
+      const spawnArgs = mockSpawnHeteroSandbox.mock.calls[0][0];
+      expect(spawnArgs.systemContext ?? '').not.toContain('Hello');
     });
   });
 
@@ -294,9 +348,9 @@ describe('AiAgentService.execAgent - topic history loading', () => {
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
       // The guard must fail BEFORE any history read reaches the visitor
-      // transcript.
+      // transcript — and before anything is dispatched.
       expect(mockMessageQuery).not.toHaveBeenCalled();
-      expect(mockCreateOperation).not.toHaveBeenCalled();
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
     });
 
     it('rejects a run when the visitor topic is filtered out of the default read scope', async () => {
@@ -316,7 +370,7 @@ describe('AiAgentService.execAgent - topic history loading', () => {
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
       expect(mockMessageQuery).not.toHaveBeenCalled();
-      expect(mockCreateOperation).not.toHaveBeenCalled();
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
     });
   });
 });

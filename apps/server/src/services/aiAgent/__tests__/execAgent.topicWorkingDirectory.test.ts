@@ -1,5 +1,9 @@
 import type * as ModelBankModule from 'model-bank';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
 
@@ -16,28 +20,36 @@ import { AiAgentService } from '../index';
 const {
   mockCreateOperation,
   mockCreateServerAgentToolsEngine,
+  mockDispatchAgentRun,
+  mockExecuteToolCall,
   mockFindByDeviceId,
   mockGenerateToolsDetailed,
   mockGetAgentConfig,
   mockGetEnabledPluginManifests,
+  mockGetHeterogeneousResumeSessionId,
   mockInitWorkspace,
   mockMessageCreate,
   mockPluginQuery,
   mockQueryDeviceList,
+  mockSpawnHeteroSandbox,
   mockTopicFindById,
   mockUpdateDevice,
   mockUpdateTopicMetadata,
 } = vi.hoisted(() => ({
   mockCreateOperation: vi.fn(),
   mockCreateServerAgentToolsEngine: vi.fn(),
+  mockDispatchAgentRun: vi.fn(),
+  mockExecuteToolCall: vi.fn(),
   mockFindByDeviceId: vi.fn(),
   mockGenerateToolsDetailed: vi.fn(),
   mockGetAgentConfig: vi.fn(),
   mockGetEnabledPluginManifests: vi.fn(),
+  mockGetHeterogeneousResumeSessionId: vi.fn(),
   mockInitWorkspace: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn(),
   mockQueryDeviceList: vi.fn(),
+  mockSpawnHeteroSandbox: vi.fn(),
   mockTopicFindById: vi.fn(),
   mockUpdateDevice: vi.fn(),
   mockUpdateTopicMetadata: vi.fn(),
@@ -105,9 +117,11 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      appendRunningOperationChild: vi.fn().mockResolvedValue(true),
       findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: mockTopicFindById,
+      patchRunningOperation: vi.fn().mockResolvedValue(true),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       updateMetadata: mockUpdateTopicMetadata,
@@ -171,14 +185,57 @@ vi.mock('@/server/modules/Mecha', () => {
   };
 });
 
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
+  createAgentStateManager: vi.fn(function () {
+    return {
+      createOperationMetadata: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+  createStreamEventManager: () => ({
+    publishAgentRuntimeEnd: vi.fn().mockResolvedValue('end-event-id'),
+    publishAgentRuntimeInit: vi.fn().mockResolvedValue('init-event-id'),
+  }),
+  isRedisAvailable: vi.fn(function () {
+    return false;
+  }),
+}));
+
+vi.mock('@/libs/trpc/utils/internalJwt', () => ({
+  signHeteroOperationJWT: vi.fn().mockResolvedValue('op-jwt'),
+  signUserJWT: vi.fn().mockResolvedValue('user-jwt'),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent', () => ({
+  HeterogeneousAgentService: vi.fn().mockImplementation(function () {
+    return {
+      getHeterogeneousResumeSessionId: mockGetHeterogeneousResumeSessionId,
+    };
+  }),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
+  spawnHeteroSandbox: mockSpawnHeteroSandbox,
+}));
+
+vi.mock('@/server/services/deviceGateway/dispatchAuthorization', () => ({
+  resolveDeviceDispatchAuthorizationFailure: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent/remoteDeviceHeteroContext', () => ({
+  buildRemoteDeviceHeteroContext: vi.fn().mockReturnValue('device context'),
+}));
+
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
+    dispatchAgentRun: mockDispatchAgentRun,
+    executeToolCall: mockExecuteToolCall,
     initWorkspace: mockInitWorkspace,
     get isConfigured() {
       return true;
     },
     queryDeviceList: mockQueryDeviceList,
     queryDeviceSystemInfo: vi.fn().mockResolvedValue(null),
+    resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -212,11 +269,22 @@ const createAgentConfig = (agencyConfig: Record<string, any>) => ({
 
 describe('AiAgentService.execAgent - topic working directory binding', () => {
   let service: AiAgentService;
+  let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
   const mockDb = {} as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // The real dispatch runs end to end: the operation row persists via the
+    // stubbed lifecycle, then the device route resolves the working directory
+    // and pins it through `bindTopicWorkingDirectory`.
+    vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
+    vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
+    recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
+    mockDispatchAgentRun.mockResolvedValue({ success: true });
+    mockExecuteToolCall.mockResolvedValue({ success: true });
+    mockSpawnHeteroSandbox.mockResolvedValue(undefined);
+    mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
     mockCreateOperation.mockResolvedValue({
       autoStarted: true,
@@ -237,6 +305,11 @@ describe('AiAgentService.execAgent - topic working directory binding', () => {
     mockUpdateTopicMetadata.mockResolvedValue(undefined);
 
     service = new AiAgentService(mockDb, userId);
+  });
+
+  afterEach(() => {
+    recordStartSpy.mockRestore();
+    vi.restoreAllMocks();
   });
 
   it('binds a new topic to the agent per-device working directory', async () => {

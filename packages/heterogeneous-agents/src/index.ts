@@ -119,7 +119,13 @@ export {
   SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
   SERVER_DEFAULT_HETEROGENEOUS_PROFILE_DEFAULT_MODELS,
 } from './providerBinding';
-export { createAdapter, listAgentTypes, listLocalAgentTypes } from './registry';
+export {
+  createLiveAdapter,
+  createTraceDecoder,
+  listLiveAgentTypes,
+  listLocalAgentTypes,
+  listTraceDecoderTypes,
+} from './registry';
 export type { HeterogeneousAgentScanMap, HeterogeneousAgentScanStatus } from './scan/types';
 export { ACP_RUNTIME_AGENT_TYPES } from './spawn/acpRuntime';
 export {

@@ -28,7 +28,7 @@ import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
-import { workQueryBoardGroups } from './workQueryBoard';
+import { workQueryBoardGroups, workQuerySourceKeysForKanbanColumn } from './workQueryBoard';
 import {
   type WorkQueryGroupPage,
   workQueryHasMore,
@@ -335,8 +335,15 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             external={{
               groups: workQueryBoardGroups(groups, boardGroupBy),
               movable,
-              onLoadMoreGroup,
+              onLoadMoreGroup: onLoadMoreGroup
+                ? (columnKey) => {
+                    for (const key of workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)) {
+                      onLoadMoreGroup(key);
+                    }
+                  }
+                : undefined,
               onRefresh: onMoved,
+              queryGroupBy: boardGroupBy,
               settled: true,
             }}
           />

@@ -18,6 +18,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { commitWorkQueryBoardMove } from '@/features/MyWork/workQueryBoardMove';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { taskService } from '@/services/task';
@@ -26,7 +27,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 import { KANBAN_GROUP_PAGE_SIZE, kanbanGroupLimitCap } from '@/store/task/slices/list/action';
-import type { TaskListItem } from '@/store/task/slices/list/initialState';
+import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
@@ -121,7 +122,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
  * Externally-sourced board data for surfaces whose queries can't map to the
  * task store's groupList scopes (saved views, team boards — arbitrary
  * work-query ASTs). `groups` must already be bucketed under the board's
- * column keys. Drops still commit through `task.update`; `onRefresh` is the
+ * column keys. Cross-column drops commit through `workAttention.moveBoard`
+ * (VIEW08 CAS + exact-state picker). Same-column reorder is visual-only
+ * because the work-query board has no position write. `onRefresh` is the
  * caller's refetch so the settled write can resync the columns.
  */
 export interface KanbanExternalGroups {
@@ -132,6 +135,12 @@ export interface KanbanExternalGroups {
   movable?: boolean;
   onLoadMoreGroup?: (columnKey: string) => void;
   onRefresh?: () => Promise<unknown> | void;
+  /**
+   * Work-query grouping the supplied `groups` were fetched with. The shared
+   * board still renders Cordy status columns; this selects the `moveBoard`
+   * `targetKey` (workflow category vs execution status).
+   */
+  queryGroupBy?: 'status' | 'workflowCategory';
   /** AsyncBoundary settle flag — defaults to `groups` being defined. */
   settled?: boolean;
 }
@@ -339,6 +348,18 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       };
       const memberAlready = taskMatchesKanbanColumn(task, groupBy, column.key);
 
+      if (external) {
+        // Membership is the Cordy column (paused+failed share needsInput).
+        // Rewriting a `failed` card to `paused` would be a silent status
+        // change; same-column reorder also has no work-query position write.
+        if (memberAlready) return true;
+        return commitWorkQueryBoardMove({
+          column,
+          groupBy: external.queryGroupBy ?? 'workflowCategory',
+          task,
+        });
+      }
+
       if (groupBy === 'status') {
         if (task.workflowStateId) {
           const targetWorkflowCategory = column.targetWorkflowCategory;
@@ -407,7 +428,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
       return true;
     },
-    [groupBy, internalRefreshTaskDetail, t, updateTask],
+    [external, groupBy, internalRefreshTaskDetail, t, updateTask],
   );
 
   // ── Drag handlers ──────────────────────────────────────────────

@@ -16,6 +16,9 @@
     "Favorite title hydration and always-visible reorder UI over favoriteReorder CAS",
     "Inbox NotificationFeedPage envelope with live titles and partial Alert",
     "workAttention.search max 200, TeamsPage search box, NavItem hover:none",
+    "CommandMenu recents via RecentModel project/savedView/team/task visit feed",
+    "Personal-mode hides Teams in CommandMenu Navigate and useNavLayout",
+    "Pin/unpin on task, team, project, saved view; favorites list can unpin",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -41,11 +44,12 @@
     "packages/types/src/workAttention.ts",
     "apps/server/src/services/workAttention/actionSources.ts",
     "apps/server/src/services/workAttention/feedCard.ts",
-    "apps/server/src/services/workAttention/feedPage.ts"
+    "apps/server/src/services/workAttention/feedPage.ts",
+    "apps/server/src/services/workAttention/recentWork.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
-  "implementationHeadBeforeDocs": "ad838850a25ee24fdcf7cad6fea3841d6cfd3174",
+  "implementationHeadBeforeDocs": "40cd74b3",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",
@@ -66,7 +70,6 @@
   "status": "IN_PROGRESS",
   "targetBranch": "canary",
   "unverified": [
-    "CommandMenu recent visits are still mostly task/topic Home recents",
     "NAV02 Electron native notification click matrix",
     "ACCEPTANCE.md 64 rows still NOT_RUN",
     "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"

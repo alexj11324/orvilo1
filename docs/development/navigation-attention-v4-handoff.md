@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                     |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                       |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                |
-| 实施 HEAD（本交接提交之前）      | `ad838850` `🐛 fix(nav): show project views and page past null sorts`                       |
+| 实施 HEAD（本交接提交之前）      | `40cd74b3` `✨ feat(nav): show recent work in command menu and pin favorites`               |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                      |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                          |
 | 远端 canary 现已走到             | `73257dff`（#80 quota）。PR `mergeable_state: behind`。**未授权 rebase，不要自行 rebase。** |
@@ -72,13 +72,21 @@
 - 收藏始终可见上 / 下箭头，走 `favoriteReorder` CAS，CONFLICT 则 refetch
 - `workAttention.search` / `searchTasks` / `searchProjects` 上限 `WORK_SEARCH_MAX_PER_TYPE`（200）；CommandMenu 仍混合 5 / 带类型 50；`TeamsPage` 搜索框走 sidecar，不传 FTS `type:`
 - `NavItem` `@media (hover: none)` 强制可见 `.nav-item-actions`
-- CommandMenu 跨类型 recents：`RecentModel.queryRecent` 加 project/savedView/team 三个 union arm，各按自己 readable 谓词（workspace+public /member grant /owner+team+workspace 可见性）；`recent.getAll` zod enum 与 routePath 补齐（`/project/`、`/views/`、`/teams/`）；`RECENT_SIDEBAR_TYPES` 变四类型，CommandMenu 主面板新增 Recents 组（开菜单时懒拉 `recentService.getAll(8)`）
+- CommandMenu 跨类型 recents：`RecentModel.queryRecent` 加 project/savedView/team 三个 union arm；`recent.getAll` 与 `RECENT_SIDEBAR_TYPES` 覆盖四类型；主面板 `RecentsCommands` 开菜单时懒拉 `recentService.getAll(8)`
+- 个人模式 CommandMenu Navigate 与 `useNavLayout` 不再露出 Teams（侧栏原先已藏）
+- Task / Team / Project / Saved View 共用 `WorkFavoriteButton`；侧栏收藏可 unpin
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-**已全部落地。** 只剩 NICE（可后做）：task/team/project 的 pin UI、favorites unpin/overflow、NAV02 原生通知矩阵、个人模式藏 Teams tab、CMDK SWR key 去掉 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
+**已全部落地。** 只剩 NICE（可后做）：NAV02 原生通知矩阵、收藏列表 overflow 折叠、CMDK 搜索 SWR key 已不含 workspaceId、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。
+
+## 给下一刀
+
+Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 rebase 到更新的 canary，除非用户要求。
+
+`listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
 
 ## 阻塞 / 不要假装完成
 
@@ -123,10 +131,9 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `cfc06a6f`：66 passed；当时全仓 `tsgo --noEmit` 通过
 - 本增量（Inbox 包络 / 收藏重排 / 团队搜索 / 触屏）：lint 干净，42 passed。不是 64× AC。
 - `d6560eb7`（CommandMenu 跨类型 recents + `recent.test.ts` work-type arms）：lint 干净，38 passed。不是 64× AC。
+- pin / 个人模式藏 Teams：lint 干净，`bun run check` 改动文件 55 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
-
-`listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
 
 ## i18n / 路由 /schema 备忘
 

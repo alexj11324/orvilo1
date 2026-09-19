@@ -8,6 +8,7 @@ interface MockGlobalState {
     hiddenSidebarSections?: string[];
     sidebarExpandedKeys?: string[];
     sidebarItems?: string[];
+    workspace?: { hiddenSidebarSections?: string[]; sidebarExpandedKeys?: string[] };
   };
   updateSystemStatus: (patch: Partial<MockGlobalState['status']>) => void;
 }
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
       { key: 'inbox', title: 'Inbox', url: '/inbox' },
       { key: 'my-work', title: 'My Work', url: '/my-work' },
       { key: 'reviews', title: 'Reviews', url: '/my-work?tab=review' },
+      { key: 'agent', title: 'Agent', url: '/agents' },
     ],
   },
   searchParams: new URLSearchParams(),
@@ -62,7 +64,9 @@ vi.mock('@/libs/router/navigation', () => ({
   usePathname: () => '/',
 }));
 
-vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getActiveWorkspaceSlug: () => null,
   useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
 
@@ -145,11 +149,12 @@ describe('Home sidebar body', () => {
     const texts = children.map((child) => child.textContent);
 
     // Core links first, in contract order — the stored legacy keys
-    // (recents/tasks/image) can neither reorder nor resurrect.
+    // (recents/tasks/image) can neither reorder nor resurrect. Agent is a
+    // flat row now; the old agent accordion is retired.
     expect(texts[0]).toBe('Inbox');
     expect(texts[1]).toBe('My Work');
     expect(texts[2]).toBe('Reviews');
-    expect(screen.getByTestId('sidebar-item-agent')).toBeInTheDocument();
+    expect(texts[3]).toBe('Agent');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
     expect(screen.queryByTestId('sidebar-item-teams')).not.toBeInTheDocument();
@@ -180,13 +185,13 @@ describe('Home sidebar body', () => {
   });
 
   it('passes persisted expanded keys to the accordion', () => {
-    mocks.globalState.status.sidebarExpandedKeys = ['agent'];
+    mocks.globalState.status.sidebarExpandedKeys = ['workspace'];
 
     render(<Body />);
 
     expect(screen.getByTestId('sidebar-accordion')).toHaveAttribute(
       'data-expanded-keys',
-      '["agent"]',
+      '["workspace"]',
     );
   });
 });

@@ -75,14 +75,18 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
 const SETTINGS_PREFIX_REGEX = /^\/settings\/([^/?#]+)/;
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;
 
-const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
+export const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
   'agent',
   'agents',
+  'automations',
   'community',
   'eval',
+  'goal',
   'group',
   'image',
+  'inbox',
   'memory',
+  'my-work',
   'page',
   'project',
   'projects',
@@ -90,7 +94,9 @@ const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
   'settings',
   'task',
   'tasks',
+  'teams',
   'video',
+  'views',
 ]);
 
 const parseFirstSegment = (pathname: string): string | null => {

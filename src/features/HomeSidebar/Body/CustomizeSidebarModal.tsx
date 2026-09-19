@@ -52,7 +52,7 @@ const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   { alwaysVisible: true, icon: Inbox, id: 'inbox', labelKey: 'tab.inbox' },
   { alwaysVisible: true, icon: SquareUser, id: 'my-work', labelKey: 'tab.myWork' },
   { alwaysVisible: true, icon: GitPullRequestIcon, id: 'reviews', labelKey: 'tab.reviews' },
-  { icon: BotIcon, id: 'agent', labelKey: 'navPanel.agent' },
+  { alwaysVisible: true, icon: BotIcon, id: 'agent', labelKey: 'navPanel.agent' },
   { icon: FolderKanbanIcon, id: 'workspace', labelKey: 'navPanel.workspace' },
   { icon: Star, id: 'favorites', labelKey: 'tab.favorites' },
   { icon: Users, id: 'teams', labelKey: 'navPanel.yourTeams', workspaceOnly: true },
@@ -129,7 +129,7 @@ const SectionRow = memo<{
 
 /**
  * Sidebar customization under the fixed IA contract: core destinations stay
- * pinned, optional sections (agent / workspace / favorites / your teams) can
+ * pinned, optional sections (workspace / favorites / your teams) can
  * be hidden. Ordering is contract-owned, so there is no drag-sort here.
  */
 const CustomizeSidebarContent = memo(() => {

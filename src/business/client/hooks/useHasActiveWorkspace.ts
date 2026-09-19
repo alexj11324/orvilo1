@@ -1,1 +1,5 @@
-export const useHasActiveWorkspace = (): boolean => false;
+'use client';
+
+import { useActiveWorkspaceId } from './useActiveWorkspaceId';
+
+export const useHasActiveWorkspace = (): boolean => useActiveWorkspaceId() !== null;

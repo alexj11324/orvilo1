@@ -8,6 +8,7 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import Loading from '@/components/Loading/BrandTextLoading';
 import { RouteMetaBridge } from '@/features/RouteMeta';
+import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { stripWorkspaceSlug } from '@/features/Workspace/workspaceAwarePath';
 import dynamic from '@/libs/next/dynamic';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -46,6 +47,7 @@ const MobileMainLayout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
   const activeSlug = useActiveWorkspaceSlug();
   const { pathname } = useLocation();
+  useWorkspaceUrlSync();
 
   const showNav = isMobileNavRoute(pathname, activeSlug);
   return (

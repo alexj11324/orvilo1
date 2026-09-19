@@ -24,7 +24,6 @@ import { useUserStore } from '@/store/user';
 import { isModifierClick } from '@/utils/navigation';
 
 import { useInboxUnreadCount } from '../Header/components/useInboxUnreadCount';
-import Agent from './Agent';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import TeamsSection from './TeamsSection';
 import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPreference';
@@ -38,22 +37,16 @@ export enum GroupKey {
   Workspace = 'workspace',
 }
 
-const ACCORDION_KEYS = new Set<string>([
-  GroupKey.Agent,
-  GroupKey.Workspace,
-  GroupKey.Favorites,
-  GroupKey.Teams,
-]);
+const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, GroupKey.Teams]);
 
 /** Core links can never be hidden — the fixed IA keeps them always mounted. */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews']);
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
 const HEADER_KEYS = new Set<string>(['home', 'search']);
 
 const accordionComponents: Record<string, (key: string) => ReactElement> = {
-  [GroupKey.Agent]: (key) => <Agent itemKey={key} key={key} />,
   [GroupKey.Favorites]: (key) => <WorkFavorites itemKey={key} key={key} />,
   [GroupKey.Teams]: (key) => <TeamsSection itemKey={key} key={key} />,
   [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
@@ -170,7 +163,9 @@ const Body = memo(() => {
           ? onReviewTab
           : key === 'my-work'
             ? tab === 'my-work' && !onReviewTab
-            : tab === key;
+            : key === 'agent'
+              ? tab === 'agent' || tab === 'agents'
+              : tab === key;
       return (
         <WorkspaceLink
           key={key}

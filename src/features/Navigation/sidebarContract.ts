@@ -40,7 +40,7 @@ export const LEGACY_PRIMARY_KEYS = new Set([
 ]);
 
 /** Optional sections a user may hide — everything else is structural. */
-export const OPTIONAL_SECTION_KEYS = new Set(['agent', 'workspace', 'favorites', 'teams']);
+export const OPTIONAL_SECTION_KEYS = new Set(['workspace', 'favorites', 'teams']);
 
 export const isFixedPrimaryKey = (key: string): key is (typeof FIXED_PRIMARY_KEYS)[number] =>
   (FIXED_PRIMARY_KEYS as readonly string[]).includes(key);

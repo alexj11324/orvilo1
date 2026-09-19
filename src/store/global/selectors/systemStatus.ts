@@ -256,7 +256,7 @@ const withoutRetiredItems = (items: string[]): string[] => {
 
 /** The accordion sections of the fixed IA — contiguous in the sidebar list
  * and the only entries the user may hide via `hiddenSidebarSections`. */
-export const SIDEBAR_ACCORDION_KEYS = new Set(['agent', 'workspace', 'favorites', 'teams']);
+export const SIDEBAR_ACCORDION_KEYS = new Set(['workspace', 'favorites', 'teams']);
 
 const DEFAULT_BOTTOM_KEYS = new Set(
   DEFAULT_SIDEBAR_ITEMS.slice(DEFAULT_SIDEBAR_ITEMS.indexOf(SIDEBAR_SPACER_ID) + 1),

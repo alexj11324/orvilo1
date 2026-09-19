@@ -362,11 +362,12 @@ describe('systemStatusSelectors', () => {
   });
 
   describe('reorderSidebarItems', () => {
-    // Synthetic fixture: one top-group slot, the accordion block
-    // (agent/workspace/favorites/teams), the spacer, then three bottom-group
-    // slots. `reorderSidebarItems` is key-agnostic — it only consults
-    // SIDEBAR_ACCORDION_KEYS membership — so non-accordion names here are
-    // placeholders that keep the shape wide enough to exercise the rules.
+    // Synthetic fixture: two top-group slots (alpha + the non-accordion
+    // `agent` flat row), the accordion block (workspace/favorites/teams), the
+    // spacer, then three bottom-group slots. `reorderSidebarItems` is
+    // key-agnostic — it only consults SIDEBAR_ACCORDION_KEYS membership — so
+    // non-accordion names here are placeholders that keep the shape wide
+    // enough to exercise the rules.
     const DEFAULT = [
       'alpha',
       'agent',
@@ -415,8 +416,8 @@ describe('systemStatusSelectors', () => {
       // lands ahead of the accordion (top group).
       expect(reorderSidebarItems(DEFAULT, 6, 2)).toEqual([
         'alpha',
-        'beta',
         'agent',
+        'beta',
         'workspace',
         'favorites',
         'teams',
@@ -426,16 +427,16 @@ describe('systemStatusSelectors', () => {
       ]);
     });
 
-    it('should move the whole accordion block when moving `agent` up past the block boundary', () => {
-      // `agent` (idx 1) moveUp → idx 0. Block [agent…teams] slides to top,
-      // spacer follows it.
+    it('should move the non-accordion `agent` flat row normally past the block', () => {
+      // `agent` (idx 1) moveUp → idx 0. `agent` is a core flat row, not an
+      // accordion member, so this is a plain move — the block stays put.
       expect(reorderSidebarItems(DEFAULT, 1, 0)).toEqual([
         'agent',
+        'alpha',
         'workspace',
         'favorites',
         'teams',
         SIDEBAR_SPACER_ID,
-        'alpha',
         'beta',
         'gamma',
         'delta',
@@ -448,15 +449,16 @@ describe('systemStatusSelectors', () => {
       expect(reorderSidebarItems(DEFAULT, 4, 5)).toBe(DEFAULT);
     });
 
-    it('should swap agent and workspace within the block', () => {
-      // `agent` (idx 1) moveDown → idx 2. Within block, so just swap.
+    it('should snap the non-accordion `agent` past the block when dragged down into it', () => {
+      // `agent` (idx 1) moveDown → idx 2 (workspace's slot, the block start).
+      // A non-accordion item dropped into the block snaps past it.
       expect(reorderSidebarItems(DEFAULT, 1, 2)).toEqual([
         'alpha',
         'workspace',
-        'agent',
         'favorites',
         'teams',
         SIDEBAR_SPACER_ID,
+        'agent',
         'beta',
         'gamma',
         'delta',

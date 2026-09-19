@@ -20,6 +20,7 @@ import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
 import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
 import { RouteMetaBridge } from '@/features/RouteMeta';
+import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { usePlatform } from '@/hooks/usePlatform';
 import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
 import dynamic from '@/libs/next/dynamic';
@@ -38,6 +39,9 @@ const GlobalApprovalNotification = dynamic(() => import('@/features/GlobalApprov
 const Layout: FC = () => {
   const { isPWA } = usePlatform();
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
+  // URL is the source of truth for workspace context — keep the selection
+  // store aligned with the route before any workspace surface paints.
+  useWorkspaceUrlSync();
 
   // The provider wraps the whole tree — the `<Outlet/>` subtree that resolves to
   // the pages *and* the `<GlobalOverlays/>` host below it. Panels declared on a

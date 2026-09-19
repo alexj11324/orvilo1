@@ -13,7 +13,6 @@ import {
   Text,
 } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
   EyeOffIcon,
@@ -74,22 +73,15 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-interface TeamSubItem {
-  icon: LucideIcon;
-  key: string;
-  tab: string;
-  titleKey: string;
-}
-
 /** Linear's per-team sub-navigation. Every entry lands on a real surface of
  * the team page — the `tab` query selects which section renders. */
-const TEAM_SUB_ITEMS: TeamSubItem[] = [
+const TEAM_SUB_ITEMS = [
   { icon: House, key: 'home', tab: 'home', titleKey: 'teams.subNav.home' },
   { icon: InboxIcon, key: 'triage', tab: 'triage', titleKey: 'teams.subNav.triage' },
   { icon: ListChecksIcon, key: 'issues', tab: 'issues', titleKey: 'teams.subNav.issues' },
   { icon: FolderKanbanIcon, key: 'projects', tab: 'projects', titleKey: 'teams.subNav.projects' },
   { icon: Layers, key: 'views', tab: 'views', titleKey: 'teams.subNav.views' },
-];
+] as const;
 
 const teamAccordionKey = (teamId: string) => `team:${teamId}`;
 
@@ -244,7 +236,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
                   </WorkspaceLink>
                 </AccordionHeader>
                 <AccordionPanel>
-                  <Flexbox gap={1} paddingBlock={1} paddingInlineStart={20}>
+                  <Flexbox gap={1} paddingBlock={1} style={{ paddingInlineStart: 20 }}>
                     {TEAM_SUB_ITEMS.map((sub) => (
                       <WorkspaceLink
                         key={sub.key}

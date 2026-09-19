@@ -1,4 +1,4 @@
-import { GitPullRequestIcon, InboxIcon, SquareUserIcon } from 'lucide-react';
+import { BotIcon, GitPullRequestIcon, InboxIcon, SquareUserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -36,9 +36,10 @@ export const useNavLayout = (): NavLayout => {
 
   // Fixed primary IA (see features/Navigation/sidebarContract): the header
   // carries the workspace switcher + search/new-issue icons; the body renders
-  // inbox/my-work/reviews as core links and the accordion sections (agent,
-  // workspace, favorites, teams) separately. Retired surfaces keep their
-  // routes for deep links but no sidebar entry.
+  // inbox/my-work/reviews/agent as core links (Agent is a flat row to /agents —
+  // the old agent accordion is retired) and the accordion sections (workspace,
+  // favorites, teams) separately. Retired surfaces keep their routes for deep
+  // links but no sidebar entry.
   const topNavItems = useMemo(
     () =>
       [
@@ -59,6 +60,12 @@ export const useNavLayout = (): NavLayout => {
           key: SidebarTabKey.Reviews,
           title: t('tab.reviews'),
           url: '/my-work?tab=review',
+        },
+        {
+          icon: BotIcon,
+          key: SidebarTabKey.Agent,
+          title: t('navPanel.agent'),
+          url: '/agents',
         },
       ] as NavItem[],
     [t],

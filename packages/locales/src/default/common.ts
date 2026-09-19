@@ -485,7 +485,7 @@ export default {
   'addNew': 'Add new',
   'gotIt': 'Got it',
   'more': 'More',
-  'navPanel.agent': 'Agents',
+  'navPanel.agent': 'Agent',
   'navPanel.bottomDivider': 'Items below anchor to bottom',
   'navPanel.customizeSidebar': 'Customize Sidebar',
   'navPanel.displayItems': 'Display Items',

@@ -1,3 +1,10 @@
-export const getActiveWorkspaceSlug = (): string | null => null;
+'use client';
 
-export const useActiveWorkspaceSlug = (): string | null => null;
+import { useSyncExternalStore } from 'react';
+
+import { getActiveWorkspaceSlug, subscribeActiveWorkspace } from './useActiveWorkspaceId';
+
+export { getActiveWorkspaceSlug } from './useActiveWorkspaceId';
+
+export const useActiveWorkspaceSlug = (): string | null =>
+  useSyncExternalStore(subscribeActiveWorkspace, getActiveWorkspaceSlug, getActiveWorkspaceSlug);

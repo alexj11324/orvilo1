@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { createMainAreaChildren } from '@/spa/router/desktopRouter.config';
+import { createMainAreaChildren, sharedMainAreaChildren } from '@/spa/router/desktopRouter.config';
 
 import { RESERVED_FIRST_SEGMENTS } from '../useWorkspaceUrlSync';
+import { WORKSPACE_MIRRORED_FIRST_SEGMENTS } from '../workspaceAwarePath';
 
 /**
  * The comment on `RESERVED_FIRST_SEGMENTS` has always asked for this — "kept in
@@ -44,5 +45,15 @@ describe('RESERVED_FIRST_SEGMENTS', () => {
     // Guards the guard: if `createMainAreaChildren` ever returns no static
     // segments, the assertion above would pass vacuously.
     expect(staticTopLevelSegments().length).toBeGreaterThan(5);
+  });
+});
+
+describe('WORKSPACE_MIRRORED_FIRST_SEGMENTS', () => {
+  it('covers every static top-level path mirrored under /:workspaceSlug', () => {
+    const missing = staticTopLevelSegments(sharedMainAreaChildren).filter(
+      (segment) => segment && !WORKSPACE_MIRRORED_FIRST_SEGMENTS.has(segment),
+    );
+
+    expect(missing).toEqual([]);
   });
 });

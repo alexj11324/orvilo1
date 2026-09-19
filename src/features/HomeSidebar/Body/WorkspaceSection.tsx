@@ -6,12 +6,9 @@ import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
-  accordionStyles,
   AccordionTrigger,
-  ActionIcon,
   Text,
 } from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlarmClock,
@@ -24,7 +21,7 @@ import {
   SlidersHorizontalIcon,
   UsersIcon,
 } from 'lucide-react';
-import { memo, type MouseEvent, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -103,8 +100,6 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
     [activeWorkspaceId, navigate, t],
   );
 
-  const stop = useCallback((e: MouseEvent) => e.stopPropagation(), []);
-
   const row = useCallback(
     (key: string, icon: LucideIcon, title: string, url: string) => (
       <WorkspaceLink key={key} to={url}>
@@ -123,25 +118,6 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
               {t('navPanel.workspace')}
             </Text>
           </AccordionTrigger>
-          <Flexbox
-            horizontal
-            align="center"
-            gap={2}
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-            )}
-          >
-            <DropdownMenu items={moreMenu}>
-              <ActionIcon
-                icon={MoreHorizontalIcon}
-                size={'small'}
-                title={t('navPanel.more')}
-                onClick={stop}
-              />
-            </DropdownMenu>
-          </Flexbox>
         </AccordionHeader>
       </ContextMenuTrigger>
       <AccordionPanel>
@@ -150,6 +126,13 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
           {row('views', LayoutList, t('tab.views'), '/views')}
           {activeWorkspaceId &&
             row('members', UsersIcon, t('navPanel.members'), '/settings/members')}
+          {/* Linear renders "More" as a row — it opens the menu holding the
+              retired surfaces (Automations / Resource / workspace settings). */}
+          <DropdownMenu items={moreMenu}>
+            <div>
+              <NavItem icon={MoreHorizontalIcon} title={t('navPanel.more')} />
+            </div>
+          </DropdownMenu>
         </Flexbox>
       </AccordionPanel>
     </AccordionItem>

@@ -4,8 +4,16 @@ import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
 import { MarketService } from '@/server/services/market';
 
-const log = debug('github-repo');
+import {
+  type ExpectedPullRequestIdentity,
+  readPullRequestReviewSnapshot,
+  type RemotePrReviewSnapshot,
+} from './reviewSnapshot';
 
+export { isRemotePrMergeReady } from './reviewGate';
+export type { ExpectedPullRequestIdentity, RemotePrReviewSnapshot } from './reviewSnapshot';
+
+const log = debug('github-repo');
 const GITHUB_API = 'https://api.github.com';
 
 export interface GithubRepoCoordinate {
@@ -13,10 +21,6 @@ export interface GithubRepoCoordinate {
   owner: string;
 }
 
-/**
- * Parse a workspace `repo` coordinate — `owner/repo`, `owner/repo.git`, or a
- * `https://github.com/owner/repo[.git]` URL — into `{ owner, name }`.
- */
 export const parseGithubRepo = (repo: string): GithubRepoCoordinate | undefined => {
   const trimmed = repo
     .trim()
@@ -27,17 +31,6 @@ export const parseGithubRepo = (repo: string): GithubRepoCoordinate | undefined 
   return { name: match[2], owner: match[1] };
 };
 
-/**
- * Resolve the caller's GitHub OAuth access token from Market credentials —
- * the same `github` cred the cloud sandbox injects as `GITHUB_TOKEN`. Inside a
- * workspace the credential lives on the shared organization, not the
- * operator's personal list. Returns `undefined` when no credential exists;
- * callers must tolerate anonymous API access (public repos only).
- *
- * Pass `marketService` when the caller already holds one (e.g. the aiAgent
- * pipeline's `deps.getMarketService()`); otherwise it is built from the
- * user's stored market access token.
- */
 export const resolveGithubAccessToken = async (params: {
   credKey?: string;
   db: OrviloDatabase;
@@ -54,7 +47,7 @@ export const resolveGithubAccessToken = async (params: {
         const settings = await new UserModel(db, userId).getUserSettings();
         accessToken = (settings?.market as { accessToken?: string } | undefined)?.accessToken;
       } catch {
-        // non-fatal — MarketService falls back to the trusted client token
+        // MarketService can still use its trusted client token.
       }
       marketService = new MarketService({ accessToken, userInfo: { userId } });
     }
@@ -65,7 +58,6 @@ export const resolveGithubAccessToken = async (params: {
     const list = await credsAccessor.list();
     const cred = list.data?.find((c: { key: string }) => c.key === credKey);
     if (!cred) return undefined;
-
     const full = await credsAccessor.get(cred.id, { decrypt: true });
     const values = (full as any).plaintext ?? (full as any).values ?? {};
     return values.access_token ?? values.token;
@@ -78,13 +70,19 @@ export const resolveGithubAccessToken = async (params: {
 const githubFetch = async (
   path: string,
   token?: string,
+  init?: { body?: unknown; method?: 'GET' | 'POST' | 'PUT' },
 ): Promise<{ ok: boolean; status: number; json?: any }> => {
   try {
     const res = await fetch(`${GITHUB_API}${path}`, {
+      body: init?.body === undefined ? undefined : JSON.stringify(init.body),
       headers: {
-        Accept: 'application/vnd.github+json',
+        'Accept': 'application/vnd.github+json',
+        ...(init?.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-GitHub-Api-Version': '2022-11-28',
       },
+      method: init?.method ?? 'GET',
+      signal: AbortSignal.timeout(30_000),
     });
     const json = res.status === 204 ? undefined : await res.json().catch(() => undefined);
     return { json, ok: res.ok, status: res.status };
@@ -94,7 +92,6 @@ const githubFetch = async (
   }
 };
 
-/** The repo's remote default branch; `undefined` when the API can't tell. */
 export const getRepoDefaultBranch = async (
   repo: string,
   token?: string,
@@ -154,23 +151,14 @@ export const verifyGithubRepository = async (
 };
 
 export interface RemotePrInfo {
-  /** Target branch recorded on the pull request. */
   baseBranch: string;
-  /** Source commit recorded on the pull request. */
   headSha: string;
   merged: boolean;
   number: number;
-  /** The merge commit SHA when the PR was merged. */
   sha?: string;
   url: string;
 }
 
-/**
- * Most recent pull request whose head is `headBranch` on this repo, if any.
- * Matches on the remote side — a squash-merged PR does not make the task
- * branch an ancestor of the base, so PR state is checked alongside the
- * ancestry compare in {@link isBranchMergedInto}.
- */
 export const findBranchPr = async (
   repo: string,
   headBranch: string,
@@ -201,7 +189,6 @@ export const findBranchPr = async (
   };
 };
 
-/** Resolve the current commit of one remote branch. */
 export const getRemoteBranchSha = async (
   repo: string,
   branch: string,
@@ -223,7 +210,6 @@ export interface RemoteBranchHead {
   state: 'found' | 'missing' | 'unknown';
 }
 
-/** Resolve the current remote branch tip while preserving 404 vs API failure. */
 export const getBranchHead = async (
   repo: string,
   branch: string,
@@ -242,10 +228,11 @@ export const getBranchHead = async (
 };
 
 /**
- * Whether `head` (a task branch) is fully contained in `base` on the remote —
- * i.e. `base` is equal to or ahead of `head`. 'unknown' covers API failures
- * (private repo without a token, rate limits, network) so callers can decide
- * between retrying and trusting the run's own report.
+ * PR-first delivery intentionally does not accept ancestry as merge proof.
+ * TaskIntegrationService calls this only after checking for a merged PR; if the
+ * PR is absent/open we return `unknown`, which advances the integration row to
+ * `verification_pending` for TaskDeliveryReviewService. This prevents a direct
+ * push/merge into the base branch from bypassing CI/review/PR identity gates.
  */
 export const isBranchMergedInto = async (params: {
   base: string;
@@ -255,13 +242,92 @@ export const isBranchMergedInto = async (params: {
 }): Promise<RemoteMergeState> => {
   const coordinate = parseGithubRepo(params.repo);
   if (!coordinate) return 'unknown';
-  const res = await githubFetch(
+
+  // Still probe the compare endpoint so an unavailable/private repository is
+  // distinguishable in logs and exercises the same credential path, but a
+  // successful ancestry relation is no longer authoritative for completion.
+  await githubFetch(
     `/repos/${coordinate.owner}/${coordinate.name}/compare/${encodeURIComponent(params.head)}...${encodeURIComponent(params.base)}`,
     params.token,
   );
-  if (!res.ok) return 'unknown';
-  const status = res.json?.status;
-  if (status === 'ahead' || status === 'identical') return 'merged';
-  if (status === 'behind' || status === 'diverged') return 'unmerged';
   return 'unknown';
+};
+
+export interface CreatedPullRequest {
+  number: number;
+  url: string;
+}
+
+/** Create the delivery PR only after its branch is confirmed on the remote. */
+export const createPullRequestForBranch = async (params: {
+  baseBranch: string;
+  body?: string;
+  headBranch: string;
+  repo: string;
+  title: string;
+  token?: string;
+}): Promise<CreatedPullRequest | undefined> => {
+  const coordinate = parseGithubRepo(params.repo);
+  if (!coordinate) return undefined;
+  const res = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/pulls`,
+    params.token,
+    {
+      body: {
+        base: params.baseBranch,
+        body: params.body,
+        head: params.headBranch,
+        maintainer_can_modify: true,
+        title: params.title,
+      },
+      method: 'POST',
+    },
+  );
+  if (!res.ok || typeof res.json?.number !== 'number' || typeof res.json?.html_url !== 'string') {
+    return undefined;
+  }
+  return { number: res.json.number, url: res.json.html_url };
+};
+
+/** Return only a complete snapshot of the expected delivery revision. */
+export const getPullRequestReviewSnapshot = async (
+  repo: string,
+  prNumber: number,
+  token?: string,
+  expected?: ExpectedPullRequestIdentity,
+): Promise<RemotePrReviewSnapshot | undefined> => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return undefined;
+  return readPullRequestReviewSnapshot(githubFetch, coordinate, prNumber, token, expected);
+};
+
+export interface MergePullRequestResult {
+  merged: boolean;
+  message?: string;
+  sha?: string;
+}
+
+/** Merge only the exact PR revision reviewed by the delivery controller. */
+export const mergePullRequest = async (params: {
+  expectedHeadSha: string;
+  mergeMethod?: 'merge' | 'rebase' | 'squash';
+  prNumber: number;
+  repo: string;
+  token?: string;
+}): Promise<MergePullRequestResult> => {
+  const coordinate = parseGithubRepo(params.repo);
+  if (!coordinate) return { merged: false, message: 'Invalid GitHub repository coordinate' };
+  const res = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/pulls/${params.prNumber}/merge`,
+    params.token,
+    {
+      body: { merge_method: params.mergeMethod ?? 'squash', sha: params.expectedHeadSha },
+      method: 'PUT',
+    },
+  );
+  return {
+    merged: res.ok && res.json?.merged === true,
+    message: typeof res.json?.message === 'string' ? res.json.message : undefined,
+    sha: typeof res.json?.sha === 'string' ? res.json.sha : undefined,
+  };
 };

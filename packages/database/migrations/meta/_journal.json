@@ -1225,6 +1225,13 @@
       "when": 1789742804948,
       "tag": "0174_workspace_ownership_transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1789770502747,
+      "tag": "0175_task_pr_delivery_gate",
+      "breakpoints": true
     }
   ],
   "version": "6"

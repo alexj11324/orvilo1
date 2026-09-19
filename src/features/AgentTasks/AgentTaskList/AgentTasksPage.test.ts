@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { TaskViewMode } from '@/store/global/initialState';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import {
@@ -106,17 +107,25 @@ describe('AgentTasksPage', () => {
   });
 
   describe('resolveOrdinaryCollectionSurface', () => {
-    it('lands a settled empty collection on the board regardless of the stored view mode', () => {
-      // Regression for the retired empty-state hero: an empty ordinary
-      // collection renders the kanban board even when the user last picked
-      // the list view — there is no hero or bare-list surface to fall back to.
-      expect(resolveOrdinaryCollectionSurface('list', true)).toBe('board');
-      expect(resolveOrdinaryCollectionSurface('kanban', true)).toBe('board');
+    it('follows the stored view mode regardless of how many tasks exist', () => {
+      // The empty-board fallback snapped a list-mode user onto the board at 0
+      // tasks and back onto the list at 1 — the surface must not move with the
+      // count. Empty list mode renders the list's own empty state.
+      expect(resolveOrdinaryCollectionSurface('list')).toBe('list');
+      expect(resolveOrdinaryCollectionSurface('kanban')).toBe('board');
     });
 
-    it('follows the stored view mode once the collection has tasks', () => {
-      expect(resolveOrdinaryCollectionSurface('list', false)).toBe('list');
-      expect(resolveOrdinaryCollectionSurface('kanban', false)).toBe('board');
+    it('keeps an empty list-mode collection on the list — the count must not vote', () => {
+      // The pre-fix signature took `isListEmpty` and forced the board whenever
+      // the collection was empty. Calling through the legacy two-argument
+      // shape proves the empty condition is no longer read at all — this case
+      // returns 'board' on the parent implementation and fails there.
+      const legacyCall = resolveOrdinaryCollectionSurface as (
+        viewMode: TaskViewMode,
+        isListEmpty?: boolean,
+      ) => 'board' | 'list';
+      expect(legacyCall('list', true)).toBe('list');
+      expect(legacyCall('kanban', true)).toBe('board');
     });
   });
 

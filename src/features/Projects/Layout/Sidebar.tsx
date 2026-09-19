@@ -1,6 +1,7 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
+import { cssVar } from 'antd-style';
 import { HouseIcon, LibraryBigIcon, ListTodoIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +9,6 @@ import { useLocation } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import NavItem from '@/features/NavPanel/components/NavItem';
-import { NavPanelPortal } from '@/features/NavPanel/NavPanelPortal';
 import SideBarLayout from '@/features/NavPanel/SideBarLayout';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
@@ -41,12 +41,14 @@ const ProjectSidebarContent = memo(() => {
       <SideBarLayout
         body={<AsyncError error={detailSWR.error} variant="inline" onRetry={detailSWR.mutate} />}
         header={header}
+        scrollKey="project"
       />
     );
 
   return (
     <SideBarLayout
       header={header}
+      scrollKey="project"
       body={
         <Flexbox gap={8} paddingInline={4}>
           <NavItem
@@ -81,11 +83,28 @@ const ProjectSidebarContent = memo(() => {
   );
 });
 
-const ProjectSidebar = memo(() => (
-  <NavPanelPortal navKey="project">
-    <ProjectSidebarContent />
-  </NavPanelPortal>
-));
+// The project rail renders inside the page surface — the workspace nav panel
+// stays mounted on project routes, so this is a second, narrower in-surface
+// rail rather than a nav-panel swap.
+const ProjectSidebar = memo(() => {
+  const { projectId } = useActiveRouteParams<{ projectId: string }>();
+  const detail = useCurrentProjectDetail(projectId);
+
+  return (
+    <Flexbox
+      aria-label={detail?.project.name}
+      flex="none"
+      role="navigation"
+      style={{
+        width: 208,
+        borderInlineEnd: `1px solid ${cssVar.colorBorderSecondary}`,
+        minHeight: 0,
+      }}
+    >
+      <ProjectSidebarContent />
+    </Flexbox>
+  );
+});
 
 ProjectSidebar.displayName = 'ProjectSidebar';
 

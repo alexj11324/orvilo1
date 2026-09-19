@@ -31,8 +31,8 @@ import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -226,6 +226,16 @@ const TeamTriageRow = memo<{
 TeamTriageRow.displayName = 'TeamTriageRow';
 
 const ISSUE_SCOPES: TeamIssueScope[] = ['all', 'active', 'backlog'];
+
+// Board mode bounds the collection body to the scrollport so the kanban's own
+// column scrollers engage; list mode lets the body grow and the scroll host
+// stays the single scroll owner.
+const boardBodyStyle = {
+  boxSizing: 'border-box',
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+} as const;
 
 const resolveIssueScope = (value: string | null): TeamIssueScope =>
   ISSUE_SCOPES.includes(value as TeamIssueScope) ? (value as TeamIssueScope) : 'all';
@@ -437,41 +447,74 @@ const TeamPage = memo(() => {
   );
 
   return (
-    <Flexbox flex={1} height="100%">
+    <WorkSurface>
       <NavHeader
-        right={<WorkFavoriteButton targetId={teamId} targetType="team" />}
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {teamData?.data.team.name ?? t('tab.teams')}
           </Text>
+        }
+        right={
+          <Flexbox horizontal align={'center'} gap={8}>
+            {teamTab === 'views' ? (
+              <Button icon={PlusIcon} size={'small'} onClick={() => setCreatingView(true)}>
+                {t('savedViews.newView')}
+              </Button>
+            ) : null}
+            <WorkFavoriteButton targetId={teamId} targetType="team" />
+          </Flexbox>
         }
       />
       {!workspaceId ? (
         <Center flex={1}>
           <Empty description={t('teams.personal')} icon={UsersIcon} />
         </Center>
-      ) : teamError ? (
-        <WideScreenContainer
-          gap={16}
-          paddingBlock={16}
-          wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-        >
-          <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
-        </WideScreenContainer>
       ) : (
-        <WideScreenContainer
-          fullWidth={boardActive}
-          gap={16}
-          paddingBlock={16}
-          paddingInline={boardActive ? 16 : undefined}
-          wrapperStyle={boardActive ? undefined : { flex: 1, overflowY: 'auto' }}
-        >
-          {/* Issues toolbar: cycle / no-project filters, the All–Active–Backlog
-              workflow scope, and the list/board switch. Triage never shows the
-              layout toggle — it renders its own row surface. */}
-          {teamTab === 'issues' ? (
-            <Flexbox horizontal align="center" gap={12} justify="space-between" wrap="wrap">
-              <Flexbox horizontal gap={8} wrap="wrap">
+        <WorkSurfaceCollection
+          style={boardActive ? boardBodyStyle : undefined}
+          toolbar={
+            /* Issues toolbar: the All–Active–Backlog scope stays primary;
+               cycle / no-project filters and the list/board switch ride the
+               aside so they overflow into the popover instead of wrapping.
+               Triage never shows the layout toggle — it renders its own row
+               surface. */
+            teamTab === 'issues' && !teamError ? (
+              <WorkSurfaceToolbar
+                asideLabel={t('members.filter')}
+                aside={
+                  <>
+                    {cycleOptions.length > 1 ? (
+                      <Select
+                        aria-label={t('teams.cycle')}
+                        options={cycleOptions}
+                        size="small"
+                        style={{ maxWidth: 280 }}
+                        value={cycleId}
+                        onChange={(next) => {
+                          if (typeof next === 'string') setCycleId(next);
+                        }}
+                      />
+                    ) : null}
+                    <Button
+                      icon={FolderXIcon}
+                      size="small"
+                      type={noProject ? 'primary' : 'default'}
+                      onClick={() => setNoProject((current) => !current)}
+                    >
+                      {t('teams.noProject')}
+                    </Button>
+                    <Segmented
+                      size="small"
+                      value={layout}
+                      options={[
+                        { label: t('teams.layoutList'), value: 'list' },
+                        { label: t('teams.layoutBoard'), value: 'board' },
+                      ]}
+                      onChange={(value) => setLayout(value as WorkQueryLayout)}
+                    />
+                  </>
+                }
+              >
                 <Segmented
                   size="small"
                   value={issueScope}
@@ -491,186 +534,165 @@ const TeamPage = memo(() => {
                     )
                   }
                 />
-                {cycleOptions.length > 1 ? (
-                  <Select
-                    aria-label={t('teams.cycle')}
-                    options={cycleOptions}
-                    size="small"
-                    style={{ maxWidth: 280 }}
-                    value={cycleId}
-                    onChange={(next) => {
-                      if (typeof next === 'string') setCycleId(next);
-                    }}
-                  />
-                ) : null}
-                <Button
-                  icon={FolderXIcon}
-                  size="small"
-                  type={noProject ? 'primary' : 'default'}
-                  onClick={() => setNoProject((current) => !current)}
-                >
-                  {t('teams.noProject')}
-                </Button>
-              </Flexbox>
-              <Segmented
-                size="small"
-                value={layout}
-                options={[
-                  { label: t('teams.layoutList'), value: 'list' },
-                  { label: t('teams.layoutBoard'), value: 'board' },
-                ]}
-                onChange={(value) => setLayout(value as WorkQueryLayout)}
-              />
-            </Flexbox>
-          ) : null}
-          {teamTab === 'home' && teamData ? (
-            <TeamHome
-              teamData={teamData.data}
-              teamId={teamId!}
-              triageCapable={triageCapable}
-              workspaceSlug={workspaceSlug ?? ''}
-            />
-          ) : null}
-          {teamTab === 'triage' && !triageCapable ? (
-            <Center flex={1} padding={48}>
-              <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
-            </Center>
-          ) : null}
-          {wantsTriage ? (
+              </WorkSurfaceToolbar>
+            ) : undefined
+          }
+        >
+          {/* The team fetch gates every tab — a failed team response never
+              renders a half-populated tab surface underneath the error. */}
+          {teamError ? (
+            <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
+          ) : (
             <>
-              <Text weight={500}>{t('teams.triage')}</Text>
-              {triageState === 'error' ? (
-                <AsyncError error={triageError} onRetry={() => revalidateTriage()} />
-              ) : triageState === 'loading' ? (
-                <SkeletonList aria-label={t('teams.loading')} rows={4} />
-              ) : triageState === 'empty' ? (
+              {teamTab === 'home' && teamData ? (
+                <TeamHome
+                  teamData={teamData.data}
+                  teamId={teamId!}
+                  triageCapable={triageCapable}
+                  workspaceSlug={workspaceSlug ?? ''}
+                />
+              ) : null}
+              {teamTab === 'triage' && !triageCapable ? (
                 <Center flex={1} padding={48}>
-                  <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
+                  <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
                 </Center>
-              ) : (
-                <Flexbox gap={2}>
-                  {tasks.map((task) => (
-                    <TeamTriageRow
-                      destinations={destinations}
-                      key={task.id}
-                      members={teamData?.data.members ?? []}
-                      task={task}
-                      onAccept={() => void act(task, 'accept')}
-                      onDecline={() => void act(task, 'decline')}
-                      onPickDuplicate={(id) => setDuplicateTaskId(id)}
-                      onTransferred={refreshTriage}
-                      onReassign={(_id, assigneeUserId) =>
-                        void act(task, 'reassign', { assigneeUserId })
-                      }
-                    />
-                  ))}
-                </Flexbox>
-              )}
-            </>
-          ) : null}
+              ) : null}
+              {wantsTriage ? (
+                <>
+                  <Text weight={500}>{t('teams.triage')}</Text>
+                  {triageState === 'error' ? (
+                    <AsyncError error={triageError} onRetry={() => revalidateTriage()} />
+                  ) : triageState === 'loading' ? (
+                    <SkeletonList aria-label={t('teams.loading')} rows={4} />
+                  ) : triageState === 'empty' ? (
+                    <Center flex={1} padding={48}>
+                      <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
+                    </Center>
+                  ) : (
+                    <Flexbox gap={2}>
+                      {tasks.map((task) => (
+                        <TeamTriageRow
+                          destinations={destinations}
+                          key={task.id}
+                          members={teamData?.data.members ?? []}
+                          task={task}
+                          onAccept={() => void act(task, 'accept')}
+                          onDecline={() => void act(task, 'decline')}
+                          onPickDuplicate={(id) => setDuplicateTaskId(id)}
+                          onTransferred={refreshTriage}
+                          onReassign={(_id, assigneeUserId) =>
+                            void act(task, 'reassign', { assigneeUserId })
+                          }
+                        />
+                      ))}
+                    </Flexbox>
+                  )}
+                </>
+              ) : null}
 
-          {teamTab === 'projects' ? (
-            isTeamProjectsLoading ? (
-              <SkeletonList aria-label={t('teams.loading')} rows={4} />
-            ) : teamProjectsError && teamProjects.length === 0 ? (
-              <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
-            ) : teamProjects.length === 0 ? (
-              <Center flex={1} padding={48}>
-                <Empty description={t('teams.projectsEmpty')} icon={FolderXIcon} />
-              </Center>
-            ) : (
-              <Flexbox gap={2}>
-                {teamProjectsError ? (
-                  <AsyncError
-                    error={teamProjectsError}
-                    variant={'inline'}
-                    onRetry={() => revalidateTeamProjects()}
-                  />
-                ) : null}
-                {teamProjects.map((project) => (
-                  <SavedViewProjectRow key={project.id} project={project} />
-                ))}
-              </Flexbox>
-            )
-          ) : null}
-          {teamTab === 'views' ? (
-            isTeamViewsLoading ? (
-              <SkeletonList aria-label={t('teams.loading')} rows={4} />
-            ) : teamViewsError && teamViews.length === 0 ? (
-              <AsyncError error={teamViewsError} onRetry={() => revalidateTeamViews()} />
-            ) : (
-              <Flexbox gap={2}>
-                <Flexbox horizontal align={'center'} justify={'flex-end'}>
-                  <Button icon={PlusIcon} size={'small'} onClick={() => setCreatingView(true)}>
-                    {t('savedViews.newView')}
-                  </Button>
-                </Flexbox>
-                {teamViewsError ? (
-                  <AsyncError
-                    error={teamViewsError}
-                    variant={'inline'}
-                    onRetry={() => revalidateTeamViews()}
-                  />
-                ) : null}
-                {teamViews.length === 0 ? (
+              {teamTab === 'projects' ? (
+                isTeamProjectsLoading ? (
+                  <SkeletonList aria-label={t('teams.loading')} rows={4} />
+                ) : teamProjectsError && teamProjects.length === 0 ? (
+                  <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
+                ) : teamProjects.length === 0 ? (
                   <Center flex={1} padding={48}>
-                    <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
+                    <Empty description={t('teams.projectsEmpty')} icon={FolderXIcon} />
                   </Center>
                 ) : (
-                  teamViews.map((view) => (
-                    <WorkspaceLink className={styles.link} key={view.id} to={`/views/${view.id}`}>
-                      <Flexbox horizontal align="center" className={styles.row} gap={8}>
-                        <Flexbox flex={1} style={{ minWidth: 0 }}>
-                          <Text ellipsis weight={500}>
-                            {view.name}
-                          </Text>
-                        </Flexbox>
-                        <Text fontSize={12} type={'secondary'}>
-                          {view.visibility === 'workspace'
-                            ? t('savedViews.visibilityWorkspace')
-                            : t('savedViews.visibilityTeam')}
-                        </Text>
-                        <Text fontSize={12} type={'secondary'}>
-                          {view.layout}
-                        </Text>
-                      </Flexbox>
-                    </WorkspaceLink>
-                  ))
-                )}
-              </Flexbox>
-            )
-          ) : null}
-          {wantsTasks ? (
-            workState === 'error' ? (
-              <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
-            ) : (
-              <WorkQueryResults
-                createContext={{ teamId }}
-                emptyLabel={t('teams.workEmpty')}
-                groups={teamGroups}
-                layout={layout}
-                loadMoreLabel={t('myWork.loadMore')}
-                loading={workState === 'loading'}
-                loadingLabel={t('teams.loading')}
-                movable={layout === 'board'}
-                tasks={teamTasks}
-                groupBy={
-                  teamTasksData?.data && 'groupBy' in teamTasksData.data
-                    ? teamTasksData.data.groupBy
-                    : undefined
-                }
-                total={
-                  teamTasksData?.data && 'total' in teamTasksData.data
-                    ? teamTasksData.data.total
-                    : undefined
-                }
-                onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
-                onLoadMoreGroup={(key) => void loadMoreTeamGroup(key)}
-                onMoved={refreshTriage}
-              />
-            )
-          ) : null}
-        </WideScreenContainer>
+                  <Flexbox gap={2}>
+                    {teamProjectsError ? (
+                      <AsyncError
+                        error={teamProjectsError}
+                        variant={'inline'}
+                        onRetry={() => revalidateTeamProjects()}
+                      />
+                    ) : null}
+                    {teamProjects.map((project) => (
+                      <SavedViewProjectRow key={project.id} project={project} />
+                    ))}
+                  </Flexbox>
+                )
+              ) : null}
+              {teamTab === 'views' ? (
+                isTeamViewsLoading ? (
+                  <SkeletonList aria-label={t('teams.loading')} rows={4} />
+                ) : teamViewsError && teamViews.length === 0 ? (
+                  <AsyncError error={teamViewsError} onRetry={() => revalidateTeamViews()} />
+                ) : (
+                  <Flexbox gap={2}>
+                    {teamViewsError ? (
+                      <AsyncError
+                        error={teamViewsError}
+                        variant={'inline'}
+                        onRetry={() => revalidateTeamViews()}
+                      />
+                    ) : null}
+                    {teamViews.length === 0 ? (
+                      <Center flex={1} padding={48}>
+                        <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
+                      </Center>
+                    ) : (
+                      teamViews.map((view) => (
+                        <WorkspaceLink
+                          className={styles.link}
+                          key={view.id}
+                          to={`/views/${view.id}`}
+                        >
+                          <Flexbox horizontal align="center" className={styles.row} gap={8}>
+                            <Flexbox flex={1} style={{ minWidth: 0 }}>
+                              <Text ellipsis weight={500}>
+                                {view.name}
+                              </Text>
+                            </Flexbox>
+                            <Text fontSize={12} type={'secondary'}>
+                              {view.visibility === 'workspace'
+                                ? t('savedViews.visibilityWorkspace')
+                                : t('savedViews.visibilityTeam')}
+                            </Text>
+                            <Text fontSize={12} type={'secondary'}>
+                              {view.layout}
+                            </Text>
+                          </Flexbox>
+                        </WorkspaceLink>
+                      ))
+                    )}
+                  </Flexbox>
+                )
+              ) : null}
+              {wantsTasks ? (
+                workState === 'error' ? (
+                  <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
+                ) : (
+                  <WorkQueryResults
+                    createContext={{ teamId }}
+                    emptyLabel={t('teams.workEmpty')}
+                    groups={teamGroups}
+                    layout={layout}
+                    loadMoreLabel={t('myWork.loadMore')}
+                    loading={workState === 'loading'}
+                    loadingLabel={t('teams.loading')}
+                    movable={layout === 'board'}
+                    tasks={teamTasks}
+                    groupBy={
+                      teamTasksData?.data && 'groupBy' in teamTasksData.data
+                        ? teamTasksData.data.groupBy
+                        : undefined
+                    }
+                    total={
+                      teamTasksData?.data && 'total' in teamTasksData.data
+                        ? teamTasksData.data.total
+                        : undefined
+                    }
+                    onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
+                    onLoadMoreGroup={(key) => void loadMoreTeamGroup(key)}
+                    onMoved={refreshTriage}
+                  />
+                )
+              ) : null}
+            </>
+          )}
+        </WorkSurfaceCollection>
       )}
       <NewViewModal
         defaultTeamId={teamId}
@@ -686,7 +708,7 @@ const TeamPage = memo(() => {
           if (task) void act(task, 'duplicate', { canonicalTaskId });
         }}
       />
-    </Flexbox>
+    </WorkSurface>
   );
 });
 

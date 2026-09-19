@@ -1233,14 +1233,39 @@ describe('WorkQueryModel', () => {
       { role: 'owner', userId, workspaceId },
       { role: 'member', userId: otherUserId, workspaceId },
     ]);
+    // Distinct updatedAt values keep the keyset cursor deterministic on real
+    // Postgres (timestamps are µs-precise; equal timestamps would rely on the
+    // id tie-breaker hitting an eq-boundary).
     await serverDB.insert(projects).values([
-      { id: 'wq-opt-a', identifier: 'WOA', name: 'Alpha deck', userId, workspaceId },
-      { id: 'wq-opt-b', identifier: 'WOB', name: 'Beta deck', userId, workspaceId },
-      { id: 'wq-opt-c', identifier: 'WOC', name: 'Gamma deck', userId, workspaceId },
+      {
+        id: 'wq-opt-a',
+        identifier: 'WOA',
+        name: 'Alpha deck',
+        updatedAt: new Date('2026-09-10T00:00:00Z'),
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'wq-opt-b',
+        identifier: 'WOB',
+        name: 'Beta deck',
+        updatedAt: new Date('2026-09-11T00:00:00Z'),
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'wq-opt-c',
+        identifier: 'WOC',
+        name: 'Gamma deck',
+        updatedAt: new Date('2026-09-12T00:00:00Z'),
+        userId,
+        workspaceId,
+      },
       {
         id: 'wq-opt-d',
         identifier: 'WOD',
         name: 'Delta private',
+        updatedAt: new Date('2026-09-13T00:00:00Z'),
         userId,
         visibility: 'private',
         workspaceId,

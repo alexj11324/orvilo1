@@ -23,6 +23,11 @@ describe('myWorkSaveAsQuery', () => {
     expect(myWorkSaveAsQuery('created').filter).toEqual({
       all: [{ field: 'createdByUserId', op: 'eq', value: { ref: 'currentUser' } }],
     });
+    // Created keeps its createdAt ordering when saved as a view (UI02).
+    expect(myWorkSaveAsQuery('created').sort).toEqual([
+      { direction: 'desc', field: 'createdAt' },
+      { direction: 'asc', field: 'id' },
+    ]);
     expect(myWorkSaveAsQuery('assigned', 'board').layout).toBe('board');
     expect(myWorkSaveAsQuery('assigned', 'board').groupBy).toBe('workflowCategory');
   });

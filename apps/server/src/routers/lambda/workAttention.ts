@@ -116,6 +116,7 @@ const workQuerySchema: z.ZodType<WorkQuery> = z.object({
       }),
     )
     .optional(),
+  sortMode: z.enum(['field', 'manual']).optional(),
 });
 
 const mapQueryError = (error: unknown): never => {
@@ -624,6 +625,58 @@ export const workAttentionRouter = router({
           })),
       ];
 
+      return { data: items, success: true };
+    }),
+
+  /**
+   * Picker data for `projectId` filter rows: authorized server-side name
+   * search with a keyset cursor, or `ids` to hydrate selected values that are
+   * not on the loaded page. Same ACL as `query`/`search`.
+   */
+  projectOptions: workAttentionProcedure
+    .input(
+      z.object({
+        afterId: z.string().min(1).optional(),
+        ids: z.array(z.string().min(1)).min(1).max(50).optional(),
+        limit: z.number().min(1).max(100).default(25),
+        query: z.string().trim().max(200).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const result = await ctx.workQueryModel.searchProjectOptions({
+          afterId: input.afterId,
+          ids: input.ids,
+          limit: input.limit,
+          needle: input.query,
+        });
+        return { data: result, success: true };
+      } catch (error) {
+        return mapQueryError(error);
+      }
+    }),
+
+  /**
+   * Picker data for `cycleId` filter rows — one authorized query over the
+   * caller's readable teams, optionally narrowed to the team already chosen
+   * in the filter. `ids` hydrates selected values.
+   */
+  cycleOptions: workAttentionProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string().min(1)).min(1).max(50).optional(),
+        limit: z.number().min(1).max(200).default(100),
+        query: z.string().trim().max(200).optional(),
+        teamId: z.string().min(1).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const items = await ctx.workQueryModel.listCycleOptions({
+        ids: input.ids,
+        limit: input.limit,
+        needle: input.query,
+        teamId: input.teamId,
+      });
       return { data: items, success: true };
     }),
 

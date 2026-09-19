@@ -1,3 +1,4 @@
+import type { WorkQuery } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,13 +18,14 @@ describe('workQueryBuilder', () => {
       ],
     } as const;
     const state = filterToBuilder('task', filter as never);
-    expect(state.retained).toHaveLength(0);
+    expect(state.slots).toHaveLength(3);
+    expect(state.any).toHaveLength(0);
     expect(state.rows).toHaveLength(3);
     const rebuilt = builderToFilter('task', state);
     expect(rebuilt).toEqual({ all: [...filter.all] });
   });
 
-  it('keeps unknown fields, unsupported ops, and any-groups as retained nodes', () => {
+  it('keeps unknown fields, unsupported ops, and any-groups untouched', () => {
     const unknownPredicate = { field: 'delegatedByUserId', op: 'eq', value: 'x' };
     const anyGroup = { any: [{ field: 'status', op: 'eq', value: 'running' }] };
     const retainedOp = { field: 'reviewerUserId', op: 'neq', value: 'u2' };
@@ -32,10 +34,56 @@ describe('workQueryBuilder', () => {
       any: anyGroup.any,
     } as never);
     expect(state.rows).toHaveLength(0);
-    expect(state.retained).toEqual([unknownPredicate, retainedOp, ...anyGroup.any]);
+    expect(state.slots).toEqual([
+      { node: unknownPredicate, type: 'node' },
+      { node: retainedOp, type: 'node' },
+    ]);
+    expect(state.any).toEqual(anyGroup.any);
+    // The OR subtree stays under `any` — it must not be folded into `all`.
     expect(builderToFilter('task', state)).toEqual({
-      all: [unknownPredicate, retainedOp, ...anyGroup.any],
+      all: [unknownPredicate, retainedOp],
+      any: anyGroup.any,
     });
+  });
+
+  it('keeps a top-level any group under any after an edit round-trip (VW01)', () => {
+    // "priority=Urgent OR assignee=me" — a rename-only save must not mutate
+    // the boolean tree, and an unrelated row edit must not touch the `any`.
+    const filter = {
+      all: [{ field: 'status', op: 'eq', value: 'running' }],
+      any: [
+        { field: 'priority', op: 'eq', value: 3 },
+        { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+      ],
+    } as const;
+    const state = filterToBuilder('task', filter as never);
+    expect(builderToFilter('task', state)).toEqual(filter);
+
+    const edited = {
+      ...state,
+      rows: state.rows.map((row) => ({ ...row, value: 'paused' })),
+    };
+    expect(builderToFilter('task', edited)).toEqual({
+      all: [{ field: 'status', op: 'eq', value: 'paused' }],
+      any: [...filter.any],
+    });
+  });
+
+  it('produces an identical AST for a rename-only edit so dirty stays false', () => {
+    const query: WorkQuery = {
+      entityType: 'task',
+      filter: {
+        all: [
+          { any: [{ field: 'teamId', op: 'eq', value: 't1' }] },
+          { field: 'status', op: 'eq', value: 'running' },
+        ],
+        any: [{ field: 'priority', op: 'eq', value: 3 }],
+      },
+      schemaVersion: 1,
+    };
+    const rebuilt = builderToFilter('task', filterToBuilder('task', query.filter));
+    expect(rebuilt).toEqual(query.filter);
+    expect(comparableQuery({ ...query, filter: rebuilt })).toBe(comparableQuery(query));
   });
 
   it('drops incomplete rows on save without touching retained nodes', () => {
@@ -48,7 +96,7 @@ describe('workQueryBuilder', () => {
         { field: 'status', id: 'b', op: 'eq', value: 'running' },
       ],
     });
-    expect(next).toEqual({ all: [{ field: 'status', op: 'eq', value: 'running' }, retainedNode] });
+    expect(next).toEqual({ all: [retainedNode, { field: 'status', op: 'eq', value: 'running' }] });
   });
 
   it('project entity renders only project-registry fields', () => {
@@ -59,7 +107,10 @@ describe('workQueryBuilder', () => {
       ],
     } as never);
     expect(state.rows.map((row) => row.field)).toEqual(['status']);
-    expect(state.retained).toEqual([{ field: 'assigneeUserId', op: 'eq', value: 'u1' }]);
+    expect(state.slots).toEqual([
+      { rowId: state.rows[0]!.id, type: 'row' },
+      { node: { field: 'assigneeUserId', op: 'eq', value: 'u1' }, type: 'node' },
+    ]);
   });
 
   it('isRowComplete follows the op arity', () => {

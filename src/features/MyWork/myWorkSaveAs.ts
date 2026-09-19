@@ -38,6 +38,10 @@ export const myWorkSaveAsQuery = (
         entityType: 'task',
         filter: { all: [{ field: 'createdByUserId', op: 'eq', value: current }] },
         schemaVersion: 1,
+        sort: [
+          { direction: 'desc', field: 'createdAt' },
+          { direction: 'asc', field: 'id' },
+        ],
         ...board,
       };
     }

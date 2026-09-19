@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as useActiveWorkspaceIdModule from '@/business/client/hooks/useActiveWorkspaceId';
+import * as useActiveWorkspaceSlugModule from '@/business/client/hooks/useActiveWorkspaceSlug';
 import * as useFetchWorkspacesModule from '@/business/client/hooks/useFetchWorkspaces';
 import * as useIsWorkspaceLoadingModule from '@/business/client/hooks/useIsWorkspaceLoading';
 import * as useSwitchWorkspaceModule from '@/business/client/hooks/useSwitchWorkspace';
@@ -17,16 +18,16 @@ vi.mock('../ensureDefaultWorkspace', () => ({ ensureDefaultWorkspace }));
 
 interface WorkspaceStateMock {
   activeWorkspaceId: null | string;
+  activeWorkspaceSlug: null | string;
   isWorkspaceLoading: boolean;
-  switchToPersonal: () => void;
   switchWorkspace: (id: string) => void;
   workspaces: { id: string; lockedOut?: boolean; slug: string }[];
 }
 
 const createState = (overrides: Partial<WorkspaceStateMock> = {}): WorkspaceStateMock => ({
   activeWorkspaceId: null,
+  activeWorkspaceSlug: null,
   isWorkspaceLoading: false,
-  switchToPersonal: vi.fn(),
   switchWorkspace: vi.fn(),
   workspaces: [{ id: 'ws-1', slug: 'acme' }],
   ...overrides,
@@ -46,8 +47,10 @@ const mockWorkspaceStore = (state: WorkspaceStateMock) => {
   vi.spyOn(useActiveWorkspaceIdModule, 'useActiveWorkspaceId').mockReturnValue(
     state.activeWorkspaceId,
   );
+  vi.spyOn(useActiveWorkspaceSlugModule, 'useActiveWorkspaceSlug').mockReturnValue(
+    state.activeWorkspaceSlug,
+  );
   vi.spyOn(useSwitchWorkspaceModule, 'useSilentSwitchWorkspace').mockReturnValue({
-    switchToPersonal: state.switchToPersonal as any,
     switchWorkspace: state.switchWorkspace as any,
   });
 };
@@ -119,7 +122,6 @@ describe('useWorkspaceUrlSync', () => {
     });
 
     expect(state.switchWorkspace).toHaveBeenCalledWith('ws-1');
-    expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 
   it('does not switch while the workspace list is loading', () => {
@@ -131,11 +133,12 @@ describe('useWorkspaceUrlSync', () => {
     });
 
     expect(state.switchWorkspace).not.toHaveBeenCalled();
-    expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 
   it('leaves the current workspace untouched for an unknown slug', () => {
-    const state = createState({ activeWorkspaceId: 'ws-1' });
+    // `/unknown/...` resolves to the 404 boundary; the reconcile below sees the
+    // active membership still present and already the target, so nothing moves.
+    const state = createState({ activeWorkspaceId: 'ws-1', activeWorkspaceSlug: 'acme' });
     mockWorkspaceStore(state);
 
     renderHook(() => useWorkspaceUrlSync(), {
@@ -143,7 +146,6 @@ describe('useWorkspaceUrlSync', () => {
     });
 
     expect(state.switchWorkspace).not.toHaveBeenCalled();
-    expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 
   it('activates the last-used workspace on reserved slug-less routes', () => {
@@ -156,7 +158,6 @@ describe('useWorkspaceUrlSync', () => {
     });
 
     expect(state.switchWorkspace).toHaveBeenCalledWith('ws-1');
-    expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 
   it('provisions a default workspace when the account has none', () => {
@@ -169,13 +170,13 @@ describe('useWorkspaceUrlSync', () => {
 
     expect(ensureDefaultWorkspace).toHaveBeenCalled();
     expect(state.switchWorkspace).not.toHaveBeenCalled();
-    expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 
-  it('drops the stale selection when the active workspace leaves the membership list', () => {
+  it('re-provisions when the active workspace leaves the membership list', () => {
     // Revocation while its slug URL is still open: the workspace is absent
     // from the resolved list, so the store must not keep scoping requests to
-    // a membership the server would now reject.
+    // a membership the server would now reject — with an empty list the sync
+    // falls back to ensureDefault rather than a stale scope.
     const state = createState({ activeWorkspaceId: 'ws-1', workspaces: [] });
     mockWorkspaceStore(state);
 
@@ -183,19 +184,34 @@ describe('useWorkspaceUrlSync', () => {
       wrapper: createRouteWrapper('/acme/agent/inbox', '*'),
     });
 
-    expect(state.switchToPersonal).toHaveBeenCalled();
+    expect(ensureDefaultWorkspace).toHaveBeenCalled();
     expect(state.switchWorkspace).not.toHaveBeenCalled();
   });
 
+  it('falls back to another membership when the revoked active workspace has siblings', () => {
+    const state = createState({
+      activeWorkspaceId: 'ws-1',
+      activeWorkspaceSlug: 'acme',
+      workspaces: [{ id: 'ws-2', slug: 'other' }],
+    });
+    mockWorkspaceStore(state);
+
+    renderHook(() => useWorkspaceUrlSync(), {
+      wrapper: createRouteWrapper('/acme/agent/inbox', '*'),
+    });
+
+    expect(state.switchWorkspace).toHaveBeenCalledWith('ws-2');
+    expect(ensureDefaultWorkspace).not.toHaveBeenCalled();
+  });
+
   it('keeps the active workspace when the URL slug is unknown but membership is intact', () => {
-    const state = createState({ activeWorkspaceId: 'ws-1' });
+    const state = createState({ activeWorkspaceId: 'ws-1', activeWorkspaceSlug: 'acme' });
     mockWorkspaceStore(state);
 
     renderHook(() => useWorkspaceUrlSync(), {
       wrapper: createRouteWrapper('/typo-slug/agent/inbox', '*'),
     });
 
-    expect(state.switchToPersonal).not.toHaveBeenCalled();
     expect(state.switchWorkspace).not.toHaveBeenCalled();
   });
 });

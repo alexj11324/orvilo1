@@ -69,7 +69,8 @@ describe('Agent quota workspace scope', () => {
     });
     expect(personalRow?.workspaceId).toBeNull();
 
-    // neither side sees the other
+    // Provider accounts are per-scope capacity pools (the dedupe key is the
+    // external account id), so neither side sees the other.
     expect((await personalAccounts.list()).map((a) => a.id)).toEqual([personal.id]);
     expect((await workspaceAccounts.list()).map((a) => a.id)).toEqual([shared.id]);
     expect(await personalAccounts.findById(shared.id)).toBeNull();
@@ -84,9 +85,12 @@ describe('Agent quota workspace scope', () => {
     expect(workspaceList.map((b) => b.accountId)).toEqual([shared.id]);
     expect(workspaceList[0].workspaceId).toBe(workspaceId);
 
-    // a personal-mode read must not reach a workspace binding, and vice versa
+    // A personal-scope read must not reach a workspace binding, while the
+    // workspace-scope read still sees the owner's unfiled binding.
     expect(await personalBindings.listByAgent(wsAgentId)).toEqual([]);
-    expect(await workspaceBindings.listByAgent(agentId)).toEqual([]);
+    expect((await workspaceBindings.listByAgent(agentId)).map((b) => b.accountId)).toEqual([
+      personal.id,
+    ]);
 
     // …but a teammate reading in the same workspace does see it (shared by design)
     const teammateBindings = new AgentAccountBindingModel(serverDB, teammateId, workspaceId);

@@ -313,8 +313,15 @@ describe('KnowledgeRepo', () => {
 
       const results = await workspaceRepo.query({ category: FilesTabs.All });
 
+      // Filed workspace rows are shared with every member; on top of those the
+      // caller still sees their own unfiled rows (unfiled follows the owner).
       const names = results.map((item) => item.name).sort();
-      expect(names).toEqual(['workspace-owner-doc.pdf', 'workspace-owner-file.pdf']);
+      expect(names).toEqual([
+        'viewer-personal-doc.pdf',
+        'viewer-personal-file.pdf',
+        'workspace-owner-doc.pdf',
+        'workspace-owner-file.pdf',
+      ]);
     });
 
     it('should restrict workspace query results to the requested creator', async () => {
@@ -333,7 +340,11 @@ describe('KnowledgeRepo', () => {
         'workspace-owner-doc.pdf',
         'workspace-owner-file.pdf',
       ]);
-      expect(callerRows).toEqual([]);
+      // The caller's own unfiled rows follow them into workspace scope.
+      expect(callerRows.map((item) => item.name).sort()).toEqual([
+        'viewer-personal-doc.pdf',
+        'viewer-personal-file.pdf',
+      ]);
     });
 
     it('should not return workspace items in personal mode', async () => {

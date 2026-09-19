@@ -3,7 +3,7 @@ import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { ConnectorCredentials, NewUserConnector, UserConnectorItem } from '../schemas';
 import { ConnectorStatus, userConnectors, userConnectorTools } from '../schemas';
 import type { OrviloDatabase } from '../type';
-import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import { buildStrictWorkspaceWhere, buildWorkspacePayload } from '../utils/workspace';
 
 interface GateKeeper {
   decrypt: (ciphertext: string) => Promise<{ plaintext: string }>;
@@ -60,20 +60,21 @@ export class ConnectorModel {
   private gateKeeper?: GateKeeper;
   private workspaceId?: string;
 
-  constructor(
-    db: OrviloDatabase,
-    userId: string,
-    workspaceId?: string,
-    gateKeeper?: GateKeeper,
-  ) {
+  constructor(db: OrviloDatabase, userId: string, workspaceId?: string, gateKeeper?: GateKeeper) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
     this.gateKeeper = gateKeeper;
   }
 
+  // Connectors are per-scope credentials (OAuth tokens, sync state) with an
+  // explicit resolution chain (agent-workspace > workspace); an unfiled
+  // connector must never be adopted as a workspace fallback.
   private ownership = () =>
-    buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, userConnectors);
+    buildStrictWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      userConnectors,
+    );
 
   /**
    * Base (non-agent) scope: the current user/workspace scope restricted to rows

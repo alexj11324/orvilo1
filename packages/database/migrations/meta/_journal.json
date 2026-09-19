@@ -1232,6 +1232,13 @@
       "when": 1789770502747,
       "tag": "0175_task_pr_delivery_gate",
       "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1789827475641,
+      "tag": "0176_work_attention",
+      "breakpoints": true
     }
   ],
   "version": "6"

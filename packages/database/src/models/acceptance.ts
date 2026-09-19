@@ -5,7 +5,11 @@ import type { AcceptanceItem, NewAcceptance } from '../schemas/verify';
 import { acceptances } from '../schemas/verify';
 import type { OrviloDatabase } from '../type';
 import { isUuid } from '../utils/uuid';
-import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import {
+  buildStrictWorkspaceWhere,
+  buildWorkspacePayload,
+  buildWorkspaceWhere,
+} from '../utils/workspace';
 
 /** Statuses a user's decision produced — sticky until explicitly re-opened. */
 const TERMINAL_ACCEPTANCE_STATUSES = new Set<AcceptanceStatus>(['accepted', 'closed', 'rejected']);
@@ -51,6 +55,14 @@ export class AcceptanceModel {
 
   private ownership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, acceptances);
+
+  // Subject aggregates are a per-scope namespace: `ensureForSubject` must
+  // find-or-create within the exact scope — adopting an unfiled row would
+  // silently share one aggregate across scopes and skip the scope's
+  // visibility default (workspace rows default private, unfiled default
+  // public).
+  private subjectScope = () =>
+    buildStrictWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, acceptances);
 
   /** Presentation-only write: never starts a round or rewrites evidence-bearing snapshots. */
   setCheckGroups = async (id: string, groups: AcceptanceCheckGroup[], expectedVersion: number) => {
@@ -110,7 +122,7 @@ export class AcceptanceModel {
       where: and(
         eq(acceptances.subjectType, subjectType),
         eq(acceptances.subjectId, subjectId),
-        this.ownership(),
+        this.subjectScope(),
       ),
     });
   };

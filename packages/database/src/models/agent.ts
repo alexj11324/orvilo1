@@ -87,7 +87,11 @@ import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
 import { sanitizeAgentApiConfig } from '../utils/sanitizeAgentApiConfig';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
-import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import {
+  buildStrictWorkspaceWhere,
+  buildWorkspacePayload,
+  buildWorkspaceWhere,
+} from '../utils/workspace';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from './agentCopyJob';
 import {
   AGENT_TRANSFER_IN_PROGRESS,
@@ -321,6 +325,25 @@ export class AgentModel {
   /** Same predicate but for the `sessions` table (used in delete cascade). */
   private sessionsOwnership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, sessions);
+
+  /**
+   * Strict per-scope variant for builtin-agent resolution: builtin slugs are
+   * per-scope infrastructure singletons (inbox, agent-builder), so an unfiled
+   * builtin must not be adopted as the workspace's own — the workspace
+   * provisions its own row instead.
+   */
+  private strictOwnership = () =>
+    buildStrictWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      {
+        userId: agents.userId,
+        workspaceId: agents.workspaceId,
+        visibility: agents.visibility,
+      },
+    );
+
+  private strictSessionsOwnership = () =>
+    buildStrictWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, sessions);
 
   /** Ownership predicates for the agent join/related tables. */
   private documentsOwnership = () =>
@@ -1786,9 +1809,11 @@ export class AgentModel {
   getBuiltinAgent = async (slug: string): Promise<AgentItem | null> => {
     const persistConfig = getAgentPersistConfig(slug);
 
-    // 1. First try to find existing agent by slug
+    // 1. First try to find existing agent by slug (strict scope: builtin
+    // slugs are per-scope singletons — an unfiled inbox agent must not
+    // satisfy the workspace's lookup).
     const existing = await this.db.query.agents.findFirst({
-      where: and(eq(agents.slug, slug), this.ownership()),
+      where: and(eq(agents.slug, slug), this.strictOwnership()),
     });
 
     if (existing) {
@@ -1813,7 +1838,7 @@ export class AgentModel {
         .from(sessions)
         .innerJoin(agentsToSessions, eq(sessions.id, agentsToSessions.sessionId))
         .innerJoin(agents, eq(agentsToSessions.agentId, agents.id))
-        .where(and(eq(sessions.slug, INBOX_SESSION_ID), this.sessionsOwnership()))
+        .where(and(eq(sessions.slug, INBOX_SESSION_ID), this.strictSessionsOwnership()))
         .limit(1);
 
       if (result.length > 0 && result[0].agent) {

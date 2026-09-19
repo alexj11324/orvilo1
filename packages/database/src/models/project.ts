@@ -5,7 +5,7 @@ import type {
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
-import { and, asc, desc, eq, exists, inArray, isNull, max, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
 import { knowledgeBases } from '../schemas/file';
@@ -15,11 +15,11 @@ import {
   projectKnowledgeBases,
   projects,
 } from '../schemas/project';
-import { projectMembers } from '../schemas/projectMember';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
 
@@ -192,31 +192,10 @@ export class ProjectModel {
   }
 
   private readable() {
-    const base = buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId },
-      projects,
-    );
-    // Personal mode has no memberships — the ownership predicate is final.
-    if (!this.workspaceId) return base;
-
-    // Workspace mode adds one more read path: an ACTIVE project_members row
-    // grants read on the project it names. The grant — not creator ownership —
-    // is what an accepted invitation or explicit share confers, and it is the
-    // only way a member reads somebody else's private project.
-    const grantedRead = exists(
-      this.db
-        .select({ one: sql`1` })
-        .from(projectMembers)
-        .where(
-          and(
-            eq(projectMembers.projectId, projects.id),
-            eq(projectMembers.userId, this.userId),
-            isNull(projectMembers.deletedAt),
-            isNull(projectMembers.suspendedAt),
-          ),
-        ),
-    );
-    return or(base, and(eq(projects.workspaceId, this.workspaceId), grantedRead)) as SQL;
+    return buildProjectReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
   }
 
   private manageable() {

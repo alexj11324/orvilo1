@@ -43,7 +43,7 @@ afterEach(async () => {
 });
 
 describe('Agent eval workspace scope', () => {
-  it('isolates benchmarks, datasets, test cases, runs, and run topics', async () => {
+  it("adopts the owner's unfiled rows into workspace scope while identifiers stay per-scope", async () => {
     const personalBenchmarkModel = new AgentEvalBenchmarkModel(serverDB, userId);
     const workspaceBenchmarkModel = new AgentEvalBenchmarkModel(serverDB, userId, workspaceId);
     const personalDatasetModel = new AgentEvalDatasetModel(serverDB, userId);
@@ -117,7 +117,11 @@ describe('Agent eval workspace scope', () => {
     });
 
     await expect(personalTestCaseModel.findById(workspaceTestCase.id)).resolves.toBeUndefined();
-    await expect(workspaceTestCaseModel.findById(personalTestCase.id)).resolves.toBeUndefined();
+    // Owner's unfiled rows stay reachable from workspace scope.
+    await expect(workspaceTestCaseModel.findById(personalTestCase.id)).resolves.toMatchObject({
+      id: personalTestCase.id,
+      workspaceId: null,
+    });
 
     const personalRun = await personalRunModel.create({
       datasetId: personalDataset.id,
@@ -129,7 +133,10 @@ describe('Agent eval workspace scope', () => {
     });
 
     await expect(personalRunModel.findById(workspaceRun.id)).resolves.toBeUndefined();
-    await expect(workspaceRunModel.findById(personalRun.id)).resolves.toBeUndefined();
+    await expect(workspaceRunModel.findById(personalRun.id)).resolves.toMatchObject({
+      id: personalRun.id,
+      workspaceId: null,
+    });
 
     await serverDB.insert(topics).values([
       { id: 'agent-eval-personal-topic', title: 'Personal topic', userId, workspaceId: null },
@@ -156,7 +163,12 @@ describe('Agent eval workspace scope', () => {
     expect(workspaceRunTopic).toMatchObject({ runId: workspaceRun.id, workspaceId });
 
     await expect(personalRunTopicModel.findByRunId(workspaceRun.id)).resolves.toEqual([]);
-    await expect(workspaceRunTopicModel.findByRunId(personalRun.id)).resolves.toEqual([]);
+    await expect(workspaceRunTopicModel.findByRunId(personalRun.id)).resolves.toEqual([
+      expect.objectContaining({
+        runId: personalRun.id,
+        topicId: 'agent-eval-personal-topic',
+      }),
+    ]);
     await expect(workspaceRunTopicModel.findByRunId(workspaceRun.id)).resolves.toEqual([
       expect.objectContaining({
         runId: workspaceRun.id,

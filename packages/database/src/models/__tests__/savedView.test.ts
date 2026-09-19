@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaces } from '../../schemas';
 import { projects } from '../../schemas/project';
-import { teamMembers, teams } from '../../schemas/team';
+import { teamCycles, teamMembers, teams } from '../../schemas/team';
 import type { OrviloDatabase } from '../../type';
 import {
   SavedViewBuiltinError,
@@ -244,6 +244,67 @@ describe('SavedViewModel', () => {
     const serialized = JSON.stringify(presented.queryAst);
     expect(serialized).not.toContain('view-secret-team');
     expect(serialized).toContain('view-public-team');
+  });
+
+  it('redacts private-team cycle ids from a shared view definition', async () => {
+    await serverDB.insert(teams).values([
+      {
+        createdByUserId: ownerId,
+        id: 'view-cycle-secret-team',
+        key: 'VC',
+        name: 'Secret cycle team',
+        visibility: 'private',
+        workspaceId,
+      },
+      {
+        createdByUserId: ownerId,
+        id: 'view-cycle-public-team',
+        key: 'VU',
+        name: 'Public cycle team',
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+    await serverDB.insert(teamMembers).values({
+      teamId: 'view-cycle-secret-team',
+      userId: ownerId,
+      workspaceId,
+    });
+    const [secretCycle] = await serverDB
+      .insert(teamCycles)
+      .values({ name: 'Secret cycle', teamId: 'view-cycle-secret-team', workspaceId })
+      .returning();
+    const [publicCycle] = await serverDB
+      .insert(teamCycles)
+      .values({ name: 'Public cycle', teamId: 'view-cycle-public-team', workspaceId })
+      .returning();
+
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const view = await ownerViews.create({
+      entityType: 'task',
+      name: 'Cycle slice',
+      query: {
+        entityType: 'task',
+        filter: {
+          any: [
+            { field: 'cycleId', op: 'eq', value: secretCycle!.id },
+            { field: 'cycleId', op: 'eq', value: publicCycle!.id },
+          ],
+        },
+        schemaVersion: 1,
+      },
+      visibility: 'workspace',
+    });
+
+    const ownerPresented = await ownerViews.present((await ownerViews.findById(view.id))!);
+    expect(JSON.stringify(ownerPresented.queryAst)).toContain(secretCycle!.id);
+    expect(JSON.stringify(ownerPresented.queryAst)).toContain(publicCycle!.id);
+
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    const presented = await visitorViews.present((await visitorViews.findById(view.id))!);
+    const serialized = JSON.stringify(presented.queryAst);
+    expect(serialized).not.toContain(secretCycle!.id);
+    expect(serialized).toContain(publicCycle!.id);
   });
 
   it('lists virtual builtins that cannot be overwritten or deleted', async () => {

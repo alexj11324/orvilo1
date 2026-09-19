@@ -9,9 +9,9 @@ import type {
   WorkQueryPredicate,
 } from '@orvilo/types';
 import { builtinSavedViewKey, isBuiltinSavedViewId, notificationScopeKey } from '@orvilo/types';
-import { and, desc, eq, or, type SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
 
-import { teamMembers, teams } from '../schemas/team';
+import { teamCycles, teamMembers, teams } from '../schemas/team';
 import type { NewSavedView, SavedViewItem } from '../schemas/workAttention';
 import { savedViews } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -108,9 +108,16 @@ const chunkIds = (ids: string[]) => {
   return chunks;
 };
 
+type ReadableIds = {
+  cycleId: Set<string>;
+  id: Set<string>;
+  projectId: Set<string>;
+  teamId: Set<string>;
+};
+
 const redactPredicate = (
   predicate: WorkQueryPredicate,
-  readable: { id: Set<string>; projectId: Set<string>; teamId: Set<string> },
+  readable: ReadableIds,
 ): WorkQueryPredicate => {
   const allowed =
     predicate.field === 'id'
@@ -119,7 +126,9 @@ const redactPredicate = (
         ? readable.projectId
         : predicate.field === 'teamId'
           ? readable.teamId
-          : null;
+          : predicate.field === 'cycleId'
+            ? readable.cycleId
+            : null;
   if (!allowed) return predicate;
   if ((predicate.op === 'eq' || predicate.op === 'neq') && typeof predicate.value === 'string') {
     return allowed.has(predicate.value) ? predicate : { ...predicate, value: UNREADABLE_ID };
@@ -140,7 +149,7 @@ const redactPredicate = (
 
 const redactFilter = (
   node: WorkQueryFilter | undefined,
-  readable: { id: Set<string>; projectId: Set<string>; teamId: Set<string> },
+  readable: ReadableIds,
 ): WorkQueryFilter | undefined => {
   if (!node) return node;
   return {
@@ -235,11 +244,14 @@ export class SavedViewModel {
     const taskIds = new Set<string>();
     const projectIds = new Set<string>();
     const teamIds = new Set<string>();
+    const cycleIds = new Set<string>();
     collectScalarIds(query.filter, 'id', query.entityType === 'project' ? projectIds : taskIds);
     collectScalarIds(query.filter, 'projectId', projectIds);
     collectScalarIds(query.filter, 'teamId', teamIds);
+    collectScalarIds(query.filter, 'cycleId', cycleIds);
 
-    const readable = {
+    const readable: ReadableIds = {
+      cycleId: new Set<string>(),
       id: new Set<string>(),
       projectId: new Set<string>(),
       teamId: new Set<string>(),
@@ -270,14 +282,26 @@ export class SavedViewModel {
         readable.projectId.add(project.id);
       }
     }
-    if (this.workspaceId && teamIds.size > 0) {
+    if (this.workspaceId && (teamIds.size > 0 || cycleIds.size > 0)) {
       const readableTeams = await new TeamModel(
         this.db,
         this.userId,
         this.workspaceId,
       ).listReadable();
+      const readableTeamIds = new Set(readableTeams.map((team) => team.id));
       for (const team of readableTeams) {
         if (teamIds.has(team.id)) readable.teamId.add(team.id);
+      }
+      if (cycleIds.size > 0) {
+        for (const chunk of chunkIds([...cycleIds])) {
+          const cycleRows = await this.db
+            .select({ id: teamCycles.id, teamId: teamCycles.teamId })
+            .from(teamCycles)
+            .where(inArray(teamCycles.id, chunk));
+          for (const cycle of cycleRows) {
+            if (readableTeamIds.has(cycle.teamId)) readable.cycleId.add(cycle.id);
+          }
+        }
       }
     }
 

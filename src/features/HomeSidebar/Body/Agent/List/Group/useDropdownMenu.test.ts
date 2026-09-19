@@ -38,10 +38,6 @@ vi.mock('../../../../hooks', () => ({
   }),
 }));
 
-vi.mock('../../useSidebarGroupVisibility', () => ({
-  useSidebarGroupVisibility: () => ({ setSidebarGroupVisible: vi.fn() }),
-}));
-
 const getMenuLayout = (items: ReturnType<typeof useGroupDropdownMenu>) =>
   (items ?? []).flatMap((item) => {
     if (!item || typeof item !== 'object') return [];
@@ -71,7 +67,6 @@ describe('Category useGroupDropdownMenu', () => {
       'divider',
       'rename',
       'config',
-      'hideFromSidebar',
       'divider',
       'delete',
     ]);

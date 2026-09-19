@@ -6,15 +6,12 @@ export interface AgentListViewOptions {
   groupBy: AgentGroupBy;
   orderBy: AgentOrderBy;
   orderDirection: AgentOrderDirection;
-  /** Whether agents hidden from the sidebar still appear on this page. */
-  showSidebarHidden: boolean;
 }
 
 export const DEFAULT_AGENT_LIST_VIEW_OPTIONS: AgentListViewOptions = {
   groupBy: 'none',
   orderBy: 'updatedAt',
   orderDirection: 'desc',
-  showSidebarHidden: true,
 };
 
 const AGENT_GROUP_BY_SET = new Set<AgentGroupBy>(['author', 'label', 'none']);
@@ -35,9 +32,5 @@ export const normalizeAgentListViewOptions = (
     orderDirection: AGENT_ORDER_DIRECTION_SET.has(next.orderDirection as AgentOrderDirection)
       ? (next.orderDirection as AgentOrderDirection)
       : DEFAULT_AGENT_LIST_VIEW_OPTIONS.orderDirection,
-    showSidebarHidden:
-      typeof next.showSidebarHidden === 'boolean'
-        ? next.showSidebarHidden
-        : DEFAULT_AGENT_LIST_VIEW_OPTIONS.showSidebarHidden,
   };
 };

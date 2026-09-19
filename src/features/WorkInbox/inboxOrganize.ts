@@ -1,5 +1,5 @@
 import {
-  isWorkAttentionAllowedHttpsHost,
+  classifyWorkAttentionActionUrl,
   notificationBulkFingerprint,
   type NotificationFeedKind,
   type NotificationPresentationFilter,
@@ -25,15 +25,5 @@ export const inboxBulkFingerprint = (
 ): string => notificationBulkFingerprint(action, chip, kind);
 
 /** Same-app relative paths navigate in-app; allowlisted https opens a new tab. */
-export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' => {
-  if (url.startsWith('/') && !url.startsWith('//')) return 'internal';
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol === 'https:' && isWorkAttentionAllowedHttpsHost(parsed.hostname)) {
-      return 'external';
-    }
-  } catch {
-    return 'reject';
-  }
-  return 'reject';
-};
+export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' =>
+  classifyWorkAttentionActionUrl(url).mode;

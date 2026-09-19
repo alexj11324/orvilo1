@@ -313,6 +313,64 @@ export const isWorkAttentionAllowedHttpsHost = (hostname: string): boolean => {
   );
 };
 
+export type WorkAttentionActionUrlMode = 'external' | 'internal' | 'reject';
+
+export type ClassifiedWorkAttentionActionUrl =
+  { mode: Exclude<WorkAttentionActionUrlMode, 'reject'>; url: string } | { mode: 'reject' };
+
+const WORK_ATTENTION_RELATIVE_ORIGIN = 'https://orvilo.invalid';
+
+const hasUnsafeWorkAttentionUrlChar = (value: string): boolean => {
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if (code <= 0x1f || code === 0x7f || char === '\\') return true;
+  }
+  return false;
+};
+
+/**
+ * Inbox and My Work may only open same-app relative paths or an allowlisted
+ * https host. javascript:/data:/credentials/protocol-relative URLs fail closed.
+ */
+export const classifyWorkAttentionActionUrl = (
+  raw: string | null | undefined,
+): ClassifiedWorkAttentionActionUrl => {
+  if (!raw) return { mode: 'reject' };
+  const trimmed = raw.trim();
+  if (!trimmed || hasUnsafeWorkAttentionUrlChar(trimmed)) return { mode: 'reject' };
+
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('//') || trimmed.includes('://')) return { mode: 'reject' };
+    try {
+      const parsed = new URL(trimmed, WORK_ATTENTION_RELATIVE_ORIGIN);
+      if (parsed.username || parsed.password || parsed.hostname !== 'orvilo.invalid') {
+        return { mode: 'reject' };
+      }
+      if (!parsed.pathname.startsWith('/') || parsed.pathname.startsWith('//')) {
+        return { mode: 'reject' };
+      }
+      return { mode: 'internal', url: `${parsed.pathname}${parsed.search}${parsed.hash}` };
+    } catch {
+      return { mode: 'reject' };
+    }
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password)
+      return { mode: 'reject' };
+    if (!isWorkAttentionAllowedHttpsHost(parsed.hostname)) return { mode: 'reject' };
+    return { mode: 'external', url: parsed.toString() };
+  } catch {
+    return { mode: 'reject' };
+  }
+};
+
+export const safeWorkAttentionActionUrl = (raw: string | null | undefined): string | null => {
+  const classified = classifyWorkAttentionActionUrl(raw);
+  return classified.mode === 'reject' ? null : classified.url;
+};
+
 /** Pending review that is not a Task — never materialized as a Task just to fill My Work. */
 export interface WorkQueryExternalReview {
   actionType: string;

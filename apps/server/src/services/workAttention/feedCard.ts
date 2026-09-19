@@ -2,8 +2,8 @@ import {
   ACTION_SOURCE_KINDS,
   type ActionSourceKind,
   type DecisionVerb,
-  isWorkAttentionAllowedHttpsHost,
   type NotificationFeedCard,
+  safeWorkAttentionActionUrl,
   type TypedNavigationTarget,
 } from '@orvilo/types';
 
@@ -14,44 +14,11 @@ const ACTION_KINDS = new Set<ActionSourceKind>(ACTION_SOURCE_KINDS);
 const asActionKind = (value: string | null | undefined): ActionSourceKind | null =>
   value && ACTION_KINDS.has(value as ActionSourceKind) ? (value as ActionSourceKind) : null;
 
-const hasUnsafeUrlChar = (value: string) => {
-  for (const char of value) {
-    const code = char.charCodeAt(0);
-    if (code <= 0x1f || code === 0x7f || char === '\\') return true;
-  }
-  return false;
-};
-
 /**
  * Inbox may only open same-app relative paths or an allowlisted https host.
  * javascript:/data:/protocol-relative URLs fall back to the inbox itself.
  */
-export const safeInboxActionUrl = (raw: string | null | undefined): string | null => {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed || hasUnsafeUrlChar(trimmed)) return null;
-
-  if (trimmed.startsWith('/')) {
-    if (trimmed.startsWith('//') || trimmed.includes('://')) return null;
-    try {
-      const parsed = new URL(trimmed, 'https://orvilo.invalid');
-      if (parsed.username || parsed.password || parsed.hostname !== 'orvilo.invalid') return null;
-      if (!parsed.pathname.startsWith('/') || parsed.pathname.startsWith('//')) return null;
-      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-    } catch {
-      return null;
-    }
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return null;
-    if (!isWorkAttentionAllowedHttpsHost(parsed.hostname)) return null;
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-};
+export const safeInboxActionUrl = safeWorkAttentionActionUrl;
 
 const navigationFor = (row: NotificationItem): TypedNavigationTarget => {
   if (row.resourceType === 'task' && row.resourceId) {

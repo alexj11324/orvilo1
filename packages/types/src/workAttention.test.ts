@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyNoProjectFilter, NO_PROJECT_PREDICATE, type WorkQuery } from './workAttention';
+import {
+  applyNoProjectFilter,
+  classifyWorkAttentionActionUrl,
+  NO_PROJECT_PREDICATE,
+  safeWorkAttentionActionUrl,
+  type WorkQuery,
+} from './workAttention';
 
 const assigned = (): WorkQuery => ({
   entityType: 'task',
@@ -27,5 +33,25 @@ describe('applyNoProjectFilter', () => {
   it('drops the chip without removing the rest of the filter', () => {
     const withChip = applyNoProjectFilter(assigned(), true);
     expect(applyNoProjectFilter(withChip, false)).toEqual(assigned());
+  });
+});
+
+describe('classifyWorkAttentionActionUrl', () => {
+  it('keeps same-app paths and allowlisted https, and fails closed otherwise', () => {
+    expect(classifyWorkAttentionActionUrl('/inbox?tab=action')).toEqual({
+      mode: 'internal',
+      url: '/inbox?tab=action',
+    });
+    expect(classifyWorkAttentionActionUrl('https://github.com/org/repo/pull/1')).toEqual({
+      mode: 'external',
+      url: 'https://github.com/org/repo/pull/1',
+    });
+    expect(safeWorkAttentionActionUrl('javascript:alert(1)')).toBeNull();
+    expect(safeWorkAttentionActionUrl('https://evil.example/phish')).toBeNull();
+    expect(safeWorkAttentionActionUrl('//evil.example/phish')).toBeNull();
+    expect(safeWorkAttentionActionUrl('/inbox\u0000/escape')).toBeNull();
+    expect(safeWorkAttentionActionUrl('/inbox\\x')).toBeNull();
+    expect(safeWorkAttentionActionUrl('https://user:pass@github.com/org/repo')).toBeNull();
+    expect(safeWorkAttentionActionUrl('  /inbox  ')).toBe('/inbox');
   });
 });

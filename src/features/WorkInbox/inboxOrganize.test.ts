@@ -33,5 +33,8 @@ describe('inboxUrlOpenMode', () => {
     expect(inboxUrlOpenMode('https://evil.example/phish')).toBe('reject');
     expect(inboxUrlOpenMode('/inbox')).toBe('internal');
     expect(inboxUrlOpenMode('//evil.example')).toBe('reject');
+    expect(inboxUrlOpenMode('/inbox\u0000/escape')).toBe('reject');
+    expect(inboxUrlOpenMode('/inbox\\x')).toBe('reject');
+    expect(inboxUrlOpenMode('https://user:pass@github.com/org/repo')).toBe('reject');
   });
 });

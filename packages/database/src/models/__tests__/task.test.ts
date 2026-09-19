@@ -3875,6 +3875,28 @@ describe('TaskModel', () => {
         secret.id,
       );
     });
+
+    it('does not report a private-team task as blocked to a non-member', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team blocked work',
+        name: 'Private-team blocked work',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const blocker = await alice.create({
+        instruction: 'Still open',
+        name: 'Still open',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      await alice.addDependency(secret.id, blocker.id);
+
+      expect(await alice.findBlockedTaskIds([secret.id])).toEqual([secret.id]);
+      expect(await bob.findBlockedTaskIds([secret.id])).toEqual([]);
+      expect(await bob.areAllDependenciesCompleted(secret.id)).toBe(false);
+    });
   });
 
   describe('my tasks filters', () => {

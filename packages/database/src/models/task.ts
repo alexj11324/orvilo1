@@ -3074,6 +3074,8 @@ export class TaskModel {
   /** Missing, trashed, inaccessible, canceled and failed prerequisites all block. */
   async findBlockedTaskIds(taskIds: string[]): Promise<string[]> {
     if (taskIds.length === 0) return [];
+    const readableIds = (await this.findByIds(taskIds)).map((row) => row.id);
+    if (readableIds.length === 0) return [];
     const blocked = await this.db
       .selectDistinct({ taskId: taskDependencies.taskId })
       .from(taskDependencies)
@@ -3088,7 +3090,7 @@ export class TaskModel {
       )
       .where(
         and(
-          inArray(taskDependencies.taskId, taskIds),
+          inArray(taskDependencies.taskId, readableIds),
           eq(taskDependencies.type, 'blocks'),
           or(isNull(tasks.id), ne(tasks.status, 'completed')),
           this.depsOwnership(),
@@ -3098,6 +3100,7 @@ export class TaskModel {
   }
 
   async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
+    if (!(await this.findById(taskId))) return false;
     if (this.workspaceId) {
       const unresolvedExternal = await this.db.execute(sql`
         SELECT 1

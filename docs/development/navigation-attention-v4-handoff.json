@@ -64,8 +64,8 @@
     "src/features/SavedViews/SavedViewPage.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": null,
-  "implementationHeadBeforeDocs": "b554e2cc",
+  "headSha": "a705b45c",
+  "implementationHeadBeforeDocs": "a705b45c",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

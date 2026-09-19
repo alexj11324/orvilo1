@@ -25,6 +25,10 @@ import type { CommandMenuSearchResult } from './SearchResults';
 import { type ThemeMode } from './types';
 import { isCommandMenuFtsType, isCommandMenuWorkType } from './utils/queryParser';
 
+/** Mixed palette stays small; a typed filter may request up to 50 of that type. */
+const COMMAND_MENU_MIXED_LIMIT_PER_TYPE = 5;
+const COMMAND_MENU_TYPED_LIMIT_PER_TYPE = 50;
+
 /**
  * Shared methods for CommandMenu
  */
@@ -73,7 +77,9 @@ export const useCommandMenu = () => {
     hasSearch ? ['search', searchQuery, agentId, typeFilter] : null,
     async () => {
       const locale = globalHelpers.getCurrentLanguage();
-      const limitPerType = typeFilter ? 50 : 5;
+      const limitPerType = typeFilter
+        ? COMMAND_MENU_TYPED_LIMIT_PER_TYPE
+        : COMMAND_MENU_MIXED_LIMIT_PER_TYPE;
       const ftsType = isCommandMenuFtsType(typeFilter) ? typeFilter : undefined;
       const wantsFts = !typeFilter || Boolean(ftsType);
       const wantsWork = !typeFilter || isCommandMenuWorkType(typeFilter);

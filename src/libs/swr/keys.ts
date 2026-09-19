@@ -1145,6 +1145,15 @@ export const workAttentionKeys = {
     'workAttention:savedViews',
     workspaceId,
   ]),
+  search: def(
+    'workAttention:search',
+    (workspaceId: string | null, query: string, type: string | undefined) => [
+      'workAttention:search',
+      workspaceId,
+      query,
+      type,
+    ],
+  ),
   teams: def('workAttention:teams', (workspaceId: string | null) => [
     'workAttention:teams',
     workspaceId,

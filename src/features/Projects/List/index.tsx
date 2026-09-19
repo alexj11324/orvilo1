@@ -31,8 +31,8 @@ import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import TopicCreatorAvatar from '@/features/TopicCreatorAvatar';
 import UserAvatar from '@/features/User/UserAvatar';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
@@ -213,27 +213,37 @@ const ProjectListPage = memo(() => {
   if (!enabled) return <ProjectDisabled />;
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {t('list.title')}
           </Text>
         }
-      />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <SearchBar
-            allowClear
-            placeholder={t('list.searchPlaceholder')}
-            style={{ maxWidth: 280 }}
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
-          <Button icon={PlusIcon} onClick={() => openCreateProjectModal()}>
+        right={
+          <Button
+            icon={PlusIcon}
+            size={'small'}
+            type="primary"
+            onClick={() => openCreateProjectModal()}
+          >
             {t('create.action')}
           </Button>
-        </Flexbox>
+        }
+      />
+      <WorkSurfaceCollection
+        toolbar={
+          <WorkSurfaceToolbar>
+            <SearchBar
+              allowClear
+              placeholder={t('list.searchPlaceholder')}
+              style={{ maxWidth: 280 }}
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+            />
+          </WorkSurfaceToolbar>
+        }
+      >
         {error ? (
           <AsyncError error={error} onRetry={() => mutate()} />
         ) : isLoading && projects.length === 0 ? (
@@ -252,8 +262,8 @@ const ProjectListPage = memo(() => {
             ))}
           </Flexbox>
         )}
-      </WideScreenContainer>
-    </Flexbox>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

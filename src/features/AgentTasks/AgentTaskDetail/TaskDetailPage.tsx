@@ -10,17 +10,16 @@ import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import Breadcrumb from '../shared/Breadcrumb';
+import IssueContent from './IssueContent';
 import TaskDetailCopyActions from './TaskDetailCopyActions';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
-import TaskDetailSections from './TaskDetailSections';
-import TaskDetailSkeleton from './TaskDetailSkeleton';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
 
@@ -37,7 +36,8 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
     s.toggleTaskAgentPanel,
   ]);
 
-  const { isInitialLoading, isNotFound, error, onRetry } = useActiveTaskDetail(taskId);
+  const detail = useActiveTaskDetail(taskId);
+  const { isNotFound, error, onRetry } = detail;
 
   // A transient fetch failure (network / 500) is not a 404 — keep the URL and
   // offer Reload instead of the terminal "task was deleted" dead-end below.
@@ -78,7 +78,7 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   }
 
   return (
-    <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, position: 'relative' }}>
+    <WorkSurface style={{ position: 'relative' }}>
       <NavHeader
         left={
           <>
@@ -109,16 +109,15 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
           },
         }}
       />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
-        {/* Detail is prose — instruction, deliverables, activity — so it keeps the
-            centered reading column rather than the list page's full-bleed rows,
-            whose value is the horizontal room for their metadata columns. */}
-        <WideScreenContainer>
-          {isInitialLoading ? <TaskDetailSkeleton chrome={'body'} /> : <TaskDetailSections />}
-        </WideScreenContainer>
-      </Flexbox>
+      {/* Detail is prose — instruction, deliverables, activity — so it mounts
+          the document frame: a centered reading column at a fixed max width,
+          invariant under the chat wide-screen toggle. `IssueContent` is the
+          same body the inbox split pane mounts. */}
+      <WorkSurfaceDocument>
+        <IssueContent detail={detail} taskId={taskId} />
+      </WorkSurfaceDocument>
       <TopicChatDrawer />
-    </Flexbox>
+    </WorkSurface>
   );
 });
 

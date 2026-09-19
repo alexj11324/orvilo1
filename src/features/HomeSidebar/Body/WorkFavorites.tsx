@@ -6,20 +6,25 @@ import {
   AccordionPanel,
   accordionStyles,
   AccordionTrigger,
+  ActionIcon,
+  toast,
 } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
-import { memo } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { useClientDataSWR } from '@/libs/swr';
+import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
+import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { favoriteLabel } from './favoriteLabel';
+import { favoriteReorderSwap } from './favoriteReorder';
 
 interface WorkFavoritesProps {
   itemKey: string;
@@ -39,7 +44,29 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   const { data } = useClientDataSWR(workAttentionKeys.favorites(workspaceId), () =>
     workAttentionService.favoriteList(),
   );
-  const items = data?.data ?? [];
+  const items = useMemo(() => data?.data ?? [], [data?.data]);
+
+  const refresh = useCallback(
+    () => mutate(workAttentionKeys.favorites(workspaceId)),
+    [workspaceId],
+  );
+
+  const move = useCallback(
+    async (index: number, direction: 'down' | 'up') => {
+      const payload = favoriteReorderSwap(items, index, direction);
+      if (!payload) return;
+      try {
+        await workAttentionService.favoriteReorder(payload);
+      } catch (error) {
+        if (!isTrpcErrorCode(error, 'CONFLICT')) {
+          toast.error(t('favorites.reorderFailed'));
+        }
+      }
+      await refresh();
+    },
+    [items, refresh, t],
+  );
+
   if (items.length === 0) return null;
 
   return (
@@ -48,12 +75,32 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
         <AccordionTrigger>{t('tab.favorites')}</AccordionTrigger>
       </AccordionHeader>
       <AccordionPanel>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <WorkspaceLink
             key={`${item.targetType}:${item.targetId}`}
             to={targetPath(item.targetType, item.targetId)}
           >
-            <NavItem title={favoriteLabel(item.targetType, item.title, t, item.targetId)} />
+            <NavItem
+              title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
+              extra={
+                <>
+                  <ActionIcon
+                    disabled={index === 0}
+                    icon={ChevronUp}
+                    size="small"
+                    title={t('navPanel.moveUp')}
+                    onClick={() => void move(index, 'up')}
+                  />
+                  <ActionIcon
+                    disabled={index === items.length - 1}
+                    icon={ChevronDown}
+                    size="small"
+                    title={t('navPanel.moveDown')}
+                    onClick={() => void move(index, 'down')}
+                  />
+                </>
+              }
+            />
           </WorkspaceLink>
         ))}
       </AccordionPanel>

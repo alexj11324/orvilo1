@@ -2,14 +2,13 @@
 
 import type { MenuProps } from '@lobehub/ui';
 import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { AccordionRoot, ActionIcon } from '@lobehub/ui/base-ui';
+import { AccordionRoot, ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { EyeOffIcon, MoreHorizontalIcon, SlidersHorizontalIcon } from 'lucide-react';
 import type { Key, ReactElement } from 'react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import Recents from '@/features/Home/Recents';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -17,46 +16,49 @@ import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
 import { useNavLayout } from '@/hooks/useNavLayout';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+import { useClientDataSWR } from '@/libs/swr';
+import { pullRequestKeys } from '@/libs/swr/keys';
+import { pullRequestService } from '@/services/pullRequest';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { isModifierClick } from '@/utils/navigation';
 
-import Agent from './Agent';
+import { useInboxUnreadCount } from '../Header/components/useInboxUnreadCount';
+import CreateRow from './CreateRow';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
-import Private from './Private';
-import Project from './Project';
+import TeamsSection from './TeamsSection';
 import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPreference';
+import WorkFavorites from './WorkFavorites';
+import WorkspaceSection from './WorkspaceSection';
 
 export enum GroupKey {
   Agent = 'agent',
-  Private = 'private',
-  Project = 'project',
-  Recents = 'recents',
-  Resource = 'resource',
+  Favorites = 'favorites',
+  Teams = 'teams',
+  Workspace = 'workspace',
 }
 
-const ACCORDION_KEYS = new Set<string>([
-  GroupKey.Project,
-  GroupKey.Recents,
-  GroupKey.Agent,
-  GroupKey.Private,
-]);
+const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, GroupKey.Teams]);
+
+/** Core entries can never be hidden — the fixed IA keeps them always mounted.
+ * `create` is the standalone quick-create row (Linear's `+`). */
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'create']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
 const HEADER_KEYS = new Set<string>(['home', 'search']);
 
 const accordionComponents: Record<string, (key: string) => ReactElement> = {
-  [GroupKey.Agent]: (key) => <Agent itemKey={key} key={key} />,
-  [GroupKey.Private]: (key) => <Private itemKey={key} key={key} />,
-  [GroupKey.Project]: (key) => <Project itemKey={key} key={key} />,
-  [GroupKey.Recents]: (key) => <Recents itemKey={key} key={key} />,
+  [GroupKey.Favorites]: (key) => <WorkFavorites itemKey={key} key={key} />,
+  [GroupKey.Teams]: (key) => <TeamsSection itemKey={key} key={key} />,
+  [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
 };
 
-const mergeSidebarExpandedKeys = (
+/** Exported for TeamsSection — each expanded `team:<id>` accordion shares
+ * the same persisted `sidebarExpandedKeys` bucket. */
+export const mergeSidebarExpandedKeys = (
   currentKeys: string[],
   accordionKeys: string[],
   expandedKeys: Key[],
@@ -77,15 +79,10 @@ const Body = memo(() => {
   const tab = useActiveTabKey();
   const navigate = useWorkspaceAwareNavigate();
   const { topNavItems, bottomMenuItems } = useNavLayout();
-  // Personal mode has no notion of "private vs workspace-public" — every row
-  // is implicitly the owner's. Hide the Private section entirely there so the
-  // sidebar doesn't sprout an empty accordion users can't populate.
   const activeWorkspaceId = useActiveWorkspaceId();
-  // The Agent/Private sections subtract the caller's sidebar-hidden items,
-  // and the section layout syncs per-member — both live in the workspace
-  // user preference, so load it alongside the sidebar.
+  // The section layout syncs per-member via the workspace user preference, so
+  // load it alongside the sidebar.
   const useFetchWorkspaceUserPreference = useUserStore((s) => s.useFetchWorkspaceUserPreference);
-  const enableProjects = useUserStore(labPreferSelectors.enableProjects);
   useFetchWorkspaceUserPreference();
   useSyncWorkspaceSidebarPreference(activeWorkspaceId);
   const sidebarItems = useGlobalStore(systemStatusSelectors.sidebarItems(activeWorkspaceId));
@@ -96,6 +93,17 @@ const Body = memo(() => {
     systemStatusSelectors.hiddenSidebarSections(activeWorkspaceId),
   );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+  const { unreadCount: inboxUnreadCount } = useInboxUnreadCount();
+
+  // Reviews badge = the pending for-me review count (Linear shows a count on
+  // the Reviews row). Same SWR key as ReviewsPage, so it's one shared fetch;
+  // a failed queue (GitHub not connected) just renders no badge.
+  const reviewsQueue = useClientDataSWR(
+    pullRequestKeys.queue(activeWorkspaceId, 'for-me'),
+    () => pullRequestService.queue('for-me'),
+    { revalidateOnFocus: false },
+  );
+  const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
 
   const hideSection = useCallback(
     (key: string) => {
@@ -107,14 +115,19 @@ const Body = memo(() => {
   const getContextMenuItems = useCallback(
     (key: string): MenuProps['items'] => {
       const items: NativeContextMenuItem[] = [
-        {
-          icon: <Icon icon={EyeOffIcon} />,
-          key: 'hideSection',
-          label: t('navPanel.hideSection'),
-          onClick: () => hideSection(key),
-          sfSymbol: 'eye.slash',
-        },
-        { type: 'divider' as const },
+        // Core destinations are part of the fixed IA — no hide affordance.
+        ...(CORE_KEYS.has(key)
+          ? []
+          : [
+              {
+                icon: <Icon icon={EyeOffIcon} />,
+                key: 'hideSection' as const,
+                label: t('navPanel.hideSection'),
+                onClick: () => hideSection(key),
+                sfSymbol: 'eye.slash' as const,
+              },
+              { type: 'divider' as const },
+            ]),
         {
           icon: <Icon icon={SlidersHorizontalIcon} />,
           key: 'customizeSidebar',
@@ -139,14 +152,9 @@ const Body = memo(() => {
   // Items that must always be visible regardless of hiddenSections
   const isVisible = useCallback(
     (k: string) => {
-      // Private accordion is workspace-only. In personal mode every row is
-      // implicitly owner-private, so a dedicated bucket would be a noisy
-      // empty section.
-      if (k === GroupKey.Private && !activeWorkspaceId) return false;
-      if (k === GroupKey.Project && !enableProjects) return false;
-      return k === GroupKey.Agent || k === SIDEBAR_SPACER_ID || !hiddenSections.includes(k);
+      return CORE_KEYS.has(k) || k === SIDEBAR_SPACER_ID || !hiddenSections.includes(k);
     },
-    [hiddenSections, activeWorkspaceId, enableProjects],
+    [hiddenSections],
   );
 
   const visibleKeys = useMemo(
@@ -158,6 +166,14 @@ const Body = memo(() => {
     (key: string) => {
       const navItem = navLinkItems.get(key);
       if (!navItem || navItem.hidden) return null;
+      // The My issues key keeps resolving the legacy `/my-work` segment so the
+      // entry stays lit while the route redirect runs; Reviews is its own page.
+      const active =
+        key === 'my-work'
+          ? tab === 'my-issues' || tab === 'my-work'
+          : key === 'agent'
+            ? tab === 'agent' || tab === 'agents'
+            : tab === key;
       return (
         <WorkspaceLink
           key={key}
@@ -169,7 +185,7 @@ const Body = memo(() => {
           }}
         >
           <NavItem
-            active={tab === key}
+            active={active}
             contextMenuItems={getContextMenuItems(key)}
             icon={navItem.icon}
             title={navItem.title}
@@ -178,11 +194,22 @@ const Body = memo(() => {
                 <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
               </DropdownMenu>
             }
+            extra={
+              key === 'inbox' && inboxUnreadCount > 0 ? (
+                <Text fontSize={12} type={'secondary'}>
+                  {inboxUnreadCount}
+                </Text>
+              ) : key === 'reviews' && reviewsPendingCount > 0 ? (
+                <Text fontSize={12} type={'secondary'}>
+                  {reviewsPendingCount}
+                </Text>
+              ) : undefined
+            }
           />
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, getContextMenuItems, navigate],
+    [navLinkItems, tab, getContextMenuItems, navigate, inboxUnreadCount, reviewsPendingCount],
   );
 
   const handleAccordionExpandedChange = useCallback(
@@ -235,6 +262,9 @@ const Body = memo(() => {
             style={{ flex: '1 1 0', minHeight: 0 }}
           />,
         );
+      } else if (key === 'create') {
+        flushAccordion();
+        elements.push(<CreateRow key={key} />);
       } else if (ACCORDION_KEYS.has(key)) {
         const comp = accordionComponents[key]?.(key);
         if (comp) accGroup.push({ element: comp, key });

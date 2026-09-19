@@ -101,6 +101,12 @@ const renderFooter = async ({
   vi.doMock('@/features/User/UserPanel/ThemeButton', () => ({
     default: () => null,
   }));
+  vi.doMock('@/features/User/UserPanel', () => ({
+    default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  }));
+  vi.doMock('@/features/User/UserAvatar', () => ({
+    default: () => null,
+  }));
   vi.doMock('@/features/Workspace/WorkspaceLink', () => ({
     default: ({ children, to }: { children: React.ReactNode; to: string }) => (
       <a href={to}>{children}</a>

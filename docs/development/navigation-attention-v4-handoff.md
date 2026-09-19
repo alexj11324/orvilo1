@@ -1,0 +1,292 @@
+# Navigation Attention v4 — 会话交接（2026-09-19）
+
+给换到下一台机器 / 下一个 Agent 继续用的。合同原文在仓库里，不要再去 `/tmp` 或受保护 clone 里找。
+
+## 先读这些
+
+| 文件                                                                                         | 作用                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`docs/implementation/navigation-attention-v4/`](../implementation/navigation-attention-v4/) | 用户交付的 v4.1 执行包（`README` / `IMPLEMENTATION_SPEC` / `DECISIONS` / `ACCEPTANCE` / `work-packages.json` / `ownership.json` / `agents/*`）。已按 `SHA256SUMS` 原样入库。目录已加入 `.prettierignore` / `.remarkignore`，lint-staged 也会跳过，不要改包内字节。 |
+| [`docs/development/navigation-attention-v4.md`](./navigation-attention-v4.md)                | N00 基线：相对研究 SHA 的 canary 差异、复用清单、冻结决策、迁移号                                                                                                                                                                                                  |
+| 本文件                                                                                       | 实施进度、剩余 MUST-FIX、禁止事项、下一刀改哪些文件                                                                                                                                                                                                                |
+| Draft PR                                                                                     | <https://github.com/alexj11324/orvilo1/pull/95>                                                                                                                                                                                                                    |
+
+合同版本：`nav-attention-v4.1`。这是 **reuse-and-connect**，不是 v3 重做，也不是只改侧栏按钮。
+
+## 目标（不要缩小）
+
+完成 Orvilo Navigation Attention v4：Inbox / My Work / Views / Team Triage 统一个人工作面，事件 → 收件人 → 提示 → 真实动作 → 回执。64 项 AC 在 [`ACCEPTANCE.md`](../implementation/navigation-attention-v4/ACCEPTANCE.md)。**在每条都有证据之前，不要把系统目标标 complete。** 不要把范围缩成「侧栏有 Inbox」。
+
+## 仓库坐标
+
+| 项                               | 值                                                                                                                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
+| 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
+| PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
+| 实施 HEAD（本交接提交之前）      | `5507a816` v5 F41 歧义 team 兜底。叠在 `971ae8e1`（F09–F11/F22/F41/F42）、`315b7b7d`（F03/F35–F37）、`6156f9a8`（F02 PR 评审）之上。完整 v5 findings 终态见文末表。                                                        |
+| Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
+| 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
+| 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
+| Cloud agent                      | <https://cursor.com/agents/bc-c18edf00-e213-4176-9c88-d3f33b4ea544>                                                                                                                                                        |
+| 写者租约                         | 全局最多 3 writer。本分支上 Cursor agent 与 Devin 都推过；**先 `git pull --rebase origin cursor/navigation-attention-v4-a544`，不要 rebase 到 canary，不要 force-push。** 不要碰 `/Users/alexjiang/Desktop/vibe/orvilo1`。 |
+
+## 用户澄清（仍然有效）
+
+> 「什么 API key 啊，不是模型的 API key 吧，我已经在退役自定义 provider 了」
+
+本 PR 里的 API key 工作是 **Orvilo 签名 TRPC key**（`api_keys`、`/settings/apikey`、`TRPC_NAMESPACE_API_KEY_RULES`），给受限 key 调 `workAttention` 等命名空间用，失败关闭。
+
+- **不是** 模型 / 自定义 provider 凭据
+- **不要** 恢复 `/settings/provider`（canary #94 已退役）
+- 任务 subscribe/unsubscribe 是可读任务上的 follow 行，不是模型 key，也不是聊天 mute
+
+## 已落地（相对 `canary@d02f13f1`）
+
+表面：`/inbox`、`/my-work`、`/views/:viewId`、`/teams`。一级侧栏是固定 `inbox / my-work / reviews` + 手风琴；Tasks / Projects / Automation / Views 走 Workspace 与深链，不再是可重排一级。HomeInbox 只做聊天摘要。剩下来的 InboxModal 列表 UI 已删，opener 只跳 `/inbox`。
+
+迁移：**`0175_work_attention`**、**`0176_work_attention_triage_bulk`**。0174 被 #81 占用，不要复用。
+
+已接线的产品行为（ vitest/check 覆盖，**不是** 64× Preview 验收）：
+
+- Inbox：versioned read/archive、snooze 被更新活动打断（NOT08）、`archiveAll` 不藏未决动作卡、consume-once bulk archive/read、allowlisted `actionUrl`（SEC01）、源标题 i18n、J/K/Enter/Esc、铃铛与 `unreadBadgeCount` 共用
+- Decide：`workAttentionProcedure`（ACT01），不是 organize。ACP intervention OSS `{ handled: false }` → `outcome_unknown`。ownership transfer /withdraw outgoing。outgoing 占未读铃但不进 Needs-you（ACT08）
+- 独立 `event_consumer_receipts`（D09）。权限 `notification:read|organize` ALL-only（D14）
+- My Work：assigned / delegated=`execution_grants.initiatedBy` / review / created=`createdByUserId` 且排除 Linear 导入 null（WORK03）/subscribed。No-project chip（WORK07）。服务端 list/board（WORK08）。待审核列出非 task 的 pending approval，**不为填列表建 Task**（WORK05）
+- Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Saved View / Team 的统一 `KanbanBoard` `external` 拖放走这条路径。My Work assigned/delegated 的 Linear 卡（有 `workflowStateId`）跨列拖放也走 `moveBoard`；同列重排和无 Linear 绑定的卡仍走 store `task.update`
+- Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 task/project/team/**cycle** id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）。Devin `89619d13` 接上真实视图编辑器 / 筛选构建器 / 项目看板（F23–F26+F31–F32）
+- Team Triage：accept/decline/duplicate/reassign + `moveToTeam` CAS（TRI02）；`duplicate_of_task_id`（TRI03）；历史 Linear import `triageStatus: accepted`（TRI01）；triage 事件 `task.scope.changed`（TRI08）；`cycleId` → `tasks.cycleRefId`（TRI07）；`teamId` 与可读团队求交（TRI05）
+- Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），侧栏始终可见上 / 下箭头
+- CommandMenu sidecar 搜 task/team/project/savedView，不走 FTS `type:`（NAV07）
+- 签名 TRPC key catalog 登记 `workAttention`
+- 与 #94 合并：保留 `teams`/`views`/`my-work` 根，以及退役的 `acceptance`/`verify` 重定向
+
+精确 redirect 仅 `/tasks?collection=mine&scope=assigned|created`。
+
+## 本交接之后又接上的产品面（相对 `ad838850`）
+
+- `buildInboxFeed`：`listPendingForActorSettled` → `ensureActionCards` → `listFeed` → `mapFeedWithLiveActions` → `overlayLiveTitles`（`TaskModel` / `ProjectModel.findByIds`）
+
+- `notification.feed` 返回 `NotificationFeedPage`；`workAttention.feed` 返回 `{ data: NotificationFeedPage, success }`
+
+- `WorkInboxPage` 读 `data.cards`；`partial` 时 base-ui `Alert`；空列表 + partial **不是** 成功空态
+
+- Inbox SWR `focusThrottleInterval: 0`（SEC02：失权后下一次窗口聚焦会重拉，不再等 5 分钟）
+
+- 收藏始终可见上 / 下箭头，走 `favoriteReorder` CAS，CONFLICT 则 refetch
+
+- `workAttention.search` / `searchTasks` / `searchProjects` 上限 `WORK_SEARCH_MAX_PER_TYPE`（200）；CommandMenu 仍混合 5 / 带类型 50；`TeamsPage` 搜索框走 sidecar，不传 FTS `type:`
+
+- `NavItem` `@media (hover: none)` 强制可见 `.nav-item-actions`
+
+- CommandMenu 最近访问只走访问记录：`RecentModel.queryRecent` 的 project/savedView/team/task union；`RecentsCommands` 开菜单时懒拉 `recentService.getAll(8)`。**不要**再渲染 `workAttention.recentWork`（最近更新）第二组；该 TRPC /helper 已删
+
+- 个人模式（`!useActiveWorkspaceId()`）`recentTypesForWorkspace` 不含 `team`；Navigate 与 `useNavLayout` 也不再露出 Teams（侧栏原先已藏）。Home recents 轨道 / 抽屉和 CommandMenu 工作搜索同样不拉 team
+
+- Task / Team / Project / Saved View 共用 `WorkFavoriteButton`；侧栏收藏可 unpin
+
+- 侧栏收藏按 `favoritePageSize`（默认 5）切片，多出来的走 More + `AllFavoritesDrawer`；上 / 下箭头按**完整列表**下标重排，最后一行可见项可以和下一项（overflow）对调。个人模式不从收藏里丢掉 team pin（`favoriteReorder` CAS 会重写整表）
+
+- Web / Electron 主区 `matchRoutes` 覆盖 `/inbox` `/my-work` `/views` `/teams` 及其 workspace 镜像，叶子不是 splat `*`（NAV02 路由半边；原生通知完整点击矩阵仍是 CI\_E2E）
+
+- Recents 的 project/savedView/team 不再打开空 ⋯：可 pin 的类型走 `useWorkFavoriteToggle`；菜单长度为 0 时不渲染 ⋯ /context menu
+
+- Electron 原生通知 click 对 `/inbox` 与 `/{workspace}/inbox` 走同一 `openNotificationTarget` broadcast
+
+- My Work / 任务视图行用 `resolveTaskStatus` 再交给 `TaskStatusIcon`（`task.status` 是 `string | null | undefined`；`dde9ef1f` 的 Push Typecheck / Database lint 因此失败）
+
+- 项目 entity 的 Saved View 结果行与 Projects 列表同一套 chrome：状态图标、identifier、相对时间、Skeleton / 空态图标；链接走 `slug` 否则 `id`
+
+- My Work board 直接挂共享 `KanbanBoard`（`myTaskScope`: `assigned`/`delegated`，`projectId: null` 接 No-project chip）；看板态不再拉 work-query feed。Saved View / Team 页的 work-query board 也统一进同一个 `KanbanBoard`：`external` 数据源 prop（groups 由 `workQueryBoardGroups` 把 status/workflowCategory 键折进 7 个共享列键）。跨列拖放走 `workAttention.moveBoard` + `WORKFLOW_STATE_REQUIRED` picker（VIEW08）；同列重排不写 position。`onLoadMoreGroup` 把 Cordy 列键反解回 work-query group key（`needsInput`→`in_review` / `paused`+`failed`）。不要再写第二套看板。
+
+- `task.groupList` scope 增 `delegated`（`executionGrants` active + initiatedBy = 当前用户的 EXISTS，与 `workQuery.delegatedByUserId` 同一谓词）；`projectId` 接受 `null`（`isNull(tasks.projectId)`）。SWR key 编进 scope+project 后缀，`projectIdFromListKey` 会解码 MINE `:` 后缀与 `no-project`
+
+- 看板对齐 Cordy/Linear 现行版：列头图标用共享状态图标族（backlog 空心点灰 /todo 空心环蓝 /running 点琥珀 /needsInput 钟紫 /done 勾绿 /canceled 暂停橙 /triage 虚线圈）；计数是纯灰字非 chip；空列留空白落区不再写 "No tasks"；隐藏列是流内 40px 折叠 rail（点一下展开、仍可 drop，`CollapsedKanbanColumn`；zh/ja/ko 文字正立，其余 rotate-180），右侧 Hidden columns 面板已删；status 看板零任务也渲染全部列，不再换居中空态
+
+- My Work「待审核」无 Task 的 PR 行：`queryExternalReviews` 写出 allowlist 后的 `openUrl`（https `github.com` / `linear.app`，与 Inbox `safeInboxActionUrl` 同一主机表）；javascript / 站外主机为 null。列表行用 PR 图标 + identifier；客户端再过 `inboxUrlOpenMode` 才 `target=_blank`。不为填列表建 Task，不用应用 token 代批
+
+- Push Typecheck 在 `a96c6aa4` 失败：`KanbanBoard` 把 My Work 的 `projectId: null`（No-project 过滤）传进 `createTaskModal`（只要 `string | undefined`）。`kanbanCreateTaskProjectId` 把 `null` 收成 `undefined`；grouped query 仍带 `null` 做 IS NULL
+
+- 视图 / 列表面再对齐 Linear：SavedView 详情页不再裸露 query JSON——owner 的名称 / 查询 / 布局 / 可见性表单收进 header 的「Edit view」折叠面板（结果页是默认态）；`WorkQueryResults` 列表行换成共享 `AgentTaskItem` 富行（identifier + 状态图标 + 标题 + chips + 头像 + 日期），平铺结果按与看板相同的 Cordy 列键分组（Linear 关联 `in_review` 进 needsInput，不进 Running；`workflowCategory` 视图跟 workflow 列）。Inbox 行加类型圆形 glyph（mention→AtSign、task\_assigned→CircleUserRound、acp\_permission→KeyRound、transfer→ArrowLeftRight、review→GitPullRequest、默认 Bell），替代 Linear 的 avatar+type badge 角色
+
+- Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。Team 看板走 `WorkQueryResults` → `KanbanBoard` `external` prop（与其它页同一个组件，不自建）
+
+- Linear IA 收敛（`623f670c`）：一级侧栏改成固定合同 `inbox / my-work / reviews` + 手风琴 `agent / workspace / favorites / teams` + spacer（`DEFAULT_SIDEBAR_ITEMS`，`sidebarItems` selector 直接返回常量，stored/overlay 顺序完全不再生效 —— 旧 preference 无法复活 retired keys）。`RETIRED_SIDEBAR_KEYS` 扩到 home/tasks/automations/resource/recents/private/project/views（一级退役，路由深链保留）。新 `WorkspaceSection`（Projects / Views / Members→`/settings/members` / More 下拉：Automations、Resource、工作区设置）与 `TeamsSection`（`team.teams` 扁平行→`/teams/:id`，仅 workspace 模式渲染；TeamPage 无 Home/Issues 子 tab，不做展开子导航）。Reviews 一级指向 `/my-work?tab=review`（v4 合同已冻结 `/my-work`，没有另建 `/reviews` 路由），Body 用 `useSearchParams` 拆开两个高亮。CustomizeSidebarModal 收窄为只能隐藏可选 section（核心 pin 住，不可重排）。Header 搜索行 hover 出新建任务铅笔（`createTaskModal`）。User 弹层补 `UserPanelWorkspaceSection`（个人空间 ✓ + workspace 列表切换）。移动端 NavBar 第三栏 Tasks→My Work。`sidebarContract.ts` 登记 SCHEMA\_VERSION=2 / FIXED\_PRIMARY\_KEYS / LEGACY\_PRIMARY\_KEYS。**deviation**：spec 写 `/my-issues`，按 v4 合同保留 `/my-work`。lint 干净，89 passed。不是 64× AC。
+
+- Linear 侧栏解剖第二轮（`c2d90a23`）：对照 linear.app 真实截图 + 官方文档把侧栏拆成 Linear 的四层。①Header 不再是搜索文字行 —— 是 workspace 名称 + 图标切换器（`useActiveIdentity`），右侧 ⌕ 开 CmdK、✎ 开 `createTaskModal`；`Header/components/Nav.tsx`、`InboxButton.tsx` 删除，未读数挪进 Inbox 行的 `extra`（`useInboxUnreadCount`）。②Your teams 团队行可展开成 Linear 子导航 Home/Triage/Issues/Projects/Views：嵌套 `AccordionRoot indicatorPlacement='start'`，展开态经 `mergeSidebarExpandedKeys` 以 `team:<id>` 键并入 `sidebarExpandedKeys`；每项落到 TeamPage 新增的 `?tab=` 区段 ——projects 走 `workAttentionService.query`（entityType project + teamId，经 `projectTeams` join），views 走 `savedViewList` 过滤 `visibility==='team' && teamId`。③底栏 = Linear 的？+ 用户头像（`UserPanel` 包 `UserAvatar`）。④Drafts 仍不出 —— 没有真 draft domain（spec 明文）。lint 干净，25 passed。
+
+- WORK08：list 布局在数据库里按列分组（Linear `workflowStateId` 跟 workflow 列，本地任务跟 status 列），`total` 是全集不是当前页；每列独立 cursor。客户端 `workQueryListSections` 优先用服务端 groups，不再把一页扁列表重排成章节。My Work / Team / Saved View 列表的 load-more 走 `groupKey`
+
+- VIEW08：My Work / Tasks 的 store `KanbanBoard` 对 `workflowStateId` 任务跨列拖放走 `commitWorkQueryBoardMove`（`moveBoard` + 精确状态 picker），不再 `updateTask({ workflowCategory })`。同列重排仍写 position。status 分组的 Saved View / Team 板上，有 Linear 状态的卡也会提升到 `workflowCategory`（`in_review` 而不是 `paused`）
+
+- SEC01：客户端 `inboxUrlOpenMode` 与服务端 `safeInboxActionUrl` 共用 `classifyWorkAttentionActionUrl`（凭证、控制字符、反斜杠失败关闭）
+
+- TRI04：`queryProjects` 对跨两个团队的同一项目返回一行；vitest 覆盖 isNotNull 与分别按 team A/B 导航
+
+- END04 用户文档已改成固定一级 IA（Inbox / My issues / Reviews / Agent + Workspace / Teams / Favorites）。`/my-work` 重定向到 `/my-issues`；Reviews 是独立页。Inbox snooze 写清 hour /laterToday/tomorrow/nextWeek；侧栏 Your teams 只列出已加入的团队
+
+- WORK08/VIEW08 列表状态：My Work / Saved View / Team 列表改状态后走 `commitWorkQueryListStatus`（Linear → `moveBoard` + picker；本地 → `task.update`），再 `onMoved` refetch 并清空分页 tails，行会换分组而不是钉在旧章节
+
+- VIEW08 看板卡右键：`KanbanBoard` 把 `onStatusChange` 传到 `TaskBoardCard` /context menu；与列表共用 `applyWorkQueryStatusChange`。Linear 走 `moveBoard`，本地走 `task.update`，picker 取消不落本地 patch，成功后 `refreshGroups`
+
+- SEC06：Inbox `resourceReadable` 对挂了私有团队的任务再要求团队成员 / 工作区 admin / 负责人 / 审核人 / 创建人。退出私有团队后，即使 `tasks.visibility` 仍是 public，历史通知也不再列出标题，未读铃也不计。指派给非成员的任务标题仍可见（与 work-query assigned 一致）。私有项目复用 `ProjectModel.readable`（可见性 + 有效 `project_members` 授权）：没有授权的工作区成员看不到历史 Inbox 标题，CommandMenu `searchProjects` 与 `queryProjects` 也不再返回项目名；授权被收回后标题和搜索一并消失
+
+- TRI05：未过滤的 `queryTasks` / CommandMenu `searchTasks` 也套同一套 `buildTaskTeamReadableWhere`。非成员不能靠「全部任务」或标题搜索捞到私有团队上的公开任务；负责人 / 审核人 / 创建人仍能搜到自己的行。`teamId` 过滤本来就会与可读团队求交。`TaskModel.ownership()` 在工作区模式下同样 AND 这套谓词，所以 `findById` / `findByIdentifier` / `list` / `update` 以及 `task.detail` 对猜到的 UUID 返回空，而不是把私有团队上的公开任务交给任意工作区成员。`seqOwnership()` 仍是工作区范围，不要把团队 ACL 接到编号分配上。`getComments` / `getDependencies` / `getActivities` / `getDependenciesByTaskIds` / `getDependents` 先要求父任务可读。`RecentModel` 任务臂与 `TaskModel.ownership()` 对齐（`buildWorkspaceWhere` + `buildTaskTeamReadableWhere`），CommandMenu / Home recents 不再把私有团队上的公开任务标题交给非成员；被指派的人仍能看到自己的行。负责人和审核人仍能打开并改自己的行；工作区 admin 仍能读
+
+`summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
+
+## 剩余 MUST-FIX（无需 Preview 就能做）
+
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表、标题搜索、任务详情 API、CommandMenu recents、单任务与批量 deps/activities/dependents/`findBlockedTaskIds`，都已挡住。VIEW02 分享定义会抹掉不可读的 task /project/team/ **cycle** id。`getUnlockedTasksForMany` 发现查询仍走 `depsOwnership`，返回前用 `ownership()` 过滤候选人。不要把团队 ACL 接到 `seqOwnership()`。不要主动做 TRI04 产品复制。不要回滚 Devin `89619d13`（真实视图编辑器）、`6a0a2f04`（Team Home + Issues scopes + 搜索标重复）、`1f4333ac`（`/members` 目录）、`443ccec4`（My issues 标签 + `/reviews` 独立页）或 `2f22b262`（joined-only Your teams + `triageEnabled` 门控）。
+
+用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA（Inbox / My issues / Reviews / Agent）、Team Home / Issues scopes、snooze 预设、joined-only Your teams。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
+
+## 给下一刀
+
+Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 rebase 到更新的 canary，除非用户要求。不要把系统目标标 complete。
+
+`listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
+
+## 阻塞 / 不要假装完成
+
+| 项                                               | 状态                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| N12 / END06–08 真实 Linear、GitHub、ACP 闭环     | **BLOCKED**，没有获准 Preview。Vercel 免费档日限额，Preview 没起来。不要用 mock 报 N12 完成。 |
+| N10 生产 shadow dual-write                       | 关掉，保持关                                                                                  |
+| ACCEPTANCE 64×                                   | 合同上仍是 `NOT_RUN`。scoped vitest ≠ 产品验收                                                |
+| PR-event「Required Quality Gate」concurrent-skip | **不是** 产品失败。看 **push** Test CI                                                        |
+| Vercel「Deployment rate limited」                | **不是** 产品失败                                                                             |
+
+## 明确不要做
+
+- 不要 rebase 到更新的 canary，除非用户要求
+- 不要恢复 `/settings/provider` / 自定义模型 provider
+- 不要新写第二套看板：所有 board 复用 `AgentTasks` 的 `KanbanBoard`——store scope 能表达的直接挂（My Work），不能的走 `external` groups prop（Saved View / Team work-query）
+- 不要发明 GitHub PR-without-task 产品存储
+- 不要加 WorkQuery export
+- 不要开生产 shadow dual-write
+- 不要手改 migration `_journal.json`（`bun run db:generate` 后 rename / 幂等加固）
+- 不要跑 `bun run test`（全量套件）
+- 不要本机跑全仓 `bun run check --type`（CI-only，`scripts/type-check.mjs` 会 fail-fast）。本地：`pnpm type-check` 进对应 package，或 CI=true 的全仓脚本（会很吃内存）
+- 不要 UpdateGoal complete
+- 不要碰受保护 clone `/Users/alexjiang/Desktop/vibe/orvilo1`
+- SAFE-BY-ABSENCE，不要主动做：TRI06 AI 自动执行、SEC04 username mapping、SEC07 破坏性清理 job、TRI04 按团队复制 Project 导航器
+- **F38 Drafts — 明确缺席**：Linear 的 Drafts 一级入口需要一条真实的草稿域模型（issue 草稿持久化表、跨端同步、发布 / 丢弃生命周期）。仓库里不存在这个域；v5 包裁决为「无真实模型前不露假入口」。所以侧栏**不放** Drafts 行，任何页面不造假草稿列表。要做真的才动：先落 draft 表 + create/update/publish/discard 过程，再开入口
+
+## 质量怎么跑
+
+```bash
+# 只对改动文件，不要 bun run test
+bun run check [changed-files...]
+
+# 单测
+bunx vitest run --silent='passed-only' <file>
+cd packages/database && bunx vitest run --silent='passed-only' <file>
+```
+
+本分支近期 scoped check（都不是 64× AC）：
+
+- `b4136da6` / `24df8830`：lint 干净，19 passed（workflow-state picker + favorite 标题）
+- `02d8191e` / `c5be180c` / `bd5209d9`：288 passed
+- `cfc06a6f`：66 passed；当时全仓 `tsgo --noEmit` 通过
+- 本增量（Inbox 包络 / 收藏重排 / 团队搜索 / 触屏）：lint 干净，42 passed。不是 64× AC。
+- `d6560eb7`（CommandMenu 跨类型 recents + `recent.test.ts` work-type arms）：lint 干净，38 passed。不是 64× AC。
+- pin / 个人模式藏 Teams：lint 干净，`bun run check` 改动文件 55 passed。不是 64× AC。
+- `4ab22fd2`：CommandMenu 只保留访问 recents；个人模式不含 team；删 `workAttention.recentWork`。不是 64× AC。
+- `e88f0359`：个人模式 Home recents / CommandMenu 工作搜索不拉 team。不是 64× AC。
+- 本增量：收藏 overflow + Web/Electron work-route match。lint 干净，128 passed。不是 64× AC。
+- Recents 空 ⋯ /pin + Electron `/inbox` click：lint 干净，11 passed。不是 64× AC。
+- `af841605`：四个工作面重排前端（Views/Teams 套 Projects 列表规范；My Work 工具行 + 行内 hover 关注操作 + 空看板仍渲染列；Inbox 头部图标的批量操作 + Segmented 过滤 + 未读点 / 两行卡片 + 详情溢出菜单）。新增 `savedViews.search*`、`inbox.moreActions` 文案。lint 干净；页面手测通过（dev :28027）。不是 64× AC。
+- 本增量：END04 用户文档 Inbox/My Work/Views/Teams（EN/ZH）及 task/command-menu/start/shortcuts IA。lint 干净，tests none。不是 64× AC。
+- `dde9ef1f` Push Typecheck / Test Database lint 失败：`WorkQueryResults.tsx` `task.status` 不能赋给 `TaskStatus`。已用 `resolveTaskStatus`（未知 / 空 → `backlog`）修好；`ExecutionStatus.test.ts` 覆盖。不是 64× AC。
+- 本增量：项目 Saved View 结果行对齐 Projects 列表 chrome；`savedViewProjectPath` 优先 slug。`bun run check` 改动文件 lint 干净，6 passed。不是 64× AC。
+- 本增量：My Work 无 Task PR 行 allowlist `openUrl` + 列表 chrome。lint 干净；identifier/openUrl 单测 + `workQuery` 19 passed。不是 64× AC。
+- `1cb3e114`：看板 create-task 丢掉 `null` No-project id。lint 干净；`kanbanBoardModel` 回归覆盖 grouped query 仍带 `null`、弹窗拿到 `undefined`。不是 64× AC。
+- `b4c1ab09`：Team 分诊列表 chrome + overflow + 失败先于空态。lint 干净，`bun run check` 改动文件 47 passed。不是 64× AC。
+- 本增量：VIEW08 在统一 `KanbanBoard` `external` 板上恢复 `moveBoard` CAS + 精确状态 picker；Cordy `needsInput`/`running` 映射回 `in_review`/`in_progress`（workflow）或 `paused`/`running`（status）；load-more 反解列键。lint 干净，21 passed。不是 64× AC。
+- 本增量：work-query 列表分组与看板共用列键（Linear `in_review` 不再进 Running）。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
+- `475fb8bd`：Push Typecheck `2cd067ae` 失败（`workQueryBoard.ts` 构造 `TaskGroupItem` 缺 `limit`/`offset`）。external 组用已加载条数当 `limit`、合并列 `offset: 0`。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
+- `fa0c58ad`：WORK08 列表服务端分组 + 全集 total + 列 cursor。lint 干净，`bun run check` 改动文件 52 passed。不是 64× AC。
+- `c24608a4` / 变基后 `5e793f23`：My Work store 看板 Linear 跨列拖放走 `moveBoard`。lint 干净。不是 64× AC。
+- `215edfa9`：SEC01 客户端与服务端共用 URL allowlist。lint 干净，types 4 + inboxOrganize + feedCard 9 passed。不是 64× AC。
+- `ac32ad47`：TRI04 `queryProjects` 跨团队不放大行。`workQuery.test.ts` 21 passed。不是 64× AC。
+- `cc9289c0`：status 分组 Linear 卡提升到 `moveBoard` workflowCategory。`workQueryBoardMove` 覆盖 in\_review vs paused。不是 64× AC。
+- `994a7015`：用法文档对齐固定一级 IA。lint 干净。不是 64× AC。
+- 本增量 scoped `bun run check`：lint 干净，48 passed。不是 64× AC。
+- `c2d90a23`：Linear 侧栏解剖（workspace 头部 / 团队子导航 / 底栏头像）。不要回滚。
+- `ecaaa108`：列表改状态 refetch + Linear `moveBoard`。lint 干净，67 passed。不是 64× AC。
+- `da1dcc0a`：看板卡右键改状态走 `applyWorkQueryStatusChange`。lint 干净，27 passed。不是 64× AC。
+- `0331f0f4`：OSS workspace 激活链接上真链路 ——`useActiveWorkspaceId`/`Slug` 不再是 null stub，改成模块 store + `useWorkspaceUrlSync`（已挂进 web/desktop/mobile 三个主 layout）；`getBusinessTrpcHeaders` 发 `X-Workspace-Id`，`team.teams`/workspace settings 的 wsCompat 在 OSS 真能跑通（本地建 ws `orvilo-dev` + team `Engineering` 实测：`/orvilo-dev/teams/:id?tab=` 与 `/orvilo-dev/settings/members` 全真）。`WORKSPACE_MIRRORED_FIRST_SEGMENTS` 补齐 inbox/my-work/views/teams/automations/goal（此前 sidebar 链在 workspace 模式丢 slug 前缀掉回个人态）。Agent 改成扁平行 → `/agents`（`SidebarTabKey.Agent` 新增，旧 agent 手风琴退役出 SIDEBAR\_ACCORDION\_KEYS）。Workspace ▸ "More" 改成可见行（Linear 形状，不再是 hover ⋯）。`useActiveIdentity` 实装：workspace 模式头部显示 workspace 名 / 头像。lint 干净，104 passed。不是 64× AC。
+- `67de7007`：SEC06 退出私有团队后 Inbox 丢掉任务标题。lint 干净，`notification.test.ts` 53 passed。不是 64× AC。
+- `09ab2664`：SEC06 私有项目走 `ProjectModel.readable`。Inbox / `searchProjects` / `queryProjects` / Recents 共用 `buildProjectReadableWhere`。lint 干净，`notification` + `workQuery` + `project` + `recent` 139 passed。不是 64× AC。
+- `9f30cfb4` / 变基后 `6c80f4ac`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。叠在 Devin `8aa4f7cb`（Inbox 分页 + 工作面错误态）与 `b16936c2`（看板 raw 维度 + 持久重排）之上。lint 干净，rebase 后 `workQuery` + `notification` 77 passed。不是 64× AC。不要回滚 Devin 这两刀。
+- `2f22b262`：Devin joined-only Your teams + `triageEnabled` 门控。不要回滚。
+- `443ccec4`：Devin F01 My issues 标签（assigned/created/subscribed/activity）+ delegated 筛选 + `/reviews` 独立页。`/my-work` 重定向。不要回滚。
+- `1f4333ac`：Devin F04 `/members` 工作区成员目录。不要回滚。
+- `06d79975`：TRI05 任务详情 /list/update。`TaskModel.ownership()` AND `buildTaskTeamReadableWhere`。回归先失败后通过：非成员 `findById` 曾返回整行。`bun run check` 改动文件 lint 干净，`task.test.ts` 202 passed；连同 `taskDomainContract` / `workQuery` / `notification` 共 291 passed。不是 64× AC。不要把团队 ACL 接到 `seqOwnership()`。
+- `6a0a2f04`：Devin F17–F20 Team Home + Issues All/Active/Backlog + 搜索标重复。不要回滚。不要新写第二套看板。
+- `75aadde6`：END04 用法文档对齐 My issues / `/reviews` / `/my-work` 重定向。lint 干净。不是 64× AC。
+- `68912a25`：TRI05 CommandMenu / Home recents。`RecentModel` 任务臂 AND `buildWorkspaceWhere` + `buildTaskTeamReadableWhere`。回归先失败后通过：非成员 `queryRecent(['task'])` 曾带出 `Secret recents task` 与他人的 private-visibility 标题。`bun run check` 改动文件 lint 干净，`recent.test.ts` 39 passed。不是 64× AC。
+- `26156045`：TRI05 `getDependencies` / `getActivities` 先 `findById`。回归先失败后通过：非成员曾拿到 public-visibility 的 blocks 边。`bun run check` 改动文件 lint 干净，`task.test.ts` 203 passed。不是 64× AC。
+- `89619d13`：Devin F23–F26+F31–F32 真实视图编辑器、筛选构建器、项目看板。不要回滚。
+- `067fcfbc`：VIEW02 分享 AST 抹掉私有 `teamId`。回归先失败后通过：访问者 `present()` 曾带出 `view-secret-team`。`bun run check` 改动文件 lint 干净，`savedView` + `task` 214 passed。不是 64× AC。
+- `040292ac`：TRI05 `getDependenciesByTaskIds` / `getDependents` 经 `findByIds`。回归先失败后通过：公开 blocker 的 dependents 曾带出私有团队任务 id。不是 64× AC。
+- `f8a91dff`：VIEW02 分享 AST 抹掉私有团队上的 `cycleId`。回归先失败后通过：访问者 `present()` 曾带出 secret cycle UUID。`bun run check` 改动文件 lint 干净，`savedView` + `task` 216 passed。不是 64× AC。
+- `a4ace258`：TRI05 `findBlockedTaskIds` 经 `findByIds`；不可读父任务上 `areAllDependenciesCompleted` 失败关闭。回归先失败后通过：非成员曾看到 secret id 在 blocked 列表里。不是 64× AC。
+- `6156f9a8`：F02 真实 GitHub PR 评审工作面 —— `pullRequestReview` 服务（`MarketService` GitHub OAuth proxy + GraphQL transport + REST files）、`pullRequest` router、`pullRequestService` 客户端、`/reviews?tab=for-me|created` 队列 + `/reviews/:reviewId` 详情（diff/checks/comments/submit review）。规范 id `gh:<host>:<owner>:<repo>:<number>`；未接 GitHub 给准确接入路径。不要回滚。
+- `315b7b7d`：F03+F35–F37 —— 侧栏 Agent 主行指向 `/agent/${INBOX_SESSION_ID}`（裸 `/agent` 无 index 路由）；`TeamIdentity` 统一团队标识；My Work / Team 页满宽看板；triage Accept 降级为次级。不要回滚。
+- `971ae8e1`：F09–F11+F22+F41+F42 —— Inbox Priority/Other 双 bucket（priority = 未决 action OR 未读 mention，other = 其余，互斥不重复计数）；feed card 投影 `actor`/`agent` 快照，未知来源诚实降级 type glyph；mention 详情内嵌 `TaskDetailPage` 预览；Team 视图含 workspace 共享 + New view 继承 `teamId`；`teamId` 打通 createSchema→service→store→`CreateTaskContent`→`createTaskModal`→`KanbanBoard.createContext`→TeamPage（外部板无 createContext 不出建入口）；markReadObserved 回执同时失效 feed 列表。lint 干净，134 passed。不是 64× AC。不要回滚。
+- `5507a816`：F41 歧义兜底 —— Saved View 跨团队板把 joined teams 传给 `createContext.teamOptions`，create modal 只问 Team 这一个选择（`createTask.team`）。不是 64× AC。
+- `1faa6f16`：F38 Drafts 缺席裁决 + 台账。
+
+### v5 findings 终态（head `5507a816`）
+
+| 组                                                     | 状态           | 证据                                                                  |
+| ------------------------------------------------------ | -------------- | --------------------------------------------------------------------- |
+| F01 My issues                                          | fixed          | `443ccec4` + `6a0a2f04`                                               |
+| F02 Reviews 真实 PR 工作面                             | fixed          | `6156f9a8` pullRequestReview 服务 + `/reviews` + `/reviews/:reviewId` |
+| F03 Agent 入口                                         | fixed          | `315b7b7d` `/agent/${INBOX_SESSION_ID}`                               |
+| F04 Members 目录                                       | fixed          | `1f4333ac` `/members`                                                 |
+| F05 More 行 / F08 结构组不可被偏好隐藏                 | fixed          | `623f670c` 固定 IA + `0331f0f4` More 行                               |
+| F06 joined-only teams / F07 triage 门控                | fixed          | `2f22b262`                                                            |
+| F09 IssuePreview / F10 actor 投影 / F11 priority-other | fixed          | `971ae8e1`                                                            |
+| F12–F16 分页 / 错误 / URL 态 /snooze/pending           | fixed          | `8aa4f7cb` + `b16936c2`                                               |
+| F17–F20 Team Home/Issues/ 重复标记                     | fixed          | `6a0a2f04`                                                            |
+| F21 分页 / F22 团队视图 + 共享 + 新建继承              | fixed          | `971ae8e1` + 早前 cursor 分页                                         |
+| F23–F26/F31–F32 视图编辑器 / 筛选 / 项目看板           | fixed          | `89619d13`                                                            |
+| F27 groupBy=none / F29 同列排序持久化 / F30 组元数据   | fixed          | `b16936c2`                                                            |
+| F28 in\_review≠needs\_input                            | fixed          | Cordy 映射回 `workflow`/`status` 双维                                 |
+| F33 Project readable / F34 sidebar-teams key           | fixed          | `09ab2664`+`ac32ad47` /key 含 userId+workspaceId                      |
+| F35–F37 SidebarRow 密度 / TeamIdentity/WorkSurface     | fixed          | `315b7b7d`（NavItem 子项密度残余记在案）                              |
+| F38 Drafts                                             | **缺席即正确** | 无真实草稿域；裁决已写入「明确不要做」                                |
+| F39 Preview 全覆盖验收                                 | **BLOCKED**    | 需获准隔离 Preview；Vercel 限额。不准用 mock 报完成                   |
+| F40 合同冻结                                           | fixed          | 本文件 + json headSha=`5507a816`                                      |
+| F41 CreateIssueContext                                 | fixed          | `971ae8e1`+`5507a816` teamId 全链 + 歧义只问 Team                     |
+| F42 读回执 / 版本化 / 失效                             | fixed          | `971ae8e1` markReadObserved 同时失效 feed                             |
+
+54× acceptance 仍 `NOT_RUN` —— 等 F39 的 Preview。
+
+提交信息用 gitmoji。PR 正文英文。保持 draft。
+
+## i18n / 路由 /schema 备忘
+
+- 新文案：`packages/locales/src/default/`，并手改 en-US /zh-CN
+- 路由：先读 `spa-routes` skill。公共路径只注册在 `src/spa/router/desktopRouter.shared.tsx`
+- 组件：先读 `react` skill。Alert/Select/Modal 用 `@lobehub/ui/base-ui`
+- 验收：文档 /handoff 不需要新的产品 acceptance run。新的 Inbox 包络 UI **需要**，但在 Preview 限额解除之前只能用 vitest + 说清楚缺口
+
+### CI/e2e 收尾（head `94372a22`）
+
+- Test Web App 全绿：39/39 scenarios。侧栏重命名 e2e 链路的终修：`sidebarAgent`/`sidebarGroup` steps 用 `[data-agent-list] a[href$="/agent|/group/{id}"]` 行选择器绕开侧栏区段重复项；EditingPopover 的 title input 与 save ActionIcon 加了 `editing-popover-title-input`/`editing-popover-save` testid（EmojiPicker 会渲染自己的 lucide-check，`.first()` 会误中 swatch）；输入走 `focus → mod+a → pressSequentially`，保存等 positioner 落位后 click，失败时 `dispatchEvent('click')` 兜底；Then 断言失败时 dump 行文本 + popover 状态。
+- `85dc9749` 跑剩 1 个 `聊天列表底部补偿区域高度不应收缩`（scroll.steps.ts:454，expected ≥250 got 243）—— 该 scenario 在 canary 上就存在、本 PR 未触碰，空 commit `94372a22` 重跑即绿，判定为 mock-infra 计时 flake。若它在本分支再次复现需重新排查。
+- `94372a22` 这一轮 Test/Typecheck/Shard 全被 Check Duplicate Run 跳过（concurrent-skip 已知行为），Required Quality Gate + Test Web App 为绿。不要把 skip 当全量通过。
+
+## Linear 入口对齐补丁（head `5ccbdad7`，独立 PR #112 叠在本分支上）
+
+PR95 侧栏对照 Linear 参考图的剩余入口差异单独开 PR（回退 = 关 PR #112）：
+
+- **`+` 快捷创建行**：`create` 键进固定 IA（`FIXED_PRIMARY_KEYS` + `DEFAULT_SIDEBAR_ITEMS`，位于 agent 与 workspace 之间），`HomeSidebar/Body/CreateRow.tsx` 渲染 icon-only 行 + DropdownMenu，菜单项全部落到真实面：New task（`createTaskModal`）/ New view（`NewViewModal`）/ Create project（`openCreateProjectModal`）。
+- **Reviews 计数徽标**：`pullRequestKeys.queue(workspaceId,'for-me')` 与 ReviewsPage 同一 SWR key，一次共享请求；GitHub 未连接或出错时静默无徽标。
+- **linear-design skill**：`.agents/skills/linear-design/` 落地 linear.app DESIGN.md 全文（voltagent/awesome-design-md）+ 判定规则；记录两条故意缺席：Drafts（v5/F38 无真实 draft 域不露假入口）、Try⌄（无 Initiatives/Cycles 产品面）。
+- i18n：`navPanel.create`（Create / 新建）三处同步；菜单复用 `navPanel.newTask` / `savedViews.newView` / `project:create.action`。
+- Body 测试更新：mock CreateRow 并断言其位于 Agent 之后、首个 accordion 之前。

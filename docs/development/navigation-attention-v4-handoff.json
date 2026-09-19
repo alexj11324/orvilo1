@@ -117,8 +117,8 @@
     "packages/database/src/models/__tests__/task.test.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "971ae8e1",
-  "implementationHeadBeforeDocs": "971ae8e1",
+  "headSha": "5507a816",
+  "implementationHeadBeforeDocs": "5507a816",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

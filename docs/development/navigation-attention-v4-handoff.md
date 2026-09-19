@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `a4ace258` TRI05 `findBlockedTaskIds`。叠在 `f8a91dff` VIEW02 cycleId 抹除、`040292ac` 批量 deps、`89619d13` Devin 视图编辑器之上。                                                                                        |
+| 实施 HEAD（本交接提交之前）      | `5507a816` v5 F41 歧义 team 兜底。叠在 `971ae8e1`（F09–F11/F22/F41/F42）、`315b7b7d`（F03/F35–F37）、`6156f9a8`（F02 PR 评审）之上。完整 v5 findings 终态见文末表。                                                        |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -236,6 +236,35 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `6156f9a8`：F02 真实 GitHub PR 评审工作面 —— `pullRequestReview` 服务（`MarketService` GitHub OAuth proxy + GraphQL transport + REST files）、`pullRequest` router、`pullRequestService` 客户端、`/reviews?tab=for-me|created` 队列 + `/reviews/:reviewId` 详情（diff/checks/comments/submit review）。规范 id `gh:<host>:<owner>:<repo>:<number>`；未接 GitHub 给准确接入路径。不要回滚。
 - `315b7b7d`：F03+F35–F37 —— 侧栏 Agent 主行指向 `/agent/${INBOX_SESSION_ID}`（裸 `/agent` 无 index 路由）；`TeamIdentity` 统一团队标识；My Work / Team 页满宽看板；triage Accept 降级为次级。不要回滚。
 - `971ae8e1`：F09–F11+F22+F41+F42 —— Inbox Priority/Other 双 bucket（priority = 未决 action OR 未读 mention，other = 其余，互斥不重复计数）；feed card 投影 `actor`/`agent` 快照，未知来源诚实降级 type glyph；mention 详情内嵌 `TaskDetailPage` 预览；Team 视图含 workspace 共享 + New view 继承 `teamId`；`teamId` 打通 createSchema→service→store→`CreateTaskContent`→`createTaskModal`→`KanbanBoard.createContext`→TeamPage（外部板无 createContext 不出建入口）；markReadObserved 回执同时失效 feed 列表。lint 干净，134 passed。不是 64× AC。不要回滚。
+- `5507a816`：F41 歧义兜底 —— Saved View 跨团队板把 joined teams 传给 `createContext.teamOptions`，create modal 只问 Team 这一个选择（`createTask.team`）。不是 64× AC。
+- `1faa6f16`：F38 Drafts 缺席裁决 + 台账。
+
+### v5 findings 终态（head `5507a816`）
+
+| 组                                                     | 状态           | 证据                                                                  |
+| ------------------------------------------------------ | -------------- | --------------------------------------------------------------------- |
+| F01 My issues                                          | fixed          | `443ccec4` + `6a0a2f04`                                               |
+| F02 Reviews 真实 PR 工作面                             | fixed          | `6156f9a8` pullRequestReview 服务 + `/reviews` + `/reviews/:reviewId` |
+| F03 Agent 入口                                         | fixed          | `315b7b7d` `/agent/${INBOX_SESSION_ID}`                               |
+| F04 Members 目录                                       | fixed          | `1f4333ac` `/members`                                                 |
+| F05 More 行 / F08 结构组不可被偏好隐藏                 | fixed          | `623f670c` 固定 IA + `0331f0f4` More 行                               |
+| F06 joined-only teams / F07 triage 门控                | fixed          | `2f22b262`                                                            |
+| F09 IssuePreview / F10 actor 投影 / F11 priority-other | fixed          | `971ae8e1`                                                            |
+| F12–F16 分页 / 错误 / URL 态 /snooze/pending           | fixed          | `8aa4f7cb` + `b16936c2`                                               |
+| F17–F20 Team Home/Issues/ 重复标记                     | fixed          | `6a0a2f04`                                                            |
+| F21 分页 / F22 团队视图 + 共享 + 新建继承              | fixed          | `971ae8e1` + 早前 cursor 分页                                         |
+| F23–F26/F31–F32 视图编辑器 / 筛选 / 项目看板           | fixed          | `89619d13`                                                            |
+| F27 groupBy=none / F29 同列排序持久化 / F30 组元数据   | fixed          | `b16936c2`                                                            |
+| F28 in\_review≠needs\_input                            | fixed          | Cordy 映射回 `workflow`/`status` 双维                                 |
+| F33 Project readable / F34 sidebar-teams key           | fixed          | `09ab2664`+`ac32ad47` /key 含 userId+workspaceId                      |
+| F35–F37 SidebarRow 密度 / TeamIdentity/WorkSurface     | fixed          | `315b7b7d`（NavItem 子项密度残余记在案）                              |
+| F38 Drafts                                             | **缺席即正确** | 无真实草稿域；裁决已写入「明确不要做」                                |
+| F39 Preview 全覆盖验收                                 | **BLOCKED**    | 需获准隔离 Preview；Vercel 限额。不准用 mock 报完成                   |
+| F40 合同冻结                                           | fixed          | 本文件 + json headSha=`5507a816`                                      |
+| F41 CreateIssueContext                                 | fixed          | `971ae8e1`+`5507a816` teamId 全链 + 歧义只问 Team                     |
+| F42 读回执 / 版本化 / 失效                             | fixed          | `971ae8e1` markReadObserved 同时失效 feed                             |
+
+54× acceptance 仍 `NOT_RUN` —— 等 F39 的 Preview。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

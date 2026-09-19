@@ -270,7 +270,29 @@ Hatchet `agentStep` task 与 `/api/agent/run` 映射、hono `runStep` handler。
 启动即崩（dockerComposeDeploy 冒烟测试抓住）。修法：instruments 惰性初始化
 （`instruments()` 首次调用才建 meter/tracer），对 chunk 求值顺序免疫。
 
-### 4. P80 dry-run 迁移 + 回滚演练
+### 4. P80 dry-run 迁移 + 回滚演练 —— **已完成**（2026-09-19）
+
+在 scratch 分支 `rehearsal/p80-rollback`（基于最新 `origin/canary` `bd46886c`）
+对真实合并序列做全量演练：
+
+```
+git checkout -b rehearsal/p80-rollback origin/canary
+git merge --no-ff origin/feat/acp-P70-cleanup              # 模拟 #90 merge → 90c26fb0，零冲突
+git merge --no-ff origin/feat/acp-P70d-engine-deletion     # 模拟 #107 merge → 40befa74，零冲突
+git revert -m 1 40befa74 && git revert -m 1 90c26fb0       # 逆序回滚两个 merge commit
+git diff origin/canary HEAD → 空                          # 树与 canary 字节级一致
+```
+
+结论：**merge → revert 回滚路径机械上完全干净**—— 两次 `git revert -m 1` 后工作树
+与 canary 逐字节相同，无残留、无冲突。#107 依赖 #90（其分支栈于其后），回滚必须
+逆序（先 #107 后 #90）。
+
+部署层回滚（#82 后的流水线）：canary 部署按 `repo@sha256:<digest>` 钉死镜像，
+回滚 = 重新部署上一个 digest（不需要重建）。两层回滚互不依赖：镜像层秒级，
+代码层 revert 走正常 PR/CI。
+
+注意事项：P70 全程未改 DB schema、无数据迁移，因此 revert 即完整回滚，不存在
+「删列不可 revert」类陷阱（对照 `docs/development/task-first-rollout.md` §12.4）。
 
 ## 验证命令
 

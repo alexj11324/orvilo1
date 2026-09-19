@@ -460,6 +460,7 @@
   "myWork.unsubscribeFailed": "无法退订这个任务",
   "navPanel.agent": "助理",
   "navPanel.bottomDivider": "下方条目锚定到底部",
+  "navPanel.create": "新建",
   "navPanel.customizeSidebar": "自定义侧边栏",
   "navPanel.displayItems": "显示条目",
   "navPanel.hidden": "已隐藏",

@@ -106,6 +106,15 @@ vi.mock('./CustomizeSidebarModal', () => ({
   openCustomizeSidebarModal: vi.fn(),
 }));
 
+vi.mock('./CreateRow', () => ({
+  default: () => <div data-testid="sidebar-item-create" />,
+}));
+
+vi.mock('@/libs/swr', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useClientDataSWR: () => ({ data: undefined, error: undefined, isLoading: false }),
+}));
+
 vi.mock('./useSyncWorkspaceSidebarPreference', () => ({
   useSyncWorkspaceSidebarPreference: vi.fn(),
 }));
@@ -155,6 +164,9 @@ describe('Home sidebar body', () => {
     expect(texts[1]).toBe('My issues');
     expect(texts[2]).toBe('Reviews');
     expect(texts[3]).toBe('Agent');
+    // The standalone quick-create row sits between the flat links and the
+    // first accordion, mirroring Linear's `+` slot.
+    expect(children[4]).toHaveAttribute('data-testid', 'sidebar-item-create');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
     expect(screen.queryByTestId('sidebar-item-teams')).not.toBeInTheDocument();

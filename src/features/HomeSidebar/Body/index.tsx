@@ -16,6 +16,9 @@ import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
 import { useNavLayout } from '@/hooks/useNavLayout';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+import { useClientDataSWR } from '@/libs/swr';
+import { pullRequestKeys } from '@/libs/swr/keys';
+import { pullRequestService } from '@/services/pullRequest';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
@@ -23,6 +26,7 @@ import { useUserStore } from '@/store/user';
 import { isModifierClick } from '@/utils/navigation';
 
 import { useInboxUnreadCount } from '../Header/components/useInboxUnreadCount';
+import CreateRow from './CreateRow';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import TeamsSection from './TeamsSection';
 import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPreference';
@@ -38,8 +42,9 @@ export enum GroupKey {
 
 const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, GroupKey.Teams]);
 
-/** Core links can never be hidden — the fixed IA keeps them always mounted. */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent']);
+/** Core entries can never be hidden — the fixed IA keeps them always mounted.
+ * `create` is the standalone quick-create row (Linear's `+`). */
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'create']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
@@ -89,6 +94,16 @@ const Body = memo(() => {
   );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const { unreadCount: inboxUnreadCount } = useInboxUnreadCount();
+
+  // Reviews badge = the pending for-me review count (Linear shows a count on
+  // the Reviews row). Same SWR key as ReviewsPage, so it's one shared fetch;
+  // a failed queue (GitHub not connected) just renders no badge.
+  const reviewsQueue = useClientDataSWR(
+    pullRequestKeys.queue(activeWorkspaceId, 'for-me'),
+    () => pullRequestService.queue('for-me'),
+    { revalidateOnFocus: false },
+  );
+  const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
 
   const hideSection = useCallback(
     (key: string) => {
@@ -186,13 +201,17 @@ const Body = memo(() => {
                 <Text fontSize={12} type={'secondary'}>
                   {inboxUnreadCount}
                 </Text>
+              ) : key === 'reviews' && reviewsPendingCount > 0 ? (
+                <Text fontSize={12} type={'secondary'}>
+                  {reviewsPendingCount}
+                </Text>
               ) : undefined
             }
           />
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, getContextMenuItems, navigate, inboxUnreadCount],
+    [navLinkItems, tab, getContextMenuItems, navigate, inboxUnreadCount, reviewsPendingCount],
   );
 
   const handleAccordionExpandedChange = useCallback(
@@ -245,6 +264,9 @@ const Body = memo(() => {
             style={{ flex: '1 1 0', minHeight: 0 }}
           />,
         );
+      } else if (key === 'create') {
+        flushAccordion();
+        elements.push(<CreateRow key={key} />);
       } else if (ACCORDION_KEYS.has(key)) {
         const comp = accordionComponents[key]?.(key);
         if (comp) accGroup.push({ element: comp, key });

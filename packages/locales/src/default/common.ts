@@ -487,6 +487,7 @@ export default {
   'more': 'More',
   'navPanel.agent': 'Agent',
   'navPanel.bottomDivider': 'Items below anchor to bottom',
+  'navPanel.create': 'Create',
   'navPanel.customizeSidebar': 'Customize Sidebar',
   'navPanel.displayItems': 'Display Items',
   'navPanel.resetDefault': 'Reset to Default',

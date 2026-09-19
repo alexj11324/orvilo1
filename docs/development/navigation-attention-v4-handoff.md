@@ -86,9 +86,11 @@
 
 **已全部落地。** 只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。
 
+用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx`；`task` / `command-menu` / `start` / `shortcuts` 已改到新 IA。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
+
 ## 给下一刀
 
-Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 rebase 到更新的 canary，除非用户要求。
+Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 rebase 到更新的 canary，除非用户要求。不要把系统目标标 complete。
 
 `listPendingForActor()` 仍返回数组，给 `ensurePendingSourceCards` 用，可以留。
 
@@ -141,6 +143,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 本增量：收藏 overflow + Web/Electron work-route match。lint 干净，128 passed。不是 64× AC。
 - Recents 空 ⋯ /pin + Electron `/inbox` click：lint 干净，11 passed。不是 64× AC。
 - `af841605`：四个工作面重排前端（Views/Teams 套 Projects 列表规范；My Work 工具行 + 行内 hover 关注操作 + 空看板仍渲染列；Inbox 头部图标的批量操作 + Segmented 过滤 + 未读点 / 两行卡片 + 详情溢出菜单）。新增 `savedViews.search*`、`inbox.moreActions` 文案。lint 干净；页面手测通过（dev :28027）。不是 64× AC。
+- 本增量：END04 用户文档 Inbox/My Work/Views/Teams（EN/ZH）及 task/command-menu/start/shortcuts IA。lint 干净，tests none。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

@@ -23,6 +23,7 @@
     "Web and Electron main-area match /inbox /my-work /views /teams instead of splat 404",
     "Recents project/savedView/team pin from overflow; empty ⋯ is hidden",
     "Electron native notification click broadcasts /inbox and /{workspace}/inbox",
+    "Usage docs for Inbox/My Work/Views/Teams (EN/ZH) plus task/command-menu/start/shortcuts IA updates",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -45,6 +46,8 @@
     "docs/development/navigation-attention-v4.md",
     "docs/development/navigation-attention-v4-handoff.md",
     "docs/development/navigation-attention-v4-handoff.json",
+    "docs/usage/getting-started/work.mdx",
+    "docs/usage/getting-started/work.zh-CN.mdx",
     "packages/types/src/workAttention.ts",
     "apps/server/src/services/workAttention/actionSources.ts",
     "apps/server/src/services/workAttention/feedCard.ts",
@@ -78,7 +81,7 @@
   "targetBranch": "canary",
   "unverified": [
     "NAV02 Electron native notification click matrix (routes aligned; human-approval /inbox click covered in unit tests; full OS matrix still CI_E2E)",
-    "ACCEPTANCE.md 64 rows still NOT_RUN",
+    "ACCEPTANCE.md 64 rows still NOT_RUN; END04 user docs exist but CI_REVIEW is not a 64-AC pass",
     "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"
   ],
   "workPackage": "N00-N13 single-writer increment on one PR",

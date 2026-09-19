@@ -4,7 +4,7 @@ Research SHA: `d2c522fd8bf37448dccd86eacc6442a580d55cbd`\
 Actual implementation base: `d02f13f1` (`origin/canary`, 2026-09-18; includes #81 ownership transfer and #94 hidden-surface retirement)\
 Contract version: `nav-attention-v4.1`
 
-Original execution packet (byte-identical, `SHA256SUMS` verified): [`docs/implementation/navigation-attention-v4/`](../implementation/navigation-attention-v4/). Do not edit packet files — lint-staged remark/prettier will CJK-space them and break the checksums. Session handoff for draft PR #95: [`docs/development/navigation-attention-v4-handoff.md`](./navigation-attention-v4-handoff.md).
+Original execution packet (byte-identical, `SHA256SUMS` verified): [`docs/implementation/navigation-attention-v4/`](../implementation/navigation-attention-v4/). Do not edit packet files — lint-staged remark/prettier will CJK-space them and break the checksums. Session handoff for draft PR #95: [`docs/development/navigation-attention-v4-handoff.md`](./navigation-attention-v4-handoff.md). User-facing usage: [`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) (EN/ZH).
 
 This is a reuse-and-connect increment, not a rebuild. Team, notifications, InboxModal, action approvals, and event outbox already exist on canary. The gap is a unified personal work surface: event → recipient → prompt → real action → receipt, with one query contract for My Work, Views, and Team Triage.
 

@@ -51,6 +51,7 @@
     "Sidebar Your teams lists joined teams only; readable-but-unjoined public teams stay on /teams; triageEnabled=false hides triage (Devin 2f22b262)",
     "My issues tabs are assigned/created/subscribed/activity; delegated is a filter; /reviews is its own page; /my-work redirects (Devin 443ccec4)",
     "Workspace Members opens /members directory of people, agents, and invitations (Devin 1f4333ac)",
+    "Team Home is its own surface; Issues All/Active/Backlog scopes; mark-duplicate searches readable tasks (Devin 6a0a2f04)",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -110,7 +111,7 @@
     "packages/database/src/models/__tests__/task.test.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "06d79975",
+  "headSha": "6a0a2f04",
   "implementationHeadBeforeDocs": "06d79975",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",

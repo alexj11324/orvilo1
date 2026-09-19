@@ -127,10 +127,12 @@ Pin a view with the favorite control on the view page. Use **Save as** on an exi
 
 In a workspace, the sidebar **Your teams** list is teams you have joined. Public teams you have not joined stay on the `/teams` directory. Search that directory and open a team. The team page has:
 
-- **Triage** — inbound work waiting for a human. Shown only when the team allows triage. **Accept** and **Decline** stay on the row. **Mark duplicate**, **Reassign**, and **Move to team** live under **More actions**. Accepting triage keeps the task on the team; it does not start an Agent run by itself.
-- **Team work** — the team's current tasks, as a list or a board (the same Kanban as Tasks, filled from the team's query), with the same **No project** chip as My issues.
+- **Home** — description, members (linked to `/members`), the live cycle, top projects and views, and jumps into Issues / Triage / Projects / Views. It does not stack the task list.
+- **Issues** — the team's current tasks, as a list or a board (the same Kanban as Tasks). Scopes **All**, **Active**, and **Backlog** live in the URL (`?scope=`). **No project** and **Cycle** filters apply here. List/Board is only on this tab.
+- **Triage** — inbound work waiting for a human. Shown only when the team allows triage. **Accept** and **Decline** stay on the row. **Mark duplicate**, **Reassign**, and **Move to team** live under **More actions**. Mark duplicate searches readable tasks, not just the loaded page. Accepting triage keeps the task on the team; it does not start an Agent run by itself.
+- **Projects** / **Views** — projects this team participates in, and views shared with the team.
 
-If the team already has cycles, a **Cycle** filter is available. There is no separate Cycles manager in this increment.
+If the team already has cycles, a **Cycle** filter is available on Issues and Triage. There is no separate Cycles manager in this increment.
 
 Linear-linked issues must be moved between teams in Linear. Orvilo will tell you that instead of rewriting the external issue.
 

@@ -1,7 +1,4 @@
-import {
-  getWorkspaceContextState,
-  useWorkspaceContextStore,
-} from '../workspaceContextStore';
+import { getWorkspaceContextState, useWorkspaceContextStore } from '../workspaceContextStore';
 
 /**
  * Active workspace selector shared by the SWR cache scope, the

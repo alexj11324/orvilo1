@@ -3,13 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
-const { mockCreateOperation, mockGetAgentConfig, mockGetUserSettings, mockMessageCreate } =
-  vi.hoisted(() => ({
-    mockCreateOperation: vi.fn(),
-    mockGetAgentConfig: vi.fn(),
-    mockGetUserSettings: vi.fn(),
-    mockMessageCreate: vi.fn(),
-  }));
+const {
+  mockCreateOperation,
+  mockDispatchHeteroAgent,
+  mockGetAgentConfig,
+  mockGetInfoForAIGeneration,
+  mockGetUserSettings,
+  mockMessageCreate,
+} = vi.hoisted(() => ({
+  mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
+  mockGetAgentConfig: vi.fn(),
+  mockGetInfoForAIGeneration: vi.fn(),
+  mockGetUserSettings: vi.fn(),
+  mockMessageCreate: vi.fn(),
+}));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
@@ -79,12 +87,17 @@ vi.mock('@/database/models/thread', () => ({
 // `UserModel` here is what actually resolves `userTimezone` — constructed
 // with the caller's userId, which is whose settings the run must read.
 vi.mock('@/database/models/user', () => ({
-  UserModel: vi.fn().mockImplementation(function (_db: unknown, userId: string) {
-    return {
-      getUserPreference: vi.fn().mockResolvedValue({}),
-      getUserSettings: () => mockGetUserSettings(userId),
-    };
-  }),
+  UserModel: Object.assign(
+    vi.fn().mockImplementation(function (_db: unknown, userId: string) {
+      return {
+        getUserPreference: vi.fn().mockResolvedValue({}),
+        getUserSettings: () => mockGetUserSettings(userId),
+      };
+    }),
+    // `resolveRunAgentConfig` reads locale + timezone through this static —
+    // the instance path above serves older callers.
+    { getInfoForAIGeneration: mockGetInfoForAIGeneration },
+  ),
 }));
 
 vi.mock('@/server/services/agentRuntime', () => ({
@@ -93,6 +106,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
       createOperation: mockCreateOperation,
     };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// the test exercises config resolution without touching the gateway/sandbox.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -177,6 +196,17 @@ describe('AiAgentService.execAgent - user timezone resolution', () => {
     mockGetUserSettings.mockResolvedValue({
       general: { timezone: 'America/Los_Angeles' },
     });
+    mockGetInfoForAIGeneration.mockResolvedValue({
+      responseLanguage: 'en-US',
+      timezone: 'America/Los_Angeles',
+      userName: 'Test User',
+    });
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
     service = new AiAgentService(mockDb, userId);
   });
 
@@ -186,9 +216,11 @@ describe('AiAgentService.execAgent - user timezone resolution', () => {
       prompt: 'Hello',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userTimezone).toBe('America/Los_Angeles');
-    expect(mockGetUserSettings).toHaveBeenCalledWith(userId);
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    // The timezone rides the ACP system-context channel: resolveRunAgentConfig
+    // snapshot → mecha resolveAgentConfig → systemRole directive line.
+    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(runContext.agentConfig.systemRole).toContain('America/Los_Angeles');
+    expect(mockGetInfoForAIGeneration).toHaveBeenCalledWith(mockDb, userId);
   });
 });

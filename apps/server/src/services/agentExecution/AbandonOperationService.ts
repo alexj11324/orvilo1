@@ -11,19 +11,18 @@ import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { agentOperations, messages } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
-// Direct file import (not the barrel) to avoid pulling in RuntimeExecutors and
-// its workspace-package transitive deps in the unit-test environment.
-import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime/AgentRuntimeCoordinator';
+import { createAgentStateManager } from '@/server/modules/AgentExecution';
+import type { IAgentStateManager } from '@/server/modules/AgentExecution/types';
 
-import { CompletionLifecycle } from '../agentExecution/CompletionLifecycle';
+import { CompletionLifecycle } from './CompletionLifecycle';
 import { OperationTraceRecorder } from './OperationTraceRecorder';
-import { createDefaultSnapshotStore } from '../agentExecution/snapshotStore';
+import { createDefaultSnapshotStore } from './snapshotStore';
 
 const log = debug('orvilo-server:abandon-operation');
 
 interface AbandonOperationOptions {
-  coordinator?: AgentRuntimeCoordinator;
   snapshotStore?: ISnapshotStore | null;
+  stateManager?: IAgentStateManager;
 }
 
 /**
@@ -82,7 +81,7 @@ export interface FinalizeAbandonedResult {
  * skip due to missing partial.
  */
 export class AbandonOperationService {
-  private readonly coordinator: AgentRuntimeCoordinator;
+  private readonly stateManager: IAgentStateManager;
   private readonly snapshotStore: ISnapshotStore | null;
   private readonly traceRecorder: OperationTraceRecorder;
 
@@ -90,7 +89,7 @@ export class AbandonOperationService {
     private readonly db: OrviloDatabase,
     options?: AbandonOperationOptions,
   ) {
-    this.coordinator = options?.coordinator ?? new AgentRuntimeCoordinator();
+    this.stateManager = options?.stateManager ?? createAgentStateManager();
     this.snapshotStore =
       options?.snapshotStore !== undefined ? options.snapshotStore : createDefaultSnapshotStore();
     this.traceRecorder = new OperationTraceRecorder(this.snapshotStore);
@@ -103,9 +102,9 @@ export class AbandonOperationService {
       found: false,
     };
 
-    const state = await this.coordinator.loadAgentState(operationId);
+    const state = await this.stateManager.loadAgentState(operationId);
     if (!state) {
-      log('[%s] no agent state in coordinator — already cleaned up', operationId);
+      log('[%s] no agent state in state manager — already cleaned up', operationId);
       await this.finalizeRunningOperationWithoutState(operationId, reason, result);
       return result;
     }
@@ -263,7 +262,7 @@ export class AbandonOperationService {
     // and strand the parent. The lingering state expires on its own Redis TTL.
     if (!result.subAgentResume) {
       try {
-        await this.coordinator.deleteAgentOperation(operationId);
+        await this.stateManager.deleteAgentOperation(operationId);
       } catch (e) {
         log('[%s] coordinator cleanup failed (non-fatal): %O', operationId, e);
       }

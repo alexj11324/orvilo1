@@ -9,18 +9,20 @@ import { type OrviloDatabase } from '@orvilo/database';
 import { agents, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
-import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { inMemoryAgentStateManager } from '@/server/modules/AgentExecution/InMemoryAgentStateManager';
-import { inMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 
 import { aiAgentRouter } from '../../../aiAgent';
 import { cleanupTestUser, createTestUser } from '../setup';
-import { createMockResponsesAPIStream } from './helpers';
 
-// Set fake API key for testing to bypass OpenAI SDK validation
-process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
+// Every execAgent run hands off to ACP via dispatchHeteroAgent — stub that
+// boundary so these tests cover the router → service path (topic/message
+// persistence, context wiring) without spawning a host.
+const { mockDispatchHeteroAgent } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
+}));
+vi.mock('../../../../../services/aiAgent/pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
 
 // Mock getServerDB to return our test database instance
 let testDB: OrviloDatabase;
@@ -40,8 +42,6 @@ vi.mock('@/server/services/file', () => ({
     };
   }),
 }));
-
-let mockResponsesCreate: any;
 
 let serverDB: OrviloDatabase;
 let userId: string;
@@ -85,25 +85,30 @@ beforeEach(async () => {
     .returning();
   testAgent2Id = agent2.id;
 
-  // Setup spyOn for OpenAI Responses API prototype
-  mockResponsesCreate = vi.spyOn(OpenAI.Responses.prototype, 'create');
+  let opCounter = 0;
+  mockDispatchHeteroAgent.mockImplementation(async (_deps, ctx) => ({
+    agentId: ctx.resolvedAgentId,
+    assistantMessageId: ctx.assistantMessageId,
+    autoStarted: true,
+    createdAt: new Date().toISOString(),
+    message: 'Hetero agent dispatched successfully',
+    operationId: `op_${Date.now()}_${ctx.resolvedAgentId}_${ctx.topicId}_${opCounter++}`,
+    status: 'created',
+    success: true,
+    timestamp: new Date().toISOString(),
+    topicId: ctx.topicId,
+    userMessageId: ctx.userMessageId ?? ctx.parentMessageId ?? '',
+  }));
 });
 
 afterEach(async () => {
   await cleanupTestUser(serverDB, userId);
   vi.clearAllMocks();
   vi.restoreAllMocks();
-
-  // Clear singleton instances for next test
-  inMemoryAgentStateManager.clear();
-  inMemoryStreamEventManager.clear();
 });
 
 describe('Batch Execution (execAgents)', () => {
   it('should execute multiple agents in parallel', async () => {
-    const responseContent = 'Hello from batch execution!';
-    mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream(responseContent) as any);
-
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     const result = await caller.execAgents({
@@ -141,9 +146,6 @@ describe('Batch Execution (execAgents)', () => {
   });
 
   it('should execute multiple agents sequentially when parallel=false', async () => {
-    const responseContent = 'Sequential execution response';
-    mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream(responseContent) as any);
-
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     const result = await caller.execAgents({
@@ -160,8 +162,6 @@ describe('Batch Execution (execAgents)', () => {
   });
 
   it('should handle partial failures gracefully', async () => {
-    mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Success response') as any);
-
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     const result = await caller.execAgents({
@@ -193,10 +193,6 @@ describe('Batch Execution (execAgents)', () => {
   });
 
   it('should create separate topics for each task', async () => {
-    mockResponsesCreate.mockResolvedValue(
-      createMockResponsesAPIStream('Response for separate topics') as any,
-    );
-
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     await caller.execAgents({
@@ -216,10 +212,6 @@ describe('Batch Execution (execAgents)', () => {
   });
 
   it('should preserve deviceId bindings for batch tasks', async () => {
-    mockResponsesCreate.mockResolvedValue(
-      createMockResponsesAPIStream('Response for device-bound topics') as any,
-    );
-
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     await caller.execAgents({
@@ -251,9 +243,9 @@ describe('Batch Execution (execAgents)', () => {
     ]);
   });
 
-  it('should support autoStart for batch tasks', async () => {
-    mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Auto start test') as any);
-
+  // ACP dispatch is the run start itself — autoStart=false no longer defers;
+  // every task dispatches.
+  it('should dispatch every batch task regardless of autoStart', async () => {
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     const result = await caller.execAgents({
@@ -266,6 +258,6 @@ describe('Batch Execution (execAgents)', () => {
     expect(result.success).toBe(true);
 
     expect(result.results[0].autoStarted).toBe(true);
-    expect(result.results[1].autoStarted).toBe(false);
+    expect(result.results[1].autoStarted).toBe(true);
   });
 });

@@ -4,7 +4,7 @@
 
 ## 授权铸发（mint）
 
-`mintExecutionGrant` 为一次委托生成 grant 行。仅当委托主体是 `user` 时写入 `authzVersions.workspaceAuthzVersion`——版本栅栏只对 user 主体有意义；对非 user 主体写版本会铸出提交时永远满足不了的栅栏。
+`mintExecutionGrant` 为一次委托生成 grant 行。仅当委托主体是 `user` 时写入 `authzVersions.workspaceAuthzVersion`—— 版本栅栏只对 user 主体有意义；对非 user 主体写版本会铸出提交时永远满足不了的栅栏。
 
 ## 活性声明（claim）
 
@@ -14,11 +14,11 @@
 2. 校验 grant 未撤销、未过期、授权版本仍匹配；
 3. bump `executionEpoch` 并返回给调用方。
 
-调用方未传入 executor 时函数自开事务——`FOR UPDATE` 的行锁只在事务生命周期内持有，autocommit 下锁会在校验与 bump 之间提前释放，撤权可以插进窗口。
+调用方未传入 executor 时函数自开事务 ——`FOR UPDATE` 的行锁只在事务生命周期内持有，autocommit 下锁会在校验与 bump 之间提前释放，撤权可以插进窗口。
 
 ## 提交栅栏（assertMayCommit）
 
-`taskRunner` 在 dispatch 注册持久化之前调用 `assertMayCommit({ epoch, grantId, taskId, topicId })`：再次在事务内校验 grant 活性与 epoch 一致性。claim 抛出时，dispatch 路径必须先把 topic 标为 `failed` 再向上抛——否则行会卡在 `running` 等看门狗兜底，撤权期间的失败语义也被掩盖。
+`taskRunner` 在 dispatch 注册持久化之前调用 `assertMayCommit({ epoch, grantId, taskId, topicId })`：再次在事务内校验 grant 活性与 epoch 一致性。claim 抛出时，dispatch 路径必须先把 topic 标为 `failed` 再向上抛 —— 否则行会卡在 `running` 等看门狗兜底，撤权期间的失败语义也被掩盖。
 
 ## 不变量
 

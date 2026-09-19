@@ -59,7 +59,11 @@ import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJwt';
+import {
+  type HeteroOperationCapability,
+  signHeteroOperationJWT,
+  signUserJWT,
+} from '@/libs/trpc/utils/internalJwt';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
 import {
@@ -82,6 +86,12 @@ import {
   ResolveAgentInterventionSchema,
 } from '@/server/routers/lambda/_schema/agentIntervention';
 import { AiAgentService } from '@/server/services/aiAgent';
+import {
+  AcpBuiltinToolForbiddenError,
+  AcpBuiltinToolNotFoundError,
+  awaitAcpBuiltinToolChildren,
+  execAcpBuiltinTool,
+} from '@/server/services/aiAgent/acpBuiltinToolExec';
 import { AiChatService } from '@/server/services/aiChat';
 import { getFileProxyUrl } from '@/server/services/file';
 import { HeterogeneousAgentService } from '@/server/services/heterogeneousAgent';
@@ -1471,6 +1481,36 @@ const WaitInterventionResponseSchema = z.object({
 });
 
 /**
+ * Schema for `aiAgent.heteroExecBuiltinTool` — one server-backed builtin tool
+ * call from the per-run `orvilo_cc` MCP server the execution host mounted.
+ * `identifier`/`apiName`/`args` are the MCP tool invocation verbatim; the
+ * dispatch-time allowlist persisted on the operation row decides whether this
+ * run may invoke them, so a replayed op token cannot reach an unmounted API.
+ */
+const HeteroExecBuiltinToolSchema = z.object({
+  apiName: z.string().min(1),
+  args: z.record(z.string(), z.unknown()).default({}),
+  identifier: z.string().min(1),
+  operationId: z.string().min(1),
+  /** CLI-generated id stamped on the placeholder `tool_call` row pair. */
+  toolCallId: z.string().min(1),
+});
+
+/**
+ * Schema for `aiAgent.heteroAwaitBuiltinToolChildren` — bounded long-poll for
+ * the child operations a deferred builtin call forked (sub-agent / group
+ * members). The MCP server polls until every child op is terminal; the server
+ * resolves each child's final assistant content and sweeps any placeholder
+ * tool rows the completion bridges didn't reach.
+ */
+const HeteroAwaitBuiltinToolChildrenSchema = z.object({
+  childOperationIds: z.array(z.string().min(1)).min(1).max(64),
+  operationId: z.string().min(1),
+  timeoutMs: z.number().int().positive().max(30_000).default(25_000),
+  toolCallId: z.string().min(1).optional(),
+});
+
+/**
  * Schema for `aiAgent.submitHeteroIntervention` — the browser leg of remote
  * Human-in-the-loop. The user's answer to an `agent_intervention_request` is
  * published back onto the op's Redis stream as an `agent_intervention_response`,
@@ -1627,7 +1667,7 @@ const authorizeOperationCallback = async (
     serverDB: OrviloDatabase;
   },
   operationId: string,
-  capability: 'hetero:finish' | 'hetero:ingest' | 'hetero:intervention:read',
+  capability: HeteroOperationCapability,
 ) => {
   if (ctx.heteroAuthKind !== 'operation') return;
   if (!ctx.heteroOperation) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -3325,6 +3365,105 @@ export const aiAgentRouter = router({
         events: events.filter((e) => e.type === 'agent_intervention_response'),
         lastEventId: nextEventId,
       };
+    }),
+
+  /**
+   * Server-backed builtin tool execution for ACP runs (P70c). The execution
+   * host's per-run `orvilo_cc` MCP server forwards each mounted builtin call
+   * here; the op-scoped token must carry `hetero:tool:exec` (only granted when
+   * the dispatch actually mounted a tool surface), and the durable allowlist
+   * on the operation row re-checks `identifier:apiName` before the shared
+   * `BuiltinToolsExecutor` runs the matching `serverRuntimes` implementation.
+   */
+  heteroExecBuiltinTool: heteroAgentProcedure
+    .input(HeteroExecBuiltinToolSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { apiName, args, identifier, operationId, toolCallId } = input;
+
+      await authorizeOperationCallback(ctx, operationId, 'hetero:tool:exec');
+
+      // Ownership guard for user-token callers — the tool call mutates the
+      // op's conversation, so an owner-token caller must own THIS operation
+      // (mirrors `waitInterventionResponse`).
+      if (ctx.heteroAuthKind !== 'operation') {
+        const [operationRow] = await ctx.serverDB
+          .select({ userId: agentOperations.userId })
+          .from(agentOperations)
+          .where(eq(agentOperations.id, operationId))
+          .limit(1);
+
+        if (operationRow?.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Operation not found or not owned by the caller',
+          });
+        }
+      }
+
+      try {
+        const aiAgentService = new AiAgentService(ctx.serverDB, ctx.userId, {
+          workspaceId: ctx.workspaceId ?? undefined,
+        });
+        return await execAcpBuiltinTool(
+          {
+            db: ctx.serverDB,
+            execGroupMember: aiAgentService.execGroupMember,
+            execSubAgent: aiAgentService.execSubAgent,
+            execVirtualSubAgent: aiAgentService.execVirtualSubAgent,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId ?? undefined,
+          },
+          { apiName, args, identifier, operationId, toolCallId },
+        );
+      } catch (error) {
+        if (error instanceof AcpBuiltinToolNotFoundError) {
+          throw new TRPCError({ cause: error, code: 'NOT_FOUND', message: error.message });
+        }
+        if (error instanceof AcpBuiltinToolForbiddenError) {
+          throw new TRPCError({ cause: error, code: 'FORBIDDEN', message: error.message });
+        }
+        if (error instanceof TRPCError) throw error;
+        log('heteroExecBuiltinTool failed: %s', (error as Error)?.message);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: (error as Error)?.message || 'Failed to execute builtin tool',
+        });
+      }
+    }),
+
+  /**
+   * Bounded long-poll for the child operations a deferred builtin tool call
+   * forked (`hetero:tool:exec` — the same op token as the exec endpoint). The
+   * MCP server loops until `settled`, then hands each child's final assistant
+   * content back to the harness as the tool result.
+   */
+  heteroAwaitBuiltinToolChildren: heteroAgentProcedure
+    .input(HeteroAwaitBuiltinToolChildrenSchema)
+    .query(async ({ input, ctx }) => {
+      const { childOperationIds, operationId, timeoutMs, toolCallId } = input;
+
+      await authorizeOperationCallback(ctx, operationId, 'hetero:tool:exec');
+
+      if (ctx.heteroAuthKind !== 'operation') {
+        const [operationRow] = await ctx.serverDB
+          .select({ userId: agentOperations.userId })
+          .from(agentOperations)
+          .where(eq(agentOperations.id, operationId))
+          .limit(1);
+
+        if (operationRow?.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Operation not found or not owned by the caller',
+          });
+        }
+      }
+
+      return awaitAcpBuiltinToolChildren(
+        { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+        { childOperationIds, operationId, timeoutMs, toolCallId },
+      );
     }),
 
   /**

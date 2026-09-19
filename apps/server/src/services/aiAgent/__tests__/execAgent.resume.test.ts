@@ -1,16 +1,40 @@
 import type * as ModelBankModule from 'model-bank';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
+import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 
-const { mockCreateOperation, mockFindById, mockMessageCreate, mockMessageQuery, mockQueryTree } =
-  vi.hoisted(() => ({
-    mockCreateOperation: vi.fn(),
-    mockFindById: vi.fn(),
-    mockMessageCreate: vi.fn(),
-    mockMessageQuery: vi.fn(),
-    mockQueryTree: vi.fn(),
-  }));
+// Under ACP a resume/regenerate run still prunes the anchor's old answer
+// branch — but the pruning now happens inside `dispatchHeteroAgent` (topic
+// query → pruneRegeneratedBranch → conversation history), and the surviving
+// turns reach the execution host inside the `systemContext` block instead of
+// a model-loop `initialMessages` array. These tests delegate to the real
+// dispatch (stubs around the persistence/device/sandbox edges) and assert on
+// the serialized history the host receives.
+const {
+  mockDispatchHeteroAgent,
+  mockFindById,
+  mockMessageCreate,
+  mockMessageQuery,
+  mockQueryTree,
+  mockSpawnHeteroSandbox,
+  realDispatchRef,
+} = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
+  mockFindById: vi.fn(),
+  mockMessageCreate: vi.fn(),
+  mockMessageQuery: vi.fn(),
+  mockQueryTree: vi.fn(),
+  mockSpawnHeteroSandbox: vi.fn(),
+  realDispatchRef: (() => {
+    const ref: { current: typeof dispatchHeteroAgent | null } = { current: null };
+    return ref;
+  })(),
+}));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
@@ -44,6 +68,7 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
+        agencyConfig: { executionTarget: 'sandbox' },
         chatConfig: {},
         id: 'agent-1',
         knowledgeBases: [],
@@ -67,11 +92,15 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      appendRunningOperationChild: vi.fn().mockResolvedValue(true),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
       findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
+      patchRunningOperation: vi.fn().mockResolvedValue(true),
+      settleRunningOperation: vi.fn().mockResolvedValue(true),
+      updateMetadata: vi.fn().mockResolvedValue({}),
     };
   }),
 }));
@@ -105,10 +134,64 @@ vi.mock('@/database/models/userMemory/persona', () => ({
 vi.mock('@/server/services/agentRuntime', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
-      createOperation: mockCreateOperation,
+      createOperation: vi.fn().mockResolvedValue({
+        autoStarted: true,
+        messageId: 'queue-msg-1',
+        operationId: 'op-123',
+        success: true,
+      }),
     };
   }),
 }));
+
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
+  createAgentStateManager: vi.fn(function () {
+    return {
+      createOperationMetadata: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+  createStreamEventManager: () => ({
+    publishAgentRuntimeEnd: vi.fn().mockResolvedValue('end-event-id'),
+    publishAgentRuntimeInit: vi.fn().mockResolvedValue('init-event-id'),
+  }),
+  isRedisAvailable: vi.fn(function () {
+    return false;
+  }),
+}));
+
+vi.mock('@/libs/trpc/utils/internalJwt', () => ({
+  signHeteroOperationJWT: vi.fn().mockResolvedValue('op-jwt'),
+  signUserJWT: vi.fn().mockResolvedValue('user-jwt'),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent', () => ({
+  HeterogeneousAgentService: vi.fn().mockImplementation(function () {
+    return {
+      getHeterogeneousResumeSessionId: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
+  spawnHeteroSandbox: mockSpawnHeteroSandbox,
+}));
+
+vi.mock('@/server/services/deviceGateway/dispatchAuthorization', () => ({
+  resolveDeviceDispatchAuthorizationFailure: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/server/services/heterogeneousAgent/remoteDeviceHeteroContext', () => ({
+  buildRemoteDeviceHeteroContext: vi.fn().mockReturnValue('device context'),
+}));
+
+// Runs the real dispatchHeteroAgent so the resume pruning inside it actually
+// executes; the mock lets us intercept if needed and keeps the harness
+// hermetic.
+vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  realDispatchRef.current = actual.dispatchHeteroAgent as typeof dispatchHeteroAgent;
+  return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
+});
 
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
@@ -134,13 +217,6 @@ vi.mock('@/server/services/file', () => ({
   }),
 }));
 
-vi.mock('@/server/modules/Mecha', () => ({
-  createServerAgentToolsEngine: vi.fn().mockReturnValue({
-    generateToolsDetailed: vi.fn().mockReturnValue({ enabledToolIds: [], tools: [] }),
-    getEnabledPluginManifests: vi.fn().mockReturnValue(new Map()),
-  }),
-}));
-
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
     isConfigured: false,
@@ -163,18 +239,37 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
+const resumeParams = (overrides: Record<string, unknown> = {}) => ({
+  agentId: 'agent-1',
+  appContext: {
+    sessionId: 'session-1',
+    threadId: 'thread-1',
+    topicId: 'topic-1',
+  },
+  parentMessageId: 'parent-msg-1',
+  prompt: 'caller prompt is ignored for runtime payload messages',
+  resume: true,
+  ...overrides,
+});
+
+/** The serialized prior turns the execution host receives for this run. */
+const dispatchedSystemContext = () =>
+  mockSpawnHeteroSandbox.mock.calls[0]?.[0]?.systemContext as string | undefined;
+
 describe('AiAgentService.execAgent - resume mode', () => {
   let service: AiAgentService;
+  let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockCreateOperation.mockResolvedValue({
-      autoStarted: true,
-      messageId: 'queue-msg-1',
-      operationId: 'op-123',
-      success: true,
-    });
+    vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
+    vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
+    recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
+    mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
+      realDispatchRef.current!(deps, ctx, input),
+    );
+    mockSpawnHeteroSandbox.mockResolvedValue(undefined);
 
     mockFindById.mockResolvedValue({
       id: 'parent-msg-1',
@@ -194,27 +289,19 @@ describe('AiAgentService.execAgent - resume mode', () => {
     service = new AiAgentService({} as any, 'user-1');
   });
 
+  afterEach(() => {
+    recordStartSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
+
   it('should create only a new assistant message in resume mode and use caller appContext', async () => {
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: {
-        sessionId: 'session-1',
-        threadId: 'thread-1',
-        topicId: 'topic-1',
-      },
-      parentMessageId: 'parent-msg-1',
-      prompt: 'caller prompt is ignored for runtime payload messages',
-      resume: true,
-    });
+    await service.execAgent(resumeParams());
 
     expect(mockFindById).toHaveBeenCalledWith('parent-msg-1');
+    // The topic history loads inside dispatch, bounded + share-visitor-allowed.
     expect(mockMessageQuery).toHaveBeenCalledWith(
-      {
-        sessionId: 'session-1',
-        threadId: 'thread-1',
-        topicId: 'topic-1',
-      },
-      expect.any(Object),
+      { pageSize: 200, topicId: 'topic-1' },
+      { allowShareVisitor: true },
     );
     expect(mockMessageCreate).toHaveBeenCalledTimes(1);
     expect(mockMessageCreate).toHaveBeenCalledWith(
@@ -228,25 +315,17 @@ describe('AiAgentService.execAgent - resume mode', () => {
       undefined,
     );
 
-    expect(mockCreateOperation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        appContext: expect.objectContaining({
-          threadId: 'thread-1',
-          topicId: 'topic-1',
-        }),
-        initialContext: expect.objectContaining({
-          payload: expect.objectContaining({
-            message: [{ content: '' }],
-            parentMessageId: 'parent-msg-1',
-          }),
-          phase: 'user_input',
-        }),
-        initialMessages: [
-          { content: 'history user', id: 'history-1', role: 'user' },
-          { content: 'history assistant', id: 'history-2', role: 'assistant' },
-        ],
-      }),
+    // The run context carries the caller's appContext, and the surviving
+    // history reaches the host serialized inside systemContext.
+    const ctx = mockDispatchHeteroAgent.mock.calls[0][1];
+    expect(ctx.appContext).toEqual(
+      expect.objectContaining({ threadId: 'thread-1', topicId: 'topic-1' }),
     );
+    expect(ctx.parentMessageId).toBe('parent-msg-1');
+    const systemContext = dispatchedSystemContext();
+    expect(systemContext).toContain('<previous_conversation>');
+    expect(systemContext).toContain('history user');
+    expect(systemContext).toContain('history assistant');
   });
 
   it('should reject missing appContext in resume mode', async () => {
@@ -262,17 +341,15 @@ describe('AiAgentService.execAgent - resume mode', () => {
 
   it('should reject appContext.topicId mismatch in resume mode', async () => {
     await expect(
-      service.execAgent({
-        agentId: 'agent-1',
-        appContext: {
-          sessionId: 'session-1',
-          threadId: 'thread-1',
-          topicId: 'topic-other',
-        },
-        parentMessageId: 'parent-msg-1',
-        prompt: '',
-        resume: true,
-      }),
+      service.execAgent(
+        resumeParams({
+          appContext: {
+            sessionId: 'session-1',
+            threadId: 'thread-1',
+            topicId: 'topic-other',
+          },
+        }),
+      ),
     ).rejects.toThrow('appContext.topicId does not match parent message');
   });
 
@@ -288,7 +365,7 @@ describe('AiAgentService.execAgent - resume mode', () => {
 
   // Regression: gateway/server-runtime regenerate must replace, not continue.
   // The flat topic query returns the anchor user message's existing answer
-  // branch; feeding it back makes the model continue the old answer
+  // branch; feeding it back makes the agent continue the old answer
   // ([U1, A1] -> continue) instead of producing a fresh one ([U1] -> A2).
   it('regenerate: drops the anchor user message existing answer branch from history', async () => {
     mockFindById.mockResolvedValue({
@@ -313,16 +390,13 @@ describe('AiAgentService.execAgent - resume mode', () => {
       { id: 'a1', messageGroupId: null, parentId: 'u1' },
     ]);
 
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: { sessionId: 'session-1', threadId: 'thread-1', topicId: 'topic-1' },
-      parentMessageId: 'u1',
-      prompt: 'ignored',
-      resume: true,
-    });
+    await service.execAgent(resumeParams({ parentMessageId: 'u1', prompt: 'ignored' }));
 
-    const call = mockCreateOperation.mock.calls[0][0];
-    expect(call.initialMessages.map((m: any) => m.id)).toEqual(['prior-u', 'prior-a', 'u1']);
+    const systemContext = dispatchedSystemContext();
+    expect(systemContext).toContain('prior question');
+    expect(systemContext).toContain('prior answer');
+    expect(systemContext).toContain('the question');
+    expect(systemContext).not.toContain('OLD answer');
   });
 
   // Regression: regenerating a MIDDLE turn must also drop the turns that
@@ -349,22 +423,22 @@ describe('AiAgentService.execAgent - resume mode', () => {
       { id: 'a2', messageGroupId: null, parentId: 'u2' },
     ]);
 
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: { sessionId: 'session-1', threadId: 'thread-1', topicId: 'topic-1' },
-      parentMessageId: 'u1',
-      prompt: 'ignored',
-      resume: true,
-    });
+    await service.execAgent(resumeParams({ parentMessageId: 'u1', prompt: 'ignored' }));
 
-    const call = mockCreateOperation.mock.calls[0][0];
-    expect(call.initialMessages.map((m: any) => m.id)).toEqual(['u1']);
+    const systemContext = dispatchedSystemContext();
+    expect(systemContext).toContain('the question');
+    expect(systemContext).not.toContain('OLD answer');
+    expect(systemContext).not.toContain('follow-up question');
+    expect(systemContext).not.toContain('follow-up answer');
   });
 
   // Regression: after /compact, the old branch is hidden inside a compression
   // group and `query` returns a synthetic `compressedGroup` node that carries no
   // `parentId`. Pruning must use the raw message tree so the group (whose members
   // descend from the anchor) is dropped instead of being fed back as a summary.
+  // (The role filter also excludes `compressedGroup` from conversationHistory,
+  // so the summary never reaches the host either way — the prune is what keeps
+  // the flat-query members of the group out.)
   it('regenerate: drops a compressedGroup node whose compacted members descend from the anchor', async () => {
     mockFindById.mockResolvedValue({
       id: 'u1',
@@ -392,21 +466,20 @@ describe('AiAgentService.execAgent - resume mode', () => {
       { id: 'a2', messageGroupId: 'grp-1', parentId: 'u2' },
     ]);
 
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: { sessionId: 'session-1', threadId: 'thread-1', topicId: 'topic-1' },
-      parentMessageId: 'u1',
-      prompt: 'ignored',
-      resume: true,
-    });
+    await service.execAgent(resumeParams({ parentMessageId: 'u1', prompt: 'ignored' }));
 
-    const call = mockCreateOperation.mock.calls[0][0];
-    expect(call.initialMessages.map((m: any) => m.id)).toEqual(['prior-u', 'prior-a', 'u1']);
+    const systemContext = dispatchedSystemContext();
+    expect(systemContext).toContain('prior question');
+    expect(systemContext).toContain('prior answer');
+    expect(systemContext).toContain('the question');
+    expect(systemContext).not.toContain('summary of old branch');
   });
 
   // Guard: a compression group of PRIOR turns (not descended from the anchor)
-  // must be kept — it is legitimate earlier context.
-  it('regenerate: keeps a compressedGroup node whose members precede the anchor', async () => {
+  // must not prune the anchor turn itself — it is legitimate earlier context.
+  // (As above, `compressedGroup` nodes are not user/assistant turns, so only
+  // the anchor's own content reaches the host.)
+  it('regenerate: keeps the anchor when an earlier compression group precedes it', async () => {
     mockFindById.mockResolvedValue({
       id: 'u1',
       role: 'user',
@@ -427,21 +500,18 @@ describe('AiAgentService.execAgent - resume mode', () => {
       { id: 'a1', messageGroupId: null, parentId: 'u1' },
     ]);
 
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: { sessionId: 'session-1', threadId: 'thread-1', topicId: 'topic-1' },
-      parentMessageId: 'u1',
-      prompt: 'ignored',
-      resume: true,
-    });
+    await service.execAgent(resumeParams({ parentMessageId: 'u1', prompt: 'ignored' }));
 
-    const call = mockCreateOperation.mock.calls[0][0];
-    expect(call.initialMessages.map((m: any) => m.id)).toEqual(['grp-0', 'u1']);
+    const systemContext = dispatchedSystemContext();
+    expect(systemContext).toContain('the question');
+    expect(systemContext).not.toContain('OLD answer');
+    expect(systemContext).not.toContain('summary of early turns');
   });
 
   // Guard: the human-approval resume path anchors on a tool message and must
-  // keep the in-flight turn — including parallel-tool sibling messages — intact.
-  it('resume on a non-user anchor (tool message) keeps full history untouched', async () => {
+  // keep the in-flight turn — tool-role rows never enter conversationHistory,
+  // but pruning must not drop the user/assistant turns around them.
+  it('resume on a non-user anchor (tool message) keeps the surrounding turn', async () => {
     mockFindById.mockResolvedValue({
       id: 'tool-1',
       role: 'tool',
@@ -457,15 +527,12 @@ describe('AiAgentService.execAgent - resume mode', () => {
       { content: 'tool result B', id: 'tool-2', parentId: 'a1', role: 'tool' },
     ]);
 
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: { sessionId: 'session-1', threadId: 'thread-1', topicId: 'topic-1' },
-      parentMessageId: 'tool-1',
-      prompt: '',
-      resume: true,
-    });
+    await service.execAgent(resumeParams({ parentMessageId: 'tool-1', prompt: '' }));
 
-    const call = mockCreateOperation.mock.calls[0][0];
-    expect(call.initialMessages.map((m: any) => m.id)).toEqual(['u1', 'a1', 'tool-1', 'tool-2']);
+    const systemContext = dispatchedSystemContext();
+    expect(systemContext).toContain('q');
+    expect(systemContext).toContain('a with tool calls');
+    expect(systemContext).not.toContain('tool result A');
+    expect(systemContext).not.toContain('tool result B');
   });
 });

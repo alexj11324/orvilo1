@@ -15,6 +15,7 @@ import { eq } from 'drizzle-orm';
 import type * as ModelBankModule from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as WorkspaceModule from '@/database/models/workspace';
 import type * as InternalJwtModule from '@/libs/trpc/utils/internalJwt';
 import {
   assertCanPerformResourceAction,
@@ -35,7 +36,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 
@@ -51,6 +52,16 @@ vi.mock('@/server/services/agentRuntime', () => ({
       }),
     };
   }),
+}));
+
+// Every execAgent run hands off to ACP via dispatchHeteroAgent — stub that
+// boundary so these tests cover the router → service path (topic/message
+// persistence, context wiring) without spawning a host or needing JWKS_KEY.
+const { mockDispatchHeteroAgent } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
+}));
+vi.mock('../../../services/aiAgent/pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 // Mock serverMessagesEngine
@@ -164,6 +175,21 @@ describe('AI Agent Router Integration Tests', () => {
       sessionId: testSessionId,
       userId,
     });
+
+    let opCounter = 0;
+    mockDispatchHeteroAgent.mockImplementation(async (_deps, ctx) => ({
+      agentId: ctx.resolvedAgentId,
+      assistantMessageId: ctx.assistantMessageId,
+      autoStarted: true,
+      createdAt: new Date().toISOString(),
+      message: 'Hetero agent dispatched successfully',
+      operationId: `op_${Date.now()}_${ctx.resolvedAgentId}_${ctx.topicId}_${opCounter++}`,
+      status: 'created',
+      success: true,
+      timestamp: new Date().toISOString(),
+      topicId: ctx.topicId,
+      userMessageId: ctx.userMessageId ?? ctx.parentMessageId ?? '',
+    }));
   });
 
   afterEach(async () => {
@@ -334,46 +360,26 @@ describe('AI Agent Router Integration Tests', () => {
       ).rejects.toThrow();
     });
 
-    it('should pass correct parameters to createOperation', async () => {
-      const { AgentRuntimeService } = await import('@/server/services/agentRuntime');
-      const mockCreateOperation = vi.fn().mockResolvedValue({
-        success: true,
-        operationId: 'test-op-id',
-        autoStarted: true,
-        messageId: 'test-msg-id',
-      });
-
-      vi.mocked(AgentRuntimeService).mockImplementation(function () {
-        return {
-          createOperation: mockCreateOperation,
-        } as any;
-      });
-
+    it('should pass correct parameters to dispatchHeteroAgent', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       await caller.execAgent({
         agentId: testAgentId,
         prompt: 'Test prompt',
-        autoStart: false,
       });
 
-      expect(mockCreateOperation).toHaveBeenCalledWith(
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledWith(
+        expect.objectContaining({ userId }),
         expect.objectContaining({
           agentConfig: expect.objectContaining({
             model: 'gpt-4o-mini',
             provider: 'openai',
           }),
-          appContext: expect.objectContaining({
-            agentId: testAgentId,
-          }),
-          autoStart: false,
-          modelRuntimeConfig: {
-            mediaCapabilities: expect.objectContaining({ vision: true }),
-            model: 'gpt-4o-mini',
-            provider: 'openai',
-          },
-          userId,
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          resolvedAgentId: testAgentId,
         }),
+        expect.anything(),
       );
     });
 
@@ -389,20 +395,6 @@ describe('AI Agent Router Integration Tests', () => {
     });
 
     it('should include threadId in appContext when provided', async () => {
-      const { AgentRuntimeService } = await import('@/server/services/agentRuntime');
-      const mockCreateOperation = vi.fn().mockResolvedValue({
-        success: true,
-        operationId: 'test-op-id',
-        autoStarted: true,
-        messageId: 'test-msg-id',
-      });
-
-      vi.mocked(AgentRuntimeService).mockImplementation(function () {
-        return {
-          createOperation: mockCreateOperation,
-        } as any;
-      });
-
       // Create a topic first (required for thread)
       const [topic] = await serverDB
         .insert(topics)
@@ -436,12 +428,14 @@ describe('AI Agent Router Integration Tests', () => {
         },
       });
 
-      expect(mockCreateOperation).toHaveBeenCalledWith(
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
           appContext: expect.objectContaining({
             threadId: thread.id,
           }),
         }),
+        expect.anything(),
       );
     });
 

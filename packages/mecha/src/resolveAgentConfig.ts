@@ -135,6 +135,8 @@ export interface AgentConfigSnapshot {
   slug?: string;
   /** The user's preferred reply language, injected into the system role. */
   userLocale?: string;
+  /** The user's IANA time zone, injected into the system role. */
+  userTimezone?: string;
 }
 
 export interface AgentConfigResolverContext {
@@ -376,14 +378,20 @@ export const resolveAgentConfig = (
     const finalPlugins = plugins && plugins.length > 0 ? plugins : basePlugins;
 
     // Inject response language preference into system role for regular agents
-    const { userLocale } = snapshot;
+    const { userLocale, userTimezone } = snapshot;
     const localeInstruction = userLocale
       ? `Preferred reply language: ${userLocale}. Use this language unless the user explicitly asks to switch.`
       : '';
-    const systemRoleWithLocale = localeInstruction
+    const timezoneInstruction = userTimezone
+      ? `The user's time zone is ${userTimezone}. Use it when interpreting or stating times and dates.`
+      : '';
+    const userWorldInstructions = [localeInstruction, timezoneInstruction]
+      .filter(Boolean)
+      .join('\n');
+    const systemRoleWithLocale = userWorldInstructions
       ? agentConfig.systemRole
-        ? `${agentConfig.systemRole}\n\n${localeInstruction}`
-        : localeInstruction
+        ? `${agentConfig.systemRole}\n\n${userWorldInstructions}`
+        : userWorldInstructions
       : agentConfig.systemRole;
 
     // Apply params adjustments based on chatConfig

@@ -105,6 +105,13 @@ export interface OrviloBuiltinMcpServerOptions {
    */
   extraTools?: McpExtraTool[];
   /**
+   * Whether to register `ask_user_question`. Default `true`. Set `false` for
+   * harnesses that mount this server only for the producer's extra tools and
+   * have their own (or no) human-in-the-loop channel — e.g. the standard-ACP
+   * runtimes (amp / codex / opencode / …) that never got the AskUser bridge.
+   */
+  includeAskUserTool?: boolean;
+  /**
    * Per-call timeout passed to `bridge.pending()`. Default 5 minutes —
    * matches the issue's UX requirement and the tested CC keepalive ceiling.
    */
@@ -362,9 +369,8 @@ export class OrviloBuiltinMcpServer {
       { name: ASK_USER_MCP_SERVER_NAME, version: '1.0.0' },
       { capabilities: { tools: {} } },
     );
-    this.registerAskUserTool(mcp);
+    if (this.options.includeAskUserTool !== false) this.registerAskUserTool(mcp);
     for (const tool of this.options.extraTools ?? []) this.registerExtraTool(mcp, tool);
-
     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
       onsessionclosed: (sessionId: string) => {
         this.sessionTransports.delete(sessionId);

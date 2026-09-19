@@ -1,3 +1,5 @@
+import type { AcpBuiltinToolSpec } from '@orvilo/types';
+
 import {
   describeGatewayRequestFailure,
   describeGatewayResponseFailure,
@@ -280,6 +282,8 @@ export class GatewayHttpClient {
     assistantMessageId: string;
     /** Resolved `lh hetero exec` wrapper args. */
     args?: string[];
+    /** Server-backed builtin tool surface the device mounts on its per-run MCP server. */
+    builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     deviceId?: string;
     /**

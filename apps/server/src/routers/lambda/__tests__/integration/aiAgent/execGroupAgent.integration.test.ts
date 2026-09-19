@@ -10,18 +10,20 @@ import { type OrviloDatabase } from '@orvilo/database';
 import { agents, chatGroups, messages, topics } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
-import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { inMemoryAgentStateManager } from '@/server/modules/AgentExecution/InMemoryAgentStateManager';
-import { inMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 
 import { aiAgentRouter } from '../../../aiAgent';
 import { cleanupTestUser, createTestUser } from '../setup';
-import { createMockResponsesAPIStream } from './helpers';
 
-// Set fake API key for testing to bypass OpenAI SDK validation
-process.env.OPENAI_API_KEY = 'sk-test-fake-api-key-for-testing';
+// Every execAgent run hands off to ACP via dispatchHeteroAgent — stub that
+// boundary so these tests cover the router → service path (group topic/message
+// persistence, response shape) without spawning a host.
+const { mockDispatchHeteroAgent } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
+}));
+vi.mock('../../../../../services/aiAgent/pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
 
 // Local testDB variable for mock closure
 let testDB: OrviloDatabase;
@@ -58,8 +60,6 @@ let userId: string;
 let testAgentId: string;
 let testGroupId: string;
 
-let mockResponsesCreate: any;
-
 const createTestCallerContext = (uid: string) => ({
   jwtPayload: { userId: uid },
   userId: uid,
@@ -94,27 +94,31 @@ beforeEach(async () => {
     .returning();
   testGroupId = group.id;
 
-  // Setup spyOn for OpenAI Responses API prototype
-  mockResponsesCreate = vi.spyOn(OpenAI.Responses.prototype, 'create');
+  let opCounter = 0;
+  mockDispatchHeteroAgent.mockImplementation(async (_deps, ctx) => ({
+    agentId: ctx.resolvedAgentId,
+    assistantMessageId: ctx.assistantMessageId,
+    autoStarted: true,
+    createdAt: new Date().toISOString(),
+    message: 'Hetero agent dispatched successfully',
+    operationId: `op_${Date.now()}_${ctx.resolvedAgentId}_${ctx.topicId}_${opCounter++}`,
+    status: 'created',
+    success: true,
+    timestamp: new Date().toISOString(),
+    topicId: ctx.topicId,
+    userMessageId: ctx.userMessageId ?? ctx.parentMessageId ?? '',
+  }));
 });
 
 afterEach(async () => {
   await cleanupTestUser(serverDB, userId);
   vi.clearAllMocks();
   vi.restoreAllMocks();
-
-  // Clear singleton instances for next test
-  inMemoryAgentStateManager.clear();
-  inMemoryStreamEventManager.clear();
 });
 
 describe('execGroupAgent', () => {
   describe('Topic Creation with groupId', () => {
     it('should create a new topic with groupId when topicId is not provided', async () => {
-      mockResponsesCreate.mockResolvedValue(
-        createMockResponsesAPIStream('Hello from group agent!') as any,
-      );
-
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
 
       const result = await caller.execGroupAgent({
@@ -140,8 +144,6 @@ describe('execGroupAgent', () => {
     });
 
     it('should truncate long message for topic title', async () => {
-      mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Response') as any);
-
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
       const longMessage =
         'This is a very long message that exceeds fifty characters and should be truncated for the topic title';
@@ -164,10 +166,6 @@ describe('execGroupAgent', () => {
     });
 
     it('should reuse existing topic when topicId is provided', async () => {
-      mockResponsesCreate.mockResolvedValue(
-        createMockResponsesAPIStream('Follow up response') as any,
-      );
-
       // Create an existing topic with groupId
       const [existingTopic] = await serverDB
         .insert(topics)
@@ -199,10 +197,6 @@ describe('execGroupAgent', () => {
     });
 
     it('should create topic with custom title when newTopic is provided', async () => {
-      mockResponsesCreate.mockResolvedValue(
-        createMockResponsesAPIStream('Response with custom topic') as any,
-      );
-
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
 
       const result = await caller.execGroupAgent({
@@ -228,8 +222,6 @@ describe('execGroupAgent', () => {
 
   describe('Message Creation', () => {
     it('should create user message in the topic', async () => {
-      mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Agent response') as any);
-
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
 
       const result = await caller.execGroupAgent({
@@ -252,10 +244,6 @@ describe('execGroupAgent', () => {
 
   describe('Response Data', () => {
     it('should return messages and topics in response', async () => {
-      mockResponsesCreate.mockResolvedValue(
-        createMockResponsesAPIStream('Response with data') as any,
-      );
-
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
 
       const result = await caller.execGroupAgent({
@@ -277,8 +265,6 @@ describe('execGroupAgent', () => {
     });
 
     it('should not return topics when using existing topic', async () => {
-      mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Response') as any);
-
       // Create an existing topic
       const [existingTopic] = await serverDB
         .insert(topics)
@@ -319,87 +305,8 @@ describe('execGroupAgent', () => {
     });
   });
 
-  describe('Stream Events', () => {
-    // This test documents the current bug where agent_runtime_end is not sent
-    // When fixed, remove .todo and the test should pass
-    it.todo('should emit agent_runtime_end event when agent completes', async () => {
-      mockResponsesCreate.mockResolvedValue(
-        createMockResponsesAPIStream('Completed response') as any,
-      );
-
-      const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
-
-      const result = await caller.execGroupAgent({
-        agentId: testAgentId,
-        groupId: testGroupId,
-        message: 'Test message for stream events',
-      });
-
-      expect(result.operationId).toBeDefined();
-
-      // Wait a bit for all events to be processed
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Check all events that were emitted
-      const allEvents = inMemoryStreamEventManager.getAllEvents(result.operationId);
-      const eventTypes = allEvents.map((e) => e.type);
-
-      console.log('All emitted event types:', eventTypes);
-
-      // IMPORTANT: This test verifies that agent_runtime_end event is sent
-      // If this test fails, it means the SSE stream won't close properly
-      expect(eventTypes).toContain('agent_runtime_end');
-
-      // Also verify the event has correct data structure
-      const endEvent = allEvents.find((e) => e.type === 'agent_runtime_end');
-      if (endEvent) {
-        expect(endEvent.data).toBeDefined();
-        expect(endEvent.data.phase).toBe('execution_complete');
-      }
-    });
-
-    it('should emit events in correct order: init -> chunks -> end', async () => {
-      mockResponsesCreate.mockResolvedValue(
-        createMockResponsesAPIStream('Response content') as any,
-      );
-
-      const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
-
-      const result = await caller.execGroupAgent({
-        agentId: testAgentId,
-        groupId: testGroupId,
-        message: 'Test event order',
-      });
-
-      // Wait a bit for all events to be processed
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const allEvents = inMemoryStreamEventManager.getAllEvents(result.operationId);
-      const eventTypes = allEvents.map((e) => e.type);
-
-      // Log event types for debugging
-      console.log('Emitted event types:', eventTypes);
-
-      // Verify agent_runtime_init is emitted (should be first or near first)
-      const initIndex = eventTypes.indexOf('agent_runtime_init');
-
-      // Verify agent_runtime_end is emitted (should be last)
-      const endIndex = eventTypes.indexOf('agent_runtime_end');
-
-      // If both events exist, verify order
-      if (initIndex !== -1 && endIndex !== -1) {
-        expect(initIndex).toBeLessThan(endIndex);
-      }
-
-      // At minimum, we should have some events
-      expect(allEvents.length).toBeGreaterThan(0);
-    });
-  });
-
   describe('Multiple Group Sessions', () => {
     it('should create separate topics for different groups', async () => {
-      mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Response') as any);
-
       // Create another group
       const [group2] = await serverDB
         .insert(chatGroups)
@@ -437,8 +344,6 @@ describe('execGroupAgent', () => {
     });
 
     it('should allow multiple topics within same group', async () => {
-      mockResponsesCreate.mockResolvedValue(createMockResponsesAPIStream('Response') as any);
-
       const caller = aiAgentRouter.createCaller(createTestCallerContext(userId));
 
       // Create first topic in group

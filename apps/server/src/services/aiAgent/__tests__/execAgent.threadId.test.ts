@@ -4,12 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
-const { mockMessageCreate, mockTopicAppendRunningOperationChild, mockTopicUpdateMetadata } =
-  vi.hoisted(() => ({
-    mockMessageCreate: vi.fn(),
-    mockTopicAppendRunningOperationChild: vi.fn(),
-    mockTopicUpdateMetadata: vi.fn(),
-  }));
+const {
+  mockDispatchHeteroAgent,
+  mockMessageCreate,
+  mockTopicAppendRunningOperationChild,
+  mockTopicUpdateMetadata,
+} = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
+  mockMessageCreate: vi.fn(),
+  mockTopicAppendRunningOperationChild: vi.fn(),
+  mockTopicUpdateMetadata: vi.fn(),
+}));
 
 // Mock trusted client to avoid server-side env access
 vi.mock('@/libs/trusted-client', () => ({
@@ -128,6 +133,15 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise message persistence without the gateway. The topic
+// `runningOperation` mark itself is written inside `dispatchHeteroAgent`
+// (asserted at that level in execAgent.heteroFiles.test.ts); here we pin the
+// inputs that drive its root-vs-child decision.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 // Mock MarketService (for getOrviloSkillManifests)
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
@@ -204,6 +218,12 @@ describe('AiAgentService.execAgent - threadId handling', () => {
     mockTopicAppendRunningOperationChild.mockReset().mockResolvedValue(true);
     mockTopicUpdateMetadata.mockClear();
     mockTopicUpdateMetadata.mockResolvedValue(undefined);
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
 
     service = new AiAgentService(mockDb, userId);
   });
@@ -260,22 +280,28 @@ describe('AiAgentService.execAgent - threadId handling', () => {
     });
   });
 
-  describe('topic running mark', () => {
-    const runningMarkCalls = () =>
-      mockTopicUpdateMetadata.mock.calls.filter((call) => 'runningOperation' in (call[1] ?? {}));
+  // The `runningOperation` mark is seeded inside `dispatchHeteroAgent`, keyed
+  // off these inputs: no parent anchor + no `isolationThread` claims the root
+  // mark; an owned isolation child nests under `topicStartOwnerOperationId`
+  // (or `parentOperationId`) via `appendRunningOperationChild`; an unowned
+  // isolation run skips the mark entirely.
+  describe('topic running mark dispatch inputs', () => {
+    const dispatchCall = () => ({
+      input: mockDispatchHeteroAgent.mock.calls[0][2],
+      runContext: mockDispatchHeteroAgent.mock.calls[0][1],
+    });
 
-    it('claims the mark for a main-conversation run', async () => {
+    it('dispatches a root-mark run for a main-conversation turn', async () => {
       await service.execAgent({
         agentId: 'agent-1',
         appContext: { topicId: 'topic-1' },
         prompt: 'Test prompt',
       });
 
-      expect(runningMarkCalls()).toHaveLength(1);
-      expect(runningMarkCalls()[0][1].runningOperation).toMatchObject({
-        assistantMessageId: 'msg-1',
-        operationId: expect.stringContaining('op_'),
-      });
+      const { input, runContext } = dispatchCall();
+      expect(input.topicStartOwnerOperationId).toBeUndefined();
+      expect(input.parentOperationId).toBeUndefined();
+      expect(runContext.appContext?.isolationThread).toBeFalsy();
     });
 
     it('does not trust a public member role to suppress the marker', async () => {
@@ -285,25 +311,29 @@ describe('AiAgentService.execAgent - threadId handling', () => {
         prompt: 'Test prompt',
       });
 
-      expect(runningMarkCalls()).toHaveLength(1);
+      const { input, runContext } = dispatchCall();
+      expect(input.topicStartOwnerOperationId).toBeUndefined();
+      expect(runContext.appContext?.isolationThread).toBeFalsy();
     });
 
-    it('does not claim the mark for an isolation-thread run', async () => {
+    it('hands an unowned isolation-thread run no mark anchor', async () => {
       // A callAgent / callSubAgent / group-member child executes on the PARENT's
-      // topic. Claiming the mark pointed every client reconnect at the child's
-      // thread stream, and clearing it on the child's (much earlier) finish left
-      // the still-running parent with no reconnect anchor at all — the run drawer
-      // then never opened a gateway WebSocket for the rest of the run.
+      // topic. Claiming the root mark pointed every client reconnect at the
+      // child's thread stream, and clearing it on the child's (much earlier)
+      // finish left the still-running parent with no reconnect anchor at all.
       await service.execAgent({
         agentId: 'agent-1',
         appContext: { isolationThread: true, threadId: 'thread-123', topicId: 'topic-1' },
         prompt: 'Test prompt',
       });
 
-      expect(runningMarkCalls()).toHaveLength(0);
+      const { input, runContext } = dispatchCall();
+      expect(runContext.appContext?.isolationThread).toBe(true);
+      expect(input.parentOperationId).toBeUndefined();
+      expect(input.topicStartOwnerOperationId).toBeUndefined();
     });
 
-    it('registers an owned isolation-thread run as a child marker', async () => {
+    it('anchors an owned isolation-thread run under its parent operation', async () => {
       await service.execAgent({
         agentId: 'agent-1',
         appContext: {
@@ -317,17 +347,14 @@ describe('AiAgentService.execAgent - threadId handling', () => {
         topicStartOwnerOperationId: 'parent-operation',
       } as any);
 
-      expect(mockTopicAppendRunningOperationChild).toHaveBeenCalledWith(
-        'topic-1',
-        'parent-operation',
-        expect.objectContaining({
-          assistantMessageId: 'msg-1',
-          operationId: expect.stringContaining('op_'),
-          orchestrationRole: 'member',
-          threadId: 'thread-123',
-        }),
-      );
-      expect(runningMarkCalls()).toHaveLength(0);
+      const { input, runContext } = dispatchCall();
+      expect(input.topicStartOwnerOperationId).toBe('parent-operation');
+      expect(input.parentOperationId).toBe('parent-operation');
+      expect(runContext.appContext).toMatchObject({
+        isolationThread: true,
+        orchestrationRole: 'member',
+        threadId: 'thread-123',
+      });
     });
   });
 

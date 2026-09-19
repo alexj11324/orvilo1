@@ -6,6 +6,7 @@ import {
   type HeteroExecImageRef,
 } from '@orvilo/heterogeneous-agents/protocol';
 import { resolveHeteroSpawnCwd } from '@orvilo/heterogeneous-agents/workingDirectory';
+import type { AcpBuiltinToolSpec } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 
 import { getTask, removeTask, saveTask, type TaskEntry } from '../daemon/taskRegistry';
@@ -126,11 +127,20 @@ export interface SpawnHeteroAgentRunParams {
   /** Resolved `lh hetero exec` wrapper args. */
   args?: string[];
   assistantMessageId?: string;
+  /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
+  builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
   /** Image attachments (signed URLs) appended as image content blocks. */
   imageList?: HeteroExecImageRef[];
   jwt: string;
   operationId: string;
+  /**
+   * Operation-scoped token forwarded as `ORVILO_OPERATION_JWT` for builtin
+   * tool callbacks. `jwt` on this path is already the operation token, but
+   * the field is kept explicit so all three hosts (device daemon / desktop /
+   * sandbox) share the same env contract.
+   */
+  operationJwt?: string;
   prompt: string;
   /** System context used only by the automatic retry without native resume. */
   resumeFallbackSystemContext?: string;
@@ -205,10 +215,12 @@ async function admitHeteroAgentRun(
     agentType,
     assistantMessageId,
     args: extraArgs,
+    builtinTools,
     cwd,
     imageList,
     jwt,
     operationId,
+    operationJwt,
     prompt,
     resumeFallbackSystemContext,
     resumeSessionId,
@@ -310,6 +322,8 @@ async function admitHeteroAgentRun(
   for (const key of [
     'ORVILO_AGENT_ID',
     'ORVILO_ASSISTANT_MESSAGE_ID',
+    'ORVILO_BUILTIN_TOOLS',
+    'ORVILO_OPERATION_JWT',
     'ORVILO_RUN_GENERATION',
     'ORVILO_TASK_ID',
     'ORVILO_WORKSPACE_ID',
@@ -334,6 +348,12 @@ async function admitHeteroAgentRun(
         ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
         ORVILO_JWT: jwt,
+        // The operation token is `jwt` on this path; forwarded under its own
+        // key so the CLI's builtin-tool callback path is host-agnostic.
+        ...(operationJwt ? { ORVILO_OPERATION_JWT: operationJwt } : {}),
+        ...(builtinTools?.length
+          ? { ORVILO_BUILTIN_TOOLS: Buffer.from(JSON.stringify(builtinTools)).toString('base64') }
+          : {}),
         ORVILO_OPERATION_ID: operationId,
         ...(runGeneration != null ? { ORVILO_RUN_GENERATION: String(runGeneration) } : {}),
         ORVILO_SERVER: serverUrl,

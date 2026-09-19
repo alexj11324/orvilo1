@@ -3,9 +3,13 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as EventOutboxModel from '@/database/models/eventOutbox';
 import { insertOutboxEvent } from '@/database/models/eventOutbox';
 import type { OrviloDatabase } from '@/database/type';
-import { cleanupTestUser, createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
+import {
+  cleanupTestUser,
+  createTestUser,
+} from '@/server/routers/lambda/__tests__/integration/setup';
 import { outboxRowToActivityEvent } from '@/server/services/collaboration/projection';
 import { uuid } from '@/utils/uuid';
 
@@ -27,7 +31,7 @@ import { TaskInputService } from '../taskInputs';
 // The outbox writer is spied — not stubbed — so revocation tests can fail a
 // single insert while every other event keeps flowing through the real model.
 vi.mock('@/database/models/eventOutbox', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('@/database/models/eventOutbox')>();
+  const mod = await importOriginal<typeof EventOutboxModel>();
   return { ...mod, insertOutboxEvent: vi.fn(mod.insertOutboxEvent) };
 });
 
@@ -349,10 +353,7 @@ describe('agentDelegation services (integration)', () => {
         .update(workspaceMembers)
         .set({ deletedAt: new Date() })
         .where(
-          and(
-            eq(workspaceMembers.workspaceId, workspaceId),
-            eq(workspaceMembers.userId, memberId),
-          ),
+          and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)),
         );
 
       await expect(
@@ -383,10 +384,7 @@ describe('agentDelegation services (integration)', () => {
         .update(workspaceMembers)
         .set({ authzVersion: 99 })
         .where(
-          and(
-            eq(workspaceMembers.workspaceId, workspaceId),
-            eq(workspaceMembers.userId, memberId),
-          ),
+          and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)),
         );
 
       await expect(

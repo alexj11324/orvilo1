@@ -14,7 +14,7 @@
 
 ## Router 边界
 
-`WorkspaceContextSlot` 里的 URL 同步依赖 `useLocation`——该 hook 在无 `<Router>` 祖先时抛错。槽位可能在测试树或桌面端的非 Router 挂载点渲染，因此 URL 同步下沉到子组件并用 `useInRouterContext` 门控：有 Router 才挂载同步，无 Router 时槽位仍提供上下文。
+`WorkspaceContextSlot` 里的 URL 同步依赖 `useLocation`—— 该 hook 在无 `<Router>` 祖先时抛错。槽位可能在测试树或桌面端的非 Router 挂载点渲染，因此 URL 同步下沉到子组件并用 `useInRouterContext` 门控：有 Router 才挂载同步，无 Router 时槽位仍提供上下文。
 
 ## 模块边界
 

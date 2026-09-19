@@ -1,7 +1,4 @@
-import {
-  getWorkspaceContextState,
-  useWorkspaceContextStore,
-} from '../workspaceContextStore';
+import { getWorkspaceContextState, useWorkspaceContextStore } from '../workspaceContextStore';
 
 /**
  * Slug of the active workspace, kept alongside the id so

@@ -31,7 +31,6 @@ export interface RecordOperationStartParams {
   agentId?: string | null;
   appContext?: AgentOperationAppContext;
   chatGroupId?: string | null;
-  maxSteps?: number;
   /**
    * Which execution engine carried the run: `native-runtime` is the in-process
    * AgentRuntimeService step loop; `hetero` is a heterogeneous-agent dispatch
@@ -40,6 +39,7 @@ export interface RecordOperationStartParams {
    * prove which engine ran instead of inferring it from model/provider fields.
    */
   executionEngine?: 'hetero' | 'native-runtime';
+  maxSteps?: number;
   /**
    * Durable per-run metadata persisted on the operation row (jsonb). Carries the
    * Agent Signal run marker so server-side tools can read it back from the row
@@ -153,9 +153,7 @@ export class AgentOperationModel {
               // The declared engine wins over a caller-supplied metadata key —
               // provenance must reflect the path that actually recorded the
               // row, not whatever an upstream payload happened to carry.
-              ...(params.executionEngine
-                ? { executionEngine: params.executionEngine }
-                : {}),
+              ...(params.executionEngine ? { executionEngine: params.executionEngine } : {}),
             },
           }
         : {}),

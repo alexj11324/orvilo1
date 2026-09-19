@@ -12,8 +12,7 @@ export interface SwitchWorkspaceActions {
   switchWorkspace: (id: string) => Promise<void>;
 }
 
-const useSetActiveWorkspace = () =>
-  useWorkspaceContextStore((s) => s.setActiveWorkspace);
+const useSetActiveWorkspace = () => useWorkspaceContextStore((s) => s.setActiveWorkspace);
 
 /**
  * Workspace switch invoked from imperative call sites that represent an

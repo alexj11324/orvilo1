@@ -27,6 +27,7 @@ export interface AgentOperationError {
 }
 
 export interface AgentOperationAppContext {
+  clientIp?: string;
   defaultTaskAssigneeAgentId?: string;
   dispatchFence?: number;
   dispatchId?: string;
@@ -36,6 +37,7 @@ export interface AgentOperationAppContext {
   scope?: string | null;
   sessionId?: string;
   sourceMessageId?: string;
+  userAgent?: string;
 }
 
 export const agentOperations = pgTable(

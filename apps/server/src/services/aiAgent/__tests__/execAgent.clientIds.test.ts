@@ -6,7 +6,8 @@ import * as modelHints from '@/server/modules/AgentRuntime/adapters/serverCallLl
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
-const { mockMessageCreate, mockTopicCreate } = vi.hoisted(() => ({
+const { mockDispatchHeteroAgent, mockMessageCreate, mockTopicCreate } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockTopicCreate: vi.fn(),
 }));
@@ -143,6 +144,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise id minting without touching the gateway/sandbox.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 // Mock MarketService (for getOrviloSkillManifests)
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
@@ -225,6 +232,12 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     mockTopicCreate.mockImplementation(async (_params: unknown, id?: string) => ({
       id: id ?? 'topic-server-minted',
     }));
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
 
     service = new AiAgentService(mockDb, userId);
   });
@@ -234,14 +247,14 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     mockTopicCreate.mockClear();
   });
 
+  // Precreated topics pin the run's ACP execution binding (CLI family +
+  // selector model), not the member's chat model — the Lobe model loop that
+  // consumed chat-model pins is retired. `reasoningConfig`/`heteroEffort` are
+  // stamped only when the binding carries an effort; the default 'orvilo'
+  // binding has none.
   it.each(['scheduled', 'group'] as const)(
-    'snapshots the model and reasoning for a precreated %s topic',
+    'pins the ACP execution binding for a precreated %s topic',
     async (kind) => {
-      const hintsSpy = vi.spyOn(modelHints, 'resolveModelExtendParamsForUser').mockResolvedValue({
-        modelHasReasoningExtendParams: true,
-        modelExtendParams: ['reasoningEffort'],
-      });
-
       const runSpy = vi
         .spyOn(service, 'execAgent')
         .mockResolvedValue({} as Awaited<ReturnType<AiAgentService['execAgent']>>);
@@ -255,20 +268,16 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
         await service.execGroupAgent({ agentId: 'agent-1', groupId: 'group-1', message: 'Group' });
       }
       expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-        model: 'gpt-4',
-        provider: 'openai',
-        metadata: { reasoningConfig: { reasoningEffort: 'high' } },
+        model: 'default',
+        provider: 'claude-code',
       });
-      hintsSpy.mockRestore();
       runSpy.mockRestore();
     },
   );
 
-  it('snapshots an explicit model override when scheduling', async () => {
-    const hintsSpy = vi.spyOn(modelHints, 'resolveModelExtendParamsForUser').mockResolvedValue({
-      modelHasReasoningExtendParams: true,
-      modelExtendParams: ['reasoningEffort'],
-    });
+  it('keeps the execution-binding pin when a chat-model override is scheduled', async () => {
+    // 'override-model' is not a heterogeneous model id, so the run falls back
+    // to the deployment's default 'orvilo' binding.
     await service.scheduleAgentRun({
       agentId: 'agent-1',
       model: 'override-model',
@@ -277,11 +286,9 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       runAt: new Date(Date.now() + 60000).toISOString(),
     });
     expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-      model: 'override-model',
-      provider: 'override-provider',
-      metadata: { reasoningConfig: { reasoningEffort: 'high' } },
+      model: 'default',
+      provider: 'claude-code',
     });
-    hintsSpy.mockRestore();
   });
 
   it('does not recreate or snapshot an existing group topic', async () => {

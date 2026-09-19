@@ -86,6 +86,7 @@ import {
   resolveHeteroSpawnCwd,
 } from '@orvilo/heterogeneous-agents/workingDirectory';
 import type {
+  AcpBuiltinToolSpec,
   BuiltinHeterogeneousAgentType,
   HeterogeneousAgentModelCatalog,
   HeterogeneousServerDefaultApiConfig,
@@ -2481,11 +2482,20 @@ export default class HeterogeneousAgentCtr {
     assistantMessageId?: string;
     /** Resolved `lh hetero exec` wrapper args. */
     args?: string[];
+    /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
+    builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     /** Image attachments (signed URLs) appended as image content blocks. */
     imageList?: HeteroExecImageRef[];
     jwt: string;
     operationId: string;
+    /**
+     * The operation-scoped token from the dispatch (carries `hetero:tool:exec`
+     * when builtin tools are mounted). The caller often substitutes `jwt` with
+     * the device's own user token for ingest/finish, so the op token travels
+     * separately and the CLI prefers it for `execBuiltinTool` callbacks.
+     */
+    operationJwt?: string;
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;
@@ -2507,10 +2517,12 @@ export default class HeterogeneousAgentCtr {
       agentType,
       assistantMessageId,
       args: extraArgs,
+      builtinTools,
       cwd,
       imageList,
       jwt,
       operationId,
+      operationJwt,
       onChildSpawned,
       prompt,
       resumeFallbackSystemContext,
@@ -2579,6 +2591,16 @@ export default class HeterogeneousAgentCtr {
       ELECTRON_RUN_AS_NODE: '1',
       [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
       ORVILO_JWT: jwt,
+      // The operation-scoped token (with `hetero:tool:exec` when the run mounts
+      // builtin tools) travels separately: `ORVILO_JWT` here is often the
+      // device's own user token, which the execBuiltinTool endpoint would
+      // reject for lacking the capability.
+      ...(operationJwt ? { ORVILO_OPERATION_JWT: operationJwt } : {}),
+      ...(builtinTools?.length
+        ? {
+            ORVILO_BUILTIN_TOOLS: Buffer.from(JSON.stringify(builtinTools)).toString('base64'),
+          }
+        : {}),
       ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
       ...(runGeneration != null ? { ORVILO_RUN_GENERATION: String(runGeneration) } : {}),
       ORVILO_SERVER: serverUrl,

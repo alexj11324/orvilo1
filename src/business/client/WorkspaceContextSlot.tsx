@@ -32,13 +32,13 @@ const RouterBoundWorkspaceSync = ({ children }: PropsWithChildren) => {
     if (error !== undefined && data === undefined) {
       return (
         <Alert
-          message={t('workspace.loadFailedHint', { ns: 'setting' })}
           showIcon
+          message={t('workspace.loadFailedHint', { ns: 'setting' })}
           style={{ margin: 16 }}
           title={t('workspace.loadFailed', { ns: 'setting' })}
           type="error"
           extra={
-            <Button onClick={() => void mutate()} size="small">
+            <Button size="small" onClick={() => void mutate()}>
               {t('retry', { ns: 'common' })}
             </Button>
           }

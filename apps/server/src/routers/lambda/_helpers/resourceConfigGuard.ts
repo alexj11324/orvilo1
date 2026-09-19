@@ -4,9 +4,9 @@ import {
   canPerformResourceAction,
   getResourceMeta,
   isCollaborativeBuiltinAgent,
-  isWorkspaceScopedMeta,
   type ResourceMeta,
 } from '@/server/services/resourcePermission';
+import { isWorkspaceScopedMeta } from '@/server/services/resourcePermission/scopeMeta';
 
 import { getWorkspaceAgentParentGroupIds } from './workspaceAgentGuard';
 

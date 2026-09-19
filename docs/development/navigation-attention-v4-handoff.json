@@ -50,6 +50,7 @@
     "Usage docs describe Inbox / My issues / Reviews / Agent, snooze presets, and joined-only Your teams",
     "Sidebar Your teams lists joined teams only; readable-but-unjoined public teams stay on /teams; triageEnabled=false hides triage (Devin 2f22b262)",
     "My issues tabs are assigned/created/subscribed/activity; delegated is a filter; /reviews is its own page; /my-work redirects (Devin 443ccec4)",
+    "Workspace Members opens /members directory of people, agents, and invitations (Devin 1f4333ac)",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -109,8 +110,8 @@
     "packages/database/src/models/__tests__/task.test.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "bbd67f20",
-  "implementationHeadBeforeDocs": "bbd67f20",
+  "headSha": "06d79975",
+  "implementationHeadBeforeDocs": "06d79975",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

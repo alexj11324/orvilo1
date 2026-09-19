@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `bbd67f20` TaskModel `findById` /list/update 对私有团队任务走 Inbox 同一套可读性（TRI05 页面 / API）。叠在 Devin `443ccec4` My issues / `/reviews` 与 `2f22b262` joined-only Your teams 之上。                             |
+| 实施 HEAD（本交接提交之前）      | `06d79975` TaskModel `findById` /list/update 对私有团队任务走 Inbox 同一套可读性（TRI05 页面 / API）。叠在 Devin `1f4333ac` `/members`、`443ccec4` My issues / `/reviews` 与 `2f22b262` joined-only Your teams 之上。      |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -137,7 +137,7 @@
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表、标题搜索、任务详情 API，都已挡住。不要主动做 TRI04 产品复制。不要回滚 Devin `443ccec4`（My issues 标签 + `/reviews` 独立页）或 `2f22b262`（joined-only Your teams + `triageEnabled` 门控）。
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表、标题搜索、任务详情 API，都已挡住。不要主动做 TRI04 产品复制。不要回滚 Devin `1f4333ac`（`/members` 目录）、`443ccec4`（My issues 标签 + `/reviews` 独立页）或 `2f22b262`（joined-only Your teams + `triageEnabled` 门控）。
 
 用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA（Inbox / My issues / Reviews / Agent）、snooze 预设、joined-only Your teams。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
@@ -221,7 +221,8 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `9f30cfb4` / 变基后 `6c80f4ac`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。叠在 Devin `8aa4f7cb`（Inbox 分页 + 工作面错误态）与 `b16936c2`（看板 raw 维度 + 持久重排）之上。lint 干净，rebase 后 `workQuery` + `notification` 77 passed。不是 64× AC。不要回滚 Devin 这两刀。
 - `2f22b262`：Devin joined-only Your teams + `triageEnabled` 门控。不要回滚。
 - `443ccec4`：Devin F01 My issues 标签（assigned/created/subscribed/activity）+ delegated 筛选 + `/reviews` 独立页。`/my-work` 重定向。不要回滚。
-- `bbd67f20`：TRI05 任务详情 /list/update。`TaskModel.ownership()` AND `buildTaskTeamReadableWhere`。回归先失败后通过：非成员 `findById` 曾返回整行。`bun run check` 改动文件 lint 干净，`task.test.ts` 202 passed；连同 `taskDomainContract` / `workQuery` / `notification` 共 291 passed。不是 64× AC。不要把团队 ACL 接到 `seqOwnership()`。
+- `1f4333ac`：Devin F04 `/members` 工作区成员目录。不要回滚。
+- `06d79975`：TRI05 任务详情 /list/update。`TaskModel.ownership()` AND `buildTaskTeamReadableWhere`。回归先失败后通过：非成员 `findById` 曾返回整行。`bun run check` 改动文件 lint 干净，`task.test.ts` 202 passed；连同 `taskDomainContract` / `workQuery` / `notification` 共 291 passed。不是 64× AC。不要把团队 ACL 接到 `seqOwnership()`。
 - `75aadde6`：END04 用法文档对齐 My issues / `/reviews` / `/my-work` 重定向。lint 干净。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。

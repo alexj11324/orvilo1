@@ -24,6 +24,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'invite',
   'inbox',
   'me',
+  'members',
   'my-issues',
   'my-work',
   'memory',

@@ -33,6 +33,7 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'goal',
   'group',
   'inbox',
+  'members',
   'memory',
   'my-issues',
   'my-work',

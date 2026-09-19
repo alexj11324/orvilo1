@@ -46,6 +46,7 @@ import {
   automationRunsRouteMeta,
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
+import { membersRouteMeta } from '@/features/Members/routeMeta';
 import { myWorkRouteMeta } from '@/features/MyWork/routeMeta';
 import {
   projectLibraryRouteMeta,
@@ -748,6 +749,19 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'reviews',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/members'), 'Desktop > Members', {
+              preloadId: 'members',
+            }),
+            handle: { meta: membersRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'members',
       },
       {
         children: [

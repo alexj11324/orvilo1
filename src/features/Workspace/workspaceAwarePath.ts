@@ -85,6 +85,7 @@ export const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
   'group',
   'image',
   'inbox',
+  'members',
   'memory',
   'my-issues',
   'my-work',

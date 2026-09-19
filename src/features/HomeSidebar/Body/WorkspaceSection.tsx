@@ -124,8 +124,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
         <Flexbox gap={1} paddingBlock={1}>
           {row('project', FolderKanbanIcon, t('navPanel.projects'), '/projects')}
           {row('views', LayoutList, t('tab.views'), '/views')}
-          {activeWorkspaceId &&
-            row('members', UsersIcon, t('navPanel.members'), '/settings/members')}
+          {activeWorkspaceId && row('members', UsersIcon, t('navPanel.members'), '/members')}
           {/* Linear renders "More" as a row — it opens the menu holding the
               retired surfaces (Automations / Resource / workspace settings). */}
           <DropdownMenu items={moreMenu}>

@@ -951,4 +951,131 @@ describe('WorkQueryModel', () => {
       (await outsider.queryProjects({ query: emptyQuery })).projects.map((row) => row.id).sort(),
     ).toEqual(['wq-public-project', 'wq-secret-project']);
   });
+
+  it('boards projects by real status columns with per-column totals', async () => {
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB.insert(projects).values([
+      {
+        id: 'wq-board-a',
+        identifier: 'WBA',
+        name: 'Board alpha',
+        status: 'active',
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'wq-board-b',
+        identifier: 'WBB',
+        name: 'Board beta',
+        status: 'active',
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'wq-board-c',
+        identifier: 'WBC',
+        name: 'Board gamma',
+        status: 'paused',
+        userId,
+        workspaceId,
+      },
+    ]);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const result = await model.queryProjects({
+      query: { entityType: 'project', layout: 'board', schemaVersion: 1 },
+    });
+    const active = result.projectGroups?.find((group) => group.key === 'active');
+    const paused = result.projectGroups?.find((group) => group.key === 'paused');
+    expect(result.groupBy).toBe('status');
+    expect(active?.total).toBe(2);
+    expect(active?.projects.map((row) => row.id).sort()).toEqual(['wq-board-a', 'wq-board-b']);
+    expect(paused?.total).toBe(1);
+    // Every status column is rendered even when empty — Linear keeps the board
+    // visible rather than collapsing to populated states only.
+    expect(result.projectGroups?.map((group) => group.key)).toContain('backlog');
+    expect(result.projects).toHaveLength(3);
+  });
+
+  it('honours project sort by name and rejects a task-only groupBy', async () => {
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB.insert(projects).values([
+      { id: 'wq-sort-a', identifier: 'WSA', name: 'Zulu', userId, workspaceId },
+      { id: 'wq-sort-b', identifier: 'WSB', name: 'Alpha', userId, workspaceId },
+    ]);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const sorted = await model.queryProjects({
+      query: {
+        entityType: 'project',
+        schemaVersion: 1,
+        sort: [{ direction: 'asc', field: 'name' }],
+      },
+    });
+    expect(sorted.projects.map((row) => row.name)).toEqual(['Alpha', 'Zulu']);
+
+    await expect(
+      model.queryProjects({
+        query: { entityType: 'project', groupBy: 'workflowCategory', schemaVersion: 1 },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_QUERY' });
+  });
+
+  it('filters projects by ownerUserId and visibility predicates', async () => {
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
+    await serverDB.insert(projects).values([
+      {
+        id: 'wq-filter-mine',
+        identifier: 'WFM',
+        name: 'Mine',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        id: 'wq-filter-theirs',
+        identifier: 'WFT',
+        name: 'Theirs',
+        userId: otherUserId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        id: 'wq-filter-private',
+        identifier: 'WFP',
+        name: 'Mine private',
+        userId,
+        visibility: 'private',
+        workspaceId,
+      },
+    ]);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const owned = await model.queryProjects({
+      query: {
+        entityType: 'project',
+        filter: { all: [{ field: 'ownerUserId', op: 'eq', value: { ref: 'currentUser' } }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(owned.projects.map((row) => row.id).sort()).toEqual([
+      'wq-filter-mine',
+      'wq-filter-private',
+    ]);
+
+    const publicOnly = await model.queryProjects({
+      query: {
+        entityType: 'project',
+        filter: { all: [{ field: 'visibility', op: 'eq', value: 'public' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(publicOnly.projects.map((row) => row.id).sort()).toEqual([
+      'wq-filter-mine',
+      'wq-filter-theirs',
+    ]);
+  });
 });

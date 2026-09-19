@@ -17,6 +17,7 @@ import type {
 } from '@orvilo/types';
 import {
   isWorkAttentionAllowedHttpsHost,
+  PROJECT_STATUS_VALUES,
   WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_MAX_DEPTH,
   WORK_QUERY_MAX_IN_VALUES,
@@ -82,7 +83,13 @@ const TASK_FIELDS = new Set<WorkQueryField>([
   'workflowCategory',
 ]);
 
-const PROJECT_FIELDS = new Set<WorkQueryField>(['id', 'teamId']);
+const PROJECT_FIELDS = new Set<WorkQueryField>([
+  'id',
+  'ownerUserId',
+  'status',
+  'teamId',
+  'visibility',
+]);
 
 const isPredicate = (node: WorkQueryFilter | WorkQueryPredicate): node is WorkQueryPredicate =>
   'field' in node && 'op' in node;
@@ -270,6 +277,27 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
     if (predicate.field === 'id') {
       return compileColumnPredicate(
         projects.id,
+        predicate.op,
+        resolveValue(predicate.value, ctx.currentUserId),
+      );
+    }
+    if (predicate.field === 'status') {
+      return compileColumnPredicate(
+        projects.status,
+        predicate.op,
+        resolveValue(predicate.value, ctx.currentUserId),
+      );
+    }
+    if (predicate.field === 'visibility') {
+      return compileColumnPredicate(
+        projects.visibility,
+        predicate.op,
+        resolveValue(predicate.value, ctx.currentUserId),
+      );
+    }
+    if (predicate.field === 'ownerUserId') {
+      return compileColumnPredicate(
+        projects.userId,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
       );
@@ -537,6 +565,8 @@ const normalizeTaskSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] =
 
 const sortColumn = (field: WorkQuerySort['field']) => {
   if (field === 'updatedAt') return tasks.updatedAt;
+  if (field === 'createdAt') return tasks.createdAt;
+  if (field === 'name') return tasks.title;
   if (field === 'id') return tasks.id;
   return taskColumn(field);
 };
@@ -546,24 +576,30 @@ const sortValue = (
   field: WorkQuerySort['field'],
 ): Date | number | string | null => {
   if (field === 'updatedAt') return row.updatedAt;
+  if (field === 'createdAt') return row.createdAt;
+  if (field === 'name') return row.title;
   if (field === 'id') return row.id;
   if (field === 'cycleId') return row.cycleRefId;
-  if (field === 'delegatedByUserId' || field === 'reviewerUserId') {
-    throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
+  if (
+    field === 'delegatedByUserId' ||
+    field === 'ownerUserId' ||
+    field === 'reviewerUserId' ||
+    field === 'visibility'
+  ) {
+    throw new WorkQueryError('INVALID_QUERY', `Cannot sort tasks by ${field}`);
   }
   return row[field];
 };
 
 /** Keyset: (c1, c2, …, id) compared with the cursor row using each column's direction. */
-const keysetEq = (field: WorkQuerySort['field'], value: Date | number | string | null): SQL =>
-  value == null ? isNull(sortColumn(field)) : eq(sortColumn(field), value as never);
+const keysetEq = (column: AnyPgColumn, value: Date | number | string | null): SQL =>
+  value == null ? isNull(column) : eq(column, value as never);
 
 const keysetBeyond = (
-  field: WorkQuerySort['field'],
+  column: AnyPgColumn,
   direction: WorkQuerySort['direction'],
   value: Date | number | string | null,
 ): SQL | undefined => {
-  const column = sortColumn(field);
   if (direction === 'asc') {
     if (value == null) return undefined;
     return or(gt(column, value as never), isNull(column))!;
@@ -572,20 +608,77 @@ const keysetBeyond = (
   return lt(column, value as never);
 };
 
-const keysetAfter = (sort: WorkQuerySort[], cursor: typeof tasks.$inferSelect): SQL => {
+const keysetAfter = (
+  sort: WorkQuerySort[],
+  columnFor: (field: WorkQuerySort['field']) => AnyPgColumn,
+  valueOf: (field: WorkQuerySort['field']) => Date | number | string | null,
+): SQL => {
   const parts: SQL[] = [];
   for (let index = 0; index < sort.length; index += 1) {
     const equalities: SQL[] = [];
     for (let prior = 0; prior < index; prior += 1) {
       const field = sort[prior]!.field;
-      equalities.push(keysetEq(field, sortValue(cursor, field)));
+      equalities.push(keysetEq(columnFor(field), valueOf(field)));
     }
     const current = sort[index]!;
-    const beyond = keysetBeyond(current.field, current.direction, sortValue(cursor, current.field));
+    const beyond = keysetBeyond(
+      columnFor(current.field),
+      current.direction,
+      valueOf(current.field),
+    );
     if (!beyond) continue;
     parts.push(equalities.length ? and(...equalities, beyond)! : beyond);
   }
   return parts.length ? or(...parts)! : sql`false`;
+};
+
+const PROJECT_SORT_FIELDS = new Set<WorkQuerySort['field']>([
+  'createdAt',
+  'id',
+  'name',
+  'status',
+  'updatedAt',
+]);
+
+const DEFAULT_PROJECT_SORT: WorkQuerySort[] = [
+  { direction: 'desc', field: 'updatedAt' },
+  { direction: 'asc', field: 'id' },
+];
+
+const normalizeProjectSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] => {
+  const next = sort?.length ? [...sort] : [...DEFAULT_PROJECT_SORT];
+  for (const item of next) {
+    if (!PROJECT_SORT_FIELDS.has(item.field)) {
+      throw new WorkQueryError('INVALID_QUERY', `Cannot sort projects by ${item.field}`);
+    }
+  }
+  if (next.at(-1)?.field !== 'id') {
+    next.push({ direction: 'asc', field: 'id' });
+  }
+  return next;
+};
+
+const projectSortColumn = (field: WorkQuerySort['field']) => {
+  switch (field) {
+    case 'createdAt': {
+      return projects.createdAt;
+    }
+    case 'id': {
+      return projects.id;
+    }
+    case 'name': {
+      return projects.name;
+    }
+    case 'status': {
+      return projects.status;
+    }
+    case 'updatedAt': {
+      return projects.updatedAt;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Cannot sort projects by ${field}`);
+    }
+  }
 };
 
 export class WorkQueryModel {
@@ -699,7 +792,7 @@ export class WorkQueryModel {
       if (!cursor) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
-      listConditions.push(keysetAfter(sort, cursor));
+      listConditions.push(keysetAfter(sort, sortColumn, (f) => sortValue(cursor, f)));
     }
 
     const orderBy = sort.map((item) =>
@@ -801,7 +894,9 @@ export class WorkQueryModel {
             throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
           }
           groupConditions.push(
-            boardOrdered ? keysetAfterBoardPosition(cursor) : keysetAfter(params.sort, cursor),
+            boardOrdered
+              ? keysetAfterBoardPosition(cursor)
+              : keysetAfter(params.sort, sortColumn, (f) => sortValue(cursor, f)),
           );
         }
 
@@ -881,6 +976,7 @@ export class WorkQueryModel {
 
   queryProjects = async (params: {
     afterId?: string;
+    groupKey?: string;
     limit?: number;
     query: WorkQuery;
     queryHash?: string;
@@ -888,6 +984,9 @@ export class WorkQueryModel {
     validateWorkQuery(params.query);
     if (params.query.entityType !== 'project') {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must be project');
+    }
+    if (params.query.groupBy === 'workflowCategory') {
+      throw new WorkQueryError('INVALID_QUERY', 'Projects group by status only');
     }
     const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
     const conditions: SQL[] = [
@@ -907,6 +1006,87 @@ export class WorkQueryModel {
     if (filterSql) conditions.push(filterSql);
 
     const queryHash = hashQuery(params.query);
+    const sort = normalizeProjectSort(params.query.sort);
+    const orderBy = sort.map((item) =>
+      item.direction === 'desc'
+        ? desc(projectSortColumn(item.field))
+        : asc(projectSortColumn(item.field)),
+    );
+    const projectValueOf =
+      (cursor: typeof projects.$inferSelect) =>
+      (field: WorkQuerySort['field']): Date | number | string | null => {
+        if (field === 'createdAt') return cursor.createdAt;
+        if (field === 'id') return cursor.id;
+        if (field === 'name') return cursor.name;
+        if (field === 'status') return cursor.status;
+        if (field === 'updatedAt') return cursor.updatedAt;
+        return null;
+      };
+
+    const isBoard = params.query.layout === 'board' || params.query.groupBy === 'status';
+    if (isBoard) {
+      if (params.afterId && !params.groupKey) {
+        throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      }
+      if (params.afterId && (!params.queryHash || params.queryHash !== queryHash)) {
+        throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+      }
+      const countRows = await this.db
+        .select({ count: sql<number>`count(*)`, key: projects.status })
+        .from(projects)
+        .where(and(...conditions))
+        .groupBy(projects.status);
+      const countByKey = new Map<string, number>();
+      for (const row of countRows) {
+        countByKey.set(String(row.key), Number(row.count));
+      }
+      const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
+      const extra = [...countByKey.keys()]
+        .filter((key) => !(PROJECT_STATUS_VALUES as readonly string[]).includes(key))
+        .sort();
+      const keys = [...PROJECT_STATUS_VALUES, ...extra];
+      const projectGroups = await Promise.all(
+        keys.map(async (key) => {
+          const groupTotal = countByKey.get(key) ?? 0;
+          if (params.groupKey && key !== params.groupKey) {
+            return { hasMore: groupTotal > 0, key, projects: [], total: groupTotal };
+          }
+          const groupConditions: SQL[] = [...conditions, eq(projects.status, key as never)];
+          if (params.afterId) {
+            const [cursor] = await this.db
+              .select()
+              .from(projects)
+              .where(and(...groupConditions, eq(projects.id, params.afterId)))
+              .limit(1);
+            if (!cursor) {
+              throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+            }
+            groupConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
+          }
+          const rows = await this.db
+            .select()
+            .from(projects)
+            .where(and(...groupConditions))
+            .orderBy(...orderBy)
+            .limit(limit);
+          return {
+            hasMore: params.afterId ? rows.length === limit : rows.length < groupTotal,
+            key,
+            projects: rows,
+            total: groupTotal,
+          };
+        }),
+      );
+      return {
+        groupBy: 'status' as const,
+        layout: params.query.layout === 'board' ? ('board' as const) : ('list' as const),
+        projectGroups,
+        projects: projectGroups.flatMap((group) => group.projects),
+        queryHash,
+        total,
+      };
+    }
+
     const listConditions = [...conditions];
     if (params.afterId) {
       if (!params.queryHash || params.queryHash !== queryHash) {
@@ -918,12 +1098,7 @@ export class WorkQueryModel {
         .where(and(...conditions, eq(projects.id, params.afterId)))
         .limit(1);
       if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
-      listConditions.push(
-        or(
-          lt(projects.updatedAt, cursor.updatedAt),
-          and(eq(projects.updatedAt, cursor.updatedAt), gt(projects.id, cursor.id)),
-        )!,
-      );
+      listConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
     }
 
     const [countRow] = await this.db
@@ -935,7 +1110,7 @@ export class WorkQueryModel {
       .select()
       .from(projects)
       .where(and(...listConditions))
-      .orderBy(desc(projects.updatedAt), asc(projects.id))
+      .orderBy(...orderBy)
       .limit(limit);
     return {
       projects: rows,

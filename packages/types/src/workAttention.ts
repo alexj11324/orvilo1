@@ -189,12 +189,14 @@ export type WorkQueryField =
   | 'cycleId'
   | 'delegatedByUserId'
   | 'id'
+  | 'ownerUserId'
   | 'priority'
   | 'projectId'
   | 'reviewerUserId'
   | 'status'
   | 'teamId'
   | 'triageStatus'
+  | 'visibility'
   | 'workflowCategory';
 
 export type WorkQueryOp = 'eq' | 'in' | 'isNotNull' | 'isNull' | 'neq' | 'notIn';
@@ -212,9 +214,11 @@ export interface WorkQueryFilter {
   any?: Array<WorkQueryFilter | WorkQueryPredicate>;
 }
 
+export type WorkQuerySortField = WorkQueryField | 'createdAt' | 'id' | 'name' | 'updatedAt';
+
 export interface WorkQuerySort {
   direction: 'asc' | 'desc';
-  field: WorkQueryField | 'id' | 'updatedAt';
+  field: WorkQuerySortField;
 }
 
 export type WorkQueryLayout = 'board' | 'list';
@@ -250,6 +254,161 @@ export interface WorkQuery {
   schemaVersion: 1;
   sort?: WorkQuerySort[];
 }
+
+/**
+ * Field capability table — the single source for what the visual filter
+ * builder may offer per entity. Server compile keeps its own allow-list; a
+ * field absent here must still round-trip untouched (preserved, not dropped).
+ */
+export type WorkQueryValueKind = 'cycle' | 'enum' | 'project' | 'team' | 'user';
+
+export interface WorkQueryFieldSpec {
+  /**
+   * `true` when the only legal `eq` operand is `{ref:'currentUser'}` — the UI
+   * hides the member picker and the row means "involving me".
+   */
+  currentUserOnly?: boolean;
+  /** Allowed values for `valueKind === 'enum'`. Numbers for `priority`. */
+  enumValues?: readonly (number | string)[];
+  field: WorkQueryField;
+  ops: readonly WorkQueryOp[];
+  valueKind: WorkQueryValueKind;
+}
+
+export const TASK_WORKFLOW_CATEGORY_VALUES = [
+  'triage',
+  'backlog',
+  'todo',
+  'in_progress',
+  'in_review',
+  'done',
+  'canceled',
+] as const;
+
+export const TASK_STATUS_VALUES = [
+  'backlog',
+  'scheduled',
+  'running',
+  'paused',
+  'failed',
+  'completed',
+  'canceled',
+] as const;
+
+export const TASK_TRIAGE_STATUS_VALUES = [
+  'accepted',
+  'declined',
+  'duplicate',
+  'untriaged',
+] as const;
+
+export const TASK_PRIORITY_VALUES = [0, 1, 2, 3] as const;
+
+export const PROJECT_STATUS_VALUES = [
+  'backlog',
+  'active',
+  'paused',
+  'reviewing',
+  'completed',
+  'canceled',
+  'archived',
+] as const;
+
+export const PROJECT_VISIBILITY_VALUES = ['private', 'public'] as const;
+
+export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
+  {
+    enumValues: TASK_STATUS_VALUES,
+    field: 'status',
+    ops: ['eq', 'neq', 'in', 'notIn'],
+    valueKind: 'enum',
+  },
+  {
+    enumValues: TASK_WORKFLOW_CATEGORY_VALUES,
+    field: 'workflowCategory',
+    ops: ['eq', 'neq', 'in', 'notIn'],
+    valueKind: 'enum',
+  },
+  {
+    enumValues: TASK_PRIORITY_VALUES,
+    field: 'priority',
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
+    valueKind: 'enum',
+  },
+  {
+    field: 'assigneeUserId',
+    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    valueKind: 'user',
+  },
+  {
+    field: 'createdByUserId',
+    ops: ['eq', 'neq'],
+    valueKind: 'user',
+  },
+  {
+    currentUserOnly: true,
+    field: 'reviewerUserId',
+    ops: ['eq', 'isNotNull'],
+    valueKind: 'user',
+  },
+  {
+    field: 'projectId',
+    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    valueKind: 'project',
+  },
+  {
+    field: 'teamId',
+    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    valueKind: 'team',
+  },
+  {
+    field: 'cycleId',
+    ops: ['eq', 'isNull', 'isNotNull'],
+    valueKind: 'cycle',
+  },
+  {
+    enumValues: TASK_TRIAGE_STATUS_VALUES,
+    field: 'triageStatus',
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
+    valueKind: 'enum',
+  },
+];
+
+export const WORK_QUERY_PROJECT_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
+  {
+    enumValues: PROJECT_STATUS_VALUES,
+    field: 'status',
+    ops: ['eq', 'neq', 'in', 'notIn'],
+    valueKind: 'enum',
+  },
+  {
+    field: 'teamId',
+    ops: ['eq', 'isNull', 'isNotNull'],
+    valueKind: 'team',
+  },
+  {
+    field: 'ownerUserId',
+    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    valueKind: 'user',
+  },
+  {
+    enumValues: PROJECT_VISIBILITY_VALUES,
+    field: 'visibility',
+    ops: ['eq', 'neq'],
+    valueKind: 'enum',
+  },
+];
+
+export const workQueryFieldSpecs = (
+  entityType: WorkQueryEntityType,
+): readonly WorkQueryFieldSpec[] =>
+  entityType === 'project' ? WORK_QUERY_PROJECT_FIELD_SPECS : WORK_QUERY_TASK_FIELD_SPECS;
+
+export const workQueryFieldSpec = (
+  entityType: WorkQueryEntityType,
+  field: string,
+): WorkQueryFieldSpec | undefined =>
+  workQueryFieldSpecs(entityType).find((spec) => spec.field === field);
 
 export const NO_PROJECT_PREDICATE = {
   field: 'projectId',

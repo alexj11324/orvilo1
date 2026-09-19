@@ -20,11 +20,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
-import { myWorkSaveAsQuery } from '@/features/MyWork/myWorkSaveAs';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -32,6 +30,7 @@ import { workAttentionService } from '@/services/workAttention';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import NewViewModal from './NewViewModal';
 import { savedViewTitle } from './savedViewTitle';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -177,9 +176,9 @@ ViewSection.displayName = 'ViewSection';
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
-  const navigate = useWorkspaceAwareNavigate();
   const ownerUserId = useUserStore(userProfileSelectors.userId);
   const [keyword, setKeyword] = useState('');
+  const [creating, setCreating] = useState(false);
   const {
     data,
     error,
@@ -210,17 +209,6 @@ const SavedViewsPage = memo(() => {
     }
     return [builtinList, mineList, sharedList];
   }, [filteredViews, ownerUserId]);
-
-  const createAssigned = useCallback(async () => {
-    const created = await workAttentionService.savedViewCreate({
-      entityType: 'task',
-      name: t('savedViews.assignedDefaultName'),
-      query: myWorkSaveAsQuery('assigned'),
-      visibility: 'private',
-    });
-    await mutate(workAttentionKeys.savedViews(workspaceId));
-    navigate(`/views/${created.data.id}`);
-  }, [navigate, t, workspaceId]);
 
   const deleteView = useCallback(
     (view: SavedViewItem) => {
@@ -261,8 +249,8 @@ const SavedViewsPage = memo(() => {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
-          <Button icon={PlusIcon} onClick={() => void createAssigned()}>
-            {t('savedViews.saveAssigned')}
+          <Button icon={PlusIcon} type="primary" onClick={() => setCreating(true)}>
+            {t('savedViews.newView')}
           </Button>
         </Flexbox>
         {error ? (
@@ -298,6 +286,7 @@ const SavedViewsPage = memo(() => {
           </Flexbox>
         )}
       </WideScreenContainer>
+      <NewViewModal open={creating} onClose={() => setCreating(false)} />
     </Flexbox>
   );
 });

@@ -1,11 +1,11 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
-import { Alert, Button, Select, Text, TextArea, toast } from '@lobehub/ui/base-ui';
-import type { SavedViewVisibility, WorkQueryLayout } from '@orvilo/types';
+import { Center, Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Alert, Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import type { SavedViewItem, WorkQuery } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { FolderClosedIcon, SlidersHorizontalIcon } from 'lucide-react';
+import { EllipsisIcon, FolderClosedIcon, SlidersHorizontalIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -17,6 +17,7 @@ import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
+  type WorkQueryGroupPage,
   workQueryHasMore,
 } from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
@@ -26,18 +27,42 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { savedViewProjectPath } from './savedViewProjectPath';
-import { stringifyWorkQueryDraft, workQueryFromDraft } from './savedViewQueryDraft';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
+import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
+import { builderToFilter, comparableQuery, filterToBuilder } from './workQueryBuilder';
 
 const styles = createStaticStyles(({ css }) => ({
+  boardColumn: css`
+    flex: none;
+
+    width: 300px;
+    padding-block-end: 12px;
+    border-radius: ${cssVar.borderRadiusLG};
+
+    background: ${cssVar.colorFillQuaternary};
+  `,
+  boardColumnBody: css`
+    gap: 4px;
+    padding-inline: 8px;
+  `,
+  boardColumnHeader: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    padding-block: 10px;
+    padding-inline: 12px;
+
+    font-size: ${cssVar.fontSizeSM};
+    color: ${cssVar.colorTextSecondary};
+  `,
   identifier: css`
     flex: none;
     min-width: 72px;
@@ -120,6 +145,69 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
 
 SavedViewProjectRow.displayName = 'SavedViewProjectRow';
 
+/** Read-only status board for project views — the kanban columns Linear
+ *  renders for project status. Project cards are not draggable here:
+ *  status changes flow through the project surface. */
+const SavedViewProjectBoard = memo<{
+  groups: WorkQueryGroupPage<SavedViewProjectRowData>[];
+  loadMoreLabel: string;
+  onLoadMoreGroup?: (key: string) => void;
+}>(({ groups, loadMoreLabel, onLoadMoreGroup }) => {
+  const { t } = useTranslation('project');
+  return (
+    <Flexbox horizontal align="flex-start" gap={12} style={{ overflowX: 'auto' }}>
+      {groups.map((group) => {
+        const status = resolveProjectStatus(group.key);
+        const visual = PROJECT_STATUS_VISUALS[status];
+        return (
+          <Flexbox className={styles.boardColumn} key={group.key}>
+            <Flexbox horizontal className={styles.boardColumnHeader}>
+              <Icon color={visual.color} icon={visual.icon} size={14} />
+              <Text fontSize={13} weight={500}>
+                {t(`acceptance.status.${status}`)}
+              </Text>
+              <Text fontSize={12} type="secondary">
+                {group.total}
+              </Text>
+            </Flexbox>
+            <Flexbox className={styles.boardColumnBody}>
+              {group.tasks.map((project) => (
+                <SavedViewProjectRow key={project.id} project={project} />
+              ))}
+              {group.hasMore && onLoadMoreGroup ? (
+                <Button size="small" onClick={() => onLoadMoreGroup(group.key)}>
+                  {loadMoreLabel}
+                </Button>
+              ) : null}
+            </Flexbox>
+          </Flexbox>
+        );
+      })}
+    </Flexbox>
+  );
+});
+
+SavedViewProjectBoard.displayName = 'SavedViewProjectBoard';
+
+const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
+  builder: filterToBuilder(view.entityType, view.queryAst.filter),
+  entityType: view.entityType,
+  groupBy: view.queryAst.groupBy ?? 'none',
+  layout: view.layout ?? 'list',
+  name: view.name,
+  sort: view.queryAst.sort,
+  teamId: view.teamId ?? null,
+  visibility: view.visibility ?? 'private',
+});
+
+const draftQuery = (state: ViewEditorState): WorkQuery => ({
+  entityType: state.entityType,
+  filter: builderToFilter(state.entityType, state.builder),
+  groupBy: state.groupBy === 'none' ? undefined : state.groupBy,
+  schemaVersion: 1,
+  sort: state.sort,
+});
+
 const SavedViewPage = memo(() => {
   const { t } = useTranslation('common');
   const { viewId } = useParams<{ viewId: string }>();
@@ -130,91 +218,82 @@ const SavedViewPage = memo(() => {
     viewId ? workAttentionKeys.savedView(workspaceId, viewId) : null,
     () => workAttentionService.savedViewEvaluate({ id: viewId! }),
   );
-  const { data: teamsData } = useClientDataSWR(
-    workspaceId ? workAttentionKeys.teams(workspaceId) : null,
-    () => lambdaClient.team.teams.query(),
-  );
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
   const firstTasks = evaluation?.tasks ?? [];
   const firstProjects = evaluation?.projects ?? [];
   const firstGroups = evaluation?.groups ?? [];
+  const firstProjectGroups = useMemo<WorkQueryGroupPage<SavedViewProjectRowData>[]>(
+    () =>
+      (evaluation?.projectGroups ?? []).map((group) => ({
+        hasMore: group.hasMore,
+        key: group.key,
+        tasks: group.projects,
+        total: group.total,
+      })),
+    [evaluation?.projectGroups],
+  );
   const queryHash = evaluation?.queryHash;
   const [tail, setTail] = useState<typeof firstTasks>([]);
   const [projectTail, setProjectTail] = useState<typeof firstProjects>([]);
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
+  const [projectGroupTail, setProjectGroupTail] = useState<
+    WorkQueryGroupPage<SavedViewProjectRowData>[]
+  >([]);
   useEffect(() => {
     setTail([]);
     setProjectTail([]);
     setGroupTail([]);
+    setProjectGroupTail([]);
   }, [queryHash, viewId, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
   const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
+  const projectGroups = mergeWorkQueryGroups(firstProjectGroups, projectGroupTail);
   const isOwner = Boolean(currentUserId && view && view.ownerUserId === currentUserId);
-  const [name, setName] = useState('');
-  const [queryDraft, setQueryDraft] = useState('');
-  const [visibility, setVisibility] = useState<SavedViewVisibility>('private');
-  const [layout, setLayout] = useState<WorkQueryLayout>('list');
-  const [teamId, setTeamId] = useState<string | null>(null);
-  /* The query/name/share form is authoring chrome — hidden until asked for,
-     so the page reads as the view itself, not an editor. */
+
+  /* Draft editing state — `draftBase` is the definitionVersion the editor was
+     built from; when the server-side version moves while the draft is dirty,
+     the user picks reload/save-as-copy instead of being silently clobbered. */
+  const [draft, setDraft] = useState<ViewEditorState | null>(null);
+  const [draftBase, setDraftBase] = useState<number | undefined>();
+  const [conflict, setConflict] = useState(false);
   const [editing, setEditing] = useState(false);
-  const viewName = view?.name;
-  const viewQueryAst = view?.queryAst;
-  const viewVisibility = view?.visibility;
-  const viewLayout = view?.layout;
-  const viewTeamId = view?.teamId;
-  const viewIdValue = view?.id;
-  const definitionVersion = view?.definitionVersion;
 
+  const dirty = useMemo(() => {
+    if (!draft || !view) return false;
+    return (
+      draft.name !== view.name ||
+      draft.layout !== (view.layout ?? 'list') ||
+      draft.visibility !== view.visibility ||
+      draft.teamId !== (view.teamId ?? null) ||
+      comparableQuery(draftQuery(draft)) !== comparableQuery(view.queryAst)
+    );
+  }, [draft, view]);
+
+  const viewFingerprint = view
+    ? `${view.id}:${view.definitionVersion}:${view.name}:${view.layout}:${view.visibility}:${view.teamId ?? ''}`
+    : undefined;
   useEffect(() => {
-    if (!viewIdValue) return;
-    setName(viewName ?? '');
-    setQueryDraft(viewQueryAst ? stringifyWorkQueryDraft(viewQueryAst) : '');
-    setVisibility(viewVisibility ?? 'private');
-    setLayout(viewLayout ?? 'list');
-    setTeamId(viewTeamId ?? null);
-  }, [
-    definitionVersion,
-    viewIdValue,
-    viewLayout,
-    viewName,
-    viewQueryAst,
-    viewTeamId,
-    viewVisibility,
-  ]);
+    if (!view) return;
+    if (!draft || !dirty) {
+      setDraft(viewToEditorState(view));
+      setDraftBase(view.definitionVersion);
+      setConflict(false);
+      return;
+    }
+    if (view.definitionVersion !== draftBase) setConflict(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewFingerprint]);
 
-  const teamOptions = useMemo(
-    () => (teamsData?.data ?? []).map((team) => ({ label: team.name, value: team.id })),
-    [teamsData?.data],
-  );
-  const visibilityOptions = useMemo(
-    () => [
-      { label: t('savedViews.visibilityPrivate'), value: 'private' },
-      ...(workspaceId
-        ? [
-            { label: t('savedViews.visibilityWorkspace'), value: 'workspace' },
-            { label: t('savedViews.visibilityTeam'), value: 'team' },
-          ]
-        : []),
-    ],
-    [t, workspaceId],
-  );
-  const layoutOptions = useMemo(
-    () => [
-      { label: t('savedViews.layoutList'), value: 'list' },
-      { label: t('savedViews.layoutBoard'), value: 'board' },
-    ],
-    [t],
-  );
-  const shareReady = isSavedViewShareReady(visibility, teamId);
+  const shareReady = draft ? isSavedViewShareReady(draft.visibility, draft.teamId) : false;
 
   const refreshView = useCallback(async () => {
     if (!viewId) return;
     setTail([]);
     setProjectTail([]);
     setGroupTail([]);
+    setProjectGroupTail([]);
     await mutate(workAttentionKeys.savedView(workspaceId, viewId));
     await mutate(workAttentionKeys.savedViews(workspaceId));
     await mutate(workAttentionKeys.favorites(workspaceId));
@@ -259,49 +338,65 @@ const SavedViewPage = memo(() => {
     [groups, queryHash, viewId],
   );
 
+  const loadMoreProjectGroup = useCallback(
+    async (groupKey: string) => {
+      const column = projectGroups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      if (!last || !queryHash || !viewId) return;
+      const next = await workAttentionService.savedViewEvaluate({
+        afterId: last.id,
+        groupKey,
+        id: viewId,
+        queryHash,
+      });
+      setProjectGroupTail((current) =>
+        mergeWorkQueryGroups(
+          current,
+          (next.data.evaluation.projectGroups ?? []).map((group) => ({
+            hasMore: group.hasMore,
+            key: group.key,
+            tasks: group.projects,
+            total: group.total,
+          })),
+        ),
+      );
+    },
+    [projectGroups, queryHash, viewId],
+  );
+
   const saveView = useCallback(async () => {
-    if (!viewId || !view || !shareReady) return;
-    const trimmed = name.trim();
+    if (!viewId || !view || !draft || !shareReady) return;
+    const trimmed = draft.name.trim();
     if (!trimmed) return;
-    const query = workQueryFromDraft(queryDraft, view.entityType);
-    if (!query) {
-      toast.error(t('savedViews.queryInvalid'));
-      return;
-    }
     try {
       await workAttentionService.savedViewUpdate({
-        expectedDefinitionVersion: view.definitionVersion,
+        expectedDefinitionVersion: draftBase ?? view.definitionVersion,
         id: viewId,
-        layout,
+        layout: draft.layout,
         name: trimmed,
-        query,
-        ...savedViewSharePatch(visibility, teamId),
+        query: draftQuery(draft),
+        ...savedViewSharePatch(draft.visibility, draft.teamId),
       });
+      setConflict(false);
       await refreshView();
       toast.success(t('savedViews.saved'));
     } catch (error) {
-      toast.error(
-        isTrpcErrorCode(error, 'CONFLICT')
-          ? t('savedViews.versionConflict')
-          : t('savedViews.saveFailed'),
-      );
-      await refreshView();
+      if (isTrpcErrorCode(error, 'CONFLICT')) {
+        setConflict(true);
+        return;
+      }
+      toast.error(t('savedViews.saveFailed'));
     }
-  }, [layout, name, queryDraft, refreshView, shareReady, t, teamId, view, viewId, visibility]);
+  }, [draft, draftBase, refreshView, shareReady, t, view, viewId]);
 
   const saveCopy = useCallback(async () => {
-    if (!view) return;
-    const query = workQueryFromDraft(queryDraft, view.entityType) ?? view.queryAst;
-    if (!query) {
-      toast.error(t('savedViews.queryInvalid'));
-      return;
-    }
+    if (!view || !draft) return;
     try {
       const created = await workAttentionService.savedViewCreate({
         entityType: view.entityType,
-        layout,
-        name: savedViewCopyName(savedViewTitle(view.id, name || view.name, t), t('copy')),
-        query,
+        layout: draft.layout,
+        name: savedViewCopyName(savedViewTitle(view.id, draft.name || view.name, t), t('copy')),
+        query: draftQuery(draft),
         visibility: 'private',
       });
       await mutate(workAttentionKeys.savedViews(workspaceId));
@@ -309,19 +404,55 @@ const SavedViewPage = memo(() => {
     } catch {
       toast.error(t('savedViews.saveAsFailed'));
     }
-  }, [layout, name, navigate, queryDraft, t, view, workspaceId]);
+  }, [draft, navigate, t, view, workspaceId]);
 
-  const deleteView = useCallback(async () => {
-    if (!viewId) return;
-    try {
-      await workAttentionService.savedViewDelete(viewId);
-      await mutate(workAttentionKeys.savedViews(workspaceId));
-      await mutate(workAttentionKeys.favorites(workspaceId));
-      navigate('/views');
-    } catch {
-      toast.error(t('savedViews.deleteFailed'));
-    }
-  }, [navigate, t, viewId, workspaceId]);
+  const reloadDraft = useCallback(() => {
+    if (!view) return;
+    setDraft(viewToEditorState(view));
+    setDraftBase(view.definitionVersion);
+    setConflict(false);
+  }, [view]);
+
+  const deleteView = useCallback(() => {
+    if (!viewId || !view) return;
+    confirmModal({
+      cancelText: t('cancel'),
+      content: t('savedViews.deleteConfirm', { name: view.name }),
+      okButtonProps: { danger: true },
+      okText: t('delete'),
+      onOk: async () => {
+        try {
+          await workAttentionService.savedViewDelete(viewId);
+          await mutate(workAttentionKeys.savedViews(workspaceId));
+          await mutate(workAttentionKeys.favorites(workspaceId));
+          navigate('/views');
+        } catch {
+          toast.error(t('savedViews.deleteFailed'));
+        }
+      },
+      title: t('savedViews.delete'),
+    });
+  }, [navigate, t, view, viewId, workspaceId]);
+
+  const moreMenuItems = useMemo(
+    () => [
+      { key: 'copy', label: t('savedViews.saveAs'), onClick: () => void saveCopy() },
+      ...(isOwner
+        ? [
+            {
+              danger: true,
+              key: 'delete',
+              label: t('savedViews.delete'),
+              onClick: deleteView,
+            },
+          ]
+        : []),
+    ],
+    [deleteView, isOwner, saveCopy, t],
+  );
+
+  const projectBoard =
+    view?.entityType === 'project' && (evaluation?.layout ?? view?.layout) === 'board';
 
   return (
     <Flexbox flex={1} height="100%">
@@ -333,19 +464,6 @@ const SavedViewPage = memo(() => {
         }
         right={
           <Flexbox horizontal gap={8}>
-            {isOwner ? (
-              <Button
-                disabled={!shareReady}
-                size="small"
-                type="primary"
-                onClick={() => void saveView()}
-              >
-                {t('save')}
-              </Button>
-            ) : null}
-            <Button size="small" onClick={() => void saveCopy()}>
-              {t('savedViews.saveAs')}
-            </Button>
             <WorkFavoriteButton targetId={viewId} targetType="savedView" />
             {isOwner ? (
               <Button
@@ -357,64 +475,48 @@ const SavedViewPage = memo(() => {
                 {t('savedViews.editView')}
               </Button>
             ) : null}
-            {isOwner ? (
-              <Button size="small" onClick={() => void deleteView()}>
-                {t('savedViews.delete')}
-              </Button>
+            {view ? (
+              <DropdownMenu items={moreMenuItems} placement="bottomRight">
+                <Button icon={EllipsisIcon} size="small" />
+              </DropdownMenu>
             ) : null}
           </Flexbox>
         }
       />
       <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
-        {isOwner && editing ? (
-          <Flexbox gap={8}>
-            <Input
-              placeholder={t('savedViews.name')}
-              size="small"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <TextArea
-              aria-label={t('savedViews.query')}
-              autoSize={{ minRows: 6, maxRows: 16 }}
-              placeholder={t('savedViews.query')}
-              value={queryDraft}
-              onChange={(event) => setQueryDraft(event.target.value)}
-            />
-            <Flexbox horizontal gap={8} wrap="wrap">
-              <Select
-                options={layoutOptions}
+        {conflict ? (
+          <Alert
+            showIcon
+            description={t('savedViews.conflictDesc')}
+            title={t('savedViews.conflictTitle')}
+            type="warning"
+            action={
+              <Flexbox horizontal gap={8}>
+                <Button size="small" onClick={reloadDraft}>
+                  {t('savedViews.conflictReload')}
+                </Button>
+                <Button size="small" onClick={() => void saveCopy()}>
+                  {t('savedViews.saveAs')}
+                </Button>
+              </Flexbox>
+            }
+          />
+        ) : null}
+        {isOwner && editing && draft ? (
+          <Flexbox gap={12}>
+            <ViewDefinitionEditor showName showShare value={draft} onChange={setDraft} />
+            <Flexbox horizontal gap={8}>
+              <Button
+                disabled={!dirty || !shareReady || !draft.name.trim()}
                 size="small"
-                style={{ minWidth: 160 }}
-                value={layout}
-                onChange={(next) => {
-                  if (next === 'board' || next === 'list') setLayout(next);
-                }}
-              />
-              <Select
-                options={visibilityOptions}
-                size="small"
-                style={{ minWidth: 160 }}
-                value={visibility}
-                onChange={(next) => {
-                  if (next === 'private' || next === 'team' || next === 'workspace') {
-                    setVisibility(next);
-                    if (next !== 'team') setTeamId(null);
-                  }
-                }}
-              />
-              {visibility === 'team' ? (
-                <Select
-                  options={teamOptions}
-                  placeholder={t('savedViews.teamRequired')}
-                  size="small"
-                  style={{ minWidth: 160 }}
-                  value={teamId ?? undefined}
-                  onChange={(next) => {
-                    if (typeof next === 'string') setTeamId(next);
-                  }}
-                />
-              ) : null}
+                type="primary"
+                onClick={() => void saveView()}
+              >
+                {t('save')}
+              </Button>
+              <Button size="small" onClick={reloadDraft}>
+                {t('cancel')}
+              </Button>
             </Flexbox>
           </Flexbox>
         ) : null}
@@ -443,6 +545,12 @@ const SavedViewPage = memo(() => {
           <Flexbox gap={16}>
             {isLoading ? (
               <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
+            ) : projectBoard ? (
+              <SavedViewProjectBoard
+                groups={projectGroups}
+                loadMoreLabel={t('savedViews.loadMore')}
+                onLoadMoreGroup={loadMoreProjectGroup}
+              />
             ) : projectRows.length === 0 ? (
               <Center flex={1} padding={48}>
                 <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
@@ -454,7 +562,7 @@ const SavedViewPage = memo(() => {
                 ))}
               </Flexbox>
             )}
-            {workQueryHasMore(projectRows.length, evaluation?.total) ? (
+            {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
               <Flexbox horizontal justify="center">
                 <Button size="small" onClick={() => void loadMore()}>
                   {t('savedViews.loadMore')}
@@ -467,17 +575,17 @@ const SavedViewPage = memo(() => {
             emptyLabel={t('savedViews.emptyResults')}
             groupBy={evaluation?.groupBy}
             groups={groups}
-            layout={evaluation?.layout ?? viewLayout ?? 'list'}
+            layout={evaluation?.layout ?? view?.layout ?? 'list'}
             loadMoreLabel={t('savedViews.loadMore')}
             loading={isLoading}
             loadingLabel={t('savedViews.loading')}
-            movable={(evaluation?.layout ?? viewLayout) === 'board'}
+            movable={(evaluation?.layout ?? view?.layout) === 'board'}
             tasks={tasks}
             total={evaluation?.total}
             onLoadMoreGroup={(key) => void loadMoreGroup(key)}
             onMoved={() => void refreshView()}
             onLoadMore={
-              (evaluation?.layout ?? viewLayout) === 'list' ? () => void loadMore() : undefined
+              (evaluation?.layout ?? view?.layout) === 'list' ? () => void loadMore() : undefined
             }
           />
         )}

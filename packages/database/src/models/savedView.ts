@@ -30,6 +30,7 @@ export interface SavedViewEvaluation {
   layout?: Awaited<ReturnType<WorkQueryModel['queryTasks']>>['layout'];
   needsRepair: boolean;
   needsRepairReason?: SavedViewNeedsRepairReason;
+  projectGroups?: Awaited<ReturnType<WorkQueryModel['queryProjects']>>['projectGroups'];
   projects?: Awaited<ReturnType<WorkQueryModel['queryProjects']>>['projects'];
   queryHash: string;
   tasks?: Awaited<ReturnType<WorkQueryModel['queryTasks']>>['tasks'];
@@ -368,13 +369,16 @@ export class SavedViewModel {
       if (query.entityType === 'project') {
         const result = await kernel.queryProjects({
           afterId: params.afterId,
+          groupKey: params.groupKey,
           limit: params.limit,
           query,
           queryHash: params.queryHash,
         });
         return {
-          layout: 'list',
+          groupBy: result.groupBy,
+          layout: result.layout ?? 'list',
           needsRepair: false,
+          projectGroups: result.projectGroups,
           projects: result.projects,
           queryHash: result.queryHash,
           total: result.total,

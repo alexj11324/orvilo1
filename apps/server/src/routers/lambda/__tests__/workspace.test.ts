@@ -150,7 +150,6 @@ describe('workspaceRouter', () => {
     });
   });
 
-<<<<<<< HEAD
   it('recovers a retried create by returning the caller-owned same-slug workspace', async () => {
     workspaceModel.create.mockRejectedValue(Object.assign(new Error('dup'), { code: '23505' }));
     workspaceModel.findBySlug.mockResolvedValue({

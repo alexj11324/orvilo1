@@ -5,7 +5,7 @@ import { Alert, Button, Select, Text, TextArea, toast } from '@lobehub/ui/base-u
 import type { SavedViewVisibility, WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { FolderClosedIcon } from 'lucide-react';
+import { FolderClosedIcon, SlidersHorizontalIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -156,6 +156,9 @@ const SavedViewPage = memo(() => {
   const [visibility, setVisibility] = useState<SavedViewVisibility>('private');
   const [layout, setLayout] = useState<WorkQueryLayout>('list');
   const [teamId, setTeamId] = useState<string | null>(null);
+  /* The query/name/share form is authoring chrome — hidden until asked for,
+     so the page reads as the view itself, not an editor. */
+  const [editing, setEditing] = useState(false);
   const viewName = view?.name;
   const viewQueryAst = view?.queryAst;
   const viewVisibility = view?.visibility;
@@ -341,6 +344,16 @@ const SavedViewPage = memo(() => {
             </Button>
             <WorkFavoriteButton targetId={viewId} targetType="savedView" />
             {isOwner ? (
+              <Button
+                icon={SlidersHorizontalIcon}
+                size="small"
+                type={editing ? 'primary' : 'default'}
+                onClick={() => setEditing((current) => !current)}
+              >
+                {t('savedViews.editView')}
+              </Button>
+            ) : null}
+            {isOwner ? (
               <Button size="small" onClick={() => void deleteView()}>
                 {t('savedViews.delete')}
               </Button>
@@ -349,7 +362,7 @@ const SavedViewPage = memo(() => {
         }
       />
       <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
-        {isOwner ? (
+        {isOwner && editing ? (
           <Flexbox gap={8}>
             <Input
               placeholder={t('savedViews.name')}

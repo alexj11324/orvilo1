@@ -662,6 +662,7 @@ export default {
   'savedViews.delete': 'Delete view',
   'savedViews.deleteConfirm': 'Delete “{{name}}”? This cannot be undone.',
   'savedViews.deleteFailed': 'Could not delete this view',
+  'savedViews.editView': 'Edit view',
   'savedViews.empty': 'No saved views yet',
   'savedViews.emptyResults': 'No matching work',
   'savedViews.favorite': 'Add to favorites',

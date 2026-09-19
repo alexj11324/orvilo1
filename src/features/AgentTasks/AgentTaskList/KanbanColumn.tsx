@@ -187,9 +187,20 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   count: css`
     flex: none;
-    font-size: 12px;
+
+    padding-block: 1px;
+    padding-inline: 6px;
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextQuaternary};
+    line-height: 16px;
+    color: ${cssVar.colorTextTertiary};
+
+    /* Same subtle chip as Cordy's column count — bg slightly off the column
+       card so the numeral reads as metadata, not a button. */
+    background: ${cssVar.colorFillQuaternary};
   `,
   header: css`
     display: flex;

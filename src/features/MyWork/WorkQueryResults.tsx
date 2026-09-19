@@ -5,16 +5,21 @@ import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryExternalReview, WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { BellOffIcon, BellPlusIcon, GitPullRequestIcon, ListTodoIcon } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
+import {
+  KANBAN_STATUS_COLUMN_KEY,
+  STATUS_KANBAN_COLUMNS,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import {
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
+} from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
 import { workQueryBoardGroups } from './workQueryBoard';
@@ -56,15 +61,31 @@ const styles = createStaticStyles(({ css }) => ({
     color: inherit;
     text-decoration: none;
   `,
-  row: css`
-    padding-block: 7px;
-    padding-inline: 4px 12px;
+  groupHeader: css`
+    cursor: pointer;
+    user-select: none;
+
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    padding-block: 6px;
+    padding-inline: 4px;
+    border: none;
     border-radius: ${cssVar.borderRadiusLG};
-    color: inherit;
+
+    color: ${cssVar.colorTextSecondary};
+
+    background: transparent;
 
     &:hover {
-      background: ${cssVar.colorFillTertiary};
+      background: ${cssVar.colorFillQuaternary};
     }
+  `,
+  row: css`
+    padding-inline-end: 8px;
+    border-radius: ${cssVar.borderRadiusLG};
+    color: inherit;
 
     &:hover .work-query-row-actions,
     &:focus-within .work-query-row-actions {
@@ -103,24 +124,16 @@ const WorkQueryTaskRow = memo(
     task: WorkQueryResultTask;
   }) => {
     const { t } = useTranslation('common');
+    // The same rich row /tasks renders — identifier, status glyph, title,
+    // chips, assignee, date — instead of a second, thinner task row.
     return (
-      <Flexbox horizontal align="center" className={styles.row}>
-        <WorkspaceLink
-          className={styles.link}
-          to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-        >
-          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-          <Flexbox flex={1} style={{ minWidth: 0 }}>
-            <Text ellipsis weight={500}>
-              {task.name ?? task.instruction}
-            </Text>
-          </Flexbox>
-          {task.identifier ? (
-            <Text className={styles.identifier} fontSize={12}>
-              {task.identifier}
-            </Text>
-          ) : null}
-        </WorkspaceLink>
+      <Flexbox horizontal align={'center'} className={styles.row}>
+        <Flexbox flex={1} style={{ minWidth: 0 }}>
+          <AgentTaskItem
+            routeScope={'global'}
+            task={{ ...task, participants: task.participants ?? [] }}
+          />
+        </Flexbox>
         {onToggleFollow ? (
           <span className={`${styles.actions} work-query-row-actions`}>
             <ActionIcon
@@ -137,6 +150,72 @@ const WorkQueryTaskRow = memo(
 );
 
 WorkQueryTaskRow.displayName = 'WorkQueryTaskRow';
+
+/**
+ * Linear's default list is status-grouped with collapsible headers. Bucket the
+ * flat result set into board column order so a view reads the same whether it
+ * renders as a list or a board.
+ */
+const WorkQueryStatusGroup = memo<{
+  columnKey: string;
+  isFollowed?: (taskId: string) => boolean;
+  onToggleFollow?: (taskId: string, followed: boolean) => void;
+  tasks: WorkQueryResultTask[];
+}>(({ columnKey, isFollowed, onToggleFollow, tasks }) => {
+  const { t } = useTranslation('chat');
+  const [collapsed, setCollapsed] = useState(false);
+  const visual = COLUMN_STATUS_VISUAL[columnKey];
+  const labelKey = COLUMN_I18N_KEYS[columnKey];
+
+  return (
+    <Flexbox>
+      <button
+        aria-expanded={!collapsed}
+        className={styles.groupHeader}
+        type="button"
+        onClick={() => setCollapsed((current) => !current)}
+      >
+        {visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
+        <Text fontSize={12} weight={500}>
+          {labelKey ? t(labelKey as never) : columnKey}
+        </Text>
+        <Text fontSize={12} type={'secondary'}>
+          {tasks.length}
+        </Text>
+      </button>
+      {collapsed ? null : (
+        <Flexbox>
+          {tasks.map((task) => (
+            <WorkQueryTaskRow
+              followed={isFollowed?.(task.id)}
+              key={task.id}
+              task={task}
+              onToggleFollow={onToggleFollow}
+            />
+          ))}
+        </Flexbox>
+      )}
+    </Flexbox>
+  );
+});
+
+WorkQueryStatusGroup.displayName = 'WorkQueryStatusGroup';
+
+const groupTasksByStatusColumn = (
+  tasks: WorkQueryResultTask[],
+): { key: string; tasks: WorkQueryResultTask[] }[] => {
+  const buckets = new Map<string, WorkQueryResultTask[]>();
+  for (const task of tasks) {
+    const key = KANBAN_STATUS_COLUMN_KEY[task.status ?? ''] ?? 'backlog';
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(task);
+    else buckets.set(key, [task]);
+  }
+  return STATUS_KANBAN_COLUMNS.map((col) => ({
+    key: col.key,
+    tasks: buckets.get(col.key) ?? [],
+  })).filter((group) => group.tasks.length > 0);
+};
 
 const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ review }) => {
   const href = externalReviewOpenHref(review.openUrl);
@@ -255,12 +334,13 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             <Empty description={emptyLabel} icon={ListTodoIcon} />
           </Center>
         ) : (
-          <Flexbox gap={2}>
-            {tasks.map((task) => (
-              <WorkQueryTaskRow
-                followed={isFollowed?.(task.id)}
-                key={task.id}
-                task={task}
+          <Flexbox gap={8}>
+            {groupTasksByStatusColumn(tasks).map((group) => (
+              <WorkQueryStatusGroup
+                columnKey={group.key}
+                isFollowed={isFollowed}
+                key={group.key}
+                tasks={group.tasks}
                 onToggleFollow={onToggleFollow}
               />
             ))}

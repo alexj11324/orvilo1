@@ -503,6 +503,7 @@
   "savedViews.delete": "删除视图",
   "savedViews.deleteConfirm": "删除“{{name}}”？此操作不可撤销。",
   "savedViews.deleteFailed": "无法删除这个视图",
+  "savedViews.editView": "编辑视图",
   "savedViews.empty": "还没有保存的视图",
   "savedViews.emptyResults": "没有匹配的工作",
   "savedViews.favorite": "加入收藏",

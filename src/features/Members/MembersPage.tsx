@@ -19,11 +19,6 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import { openInviteTeammateModal } from '../Teammates';
-import type {
-  WorkspaceAgentSummary,
-  WorkspaceInvitationSummary,
-  WorkspaceMemberSummary,
-} from '../Teammates/api/contract';
 import {
   useTeammateActions,
   useWorkspaceAgentsQuery,
@@ -31,6 +26,12 @@ import {
   useWorkspaceMembersQuery,
 } from '../Teammates/api/hooks';
 import { memberStatus } from '../Teammates/api/roleCapabilities';
+import {
+  buildDirectoryRows,
+  type DirectoryFilter,
+  type DirectoryRow,
+  filterDirectoryRows,
+} from './directoryRows';
 
 const styles = createStaticStyles(({ css }) => ({
   cell: css`
@@ -65,13 +66,6 @@ const styles = createStaticStyles(({ css }) => ({
     white-space: nowrap;
   `,
 }));
-
-type DirectoryRow =
-  | { id: string; kind: 'agent'; sortName: string; value: WorkspaceAgentSummary }
-  | { id: string; kind: 'invitation'; sortName: string; value: WorkspaceInvitationSummary }
-  | { id: string; kind: 'person'; sortName: string; value: WorkspaceMemberSummary };
-
-type DirectoryFilter = 'agent' | 'all' | 'invitation' | 'person';
 
 const normalize = (value: string | null | undefined) => (value ?? '').toLowerCase();
 
@@ -114,51 +108,14 @@ const MembersPage = memo(() => {
     enabled: enabled && capabilities.canInvite,
   });
 
-  const rows = useMemo(() => {
-    const next: DirectoryRow[] = [];
-    for (const member of membersQuery.members ?? []) {
-      next.push({
-        id: `person:${member.userId}`,
-        kind: 'person',
-        sortName: normalize(member.user?.fullName || member.user?.username || member.user?.email),
-        value: member,
-      });
-    }
-    // Workspace agents are execution agents — not OAuth applications. The
-    // directory has no real applications source yet, so the group stays
-    // absent rather than faking one out of the agent roster.
-    for (const agent of agentsQuery.data ?? []) {
-      next.push({
-        id: `agent:${agent.id}`,
-        kind: 'agent',
-        sortName: normalize(agent.name),
-        value: agent,
-      });
-    }
-    for (const invitation of invitationsQuery.data ?? []) {
-      if (invitation.status === 'accepted' || invitation.status === 'revoked') continue;
-      next.push({
-        id: `invitation:${invitation.id}`,
-        kind: 'invitation',
-        sortName: normalize(invitation.email),
-        value: invitation,
-      });
-    }
-    return next.sort((a, b) => a.sortName.localeCompare(b.sortName));
-  }, [membersQuery.members, agentsQuery.data, invitationsQuery.data]);
+  const rows = useMemo(
+    () => buildDirectoryRows(membersQuery.members, agentsQuery.data, invitationsQuery.data),
+    [membersQuery.members, agentsQuery.data, invitationsQuery.data],
+  );
 
   const needle = normalize(query).trim();
   const visible = useMemo(
-    () =>
-      rows.filter((row) => {
-        if (groupFilter !== 'all' && row.kind !== groupFilter) return false;
-        if (!needle) return true;
-        const haystack =
-          row.kind === 'person'
-            ? normalize(row.value.user?.email) + normalize(row.value.user?.username)
-            : '';
-        return row.sortName.includes(needle) || haystack.includes(needle);
-      }),
+    () => filterDirectoryRows(rows, needle, groupFilter),
     [groupFilter, needle, rows],
   );
 
@@ -324,9 +281,9 @@ const MembersPage = memo(() => {
                 ]}
               >
                 <ActionIcon
+                  aria-label={t('members.manageInSettings', { ns: 'common' })}
                   icon={MoreHorizontal}
                   size={'small'}
-                  title={t('members.manageInSettings', { ns: 'common' })}
                 />
               </DropdownMenu>
             ) : null;
@@ -351,9 +308,9 @@ const MembersPage = memo(() => {
                 ]}
               >
                 <ActionIcon
+                  aria-label={t('inbox.moreActions', { ns: 'notification' })}
                   icon={MoreHorizontal}
                   size={'small'}
-                  title={t('inbox.moreActions', { ns: 'notification' })}
                 />
               </DropdownMenu>
             );
@@ -384,9 +341,9 @@ const MembersPage = memo(() => {
             {capabilities.canManageMembers ? (
               <Tooltip title={t('members.manageInSettings', { ns: 'common' })}>
                 <ActionIcon
+                  aria-label={t('members.manageInSettings', { ns: 'common' })}
                   icon={Settings2}
                   size={'small'}
-                  title={t('members.manageInSettings', { ns: 'common' })}
                   onClick={() => navigate(settingsPath)}
                 />
               </Tooltip>

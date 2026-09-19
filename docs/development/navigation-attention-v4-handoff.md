@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `040292ac` TRI05 批量 deps/dependents。叠在 `067fcfbc` VIEW02 私有 teamId 抹除、`89619d13` Devin 视图编辑器、`e168070e` recents/deps handoff 之上。                                                                        |
+| 实施 HEAD（本交接提交之前）      | `a4ace258` TRI05 `findBlockedTaskIds`。叠在 `f8a91dff` VIEW02 cycleId 抹除、`040292ac` 批量 deps、`89619d13` Devin 视图编辑器之上。                                                                                        |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -54,7 +54,7 @@
 - 独立 `event_consumer_receipts`（D09）。权限 `notification:read|organize` ALL-only（D14）
 - My Work：assigned / delegated=`execution_grants.initiatedBy` / review / created=`createdByUserId` 且排除 Linear 导入 null（WORK03）/subscribed。No-project chip（WORK07）。服务端 list/board（WORK08）。待审核列出非 task 的 pending approval，**不为填列表建 Task**（WORK05）
 - Board：`moveBoard` CAS；N>1 `team_workflow_states` → `WORKFLOW_STATE_REQUIRED` + 精确 picker（VIEW08）。Saved View / Team 的统一 `KanbanBoard` `external` 拖放走这条路径。My Work assigned/delegated 的 Linear 卡（有 `workflowStateId`）跨列拖放也走 `moveBoard`；同列重排和无 Linear 绑定的卡仍走 store `task.update`
-- Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 task/project/team id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）。Devin `89619d13` 接上真实视图编辑器 / 筛选构建器 / 项目看板（F23–F26+F31–F32）
+- Saved views：visitor 时 `currentUser`；`expectedDefinitionVersion` CAS；builtin 虚拟 id `builtin:all|blocked|in-progress|review|projects` 不可覆盖（VIEW01）；分享 AST 抹掉不可读 task/project/team/**cycle** id（VIEW02）；count/facet 同 ACL（VIEW07）；cursor 绑 `queryHash` + 全排序元组（VIEW06）。Devin `89619d13` 接上真实视图编辑器 / 筛选构建器 / 项目看板（F23–F26+F31–F32）
 - Team Triage：accept/decline/duplicate/reassign + `moveToTeam` CAS（TRI02）；`duplicate_of_task_id`（TRI03）；历史 Linear import `triageStatus: accepted`（TRI01）；triage 事件 `task.scope.changed`（TRI08）；`cycleId` → `tasks.cycleRefId`（TRI07）；`teamId` 与可读团队求交（TRI05）
 - Favorites：可读 task/team/project/view 标题水合；reorder API 已是 `expectedVersion` CAS（NAV06），侧栏始终可见上 / 下箭头
 - CommandMenu sidecar 搜 task/team/project/savedView，不走 FTS `type:`（NAV07）
@@ -137,7 +137,7 @@
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表、标题搜索、任务详情 API、CommandMenu recents、单任务与批量 deps/activities/dependents，都已挡住。VIEW02 分享定义会抹掉不可读的 task /project/ **team** id；`cycleId` 仍未抹。`findBlockedTaskIds` 仍走子表 `ownershipSql`（工作区可见性）；TRPC 通常先 `resolveOrThrow`。不要把团队 ACL 接到 `seqOwnership()`。不要主动做 TRI04 产品复制。不要回滚 Devin `89619d13`（真实视图编辑器）、`6a0a2f04`（Team Home + Issues scopes + 搜索标重复）、`1f4333ac`（`/members` 目录）、`443ccec4`（My issues 标签 + `/reviews` 独立页）或 `2f22b262`（joined-only Your teams + `triageEnabled` 门控）。
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。SEC06 私有团队 / 私有项目标题、以及 TRI05 未过滤列表、标题搜索、任务详情 API、CommandMenu recents、单任务与批量 deps/activities/dependents/`findBlockedTaskIds`，都已挡住。VIEW02 分享定义会抹掉不可读的 task /project/team / **cycle** id。`getUnlockedTasksForMany` 发现查询仍走 `depsOwnership`，返回前用 `ownership()` 过滤候选人。不要把团队 ACL 接到 `seqOwnership()`。不要主动做 TRI04 产品复制。不要回滚 Devin `89619d13`（真实视图编辑器）、`6a0a2f04`（Team Home + Issues scopes + 搜索标重复）、`1f4333ac`（`/members` 目录）、`443ccec4`（My issues 标签 + `/reviews` 独立页）或 `2f22b262`（joined-only Your teams + `triageEnabled` 门控）。
 
 用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA（Inbox / My issues / Reviews / Agent）、Team Home / Issues scopes、snooze 预设、joined-only Your teams。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
@@ -230,6 +230,8 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `89619d13`：Devin F23–F26+F31–F32 真实视图编辑器、筛选构建器、项目看板。不要回滚。
 - `067fcfbc`：VIEW02 分享 AST 抹掉私有 `teamId`。回归先失败后通过：访问者 `present()` 曾带出 `view-secret-team`。`bun run check` 改动文件 lint 干净，`savedView` + `task` 214 passed。不是 64× AC。
 - `040292ac`：TRI05 `getDependenciesByTaskIds` / `getDependents` 经 `findByIds`。回归先失败后通过：公开 blocker 的 dependents 曾带出私有团队任务 id。不是 64× AC。
+- `f8a91dff`：VIEW02 分享 AST 抹掉私有团队上的 `cycleId`。回归先失败后通过：访问者 `present()` 曾带出 secret cycle UUID。`bun run check` 改动文件 lint 干净，`savedView` + `task` 216 passed。不是 64× AC。
+- `a4ace258`：TRI05 `findBlockedTaskIds` 经 `findByIds`；不可读父任务上 `areAllDependenciesCompleted` 失败关闭。回归先失败后通过：非成员曾看到 secret id 在 blocked 列表里。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

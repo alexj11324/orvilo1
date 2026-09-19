@@ -24,7 +24,9 @@
   execAgent 全量走 ACP 绑定）+ 本次推送的 P70c 系列 commit。
 - CI（push run `902ce0e8`）：`Test Server (shard 1/2)` FAIL = 4 个 router 集成
   文件走真 dispatch 撞 `JWKS_KEY`（已由 `aae2a6be` stub 到边界）；`Typecheck`/`Test
-Database` FAIL = functionTools/safeParse/as-cast 三类（同 commit 修复）；
+Database` FAIL = functionTools/safeParse/as-cast 三类（同 commit 修复）。
+  `b7e7a7be` run：`Typecheck` 转绿，`Test Database` 新增 `lint:circular` FAIL
+  （8 个 import 环，`7a84fecf` 已修 —— 见下）；
   `Test Web App` FAIL = 无关滚动 E2E flake（`关闭流式自动滚动后…`），重跑即可；
   `Required Quality Gate` = #98 修法的镜像逻辑，上游绿后会自动转绿。
 - 分支 BEHIND canary，合并前需要 `gh update-branch`。
@@ -176,6 +178,18 @@ device'}`。denied-sender（`!canUseDevice`）与 sandboxFallback/share-visitor
 test.ts` 删除（callAgent park/resume 生命周期已退役，deferred 编排现在 host 侧
   `heteroAwaitBuiltinToolChildren`）。旧 LLM Execution / Tool Calling / Stream
   Events describes 一并删除 ——OpenAI Responses mock 边界在退役引擎内部。
+- **lint:circular 修复（`7a84fecf`）**：`aiAgent → runToolSurface → serverRuntimes
+→ services/goal → … → aiAgent` 新环 + canary 既有 3 环（taskRunner↔
+  taskLifecycle↔taskIntegration、goal scheduler 内环、expertiseHistory index↔run）
+  全部打破。`serverRuntimes/index.ts` 改为**按 identifier 的惰性 loader map**
+  （`hasServerRuntime`/`getServerRuntimeIdentifiers` 保持同步纯查表；仅
+  `getServerRuntime` 真正按需 import 单个模块 —— 唯一调用方 builtin.ts 已 await）。
+  drift 守卫：`serverRuntimes/__tests__/registry.test.ts` 断言 loader keys ==
+  各模块 registration.identifier。`expertiseHistory/run.ts` 直调
+  `triggerHatchetWorkflow('/api/workflows/expertise-history/topic')`（与原
+  `triggerTopic` 等价）；`taskLifecycle`/`goal scheduler local` 用 `await import`
+  破边。注意：canary 上这 3 个环本就存在 → canary push 的 Test Database 可能
+  也一直红（duplicate-skip 掩盖了 PR 检查）。
 - **#82 已由上游解决**：PR #98（`7525f524`，已并入 canary）在 test.yml 内联实现
   了 poll-and-mirror 修法（GH\_TOKEN + GATE\_MIRROR\_TIMEOUT:2700 + head SHA），#82
   以 `3f172b9a` squash 合入。/tmp/orvilo-qgate 里那个 `72f5da0a` disposition-job
@@ -212,11 +226,34 @@ bot}-callback` 经 Hatchet workflow task → `invokeHonoHandler`。ACP 子 op
 - **cron**：gatewayCron /agentSignalNightlySchedule/memory cron 跑自己的
   workflow，不经 agentStep。
 
-### 3. P70d 删除引擎
+### 3. P70d 删除引擎（2026-09-19 依赖盘点，不可整树 rm）
 
-`modules/AgentRuntime`、`services/agentRuntime` 剩余文件、agent-runtime 包
-core/executors。删前全仓 grep 确认无 import（`agentRuntime/types.ts` re-export
-是排空期兼容，消费者已指 `agentExecution/stepTypes.ts`）。
+`modules/AgentExecution`（state manager / StreamEventManager / factory）**保留**
+——ACP `heteroDispatch` 仍在用（stream init/end 发布、operation 状态）。要删的是
+引擎执行树三块，各自有存活依赖需先摘出：
+
+- `modules/AgentRuntime`（\~7.3k 行含 adapters/tests）：
+  - 活引用：`executorHelpers.ts`（`buildServerAgentMemberRunner` /
+    `buildServerVirtualSubAgentRunner` / `registerWorkFromIntent` → 被
+    `acpBuiltinToolExec` 用）；`AgentRuntimeCoordinator.getOperationMetadata`
+    → `services/goal/index.ts:1960` 单次调用（只是 stateManager 透传）。
+  - 摘法：executorHelpers 三个函数搬到 AgentExecution 或 acpBuiltinToolExec
+    邻近文件；goal 直接调 stateManager。其余（coordinator 主体、adapters、
+    executors、ToolResultWaiter、buildHost、dispatchClientTool 等）整树删。
+- `services/agentRuntime`：facade 仍接 tRPC ctx（`createIsolatedRuntime`）。
+  存活入口：`getOperationStatus` / `getPendingInterventions` /
+  `getSubAgentTaskStatus` 的 realtime 分支 / `processHumanIntervention`（前端
+  `runAgent.internal_handleHumanIntervention` 仍调）/ `startExecution`
+  （autoStart 已死，语义同步退役）。决定项：这几个 procedure 是删还是改读
+  `agentOperations`/approval 表 —— 删 = API break，要在 PR 标注。
+  `subAgentRuns`/`approvalResume`/`threadRunHooks`/`InterventionController`/
+  `agentEvalRun`/`responses.service` 对其有类型或调用引用，逐个摘。
+- `packages/agent-runtime`：外部～69 个 import，多数 `import type`（`AgentState`
+  等）—— 类型需落到 AgentExecution 或独立 types 文件后 repoint；core/executors
+  整删。
+- hono `agent/handlers/{runStep,threadRunCallback,subAgentCallback,
+groupMemberCallback}`：引擎 plumbing，随 AgentRuntimeService 删除一起删
+  （agentStep task 的 Hatchet 注册也要一并摘）。
 
 ### 4. P80 dry-run 迁移 + 回滚演练
 

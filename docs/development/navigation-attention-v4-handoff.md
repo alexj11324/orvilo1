@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `b554e2cc` `✅ test(nav): click native notifications through to the work inbox`                                                                                                                                            |
+| 实施 HEAD（本交接提交之前）      | `af841605` `💄 style(nav): restyle work surfaces with app list conventions`                                                                                                                                                |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -140,6 +140,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `e88f0359`：个人模式 Home recents / CommandMenu 工作搜索不拉 team。不是 64× AC。
 - 本增量：收藏 overflow + Web/Electron work-route match。lint 干净，128 passed。不是 64× AC。
 - Recents 空 ⋯ /pin + Electron `/inbox` click：lint 干净，11 passed。不是 64× AC。
+- `af841605`：四个工作面重排前端（Views/Teams 套 Projects 列表规范；My Work 工具行 + 行内 hover 关注操作 + 空看板仍渲染列；Inbox 头部图标的批量操作 + Segmented 过滤 + 未读点 / 两行卡片 + 详情溢出菜单）。新增 `savedViews.search*`、`inbox.moreActions` 文案。lint 干净；页面手测通过（dev :28027）。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

@@ -395,6 +395,21 @@ export class NotificationModel {
       .limit(limit);
   }
 
+  /**
+   * Single feed row by id under the same read scope as `listFeed`, minus the
+   * kind/filter/cursor clauses — a deep-linked selection must resolve even
+   * when it is not on the loaded pages. `null` covers absent AND unreadable
+   * so probing an id cannot distinguish a foreign row from a missing one.
+   */
+  async findFeedRowById(id: string) {
+    const rows = await this.db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.id, id), ...this.scope(), this.resourceReadable()))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
   async markAsRead(ids: string[]) {
     if (ids.length === 0) return;
 

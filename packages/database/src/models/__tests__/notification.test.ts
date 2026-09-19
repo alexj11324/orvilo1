@@ -802,6 +802,54 @@ describe('NotificationModel (integration)', () => {
     });
   });
 
+  describe('findFeedRowById', () => {
+    it('resolves a card that is not on the loaded pages', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({ dedupeKey: 'deep-link', kind: 'update', title: 'Deep linked' }),
+      );
+
+      const row = await model.findFeedRowById(created!.id);
+      expect(row?.title).toBe('Deep linked');
+    });
+
+    it('returns null for another user’s row — probing cannot distinguish foreign from missing', async () => {
+      const owner = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId: null });
+      const created = await owner.create(
+        baseNotification({ dedupeKey: 'foreign-row', kind: 'update', title: 'Foreign' }),
+      );
+
+      expect(await viewer.findFeedRowById(created!.id)).toBeNull();
+      expect(await viewer.findFeedRowById('00000000-0000-0000-0000-000000000000')).toBeNull();
+    });
+
+    it('still resolves an archived card — a deep link survives organizing', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({ dedupeKey: 'archived-deep', kind: 'update', title: 'Archived card' }),
+      );
+      await model.archive(created!.id);
+
+      expect(await model.listFeed()).toHaveLength(0);
+      expect((await model.findFeedRowById(created!.id))?.title).toBe('Archived card');
+    });
+
+    it('returns null when the linked resource is no longer readable', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          dedupeKey: 'gone-resource',
+          resourceId: 'task_missing',
+          resourceType: 'task',
+          title: 'Secret title',
+        }),
+      );
+
+      expect(await model.findFeedRowById(created!.id)).toBeNull();
+    });
+  });
+
   describe('prepareBulk and applyBulk', () => {
     it('does not archive a card that landed after the snapshot cutoff', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });

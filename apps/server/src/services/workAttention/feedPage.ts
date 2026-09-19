@@ -32,6 +32,7 @@ export interface InboxFeedDeps {
   };
   notificationModel: {
     ensureActionCards: (pending: PendingSourceCard[]) => Promise<unknown>;
+    findFeedRowById: (id: string) => Promise<NotificationItem | null>;
     listFeed: (input: InboxFeedDeps['input']) => Promise<NotificationItem[]>;
   };
   projectModel: {
@@ -101,4 +102,31 @@ export const buildInboxFeed = async (deps: InboxFeedDeps): Promise<NotificationF
     partial: unavailable.length > 0,
     sourceUnavailable: unavailable,
   };
+};
+
+/**
+ * One feed card by notification id — the deep-link resolver. Runs the same
+ * reconcile + live-overlay pipeline as `buildInboxFeed` so a card fetched
+ * alone is identical to the one the list would render. `null` when the row is
+ * absent or no longer readable; it never leaks existence.
+ */
+export const buildInboxFeedCard = async (
+  deps: InboxFeedDeps,
+  id: string,
+): Promise<NotificationFeedCard | null> => {
+  const { pending } = await deps.actionSources.listPendingForActorSettled();
+  // Lazy projection first — a live pending source without a stored row still
+  // resolves, matching what the feed would show on the next page fetch.
+  await deps.notificationModel.ensureActionCards(pending);
+  const row = await deps.notificationModel.findFeedRowById(id);
+  if (!row) return null;
+  const [card] = mapFeedWithLiveActions([row], pending);
+  if (!card) return null;
+  let titles = new Map<string, string>();
+  try {
+    titles = await collectLiveTitles([card], deps.taskModel, deps.projectModel);
+  } catch (error) {
+    console.error('[buildInboxFeedCard] live titles unavailable', error);
+  }
+  return overlayLiveTitles([card], titles)[0] ?? null;
 };

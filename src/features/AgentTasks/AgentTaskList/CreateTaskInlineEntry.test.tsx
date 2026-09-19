@@ -547,9 +547,7 @@ describe('CreateTaskInlineEntry', () => {
       await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
       // The answer reaches the task through the rewritten brief, not as a list
       // bolted underneath one written before the answer existed.
-      expect(createTaskMock.mock.calls[0][0].instruction).toBe(
-        'Write the Q3 plan for orvilo.',
-      );
+      expect(createTaskMock.mock.calls[0][0].instruction).toBe('Write the Q3 plan for orvilo.');
       expect(createTaskMock.mock.calls[0][0].instruction).not.toContain(
         'taskIntent.answersHeading',
       );

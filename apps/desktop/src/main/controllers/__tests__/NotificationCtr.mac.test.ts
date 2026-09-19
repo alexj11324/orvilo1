@@ -158,6 +158,45 @@ describe('NotificationCtr.mac', () => {
     expect(mockMainWindow.broadcast).toHaveBeenCalledWith('navigate', navigate);
   });
 
+  it('opens the work inbox when a human-approval notification is clicked', async () => {
+    mockBrowserWindow.isVisible.mockReturnValue(false);
+    let handler: (event: { id: string; type: string }) => void = () => {};
+    macNotificationsMock.onNotificationEvent.mockImplementation((listener) => {
+      handler = listener;
+      return () => {};
+    });
+    macNotificationsMock.showNotification.mockResolvedValueOnce({ id: 'orvilo-inbox', ok: true });
+    const navigate = { escape: true as const, path: '/inbox' };
+
+    controller.afterAppReady();
+    await controller.showDesktopNotification({ ...params, navigate });
+
+    handler({ id: 'orvilo-inbox', type: 'clicked' });
+
+    expect(mockMainWindow.broadcast).toHaveBeenCalledWith('navigate', navigate);
+  });
+
+  it('keeps the originating workspace on a work-inbox notification click', async () => {
+    mockBrowserWindow.isVisible.mockReturnValue(false);
+    let handler: (event: { id: string; type: string }) => void = () => {};
+    macNotificationsMock.onNotificationEvent.mockImplementation((listener) => {
+      handler = listener;
+      return () => {};
+    });
+    macNotificationsMock.showNotification.mockResolvedValueOnce({
+      id: 'orvilo-ws-inbox',
+      ok: true,
+    });
+    const navigate = { escape: true as const, path: '/team/inbox' };
+
+    controller.afterAppReady();
+    await controller.showDesktopNotification({ ...params, navigate });
+
+    handler({ id: 'orvilo-ws-inbox', type: 'clicked' });
+
+    expect(mockMainWindow.broadcast).toHaveBeenCalledWith('navigate', navigate);
+  });
+
   it('reports permission status from the addon', async () => {
     macNotificationsMock.getAuthorizationStatus.mockResolvedValueOnce('denied');
     expect(await controller.getNotificationPermissionStatus()).toBe('denied');

@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import SideBarHeaderLayout from '@/features/NavPanel/SideBarHeaderLayout';
 import {
   SidebarHeaderSelectPopover,
@@ -43,6 +44,7 @@ const ProjectHeader = memo<ProjectHeaderProps>(({ project }) => {
   return (
     <SideBarHeaderLayout
       backTo="/"
+      right={<WorkFavoriteButton targetId={project?.id} targetType="project" variant="icon" />}
       left={
         <SidebarHeaderSelectPopover
           content={

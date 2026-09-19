@@ -50,7 +50,10 @@ vi.mock('@/store/task', () => ({
     }),
 }));
 
-vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
+  // Keep the real module store helpers (getActiveWorkspaceSlug and friends) —
+  // useWorkspaceAwareNavigate reads them on every navigate.
+  ...(await importOriginal<object>()),
   useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
 

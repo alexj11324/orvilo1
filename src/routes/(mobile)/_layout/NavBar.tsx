@@ -4,7 +4,7 @@ import { Icon } from '@lobehub/ui';
 import { type TabBarProps } from '@lobehub/ui/mobile';
 import { TabBar } from '@lobehub/ui/mobile';
 import { createStaticStyles } from 'antd-style';
-import { ListTodo, MessageSquare, User } from 'lucide-react';
+import { Inbox, MessageSquare, SquareUser, User } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -32,10 +32,8 @@ const NavBar = memo(() => {
   const activeKey = useActiveTabKey();
   const navigate = useWorkspaceAwareNavigate();
 
-  // The community tab that used to sit here has been retired by the task-first
-  // convergence, so this slot now carries the primary working destination. Tasks
-  // must stay reachable from every client, and the tab bar is the only navigation
-  // a phone viewport gets.
+  // Chat stays reachable. Inbox is the work-attention tab: native banners,
+  // the desktop bell, and this bar all land on `/inbox`.
   const items: TabBarProps['items'] = useMemo(
     () =>
       [
@@ -51,13 +49,23 @@ const NavBar = memo(() => {
         },
         {
           icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={ListTodo} />
+            <Icon className={active ? styles.active : undefined} icon={Inbox} />
           ),
-          key: SidebarTabKey.Tasks,
+          key: SidebarTabKey.Inbox,
           onClick: () => {
-            navigate('/tasks');
+            navigate('/inbox');
           },
-          title: t('tab.tasks'),
+          title: t('tab.inbox'),
+        },
+        {
+          icon: (active: boolean) => (
+            <Icon className={active ? styles.active : undefined} icon={SquareUser} />
+          ),
+          key: SidebarTabKey.MyWork,
+          onClick: () => {
+            navigate('/my-issues');
+          },
+          title: t('tab.myWork'),
         },
         {
           icon: (active: boolean) => (

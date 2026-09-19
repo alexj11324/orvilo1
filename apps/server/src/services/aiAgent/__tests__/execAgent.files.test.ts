@@ -6,11 +6,13 @@ import { AiAgentService } from '../index';
 const {
   mockMessageCreate,
   mockCreateOperation,
+  mockDispatchHeteroAgent,
   mockIngestAttachment,
   mockParseFile,
   mockFindByIds,
 } = vi.hoisted(() => ({
   mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockFindByIds: vi.fn(),
   mockIngestAttachment: vi.fn(),
   mockMessageCreate: vi.fn(),
@@ -116,6 +118,13 @@ vi.mock('@/server/services/agentRuntime', () => ({
   }),
 }));
 
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise the pre-dispatch pipeline (message persistence, file
+// ingestion, attachment resolution) without touching the gateway/sandbox.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {
@@ -204,6 +213,12 @@ describe('AiAgentService.execAgent - file upload handling', () => {
       operationId: 'op-123',
       success: true,
     });
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
     mockParseFile.mockResolvedValue({ content: '' });
 
     service = new AiAgentService(mockDb, userId);
@@ -270,17 +285,13 @@ describe('AiAgentService.execAgent - file upload handling', () => {
         prompt: 'Describe this screenshot',
       });
 
-      // Verify createOperation received initialMessages with imageList on user message
-      expect(mockCreateOperation).toHaveBeenCalled();
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      // ACP dispatch receives the resolved attachments via runAttachments
+      expect(mockDispatchHeteroAgent).toHaveBeenCalled();
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
-      expect(lastMessage).toMatchObject({
-        content: 'Describe this screenshot',
-        id: 'msg-1',
-        role: 'user',
-      });
-      expect(lastMessage.imageList).toEqual([
+      const userMessage = mockMessageCreate.mock.calls.find((call) => call[0].role === 'user')![0];
+      expect(userMessage).toMatchObject({ content: 'Describe this screenshot' });
+      expect(dispatchInput.runAttachments.imageList).toEqual([
         {
           alt: 'screenshot.jpg',
           id: 'file-img',
@@ -315,13 +326,12 @@ describe('AiAgentService.execAgent - file upload handling', () => {
       // to extract, only the URL gets passed to video-capable models.
       expect(mockParseFile).not.toHaveBeenCalled();
 
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
       // Video should land in videoList, not imageList or fileList
-      expect(lastMessage.imageList).toBeUndefined();
-      expect(lastMessage.fileList).toBeUndefined();
-      expect(lastMessage.videoList).toEqual([
+      expect(dispatchInput.runAttachments.imageList).toBeUndefined();
+      expect(dispatchInput.runAttachments.fileList).toBeUndefined();
+      expect(dispatchInput.runAttachments.videoList).toEqual([
         {
           alt: 'clip.mp4',
           id: 'file-vid',
@@ -361,14 +371,13 @@ describe('AiAgentService.execAgent - file upload handling', () => {
       // populated and history queries can resurface the same content later.
       expect(mockParseFile).toHaveBeenCalledWith('file-pdf');
 
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
       // imageList stays undefined for a non-image file …
-      expect(lastMessage.imageList).toBeUndefined();
+      expect(dispatchInput.runAttachments.imageList).toBeUndefined();
       // … but fileList is now populated so MessageContentProcessor can inject
       // the parsed content via filesPrompts() XML.
-      expect(lastMessage.fileList).toEqual([
+      expect(dispatchInput.runAttachments.fileList).toEqual([
         {
           content: 'parsed pdf body text',
           fileType: 'application/pdf',
@@ -403,10 +412,9 @@ describe('AiAgentService.execAgent - file upload handling', () => {
         prompt: 'What is in this?',
       });
 
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
-      expect(lastMessage.fileList).toEqual([
+      expect(dispatchInput.runAttachments.fileList).toEqual([
         {
           content: undefined,
           fileType: 'application/octet-stream',
@@ -449,8 +457,8 @@ describe('AiAgentService.execAgent - file upload handling', () => {
         prompt: 'What is this?',
       });
 
-      // Should still create message and operation (without files)
-      expect(mockCreateOperation).toHaveBeenCalled();
+      // Should still create message and dispatch the run (without files)
+      expect(mockDispatchHeteroAgent).toHaveBeenCalled();
 
       const userMessageCall = mockMessageCreate.mock.calls.find((call) => call[0].role === 'user');
       // all uploads failed → no fileIds, normalized to undefined (no empty
@@ -483,18 +491,17 @@ describe('AiAgentService.execAgent - file upload handling', () => {
       const userMessageCall = mockMessageCreate.mock.calls.find((call) => call[0].role === 'user');
       expect(userMessageCall![0].files).toEqual(['file-img-1']);
 
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
-      expect(lastMessage.imageList).toEqual([
+      expect(dispatchInput.runAttachments.imageList).toEqual([
         {
           alt: 'photo.png',
           id: 'file-img-1',
           url: 'https://s3.example.com/files/test-user-id/xxx/photo.png',
         },
       ]);
-      expect(lastMessage.videoList).toBeUndefined();
-      expect(lastMessage.fileList).toBeUndefined();
+      expect(dispatchInput.runAttachments.videoList).toBeUndefined();
+      expect(dispatchInput.runAttachments.fileList).toBeUndefined();
       // parseFile is for documents only; image resolution must skip it
       expect(mockParseFile).not.toHaveBeenCalled();
     });
@@ -519,11 +526,10 @@ describe('AiAgentService.execAgent - file upload handling', () => {
 
       expect(mockParseFile).toHaveBeenCalledWith('file-pdf-1');
 
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
-      expect(lastMessage.imageList).toBeUndefined();
-      expect(lastMessage.fileList).toEqual([
+      expect(dispatchInput.runAttachments.imageList).toBeUndefined();
+      expect(dispatchInput.runAttachments.fileList).toEqual([
         {
           content: 'parsed pdf body text',
           fileType: 'application/pdf',
@@ -552,12 +558,11 @@ describe('AiAgentService.execAgent - file upload handling', () => {
         prompt: 'Describe this clip',
       });
 
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
 
-      expect(lastMessage.imageList).toBeUndefined();
-      expect(lastMessage.fileList).toBeUndefined();
-      expect(lastMessage.videoList).toEqual([
+      expect(dispatchInput.runAttachments.imageList).toBeUndefined();
+      expect(dispatchInput.runAttachments.fileList).toBeUndefined();
+      expect(dispatchInput.runAttachments.videoList).toEqual([
         {
           alt: 'clip.mp4',
           id: 'file-vid-1',
@@ -619,8 +624,8 @@ describe('AiAgentService.execAgent - file upload handling', () => {
       const userMessageCall = mockMessageCreate.mock.calls.find((call) => call[0].role === 'user');
       expect(userMessageCall![0].files).toEqual(['file-img-1']);
 
-      // Agent still runs end-to-end.
-      expect(mockCreateOperation).toHaveBeenCalled();
+      // Agent still dispatches end-to-end.
+      expect(mockDispatchHeteroAgent).toHaveBeenCalled();
     });
 
     it('deduplicates repeated fileIds before inserting the messages_files link', async () => {
@@ -650,9 +655,8 @@ describe('AiAgentService.execAgent - file upload handling', () => {
       expect(userMessageCall![0].files).toEqual(['file-img-1']);
 
       // And imageList only contains the image once (no duplicate rendering)
-      const createOpArgs = mockCreateOperation.mock.calls[0][0];
-      const lastMessage = createOpArgs.initialMessages.at(-1);
-      expect(lastMessage.imageList).toHaveLength(1);
+      const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
+      expect(dispatchInput.runAttachments.imageList).toHaveLength(1);
     });
 
     it('no-ops cleanly when fileIds is an empty array', async () => {

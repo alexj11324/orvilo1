@@ -1,6 +1,6 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AuthRequiredModal, { useAuthRequiredModal } from './index';
 
@@ -29,12 +29,17 @@ const electronStore = vi.hoisted(() => ({
   current: {
     clearRemoteServerSyncError: vi.fn(),
     connectRemoteServer: vi.fn(),
-    dataSyncConfig: undefined as { remoteServerUrl?: string; storageMode?: string } | undefined,
+    dataSyncConfig: { active: true, storageMode: 'cloud' } as
+      { active?: boolean; remoteServerUrl?: string; storageMode?: string } | undefined,
     isConnectionDrawerOpen: false,
     isInitRemoteServerConfig: true,
     refreshServerConfig: vi.fn(),
   },
 }));
+
+const originalLocation = window.location;
+const locationAssign = vi.hoisted(() => vi.fn());
+const locationState = vi.hoisted(() => ({ pathname: '/' }));
 
 vi.mock('@orvilo/electron-client-ipc', () => ({
   useWatchBroadcast: (event: string, handler: (payload?: { reason?: string }) => void) => {
@@ -73,10 +78,74 @@ describe('useAuthRequiredModal', () => {
     modalInstance.close.mockClear();
     modalInstance.update.mockClear();
     broadcastHandlers.clear();
+    locationAssign.mockClear();
+    locationState.pathname = '/';
     electronStore.current.clearRemoteServerSyncError.mockClear();
     electronStore.current.connectRemoteServer.mockClear();
+    electronStore.current.dataSyncConfig = { active: true, storageMode: 'cloud' };
+    electronStore.current.isInitRemoteServerConfig = true;
     electronStore.current.refreshServerConfig.mockClear();
     translations.current = {};
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        assign: locationAssign,
+        get pathname() {
+          return locationState.pathname;
+        },
+        search: '',
+        hash: '',
+        origin: originalLocation.origin,
+      },
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+      writable: true,
+    });
+  });
+
+  it('redirects to the login surface instead of the expired modal when no session is live', () => {
+    electronStore.current.dataSyncConfig = { storageMode: 'cloud' };
+
+    render(<AuthRequiredModal />);
+
+    act(() => {
+      broadcastHandlers.get('authorizationRequired')?.({ reason: 'no-token' });
+    });
+
+    expect(createModalMock).not.toHaveBeenCalled();
+    expect(locationAssign).toHaveBeenCalledWith('/onboarding');
+  });
+
+  it('stays put when the signed-out instance is already on /onboarding', () => {
+    electronStore.current.dataSyncConfig = { storageMode: 'cloud' };
+    locationState.pathname = '/onboarding';
+
+    render(<AuthRequiredModal />);
+
+    act(() => {
+      broadcastHandlers.get('authorizationRequired')?.({ reason: 'no-token' });
+    });
+
+    expect(createModalMock).not.toHaveBeenCalled();
+    expect(locationAssign).not.toHaveBeenCalled();
+  });
+
+  it('still opens the modal when a live session expires', () => {
+    render(<AuthRequiredModal />);
+
+    act(() => {
+      broadcastHandlers.get('authorizationRequired')?.({ reason: 'refresh:invalid_grant' });
+    });
+
+    expect(createModalMock).toHaveBeenCalledOnce();
+    expect(locationAssign).not.toHaveBeenCalled();
   });
 
   it('closes the modal when desktop authorization succeeds', () => {

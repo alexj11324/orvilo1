@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
 import { useElectronStore } from '@/store/electron';
+import { buildOnboardingRedirectUrl } from '@/utils/onboardingRedirect';
 
 const log = debug('orvilo-client:auth-required-modal');
 
@@ -160,8 +161,6 @@ const AuthRequiredModal = memo(() => {
       return;
     }
     // Wait until remote sync config has loaded once (avoid a flash before SWR resolves).
-    // Do not gate on `dataSyncConfig.active`: after sign-out `active` is false but 401 + X-Auth-Required
-    // still means the user must re-authenticate; gating on active would suppress the modal forever.
     if (!state.isInitRemoteServerConfig) {
       log(
         'authorizationRequired ignored (remote server config not initialized). reason=%s',
@@ -182,6 +181,30 @@ const AuthRequiredModal = memo(() => {
       // The desktop adapter only owns signals raised on this machine — a web
       // client never mounts this component anyway, and the tRPC path is
       // identical on both.
+      const { dataSyncConfig, isInitRemoteServerConfig } = useElectronStore.getState();
+
+      // "Expired" only exists while a session is live. On a signed-out or
+      // never-authenticated instance the same 401 bursts (in-flight requests,
+      // first-boot probes) carry no session to lose — send the user straight
+      // to the login surface instead of an expiry modal. `/onboarding`
+      // renders LoginStep on signed-out desktop; the current location is
+      // threaded as the post-login callback.
+      if (isInitRemoteServerConfig && !dataSyncConfig?.active) {
+        log(
+          'session-auth-expired with no live session — redirecting to login. source=%s reason=%s',
+          source,
+          reason,
+        );
+        if (window.location.pathname !== '/onboarding') {
+          window.location.assign(
+            buildOnboardingRedirectUrl(
+              window.location.pathname + window.location.search + window.location.hash,
+            ),
+          );
+        }
+        return;
+      }
+
       log('session-auth-expired: opening modal. source=%s reason=%s', source, reason);
       open();
     });

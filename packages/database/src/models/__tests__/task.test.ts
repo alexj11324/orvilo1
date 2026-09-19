@@ -3846,6 +3846,35 @@ describe('TaskModel', () => {
       expect(await bob.getDependencies(secret.id)).toEqual([]);
       expect(await bob.getActivities(secret.id)).toEqual([]);
     });
+
+    it('does not list batch dependencies or dependents of a private-team task the viewer cannot find', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team dependent',
+        name: 'Private-team dependent',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const publicBlocker = await alice.create({
+        instruction: 'Public-team blocker',
+        name: 'Public-team blocker',
+        teamId: publicTeamId,
+        visibility: 'public',
+      });
+      await alice.addDependency(secret.id, publicBlocker.id);
+
+      expect(await alice.getDependenciesByTaskIds([secret.id])).toHaveLength(1);
+      expect((await alice.getDependents(publicBlocker.id)).map((row) => row.taskId)).toContain(
+        secret.id,
+      );
+
+      expect((await bob.findById(publicBlocker.id))?.id).toBe(publicBlocker.id);
+      expect(await bob.getDependenciesByTaskIds([secret.id])).toEqual([]);
+      expect((await bob.getDependents(publicBlocker.id)).map((row) => row.taskId)).not.toContain(
+        secret.id,
+      );
+    });
   });
 
   describe('my tasks filters', () => {

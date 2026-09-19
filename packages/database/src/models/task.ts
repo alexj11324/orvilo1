@@ -3050,17 +3050,25 @@ export class TaskModel {
 
   async getDependenciesByTaskIds(taskIds: string[]) {
     if (taskIds.length === 0) return [];
+    const readableIds = (await this.findByIds(taskIds)).map((row) => row.id);
+    if (readableIds.length === 0) return [];
     return this.db
       .select()
       .from(taskDependencies)
-      .where(and(inArray(taskDependencies.taskId, taskIds), this.depsOwnership()));
+      .where(and(inArray(taskDependencies.taskId, readableIds), this.depsOwnership()));
   }
 
   async getDependents(taskId: string) {
-    return this.db
+    if (!(await this.findById(taskId))) return [];
+    const rows = await this.db
       .select()
       .from(taskDependencies)
       .where(and(eq(taskDependencies.dependsOnId, taskId), this.depsOwnership()));
+    if (rows.length === 0) return [];
+    const readableDependents = new Set(
+      (await this.findByIds(rows.map((row) => row.taskId))).map((row) => row.id),
+    );
+    return rows.filter((row) => readableDependents.has(row.taskId));
   }
 
   /** Missing, trashed, inaccessible, canceled and failed prerequisites all block. */

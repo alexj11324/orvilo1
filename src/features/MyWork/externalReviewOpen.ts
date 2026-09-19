@@ -1,3 +1,11 @@
+import { inboxUrlOpenMode } from '@/features/WorkInbox/inboxOrganize';
+
+/** Only allowlisted https GitHub/Linear URLs become a clickable href. */
+export const externalReviewOpenHref = (openUrl: string | null | undefined): string | null => {
+  if (!openUrl) return null;
+  return inboxUrlOpenMode(openUrl) === 'external' ? openUrl : null;
+};
+
 export const externalReviewIdentifier = (openUrl: string | null | undefined): string | null => {
   if (!openUrl) return null;
   try {

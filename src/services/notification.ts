@@ -41,7 +41,7 @@ class NotificationService {
     params: {
       cursor?: string;
       filter?: 'all' | 'archived' | 'mentions' | 'snoozed' | 'unread';
-      kind?: 'action' | 'update';
+      kind?: 'action' | 'other' | 'priority' | 'update';
       limit?: number;
     } = {},
   ) => {

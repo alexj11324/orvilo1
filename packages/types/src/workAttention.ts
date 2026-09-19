@@ -5,6 +5,8 @@
  * and action-source receipts. These are types only — not live API responses.
  */
 
+import type { NotificationActor, NotificationAgent } from './notification';
+
 export const WORK_ATTENTION_CONTRACT_VERSION = 'nav-attention-v4.1';
 
 export const EVENT_CONSUMERS = {
@@ -20,6 +22,16 @@ export const notificationScopeKey = (workspaceId: string | null | undefined): st
   workspaceId ? `ws:${workspaceId}` : 'personal';
 
 export type NotificationFeedKind = 'action' | 'update';
+
+/**
+ * Presentation buckets the Inbox tabs query by. `action`/`update` mirror the
+ * stored row kind; `priority`/`other` are the Linear-style tabs — priority is
+ * anything still needing you (undecided action or unread mention) and other
+ * carries the rest (updates, decided actions, read mentions).
+ */
+export type NotificationFeedPriority = 'other' | 'priority';
+
+export type NotificationFeedBucket = NotificationFeedKind | NotificationFeedPriority;
 
 export const NOTIFICATION_BULK_ACTIONS = ['archive', 'mark_read'] as const;
 
@@ -37,11 +49,12 @@ const PRESENTATION_FILTERS: readonly NotificationPresentationFilter[] = [
   'unread',
 ];
 const FEED_KINDS: readonly NotificationFeedKind[] = ['action', 'update'];
+const FEED_BUCKETS: readonly NotificationFeedBucket[] = [...FEED_KINDS, 'other', 'priority'];
 
 export const notificationBulkFingerprint = (
   action: NotificationBulkAction,
   chip: NotificationPresentationFilter,
-  kind?: NotificationFeedKind,
+  kind?: NotificationFeedBucket,
 ): string => (kind ? `${action}:${chip}:${kind}` : `${action}:${chip}`);
 
 /** Server-validated Inbox bulk query. `filter` omitted means the All chip. */
@@ -49,7 +62,7 @@ export const parseNotificationBulkFingerprint = (
   action: NotificationBulkAction,
   fingerprint: string,
 ):
-  | { filter?: Exclude<NotificationPresentationFilter, 'all'>; kind?: NotificationFeedKind }
+  | { filter?: Exclude<NotificationPresentationFilter, 'all'>; kind?: NotificationFeedBucket }
   | undefined => {
   const parts = fingerprint.split(':');
   if (parts[0] !== action) return undefined;
@@ -59,8 +72,8 @@ export const parseNotificationBulkFingerprint = (
     chip === 'all' ? undefined : (chip as Exclude<NotificationPresentationFilter, 'all'>);
   if (parts.length === 2) return { filter };
   const kind = parts[2];
-  if (parts.length === 3 && FEED_KINDS.includes(kind as NotificationFeedKind)) {
-    return { filter, kind: kind as NotificationFeedKind };
+  if (parts.length === 3 && FEED_BUCKETS.includes(kind as NotificationFeedBucket)) {
+    return { filter, kind: kind as NotificationFeedBucket };
   }
   return undefined;
 };
@@ -136,6 +149,13 @@ export interface TypedNavigationTarget {
 export interface NotificationFeedCard {
   actionRef?: ActionRef | null;
   activityVersion: number;
+  /**
+   * Who triggered the event — snapshotted at send time. `actor` is a human
+   * member, `agent` an agent run; neither present means a system event. Never
+   * guessed — unknown sources render as the neutral type glyph.
+   */
+  actor?: NotificationActor;
+  agent?: NotificationAgent;
   availableActions: Array<'archive' | 'decide' | 'open' | 'snooze'>;
   content: string;
   /** Verbs the current visitor may send through `workAttention.decide`. */
@@ -160,6 +180,11 @@ export interface NotificationFeedSummary {
   snoozedPendingCount: number;
   /** Unique active, unsnoozed, currently-readable cards — not a sum of the others. */
   unreadBadgeCount: number;
+  /** Unread mentions (category=mention) — badge part of the Priority tab. */
+  unreadMentionCount: number;
+  /** Unread rows in the Other tab: updates plus decided actions — everything
+   *  badge-worthy that Priority does not already claim. */
+  unreadOtherCount: number;
   unreadUpdateCount: number;
 }
 

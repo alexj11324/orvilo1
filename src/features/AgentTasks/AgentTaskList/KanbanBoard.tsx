@@ -160,6 +160,13 @@ export interface KanbanExternalGroups {
 interface KanbanBoardProps {
   /** When set, scopes the board (and task creation) to a single agent. */
   agentId?: string;
+  /**
+   * Where a task created from this board should land. Team boards pass their
+   * teamId so a card made on the team's board is owned by that team; without
+   * it an external board keeps the create entry hidden (an ambiguous
+   * multi-team view must not silently pick one).
+   */
+  createContext?: { teamId?: string };
   /** Overrides the generic "no tasks" copy with the collection's own line. */
   emptyDescription?: string;
   /** Externally-supplied groups — bypasses the task-store fetch entirely. */
@@ -178,8 +185,16 @@ interface KanbanBoardProps {
 }
 
 const KanbanBoard = memo<KanbanBoardProps>((props) => {
-  const { agentId, emptyDescription, external, myTaskScope, options, projectId, routeScope } =
-    props;
+  const {
+    agentId,
+    createContext,
+    emptyDescription,
+    external,
+    myTaskScope,
+    options,
+    projectId,
+    routeScope,
+  } = props;
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEditTaskPerm } = usePermission('create_content');
@@ -693,12 +708,13 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       agentId,
       lockAssignee: !!agentId,
       projectId: kanbanCreateTaskProjectId(projectId),
+      teamId: createContext?.teamId,
       onCreated: (task) => {
         navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
       },
       showInlineToggle: false,
     });
-  }, [agentId, canEditTask, navigate, projectId]);
+  }, [agentId, canEditTask, createContext?.teamId, navigate, projectId]);
 
   // ── Derived layout ─────────────────────────────────────────────
 
@@ -836,8 +852,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                 // "My tasks" offers no create entry (its list view has none
                 // either): a task created here carries neither the member
                 // assignment nor — under `created` — any guarantee it lands
-                // in the column it was started from.
-                groupBy === 'status' && col.key === 'backlog' && !myTaskScope && !external
+                // in the column it was started from. An external board only
+                // shows it when the caller declared where the card belongs.
+                groupBy === 'status' &&
+                col.key === 'backlog' &&
+                !myTaskScope &&
+                (!external || Boolean(createContext?.teamId))
                   ? handleCreateTask
                   : undefined
               }

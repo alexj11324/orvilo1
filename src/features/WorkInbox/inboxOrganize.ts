@@ -1,7 +1,7 @@
 import {
   classifyWorkAttentionActionUrl,
   notificationBulkFingerprint,
-  type NotificationFeedKind,
+  type NotificationFeedBucket,
   type NotificationPresentationFilter,
 } from '@orvilo/types';
 
@@ -19,10 +19,18 @@ export const resolveInboxFilterChip = (value: string | null): InboxFilterChip =>
     ? (value as InboxFilterChip)
     : 'all';
 
-export type InboxTab = 'action' | 'activity';
+/**
+ * Linear-style tabs: Priority is anything still needing you (undecided action
+ * or unread mention), Other is the rest. The stored row kind stays
+ * `action`/`update` — the tab is a priority classification, not a kind alias.
+ */
+export type InboxTab = 'other' | 'priority';
 
-export const resolveInboxTab = (value: string | null): InboxTab =>
-  value === 'activity' ? 'activity' : 'action';
+export const resolveInboxTab = (value: string | null): InboxTab => {
+  // Legacy URLs used `action`/`activity`; they map onto the same buckets.
+  if (value === 'other' || value === 'activity' || value === 'update') return 'other';
+  return 'priority';
+};
 
 export const SNOOZE_HOURS = 4;
 
@@ -64,8 +72,8 @@ export const snoozeUntilForPreset = (preset: InboxSnoozePreset, now = new Date()
 export const inboxBulkFingerprint = (
   action: 'archive' | 'mark_read',
   chip: InboxFilterChip,
-  kind: NotificationFeedKind,
-): string => notificationBulkFingerprint(action, chip, kind);
+  bucket: NotificationFeedBucket,
+): string => notificationBulkFingerprint(action, chip, bucket);
 
 /** Same-app relative paths navigate in-app; allowlisted https opens a new tab. */
 export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' =>

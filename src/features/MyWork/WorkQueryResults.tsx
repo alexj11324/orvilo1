@@ -117,6 +117,11 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface WorkQueryResultsProps {
+  /**
+   * Where the board's create entry should file a new card. Absent means the
+   * surface is ambiguous (a cross-team saved view) and create stays hidden.
+   */
+  createContext?: { teamId?: string };
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
   groupBy?: WorkQueryGroupBy;
@@ -322,6 +327,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
     externalReviews,
+    createContext,
     groupBy,
     groups,
     isFollowed,
@@ -372,6 +378,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           {/* One board component everywhere — this surface only supplies
               groups it already fetched through the work query. */}
           <KanbanBoard
+            createContext={createContext}
             emptyDescription={emptyLabel}
             options={WORK_QUERY_BOARD_OPTIONS}
             routeScope={'global'}

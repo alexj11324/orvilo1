@@ -70,8 +70,8 @@ export default {
   'inbox.actionStale': 'This request changed. Refresh and decide on the current version.',
   'inbox.actionUnknown':
     'The original request did not confirm the outcome. Refresh and try from the source, without repeating the action.',
-  'inbox.actionTab': 'Needs you',
-  'inbox.activityTab': 'Activity',
+  'inbox.otherTab': 'Other',
+  'inbox.priorityTab': 'Priority',
   'inbox.all': 'All notifications',
   'inbox.allStatus': 'All',
   'inbox.approve': 'Approve',

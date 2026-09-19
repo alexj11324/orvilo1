@@ -14,10 +14,15 @@ describe('feedFilterForChip', () => {
 describe('inboxBulkFingerprint', () => {
   it('binds the snapshot to the visible chip so archive-all cannot widen later', () => {
     expect(inboxBulkFingerprint('archive', 'unread', 'update')).toBe('archive:unread:update');
+    expect(inboxBulkFingerprint('mark_read', 'all', 'priority')).toBe('mark_read:all:priority');
     expect(inboxBulkFingerprint('mark_read', 'all', 'action')).toBe('mark_read:all:action');
     expect(parseNotificationBulkFingerprint('archive', 'archive:mentions:update')).toEqual({
       filter: 'mentions',
       kind: 'update',
+    });
+    expect(parseNotificationBulkFingerprint('archive', 'archive:all:priority')).toEqual({
+      filter: undefined,
+      kind: 'priority',
     });
     expect(parseNotificationBulkFingerprint('archive', 'archive:all')).toEqual({
       filter: undefined,

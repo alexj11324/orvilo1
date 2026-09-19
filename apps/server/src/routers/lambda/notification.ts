@@ -127,7 +127,7 @@ export const notificationRouter = router({
       z.object({
         cursor: z.string().optional(),
         filter: z.enum(['all', 'archived', 'mentions', 'snoozed', 'unread']).optional(),
-        kind: z.enum(['action', 'update']).optional(),
+        kind: z.enum(['action', 'other', 'priority', 'update']).optional(),
         limit: z.number().min(1).max(50).default(20),
       }),
     )

@@ -46,10 +46,13 @@ export interface CreateTaskContentProps {
    * inline entry target, so contexts like the Kanban board pass `false` to hide it.
    */
   showInlineToggle?: boolean;
+  /** Owning team for workspace tasks — create entry points on a team surface
+   *  pass it so the issue lands on that team (Linear parity). */
+  teamId?: string;
 }
 
 const CreateTaskContent = memo<CreateTaskContentProps>(
-  ({ agentId, lockAssignee, onCreated, projectId, showInlineToggle = true }) => {
+  ({ agentId, lockAssignee, onCreated, projectId, showInlineToggle = true, teamId }) => {
     const { t } = useTranslation('chat');
     const { close } = useModalContext();
     const { allowed: canCreateTask, reason } = usePermission('create_content');
@@ -134,6 +137,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           name: title.trim() || undefined,
           priority: priority || undefined,
           projectId,
+          teamId,
           // Only send visibility in workspace mode; personal mode ignores it.
           visibility: activeWorkspaceId ? visibility : undefined,
         });
@@ -161,6 +165,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       priority,
       projectId,
       t,
+      teamId,
       title,
       visibility,
     ]);

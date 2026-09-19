@@ -1,7 +1,7 @@
 import type {
   ActionSourceKind,
+  NotificationFeedBucket,
   NotificationFeedCard,
-  NotificationFeedKind,
   NotificationFeedPage,
   NotificationPresentationFilter,
 } from '@orvilo/types';
@@ -27,7 +27,7 @@ export interface InboxFeedDeps {
   input?: {
     cursor?: string;
     filter?: NotificationPresentationFilter;
-    kind?: NotificationFeedKind;
+    kind?: NotificationFeedBucket;
     limit?: number;
   };
   notificationModel: {

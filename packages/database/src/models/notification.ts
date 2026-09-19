@@ -1,7 +1,7 @@
 import type {
   ActionSourceKind,
   NotificationBulkAction,
-  NotificationFeedKind,
+  NotificationFeedBucket,
   NotificationPresentationFilter,
 } from '@orvilo/types';
 import {
@@ -19,6 +19,7 @@ import {
   inArray,
   isNull,
   lt,
+  not,
   notInArray,
   or,
   type SQL,
@@ -139,12 +140,28 @@ export class NotificationModel {
     }
   };
 
+  /**
+   * `kind` is a feed bucket: `action`/`update` mirror the stored column while
+   * `priority`/`other` classify by "still needs you" — a pending action or an
+   * unread mention is priority regardless of row kind, and a card belongs to
+   * exactly one tab (never double-counted).
+   */
   private feedWhere = (opts: {
     filter?: Exclude<NotificationPresentationFilter, 'all'>;
-    kind?: NotificationFeedKind;
+    kind?: NotificationFeedBucket;
   }): SQL[] => {
     const conditions: SQL[] = [...this.scope(), this.resourceReadable()];
-    if (opts.kind === 'action') {
+    if (opts.kind === 'priority' || opts.kind === 'other') {
+      const priorityClause = or(
+        and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
+        and(eq(notifications.category, 'mention'), eq(notifications.isRead, false)),
+      )!;
+      conditions.push(eq(notifications.isArchived, false));
+      conditions.push(opts.kind === 'priority' ? priorityClause : not(priorityClause));
+      if (opts.filter && opts.filter !== 'all') {
+        conditions.push(...this.presentationWhere(opts.filter));
+      }
+    } else if (opts.kind === 'action') {
       conditions.push(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt));
       if (opts.filter === 'archived' || opts.filter === 'snoozed') {
         conditions.push(...this.presentationWhere(opts.filter));
@@ -304,6 +321,12 @@ export class NotificationModel {
         unreadBadgeCount: count(
           sql`case when ${notifications.isArchived} = false and (${notifications.isRead} = false or (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null)) and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
         ),
+        unreadMentionCount: count(
+          sql`case when ${notifications.category} = 'mention' and ${notifications.isRead} = false and ${notifications.isArchived} = false then 1 end`,
+        ),
+        unreadOtherCount: count(
+          sql`case when ${notifications.isRead} = false and ${notifications.isArchived} = false and not (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null) and not (${notifications.category} = 'mention' and ${notifications.isRead} = false) then 1 end`,
+        ),
         unreadUpdateCount: count(
           sql`case when ${notifications.kind} = 'update' and ${notifications.isRead} = false and ${notifications.isArchived} = false then 1 end`,
         ),
@@ -315,6 +338,8 @@ export class NotificationModel {
       pendingActionCount: Number(row?.pendingActionCount ?? 0),
       snoozedPendingCount: Number(row?.snoozedPendingCount ?? 0),
       unreadBadgeCount: Number(row?.unreadBadgeCount ?? 0),
+      unreadMentionCount: Number(row?.unreadMentionCount ?? 0),
+      unreadOtherCount: Number(row?.unreadOtherCount ?? 0),
       unreadUpdateCount: Number(row?.unreadUpdateCount ?? 0),
     };
   }
@@ -323,7 +348,7 @@ export class NotificationModel {
     opts: {
       cursor?: string;
       filter?: NotificationPresentationFilter;
-      kind?: NotificationFeedKind;
+      kind?: NotificationFeedBucket;
       limit?: number;
     } = {},
   ) {
@@ -411,7 +436,7 @@ export class NotificationModel {
     cutoffRevision?: number,
     query: {
       filter?: Exclude<NotificationPresentationFilter, 'all'>;
-      kind?: NotificationFeedKind;
+      kind?: NotificationFeedBucket;
     } = {},
   ) {
     const cutoff = cutoffRevision ?? (await this.snapshotCutoff());
@@ -533,7 +558,7 @@ export class NotificationModel {
     cutoffRevision: number,
     query: {
       filter?: Exclude<NotificationPresentationFilter, 'all'>;
-      kind?: NotificationFeedKind;
+      kind?: NotificationFeedBucket;
     } = {},
   ) {
     const now = new Date();

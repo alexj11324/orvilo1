@@ -270,7 +270,7 @@ export const workAttentionRouter = router({
       z.object({
         cursor: z.string().optional(),
         filter: z.enum(['all', 'archived', 'mentions', 'snoozed', 'unread']).optional(),
-        kind: z.enum(['action', 'update']).optional(),
+        kind: z.enum(['action', 'update', 'priority', 'other']).optional(),
         limit: z.number().min(1).max(50).default(20),
       }),
     )

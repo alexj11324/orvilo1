@@ -71,6 +71,8 @@ export const toFeedCard = (
               : {}),
           }
         : null,
+    actor: row.metadata?.actor,
+    agent: row.metadata?.agent,
     activityVersion: row.activityVersion,
     availableActions: unresolvedAction
       ? ['archive', 'decide', 'open', 'snooze']

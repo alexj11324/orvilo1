@@ -137,6 +137,7 @@ class TaskService {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    teamId?: string;
     visibility?: 'private' | 'public';
   }) => lambdaClient.task.create.mutate(params);
 

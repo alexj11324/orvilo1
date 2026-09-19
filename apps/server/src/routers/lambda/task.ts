@@ -139,6 +139,8 @@ const createSchema = z.object({
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().optional(),
   schedulePattern: z.string().optional(),
+  /** Owning team for workspace tasks — the team's issue-seq allocates the identifier. */
+  teamId: z.string().optional(),
   scheduleTimezone: z.string().optional(),
   // When omitted, the server derives visibility from the parent task or the
   // assignee agent's visibility (private agent → private task). UI surfaces

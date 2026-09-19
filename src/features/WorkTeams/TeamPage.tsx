@@ -13,7 +13,7 @@ import {
 } from '@lobehub/ui/base-ui';
 import type { WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { FolderXIcon, ListChecksIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
+import { FolderXIcon, ListChecksIcon, MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -29,6 +29,7 @@ import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/work
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -243,6 +244,7 @@ const TeamPage = memo(() => {
   const [noProject, setNoProject] = useState(false);
   const [layout, setLayout] = useState<WorkQueryLayout>('list');
   const [duplicateTaskId, setDuplicateTaskId] = useState<string | null>(null);
+  const [creatingView, setCreatingView] = useState(false);
   const {
     data: teamData,
     error: teamError,
@@ -318,8 +320,11 @@ const TeamPage = memo(() => {
     teamProjectsData?.data && 'projects' in teamProjectsData.data
       ? (teamProjectsData.data.projects ?? [])
       : [];
+  // Team context shows the team's own views plus every workspace-shared view
+  // the visitor can read — Linear keeps both reachable from the team page.
   const teamViews = (teamViewsData?.data ?? []).filter(
-    (view) => view.visibility === 'team' && view.teamId === teamId,
+    (view) =>
+      (view.visibility === 'team' && view.teamId === teamId) || view.visibility === 'workspace',
   );
   const firstTeamTasks =
     teamTasksData?.data && 'tasks' in teamTasksData.data ? teamTasksData.data.tasks : [];
@@ -593,12 +598,13 @@ const TeamPage = memo(() => {
               <SkeletonList aria-label={t('teams.loading')} rows={4} />
             ) : teamViewsError && teamViews.length === 0 ? (
               <AsyncError error={teamViewsError} onRetry={() => revalidateTeamViews()} />
-            ) : teamViews.length === 0 ? (
-              <Center flex={1} padding={48}>
-                <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
-              </Center>
             ) : (
               <Flexbox gap={2}>
+                <Flexbox horizontal align={'center'} justify={'flex-end'}>
+                  <Button icon={PlusIcon} size={'small'} onClick={() => setCreatingView(true)}>
+                    {t('savedViews.newView')}
+                  </Button>
+                </Flexbox>
                 {teamViewsError ? (
                   <AsyncError
                     error={teamViewsError}
@@ -606,20 +612,31 @@ const TeamPage = memo(() => {
                     onRetry={() => revalidateTeamViews()}
                   />
                 ) : null}
-                {teamViews.map((view) => (
-                  <WorkspaceLink className={styles.link} key={view.id} to={`/views/${view.id}`}>
-                    <Flexbox horizontal align="center" className={styles.row} gap={8}>
-                      <Flexbox flex={1} style={{ minWidth: 0 }}>
-                        <Text ellipsis weight={500}>
-                          {view.name}
+                {teamViews.length === 0 ? (
+                  <Center flex={1} padding={48}>
+                    <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
+                  </Center>
+                ) : (
+                  teamViews.map((view) => (
+                    <WorkspaceLink className={styles.link} key={view.id} to={`/views/${view.id}`}>
+                      <Flexbox horizontal align="center" className={styles.row} gap={8}>
+                        <Flexbox flex={1} style={{ minWidth: 0 }}>
+                          <Text ellipsis weight={500}>
+                            {view.name}
+                          </Text>
+                        </Flexbox>
+                        <Text fontSize={12} type={'secondary'}>
+                          {view.visibility === 'workspace'
+                            ? t('savedViews.visibilityWorkspace')
+                            : t('savedViews.visibilityTeam')}
+                        </Text>
+                        <Text fontSize={12} type={'secondary'}>
+                          {view.layout}
                         </Text>
                       </Flexbox>
-                      <Text fontSize={12} type={'secondary'}>
-                        {view.layout}
-                      </Text>
-                    </Flexbox>
-                  </WorkspaceLink>
-                ))}
+                    </WorkspaceLink>
+                  ))
+                )}
               </Flexbox>
             )
           ) : null}
@@ -628,6 +645,7 @@ const TeamPage = memo(() => {
               <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
             ) : (
               <WorkQueryResults
+                createContext={{ teamId }}
                 emptyLabel={t('teams.workEmpty')}
                 groups={teamGroups}
                 layout={layout}
@@ -654,6 +672,11 @@ const TeamPage = memo(() => {
           ) : null}
         </WideScreenContainer>
       )}
+      <NewViewModal
+        defaultTeamId={teamId}
+        open={creatingView}
+        onClose={() => setCreatingView(false)}
+      />
       <MarkDuplicateModal
         open={duplicateTaskId !== null}
         taskId={duplicateTaskId}

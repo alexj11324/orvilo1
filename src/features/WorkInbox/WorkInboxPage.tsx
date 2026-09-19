@@ -35,12 +35,13 @@ import {
   MoreHorizontalIcon,
   TimerOffIcon,
 } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -69,6 +70,12 @@ import {
 } from './inboxOrganize';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
 import { useInboxListKeyboard } from './useInboxListKeyboard';
+
+// The shared task body is the IssuePreview — embedded lazily so the inbox list
+// does not pay for it until a task-backed card is actually opened.
+const LazyTaskDetailPage = lazy(() =>
+  import('@/features/AgentTasks').then((module) => ({ default: module.TaskDetailPage })),
+);
 
 const styles = createStaticStyles(({ css }) => ({
   stage: css`
@@ -157,6 +164,16 @@ const styles = createStaticStyles(({ css }) => ({
     height: 1px;
     background: ${cssVar.colorBorderSecondary};
   `,
+  issuePreview: css`
+    overflow: hidden;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+
+    min-height: 480px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 8px;
+  `,
   keptMounted: css`
     pointer-events: none;
     position: absolute;
@@ -165,9 +182,8 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-/* Notification-type glyph standing in for Linear's avatar+type badge: the
-   feed model doesn't carry an actor yet, so the badge shape alone carries the
-   "what happened" read. */
+/* Notification-type glyph is the fallback for system events — human and
+   agent senders render their snapshotted avatar instead (feed card actor). */
 const INBOX_TYPE_ICON: Record<string, LucideIcon> = {
   acp_permission: KeyRoundIcon,
   mention: AtSignIcon,
@@ -208,7 +224,7 @@ const WorkInboxPage = memo(() => {
         (prev) => {
           const next = new URLSearchParams(prev);
           if (patch.tab !== undefined) {
-            if (patch.tab === 'action') next.delete('tab');
+            if (patch.tab === 'priority') next.delete('tab');
             else next.set('tab', patch.tab);
           }
           if (patch.filter !== undefined) {
@@ -227,7 +243,9 @@ const WorkInboxPage = memo(() => {
     [setSearchParams],
   );
 
-  const kind = tab === 'action' ? 'action' : 'update';
+  // `kind` is the feed bucket: the tab queries the priority classification
+  // (pending action or unread mention) rather than the stored row kind.
+  const kind = tab;
   const filter = feedFilterForChip(filterChip);
   const { data, error, isLoading } = useClientDataSWR(
     inboxKeys.feed(workspaceId, kind, filter, undefined),
@@ -279,6 +297,8 @@ const WorkInboxPage = memo(() => {
     () => cards.find((card) => card.notificationId === selectedId) ?? null,
     [cards, selectedId],
   );
+  const selectedTaskId =
+    selected?.safeNavigation?.kind === 'task' ? selected.safeNavigation.taskId : undefined;
   const draftKey = selected
     ? `${workspaceId ?? 'personal'}:${selected.notificationId}:${selected.activityVersion ?? 0}`
     : null;
@@ -314,14 +334,24 @@ const WorkInboxPage = memo(() => {
       .markReadObserved(selectedNotificationId, selectedActivityVersion)
       .then(() => {
         // The receipt drives badge/summary invalidation — selection alone is
-        // never treated as a completed read.
+        // never treated as a completed read. The feed row refreshes too so
+        // the unread dot clears at the same moment the badge does.
         void mutate(inboxKeys.feedSummary(workspaceId));
         void mutate(inboxKeys.unreadCount(workspaceId));
+        void mutate(inboxKeys.feed(workspaceId, kind, filter, undefined));
       })
       .catch(() => {
         toast.error(t('inbox.organizeFailed'));
       });
-  }, [markSelectedRead, selectedActivityVersion, selectedNotificationId, t, workspaceId]);
+  }, [
+    filter,
+    kind,
+    markSelectedRead,
+    selectedActivityVersion,
+    selectedNotificationId,
+    t,
+    workspaceId,
+  ]);
 
   const refresh = useCallback(async () => {
     await Promise.all([
@@ -518,13 +548,15 @@ const WorkInboxPage = memo(() => {
               >
                 <TabsList>
                   <TabsIndicator />
-                  <TabsTab value="action">
-                    {t('inbox.actionTab')}
-                    {summary?.pendingActionCount ? ` ${summary.pendingActionCount}` : ''}
+                  <TabsTab value="priority">
+                    {t('inbox.priorityTab')}
+                    {(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)
+                      ? ` ${(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)}`
+                      : ''}
                   </TabsTab>
-                  <TabsTab value="activity">
-                    {t('inbox.activityTab')}
-                    {summary?.unreadUpdateCount ? ` ${summary.unreadUpdateCount}` : ''}
+                  <TabsTab value="other">
+                    {t('inbox.otherTab')}
+                    {summary?.unreadOtherCount ? ` ${summary.unreadOtherCount}` : ''}
                   </TabsTab>
                 </TabsList>
               </TabsRoot>
@@ -594,9 +626,18 @@ const WorkInboxPage = memo(() => {
                   onClick={() => selectCard(card.notificationId, true)}
                 >
                   <Flexbox horizontal align={'center'} gap={10}>
-                    <span className={styles.typeGlyph}>
-                      <Icon icon={inboxCardIcon(card)} size={14} />
-                    </span>
+                    {card.actor || card.agent ? (
+                      <Avatar
+                        avatar={card.actor?.avatar ?? card.agent?.avatar}
+                        background={card.agent?.backgroundColor}
+                        name={card.actor?.name ?? card.agent?.name}
+                        size={20}
+                      />
+                    ) : (
+                      <span className={styles.typeGlyph}>
+                        <Icon icon={inboxCardIcon(card)} size={14} />
+                      </span>
+                    )}
                     {card.read ? null : <span className={styles.unreadDot} />}
                     <Flexbox flex={1} style={{ minWidth: 0 }}>
                       <Text ellipsis weight={card.read ? 400 : 600}>
@@ -751,6 +792,16 @@ const WorkInboxPage = memo(() => {
                   </DropdownMenu>
                 </Flexbox>
               </Flexbox>
+              {selectedTaskId ? (
+                // Task-backed cards open the shared issue body in place —
+                // properties, activity and comments work without leaving the
+                // inbox; the action card above stays the request itself.
+                <div className={styles.issuePreview}>
+                  <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
+                    <LazyTaskDetailPage showTaskAgentPanelToggle={false} taskId={selectedTaskId} />
+                  </Suspense>
+                </div>
+              ) : null}
             </>
           )}
         </Flexbox>

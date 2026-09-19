@@ -16,6 +16,11 @@ import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEdit
 import { builderToFilter } from './workQueryBuilder';
 
 interface NewViewModalProps {
+  /**
+   * When opened from a team surface the share row starts scoped to that team —
+   * the visitor can still widen to workspace/private before saving.
+   */
+  defaultTeamId?: string;
   onClose: () => void;
   open: boolean;
 }
@@ -34,7 +39,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
  * name + share → save lands on the new view. Nothing is persisted before the
  * explicit save (cancel leaves no draft behind).
  */
-const NewViewModal = memo<NewViewModalProps>(({ onClose, open }) => {
+const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
@@ -44,8 +49,8 @@ const NewViewModal = memo<NewViewModalProps>(({ onClose, open }) => {
     groupBy: 'none',
     layout: 'list',
     name: '',
-    teamId: null,
-    visibility: 'private',
+    teamId: defaultTeamId ?? null,
+    visibility: defaultTeamId ? 'team' : 'private',
   });
   const [preview, setPreview] = useState<{ titles: string[]; total: number } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -58,12 +63,12 @@ const NewViewModal = memo<NewViewModalProps>(({ onClose, open }) => {
         groupBy: 'none',
         layout: 'list',
         name: '',
-        teamId: null,
-        visibility: 'private',
+        teamId: defaultTeamId ?? null,
+        visibility: defaultTeamId ? 'team' : 'private',
       });
       setPreview(null);
     }
-  }, [open]);
+  }, [defaultTeamId, open]);
 
   const query = useMemo(() => draftQuery(state), [state]);
 

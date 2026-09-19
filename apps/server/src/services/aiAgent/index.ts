@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import type { OrviloDatabase } from '@orvilo/database';
 import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';

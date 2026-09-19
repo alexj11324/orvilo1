@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 
 import { MessageModel } from '@/database/models/message';
 import { InMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
@@ -36,7 +36,7 @@ import type {
 const DELEGATED_RUN_WAIT_MS = 5 * 60_000;
 const DELEGATED_RUN_POLL_MS = 2_000;
 
-// Mirrors `isParkedStatus` in @orvilo/agent-runtime — kept local because this
+// Mirrors `isParkedStatus` in @orvilo/agent-execution — kept local because this
 // package must not take a runtime dependency on the server-side runtime bundle.
 const isParked = (status: AgentState['status']): boolean =>
   status === 'waiting_for_human' || status === 'waiting_for_async_tool';

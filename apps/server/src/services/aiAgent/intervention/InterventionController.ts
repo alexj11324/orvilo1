@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import type { OrviloDatabase } from '@orvilo/database';
 import {
   isBuiltinHeterogeneousType,

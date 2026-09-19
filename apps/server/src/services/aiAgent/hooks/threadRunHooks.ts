@@ -1,4 +1,4 @@
-import type { AgentHookEvent, AgentState } from '@orvilo/agent-runtime';
+import type { AgentHookEvent, AgentState } from '@orvilo/agent-execution';
 import { ThreadStatus } from '@orvilo/types';
 import debug from 'debug';
 
@@ -476,5 +476,5 @@ export function createGroupActionMemberBridgeHook(
 
 /**
  * Calculate total tokens from AgentState usage object
- * AgentState.usage is of type Usage from @orvilo/agent-runtime
+ * AgentState.usage is of type Usage from @orvilo/agent-execution
  */

@@ -1,4 +1,4 @@
-import { type AgentState, isParkedStatus } from '@orvilo/agent-runtime';
+import { type AgentState, isParkedStatus } from '@orvilo/agent-execution';
 import { parse } from '@orvilo/conversation-flow';
 import { asyncToolResumeCounter } from '@orvilo/observability-otel/modules/agent-runtime';
 import { type ChatToolPayload } from '@orvilo/types';

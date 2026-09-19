@@ -1,5 +1,4 @@
-import type { ToolRunResult } from '@orvilo/agent-runtime/src/transport/tool';
-import type { AgentHookEvent, ToolCallHookEvent } from '@orvilo/agent-runtime/src/types/hooks';
+import type { AgentHookEvent, ToolCallHookEvent, ToolRunResult } from '@orvilo/agent-execution';
 
 import type { RuntimeChaosController } from './controller';
 import { delayWithAbort } from './effects';

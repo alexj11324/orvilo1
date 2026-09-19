@@ -1,4 +1,4 @@
-import { type AgentState } from '@orvilo/agent-runtime';
+import { type AgentState } from '@orvilo/agent-execution';
 import { dispatchWorkRegistrationIntent } from '@orvilo/builtin-tools/workRegistration';
 import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
 import {

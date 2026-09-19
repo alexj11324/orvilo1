@@ -3,10 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { isMobileNavRoute } from './index';
 
 describe('isMobileNavRoute', () => {
-  it('keeps the tab bar on the task board, which is where the Tasks tab lands', () => {
-    // The tab bar is the only navigation a phone viewport gets; losing it on the
-    // destination its own tab points at would strand the user there.
-    expect(isMobileNavRoute('/tasks', null)).toBe(true);
+  it('keeps the tab bar on the work inbox, which is where the Inbox tab lands', () => {
+    expect(isMobileNavRoute('/inbox', null)).toBe(true);
+    expect(isMobileNavRoute('/lobe-team/inbox', 'lobe-team')).toBe(true);
   });
 
   it('keeps the tab bar on the personal destinations', () => {
@@ -23,6 +22,12 @@ describe('isMobileNavRoute', () => {
 
   it('does not hide the tab bar on a nested workspace route it covers', () => {
     expect(isMobileNavRoute('/lobe-team/me', 'lobe-team')).toBe(true);
+  });
+
+  it('keeps the tab bar on My issues, Views and Teams', () => {
+    expect(isMobileNavRoute('/my-issues', null)).toBe(true);
+    expect(isMobileNavRoute('/lobe-team/views/view-1', 'lobe-team')).toBe(true);
+    expect(isMobileNavRoute('/lobe-team/teams/team-1', 'lobe-team')).toBe(true);
   });
 
   it('still hides the tab bar where it never belonged', () => {

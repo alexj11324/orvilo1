@@ -6,7 +6,8 @@
   ],
   "baseSha": "d02f13f11be08921014aa54e523ac3c23184680c",
   "behaviorDelivered": [
-    "Unified routes /inbox /my-work /views /teams; Tasks/Projects/Automation kept",
+    "Unified routes /inbox /my-work /views /teams; Tasks/Projects/Automation stay as deep links under Workspace, not reorderable primary IA",
+    "Fixed primary IA: inbox / my-work / reviews + agent / workspace / favorites / teams accordions (Devin 623f670c)",
     "Migrations 0175_work_attention and 0176_work_attention_triage_bulk",
     "Versioned inbox read/archive/snooze/bulk; independent event_consumer_receipts",
     "ActionSourceRegistry decide path including ownership transfer and ACP intervention",
@@ -85,8 +86,8 @@
     "src/features/SavedViews/SavedViewsPage.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "c24608a4",
-  "implementationHeadBeforeDocs": "c24608a4",
+  "headSha": "5e793f23",
+  "implementationHeadBeforeDocs": "5e793f23",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

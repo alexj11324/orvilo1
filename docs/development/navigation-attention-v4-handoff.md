@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `4ab22fd2` `♻️ refactor(nav): keep visit recents as the only command-menu source`                                                                                                                                          |
+| 实施 HEAD（本交接提交之前）      | `e88f0359` `🐛 fix(nav): hide team recents and search in personal mode`                                                                                                                                                    |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -73,14 +73,14 @@
 - `workAttention.search` / `searchTasks` / `searchProjects` 上限 `WORK_SEARCH_MAX_PER_TYPE`（200）；CommandMenu 仍混合 5 / 带类型 50；`TeamsPage` 搜索框走 sidecar，不传 FTS `type:`
 - `NavItem` `@media (hover: none)` 强制可见 `.nav-item-actions`
 - CommandMenu 最近访问只走访问记录：`RecentModel.queryRecent` 的 project/savedView/team/task union；`RecentsCommands` 开菜单时懒拉 `recentService.getAll(8)`。**不要**再渲染 `workAttention.recentWork`（最近更新）第二组；该 TRPC /helper 已删
-- 个人模式（`!useActiveWorkspaceId()`）`recentTypesForWorkspace` 不含 `team`；Navigate 与 `useNavLayout` 也不再露出 Teams（侧栏原先已藏）
+- 个人模式（`!useActiveWorkspaceId()`）`recentTypesForWorkspace` 不含 `team`；Navigate 与 `useNavLayout` 也不再露出 Teams（侧栏原先已藏）。Home recents 轨道 / 抽屉和 CommandMenu 工作搜索同样不拉 team
 - Task / Team / Project / Saved View 共用 `WorkFavoriteButton`；侧栏收藏可 unpin
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-**已全部落地。** 只剩 NICE（可后做）：NAV02 原生通知矩阵、收藏列表 overflow 折叠、Home recents 轨道仍按 `RECENT_SIDEBAR_TYPES` 拉 team（个人模式 CommandMenu 已滤掉）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。
+**已全部落地。** 只剩 NICE（可后做）：NAV02 原生通知矩阵、收藏列表 overflow 折叠、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。
 
 ## 给下一刀
 
@@ -133,6 +133,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `d6560eb7`（CommandMenu 跨类型 recents + `recent.test.ts` work-type arms）：lint 干净，38 passed。不是 64× AC。
 - pin / 个人模式藏 Teams：lint 干净，`bun run check` 改动文件 55 passed。不是 64× AC。
 - `4ab22fd2`：CommandMenu 只保留访问 recents；个人模式不含 team；删 `workAttention.recentWork`。不是 64× AC。
+- `e88f0359`：个人模式 Home recents / CommandMenu 工作搜索不拉 team。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

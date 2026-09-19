@@ -17,7 +17,7 @@
     "Inbox NotificationFeedPage envelope with live titles and partial Alert",
     "workAttention.search max 200, TeamsPage search box, NavItem hover:none",
     "CommandMenu recents via RecentModel visit feed only; workAttention.recentWork removed",
-    "Personal-mode omits team recents and hides Teams in CommandMenu Navigate and useNavLayout",
+    "Personal-mode omits team recents (CommandMenu + Home recents) and hides Teams in Navigate and useNavLayout",
     "Pin/unpin on task, team, project, saved view; favorites list can unpin",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
@@ -49,7 +49,7 @@
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
-  "implementationHeadBeforeDocs": "4ab22fd2",
+  "implementationHeadBeforeDocs": "e88f0359",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",
@@ -71,7 +71,6 @@
   "targetBranch": "canary",
   "unverified": [
     "NAV02 Electron native notification click matrix",
-    "Home recents rail still requests team types in personal mode",
     "ACCEPTANCE.md 64 rows still NOT_RUN",
     "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"
   ],

@@ -30,8 +30,8 @@
  *   fixture.mjs compose --subject topic:tpc_xxx --slug <slug> [--title "..."]
  *                       [--focus "..."] [--entry "..."] <check-id> [<check-id>...]
  *       Assemble a report-shaped round dir from the given checks:
- *       <report-root>/topic-tpc_xxx/<ts>-<slug>/  (ready for
- *       `lh acceptance run ingest <dir>`). Files referenced by case.evidence
+ *       <report-root>/topic-tpc_xxx/<ts>-<slug>/  (ready to attach as the
+ *       round's evidence). Files referenced by case.evidence
  *       (seed/…) are copied into the round's assets/<check-id>/ and paths
  *       rewritten. Prints the dir path.
  *

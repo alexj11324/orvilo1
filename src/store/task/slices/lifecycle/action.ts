@@ -52,37 +52,6 @@ export class TaskLifecycleSliceActionImpl {
     if (activeTaskId) await internal_refreshTaskDetail(activeTaskId);
   };
 
-  /**
-   * Send a steering message into a topic's conversation. While the run is
-   * live the server injects it for the next step (`injected`); when the run
-   * cannot consume messages it answers `requiresInterrupt` and the caller
-   * re-invokes with `interrupt: true`; an idle topic is continued
-   * (`continued`), which flips the task back to running — refresh the board
-   * and detail so both move.
-   */
-  steerTopic = async (
-    id: string,
-    params: { fileIds?: string[]; interrupt?: boolean; message: string; topicId: string },
-  ): Promise<Awaited<ReturnType<typeof taskService.steerTopic>>> => {
-    const result = await taskService.steerTopic(id, params);
-    if (result.mode === 'continued') {
-      const refreshResults = await Promise.allSettled([
-        this.#get().internal_refreshTaskDetail(id),
-        this.#get().refreshTaskList(),
-      ]);
-      for (const refreshResult of refreshResults) {
-        if (refreshResult.status === 'rejected') {
-          log(
-            'Failed to refresh after steer continuation for task %s: %O',
-            id,
-            refreshResult.reason,
-          );
-        }
-      }
-    }
-    return result;
-  };
-
   deleteTopic = async (topicId: string): Promise<void> => {
     await taskService.deleteTopic(topicId);
     const { activeTaskId, internal_refreshTaskDetail } = this.#get();

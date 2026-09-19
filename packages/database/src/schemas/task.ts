@@ -396,7 +396,7 @@ export const taskTopics = pgTable(
     dispatchFence: integer('dispatch_fence'),
     // Fencing token for the delegated-execution occupancy on this run —
     // advanced by `claimExecutionEpoch` when a delegated run registers; the
-    // runner asserts it via `assertExecutionEpoch` before the registration
+    // runner asserts it via `assertMayCommit` before the registration
     // commits, so a superseded delegation cannot land its dispatch.
     executionEpoch: integer('execution_epoch').notNull().default(0),
     // Soft reference to `execution_grants.id` (the grant table points back at

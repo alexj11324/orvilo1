@@ -1,8 +1,8 @@
 // @vitest-environment node
+import type { TaskItem } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { TaskItem } from '@orvilo/types';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -76,13 +76,15 @@ const setupHappyPath = (task: TaskItem, execResult: unknown) => {
   return { execAgent, interruptTask };
 };
 
-const newRunner = (overrides: {
-  assertExecutionEpoch?: ReturnType<typeof vi.fn>;
-  claimExecutionEpoch?: ReturnType<typeof vi.fn>;
-  db?: unknown;
-  getAgentModelConfig?: ReturnType<typeof vi.fn>;
-  getBuiltinAgent?: ReturnType<typeof vi.fn>;
-} = {}) => {
+const newRunner = (
+  overrides: {
+    assertMayCommit?: ReturnType<typeof vi.fn>;
+    claimExecutionEpoch?: ReturnType<typeof vi.fn>;
+    db?: unknown;
+    getAgentModelConfig?: ReturnType<typeof vi.fn>;
+    getBuiltinAgent?: ReturnType<typeof vi.fn>;
+  } = {},
+) => {
   const db = (overrides.db ?? {}) as {
     transaction?: (callback: (tx: unknown) => Promise<void>) => Promise<void>;
   };
@@ -94,7 +96,7 @@ const newRunner = (overrides: {
     getBuiltinAgent: overrides.getBuiltinAgent ?? vi.fn(),
   };
   const delegationService = {
-    assertExecutionEpoch: overrides.assertExecutionEpoch ?? vi.fn().mockResolvedValue(undefined),
+    assertMayCommit: overrides.assertMayCommit ?? vi.fn().mockResolvedValue(undefined),
     claimExecutionEpoch: overrides.claimExecutionEpoch ?? vi.fn().mockResolvedValue(7),
   };
   (service as unknown as { agentModel: unknown }).agentModel = agentModel;
@@ -123,10 +125,10 @@ describe('TaskRunnerService delegated runs', () => {
     await service.runTask(runParams);
 
     // The dispatch binds the delegate — the stored assignee never executes.
-    expect(execAgent).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: 'agt_delegate' }),
+    expect(execAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agt_delegate' }));
+    expect(execAgent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'agt_assignee' }),
     );
-    expect(execAgent).not.toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agt_assignee' }));
     // Its model snapshot is pinned from the delegate, not the assignee.
     expect(agentModel.getAgentModelConfig).toHaveBeenCalledWith('agt_delegate');
     expect(agentModel.getBuiltinAgent).not.toHaveBeenCalled();
@@ -140,7 +142,7 @@ describe('TaskRunnerService delegated runs', () => {
       },
       expect.anything(),
     );
-    expect(delegationService.assertExecutionEpoch).toHaveBeenCalledWith({
+    expect(delegationService.assertMayCommit).toHaveBeenCalledWith({
       epoch: 7,
       grantId: 'grant-1',
       taskId: 'task-1',
@@ -161,9 +163,7 @@ describe('TaskRunnerService delegated runs', () => {
 
     // A delegated run on a human-assigned task must still run the delegate —
     // the inbox fallback would silently substitute a different principal.
-    expect(execAgent).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: 'agt_delegate' }),
-    );
+    expect(execAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agt_delegate' }));
     expect(agentModel.getBuiltinAgent).not.toHaveBeenCalled();
   });
 
@@ -174,12 +174,15 @@ describe('TaskRunnerService delegated runs', () => {
       success: true,
       topicId: 'tpc_1',
     });
-    const assertExecutionEpoch = vi
+    const assertMayCommit = vi
       .fn()
       .mockRejectedValue(
-        new TRPCError({ code: 'CONFLICT', message: 'Execution superseded by a newer delegation epoch' }),
+        new TRPCError({
+          code: 'CONFLICT',
+          message: 'Execution superseded by a newer delegation epoch',
+        }),
       );
-    const { service } = newRunner({ assertExecutionEpoch });
+    const { service } = newRunner({ assertMayCommit });
     const updateHeartbeat = vi.mocked(TaskModel.prototype.updateHeartbeat);
 
     await expect(service.runTask(runParams)).rejects.toMatchObject({ code: 'CONFLICT' });

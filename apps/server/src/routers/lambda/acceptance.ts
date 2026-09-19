@@ -2,12 +2,10 @@ import {
   acceptanceCheckReviewActions,
   acceptanceRejectIntents,
   acceptanceSubjectTypes,
-  acceptanceVisibilities,
   reviewAdjudications,
   reviewProposalEdits,
 } from '@orvilo/const/verify';
 import type { AcceptanceAttachment } from '@orvilo/types';
-import { verifyCheckDefinitionSchema } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
@@ -18,7 +16,6 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AcceptanceFlowModel } from '@/database/models/acceptanceFlow';
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { ProjectModel } from '@/database/models/project';
 import { VerifyReviewPredictionModel } from '@/database/models/verifyReviewPrediction';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -46,50 +43,7 @@ import {
 } from '@/server/services/verify';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
-import { canManageAcceptance, filterManageableAcceptances } from './_helpers/acceptanceWriteScope';
-import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
-
-const flowDefinitionSchema = z.object({
-  title: z.string().min(1).max(200),
-  entryNodeId: z.string().uuid(),
-  nodes: z
-    .array(
-      z.object({
-        id: z.string().uuid(),
-        criterionId: z.string().uuid().optional(),
-        subFlowId: z.string().uuid().optional(),
-        check: z
-          .object({
-            id: z.string().uuid(),
-            title: z.string().min(1).max(200),
-            description: z.string().optional(),
-            definition: verifyCheckDefinitionSchema,
-          })
-          .optional(),
-        overrides: z
-          .object({
-            required: z.boolean().optional(),
-            onFail: z.enum(['manual', 'auto_repair']).optional(),
-            fixtureData: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
-          })
-          .optional(),
-      }),
-    )
-    .min(1)
-    .max(100),
-  edges: z
-    .array(
-      z.object({
-        id: z.string().uuid(),
-        sourceNodeId: z.string().uuid(),
-        targetNodeId: z.string().uuid(),
-        trigger: z.string().min(1).max(1000),
-        condition: z.string().max(2000).optional(),
-        required: z.boolean(),
-      }),
-    )
-    .max(300),
-});
+import { canManageAcceptance } from './_helpers/acceptanceWriteScope';
 
 const subjectTypeSchema = z.enum(acceptanceSubjectTypes);
 
@@ -170,8 +124,6 @@ const canReadAcceptance = async (
 };
 
 /** Max rows one multi-select sweep may touch — the list itself is capped at 200. */
-const ACCEPTANCE_BATCH_LIMIT = 200;
-const PURGE_BATCH_CONCURRENCY = 4;
 const PURGE_PREVIEW_LIMIT = 20;
 
 const acceptanceStatusOverrideSchema = z.enum(['delivered', 'accepted', 'closed', 'rejected']);
@@ -225,99 +177,6 @@ const applyAcceptanceStatus = async (
 };
 
 export const acceptanceRouter = router({
-  regroupChecks: acceptanceWriteProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        expectedVersion: z.number().int().nonnegative(),
-        groups: z
-          .array(
-            z.object({
-              title: z.string().trim().min(1).max(200),
-              checkItemIds: z.array(z.string().min(1)).min(1).max(1000),
-            }),
-          )
-          .max(100),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { service } = await resolveAcceptanceForWrite(ctx, input.id);
-      return service.regroupChecks(input.id, input.groups, input.expectedVersion);
-    }),
-  publishFlow: acceptanceWriteProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        definition: flowDefinitionSchema,
-        flowId: z.string().uuid().optional(),
-        expectedHash: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance } = await resolveAcceptanceForWrite(ctx, input.id);
-      return new AcceptanceFlowModel(ctx.serverDB, acceptance.userId).publish(
-        input.id,
-        input.definition,
-        input.flowId,
-        input.expectedHash,
-      );
-    }),
-  deleteFlow: acceptanceWriteProcedure
-    .input(z.object({ id: z.string().uuid(), flowId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-      const result = await new AcceptanceFlowModel(ctx.serverDB, acceptance.userId).delete(
-        input.id,
-        input.flowId,
-      );
-      await service.recomputeStatus(input.id);
-      return result;
-    }),
-  startFlow: acceptanceWriteProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        flowId: z.string().uuid(),
-        sourceRunId: z.string().uuid().optional(),
-        verifyRunId: z.string().uuid().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-      const result = await new AcceptanceFlowModel(ctx.serverDB, acceptance.userId).start(
-        input.id,
-        input.flowId,
-        input.verifyRunId,
-        input.sourceRunId,
-      );
-      await service.recomputeStatus(input.id);
-      return result;
-    }),
-  recordFlowStep: acceptanceWriteProcedure
-    .input(
-      z.object({
-        id: z.string().uuid(),
-        verifyRunId: z.string().uuid(),
-        checkItemId: z.string().min(1),
-        observation: z.string().min(1).max(20000),
-        verdict: z.enum(['passed', 'failed', 'uncertain', 'blocked']),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance } = await resolveAcceptanceForWrite(ctx, input.id);
-      return new AcceptanceFlowModel(ctx.serverDB, acceptance.userId).record(input.id, input);
-    }),
-  completeFlow: acceptanceWriteProcedure
-    .input(z.object({ id: z.string().uuid(), verifyRunId: z.string().uuid() }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-      const result = await new AcceptanceFlowModel(ctx.serverDB, acceptance.userId).complete(
-        input.id,
-        input.verifyRunId,
-      );
-      await service.recomputeStatus(input.id);
-      return result;
-    }),
   reviewFlowStep: acceptanceWriteProcedure
     .input(
       z.object({
@@ -374,59 +233,6 @@ export const acceptanceRouter = router({
    * Idempotent when the run is already chained to the same acceptance (the
    * ingest CLI re-runs against a remembered session).
    */
-  attachRun: acceptanceWriteProcedure
-    .input(z.object({ acceptanceId: z.string(), verifyRunId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.acceptanceId);
-
-      // The attach rewrites the RUN's acceptance_id/round_index too — and a
-      // workspace-visible run is not necessarily the caller's. Creator-scope it
-      // like every other verify write, or a member could chain another
-      // member's report onto their aggregate.
-      const run = await new VerifyRunModel(
-        ctx.serverDB,
-        ctx.userId,
-        ctx.workspaceId ?? undefined,
-      ).findById(input.verifyRunId);
-      if (!run) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Verification run not found' });
-      }
-      assertWorkspaceRowManageable(ctx, run.userId, 'verify run');
-
-      try {
-        return await service.attachRun(run.id, acceptance.id);
-      } catch (error) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: error instanceof Error ? error.message : 'Failed to attach run',
-        });
-      }
-    }),
-
-  /** Get (or lazily create) the aggregate for a subject — the ingest entry point. */
-  ensure: acceptanceWriteProcedure
-    .input(
-      z.object({
-        requirement: z.string().max(2000).optional(),
-        subjectId: z.string(),
-        subjectType: subjectTypeSchema,
-        title: z.string().trim().min(1).max(500).optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        return await ctx.acceptanceService.ensureForSubject(input.subjectType, input.subjectId, {
-          requirement: input.requirement,
-          title: input.title,
-        });
-      } catch (error) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: error instanceof Error ? error.message : 'Acceptance subject not found',
-        });
-      }
-    }),
-
   /** The acceptance row for a subject, or null when none exists yet. */
   getBySubject: acceptanceProcedure
     .input(z.object({ subjectId: z.string(), subjectType: subjectTypeSchema }))
@@ -832,102 +638,6 @@ export const acceptanceRouter = router({
    * asks for the wide end because a target it cannot list is a target the user
    * cannot merge into.
    */
-  list: acceptanceProcedure
-    .input(
-      z
-        .object({
-          filter: z.enum(['active', 'all', 'completed']).optional(),
-          limit: z.number().int().min(1).max(200).optional(),
-          projectId: z.string().optional(),
-          q: z.string().max(200).optional(),
-        })
-        .optional(),
-    )
-    .query(async ({ ctx, input }) => ctx.acceptanceService.listWithSubjects(input)),
-
-  /**
-   * One keyset page of the same feed — what the list panel scrolls.
-   *
-   * Speaks the same `filter` vocabulary as `list`, applied in the query, so a
-   * page of "in progress" is a full page of in-progress rows. There is no
-   * paged search on purpose: a title search must span the whole owned set,
-   * which `list` already does — the panel asks that one while a query is live.
-   */
-  listPage: acceptanceProcedure
-    .input(
-      z
-        .object({
-          cursor: z.string().optional(),
-          filter: z.enum(['active', 'all', 'completed']).optional(),
-          limit: z.number().int().min(1).max(100).optional(),
-          projectId: z.string().optional(),
-        })
-        .optional(),
-    )
-    .query(async ({ ctx, input }) =>
-      ctx.acceptanceService.listPageWithSubjects({
-        cursor: input?.cursor,
-        filter: input?.filter,
-        limit: input?.limit,
-        projectId: input?.projectId,
-      }),
-    ),
-
-  /**
-   * Fold one acceptance into another: the source's verification rounds (and
-   * with them its checks, verdicts and evidence) re-chain onto the target, and
-   * the source entry is deleted.
-   *
-   * Both sides are creator-scoped like every other verify write — a merge
-   * rewrites BOTH aggregates, so a workspace member must not be able to fold
-   * another member's acceptance into (or out of) their own.
-   */
-  merge: acceptanceWriteProcedure
-    .input(z.object({ sourceId: z.string(), targetId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      // A merge rewrites BOTH aggregates, so both have to authorize; the source
-      // owns the rows that move, so its scope is the one the write runs in.
-      const { acceptance: source, service } = await resolveAcceptanceForWrite(ctx, input.sourceId);
-      const { acceptance: target } = await resolveAcceptanceForWrite(ctx, input.targetId);
-
-      try {
-        return await service.merge(source.id, target.id);
-      } catch (error) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: error instanceof Error ? error.message : 'Failed to merge acceptance',
-        });
-      }
-    }),
-
-  /**
-   * Acceptance status for a known set of subjects, in one read.
-   *
-   * `list` is recency-capped and spans every subject type, so a list surface
-   * that derived per-row state from it would silently mis-read any subject
-   * pushed past the cap. This answers about exactly the subjects asked for.
-   */
-  listStatusesBySubjects: acceptanceProcedure
-    .input(
-      z.object({
-        subjectIds: z.array(z.string()).max(200),
-        subjectType: subjectTypeSchema,
-      }),
-    )
-    .query(async ({ ctx, input }) =>
-      ctx.acceptanceService.acceptanceModel.listStatusesBySubjects(
-        input.subjectType,
-        input.subjectIds,
-      ),
-    ),
-
-  /**
-   * Feedback addressed to a check GROUP (business category) rather than any
-   * single check — for concerns that don't invalidate an individual check
-   * (which may well be accepted) but still need to reach the next round.
-   * Append-only, stamped with the current round for the same staleness rule
-   * as check-level rejects.
-   */
   addGroupFeedback: acceptanceWriteProcedure
     .input(
       z.object({
@@ -1171,51 +881,6 @@ export const acceptanceRouter = router({
    * scope-dependent (personal → public, workspace → private); this is the
    * deliberate override.
    */
-  setVisibility: acceptanceWriteProcedure
-    .input(z.object({ id: z.string(), visibility: z.enum(acceptanceVisibilities) }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-
-      const updated = await service.acceptanceModel.update(acceptance.id, {
-        visibility: input.visibility,
-      });
-      // Cascade to every chained round: each round's report page is its own
-      // shareable URL, so it must follow the umbrella (clobbering per-round
-      // overrides on purpose — the aggregate flip is the deliberate act).
-      await new VerifyRunModel(
-        ctx.serverDB,
-        acceptance.userId,
-        acceptance.workspaceId ?? undefined,
-      ).setVisibilityByAcceptance(acceptance.id, input.visibility);
-      return updated;
-    }),
-
-  /**
-   * The user sent the delivery back for a repair round (the in-app 打回重跑
-   * dispatch). Stamps the aggregate `repairing` so every surface reflects the
-   * send-back immediately; the next round's ingest recomputes the status from
-   * real run state, so a stale stamp cannot stick.
-   */
-  markRepairing: acceptanceWriteProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-
-      if (acceptance.status !== 'delivered' && acceptance.status !== 'errored') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `Only a settled acceptance can be sent back (status: ${acceptance.status})`,
-        });
-      }
-      return service.acceptanceModel.updateStatus(acceptance.id, 'repairing');
-    }),
-
-  /**
-   * The user rejects the delivery. The comment is a re-tasking input: it is
-   * recorded on the current round's decision and seeds the next repair/verify
-   * round (spawned by the runtime for agent rounds, or by the next
-   * `lh verify ingest-report` for harness rounds).
-   */
   reject: acceptanceWriteProcedure
     .input(z.object({ comment: z.string().min(1).max(2000), id: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -1229,108 +894,6 @@ export const acceptanceRouter = router({
    * on the aggregate's metadata. The subject's own title (the source topic /
    * task / document) is left untouched, so renaming the sidebar entry never
    * mutates the origin conversation.
-   */
-  rename: acceptanceWriteProcedure
-    .input(z.object({ id: z.string(), title: z.string().trim().min(1).max(200) }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-
-      return service.acceptanceModel.update(acceptance.id, {
-        metadata: { ...acceptance.metadata, title: input.title },
-      });
-    }),
-
-  /**
-   * File the acceptance under a project (or take it out of one) from the list.
-   * Only the grouping pointer moves: the delivery, its rounds and its subject
-   * are untouched, so this is reversible and never rewrites history.
-   *
-   * The bar is READABLE, not manageable: a delivery may be filed under any
-   * project the caller can see — the same set the list already groups by — so
-   * a workspace member is not blocked from filing under a teammate's project.
-   */
-  setProject: acceptanceWriteProcedure
-    .input(z.object({ id: z.string(), projectId: z.string().nullable() }))
-    .mutation(async ({ ctx, input }) => {
-      const { acceptance, service } = await resolveAcceptanceForWrite(ctx, input.id);
-
-      if (input.projectId) {
-        const project = await new ProjectModel(
-          ctx.serverDB,
-          ctx.userId,
-          ctx.workspaceId ?? undefined,
-        ).findById(input.projectId);
-        if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
-      }
-
-      await service.acceptanceModel.update(acceptance.id, {
-        projectId: input.projectId,
-      });
-      return { success: true };
-    }),
-
-  /**
-   * The multi-select twin of `setProject`: file a whole selection under one
-   * project (or take it out of any) in one action.
-   *
-   * The target project is validated ONCE, up front — a missing project fails
-   * the sweep wholesale, because every row was headed to the same place. Rows
-   * keep the batch contract — one the caller cannot write lands in `failedIds`
-   * instead of voiding the rest — but unlike the status sweep there is no
-   * per-row recomputation, so the whole move is three bounded queries (resolve,
-   * authorize, bulk update) rather than a round trip per row.
-   */
-  setProjectBatch: acceptanceWriteProcedure
-    .input(
-      z.object({
-        ids: z.array(z.string()).min(1).max(ACCEPTANCE_BATCH_LIMIT),
-        projectId: z.string().nullable(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (input.projectId) {
-        const project = await new ProjectModel(
-          ctx.serverDB,
-          ctx.userId,
-          ctx.workspaceId ?? undefined,
-        ).findById(input.projectId);
-        if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
-      }
-
-      const ids = [...new Set(input.ids)];
-      const resolvableIds = ids.filter((id) => isUuid(id));
-      const rows =
-        resolvableIds.length > 0
-          ? await ctx.serverDB.query.acceptances.findMany({
-              columns: { id: true, userId: true, workspaceId: true },
-              where: inArray(acceptances.id, resolvableIds),
-            })
-          : [];
-      const manageable = await filterManageableAcceptances(ctx, rows);
-
-      let updatedIds: string[] = [];
-      if (manageable.length > 0) {
-        updatedIds = (
-          await ctx.serverDB
-            .update(acceptances)
-            .set({ projectId: input.projectId })
-            .where(
-              inArray(
-                acceptances.id,
-                manageable.map((row) => row.id),
-              ),
-            )
-            .returning({ id: acceptances.id })
-        ).map((row) => row.id);
-      }
-
-      const updatedSet = new Set(updatedIds);
-      return { failedIds: ids.filter((id) => !updatedSet.has(id)), updated: updatedIds.length };
-    }),
-
-  /**
-   * Manually move the acceptance's user-facing lifecycle state from the list —
-   * an owner override (mark accepted / closed / rejected, or reopen for another look).
    */
   updateStatus: acceptanceWriteProcedure
     .input(z.object({ id: z.string(), status: acceptanceStatusOverrideSchema }))
@@ -1360,31 +923,6 @@ export const acceptanceRouter = router({
    * recomputes the aggregate and stamps its round, and a sweep is a background
    * chore, not a latency-critical path.
    */
-  updateStatusBatch: acceptanceWriteProcedure
-    .input(
-      z.object({
-        ids: z.array(z.string()).min(1).max(ACCEPTANCE_BATCH_LIMIT),
-        status: acceptanceStatusOverrideSchema,
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const failedIds: string[] = [];
-      let updated = 0;
-
-      for (const id of new Set(input.ids)) {
-        try {
-          const { acceptance, service } = await resolveAcceptanceForWrite(ctx, id);
-          await applyAcceptanceStatus(service, acceptance, input.status);
-          updated += 1;
-        } catch (error) {
-          console.error('[acceptance] batch status update failed for %s', id, error);
-          failedIds.push(id);
-        }
-      }
-
-      return { failedIds, updated };
-    }),
-
   purgePreview: acceptanceProcedure
     .input(z.object({ ids: z.array(z.string()).min(1).max(PURGE_PREVIEW_LIMIT) }))
     .query(async ({ ctx, input }) => {
@@ -1455,39 +993,4 @@ export const acceptanceRouter = router({
    * caller may not delete is collected rather than thrown, so the rest of the
    * selection still goes.
    */
-  removeBatch: acceptanceWriteProcedure
-    .input(
-      z.object({
-        ids: z.array(z.string()).min(1).max(ACCEPTANCE_BATCH_LIMIT),
-        purge: z.boolean().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const failedIds: string[] = [];
-      let deleted = 0;
-      const fileService = new FileService(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
-
-      await mapWithConcurrency([...new Set(input.ids)], PURGE_BATCH_CONCURRENCY, async (id) => {
-        try {
-          const { acceptance, service } = await resolveAcceptanceForWrite(ctx, id);
-          if (input.purge) {
-            await purgeAcceptance(
-              ctx.serverDB,
-              fileService,
-              acceptance.userId,
-              acceptance.workspaceId ?? undefined,
-              acceptance.id,
-            );
-          } else {
-            await service.acceptanceModel.delete(acceptance.id);
-          }
-          deleted += 1;
-        } catch (error) {
-          console.error('[acceptance] batch delete failed for %s', id, error);
-          failedIds.push(id);
-        }
-      });
-
-      return { deleted, failedIds };
-    }),
 });

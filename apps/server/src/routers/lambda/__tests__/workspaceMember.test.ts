@@ -54,6 +54,7 @@ const {
     bumpAuthzVersion: vi.fn(),
     countActiveDelegations: vi.fn(),
     countMemberBoundDevices: vi.fn(),
+    countMemberWorkload: vi.fn(async () => new Map()),
     countOpenTasksAssignedTo: vi.fn(),
     countOpenTasksReviewedBy: vi.fn(),
     findMembershipRow: vi.fn(),

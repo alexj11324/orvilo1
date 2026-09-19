@@ -12,7 +12,6 @@ import {
   Clock3Icon,
   PackageOpenIcon,
   TargetIcon,
-  TriangleAlertIcon,
 } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,11 +22,7 @@ import AsyncError from '@/components/AsyncError';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavItem from '@/features/NavPanel/components/NavItem';
-import {
-  getProjectAcceptancePath,
-  getProjectGoalsPath,
-  getProjectTasksPath,
-} from '@/features/Projects/Layout/navigation';
+import { getProjectGoalsPath, getProjectTasksPath } from '@/features/Projects/Layout/navigation';
 import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { canInviteToProject } from '@/features/Teammates/api/roleCapabilities';
@@ -313,14 +308,6 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
                 </Text>
               </Flexbox>
             ))
-          )}
-          {detail.project.status === 'reviewing' && (
-            <Button
-              icon={TriangleAlertIcon}
-              onClick={() => navigate(getProjectAcceptancePath(projectReference))}
-            >
-              {t('overview.reviewProject')}
-            </Button>
           )}
         </Flexbox>
 

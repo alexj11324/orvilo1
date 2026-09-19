@@ -3,9 +3,13 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as EventOutboxModel from '@/database/models/eventOutbox';
 import { insertOutboxEvent } from '@/database/models/eventOutbox';
 import type { OrviloDatabase } from '@/database/type';
-import { cleanupTestUser, createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
+import {
+  cleanupTestUser,
+  createTestUser,
+} from '@/server/routers/lambda/__tests__/integration/setup';
 import { outboxRowToActivityEvent } from '@/server/services/collaboration/projection';
 import { uuid } from '@/utils/uuid';
 
@@ -27,7 +31,7 @@ import { TaskInputService } from '../taskInputs';
 // The outbox writer is spied — not stubbed — so revocation tests can fail a
 // single insert while every other event keeps flowing through the real model.
 vi.mock('@/database/models/eventOutbox', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('@/database/models/eventOutbox')>();
+  const mod = await importOriginal<typeof EventOutboxModel>();
   return { ...mod, insertOutboxEvent: vi.fn(mod.insertOutboxEvent) };
 });
 
@@ -207,6 +211,10 @@ describe('agentDelegation services (integration)', () => {
         agentId: 'agt_worker',
         task: { id: taskId, projectId: null, workspaceId },
       });
+      const superseding = await service.createGrant({
+        agentId: 'agt_worker',
+        task: { id: taskId, projectId: null, workspaceId },
+      });
       await db.insert(topics).values({ id: 'tpc_run-1', userId: ownerId });
       await db
         .insert(taskTopics)
@@ -226,32 +234,162 @@ describe('agentDelegation services (integration)', () => {
       expect(runRow.executionGrantId).toBe(grant.id);
 
       await expect(
-        service.assertExecutionEpoch({ epoch, grantId: grant.id, taskId, topicId: 'tpc_run-1' }),
+        service.assertMayCommit({ epoch, grantId: grant.id, taskId, topicId: 'tpc_run-1' }),
       ).resolves.toBeUndefined();
 
       // A superseding delegation claims the next epoch — the old fencing
       // token is stale even though nothing "cancelled" the first run.
       const newer = await service.claimExecutionEpoch({
-        grantId: 'grant-superseding',
+        grantId: superseding.id,
         taskId,
         topicId: 'tpc_run-1',
       });
       expect(newer).toBe(2);
       await expect(
-        service.assertExecutionEpoch({ epoch, grantId: grant.id, taskId, topicId: 'tpc_run-1' }),
+        service.assertMayCommit({ epoch, grantId: grant.id, taskId, topicId: 'tpc_run-1' }),
       ).rejects.toMatchObject({ code: 'CONFLICT' });
     });
 
-    it('assertExecutionEpoch rejects a run row that does not exist', async () => {
+    it('assertMayCommit rejects a run row that does not exist', async () => {
       const service = new AgentDelegationService(db, ownerId, workspaceId);
       await expect(
-        service.assertExecutionEpoch({
+        service.assertMayCommit({
           epoch: 1,
           grantId: 'grant-x',
           taskId,
           topicId: 'tpc_missing',
         }),
       ).rejects.toMatchObject({ code: 'CONFLICT' });
+    });
+
+    it('refuses to claim an epoch for a revoked grant', async () => {
+      const service = new AgentDelegationService(db, ownerId, workspaceId);
+      const grant = await service.createGrant({
+        agentId: 'agt_worker',
+        task: { id: taskId, projectId: null, workspaceId },
+      });
+      await service.revokeGrant(grant.id);
+      await db.insert(topics).values({ id: 'tpc_revoked', userId: ownerId });
+      await db
+        .insert(taskTopics)
+        .values({ seq: 2, taskId, topicId: 'tpc_revoked', userId: ownerId, workspaceId });
+
+      await expect(
+        service.claimExecutionEpoch({ grantId: grant.id, taskId, topicId: 'tpc_revoked' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('denies the commit when the grant was revoked after the epoch was claimed', async () => {
+      const service = new AgentDelegationService(db, ownerId, workspaceId);
+      const grant = await service.createGrant({
+        agentId: 'agt_worker',
+        task: { id: taskId, projectId: null, workspaceId },
+      });
+      await db.insert(topics).values({ id: 'tpc_revoke-mid', userId: ownerId });
+      await db
+        .insert(taskTopics)
+        .values({ seq: 3, taskId, topicId: 'tpc_revoke-mid', userId: ownerId, workspaceId });
+      const epoch = await service.claimExecutionEpoch({
+        grantId: grant.id,
+        taskId,
+        topicId: 'tpc_revoke-mid',
+      });
+
+      // The window the audit called out: claim passes, then the grant dies.
+      await service.revokeGrant(grant.id);
+
+      await expect(
+        service.assertMayCommit({ epoch, grantId: grant.id, taskId, topicId: 'tpc_revoke-mid' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('denies the commit when the grant lapses after the epoch was claimed', async () => {
+      const service = new AgentDelegationService(db, ownerId, workspaceId);
+      const grant = await service.createGrant({
+        agentId: 'agt_worker',
+        expiresAt: new Date(Date.now() + 60_000),
+        task: { id: taskId, projectId: null, workspaceId },
+      });
+      await db.insert(topics).values({ id: 'tpc_expire-mid', userId: ownerId });
+      await db
+        .insert(taskTopics)
+        .values({ seq: 4, taskId, topicId: 'tpc_expire-mid', userId: ownerId, workspaceId });
+      const epoch = await service.claimExecutionEpoch({
+        grantId: grant.id,
+        taskId,
+        topicId: 'tpc_expire-mid',
+      });
+
+      // The expiry sweep hasn't run yet — the row is still 'active' but past
+      // its deadline. The fence reads the deadline, not just the status.
+      await db
+        .update(executionGrants)
+        .set({ expiresAt: new Date(Date.now() - 1_000) })
+        .where(eq(executionGrants.id, grant.id));
+
+      await expect(
+        service.assertMayCommit({ epoch, grantId: grant.id, taskId, topicId: 'tpc_expire-mid' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('denies the commit when the delegation subject loses membership mid-run', async () => {
+      const service = new AgentDelegationService(db, ownerId, workspaceId);
+      const grant = await service.createGrant({
+        agentId: 'agt_worker',
+        delegationSubjectId: memberId,
+        task: { id: taskId, projectId: null, workspaceId },
+      });
+      await db.insert(topics).values({ id: 'tpc_member-mid', userId: ownerId });
+      await db
+        .insert(taskTopics)
+        .values({ seq: 5, taskId, topicId: 'tpc_member-mid', userId: ownerId, workspaceId });
+      const epoch = await service.claimExecutionEpoch({
+        grantId: grant.id,
+        taskId,
+        topicId: 'tpc_member-mid',
+      });
+
+      await db
+        .update(workspaceMembers)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)),
+        );
+
+      await expect(
+        service.assertMayCommit({ epoch, grantId: grant.id, taskId, topicId: 'tpc_member-mid' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('denies the commit when the subject membership authorization version moved', async () => {
+      const service = new AgentDelegationService(db, ownerId, workspaceId);
+      const grant = await service.createGrant({
+        agentId: 'agt_worker',
+        delegationSubjectId: memberId,
+        task: { id: taskId, projectId: null, workspaceId },
+      });
+      await db.insert(topics).values({ id: 'tpc_authz-mid', userId: ownerId });
+      await db
+        .insert(taskTopics)
+        .values({ seq: 6, taskId, topicId: 'tpc_authz-mid', userId: ownerId, workspaceId });
+      const epoch = await service.claimExecutionEpoch({
+        grantId: grant.id,
+        taskId,
+        topicId: 'tpc_authz-mid',
+      });
+
+      // A role change / re-invite bumps authzVersion on the member row — the
+      // version the grant captured at issuance no longer matches.
+      await db
+        .update(workspaceMembers)
+        .set({ authzVersion: 99 })
+        .where(
+          and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, memberId)),
+        );
+
+      await expect(
+        service.assertMayCommit({ epoch, grantId: grant.id, taskId, topicId: 'tpc_authz-mid' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
 
     it('revokes and publishes the event atomically — a failed insert rolls the status back', async () => {

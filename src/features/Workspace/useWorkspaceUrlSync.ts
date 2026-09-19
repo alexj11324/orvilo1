@@ -1,11 +1,14 @@
 'use client';
 
-import { useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
+import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { useSilentSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
-import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { getWorkspaceContextState } from '@/business/client/workspaceContextStore';
 
 import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
 
@@ -25,6 +28,7 @@ import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
  */
 export const RESERVED_FIRST_SEGMENTS = new Set([
   // Shared (mirrored under /:workspaceSlug too):
+  'acceptance',
   'agent',
   'agents',
   'automations',
@@ -42,6 +46,7 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'eval',
   'tasks',
   'task',
+  'verify',
   // Personal-only:
   'a',
   'apps',
@@ -55,6 +60,10 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
 ]);
 
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;
+
+// Shared empty array so an unresolved list doesn't create a new dependency
+// identity on every render.
+const EMPTY_LIST: WorkspaceListItem[] = [];
 
 const parseFirstSegment = (pathname: string): string | null => {
   const match = pathname.match(FIRST_SEGMENT_REGEX);
@@ -86,13 +95,30 @@ export const isWorkspaceSlugCandidatePath = (pathname: string): boolean => {
  */
 export const useWorkspaceUrlSync = (): void => {
   const pathname = useWorkspaceSyncPathname();
-  const workspaces = useWorkspaces();
+  // `useFetchWorkspaces` (not the array-shaped `useWorkspaces`) because the
+  // reconcile below must distinguish "the list resolved and the membership is
+  // gone" (revocation → drop to personal) from "the list never resolved"
+  // (error / signed out → don't touch a scope we can't verify).
+  const { data: workspaceList } = useFetchWorkspaces();
+  const workspaces = workspaceList ?? EMPTY_LIST;
   const activeId = useActiveWorkspaceId();
+  const activeSlug = useActiveWorkspaceSlug();
   const isLoading = useIsWorkspaceLoading();
   // URL is a passive source, not an explicit user intent — use the silent
   // variant so refreshing or following a `/{slug}` link is not treated as
   // a user-driven switch.
   const { switchWorkspace, switchToPersonal } = useSilentSwitchWorkspace();
+
+  // The store's lifetime is bound to this sync: when the slot that hosts it
+  // unmounts (leaving the layouts that provide workspace context), clear the
+  // selection so imperative readers — `X-Workspace-Id`, tool executors — stop
+  // addressing a workspace that is no longer on screen.
+  useEffect(
+    () => () => {
+      getWorkspaceContextState().setActiveWorkspace(null);
+    },
+    [],
+  );
 
   // `useLayoutEffect` (not `useEffect`) so the workspace switch is scheduled
   // before the browser paints. With `useEffect` there is one paintable frame
@@ -110,15 +136,40 @@ export const useWorkspaceUrlSync = (): void => {
     if (first && !RESERVED_FIRST_SEGMENTS.has(first)) {
       const ws = workspaces.find((w) => w.slug === first);
       if (ws) {
-        if (activeId !== ws.id) void switchWorkspace(ws.id);
+        // Re-run when the stored slug drifted (rename server-side) even if the
+        // id already matches, so `/{slug}` navigation prefixes keep resolving.
+        if (activeId !== ws.id || activeSlug !== ws.slug) void switchWorkspace(ws.id);
         return;
       }
-      // Unknown slug — let `WorkspaceSlugBoundary` show 404; don't touch the
-      // active workspace.
+      // Unknown slug — `WorkspaceSlugBoundary` shows the 404. Fall through to
+      // the reconcile below: if the active workspace itself vanished from the
+      // membership list it must still be dropped, even with its old URL open.
+    } else {
+      // URL has no workspace slug → personal context.
+      if (activeId !== null) void switchToPersonal();
       return;
     }
 
-    // URL has no workspace slug → personal context.
-    if (activeId !== null) void switchToPersonal();
-  }, [pathname, workspaces, isLoading, activeId, switchWorkspace, switchToPersonal]);
+    // Membership reconcile — only on a resolved list. When the active
+    // workspace is gone (removed / suspended in another tab, or a leave that
+    // succeeded server-side), clear the selection so the `X-Workspace-Id`
+    // header and scoped caches stop addressing a scope the server would now
+    // reject — instead of silently writing through the stale selection.
+    if (
+      workspaceList !== undefined &&
+      activeId !== null &&
+      !workspaceList.some((w) => w.id === activeId)
+    ) {
+      void switchToPersonal();
+    }
+  }, [
+    pathname,
+    workspaces,
+    workspaceList,
+    isLoading,
+    activeId,
+    activeSlug,
+    switchWorkspace,
+    switchToPersonal,
+  ]);
 };

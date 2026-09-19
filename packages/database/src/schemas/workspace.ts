@@ -147,6 +147,46 @@ export const workspaceInvitations = pgTable(
 export type WorkspaceInvitationItem = typeof workspaceInvitations.$inferSelect;
 export type NewWorkspaceInvitation = typeof workspaceInvitations.$inferInsert;
 
+/**
+ * Owner → admin hand-off with explicit recipient consent. The row is the
+ * source of truth for "a transfer is awaiting the recipient": only a pending
+ * row may be responded to, and the partial unique index guarantees at most
+ * one live request per workspace. `fromUserId` stays `primaryOwnerId` until
+ * the recipient accepts.
+ */
+export const workspaceOwnershipTransfers = pgTable(
+  'workspace_ownership_transfers',
+  {
+    id: text('id')
+      .$defaultFn(() => createNanoId(16)())
+      .notNull()
+      .primaryKey(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    fromUserId: text('from_user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    toUserId: text('to_user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    // 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired'
+    status: text('status').notNull().default('pending'),
+    expiresAt: timestamptz('expires_at').notNull(),
+    decidedAt: timestamptz('decided_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('workspace_ownership_transfers_pending_workspace_idx')
+      .on(t.workspaceId)
+      .where(sql`${t.status} = 'pending'`),
+    index('workspace_ownership_transfers_to_user_idx').on(t.toUserId, t.status),
+  ],
+);
+
+export type WorkspaceOwnershipTransferItem = typeof workspaceOwnershipTransfers.$inferSelect;
+export type NewWorkspaceOwnershipTransfer = typeof workspaceOwnershipTransfers.$inferInsert;
+
 export const workspaceAuditLogs = pgTable(
   'workspace_audit_logs',
   {

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as useActiveWorkspaceIdModule from '@/business/client/hooks/useActiveWorkspaceId';
+import * as useFetchWorkspacesModule from '@/business/client/hooks/useFetchWorkspaces';
 import * as useIsWorkspaceLoadingModule from '@/business/client/hooks/useIsWorkspaceLoading';
 import * as useSwitchWorkspaceModule from '@/business/client/hooks/useSwitchWorkspace';
 import * as useWorkspacesModule from '@/business/client/hooks/useWorkspaces';
@@ -38,6 +39,12 @@ beforeEach(() => {
   vi.spyOn(useWorkspacesModule, 'useWorkspaces').mockReturnValue([
     { id: 'ws-1', slug: 'acme' },
   ] as any);
+  // `useWorkspaceUrlSync` consumes the resolved list via `useFetchWorkspaces`
+  // so it can reconcile a stale selection without trusting a failed query.
+  vi.spyOn(useFetchWorkspacesModule, 'useFetchWorkspaces').mockReturnValue({
+    data: [{ id: 'ws-1', slug: 'acme' }],
+    isLoading: false,
+  } as any);
   vi.spyOn(useIsWorkspaceLoadingModule, 'useIsWorkspaceLoading').mockReturnValue(false);
   vi.spyOn(useActiveWorkspaceIdModule, 'useActiveWorkspaceId').mockReturnValue(null);
   vi.spyOn(useSwitchWorkspaceModule, 'useSilentSwitchWorkspace').mockReturnValue({

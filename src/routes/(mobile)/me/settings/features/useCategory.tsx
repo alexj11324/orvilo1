@@ -1,6 +1,4 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import {
-  AppWindowIcon,
   Blocks,
   BrainCircuit,
   ChartColumnBigIcon,
@@ -8,7 +6,6 @@ import {
   CreditCard,
   Database,
   EllipsisIcon,
-  Gift,
   Info,
   KeyIcon,
   KeyRound,
@@ -21,16 +18,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type CellProps } from '@/components/Cell';
+import { isSettingsTabOffered } from '@/config/routes/settings';
+import { useSettingsCapabilityContext } from '@/features/Settings/hooks/useSettingsCapability';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
-import {
-  featureFlagsSelectors,
-  serverConfigSelectors,
-  useServerConfigStore,
-} from '@/store/serverConfig';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
-import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
 
 export enum SettingsGroupKey {
   Account = 'account',
@@ -55,12 +46,14 @@ export interface CategoryGroup {
 export const useCategory = (): CategoryGroup[] => {
   const navigate = useWorkspaceAwareNavigate();
   const { t } = useTranslation(['setting', 'auth', 'subscription']);
-  const { hideDocs, showApiKeyManage } = useServerConfigStore(featureFlagsSelectors);
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
-  const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
-  const enableOAuthApps = useUserStore(labPreferSelectors.enableOAuthApps);
+  const capabilityContext = useSettingsCapabilityContext();
 
   return useMemo(() => {
+    // The mobile list is a deliberately narrower subset of the personal
+    // sidebar, but it never decides availability on its own: both read the
+    // settings capability registry, so `/settings/<tab>` cannot open a page
+    // this list withholds.
+    const offered = (tab: SettingsTabs) => isSettingsTabOffered(tab, capabilityContext);
     const navigateTo = (key: SettingsTabs) => navigate(`/settings/${key}`);
 
     const makeItem = (item: Omit<CategoryItem, 'onClick'>): CategoryItem => ({
@@ -85,7 +78,7 @@ export const useCategory = (): CategoryGroup[] => {
         key: SettingsTabs.Stats,
         label: t('auth:tab.stats'),
       }),
-      ...(enableBusinessFeatures
+      ...(offered(SettingsTabs.Plans)
         ? [
             makeItem({ icon: Map, key: SettingsTabs.Plans, label: t('subscription:tab.plans') }),
             makeItem({
@@ -103,11 +96,10 @@ export const useCategory = (): CategoryGroup[] => {
               key: SettingsTabs.Billing,
               label: t('subscription:tab.billing'),
             }),
-            makeItem({
-              icon: Gift,
-              key: SettingsTabs.Referral,
-              label: t('subscription:tab.referral'),
-            }),
+            // No Referral entry: that settings page was an empty shell and has
+            // been retired, so a row here would open a not-found. It used to be
+            // listed unconditionally inside the Plans gate, which is how it
+            // outlived the page on mobile.
           ]
         : []),
     ];
@@ -117,15 +109,8 @@ export const useCategory = (): CategoryGroup[] => {
     ].filter((item): item is CategoryItem => Boolean(item));
 
     const tools: CategoryItem[] = [
-      makeItem({ icon: SkillsIcon, key: SettingsTabs.Skill, label: t('setting:tab.skill') }),
       makeItem({ icon: TagIcon, key: SettingsTabs.Labels, label: t('setting:tab.labels') }),
       makeItem({ icon: Blocks, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
-      enableOAuthApps &&
-        makeItem({
-          icon: AppWindowIcon,
-          key: SettingsTabs.OAuthApps,
-          label: t('auth:tab.oauthApps'),
-        }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
     // The API Key entry used to appear twice — once here under dev mode and once
@@ -133,7 +118,7 @@ export const useCategory = (): CategoryGroup[] => {
     // one page.
     const security: CategoryItem[] = [
       makeItem({ icon: KeyRound, key: SettingsTabs.Creds, label: t('setting:tab.creds') }),
-      (showApiKeyManage || isDevMode) &&
+      offered(SettingsTabs.APIKey) &&
         makeItem({ icon: KeyIcon, key: SettingsTabs.APIKey, label: t('auth:tab.apikey') }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
@@ -148,7 +133,8 @@ export const useCategory = (): CategoryGroup[] => {
         key: SettingsTabs.Advanced,
         label: t('setting:tab.advanced'),
       }),
-      !hideDocs && makeItem({ icon: Info, key: SettingsTabs.About, label: t('setting:tab.about') }),
+      offered(SettingsTabs.About) &&
+        makeItem({ icon: Info, key: SettingsTabs.About, label: t('setting:tab.about') }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
     return [
@@ -168,13 +154,5 @@ export const useCategory = (): CategoryGroup[] => {
         title: t('setting:group.developer'),
       },
     ].filter((group) => group.items.length > 0);
-  }, [
-    t,
-    enableBusinessFeatures,
-    hideDocs,
-    showApiKeyManage,
-    isDevMode,
-    enableOAuthApps,
-    navigate,
-  ]);
+  }, [t, capabilityContext, navigate]);
 };

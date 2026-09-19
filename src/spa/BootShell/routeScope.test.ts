@@ -10,8 +10,9 @@ const variants: Array<[string, typeof webDesktopRoutes]> = [
   ['Electron', electronDesktopRoutes],
 ];
 
-// Paths that render the nav panel + rounded container the shell imitates.
-const MAIN_LAYOUT_PATHS = ['/', '/agent/agent-1', '/settings/memory', '/acme/settings/oauth-apps'];
+// Paths that render the nav panel + rounded container the shell imitates: the
+// root, a workspace-less agent and settings page, and a workspace-scoped one.
+const MAIN_LAYOUT_PATHS = ['/', '/agent/agent-1', '/settings/memory', '/acme/settings/general'];
 
 describe('isMainLayoutLocation', () => {
   it.each(variants)('%s recognises main-layout urls', (_, routes) => {

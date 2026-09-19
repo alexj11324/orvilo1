@@ -19,17 +19,17 @@
 
 ## 仓库坐标
 
-| 项                               | 值                                                                                                                                                                                                                                                                      |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                                                                 |
-| 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                                                                   |
-| PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                                                                            |
-| 实施 HEAD（本交接提交之前）      | `cc9289c0` VIEW08：status 分组的 Linear 卡也走 `moveBoard`。再前 `215edfa9` SEC01 客户端与服务端共用 allowlist、`ac32ad47` TRI04 不放大项目行、`5e793f23` store 看板 Linear 拖放。叠在 Devin `c2d90a23` Linear 侧栏解剖（workspace 头部 / 团队子导航 / 底栏头像）之上。 |
-| Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                                                                  |
-| 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                                                                      |
-| 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                                                                      |
-| Cloud agent                      | <https://cursor.com/agents/bc-c18edf00-e213-4176-9c88-d3f33b4ea544>                                                                                                                                                                                                     |
-| 写者租约                         | 全局最多 3 writer。本分支上 Cursor agent 与 Devin 都推过；**先 `git pull --rebase origin cursor/navigation-attention-v4-a544`，不要 rebase 到 canary，不要 force-push。** 不要碰 `/Users/alexjiang/Desktop/vibe/orvilo1`。                                              |
+| 项                               | 值                                                                                                                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
+| 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
+| PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
+| 实施 HEAD（本交接提交之前）      | `da1dcc0a` 看板卡右键改状态走 `applyWorkQueryStatusChange`（Linear `moveBoard`）。叠在 `ecaaa108` 列表 refetch 与 Devin `c2d90a23` Linear 侧栏解剖之上。                                                                   |
+| Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
+| 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
+| 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
+| Cloud agent                      | <https://cursor.com/agents/bc-c18edf00-e213-4176-9c88-d3f33b4ea544>                                                                                                                                                        |
+| 写者租约                         | 全局最多 3 writer。本分支上 Cursor agent 与 Devin 都推过；**先 `git pull --rebase origin cursor/navigation-attention-v4-a544`，不要 rebase 到 canary，不要 force-push。** 不要碰 `/Users/alexjiang/Desktop/vibe/orvilo1`。 |
 
 ## 用户澄清（仍然有效）
 
@@ -125,11 +125,15 @@
 
 - END04 用户文档已改成固定一级 IA（Inbox / My Work / Reviews + Workspace / Teams），Tasks 是深链不是可重排一级
 
+- WORK08/VIEW08 列表状态：My Work / Saved View / Team 列表改状态后走 `commitWorkQueryListStatus`（Linear → `moveBoard` + picker；本地 → `task.update`），再 `onMoved` refetch 并清空分页 tails，行会换分组而不是钉在旧章节
+
+- VIEW08 看板卡右键：`KanbanBoard` 把 `onStatusChange` 传到 `TaskBoardCard` /context menu；与列表共用 `applyWorkQueryStatusChange`。Linear 走 `moveBoard`，本地走 `task.update`，picker 取消不落本地 patch，成功后 `refreshGroups`
+
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。不要主动做 TRI04 产品复制。Work-query 列表行的 `TaskStatusTag` 仍走 `task.update`，不会立刻 refetch work-query SWR（VIEW08 AC 是看板拖放）。
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。看板卡右键改状态已与列表共用 `moveBoard`。不要主动做 TRI04 产品复制。
 
 用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA 和共享 Kanban。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
@@ -204,6 +208,9 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `cc9289c0`：status 分组 Linear 卡提升到 `moveBoard` workflowCategory。`workQueryBoardMove` 覆盖 in\_review vs paused。不是 64× AC。
 - `994a7015`：用法文档对齐固定一级 IA。lint 干净。不是 64× AC。
 - 本增量 scoped `bun run check`：lint 干净，48 passed。不是 64× AC。
+- `c2d90a23`：Linear 侧栏解剖（workspace 头部 / 团队子导航 / 底栏头像）。不要回滚。
+- `ecaaa108`：列表改状态 refetch + Linear `moveBoard`。lint 干净，67 passed。不是 64× AC。
+- `da1dcc0a`：看板卡右键改状态走 `applyWorkQueryStatusChange`。lint 干净，27 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

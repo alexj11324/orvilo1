@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `5e793f23` VIEW08：My Work/Tasks store 看板的 Linear 拖放改走 `moveBoard`。再前 `7d42ae9a` WORK08 列表服务端分组。叠在 Devin `623f670c` 一级 IA 收敛之上。                                                                 |
+| 实施 HEAD（本交接提交之前）      | `cc9289c0` VIEW08：status 分组的 Linear 卡也走 `moveBoard`。再前 `215edfa9` SEC01 客户端与服务端共用 allowlist、`ac32ad47` TRI04 不放大项目行、`5e793f23` store 看板 Linear 拖放。叠在 Devin `623f670c` 一级 IA 收敛之上。 |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -90,17 +90,18 @@
 - Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。Team 看板走 `WorkQueryResults` → `KanbanBoard` `external` prop（与其它页同一个组件，不自建）
 - Linear IA 收敛（`623f670c`）：一级侧栏改成固定合同 `inbox / my-work / reviews` + 手风琴 `agent / workspace / favorites / teams` + spacer（`DEFAULT_SIDEBAR_ITEMS`，`sidebarItems` selector 直接返回常量，stored/overlay 顺序完全不再生效 —— 旧 preference 无法复活 retired keys）。`RETIRED_SIDEBAR_KEYS` 扩到 home/tasks/automations/resource/recents/private/project/views（一级退役，路由深链保留）。新 `WorkspaceSection`（Projects / Views / Members→`/settings/members` / More 下拉：Automations、Resource、工作区设置）与 `TeamsSection`（`team.teams` 扁平行→`/teams/:id`，仅 workspace 模式渲染；TeamPage 无 Home/Issues 子 tab，不做展开子导航）。Reviews 一级指向 `/my-work?tab=review`（v4 合同已冻结 `/my-work`，没有另建 `/reviews` 路由），Body 用 `useSearchParams` 拆开两个高亮。CustomizeSidebarModal 收窄为只能隐藏可选 section（核心 pin 住，不可重排）。Header 搜索行 hover 出新建任务铅笔（`createTaskModal`）。User 弹层补 `UserPanelWorkspaceSection`（个人空间 ✓ + workspace 列表切换）。移动端 NavBar 第三栏 Tasks→My Work。`sidebarContract.ts` 登记 SCHEMA\_VERSION=2 / FIXED\_PRIMARY\_KEYS / LEGACY\_PRIMARY\_KEYS。**deviation**：spec 写 `/my-issues`，按 v4 合同保留 `/my-work`。lint 干净，89 passed。不是 64× AC。
 - WORK08：list 布局在数据库里按列分组（Linear `workflowStateId` 跟 workflow 列，本地任务跟 status 列），`total` 是全集不是当前页；每列独立 cursor。客户端 `workQueryListSections` 优先用服务端 groups，不再把一页扁列表重排成章节。My Work / Team / Saved View 列表的 load-more 走 `groupKey`
-- VIEW08：My Work / Tasks 的 store `KanbanBoard` 对 `workflowStateId` 任务跨列拖放走 `commitWorkQueryBoardMove`（`moveBoard` + 精确状态 picker），不再 `updateTask({ workflowCategory })`。同列重排仍写 position
+- VIEW08：My Work / Tasks 的 store `KanbanBoard` 对 `workflowStateId` 任务跨列拖放走 `commitWorkQueryBoardMove`（`moveBoard` + 精确状态 picker），不再 `updateTask({ workflowCategory })`。同列重排仍写 position。status 分组的 Saved View / Team 板上，有 Linear 状态的卡也会提升到 `workflowCategory`（`in_review` 而不是 `paused`）
+- SEC01：客户端 `inboxUrlOpenMode` 与服务端 `safeInboxActionUrl` 共用 `classifyWorkAttentionActionUrl`（凭证、控制字符、反斜杠失败关闭）
+- TRI04：`queryProjects` 对跨两个团队的同一项目返回一行；vitest 覆盖 isNotNull 与分别按 team A/B 导航
+- END04 用户文档已改成固定一级 IA（Inbox / My Work / Reviews + Workspace / Teams），Tasks 是深链不是可重排一级
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
 ## 剩余 MUST-FIX（无需 Preview 就能做）
 
-VIEW08 客户端路径已接回统一看板，并且 My Work store 看板的 Linear 卡也走 `moveBoard`。WORK08 列表不再只重排当前页。
+无需 Preview 的 MUST-FIX 已接上。只剩 NICE：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）。不要主动做 TRI04 产品复制。Work-query 列表行的 `TaskStatusTag` 仍走 `task.update`，不会立刻 refetch work-query SWR（VIEW08 AC 是看板拖放）。
 
-只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。PR 行 allowlist `openUrl` 已在 `bbc8c268` 从 Devin unify 的纯标题回归里救回。
-
-用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx`（Team / Saved View 看板已改成「和 Tasks 同一套 Kanban，数据来自查询」，不再写「不是 Tasks Kanban」）；`task` / `command-menu` / `start` / `shortcuts` 已改到新 IA。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
+用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx` 已对齐固定一级 IA 和共享 Kanban。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
 ## 给下一刀
 
@@ -167,7 +168,12 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 本增量：work-query 列表分组与看板共用列键（Linear `in_review` 不再进 Running）。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
 - `475fb8bd`：Push Typecheck `2cd067ae` 失败（`workQueryBoard.ts` 构造 `TaskGroupItem` 缺 `limit`/`offset`）。external 组用已加载条数当 `limit`、合并列 `offset: 0`。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
 - `fa0c58ad`：WORK08 列表服务端分组 + 全集 total + 列 cursor。lint 干净，`bun run check` 改动文件 52 passed。不是 64× AC。
-- `c24608a4`：My Work store 看板 Linear 跨列拖放走 `moveBoard`。lint 干净。不是 64× AC。
+- `c24608a4` / 变基后 `5e793f23`：My Work store 看板 Linear 跨列拖放走 `moveBoard`。lint 干净。不是 64× AC。
+- `215edfa9`：SEC01 客户端与服务端共用 URL allowlist。lint 干净，types 4 + inboxOrganize + feedCard 9 passed。不是 64× AC。
+- `ac32ad47`：TRI04 `queryProjects` 跨团队不放大行。`workQuery.test.ts` 21 passed。不是 64× AC。
+- `cc9289c0`：status 分组 Linear 卡提升到 `moveBoard` workflowCategory。`workQueryBoardMove` 覆盖 in\_review vs paused。不是 64× AC。
+- `994a7015`：用法文档对齐固定一级 IA。lint 干净。不是 64× AC。
+- 本增量 scoped `bun run check`：lint 干净，48 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

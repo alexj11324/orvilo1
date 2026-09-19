@@ -36,6 +36,10 @@
     "Usage docs describe Team/Saved View boards as the shared Tasks Kanban with work-query groups, not a second board",
     "Work-query lists group in the database (WORK08); Linear-linked rows follow workflow membership; per-column totals and cursors",
     "My Work / Tasks store kanban Linear drops go through moveBoard + WORKFLOW_STATE_REQUIRED picker (VIEW08)",
+    "Status-grouped Linear cards on work-query boards promote to workflowCategory moveBoard (needsInput → in_review)",
+    "Client inboxUrlOpenMode shares classifyWorkAttentionActionUrl with server safeInboxActionUrl (SEC01)",
+    "queryProjects does not amplify a project linked to two teams (TRI04 regression)",
+    "Usage docs describe fixed primary IA (Inbox/My Work/Reviews + Workspace/Teams); Tasks is a deep link",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -83,11 +87,12 @@
     "src/features/MyWork/workQueryPaging.ts",
     "src/features/AgentTasks/AgentTaskList/KanbanBoard.tsx",
     "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
-    "src/features/SavedViews/SavedViewsPage.tsx"
+    "src/features/SavedViews/SavedViewsPage.tsx",
+    "src/features/WorkInbox/inboxOrganize.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "5e793f23",
-  "implementationHeadBeforeDocs": "5e793f23",
+  "headSha": "cc9289c0",
+  "implementationHeadBeforeDocs": "cc9289c0",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

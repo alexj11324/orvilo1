@@ -82,7 +82,7 @@ Open **My Work** in the sidebar (`/my-work`). Tabs:
 
 **No project** limits the list to work that is not in a project. It does not assign a default project.
 
-**Assigned to me** and **Delegated by me** can switch **List** / **Board** from the toolbar. The board is the same Kanban as Tasks, narrowed to your assigned or delegated slice. Hidden columns collapse in place. Completing a parent with open subtasks still asks whether to cascade. Saved views and team boards still use the work-query board: dragging follows the team's workflow, and a column with more than one state asks you to pick the exact one. Blocked work cannot be moved to Done until the blockers finish.
+**Assigned to me** and **Delegated by me** can switch **List** / **Board** from the toolbar. The board is the same Kanban as Tasks, narrowed to your assigned or delegated slice. Hidden columns collapse in place. Completing a parent with open subtasks still asks whether to cascade. Saved views and team boards use that same Kanban, filled from the view or team's query. Dragging follows the team's workflow, and a column with more than one state asks you to pick the exact one. Blocked work cannot be moved to Done until the blockers finish.
 
 **Save as view** (on Assigned, Delegated, Created, and To review) stores a private copy of that list and opens it under Views. Subscribed cannot be saved that way because it is a follow list, not a query.
 
@@ -117,7 +117,7 @@ Pin a view with the favorite control on the view page. Use **Save as** on an exi
 In a workspace, search the team list and open a team. The team page has:
 
 - **Triage** — inbound work waiting for a human. **Accept** and **Decline** stay on the row. **Mark duplicate**, **Reassign**, and **Move to team** live under **More actions**. Accepting triage keeps the task on the team; it does not start an Agent run by itself.
-- **Team work** — the team's current tasks, as a list or a board (the work-query board, not the Tasks Kanban), with the same **No project** chip as My Work.
+- **Team work** — the team's current tasks, as a list or a board (the same Kanban as Tasks, filled from the team's query), with the same **No project** chip as My Work.
 
 If the team already has cycles, a **Cycle** filter is available. There is no separate Cycles manager in this increment.
 

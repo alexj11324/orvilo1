@@ -24,7 +24,7 @@
 | Repo                             | `https://github.com/alexj11324/orvilo1`                                                                                                                                                                                    |
 | 分支                             | `cursor/navigation-attention-v4-a544`                                                                                                                                                                                      |
 | PR                               | **#95 draft** → `canary`（保持 draft，除非用户明确说 ready）                                                                                                                                                               |
-| 实施 HEAD（本交接提交之前）      | `753d0df0` Devin：view editor 折叠、列表按状态分组、Inbox glyph。本增量在其上接回 VIEW08。                                                                                                                                 |
+| 实施 HEAD（本交接提交之前）      | `475fb8bd` Push Typecheck 修复：`workQueryBoardGroups` 给 `TaskGroupItem` 补上 `limit`/`offset`。再前是 `2cd067ae` 列表 / 看板列键对齐、`ebc87284` VIEW08 接回。                                                           |
 | Merge-base / 本分支基于的 canary | `d02f13f1`（含 #81 ownership transfer、#94 hidden-surface retirement）                                                                                                                                                     |
 | 研究 SHA                         | `d2c522fd8bf37448dccd86eacc6442a580d55cbd`（是 merge-base 的祖先）                                                                                                                                                         |
 | 远端 canary 现已走到             | PR `mergeable_state: behind`。**未授权 rebase 到更新的 canary，不要自行 rebase。**                                                                                                                                         |
@@ -97,7 +97,7 @@ VIEW08 客户端路径已接回统一看板（`commitWorkQueryBoardMove` / `move
 
 只剩 NICE（可后做）：NAV02 完整 OS 点击矩阵（路由已对齐，human-approval click → `/inbox` 已有单测）、TRI04 回归（`queryProjects` 已 EXISTS，没有行放大）。不要主动做 TRI04 产品复制。收藏 overflow 已落地。Recents 空 ⋯ 已修。PR 行 allowlist `openUrl` 已在 `bbc8c268` 从 Devin unify 的纯标题回归里救回。
 
-用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx`；`task` / `command-menu` / `start` / `shortcuts` 已改到新 IA。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
+用户文档（END04 用户面）：[`docs/usage/getting-started/work.mdx`](../usage/getting-started/work.mdx) 与 `.zh-CN.mdx`（Team / Saved View 看板已改成「和 Tasks 同一套 Kanban，数据来自查询」，不再写「不是 Tasks Kanban」）；`task` / `command-menu` / `start` / `shortcuts` 已改到新 IA。工程文档仍是本文件 + [`navigation-attention-v4.md`](./navigation-attention-v4.md) + 包内 contracts / 迁移 `0175`/`0176`。**不要**把 END04 标成 64× 验收通过；N12 仍 BLOCKED。
 
 ## 给下一刀
 
@@ -162,6 +162,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `b4c1ab09`：Team 分诊列表 chrome + overflow + 失败先于空态。lint 干净，`bun run check` 改动文件 47 passed。不是 64× AC。
 - 本增量：VIEW08 在统一 `KanbanBoard` `external` 板上恢复 `moveBoard` CAS + 精确状态 picker；Cordy `needsInput`/`running` 映射回 `in_review`/`in_progress`（workflow）或 `paused`/`running`（status）；load-more 反解列键。lint 干净，21 passed。不是 64× AC。
 - 本增量：work-query 列表分组与看板共用列键（Linear `in_review` 不再进 Running）。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
+- `475fb8bd`：Push Typecheck `2cd067ae` 失败（`workQueryBoard.ts` 构造 `TaskGroupItem` 缺 `limit`/`offset`）。external 组用已加载条数当 `limit`、合并列 `offset: 0`。lint 干净，`workQueryBoard` 18 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

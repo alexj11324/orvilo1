@@ -19,6 +19,12 @@ import {
   workQueryTargetKeyFromKanbanColumn,
 } from './workQueryBoard';
 
+/** Linear-linked store-kanban drops use moveBoard + exact-state picker. */
+export const storeKanbanUsesWorkflowMove = (
+  groupBy: string,
+  task: Pick<WorkQueryBoardTask, 'workflowStateId'>,
+): boolean => groupBy === 'status' && Boolean(task.workflowStateId);
+
 export const moveBoardMaybePickingState = async (input: {
   expectedDomainRevision: number;
   groupBy: 'status' | 'workflowCategory';

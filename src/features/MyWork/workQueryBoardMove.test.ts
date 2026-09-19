@@ -6,6 +6,7 @@ import { STATUS_KANBAN_COLUMNS } from '@/features/AgentTasks/AgentTaskList/kanba
 import {
   commitWorkQueryBoardMove,
   moveBoardMaybePickingState,
+  storeKanbanUsesWorkflowMove,
   workQueryBoardMoveToastKey,
 } from './workQueryBoardMove';
 
@@ -143,6 +144,14 @@ describe('moveBoardMaybePickingState', () => {
     ).rejects.toEqual(precondition);
 
     expect(mocks.createPicker).not.toHaveBeenCalled();
+  });
+});
+
+describe('storeKanbanUsesWorkflowMove', () => {
+  it('sends Linear-linked My Work drops through moveBoard', () => {
+    expect(storeKanbanUsesWorkflowMove('status', { workflowStateId: 'state-1' })).toBe(true);
+    expect(storeKanbanUsesWorkflowMove('status', { workflowStateId: null })).toBe(false);
+    expect(storeKanbanUsesWorkflowMove('assignee', { workflowStateId: 'state-1' })).toBe(false);
   });
 });
 

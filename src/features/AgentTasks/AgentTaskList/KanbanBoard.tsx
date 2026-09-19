@@ -18,7 +18,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
-import { commitWorkQueryBoardMove } from '@/features/MyWork/workQueryBoardMove';
+import {
+  commitWorkQueryBoardMove,
+  storeKanbanUsesWorkflowMove,
+} from '@/features/MyWork/workQueryBoardMove';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { taskService } from '@/services/task';
@@ -360,20 +363,21 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         });
       }
 
-      if (groupBy === 'status') {
-        if (task.workflowStateId) {
-          const targetWorkflowCategory = column.targetWorkflowCategory;
-          if (!targetWorkflowCategory || memberAlready) {
-            await updateTask(task.identifier, anchors);
-            return true;
-          }
-          await updateTask(task.identifier, {
-            ...anchors,
-            workflowCategory: targetWorkflowCategory,
-          });
+      if (storeKanbanUsesWorkflowMove(groupBy, task)) {
+        // Same-column reorder still writes position through the store.
+        // Cross-column Linear drops need VIEW08's exact-state picker.
+        if (memberAlready) {
+          await updateTask(task.identifier, anchors);
           return true;
         }
+        return commitWorkQueryBoardMove({
+          column,
+          groupBy: 'workflowCategory',
+          task,
+        });
+      }
 
+      if (groupBy === 'status') {
         const targetStatus = column.targetStatus;
         // The column writes no status (running), or the task already buckets
         // inside it (a `failed` card in `needsInput`) → pure reorder.

@@ -44,6 +44,7 @@
     "Kanban card context-menu status shares applyWorkQueryStatusChange with list glyphs (Linear moveBoard, unlinked task.update, cancelled picker does not fall through)",
     "OSS workspace activation: module-store activeWorkspace + X-Workspace-Id headers; Agent is a core row; workspace-mirrored inbox/my-work/views/teams",
     "Inbox drops stored task titles after the viewer leaves a private team (SEC06); assignees/reviewers/creators/admins still see them",
+    "Inbox, CommandMenu search, and project work-query lists drop private project titles/names unless ProjectModel.readable (visibility or an active membership grant) still holds",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -93,11 +94,15 @@
     "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
     "src/features/SavedViews/SavedViewsPage.tsx",
     "src/features/WorkInbox/inboxOrganize.ts",
-    "packages/database/src/models/notification.ts"
+    "packages/database/src/models/notification.ts",
+    "packages/database/src/utils/projectReadable.ts",
+    "packages/database/src/models/project.ts",
+    "packages/database/src/models/workQuery.ts",
+    "packages/database/src/models/recent.ts"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
-  "headSha": "67de7007",
-  "implementationHeadBeforeDocs": "67de7007",
+  "headSha": "09ab2664",
+  "implementationHeadBeforeDocs": "09ab2664",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",

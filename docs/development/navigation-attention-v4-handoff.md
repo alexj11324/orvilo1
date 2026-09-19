@@ -274,3 +274,9 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - 路由：先读 `spa-routes` skill。公共路径只注册在 `src/spa/router/desktopRouter.shared.tsx`
 - 组件：先读 `react` skill。Alert/Select/Modal 用 `@lobehub/ui/base-ui`
 - 验收：文档 /handoff 不需要新的产品 acceptance run。新的 Inbox 包络 UI **需要**，但在 Preview 限额解除之前只能用 vitest + 说清楚缺口
+
+### CI/e2e 收尾（head `94372a22`）
+
+- Test Web App 全绿：39/39 scenarios。侧栏重命名 e2e 链路的终修：`sidebarAgent`/`sidebarGroup` steps 用 `[data-agent-list] a[href$="/agent|/group/{id}"]` 行选择器绕开侧栏区段重复项；EditingPopover 的 title input 与 save ActionIcon 加了 `editing-popover-title-input`/`editing-popover-save` testid（EmojiPicker 会渲染自己的 lucide-check，`.first()` 会误中 swatch）；输入走 `focus → mod+a → pressSequentially`，保存等 positioner 落位后 click，失败时 `dispatchEvent('click')` 兜底；Then 断言失败时 dump 行文本 + popover 状态。
+- `85dc9749` 跑剩 1 个 `聊天列表底部补偿区域高度不应收缩`（scroll.steps.ts:454，expected ≥250 got 243）—— 该 scenario 在 canary 上就存在、本 PR 未触碰，空 commit `94372a22` 重跑即绿，判定为 mock-infra 计时 flake。若它在本分支再次复现需重新排查。
+- `94372a22` 这一轮 Test/Typecheck/Shard 全被 Check Duplicate Run 跳过（concurrent-skip 已知行为），Required Quality Gate + Test Web App 为绿。不要把 skip 当全量通过。

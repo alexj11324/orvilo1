@@ -1,6 +1,7 @@
+import { randomUUID } from 'node:crypto';
+
 import { TRPCError } from '@trpc/server';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { randomUUID } from 'node:crypto';
 
 import type { OrviloDatabase } from '@/database/type';
 
@@ -147,8 +148,13 @@ export class TaskInputService {
   };
 }
 
-const isUniqueViolation = (error: unknown) =>
-  typeof error === 'object' &&
-  error !== null &&
-  ((error as { code?: string }).code === '23505' ||
-    String((error as { message?: string }).message ?? '').includes('duplicate key'));
+const isUniqueViolation = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) return false;
+  if (
+    (error as { code?: string }).code === '23505' ||
+    String((error as { message?: string }).message ?? '').includes('duplicate key')
+  )
+    return true;
+  const cause = (error as { cause?: unknown }).cause;
+  return cause !== error && isUniqueViolation(cause);
+};

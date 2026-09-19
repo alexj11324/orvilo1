@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-09-19-workspace-slug-conflict-error",
+      "date": "2026-09-19",
+      "versionRange": ["2.2.17"]
+    },
+    {
       "id": "2026-09-18-collaboration-and-sync-hardening",
       "date": "2026-09-18",
       "versionRange": ["2.2.17"]

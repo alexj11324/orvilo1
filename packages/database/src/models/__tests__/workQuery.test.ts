@@ -4,7 +4,7 @@ import {
   applyNoProjectFilter,
   WORK_QUERY_MAX_IN_VALUES,
 } from '@orvilo/types';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -23,6 +23,7 @@ import {
 } from '../../schemas';
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
+import { notifications } from '../../schemas/notification';
 import { tasks as tasksTable } from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
@@ -162,34 +163,61 @@ describe('WorkQueryModel', () => {
     expect(result.tasks.map((row) => row.id)).not.toContain(someoneElses.id);
   });
 
-  it('activity unions every user relationship, including delegation and subscription', async () => {
-    await serverDB.insert(agents).values({ id: 'agt_act', slug: 'act', userId });
-    const assigned = await createTask(otherUserId, { assigneeUserId: userId, name: 'A' });
-    const created = await createTask(userId, { name: 'C' });
-    const reviewed = await createTask(otherUserId, { name: 'R', reviewerUserId: userId });
-    const delegated = await createTask(otherUserId, { name: 'D' });
-    await serverDB.insert(executionGrants).values({
-      agentId: 'agt_act',
-      id: 'grant-act',
-      initiatedBy: userId,
-      status: 'active',
-      taskId: delegated.id,
+  it('activity lists only tasks with real notification activity, most recent first', async () => {
+    const recent = await createTask(otherUserId, { name: 'Recent ping' });
+    const stale = await createTask(otherUserId, { name: 'Older ping' });
+    // Assigned to me but no notification episode — relation alone is not activity.
+    const silent = await createTask(otherUserId, { assigneeUserId: userId, name: 'Silent' });
+    const foreign = await createTask(otherUserId, { name: 'Someone else pinged' });
+
+    const ping = (resourceId: string, at: string, user: string = userId) => ({
+      category: 'work',
+      content: 'x',
+      lastActivityAt: new Date(at),
+      resourceId,
+      resourceType: 'task',
+      title: 'x',
+      type: 'task.assigned',
+      userId: user,
       workspaceId,
     });
-    const followed = await createTask(otherUserId, { name: 'F' });
-    await new TaskSubscriptionModel(serverDB, userId, workspaceId).subscribe(followed.id);
-    const unrelated = await createTask(otherUserId, { name: 'Not mine' });
+    await serverDB.insert(notifications).values([
+      ping(stale.id, '2026-09-01T00:00:00Z'),
+      ping(recent.id, '2026-09-10T00:00:00Z'),
+      ping(foreign.id, '2026-09-11T00:00:00Z', otherUserId),
+      // A non-task resource for the same user must not pull the task in.
+      {
+        category: 'work',
+        content: 'x',
+        lastActivityAt: new Date('2026-09-12T00:00:00Z'),
+        resourceId: stale.id,
+        resourceType: 'project',
+        title: 'x',
+        type: 'project.updated',
+        userId,
+        workspaceId,
+      },
+    ]);
 
-    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const result = await model.queryTasks({
       mode: 'activity',
       query: myWorkQueryForMode('activity'),
     });
 
     const ids = result.tasks.map((row) => row.id);
-    expect(ids).toEqual(
-      expect.arrayContaining([assigned.id, created.id, reviewed.id, delegated.id, followed.id]),
-    );
-    expect(ids).not.toContain(unrelated.id);
+    expect(ids).toEqual([recent.id, stale.id]);
+    expect(ids).not.toContain(silent.id);
+    expect(ids).not.toContain(foreign.id);
+
+    // Keyset pagination follows the same activity ordering.
+    const second = await model.queryTasks({
+      afterId: recent.id,
+      mode: 'activity',
+      query: myWorkQueryForMode('activity'),
+      queryHash: result.queryHash,
+    });
+    expect(second.tasks.map((row) => row.id)).toEqual([stale.id]);
   });
 
   it('activity scoped by the delegated filter matches the old delegated tab', async () => {
@@ -206,6 +234,18 @@ describe('WorkQueryModel', () => {
     const assignedOnly = await createTask(otherUserId, {
       assigneeUserId: userId,
       name: 'Assigned not delegated',
+    });
+    // Activity is notification-backed now — only the delegated task has an
+    // episode for the caller; the assigned-only task stays silent.
+    await serverDB.insert(notifications).values({
+      category: 'work',
+      content: 'x',
+      resourceId: delegated.id,
+      resourceType: 'task',
+      title: 'x',
+      type: 'task.assigned',
+      userId,
+      workspaceId,
     });
 
     const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
@@ -1077,5 +1117,227 @@ describe('WorkQueryModel', () => {
       'wq-filter-mine',
       'wq-filter-theirs',
     ]);
+  });
+
+  it('created lists newest-created first even when another row was touched later', async () => {
+    const filedFirst = await createTask(userId, { name: 'Filed first' });
+    const filedLater = await createTask(userId, { name: 'Filed later' });
+    await serverDB
+      .update(tasksTable)
+      .set({
+        createdAt: new Date('2026-09-01T00:00:00Z'),
+        updatedAt: new Date('2026-09-19T00:00:00Z'),
+      })
+      .where(eq(tasksTable.id, filedFirst.id));
+    await serverDB
+      .update(tasksTable)
+      .set({
+        createdAt: new Date('2026-09-15T00:00:00Z'),
+        updatedAt: new Date('2026-09-02T00:00:00Z'),
+      })
+      .where(eq(tasksTable.id, filedLater.id));
+
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      query: myWorkQueryForMode('created'),
+    });
+
+    // updatedAt-desc would put filedFirst first; createdAt-desc must win.
+    expect(result.tasks.map((row) => row.id)).toEqual([filedLater.id, filedFirst.id]);
+  });
+
+  it('evaluates a top-level any group as OR across all four quadrants (VW01)', async () => {
+    // Seed the acceptance matrix: only A, only B, both, neither.
+    const onlyPriority = await createTask(otherUserId, { name: 'Urgent not mine', priority: 3 });
+    const onlyAssignee = await createTask(otherUserId, {
+      assigneeUserId: userId,
+      name: 'Mine not urgent',
+      priority: 0,
+    });
+    const both = await createTask(otherUserId, {
+      assigneeUserId: userId,
+      name: 'Urgent and mine',
+      priority: 3,
+    });
+    const neither = await createTask(otherUserId, { name: 'Neither', priority: 0 });
+
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      query: {
+        entityType: 'task',
+        filter: {
+          any: [
+            { field: 'priority', op: 'eq', value: 3 },
+            { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+          ],
+        },
+        schemaVersion: 1,
+        sort: [{ direction: 'asc', field: 'name' }],
+      },
+    });
+
+    expect(result.tasks.map((row) => row.id).sort()).toEqual(
+      [onlyPriority.id, onlyAssignee.id, both.id].sort(),
+    );
+    expect(result.tasks.map((row) => row.id)).not.toContain(neither.id);
+    expect(result.total).toBe(3);
+  });
+
+  it('board columns keep manual positions unless sortMode is field (VW03)', async () => {
+    // Positions deliberately contradict name order.
+    const zebra = await createTask(userId, { name: 'Zebra', workflowCategory: 'todo' });
+    const alpha = await createTask(userId, { name: 'Alpha', workflowCategory: 'todo' });
+    const mid = await createTask(userId, { name: 'Mid', workflowCategory: 'todo' });
+    await serverDB.update(tasksTable).set({ position: 1 }).where(eq(tasksTable.id, zebra.id));
+    await serverDB.update(tasksTable).set({ position: 2 }).where(eq(tasksTable.id, mid.id));
+    await serverDB.update(tasksTable).set({ position: 3 }).where(eq(tasksTable.id, alpha.id));
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const board = {
+      entityType: 'task' as const,
+      filter: {
+        all: [{ field: 'id' as const, op: 'in' as const, value: [zebra.id, alpha.id, mid.id] }],
+      },
+      groupBy: 'workflowCategory' as const,
+      layout: 'board' as const,
+      schemaVersion: 1 as const,
+      sort: [{ direction: 'asc' as const, field: 'name' as const }],
+    };
+
+    // Unset and explicit manual both order by position — drag persistence.
+    for (const query of [board, { ...board, sortMode: 'manual' as const }]) {
+      const manual = await model.queryTasks({ query });
+      const todo = manual.groups?.find((group) => group.key === 'todo');
+      expect(manual.layout).toBe('board');
+      expect(todo?.tasks.map((row) => row.name)).toEqual(['Zebra', 'Mid', 'Alpha']);
+    }
+
+    // Field mode orders each column by the saved sort.
+    const field = await model.queryTasks({ limit: 2, query: { ...board, sortMode: 'field' } });
+    const todo = field.groups?.find((group) => group.key === 'todo');
+    expect(todo?.tasks.map((row) => row.name)).toEqual(['Alpha', 'Mid']);
+
+    // Field mode paginates by the same sort, not by position.
+    const next = await model.queryTasks({
+      afterId: todo!.tasks[1]!.id,
+      groupKey: 'todo',
+      limit: 2,
+      query: { ...board, sortMode: 'field' },
+      queryHash: field.queryHash,
+    });
+    expect(
+      next.groups?.find((group) => group.key === 'todo')?.tasks.map((row) => row.name),
+    ).toEqual(['Zebra']);
+  });
+
+  it('project options search server-side, page by cursor, and hydrate by id (VW04)', async () => {
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
+    await serverDB.insert(projects).values([
+      { id: 'wq-opt-a', identifier: 'WOA', name: 'Alpha deck', userId, workspaceId },
+      { id: 'wq-opt-b', identifier: 'WOB', name: 'Beta deck', userId, workspaceId },
+      { id: 'wq-opt-c', identifier: 'WOC', name: 'Gamma deck', userId, workspaceId },
+      {
+        id: 'wq-opt-d',
+        identifier: 'WOD',
+        name: 'Delta private',
+        userId,
+        visibility: 'private',
+        workspaceId,
+      },
+    ]);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    // Cursor pagination reaches past the first page — the old limit=100 load
+    // could not see it.
+    const first = await model.searchProjectOptions({ limit: 2 });
+    expect(first.items).toHaveLength(2);
+    expect(first.nextCursor).toBeTruthy();
+    const second = await model.searchProjectOptions({ afterId: first.nextCursor!, limit: 2 });
+    const paged = [...first.items, ...second.items].map((item) => item.id).sort();
+    expect(paged).toEqual(['wq-opt-a', 'wq-opt-b', 'wq-opt-c', 'wq-opt-d'].sort());
+    expect(second.nextCursor).toBeNull();
+
+    // Server-side name match — "project 101" is findable without loading all.
+    const searched = await model.searchProjectOptions({ needle: 'gamma' });
+    expect(searched.items.map((item) => item.id)).toEqual(['wq-opt-c']);
+
+    // Selected values hydrate by id even when not on the loaded page.
+    const hydrated = await model.searchProjectOptions({ ids: ['wq-opt-c'] });
+    expect(hydrated.items.map((item) => item.name)).toEqual(['Gamma deck']);
+
+    // Same ACL as project lists: outsiders never see the private row.
+    const outsider = new WorkQueryModel(serverDB, otherUserId, workspaceId);
+    const outsiderPage = await outsider.searchProjectOptions({ limit: 10 });
+    expect(outsiderPage.items.map((item) => item.id)).not.toContain('wq-opt-d');
+    const outsiderHydrate = await outsider.searchProjectOptions({ ids: ['wq-opt-d'] });
+    expect(outsiderHydrate.items).toEqual([]);
+  });
+
+  it('cycle options stay in one query and scope to the chosen readable team (VW04)', async () => {
+    await serverDB.insert(teams).values([
+      {
+        createdByUserId: userId,
+        id: 'wq-cyc-public',
+        key: 'CPA',
+        name: 'Cycles public',
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        createdByUserId: userId,
+        id: 'wq-cyc-member',
+        key: 'CMB',
+        name: 'Cycles member',
+        visibility: 'private',
+        workspaceId,
+      },
+      {
+        createdByUserId: userId,
+        id: 'wq-cyc-secret',
+        key: 'CSC',
+        name: 'Cycles secret',
+        visibility: 'private',
+        workspaceId,
+      },
+    ]);
+    await serverDB.insert(teamMembers).values({
+      role: 'member',
+      teamId: 'wq-cyc-member',
+      userId,
+      workspaceId,
+    });
+    const [cycleA, cycleB, cycleC] = await serverDB
+      .insert(teamCycles)
+      .values([
+        { name: 'Public cycle', teamId: 'wq-cyc-public', workspaceId },
+        { name: 'Member cycle', teamId: 'wq-cyc-member', workspaceId },
+        { name: 'Secret cycle', teamId: 'wq-cyc-secret', workspaceId },
+      ])
+      .returning();
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    // No team scope → one authorized query across readable teams, not N calls.
+    const all = await model.listCycleOptions({});
+    expect(all.map((row) => row.id).sort()).toEqual([cycleA!.id, cycleB!.id].sort());
+    expect(all.map((row) => row.id)).not.toContain(cycleC!.id);
+
+    // Scoped to the selected team.
+    const scoped = await model.listCycleOptions({ teamId: 'wq-cyc-member' });
+    expect(scoped.map((row) => row.name)).toEqual(['Member cycle']);
+    expect(scoped[0]?.teamName).toBe('Cycles member');
+
+    // An unreadable scope returns nothing rather than leaking ids.
+    expect(await model.listCycleOptions({ teamId: 'wq-cyc-secret' })).toEqual([]);
+
+    // Hydrate a selected cycle by id.
+    const hydrated = await model.listCycleOptions({ ids: [cycleB!.id] });
+    expect(hydrated.map((row) => row.name)).toEqual(['Member cycle']);
+
+    // Name needle narrows within the readable set.
+    const searched = await model.listCycleOptions({ needle: 'public' });
+    expect(searched.map((row) => row.id)).toEqual([cycleA!.id]);
   });
 });

@@ -250,6 +250,14 @@ export type WorkQueryLayout = 'board' | 'list';
 
 export type WorkQueryGroupBy = 'none' | 'status' | 'workflowCategory';
 
+/**
+ * Board ordering mode. `manual` orders a board column by the persisted
+ * position (same-column drags stick); `field` orders by `query.sort`. Layout,
+ * grouping and sort are independent dimensions — board must never silently
+ * override the saved sort. Unset means `manual`, the pre-sortMode behavior.
+ */
+export type WorkQuerySortMode = 'field' | 'manual';
+
 /** Cross-team board columns. Exact Team workflow states stay on the Team surface. */
 export const WORK_QUERY_WORKFLOW_COLUMNS = [
   'triage',
@@ -278,6 +286,7 @@ export interface WorkQuery {
   layout?: WorkQueryLayout;
   schemaVersion: 1;
   sort?: WorkQuerySort[];
+  sortMode?: WorkQuerySortMode;
 }
 
 /**

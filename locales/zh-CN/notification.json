@@ -88,6 +88,7 @@
   "inbox.loading": "正在加载收件箱…",
   "inbox.markAllRead": "全部标为已读",
   "inbox.markUnread": "标为未读",
+  "inbox.moreActions": "更多操作",
   "inbox.open": "打开",
   "inbox.organizeFailed": "无法更新此项。请刷新后按当前版本再试。",
   "inbox.read": "已读",

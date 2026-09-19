@@ -1,21 +1,26 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
+import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import {
   type TaskWorkflowCategory,
+  WORK_QUERY_STATUS_COLUMNS,
+  WORK_QUERY_WORKFLOW_COLUMNS,
   WORKFLOW_STATE_REQUIRED,
   type WorkQueryExternalReview,
   type WorkQueryGroupBy,
   type WorkQueryLayout,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { BellOffIcon, BellPlusIcon, ListTodoIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createTaskStatusCascadeModal } from '@/features/AgentTasks/features/TaskStatusCascadeModal';
+import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
@@ -32,6 +37,15 @@ import {
 import { type WorkQueryGroupPage, workQueryHasMore } from './workQueryPaging';
 
 const styles = createStaticStyles(({ css }) => ({
+  actions: css`
+    flex: none;
+    opacity: 0;
+    transition: opacity ${cssVar.motionDurationFast};
+
+    @media (hover: none) {
+      opacity: 1;
+    }
+  `,
   board: css`
     overflow: auto;
     display: flex;
@@ -53,6 +67,12 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorFillQuaternary};
   `,
+  columnCount: css`
+    color: ${cssVar.colorTextQuaternary};
+  `,
+  columnHeader: css`
+    padding-inline: 4px;
+  `,
   card: css`
     cursor: grab;
 
@@ -61,6 +81,51 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: ${cssVar.borderRadius};
 
     background: ${cssVar.colorBgContainer};
+
+    transition: border-color ${cssVar.motionDurationFast};
+
+    &:hover {
+      border-color: ${cssVar.colorBorder};
+    }
+
+    &:hover .work-query-row-actions,
+    &:focus-within .work-query-row-actions {
+      opacity: 1;
+    }
+  `,
+  identifier: css`
+    flex: none;
+
+    min-width: 64px;
+
+    font-family: ${cssVar.fontFamilyCode};
+    color: ${cssVar.colorTextTertiary};
+    text-align: end;
+  `,
+  link: css`
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    align-items: center;
+
+    min-width: 0;
+
+    color: inherit;
+  `,
+  row: css`
+    padding-block: 7px;
+    padding-inline: 4px 12px;
+    border-radius: ${cssVar.borderRadiusLG};
+    color: inherit;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:hover .work-query-row-actions,
+    &:focus-within .work-query-row-actions {
+      opacity: 1;
+    }
   `,
 }));
 
@@ -140,24 +205,44 @@ const moveBoardMaybePickingState = async (input: {
 
 const WorkQueryTaskRow = memo(
   ({
+    dense,
     followed,
     onToggleFollow,
     task,
   }: {
+    dense?: boolean;
     followed?: boolean;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
     task: WorkQueryResultTask;
   }) => {
     const { t } = useTranslation('common');
     return (
-      <Flexbox horizontal align="center" gap={8} wrap="wrap">
-        <WorkspaceLink to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}>
-          <Text weight={500}>{task.name ?? task.instruction}</Text>
+      <Flexbox horizontal align="center" className={dense ? undefined : styles.row}>
+        <WorkspaceLink
+          className={styles.link}
+          to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+        >
+          <TaskStatusIcon size={16} status={task.status} />
+          <Flexbox flex={1} style={{ minWidth: 0 }}>
+            <Text ellipsis weight={500}>
+              {task.name ?? task.instruction}
+            </Text>
+          </Flexbox>
+          {task.identifier ? (
+            <Text className={styles.identifier} fontSize={12}>
+              {task.identifier}
+            </Text>
+          ) : null}
         </WorkspaceLink>
         {onToggleFollow ? (
-          <Button size="small" onClick={() => onToggleFollow(task.id, Boolean(followed))}>
-            {followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
-          </Button>
+          <span className={`${styles.actions} work-query-row-actions`}>
+            <ActionIcon
+              icon={followed ? BellOffIcon : BellPlusIcon}
+              size={'small'}
+              title={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
+              onClick={() => onToggleFollow(task.id, Boolean(followed))}
+            />
+          </span>
         ) : null}
       </Flexbox>
     );
@@ -267,14 +352,14 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     );
 
     if (loading) {
-      return <Text type="secondary">{loadingLabel}</Text>;
+      return <SkeletonList aria-label={loadingLabel} rows={8} />;
     }
 
     const reviewBlock = externalReviews ? (
       <Flexbox gap={8}>
         <Text weight={500}>{t('myWork.externalReviews')}</Text>
         {externalReviews.length === 0 ? (
-          <Empty description={t('myWork.externalReviewsEmpty')} />
+          <Empty description={t('myWork.externalReviewsEmpty')} icon={ListTodoIcon} />
         ) : (
           externalReviews.map((review) => (
             <Text key={review.id} weight={500}>
@@ -290,35 +375,41 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
         <Flexbox gap={16}>
           {reviewBlock}
           {tasks.length === 0 ? (
-            <Empty description={emptyLabel} />
+            <Center flex={1} padding={48}>
+              <Empty description={emptyLabel} icon={ListTodoIcon} />
+            </Center>
           ) : (
-            tasks.map((task) => (
-              <WorkQueryTaskRow
-                followed={isFollowed?.(task.id)}
-                key={task.id}
-                task={task}
-                onToggleFollow={onToggleFollow}
-              />
-            ))
+            <Flexbox gap={2}>
+              {tasks.map((task) => (
+                <WorkQueryTaskRow
+                  followed={isFollowed?.(task.id)}
+                  key={task.id}
+                  task={task}
+                  onToggleFollow={onToggleFollow}
+                />
+              ))}
+            </Flexbox>
           )}
           {onLoadMore && workQueryHasMore(tasks.length, total) ? (
-            <Button size="small" onClick={() => void onLoadMore()}>
-              {loadMoreLabel}
-            </Button>
+            <Flexbox horizontal justify={'center'}>
+              <Button size="small" onClick={() => void onLoadMore()}>
+                {loadMoreLabel}
+              </Button>
+            </Flexbox>
           ) : null}
         </Flexbox>
       );
     }
 
-    const columns = groups ?? [];
-    if (total === 0) {
-      return (
-        <Flexbox gap={16}>
-          {reviewBlock}
-          <Empty description={emptyLabel} />
-        </Flexbox>
-      );
-    }
+    const fallbackColumns = (
+      boardGroupBy === 'status' ? WORK_QUERY_STATUS_COLUMNS : WORK_QUERY_WORKFLOW_COLUMNS
+    ).map((key): WorkQueryGroupPage<WorkQueryResultTask> => ({
+      hasMore: false,
+      key,
+      tasks: [],
+      total: 0,
+    }));
+    const columns = groups && groups.length > 0 ? groups : fallbackColumns;
 
     return (
       <Flexbox gap={16}>
@@ -348,14 +439,22 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 void moveTask(task, column.key);
               }}
             >
-              <Flexbox horizontal align="center" gap={8}>
+              <Flexbox
+                horizontal
+                align="center"
+                className={styles.columnHeader}
+                gap={8}
+                justify={'space-between'}
+              >
                 <Text weight={500}>
                   {t(workQueryColumnLabelKey(boardGroupBy, column.key), {
                     defaultValue: column.key,
                     ns: 'chat',
                   })}
                 </Text>
-                <Text type="secondary">{column.total}</Text>
+                <Text className={styles.columnCount} fontSize={12}>
+                  {column.total}
+                </Text>
               </Flexbox>
               {column.tasks.map((task) => (
                 <div
@@ -374,6 +473,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   }}
                 >
                   <WorkQueryTaskRow
+                    dense
                     followed={isFollowed?.(task.id)}
                     task={task}
                     onToggleFollow={onToggleFollow}

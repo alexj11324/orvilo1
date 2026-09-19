@@ -1,13 +1,21 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
-import { memo, useCallback } from 'react';
+import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
+import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import type { SavedViewItem } from '@orvilo/database/schemas';
+import { builtinSavedViewKey } from '@orvilo/types';
+import { createStaticStyles, cssVar } from 'antd-style';
+import dayjs from 'dayjs';
+import { BookmarkIcon, ListFilterIcon, PlusIcon, SearchXIcon } from 'lucide-react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncError from '@/components/AsyncError';
 import { myWorkSaveAsQuery } from '@/features/MyWork/myWorkSaveAs';
 import NavHeader from '@/features/NavHeader';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -16,14 +24,99 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { savedViewTitle } from './savedViewTitle';
 
+const styles = createStaticStyles(({ css }) => ({
+  link: css`
+    display: flex;
+    flex: 1;
+    gap: 12px;
+    align-items: center;
+
+    min-width: 0;
+
+    color: inherit;
+  `,
+  meta: css`
+    flex: none;
+    color: ${cssVar.colorTextQuaternary};
+    text-align: end;
+    white-space: nowrap;
+  `,
+  row: css`
+    padding-block: 8px;
+    padding-inline: 8px 12px;
+    border-radius: ${cssVar.borderRadiusLG};
+
+    color: inherit;
+
+    transition: background ${cssVar.motionDurationFast};
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+}));
+
+const viewIcon = (view: SavedViewItem) =>
+  builtinSavedViewKey(view.id) || view.entityType === 'project' ? ListFilterIcon : BookmarkIcon;
+
+const ViewRow = memo<{ view: SavedViewItem }>(({ view }) => {
+  const { t } = useTranslation('common');
+  const builtin = Boolean(builtinSavedViewKey(view.id));
+
+  return (
+    <Flexbox horizontal align={'center'} className={styles.row}>
+      <WorkspaceLink className={styles.link} to={`/views/${view.id}`}>
+        <Icon color={cssVar.colorTextSecondary} icon={viewIcon(view)} size={16} />
+        <Flexbox flex={1} style={{ minWidth: 0 }}>
+          <Text ellipsis weight={500}>
+            {savedViewTitle(view.id, view.name, t)}
+          </Text>
+        </Flexbox>
+        {!builtin && view.visibility === 'team' ? (
+          <Tag>{t('savedViews.visibilityTeam')}</Tag>
+        ) : null}
+        {!builtin && view.visibility === 'workspace' ? (
+          <Tag>{t('savedViews.visibilityWorkspace')}</Tag>
+        ) : null}
+        {view.updatedAt ? (
+          <Text
+            className={styles.meta}
+            fontSize={12}
+            title={dayjs(view.updatedAt).format('YYYY-MM-DD HH:mm')}
+          >
+            {dayjs(view.updatedAt).fromNow()}
+          </Text>
+        ) : null}
+      </WorkspaceLink>
+    </Flexbox>
+  );
+});
+
+ViewRow.displayName = 'ViewRow';
+
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
-  const { data, isLoading } = useClientDataSWR(workAttentionKeys.savedViews(workspaceId), () =>
+  const [keyword, setKeyword] = useState('');
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useClientDataSWR(workAttentionKeys.savedViews(workspaceId), () =>
     workAttentionService.savedViewList(),
   );
-  const views = data?.data ?? [];
+  const views = useMemo(() => data?.data ?? [], [data?.data]);
+
+  const filteredViews = useMemo(() => {
+    const needle = keyword.trim().toLocaleLowerCase();
+    return needle
+      ? views.filter((view) =>
+          savedViewTitle(view.id, view.name, t).toLocaleLowerCase().includes(needle),
+        )
+      : views;
+  }, [keyword, t, views]);
 
   const createAssigned = useCallback(async () => {
     const created = await workAttentionService.savedViewCreate({
@@ -44,25 +137,39 @@ const SavedViewsPage = memo(() => {
             {t('tab.views')}
           </Text>
         }
-        right={
-          <Button size="small" type="primary" onClick={() => void createAssigned()}>
+      />
+      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+          <SearchBar
+            allowClear
+            placeholder={t('savedViews.searchPlaceholder')}
+            style={{ maxWidth: 280 }}
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+          <Button icon={PlusIcon} onClick={() => void createAssigned()}>
             {t('savedViews.saveAssigned')}
           </Button>
-        }
-      />
-      <Flexbox gap={8} padding={16} style={{ overflow: 'auto' }}>
-        {isLoading ? (
-          <Text type="secondary">{t('savedViews.loading')}</Text>
-        ) : views.length === 0 ? (
-          <Empty description={t('savedViews.empty')} />
+        </Flexbox>
+        {error ? (
+          <AsyncError error={error} onRetry={() => revalidate()} />
+        ) : isLoading && views.length === 0 ? (
+          <SkeletonList rows={8} />
+        ) : filteredViews.length === 0 ? (
+          <Center flex={1} padding={48}>
+            <Empty
+              description={keyword.trim() ? t('savedViews.searchEmpty') : t('savedViews.empty')}
+              icon={keyword.trim() ? SearchXIcon : BookmarkIcon}
+            />
+          </Center>
         ) : (
-          views.map((view) => (
-            <WorkspaceLink key={view.id} to={`/views/${view.id}`}>
-              <Text weight={500}>{savedViewTitle(view.id, view.name, t)}</Text>
-            </WorkspaceLink>
-          ))
+          <Flexbox gap={2}>
+            {filteredViews.map((view) => (
+              <ViewRow key={view.id} view={view} />
+            ))}
+          </Flexbox>
         )}
-      </Flexbox>
+      </WideScreenContainer>
     </Flexbox>
   );
 });

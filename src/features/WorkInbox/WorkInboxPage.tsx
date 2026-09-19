@@ -1,9 +1,13 @@
 'use client';
 
-import { Empty, Flexbox, Input } from '@lobehub/ui';
+import { Center, Empty, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
 import {
+  ActionIcon,
   Alert,
   Button,
+  type DropdownItem,
+  DropdownMenu,
+  Segmented,
   TabsIndicator,
   TabsList,
   TabsRoot,
@@ -13,12 +17,24 @@ import {
 } from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import dayjs from 'dayjs';
+import {
+  ArchiveIcon,
+  CheckCheckIcon,
+  ChevronLeftIcon,
+  ExternalLinkIcon,
+  InboxIcon,
+  MailOpenIcon,
+  MoreHorizontalIcon,
+  TimerOffIcon,
+} from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -48,28 +64,70 @@ const styles = createStaticStyles(({ css }) => ({
     min-height: 0;
   `,
   list: css`
-    overflow: auto;
+    overflow: hidden auto;
     flex: 1;
 
-    min-width: 280px;
-    max-width: 420px;
+    min-width: 300px;
+    max-width: 380px;
     border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  listHeader: css`
+    flex: none;
+    padding-block: 8px 4px;
+    padding-inline: 12px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
   row: css`
     cursor: pointer;
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorFillTertiary};
+
+    padding-block: 10px;
+    padding-inline: 12px;
+    border-block-end: 1px solid ${cssVar.colorFillQuaternary};
+
+    transition: background ${cssVar.motionDurationFast};
+
+    &:hover {
+      background: ${cssVar.colorFillQuaternary};
+    }
 
     &[data-active='true'] {
       background: ${cssVar.colorFillTertiary};
     }
+  `,
+  unreadDot: css`
+    flex: none;
+
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+
+    background: ${cssVar.colorPrimary};
+  `,
+  snippet: css`
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    color: ${cssVar.colorTextSecondary};
+  `,
+  time: css`
+    flex: none;
+    color: ${cssVar.colorTextQuaternary};
+    white-space: nowrap;
   `,
   pane: css`
     overflow: auto;
     flex: 1;
     min-width: 0;
     padding: 24px;
+  `,
+  paneMeta: css`
+    color: ${cssVar.colorTextQuaternary};
+  `,
+  divider: css`
+    height: 1px;
+    background: ${cssVar.colorBorderSecondary};
   `,
   keptMounted: css`
     pointer-events: none;
@@ -311,38 +369,48 @@ const WorkInboxPage = memo(() => {
       />
       <Flexbox horizontal className={styles.stage} flex={1}>
         <Flexbox className={cx(styles.list, surface === 'detail' && styles.keptMounted)}>
-          <TabsRoot value={tab} onValueChange={(value) => setTab(value as 'action' | 'activity')}>
-            <TabsList>
-              <TabsIndicator />
-              <TabsTab value="action">
-                {t('inbox.actionTab')}
-                {summary?.pendingActionCount ? ` ${summary.pendingActionCount}` : ''}
-              </TabsTab>
-              <TabsTab value="activity">
-                {t('inbox.activityTab')}
-                {summary?.unreadUpdateCount ? ` ${summary.unreadUpdateCount}` : ''}
-              </TabsTab>
-            </TabsList>
-          </TabsRoot>
-          <Flexbox horizontal gap={8} padding={8} style={{ flexWrap: 'wrap' }}>
-            {INBOX_FILTER_CHIPS.map((chip) => (
-              <Button
-                key={chip}
-                size="small"
-                type={filterChip === chip ? 'primary' : 'default'}
-                onClick={() => setFilterChip(chip)}
+          <Flexbox className={styles.listHeader} gap={4}>
+            <Flexbox horizontal align={'center'} justify={'space-between'}>
+              <TabsRoot
+                style={{ flex: 1, minWidth: 0 }}
+                value={tab}
+                onValueChange={(value) => setTab(value as 'action' | 'activity')}
               >
-                {filterLabel(chip)}
-              </Button>
-            ))}
-          </Flexbox>
-          <Flexbox horizontal gap={8} padding={8}>
-            <Button size="small" onClick={() => void markAllRead()}>
-              {t('inbox.markAllRead')}
-            </Button>
-            <Button size="small" onClick={() => void archiveAll()}>
-              {t('inbox.archiveAll')}
-            </Button>
+                <TabsList>
+                  <TabsIndicator />
+                  <TabsTab value="action">
+                    {t('inbox.actionTab')}
+                    {summary?.pendingActionCount ? ` ${summary.pendingActionCount}` : ''}
+                  </TabsTab>
+                  <TabsTab value="activity">
+                    {t('inbox.activityTab')}
+                    {summary?.unreadUpdateCount ? ` ${summary.unreadUpdateCount}` : ''}
+                  </TabsTab>
+                </TabsList>
+              </TabsRoot>
+              <Flexbox horizontal align={'center'} flex={'none'}>
+                <Tooltip title={t('inbox.markAllRead')}>
+                  <ActionIcon
+                    icon={CheckCheckIcon}
+                    size={'small'}
+                    onClick={() => void markAllRead()}
+                  />
+                </Tooltip>
+                <Tooltip title={t('inbox.archiveAll')}>
+                  <ActionIcon icon={ArchiveIcon} size={'small'} onClick={() => void archiveAll()} />
+                </Tooltip>
+              </Flexbox>
+            </Flexbox>
+            <Segmented
+              block
+              size={'small'}
+              value={filterChip}
+              options={INBOX_FILTER_CHIPS.map((chip) => ({
+                label: filterLabel(chip),
+                value: chip,
+              }))}
+              onChange={(value) => setFilterChip(value as InboxFilterChip)}
+            />
           </Flexbox>
           {partial ? (
             <Alert
@@ -353,11 +421,11 @@ const WorkInboxPage = memo(() => {
             />
           ) : null}
           {listMode === 'loading' ? (
-            <Text style={{ padding: 16 }} type="secondary">
-              {t('inbox.loading')}
-            </Text>
+            <SkeletonList padding={12} rows={8} />
           ) : listMode === 'empty' ? (
-            <Empty description={t('inbox.empty')} />
+            <Center flex={1} padding={48}>
+              <Empty description={t('inbox.empty')} icon={InboxIcon} />
+            </Center>
           ) : listMode === 'partial-empty' ? null : (
             cards.map((card) => (
               <div
@@ -367,22 +435,52 @@ const WorkInboxPage = memo(() => {
                 key={card.notificationId}
                 onClick={() => selectCard(card.notificationId, true)}
               >
-                <Text weight={card.read ? 400 : 600}>{titleFor(card)}</Text>
-                <Text type="secondary">{card.content}</Text>
+                <Flexbox horizontal align={'center'} gap={8}>
+                  {card.read ? null : <span className={styles.unreadDot} />}
+                  <Flexbox flex={1} style={{ minWidth: 0 }}>
+                    <Text ellipsis weight={card.read ? 400 : 600}>
+                      {titleFor(card)}
+                    </Text>
+                  </Flexbox>
+                  <Text className={styles.time} fontSize={12}>
+                    {dayjs(card.lastActivityAt).fromNow()}
+                  </Text>
+                </Flexbox>
+                <Flexbox horizontal gap={8}>
+                  <span style={{ width: card.read ? 0 : 8, flex: 'none' }} />
+                  <Text className={styles.snippet} fontSize={12}>
+                    {card.content}
+                  </Text>
+                </Flexbox>
               </div>
             ))
           )}
         </Flexbox>
         <Flexbox className={cx(styles.pane, surface === 'list' && styles.keptMounted)} gap={16}>
           {surface === 'detail' ? (
-            <Button onClick={() => setDetailOpen(false)}>{tCommon('back')}</Button>
+            <Flexbox horizontal>
+              <Button icon={ChevronLeftIcon} size={'small'} onClick={() => setDetailOpen(false)}>
+                {tCommon('back')}
+              </Button>
+            </Flexbox>
           ) : null}
           {!selected ? (
-            <Empty description={t('inbox.selectItem')} />
+            <Center flex={1}>
+              <Empty description={t('inbox.selectItem')} icon={InboxIcon} />
+            </Center>
           ) : (
             <>
-              <Text weight={600}>{titleFor(selected)}</Text>
-              <Text>{selected.content}</Text>
+              <Flexbox gap={4}>
+                <Text fontSize={16} weight={600}>
+                  {titleFor(selected)}
+                </Text>
+                <Text className={styles.paneMeta} fontSize={12}>
+                  {dayjs(selected.lastActivityAt).fromNow()}
+                  {!selected.read ? ` · ${t('inbox.unread')}` : ''}
+                </Text>
+              </Flexbox>
+              <Text type={'secondary'}>{selected.content}</Text>
+              <div className={styles.divider} />
               <Flexbox gap={8}>
                 {decisionVerbs.includes('submit_input') ? (
                   <Input
@@ -418,18 +516,42 @@ const WorkInboxPage = memo(() => {
                       {t('inbox.submitInput')}
                     </Button>
                   ) : null}
-                  <Button onClick={() => openTarget(selected)}>{t('inbox.open')}</Button>
-                  {selected.availableActions.includes('archive') ? (
-                    <Button onClick={() => void archiveCard(selected)}>{t('inbox.archive')}</Button>
-                  ) : null}
-                  {selected.availableActions.includes('snooze') ? (
-                    <Button onClick={() => void snoozeCard(selected)}>{t('inbox.snooze')}</Button>
-                  ) : null}
-                  {selected.read ? (
-                    <Button onClick={() => void markCardUnread(selected)}>
-                      {t('inbox.markUnread')}
-                    </Button>
-                  ) : null}
+                  <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
+                    {t('inbox.open')}
+                  </Button>
+                  <DropdownMenu
+                    placement={'bottomRight'}
+                    items={
+                      [
+                        selected.availableActions.includes('archive')
+                          ? {
+                              icon: <Icon icon={ArchiveIcon} />,
+                              key: 'archive',
+                              label: t('inbox.archive'),
+                              onClick: () => void archiveCard(selected),
+                            }
+                          : null,
+                        selected.availableActions.includes('snooze')
+                          ? {
+                              icon: <Icon icon={TimerOffIcon} />,
+                              key: 'snooze',
+                              label: t('inbox.snooze'),
+                              onClick: () => void snoozeCard(selected),
+                            }
+                          : null,
+                        selected.read
+                          ? {
+                              icon: <Icon icon={MailOpenIcon} />,
+                              key: 'markUnread',
+                              label: t('inbox.markUnread'),
+                              onClick: () => void markCardUnread(selected),
+                            }
+                          : null,
+                      ].filter(Boolean) as DropdownItem[]
+                    }
+                  >
+                    <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
+                  </DropdownMenu>
                 </Flexbox>
               </Flexbox>
             </>

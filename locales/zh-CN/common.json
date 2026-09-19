@@ -521,6 +521,8 @@
   "savedViews.saveAssigned": "保存「分配给我」",
   "savedViews.saveFailed": "无法保存这个视图",
   "savedViews.saved": "视图已保存",
+  "savedViews.searchEmpty": "没有匹配的视图",
+  "savedViews.searchPlaceholder": "搜索视图…",
   "savedViews.teamRequired": "分享给团队时需要选择团队",
   "savedViews.unfavorite": "取消收藏",
   "savedViews.versionConflict": "这个视图已被别人改过，请刷新后再保存。",

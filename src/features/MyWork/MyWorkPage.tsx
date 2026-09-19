@@ -3,6 +3,7 @@
 import { Flexbox } from '@lobehub/ui';
 import {
   Button,
+  Segmented,
   TabsIndicator,
   TabsList,
   TabsRoot,
@@ -11,12 +12,14 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import { applyNoProjectFilter, type MyWorkMode, type WorkQueryLayout } from '@orvilo/types';
+import { BookmarkPlusIcon, FolderXIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import NavHeader from '@/features/NavHeader';
+import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -176,25 +179,8 @@ const MyWorkPage = memo(() => {
             {t('tab.myWork')}
           </Text>
         }
-        right={
-          <Flexbox horizontal gap={8}>
-            {canBoard ? (
-              <Button
-                size="small"
-                onClick={() => writeParams({ layout: layout === 'board' ? 'list' : 'board' })}
-              >
-                {layout === 'board' ? t('myWork.layoutList') : t('myWork.layoutBoard')}
-              </Button>
-            ) : null}
-            {canSaveAs ? (
-              <Button size="small" onClick={() => void saveCopy()}>
-                {t('myWork.saveAs')}
-              </Button>
-            ) : null}
-          </Flexbox>
-        }
       />
-      <Flexbox gap={16} padding={16} style={{ overflow: 'auto' }}>
+      <WideScreenContainer gap={12} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
         <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>
           <TabsList>
             <TabsIndicator />
@@ -205,14 +191,33 @@ const MyWorkPage = memo(() => {
             ))}
           </TabsList>
         </TabsRoot>
-        <Flexbox horizontal>
+        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
           <Button
-            size="small"
-            type={noProject ? 'primary' : undefined}
+            icon={FolderXIcon}
+            size={'small'}
+            type={noProject ? 'primary' : 'default'}
             onClick={() => writeParams({ noProject: !noProject })}
           >
             {t('myWork.noProject')}
           </Button>
+          <Flexbox horizontal align={'center'} gap={8}>
+            {canBoard ? (
+              <Segmented
+                size={'small'}
+                value={layout}
+                options={[
+                  { label: t('myWork.layoutList'), value: 'list' },
+                  { label: t('myWork.layoutBoard'), value: 'board' },
+                ]}
+                onChange={(value) => writeParams({ layout: value as WorkQueryLayout })}
+              />
+            ) : null}
+            {canSaveAs ? (
+              <Button icon={BookmarkPlusIcon} size={'small'} onClick={() => void saveCopy()}>
+                {t('myWork.saveAs')}
+              </Button>
+            ) : null}
+          </Flexbox>
         </Flexbox>
         <WorkQueryResults
           emptyLabel={t('myWork.empty')}
@@ -232,7 +237,7 @@ const MyWorkPage = memo(() => {
           onMoved={() => void refresh()}
           onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
         />
-      </Flexbox>
+      </WideScreenContainer>
     </Flexbox>
   );
 });

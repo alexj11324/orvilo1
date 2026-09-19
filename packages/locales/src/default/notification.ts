@@ -90,6 +90,7 @@ export default {
   'inbox.loading': 'Loading inbox…',
   'inbox.markAllRead': 'Mark all as read',
   'inbox.markUnread': 'Mark unread',
+  'inbox.moreActions': 'More actions',
   'inbox.open': 'Open',
   'inbox.organizeFailed': 'Could not update this item. Refresh and try the current version.',
   'inbox.read': 'Read',

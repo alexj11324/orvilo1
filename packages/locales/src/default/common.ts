@@ -681,6 +681,8 @@ export default {
   'savedViews.saveAssigned': 'Save “Assigned to me”',
   'savedViews.saveFailed': 'Could not save this view',
   'savedViews.saved': 'View saved',
+  'savedViews.searchEmpty': 'No views match that search',
+  'savedViews.searchPlaceholder': 'Search views…',
   'savedViews.teamRequired': 'Choose a team to share with',
   'savedViews.unfavorite': 'Remove from favorites',
   'savedViews.versionConflict': 'This view changed. Refresh and save again.',

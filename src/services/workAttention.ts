@@ -91,6 +91,14 @@ class WorkAttentionService {
     type?: 'project' | 'savedView' | 'task' | 'team';
   }) => lambdaClient.workAttention.search.query(input);
 
+  /** Authorized, keyset-paginated project options for `projectId` filter rows. */
+  projectOptions = (input: { afterId?: string; ids?: string[]; limit?: number; query?: string }) =>
+    lambdaClient.workAttention.projectOptions.query(input);
+
+  /** Cycle options across readable teams or scoped to one team — one query. */
+  cycleOptions = (input: { ids?: string[]; limit?: number; query?: string; teamId?: string }) =>
+    lambdaClient.workAttention.cycleOptions.query(input);
+
   subscribe = (taskId: string) => lambdaClient.workAttention.subscribe.mutate({ taskId });
 
   triage = (input: Parameters<typeof lambdaClient.workAttention.triage.mutate>[0]) =>

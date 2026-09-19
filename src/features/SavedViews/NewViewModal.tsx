@@ -32,6 +32,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   layout: state.layout,
   schemaVersion: 1,
   sort: state.sort,
+  sortMode: state.layout === 'board' ? state.sortMode : undefined,
 });
 
 /**
@@ -44,7 +45,7 @@ const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) 
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const [state, setState] = useState<ViewEditorState>({
-    builder: { retained: [], rows: [] },
+    builder: { any: [], rows: [], slots: [] },
     entityType: 'task',
     groupBy: 'none',
     layout: 'list',
@@ -58,7 +59,7 @@ const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) 
   useEffect(() => {
     if (!open) {
       setState({
-        builder: { retained: [], rows: [] },
+        builder: { any: [], rows: [], slots: [] },
         entityType: 'task',
         groupBy: 'none',
         layout: 'list',

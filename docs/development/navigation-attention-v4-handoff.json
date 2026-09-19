@@ -19,6 +19,8 @@
     "CommandMenu recents via RecentModel visit feed only; workAttention.recentWork removed",
     "Personal-mode omits team recents (CommandMenu + Home recents) and hides Teams in Navigate and useNavLayout",
     "Pin/unpin on task, team, project, saved view; favorites list can unpin",
+    "Sidebar favorites fold after favoritePageSize (default 5) into a More drawer; reorder uses full-list indices",
+    "Web and Electron main-area match /inbox /my-work /views /teams instead of splat 404",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -45,11 +47,13 @@
     "apps/server/src/services/workAttention/actionSources.ts",
     "apps/server/src/services/workAttention/feedCard.ts",
     "apps/server/src/services/workAttention/feedPage.ts",
-    "src/services/recent/recentTypes.ts"
+    "src/services/recent/recentTypes.ts",
+    "src/features/HomeSidebar/Body/favoriteOverflow.ts",
+    "src/features/HomeSidebar/Body/WorkFavorites.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,
-  "implementationHeadBeforeDocs": "e88f0359",
+  "implementationHeadBeforeDocs": "55a6f853",
   "leaseGeneration": 1,
   "migrationImpact": "0175 + 0176 already on this branch; 0174 owned by merged #81; do not reuse 0174",
   "n00Baseline": "docs/development/navigation-attention-v4.md",
@@ -70,7 +74,7 @@
   "status": "IN_PROGRESS",
   "targetBranch": "canary",
   "unverified": [
-    "NAV02 Electron native notification click matrix",
+    "NAV02 Electron native notification click matrix (routes aligned; OS click path still CI_E2E)",
     "ACCEPTANCE.md 64 rows still NOT_RUN",
     "N12/END06-08 real Linear/GitHub/ACP loops remain BLOCKED without Preview"
   ],

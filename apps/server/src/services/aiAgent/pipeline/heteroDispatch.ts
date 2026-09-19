@@ -72,6 +72,7 @@ import {
 import { pruneRegeneratedBranch } from '../pruneRegeneratedBranch';
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
 import type { ExecRunContext } from '../types';
+import type { ToolSurfaceOutcome } from './runToolSurface';
 
 const log = debug('orvilo-server:ai-agent-service');
 
@@ -455,6 +456,12 @@ export interface HeteroDispatchInput {
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
   skipTaskVerification?: boolean;
+  /**
+   * Per-tool mount outcomes from `resolveRunToolSurface` — persisted into the
+   * operation's metadata so a mounted/unsupported/unauthorized/failed record
+   * survives the debug log into traces.
+   */
+  toolSurfaceOutcomes?: ToolSurfaceOutcome[];
   topicStartOwnerOperationId?: string;
   /** Source attribution persisted onto the operation row's appContext. */
   userAgent?: string;
@@ -495,6 +502,7 @@ export const dispatchHeteroAgent = async (
     beforeOperationStart,
     builtinToolSpecs,
     canManageAgent,
+    toolSurfaceOutcomes,
     clientIp,
     effectiveRequestedDeviceId,
     extraSystemContext,
@@ -583,6 +591,19 @@ export const dispatchHeteroAgent = async (
           }
         : {}),
       heteroAgentType: heteroCliAgentType,
+      // Per-tool mount contract for this run — mounted/unsupported/
+      // unauthorized/failed with reasons, so a degraded surface is
+      // inspectable from the operation record instead of a lost debug log.
+      ...(toolSurfaceOutcomes?.length
+        ? {
+            toolSurface: Object.fromEntries(
+              toolSurfaceOutcomes.map((o) => [
+                o.identifier,
+                { kind: o.kind, reason: o.reason, status: o.status },
+              ]),
+            ),
+          }
+        : {}),
     },
     operationId,
     parentOperationId,

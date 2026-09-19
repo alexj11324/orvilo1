@@ -101,4 +101,85 @@ describe('resolveRunToolSurface', () => {
       agentSurface.builtinToolSpecs.length,
     );
   });
+
+  describe('outcomes', () => {
+    const outcomeFor = (surface: ReturnType<typeof resolveRunToolSurface>, id: string) =>
+      surface.outcomes.find((o) => o.identifier === id);
+
+    it('records a mounted outcome for every resolved tool and skill', () => {
+      const surface = resolveRunToolSurface({
+        additionalPluginIds: ['orvilo-task', 'task'],
+      });
+
+      expect(outcomeFor(surface, 'orvilo-task')).toEqual({
+        identifier: 'orvilo-task',
+        kind: 'tool',
+        reason: '',
+        status: 'mounted',
+      });
+      expect(outcomeFor(surface, 'task')).toEqual({
+        identifier: 'task',
+        kind: 'skill',
+        reason: '',
+        status: 'mounted',
+      });
+    });
+
+    it('records unsupported with a reason for non-builtin plugins', () => {
+      const surface = resolveRunToolSurface({
+        additionalPluginIds: ['custom-plugin-xyz'],
+      });
+
+      expect(outcomeFor(surface, 'custom-plugin-xyz')).toEqual({
+        identifier: 'custom-plugin-xyz',
+        kind: 'tool',
+        reason: 'no-server-executor',
+        status: 'unsupported',
+      });
+    });
+
+    it('records unauthorized for a selected tool denied by the disabled set', () => {
+      const surface = resolveRunToolSurface({
+        agentPlugins: [{ identifier: 'orvilo-task', mode: 'disabled' }],
+        selectedToolIds: ['orvilo-task'],
+      });
+      expect(outcomeFor(surface, 'orvilo-task')?.status).toBe('unauthorized');
+      expect(outcomeFor(surface, 'orvilo-task')?.reason).toBe('disabled-by-agent-config');
+    });
+
+    it('records unsupported when the harness cannot mount MCP', () => {
+      const surface = resolveRunToolSurface({
+        additionalPluginIds: ['orvilo-task'],
+        supportsBuiltinToolMount: false,
+      });
+      expect(outcomeFor(surface, 'orvilo-task')).toEqual({
+        identifier: 'orvilo-task',
+        kind: 'tool',
+        reason: 'harness-cannot-mount-mcp',
+        status: 'unsupported',
+      });
+    });
+
+    it('emits no outcomes when tools are disabled wholesale', () => {
+      const surface = resolveRunToolSurface({
+        additionalPluginIds: ['orvilo-task'],
+        disableTools: true,
+      });
+      expect(surface.outcomes).toEqual([]);
+    });
+
+    it('throws when an exclusive tool surface resolves nothing', () => {
+      expect(() =>
+        resolveRunToolSurface({
+          exclusivePluginIds: ['orvilo-task'],
+          supportsBuiltinToolMount: false,
+        }),
+      ).toThrow('Required tools failed to mount');
+    });
+
+    it('does not throw when the exclusive set mounts at least one tool', () => {
+      const surface = resolveRunToolSurface({ exclusivePluginIds: ['orvilo-task'] });
+      expect(surface.builtinToolSpecs).toHaveLength(1);
+    });
+  });
 });

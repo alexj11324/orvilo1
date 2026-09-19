@@ -1006,6 +1006,7 @@ export class AiAgentService {
         beforeOperationStart,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
         canManageAgent,
+        toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
         effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
         // Skill content, mounted-tool usage guidance and eval env prompts all

@@ -19,6 +19,8 @@ import {
   resolveWorkspaceGrantedPermissions,
 } from '@/server/services/workspacePermission';
 
+import { isWorkspaceScopedMeta } from './scopeMeta';
+
 export interface ResourceMeta {
   /** Only agents carry a slug; with `virtual` it identifies a provisioned builtin. */
   slug?: string | null;
@@ -85,19 +87,7 @@ export const isAccessLevelAllowed = (
   accessLevel: ResourceAccessLevel,
 ) => isResourceAccessLevelAllowed(resourceType, accessLevel);
 
-/**
- * Workspace-scope admission for one row — mirrors `buildWorkspaceWhere`'s
- * union semantics in the database layer: the caller's own unfiled rows
- * (`workspace_id IS NULL`) follow them into workspace scope, so activating a
- * workspace never locks the owner out of their pre-provisioning data. A
- * teammate's unfiled rows and any foreign-workspace row still fail.
- */
-export const isWorkspaceScopedMeta = (
-  meta: Pick<ResourceMeta, 'userId' | 'workspaceId'>,
-  workspaceId: string,
-  userId: string,
-): boolean =>
-  meta.workspaceId === workspaceId || (meta.workspaceId === null && meta.userId === userId);
+export { isWorkspaceScopedMeta } from './scopeMeta';
 
 /**
  * Fetch creator/visibility/workspace of a permission-capable resource,

@@ -38,14 +38,15 @@ const toItem = (
 /**
  * Accept / Decline stay on the row. Duplicate, transfer, and reassign fold
  * into overflow — and the ⋯ hides when none of them have a valid target.
+ * Duplicate is always offered: its canonical target is resolved through the
+ * permission-filtered task search at click time, not from the loaded list.
  */
 export const teamTriageOverflowItems = (input: {
-  canonicals: TeamTriageOverflowOption[];
   destinations: TeamTriageOverflowOption[];
   members: TeamTriageOverflowOption[];
 }): TeamTriageOverflowItem[] =>
   [
-    toItem('duplicate', input.canonicals),
+    { kind: 'duplicate' as const, label: 'search', type: 'leaf' as const, value: 'search' },
     toItem('transfer', input.destinations),
     toItem('reassign', input.members),
   ].filter((item): item is TeamTriageOverflowItem => Boolean(item));

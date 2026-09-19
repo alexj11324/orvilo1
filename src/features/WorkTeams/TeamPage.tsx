@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
@@ -38,16 +39,22 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
-import { duplicateCanonicalOptions } from './duplicateCanonicalOptions';
+import MarkDuplicateModal from './MarkDuplicateModal';
 import { otherTeamOptions } from './otherTeamOptions';
 import { reassignMemberOptions } from './reassignMemberOptions';
+import TeamHome from './TeamHome';
 import { teamSurfaceState } from './teamSurfaceState';
 import {
   TEAM_TRIAGE_OVERFLOW_I18N,
   type TeamTriageOverflowItem,
   teamTriageOverflowItems,
 } from './teamTriageOverflow';
-import { ALL_TEAM_CYCLES, teamTaskQuery, teamTriageQuery } from './teamWorkQuery';
+import {
+  ALL_TEAM_CYCLES,
+  type TeamIssueScope,
+  teamTaskQuery,
+  teamTriageQuery,
+} from './teamWorkQuery';
 
 const styles = createStaticStyles(({ css }) => ({
   actions: css`
@@ -97,23 +104,21 @@ type TeamTriageTask = {
 };
 
 const TeamTriageRow = memo<{
-  canonicals: Array<{ label: string; value: string }>;
   destinations: Array<{ label: string; value: string }>;
   members: Array<{ userId: string }>;
   onAccept: (taskId: string) => void;
   onDecline: (taskId: string) => void;
-  onDuplicate: (taskId: string, canonicalTaskId: string) => void;
+  onPickDuplicate: (taskId: string) => void;
   onReassign: (taskId: string, assigneeUserId: string) => void;
   onTransferred: () => void;
   task: TeamTriageTask;
 }>(
   ({
-    canonicals,
     destinations,
     members,
     onAccept,
     onDecline,
-    onDuplicate,
+    onPickDuplicate,
     onReassign,
     onTransferred,
     task,
@@ -121,7 +126,6 @@ const TeamTriageRow = memo<{
     const { t } = useTranslation('common');
     const memberOptions = reassignMemberOptions(members, task.assigneeUserId);
     const overflowItems = teamTriageOverflowItems({
-      canonicals,
       destinations,
       members: memberOptions,
     });
@@ -152,11 +156,11 @@ const TeamTriageRow = memo<{
 
     const runOverflow = useCallback(
       (kind: TeamTriageOverflowItem['kind'], value: string) => {
-        if (kind === 'duplicate') onDuplicate(task.id, value);
+        if (kind === 'duplicate') onPickDuplicate(task.id);
         else if (kind === 'reassign') onReassign(task.id, value);
         else void transfer(value);
       },
-      [onDuplicate, onReassign, task.id, transfer],
+      [onPickDuplicate, onReassign, task.id, transfer],
     );
 
     const overflowMenuItems = useMemo<DropdownItem[]>(
@@ -220,17 +224,25 @@ const TeamTriageRow = memo<{
 
 TeamTriageRow.displayName = 'TeamTriageRow';
 
+const ISSUE_SCOPES: TeamIssueScope[] = ['all', 'active', 'backlog'];
+
+const resolveIssueScope = (value: string | null): TeamIssueScope =>
+  ISSUE_SCOPES.includes(value as TeamIssueScope) ? (value as TeamIssueScope) : 'all';
+
 const TeamPage = memo(() => {
   const { t } = useTranslation('common');
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useActiveWorkspaceId();
-  const [searchParams] = useSearchParams();
-  // Linear's per-team sub-navigation lands here: home (triage + work),
-  // triage, issues, projects and views each get their own tab surface.
+  const workspaceSlug = useActiveWorkspaceSlug();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Linear's per-team sub-navigation lands here: home is the team context
+  // surface; triage, issues, projects and views each get their own tab.
   const teamTab = searchParams.get('tab') ?? 'home';
+  const issueScope = resolveIssueScope(searchParams.get('scope'));
   const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
   const [noProject, setNoProject] = useState(false);
   const [layout, setLayout] = useState<WorkQueryLayout>('list');
+  const [duplicateTaskId, setDuplicateTaskId] = useState<string | null>(null);
   const {
     data: teamData,
     error: teamError,
@@ -245,8 +257,8 @@ const TeamPage = memo(() => {
   // Triage is a per-team capability — a team that turned intake off shows
   // no triage surface, and a `?tab=triage` deep link falls back to home.
   const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
-  const wantsTriage = triageCapable && (teamTab === 'home' || teamTab === 'triage');
-  const wantsTasks = teamTab === 'home' || teamTab === 'issues';
+  const wantsTriage = triageCapable && teamTab === 'triage';
+  const wantsTasks = teamTab === 'issues';
   const {
     data: triageData,
     error: triageError,
@@ -268,11 +280,11 @@ const TeamPage = memo(() => {
     mutate: revalidateTeamTasks,
   } = useClientDataSWR(
     wantsTasks && teamId && workspaceId
-      ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout, triageCapable]
+      ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope, triageCapable]
       : null,
     () =>
       workAttentionService.query({
-        query: teamTaskQuery(teamId!, cycleId, noProject, layout),
+        query: teamTaskQuery(teamId!, cycleId, noProject, layout, issueScope),
       }),
   );
   const {
@@ -320,7 +332,7 @@ const TeamPage = memo(() => {
   useEffect(() => {
     setTeamTail([]);
     setTeamGroupTail([]);
-  }, [cycleId, layout, noProject, teamId, teamQueryHash, workspaceId]);
+  }, [cycleId, issueScope, layout, noProject, teamId, teamQueryHash, workspaceId]);
   const teamTasks = mergeWorkQueryPage(firstTeamTasks, teamTail);
   const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
@@ -354,7 +366,7 @@ const TeamPage = memo(() => {
         });
         await Promise.all([
           mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout]),
+          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope]),
         ]);
         toast.success(t('teams.triageUpdated'));
       } catch (error) {
@@ -365,7 +377,7 @@ const TeamPage = memo(() => {
         );
       }
     },
-    [cycleId, layout, noProject, t, teamId, workspaceId],
+    [cycleId, issueScope, layout, noProject, t, teamId, workspaceId],
   );
 
   const refreshTriage = useCallback(() => {
@@ -373,21 +385,21 @@ const TeamPage = memo(() => {
     setTeamGroupTail([]);
     void Promise.all([
       mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout]),
+      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope]),
     ]);
-  }, [cycleId, layout, noProject, teamId, workspaceId]);
+  }, [cycleId, issueScope, layout, noProject, teamId, workspaceId]);
 
   const loadMoreTeam = useCallback(async () => {
     const last = teamTasks.at(-1);
     if (!last || !teamId || !teamQueryHash) return;
     const next = await workAttentionService.query({
       afterId: last.id,
-      query: teamTaskQuery(teamId, cycleId, noProject, 'list'),
+      query: teamTaskQuery(teamId, cycleId, noProject, 'list', issueScope),
       queryHash: teamQueryHash,
     });
     const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
     setTeamTail((current) => mergeWorkQueryPage(current, incoming));
-  }, [cycleId, noProject, teamId, teamQueryHash, teamTasks]);
+  }, [cycleId, issueScope, noProject, teamId, teamQueryHash, teamTasks]);
 
   const loadMoreTeamGroup = useCallback(
     async (groupKey: string) => {
@@ -397,13 +409,13 @@ const TeamPage = memo(() => {
       const next = await workAttentionService.query({
         afterId: last.id,
         groupKey,
-        query: teamTaskQuery(teamId, cycleId, noProject, layout),
+        query: teamTaskQuery(teamId, cycleId, noProject, layout, issueScope),
         queryHash: teamQueryHash,
       });
       const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
       setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
     },
-    [cycleId, layout, noProject, teamGroups, teamId, teamQueryHash],
+    [cycleId, issueScope, layout, noProject, teamGroups, teamId, teamQueryHash],
   );
 
   const cycleOptions = useMemo(
@@ -445,9 +457,31 @@ const TeamPage = memo(() => {
           paddingBlock={16}
           wrapperStyle={{ flex: 1, overflowY: 'auto' }}
         >
-          {teamTab === 'home' || teamTab === 'triage' || teamTab === 'issues' ? (
+          {/* Issues toolbar: cycle / no-project filters, the All–Active–Backlog
+              workflow scope, and the list/board switch. Triage never shows the
+              layout toggle — it renders its own row surface. */}
+          {teamTab === 'issues' ? (
             <Flexbox horizontal align="center" gap={12} justify="space-between" wrap="wrap">
               <Flexbox horizontal gap={8} wrap="wrap">
+                <Segmented
+                  size="small"
+                  value={issueScope}
+                  options={ISSUE_SCOPES.map((scope) => ({
+                    label: t(`teams.scope.${scope}`),
+                    value: scope,
+                  }))}
+                  onChange={(value) =>
+                    setSearchParams(
+                      (current) => {
+                        const next = new URLSearchParams(current);
+                        if (value === 'all') next.delete('scope');
+                        else next.set('scope', String(value));
+                        return next;
+                      },
+                      { replace: true },
+                    )
+                  }
+                />
                 {cycleOptions.length > 1 ? (
                   <Select
                     aria-label={t('teams.cycle')}
@@ -480,6 +514,14 @@ const TeamPage = memo(() => {
               />
             </Flexbox>
           ) : null}
+          {teamTab === 'home' && teamData ? (
+            <TeamHome
+              teamData={teamData.data}
+              teamId={teamId!}
+              triageCapable={triageCapable}
+              workspaceSlug={workspaceSlug ?? ''}
+            />
+          ) : null}
           {teamTab === 'triage' && !triageCapable ? (
             <Center flex={1} padding={48}>
               <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
@@ -500,17 +542,14 @@ const TeamPage = memo(() => {
                 <Flexbox gap={2}>
                   {tasks.map((task) => (
                     <TeamTriageRow
-                      canonicals={duplicateCanonicalOptions(teamTasks, task.id)}
                       destinations={destinations}
                       key={task.id}
                       members={teamData?.data.members ?? []}
                       task={task}
                       onAccept={() => void act(task, 'accept')}
                       onDecline={() => void act(task, 'decline')}
+                      onPickDuplicate={(id) => setDuplicateTaskId(id)}
                       onTransferred={refreshTriage}
-                      onDuplicate={(_id, canonicalTaskId) =>
-                        void act(task, 'duplicate', { canonicalTaskId })
-                      }
                       onReassign={(_id, assigneeUserId) =>
                         void act(task, 'reassign', { assigneeUserId })
                       }
@@ -520,7 +559,7 @@ const TeamPage = memo(() => {
               )}
             </>
           ) : null}
-          {wantsTasks ? <Text weight={500}>{t('teams.work')}</Text> : null}
+
           {teamTab === 'projects' ? (
             isTeamProjectsLoading ? (
               <SkeletonList aria-label={t('teams.loading')} rows={4} />
@@ -611,6 +650,15 @@ const TeamPage = memo(() => {
           ) : null}
         </WideScreenContainer>
       )}
+      <MarkDuplicateModal
+        open={duplicateTaskId !== null}
+        taskId={duplicateTaskId}
+        onClose={() => setDuplicateTaskId(null)}
+        onConfirm={(id, canonicalTaskId) => {
+          const task = tasks.find((row) => row.id === id);
+          if (task) void act(task, 'duplicate', { canonicalTaskId });
+        }}
+      />
     </Flexbox>
   );
 });

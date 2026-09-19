@@ -39,4 +39,23 @@ describe('teamWorkQuery', () => {
       value: 'cycle-9',
     });
   });
+
+  it('maps the All / Active / Backlog issue scopes onto workflow categories', () => {
+    // all: no extra category predicate — completed/canceled stay included.
+    expect(teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'all').filter?.all).toEqual([
+      { field: 'teamId', op: 'eq', value: 'team-1' },
+    ]);
+    // active: unstarted + started categories only.
+    expect(
+      teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'active').filter?.all,
+    ).toContainEqual({
+      field: 'workflowCategory',
+      op: 'in',
+      value: ['todo', 'in_progress', 'in_review'],
+    });
+    // backlog: backlog category only.
+    expect(
+      teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'backlog').filter?.all,
+    ).toContainEqual({ field: 'workflowCategory', op: 'eq', value: 'backlog' });
+  });
 });

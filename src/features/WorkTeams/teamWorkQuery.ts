@@ -33,13 +33,35 @@ const withTeamScope = (
   );
 };
 
+/** Linear-style team issue scopes. `active` = unstarted + started work
+ * (todo / in_progress / in_review); `backlog` keeps only backlog-category
+ * items; `all` applies no workflow-category restriction — completed and
+ * canceled stay readable while deleted rows are excluded by the model. */
+export type TeamIssueScope = 'active' | 'all' | 'backlog';
+
+const teamScopePredicate = (scope: TeamIssueScope): WorkQueryPredicate | undefined => {
+  if (scope === 'backlog') {
+    return { field: 'workflowCategory', op: 'eq', value: 'backlog' };
+  }
+  if (scope === 'active') {
+    return {
+      field: 'workflowCategory',
+      op: 'in',
+      value: ['todo', 'in_progress', 'in_review'],
+    };
+  }
+  return undefined;
+};
+
 export const teamTaskQuery = (
   teamId: string,
   cycleId?: string | null,
   noProject = false,
   layout: WorkQueryLayout = 'list',
+  scope: TeamIssueScope = 'all',
 ): WorkQuery => {
-  const query = withTeamScope(teamId, [], cycleId, noProject);
+  const category = teamScopePredicate(scope);
+  const query = withTeamScope(teamId, category ? [category] : [], cycleId, noProject);
   if (layout !== 'board') {
     return { ...query, groupBy: 'status', layout: 'list' };
   }

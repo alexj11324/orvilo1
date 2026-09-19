@@ -24,6 +24,8 @@
     "Recents project/savedView/team pin from overflow; empty ⋯ is hidden",
     "Electron native notification click broadcasts /inbox and /{workspace}/inbox",
     "Usage docs for Inbox/My Work/Views/Teams (EN/ZH) plus task/command-menu/start/shortcuts IA updates",
+    "WorkQueryResults status icons go through resolveTaskStatus (null/unknown → backlog)",
+    "Project saved-view results use Projects-list chrome (status, identifier, relative time, slug path)",
     "Signed Orvilo TRPC api_keys catalog for workAttention — not model-provider keys"
   ],
   "blockingDependencies": [
@@ -55,7 +57,11 @@
     "src/services/recent/recentTypes.ts",
     "src/features/HomeSidebar/Body/favoriteOverflow.ts",
     "src/features/HomeSidebar/Body/WorkFavorites.tsx",
-    "src/features/Home/Recents/recentOverflow.ts"
+    "src/features/Home/Recents/recentOverflow.ts",
+    "src/components/ExecutionStatus.ts",
+    "src/features/MyWork/WorkQueryResults.tsx",
+    "src/features/SavedViews/savedViewProjectPath.ts",
+    "src/features/SavedViews/SavedViewPage.tsx"
   ],
   "handoffMarkdown": "docs/development/navigation-attention-v4-handoff.md",
   "headSha": null,

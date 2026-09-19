@@ -1,13 +1,17 @@
 'use client';
 
-import { Empty, Flexbox, Input } from '@lobehub/ui';
+import { Center, Empty, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
 import { Alert, Button, Select, Text, TextArea, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewVisibility, WorkQueryLayout } from '@orvilo/types';
+import { createStaticStyles, cssVar } from 'antd-style';
+import dayjs from 'dayjs';
+import { FolderClosedIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
   mergeWorkQueryGroups,
@@ -16,6 +20,7 @@ import {
 } from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -26,9 +31,93 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
+import { savedViewProjectPath } from './savedViewProjectPath';
 import { stringifyWorkQueryDraft, workQueryFromDraft } from './savedViewQueryDraft';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
+
+const styles = createStaticStyles(({ css }) => ({
+  identifier: css`
+    flex: none;
+    min-width: 72px;
+    color: ${cssVar.colorTextTertiary};
+  `,
+  link: css`
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    align-items: center;
+
+    min-width: 0;
+
+    color: inherit;
+  `,
+  row: css`
+    padding-block: 7px;
+    padding-inline: 4px 12px;
+    border-radius: ${cssVar.borderRadiusLG};
+    color: inherit;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+  updatedAt: css`
+    flex: none;
+
+    min-width: 88px;
+
+    color: ${cssVar.colorTextQuaternary};
+    text-align: end;
+    white-space: nowrap;
+  `,
+}));
+
+interface SavedViewProjectRowData {
+  id: string;
+  identifier?: string | null;
+  name: string;
+  slug?: string | null;
+  status?: string | null;
+  updatedAt?: Date | string | null;
+}
+
+const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({ project }) => {
+  const { t } = useTranslation('project');
+  const status = resolveProjectStatus(project.status);
+  const statusVisual = PROJECT_STATUS_VISUALS[status];
+
+  return (
+    <Flexbox horizontal align="center" className={styles.row}>
+      <WorkspaceLink className={styles.link} to={savedViewProjectPath(project)}>
+        <Tooltip title={t(`acceptance.status.${status}`)}>
+          <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
+        </Tooltip>
+        <Flexbox flex={1} style={{ minWidth: 0 }}>
+          <Text ellipsis weight={500}>
+            {project.name}
+          </Text>
+        </Flexbox>
+        {project.identifier ? (
+          <Text className={styles.identifier} fontSize={12}>
+            {project.identifier}
+          </Text>
+        ) : null}
+        {project.updatedAt ? (
+          <Text
+            className={styles.updatedAt}
+            fontSize={12}
+            title={dayjs(project.updatedAt).format('YYYY-MM-DD HH:mm')}
+          >
+            {dayjs(project.updatedAt).fromNow()}
+          </Text>
+        ) : null}
+      </WorkspaceLink>
+    </Flexbox>
+  );
+});
+
+SavedViewProjectRow.displayName = 'SavedViewProjectRow';
 
 const SavedViewPage = memo(() => {
   const { t } = useTranslation('common');
@@ -329,20 +418,24 @@ const SavedViewPage = memo(() => {
         ) : view?.entityType === 'project' ? (
           <Flexbox gap={16}>
             {isLoading ? (
-              <Text type="secondary">{t('savedViews.loading')}</Text>
+              <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
             ) : projectRows.length === 0 ? (
-              <Empty description={t('savedViews.emptyResults')} />
+              <Center flex={1} padding={48}>
+                <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
+              </Center>
             ) : (
-              projectRows.map((project) => (
-                <WorkspaceLink key={project.id} to={`/project/${project.id}`}>
-                  <Text weight={500}>{project.name}</Text>
-                </WorkspaceLink>
-              ))
+              <Flexbox gap={2}>
+                {projectRows.map((project) => (
+                  <SavedViewProjectRow key={project.id} project={project} />
+                ))}
+              </Flexbox>
             )}
             {workQueryHasMore(projectRows.length, evaluation?.total) ? (
-              <Button size="small" onClick={() => void loadMore()}>
-                {t('savedViews.loadMore')}
-              </Button>
+              <Flexbox horizontal justify="center">
+                <Button size="small" onClick={() => void loadMore()}>
+                  {t('savedViews.loadMore')}
+                </Button>
+              </Flexbox>
             ) : null}
           </Flexbox>
         ) : (

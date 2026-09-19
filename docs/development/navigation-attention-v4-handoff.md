@@ -79,6 +79,8 @@
 - Web / Electron 主区 `matchRoutes` 覆盖 `/inbox` `/my-work` `/views` `/teams` 及其 workspace 镜像，叶子不是 splat `*`（NAV02 路由半边；原生通知完整点击矩阵仍是 CI\_E2E）
 - Recents 的 project/savedView/team 不再打开空 ⋯：可 pin 的类型走 `useWorkFavoriteToggle`；菜单长度为 0 时不渲染 ⋯ /context menu
 - Electron 原生通知 click 对 `/inbox` 与 `/{workspace}/inbox` 走同一 `openNotificationTarget` broadcast
+- My Work / 任务视图行用 `resolveTaskStatus` 再交给 `TaskStatusIcon`（`task.status` 是 `string | null | undefined`；`dde9ef1f` 的 Push Typecheck / Database lint 因此失败）
+- 项目 entity 的 Saved View 结果行与 Projects 列表同一套 chrome：状态图标、identifier、相对时间、Skeleton / 空态图标；链接走 `slug` 否则 `id`
 
 `summarizeFeed` 仍不把 `sourceUnavailable` 交给铃铛；包络只在 Inbox 页。
 
@@ -144,6 +146,8 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - Recents 空 ⋯ /pin + Electron `/inbox` click：lint 干净，11 passed。不是 64× AC。
 - `af841605`：四个工作面重排前端（Views/Teams 套 Projects 列表规范；My Work 工具行 + 行内 hover 关注操作 + 空看板仍渲染列；Inbox 头部图标的批量操作 + Segmented 过滤 + 未读点 / 两行卡片 + 详情溢出菜单）。新增 `savedViews.search*`、`inbox.moreActions` 文案。lint 干净；页面手测通过（dev :28027）。不是 64× AC。
 - 本增量：END04 用户文档 Inbox/My Work/Views/Teams（EN/ZH）及 task/command-menu/start/shortcuts IA。lint 干净，tests none。不是 64× AC。
+- `dde9ef1f` Push Typecheck / Test Database lint 失败：`WorkQueryResults.tsx` `task.status` 不能赋给 `TaskStatus`。已用 `resolveTaskStatus`（未知 / 空 → `backlog`）修好；`ExecutionStatus.test.ts` 覆盖。不是 64× AC。
+- 本增量：项目 Saved View 结果行对齐 Projects 列表 chrome；`savedViewProjectPath` 优先 slug。`bun run check` 改动文件 lint 干净，6 passed。不是 64× AC。
 
 提交信息用 gitmoji。PR 正文英文。保持 draft。
 

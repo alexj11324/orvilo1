@@ -478,14 +478,19 @@ export class TaskModel {
    * Raw-SQL ownership clause for use inside `db.execute(sql...)` CTEs that
    * can't easily compose with drizzle's `and(...)` helpers. Mirrors
    * `buildWorkspaceWhere` semantics:
-   *   - workspace mode → `workspace_id = $ws AND (visibility = 'public' OR created_by_user_id = $userId)`
+   *   - workspace mode → `(workspace_id = $ws AND (visibility = 'public' OR created_by_user_id = $userId))
+   *                       OR (workspace_id IS NULL AND created_by_user_id = $userId)`
+   *     — the caller's own unfiled rows follow them into the workspace view,
+   *     matching `ownership()` so dependency edges stay visible on rows the
+   *     task read itself admits.
    *   - personal mode  → `created_by_user_id = $userId AND workspace_id IS NULL`
    */
   private ownershipSql = (alias?: string) => {
     const prefix = alias ? sql.raw(`${alias}.`) : sql.raw('');
     return this.workspaceId
-      ? sql`${prefix}workspace_id = ${this.workspaceId}
-            AND (${prefix}visibility = 'public' OR ${prefix}created_by_user_id = ${this.userId})`
+      ? sql`((${prefix}workspace_id = ${this.workspaceId}
+            AND (${prefix}visibility = 'public' OR ${prefix}created_by_user_id = ${this.userId}))
+           OR (${prefix}workspace_id IS NULL AND ${prefix}created_by_user_id = ${this.userId}))`
       : sql`${prefix}created_by_user_id = ${this.userId} AND ${prefix}workspace_id IS NULL`;
   };
 

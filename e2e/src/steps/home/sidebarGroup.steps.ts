@@ -33,12 +33,27 @@ async function getTestWorkspaceId(client: DbClient): Promise<string> {
     [TEST_USER.id],
   );
   const workspaceId = rows[0]?.workspace_id as string | undefined;
-  if (!workspaceId) {
-    throw new Error(
-      `no workspace membership for ${TEST_USER.id} — workspace was not provisioned before seeding`,
-    );
-  }
-  return workspaceId;
+  if (workspaceId) return workspaceId;
+
+  // The app auto-provisions a default workspace on first load, but fixtures
+  // often seed before the test user has opened the app — mirror
+  // `workspace.ensureDefault` here so seeding does not depend on that ordering.
+  const suffix = randomBytes(4).toString('hex');
+  const sanitizedUserId = TEST_USER.id.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
+  const newWorkspaceId = `ws_e2e_${suffix}`;
+  const slug = `ws-${sanitizedUserId.slice(0, 12)}-${suffix}`;
+  await client.query(
+    `INSERT INTO workspaces (id, slug, name, primary_owner_id)
+     VALUES ($1, $2, $3, $4)`,
+    [newWorkspaceId, slug, `${TEST_USER.fullName}'s workspace`, TEST_USER.id],
+  );
+  await client.query(
+    `INSERT INTO workspace_members (workspace_id, user_id, role)
+     VALUES ($1, $2, 'owner')`,
+    [newWorkspaceId, TEST_USER.id],
+  );
+  console.log(`   📍 Provisioned test workspace ${newWorkspaceId} for ${TEST_USER.id}`);
+  return newWorkspaceId;
 }
 
 /**

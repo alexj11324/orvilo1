@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 permissions:
   actions: write
+  checks: read
   contents: read
 
 concurrency:

@@ -55,12 +55,18 @@ const cloudOnly = (feature: string): never => {
   });
 };
 
-const isUniqueViolation = (error: unknown) => {
+const PG_UNIQUE_VIOLATION = '23505';
+
+// Drizzle wraps the raw pg error as `.cause` (sometimes more than once), so a
+// unique violation only surfaces by walking the chain — a top-level
+// code/message check always misses and maps real conflicts to 500s.
+const isUniqueViolation = (error: unknown): boolean => {
   if (typeof error !== 'object' || error === null) return false;
-  const code = (error as { code?: string }).code;
-  if (code === '23505') return true;
+  if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) return true;
   const message = error instanceof Error ? error.message : '';
-  return message.includes('duplicate key value') || message.includes('workspaces_slug');
+  if (message.includes('duplicate key value') || message.includes('workspaces_slug')) return true;
+  const cause = (error as { cause?: unknown }).cause;
+  return cause !== error && isUniqueViolation(cause);
 };
 
 // The stub list/create/checkSlugAvailable are now real; cloud-only surfaces

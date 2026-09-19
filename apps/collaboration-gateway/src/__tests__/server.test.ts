@@ -150,10 +150,13 @@ describe('gateway protocol', () => {
         publish: { kind: 'broadcast', message: { event: activity, type: 'activity' } },
         room: 'task:t1',
       }),
-      headers: { authorization: `Bearer ${publishToken}`, 'content-type': 'application/json' },
+      headers: { 'authorization': `Bearer ${publishToken}`, 'content-type': 'application/json' },
       method: 'POST',
     });
     expect(broadcastRes.status).toBe(202);
+    // The protocol-version marker is what lets the projector distinguish a
+    // v2 gateway (executes scoped kicks) from a pre-v2 one (acks but drops).
+    expect(broadcastRes.headers.get('x-orvilo-gateway-protocol-version')).toBe('2');
     await expect(nextMessage(a.messages, 'activity')).resolves.toMatchObject({
       event: { eventId: 'evt-1' },
     });
@@ -164,10 +167,11 @@ describe('gateway protocol', () => {
         publish: { kind: 'kick', reason: 'workspace.member.removed', userId: 'user-b' },
         room: 'workspace:ws-1',
       }),
-      headers: { authorization: `Bearer ${publishToken}`, 'content-type': 'application/json' },
+      headers: { 'authorization': `Bearer ${publishToken}`, 'content-type': 'application/json' },
       method: 'POST',
     });
     expect(kickRes.status).toBe(202);
+    expect(kickRes.headers.get('x-orvilo-gateway-protocol-version')).toBe('2');
     await expect(nextMessage(b.messages, 'revoked')).resolves.toEqual({
       reason: 'workspace.member.removed',
       type: 'revoked',

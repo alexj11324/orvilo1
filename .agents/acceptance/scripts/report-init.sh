@@ -13,7 +13,7 @@
 # under its acceptance:
 #   <report-root>/<type>-<id>/<YYYYMMDD-HHMMSS>-<slug>/
 # and the group directory gets an acceptance.json marker. The subject is also
-# pre-filled into result.json so acceptance run ingest attaches the run automatically.
+# pre-filled into result.json so the report records the subject it verifies.
 #
 # Run this from the CONSUMER repo root — branch/commit provenance is read from
 # the current working directory, not from this script's own location.

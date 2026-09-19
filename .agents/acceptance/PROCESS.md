@@ -1,13 +1,16 @@
 # PROCESS.md — how a verification run works in Orvilo
 
-The `acceptance` skill owns the **contract**: what a check is, what counts as
-evidence, what a report and an immutable round look like. This file owns the
-**process**: how a run is planned, approved, executed, published, and torn down
-in this repository. [`PROJECT.md`](./PROJECT.md) owns the **commands**: ports,
-services, auth, surfaces, probes.
+This file owns the **contract and the process**: what a check is, what counts
+as evidence, and how a run is planned, approved, executed, evidenced, and torn
+down in this repository. [`PROJECT.md`](./PROJECT.md) owns the **commands**:
+ports, services, auth, surfaces, probes.
 
-Read all three. Where this file and the skill disagree about _how to run_, this
-file wins; about _what may be published_, the skill wins.
+(The portable `acceptance` skill that used to own the contract was retired with
+the standalone acceptance platform — see
+`docs/development/hidden-surface-retirement.md`. This file is now the whole
+contract.)
+
+Read both.
 
 ```text
 PLAN (0–2)  →  EXECUTE (3–5)  →  FINISH (6)
@@ -82,8 +85,8 @@ passing all five is recorded automatically — no separate user request needed:
 
 Every admitted entry is one checklist line plus a Trap / Rule entry carrying
 `since` and `holds-while`. **Exit rule:** the day a mechanism moves into a script
-default or an ingest check, delete the entry in the same change — do not keep it
-"for reference"; the field notes hold history. A rule an agent skips under
+default or another gate — or the mechanism itself is retired — delete the entry
+in the same change; do not keep it "for reference"; the field notes hold history. A rule an agent skips under
 pressure (not a judgment call) goes into the table under Step 4, not the log.
 
 A candidate that fails only for being too implementation-specific gets routed:
@@ -102,11 +105,11 @@ round is written from them without re-execution and without a checker stage.
 
 Draft the surface, cases, expected evidence, assumptions, and deliverable — but
 do not send it for review yet: Step 2 must establish real environment state
-first, so the acceptance-checker reviews one complete, evidence-backed plan.
+first, so the plan review judges one complete, evidence-backed plan.
 
 Every case must be a delivery outcome a person can judge. Never plan the repo's
-own programmatic gates (tests, coverage, type-check, lint, build) — ingest drops
-them and a gates-only round fails to publish.
+own programmatic gates (tests, coverage, type-check, lint, build) — a round of
+only such checks is not verification.
 
 ### Step 2 — Environment and auth
 
@@ -159,9 +162,9 @@ account; a materially changed business goal; or an environment change that
 invalidates the evidence strategy. Ask with one structured question and stop.
 
 On follow-up feedback: read the Acceptance, silently re-check environment and
-auth, repair, re-run the affected checks, and publish a new round. The acceptance-checker is
-not involved in follow-up rounds — it reviews the plan and the first round's
-evidence only; afterwards the primary inspects its own evidence. Code
+auth, repair, re-run the affected checks, and run a new round. The plan review
+happens on the first round only; afterwards the primary inspects its own
+evidence. Code
 revisions, restarts, recaptures, retries, and new rounds never involve the
 user.
 
@@ -175,9 +178,9 @@ user.
 | Pure frontend (components, store, styles, UX)  | **Electron** | The primary product shape; live state introspection |
 | Full-stack (new API + the UI consuming it)     | **Web**      | Network and UI observable together                  |
 
-Launch commands per surface are in `PROJECT.md` §4; the operating manual for each
-is in the skill's `surfaces/`. Escalate, don't duplicate: verify a backend change
-with the CLI first, and add a UI pass only when the change reaches the UI.
+Launch commands per surface are in `PROJECT.md` §4. Escalate, don't duplicate:
+verify a backend change with the CLI first, and add a UI pass only when the
+change reaches the UI.
 
 **Separate the driver from the evidence surface.** Producing the state under test
 and capturing the evidence are independent choices. Drive with the cheapest
@@ -267,8 +270,9 @@ What is specific to this repository:
   subject directory holds an `acceptance.json` marker and one subdirectory per
   immutable round. Scaffold with
   `report-init.sh --subject topic:tpc_xxx <slug> "<title>"`, which also pre-fills
-  `result.json.subject`. Reports are per-run scratch — the published round is the
-  durable copy — so they never touch the working tree.
+  `result.json.subject`. Reports are per-run scratch — the durable copy is the
+  evidence attached to the PR, or the in-app acceptance panel for a run-scoped
+  acceptance — so they never touch the working tree.
 
 - **Reusable per-check inputs** live in `.records/fixtures/<subject-key>/<check-id>/`
   (`check.json` + `seed/`). Execution outputs stay in the round's `assets/` and are
@@ -305,9 +309,9 @@ in a source file corrupts the next run and the next agent's mental model.
   returns nothing. When you injected into a file that already had uncommitted
   changes, `git checkout --` is the WRONG revert — it wipes the branch's edits too;
   snapshot the file first and restore from the snapshot.
-- **Keep the report and its evidence** until the round is published. It lives in
-  the temp report root, never in the working tree; the published round is the
-  durable copy.
+- **Keep the report and its evidence** until the evidence is attached to the PR
+  (or submitted through the in-app acceptance panel for a run-scoped
+  acceptance). It lives in the temp report root, never in the working tree.
 - **Check `git status` before calling the tree clean.** Some dev servers write
   managed files on start.
 

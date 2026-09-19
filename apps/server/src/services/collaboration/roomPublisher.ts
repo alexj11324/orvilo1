@@ -1,6 +1,11 @@
+import {
+  COLLABORATION_GATEWAY_PROTOCOL_VERSION,
+  GATEWAY_PROTOCOL_VERSION_HEADER,
+  type PresenceEntry,
+  type RoomKickParams,
+  type RoomPublishEnvelope,
+} from '@orvilo/types';
 import debug from 'debug';
-
-import type { PresenceEntry, RoomPublishEnvelope } from '@orvilo/types';
 
 import { signGatewayPublishToken } from './ticket';
 
@@ -15,8 +20,8 @@ const log = debug('lobe-server:collaboration:publisher');
  */
 export interface RoomPublisher {
   /** Live presence for snapshot fallback; optional (empty when unavailable). */
-  presence?(room: string): Promise<PresenceEntry[]>;
-  publish(room: string, publish: RoomPublishEnvelope): Promise<void>;
+  presence?: (room: string) => Promise<PresenceEntry[]>;
+  publish: (room: string, publish: RoomPublishEnvelope) => Promise<void>;
 }
 
 /**
@@ -28,9 +33,16 @@ export interface RoomPublisher {
 export const LOCAL_ROOM_BUS_KEY = Symbol.for('orvilo.collaboration.localRoomBus');
 
 export interface LocalRoomBus {
-  kick(room: string, userId: string, reason: string): void;
-  presence(room: string): PresenceEntry[];
-  publish(room: string, message: unknown): void;
+  kick: (room: string, userId: string, reason: string) => void;
+  /**
+   * Scoped-kick contract matching the v2 gateway: the full revocation
+   * envelope (scope, tenant, authz version). Buses without it predate the
+   * scoped protocol — the publisher then fails non-workspace kicks closed so
+   * the outbox retries instead of marking the revocation delivered.
+   */
+  kickScoped?: (room: string, params: RoomKickParams) => void;
+  presence: (room: string) => PresenceEntry[];
+  publish: (room: string, message: unknown) => void;
 }
 
 const getLocalBus = (): LocalRoomBus | null =>
@@ -41,8 +53,21 @@ const localRoomPublisher: RoomPublisher = {
   publish: async (room, publish) => {
     const bus = getLocalBus();
     if (!bus) return;
-    if (publish.kind === 'kick') bus.kick(room, publish.userId, publish.reason);
-    else bus.publish(room, publish.message);
+    if (publish.kind !== 'kick') {
+      bus.publish(room, publish.message);
+      return;
+    }
+    const { kind: _kind, ...params } = publish;
+    if (bus.kickScoped) {
+      bus.kickScoped(room, params);
+      return;
+    }
+    // A pre-v2 bus only knows workspace teardown — a project/task kick that
+    // reported success without firing would strand the member's sockets.
+    if (params.scope !== 'workspace') {
+      throw new Error(`local room bus cannot deliver ${params.scope}-scoped kicks`);
+    }
+    bus.kick(room, params.userId, params.reason);
   },
 };
 
@@ -55,7 +80,7 @@ const httpRoomPublisher = (gatewayUrl: string): RoomPublisher => {
   const presenceUrl = `${gatewayUrl.replace(/\/$/, '')}/internal/presence`;
 
   const authHeaders = async () => ({
-    authorization: `Bearer ${await signGatewayPublishToken()}`,
+    'authorization': `Bearer ${await signGatewayPublishToken()}`,
     'content-type': 'application/json',
   });
 
@@ -81,6 +106,26 @@ const httpRoomPublisher = (gatewayUrl: string): RoomPublisher => {
       });
       if (!response.ok) {
         throw new Error(`gateway publish failed with HTTP ${response.status}`);
+      }
+      // Capability handshake: pre-v2 gateways ack every envelope but only
+      // execute workspace kicks — a project/task kick acked without the
+      // version marker never fired, so fail it here and let the outbox retry
+      // until the gateway fleet catches up. Workspace kicks keep their
+      // legacy semantics and pass through ungated.
+      if (publish.kind === 'kick' && publish.scope !== 'workspace') {
+        const raw = response.headers.get(GATEWAY_PROTOCOL_VERSION_HEADER);
+        const version = raw === null ? null : Number(raw);
+        if (
+          version === null ||
+          !Number.isInteger(version) ||
+          version < COLLABORATION_GATEWAY_PROTOCOL_VERSION
+        ) {
+          throw new Error(
+            `gateway does not support ${publish.scope}-scoped kicks (protocol ${
+              version === null ? 'pre-v2' : String(version)
+            })`,
+          );
+        }
       }
     },
   };

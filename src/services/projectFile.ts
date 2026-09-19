@@ -11,6 +11,7 @@ import type { DeviceLocalFilePreview } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { type LocalFilePreview, localFileService } from '@/services/electron/localFileService';
+import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 export type { LocalFilePreview } from '@/services/electron/localFileService';
 
@@ -55,7 +56,9 @@ const deserializeLocalFilePreview = (preview: DeviceLocalFilePreview): LocalFile
  * Project file chokepoint. Picks the transport per call from `deviceId`: a
  * remote / web target goes through the device RPCs; the local desktop talks to
  * Electron over IPC / preview URLs. UI / store only see this service — the
- * electron-vs-lambda decision never leaks up. (Parallels `gitService`.)
+ * electron-vs-lambda decision never leaks up. (Parallels `gitService`.) A call
+ * with no `deviceId` on a client without local execution raises
+ * `TargetRequiredError` instead of reaching a dead IPC bridge.
  */
 class ProjectFileService {
   /** Project file index (tree) for a working directory. */
@@ -66,6 +69,7 @@ class ProjectFileService {
     deviceId?: string;
     scope: string;
   }): Promise<ProjectFileIndexResult | undefined> {
+    requireLocalExecutionTransport(deviceId, 'getProjectFileIndex');
     return deviceId
       ? ((await lambdaClient.device.getProjectFileIndex.query({ deviceId, scope })) ?? undefined)
       : localFileService.getProjectFileIndex({ scope });
@@ -87,6 +91,7 @@ class ProjectFileService {
     query: string;
     scope: string;
   }): Promise<ProjectFileSearchResult | undefined> {
+    requireLocalExecutionTransport(deviceId, 'searchProjectFiles');
     return deviceId
       ? ((await lambdaClient.device.searchProjectFiles.query({
           changedOnly,
@@ -104,6 +109,7 @@ class ProjectFileService {
     deviceId,
     ...params
   }: GetLocalFilePreviewParams): Promise<LocalFilePreview> {
+    requireLocalExecutionTransport(deviceId, 'getLocalFilePreview');
     if (deviceId) {
       const result = await lambdaClient.device.getLocalFilePreview.query({
         accept: params.accept,
@@ -153,6 +159,7 @@ class ProjectFileService {
     path: string;
     workingDirectory: string;
   }): Promise<{ bytes: Uint8Array; contentType: string } | undefined> {
+    requireLocalExecutionTransport(deviceId, 'readExternalAssetForPublish');
     if (!deviceId) {
       return localFileService.readExternalAssetForPublish({ path, workingDirectory });
     }
@@ -181,6 +188,7 @@ class ProjectFileService {
     to: string;
     workingDirectory: string;
   }): Promise<{ error?: string; success: boolean }> {
+    requireLocalExecutionTransport(deviceId, 'copyAssetForPublish');
     return deviceId
       ? lambdaClient.device.copyAssetForPublish.mutate({ deviceId, from, to, workingDirectory })
       : localFileService.copyAssetForPublish({ from, to, workingDirectory });
@@ -199,6 +207,7 @@ class ProjectFileService {
     items: MoveLocalFileParams[];
     workingDirectory: string;
   }): Promise<LocalMoveFilesResultItem[]> {
+    requireLocalExecutionTransport(deviceId, 'moveProjectFiles');
     return deviceId
       ? lambdaClient.device.moveProjectFiles.mutate({ deviceId, items, workingDirectory })
       : localFileService.moveLocalFiles({ items });
@@ -216,6 +225,7 @@ class ProjectFileService {
     path: string;
     workingDirectory: string;
   }): Promise<RenameLocalFileResult> {
+    requireLocalExecutionTransport(deviceId, 'renameProjectFile');
     return deviceId
       ? lambdaClient.device.renameProjectFile.mutate({ deviceId, newName, path, workingDirectory })
       : localFileService.renameLocalFile({ newName, path });
@@ -238,6 +248,7 @@ class ProjectFileService {
     path: string;
     workingDirectory: string;
   }): Promise<{ error?: string; success: boolean }> {
+    requireLocalExecutionTransport(deviceId, 'writeProjectFile');
     return deviceId
       ? lambdaClient.device.writeProjectFile.mutate({ content, deviceId, path, workingDirectory })
       : localFileService.writeFile({ content, path });

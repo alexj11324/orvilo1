@@ -2662,8 +2662,6 @@ export default {
   'workingPanel.browser.actions.reload': 'Reload',
   'workingPanel.browser.actions.stop': 'Stop loading',
   'workingPanel.browser.addressPlaceholder': 'Search or enter address',
-  'workingPanel.browser.agentControlling': 'Agent is using the browser',
-  'workingPanel.browser.agentCursor': 'Agent',
   'workingPanel.browser.context.elementAdded': 'Element added to chat context',
   'workingPanel.browser.context.elementTitle': 'Element',
   'workingPanel.browser.context.failed': 'Could not add element context',

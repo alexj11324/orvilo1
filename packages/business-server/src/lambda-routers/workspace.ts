@@ -55,12 +55,18 @@ const cloudOnly = (feature: string): never => {
   });
 };
 
-const isUniqueViolation = (error: unknown) => {
+const PG_UNIQUE_VIOLATION = '23505';
+
+// Drizzle wraps the raw pg error as `.cause` (sometimes more than once), so a
+// unique violation only surfaces by walking the chain — a top-level
+// code/message check always misses and maps real conflicts to 500s.
+const isUniqueViolation = (error: unknown): boolean => {
   if (typeof error !== 'object' || error === null) return false;
-  const code = (error as { code?: string }).code;
-  if (code === '23505') return true;
+  if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) return true;
   const message = error instanceof Error ? error.message : '';
-  return message.includes('duplicate key value') || message.includes('workspaces_slug');
+  if (message.includes('duplicate key value') || message.includes('workspaces_slug')) return true;
+  const cause = (error as { cause?: unknown }).cause;
+  return cause !== error && isUniqueViolation(cause);
 };
 
 // The stub list/create/checkSlugAvailable are now real; cloud-only surfaces
@@ -82,15 +88,27 @@ export const workspaceRouter = router({
       z.object({
         avatar: z.string().optional(),
         description: z.string().max(1000).optional(),
+        // Idempotency key: onboarding checkpoints this id before calling, so
+        // a retried create targets the same row instead of relying on an
+        // uncorrelated slug match to find a lost response.
+        id: z.string().min(1).max(64).optional(),
         name: z.string().min(1).max(255),
         slug: workspaceSlugSchema,
       }),
     )
     .mutation(async ({ input, ctx }): Promise<WorkspaceItem> => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
       try {
-        return await new WorkspaceModel(ctx.serverDB, ctx.userId).create(input);
+        return await model.create(input);
       } catch (error) {
         if (isUniqueViolation(error)) {
+          // Idempotent recovery: a retried create (double submit, onboarding
+          // replay, a second control client firing the same request) must land
+          // on the workspace the first call made — not on a hard failure. Only
+          // reuse when the caller actually owns the conflicting row; a slug
+          // taken by someone else stays a real CONFLICT.
+          const existing = await model.findBySlug(input.slug);
+          if (existing?.primaryOwnerId === ctx.userId) return existing;
           throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
         }
         console.error('[workspace:create]', error);

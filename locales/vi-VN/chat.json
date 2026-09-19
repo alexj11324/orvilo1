@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Tải lại",
   "workingPanel.browser.actions.stop": "Dừng tải",
   "workingPanel.browser.addressPlaceholder": "Tìm kiếm hoặc nhập địa chỉ",
-  "workingPanel.browser.agentControlling": "Tác nhân đang sử dụng trình duyệt",
-  "workingPanel.browser.agentCursor": "Tác nhân",
   "workingPanel.browser.context.elementAdded": "Phần tử đã được thêm vào ngữ cảnh trò chuyện",
   "workingPanel.browser.context.elementTitle": "Phần tử",
   "workingPanel.browser.context.failed": "Không thể thêm ngữ cảnh phần tử",

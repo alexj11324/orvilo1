@@ -16,12 +16,12 @@
 
 ## 映射表
 
-| 请求 | 目标 HTML | 看请求头吗 |
-| --- | --- | --- |
-| `/`、`/index.html` | `apps/desktop/index.html` | 否 —— 显式入口，无条件重写 |
-| `/overlay`、`/overlay.html` | `apps/desktop/overlay.html` | 否 |
-| `/popup.html`、`/popup`、`/popup/**` | `apps/desktop/popup.html` | 否（沿用历史行为） |
-| 其它 deep link | `apps/desktop/index.html` | **是**，且仅限文档导航 |
+| 请求                                 | 目标 HTML                   | 看请求头吗                 |
+| ------------------------------------ | --------------------------- | -------------------------- |
+| `/`、`/index.html`                   | `apps/desktop/index.html`   | 否 —— 显式入口，无条件重写 |
+| `/overlay`、`/overlay.html`          | `apps/desktop/overlay.html` | 否                         |
+| `/popup.html`、`/popup`、`/popup/**` | `apps/desktop/popup.html`   | 否（沿用历史行为）         |
+| 其它 deep link                       | `apps/desktop/index.html`   | **是**，且仅限文档导航     |
 
 ## 「这是路由还是文件」怎么判
 

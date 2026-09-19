@@ -491,7 +491,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
                 {!isScheduledCollection && headerVisibility.showViewOptions && (
                   <TasksGroupConfig
                     options={viewOptions}
-                    pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+                    pinnedOptions={
+                      isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined
+                    }
                     setOptions={setViewOptions}
                   />
                 )}
@@ -560,7 +562,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
               <TaskList
                 data={isCollectionListInit || undefined}
                 error={collectionSWR.error}
-                isLoading={collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)}
+                isLoading={
+                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                }
                 items={collectionTasks}
                 options={myTaskViewOptions}
                 routeScope={routeScope}

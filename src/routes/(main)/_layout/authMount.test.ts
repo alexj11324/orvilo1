@@ -32,7 +32,6 @@ vi.mock('./style', () => ({ styles: {} }));
 vi.mock('react-router', () => ({ Outlet: () => null }));
 
 vi.mock('@/components/Skeleton/RouteSegment', nullComponent);
-vi.mock('@/features/DesktopBrowserGatewayBridge', nullComponent);
 vi.mock('@/features/DesktopFileMenuBridge', nullComponent);
 vi.mock('@/features/DesktopLayoutContainer', passthrough);
 vi.mock('@/features/DesktopNavigationBridge', nullComponent);
@@ -85,7 +84,7 @@ const layouts = [
 ] as const;
 
 describe.each(layouts)('main layout (%s)', (_name, Layout) => {
-  it('keeps auth recovery outside WorkspaceContextSlot so a blocked shell cannot hide it', async () => {
+  it('keeps the desktop OIDC boot hook outside WorkspaceContextSlot so a blocked shell cannot hide it', async () => {
     const tree = await (Layout as FC)({});
     const slot = findByName(tree, 'WorkspaceContextSlot');
 
@@ -93,9 +92,16 @@ describe.each(layouts)('main layout (%s)', (_name, Layout) => {
     // the traversal cannot find the component anywhere, so the second cannot
     // pass merely because the traversal is broken.
     expect(slot).toBeDefined();
-    for (const name of ['AuthRequiredModal', 'DesktopAutoOidcOnFirstOpen']) {
-      expect(findByName(tree, name)).toBeDefined();
-      expect(findByName(slot!.props.children, name)).toBeUndefined();
-    }
+    expect(findByName(tree, 'DesktopAutoOidcOnFirstOpen')).toBeDefined();
+    expect(findByName(slot!.props.children, 'DesktopAutoOidcOnFirstOpen')).toBeUndefined();
+  });
+
+  it('leaves session-auth recovery to the global provider — it must cover routes without this layout', async () => {
+    // `/onboarding` (and the mobile/popup entries) never render this layout, so
+    // AuthRequiredModal/WebSessionAuthRecovery mount in SPAGlobalProvider
+    // instead; nothing session-auth related belongs inside the slot either.
+    const tree = await (Layout as FC)({});
+    expect(findByName(tree, 'AuthRequiredModal')).toBeUndefined();
+    expect(findByName(tree, 'WebSessionAuthRecovery')).toBeUndefined();
   });
 });

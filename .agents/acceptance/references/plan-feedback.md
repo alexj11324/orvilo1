@@ -1,8 +1,8 @@
 # Phase 1 plan feedback
 
 Use this template at the end of Phase 1 (see [`../PROCESS.md`](../PROCESS.md)). It
-is written into the round's review notes and handed to the acceptance-checker for plan
-review — not posted to the user for approval. Match the user's conversation
+is written into the round's review notes and self-reviewed by the author against
+this file's criteria — not posted to the user for approval. Match the user's conversation
 language. Keep it concrete and compact: report observed state, not generic
 readiness claims.
 

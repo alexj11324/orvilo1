@@ -392,7 +392,9 @@ describe('AiAgentService.execAgent - device tool pipeline ()', () => {
         new Map([[RemoteDeviceManifest.identifier, remoteDeviceManifestFromEngine]]),
       );
 
-      mockGetAgentConfig.mockResolvedValue(createBaseAgentConfig());
+      mockGetAgentConfig.mockResolvedValue(
+        createBaseAgentConfig({ agencyConfig: { executionTarget: 'local' } }),
+      );
 
       await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
 

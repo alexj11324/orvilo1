@@ -10,7 +10,7 @@
  *
  * INPUTS vs OUTPUTS — only inputs are reusable. `seed/` holds what a run
  * CONSUMES (files to upload, DB seed fragments, config, stand-in evidence for
- * synthetic ingest rounds). What a run PRODUCES (screenshots, transcripts) is
+ * synthetic local rounds). What a run PRODUCES (screenshots, transcripts) is
  * tied to that one execution and lives only in the round dir's assets/ under
  * the report root — never copy it back into the fixture.
  *

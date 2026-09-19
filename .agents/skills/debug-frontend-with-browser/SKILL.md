@@ -6,17 +6,18 @@ description: 'Use for intermittent UI, stale state, ordering, navigation or brow
 # Debug Frontend with Browser
 
 Find the first boundary where correct data becomes incorrect. This skill extends
-`acceptance`; it does not define a separate test workflow.
+the repo's acceptance process (`.agents/acceptance/`); it does not define a
+separate test workflow.
 
 ## Mandatory foundation
 
 Before any browser, Electron, network, cache, or application interaction:
 
-1. Read [`../acceptance/SKILL.md`](../acceptance/SKILL.md) and the project's
-   [`PROCESS.md`](../../acceptance/PROCESS.md) in full.
+1. Read the project's [`PROCESS.md`](../../acceptance/PROCESS.md) and
+   [`PROJECT.md`](../../acceptance/PROJECT.md) in full.
 2. Follow its target grounding, living logs, project adapter, environment and auth
    checks, approval gate, evidence rules, publication, and teardown.
-3. Enter this diagnostic workflow only after `acceptance` has established the
+3. Enter this diagnostic workflow only after the acceptance process has established the
    approved execution surface. If its environment or auth gate is blocked, stop
    there instead of inventing another execution path.
 4. Use the isolated environment and fixture strategy selected by the project
@@ -28,11 +29,11 @@ Before any browser, Electron, network, cache, or application interaction:
 6. Never read secret files or print credentials, tokens, private content, or full
    live objects. Return structural projections only.
 
-If `acceptance` is unavailable, say so and stop before touching a live surface.
+If `.agents/acceptance/` is unavailable, say so and stop before touching a live surface.
 
 ## Responsibility boundary
 
-| `acceptance` owns                           | This skill adds                        |
+| The acceptance process owns                 | This skill adds                        |
 | ------------------------------------------- | -------------------------------------- |
 | Environment isolation and service lifecycle | Falsifiable symptom and event timeline |
 | Authentication and fixture seeding          | Boundary-by-boundary state comparison  |
@@ -40,8 +41,8 @@ If `acceptance` is unavailable, say so and stop before touching a live surface.
 | Approval and mutation authority             | Pure-function replay and commit A/B    |
 | Evidence, report, publication, teardown     | Earliest-boundary fix guidance         |
 
-Do not duplicate or weaken `acceptance` rules here. When the two skills appear
-to conflict, `acceptance` and the project layer control execution.
+Do not duplicate or weaken the acceptance rules here. When the two appear
+to conflict, the acceptance process and the project layer control execution.
 
 ## Diagnostic workflow
 
@@ -66,7 +67,7 @@ before reading implementation code.
 - Use a GIF or video for flicker and other time-based behavior.
 - Re-snapshot after navigation or a major render because element references expire.
 
-Use the surface and capture method chosen by `acceptance`; do not relaunch or
+Use the surface and capture method chosen by the acceptance process; do not relaunch or
 reattach to the user's resident application.
 
 ### 3. Find the first broken boundary
@@ -127,9 +128,9 @@ Do not infer causality from PR timing or filenames.
 
 ### 7. Return to the acceptance workflow for verification
 
-After diagnosis or a fix, resume the parent `acceptance` workflow. It owns the
+After diagnosis or a fix, resume the parent acceptance workflow. It owns the
 focused checks, isolated visual replay, evidence inspection, structured report,
-publication, and cleanup. Do not publish a separate browser-debugging verdict.
+and teardown. Do not produce a separate browser-debugging verdict.
 
 ## Diagnostic supplements
 

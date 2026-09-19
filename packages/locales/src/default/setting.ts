@@ -699,6 +699,22 @@ export default {
   'devices.fallbackTooltip':
     "This device couldn't be identified by its machine ID, so reinstalling the app may create a duplicate entry.",
   'devices.lastSeen': 'Last connected {{time}}',
+  'devices.osPermissions.actions.grant': 'Grant Access',
+  'devices.osPermissions.actions.granted': 'Access Granted',
+  'devices.osPermissions.actions.openSettings': 'Open Settings',
+  'devices.osPermissions.items.accessibility.description':
+    'Enable system-level automation for seamless workflow execution across applications',
+  'devices.osPermissions.items.accessibility.title': 'Accessibility',
+  'devices.osPermissions.items.fileAccess.description':
+    'Access files and folders to enable document analysis, knowledge base creation, and file processing workflows',
+  'devices.osPermissions.items.fileAccess.title': 'File Access',
+  'devices.osPermissions.items.notifications.description':
+    'Receive notifications when tasks complete, Agents respond, or important updates arrive',
+  'devices.osPermissions.items.notifications.title': 'Notifications',
+  'devices.osPermissions.items.screenAudio.description':
+    'Capture screen content and audio for voice interactions, screen analysis, and multimodal assistance',
+  'devices.osPermissions.items.screenAudio.title': 'Screen & Audio',
+  'devices.osPermissions.title': 'System permissions',
   'devices.remove.confirm': 'Remove this device?',
   'devices.remove.confirmDesc':
     'This disconnects the device from your account. It does not sign the device out, and it can re-register on next connect.',

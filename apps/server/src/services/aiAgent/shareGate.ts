@@ -3,11 +3,8 @@ import {
   AgentDocumentsIdentifier,
 } from '@orvilo/builtin-tool-agent-documents';
 import { KnowledgeBaseApiName, KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
-import {
-  OrviloAgentApiName,
-  OrviloAgentIdentifier,
-} from '@orvilo/builtin-tool-orvilo-agent';
 import { MEMORY_WRITE_API_NAMES, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
+import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import {
   AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS,
   builtinTools,
@@ -410,11 +407,10 @@ export const isShareBlockedBuiltinDispatch = (
  * required to withhold access — the point of default-deny is that an unproven
  * tool does not ship):
  *
- * - `lobe-local-system` / `lobe-browser` / `lobe-remote-device`: these proxy
+ * - `lobe-local-system` / `lobe-remote-device`: these proxy
  *   through `deviceGateway` to the creator's own registered physical
- *   device(s). A visitor executing arbitrary commands or driving a live
- *   browser session on the CREATOR's own machine is a far larger blast radius
- *   than any single data store.
+ *   device(s). A visitor executing arbitrary commands on the CREATOR's own
+ *   machine is a far larger blast radius than any single data store.
  *
  * - `lobe-web-onboarding`: reads and WRITES the creator's own onboarding
  *   `SOUL.md` document and persona.

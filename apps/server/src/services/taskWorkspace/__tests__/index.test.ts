@@ -297,9 +297,10 @@ describe('TaskWorkspaceService', () => {
 
       const result = await service.provision({ seq: 1, task });
 
-      expect(result?.prompt).toContain('git checkout -B task/T-1 origin/main');
+      expect(result?.prompt).toContain('fetch `origin/main` and work only on `task/T-1`');
       expect(result?.prompt).toContain('git push -u origin task/T-1');
-      expect(result?.prompt).toContain('gh pr create --base main --head task/T-1');
+      expect(result?.prompt).toContain('gh pr create');
+      expect(result?.prompt).toContain('Do not merge it yourself');
     });
 
     it('suffixes the remote branch with the run seq on retries', async () => {
@@ -370,11 +371,11 @@ describe('TaskWorkspaceService', () => {
       expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
     });
 
-    it('emits the contract for a default (unset-target) hetero assignee even with the gateway configured', async () => {
-      // Dispatch resolves unset/`none` targets to the sandbox because it
-      // hardcodes clientExecutionAvailable=false — a gateway-configured server
-      // must not fool provisioning into the device path and lose the run's
-      // work to the ephemeral sandbox.
+    it('fails a default (unset-target) hetero assignee even with the gateway configured', async () => {
+      // An unset/`none` target is a pending state — dispatch fails loudly and
+      // asks the owner to pick a device or the cloud sandbox, so provisioning
+      // must not silently emit the remote contract either, even when the
+      // device gateway is configured.
       (deviceGateway as { isConfigured: boolean }).isConfigured = true;
       try {
         mockAgentModel.getAgentConfig.mockResolvedValue({
@@ -382,10 +383,10 @@ describe('TaskWorkspaceService', () => {
         });
         const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
 
-        const result = await service.provision({ seq: 1, task });
-
-        expect(result?.repos).toEqual(['acme/widgets']);
-        expect(result?.workingDirectory).toBe('/workspace/widgets');
+        await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+          'does not match the selected execution target',
+        );
+        expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
       } finally {
         (deviceGateway as { isConfigured: boolean }).isConfigured = false;
       }

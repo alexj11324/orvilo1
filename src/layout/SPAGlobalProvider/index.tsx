@@ -9,9 +9,11 @@ import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Susp
 import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
 import { DragUploadProvider } from '@/components/DragUploadZone/DragUploadProvider';
 import { isDesktop } from '@/const/version';
+import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
 import AuthProvider from '@/layout/AuthProvider';
 import { MarketAuthProvider } from '@/layout/AuthProvider/MarketAuth';
+import WebSessionAuthRecovery from '@/layout/AuthProvider/SessionAuth/WebSessionAuthRecovery';
 import AppTheme from '@/layout/GlobalProvider/AppTheme';
 import CacheHydrationGate from '@/layout/GlobalProvider/CacheHydrationGate';
 import { FaviconProvider } from '@/layout/GlobalProvider/FaviconProvider';
@@ -86,7 +88,12 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
     <AuthProvider>
       <MarketAuthProvider isDesktop={isDesktop}>
         <StoreInitialization />
-
+        {/* One session-auth adapter per client on the same `sessionAuthEvents`
+            signal: desktop re-auths in place via the OIDC modal, web redirects
+            to /signin. Mounted at the provider level so every route —
+            /onboarding, mobile, popup — has a subscriber, not just the main
+            app layout. */}
+        {isDesktop ? <AuthRequiredModal /> : <WebSessionAuthRecovery />}
         {isDesktop && <ServerVersionOutdatedAlert />}
         <FaviconProvider>
           {postRenderReady && (

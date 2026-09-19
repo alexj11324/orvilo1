@@ -1,6 +1,6 @@
 # Quota 菜单刷新语义
 
-`QuotaMenu`（`src/features/ChatInput/ControlBar/HeteroControlBar/QuotaMenu/`）展示异构 agent 的额度快照。本文记录刷新管线的不变量——这些约束由 `QuotaMenu.test.tsx` 中的用例钉死。
+`QuotaMenu`（`src/features/ChatInput/ControlBar/HeteroControlBar/QuotaMenu/`）展示异构 agent 的额度快照。本文记录刷新管线的不变量 —— 这些约束由 `QuotaMenu.test.tsx` 中的用例钉死。
 
 ## 刷新触发器
 
@@ -12,7 +12,7 @@
 
 被动触发统一过 `requestRevalidation` 门禁：
 
-- `quota.updatedAt` 或 `lastRevalidateAtRef` 距当前 **严格小于** `autoRefreshMs`（`<`，不是 `<=`）时判定为新鲜，跳过咨询。恰好在窗口边界算作过期——快照时间戳与 interval 注册同刻时，整点 tick 的差值恰好等于窗口。
+- `quota.updatedAt` 或 `lastRevalidateAtRef` 距当前 **严格小于** `autoRefreshMs`（`<`，不是 `<=`）时判定为新鲜，跳过咨询。恰好在窗口边界算作过期 —— 快照时间戳与 interval 注册同刻时，整点 tick 的差值恰好等于窗口。
 - `lastRevalidateAtRef` 记录上一次主动咨询上游的**发起时刻**，写入点收敛在 `loadQuota` 内：手动刷新与被动重校验都会打戳，纯挂载读持久化数据不打戳。
 
 ## 飞行中合并

@@ -150,6 +150,32 @@ describe('workspaceRouter', () => {
     });
   });
 
+  it('recovers a retried create by returning the caller-owned same-slug workspace', async () => {
+    workspaceModel.create.mockRejectedValue(Object.assign(new Error('dup'), { code: '23505' }));
+    workspaceModel.findBySlug.mockResolvedValue({
+      id: 'ws-existing',
+      name: 'Team',
+      primaryOwnerId: 'u-owner',
+      slug: 'taken',
+    });
+
+    const recovered = await createCaller().create({ name: 'Team', slug: 'taken' });
+    expect(recovered).toMatchObject({ id: 'ws-existing', slug: 'taken' });
+  });
+
+  it('keeps CONFLICT when the same-slug workspace belongs to someone else', async () => {
+    workspaceModel.create.mockRejectedValue(Object.assign(new Error('dup'), { code: '23505' }));
+    workspaceModel.findBySlug.mockResolvedValue({
+      id: 'ws-other',
+      primaryOwnerId: 'u-stranger',
+      slug: 'taken',
+    });
+
+    await expect(createCaller().create({ name: 'Team', slug: 'taken' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+  });
+
   it('lists the caller memberships with their roles', async () => {
     const rows = await createCaller().list();
     expect(rows).toEqual([{ id: 'ws-1', name: 'Team', role: 'owner', slug: 'team' }]);

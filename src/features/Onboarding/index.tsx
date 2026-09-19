@@ -12,15 +12,18 @@ import {
   ONBOARDING_INVITES_FAILED,
   type OnboardingFormValues,
 } from '@/components/blocks/onboarding-2/components/onboarding';
+import { isDesktop } from '@/const/version';
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import {
   clearStaleOnboardingCallbackUrl,
+  resolvePostOnboardingTargetUrl,
   stashOnboardingCallbackUrl,
 } from '@/utils/onboardingRedirect';
 
-import { finishOnboardingAndNavigate } from './finishOnboarding';
+import DesktopAuthGate from './DesktopAuthGate';
+import { finishOnboardingAndNavigate, repairDesktopOnboardingMarkers } from './finishOnboarding';
 
 const INVITE_ROLE_MAP: Record<InviteRoleValue, 'admin' | 'member' | 'viewer'> = {
   admin: 'admin',
@@ -70,11 +73,25 @@ const OnboardingPage = memo(() => {
   const initialFullName = useUserStore((s) => s.user?.fullName ?? '');
   const initialTelemetry = useUserStore(userGeneralSettingsSelectors.telemetry) ?? true;
   const createdWorkspaceRef = useRef<{ id: string; slug: string } | null>(null);
+  // Server-authoritative completion: `finishedAt` on the user record, shared by
+  // every client. A finished user landing here (stale bookmark, desktop boot
+  // racing the marker repair) skips straight to the post-onboarding target.
+  const onboardingFinished = useUserStore((s) => !!s.onboarding?.finishedAt);
 
   useEffect(() => {
     stashOnboardingCallbackUrl(search);
     clearStaleOnboardingCallbackUrl(pathname, search);
   }, [pathname, search]);
+
+  useEffect(() => {
+    if (!onboardingFinished) return;
+    // The server record is authoritative, but the desktop boot path still
+    // reads local markers — repair them here too or `BrowserManager` keeps
+    // booting `/onboarding` on every launch. Fire-and-forget: a failed repair
+    // just means one more detour through this redirect.
+    if (isDesktop) void repairDesktopOnboardingMarkers();
+    navigate(resolvePostOnboardingTargetUrl(), { replace: true });
+  }, [navigate, onboardingFinished]);
 
   const handleComplete = async (values: OnboardingFormValues) => {
     await updateFullName(values.fullName.trim());
@@ -119,12 +136,14 @@ const OnboardingPage = memo(() => {
   };
 
   return (
-    <Onboarding
-      initialFullName={initialFullName}
-      initialTelemetry={initialTelemetry}
-      onComplete={handleComplete}
-      onOpen={handleOpen}
-    />
+    <DesktopAuthGate>
+      <Onboarding
+        initialFullName={initialFullName}
+        initialTelemetry={initialTelemetry}
+        onComplete={handleComplete}
+        onOpen={handleOpen}
+      />
+    </DesktopAuthGate>
   );
 });
 

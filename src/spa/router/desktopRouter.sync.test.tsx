@@ -377,7 +377,9 @@ describe('desktop router shared definition', () => {
     expect(electronPaths).not.toContain('/share/page');
     expect(electronPaths).not.toContain('/verify');
     expect(electronPaths).not.toContain('/acceptance');
-    expect(electronPaths).not.toContain('/onboarding');
+    // Both clients mount the unified `/onboarding`; `/desktop-onboarding`
+    // survives on Electron only as a compat redirect for legacy links.
+    expect(electronPaths).toContain('/onboarding');
     expect(electronPaths).toContain('/desktop-onboarding');
   });
 

@@ -1,6 +1,6 @@
 # 任务列表视图选择
 
-`AgentTasksPage`（`src/features/AgentTasks/AgentTaskList/`）在 board 与 list 两种视图间切换。本文记录视图选择的不变量——由 `AgentTasksPage.test.ts` 中的用例钉死。
+`AgentTasksPage`（`src/features/AgentTasks/AgentTaskList/`）在 board 与 list 两种视图间切换。本文记录视图选择的不变量 —— 由 `AgentTasksPage.test.ts` 中的用例钉死。
 
 ## 不变量
 

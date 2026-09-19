@@ -17,11 +17,20 @@ import { ComposioServerStatus } from '../composioStore';
 
 export interface OrviloToolMetaWithAvailability extends OrviloToolMeta {
   /**
-   * Whether the tool is available in web environment
-   * e.g., LocalSystem is desktop-only, so availableInWeb is false
+   * Whether the tool can run without an execution device — a static property
+   * of the tool, independent of the viewing client. Device-bound executors
+   * (LocalSystem, AUV, agent-browser) report false on every client; whether
+   * they can actually run is decided by the run's target device.
    */
   availableInWeb: boolean;
 }
+
+/**
+ * Display-side capability context: surfaces show what is configured for the
+ * run's *target* device, so device-bound tools stay visible on any viewer.
+ * The run-time enableChecker applies the real plan capability.
+ */
+const DEVICE_CAPABLE_DISPLAY = { canExecuteOnDevice: true } as const;
 
 const toBuiltinMeta = (t: ToolStoreState['builtinTools'][number]): OrviloToolMeta => ({
   author: 'Orvilo',
@@ -34,7 +43,9 @@ const toBuiltinMetaWithAvailability = (
   t: ToolStoreState['builtinTools'][number],
 ): OrviloToolMetaWithAvailability => ({
   ...toBuiltinMeta(t),
-  availableInWeb: isBuiltinToolAvailableInCurrentEnv(t.identifier),
+  availableInWeb: isBuiltinToolAvailableInCurrentEnv(t.identifier, {
+    canExecuteOnDevice: false,
+  }),
 });
 
 const toSkillMeta = (s: BuiltinSkillManifest): OrviloToolMeta => ({
@@ -50,7 +61,9 @@ const toSkillMeta = (s: BuiltinSkillManifest): OrviloToolMeta => ({
 
 const toSkillMetaWithAvailability = (s: BuiltinSkillManifest): OrviloToolMetaWithAvailability => ({
   ...toSkillMeta(s),
-  availableInWeb: isBuiltinSkillAvailableInCurrentEnv(s.identifier),
+  availableInWeb: isBuiltinSkillAvailableInCurrentEnv(s.identifier, {
+    canExecuteOnDevice: false,
+  }),
 });
 
 const getComposioMetas = (s: ToolStoreState): OrviloToolMeta[] =>
@@ -133,8 +146,9 @@ const buildVisibleMetaList = (
       // be a no-op and create UI/state mismatch).
       if (includeHidden && RUNTIME_MANAGED_TOOL_IDS.has(item.identifier)) return false;
 
-      // Filter platform-specific tools (e.g., LocalSystem desktop-only)
-      if (!isBuiltinToolAvailableInCurrentEnv(item.identifier)) return false;
+      // Device-bound tools stay visible — the target device owns capability
+      if (!isBuiltinToolAvailableInCurrentEnv(item.identifier, DEVICE_CAPABLE_DISPLAY))
+        return false;
 
       // Exclude uninstalled tools
       if (uninstalledBuiltinTools.includes(item.identifier)) {
@@ -147,7 +161,8 @@ const buildVisibleMetaList = (
 
   const skillMetas = (s.builtinSkills || [])
     .filter((skill) => {
-      if (!isBuiltinSkillAvailableInCurrentEnv(skill.identifier)) return false;
+      if (!isBuiltinSkillAvailableInCurrentEnv(skill.identifier, DEVICE_CAPABLE_DISPLAY))
+        return false;
       if (uninstalledBuiltinTools.includes(skill.identifier)) return false;
 
       return true;
@@ -224,7 +239,8 @@ const discoverableMetaList = (s: ToolStoreState): OrviloToolMeta[] => {
 
   const skillMetas = (s.builtinSkills || [])
     .filter((skill) => {
-      if (!isBuiltinSkillAvailableInCurrentEnv(skill.identifier)) return false;
+      if (!isBuiltinSkillAvailableInCurrentEnv(skill.identifier, DEVICE_CAPABLE_DISPLAY))
+        return false;
       if (uninstalledBuiltinTools.includes(skill.identifier)) return false;
       return true;
     })
@@ -319,7 +335,7 @@ const fixedDisplayMetaList =
       .filter((id) => !(isManualMode && MANUAL_MODE_EXCLUDE_TOOL_IDS.has(id)))
       .map((id) => s.builtinTools.find((tool) => tool.identifier === id))
       .filter((tool): tool is ToolStoreState['builtinTools'][number] => !!tool)
-      .filter((tool) => isBuiltinToolAvailableInCurrentEnv(tool.identifier))
+      .filter((tool) => isBuiltinToolAvailableInCurrentEnv(tool.identifier, DEVICE_CAPABLE_DISPLAY))
       .map(toBuiltinMeta);
 
 /**
@@ -327,7 +343,8 @@ const fixedDisplayMetaList =
  */
 const installedBuiltinSkills = (s: ToolStoreState): BuiltinSkillManifest[] =>
   (s.builtinSkills || []).filter((skill) => {
-    if (!isBuiltinSkillAvailableInCurrentEnv(skill.identifier)) return false;
+    if (!isBuiltinSkillAvailableInCurrentEnv(skill.identifier, DEVICE_CAPABLE_DISPLAY))
+      return false;
     if (s.uninstalledBuiltinTools.includes(skill.identifier)) return false;
 
     return true;

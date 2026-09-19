@@ -198,9 +198,11 @@ export const selectRuntimeType = (
   // Local CLI hetero (Amp / Claude Code / Codex) — route by the resolved execution
   // target (shared resolution with the server / the device switcher UI):
   // `device` / `sandbox` need server-side dispatch; `local` runs in-process on
-  // the desktop. On web, unbound `local` resolves to sandbox when supported
-  // (otherwise the pending `none` state), while a desktop `local` selection
-  // synced with boundDeviceId resolves to device dispatch.
+  // the desktop. Unset targets resolve to the pending `none` state on every
+  // client — the viewer's platform never picks an execution host — and an
+  // unbound `local` on a client without local execution also stays pending.
+  // A desktop `local` selection synced with boundDeviceId resolves to `device`
+  // dispatch when viewed from another client.
   if (ctx.heterogeneousProvider) {
     const target = resolveExecutionTarget(
       {

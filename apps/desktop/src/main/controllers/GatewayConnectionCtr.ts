@@ -343,10 +343,15 @@ export default class GatewayConnectionCtr extends ControllerModule {
         agentType: request.agentType,
         assistantMessageId: request.assistantMessageId,
         args: request.args,
+        builtinTools: request.builtinTools,
         cwd: request.cwd,
         imageList: request.imageList,
         jwt,
         operationId: request.operationId,
+        // `request.jwt` is the operation-scoped token — keep it for builtin
+        // tool callbacks (`hetero:tool:exec`) even though `jwt` above was
+        // swapped for this device's user token (see the comment above).
+        operationJwt: request.jwt,
         prompt: request.prompt,
         resumeFallbackSystemContext: request.resumeFallbackSystemContext,
         resumeSessionId: request.resumeSessionId,

@@ -132,8 +132,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
     /** External URL — fetched if no buffer provided */
     url?: string;
   }>;
-  /** Client-side function tools from Response API — injected into LLM with source='client' */
-  functionTools?: Array<{ description?: string; name: string; parameters?: Record<string, any> }>;
   /** External lifecycle hooks (auto-adapt to local/production mode) */
   hooks?: AgentHook[];
   /** Initial step count offset for resumed operations (accumulated from previous runs) */

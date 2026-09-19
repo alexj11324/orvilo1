@@ -9,6 +9,7 @@ import {
   isRemoteHeterogeneousType,
 } from '@orvilo/heterogeneous-agents';
 import type {
+  AcpBuiltinToolSpec,
   AgentRunAdmissionState,
   DeviceUnavailableErrorData,
   ErrorType,
@@ -28,11 +29,13 @@ import {
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
+import { eq, sql } from 'drizzle-orm';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DeviceModel } from '@/database/models/device';
 import type { MessageModel } from '@/database/models/message';
 import type { TopicModel } from '@/database/models/topic';
+import { agentOperations } from '@/database/schemas';
 import { resolveExecutionPlan, resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJwt';
 import {
@@ -66,6 +69,7 @@ import {
   resolveHeteroDispatchErrorType,
   supportsCloudHeterogeneousSandbox,
 } from '../helpers/heteroErrors';
+import { pruneRegeneratedBranch } from '../pruneRegeneratedBranch';
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
 import type { ExecRunContext } from '../types';
 
@@ -412,6 +416,12 @@ const settleRemoteDispatchOutcome = async (
 };
 
 export interface HeteroDispatchInput {
+  /**
+   * Server-backed builtin tools resolved for this run. The execution host
+   * (desktop, device daemon, cloud sandbox) mounts each spec on its per-run
+   * MCP server; invocations call back to the server with the operation JWT.
+   */
+  builtinToolSpecs?: AcpBuiltinToolSpec[];
   canManageAgent: boolean;
   effectiveRequestedDeviceId?: string;
   /**
@@ -471,6 +481,7 @@ export const dispatchHeteroAgent = async (
     userMessageId,
   } = ctx;
   const {
+    builtinToolSpecs,
     canManageAgent,
     effectiveRequestedDeviceId,
     extraSystemContext,
@@ -531,6 +542,17 @@ export const dispatchHeteroAgent = async (
     metadata: {
       _hooks: serializedHooks,
       assistantMessageId,
+      // Server-executed builtin tool allowlist for this run (P70c): the
+      // `execBuiltinTool` callback rejects any identifier/apiName outside
+      // this map, so a captured operation token cannot reach runtimes the
+      // dispatch-time tool surface never resolved.
+      ...(builtinToolSpecs?.length
+        ? {
+            builtinTools: Object.fromEntries(
+              builtinToolSpecs.map((spec) => [spec.identifier, spec.apis.map((api) => api.name)]),
+            ),
+          }
+        : {}),
     },
     operationId,
     parentOperationId,
@@ -559,7 +581,14 @@ export const dispatchHeteroAgent = async (
   let operationJwt: string;
   try {
     operationJwt = await signHeteroOperationJWT({
-      capabilities: ['hetero:ingest', 'hetero:finish', 'hetero:intervention:read'],
+      capabilities: [
+        'hetero:ingest',
+        'hetero:finish',
+        'hetero:intervention:read',
+        // Only granted when the run actually mounts builtin tools — the
+        // `execBuiltinTool` endpoint rejects the capability otherwise.
+        ...(builtinToolSpecs?.length ? (['hetero:tool:exec'] as const) : []),
+      ],
       operationId,
       userId: deps.userId,
       workspaceId: deps.workspaceId,
@@ -598,10 +627,19 @@ export const dispatchHeteroAgent = async (
       // and authorized upstream. An agent-share visitor run executes under
       // the creator's identity, so without the opt-in `query()`'s
       // creator-facing default would hand the agent an empty history.
-      const recentMsgs = await deps.messageModel.query(
+      let recentMsgs = await deps.messageModel.query(
         { topicId, pageSize: 200 },
         { allowShareVisitor: true },
       );
+      // A resume/regenerate run anchors on `parentMessageId`: the flat topic
+      // query still contains the anchor's old answer branch (and, for a
+      // middle-turn regenerate, the later turns that continued from it). Drop
+      // that branch — including members hidden inside compaction groups — or
+      // the CLI would "continue" an already-answered turn.
+      if (parentMessageId) {
+        const tree = await deps.messageModel.queryTopicMessageTree({ topicId });
+        recentMsgs = pruneRegeneratedBranch(recentMsgs, tree, parentMessageId);
+      }
       const turns = recentMsgs
         .filter(
           (m) =>
@@ -675,6 +713,7 @@ export const dispatchHeteroAgent = async (
     // may predate `--type orvilo` support.
     agentType: heteroCliAgentType,
     assistantMessageId,
+    builtinTools: builtinToolSpecs?.length ? builtinToolSpecs : undefined,
     githubToken,
     imageList: heteroImageList,
     jwt: operationJwt,
@@ -1203,6 +1242,30 @@ export const dispatchHeteroAgent = async (
         topicId,
       });
 
+      // Persist the device-scoped tool context the `execBuiltinTool` callback
+      // rebuilds `ToolExecutionContext` from: which device + cwd device-proxy
+      // runtimes (localSystem/remoteDevice/browser) should target. Lives on the
+      // op row — durable across Lambda instances, unlike the Redis metadata —
+      // and is written only when this run actually mounts builtin tools.
+      if (builtinToolSpecs?.length) {
+        try {
+          await deps.db
+            .update(agentOperations)
+            .set({
+              metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+                builtinToolContext: {
+                  activeDeviceId: dispatchDeviceId,
+                  activeDeviceScope: dispatchWorkspaceId ? 'workspace' : 'personal',
+                  workingDirectory: deviceCwd,
+                },
+              })}::jsonb`,
+            })
+            .where(eq(agentOperations.id, operationId));
+        } catch (err) {
+          log('execAgent: failed to persist builtinToolContext: %O', err);
+        }
+      }
+
       // Build only device-relevant context instead of reusing the cloud-sandbox one
       // (which describes an ephemeral /workspace + pre-cloned repos and would mislead
       // the agent). The spawned CLI already receives deviceCwd as its actual cwd.
@@ -1394,12 +1457,34 @@ export const dispatchHeteroAgent = async (
       // Durable admission BEFORE the spawn — the sandbox is the execution host
       // for this channel; `deviceId` stays absent by design.
       await writeDispatchAdmission(deps, { channel: 'cloud_sandbox', operationId });
+
+      // Same builtinToolContext contract as the device branch — sandbox runs
+      // have no bound device but do have a working directory (`/workspace`).
+      if (builtinToolSpecs?.length) {
+        try {
+          await deps.db
+            .update(agentOperations)
+            .set({
+              metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+                builtinToolContext: { workingDirectory: '/workspace' },
+              })}::jsonb`,
+            })
+            .where(eq(agentOperations.id, operationId));
+        } catch (err) {
+          log('execAgent: failed to persist builtinToolContext: %O', err);
+        }
+      }
+
       spawnHeteroSandbox({
         ...heteroParams,
         agentType: heteroCliAgentType as 'claude-code' | 'codex',
         args: heteroExecArgs,
         jwt: sandboxJwt,
         marketService,
+        // `heteroParams.jwt` (the operation token) is overridden above for
+        // user-scoped sandbox calls; re-forward it under its own key so the
+        // CLI's builtin-tool callbacks keep `hetero:tool:exec`.
+        operationJwt,
         workspaceId: deps.workspaceId,
       }).catch(async (err) => {
         // Fire-and-forget: execAgent has already returned `autoStarted`, and

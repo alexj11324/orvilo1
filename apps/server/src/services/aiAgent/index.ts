@@ -1,6 +1,7 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import type { OrviloDatabase } from '@orvilo/database';
+import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -12,7 +13,11 @@ import type {
   ScheduleAgentRunResult,
   WorkingDirConfig,
 } from '@orvilo/types';
-import { getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
+import {
+  getWorkingDirEffectivePath,
+  RequestTrigger,
+  resolveOrviloCliAgentType,
+} from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -57,12 +62,10 @@ import { createGraphAwareAgentFactory } from './helpers/agentFactory';
 import { createGroupActionMemberBridgeHook } from './hooks/threadRunHooks';
 import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
-import {
-  claimApprovalResume,
-  tryReuseInterventionContinuation,
-} from './pipeline/approvalResume';
+import { claimApprovalResume, tryReuseInterventionContinuation } from './pipeline/approvalResume';
 import { dispatchHeteroAgent } from './pipeline/heteroDispatch';
 import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
+import { resolveRunToolSurface } from './pipeline/runToolSurface';
 import { resolveNewTopicSnapshot, setupTurn } from './pipeline/turnSetup';
 import type { SubAgentRunDeps } from './subAgentRuns';
 import { execAgentMember, execAgentThreadRun } from './subAgentRuns';
@@ -709,7 +712,6 @@ export class AiAgentService {
       existingMessageIds = [],
       fileIds: attachedFileIds,
       files,
-      functionTools,
       hooks,
       instructions,
       chatConfigOverride,
@@ -725,10 +727,11 @@ export class AiAgentService {
       evalRuntime,
       maxSteps,
       disableLocalSystem,
+      disableSelfFeedbackIntentTool,
+      disableTools,
       initialStepCount,
       signal,
       skipTaskVerification,
-      userInterventionConfig = { approvalMode: 'headless' },
       queueRetries,
       queueRetryDelay,
       parentMessageId,
@@ -1040,6 +1043,28 @@ export class AiAgentService {
       userMessageId: turn.userMessageId,
     };
 
+    // The retired loop mounted Orvilo builtin tools/skills directly; ACP runs
+    // receive them as a per-run MCP surface (`builtinToolSpecs`) plus inline
+    // capability instructions (`capabilityContext`) — see `runToolSurface`.
+    const toolSurface = resolveRunToolSurface({
+      additionalPluginIds,
+      agentPlugins: agentConfig.plugins,
+      disableLocalSystem,
+      disableSelfFeedbackIntentTool,
+      disableTools,
+      enableAgentMode: agentConfig.chatConfig?.enableAgentMode,
+      exclusivePluginIds,
+      selectedToolIds,
+      // MCP-mountable harnesses are the standard-ACP runtimes; remote platform
+      // types and the non-standard adapters (cursor/devin/droid/grok/trae)
+      // never see a spec, so they never advertise uncallable tools.
+      supportsBuiltinToolMount: ACP_RUNTIME_AGENT_TYPES.has(
+        turn.heteroType === 'orvilo'
+          ? resolveOrviloCliAgentType(turn.heterogeneousProvider?.engine)
+          : turn.heteroType,
+      ),
+    });
+
     return dispatchHeteroAgent(
       {
         bindTopicWorkingDirectory: (p) => this.bindTopicWorkingDirectory(p),
@@ -1054,11 +1079,15 @@ export class AiAgentService {
       },
       runContext,
       {
+        builtinToolSpecs: toolSurface.builtinToolSpecs,
         canManageAgent,
         effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
-        // Eval env prompts ride the ACP system-context channel — the retired
-        // loop consumed `evalContext` during operation prep instead.
-        extraSystemContext: evalContext?.envPrompt,
+        // Skill content, mounted-tool usage guidance and eval env prompts all
+        // ride the ACP system-context channel — the retired loop consumed them
+        // as live tool definitions / `evalContext` during operation prep.
+        extraSystemContext:
+          [toolSurface.capabilityContext, evalContext?.envPrompt].filter(Boolean).join('\n\n') ||
+          undefined,
         heteroType: turn.heteroType,
         heterogeneousProvider: turn.heterogeneousProvider,
         hooks,

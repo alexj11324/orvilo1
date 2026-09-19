@@ -179,7 +179,7 @@ describe('AiModelModel', () => {
       expect(userGroups[1].id).toBe('qvq');
     });
 
-    it('should not include personal models in workspace scope', async () => {
+    it("should adopt the owner's unfiled models into workspace scope", async () => {
       await aiProviderModel.create({
         displayName: 'Personal GPT',
         id: 'gpt-personal',
@@ -193,7 +193,9 @@ describe('AiModelModel', () => {
 
       const models = await workspaceAiModelModel.query();
 
-      expect(models.map((item) => item.id)).toEqual(['gpt-workspace']);
+      // The owner's unfiled rows follow them into workspace scope — activating
+      // a workspace must not hide their configured models.
+      expect(models.map((item) => item.id).sort()).toEqual(['gpt-personal', 'gpt-workspace']);
     });
   });
 

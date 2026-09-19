@@ -280,3 +280,13 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - Test Web App 全绿：39/39 scenarios。侧栏重命名 e2e 链路的终修：`sidebarAgent`/`sidebarGroup` steps 用 `[data-agent-list] a[href$="/agent|/group/{id}"]` 行选择器绕开侧栏区段重复项；EditingPopover 的 title input 与 save ActionIcon 加了 `editing-popover-title-input`/`editing-popover-save` testid（EmojiPicker 会渲染自己的 lucide-check，`.first()` 会误中 swatch）；输入走 `focus → mod+a → pressSequentially`，保存等 positioner 落位后 click，失败时 `dispatchEvent('click')` 兜底；Then 断言失败时 dump 行文本 + popover 状态。
 - `85dc9749` 跑剩 1 个 `聊天列表底部补偿区域高度不应收缩`（scroll.steps.ts:454，expected ≥250 got 243）—— 该 scenario 在 canary 上就存在、本 PR 未触碰，空 commit `94372a22` 重跑即绿，判定为 mock-infra 计时 flake。若它在本分支再次复现需重新排查。
 - `94372a22` 这一轮 Test/Typecheck/Shard 全被 Check Duplicate Run 跳过（concurrent-skip 已知行为），Required Quality Gate + Test Web App 为绿。不要把 skip 当全量通过。
+
+## Linear 入口对齐补丁（head `5ccbdad7`，独立 PR #112 叠在本分支上）
+
+PR95 侧栏对照 Linear 参考图的剩余入口差异单独开 PR（回退 = 关 PR #112）：
+
+- **`+` 快捷创建行**：`create` 键进固定 IA（`FIXED_PRIMARY_KEYS` + `DEFAULT_SIDEBAR_ITEMS`，位于 agent 与 workspace 之间），`HomeSidebar/Body/CreateRow.tsx` 渲染 icon-only 行 + DropdownMenu，菜单项全部落到真实面：New task（`createTaskModal`）/ New view（`NewViewModal`）/ Create project（`openCreateProjectModal`）。
+- **Reviews 计数徽标**：`pullRequestKeys.queue(workspaceId,'for-me')` 与 ReviewsPage 同一 SWR key，一次共享请求；GitHub 未连接或出错时静默无徽标。
+- **linear-design skill**：`.agents/skills/linear-design/` 落地 linear.app DESIGN.md 全文（voltagent/awesome-design-md）+ 判定规则；记录两条故意缺席：Drafts（v5/F38 无真实 draft 域不露假入口）、Try⌄（无 Initiatives/Cycles 产品面）。
+- i18n：`navPanel.create`（Create / 新建）三处同步；菜单复用 `navPanel.newTask` / `savedViews.newView` / `project:create.action`。
+- Body 测试更新：mock CreateRow 并断言其位于 Agent 之后、首个 accordion 之前。

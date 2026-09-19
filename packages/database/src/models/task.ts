@@ -755,6 +755,8 @@ export class TaskModel {
       .select()
       .from(tasks)
       .where(and(eq(tasks.identifier, identifier), this.ownership()))
+      // Filed rows resolve ahead of unfiled duplicates sharing an identifier.
+      .orderBy(sql`${tasks.workspaceId} asc nulls last`)
       .limit(1);
 
     return result[0] || null;

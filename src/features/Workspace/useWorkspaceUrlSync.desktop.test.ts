@@ -13,6 +13,10 @@ import { initialState } from '@/store/electron/initialState';
 import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname.desktop';
 import { useWorkspaceUrlSync } from './useWorkspaceUrlSync';
 
+vi.mock('./ensureDefaultWorkspace', () => ({
+  ensureDefaultWorkspace: vi.fn(async () => null),
+}));
+
 vi.mock(
   './useWorkspaceSyncPathname',
   async () => await import('./useWorkspaceSyncPathname.desktop'),
@@ -100,7 +104,9 @@ describe('useWorkspaceUrlSync (desktop)', () => {
     expect(switchWorkspace).toHaveBeenCalledWith('ws-1');
   });
 
-  it('returns to personal context when the user switches to a personal tab', () => {
+  it('keeps the workspace active when the user switches to a slug-less tab', () => {
+    // No personal scope: a reserved path still resolves to a workspace —
+    // the remembered one (or the first membership).
     vi.spyOn(useActiveWorkspaceIdModule, 'useActiveWorkspaceId').mockReturnValue('ws-1');
     setTabs(
       [
@@ -117,15 +123,17 @@ describe('useWorkspaceUrlSync (desktop)', () => {
       useElectronStore.setState({ activeTabId: 'b' });
     });
 
-    expect(switchToPersonal).toHaveBeenCalled();
+    // The active workspace stays ws-1 — no switch, and never a personal flip.
+    expect(switchToPersonal).not.toHaveBeenCalled();
+    expect(switchWorkspace).not.toHaveBeenCalledWith(expect.not.stringMatching('ws-1'));
   });
 
-  it('treats the unqualified projects route as personal context', () => {
-    vi.spyOn(useActiveWorkspaceIdModule, 'useActiveWorkspaceId').mockReturnValue('ws-1');
+  it('activates the default workspace on unqualified routes', () => {
     setTabs([{ id: 'a', url: '/projects' }], 'a');
 
     renderHook(() => useWorkspaceUrlSync(), { wrapper });
 
-    expect(switchToPersonal).toHaveBeenCalled();
+    expect(switchToPersonal).not.toHaveBeenCalled();
+    expect(switchWorkspace).toHaveBeenCalledWith('ws-1');
   });
 });

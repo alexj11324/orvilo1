@@ -7,6 +7,7 @@ import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoa
 import { useSilentSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
 
+import { ensureDefaultWorkspace } from './ensureDefaultWorkspace';
 import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
 
 /**
@@ -69,6 +70,26 @@ const parseFirstSegment = (pathname: string): string | null => {
   return match ? match[1] : null;
 };
 
+/** Last workspace the URL resolved to — the target for slug-less paths, which
+ * Linear answers with "the workspace you were in last". */
+const LAST_WORKSPACE_KEY = 'orvilo:last-active-workspace';
+
+const readLastWorkspaceId = (): string | null => {
+  try {
+    return window.localStorage.getItem(LAST_WORKSPACE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const writeLastWorkspaceId = (id: string) => {
+  try {
+    window.localStorage.setItem(LAST_WORKSPACE_KEY, id);
+  } catch {
+    // Private-mode storage denial — the fallback is simply the first workspace.
+  }
+};
+
 /**
  * Whether `pathname`'s first segment could be an (as-yet-unresolved) workspace
  * slug — i.e. it's present and not one of the reserved root segments.
@@ -85,10 +106,15 @@ export const isWorkspaceSlugCandidatePath = (pathname: string): boolean => {
 };
 
 /**
- * URL is the source of truth for workspace context.
+ * URL is the source of truth for workspace context — and a workspace context
+ * always exists (Linear's model: even a solo account lives in its own
+ * workspace, so there is no personal scope).
  *
  * - `/{slug}/...` where `slug` is a known workspace → activate that workspace
- * - `/` or `/agent/...` / `/settings/...` etc. (or any non-slug surface) → personal
+ *   and remember it as the last-used target for slug-less paths
+ * - `/` or `/agent/...` / `/settings/...` etc. → activate the last-used (or
+ *   first) workspace; when the account has no workspace yet, provision a
+ *   default one via `ensureDefault`
  * - `/{unknown}/...` (slug not in workspaces) → leave store alone so
  *   `WorkspaceSlugBoundary` can render its 404
  */
@@ -100,7 +126,7 @@ export const useWorkspaceUrlSync = (): void => {
   // URL is a passive source, not an explicit user intent — use the silent
   // variant so refreshing or following a `/{slug}` link is not treated as
   // a user-driven switch.
-  const { switchWorkspace, switchToPersonal } = useSilentSwitchWorkspace();
+  const { switchWorkspace } = useSilentSwitchWorkspace();
 
   // `useLayoutEffect` (not `useEffect`) so the workspace switch is scheduled
   // before the browser paints. With `useEffect` there is one paintable frame
@@ -118,6 +144,7 @@ export const useWorkspaceUrlSync = (): void => {
     if (first && !RESERVED_FIRST_SEGMENTS.has(first)) {
       const ws = workspaces.find((w) => w.slug === first);
       if (ws) {
+        writeLastWorkspaceId(ws.id);
         if (activeId !== ws.id) void switchWorkspace(ws.id);
         return;
       }
@@ -126,7 +153,16 @@ export const useWorkspaceUrlSync = (): void => {
       return;
     }
 
-    // URL has no workspace slug → personal context.
-    if (activeId !== null) void switchToPersonal();
-  }, [pathname, workspaces, isLoading, activeId, switchWorkspace, switchToPersonal]);
+    // Slug-less path. A workspace must still be in scope: when the account
+    // hasn't been provisioned yet, create the default workspace and let the
+    // revalidated list drive the next pass.
+    if (workspaces.length === 0) {
+      ensureDefaultWorkspace().catch(() => undefined);
+      return;
+    }
+
+    const lastId = readLastWorkspaceId();
+    const target = workspaces.find((w) => w.id === lastId) ?? workspaces[0];
+    if (activeId !== target.id) void switchWorkspace(target.id);
+  }, [pathname, workspaces, isLoading, activeId, switchWorkspace]);
 };

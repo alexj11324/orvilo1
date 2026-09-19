@@ -11,6 +11,9 @@ import * as useWorkspacesModule from '@/business/client/hooks/useWorkspaces';
 import { useWorkspaceFromSlug } from '../useWorkspaceFromSlug';
 import { useWorkspaceUrlSync } from '../useWorkspaceUrlSync';
 
+const ensureDefaultWorkspace = vi.hoisted(() => vi.fn(async () => null));
+vi.mock('../ensureDefaultWorkspace', () => ({ ensureDefaultWorkspace }));
+
 interface WorkspaceStateMock {
   activeWorkspaceId: null | string;
   isWorkspaceLoading: boolean;
@@ -54,6 +57,7 @@ const createRouteWrapper =
 
 afterEach(() => {
   vi.restoreAllMocks();
+  ensureDefaultWorkspace.mockClear();
 });
 
 describe('useWorkspaceFromSlug', () => {
@@ -135,15 +139,29 @@ describe('useWorkspaceUrlSync', () => {
     expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 
-  it('switches to personal mode on reserved personal routes', () => {
-    const state = createState({ activeWorkspaceId: 'ws-1' });
+  it('activates the last-used workspace on reserved slug-less routes', () => {
+    // No personal scope: a reserved path still carries workspace context.
+    const state = createState({ activeWorkspaceId: null });
     mockWorkspaceStore(state);
 
     renderHook(() => useWorkspaceUrlSync(), {
       wrapper: createRouteWrapper('/settings/profile', '*'),
     });
 
-    expect(state.switchToPersonal).toHaveBeenCalled();
+    expect(state.switchWorkspace).toHaveBeenCalledWith('ws-1');
+    expect(state.switchToPersonal).not.toHaveBeenCalled();
+  });
+
+  it('provisions a default workspace when the account has none', () => {
+    const state = createState({ workspaces: [] });
+    mockWorkspaceStore(state);
+
+    renderHook(() => useWorkspaceUrlSync(), {
+      wrapper: createRouteWrapper('/settings/profile', '*'),
+    });
+
+    expect(ensureDefaultWorkspace).toHaveBeenCalled();
     expect(state.switchWorkspace).not.toHaveBeenCalled();
+    expect(state.switchToPersonal).not.toHaveBeenCalled();
   });
 });

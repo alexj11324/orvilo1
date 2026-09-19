@@ -1662,11 +1662,15 @@ describe('TopicModel - Query', () => {
       const personal = await topicModel.queryTopics({ statuses: ['running'] });
       expect(personal.map((t) => t.id)).toEqual(['qt-personal']);
 
-      // a workspace-scoped model only sees that workspace's topics
+      // a workspace-scoped model sees that workspace's topics plus the
+      // owner's own unfiled rows (unfiled follows the owner into workspace
+      // scope so activating a workspace never hides data)
       const workspaceScoped = await new TopicModel(serverDB, userId, 'qt-workspace').queryTopics({
         statuses: ['running'],
       });
-      expect(workspaceScoped.map((t) => t.id)).toEqual(['qt-workspace-topic']);
+      expect(workspaceScoped.map((t) => t.id).sort()).toEqual(
+        ['qt-personal', 'qt-workspace-topic'].sort(),
+      );
     });
   });
 

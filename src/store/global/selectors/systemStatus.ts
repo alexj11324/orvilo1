@@ -195,6 +195,7 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'my-work',
   'reviews',
   'agent',
+  'create',
   'workspace',
   'favorites',
   'teams',

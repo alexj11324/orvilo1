@@ -1,10 +1,16 @@
 import type { AgentState } from '@orvilo/agent-runtime';
 
+import { MessageModel } from '@/database/models/message';
 import { InMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 import type {
   StreamChunkData,
   StreamEvent,
 } from '@/server/modules/AgentExecution/StreamEventManager';
+import {
+  extractTextFromMessage,
+  findLastAssistantMessage,
+  normalizeCompletionMessages,
+} from '@/server/services/agentExecution/CompletionLifecycle';
 import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
@@ -46,8 +52,9 @@ const isTerminalRunStatus = (status: AgentState['status']): boolean =>
  * Handles OpenResponses protocol request execution via AiAgentService.execAgent
  *
  * The `model` field is treated as an agent ID.
- * Execution is delegated to execAgent (background mode),
- * with executeSync used when synchronous results are needed.
+ * Execution is delegated to execAgent (dispatched onto an ACP execution
+ * binding); synchronous responses poll the durable status surface until the
+ * run settles.
  */
 export class ResponsesService extends BaseService {
   /**
@@ -263,7 +270,7 @@ export class ResponsesService extends BaseService {
   /**
    * Wait for a delegated run (callAgent / callSubAgent) to reach a real
    * terminal state. The child completes out-of-band and resumes the parent
-   * through the shared state manager — `executeSync` cannot resume it
+   * through the shared state manager — a waiter cannot resume it
    * itself, so poll the durable state until the run settles (or the wait
    * budget expires). Parked → `running` is NOT terminal: the resumed parent
    * is still generating its answer, and reporting it early produced the
@@ -285,11 +292,76 @@ export class ResponsesService extends BaseService {
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, DELEGATED_RUN_POLL_MS));
-      const refreshed = await agentRuntimeService.getCoordinator().loadAgentState(operationId);
+      const refreshed = await agentRuntimeService.loadAgentState(operationId);
       if (refreshed) current = refreshed;
     }
 
     return current;
+  }
+
+  /**
+   * Wait for a dispatched run to settle. Under ACP there is no in-process
+   * step loop: hetero runs never write a state blob, so this polls the
+   * durable status surface (`getOperationStatus` falls back to the
+   * `agent_operations` row / remote admission ledger) and synthesizes a
+   * minimal settled state for the downstream status/output mapping. P70e
+   * owns the real Responses-API rewrite; this keeps the endpoint compiling
+   * and honestly reporting `done`/`error`/`incomplete`.
+   */
+  private async awaitRunCompletion(
+    agentRuntimeService: AgentRuntimeService,
+    operationId: string,
+    topicId?: string | null,
+  ): Promise<AgentState> {
+    const deadline = Date.now() + DELEGATED_RUN_WAIT_MS;
+    while (Date.now() < deadline) {
+      const snapshot = await agentRuntimeService.loadAgentState(operationId);
+      if (snapshot && isTerminalRunStatus(snapshot.status)) return snapshot;
+
+      const status = await agentRuntimeService
+        .getOperationStatus({ operationId })
+        .catch(() => null);
+      if (!status) {
+        return {
+          lastModified: new Date().toISOString(),
+          status: 'error',
+          stepCount: 0,
+        } as AgentState;
+      }
+      if (!status.isActive) {
+        if (snapshot) return snapshot;
+        const settled = {
+          lastModified: status.currentState.lastModified,
+          status: status.currentState.status,
+          stepCount: status.currentState.stepCount,
+          usage: status.currentState.usage,
+        } as AgentState;
+        // Hetero runs write assistant content to the topic rather than a state
+        // blob — surface the final answer so the response output isn't empty.
+        const finalText = topicId ? await this.findLastAssistantText(topicId) : '';
+        if (finalText) {
+          settled.messages = [{ content: finalText, role: 'assistant' }] as AgentState['messages'];
+        }
+        return settled;
+      }
+      await new Promise((resolve) => setTimeout(resolve, DELEGATED_RUN_POLL_MS));
+    }
+    return (
+      (await agentRuntimeService.loadAgentState(operationId)) ??
+      ({
+        lastModified: new Date().toISOString(),
+        status: 'running',
+        stepCount: 0,
+      } as AgentState)
+    );
+  }
+
+  /** Final assistant text for a completed run's topic, if any. */
+  private async findLastAssistantText(topicId: string): Promise<string> {
+    const messageModel = new MessageModel(this.db, this.userId, this.workspaceId);
+    const messages = await messageModel.query({ topicId }, { allowShareVisitor: true });
+    const lastAssistant = findLastAssistantMessage(normalizeCompletionMessages(messages));
+    return extractTextFromMessage(lastAssistant) ?? '';
   }
 
   /**
@@ -327,7 +399,7 @@ export class ResponsesService extends BaseService {
 
   /**
    * Create a response (non-streaming)
-   * Calls execAgent with autoStart: false, then executeSync to wait for completion
+   * Calls execAgent, then polls the durable status surface until the run settles
    */
   async createResponse(params: CreateResponseRequest): Promise<ResponseObject> {
     const createdAt = Math.floor(Date.now() / 1000);
@@ -381,12 +453,15 @@ export class ResponsesService extends BaseService {
       // Generate response ID encoding topicId for multi-turn support
       const responseId = this.generateResponseId(execResult.topicId);
 
-      // 2. Execute synchronously to completion — via the service's isolated
-      // runtime so the delegate (callAgent/callSubAgent) survives mid-step.
-      const agentRuntimeService = aiAgentService.createIsolatedRuntime({
-        queueService: null,
-      });
-      let finalState = await agentRuntimeService.executeSync(execResult.operationId);
+      // 2. Wait for the dispatched run to settle — under ACP the operation
+      // executes on its execution binding, so this polls the durable status
+      // surface instead of driving an in-process step loop.
+      const agentRuntimeService = aiAgentService.createIsolatedRuntime();
+      let finalState = await this.awaitRunCompletion(
+        agentRuntimeService,
+        execResult.operationId,
+        execResult.topicId,
+      );
       finalState = await this.awaitDelegatedRun(
         agentRuntimeService,
         execResult.operationId,
@@ -499,10 +574,9 @@ export class ResponsesService extends BaseService {
       };
 
       // 2. Create an isolated runtime with a custom stream manager for event
-      // subscription — via the service facade so the delegate survives.
+      // subscription.
       const streamEventManager = new InMemoryStreamEventManager();
       const agentRuntimeService = aiAgentService.createIsolatedRuntime({
-        queueService: null,
         streamEventManager,
       });
 
@@ -529,10 +603,13 @@ export class ResponsesService extends BaseService {
           }
         });
 
-      // 4. Start execution in background
+      // 4. Wait for the dispatched run to settle in the background
       let finalState: AgentState | undefined;
-      const executionPromise = agentRuntimeService
-        .executeSync(operationId)
+      const executionPromise = this.awaitRunCompletion(
+        agentRuntimeService,
+        operationId,
+        execResult.topicId,
+      )
         .then((state) => {
           finalState = state;
         })

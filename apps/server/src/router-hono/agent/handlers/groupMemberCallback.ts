@@ -2,7 +2,7 @@ import debug from 'debug';
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/core/db-adaptor';
-import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime';
+import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 const log = debug('orvilo-server:agent:group-member-callback');
@@ -65,8 +65,7 @@ export async function groupMemberCallback(c: Context): Promise<Response> {
   try {
     // Resolve userId from the child operation metadata. The worker supplies
     // only internal dispatch payloads, and the operation must exist.
-    const coordinator = new AgentRuntimeCoordinator();
-    const metadata = await coordinator.getOperationMetadata(operationId);
+    const metadata = await createAgentStateManager().getOperationMetadata(operationId);
 
     if (!metadata?.userId) {
       log('group-member-callback: invalid operation or no userId found for %s', operationId);

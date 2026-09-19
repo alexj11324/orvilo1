@@ -178,6 +178,15 @@ device'}`。denied-sender（`!canUseDevice`）与 sandboxFallback/share-visitor
 test.ts` 删除（callAgent park/resume 生命周期已退役，deferred 编排现在 host 侧
   `heteroAwaitBuiltinToolChildren`）。旧 LLM Execution / Tool Calling / Stream
   Events describes 一并删除 ——OpenAI Responses mock 边界在退役引擎内部。
+  `79785815` 追加：`__tests__/aiAgent.test.ts` 补 dispatch stub（该文件在
+  shard2，`createOperation` 断言改到 `dispatchHeteroAgent` ctx：`resolvedAgentId`
+  /`agentConfig.{model,provider}`/`appContext`——`modelRuntimeConfig`/
+  `mediaCapabilities`/`autoStart` 已不进 dispatch）；`multiRoundTools.integration`
+  与 `serverSubAgent.integration` **删除**（前者测 server 侧多轮 tool loop +
+  AgentState 结构，后者测 callSubAgent park/resume—— 全部是退役引擎内部行为，
+  ACP 下 server 不再跑 LLM / 写 tool 消息，无真实路径可 delegate）；`helpers.ts`
+  （createMockResponsesStream/waitForOperationComplete）只服务这两个文件，
+  一并删。
 - **lint:circular 修复（`7a84fecf`）**：`aiAgent → runToolSurface → serverRuntimes
 → services/goal → … → aiAgent` 新环 + canary 既有 3 环（taskRunner↔
   taskLifecycle↔taskIntegration、goal scheduler 内环、expertiseHistory index↔run）

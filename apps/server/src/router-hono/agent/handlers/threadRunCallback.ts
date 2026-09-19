@@ -6,7 +6,7 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
-import { AgentRuntimeCoordinator } from '@/server/modules/AgentRuntime';
+import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
 import {
   completeThreadRun,
   normalizeThreadCompletionReason,
@@ -71,9 +71,7 @@ export async function threadRunCallback(c: Context): Promise<Response> {
 
     let state: AgentState | null = null;
     try {
-      state = (await new AgentRuntimeCoordinator().loadAgentState(
-        operationId,
-      )) as AgentState | null;
+      state = (await createAgentStateManager().loadAgentState(operationId)) as AgentState | null;
     } catch (error) {
       log(
         'Redis state unavailable for operation %s, using durable summary: %O',

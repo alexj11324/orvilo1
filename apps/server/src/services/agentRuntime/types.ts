@@ -1,190 +1,22 @@
 import { type AgentRuntimeContext, type AgentState } from '@orvilo/agent-runtime';
-import type {
-  AgentGroupConfig,
-  BotPlatformContext,
-  OperationSkillSet,
-  OrviloToolManifest,
-  ProjectInstructionFile,
-  ToolExecutor,
-  ToolSource,
-} from '@orvilo/context-engine';
-import type {
-  ChatTopicBotContext,
-  EvalToolForwardingConfig,
-  ExpertiseContextSnapshot,
-  RemoteExecutionStatus,
-  UserInterventionConfig,
-} from '@orvilo/types';
-import type { SearchDecision } from 'model-bank';
-
-import type { ExecutionPlan } from '@/helpers/executionTarget';
-import type {
-  EvalContext,
-  ServerUserMemoryConfig,
-} from '@/server/modules/Mecha/ContextEngineering/types';
-import type { AgentSignalOperationMarker } from '@/server/services/agentSignal/operationMarker';
-import type { DeviceAccessReason } from '@/server/services/aiAgent/deviceAccessPolicy';
-
-import { type AgentHook } from '../agentExecution/hooks/types';
-
-// ==================== Operation Tool Set ====================
-
-export interface OperationToolSet {
-  /** Tool IDs that may be restored from historical explicit activations for this run. */
-  activatableToolIds?: string[];
-  enabledToolIds?: string[];
-  executorMap?: Record<string, ToolExecutor>;
-  manifestMap: Record<string, OrviloToolManifest>;
-  sourceMap?: Record<string, ToolSource>;
-  tools?: any[];
-}
+import type { EvalToolForwardingConfig, RemoteExecutionStatus } from '@orvilo/types';
 
 // ==================== Step Lifecycle Callbacks ====================
 
-// Canonical home: services/agentExecution/stepTypes.ts. Re-exported here until
-// the legacy runtime service drains (P70d).
+// Canonical home: services/agentExecution/stepTypes.ts. Re-exported here for
+// the consumers that still reference this module.
 export type {
   StepCompletionReason,
   StepLifecycleCallbacks,
   StepPresentationData,
 } from '../agentExecution/stepTypes';
 
-// ==================== Execution Params ====================
-
-export interface AgentExecutionParams {
-  approvedToolCall?: any;
-  /**
-   * 1-based attempt number carried by a `verifyAsyncToolBarrier` re-check so the
-   * bounded watchdog can back off and stop after a fixed number of tries. Absent
-   * (treated as attempt 1) on the first re-check armed by a completion bridge.
-   */
-  asyncToolVerifyAttempt?: number;
-  context?: AgentRuntimeContext;
-  externalRetryCount?: number;
-  /**
-   * Finish (rather than resume) a `waiting_for_async_tool` supervisor op after
-   * its group members have completed. Used by `skipCallSupervisor` / delegate in
-   * group orchestration: the orchestration ends without another supervisor LLM
-   * turn. Scheduled by the group-action member barrier via
-   * `tryResumeParentFromAsyncTool({ onComplete: 'finish' })`.
-   */
-  finishAfterAsyncTool?: boolean;
-  /**
-   * Watchdog payload to enforce a group member's timeout: when the member op
-   * hasn't reached a terminal state by its deadline, interrupt it and bridge a
-   * `timeout` completion so the parked supervisor resumes/finishes instead of
-   * waiting forever. Scheduled by `scheduleGroupMemberTimeout` after the member
-   * op is forked.
-   */
-  groupMemberTimeout?: GroupMemberTimeoutParams;
-  humanInput?: any;
-  /**
-   * Run the next step in this same invocation instead of publishing it to the
-   * queue. When set and the operation wants to continue, `executeStep` returns
-   * a `continuation` and leaves `nextStepScheduled` false — the caller decides
-   * whether to loop or hand the continuation back to the queue.
-   */
-  inlineContinuation?: boolean;
-  /**
-   * 1-based attempt number carried by a re-delivery that a previous attempt
-   * re-queued after losing the operation lock. Lets the bounded backoff stop
-   * after a fixed number of tries instead of re-queueing forever. Absent
-   * (treated as attempt 0) on the original delivery.
-   */
-  lockRetryAttempt?: number;
-  operationId: string;
-  /**
-   * Whether a rejection should resume execution by treating the rejected tool
-   * content as user input (maps to client `rejectAndContinueToolCalling`).
-   * When false or unset, a rejection halts the operation.
-   */
-  rejectAndContinue?: boolean;
-  rejectionReason?: string;
-  /**
-   * Resume a `waiting_for_async_tool` op after its deferred tools (e.g. server
-   * sub-agents) have all delivered results. Scheduled by the completion bridge
-   * via `tryResumeParentFromAsyncTool`.
-   */
-  resumeAsyncTool?: boolean;
-  /**
-   * Keep the operation lock held after this step returns. Used by the inline
-   * step loop so the lock spans the whole invocation rather than being dropped
-   * and re-claimed at every boundary — the caller becomes responsible for
-   * releasing it via `releaseOperationLock`.
-   */
-  retainStepLock?: boolean;
-  stepIndex: number;
-  /**
-   * Reuse an existing lock owner instead of minting one per step. The inline
-   * step loop passes a single owner for the whole invocation so every iteration
-   * re-enters the same lock.
-   */
-  stepLockOwner?: string;
-  /** ID of the pending tool message targeted by the intervention. */
-  toolMessageId?: string;
-  /**
-   * Watchdog re-check for a parked `waiting_for_async_tool` op: re-runs the
-   * resume barrier + CAS without claiming the step lock or executing a step.
-   * A no-op when the op already resumed. While the barrier is still unsatisfied
-   * it re-arms the next check with exponential backoff (see
-   * `asyncToolVerifyAttempt`) up to a bounded number of attempts, so a transient
-   * miss is retried rather than permanently stranding the parent. First armed by
-   * `tryResumeParentFromAsyncTool` when a sub-agent completion found the parent
-   * not yet resumable (covers the child-finishes-before-parent-parks race and
-   * transient barrier failures).
-   */
-  verifyAsyncToolBarrier?: boolean;
-}
-
-/**
- * A next step that was computed but deliberately not published, because the
- * caller asked for `inlineContinuation`. Carries everything `scheduleMessage`
- * needs so the caller can still hand it to the queue when it runs out of
- * invocation budget.
- */
-export interface AgentStepContinuation {
-  context: AgentRuntimeContext;
-  delay: number;
-  operationId: string;
-  priority: 'high' | 'low' | 'normal';
-  retries?: number;
-  retryDelay?: string;
-  stepIndex: number;
-}
-
-export interface AgentExecutionResult {
-  /**
-   * Present only when `inlineContinuation` was requested and the operation has
-   * a next step ready to run now. Absent for every terminal outcome and for
-   * every park (waiting_for_human, pending approval, async-tool wait), so an
-   * inline loop can simply stop when it is missing.
-   */
-  continuation?: AgentStepContinuation;
-  /**
-   * When true, the step was already being executed by another instance (lock conflict).
-   * Stale duplicates are handled before returning this; callers should keep
-   * this response retryable so fresh deliveries can run after the lock clears.
-   */
-  locked?: boolean;
-  /**
-   * Set alongside `locked` when this delivery re-queued itself for a later
-   * attempt. The caller should ACK (2xx) rather than returning a retryable
-   * status: the redelivery is already scheduled, so letting the queue retry on
-   * top of it only amplifies the conflict and burns the retry budget.
-   */
-  lockRescheduled?: boolean;
-  nextStepScheduled: boolean;
-  state: any;
-  stepResult?: any;
-  success: boolean;
-}
-
 /**
  * Params for the sub-agent completion bridge — see
  * `AgentRuntimeService.completeSubAgentBridge`.
  */
 export interface SubAgentBridgeParams {
-  /** Child op's final state — passed in local mode; loaded from the coordinator otherwise. */
+  /** Child op's final state — passed in-process when available; loaded from the state manager otherwise. */
   finalState?: AgentState;
   /** Child (sub-agent) operation ID. */
   operationId: string;
@@ -219,7 +51,7 @@ export interface GroupActionMemberBridgeParams {
   anchorMessageId: string;
   /** Total members forked under this group tool call — the K=N barrier target. */
   expectedMembers: number;
-  /** Child member op's final state — passed in local mode; loaded otherwise. */
+  /** Child member op's final state — passed in-process when available; loaded otherwise. */
   finalState?: AgentState;
   /** The supervisor's parked group-management tool message (`tool_call_id` = call id). */
   groupToolMessageId: string;
@@ -236,27 +68,9 @@ export interface GroupActionMemberBridgeParams {
 }
 
 /**
- * Watchdog payload that enforces a group member's timeout. Scheduled after an
- * isolated member op is forked; when it fires, if the member op hasn't reached a
- * terminal state it is interrupted and a `timeout` completion is bridged so the
- * parked supervisor resumes/finishes (satisfying the K=N barrier) instead of
- * waiting indefinitely.
- */
-export interface GroupMemberTimeoutParams {
-  anchorMessageId: string;
-  expectedMembers: number;
-  groupToolMessageId: string;
-  /** The forked member operation id whose deadline this enforces. */
-  memberOperationId: string;
-  mode: GroupActionMemberMode;
-  onComplete: GroupActionOnComplete;
-  parentOperationId: string;
-}
-
-/**
- * Params handed to the {@link AgentRuntimeDelegate.execGroupMember} callback —
- * fork one group member (in-group or isolated) under a group-management tool
- * call, installing the group-action member completion bridge.
+ * Params handed to the `execGroupMember` callback — fork one group member
+ * (in-group or isolated) under a group-management tool call, installing the
+ * group-action member completion bridge.
  */
 export interface ExecGroupMemberParams {
   /** Member agent id. */
@@ -303,196 +117,6 @@ export interface ExecGroupMemberResult {
   threadId?: string;
 }
 
-export interface OperationCreationParams {
-  activeDeviceId?: string;
-  /**
-   * Principal pool the routed `activeDeviceId` lives in. `personal` when a
-   * workspace run was routed to the caller's own device via a per-user
-   * `local` override — device runtimes must then address it through the
-   * personal `(userId, deviceId)` pool instead of the `workspace:<id>` pool.
-   */
-  activeDeviceScope?: 'personal' | 'workspace';
-  agentConfig?: any;
-  /**
-   * Multi-agent group (or bot-conversation fallback) context, resolved once at
-   * op creation and forwarded into `state.world.group`. The per-step
-   * context engine reads it back to inject the participant roster (with real
-   * `agt_*` IDs) — no per-step DB lookup, mirroring `botContext`.
-   */
-  agentGroup?: AgentGroupConfig;
-  appContext: {
-    agentId?: string;
-    /**
-     * Run-scoped Agent Signal marker. Stamped at dispatch for background
-     * self-iteration / memory runs; lands in `state.origin.signal` and is
-     * read on the completion path to project receipts.
-     */
-    agentSignal?: AgentSignalOperationMarker;
-    /**
-     * Client IP of the originating request. Spread onto `state.principal.audit.clientIp`
-     * so downstream LLM-call metadata can carry it for auditing and spend
-     * attribution.
-     */
-    clientIp?: string;
-    defaultTaskAssigneeAgentId?: string;
-    documentId?: string | null;
-    groupId?: string | null;
-    isSubAgent?: boolean;
-    /**
-     * Group orchestration role, stored on `state.origin.lineage.orchestrationRole`.
-     * Lets the inactivity-watchdog abandon path tell an isolated group member
-     * (`'member'`, resumed via the group K=N bridge) apart from a genuine
-     * callSubAgent child (which shares `isSubAgent: true`).
-     */
-    orchestrationRole?: 'supervisor' | 'member';
-    scope?: string | null;
-    /** Conversation/session locator used to rebuild an authenticated Review route. */
-    sessionId?: string;
-    /** Source user message ID used for same-turn Agent Signal procedure suppression. */
-    sourceMessageId?: string;
-    /**
-     * Live-progress anchor for a `callSubAgent` child, stored on
-     * `state.origin.lineage.progressAnchor`.
-     *
-     * The child runs on its own operationId, but the client only ever subscribes
-     * to the PARENT's gateway channel — which stays open across the sub-agent run
-     * because `waiting_for_async_tool` is excluded from `STREAM_END_STATUSES`.
-     * So the child's step loop publishes its running totals onto the parent's
-     * channel, addressed at the placeholder tool message by `toolMessageId`.
-     * Without this the client sees nothing until `completeSubAgentBridge`
-     * backfills `pluginState` at the very end.
-     */
-    subAgentProgress?: { parentOperationId: string; toolMessageId: string };
-    taskId?: string;
-    threadId?: string | null;
-    topicId?: string | null;
-    trigger?: string;
-    /**
-     * User agent of the originating request. Spread onto
-     * `state.principal.audit.userAgent` so downstream LLM-call metadata can carry it for
-     * auditing and spend attribution.
-     */
-    userAgent?: string;
-  };
-  autoStart?: boolean;
-  /**
-   * Sender/owner identity for bot-originated runs. Forwarded into
-   * `state.principal.actor.bot` so device-tool dispatch can audit who
-   * triggered the call. `undefined` for first-party (web/desktop) callers.
-   */
-  botContext?: ChatTopicBotContext;
-  /** Bot platform context for injecting platform capabilities (e.g. markdown support) */
-  botPlatformContext?: BotPlatformContext;
-  /**
-   * Borrowed-connector attribution, resolved once during tool discovery. Run
-   * context for the context engine to inject — see `expertise`.
-   */
-  connectorOwnershipNote?: string;
-  /**
-   * Device-access policy decision computed once per turn by
-   * `resolveDeviceAccessPolicy`. Forwarded into `state.principal.policy.deviceAccess`
-   * so the dispatch site can include `reason` in the audit entry without
-   * re-deriving it.
-   */
-  deviceAccessPolicy?: { canUseDevice: boolean; reason: DeviceAccessReason };
-  /** Device system info for placeholder variable replacement in Local System systemRole */
-  deviceSystemInfo?: Record<string, string>;
-  /** Discord context for injecting channel/guild info into agent system message */
-  discordContext?: any;
-  /** Whether ContextEngine may inject the operation expertise snapshot. */
-  enableExpertise?: boolean;
-  /** Evaluation prompt data consumed by Context Engine. */
-  evalContext?: EvalContext;
-  /** Evaluation execution controls consumed by Agent Runtime. */
-  evalRuntime?: EvalRuntimeContext;
-  /**
-   * Resolved execution plan for the run (see `resolveExecutionPlan`).
-   * Forwarded into `state.plan.execution` so step-level layers (the
-   * `call_llm` device-tool injection) consume the plan instead of re-deriving
-   * device capability from raw config.
-   */
-  executionPlan?: ExecutionPlan;
-  /** Immutable expertise resolved once before the operation is persisted. */
-  expertise?: ExpertiseContextSnapshot;
-  /**
-   * External lifecycle hooks
-   * Registered once, auto-adapt to local (in-memory) or production (webhook) mode
-   */
-  hooks?: AgentHook[];
-  initialContext: AgentRuntimeContext;
-  initialMessages?: any[];
-  /** Initial step count offset for resumed operations (accumulated from previous runs) */
-  initialStepCount?: number;
-  /**
-   * Server-authored provenance for a continuation created from a durable human
-   * intervention claim. It is persisted in both agent_operations.metadata and
-   * runtime state so a retry can distinguish this exact continuation from an
-   * unrelated operation that happens to reuse an id. Never client-passable.
-   */
-  interventionResolution?: {
-    resolutionRequestId: string;
-    sourceOperationId: string;
-    sourceToolMessageIds: string[];
-  };
-  maxSteps?: number;
-  modelRuntimeConfig?: any;
-  /** Marks the source claim non-rollbackable once deterministic runtime state is durable. */
-  onInterventionPrepared?: () => void;
-  operationId: string;
-  /** Operation-level skill set for SkillResolver */
-  operationSkillSet?: OperationSkillSet;
-  /**
-   * Operation ID of the parent run when this operation is a sub-agent
-   * invocation (e.g. spawned via `execSubAgent`). Persisted to
-   * `agent_operations.parent_operation_id` so analytics can join the
-   * sub-tree back to its root.
-   */
-  parentOperationId?: string;
-  /**
-   * A project's root instruction files, collected once during operation prep.
-   * Run context for the context engine to inject — see `expertise`.
-   */
-  projectInstructions?: ProjectInstructionFile[];
-  queueRetries?: number;
-  queueRetryDelay?: string;
-  /** Search route resolved once before the operation starts. */
-  searchDecision?: SearchDecision;
-  /** Abort startup before the first step is scheduled */
-  signal?: AbortSignal;
-  /** Server-authored: keep a corrective task run bound to the original Verify plan. */
-  skipTaskVerification?: boolean;
-  /**
-   * Whether the LLM call should use streaming.
-   * Defaults to true. Set to false for non-streaming scenarios (e.g., bot integrations).
-   */
-  stream?: boolean;
-  toolSet: OperationToolSet;
-  userId?: string;
-  /**
-   * User intervention configuration
-   * Controls how tools requiring approval are handled
-   * Use { approvalMode: 'headless' } for async tasks that should never wait for human approval
-   */
-  userInterventionConfig?: UserInterventionConfig;
-  /** User memory (persona) for injection into LLM context */
-  userMemory?: ServerUserMemoryConfig;
-  /** User's timezone from settings (e.g. 'Asia/Shanghai') */
-  userTimezone?: string;
-  /**
-   * Workspace ID propagated down from the originating chat/task router so
-   * tool executions (createBrief / pinTask / etc.) ownership-filter to the
-   * caller's workspace. Stored on `state.origin.workspaceId`.
-   */
-  workspaceId?: string;
-}
-
-export interface OperationCreationResult {
-  autoStarted: boolean;
-  messageId?: string;
-  operationId: string;
-  success: boolean;
-}
-
 export interface OperationStatusResult {
   currentState: {
     cost?: any;
@@ -517,9 +141,9 @@ export interface OperationStatusResult {
   operationId: string;
   recentEvents?: any[];
   /**
-   * Remote-execution surface (P20): the durable admission + cancel ledger for
+   * Remote-execution surface: the durable admission + cancel ledger for
    * device/sandbox-dispatched runs, plus the stream tail cursor a reconnect
-   * would resume from. Absent for pure in-process runs.
+   * would resume from. Absent for runs with no remote admission record.
    */
   remoteExecution?: RemoteExecutionStatus;
   stats: {
@@ -561,6 +185,7 @@ export interface StartExecutionResult {
   scheduled: boolean;
   success: boolean;
 }
+
 export interface EvalRuntimeContext {
   caseId?: string;
   toolForwarding?: EvalToolForwardingConfig;

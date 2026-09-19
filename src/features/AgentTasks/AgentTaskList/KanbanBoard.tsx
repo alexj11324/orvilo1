@@ -59,7 +59,7 @@ import {
 import KanbanColumn, {
   CollapsedKanbanColumn,
   COLUMN_I18N_KEYS,
-  COLUMN_STATUS_ICON,
+  COLUMN_STATUS_VISUAL,
   COLUMN_WIDTH,
 } from './KanbanColumn';
 import type { TaskListViewOptions } from './listViewOptions';
@@ -117,11 +117,32 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+/**
+ * Externally-sourced board data for surfaces whose queries can't map to the
+ * task store's groupList scopes (saved views, team boards — arbitrary
+ * work-query ASTs). `groups` must already be bucketed under the board's
+ * column keys. Drops still commit through `task.update`; `onRefresh` is the
+ * caller's refetch so the settled write can resync the columns.
+ */
+export interface KanbanExternalGroups {
+  error?: unknown;
+  groups: TaskGroupItem[];
+  isLoading?: boolean;
+  /** Whether cards may be dragged (default true, still gated by permission). */
+  movable?: boolean;
+  onLoadMoreGroup?: (columnKey: string) => void;
+  onRefresh?: () => Promise<unknown> | void;
+  /** AsyncBoundary settle flag — defaults to `groups` being defined. */
+  settled?: boolean;
+}
+
 interface KanbanBoardProps {
   /** When set, scopes the board (and task creation) to a single agent. */
   agentId?: string;
   /** Overrides the generic "no tasks" copy with the collection's own line. */
   emptyDescription?: string;
+  /** Externally-supplied groups — bypasses the task-store fetch entirely. */
+  external?: KanbanExternalGroups;
   /**
    * "My tasks" board: narrows the server groups to the caller's own slice of
    * the workspace, matching what that tab's list view fetches — including its
@@ -136,18 +157,32 @@ interface KanbanBoardProps {
 }
 
 const KanbanBoard = memo<KanbanBoardProps>((props) => {
-  const { agentId, emptyDescription, myTaskScope, options, projectId, routeScope } = props;
+  const { agentId, emptyDescription, external, myTaskScope, options, projectId, routeScope } =
+    props;
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
-  const { allowed: canEditTask } = usePermission('create_content');
+  const { allowed: canEditTaskPerm } = usePermission('create_content');
+  const canEditTask = canEditTaskPerm && (external?.movable ?? true);
   const groupBy = normalizeKanbanGroupBy(options.groupBy);
   const excludeStatuses = options.hideCompleted ? HIDDEN_WHEN_COMPLETED_STATUSES : undefined;
 
   const useFetchTaskGroupList = useTaskStore((s) => s.useFetchTaskGroupList);
   // Keep the SWR handle only for `error` + `mutate` (the error/Retry state).
-  const { error, isLoading, isQueryScopeCurrent, mutate } = useFetchTaskGroupList(
-    buildKanbanGroupQuery({ agentId, excludeStatuses, groupBy, myTaskScope, projectId }),
+  // An external board disables the store query entirely (no effective key →
+  // the scope sync never scribbles the shared list state).
+  const swr = useFetchTaskGroupList(
+    external
+      ? { enabled: false }
+      : buildKanbanGroupQuery({ agentId, excludeStatuses, groupBy, myTaskScope, projectId }),
   );
+  const error = external?.error ?? swr.error;
+  const isLoading = external ? (external.isLoading ?? false) : swr.isLoading;
+  const isQueryScopeCurrent = external ? true : swr.isQueryScopeCurrent;
+  const mutate = external
+    ? async () => {
+        await external.onRefresh?.();
+      }
+    : swr.mutate;
   // Drive the loading/empty boundary off the store's own init flag, NOT SWR's
   // per-key `data`. On a scope or visibility switch the store resets
   // `taskGroups` + `isTaskGroupListInit` together (`scopeChangeResetState`)
@@ -155,12 +190,15 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   // off SWR `data` flashed the "no tasks" empty board during the refetch.
   // `isTaskGroupListInit` resets in lockstep with `taskGroups`, so the settled
   // signal never disagrees with the emptiness signal.
-  const isTaskGroupListInit = useTaskStore(taskListSelectors.isTaskGroupListInit);
+  const storeGroupListInit = useTaskStore(taskListSelectors.isTaskGroupListInit);
+  const isTaskGroupListInit = external
+    ? (external.settled ?? external.groups !== undefined)
+    : storeGroupListInit;
 
-  const taskGroups = useTaskStore(taskListSelectors.taskGroups);
+  const storeTaskGroups = useTaskStore(taskListSelectors.taskGroups);
   const currentTaskGroups = useMemo(
-    () => (isQueryScopeCurrent ? taskGroups : []),
-    [isQueryScopeCurrent, taskGroups],
+    () => (external ? external.groups : isQueryScopeCurrent ? storeTaskGroups : []),
+    [external, isQueryScopeCurrent, storeTaskGroups],
   );
   const updateTask = useTaskStore((s) => s.updateTask);
   const loadMoreTaskGroup = useTaskStore((s) => s.loadMoreTaskGroup);
@@ -230,10 +268,26 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     setColumns(
       preserveKanbanColumnOrder(
         columnsRef.current,
-        buildKanbanColumnMap(columnKeys, useTaskStore.getState().taskGroups),
+        buildKanbanColumnMap(
+          columnKeys,
+          external ? external.groups : useTaskStore.getState().taskGroups,
+        ),
       ),
     );
-  }, [columnKeys, columnsRef, setColumns]);
+  }, [columnKeys, columnsRef, external, setColumns]);
+
+  /** Store boards resync via the store; external boards via the caller's refetch. */
+  const refreshGroups = useCallback(
+    () => (external?.onRefresh ? external.onRefresh() : refreshTaskGroupList()),
+    [external, refreshTaskGroupList],
+  );
+  const loadMoreGroup = useCallback(
+    (columnKey: string) => {
+      if (external) return external.onLoadMoreGroup?.(columnKey);
+      return loadMoreTaskGroup(columnKey);
+    },
+    [external, loadMoreTaskGroup],
+  );
 
   // Resync the mirror whenever store truth lands outside a drag/settle.
   useEffect(() => {
@@ -501,7 +555,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         // mirror back so a persisted move is never displayed as reverted.
         revert();
         release();
-        await refreshTaskGroupList().catch(() => {});
+        await refreshGroups()?.catch(() => {});
         return;
       }
       if (!applied) {
@@ -512,14 +566,14 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       try {
         // Land the reconciled order before releasing the lock so the resync
         // renders server truth, not a stale intermediate page.
-        await refreshTaskGroupList();
+        await refreshGroups();
         release();
       } catch {
         // The move persisted but the reconcile failed — keep the optimistic
         // placement (reverting would lie about a write the server accepted)
         // and retry the refetch in the background.
         release({ resync: false });
-        void refreshTaskGroupList().catch(() => {});
+        void refreshGroups()?.catch(() => {});
       }
     },
     [
@@ -534,7 +588,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       handleRestoreColumn,
       hiddenColumns,
       isDraggingRef,
-      refreshTaskGroupList,
+      refreshGroups,
       resetColumns,
       setColumns,
     ],
@@ -579,7 +633,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           columnKey: col.key,
           droppable: canEditTask && col.droppable,
           label: t(COLUMN_I18N_KEYS[col.key] as any),
-          statusIcon: COLUMN_STATUS_ICON[col.key],
+          statusIcon: COLUMN_STATUS_VISUAL[col.key],
           total: currentTaskGroups.find((group) => group.key === col.key)?.total ?? 0,
         })),
     [allColumns, canEditTask, currentTaskGroups, hiddenColumnSet, t],
@@ -670,16 +724,17 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               tasks={columnTasks}
               total={group?.total ?? 0}
               footer={
-                group?.hasMore ? (
+                group?.hasMore && (!external || external.onLoadMoreGroup) ? (
                   <button
                     data-no-board-pan
                     className={styles.loadMore}
                     type="button"
                     disabled={
+                      !external &&
                       (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >=
-                      kanbanGroupLimitCap(groupBy)
+                        kanbanGroupLimitCap(groupBy)
                     }
-                    onClick={() => loadMoreTaskGroup(col.key)}
+                    onClick={() => loadMoreGroup(col.key)}
                   >
                     {t('taskList.kanban.loadMore', {
                       shown: columnTasks.length,
@@ -694,7 +749,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                 // either): a task created here carries neither the member
                 // assignment nor — under `created` — any guarantee it lands
                 // in the column it was started from.
-                groupBy === 'status' && col.key === 'backlog' && !myTaskScope
+                groupBy === 'status' && col.key === 'backlog' && !myTaskScope && !external
                   ? handleCreateTask
                   : undefined
               }

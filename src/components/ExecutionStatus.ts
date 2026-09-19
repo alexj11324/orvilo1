@@ -6,9 +6,8 @@ import {
   Archive,
   Circle,
   CircleCheck,
-  CircleDashed,
   CircleDot,
-  CircleSlash,
+  CirclePause,
   CircleX,
   Clock,
   HandIcon,
@@ -32,8 +31,8 @@ export interface ExecutionStatusVisual {
  */
 const VISUALS = {
   archived: { color: cssVar.colorTextDescription, icon: Archive },
-  backlog: { color: cssVar.colorTextQuaternary, icon: CircleDashed },
-  canceled: { color: cssVar.colorTextSecondary, icon: CircleSlash },
+  backlog: { color: cssVar.colorTextQuaternary, icon: CircleDot },
+  canceled: { color: cssVar.orange, icon: CirclePause },
   completed: { color: cssVar.colorSuccess, icon: CircleCheck },
   failed: { color: cssVar.colorError, icon: CircleX },
   idle: { color: cssVar.colorTextTertiary, icon: Circle },
@@ -47,9 +46,10 @@ export const TASK_STATUS_VISUALS: Record<TaskStatus, ExecutionStatusVisual> = {
   canceled: VISUALS.canceled,
   completed: VISUALS.completed,
   failed: VISUALS.failed,
-  // Task `paused` is surfaced as "Pending review" — same semantic as a topic
-  // waiting for human input, so it shares the hand glyph.
-  paused: VISUALS.waitingForHuman,
+  // Task `paused` is surfaced as "Pending review" — Cordy's in-review
+  // category, so it takes the review glyph (violet clock), not the
+  // waiting-for-human hand a topic uses.
+  paused: { color: cssVar.purple, icon: Clock },
   running: VISUALS.running,
   scheduled: VISUALS.scheduled,
 };

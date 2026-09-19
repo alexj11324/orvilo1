@@ -3,16 +3,15 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
-import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
-import { ChevronLeft, Plus } from 'lucide-react';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { ChevronLeft, Circle, CircleDashed, Plus } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type ExecutionStatusVisual, TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
-import TaskStatusIcon from '../features/TaskStatusIcon';
 import { getKanbanColumnHeaderVariant } from './kanbanBoardModel';
 import type { TaskGroupMeta } from './listViewOptions';
 import TaskBoardCard from './TaskBoardCard';
@@ -188,26 +187,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   count: css`
     flex: none;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  emptyText: css`
-    padding-block: 24px;
-    padding-inline: 16px;
-
-    font-size: 13px;
     color: ${cssVar.colorTextQuaternary};
-    text-align: center;
   `,
   header: css`
     display: flex;
@@ -245,14 +227,21 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
   triage: 'taskList.kanban.triage',
 };
 
-export const COLUMN_STATUS_ICON: Record<string, TaskStatus> = {
-  backlog: 'backlog',
-  canceled: 'canceled',
-  done: 'completed',
-  needsInput: 'paused',
-  running: 'running',
-  todo: 'backlog',
-  triage: 'backlog',
+/**
+ * Per-column header glyphs in the shared status-icon family (the same one
+ * topic/task rows use): backlog→hollow dot gray, todo→hollow ring blue,
+ * running→dot amber, needs-input→clock violet, done→check green,
+ * canceled→pause orange. `triage` has no status analog — a dashed circle
+ * reads "not yet categorized".
+ */
+export const COLUMN_STATUS_VISUAL: Record<string, ExecutionStatusVisual> = {
+  backlog: TASK_STATUS_VISUALS.backlog,
+  canceled: TASK_STATUS_VISUALS.canceled,
+  done: TASK_STATUS_VISUALS.completed,
+  needsInput: TASK_STATUS_VISUALS.paused,
+  running: TASK_STATUS_VISUALS.running,
+  todo: { color: cssVar.blue, icon: Circle },
+  triage: { color: cssVar.colorTextQuaternary, icon: CircleDashed },
 };
 
 interface CollapsedKanbanColumnProps {
@@ -261,7 +250,7 @@ interface CollapsedKanbanColumnProps {
   droppable: boolean;
   label: string;
   onExpand: () => void;
-  statusIcon?: TaskStatus;
+  statusIcon?: ExecutionStatusVisual;
   total: number;
 }
 
@@ -292,7 +281,7 @@ export const CollapsedKanbanColumn = memo<CollapsedKanbanColumnProps>(
           type="button"
           onClick={onExpand}
         >
-          {statusIcon && <TaskStatusIcon size={16} status={statusIcon} />}
+          {statusIcon && <Icon color={statusIcon.color} icon={statusIcon.icon} size={16} />}
           <span
             className={cx(styles.collapsedLabel, !upright && styles.collapsedLabelRotated)}
             style={{ flex: 1, minHeight: 0 }}
@@ -344,7 +333,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
       id: columnKey,
     });
 
-    const statusIcon = COLUMN_STATUS_ICON[columnKey];
+    const statusIcon = COLUMN_STATUS_VISUAL[columnKey];
     const i18nKey = COLUMN_I18N_KEYS[columnKey];
     const label = i18nKey ? t(i18nKey as any) : t(`taskList.groupBy.${groupBy}` as any);
     const headerVariant = getKanbanColumnHeaderVariant({
@@ -384,7 +373,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <TaskGroupLabel group={groupMeta} />
             ) : (
               <>
-                {statusIcon && <TaskStatusIcon size={16} status={statusIcon} />}
+                {statusIcon && <Icon color={statusIcon.color} icon={statusIcon.icon} size={16} />}
                 <Text fontSize={13} weight={500}>
                   {label}
                 </Text>
@@ -429,9 +418,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             <div className={styles.addPill} title={t('taskList.kanban.addTask')} onClick={onCreate}>
               <Icon icon={Plus} size={16} />
             </div>
-          ) : (
-            <div className={styles.emptyText}>{t('taskList.kanban.emptyColumn')}</div>
-          )}
+          ) : null}
           {footer}
         </div>
       </div>

@@ -1,3 +1,14 @@
+import type { TaskListItem } from '@orvilo/types';
+
+/**
+ * A task row inside a work-query result. The server selects full `tasks` rows,
+ * so this is the complete task shape; `participants` is the only list-read
+ * attachment the work query doesn't join in.
+ */
+export type WorkQueryResultTask = Omit<TaskListItem, 'participants'> & {
+  participants?: TaskListItem['participants'];
+};
+
 export const mergeWorkQueryPage = <T extends { id: string }>(current: T[], incoming: T[]): T[] => {
   if (current.length === 0) return incoming;
   const seen = new Set(current.map((row) => row.id));

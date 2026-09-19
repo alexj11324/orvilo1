@@ -164,7 +164,13 @@ const MyWorkPage = memo(() => {
           </Text>
         }
       />
-      <WideScreenContainer gap={12} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+      {/* Board mode breaks out of the centered container — a kanban needs
+          full-width horizontal scroll, not a letterboxed column. */}
+      <WideScreenContainer
+        gap={12}
+        paddingBlock={16}
+        wrapperStyle={boardActive ? undefined : { flex: 1, overflowY: 'auto' }}
+      >
         <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>
           <TabsList>
             <TabsIndicator />
@@ -203,20 +209,7 @@ const MyWorkPage = memo(() => {
             ) : null}
           </Flexbox>
         </Flexbox>
-        {boardActive ? (
-          /* The same Cordy-ported board /tasks mounts — myTaskScope narrows
-             the grouped query to the caller's slice ('delegated' = tasks the
-             caller handed to agents). */
-          <Flexbox flex={1} style={{ minHeight: 0, overflowX: 'auto', overflowY: 'hidden' }}>
-            <KanbanBoard
-              emptyDescription={t('myWork.empty')}
-              myTaskScope={mode === 'delegated' ? 'delegated' : 'assigned'}
-              options={boardViewOptions}
-              projectId={noProject ? null : undefined}
-              routeScope={'global'}
-            />
-          </Flexbox>
-        ) : (
+        {boardActive ? null : (
           <WorkQueryResults
             emptyLabel={t('myWork.empty')}
             externalReviews={mode === 'review' ? (data?.data.externalReviews ?? []) : undefined}
@@ -231,6 +224,20 @@ const MyWorkPage = memo(() => {
           />
         )}
       </WideScreenContainer>
+      {boardActive ? (
+        /* The same Cordy-ported board /tasks mounts — myTaskScope narrows
+           the grouped query to the caller's slice ('delegated' = tasks the
+           caller handed to agents). */
+        <Flexbox flex={1} style={{ minHeight: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+          <KanbanBoard
+            emptyDescription={t('myWork.empty')}
+            myTaskScope={mode === 'delegated' ? 'delegated' : 'assigned'}
+            options={boardViewOptions}
+            projectId={noProject ? null : undefined}
+            routeScope={'global'}
+          />
+        </Flexbox>
+      ) : null}
     </Flexbox>
   );
 });

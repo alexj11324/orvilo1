@@ -1,12 +1,20 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Button, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import { builtinSavedViewKey } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { BookmarkIcon, ListFilterIcon, PlusIcon, SearchXIcon } from 'lucide-react';
+import {
+  Columns3Icon,
+  FolderClosedIcon,
+  ListIcon,
+  ListTodoIcon,
+  PlusIcon,
+  SearchXIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,10 +29,21 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { savedViewTitle } from './savedViewTitle';
 
 const styles = createStaticStyles(({ css }) => ({
+  actions: css`
+    flex: none;
+    opacity: 0;
+    transition: opacity ${cssVar.motionDurationFast};
+
+    @media (hover: none) {
+      opacity: 1;
+    }
+  `,
   link: css`
     display: flex;
     flex: 1;
@@ -53,15 +72,29 @@ const styles = createStaticStyles(({ css }) => ({
     &:hover {
       background: ${cssVar.colorFillTertiary};
     }
+
+    &:hover .saved-view-row-actions,
+    &:focus-within .saved-view-row-actions {
+      opacity: 1;
+    }
+  `,
+  sectionLabel: css`
+    padding-block: 8px 4px;
+    padding-inline: 8px;
+    font-size: ${cssVar.fontSizeSM};
+    color: ${cssVar.colorTextQuaternary};
   `,
 }));
 
 const viewIcon = (view: SavedViewItem) =>
-  builtinSavedViewKey(view.id) || view.entityType === 'project' ? ListFilterIcon : BookmarkIcon;
+  view.entityType === 'project' ? FolderClosedIcon : ListTodoIcon;
 
-const ViewRow = memo<{ view: SavedViewItem }>(({ view }) => {
+const ViewRow = memo<{
+  deletable: boolean;
+  onDelete: (view: SavedViewItem) => void;
+  view: SavedViewItem;
+}>(({ deletable, onDelete, view }) => {
   const { t } = useTranslation('common');
-  const builtin = Boolean(builtinSavedViewKey(view.id));
 
   return (
     <Flexbox horizontal align={'center'} className={styles.row}>
@@ -72,10 +105,16 @@ const ViewRow = memo<{ view: SavedViewItem }>(({ view }) => {
             {savedViewTitle(view.id, view.name, t)}
           </Text>
         </Flexbox>
-        {!builtin && view.visibility === 'team' ? (
+        <Icon
+          color={cssVar.colorTextQuaternary}
+          icon={view.layout === 'board' ? Columns3Icon : ListIcon}
+          size={14}
+          title={t(view.layout === 'board' ? 'savedViews.layoutBoard' : 'savedViews.layoutList')}
+        />
+        {!builtinSavedViewKey(view.id) && view.visibility === 'team' ? (
           <Tag>{t('savedViews.visibilityTeam')}</Tag>
         ) : null}
-        {!builtin && view.visibility === 'workspace' ? (
+        {!builtinSavedViewKey(view.id) && view.visibility === 'workspace' ? (
           <Tag>{t('savedViews.visibilityWorkspace')}</Tag>
         ) : null}
         {view.updatedAt ? (
@@ -88,16 +127,58 @@ const ViewRow = memo<{ view: SavedViewItem }>(({ view }) => {
           </Text>
         ) : null}
       </WorkspaceLink>
+      {deletable ? (
+        <span className={`${styles.actions} saved-view-row-actions`}>
+          <ActionIcon
+            icon={Trash2Icon}
+            size={'small'}
+            title={t('savedViews.delete')}
+            onClick={() => onDelete(view)}
+          />
+        </span>
+      ) : null}
     </Flexbox>
   );
 });
 
 ViewRow.displayName = 'ViewRow';
 
+/**
+ * Views are retrieval objects — the page answers "where is the thing I saved?"
+ * Grouping by provenance (built-in / mine / shared) matches how a user recalls
+ * a view ("I made it" vs "it's a workspace view") better than one flat list.
+ */
+const ViewSection = memo<{
+  label: string;
+  onDelete: (view: SavedViewItem) => void;
+  ownerUserId?: string;
+  views: SavedViewItem[];
+}>(({ label, onDelete, ownerUserId, views }) => {
+  if (views.length === 0) return null;
+  return (
+    <Flexbox>
+      <Text className={styles.sectionLabel}>{label}</Text>
+      <Flexbox gap={2}>
+        {views.map((view) => (
+          <ViewRow
+            deletable={!builtinSavedViewKey(view.id) && view.ownerUserId === ownerUserId}
+            key={view.id}
+            view={view}
+            onDelete={onDelete}
+          />
+        ))}
+      </Flexbox>
+    </Flexbox>
+  );
+});
+
+ViewSection.displayName = 'ViewSection';
+
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
+  const ownerUserId = useUserStore(userProfileSelectors.userId);
   const [keyword, setKeyword] = useState('');
   const {
     data,
@@ -118,6 +199,18 @@ const SavedViewsPage = memo(() => {
       : views;
   }, [keyword, t, views]);
 
+  const [builtinViews, mine, shared] = useMemo(() => {
+    const builtinList: SavedViewItem[] = [];
+    const mineList: SavedViewItem[] = [];
+    const sharedList: SavedViewItem[] = [];
+    for (const view of filteredViews) {
+      if (builtinSavedViewKey(view.id)) builtinList.push(view);
+      else if (view.ownerUserId === ownerUserId) mineList.push(view);
+      else sharedList.push(view);
+    }
+    return [builtinList, mineList, sharedList];
+  }, [filteredViews, ownerUserId]);
+
   const createAssigned = useCallback(async () => {
     const created = await workAttentionService.savedViewCreate({
       entityType: 'task',
@@ -128,6 +221,27 @@ const SavedViewsPage = memo(() => {
     await mutate(workAttentionKeys.savedViews(workspaceId));
     navigate(`/views/${created.data.id}`);
   }, [navigate, t, workspaceId]);
+
+  const deleteView = useCallback(
+    (view: SavedViewItem) => {
+      confirmModal({
+        cancelText: t('cancel'),
+        content: t('savedViews.deleteConfirm', { name: view.name }),
+        okButtonProps: { danger: true },
+        okText: t('delete'),
+        onOk: async () => {
+          try {
+            await workAttentionService.savedViewDelete(view.id);
+            await mutate(workAttentionKeys.savedViews(workspaceId));
+          } catch {
+            toast.error(t('savedViews.deleteFailed'));
+          }
+        },
+        title: t('savedViews.delete'),
+      });
+    },
+    [t, workspaceId],
+  );
 
   return (
     <Flexbox flex={1} height="100%">
@@ -159,14 +273,28 @@ const SavedViewsPage = memo(() => {
           <Center flex={1} padding={48}>
             <Empty
               description={keyword.trim() ? t('savedViews.searchEmpty') : t('savedViews.empty')}
-              icon={keyword.trim() ? SearchXIcon : BookmarkIcon}
+              icon={keyword.trim() ? SearchXIcon : ListTodoIcon}
             />
           </Center>
         ) : (
-          <Flexbox gap={2}>
-            {filteredViews.map((view) => (
-              <ViewRow key={view.id} view={view} />
-            ))}
+          <Flexbox gap={16}>
+            <ViewSection
+              label={t('savedViews.sectionBuiltin')}
+              views={builtinViews}
+              onDelete={deleteView}
+            />
+            <ViewSection
+              label={t('savedViews.sectionMine')}
+              ownerUserId={ownerUserId}
+              views={mine}
+              onDelete={deleteView}
+            />
+            <ViewSection
+              label={t('savedViews.sectionShared')}
+              ownerUserId={ownerUserId}
+              views={shared}
+              onDelete={deleteView}
+            />
           </Flexbox>
         )}
       </WideScreenContainer>

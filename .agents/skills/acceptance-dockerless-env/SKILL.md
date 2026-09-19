@@ -14,12 +14,12 @@ None. The seeded test account is created locally by `init-dev-env.sh seed-user`.
 ## Prereqs
 
 ```bash
-brew install postgresql@17 pgvector redis   # brew pgvector targets pg17/pg18 on current taps
+brew install postgresql@17 pgvector redis # brew pgvector targets pg17/pg18 on current taps
 brew services start postgresql@17 redis
 # psql bootstrap: createuser -s postgres (or use default superuser); the scripts expect
 # postgresql://postgres:postgres@localhost:5432/postgres — set password or use trust in pg_hba
 export PATH="$HOME/.bun/bin:$PATH"
-npm i -g agent-browser   # if absent — check `agent-browser --version`
+npm i -g agent-browser # if absent — check `agent-browser --version`
 ```
 
 ## Env overrides the scripts honor
@@ -33,11 +33,11 @@ export REDIS_URL="redis://localhost:6379" DB_PORT=5432 REDIS_PORT=6379
 
 Then run: `setup-db` (skipped — it requires docker/paradedb), `s3` (nohup), `seed-user`, `dev` (nohup). Resolved ports land in `.records/env/agent-testing-ports.env` (Next :26730-class, Vite :21725-class, s3rver :29000-class — auto-allocated, read the file).
 
-## pg_search migration gap
+## pg\_search migration gap
 
-`paradedb/paradedb` image and the pg_search extension are unobtainable on this host (homebrew tap 403 via git proxy, no virtualization). Migrations that create pg_search/bm25 indexes (e.g. 0090, 0093) will fail.
+`paradedb/paradedb` image and the pg\_search extension are unobtainable on this host (homebrew tap 403 via git proxy, no virtualization). Migrations that create pg\_search/bm25 indexes (e.g. 0090, 0093) will fail.
 
-Workaround (verified): apply the non-pg_search migrations by hand, then mark the pg_search ones applied in `drizzle.__drizzle_migrations`:
+Workaround (verified): apply the non-pg\_search migrations by hand, then mark the pg\_search ones applied in `drizzle.__drizzle_migrations`:
 
 ```sql
 -- row format: (id uuid?, hash text, created_at bigint) — hash = sha256 of the .sql file contents,
@@ -50,8 +50,27 @@ Dialect applies only entries with `folderMillis > max(created_at)`, so a marker 
 
 - Web seed: `.agents/acceptance/scripts/setup-auth.sh web-seed` → drives `agent-browser --session orvilo-dev`; verify with `setup-auth.sh status --surface web`.
 - Electron: `.agents/acceptance/scripts/electron-dev.sh start` (CDP :9222). `login-status` reports snapshot/golden-profile state; `stop` snapshots login into `~/.orvilo/agent-testing/electron-login`.
-- Electron login CANNOT be acquired headlessly: OAuth (`requestAuthorization`) is forbidden and hijacks the user's browser; no IPC accepts raw tokens (`saveTokens` is not `@IpcMethod`-decorated); macOS `safeStorage` blocks plaintext store injection (decrypt runs at read time). No snapshot → mark Electron signed-in checks blocked; one manual sign-in fixes all future runs.
 - `/signin`+`/signup` are a separate auth bundle (`entry.auth.tsx`) — no SPAGlobalProvider, no session-auth listener. For non-`(main)` route probes use e.g. `/verify-im` (stays mounted signed-out).
+
+## Scripted Electron OIDC sign-in
+
+The dev Electron instance CAN be signed in fully scripted — no manual step needed. The OAuth browser hop is authorized on this machine (opens in Safari, the VM default browser).
+
+1. Boot signed-out: `electron-dev.sh start` → renderer lands on `/onboarding` LoginStep.
+2. LoginStep → "Connect to your own Orvilo server instance" → enter `http://localhost:26730` → Connect.
+   - Calls `connectRemoteServer({remoteServerUrl, storageMode:'selfHost'})` → `requestAuthorization`.
+3. `requestAuthorization` builds `{server}/oidc/auth?client_id=orvilo-desktop&redirect_uri={server}/oidc/callback/desktop&prompt=consent&scope=profile email offline_access&state&code_challenge` and `shell.openExternal` opens it in **Safari**.
+4. In Safari: better-auth login form → sign in (test account) → consent screen → authorize.
+   - First login pops a "Terms and Privacy Policy" modal → click **"Agree and continue"**.
+   - Then a "Save Password?" prompt → **"Not Now"**.
+5. Server `/oidc/callback/desktop` writes an `OAuthHandoff` record keyed by `state`; Safari lands on `/oauth/callback/success` ("Authorization Successful").
+6. Desktop polls `GET /oidc/handoff?id=<state>&client=desktop` → gets `code` → `POST /oidc/token` (PKCE) → `saveTokens` → `setRemoteServerConfig({active:true})` → broadcasts `authorizationSuccessful` → renderer routes to the post-onboarding target (`/tasks?onboarding=task`).
+
+### Persistence
+
+- `electron-dev.sh login-status` reads the golden profile `~/Library/Application Support/orvilo-desktop-dev`.
+- `save-login <id>` is **only for pool instances**, not the golden profile — the golden profile persists the refresh token itself (access token \~167 h). A future `electron-dev.sh start` boots signed in.
+- There is **no** `@IpcMethod`-decorated IPC that accepts raw tokens (`saveTokens` is not registered) — you cannot inject a session via `electronAPI.invoke`; the OIDC drive is the only scripted path.
 
 ## Probes that worked here
 
@@ -66,6 +85,10 @@ agent-browser --cdp 9222 eval "typeof __ELECTRON__ !== 'undefined' && !!__ELECTR
 
 ## Gotchas
 
-- `computer` `type` action drops/mangles `@` and `/` — use `printf '...' | pbcopy` + Cmd+V for emails/URLs.
+- `computer` `type` action drops/mangles `@` and `/` — use `printf '...' | pbcopy` + Cmd+V for emails/URLs (this applies to Safari fields too).
+- In-app Electron navigation: `agent-browser --cdp 9222 open 'app://renderer/...'` → `ERR_NAME_NOT_RESOLVED`. Use `eval "location.assign('app://renderer/onboarding')"` instead.
+- Electron renderer probes must import via the `app://renderer/src/…` module graph — `import('http://localhost:5173/src/…')` resolves a **separate** module instance, so store reads/emits through it are phantom.
+- Pool instances (`electron-dev.sh start <id>` → ipcId namespaced `ORVILO_IPC_ID=…-9`) diverge on `useWatchBroadcast`/remote-config wiring — an invalid rig for auth-flow tests; use the legacy default-profile instance.
+- Post-auth renderer can show garbled i18n keys for a beat while lazy namespaces load — resolves itself.
 - Import probes via the Next port fail (module not served there) — always import from the Vite origin; both windows share the same module instance.
 - Agent-browser `open` right after seeding can race the auth redirect; `status --surface web` is the source of truth, retry the open.

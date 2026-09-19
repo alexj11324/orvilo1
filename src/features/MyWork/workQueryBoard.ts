@@ -61,13 +61,20 @@ export const workQueryBoardGroups = (
     }));
     const existing = byColumn.get(columnKey);
     if (existing) {
-      existing.tasks = [...existing.tasks, ...tasks];
-      existing.total += group.total;
-      existing.hasMore ||= group.hasMore;
+      const mergedTasks = [...existing.tasks, ...tasks];
+      byColumn.set(columnKey, {
+        ...existing,
+        hasMore: existing.hasMore || group.hasMore,
+        limit: mergedTasks.length,
+        tasks: mergedTasks,
+        total: existing.total + group.total,
+      });
     } else {
       byColumn.set(columnKey, {
         hasMore: group.hasMore,
         key: columnKey,
+        limit: tasks.length,
+        offset: 0,
         tasks,
         total: group.total,
       });

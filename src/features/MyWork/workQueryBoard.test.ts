@@ -60,7 +60,14 @@ describe('workQueryBoardGroups', () => {
     expect(needsInput?.tasks.map((item) => item.id)).toEqual(['a', 'b']);
     expect(needsInput?.total).toBe(3);
     expect(needsInput?.hasMore).toBe(true);
+    // TaskGroupItem (groupList) requires the loaded window; KanbanBoard's
+    // external path pages via onLoadMoreGroup, but the object still has to
+    // type-check (Push Typecheck 2cd067ae failed without these).
+    expect(needsInput?.limit).toBe(2);
+    expect(needsInput?.offset).toBe(0);
     expect(groups.find((group) => group.key === 'done')?.total).toBe(1);
+    expect(groups.find((group) => group.key === 'done')?.limit).toBe(1);
+    expect(groups.find((group) => group.key === 'done')?.offset).toBe(0);
   });
 
   it('maps workflow-category keys by name', () => {

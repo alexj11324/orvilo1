@@ -501,6 +501,7 @@ export default {
   'navPanel.show': 'Show',
   'navPanel.visible': 'Visible',
   'navPanel.searchAgent': 'Search Agent...',
+  'navPanel.searchFavorites': 'Search Favorites...',
   'navPanel.searchProject': 'Search projects...',
   'navPanel.viewAllAgents': 'View all',
   'navPanel.searchRecent': 'Search Recent...',

@@ -203,6 +203,10 @@ export interface SystemStatus {
   expandInputActionbar?: boolean;
   // which sessionGroup should expand
   expandSessionGroupKeys: string[];
+  /**
+   * number of pinned favorites to display in the sidebar before More
+   */
+  favoritePageSize?: number;
   fileManagerViewMode?: 'list' | 'masonry';
   filePanelWidth: number;
   /**
@@ -515,6 +519,7 @@ export const INITIAL_STATUS = {
   agentPageSize: 5,
   privateAgentPageSize: 5,
   chatInputHeight: 64,
+  favoritePageSize: 5,
   recentPageSize: 5,
   taskListViewOptions: {
     groupBy: 'status',

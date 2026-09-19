@@ -451,6 +451,7 @@
   "navPanel.publicAgents": "Workspace",
   "navPanel.resetDefault": "Reset to Default",
   "navPanel.searchAgent": "Search Agent...",
+  "navPanel.searchFavorites": "Search Favorites...",
   "navPanel.searchProject": "Search projects...",
   "navPanel.searchRecent": "Search Recent...",
   "navPanel.searchResultEmpty": "No search results found",

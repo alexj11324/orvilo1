@@ -101,6 +101,8 @@ const agentPageSize = (s: GlobalState): number => s.status.agentPageSize || 5;
 
 const privateAgentPageSize = (s: GlobalState): number => s.status.privateAgentPageSize || 5;
 
+const favoritePageSize = (s: GlobalState): number => s.status.favoritePageSize || 5;
+
 const recentPageSize = (s: GlobalState): number => s.status.recentPageSize || 5;
 
 const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
@@ -545,6 +547,7 @@ export const systemStatusSelectors = {
   disabledModelProvidersSortType,
   disabledModelsSortType,
   expandInputActionbar,
+  favoritePageSize,
   filePanelWidth,
   getAgentSystemRoleExpanded,
   groupAgentBuilderPanelWidth,

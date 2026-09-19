@@ -109,14 +109,14 @@ const liveAdapterRegistry: Record<string, AgentRegistryEntry> = {
  * Parse-only decoders for archived vendor streams. Nothing here can be
  * resolved for a live run — `createLiveAdapter` throws on these keys.
  */
-const historicalDecoderRegistry = {
+const historicalDecoderRegistry: Record<string, AgentRegistryEntry> = {
   'claude-code-sdk': {
     createAdapter: () => new ClaudeCodeSdkAdapter(),
   },
   'cursor': {
     createAdapter: () => new CursorAdapter(),
   },
-} satisfies Record<string, AgentRegistryEntry>;
+};
 
 /**
  * Create a live adapter for the given agent/transport type. Every registered

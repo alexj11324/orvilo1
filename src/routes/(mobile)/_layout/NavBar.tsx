@@ -4,7 +4,7 @@ import { Icon } from '@lobehub/ui';
 import { type TabBarProps } from '@lobehub/ui/mobile';
 import { TabBar } from '@lobehub/ui/mobile';
 import { createStaticStyles } from 'antd-style';
-import { Inbox, ListTodo, MessageSquare, User } from 'lucide-react';
+import { Inbox, MessageSquare, SquareUser, User } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -59,13 +59,13 @@ const NavBar = memo(() => {
         },
         {
           icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={ListTodo} />
+            <Icon className={active ? styles.active : undefined} icon={SquareUser} />
           ),
-          key: SidebarTabKey.Tasks,
+          key: SidebarTabKey.MyWork,
           onClick: () => {
-            navigate('/tasks');
+            navigate('/my-work');
           },
-          title: t('tab.tasks'),
+          title: t('tab.myWork'),
         },
         {
           icon: (active: boolean) => (

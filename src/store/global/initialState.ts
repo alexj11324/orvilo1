@@ -16,6 +16,7 @@ export enum SidebarTabKey {
   Me = 'me',
   MyWork = 'my-work',
   Resource = 'resource',
+  Reviews = 'reviews',
   Setting = 'settings',
   Tasks = 'tasks',
   Teams = 'teams',
@@ -141,7 +142,7 @@ export const MODEL_DETAIL_PANEL_EXPANDABLE_KEYS = [
 
 export type TaskViewMode = 'kanban' | 'list';
 
-export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['recents', 'agent', 'private'];
+export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['agent', 'workspace', 'favorites', 'teams'];
 
 export interface SystemStatus {
   /**

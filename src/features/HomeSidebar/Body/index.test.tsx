@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Body from './index';
@@ -13,11 +13,17 @@ interface MockGlobalState {
 }
 
 const mocks = vi.hoisted(() => ({
+  activeWorkspaceId: null as string | null,
   globalState: undefined as unknown as MockGlobalState,
   navLayout: {
     bottomMenuItems: [] as { key: string; title: string; url: string }[],
-    topNavItems: [] as { key: string; title: string; url: string }[],
+    topNavItems: [
+      { key: 'inbox', title: 'Inbox', url: '/inbox' },
+      { key: 'my-work', title: 'My Work', url: '/my-work' },
+      { key: 'reviews', title: 'Reviews', url: '/my-work?tab=review' },
+    ],
   },
+  searchParams: new URLSearchParams(),
   updateSystemStatus: vi.fn(),
 }));
 
@@ -33,14 +39,12 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   AccordionRoot: ({
     children,
     value,
-    onValueChange,
   }: {
     children: React.ReactNode;
     onValueChange?: (keys: string[]) => void;
     value?: string[];
   }) => (
     <div data-expanded-keys={JSON.stringify(value)} data-testid="sidebar-accordion">
-      <button aria-label="collapse recents" onClick={() => onValueChange?.(['agent'])} />
       {children}
     </div>
   ),
@@ -51,6 +55,15 @@ vi.mock('react-router', () => ({
     <a href={to}>{children}</a>
   ),
   useNavigate: () => vi.fn(),
+}));
+
+vi.mock('@/libs/router/navigation', () => ({
+  useSearchParams: () => [mocks.searchParams],
+  usePathname: () => '/',
+}));
+
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
+  useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
 
 vi.mock('@/features/NavPanel/components/NavItem', () => ({
@@ -69,15 +82,19 @@ vi.mock('@/utils/navigation', () => ({
   isModifierClick: () => false,
 }));
 
-vi.mock('@/features/Home/Recents', () => ({
-  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
-}));
-
 vi.mock('./Agent', () => ({
   default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
 }));
 
-vi.mock('./Private', () => ({
+vi.mock('./WorkFavorites', () => ({
+  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+}));
+
+vi.mock('./WorkspaceSection', () => ({
+  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+}));
+
+vi.mock('./TeamsSection', () => ({
   default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
 }));
 
@@ -85,21 +102,28 @@ vi.mock('./CustomizeSidebarModal', () => ({
   openCustomizeSidebarModal: vi.fn(),
 }));
 
+vi.mock('./useSyncWorkspaceSidebarPreference', () => ({
+  useSyncWorkspaceSidebarPreference: vi.fn(),
+}));
+
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: MockGlobalState) => unknown) => selector(mocks.globalState),
 }));
 
+vi.mock('@/store/user', () => ({
+  useUserStore: (selector: (state: unknown) => unknown) =>
+    selector({ useFetchWorkspaceUserPreference: () => undefined }),
+}));
+
 beforeEach(() => {
   mocks.updateSystemStatus.mockReset();
-  mocks.navLayout = {
-    bottomMenuItems: [],
-    topNavItems: [],
-  };
+  mocks.activeWorkspaceId = null;
+  mocks.searchParams = new URLSearchParams();
   mocks.globalState = {
     status: {
       hiddenSidebarSections: [],
-      sidebarExpandedKeys: ['recents', 'agent'],
-      sidebarItems: ['recents', 'agent'],
+      sidebarExpandedKeys: ['agent', 'workspace', 'favorites', 'teams'],
+      sidebarItems: ['recents', 'tasks', 'image'],
     },
     updateSystemStatus: mocks.updateSystemStatus,
   };
@@ -110,7 +134,48 @@ afterEach(() => {
 });
 
 describe('Home sidebar body', () => {
-  it('uses persisted sidebar accordion expanded keys', () => {
+  it('renders the fixed IA regardless of a stale stored order', () => {
+    render(<Body />);
+
+    const children = Array.from(screen.getByTestId('sidebar-body').children);
+    const texts = children.map((child) => child.textContent);
+
+    // Core links first, in contract order — the stored legacy keys
+    // (recents/tasks/image) can neither reorder nor resurrect.
+    expect(texts[0]).toBe('Inbox');
+    expect(texts[1]).toBe('My Work');
+    expect(texts[2]).toBe('Reviews');
+    expect(screen.getByTestId('sidebar-item-agent')).toBeInTheDocument();
+    expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
+    expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-item-teams')).not.toBeInTheDocument();
+    expect(children.some((child) => child.hasAttribute('data-sidebar-bottom-spacer'))).toBe(true);
+  });
+
+  it('shows the Your teams group only in workspace mode', () => {
+    mocks.activeWorkspaceId = 'ws-1';
+    mocks.globalState.status.workspace = { hiddenSidebarSections: [] } as never;
+
+    render(<Body />);
+
+    expect(screen.getByTestId('sidebar-item-teams')).toBeInTheDocument();
+  });
+
+  it('hides an optional section via hiddenSidebarSections but never a core link', () => {
+    mocks.globalState.status.hiddenSidebarSections = ['workspace', 'favorites', 'inbox'];
+
+    render(<Body />);
+
+    expect(screen.queryByTestId('sidebar-item-workspace')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-item-favorites')).not.toBeInTheDocument();
+    // `inbox` is core — hidden sections cannot remove it.
+    const texts = Array.from(screen.getByTestId('sidebar-body').children).map(
+      (child) => child.textContent,
+    );
+    expect(texts).toContain('Inbox');
+  });
+
+  it('passes persisted expanded keys to the accordion', () => {
     mocks.globalState.status.sidebarExpandedKeys = ['agent'];
 
     render(<Body />);
@@ -119,71 +184,5 @@ describe('Home sidebar body', () => {
       'data-expanded-keys',
       '["agent"]',
     );
-  });
-
-  it('persists sidebar accordion expanded changes', () => {
-    render(<Body />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'collapse recents' }));
-
-    expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ sidebarExpandedKeys: ['agent'] });
-  });
-
-  it('renders items strictly in sidebarItems order with the spacer at its stored position', () => {
-    // Production has no bottom-group destinations left, so every item is a top
-    // nav item; the render order still comes from `sidebarItems`, not from which
-    // list an item is declared in.
-    mocks.navLayout = {
-      bottomMenuItems: [],
-      topNavItems: [
-        { key: 'automations', title: 'Automations', url: '/automations' },
-        { key: 'tasks', title: 'Tasks', url: '/tasks' },
-        { key: 'resource', title: 'Resource', url: '/resource' },
-      ],
-    };
-    mocks.globalState.status.sidebarItems = [
-      'automations',
-      'recents',
-      'agent',
-      '__spacer__',
-      'tasks',
-      'resource',
-    ];
-
-    render(<Body />);
-
-    const children = Array.from(screen.getByTestId('sidebar-body').children);
-    const spacerIndex = children.findIndex((child) =>
-      child.hasAttribute('data-sidebar-bottom-spacer'),
-    );
-
-    expect(spacerIndex).toBe(2);
-    expect(children[0]).toHaveTextContent('Automations');
-    expect(children[1]).toHaveAttribute('data-testid', 'sidebar-accordion');
-    expect(children[3]).toHaveTextContent('Tasks');
-    expect(children[4]).toHaveTextContent('Resource');
-  });
-
-  it('keeps a top item that was dragged past the spacer in its new position', () => {
-    mocks.navLayout = {
-      bottomMenuItems: [],
-      topNavItems: [
-        { key: 'tasks', title: 'Tasks', url: '/tasks' },
-        { key: 'resource', title: 'Resource', url: '/resource' },
-      ],
-    };
-    // User dragged `tasks` from the top section to sit after `resource`.
-    mocks.globalState.status.sidebarItems = ['recents', 'agent', '__spacer__', 'resource', 'tasks'];
-
-    render(<Body />);
-
-    const children = Array.from(screen.getByTestId('sidebar-body').children);
-    const spacerIndex = children.findIndex((child) =>
-      child.hasAttribute('data-sidebar-bottom-spacer'),
-    );
-    const tasksIndex = children.findIndex((child) => child.textContent === 'Tasks');
-
-    // The drag survives: the item that was moved past the spacer stays below it.
-    expect(tasksIndex).toBeGreaterThan(spacerIndex);
   });
 });

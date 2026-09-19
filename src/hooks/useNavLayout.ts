@@ -1,16 +1,7 @@
-import {
-  HomeIcon,
-  InboxIcon,
-  LayoutListIcon,
-  SearchIcon,
-  SquareUserIcon,
-  UsersIcon,
-} from 'lucide-react';
+import { GitPullRequestIcon, InboxIcon, SearchIcon, SquareUserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { getRouteById } from '@/config/routes';
 import { useGlobalStore } from '@/store/global';
 import { SidebarTabKey } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -44,8 +35,11 @@ export const useNavLayout = (): NavLayout => {
   const { t } = useTranslation('common');
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
-  const activeWorkspaceId = useActiveWorkspaceId();
 
+  // Fixed primary IA (see features/Navigation/sidebarContract): the header
+  // renders search; the body renders inbox/my-work/reviews as core links and
+  // the accordion sections (agent, workspace, favorites, teams) separately.
+  // Retired surfaces keep their routes for deep links but no sidebar entry.
   const topNavItems = useMemo(
     () =>
       [
@@ -54,12 +48,6 @@ export const useNavLayout = (): NavLayout => {
           key: 'search',
           onClick: () => toggleCommandMenu(true),
           title: t('tab.search'),
-        },
-        {
-          icon: HomeIcon,
-          key: SidebarTabKey.Home,
-          title: t('tab.home'),
-          url: '/',
         },
         {
           icon: InboxIcon,
@@ -74,41 +62,13 @@ export const useNavLayout = (): NavLayout => {
           url: '/my-work',
         },
         {
-          icon: getRouteById('tasks')!.icon,
-          key: SidebarTabKey.Tasks,
-          title: t('tab.tasks'),
-          url: '/tasks',
-        },
-        {
-          icon: LayoutListIcon,
-          key: SidebarTabKey.Views,
-          title: t('tab.views'),
-          url: '/views',
-        },
-        {
-          icon: getRouteById('automations')!.icon,
-          key: SidebarTabKey.Automations,
-          title: t('tab.automations'),
-          url: '/automations',
-        },
-        ...(activeWorkspaceId
-          ? [
-              {
-                icon: UsersIcon,
-                key: SidebarTabKey.Teams,
-                title: t('tab.teams'),
-                url: '/teams',
-              },
-            ]
-          : []),
-        {
-          icon: getRouteById('resource')!.icon,
-          key: SidebarTabKey.Resource,
-          title: t('tab.resource'),
-          url: '/resource',
+          icon: GitPullRequestIcon,
+          key: SidebarTabKey.Reviews,
+          title: t('tab.reviews'),
+          url: '/my-work?tab=review',
         },
       ] as NavItem[],
-    [activeWorkspaceId, t, toggleCommandMenu],
+    [t, toggleCommandMenu],
   );
 
   // Every destination that used to live here has been retired by the task-first

@@ -183,13 +183,26 @@ const AuthRequiredModal = memo(() => {
       // identical on both.
       const { dataSyncConfig, isInitRemoteServerConfig } = useElectronStore.getState();
 
+      // Until the remote-server config hydrates once we cannot tell "session
+      // live" from "never signed in" — boot-time 401 probes fire inside this
+      // window. Drop them (same gate the broadcast path above already uses);
+      // a genuinely expired session keeps emitting 401s after init resolves.
+      if (!isInitRemoteServerConfig) {
+        log(
+          'session-auth-expired ignored (remote server config not initialized). source=%s reason=%s',
+          source,
+          reason,
+        );
+        return;
+      }
+
       // "Expired" only exists while a session is live. On a signed-out or
       // never-authenticated instance the same 401 bursts (in-flight requests,
       // first-boot probes) carry no session to lose — send the user straight
       // to the login surface instead of an expiry modal. `/onboarding`
       // renders LoginStep on signed-out desktop; the current location is
       // threaded as the post-login callback.
-      if (isInitRemoteServerConfig && !dataSyncConfig?.active) {
+      if (!dataSyncConfig?.active) {
         log(
           'session-auth-expired with no live session — redirecting to login. source=%s reason=%s',
           source,

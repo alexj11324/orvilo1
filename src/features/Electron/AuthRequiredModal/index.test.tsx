@@ -2,6 +2,8 @@ import { act, fireEvent, render, renderHook, screen } from '@testing-library/rea
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
+
 import AuthRequiredModal, { useAuthRequiredModal } from './index';
 
 interface ModalProps {
@@ -145,6 +147,23 @@ describe('useAuthRequiredModal', () => {
     });
 
     expect(createModalMock).toHaveBeenCalledOnce();
+    expect(locationAssign).not.toHaveBeenCalled();
+  });
+
+  it('drops session-auth-expired while the remote config has not initialized', () => {
+    electronStore.current.isInitRemoteServerConfig = false;
+
+    render(<AuthRequiredModal />);
+
+    act(() => {
+      sessionAuthEvents.emit('session-auth-expired', {
+        reason: 'boot-probe',
+        source: 'trpc',
+        timestamp: Date.now(),
+      });
+    });
+
+    expect(createModalMock).not.toHaveBeenCalled();
     expect(locationAssign).not.toHaveBeenCalled();
   });
 

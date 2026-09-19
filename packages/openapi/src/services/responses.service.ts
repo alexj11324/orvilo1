@@ -35,6 +35,12 @@ const DELEGATED_RUN_POLL_MS = 2_000;
 const isParked = (status: AgentState['status']): boolean =>
   status === 'waiting_for_human' || status === 'waiting_for_async_tool';
 
+// Terminal run statuses — the only states that may produce a completed or
+// failed response. A `running`/`idle` parent observed mid-resume is still
+// generating and must never be reported as finished.
+const isTerminalRunStatus = (status: AgentState['status']): boolean =>
+  status === 'done' || status === 'error' || status === 'interrupted';
+
 /**
  * Response API Service
  * Handles OpenResponses protocol request execution via AiAgentService.execAgent
@@ -271,10 +277,13 @@ export class ResponsesService extends BaseService {
   }
 
   /**
-   * Wait for a delegated run (callAgent / callSubAgent) to leave its parked
-   * state. The child completes out-of-band and resumes the parent through the
-   * shared state manager — `executeSync` cannot resume it itself, so poll the
-   * durable state until the run turns terminal (or the wait budget expires).
+   * Wait for a delegated run (callAgent / callSubAgent) to reach a real
+   * terminal state. The child completes out-of-band and resumes the parent
+   * through the shared state manager — `executeSync` cannot resume it
+   * itself, so poll the durable state until the run settles (or the wait
+   * budget expires). Parked → `running` is NOT terminal: the resumed parent
+   * is still generating its answer, and reporting it early produced the
+   * premature-completed bug this wait exists to prevent.
    * `client_tool_execution` parks return immediately: they resume from the
    * caller, not the server.
    */
@@ -286,17 +295,50 @@ export class ResponsesService extends BaseService {
     const deadline = Date.now() + DELEGATED_RUN_WAIT_MS;
     let current = state;
 
-    while (
-      isParked(current.status) &&
-      current.interruption?.reason !== 'client_tool_execution' &&
-      Date.now() < deadline
-    ) {
+    while (Date.now() < deadline) {
+      if (isTerminalRunStatus(current.status)) break;
+      if (isParked(current.status) && current.interruption?.reason === 'client_tool_execution') {
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, DELEGATED_RUN_POLL_MS));
       const refreshed = await agentRuntimeService.getCoordinator().loadAgentState(operationId);
       if (refreshed) current = refreshed;
     }
 
     return current;
+  }
+
+  /**
+   * Map a settled run state onto the response status contract. Only `done`
+   * completes; `error` and `interrupted` fail/cancel distinctly; parked or
+   * still-running states at the wait deadline report `incomplete` with a
+   * null completion time — never `completed`.
+   */
+  private mapFinalRunState(finalState: AgentState | undefined): {
+    completedAt: number | null;
+    incompleteDetails?: { reason: string };
+    status: 'completed' | 'failed' | 'incomplete';
+  } {
+    const status = finalState?.status;
+    if (status === 'done') {
+      return { completedAt: Math.floor(Date.now() / 1000), status: 'completed' };
+    }
+    if (status === 'error') {
+      return { completedAt: Math.floor(Date.now() / 1000), status: 'failed' };
+    }
+    if (status === 'interrupted') {
+      return {
+        completedAt: null,
+        incompleteDetails: { reason: 'interrupted' },
+        status: 'incomplete',
+      };
+    }
+    // Parked (delegated child, human approval, async tool, client tool) or a
+    // non-terminal run at the deadline — the reason names what still blocks
+    // completion so callers can decide whether to keep waiting.
+    const reason =
+      (finalState && isParked(status!) && finalState.interruption?.reason) || status || 'unknown';
+    return { completedAt: null, incompleteDetails: { reason }, status: 'incomplete' };
   }
 
   /**
@@ -372,24 +414,17 @@ export class ResponsesService extends BaseService {
       // 3. Extract results from final state
       const { output, outputText } = this.extractOutputItems(finalState, responseId);
       const usage = this.extractUsage(finalState);
-
-      const parkedReason = isParked(finalState.status)
-        ? (finalState.interruption?.reason ?? finalState.status)
-        : undefined;
+      const mapped = this.mapFinalRunState(finalState);
 
       return this.buildResponseObject({
-        completedAt: parkedReason ? null : Math.floor(Date.now() / 1000),
+        completedAt: mapped.completedAt,
         createdAt,
         id: responseId,
-        incompleteDetails: parkedReason ? { reason: parkedReason } : undefined,
+        incompleteDetails: mapped.incompleteDetails,
         output,
         outputText,
         params,
-        status: parkedReason
-          ? 'incomplete'
-          : finalState.status === 'error'
-            ? 'failed'
-            : 'completed',
+        status: mapped.status,
         usage,
       });
     } catch (error) {
@@ -810,53 +845,35 @@ export class ResponsesService extends BaseService {
         ? this.extractOutputItems(finalState, responseId)
         : { output: [], outputText: accumulatedText };
 
-      // Any still-parked run is nonterminal — delegated children resume the
-      // parent out-of-band, client tools resume from the caller.
-      const parkedReason =
-        finalState && isParked(finalState.status)
-          ? (finalState.interruption?.reason ?? finalState.status)
-          : undefined;
+      // Terminal mapping shared with the sync path — a still-running or
+      // parked run reports incomplete, never completed.
+      const mapped = this.mapFinalRunState(finalState);
+      const terminalType =
+        mapped.status === 'completed'
+          ? ('response.completed' as const)
+          : mapped.status === 'failed'
+            ? ('response.failed' as const)
+            : ('response.incomplete' as const);
 
-      if (parkedReason) {
-        yield {
-          response: {
-            ...response,
-            completed_at: null,
-            incomplete_details: { reason: parkedReason },
-            output: fullOutput.output,
-            output_text: fullOutput.outputText || accumulatedText,
-            status: 'incomplete' as any,
-            usage: {
-              input_tokens: usage.input_tokens,
-              input_tokens_details: { cached_tokens: 0 },
-              output_tokens: usage.output_tokens,
-              output_tokens_details: { reasoning_tokens: 0 },
-              total_tokens: usage.total_tokens,
-            },
+      yield {
+        response: {
+          ...response,
+          completed_at: mapped.completedAt,
+          incomplete_details: mapped.incompleteDetails ?? null,
+          output: fullOutput.output,
+          output_text: fullOutput.outputText || accumulatedText,
+          status: mapped.status as any,
+          usage: {
+            input_tokens: usage.input_tokens,
+            input_tokens_details: { cached_tokens: 0 },
+            output_tokens: usage.output_tokens,
+            output_tokens_details: { reasoning_tokens: 0 },
+            total_tokens: usage.total_tokens,
           },
-          sequence_number: sequenceNumber,
-          type: 'response.incomplete' as const,
-        };
-      } else {
-        yield {
-          response: {
-            ...response,
-            completed_at: Math.floor(Date.now() / 1000),
-            output: fullOutput.output,
-            output_text: fullOutput.outputText || accumulatedText,
-            status: (finalState?.status === 'error' ? 'failed' : 'completed') as any,
-            usage: {
-              input_tokens: usage.input_tokens,
-              input_tokens_details: { cached_tokens: 0 },
-              output_tokens: usage.output_tokens,
-              output_tokens_details: { reasoning_tokens: 0 },
-              total_tokens: usage.total_tokens,
-            },
-          },
-          sequence_number: sequenceNumber,
-          type: 'response.completed' as const,
-        };
-      }
+        },
+        sequence_number: sequenceNumber,
+        type: terminalType,
+      };
     } catch (error) {
       const errorResponseId = this.generateResponseId();
       this.log('error', 'Streaming response failed', { error, responseId: errorResponseId });

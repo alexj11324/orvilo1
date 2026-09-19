@@ -1,7 +1,7 @@
+import type { CollaborationRoom } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
-import type { CollaborationRoom } from '@orvilo/types';
 import type { OrviloDatabase } from '@/database/type';
 
 import {
@@ -13,6 +13,16 @@ import {
 } from './contractTables';
 
 const NOT_FOUND = () => new TRPCError({ code: 'NOT_FOUND', message: 'Room not found' });
+
+/** Room authorization outcome the ticket needs beyond a bare allow. */
+export interface RoomAccessGrant {
+  /**
+   * Project the room's resource belongs to — `project:*` rooms report their
+   * own id, `task:*` rooms the owning project (when any). Minted into the
+   * ticket so a project-scoped kick reaches the member's task-room sockets.
+   */
+  projectId?: string;
+}
 
 /**
  * Server-side room authorization. A client naming a room grants nothing —
@@ -29,7 +39,7 @@ export const assertRoomAccess = async (
   db: OrviloDatabase,
   ctx: { userId: string; workspaceId: string },
   room: CollaborationRoom,
-): Promise<void> => {
+): Promise<RoomAccessGrant> => {
   switch (room.scope) {
     case 'workspace': {
       if (room.id !== ctx.workspaceId) throw NOT_FOUND();
@@ -38,7 +48,7 @@ export const assertRoomAccess = async (
         workspaceId: room.id,
       });
       if (!role) throw NOT_FOUND();
-      return;
+      return {};
     }
 
     case 'project': {
@@ -54,19 +64,19 @@ export const assertRoomAccess = async (
       const visibility = project.visibility as string;
       const isPublic = visibility !== 'private' && visibility !== 'restricted';
       const isOwner = project.userId === ctx.userId;
-      if (isPublic || isOwner) return;
+      if (isPublic || isOwner) return { projectId: room.id };
 
       // Restricted/private reach: an explicit project membership row grants
       // room access without widening the project's content visibility.
       const projectMemberModel = new ProjectMemberModel(db, ctx.userId);
       const projectRole = await projectMemberModel.getRole(room.id, ctx.userId);
       if (!projectRole) throw NOT_FOUND();
-      return;
+      return { projectId: room.id };
     }
 
     case 'task': {
       const [task] = await db
-        .select({ id: tasks.id })
+        .select({ id: tasks.id, projectId: tasks.projectId })
         .from(tasks)
         .where(
           and(
@@ -80,7 +90,7 @@ export const assertRoomAccess = async (
         )
         .limit(1);
       if (!task) throw NOT_FOUND();
-      return;
+      return { projectId: task.projectId ?? undefined };
     }
   }
 };

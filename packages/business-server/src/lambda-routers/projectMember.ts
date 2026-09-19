@@ -32,7 +32,9 @@ const wrapInternal = (domain: string, error: unknown): never => {
 
 // Project membership is meaningful only inside a workspace: every procedure
 // needs an active caller membership (wsMemberProcedure), and the service then
-// checks project-manage rights plus the workspace-role ceiling on the target.
+// re-verifies the caller inside the write transaction — project visibility,
+// project-manage rights, and the workspace-role ceiling on the target. The
+// role on ctx is only a request-time snapshot and is never trusted for writes.
 export const projectMemberRouter = router({
   add: wsMemberProcedure
     .use(serverDatabase)
@@ -46,7 +48,6 @@ export const projectMemberRouter = router({
           role: input.role,
           targetUserId: input.userId,
           workspaceId: ctx.workspaceId!,
-          workspaceRole: ctx.workspaceRole ?? null,
         });
       } catch (error) {
         return wrapInternal('add', error);
@@ -65,7 +66,6 @@ export const projectMemberRouter = router({
           role: input.role,
           targetUserId: input.userId,
           workspaceId: ctx.workspaceId!,
-          workspaceRole: ctx.workspaceRole ?? null,
         });
       } catch (error) {
         return wrapInternal('changeRole', error);
@@ -98,7 +98,6 @@ export const projectMemberRouter = router({
           projectId: input.projectId,
           targetUserId: input.userId,
           workspaceId: ctx.workspaceId!,
-          workspaceRole: ctx.workspaceRole ?? null,
         });
       } catch (error) {
         return wrapInternal('remove', error);

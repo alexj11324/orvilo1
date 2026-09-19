@@ -91,6 +91,12 @@ export class WorkspaceModel {
   create = async (params: {
     avatar?: string;
     description?: string;
+    /**
+     * Caller-chosen id — the onboarding idempotency key. When absent the
+     * schema's `$defaultFn` mints one; when present, a retried create with
+     * the same id hits the PK conflict instead of minting a duplicate row.
+     */
+    id?: string;
     name: string;
     slug: string;
   }) => {
@@ -100,6 +106,7 @@ export class WorkspaceModel {
         .values({
           avatar: params.avatar,
           description: params.description,
+          id: params.id,
           name: params.name,
           primaryOwnerId: this.userId,
           slug: params.slug,

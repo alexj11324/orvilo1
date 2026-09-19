@@ -149,8 +149,6 @@
   "reui.goal.sprints.description": "推动问题、周期和评审持续进行。",
   "reui.goal.sprints.label": "工程迭代",
   "reui.invite.addAnother": "再添加一位",
-  "reui.invite.digestDescription": "包含工作区详情。",
-  "reui.invite.digestLabel": "发送邀请摘要",
   "reui.invite.email": "邮箱",
   "reui.invite.emailLabel": "受邀者 {{number}} 的邮箱",
   "reui.invite.emailPlaceholder": "teammate@company.com",

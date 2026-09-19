@@ -150,6 +150,7 @@ describe('workspaceRouter', () => {
     });
   });
 
+<<<<<<< HEAD
   it('recovers a retried create by returning the caller-owned same-slug workspace', async () => {
     workspaceModel.create.mockRejectedValue(Object.assign(new Error('dup'), { code: '23505' }));
     workspaceModel.findBySlug.mockResolvedValue({
@@ -174,6 +175,47 @@ describe('workspaceRouter', () => {
     await expect(createCaller().create({ name: 'Team', slug: 'taken' })).rejects.toMatchObject({
       code: 'CONFLICT',
     });
+  });
+
+  it('reports a Drizzle-wrapped unique violation as CONFLICT on create', async () => {
+    workspaceModel.create.mockRejectedValue(
+      Object.assign(new Error('Failed query: insert into "workspaces"'), {
+        cause: Object.assign(new Error('pg driver error'), {
+          code: '23505',
+        }),
+      }),
+    );
+    workspaceModel.findBySlug.mockResolvedValue({
+      id: 'ws-other',
+      primaryOwnerId: 'u-stranger',
+      slug: 'taken',
+    });
+
+    await expect(createCaller().create({ name: 'Team', slug: 'taken' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+  });
+
+  it('recovers a Drizzle-wrapped unique violation by returning the caller-owned workspace', async () => {
+    // Real Drizzle errors wrap the pg error under `.cause`; a shallow code
+    // check misses them and the idempotent retry path 500s instead of
+    // returning the workspace the first attempt created.
+    workspaceModel.create.mockRejectedValue(
+      Object.assign(new Error('Failed query: insert into "workspaces"'), {
+        cause: Object.assign(new Error('pg driver error'), {
+          code: '23505',
+        }),
+      }),
+    );
+    workspaceModel.findBySlug.mockResolvedValue({
+      id: 'ws-existing',
+      name: 'Team',
+      primaryOwnerId: 'u-owner',
+      slug: 'taken',
+    });
+
+    const recovered = await createCaller().create({ name: 'Team', slug: 'taken' });
+    expect(recovered).toMatchObject({ id: 'ws-existing', slug: 'taken' });
   });
 
   it('lists the caller memberships with their roles', async () => {

@@ -36,7 +36,7 @@ import {
   workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
-import { commitWorkQueryListStatus } from './workQueryBoardMove';
+import { applyWorkQueryStatusChange } from './workQueryBoardMove';
 import {
   type WorkQueryGroupPage,
   workQueryHasMore,
@@ -153,13 +153,13 @@ const WorkQueryTaskRow = memo(
     const changeTaskStatus = useTaskStatusChange();
     const handleStatusChange = useCallback(
       async (status: TaskStatus) => {
-        const result = await commitWorkQueryListStatus({ groupBy, status, task });
-        if (result === 'cancelled') return;
-        if (result === 'local') {
-          const applied = await changeTaskStatus(task.identifier, status);
-          if (!applied) return;
-        }
-        onMoved?.();
+        const applied = await applyWorkQueryStatusChange({
+          changeLocal: changeTaskStatus,
+          groupBy,
+          status,
+          task,
+        });
+        if (applied) onMoved?.();
       },
       [changeTaskStatus, groupBy, onMoved, task],
     );

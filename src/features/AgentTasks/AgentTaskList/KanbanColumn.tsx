@@ -3,9 +3,10 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
+import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronLeft, Circle, CircleDashed, Plus } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type ExecutionStatusVisual, TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
@@ -26,30 +27,40 @@ const cardStyles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const SortableTaskCard = memo<{ routeScope?: TaskItemRouteScope; task: TaskListItem }>(
-  ({ routeScope, task }) => {
-    const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
-      data: { task },
-      id: task.identifier,
-    });
+const SortableTaskCard = memo<{
+  onStatusChange?: (task: TaskListItem, status: TaskStatus) => void | Promise<void>;
+  routeScope?: TaskItemRouteScope;
+  task: TaskListItem;
+}>(({ onStatusChange, routeScope, task }) => {
+  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
+    data: { task },
+    id: task.identifier,
+  });
+  const handleStatusChange = useCallback(
+    (status: TaskStatus) => onStatusChange?.(task, status),
+    [onStatusChange, task],
+  );
 
-    return (
-      <div
-        data-board-card
-        className={cx(isDragging && cardStyles.dragging)}
-        ref={setNodeRef}
-        style={{
-          transform: CSS.Transform.toString(transform),
-          transition: transition ?? undefined,
-        }}
-        {...listeners}
-        {...attributes}
-      >
-        <TaskBoardCard routeScope={routeScope} task={task} />
-      </div>
-    );
-  },
-);
+  return (
+    <div
+      data-board-card
+      className={cx(isDragging && cardStyles.dragging)}
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
+      }}
+      {...listeners}
+      {...attributes}
+    >
+      <TaskBoardCard
+        routeScope={routeScope}
+        task={task}
+        onStatusChange={onStatusChange ? handleStatusChange : undefined}
+      />
+    </div>
+  );
+});
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   /**
@@ -318,6 +329,7 @@ interface KanbanColumnProps {
   loading?: boolean;
   onCreate?: () => void;
   onHide?: () => void;
+  onStatusChange?: (task: TaskListItem, status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   tasks: TaskListItem[];
   total: number;
@@ -333,6 +345,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
     loading,
     onCreate,
     onHide,
+    onStatusChange,
     routeScope,
     tasks,
     total,
@@ -422,7 +435,12 @@ const KanbanColumn = memo<KanbanColumnProps>(
               strategy={verticalListSortingStrategy}
             >
               {tasks.map((task) => (
-                <SortableTaskCard key={task.identifier} routeScope={routeScope} task={task} />
+                <SortableTaskCard
+                  key={task.identifier}
+                  routeScope={routeScope}
+                  task={task}
+                  onStatusChange={onStatusChange}
+                />
               ))}
             </SortableContext>
           ) : onCreate ? (

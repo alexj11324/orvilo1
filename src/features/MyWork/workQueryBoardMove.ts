@@ -194,3 +194,31 @@ export const commitWorkQueryListStatus = async (input: {
   });
   return moved ? 'moved' : 'cancelled';
 };
+
+/**
+ * Store boards never group by workflow category; Saved View / Team boards
+ * pass the work-query grouping via `queryGroupBy`.
+ */
+export const kanbanStatusMoveGroupBy = (
+  queryGroupBy?: 'status' | 'workflowCategory',
+): 'status' | 'workflowCategory' => queryGroupBy ?? 'status';
+
+/**
+ * List rows and board-card context menus share this: Linear → `moveBoard`,
+ * unlinked → caller `task.update`, picker cancel → do not fall through.
+ */
+export const applyWorkQueryStatusChange = async (input: {
+  changeLocal: (identifier: string, status: TaskStatus) => Promise<boolean>;
+  groupBy: 'status' | 'workflowCategory';
+  status: TaskStatus;
+  task: WorkQueryBoardTask;
+}): Promise<boolean> => {
+  const result = await commitWorkQueryListStatus({
+    groupBy: input.groupBy,
+    status: input.status,
+    task: input.task,
+  });
+  if (result === 'cancelled') return false;
+  if (result === 'local') return input.changeLocal(input.task.identifier, input.status);
+  return true;
+};

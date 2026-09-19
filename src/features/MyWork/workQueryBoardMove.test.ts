@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STATUS_KANBAN_COLUMNS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 
 import {
+  applyWorkQueryStatusChange,
   commitWorkQueryBoardMove,
   commitWorkQueryListStatus,
+  kanbanStatusMoveGroupBy,
   moveBoardMaybePickingState,
   storeKanbanUsesWorkflowMove,
   workQueryBoardMoveToastKey,
@@ -302,6 +304,92 @@ describe('commitWorkQueryListStatus', () => {
         task,
       }),
     ).resolves.toBe('cancelled');
+  });
+});
+
+describe('applyWorkQueryStatusChange', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.moveBoard.mockResolvedValue({ success: true });
+  });
+
+  it('does not fall through to a local patch for a Linear board-card status', async () => {
+    const changeLocal = vi.fn(async () => true);
+
+    await expect(
+      applyWorkQueryStatusChange({
+        changeLocal,
+        groupBy: 'status',
+        status: 'paused',
+        task,
+      }),
+    ).resolves.toBe(true);
+
+    expect(changeLocal).not.toHaveBeenCalled();
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'in_review',
+      taskId: 'tsk_1',
+    });
+  });
+
+  it('uses the local patch for an unlinked board card', async () => {
+    const changeLocal = vi.fn(async () => true);
+
+    await expect(
+      applyWorkQueryStatusChange({
+        changeLocal,
+        groupBy: 'status',
+        status: 'paused',
+        task: { ...task, workflowStateId: null },
+      }),
+    ).resolves.toBe(true);
+
+    expect(changeLocal).toHaveBeenCalledWith('T-1', 'paused');
+    expect(mocks.moveBoard).not.toHaveBeenCalled();
+  });
+
+  it('does not fall through when the workflow-state picker is cancelled', async () => {
+    mocks.moveBoard.mockRejectedValueOnce(precondition);
+    mocks.createPicker.mockResolvedValueOnce(undefined);
+    const changeLocal = vi.fn(async () => true);
+
+    await expect(
+      applyWorkQueryStatusChange({
+        changeLocal,
+        groupBy: 'status',
+        status: 'completed',
+        task,
+      }),
+    ).resolves.toBe(false);
+
+    expect(changeLocal).not.toHaveBeenCalled();
+  });
+
+  it('returns false when the local cascade is cancelled', async () => {
+    const changeLocal = vi.fn(async () => false);
+
+    await expect(
+      applyWorkQueryStatusChange({
+        changeLocal,
+        groupBy: 'status',
+        status: 'completed',
+        task: { ...task, workflowStateId: null },
+      }),
+    ).resolves.toBe(false);
+  });
+});
+
+describe('kanbanStatusMoveGroupBy', () => {
+  it('keeps a Saved View workflow grouping and defaults store boards to status', () => {
+    expect(kanbanStatusMoveGroupBy('workflowCategory')).toBe('workflowCategory');
+    expect(kanbanStatusMoveGroupBy('status')).toBe('status');
+    expect(kanbanStatusMoveGroupBy()).toBe('status');
   });
 });
 

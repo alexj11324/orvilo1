@@ -12,6 +12,7 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
+import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -19,7 +20,9 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import {
+  applyWorkQueryStatusChange,
   commitWorkQueryBoardMove,
+  kanbanStatusMoveGroupBy,
   storeKanbanUsesWorkflowMove,
 } from '@/features/MyWork/workQueryBoardMove';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -35,7 +38,7 @@ import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initi
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
-import { getOpenSubtasks } from '../features/useTaskStatusChange';
+import { getOpenSubtasks, useTaskStatusChange } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import {
   buildKanbanColumnMap,
@@ -213,6 +216,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [external, isQueryScopeCurrent, storeTaskGroups],
   );
   const updateTask = useTaskStore((s) => s.updateTask);
+  const changeTaskStatus = useTaskStatusChange();
   const loadMoreTaskGroup = useTaskStore((s) => s.loadMoreTaskGroup);
   const boardGroupLimits = useTaskStore((s) => s.boardGroupLimits);
   const refreshTaskGroupList = useTaskStore((s) => s.refreshTaskGroupList);
@@ -625,6 +629,24 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     resetColumns();
   }, [isDraggingRef, resetColumns]);
 
+  const handleCardStatusChange = useCallback(
+    async (task: TaskListItem, status: TaskStatus) => {
+      const applied = await applyWorkQueryStatusChange({
+        changeLocal: changeTaskStatus,
+        groupBy: kanbanStatusMoveGroupBy(external?.queryGroupBy),
+        status,
+        task,
+      });
+      if (!applied) return;
+      try {
+        await refreshGroups();
+      } catch (error) {
+        console.error('[KanbanBoard] Failed to refresh after status change:', error);
+      }
+    },
+    [changeTaskStatus, external?.queryGroupBy, refreshGroups],
+  );
+
   const handleCreateTask = useCallback(() => {
     if (!canEditTask) return;
     createTaskModal({
@@ -769,6 +791,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                 ) : undefined
               }
               onHide={groupBy === 'status' ? () => handleHideColumn(col.key) : undefined}
+              onStatusChange={handleCardStatusChange}
               onCreate={
                 // "My tasks" offers no create entry (its list view has none
                 // either): a task created here carries neither the member

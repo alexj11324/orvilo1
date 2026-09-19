@@ -155,6 +155,34 @@ describe('RecentModel', () => {
         expect(result[0].updatedAt.getTime()).toBeGreaterThan(result[1].updatedAt.getTime());
       });
 
+      it('breaks identical updatedAt ties deterministically by id', async () => {
+        // shared-timestamp rows used to flip order depending on the plan; the
+        // union now orders by (updated_at desc, id desc).
+        await serverDB.insert(agents).values({ id: 'agent-tie', userId, slug: 'inbox' });
+        const tiedAt = now();
+        await serverDB.insert(topics).values([
+          {
+            agentId: 'agent-tie',
+            id: 'topic-tie-a',
+            title: 'tie a',
+            updatedAt: tiedAt,
+            userId,
+          },
+          {
+            agentId: 'agent-tie',
+            id: 'topic-tie-b',
+            title: 'tie b',
+            updatedAt: tiedAt,
+            userId,
+          },
+        ]);
+
+        const first = await recentModel.queryRecent();
+        const second = await recentModel.queryRecent();
+        expect(first.map((r) => r.id)).toEqual(['topic-tie-b', 'topic-tie-a']);
+        expect(second.map((r) => r.id)).toEqual(['topic-tie-b', 'topic-tie-a']);
+      });
+
       it('includes topics on non-virtual non-group agents', async () => {
         await serverDB.insert(agents).values({ id: 'agent-real', userId, virtual: false });
 
@@ -871,8 +899,8 @@ describe('RecentModel', () => {
           const owner = new RecentModel(serverDB, otherUserId, workspaceId);
           const ownerResult = await owner.queryRecent(2, ['topic'], true, false);
           expect(ownerResult.map((row) => row.id)).toEqual([
-            'personal-resource-topic-0',
             'personal-resource-topic-1',
+            'personal-resource-topic-0',
           ]);
 
           const personalModel = new RecentModel(serverDB, otherUserId);

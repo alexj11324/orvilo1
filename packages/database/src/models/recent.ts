@@ -352,7 +352,7 @@ export class RecentModel {
       );
 
     const rows = await unionAll(topicArm, documentArm, taskArm, projectArm, savedViewArm, teamArm)
-      .orderBy(desc(sql`updated_at`))
+      .orderBy(desc(sql`updated_at`), desc(sql`id`))
       .limit(limit);
 
     // Previews are fetched in a second batched query scoped to the final page

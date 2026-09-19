@@ -25,6 +25,12 @@ export const storeKanbanUsesWorkflowMove = (
   task: Pick<WorkQueryBoardTask, 'workflowStateId'>,
 ): boolean => groupBy === 'status' && Boolean(task.workflowStateId);
 
+export const workQueryMoveGroupBy = (
+  groupBy: 'status' | 'workflowCategory',
+  task: Pick<WorkQueryBoardTask, 'workflowStateId'>,
+): 'status' | 'workflowCategory' =>
+  storeKanbanUsesWorkflowMove(groupBy, task) ? 'workflowCategory' : groupBy;
+
 export const moveBoardMaybePickingState = async (input: {
   expectedDomainRevision: number;
   groupBy: 'status' | 'workflowCategory';
@@ -112,19 +118,21 @@ const toastWorkQueryBoardMoveError = (error: unknown) => {
 };
 
 /**
- * Persist a drop on a work-query board (Saved View / Team). Store-scoped
- * My Work / Tasks boards keep `task.update`; this path is the VIEW08 CAS
- * + exact-state picker that `moveBoard` already implements server-side.
+ * Persist a drop on a work-query board (Saved View / Team) or a Linear-linked
+ * store-kanban card. Unlinked store cards keep `task.update`. Linear cards
+ * with `workflowStateId` promote a status-grouped drop onto the VIEW08
+ * `moveBoard` CAS + exact-state picker.
  */
 export const commitWorkQueryBoardMove = async (input: {
   column: Pick<KanbanColumnDefinition, 'key' | 'targetStatus' | 'targetWorkflowCategory'>;
   groupBy: 'status' | 'workflowCategory';
   task: WorkQueryBoardTask;
 }): Promise<boolean> => {
-  const targetKey = workQueryTargetKeyFromKanbanColumn(input.groupBy, input.column);
+  const groupBy = workQueryMoveGroupBy(input.groupBy, input.task);
+  const targetKey = workQueryTargetKeyFromKanbanColumn(groupBy, input.column);
   if (!targetKey) return false;
   const plan = workQueryMovePlan({
-    groupBy: input.groupBy,
+    groupBy,
     targetKey,
     task: input.task,
   });
@@ -140,7 +148,7 @@ export const commitWorkQueryBoardMove = async (input: {
         throw loadError;
       }
       if (revision === undefined) return false;
-      if (input.groupBy !== 'workflowCategory') return true;
+      if (groupBy !== 'workflowCategory') return true;
       return moveBoardMaybePickingState({
         expectedDomainRevision: revision,
         groupBy: 'workflowCategory',

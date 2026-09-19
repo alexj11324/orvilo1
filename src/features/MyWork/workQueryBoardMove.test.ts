@@ -8,6 +8,7 @@ import {
   moveBoardMaybePickingState,
   storeKanbanUsesWorkflowMove,
   workQueryBoardMoveToastKey,
+  workQueryMoveGroupBy,
 } from './workQueryBoardMove';
 
 const mocks = vi.hoisted(() => ({
@@ -152,6 +153,11 @@ describe('storeKanbanUsesWorkflowMove', () => {
     expect(storeKanbanUsesWorkflowMove('status', { workflowStateId: 'state-1' })).toBe(true);
     expect(storeKanbanUsesWorkflowMove('status', { workflowStateId: null })).toBe(false);
     expect(storeKanbanUsesWorkflowMove('assignee', { workflowStateId: 'state-1' })).toBe(false);
+    expect(workQueryMoveGroupBy('status', { workflowStateId: 'state-1' })).toBe('workflowCategory');
+    expect(workQueryMoveGroupBy('status', { workflowStateId: null })).toBe('status');
+    expect(workQueryMoveGroupBy('workflowCategory', { workflowStateId: 'state-1' })).toBe(
+      'workflowCategory',
+    );
   });
 });
 
@@ -209,6 +215,40 @@ describe('commitWorkQueryBoardMove', () => {
     ).resolves.toBe(true);
 
     expect(mocks.createPicker).toHaveBeenCalledWith({ category: 'done', teamId: 'team_1' });
+  });
+
+  it('promotes a status-grouped Linear card onto the workflow move path', async () => {
+    await expect(
+      commitWorkQueryBoardMove({
+        column: column('needsInput'),
+        groupBy: 'status',
+        task,
+      }),
+    ).resolves.toBe(true);
+
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'in_review',
+      taskId: 'tsk_1',
+    });
+  });
+
+  it('keeps an unlinked status drop on the status path', async () => {
+    await expect(
+      commitWorkQueryBoardMove({
+        column: column('needsInput'),
+        groupBy: 'status',
+        task: { ...task, workflowStateId: null },
+      }),
+    ).resolves.toBe(true);
+
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 3,
+      groupBy: 'status',
+      targetKey: 'paused',
+      taskId: 'tsk_1',
+    });
   });
 });
 

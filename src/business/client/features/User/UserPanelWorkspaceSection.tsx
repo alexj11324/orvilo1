@@ -17,31 +17,30 @@ interface UserPanelWorkspaceSectionProps {
 }
 
 /**
- * Workspace switcher rows inside the user panel: personal space first, then
- * each workspace membership, check-marking the active scope. The OSS build has
- * no workspace memberships, so this renders the personal row alone — the cloud
- * override ships the richer section with create/join flows.
+ * Workspace switcher rows inside the user panel — Linear's model: there is no
+ * personal space, so the section lists only workspace memberships with a
+ * check on the active one. Provisioning guarantees at least one row
+ * (`workspace.ensureDefault` runs on boot), so this never renders empty.
  */
 const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwitch }) => {
   const { t } = useTranslation('common');
   const workspaces = useWorkspaces();
   const activeWorkspaceId = useActiveWorkspaceId();
-  const { switchToPersonal, switchWorkspace } = useSwitchWorkspace();
+  const { switchWorkspace } = useSwitchWorkspace();
 
   const handlePick = useCallback(
-    async (workspaceId: string | null) => {
+    async (workspaceId: string) => {
       if (workspaceId === activeWorkspaceId) {
         onSwitch?.();
         return;
       }
       try {
-        if (workspaceId) await switchWorkspace(workspaceId);
-        else await switchToPersonal();
+        await switchWorkspace(workspaceId);
       } finally {
         onSwitch?.();
       }
     },
-    [activeWorkspaceId, onSwitch, switchToPersonal, switchWorkspace],
+    [activeWorkspaceId, onSwitch, switchWorkspace],
   );
 
   const row = (
@@ -84,13 +83,6 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
       <Text fontSize={11} style={{ paddingInline: 8 }} type={'secondary'} weight={500}>
         {t('workspaceSwitcher.label')}
       </Text>
-      {row(
-        'personal',
-        t('workspaceSwitcher.personal'),
-        undefined,
-        !activeWorkspaceId,
-        () => void handlePick(null),
-      )}
       {workspaces.map((workspace) =>
         row(
           workspace.id,

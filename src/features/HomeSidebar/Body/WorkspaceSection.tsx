@@ -93,18 +93,14 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
           label: t('tab.resource'),
           onClick: () => navigate('/resource'),
         },
-        ...(activeWorkspaceId
-          ? [
-              {
-                icon: <Icon icon={Settings2} />,
-                key: 'workspaceSettings',
-                label: t('navPanel.workspaceSettings'),
-                onClick: () => navigate('/settings'),
-              },
-            ]
-          : []),
+        {
+          icon: <Icon icon={Settings2} />,
+          key: 'workspaceSettings',
+          label: t('navPanel.workspaceSettings'),
+          onClick: () => navigate('/settings'),
+        },
       ] as MenuProps['items'],
-    [activeWorkspaceId, navigate, t],
+    [navigate, t],
   );
 
   const row = useCallback(
@@ -131,7 +127,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
         <Flexbox gap={1} paddingBlock={1}>
           {row('project', FolderKanbanIcon, t('navPanel.projects'), '/projects')}
           {row('views', LayoutList, t('tab.views'), '/views')}
-          {activeWorkspaceId && row('members', UsersIcon, t('navPanel.members'), '/members')}
+          {row('members', UsersIcon, t('navPanel.members'), '/members')}
           {/* Linear renders "More" as a row — it opens the menu holding the
               retired surfaces (Automations / Resource / workspace settings). */}
           <DropdownMenu items={moreMenu}>

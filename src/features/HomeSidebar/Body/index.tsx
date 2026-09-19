@@ -152,11 +152,9 @@ const Body = memo(() => {
   // Items that must always be visible regardless of hiddenSections
   const isVisible = useCallback(
     (k: string) => {
-      // Your teams is a workspace concept — personal mode has no teams to list.
-      if (k === GroupKey.Teams && !activeWorkspaceId) return false;
       return CORE_KEYS.has(k) || k === SIDEBAR_SPACER_ID || !hiddenSections.includes(k);
     },
-    [hiddenSections, activeWorkspaceId],
+    [hiddenSections],
   );
 
   const visibleKeys = useMemo(

@@ -166,8 +166,9 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
     [pathname, searchParams],
   );
 
-  if (!activeWorkspaceId) return null;
-
+  // No personal mode: the section shell always renders — before the default
+  // workspace has been provisioned (activeWorkspaceId still null) it shows
+  // the single "Teams" row that deep-links to /teams.
   return (
     <AccordionItem value={itemKey}>
       <ContextMenuTrigger items={contextMenu}>

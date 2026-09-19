@@ -169,11 +169,13 @@ describe('Home sidebar body', () => {
     expect(children[4]).toHaveAttribute('data-testid', 'sidebar-item-create');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
-    expect(screen.queryByTestId('sidebar-item-teams')).not.toBeInTheDocument();
+    // There is no personal mode — Your teams renders even while the
+    // workspace is still being provisioned (empty-state row inside).
+    expect(screen.getByTestId('sidebar-item-teams')).toBeInTheDocument();
     expect(children.some((child) => child.hasAttribute('data-sidebar-bottom-spacer'))).toBe(true);
   });
 
-  it('shows the Your teams group only in workspace mode', () => {
+  it('always renders the Your teams section', () => {
     mocks.activeWorkspaceId = 'ws-1';
     mocks.globalState.status.workspace = { hiddenSidebarSections: [] } as never;
 

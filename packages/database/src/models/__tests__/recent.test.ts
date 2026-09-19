@@ -857,13 +857,23 @@ describe('RecentModel', () => {
             })),
           );
 
-          for (const viewerId of [userId, otherUserId]) {
-            const viewer = new RecentModel(serverDB, viewerId, workspaceId);
-            const result = await viewer.queryRecent(2, ['topic'], true, false);
-            expect(result.map((row) => row.id)).toEqual(['topic-ws-mine', 'topic-ws-other']);
-            expect(result.every((row) => row.description === null)).toBe(true);
-            expect(result.every((row) => row.lastAssistantMessage === null)).toBe(true);
-          }
+          // A member who doesn't own the personal/foreign parents keeps a
+          // clean feed — their unfiled branch only matches their own rows.
+          const member = new RecentModel(serverDB, userId, workspaceId);
+          const memberResult = await member.queryRecent(2, ['topic'], true, false);
+          expect(memberResult.map((row) => row.id)).toEqual(['topic-ws-mine', 'topic-ws-other']);
+          expect(memberResult.every((row) => row.description === null)).toBe(true);
+          expect(memberResult.every((row) => row.lastAssistantMessage === null)).toBe(true);
+
+          // The parent owner is different: their unfiled resource is still in
+          // scope for them, so its conversations surface — recency puts them
+          // ahead of the workspace rows within the limit.
+          const owner = new RecentModel(serverDB, otherUserId, workspaceId);
+          const ownerResult = await owner.queryRecent(2, ['topic'], true, false);
+          expect(ownerResult.map((row) => row.id)).toEqual([
+            'personal-resource-topic-0',
+            'personal-resource-topic-1',
+          ]);
 
           const personalModel = new RecentModel(serverDB, otherUserId);
           const personal = await personalModel.queryRecent(2, ['topic'], true);

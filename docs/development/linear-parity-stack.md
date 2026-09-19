@@ -19,3 +19,14 @@ only merge after the ones below it.
 - Per-scope namespaces stay strict (`buildStrictWorkspaceWhere`): quota
   provider accounts, eval identifiers, builtin agent slugs, connector
   credentials, acceptance subject aggregates, scoped export.
+
+## Layer 2 — workspace activation
+
+- `useWorkspaceUrlSync` is the only writer of the active workspace: a
+  `/{slug}` path activates that workspace and persists it as the last-used
+  target; slug-less paths reactivate the last-used (or first) workspace;
+  an empty membership list provisions the default via
+  `workspace.ensureDefault`. There is no personal scope.
+- `workspaceContextStore` feeds the `X-Workspace-Id` lambda header and SWR
+  cache scoping; silent switches reconcile the store without navigating.
+

@@ -193,6 +193,59 @@ describe('SavedViewModel', () => {
     expect(asVisitor.tasks?.map((row) => row.name)).not.toContain('Secret task');
   });
 
+  it('redacts private team ids from a shared view definition', async () => {
+    await serverDB.insert(teams).values([
+      {
+        createdByUserId: ownerId,
+        id: 'view-secret-team',
+        key: 'VS',
+        name: 'Secret Squadron',
+        visibility: 'private',
+        workspaceId,
+      },
+      {
+        createdByUserId: ownerId,
+        id: 'view-public-team',
+        key: 'VP',
+        name: 'Public Fleet',
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+    await serverDB.insert(teamMembers).values({
+      teamId: 'view-secret-team',
+      userId: ownerId,
+      workspaceId,
+    });
+
+    const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
+    const view = await ownerViews.create({
+      entityType: 'task',
+      name: 'Team slice',
+      query: {
+        entityType: 'task',
+        filter: {
+          any: [
+            { field: 'teamId', op: 'eq', value: 'view-secret-team' },
+            { field: 'teamId', op: 'eq', value: 'view-public-team' },
+          ],
+        },
+        schemaVersion: 1,
+      },
+      visibility: 'workspace',
+    });
+
+    const ownerPresented = await ownerViews.present((await ownerViews.findById(view.id))!);
+    expect(JSON.stringify(ownerPresented.queryAst)).toContain('view-secret-team');
+    expect(JSON.stringify(ownerPresented.queryAst)).toContain('view-public-team');
+
+    const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    const presented = await visitorViews.present((await visitorViews.findById(view.id))!);
+    const serialized = JSON.stringify(presented.queryAst);
+    expect(serialized).not.toContain('view-secret-team');
+    expect(serialized).toContain('view-public-team');
+  });
+
   it('lists virtual builtins that cannot be overwritten or deleted', async () => {
     const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
     const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);

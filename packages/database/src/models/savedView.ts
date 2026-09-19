@@ -16,6 +16,7 @@ import type { NewSavedView, SavedViewItem } from '../schemas/workAttention';
 import { savedViews } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { listVirtualBuiltinSavedViews, virtualBuiltinSavedView } from './builtinSavedViews';
+import { TeamModel } from './team';
 import {
   applyWorkQueryLayout,
   validateWorkQuery,
@@ -109,16 +110,18 @@ const chunkIds = (ids: string[]) => {
 
 const redactPredicate = (
   predicate: WorkQueryPredicate,
-  readable: { id: Set<string>; projectId: Set<string> },
+  readable: { id: Set<string>; projectId: Set<string>; teamId: Set<string> },
 ): WorkQueryPredicate => {
   const allowed =
     predicate.field === 'id'
       ? readable.id
       : predicate.field === 'projectId'
         ? readable.projectId
-        : null;
+        : predicate.field === 'teamId'
+          ? readable.teamId
+          : null;
   if (!allowed) return predicate;
-  if (predicate.op === 'eq' && typeof predicate.value === 'string') {
+  if ((predicate.op === 'eq' || predicate.op === 'neq') && typeof predicate.value === 'string') {
     return allowed.has(predicate.value) ? predicate : { ...predicate, value: UNREADABLE_ID };
   }
   if ((predicate.op === 'in' || predicate.op === 'notIn') && Array.isArray(predicate.value)) {
@@ -137,7 +140,7 @@ const redactPredicate = (
 
 const redactFilter = (
   node: WorkQueryFilter | undefined,
-  readable: { id: Set<string>; projectId: Set<string> },
+  readable: { id: Set<string>; projectId: Set<string>; teamId: Set<string> },
 ): WorkQueryFilter | undefined => {
   if (!node) return node;
   return {
@@ -231,10 +234,16 @@ export class SavedViewModel {
   private redactQuery = async (query: WorkQuery): Promise<WorkQuery> => {
     const taskIds = new Set<string>();
     const projectIds = new Set<string>();
+    const teamIds = new Set<string>();
     collectScalarIds(query.filter, 'id', query.entityType === 'project' ? projectIds : taskIds);
     collectScalarIds(query.filter, 'projectId', projectIds);
+    collectScalarIds(query.filter, 'teamId', teamIds);
 
-    const readable = { id: new Set<string>(), projectId: new Set<string>() };
+    const readable = {
+      id: new Set<string>(),
+      projectId: new Set<string>(),
+      teamId: new Set<string>(),
+    };
     const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
     for (const chunk of chunkIds([...taskIds])) {
       const result = await kernel.queryTasks({
@@ -259,6 +268,16 @@ export class SavedViewModel {
       for (const project of result.projects) {
         readable.id.add(project.id);
         readable.projectId.add(project.id);
+      }
+    }
+    if (this.workspaceId && teamIds.size > 0) {
+      const readableTeams = await new TeamModel(
+        this.db,
+        this.userId,
+        this.workspaceId,
+      ).listReadable();
+      for (const team of readableTeams) {
+        if (teamIds.has(team.id)) readable.teamId.add(team.id);
       }
     }
 

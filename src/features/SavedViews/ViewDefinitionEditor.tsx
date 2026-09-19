@@ -8,6 +8,7 @@ import type {
   WorkQueryGroupBy,
   WorkQueryLayout,
   WorkQuerySort,
+  WorkQuerySortMode,
 } from '@orvilo/types';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +33,8 @@ export interface ViewEditorState {
   layout: WorkQueryLayout;
   name: string;
   sort?: WorkQuerySort[];
+  /** Board ordering: `manual` = drag position, `field` = `sort`. Board-only. */
+  sortMode?: WorkQuerySortMode;
   teamId: string | null;
   visibility: SavedViewVisibility;
 }
@@ -99,7 +102,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
               onChange={(next) => {
                 if (next !== 'task' && next !== 'project') return;
                 set({
-                  builder: { retained: [], rows: [] },
+                  builder: { any: [], rows: [], slots: [] },
                   entityType: next,
                   groupBy: 'none',
                 });
@@ -171,16 +174,31 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
           <Select
             size="small"
             style={{ minWidth: 170 }}
-            value={sortKey(value.sort)}
             options={[
+              ...(value.layout === 'board'
+                ? [{ label: t('savedViews.sort.manual'), value: 'manual' }]
+                : []),
               { label: t('savedViews.sortDefault'), value: 'default' },
               ...Object.keys(SORT_PRESETS).map((key) => ({
                 label: t(`savedViews.sort.${key}` as never),
                 value: key,
               })),
             ]}
+            value={
+              value.layout === 'board' && (value.sortMode ?? 'manual') === 'manual'
+                ? 'manual'
+                : sortKey(value.sort)
+            }
             onChange={(next) => {
-              set({ sort: typeof next === 'string' ? SORT_PRESETS[next] : undefined });
+              if (next === 'manual') {
+                set({ sortMode: 'manual' });
+                return;
+              }
+              if (typeof next === 'string' && next in SORT_PRESETS) {
+                set({ sort: SORT_PRESETS[next], sortMode: 'field' });
+                return;
+              }
+              set({ sort: undefined, sortMode: undefined });
             }}
           />
         </Flexbox>

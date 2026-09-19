@@ -648,6 +648,7 @@
   "savedViews.share": "共享",
   "savedViews.sort.createdAsc": "最早创建",
   "savedViews.sort.createdDesc": "最新创建",
+  "savedViews.sort.manual": "手动排序（拖拽）",
   "savedViews.sort.nameAsc": "名称 A–Z",
   "savedViews.sort.nameDesc": "名称 Z–A",
   "savedViews.sort.updatedAsc": "最早更新",

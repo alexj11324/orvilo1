@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
@@ -45,6 +46,7 @@ import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useSingleton } from '@/hooks/useSingleton';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
@@ -56,10 +58,14 @@ import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedStat
 import {
   feedFilterForChip,
   INBOX_FILTER_CHIPS,
+  INBOX_SNOOZE_PRESETS,
   inboxBulkFingerprint,
   type InboxFilterChip,
+  type InboxSnoozePreset,
   inboxUrlOpenMode,
-  snoozeUntilIso,
+  resolveInboxFilterChip,
+  resolveInboxTab,
+  snoozeUntilForPreset,
 } from './inboxOrganize';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
 import { useInboxListKeyboard } from './useInboxListKeyboard';
@@ -181,11 +187,45 @@ const WorkInboxPage = memo(() => {
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const isMobile = useIsMobile();
-  const [tab, setTab] = useState<'action' | 'activity'>('action');
-  const [filterChip, setFilterChip] = useState<InboxFilterChip>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Selection, tab and filter live in the URL so a refresh/back/deep link
+  // restores the exact inbox state (and stays shareable).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = resolveInboxTab(searchParams.get('tab'));
+  const filterChip = resolveInboxFilterChip(searchParams.get('filter'));
+  const selectedId = searchParams.get('item');
   const [detailOpen, setDetailOpen] = useState(false);
-  const [inputDraft, setInputDraft] = useState('');
+  // Reply drafts persist per (workspace, request, request-version): switching
+  // between two pending requests never loses or leaks an unsubmitted draft.
+  const [inputDrafts, setInputDrafts] = useState<Record<string, string>>({});
+  // One idempotency key per user intent; an `outcome_unknown` retry reuses it
+  // so a double-click / flaky retry can never mint a second server operation.
+  const decisionKeys = useSingleton(() => new Map<string, string>());
+  const [pendingDecisions, setPendingDecisions] = useState<ReadonlySet<string>>(() => new Set());
+
+  const writeInboxParams = useCallback(
+    (patch: { filter?: string; item?: string | null; tab?: string }) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (patch.tab !== undefined) {
+            if (patch.tab === 'action') next.delete('tab');
+            else next.set('tab', patch.tab);
+          }
+          if (patch.filter !== undefined) {
+            if (patch.filter === 'all') next.delete('filter');
+            else next.set('filter', patch.filter);
+          }
+          if (patch.item !== undefined) {
+            if (patch.item === null) next.delete('item');
+            else next.set('item', patch.item);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const kind = tab === 'action' ? 'action' : 'update';
   const filter = feedFilterForChip(filterChip);
@@ -239,15 +279,16 @@ const WorkInboxPage = memo(() => {
     () => cards.find((card) => card.notificationId === selectedId) ?? null,
     [cards, selectedId],
   );
+  const draftKey = selected
+    ? `${workspaceId ?? 'personal'}:${selected.notificationId}:${selected.activityVersion ?? 0}`
+    : null;
+  const inputDraft = draftKey ? (inputDrafts[draftKey] ?? '') : '';
   const decisionVerbs = selected ? visibleDecisionVerbs(selected) : [];
   const titleFor = (card: NotificationFeedCard) => {
     const key = inboxCardTitleKey(card);
     return key ? t(key) : card.title;
   };
 
-  useEffect(() => {
-    setInputDraft('');
-  }, [selectedId]);
   const cardIds = useMemo(() => cards.map((card) => card.notificationId), [cards]);
   const surface = inboxSurface(isMobile, detailOpen);
   const selectedNotificationId = selected?.notificationId;
@@ -259,18 +300,28 @@ const WorkInboxPage = memo(() => {
   });
 
   useEffect(() => {
-    if (selectedId && !cards.some((card) => card.notificationId === selectedId)) {
-      setSelectedId(null);
+    if (selectedId && !isLoading && !cards.some((card) => card.notificationId === selectedId)) {
+      writeInboxParams({ item: null });
       setDetailOpen(false);
     }
-  }, [cards, selectedId]);
+  }, [cards, isLoading, selectedId, writeInboxParams]);
 
   useEffect(() => {
     if (!markSelectedRead || !selectedNotificationId || selectedActivityVersion === undefined) {
       return;
     }
-    void notificationService.markReadObserved(selectedNotificationId, selectedActivityVersion);
-  }, [markSelectedRead, selectedActivityVersion, selectedNotificationId]);
+    notificationService
+      .markReadObserved(selectedNotificationId, selectedActivityVersion)
+      .then(() => {
+        // The receipt drives badge/summary invalidation — selection alone is
+        // never treated as a completed read.
+        void mutate(inboxKeys.feedSummary(workspaceId));
+        void mutate(inboxKeys.unreadCount(workspaceId));
+      })
+      .catch(() => {
+        toast.error(t('inbox.organizeFailed'));
+      });
+  }, [markSelectedRead, selectedActivityVersion, selectedNotificationId, t, workspaceId]);
 
   const refresh = useCallback(async () => {
     await Promise.all([
@@ -297,11 +348,11 @@ const WorkInboxPage = memo(() => {
   );
 
   const snoozeCard = useCallback(
-    async (card: NotificationFeedCard) => {
+    async (card: NotificationFeedCard, preset: InboxSnoozePreset) => {
       try {
         await notificationService.snooze(
           card.notificationId,
-          snoozeUntilIso(),
+          snoozeUntilForPreset(preset),
           card.activityVersion,
         );
         await refresh();
@@ -330,31 +381,49 @@ const WorkInboxPage = memo(() => {
       decision: DecisionVerb,
       inputPayload?: Record<string, unknown>,
     ) => {
+      const pendingKey = `${card.notificationId}:${decision}`;
+      if (pendingDecisions.has(pendingKey)) return;
+      // One key per intent — an `outcome_unknown` retry reuses it, so a
+      // duplicate click can never mint a second server operation.
+      const idempotencyKey = decisionKeys.get(pendingKey) ?? crypto.randomUUID();
+      decisionKeys.set(pendingKey, idempotencyKey);
       const command = versionedDecisionFromCard(card, decision, {
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey,
         inputPayload,
       });
       if (!command) return;
+      setPendingDecisions((prev) => new Set(prev).add(pendingKey));
       try {
         const result = await workAttentionService.decide(command);
         const status = result.data.status;
         if (status === 'stale' || status === 'expired') {
           toast.error(t('inbox.actionStale'));
         } else if (status === 'outcome_unknown') {
+          // Key stays — the retry button the toast implies submits the SAME
+          // operation, not a fresh intent.
           toast.error(t('inbox.actionUnknown'));
-        } else if (status === 'source_accepted' || status === 'source_confirmed') {
-          toast.success(t('inbox.actionAccepted'));
-        } else if (status === 'already_decided') {
-          toast.info(t('inbox.actionAlreadyDecided'));
         } else {
-          toast.success(t('inbox.actionRecorded'));
+          decisionKeys.delete(pendingKey);
+          if (status === 'source_accepted' || status === 'source_confirmed') {
+            toast.success(t('inbox.actionAccepted'));
+          } else if (status === 'already_decided') {
+            toast.info(t('inbox.actionAlreadyDecided'));
+          } else {
+            toast.success(t('inbox.actionRecorded'));
+          }
         }
         await refresh();
       } catch {
         toast.error(t('inbox.actionFailed'));
+      } finally {
+        setPendingDecisions((prev) => {
+          const next = new Set(prev);
+          next.delete(pendingKey);
+          return next;
+        });
       }
     },
-    [refresh, t],
+    [decisionKeys, pendingDecisions, refresh, t],
   );
 
   const openTarget = useCallback(
@@ -373,10 +442,13 @@ const WorkInboxPage = memo(() => {
     [navigate],
   );
 
-  const selectCard = useCallback((id: string, openDetail: boolean) => {
-    setSelectedId(id);
-    if (openDetail) setDetailOpen(true);
-  }, []);
+  const selectCard = useCallback(
+    (id: string, openDetail: boolean) => {
+      writeInboxParams({ item: id });
+      if (openDetail) setDetailOpen(true);
+    },
+    [writeInboxParams],
+  );
 
   const markAllRead = useCallback(async () => {
     try {
@@ -442,7 +514,7 @@ const WorkInboxPage = memo(() => {
               <TabsRoot
                 style={{ flex: 1, minWidth: 0 }}
                 value={tab}
-                onValueChange={(value) => setTab(value as 'action' | 'activity')}
+                onValueChange={(value) => writeInboxParams({ tab: value })}
               >
                 <TabsList>
                   <TabsIndicator />
@@ -477,7 +549,7 @@ const WorkInboxPage = memo(() => {
                 label: filterLabel(chip),
                 value: chip,
               }))}
-              onChange={(value) => setFilterChip(value as InboxFilterChip)}
+              onChange={(value) => writeInboxParams({ filter: value })}
             />
           </Flexbox>
           {partial ? (
@@ -556,7 +628,14 @@ const WorkInboxPage = memo(() => {
         <Flexbox className={cx(styles.pane, surface === 'list' && styles.keptMounted)} gap={16}>
           {surface === 'detail' ? (
             <Flexbox horizontal>
-              <Button icon={ChevronLeftIcon} size={'small'} onClick={() => setDetailOpen(false)}>
+              <Button
+                icon={ChevronLeftIcon}
+                size={'small'}
+                onClick={() => {
+                  setDetailOpen(false);
+                  writeInboxParams({ item: null });
+                }}
+              >
                 {tCommon('back')}
               </Button>
             </Flexbox>
@@ -583,28 +662,43 @@ const WorkInboxPage = memo(() => {
                   <Input
                     placeholder={t('inbox.inputPlaceholder')}
                     value={inputDraft}
-                    onChange={(event) => setInputDraft(event.target.value)}
+                    onChange={(event) => {
+                      if (!draftKey) return;
+                      const value = event.target.value;
+                      setInputDrafts((prev) => ({ ...prev, [draftKey]: value }));
+                    }}
                   />
                 ) : null}
                 <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
                   {decisionVerbs.includes('approve') ? (
-                    <Button type="primary" onClick={() => void decide(selected, 'approve')}>
+                    <Button
+                      loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                      type="primary"
+                      onClick={() => void decide(selected, 'approve')}
+                    >
                       {t('inbox.approve')}
                     </Button>
                   ) : null}
                   {decisionVerbs.includes('decline') ? (
-                    <Button onClick={() => void decide(selected, 'decline')}>
+                    <Button
+                      loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                      onClick={() => void decide(selected, 'decline')}
+                    >
                       {t('inbox.decline')}
                     </Button>
                   ) : null}
                   {decisionVerbs.includes('cancel') ? (
-                    <Button onClick={() => void decide(selected, 'cancel')}>
+                    <Button
+                      loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                      onClick={() => void decide(selected, 'cancel')}
+                    >
                       {t('inbox.cancel')}
                     </Button>
                   ) : null}
                   {decisionVerbs.includes('submit_input') ? (
                     <Button
                       disabled={!inputDraft.trim()}
+                      loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
                       type="primary"
                       onClick={() =>
                         void decide(selected, 'submit_input', { text: inputDraft.trim() })
@@ -630,10 +724,16 @@ const WorkInboxPage = memo(() => {
                           : null,
                         selected.availableActions.includes('snooze')
                           ? {
+                              // Pick an absolute moment, not a bare "4h" —
+                              // every preset resolves against local time.
+                              children: INBOX_SNOOZE_PRESETS.map((preset) => ({
+                                key: `snooze-${preset}`,
+                                label: t(`inbox.snoozePreset.${preset}`),
+                                onClick: () => void snoozeCard(selected, preset),
+                              })),
                               icon: <Icon icon={TimerOffIcon} />,
                               key: 'snooze',
                               label: t('inbox.snooze'),
-                              onClick: () => void snoozeCard(selected),
                             }
                           : null,
                         selected.read

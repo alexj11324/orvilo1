@@ -701,6 +701,13 @@ export const workAttentionRouter = router({
       if (!(await ctx.teamModel.hasWriteAccess(input.teamId))) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });
       }
+      const triageTeam = await ctx.teamModel.findById(input.teamId);
+      if (triageTeam?.orchestrationPolicy?.triageEnabled === false) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Triage intake is disabled for this team',
+        });
+      }
       const task = await ctx.taskModel.findById(input.taskId);
       if (!task || task.teamId !== input.teamId) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });

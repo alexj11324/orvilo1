@@ -120,7 +120,9 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
       revalidateOnFocus: false,
     },
   );
-  const teams = useMemo(() => data?.data ?? [], [data]);
+  // "Your teams" lists JOINED teams only — readable-but-unjoined public
+  // teams stay discoverable on /teams (the directory surface), not here.
+  const teams = useMemo(() => (data?.data ?? []).filter((team) => team.joined === true), [data]);
   const teamKeys = useMemo(() => teams.map((team) => teamAccordionKey(team.id)), [teams]);
   const expandedTeams = useMemo(
     () => teamKeys.filter((key) => sidebarExpandedKeys.includes(key)),
@@ -241,7 +243,10 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
                 </AccordionHeader>
                 <AccordionPanel>
                   <Flexbox gap={1} paddingBlock={1} style={{ paddingInlineStart: 20 }}>
-                    {TEAM_SUB_ITEMS.map((sub) => (
+                    {TEAM_SUB_ITEMS.filter(
+                      (sub) =>
+                        sub.key !== 'triage' || team.orchestrationPolicy?.triageEnabled !== false,
+                    ).map((sub) => (
                       <WorkspaceLink
                         key={sub.key}
                         to={

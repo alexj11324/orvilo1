@@ -242,7 +242,10 @@ const TeamPage = memo(() => {
     workspaceId ? workAttentionKeys.teams(workspaceId) : null,
     () => lambdaClient.team.teams.query(),
   );
-  const wantsTriage = teamTab === 'home' || teamTab === 'triage';
+  // Triage is a per-team capability — a team that turned intake off shows
+  // no triage surface, and a `?tab=triage` deep link falls back to home.
+  const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
+  const wantsTriage = triageCapable && (teamTab === 'home' || teamTab === 'triage');
   const wantsTasks = teamTab === 'home' || teamTab === 'issues';
   const {
     data: triageData,
@@ -265,7 +268,7 @@ const TeamPage = memo(() => {
     mutate: revalidateTeamTasks,
   } = useClientDataSWR(
     wantsTasks && teamId && workspaceId
-      ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout]
+      ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout, triageCapable]
       : null,
     () =>
       workAttentionService.query({
@@ -476,6 +479,11 @@ const TeamPage = memo(() => {
                 onChange={(value) => setLayout(value as WorkQueryLayout)}
               />
             </Flexbox>
+          ) : null}
+          {teamTab === 'triage' && !triageCapable ? (
+            <Center flex={1} padding={48}>
+              <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
+            </Center>
           ) : null}
           {wantsTriage ? (
             <>

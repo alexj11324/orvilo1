@@ -58,7 +58,17 @@ const orchestrationPolicySchema = z.object({
 
 export const teamRouter = router({
   teams: teamProcedure.query(async ({ ctx }) => {
-    return { data: await ctx.teamModel.listReadable(), success: true };
+    // Annotate membership so "Your teams" can list joined teams without
+    // turning the sidebar into a whole-workspace directory.
+    const [teams, memberTeamIds] = await Promise.all([
+      ctx.teamModel.listReadable(),
+      ctx.teamModel.listMemberTeamIds(),
+    ]);
+    const joined = new Set(memberTeamIds);
+    return {
+      data: teams.map((team) => ({ ...team, joined: joined.has(team.id) })),
+      success: true,
+    };
   }),
 
   team: teamProcedure.input(teamIdInput).query(async ({ ctx, input }) => {

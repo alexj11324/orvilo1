@@ -6,7 +6,7 @@ import { memo } from 'react';
 
 import SkeletonBar from '@/components/Skeleton/Bar';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
 import { taskDetailLayoutStyles as layout } from './taskDetailLayoutStyles';
@@ -105,14 +105,12 @@ const TaskDetailSkeleton = memo<RouteSkeletonProps>(({ chrome = 'page' }) =>
   chrome === 'body' ? (
     <TaskDetailBodySkeleton />
   ) : (
-    <Flexbox flex={1} height={'100%'}>
+    <WorkSurface>
       <NavHeader />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer>
-          <TaskDetailBodySkeleton />
-        </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      <WorkSurfaceDocument>
+        <TaskDetailBodySkeleton />
+      </WorkSurfaceDocument>
+    </WorkSurface>
   ),
 );
 

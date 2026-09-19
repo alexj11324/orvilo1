@@ -5,4 +5,3 @@ export {
   NotificationProjectionService,
   resolveNotificationTargets,
 } from './notificationProjection';
-export { mergeRecentWork, recentWorkFromSources } from './recentWork';

@@ -210,9 +210,6 @@ describe('requiredApiKeyScopeForTrpc', () => {
     expect(requiredApiKeyScopeForTrpc('workAttention.search', 'query')).toEqual({
       scopes: ['user:read', 'agent:read'],
     });
-    expect(requiredApiKeyScopeForTrpc('workAttention.recentWork', 'query')).toEqual({
-      scopes: ['user:read', 'agent:read'],
-    });
     expect(requiredApiKeyScopeForTrpc('workAttention.savedViewCreate', 'mutation')).toEqual({
       scopes: ['user:write', 'agent:write'],
     });

@@ -177,22 +177,6 @@ export interface NotificationFeedPage {
 /** CommandMenu / work search bound so 200 teams stay reachable. */
 export const WORK_SEARCH_MAX_PER_TYPE = 200;
 
-/**
- * CommandMenu empty-query recents. Recently updated readable work, not a
- * visit log — do not invent a second recents store.
- */
-export const RECENT_WORK_PER_TYPE = 8;
-export const RECENT_WORK_LIMIT = 12;
-export const RECENT_WORK_TYPES = ['project', 'savedView', 'task', 'team'] as const;
-export type RecentWorkType = (typeof RECENT_WORK_TYPES)[number];
-
-export interface RecentWorkItem {
-  id: string;
-  title: string;
-  type: RecentWorkType;
-  updatedAt: string;
-}
-
 export type WorkQueryEntityType = 'project' | 'task';
 
 export type WorkQueryField =

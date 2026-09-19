@@ -231,8 +231,6 @@ export default {
 
   'cmdk.project': 'Projects',
 
-  'cmdk.recentWork': 'Recent',
-
   'cmdk.resource': 'Resources',
 
   'cmdk.search.agent': 'Agent',

@@ -5,10 +5,12 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
-import { RECENT_SIDEBAR_TYPES, recentService } from '@/services/recent';
+import type { RECENT_SIDEBAR_TYPES } from '@/services/recent';
+import { recentService, recentTypesForWorkspace } from '@/services/recent';
 import { useGlobalStore } from '@/store/global';
 
 import { useCommandMenuContext } from './CommandMenuContext';
@@ -31,10 +33,12 @@ const RecentsCommands = memo(() => {
   const { onClose } = useCommandMenuContext();
   const navigate = useWorkspaceAwareNavigate();
   const scope = useCacheScope();
+  const workspaceId = useActiveWorkspaceId();
   const open = useGlobalStore((s) => s.status.showCommandMenu);
+  const recentTypes = recentTypesForWorkspace(workspaceId);
 
-  const { data: recents } = useSWR(open ? ['cmdk-recents', scope] : null, () =>
-    recentService.getAll(8, RECENT_SIDEBAR_TYPES),
+  const { data: recents } = useSWR(open ? ['cmdk-recents', scope, workspaceId] : null, () =>
+    recentService.getAll(8, recentTypes),
   );
 
   if (!recents?.length) return null;

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 import { buildAcpBuiltinToolExtras, decodeAcpBuiltinToolSpecs } from './acpBuiltinToolExtras';
 import { jsonSchemaToZodRawShape } from './jsonSchemaToZod';
@@ -15,11 +16,11 @@ describe('jsonSchemaToZodRawShape', () => {
     });
 
     expect(Object.keys(shape).sort()).toEqual(['count', 'name']);
-    expect(shape.name.safeParse('x').success).toBe(true);
-    expect(shape.name.safeParse(1).success).toBe(false);
-    expect(shape.name.safeParse(undefined).success).toBe(false);
-    expect(shape.count.safeParse(undefined).success).toBe(true);
-    expect(shape.count.safeParse(3).success).toBe(true);
+    expect(z.safeParse(shape.name, 'x').success).toBe(true);
+    expect(z.safeParse(shape.name, 1).success).toBe(false);
+    expect(z.safeParse(shape.name, undefined).success).toBe(false);
+    expect(z.safeParse(shape.count, undefined).success).toBe(true);
+    expect(z.safeParse(shape.count, 3).success).toBe(true);
   });
 
   it('handles nested objects, arrays and enums', () => {
@@ -37,12 +38,12 @@ describe('jsonSchemaToZodRawShape', () => {
       type: 'object',
     });
 
-    expect(shape.mode.safeParse('a').success).toBe(true);
-    expect(shape.mode.safeParse('z').success).toBe(false);
-    expect(shape.tags.safeParse([]).success).toBe(false);
-    expect(shape.tags.safeParse(['x']).success).toBe(true);
-    expect(shape.nested.safeParse({ flag: true }).success).toBe(true);
-    expect(shape.nested.safeParse({}).success).toBe(false);
+    expect(z.safeParse(shape.mode, 'a').success).toBe(true);
+    expect(z.safeParse(shape.mode, 'z').success).toBe(false);
+    expect(z.safeParse(shape.tags, []).success).toBe(false);
+    expect(z.safeParse(shape.tags, ['x']).success).toBe(true);
+    expect(z.safeParse(shape.nested, { flag: true }).success).toBe(true);
+    expect(z.safeParse(shape.nested, {}).success).toBe(false);
   });
 
   it('degrades unknown shapes to z.any()', () => {
@@ -50,7 +51,7 @@ describe('jsonSchemaToZodRawShape', () => {
       properties: { whatever: { type: 'funky-type' } },
       type: 'object',
     });
-    expect(shape.whatever.safeParse({ arbitrary: 1 }).success).toBe(true);
+    expect(z.safeParse(shape.whatever, { arbitrary: 1 }).success).toBe(true);
   });
 
   it('returns an empty shape for non-object input', () => {
@@ -101,7 +102,7 @@ describe('buildAcpBuiltinToolExtras', () => {
     expect(extras).toHaveLength(1);
     expect(extras[0].name).toBe('orvilo-agent__callSubAgent');
     expect(extras[0].description).toBe('spawn a sub agent');
-    expect(extras[0].inputSchema.instruction.safeParse('go').success).toBe(true);
+    expect(z.safeParse(extras[0].inputSchema.instruction, 'go').success).toBe(true);
   });
 
   it('returns the exec result content as the tool result', async () => {

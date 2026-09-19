@@ -31,9 +31,10 @@ const {
   mockSpawnHeteroSandbox: vi.fn(),
   // The unmocked dispatch, captured by the factory below; the mock delegates
   // to it so tests observe the call AND the real routing pipeline runs.
-  realDispatchRef: {
-    current: null | typeof dispatchHeteroAgent,
-  },
+  realDispatchRef: (() => {
+    const ref: { current: typeof dispatchHeteroAgent | null } = { current: null };
+    return ref;
+  })(),
 }));
 
 const topicMock = {

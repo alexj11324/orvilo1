@@ -30,9 +30,10 @@ const {
   mockMessageQuery: vi.fn(),
   mockQueryTree: vi.fn(),
   mockSpawnHeteroSandbox: vi.fn(),
-  realDispatchRef: {
-    current: null | typeof dispatchHeteroAgent,
-  },
+  realDispatchRef: (() => {
+    const ref: { current: typeof dispatchHeteroAgent | null } = { current: null };
+    return ref;
+  })(),
 }));
 
 vi.mock('@/libs/trusted-client', () => ({

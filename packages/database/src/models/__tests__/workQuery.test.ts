@@ -5,7 +5,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { tasks } from '../../schemas';
-import { agents, projects, teamCycles, teamMembers, teams, users, workspaces } from '../../schemas';
+import {
+  agents,
+  projects,
+  projectTeams,
+  teamCycles,
+  teamMembers,
+  teams,
+  users,
+  workspaces,
+} from '../../schemas';
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { tasks as tasksTable } from '../../schemas/task';
@@ -719,5 +728,67 @@ describe('WorkQueryModel', () => {
     expect(
       facet.restrictedCount + facet.buckets.reduce((sum, bucket) => sum + bucket.count, 0),
     ).toBe(facet.total);
+  });
+
+  it('does not duplicate a project linked to two teams (TRI04)', async () => {
+    await serverDB.insert(teams).values([
+      {
+        createdByUserId: userId,
+        id: 'wq-team-a',
+        key: 'WQA',
+        name: 'Query team A',
+        workspaceId,
+      },
+      {
+        createdByUserId: userId,
+        id: 'wq-team-b',
+        key: 'WQB',
+        name: 'Query team B',
+        workspaceId,
+      },
+    ]);
+    await serverDB.insert(teamMembers).values([
+      { role: 'lead', teamId: 'wq-team-a', userId, workspaceId },
+      { role: 'lead', teamId: 'wq-team-b', userId, workspaceId },
+    ]);
+    await serverDB.insert(projects).values({
+      id: 'wq-shared-project',
+      identifier: 'WQS',
+      name: 'Shared project',
+      userId,
+      workspaceId,
+    });
+    await serverDB.insert(projectTeams).values([
+      { projectId: 'wq-shared-project', teamId: 'wq-team-a', workspaceId },
+      { projectId: 'wq-shared-project', teamId: 'wq-team-b', workspaceId },
+    ]);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const linked = await model.queryProjects({
+      query: {
+        entityType: 'project',
+        filter: { all: [{ field: 'teamId', op: 'isNotNull' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(linked.projects.map((row) => row.id)).toEqual(['wq-shared-project']);
+    expect(linked.total).toBe(1);
+
+    const fromA = await model.queryProjects({
+      query: {
+        entityType: 'project',
+        filter: { all: [{ field: 'teamId', op: 'eq', value: 'wq-team-a' }] },
+        schemaVersion: 1,
+      },
+    });
+    const fromB = await model.queryProjects({
+      query: {
+        entityType: 'project',
+        filter: { all: [{ field: 'teamId', op: 'eq', value: 'wq-team-b' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(fromA.projects.map((row) => row.id)).toEqual(['wq-shared-project']);
+    expect(fromB.projects.map((row) => row.id)).toEqual(['wq-shared-project']);
   });
 });

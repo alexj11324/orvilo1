@@ -3,6 +3,7 @@ import { useTheme as useNextThemesTheme } from 'next-themes';
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { isDesktop } from '@/const/version';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useCreateNewModal } from '@/features/LibraryModal';
@@ -11,6 +12,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
 import { lambdaClient } from '@/libs/trpc/client';
 import { electronSystemService } from '@/services/electron/system';
+import { omitPersonalTeamItems } from '@/services/recent';
 import { workAttentionService } from '@/services/workAttention';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelectors';
@@ -52,6 +54,7 @@ export const useCommandMenu = () => {
   } = useCommandMenuContext();
 
   const navigate = useWorkspaceAwareNavigate();
+  const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const createAgent = useAgentStore((s) => s.createAgent);
@@ -74,7 +77,7 @@ export const useCommandMenu = () => {
     isLoading: isSearching,
     isValidating: isSearchValidating,
   } = useSWR<CommandMenuSearchResult[]>(
-    hasSearch ? ['search', searchQuery, agentId, typeFilter] : null,
+    hasSearch ? ['search', searchQuery, agentId, typeFilter, workspaceId] : null,
     async () => {
       const locale = globalHelpers.getCurrentLanguage();
       const limitPerType = typeFilter
@@ -82,7 +85,9 @@ export const useCommandMenu = () => {
         : COMMAND_MENU_MIXED_LIMIT_PER_TYPE;
       const ftsType = isCommandMenuFtsType(typeFilter) ? typeFilter : undefined;
       const wantsFts = !typeFilter || Boolean(ftsType);
-      const wantsWork = !typeFilter || isCommandMenuWorkType(typeFilter);
+      const wantsWork =
+        (!typeFilter || isCommandMenuWorkType(typeFilter)) &&
+        (Boolean(workspaceId) || typeFilter !== 'team');
       const [fts, work] = await Promise.all([
         wantsFts
           ? lambdaClient.search.query.query({
@@ -101,7 +106,7 @@ export const useCommandMenu = () => {
                 query: searchQuery,
                 type: isCommandMenuWorkType(typeFilter) ? typeFilter : undefined,
               })
-              .then((response) => response.data)
+              .then((response) => omitPersonalTeamItems(response.data, workspaceId))
               .catch((error: unknown) => {
                 console.error('[commandMenu.workSearch]', error);
                 return [];

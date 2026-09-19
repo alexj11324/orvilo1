@@ -2,7 +2,12 @@ import type { RecentItem } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
-export { RECENT_SIDEBAR_TYPES, recentTypesForWorkspace } from './recentTypes';
+export {
+  isWorkspaceTeamVisible,
+  omitPersonalTeamItems,
+  RECENT_SIDEBAR_TYPES,
+  recentTypesForWorkspace,
+} from './recentTypes';
 
 class RecentService {
   getAll = (

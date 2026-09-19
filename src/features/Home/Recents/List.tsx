@@ -3,9 +3,11 @@ import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { omitPersonalTeamItems } from '@/services/recent';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
@@ -24,6 +26,7 @@ interface RecentsListProps {
 
 const RecentsList = memo<RecentsListProps>(({ error, onRetry, scope }) => {
   const { t } = useTranslation('chat');
+  const workspaceId = useActiveWorkspaceId();
   const recentPageSize = useGlobalStore(systemStatusSelectors.recentPageSize);
   const queryKey = createRecentQueryKey(recentPageSize + 1);
   const query = useHomeStore(homeRecentSelectors.query(scope, queryKey));
@@ -34,11 +37,15 @@ const RecentsList = memo<RecentsListProps>(({ error, onRetry, scope }) => {
     s.closeAllRecentsDrawer,
   ]);
 
-  const displayItems = useMemo(
-    () => items?.slice(0, recentPageSize) ?? [],
-    [items, recentPageSize],
+  const visibleItems = useMemo(
+    () => omitPersonalTeamItems(items ?? [], workspaceId),
+    [items, workspaceId],
   );
-  const hasMore = (items?.length ?? 0) > recentPageSize;
+  const displayItems = useMemo(
+    () => visibleItems.slice(0, recentPageSize),
+    [recentPageSize, visibleItems],
+  );
+  const hasMore = visibleItems.length > recentPageSize;
 
   // Error gated ahead of the skeleton so a failed recents fetch shows Retry
   // instead of a permanent skeleton (`isRecentsInit` only flips on success —

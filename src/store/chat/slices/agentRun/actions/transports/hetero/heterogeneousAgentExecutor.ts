@@ -11,7 +11,6 @@ import {
   createMainAgentRunState,
   isHeterogeneousAgentAuthRequired,
   isLocalHeterogeneousType,
-  isServerDefaultHeterogeneousAgentType,
   type MainAgentIntent,
   type MainAgentReduceCtx,
   type MainAgentRunState,
@@ -46,7 +45,6 @@ import {
   resolveOrviloEngine,
   ThreadStatus,
   ThreadType,
-  unwrapServerDefaultHeterogeneousModel,
 } from '@orvilo/types';
 import { createNanoId } from '@orvilo/utils';
 import { t } from 'i18next';
@@ -230,7 +228,6 @@ export interface HeterogeneousAgentExecutorParams {
   operationId: string;
   pageSelections?: PageSelection[];
   /** CC session ID from previous execution in this topic (for --resume) */
-  resumeBindingKey?: string;
   resumeSessionId?: string;
   workingDirectory?: string;
   workingDirectoryConfig?: WorkingDirConfig;
@@ -471,7 +468,6 @@ export const executeHeterogeneousAgent = async (
     message,
     operationId,
     pageSelections,
-    resumeBindingKey,
     resumeSessionId,
     workingDirectory,
     workingDirectoryConfig,
@@ -490,11 +486,6 @@ export const executeHeterogeneousAgent = async (
   const adapterType = orviloEngine
     ? resolveOrviloCliAgentType(orviloEngine)
     : heterogeneousProvider.type;
-  const serverDefaultConfiguredModel =
-    heterogeneousProvider.authMode === 'api' &&
-    heterogeneousProvider.apiConfig?.source === 'server-default'
-      ? heterogeneousProvider.apiConfig.model.trim() || undefined
-      : undefined;
 
   // Which real provider account this run consumes, resolved once after spawn
   // from the FINAL env (so an agent-env override is attributed correctly, not
@@ -512,11 +503,7 @@ export const executeHeterogeneousAgent = async (
     model?: string;
     usage: unknown;
   }) => {
-    if (
-      adapterType !== 'claude-code' ||
-      (heterogeneousProvider.authMode ?? 'subscription') !== 'subscription'
-    )
-      return;
+    if (adapterType !== 'claude-code') return;
     const u = intent.usage as ModelUsage;
     agentQuotaService
       .recordUsage({
@@ -1811,19 +1798,6 @@ export const executeHeterogeneousAgent = async (
    * matches arrival.
    */
   const reduceAndApplyMain = async (event: AgentStreamEvent) => {
-    // Server-default CLIs report `aspectlylabs/${catalogId}` (older Claude Code
-    // sessions used `orvilo-default`). Stamp the catalog id onto the message
-    // so the usage footer and model-card lookup resolve the real model.
-    if (serverDefaultConfiguredModel) {
-      const reported = event.data?.model;
-      if (typeof reported === 'string') {
-        const model = unwrapServerDefaultHeterogeneousModel(reported, serverDefaultConfiguredModel);
-        if (model && model !== reported) {
-          event = { ...event, data: { ...event.data, model } };
-        }
-      }
-    }
-
     // Capture the CC-native session id off the stream_start stream so every
     // message persisted below carries the session it belongs to (mirrors the
     // server handler). Stable per run; the copy makes a mid-topic fork visible.
@@ -1855,44 +1829,11 @@ export const executeHeterogeneousAgent = async (
 
   await rehydrateClientSubagentRuns();
 
-  const providerBindingActive = heterogeneousProvider.authMode === 'api';
-  const serverDefaultApiConfig =
-    providerBindingActive && heterogeneousProvider.apiConfig?.source === 'server-default'
-      ? heterogeneousProvider.apiConfig
-      : undefined;
-  const serverDefaultBindingActive = !!serverDefaultApiConfig;
-  // User-provider (BYOK) bindings are retired — only the server-default binding
-  // remains a supported `authMode: 'api'` source.
-  if (providerBindingActive && !serverDefaultBindingActive) {
-    await persistTerminalError(
-      toHeterogeneousAgentMessageError(
-        new Error(t('heteroAgent.apiMode.configMissing', { ns: 'chat' })),
-        adapterType,
-      ),
-    );
-    return;
-  }
-
-  if (
-    serverDefaultBindingActive &&
-    (!serverDefaultApiConfig.model.trim() || !isServerDefaultHeterogeneousAgentType(adapterType))
-  ) {
-    await persistTerminalError(
-      toHeterogeneousAgentMessageError(
-        new Error(t('heteroAgent.apiMode.defaultProviderConfigMissing', { ns: 'chat' })),
-        adapterType,
-      ),
-    );
-    return;
-  }
-
   try {
     // Account routing: realize the pinned/balanced account choice as spawn env
     // (CLAUDE_CONFIG_DIR profile). Unbound agents get {} and spawn exactly as
     // before; a quota-service failure must never block the run.
-    const quotaAccountPlan = providerBindingActive
-      ? { env: {}, externalAccountId: undefined }
-      : await resolveQuotaAccountSpawnPlan(context.agentId, adapterType);
+    const quotaAccountPlan = await resolveQuotaAccountSpawnPlan(context.agentId, adapterType);
 
     const sessionEnv = {
       // Tell the CLI which Orvilo conversation it is running inside. The child
@@ -1912,13 +1853,6 @@ export const executeHeterogeneousAgent = async (
     };
 
     const spawnArgs = buildHeteroSpawnArgs(heterogeneousProvider);
-    const providerBinding = serverDefaultBindingActive
-      ? {
-          apiConfig: serverDefaultApiConfig,
-          kind: 'server-default' as const,
-          resumeBindingKey,
-        }
-      : undefined;
 
     // Start session (pass resumeSessionId for multi-turn --resume)
     const result = await heterogeneousAgentService.startSession({
@@ -1929,25 +1863,19 @@ export const executeHeterogeneousAgent = async (
       env: sessionEnv,
       initialModel:
         (adapterType === 'devin' || adapterType === 'droid' || adapterType === 'trae') &&
-        !providerBindingActive &&
         heterogeneousProvider.model &&
         heterogeneousProvider.model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION
           ? heterogeneousProvider.model
           : undefined,
       orviloEngine,
-      providerBinding,
       resumeSessionId,
     });
-    activeSessionBindingKey =
-      result.providerBindingKey ?? getNativeHeteroSessionBindingKey(adapterType);
-    if (providerBindingActive && resumeSessionId && resumeBindingKey !== activeSessionBindingKey) {
-      await clearStaleResumeMetadata();
-    }
+    activeSessionBindingKey = getNativeHeteroSessionBindingKey(adapterType);
 
     // Attribute the run to the login the FINAL env actually resolves to (an
     // agent-env CLAUDE_CONFIG_DIR beats routing, and unbound agents use the
     // default login). Falls back to the routed choice when the file read fails.
-    if (adapterType === 'claude-code' && !providerBindingActive) {
+    if (adapterType === 'claude-code') {
       heterogeneousAgentService
         .getClaudeCodeIdentity({ env: sessionEnv })
         .then((identity) => {

@@ -26,7 +26,7 @@ const log = debug('lobe-server:hetero-run-admission');
  * had no way to distinguish "cancel sent" from "cancel confirmed".
  *
  * The ledger lives on `agent_operations.metadata` (jsonb — same pattern as
- * `agentInterventionDispatch` / `serverDefaultHeterogeneous`, so no schema
+ * `agentInterventionDispatch`), so no schema
  * migration is needed):
  *
  * - `remoteAdmission` — written BEFORE the dispatch is attempted and driven

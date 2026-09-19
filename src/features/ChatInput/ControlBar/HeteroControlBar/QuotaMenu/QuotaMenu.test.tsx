@@ -308,32 +308,24 @@ describe('HeteroControlBar', () => {
     expect(mockService.getCodexQuota).not.toHaveBeenCalled();
   });
 
-  it('shows platform credits instead of Codex quota in API mode', () => {
+  it('still shows quota when a legacy apiConfig shape is persisted', async () => {
+    // Stale persisted configs may still carry retired auth fields; they are
+    // ignored and the run is subscription-native.
+    mockService.getCodexQuota.mockResolvedValue(
+      codexSnapshot({ session: { resetsAt: null, usedPercent: 20, windowMinutes: 300 } }),
+    );
     effectiveAgencyConfig.current = {
       boundDeviceId: 'personal-device',
       executionTarget: 'local',
-      heterogeneousProvider: { authMode: 'api', command: 'codex', type: 'codex' },
+      heterogeneousProvider: { authMode: 'api', command: 'codex', type: 'codex' } as never,
     };
 
     render(<HeteroControlBar />);
 
-    expect(screen.getByTestId('api-credits')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'heteroAgent.codexQuota.tooltip' })).toBeNull();
-    expect(mockService.getCodexQuota).not.toHaveBeenCalled();
-  });
-
-  it('shows platform credits instead of Claude Code quota in API mode', () => {
-    effectiveAgencyConfig.current = {
-      boundDeviceId: 'personal-device',
-      executionTarget: 'local',
-      heterogeneousProvider: { authMode: 'api', type: 'claude-code' },
-    };
-
-    render(<HeteroControlBar />);
-
-    expect(screen.getByTestId('api-credits')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'heteroAgent.claudeQuota.tooltip' })).toBeNull();
-    expect(mockService.getClaudeCodeQuota).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole('button', { name: 'heteroAgent.codexQuota.tooltip' }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('api-credits')).toBeNull();
   });
 });
 

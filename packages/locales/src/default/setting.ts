@@ -451,37 +451,6 @@ export default {
 
   // Heterogeneous agent CLI status (shown on agent profile page in integration mode)
   'heterogeneousStatus.account.label': 'Account',
-  'heterogeneousStatus.apiMode.configureProvider': 'Go to provider settings',
-  'heterogeneousStatus.apiMode.localOnly': 'Available only for Desktop local execution',
-  'heterogeneousStatus.apiMode.defaultProvider': 'Orvilo',
-  'heterogeneousStatus.apiMode.model': 'Model',
-  'heterogeneousStatus.apiMode.modelPlaceholder': 'Select a model',
-  'heterogeneousStatus.apiMode.noProviders':
-    'No enabled provider with an Anthropic-compatible endpoint is configured.',
-  'heterogeneousStatus.apiMode.noResponsesProviders':
-    'No enabled provider with an explicitly supported Responses API endpoint is configured.',
-  'heterogeneousStatus.apiMode.smallFastModel': 'Background model',
-  'heterogeneousStatus.apiMode.smallFastModelDesc':
-    'Used for session titles, summaries, and other background work. Does not change the main conversation.',
-  'heterogeneousStatus.apiMode.smallFastModelPlaceholder': 'Same as primary model',
-  'heterogeneousStatus.apiMode.provider': 'Provider',
-  'heterogeneousStatus.apiMode.providerPlaceholder': 'Select a provider',
-  'heterogeneousStatus.apiMode.workspaceUnsupported': 'Not available for workspace agents',
-  'heterogeneousStatus.apiMode.serverDefault.checking': 'Checking deployment provider...',
-  'heterogeneousStatus.apiMode.serverDefault.disabled':
-    'The deployment administrator has disabled the default API provider for heterogeneous agents.',
-  'heterogeneousStatus.apiMode.serverDefault.invalidConfiguration':
-    'The deployment provider or its compatible models are not configured.',
-  'heterogeneousStatus.apiMode.serverDefault.loadFailed':
-    'Could not check the deployment provider.',
-  'heterogeneousStatus.apiMode.serverDefault.noModels':
-    'No compatible models are available from the deployment provider.',
-  'heterogeneousStatus.apiMode.serverDefault.retry': 'Retry',
-  'heterogeneousStatus.apiMode.serverDefault.unsupported':
-    'The deployment provider does not expose a compatible model for this CLI.',
-  'heterogeneousStatus.auth.api': 'API',
-  'heterogeneousStatus.auth.label': 'Auth Method',
-  'heterogeneousStatus.auth.subscription': 'Subscription',
   'heterogeneousStatus.command.edit': 'Edit command',
   'heterogeneousStatus.command.label': 'Launch Command',
   'heterogeneousStatus.command.placeholder': 'Command name or absolute path',

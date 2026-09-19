@@ -92,7 +92,7 @@ const addPendingRepoBoundTopic = async (taskId: string, identifier: string, gene
       pushedToRemote: true,
       repo: 'acme/widgets',
       role: 'task',
-      state: 'delivering',
+      state: 'verification_pending',
     },
     seq: 1,
     status: 'running',

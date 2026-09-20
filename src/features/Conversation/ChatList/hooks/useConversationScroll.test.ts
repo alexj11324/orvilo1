@@ -191,14 +191,19 @@ describe('useConversationScroll — pin behavior', () => {
       },
     );
 
-    const rerender = (next: {
-      contextKey?: string;
-      dataSource: string[];
-      isSecondLastMessageFromUser: boolean;
-    }) => {
+    const rerender = (
+      next: {
+        contextKey?: string;
+        dataSource: string[];
+        isSecondLastMessageFromUser: boolean;
+      },
+      opts?: { lagDisplayMessages?: boolean },
+    ) => {
       currentFixture = {
         ...currentFixture,
-        displayMessages: deriveDisplayMessages(next.dataSource),
+        displayMessages: opts?.lagDisplayMessages
+          ? currentFixture.displayMessages
+          : deriveDisplayMessages(next.dataSource),
       };
       hook.rerender({ contextKey: undefined, ...next });
     };
@@ -541,6 +546,33 @@ describe('useConversationScroll — pin behavior', () => {
       await vi.advanceTimersByTimeAsync(500);
     });
     expect(result.current.spacerActive).toBe(false);
+  });
+
+  // Regression: under a starved renderer the optimistic user row can commit
+  // to dataSource a pass *before* displayMessages knows its role. The old gate
+  // (findLast(user) then tail-boundary check) rejected it silently — the next
+  // commit's tail was assistant-only, so the pin never fired at all.
+  it('pins the user row when its role resolves a commit after the append', () => {
+    const { rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+    });
+
+    // Commit 1: user row lands in dataSource; role map still shows the old list.
+    rerender(
+      { dataSource: [assistantId, 'prev', userId], isSecondLastMessageFromUser: true },
+      { lagDisplayMessages: true },
+    );
+    expect(scrollToIndex).not.toHaveBeenCalled();
+
+    // Commit 2: assistant row lands; the role map catches up — the pin must
+    // still fire on the user row appended one pass earlier.
+    rerender({
+      dataSource: [assistantId, 'prev', userId, 'assistant-2'],
+      isSecondLastMessageFromUser: true,
+    });
+
+    expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
   });
 
   it('targets the correct index when multiple turns accumulate', () => {

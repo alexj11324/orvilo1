@@ -734,6 +734,7 @@ const gateAcpExternalToolApproval = async (params: {
     // card answered for a previous window is rejected as `stale_window`.
     const renewWindowId = newEventId();
     const renewed = await new EventOutboxModel(db).renewToolApprovalReceipt({
+      argsHash,
       eventId: toolApprovalEventId(operation.id, toolCallId),
       expiresAt,
       now,

@@ -166,7 +166,9 @@ export class EventOutboxModel {
         nextAttemptAt: params.event.nextAttemptAt,
         payload: params.event.payload ?? {},
         status: 'pending',
-        workspaceId: params.event.workspaceId,
+        // '' is a scope-marker, not a workspace row — normalize it out so
+        // personal-scope receipts don't violate the workspaces FK.
+        workspaceId: params.event.workspaceId || undefined,
       })
       .onConflictDoNothing({ target: eventOutbox.eventId })
       .returning({ id: eventOutbox.id });
@@ -350,6 +352,7 @@ export class EventOutboxModel {
    * impossible and the caller's read-back classifies them.
    */
   renewToolApprovalReceipt = async (params: {
+    argsHash: string;
     eventId: string;
     expiresAt: number;
     now: number;
@@ -361,6 +364,7 @@ export class EventOutboxModel {
       .set({
         nextAttemptAt: new Date(params.expiresAt),
         payload: sql`(${eventOutbox.payload} #- '{decision}') || jsonb_build_object(
+          'argsHash', ${params.argsHash}::text,
           'expiresAt', ${params.expiresAt}::numeric,
           'requestedAt', ${params.now}::numeric,
           'scopeHash', ${params.scopeHash}::text,

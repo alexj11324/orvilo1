@@ -225,12 +225,16 @@ describe('TaskWorkspaceService', () => {
         },
       });
     });
-    vi.mocked(deviceGateway.addGitWorktree).mockImplementation(async ({ branch, ref }) => {
-      worktreeAdded = true;
-      worktreeBranch = branch;
-      worktreeHead = ref;
-      return { success: true };
-    });
+    vi.mocked(deviceGateway.addGitWorktree).mockImplementation(
+      async ({ branch, claimToken, ref }) => {
+        worktreeAdded = true;
+        worktreeBranch = branch;
+        worktreeHead = ref;
+        // A current host registers the presented claim token and reports the
+        // capability back; an old host silently drops it (undefined).
+        return { claimRegistered: claimToken === undefined ? undefined : true, success: true };
+      },
+    );
     // The host echoes `claimTokenVerified` only when a token was presented —
     // mimicking a host that enforces the cleanup contract.
     vi.mocked(deviceGateway.removeGitWorktree).mockImplementation(async ({ claimToken }) => ({
@@ -480,6 +484,7 @@ describe('TaskWorkspaceService', () => {
       // only used for `baseBranch` bookkeeping, never as the checkout target.
       expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith({
         branch: 'task/T-1',
+        claimToken: expect.any(String),
         deviceId: 'dev-1',
         path: '/repos/orvilo',
         ref: 'sha-base-1',
@@ -534,6 +539,35 @@ describe('TaskWorkspaceService', () => {
       await expect(
         service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
       ).rejects.toThrow('could not verify the new checkout');
+    });
+
+    it('refuses provisioning on a host that cannot register claims, rolling back the add', async () => {
+      // SB01: an old host drops the claim token silently — the response then
+      // lacks `claimRegistered`, and proceeding would pair the minted claim
+      // with cleanup that can never be verified. Roll the worktree back with
+      // a plain remove and keep the minted claim row for a retry post-upgrade.
+      vi.mocked(deviceGateway.addGitWorktree).mockImplementation(async ({ branch, ref }) => {
+        worktreeAdded = true;
+        worktreeBranch = branch;
+        worktreeHead = ref;
+        // Old-host shape: accepted the params, dropped the capability flag.
+        return { success: true };
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(
+        service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
+      ).rejects.toThrow('cannot register worktree claims');
+
+      // Rollback used the plain remove path — no token on an incapable host.
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreePath: '/repos/orvilo-task-T-1@task_1' }),
+      );
+      expect(
+        vi.mocked(deviceGateway.removeGitWorktree).mock.calls[0]?.[0]?.claimToken,
+      ).toBeUndefined();
+      // The minted claim stays live — nothing unverifiable was destroyed.
+      expect(claimRows.get(CLAIM_KEY)?.releasedAt).toBeNull();
     });
 
     it('suffices the branch with the run seq on retries', async () => {

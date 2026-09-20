@@ -794,10 +794,16 @@ export class DeviceGateway {
 
   /**
    * Add a linked worktree on a fresh branch in a directory's repository on a
-   * remote device via the `addGitWorktree` device RPC.
+   * remote device via the `addGitWorktree` device RPC. Callers that minted a
+   * durable claim pass `claimToken` so the host registers it against the
+   * physical checkout — the response's `claimRegistered` flag is then the
+   * capability signal distinguishing "host can verify claims" from "host
+   * dropped the token".
    */
   async addGitWorktree(params: {
     branch: string;
+    /** Server-issued claim token to register on the host for verified delete. */
+    claimToken?: string;
     detach?: boolean;
     deviceId: string;
     path: string;
@@ -806,11 +812,12 @@ export class DeviceGateway {
     userId: string;
     workspaceId?: string;
     worktreePath: string;
-  }): Promise<DeviceGitAddWorktreeResult> {
+  }): Promise<DeviceGitAddWorktreeResult & { claimRegistered?: boolean }> {
     const {
       userId,
       deviceId,
       branch,
+      claimToken,
       path,
       worktreePath,
       workspaceId,
@@ -824,7 +831,10 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitAddWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'addGitWorktree', params: { branch, detach, path, ref, worktreePath } },
+        {
+          method: 'addGitWorktree',
+          params: { branch, claimToken, detach, path, ref, worktreePath },
+        },
       );
 
       if (!result.success || !result.data) {

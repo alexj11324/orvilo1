@@ -1,3 +1,7 @@
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { GatewayClient } from '@orvilo/device-gateway-client';
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -83,13 +87,15 @@ let clientOptions: any = {};
 let connectCalled = false;
 let lastSentToolResponse: any = null;
 let lastSentSystemInfoResponse: any = null;
+let lastSentRpcResponse: any = null;
 vi.mock('@orvilo/device-gateway-client', () => ({
-  GatewayClient: vi.fn().mockImplementation((opts: any) => {
+  GatewayClient: vi.fn().mockImplementation(function (opts: any) {
     clientOptions = opts;
     clientEventHandlers = {};
     connectCalled = false;
     lastSentToolResponse = null;
     lastSentSystemInfoResponse = null;
+    lastSentRpcResponse = null;
     return {
       connect: vi.fn().mockImplementation(async () => {
         connectCalled = true;
@@ -100,6 +106,9 @@ vi.mock('@orvilo/device-gateway-client', () => ({
         clientEventHandlers[event] = handler;
       }),
       reconnect: vi.fn().mockResolvedValue(undefined),
+      sendRpcResponse: vi.fn().mockImplementation((data: any) => {
+        lastSentRpcResponse = data;
+      }),
       sendSystemInfoResponse: vi.fn().mockImplementation((data: any) => {
         lastSentSystemInfoResponse = data;
       }),
@@ -123,7 +132,12 @@ describe('connect command', () => {
 
   afterEach(() => {
     exitSpy.mockRestore();
+    // Spies on shared globals (process.on / process.exit) must be restored —
+    // leaving one installed makes the next test's `process.on` capture the
+    // OLD spy as "original" and self-recurse.
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
   function createProgram() {
@@ -511,5 +525,58 @@ describe('connect command', () => {
       expect(spawnDaemon).toHaveBeenCalled();
       expect(log.info).toHaveBeenCalledWith(expect.stringContaining('Daemon started'));
     });
+  });
+
+  it('SA01-A: refuses a claimToken worktree remove while a run writes under an aliased cwd', async () => {
+    // The daemon registry may record a run's cwd through a symlink spelling —
+    // the writer check must compare canonical identities so a cleanup request
+    // for the real path still sees the writer.
+    const home = await mkdtemp(path.join(tmpdir(), 'lh-home-'));
+    const realWorktree = await mkdtemp(path.join(tmpdir(), 'lh-wt-'));
+    const aliasCwd = `${realWorktree}-link`;
+    await symlink(realWorktree, aliasCwd);
+    try {
+      vi.stubEnv('HOME', home);
+      const registryDir = path.join(home, '.orvilo');
+      await mkdir(registryDir, { recursive: true });
+      await writeFile(
+        path.join(registryDir, 'task-registry.json'),
+        JSON.stringify({
+          'task-1': {
+            agentType: 'devin',
+            cwd: aliasCwd,
+            operationId: 'op-1',
+            pid: 4321,
+            startedAt: '2026-01-01T00:00:00.000Z',
+            taskId: 'task-1',
+            topicId: 'tp-1',
+          },
+        }),
+      );
+
+      const program = createProgram();
+      await program.parseAsync(['node', 'test', 'connect']);
+      await clientEventHandlers.rpc_request?.({
+        method: 'removeGitWorktree',
+        params: { claimToken: 'tok-1', path: realWorktree, worktreePath: realWorktree },
+        requestId: 'rpc-1',
+      });
+
+      expect(lastSentRpcResponse).toMatchObject({
+        requestId: 'rpc-1',
+        result: {
+          data: {
+            claimTokenVerified: false,
+            success: false,
+          },
+          success: true,
+        },
+      });
+      expect(lastSentRpcResponse.result.data.error).toContain('live writer');
+    } finally {
+      await rm(aliasCwd, { force: true });
+      await rm(realWorktree, { force: true, recursive: true });
+      await rm(home, { force: true, recursive: true });
+    }
   });
 });

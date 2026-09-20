@@ -8,7 +8,7 @@ import { workspaces } from './workspace';
  * Durable ownership proof for a device worktree provisioned for a run (SA01
  * F01). Git state alone never proves ownership — a directory named like our
  * convention can belong to anyone — so `TaskWorkspaceService.provisionOnDevice`
- * mints one row per physical `(deviceId, repoPath, worktreePath)` before it
+ * mints one row per physical `(deviceId, repoCommonDir, worktreePath)` before it
  * inspects or touches the path, and a later provisioning of the same attempt
  * may reuse the checkout only while this row still matches the caller's
  * `(taskId, dispatchId, generation)`.
@@ -27,10 +27,19 @@ export const taskWorkspaceClaims = pgTable(
       onDelete: 'cascade',
     }),
 
-    /** Serialized unique key: `${deviceId}:${repoPath}::${worktreePath}`. */
+    /**
+     * Serialized unique key:
+     * `${deviceId}:${repoCommonDir}::${canonicalWorktreePath}` — the device's
+     * canonical identity, so aliases of the same physical directory share one
+     * claim instead of splitting it.
+     */
     key: text('key').notNull(),
     deviceId: text('device_id').notNull(),
+    /** Raw repo path as requested on the device (kept for display/recovery). */
     repoPath: text('repo_path').notNull(),
+    /** Canonical git common-dir proven by the device inspection. */
+    repoCommonDir: text('repo_common_dir'),
+    /** Canonical worktree path proven by the device inspection. */
     worktreePath: text('worktree_path').notNull(),
 
     taskId: text('task_id').notNull(),
@@ -39,6 +48,8 @@ export const taskWorkspaceClaims = pgTable(
     generation: integer('generation').notNull(),
     /** Fencing token — a fresh UUID per claim mint. */
     ownerToken: text('owner_token').notNull(),
+    /** Base branch resolved before `worktree add` — replays re-read it. */
+    baseBranch: text('base_branch'),
     /** Remote base commit pinned before `worktree add`. */
     expectedBaseSha: text('expected_base_sha'),
     issuedAt: timestamptz('issued_at').notNull().defaultNow(),

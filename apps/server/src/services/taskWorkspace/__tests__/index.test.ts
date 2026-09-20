@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { TaskItem } from '@orvilo/types';
+import type { DeviceGitWorktreePathInspection, TaskItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
@@ -50,13 +50,13 @@ vi.mock('@/database/models/taskWorkspaceClaim', () => ({
   TaskWorkspaceClaimModel: vi.fn(),
   taskWorkspaceClaimKey: ({
     deviceId,
-    repoPath,
+    repoCommonDir,
     worktreePath,
   }: {
     deviceId: string;
-    repoPath: string;
+    repoCommonDir: string;
     worktreePath: string;
-  }) => `${deviceId}:${repoPath}::${worktreePath}`,
+  }) => `${deviceId}:${repoCommonDir}::${worktreePath}`,
 }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
@@ -84,6 +84,68 @@ let worktreeAdded = false;
 let worktreeBranch: string | undefined;
 /** The pinned ref the add checked out — becomes the listed HEAD. */
 let worktreeHead: string | undefined;
+
+/** Canonical identity the device reports for the standard fixture repo. */
+const REPO_COMMON_DIR = '/repos/orvilo/.git';
+const REPO_ROOT = '/repos/orvilo';
+const CANONICAL_WORKTREE = '/repos/orvilo-task-T-1@task_1';
+const CLAIM_KEY = `dev-1:${REPO_COMMON_DIR}::${CANONICAL_WORKTREE}`;
+
+interface ClaimRow {
+  baseBranch?: string;
+  deviceId: string;
+  dispatchId: string;
+  expectedBaseSha?: string;
+  generation: number;
+  id: string;
+  key: string;
+  ownerToken: string;
+  releasedAt?: string | null;
+  repoPath: string;
+  taskId: string;
+  worktreePath: string;
+}
+
+/**
+ * Faithful claim-store backing for the mocked model: mint is insert-or-read
+ * (a live row wins untouched; a released row gets reclaimed), release is
+ * fenced on the owner token.
+ */
+const claimRows = new Map<string, ClaimRow>();
+let claimSeq = 0;
+
+const seedClaim = (overrides: Partial<ClaimRow> = {}): ClaimRow => {
+  claimSeq += 1;
+  const row: ClaimRow = {
+    baseBranch: 'main',
+    deviceId: 'dev-1',
+    dispatchId: 'disp-1',
+    expectedBaseSha: 'sha-base-1',
+    generation: 1,
+    id: `claim-${claimSeq}`,
+    key: CLAIM_KEY,
+    ownerToken: `tok-${claimSeq}`,
+    releasedAt: null,
+    repoPath: REPO_ROOT,
+    taskId: 'task_1',
+    worktreePath: CANONICAL_WORKTREE,
+    ...overrides,
+  };
+  claimRows.set(row.key, row);
+  return row;
+};
+
+const cleanStatus = { added: 0, clean: true, deleted: 0, modified: 0, total: 0 };
+
+/** Inspection carrying the canonical identity fields the claim key binds. */
+const inspectionOf = (
+  result: DeviceGitWorktreePathInspection,
+): DeviceGitWorktreePathInspection => ({
+  canonicalWorktreePath: CANONICAL_WORKTREE,
+  repoCommonDir: REPO_COMMON_DIR,
+  repoRoot: REPO_ROOT,
+  ...result,
+});
 
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
@@ -144,20 +206,24 @@ describe('TaskWorkspaceService', () => {
     ]);
     // Post-provision verification re-inspects the path: absent until the add
     // succeeds, then the fresh worktree lists with its checkout HEAD pinned
-    // as the run's immutable baseSha.
-    vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async () => {
-      if (!worktreeAdded) return { kind: 'absent' };
-      return {
+    // as the run's immutable baseSha. Every answer carries the canonical
+    // identity fields the claim key binds.
+    vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async ({ worktreePath }) => {
+      if (!worktreeAdded) {
+        return inspectionOf({ canonicalWorktreePath: worktreePath, kind: 'absent' });
+      }
+      return inspectionOf({
         activeWriter: null,
+        canonicalWorktreePath: worktreePath,
         kind: 'listed',
         listed: {
           branch: worktreeBranch,
           current: false,
           head: worktreeHead ?? 'sha-base-1',
           path: `/repos/orvilo-${worktreeBranch?.replace('/', '-')}@task_1`,
-          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
+          status: { ...cleanStatus },
         },
-      };
+      });
     });
     vi.mocked(deviceGateway.addGitWorktree).mockImplementation(async ({ branch, ref }) => {
       worktreeAdded = true;
@@ -165,20 +231,38 @@ describe('TaskWorkspaceService', () => {
       worktreeHead = ref;
       return { success: true };
     });
-    vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
-    // The claim mint resolves to a row owned by this dispatch — the default
-    // happy path. Individual tests re-mock mint/lookup to seed foreign claims.
-    mockClaimModel.mint.mockImplementation(async (params: Record<string, unknown>) => ({
-      deviceId: params.deviceId,
-      dispatchId: params.dispatchId,
-      expectedBaseSha: params.expectedBaseSha,
-      generation: params.generation,
-      key: 'dev-1:/repos/orvilo::/repos/orvilo-task-T-1@task_1',
-      ownerToken: 'tok-1',
-      repoPath: params.repoPath,
-      taskId: params.taskId,
-      worktreePath: params.worktreePath,
+    // The host echoes `claimTokenVerified` only when a token was presented —
+    // mimicking a host that enforces the cleanup contract.
+    vi.mocked(deviceGateway.removeGitWorktree).mockImplementation(async ({ claimToken }) => ({
+      claimTokenVerified: claimToken === undefined ? undefined : true,
+      success: true,
     }));
+    // Mint is insert-or-read against the claim store; release is fenced on
+    // the presented owner token — a stale token can never release a newer row.
+    claimRows.clear();
+    claimSeq = 0;
+    mockClaimModel.mint.mockImplementation(async (params: Record<string, any>) => {
+      const key = `${params.deviceId}:${params.repoCommonDir}::${params.worktreePath}`;
+      const existing = claimRows.get(key);
+      if (existing && !existing.releasedAt) return existing;
+      claimSeq += 1;
+      const row: ClaimRow = {
+        baseBranch: params.baseBranch,
+        deviceId: params.deviceId,
+        dispatchId: params.dispatchId,
+        expectedBaseSha: params.expectedBaseSha,
+        generation: params.generation,
+        id: `claim-${claimSeq}`,
+        key,
+        ownerToken: params.ownerToken ?? `tok-${claimSeq}`,
+        releasedAt: null,
+        repoPath: params.repoPath,
+        taskId: params.taskId,
+        worktreePath: params.worktreePath,
+      };
+      claimRows.set(key, row);
+      return row;
+    });
     mockClaimModel.matches.mockImplementation(
       (
         row: { dispatchId: string; generation: number; taskId: string },
@@ -188,8 +272,13 @@ describe('TaskWorkspaceService', () => {
         row.dispatchId === owner.dispatchId &&
         row.generation === owner.generation,
     );
-    mockClaimModel.lookup.mockResolvedValue(undefined);
-    mockClaimModel.release.mockResolvedValue(undefined);
+    mockClaimModel.lookup.mockImplementation(async (key: string) => claimRows.get(key));
+    mockClaimModel.release.mockImplementation(async (key: string, ownerToken: string) => {
+      const row = claimRows.get(key);
+      if (row && row.ownerToken === ownerToken) {
+        row.releasedAt = new Date('2026-01-01T00:00:00.000Z').toISOString();
+      }
+    });
     mockClaimModel.requestRecovery.mockResolvedValue(undefined);
   });
 
@@ -253,13 +342,133 @@ describe('TaskWorkspaceService', () => {
       });
 
       await expect(service.discardUnregistered(provisioned!)).resolves.toBe(true);
+      // Cleanup carries the provision's own claim token — the device must
+      // verify writer absence before it may remove anything.
       expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith({
+        claimToken: provisioned?.claim?.ownerToken,
         deviceId: 'dev-1',
         path: '/repos/orvilo',
         userId: 'user-1',
         workspaceId: 'ws-1',
         worktreePath: '/repos/orvilo-task-T-1@task_1',
       });
+      expect(claimRows.get(CLAIM_KEY)?.releasedAt).not.toBeNull();
+    });
+
+    it('SA01-A: cleanup preserves the worktree while writer presence is unproven', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const provisioned = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+
+      // The host cannot answer writer presence (no activeWriter field) —
+      // "undefined" must never be read as "no writer".
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(false);
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(mockClaimModel.release).not.toHaveBeenCalled();
+
+      // A live writer owns the path — preserve.
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: { operationId: 'op-live', pid: 4242 },
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(false);
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('SA01-A: an unverified removal keeps the claim live', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const provisioned = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+
+      // A stale host silently ignores claimToken — the result reports success
+      // without verification, so the claim must NOT be released.
+      vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(false);
+      expect(mockClaimModel.release).not.toHaveBeenCalled();
+      expect(claimRows.get(CLAIM_KEY)?.releasedAt).toBeNull();
+    });
+
+    it('SA01-A: a stale provision cleanup cannot remove or release the new owner', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const first = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+
+      // The first claim was released and a new dispatch reclaimed the path —
+      // the row now carries the NEW owner's token.
+      claimRows.get(CLAIM_KEY)!.releasedAt = '2025-12-31T00:00:00.000Z';
+      const reclaim = await mockClaimModel.mint({
+        baseBranch: 'main',
+        deviceId: 'dev-1',
+        dispatchId: 'disp-2',
+        expectedBaseSha: 'sha-base-2',
+        generation: 1,
+        ownerToken: 'tok-new',
+        repoCommonDir: REPO_COMMON_DIR,
+        repoPath: '/repos/orvilo',
+        taskId: 'task_1',
+        worktreePath: CANONICAL_WORKTREE,
+      });
+      expect(reclaim.ownerToken).toBe('tok-new');
+
+      // The first provision's cleanup arrives late — its stale token must not
+      // delete the worktree or release the new claim.
+      await expect(service.discardUnregistered(first!)).resolves.toBe(true);
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(claimRows.get(CLAIM_KEY)).toMatchObject({
+        ownerToken: 'tok-new',
+        releasedAt: null,
+      });
+    });
+
+    it('SA01-A: an already-absent path releases the claim without a removal call', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const provisioned = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+
+      worktreeAdded = false;
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({ activeWriter: null, kind: 'absent' }),
+      );
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(true);
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(claimRows.get(CLAIM_KEY)?.releasedAt).not.toBeNull();
     });
 
     it('creates a worktree on the resolved device and seeds the integration record', async () => {
@@ -310,17 +519,17 @@ describe('TaskWorkspaceService', () => {
       // checkout is not what the contract asked for, so provisioning refuses.
       worktreeAdded = false;
       vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async () => {
-        if (!worktreeAdded) return { kind: 'absent' };
-        return {
+        if (!worktreeAdded) return inspectionOf({ kind: 'absent' });
+        return inspectionOf({
           kind: 'listed',
           listed: {
             branch: 'task/T-9',
             current: false,
             head: 'sha-other',
-            path: '/repos/orvilo-task-T-1@task_1',
-            status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
           },
-        };
+        });
       });
       await expect(
         service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
@@ -394,17 +603,22 @@ describe('TaskWorkspaceService', () => {
     });
 
     it('reuses the same-path worktree when an identical provision replays after a crash', async () => {
-      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
-        activeWriter: null,
-        kind: 'listed',
-        listed: {
-          branch: 'task/T-1',
-          current: false,
-          head: 'sha-base-1',
-          path: '/repos/orvilo-task-T-1@task_1',
-          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
-        },
-      });
+      // The earlier attempt minted the claim and added the worktree, then
+      // crashed before the ACK landed — the replay must adopt claim + dir.
+      seedClaim();
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       const result = await service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task });
@@ -412,18 +626,220 @@ describe('TaskWorkspaceService', () => {
       expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1@task_1');
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
       expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      // A replay reads the existing claim — it never re-mints or re-resolves.
+      expect(mockClaimModel.mint).not.toHaveBeenCalled();
+      expect(deviceGateway.listGitRemoteBranches).not.toHaveBeenCalled();
+    });
+
+    it('SA01-A: replay after a lost ACK still takes over base A after the remote moved to B', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      const first = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+      expect(first?.integration.baseSha).toBe('sha-base-1');
+
+      // The add ACK was lost; meanwhile `origin/main` moved from A to B. The
+      // replay of the SAME dispatch must reuse the claim-pinned base A, not
+      // block or rebase onto B.
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockClear();
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'sha-base-2' },
+      ]);
+
+      const replay = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+
+      expect(replay?.integration.baseSha).toBe('sha-base-1');
+      expect(deviceGateway.listGitRemoteBranches).not.toHaveBeenCalled();
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(1);
+      expect(mockClaimModel.mint).toHaveBeenCalledTimes(1);
+    });
+
+    it('SA01-A: replays the claim-pinned base when the worktree vanished between attempts', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const first = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+      expect(first?.integration.baseSha).toBe('sha-base-1');
+
+      // The worktree was physically removed but the live claim is still ours:
+      // the replay re-adds on the claim's pin, never a freshly resolved base.
+      worktreeAdded = false;
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockClear();
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'sha-base-2' },
+      ]);
+
+      const replay = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task,
+      });
+
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(2);
+      expect(deviceGateway.addGitWorktree).toHaveBeenLastCalledWith(
+        expect.objectContaining({ ref: 'sha-base-1' }),
+      );
+      expect(deviceGateway.listGitRemoteBranches).not.toHaveBeenCalled();
+      expect(replay?.integration.baseSha).toBe('sha-base-1');
+    });
+
+    it('SA01-A: aliases of the same physical directory share a single claim', async () => {
+      // The device proves `/link/orvilo` and `/repos/orvilo` are the same
+      // physical repo, and both worktree spellings collapse to one canonical
+      // path — the claim key binds identity, not the requested string.
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async () => {
+        if (!worktreeAdded) {
+          return inspectionOf({
+            canonicalWorktreePath: CANONICAL_WORKTREE,
+            kind: 'absent',
+          });
+        }
+        return inspectionOf({
+          activeWriter: null,
+          canonicalWorktreePath: CANONICAL_WORKTREE,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        });
+      });
+      const aliasTask = baseTask({
+        config: { workspace: { provider: 'git', repoPath: '/link/orvilo' } },
+      });
+
+      const first = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task: aliasTask,
+      });
+      expect(first?.workingDirectory).toBe('/link/orvilo-task-T-1@task_1');
+      expect(claimRows.size).toBe(1);
+
+      // Replaying the same dispatch through the canonical spelling reuses the
+      // SAME claim — one physical directory, one owner.
+      const replay = await service.provision({
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        task: baseTask({ config: { workspace: workspaceConfig } }),
+      });
+      expect(replay?.workingDirectory).toBe('/repos/orvilo-task-T-1@task_1');
+      expect(mockClaimModel.mint).toHaveBeenCalledTimes(1);
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(1);
+      expect(claimRows.size).toBe(1);
+    });
+
+    it('SA01-A: an aliased second dispatch conflicts on the shared claim', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async () => {
+        if (!worktreeAdded) return inspectionOf({ kind: 'absent' });
+        return inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        });
+      });
+      const aliasTask = baseTask({
+        config: { workspace: { provider: 'git', repoPath: '/link/orvilo' } },
+      });
+      await service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task: aliasTask });
+
+      // A different dispatch spelling the repo through the canonical path
+      // still hits the same claim — the alias cannot split ownership.
+      await expect(
+        service.provision({
+          dispatchId: 'disp-2',
+          generation: 1,
+          seq: 1,
+          task: baseTask({ config: { workspace: workspaceConfig } }),
+        }),
+      ).rejects.toThrow('claimed by another dispatch');
+      expect(mockClaimModel.requestRecovery).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'claim_conflict' }),
+      );
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(1);
+    });
+
+    it('SA01-A: an existing worktree without a claim is never adopted by a fresh mint', async () => {
+      // `listed` on the device but no claim row — minting now would adopt a
+      // directory nobody proved ours. Queue a human instead.
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(
+        service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
+      ).rejects.toThrow('no registered claim');
+      expect(mockClaimModel.mint).not.toHaveBeenCalled();
+      expect(mockClaimModel.requestRecovery).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'orphan_directory' }),
+      );
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('SA01-A: blocks provisioning when the host cannot report canonical identity', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        kind: 'absent',
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(
+        service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
+      ).rejects.toThrow('does not report canonical path identity');
+      expect(mockClaimModel.mint).not.toHaveBeenCalled();
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
     it('A01: refuses reuse when the path is claimed by another dispatch — content preserved', async () => {
-      // mint reports the row back as-is; seed a foreign-dispatch claim.
-      mockClaimModel.mint.mockResolvedValue({
-        deviceId: 'dev-1',
-        dispatchId: 'disp-other',
-        expectedBaseSha: 'sha-base-1',
-        generation: 2,
-        ownerToken: 'tok-other',
-        taskId: 'task_1',
-      });
+      // The foreign dispatch already owns the live claim for the path.
+      seedClaim({ dispatchId: 'disp-other', generation: 2, ownerToken: 'tok-other' });
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(
@@ -432,24 +848,27 @@ describe('TaskWorkspaceService', () => {
 
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
       expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
-      expect(deviceGateway.inspectGitWorktreePath).not.toHaveBeenCalled();
+      expect(mockClaimModel.mint).not.toHaveBeenCalled();
       expect(mockClaimModel.requestRecovery).toHaveBeenCalledWith(
         expect.objectContaining({ kind: 'claim_conflict' }),
       );
     });
 
     it('A02: refuses reuse of a clean worktree while a live writer owns it', async () => {
-      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
-        activeWriter: { operationId: 'op-live', pid: 4242 },
-        kind: 'listed',
-        listed: {
-          branch: 'task/T-1',
-          current: false,
-          head: 'sha-base-1',
-          path: '/repos/orvilo-task-T-1@task_1',
-          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
-        },
-      } as any);
+      seedClaim();
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: { operationId: 'op-live', pid: 4242 },
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-base-1',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(
@@ -463,17 +882,20 @@ describe('TaskWorkspaceService', () => {
     });
 
     it('A03: refuses reuse when the same-branch HEAD differs from the claimed base', async () => {
-      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
-        activeWriter: null,
-        kind: 'listed',
-        listed: {
-          branch: 'task/T-1',
-          current: false,
-          head: 'sha-drifted',
-          path: '/repos/orvilo-task-T-1@task_1',
-          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
-        },
-      } as any);
+      seedClaim();
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            head: 'sha-drifted',
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(
@@ -486,16 +908,19 @@ describe('TaskWorkspaceService', () => {
     it('blocks on a same-path worktree checked out to a different branch', async () => {
       // F01: a matching directory name is never proof of ownership — the
       // occupant is preserved, not force-removed.
-      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
-        activeWriter: null,
-        kind: 'listed',
-        listed: {
-          branch: 'task/T-9',
-          current: false,
-          path: '/repos/orvilo-task-T-1@task_1',
-          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
-        },
-      });
+      seedClaim();
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-9',
+            current: false,
+            path: CANONICAL_WORKTREE,
+            status: { ...cleanStatus },
+          },
+        }),
+      );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(
@@ -509,16 +934,19 @@ describe('TaskWorkspaceService', () => {
     });
 
     it('blocks on a same-branch worktree that is dirty or locked', async () => {
-      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
-        activeWriter: null,
-        kind: 'listed',
-        listed: {
-          branch: 'task/T-1',
-          current: false,
-          path: '/repos/orvilo-task-T-1@task_1',
-          status: { added: 0, clean: false, deleted: 0, modified: 2, total: 2 },
-        },
-      });
+      seedClaim();
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({
+          activeWriter: null,
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-1',
+            current: false,
+            path: CANONICAL_WORKTREE,
+            status: { added: 0, clean: false, deleted: 0, modified: 2, total: 2 },
+          },
+        }),
+      );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(
@@ -531,7 +959,7 @@ describe('TaskWorkspaceService', () => {
     it.each(['orphan-safe', 'orphan-foreign'] as const)(
       'A04/A05: queues an %s path for manual recovery — never auto-deletes',
       async (kind) => {
-        vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({ kind });
+        vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(inspectionOf({ kind }));
         const task = baseTask({ config: { workspace: workspaceConfig } });
 
         await expect(
@@ -593,18 +1021,20 @@ describe('TaskWorkspaceService', () => {
       // The add lands but the post-add inspection reports a newer HEAD than
       // the claim's pinned base — the run refuses to adopt drifted state.
       vi.mocked(deviceGateway.inspectGitWorktreePath)
-        .mockResolvedValueOnce({ kind: 'absent' })
-        .mockResolvedValue({
-          activeWriter: null,
-          kind: 'listed',
-          listed: {
-            branch: 'task/T-1',
-            current: false,
-            head: 'sha-newer',
-            path: '/repos/orvilo-task-T-1@task_1',
-            status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
-          },
-        });
+        .mockResolvedValueOnce(inspectionOf({ kind: 'absent' }))
+        .mockResolvedValue(
+          inspectionOf({
+            activeWriter: null,
+            kind: 'listed',
+            listed: {
+              branch: 'task/T-1',
+              current: false,
+              head: 'sha-newer',
+              path: CANONICAL_WORKTREE,
+              status: { ...cleanStatus },
+            },
+          }),
+        );
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(

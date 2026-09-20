@@ -454,9 +454,12 @@ export default class GatewayConnectionCtr extends ControllerModule {
         this.localFileCtr.readExternalAssetForPublish(params),
       copyAssetForPublish: (params) => this.localFileCtr.copyAssetForPublish(params),
       getActiveWorktreeWriter: async (worktreePath: string) => {
-        const target = path.resolve(worktreePath);
+        // Compare canonical identities, not spellings — a run registered under
+        // a symlinked or aliased cwd still owns the same physical directory.
+        const { canonicalizePath } = await import('@orvilo/local-file-shell/git');
+        const target = await canonicalizePath(worktreePath);
         for (const entry of this.platformTasks.values()) {
-          if (entry.cwd && path.resolve(entry.cwd) === target) {
+          if (entry.cwd && (await canonicalizePath(entry.cwd)) === target) {
             return { operationId: entry.operationId, pid: entry.pid, topicId: entry.topicId };
           }
         }

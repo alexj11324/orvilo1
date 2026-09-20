@@ -516,9 +516,19 @@ export interface DeviceGitWorktreeActiveWriter {
  */
 export interface DeviceGitWorktreePathInspection {
   activeWriter?: DeviceGitWorktreeActiveWriter | null;
+  /**
+   * Canonical spelling of the inspected `worktreePath` — every alias of the
+   * same physical directory collapses to it. Present when the repo listing
+   * succeeded; absent means the host predates identity reporting.
+   */
+  canonicalWorktreePath?: string;
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: DeviceGitWorktreeListItem;
+  /** Canonical git common-dir proving which physical repo owns the path. */
+  repoCommonDir?: string;
+  /** Canonical main-checkout root of the repo. */
+  repoRoot?: string;
 }
 
 /**
@@ -667,6 +677,12 @@ export interface DeviceGitDeleteBranchResult {
 
 /** Result of the `removeGitWorktree` device RPC. Mirrors the desktop shape. */
 export interface DeviceGitRemoveWorktreeResult {
+  /**
+   * `true` when the request carried a `claimToken` and the host verified no
+   * live writer owns the path before removing. Absent on hosts that cannot
+   * answer writer presence — never treat as verified.
+   */
+  claimTokenVerified?: boolean;
   error?: string;
   success: boolean;
 }

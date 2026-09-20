@@ -4189,11 +4189,13 @@ table task_workspace_claims {
   key text [not null]
   device_id text [not null]
   repo_path text [not null]
+  repo_common_dir text
   worktree_path text [not null]
   task_id text [not null]
   dispatch_id text [not null]
   generation integer [not null]
   owner_token text [not null]
+  base_branch text
   expected_base_sha text
   issued_at "timestamp with time zone" [not null, default: `now()`]
   released_at "timestamp with time zone"

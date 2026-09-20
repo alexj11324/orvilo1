@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { addGitWorktree, inspectGitWorktreePath } from '../worktrees';
+import { addGitWorktree, canonicalizePath, inspectGitWorktreePath } from '../worktrees';
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
@@ -147,5 +147,59 @@ describe('inspectGitWorktreePath', () => {
     } finally {
       await chmod(target, 0o700).catch(() => undefined);
     }
+  });
+
+  it('SA01-A: reports the repo common-dir, root and canonical worktree path', async () => {
+    const target = path.join(path.dirname(repo), 'lfs-identity');
+    cleanup.push(target);
+
+    const result = await inspectGitWorktreePath({ path: repo, worktreePath: target });
+
+    expect(result.kind).toBe('absent');
+    expect(result.repoCommonDir).toBe(await realpath(path.join(repo, '.git')));
+    expect(result.repoRoot).toBe(await realpath(repo));
+    expect(result.canonicalWorktreePath).toBe(
+      path.join(await realpath(path.dirname(repo)), 'lfs-identity'),
+    );
+  });
+
+  it('SA01-A: aliases of the same worktree directory report one canonical identity', async () => {
+    const target = path.join(path.dirname(repo), 'lfs-aliased');
+    const linkParent = path.join(path.dirname(repo), 'lfs-parent-link');
+    cleanup.push(target, linkParent);
+    await addGitWorktree({ branch: 'task/T-1', path: repo, worktreePath: target });
+    await symlink(path.dirname(repo), linkParent);
+
+    const direct = await inspectGitWorktreePath({ path: repo, worktreePath: target });
+    const aliased = await inspectGitWorktreePath({
+      path: repo,
+      worktreePath: path.join(linkParent, 'lfs-aliased'),
+    });
+
+    expect(direct.kind).toBe('listed');
+    expect(aliased.kind).toBe('listed');
+    expect(aliased.canonicalWorktreePath).toBe(direct.canonicalWorktreePath);
+    expect(aliased.repoCommonDir).toBe(direct.repoCommonDir);
+    expect(aliased.repoRoot).toBe(direct.repoRoot);
+  });
+});
+
+describe('canonicalizePath', () => {
+  it('collapses a symlinked ancestor onto the real path', async () => {
+    const real = path.join(path.dirname(repo), 'lfs-real');
+    const link = path.join(path.dirname(repo), 'lfs-alias');
+    cleanup.push(real, link);
+    await mkdir(real);
+    await symlink(real, link);
+
+    await expect(canonicalizePath(path.join(link, 'task-worktree'))).resolves.toBe(
+      path.join(await realpath(real), 'task-worktree'),
+    );
+  });
+
+  it('resolves a missing leaf through the deepest existing ancestor', async () => {
+    await expect(canonicalizePath(path.join(repo, 'missing', 'deeper'))).resolves.toBe(
+      path.join(await realpath(repo), 'missing', 'deeper'),
+    );
   });
 });

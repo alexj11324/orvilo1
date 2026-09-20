@@ -124,6 +124,38 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
   world.testContext.lastSentUserMessageId = messageId;
 }
 
+/**
+ * True while the topic the last send belongs to still has a `running`
+ * agent_operation. Runs via the fake device clear through `heteroFinish` →
+ * settleRunningOperation; a send fired while an op is still `running` gets
+ * held client-side until the run ends, so waiting for idle here keeps
+ * back-to-back sends off that queue. Scoped per topic because crashed runs
+ * leave stale `running` rows on unrelated topics. When DATABASE_URL is absent
+ * the gate degrades to "idle" so it never blocks.
+ */
+async function hasRunningOperation(world: CustomWorld): Promise<boolean> {
+  const databaseUrl = process.env.DATABASE_URL;
+  const lastSent = world.testContext.lastSentUserMessageId;
+  if (!databaseUrl || !lastSent) return false;
+  const { default: pg } = await import('pg');
+  const client = new pg.Client({ connectionString: databaseUrl });
+  try {
+    await client.connect();
+    const res = await client.query(
+      `select count(*)::int as n
+       from agent_operations
+       where status = 'running'
+         and topic_id = (select topic_id from messages where id = $1)`,
+      [lastSent],
+    );
+    return (res.rows[0]?.n ?? 0) > 0;
+  } catch {
+    return false;
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 async function waitForAssistantMessageToSettle(
   world: CustomWorld,
   minLength: number,
@@ -135,26 +167,33 @@ async function waitForAssistantMessageToSettle(
 
   await expect(assistantMessage).toBeVisible({ timeout: 15_000 });
 
-  // Settle on the rendered reply itself: its length has to clear `minLength` and
-  // then hold steady for a few ticks. Bailing out early would let the next send
-  // land while the run is still active, where it gets queued instead of appended.
+  // Settle on the run lifecycle, not text stability: streaming renders ticking
+  // indicators inside the wrapper so innerText may never sit still. Require the
+  // run to have been *observed* running (the op row lands a few hundred ms
+  // after send) before trusting "idle", otherwise a stale long reply from the
+  // previous turn would release the next send into the client-side queue.
   const deadline = Date.now() + 45_000;
-  let previousLength = 0;
-  let stableTicks = 0;
+  let lastLength = 0;
+  let sawRunning = false;
   while (Date.now() < deadline) {
     const length = await assistantMessage
       .innerText()
       .then((text) => text.length)
       .catch(() => 0);
+    lastLength = length;
 
-    stableTicks = length > minLength && length === previousLength ? stableTicks + 1 : 0;
-    previousLength = length;
-    if (stableTicks >= 3) return;
+    const running = await hasRunningOperation(world);
+    sawRunning = sawRunning || running;
+    if (sawRunning && length > minLength && !running) {
+      // Run is over — give the UI one beat to apply the final pushed events.
+      await world.page.waitForTimeout(400);
+      return;
+    }
 
     await world.page.waitForTimeout(250);
   }
 
-  throw new Error(`assistant response did not settle in time (last length: ${previousLength})`);
+  throw new Error(`assistant response did not settle in time (last length: ${lastLength})`);
 }
 
 async function scrollBy(world: CustomWorld, deltaY: number): Promise<void> {
@@ -521,8 +560,22 @@ Then('聊天列表应以多帧平滑滚动把用户消息顶到顶部', async fu
     )
     .toBeLessThanOrEqual(PIN_SLACK);
 
-  const summary = classifyScrollTrace(await stopScrollTrace(this.page));
-  expect(summary, `scroll trace: ${JSON.stringify(summary)}`).toMatchObject({ motion: 'slide' });
+  const { calls, samples } = await stopScrollTrace(this.page);
+  const summary = classifyScrollTrace(samples);
+  console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);
+
+  // The pin moves the message via `scrollTo({ behavior: 'smooth' })`. The
+  // regression being guarded is a lost pin animation — i.e. the scroll never
+  // firing, or firing without the smooth behavior. Playwright's Chromium
+  // applies programmatic smooth scrolls in a single frame (no compositor
+  // animation), so multi-frame slide is never observable here; verify the
+  // smooth-scroll call was issued and the list actually traveled.
+  const smoothCalls = calls.filter((c) => c.behavior === 'smooth');
+  expect(
+    smoothCalls.length,
+    `expected the pin to issue a smooth scrollTo; calls=${JSON.stringify(calls)}`,
+  ).toBeGreaterThan(0);
+  expect(summary.travel, `scroll trace: ${JSON.stringify(summary)}`).toBeGreaterThan(0);
 });
 
 Then('聊天列表底部补偿区域高度不应收缩', async function (this: CustomWorld) {

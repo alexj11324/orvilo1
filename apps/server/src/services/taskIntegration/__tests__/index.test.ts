@@ -44,6 +44,9 @@ const mockWorkspaceService = {
   resolveWorkspaceConfig: vi.fn(),
 };
 const { mockAfter } = vi.hoisted(() => ({ mockAfter: vi.fn() }));
+const { mockTaskServiceUpdateStatus } = vi.hoisted(() => ({
+  mockTaskServiceUpdateStatus: vi.fn(),
+}));
 
 const { mockLeaseModel } = vi.hoisted(() => ({
   mockLeaseModel: {
@@ -91,6 +94,11 @@ vi.mock('@/database/models/taskTopic', () => ({
 
 vi.mock('@/server/services/taskRunner', () => ({
   TaskRunnerService: vi.fn(),
+}));
+vi.mock('@/server/services/task', () => ({
+  TaskService: vi.fn(function () {
+    return { updateStatus: mockTaskServiceUpdateStatus };
+  }),
 }));
 vi.mock('@/server/services/taskWorkspace', () => ({
   TaskWorkspaceService: vi.fn(),
@@ -1694,7 +1702,7 @@ describe('TaskIntegrationService', () => {
       expect(mockLeaseModel.release).toHaveBeenCalledWith('lease-1', expect.any(String));
     });
 
-    it('stops before remote writes when the lease is stolen mid-run', async () => {
+    it('holds (not stale) and frees the claim when the lease is stolen mid-run', async () => {
       mockLeaseModel.renew.mockResolvedValue(false);
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
 
@@ -1703,12 +1711,89 @@ describe('TaskIntegrationService', () => {
         taskTopicId: 'topic_1',
       });
 
-      expect(outcome).toBe('stale');
+      // Lease theft is not dispatch staleness: the run still owns the claim, so
+      // the outcome parks at 'hold' (not 'stale') and the claim is released in
+      // the finally — the watchdog's pending-integration sweep can re-drive it
+      // instead of stranding the task 'running'.
+      expect(outcome).toBe('hold');
+      expect(mockTaskTopicModel.releaseIntegration).toHaveBeenCalled();
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
       expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
-      // A release by a displaced owner is a filtered no-op; nothing ran, so
-      // there is no ambiguous outcome to record.
+      // No mutation phase ran: the remote outcome is known — no outcomeUnknown,
+      // and the displaced release is a filtered no-op.
       expect(mockLeaseModel.markOutcomeUnknown).not.toHaveBeenCalled();
+    });
+
+    it('renews the lease while a remote mutation is in flight (fenced heartbeat)', async () => {
+      vi.useFakeTimers();
+      try {
+        let resolveMerge:
+          ((v: { sha: string; state: string; success: boolean }) => void) | undefined;
+        vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              resolveMerge = resolve;
+            }),
+        );
+        mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+        const svc = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1', {
+          ...pacing,
+          heartbeatMs: 10,
+        });
+
+        const run = svc.integrateOnComplete({
+          task: baseTask(),
+          taskTopicId: 'topic_1',
+        });
+        // Flush the claim/owner/prepare chain until the merge RPC is in flight.
+        for (let i = 0; i < 10 && !resolveMerge; i++) {
+          await vi.advanceTimersByTimeAsync(0);
+        }
+        expect(deviceGateway.mergeGitBranch).toHaveBeenCalledTimes(1);
+
+        // The heartbeat renews the lease while the RPC is still pending.
+        const renewsBefore = mockLeaseModel.renew.mock.calls.length;
+        await vi.advanceTimersByTimeAsync(10);
+        expect(mockLeaseModel.renew.mock.calls.length).toBeGreaterThan(renewsBefore);
+
+        resolveMerge?.({ sha: 'late-sha', state: 'merged', success: true });
+        const outcome = await run;
+        expect(outcome).toBe('settled');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('blocks further fenced writes once a mid-flight heartbeat fails', async () => {
+      let resolveMerge: ((v: { sha: string; state: string; success: boolean }) => void) | undefined;
+      vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveMerge = resolve;
+          }),
+      );
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+
+      const svc = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1', {
+        ...pacing,
+        heartbeatMs: 2,
+      });
+      const run = svc.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+      // Let the call reach the in-flight merge and tick a few heartbeats.
+      await new Promise((r) => setTimeout(r, 15));
+      // Mid-flight renewal fails -> handle marked lost; the publish step must
+      // never fire even though the merge RPC eventually returned success.
+      mockLeaseModel.renew.mockResolvedValue(false);
+      await new Promise((r) => setTimeout(r, 10));
+      resolveMerge?.({ sha: 'sha-x', state: 'merged', success: true });
+      const outcome = await run;
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
+      expect(deviceGateway.finalizeGitMerge).not.toHaveBeenCalled();
+      expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalled();
     });
 
     it('marks outcome_unknown (not release) when a mutation-phase write fails', async () => {
@@ -1725,6 +1810,58 @@ describe('TaskIntegrationService', () => {
       expect(outcome).toBe('blocked');
       expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalledWith('lease-1', expect.any(String));
       expect(mockLeaseModel.release).not.toHaveBeenCalled();
+    });
+
+    it('sweep completes an integrated orphan row whose deferred re-entry died', async () => {
+      const task = baseTask();
+      (mockDb as any).select = vi.fn(() => ({
+        from: () => ({
+          where: () => ({ orderBy: () => ({ limit: async () => [task] }) }),
+        }),
+      }));
+      const integrated = asTopic(seedRecord({ state: 'integrated' }));
+      (integrated as any).status = 'completed';
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([integrated]);
+
+      const result = await service.sweepPendingIntegrations({
+        createdByUserId: 'user-1',
+        workspaceId: 'ws-1',
+      });
+
+      expect(result.completed).toEqual(['T-1']);
+      expect(mockTaskServiceUpdateStatus).toHaveBeenCalledWith({
+        id: 'task_1',
+        status: 'completed',
+      });
+      // Integrated rows are finished by the sweep itself — no merge retry.
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    });
+
+    it('sweep re-drives a pending row instead of stranding the task', async () => {
+      const task = baseTask();
+      (mockDb as any).select = vi.fn(() => ({
+        from: () => ({
+          where: () => ({ orderBy: () => ({ limit: async () => [task] }) }),
+        }),
+      }));
+      const pending = asTopic(seedRecord());
+      (pending as any).status = 'completed';
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([pending]);
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(pending);
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'swept-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const result = await service.sweepPendingIntegrations({
+        createdByUserId: 'user-1',
+        workspaceId: 'ws-1',
+      });
+
+      expect(deviceGateway.mergeGitBranch).toHaveBeenCalled();
+      expect(result.held.length + result.completed.length).toBe(1);
+      expect(result.blocked).toHaveLength(0);
     });
 
     it('releases the lease on the clean happy path', async () => {

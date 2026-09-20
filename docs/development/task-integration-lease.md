@@ -34,12 +34,25 @@ completion callback. The record's own claim/state checks re-gate the retry.
 
 ## Fencing
 
-Every remote mutation calls `lease.assert(phase)` — one `UPDATE … WHERE
-owner_token AND released_at IS NULL` that renews the deadline and proves
-ownership in the same statement. A failed assert throws
-`RepoRefLeaseLostError` → outcome `'stale'`, and the caller performs no
-further writes. Post-acquire, `resolveCurrentOwner` re-runs so a task whose
-state changed while queued cancels the new owner before any side effect.
+Local side effects (row writes, corrective dispatches) call
+`lease.assert(phase)` — one `UPDATE … WHERE owner_token AND released_at IS
+NULL` that renews the deadline and proves ownership in the same statement.
+
+Remote mutations run inside `lease.fenced(phase, fn)`: it asserts ownership,
+records the phase, then keeps a `setInterval` heartbeat renewing the lease for
+the whole duration of `fn`. A device/GitHub RPC can outlive the 60s TTL —
+without the heartbeat the lease would be stealable while `mergeGitBranch` is
+still in flight, yielding two live owners. A failed renewal marks the handle
+lost: the in-flight call completes, but every later fenced call throws
+`RepoRefLeaseLostError` before issuing another write.
+
+Lease loss is not dispatch staleness. `RepoRefLeaseLostError` → outcome
+`'hold'` (the claim row is freed in the `finally`, so the watchdog's
+pending-integration sweep can re-drive the row), versus `'stale'` which is
+reserved for dispatch supersession — the task's dispatch was claimed by a
+different run and this one is history. Post-acquire, `resolveCurrentOwner`
+re-runs so a task whose state changed while queued cancels the new owner
+before any side effect.
 
 ## Outcome ambiguity
 
@@ -50,6 +63,19 @@ verification (`verifyRemoteMerge`, `isBranchMergedInto`, same-SHA push no-op)
 is already idempotent, so re-drive is safe. Clean completions `release`, which
 clears the ambiguity flag for the next owner; a release failure just means the
 row lives until its deadline.
+
+## Durable re-drive
+
+The `after()` deferred re-entry is only the fast path — it dies with the
+request process. The durable guarantee is `sweepPendingIntegrations`, invoked
+each `runTaskWatchdog` tick: it scans for device-bound rows whose topic
+completed but whose integration state is still `pending`/`merging`/`conflict`/
+`publish_failed`, re-runs `integrateOnComplete` (the whole contention/claim/
+fence pipeline re-applies), and finishes `integrated` rows via
+`completeDeferredIntegration` — a `verifyOperationId` hands off to
+`driveTaskFromVerify`, otherwise the task transitions `completed` directly.
+Repo-bound rows stay with `runTaskDeliveryReviewSweep`; the two sweeps never
+touch each other's records.
 
 ## Rollback boundary
 

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { IntegrationLeasePhase, TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { IntegrationLeaseModel } from '@/database/models/integrationLease';
@@ -12,6 +13,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { IntegrationLeaseItem } from '@/database/schemas';
 import type { TaskTopicItem } from '@/database/schemas/task';
+import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
@@ -59,7 +61,19 @@ class RepoRefLeaseLostError extends Error {
  * double-publish.
  */
 interface RepoRefLeaseHandle {
+  /**
+   * Single fencing statement for a local side effect (row writes,
+   * dispatches) — renews the deadline, records `phase`, proves ownership.
+   */
   assert: (phase: IntegrationLeasePhase) => Promise<void>;
+  /**
+   * Assert ownership, record `phase`, then run `fn` under a renewal
+   * heartbeat — a device/GitHub RPC may outlive the base TTL, so the lease
+   * stays owned while the write is in flight. A failed renewal marks the
+   * handle lost; the in-flight call completes but every later fenced call
+   * throws before issuing another write.
+   */
+  fenced: <T>(phase: IntegrationLeasePhase, fn: () => Promise<T>) => Promise<T>;
   id: string;
   /** Last mutation phase asserted on this handle ('claimed' = none so far). */
   phase: IntegrationLeasePhase;
@@ -68,12 +82,18 @@ interface RepoRefLeaseHandle {
 /** Lease pacing knobs — tests inject smaller windows; production uses defaults. */
 interface RepoRefLeasePacing {
   deferMs: number;
+  /** Renewal cadence while a fenced remote call is in flight. */
+  heartbeatMs: number;
   pollMs: number;
   ttlMs: number;
   waitMs: number;
 }
 /** Push rejections that mean the recorded merge commit's base moved. */
 const NON_FAST_FORWARD_PUSH = /non-fast-forward|fetch first|stale info|\[rejected\]/i;
+/** Bounded scan for the pending-integration re-drive pass — same oldest-first
+ * pattern as the delivery-review sweep so a busy watchdog never starves the
+ * tail. */
+const PENDING_INTEGRATION_SCAN_LIMIT = 50;
 
 /**
  * Re-baselining must never erase provenance: when a check advances
@@ -138,6 +158,9 @@ export class TaskIntegrationService {
     this.leaseModel = new IntegrationLeaseModel(db);
     this.pacing = {
       deferMs: pacing?.deferMs ?? REPO_REF_LEASE_DEFER_MS,
+      heartbeatMs:
+        pacing?.heartbeatMs ??
+        Math.max(1, Math.floor((pacing?.ttlMs ?? REPO_REF_LEASE_TTL_MS) / 3)),
       pollMs: pacing?.pollMs ?? REPO_REF_LEASE_POLL_MS,
       ttlMs: pacing?.ttlMs ?? REPO_REF_LEASE_TTL_MS,
       waitMs: pacing?.waitMs ?? REPO_REF_LEASE_WAIT_MS,
@@ -534,11 +557,32 @@ export class TaskIntegrationService {
     }
 
     const leaseId = lease.id;
+    let lost = false;
+    const renewAt = async (phase: IntegrationLeasePhase) => {
+      const ok = await this.leaseModel.renew(leaseId, ownerToken, deadline(), phase);
+      if (!ok) throw new RepoRefLeaseLostError(key);
+    };
     const handle: RepoRefLeaseHandle = {
       assert: async (phase) => {
-        const ok = await this.leaseModel.renew(leaseId, ownerToken, deadline(), phase);
-        if (!ok) throw new RepoRefLeaseLostError(key);
+        if (lost) throw new RepoRefLeaseLostError(key);
+        await renewAt(phase);
         handle.phase = phase;
+      },
+      fenced: async <T>(phase: IntegrationLeasePhase, fn: () => Promise<T>): Promise<T> => {
+        if (lost) throw new RepoRefLeaseLostError(key);
+        await renewAt(phase);
+        handle.phase = phase;
+        const heartbeat = setInterval(() => {
+          void renewAt(phase).catch(() => {
+            lost = true;
+          });
+        }, this.pacing.heartbeatMs);
+        heartbeat.unref?.();
+        try {
+          return await fn();
+        } finally {
+          clearInterval(heartbeat);
+        }
       },
       id: leaseId,
       phase: 'claimed',
@@ -554,8 +598,23 @@ export class TaskIntegrationService {
       return await run(handle);
     } catch (error) {
       if (error instanceof RepoRefLeaseLostError) {
-        log('repo/ref lease %s lost mid-run for %s — stopping without writes', key, ctx.topicId);
-        return 'stale';
+        // Lease theft is not dispatch staleness — this run still owns the task.
+        // Park the outcome at 'hold' (release drops in the finally) so the
+        // pending-integration sweep re-drives the row and reconciles remote
+        // state instead of stranding a valid merge.
+        ambiguousOutcome = handle.phase !== 'claimed';
+        if (ambiguousOutcome) {
+          await this.leaseModel
+            .markOutcomeUnknown(leaseId, ownerToken)
+            .catch((e) => log('repo/ref lease %s outcome_unknown mark failed — %O', key, e));
+        }
+        log(
+          'repo/ref lease %s lost mid-run for %s at phase=%s — holding for re-drive',
+          key,
+          ctx.topicId,
+          handle.phase,
+        );
+        return 'hold';
       }
       // A mutation-phase failure leaves the remote outcome ambiguous: keep the
       // row with outcomeUnknown so the next claimant reconciles first.
@@ -844,13 +903,14 @@ export class TaskIntegrationService {
 
     // Fence before provisioning device state: a stolen lease must not create
     // an integration worktree for a section it no longer owns.
-    await lease.assert('prepare');
-    const ensured = await this.ensureIntegrationWorktree({
-      baseRef: this.baseRef(record),
-      deviceId: record.deviceId,
-      integrationWorktreePath,
-      repoPath: record.repoPath,
-    });
+    const ensured = await lease.fenced('prepare', () =>
+      this.ensureIntegrationWorktree({
+        baseRef: this.baseRef(record),
+        deviceId: record.deviceId,
+        integrationWorktreePath,
+        repoPath: record.repoPath,
+      }),
+    );
     if (!ensured) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
         integrationWorktreePath,
@@ -868,18 +928,19 @@ export class TaskIntegrationService {
       integrationWorktreePath,
     });
 
-    await lease.assert('merge');
-    const merged = await deviceGateway.mergeGitBranch({
-      baseRef: this.baseRef(record),
-      branch: record.branch,
-      deviceId: record.deviceId,
-      // Refresh the tracking ref so the serialized merge re-baselines onto the
-      // published tip rather than a stale `origin/<base>`.
-      fetchBase: record.baseBranch !== 'HEAD',
-      path: integrationWorktreePath,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
-    });
+    const merged = await lease.fenced('merge', () =>
+      deviceGateway.mergeGitBranch({
+        baseRef: this.baseRef(record),
+        branch: record.branch,
+        deviceId: record.deviceId,
+        // Refresh the tracking ref so the serialized merge re-baselines onto the
+        // published tip rather than a stale `origin/<base>`.
+        fetchBase: record.baseBranch !== 'HEAD',
+        path: integrationWorktreePath,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }),
+    );
     const deliveryRecord: TaskTopicIntegration = {
       ...activeRecord,
       expectedHeadSha: merged.headSha ?? record.expectedHeadSha,
@@ -1217,14 +1278,15 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
-    await lease.assert('merge');
-    const finalized = await deviceGateway.finalizeGitMerge({
-      deviceId: record.deviceId,
-      expectedHead: record.expectedHeadSha,
-      path: finalizePath,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
-    });
+    const finalized = await lease.fenced('merge', () =>
+      deviceGateway.finalizeGitMerge({
+        deviceId: record.deviceId,
+        expectedHead: record.expectedHeadSha,
+        path: finalizePath,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }),
+    );
 
     if (finalized.state === 'integrated' && finalized.validatedExpectedHead) {
       return this.landMerge(task, topicId, record, finalized.sha, lease);
@@ -1379,16 +1441,17 @@ export class TaskIntegrationService {
 
     let pushedToRemote: boolean | undefined;
     if (record.baseBranch !== 'HEAD') {
-      await lease.assert('publish');
-      const pushed = await deviceGateway.pushGitBranch({
-        deviceId: record.deviceId,
-        expectedSha: sha,
-        path: publishPath,
-        remoteBranch: record.baseBranch,
-        sourceRef: sha,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      });
+      const pushed = await lease.fenced('publish', () =>
+        deviceGateway.pushGitBranch({
+          deviceId: record.deviceId,
+          expectedSha: sha,
+          path: publishPath,
+          remoteBranch: record.baseBranch,
+          sourceRef: sha,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        }),
+      );
       if (!pushed.success || pushed.pushedSourceRef !== sha) {
         const immutableSourceUnconfirmed = pushed.success && pushed.pushedSourceRef !== sha;
         const reason = immutableSourceUnconfirmed
@@ -1689,6 +1752,120 @@ export class TaskIntegrationService {
       ),
     );
     return true;
+  }
+
+  /**
+   * Durable re-driver for completions that were held behind a repo/ref lease
+   * or lost it mid-flight: the deferred `after()` re-entry is only the fast
+   * path, so this sweep (run by the task watchdog) guarantees a stranded
+   * integration row cannot keep its task 'running' forever. Repo-bound rows
+   * belong to `runTaskDeliveryReviewSweep`; this pass only takes device-bound
+   * rows whose run already finished.
+   */
+  async sweepPendingIntegrations(
+    options: {
+      createdByUserId?: string;
+      workspaceId?: string;
+    } = {},
+  ): Promise<{ blocked: string[]; completed: string[]; held: string[] }> {
+    const filters = [
+      or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
+      or(eq(tasks.status, 'running'), eq(tasks.status, 'paused')),
+      sql`exists (
+        select 1 from task_topics tt
+        where tt.task_id = ${tasks.id}
+          and tt.execution_generation = ${tasks.executionGeneration}
+          and tt.status = 'completed'
+          and nullif(btrim(coalesce(tt.integration ->> 'repo', '')), '') is null
+          and tt.integration ->> 'state' in (
+            'pending', 'merging', 'conflict', 'publish_failed', 'integrated'
+          )
+      )`,
+    ];
+    if (options.createdByUserId) {
+      filters.push(eq(tasks.createdByUserId, options.createdByUserId));
+      filters.push(
+        options.workspaceId
+          ? eq(tasks.workspaceId, options.workspaceId)
+          : isNull(tasks.workspaceId),
+      );
+    }
+    const candidates = await this.db
+      .select()
+      .from(tasks)
+      .where(and(...filters))
+      .orderBy(asc(tasks.updatedAt))
+      .limit(PENDING_INTEGRATION_SCAN_LIMIT);
+    const result = { blocked: [] as string[], completed: [] as string[], held: [] as string[] };
+    for (const task of candidates) {
+      const rows = await this.taskTopicModel.findByTaskId(task.id);
+      for (const row of rows) {
+        const record = row.integration;
+        if (!row.topicId || !record || record.repo) continue;
+        if (row.status !== 'completed') continue;
+        if (row.executionGeneration !== task.executionGeneration) continue;
+        const state = record.state;
+        if (
+          state !== 'pending' &&
+          state !== 'merging' &&
+          state !== 'conflict' &&
+          state !== 'publish_failed' &&
+          state !== 'integrated'
+        )
+          continue;
+
+        if (state === 'integrated') {
+          // The merge proof landed but the task never transitioned (a deferred
+          // re-entry dropped with its process, or a hold outlived the request):
+          // finish it here.
+          await this.completeDeferredIntegration(task, record);
+          result.completed.push(task.identifier);
+          continue;
+        }
+
+        const outcome = await this.integrateOnComplete({ task, taskTopicId: row.topicId });
+        if (outcome === 'blocked') {
+          result.blocked.push(task.identifier);
+        } else if (outcome === 'settled') {
+          const refreshed = (await this.taskTopicModel.findByTopicId(row.topicId))?.integration;
+          if (refreshed?.state === 'integrated') {
+            await this.completeDeferredIntegration(task, refreshed);
+            result.completed.push(task.identifier);
+          } else {
+            result.held.push(task.identifier);
+          }
+        } else {
+          // 'hold'/'stale' — still contended or superseded; the next sweep pass
+          // and the record's own claim/state gates decide again.
+          result.held.push(task.identifier);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Terminal transition for a deferred/swept integration that settled: a bound
+   * verify plan owns completion (same redirect as the lifecycle gate);
+   * otherwise the task completes here — mirroring how the delivery-review
+   * sweep completes repo-bound rows.
+   */
+  private async completeDeferredIntegration(
+    task: TaskItem,
+    record: TaskTopicIntegration,
+  ): Promise<void> {
+    if (record.verifyOperationId) {
+      const { driveTaskFromVerify } = await import('../verify/settle');
+      await driveTaskFromVerify(this.db, this.userId, record.verifyOperationId, this.workspaceId);
+      return;
+    }
+    // TaskService statically imports this service — keep the edge dynamic so
+    // module initialization stays acyclic.
+    const { TaskService } = await import('../task');
+    await new TaskService(this.db, this.userId, this.workspaceId).updateStatus({
+      id: task.id,
+      status: 'completed',
+    });
   }
 }
 

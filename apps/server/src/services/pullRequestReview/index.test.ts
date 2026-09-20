@@ -242,6 +242,16 @@ const snapshotFor = (over: { headSha?: string; threadIds?: string[]; reviewIds?:
     threadIds: over.threadIds ?? [THREAD_ID],
   });
 
+const githubStatus = vi.hoisted(() => ({
+  getStatus: vi.fn<(id: string) => Promise<{ connected: boolean; success: boolean }>>(),
+}));
+
+vi.mock('@/server/services/market', () => ({
+  MarketService: class {
+    market = { skills: { getStatus: githubStatus.getStatus } };
+  },
+}));
+
 describe('pull request review id', () => {
   it('round-trips a canonical provider identity', () => {
     const id = formatPullRequestReviewId({
@@ -815,5 +825,24 @@ describe('page (RV05)', () => {
       }),
     );
     expect(error.code).toBe('THREAD_MISMATCH');
+  });
+});
+
+describe('connection probe', () => {
+  it('maps a market status-probe failure to GITHUB_NOT_CONNECTED', async () => {
+    githubStatus.getStatus.mockRejectedValue(new Error('connect ECONNREFUSED'));
+    const service = new PullRequestReviewService('user-1', 'ws-1');
+    await expect(service.reviewQueue('for-me')).rejects.toMatchObject({
+      code: 'GITHUB_NOT_CONNECTED',
+      name: 'PullRequestReviewError',
+    });
+  });
+
+  it('maps a disconnected status to GITHUB_NOT_CONNECTED', async () => {
+    githubStatus.getStatus.mockResolvedValue({ connected: false, success: true });
+    const service = new PullRequestReviewService('user-1', 'ws-1');
+    await expect(service.reviewQueue('for-me')).rejects.toMatchObject({
+      code: 'GITHUB_NOT_CONNECTED',
+    });
   });
 });

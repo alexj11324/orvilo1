@@ -117,6 +117,24 @@ Before(async function (this: CustomWorld, { pickle }) {
   }
 });
 
+// Scroll scenarios need the product's own send-detection verdicts to debug
+// CI-only failures (pg stalls make sends arrive at odd commit boundaries).
+// Enable the hook's debug namespace before any navigation and forward its
+// console lines into the test log.
+Before({ tags: '@scroll' }, async function (this: CustomWorld) {
+  await this.browserContext.addInitScript(() => {
+    try {
+      localStorage.setItem('debug', 'orvilo:conversation:scroll');
+    } catch {
+      // about:blank has no localStorage; the real origin page will set it.
+    }
+  });
+  this.page.on('console', (msg) => {
+    const text = msg.text();
+    if (text.includes('orvilo:conversation:scroll')) console.log(`   [scroll] ${text}`);
+  });
+});
+
 After(async function (this: CustomWorld, { pickle, result }) {
   const testId = pickle.tags
     .find(

@@ -3,7 +3,7 @@ import {
   type AgentOperationStatus,
   type VerifyRunStatus,
 } from '@orvilo/types';
-import { and, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
 import { today } from '@/utils/time';
 
@@ -464,6 +464,26 @@ export class AgentOperationModel {
       )
       .limit(1);
     return row ?? null;
+  }
+
+  /**
+   * Match a judgment launch by its `appContext.judgment.intentKey` — the
+   * reconcile path for a dispatch whose operationId never came back (throw,
+   * caller abort, or hang past the caller's budget). Newest match wins.
+   */
+  async findByJudgmentIntent(intentKey: string) {
+    const [operation] = await this.db
+      .select()
+      .from(agentOperations)
+      .where(
+        and(
+          this.ownership(),
+          sql`${agentOperations.appContext}->'judgment'->>'intentKey' = ${intentKey}`,
+        ),
+      )
+      .orderBy(desc(agentOperations.createdAt))
+      .limit(1);
+    return operation ?? null;
   }
 
   /** Match a server-minted turn identity when a diagnostic dispatch receipt was lost. */

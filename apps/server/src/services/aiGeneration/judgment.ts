@@ -2,6 +2,7 @@ import { computePromptHash, resolveScenario } from '@orvilo/llm-generation-traci
 import type { GenerateObjectPayload, GenerateObjectSchema } from '@orvilo/model-runtime';
 import type { AgentOperationStatus, OpenAIChatMessage } from '@orvilo/types';
 import { isTerminalAgentOperationStatus } from '@orvilo/types';
+import { nanoid } from '@orvilo/utils';
 import Ajv from 'ajv';
 import debug from 'debug';
 
@@ -146,8 +147,14 @@ export const resolveAcpJudgmentAgent = async (
     );
   }
 
-  if (binding.slug && (await agents.getBuiltinAgent(binding.slug))) {
-    return { slug: binding.slug };
+  if (binding.slug) {
+    if (await agents.getBuiltinAgent(binding.slug)) return { slug: binding.slug };
+    // Same rule for an explicit slug: a pinned builtin identity that does not
+    // resolve is a hard boundary, never a silent env fallback.
+    throw new AcpJudgmentBindingError(
+      `slug:${binding.slug}`,
+      'the explicitly pinned slug does not resolve to a builtin agent — no env fallthrough',
+    );
   }
 
   if (binding.allowEnvFallback === false) return undefined;
@@ -263,6 +270,12 @@ export interface AcpJudgmentRunParams {
   binding: AcpJudgmentBinding;
   /** Evidence files the judgment must see (attached to the judgment turn). */
   fileIds?: string[];
+  /**
+   * Optional launch identity override, stamped on `appContext.judgment.intentKey`.
+   * Defaults to a unique key per call; a caller that can legitimately re-issue
+   * the same logical launch may pin it so reconcile finds the same row.
+   */
+  intentKey?: string;
   /** Agent step cap — the per-run step budget. Defaults to a one-shot judgment. */
   maxSteps?: number;
   /** Advisory model/provider override — applied to slug-bound runs only. */
@@ -377,6 +390,8 @@ const readTracing = (raw: Record<string, unknown> | undefined) => ({
  * produced the judgment.
  */
 const recordJudgmentTracing = async (params: {
+  /** Explicit failure code — distinguishes 'no_json' from 'schema_mismatch'. */
+  errorCode?: string;
   input: unknown;
   operation: AgentOperationItem;
   output: unknown;
@@ -412,9 +427,8 @@ const recordJudgmentTracing = async (params: {
       costUsd: params.operation.totalCost,
       errorCode: success
         ? null
-        : params.operation.status === 'done'
-          ? 'schema_mismatch'
-          : params.operation.status,
+        : (params.errorCode ??
+          (params.operation.status === 'done' ? 'schema_mismatch' : params.operation.status)),
       inputHint: tracing.inputHint,
       inputTokens: params.operation.totalInputTokens,
       latencyMs: params.operation.processingTimeMs,
@@ -497,16 +511,83 @@ export const runAcpJudgment = async <T = unknown>(
   const slugBound = 'slug' in binding;
   const maxSteps = judgment.maxSteps ?? DEFAULT_MAX_STEPS;
   const timeoutMs = judgment.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  // The wait budget covers dispatch latency too — establish the deadline
-  // before the execAgent side-effect so a slow start cannot escape it.
+  // The budget covers dispatch latency too — the deadline and the dispatch
+  // abort controller are established BEFORE the execAgent side-effect so a
+  // slow or lost start consumes the caller's budget instead of escaping it.
   const deadline = Date.now() + timeoutMs;
+  // Launch identity: minted before dispatch and stamped on the operation row,
+  // so a dispatch whose return value is lost (throw / caller abort / hang past
+  // the budget) is reconciled by intent — never re-dispatched as a second
+  // writer.
+  const intentKey =
+    judgment.intentKey ?? `${judgment.purpose}:${judgment.attempt ?? 0}:${nanoid(10)}`;
 
-  const exec = await new AiAgentService(db, userId, { workspaceId }).execAgent({
+  const dispatchController = new AbortController();
+  const onCallerAbort = () => dispatchController.abort(judgment.signal?.reason);
+  if (judgment.signal?.aborted) dispatchController.abort(judgment.signal?.reason);
+  else judgment.signal?.addEventListener('abort', onCallerAbort, { once: true });
+  let onDeadline!: () => void;
+  const deadlineReached = new Promise<'timeout'>((resolve) => {
+    onDeadline = () => resolve('timeout');
+  });
+  const deadlineTimer = setTimeout(() => {
+    dispatchController.abort('judgment-deadline');
+    onDeadline();
+  }, timeoutMs);
+  deadlineTimer.unref();
+
+  const operations = new AgentOperationModel(db, userId, workspaceId);
+  const messages = new MessageModel(db, userId, workspaceId);
+
+  /**
+   * Interrupt a run and report PHYSICAL stop authority — `interruptTask`'s
+   * `cancelState` is what the host provably did: 'confirmed' means stopped,
+   * 'requested'/'unknown' mean the signal may never have landed. A DB terminal
+   * status is never a substitute (a row can read 'interrupted' while the
+   * device writer is still alive), and `deviceCancellationConfirmed === false`
+   * forces 'unknown'.
+   */
+  const interrupt = async (
+    reason: string,
+    targetOperationId: string,
+  ): Promise<'confirmed' | 'unknown'> => {
+    try {
+      const interruption = await new AiAgentService(db, userId, { workspaceId }).interruptTask({
+        operationId: targetOperationId,
+      });
+      if (interruption.deviceCancellationConfirmed === false) return 'unknown';
+      return interruption.cancelState === 'confirmed' ? 'confirmed' : 'unknown';
+    } catch (error) {
+      log('judgment %s interrupt failed (%s, non-fatal): %O', targetOperationId, reason, error);
+      return 'unknown';
+    }
+  };
+
+  /** The operation row this launch minted — survives a lost dispatch return. */
+  const reconcileIntent = () => operations.findByJudgmentIntent(intentKey).catch(() => null);
+
+  /**
+   * Honest terminal status for an error detail: a row that reached a real
+   * terminal state (incl. a natural 'done' racing our cancel) reports itself —
+   * only a confirmed physical interrupt may claim 'interrupted'.
+   */
+  const reportedStatus = (
+    cancelResult: 'confirmed' | 'unknown' | undefined,
+    latest: AgentOperationItem | null | undefined,
+  ): AgentOperationStatus | undefined =>
+    latest && isTerminalAgentOperationStatus(latest.status)
+      ? latest.status
+      : cancelResult === 'confirmed'
+        ? 'interrupted'
+        : latest?.status;
+
+  const execPromise = new AiAgentService(db, userId, { workspaceId }).execAgent({
     ...binding,
     appContext: {
       judgment: {
         attempt: judgment.attempt,
         budget: { maxSteps, maxWaitMs: timeoutMs },
+        intentKey,
         purpose: judgment.purpose,
       },
       suppressSignal: true,
@@ -523,133 +604,187 @@ export const runAcpJudgment = async <T = unknown>(
     maxSteps,
     parentOperationId: judgment.parentOperationId,
     prompt: body,
-    signal: judgment.signal,
+    signal: dispatchController.signal,
     taskId: judgment.taskId,
     title: `[judgment] ${judgment.purpose}`,
     trigger: ACP_JUDGMENT_TRIGGER,
     userInterventionConfig: { approvalMode: 'headless' },
   });
+  // `settled` never rejects — the race below decides the outcome.
+  const settled = execPromise.then(
+    (value) => ({ kind: 'ok' as const, value }),
+    (error) => ({ error, kind: 'err' as const }),
+  );
+  const callerAborted = new Promise<{ kind: 'caller' }>((resolve) => {
+    if (!judgment.signal) return;
+    if (judgment.signal.aborted) resolve({ kind: 'caller' });
+    else
+      judgment.signal.addEventListener('abort', () => resolve({ kind: 'caller' }), { once: true });
+  });
 
-  const operationId = exec.operationId;
-  const operations = new AgentOperationModel(db, userId, workspaceId);
-  const messages = new MessageModel(db, userId, workspaceId);
+  try {
+    const raced = await Promise.race([
+      settled,
+      callerAborted,
+      deadlineReached.then(() => ({ kind: 'timeout' as const })),
+    ]);
 
-  /**
-   * Interrupt the run and confirm via the durable row. Returns 'unknown' when
-   * the interrupt request failed or the row did not reach a terminal status —
-   * callers must treat 'unknown' as possibly-still-running, never as stopped.
-   */
-  const interrupt = async (reason: string): Promise<'confirmed' | 'unknown'> => {
-    try {
-      await new AiAgentService(db, userId, { workspaceId }).interruptTask({ operationId });
-      const after = await operations.findById(operationId).catch(() => undefined);
-      return after && isTerminalAgentOperationStatus(after.status) ? 'confirmed' : 'unknown';
-    } catch (error) {
-      log('judgment %s interrupt failed (%s, non-fatal): %O', operationId, reason, error);
-      return 'unknown';
-    }
-  };
-
-  let operation = await operations.findById(operationId);
-  for (;;) {
-    if (operation && isTerminalAgentOperationStatus(operation.status)) break;
-    if (judgment.signal?.aborted) {
-      const cancelResult = await interrupt('caller signal aborted');
-      throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-        cancelResult,
-        operationId,
-        // Only a confirmed interrupt may claim 'interrupted' — an unconfirmed
-        // cancel reports the last durable status, not a state we never proved.
-        status: cancelResult === 'confirmed' ? 'interrupted' : operation?.status,
+    if (raced.kind !== 'ok' || judgment.signal?.aborted) {
+      // Dispatch threw, the caller aborted, or the total budget was spent
+      // before execAgent returned. The operation row may still have landed —
+      // reconcile by intentKey so the landed writer is interrupted, not
+      // orphaned, and no second dispatch is ever attempted.
+      const interruptIfLanded = async (op: AgentOperationItem | null) =>
+        op && !isTerminalAgentOperationStatus(op.status)
+          ? interrupt('dispatch outcome lost', op.id)
+          : undefined;
+      // A still-pending exec that lands late is reconciled in the background —
+      // it can no longer answer the caller but must not leak a live writer.
+      void settled.then(async (s) => {
+        const late =
+          s.kind === 'ok'
+            ? await operations.findById(s.value.operationId).catch(() => null)
+            : await reconcileIntent();
+        await interruptIfLanded(late);
       });
-    }
-    if (Date.now() > deadline) {
-      const cancelResult = await interrupt('wait budget exceeded');
+      const landed =
+        raced.kind === 'ok'
+          ? await operations.findById(raced.value.operationId).catch(() => null)
+          : await reconcileIntent();
+      const cancelResult = await interruptIfLanded(landed);
+      // Re-read after the interrupt: a run that reached 'done' on its own
+      // while the cancel was in flight reports 'done', never 'interrupted'.
+      const latest = landed ? await operations.findById(landed.id).catch(() => landed) : landed;
+      const detail = {
+        cancelResult,
+        operationId: landed?.id ?? (raced.kind === 'ok' ? raced.value.operationId : undefined),
+        status: reportedStatus(cancelResult, latest ?? landed),
+      };
+      if (raced.kind === 'err' && !judgment.signal?.aborted && Date.now() <= deadline) {
+        const message = raced.error instanceof Error ? raced.error.message : String(raced.error);
+        throw new AcpJudgmentRunError(
+          `Judgment "${judgment.purpose}" dispatch failed: ${message}`,
+          detail,
+        );
+      }
       throw new AcpJudgmentRunError(
-        `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
-        {
-          cancelResult,
-          operationId,
-          status: cancelResult === 'confirmed' ? 'interrupted' : operation?.status,
-        },
+        judgment.signal?.aborted || raced.kind === 'caller'
+          ? `Judgment "${judgment.purpose}" aborted by caller`
+          : `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget during dispatch`,
+        detail,
       );
     }
-    if (
-      (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
-      'aborted'
-    ) {
-      const cancelResult = await interrupt('caller signal aborted');
-      throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-        cancelResult,
-        operationId,
-        status: cancelResult === 'confirmed' ? 'interrupted' : operation?.status,
-      });
+    const operationId = raced.value.operationId;
+
+    let operation = await operations.findById(operationId);
+    for (;;) {
+      if (Date.now() > deadline) {
+        // The budget is binding even against a row that flipped terminal late:
+        // a 'done' observed past the deadline is reported honestly but never
+        // accepted as a successful judgment.
+        const cancelResult = await interrupt('wait budget exceeded', operationId);
+        const latest = await operations.findById(operationId).catch(() => operation);
+        throw new AcpJudgmentRunError(
+          `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
+          {
+            cancelResult,
+            operationId,
+            status: reportedStatus(cancelResult, latest ?? operation),
+          },
+        );
+      }
+      if (operation && isTerminalAgentOperationStatus(operation.status)) break;
+      if (judgment.signal?.aborted) {
+        const cancelResult = await interrupt('caller signal aborted', operationId);
+        const latest = await operations.findById(operationId).catch(() => operation);
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+          cancelResult,
+          operationId,
+          status: reportedStatus(cancelResult, latest ?? operation),
+        });
+      }
+      if (
+        (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
+        'aborted'
+      ) {
+        const cancelResult = await interrupt('caller signal aborted', operationId);
+        const latest = await operations.findById(operationId).catch(() => operation);
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+          cancelResult,
+          operationId,
+          status: reportedStatus(cancelResult, latest ?? operation),
+        });
+      }
+      operation = await operations.findById(operationId);
     }
-    operation = await operations.findById(operationId);
-  }
 
-  const run: AcpJudgmentRunRecord = {
-    assistantMessageId: (operation!.metadata as { assistantMessageId?: string } | null)
-      ?.assistantMessageId,
-    model: operation!.model,
-    operationId,
-    provider: operation!.provider,
-    status: operation!.status,
-    totalCost: operation!.totalCost,
-    totalInputTokens: operation!.totalInputTokens,
-    totalOutputTokens: operation!.totalOutputTokens,
-  };
+    const run: AcpJudgmentRunRecord = {
+      assistantMessageId: (operation!.metadata as { assistantMessageId?: string } | null)
+        ?.assistantMessageId,
+      model: operation!.model,
+      operationId,
+      provider: operation!.provider,
+      status: operation!.status,
+      totalCost: operation!.totalCost,
+      totalInputTokens: operation!.totalInputTokens,
+      totalOutputTokens: operation!.totalOutputTokens,
+    };
 
-  if (operation!.status !== 'done') {
-    const detail = (operation!.error as { message?: string } | null)?.message;
-    await recordJudgmentTracing({
+    if (operation!.status !== 'done') {
+      const detail = (operation!.error as { message?: string } | null)?.message;
+      await recordJudgmentTracing({
+        input: input.messages,
+        operation: operation!,
+        output: null,
+        purpose: judgment.purpose,
+        schema: input.schema,
+        tracing: judgment.tracing,
+        userId,
+        workspaceId,
+      });
+      throw new AcpJudgmentRunError(
+        `Judgment "${judgment.purpose}" ended ${operation!.status}${detail ? `: ${detail}` : ''}`,
+        { operationId, status: operation!.status },
+      );
+    }
+
+    const reply = run.assistantMessageId ? await messages.findById(run.assistantMessageId) : null;
+    const content = typeof reply?.content === 'string' ? reply.content : '';
+    const data = content ? extractJudgmentJson(content) : undefined;
+    // Server-side contract check: a `done` operation with no parseable payload
+    // or a malformed one is still a FAILED judgment — the trace records
+    // succeeded=false with a distinct error code BEFORE the throw.
+    const hasJson = data !== undefined && data !== null;
+    const validationIssues =
+      hasJson && input.schema ? validateJudgmentData(input.schema.schema, data) : [];
+    const succeeded = hasJson && validationIssues.length === 0;
+    const tracingId = await recordJudgmentTracing({
+      errorCode: succeeded ? undefined : hasJson ? 'schema_mismatch' : 'no_json',
       input: input.messages,
       operation: operation!,
-      output: null,
+      output: succeeded ? data : null,
       purpose: judgment.purpose,
       schema: input.schema,
+      succeeded,
+      systemPrompt: instructions,
       tracing: judgment.tracing,
       userId,
       workspaceId,
     });
-    throw new AcpJudgmentRunError(
-      `Judgment "${judgment.purpose}" ended ${operation!.status}${detail ? `: ${detail}` : ''}`,
-      { operationId, status: operation!.status },
-    );
-  }
 
-  const reply = run.assistantMessageId ? await messages.findById(run.assistantMessageId) : null;
-  const content = typeof reply?.content === 'string' ? reply.content : '';
-  const data = content ? extractJudgmentJson(content) : undefined;
-  // Server-side contract check: a `done` operation with a malformed payload is
-  // still a failed judgment. Validation precedes tracing so the recorded
-  // `success` flag means execution AND contract conformance.
-  const validationIssues =
-    data !== undefined && data !== null && input.schema
-      ? validateJudgmentData(input.schema.schema, data)
-      : [];
-  const tracingId = await recordJudgmentTracing({
-    input: input.messages,
-    operation: operation!,
-    output: validationIssues.length ? null : (data ?? null),
-    purpose: judgment.purpose,
-    schema: input.schema,
-    succeeded: validationIssues.length === 0,
-    systemPrompt: instructions,
-    tracing: judgment.tracing,
-    userId,
-    workspaceId,
-  });
+    if (!hasJson) {
+      throw new AcpJudgmentRunError(
+        `Judgment "${judgment.purpose}" returned no parseable JSON (op ${operationId})`,
+        { operationId, status: operation!.status },
+      );
+    }
+    if (validationIssues.length) {
+      throw new AcpJudgmentValidationError(judgment.purpose, validationIssues, operationId);
+    }
 
-  if (data === undefined || data === null) {
-    throw new AcpJudgmentRunError(
-      `Judgment "${judgment.purpose}" returned no parseable JSON (op ${operationId})`,
-      { operationId, status: operation!.status },
-    );
+    return { data: data as T, run, tracingId };
+  } finally {
+    clearTimeout(deadlineTimer);
+    judgment.signal?.removeEventListener('abort', onCallerAbort);
   }
-  if (validationIssues.length) {
-    throw new AcpJudgmentValidationError(judgment.purpose, validationIssues, operationId);
-  }
-
-  return { data: data as T, run, tracingId };
 };

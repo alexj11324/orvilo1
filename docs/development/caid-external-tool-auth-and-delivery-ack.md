@@ -118,3 +118,15 @@ default set) separately:
   A v2 settle on a host without ack capability fails explicitly; a
   v1-shaped settle is never treated as v2. The server normalizes unknown
   versions to v1 — no breaking change is claimed from optionality alone.
+
+## Follow-up hardening (post-merge E2E)
+
+- **Personal-scope receipts.** `upsertDeliveryReceipt` normalizes a `''`
+  `workspaceId` to `NULL` — `''` is a scope marker inside the canonical
+  `scopeHash`, not a workspaces row, so personal-scope approval receipts,
+  `await-anchor` rows, and child-result receipts no longer violate the
+  `event_outbox.workspace_id` FK.
+- **Renew binds the calling scope's args.** `renewToolApprovalReceipt`
+  rewrites `argsHash` (alongside `scopeHash`/`windowId`) — a receipt
+  re-pended for a retry with different args is consumable after approval
+  instead of refusing forever on `args_mismatch`.

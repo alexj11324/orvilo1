@@ -818,6 +818,7 @@ describe('execAcpBuiltinTool', () => {
         const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
         expect(mockRenewApprovalReceipt).toHaveBeenCalledWith(
           expect.objectContaining({
+            argsHash: expect.any(String),
             eventId: 'tool-approval:op_1:tc_1',
             scopeHash: gateScopeHash(),
             windowId: 'evt_test',

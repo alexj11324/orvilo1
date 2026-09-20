@@ -1239,6 +1239,13 @@
       "when": 1789857483828,
       "tag": "0176_task_topics_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1789871969944,
+      "tag": "0177_shallow_gateway",
+      "breakpoints": true
     }
   ],
   "version": "6"

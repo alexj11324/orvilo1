@@ -1,15 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
-import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
+import type { IntegrationLeasePhase, TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
-import { sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
+import { IntegrationLeaseModel } from '@/database/models/integrationLease';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
+import type { IntegrationLeaseItem } from '@/database/schemas';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { deviceGateway } from '@/server/services/deviceGateway';
@@ -32,10 +33,45 @@ const log = debug('task-integration');
 const MAX_CORRECTIVE_ATTEMPTS = 3;
 const INTEGRATION_CLAIM_TTL_MS = 15 * 60 * 1000;
 /**
- * Advisory-lock namespace serializing the merge+publish critical section per
- * target repo/ref ('intg'). Distinct from the goal dispatch namespace.
+ * Repo/ref lease pacing. The TTL bounds each heartbeat window — a holder that
+ * stops renewing becomes stealable; WAIT bounds how long a waiter polls inline
+ * before deferring itself; DEFER is the re-entry delay. None of these hold a
+ * database connection while waiting (F03).
  */
-const REPO_REF_INTEGRATION_LOCK_NAMESPACE = 0x69_6e_74_67;
+const REPO_REF_LEASE_TTL_MS = 60 * 1000;
+const REPO_REF_LEASE_WAIT_MS = 2 * 60 * 1000;
+const REPO_REF_LEASE_POLL_MS = 750;
+const REPO_REF_LEASE_DEFER_MS = 5 * 1000;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The lease was stolen or expired underneath the holder — stop, don't write. */
+class RepoRefLeaseLostError extends Error {
+  constructor(key: string) {
+    super(`repo/ref integration lease lost: ${key}`);
+    this.name = 'RepoRefLeaseLostError';
+  }
+}
+
+/**
+ * Handle handed to the lease-protected section. `assert` renews the deadline
+ * and proves ownership in one short statement — every remote side effect
+ * calls it immediately before issuing the write so a stolen lease can never
+ * double-publish.
+ */
+interface RepoRefLeaseHandle {
+  assert: (phase: IntegrationLeasePhase) => Promise<void>;
+  id: string;
+  /** Last mutation phase asserted on this handle ('claimed' = none so far). */
+  phase: IntegrationLeasePhase;
+}
+
+/** Lease pacing knobs — tests inject smaller windows; production uses defaults. */
+interface RepoRefLeasePacing {
+  deferMs: number;
+  pollMs: number;
+  ttlMs: number;
+  waitMs: number;
+}
 /** Push rejections that mean the recorded merge commit's base moved. */
 const NON_FAST_FORWARD_PUSH = /non-fast-forward|fetch first|stale info|\[rejected\]/i;
 
@@ -81,6 +117,8 @@ export type IntegrationOutcome = 'settled' | 'hold' | 'blocked' | 'stale';
  */
 export class TaskIntegrationService {
   private db: OrviloDatabase;
+  private leaseModel: IntegrationLeaseModel;
+  private pacing: RepoRefLeasePacing;
   private taskModel: TaskModel;
   private taskDispatchModel: TaskDispatchModel;
   private taskTopicModel: TaskTopicModel;
@@ -88,10 +126,22 @@ export class TaskIntegrationService {
   private workspaceId?: string;
   private workspaceService: TaskWorkspaceService;
 
-  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
+  constructor(
+    db: OrviloDatabase,
+    userId: string,
+    workspaceId?: string,
+    pacing?: Partial<RepoRefLeasePacing>,
+  ) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
+    this.leaseModel = new IntegrationLeaseModel(db);
+    this.pacing = {
+      deferMs: pacing?.deferMs ?? REPO_REF_LEASE_DEFER_MS,
+      pollMs: pacing?.pollMs ?? REPO_REF_LEASE_POLL_MS,
+      ttlMs: pacing?.ttlMs ?? REPO_REF_LEASE_TTL_MS,
+      waitMs: pacing?.waitMs ?? REPO_REF_LEASE_WAIT_MS,
+    };
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskDispatchModel = new TaskDispatchModel(db, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
@@ -276,71 +326,82 @@ export class TaskIntegrationService {
         // integrations onto the same base queue up: the next merge
         // re-baselines onto the ref this section just published instead of
         // producing an unpublishable non-fast-forward commit.
-        outcome = await this.withRepoRefLease(activeRecord, async () => {
-          // Close the query/claim race: a child may be inserted after the
-          // first successor read but before this invocation acquires the
-          // chain lease.
-          if (
-            activeRecord.role === 'integrate' &&
-            this.hasCorrectiveSuccessor(
-              topicId,
-              activeRecord,
-              await this.taskTopicModel.findByTaskId(task.id),
-            )
-          ) {
-            return 'hold';
-          }
-          return activeRecord.state === 'publish_failed'
-            ? await this.retryLocalPublish(
-                task,
+        outcome = await this.withRepoRefLease(
+          activeRecord,
+          { params, taskId: task.id, topicId },
+          async (lease) => {
+            // Close the query/claim race: a child may be inserted after the
+            // first successor read but before this invocation acquires the
+            // chain lease.
+            if (
+              activeRecord.role === 'integrate' &&
+              this.hasCorrectiveSuccessor(
                 topicId,
                 activeRecord,
-                params.completionReservationId,
+                await this.taskTopicModel.findByTaskId(task.id),
               )
-            : activeRecord.role === 'task'
-              ? activeRecord.state === 'merging'
-                ? activeRecord.repo
-                  ? await this.dispatchCorrective(
-                      task,
-                      topicId,
-                      activeRecord,
-                      undefined,
-                      params.completionReservationId,
-                    )
-                  : activeRecord.integratedSha
-                    ? await this.publishAndCleanup(
-                        task.id,
+            ) {
+              return 'hold';
+            }
+            return activeRecord.state === 'publish_failed'
+              ? await this.retryLocalPublish(
+                  task,
+                  topicId,
+                  activeRecord,
+                  params.completionReservationId,
+                  lease,
+                )
+              : activeRecord.role === 'task'
+                ? activeRecord.state === 'merging'
+                  ? activeRecord.repo
+                    ? await this.dispatchCorrective(
+                        task,
+                        topicId,
                         activeRecord,
-                        activeRecord.integratedSha,
+                        undefined,
+                        params.completionReservationId,
+                        lease,
                       )
-                    : 'blocked'
+                    : activeRecord.integratedSha
+                      ? await this.publishAndCleanup(
+                          task.id,
+                          activeRecord,
+                          activeRecord.integratedSha,
+                          lease,
+                        )
+                      : 'blocked'
+                  : activeRecord.repo
+                    ? await this.integrateRemoteRun(
+                        task,
+                        topicId,
+                        activeRecord,
+                        params.completionReservationId,
+                        lease,
+                      )
+                    : await this.integrateTaskRun(
+                        task,
+                        topicId,
+                        activeRecord,
+                        params.completionReservationId,
+                        lease,
+                      )
                 : activeRecord.repo
-                  ? await this.integrateRemoteRun(
+                  ? await this.finalizeRemoteCorrectiveRun(
                       task,
                       topicId,
                       activeRecord,
                       params.completionReservationId,
+                      lease,
                     )
-                  : await this.integrateTaskRun(
+                  : await this.finalizeCorrectiveRun(
                       task,
                       topicId,
                       activeRecord,
                       params.completionReservationId,
-                    )
-              : activeRecord.repo
-                ? await this.finalizeRemoteCorrectiveRun(
-                    task,
-                    topicId,
-                    activeRecord,
-                    params.completionReservationId,
-                  )
-                : await this.finalizeCorrectiveRun(
-                    task,
-                    topicId,
-                    activeRecord,
-                    params.completionReservationId,
-                  );
-        });
+                      lease,
+                    );
+          },
+        );
       } finally {
         await this.taskTopicModel
           .releaseIntegration(task.id, integrationOwnerTopicId, claimToken)
@@ -386,23 +447,134 @@ export class TaskIntegrationService {
   }
 
   /**
-   * Serialize the merge+publish critical section per target repo/ref. The
-   * transaction-scoped advisory lock is held across the device/GitHub calls so
-   * two completed runs can never merge onto the same base concurrently — the
-   * loser waits, then re-baselines onto the ref the winner just published.
+   * Serialize the merge+publish critical section per target repo/ref (R02).
+   *
+   * The lease is a durable `integration_leases` row, not a held transaction:
+   * claim and fencing are single short statements, so neither the holder nor
+   * a queued waiter pins a pool connection across device/GitHub I/O. Every
+   * remote side effect calls `lease.assert(phase)` immediately beforehand —
+   * the same statement renews the deadline and re-proves ownership, so a
+   * stolen or expired lease can never issue another write.
+   *
+   * Losing the DB connection mid-flight does not undo remote state: a holder
+   * that crashes leaves an expired, unreleased row and a mutation-phase
+   * failure leaves `outcomeUnknown`; either way the next claimant reconciles
+   * by construction — the run body's verify/merge-status reads come before
+   * any write, and a repeat push of the same SHA is a no-op.
+   *
+   * Waiters poll connection-free and defer one re-entry past the wait budget
+   * instead of dying with the request, so a busy ref still settles.
    */
-  private async withRepoRefLease<T>(
+  private async withRepoRefLease(
     record: TaskTopicIntegration,
-    run: () => Promise<T>,
-  ): Promise<T> {
+    ctx: {
+      params: {
+        completionReservationId?: string;
+        task: TaskItem;
+        taskTopicId: string;
+        verifyOperationId?: string;
+      };
+      taskId: string;
+      topicId: string;
+    },
+    run: (lease: RepoRefLeaseHandle) => Promise<IntegrationOutcome>,
+  ): Promise<IntegrationOutcome> {
     const target = record.repo ?? `${record.deviceId}:${record.repoPath}`;
-    const key = `caid-integration:${target}#${record.baseBranch}`;
-    return this.db.transaction(async (tx) => {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(${REPO_REF_INTEGRATION_LOCK_NAMESPACE}, hashtext(${key}))`,
+    const key = `${this.workspaceId ?? 'global'}:${target}#${record.baseBranch}`;
+    const ownerToken = randomUUID();
+    const deadline = () => new Date(Date.now() + this.pacing.ttlMs);
+    const waitUntil = Date.now() + this.pacing.waitMs;
+
+    let lease: IntegrationLeaseItem | undefined;
+    let prior: IntegrationLeaseItem | undefined;
+    for (;;) {
+      ({ lease, prior } = await this.leaseModel.acquire({
+        deadline: deadline(),
+        expectedBaseSha: record.expectedBaseSha,
+        expectedHeadSha: record.expectedHeadSha,
+        key,
+        ownerTaskId: ctx.taskId,
+        ownerToken,
+        ownerTopicId: ctx.topicId,
+        ref: record.baseBranch,
+        target,
+        workspaceId: this.workspaceId,
+      }));
+      if (lease) break;
+      if (Date.now() >= waitUntil) {
+        // Re-enter after a short defer instead of dying with this completion
+        // callback — the record's own claim/state checks still gate the retry.
+        log(
+          'repo/ref lease %s held past %dms — deferring %s',
+          key,
+          this.pacing.waitMs,
+          ctx.topicId,
+        );
+        after(async () => {
+          await sleep(this.pacing.deferMs);
+          await this.integrateOnComplete({
+            completionReservationId: ctx.params.completionReservationId,
+            task: ctx.params.task,
+            taskTopicId: ctx.params.taskTopicId,
+            verifyOperationId: ctx.params.verifyOperationId,
+          });
+        });
+        return 'hold';
+      }
+      await sleep(this.pacing.pollMs);
+    }
+
+    if (prior && (prior.outcomeUnknown || !prior.releasedAt)) {
+      log(
+        'repo/ref lease %s reclaimed from an ambiguous owner (phase=%s, outcomeUnknown=%s) — run body reconciles before writing',
+        key,
+        prior.phase,
+        prior.outcomeUnknown,
       );
-      return run();
-    });
+    }
+
+    const leaseId = lease.id;
+    const handle: RepoRefLeaseHandle = {
+      assert: async (phase) => {
+        const ok = await this.leaseModel.renew(leaseId, ownerToken, deadline(), phase);
+        if (!ok) throw new RepoRefLeaseLostError(key);
+        handle.phase = phase;
+      },
+      id: leaseId,
+      phase: 'claimed',
+    };
+    let ambiguousOutcome = false;
+
+    try {
+      // The queue wait may have superseded this owner — re-verify the dispatch
+      // fence before running, so a callback that lost its window never writes.
+      if (!(await this.resolveCurrentOwner(ctx.taskId, ctx.topicId))) {
+        return 'stale';
+      }
+      return await run(handle);
+    } catch (error) {
+      if (error instanceof RepoRefLeaseLostError) {
+        log('repo/ref lease %s lost mid-run for %s — stopping without writes', key, ctx.topicId);
+        return 'stale';
+      }
+      // A mutation-phase failure leaves the remote outcome ambiguous: keep the
+      // row with outcomeUnknown so the next claimant reconciles first.
+      ambiguousOutcome = handle.phase !== 'claimed';
+      if (ambiguousOutcome) {
+        await this.leaseModel
+          .markOutcomeUnknown(leaseId, ownerToken)
+          .catch((e) => log('repo/ref lease %s outcome_unknown mark failed — %O', key, e));
+      }
+      throw error;
+    } finally {
+      // Skip the clean release when outcome_unknown was just recorded — the
+      // flag must survive for the next claimant; the row frees on deadline.
+      if (!ambiguousOutcome) {
+        await this.leaseModel
+          .release(leaseId, ownerToken)
+          .catch((e) => log('repo/ref lease %s release failed — expires at deadline: %O', key, e));
+      }
+    }
   }
 
   /** Resolve the task/topic dispatch owner before accepting an integration result. */
@@ -637,7 +809,8 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId?: string,
+    completionReservationId: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     if (!record.deviceId || !record.repoPath || !record.worktreePath) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
@@ -669,6 +842,9 @@ export class TaskIntegrationService {
       integrationWorktreePath,
     };
 
+    // Fence before provisioning device state: a stolen lease must not create
+    // an integration worktree for a section it no longer owns.
+    await lease.assert('prepare');
     const ensured = await this.ensureIntegrationWorktree({
       baseRef: this.baseRef(record),
       deviceId: record.deviceId,
@@ -692,6 +868,7 @@ export class TaskIntegrationService {
       integrationWorktreePath,
     });
 
+    await lease.assert('merge');
     const merged = await deviceGateway.mergeGitBranch({
       baseRef: this.baseRef(record),
       branch: record.branch,
@@ -713,7 +890,7 @@ export class TaskIntegrationService {
     });
 
     if (merged.state === 'merged') {
-      return this.landMerge(task, topicId, deliveryRecord, merged.sha);
+      return this.landMerge(task, topicId, deliveryRecord, merged.sha, lease);
     }
 
     if (merged.state === 'in-progress') {
@@ -728,6 +905,7 @@ export class TaskIntegrationService {
           integrationWorktreePath,
         },
         completionReservationId,
+        lease,
       );
     }
 
@@ -747,6 +925,7 @@ export class TaskIntegrationService {
         integrationWorktreePath,
       },
       completionReservationId,
+      lease,
     );
   }
 
@@ -760,7 +939,8 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId?: string,
+    completionReservationId: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     if (!parseGithubRepo(record.repo!)) {
       // An unparseable coordinate can never verify or merge — block now rather
@@ -803,6 +983,7 @@ export class TaskIntegrationService {
       { ...record, ...historyPatch },
       undefined,
       completionReservationId,
+      lease,
     );
   }
 
@@ -811,7 +992,8 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId?: string,
+    completionReservationId: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     const check = await this.verifyRemoteMerge(record, task);
     const patch: Partial<TaskTopicIntegration> = {};
@@ -862,7 +1044,14 @@ export class TaskIntegrationService {
     if (Object.keys(patch).length > 0) {
       await this.updateIntegrationOrThrow(task.id, topicId, patch);
     }
-    return this.dispatchCorrective(task, topicId, record, undefined, completionReservationId);
+    return this.dispatchCorrective(
+      task,
+      topicId,
+      record,
+      undefined,
+      completionReservationId,
+      lease,
+    );
   }
 
   /**
@@ -1016,7 +1205,8 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId?: string,
+    completionReservationId: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     const finalizePath = record.integrationWorktreePath ?? record.worktreePath;
     if (!record.deviceId || !finalizePath || !record.expectedHeadSha) {
@@ -1027,6 +1217,7 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
+    await lease.assert('merge');
     const finalized = await deviceGateway.finalizeGitMerge({
       deviceId: record.deviceId,
       expectedHead: record.expectedHeadSha,
@@ -1036,7 +1227,7 @@ export class TaskIntegrationService {
     });
 
     if (finalized.state === 'integrated' && finalized.validatedExpectedHead) {
-      return this.landMerge(task, topicId, record, finalized.sha);
+      return this.landMerge(task, topicId, record, finalized.sha, lease);
     }
 
     if (finalized.state === 'integrated') {
@@ -1068,7 +1259,14 @@ export class TaskIntegrationService {
       conflicts: finalized.conflicts,
       state: 'conflict',
     });
-    return this.dispatchCorrective(task, topicId, record, undefined, completionReservationId);
+    return this.dispatchCorrective(
+      task,
+      topicId,
+      record,
+      undefined,
+      completionReservationId,
+      lease,
+    );
   }
 
   /**
@@ -1084,7 +1282,8 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    sha?: string,
+    sha: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     if (!sha) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
@@ -1097,7 +1296,7 @@ export class TaskIntegrationService {
       integratedSha: sha,
       state: 'merging',
     });
-    const outcome = await this.publishAndCleanup(task.id, record, sha);
+    const outcome = await this.publishAndCleanup(task.id, record, sha, lease);
     if (outcome !== 'settled') return outcome;
     return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : outcome;
   }
@@ -1116,7 +1315,8 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId?: string,
+    completionReservationId: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     if (record.repo || !record.integratedSha) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
@@ -1125,7 +1325,7 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
-    const outcome = await this.landMerge(task, topicId, record, record.integratedSha);
+    const outcome = await this.landMerge(task, topicId, record, record.integratedSha, lease);
     if (outcome !== 'hold' || record.role !== 'task') return outcome;
 
     const latest = (await this.taskTopicModel.findByTopicId(topicId))?.integration;
@@ -1141,6 +1341,7 @@ export class TaskIntegrationService {
       topicId,
       { ...record, integratedSha: latest.integratedSha },
       completionReservationId,
+      lease,
     );
   }
 
@@ -1148,6 +1349,7 @@ export class TaskIntegrationService {
     taskId: string,
     record: TaskTopicIntegration,
     sha: string,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     const rows = await this.taskTopicModel.findByTaskId(taskId);
     const related = rows.filter((row) => row.topicId && row.integration?.branch === record.branch);
@@ -1177,6 +1379,7 @@ export class TaskIntegrationService {
 
     let pushedToRemote: boolean | undefined;
     if (record.baseBranch !== 'HEAD') {
+      await lease.assert('publish');
       const pushed = await deviceGateway.pushGitBranch({
         deviceId: record.deviceId,
         expectedSha: sha,
@@ -1266,9 +1469,13 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    context?: { conflicts?: string[]; integrationWorktreePath?: string },
-    completionReservationId?: string,
+    context: { conflicts?: string[]; integrationWorktreePath?: string } | undefined,
+    completionReservationId: string | undefined,
+    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
+    // Dispatching a corrective run is itself a side effect on the serialized
+    // merge pipeline — fence before any row write or runner invocation.
+    await lease.assert('dispatch');
     const attempts = record.attempts + 1;
     if (attempts > MAX_CORRECTIVE_ATTEMPTS) {
       const lastError = `Merge conflicts remain after ${MAX_CORRECTIVE_ATTEMPTS} corrective runs`;

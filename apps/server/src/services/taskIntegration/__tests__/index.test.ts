@@ -45,17 +45,37 @@ const mockWorkspaceService = {
 };
 const { mockAfter } = vi.hoisted(() => ({ mockAfter: vi.fn() }));
 
-const mockTxExecute = vi.fn();
+const { mockLeaseModel } = vi.hoisted(() => ({
+  mockLeaseModel: {
+    acquire: vi.fn(),
+    markOutcomeUnknown: vi.fn(),
+    release: vi.fn(),
+    renew: vi.fn(),
+  },
+}));
+
 /**
- * Minimal `OrviloDatabase` stand-in: the service only uses `db.transaction` to
- * pin the repo/ref advisory lease, so the mock runs the callback against a
- * fake tx and (optionally) serializes transactions like the real lock.
+ * Minimal `OrviloDatabase` stand-in: R02 moved repo/ref serialization off the
+ * transaction-held advisory lock into IntegrationLeaseModel, so the mock DB
+ * carries nothing — the lease mock below controls contention directly.
  */
-const mockDb = {
-  transaction: vi.fn(async (run: (tx: { execute: typeof mockTxExecute }) => unknown) =>
-    run({ execute: mockTxExecute }),
-  ),
+const mockDb = {};
+
+const leaseGranted = () => {
+  mockLeaseModel.acquire.mockResolvedValue({
+    lease: { id: 'lease-1', key: 'ws-1:dev-1:/repos/orvilo#main' },
+    prior: undefined,
+  });
+  mockLeaseModel.renew.mockResolvedValue(true);
+  mockLeaseModel.release.mockResolvedValue(undefined);
+  mockLeaseModel.markOutcomeUnknown.mockResolvedValue(undefined);
 };
+
+vi.mock('@/database/models/integrationLease', () => ({
+  IntegrationLeaseModel: vi.fn(function () {
+    return mockLeaseModel;
+  }),
+}));
 
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
@@ -188,11 +208,7 @@ describe('TaskIntegrationService', () => {
       taskRevision: 1,
     });
     mockTaskTopicModel.updateIntegration.mockResolvedValue(true);
-    mockTxExecute.mockResolvedValue([]);
-    mockDb.transaction.mockImplementation(
-      async (run: (tx: { execute: typeof mockTxExecute }) => unknown) =>
-        run({ execute: mockTxExecute }),
-    );
+    leaseGranted();
     service = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1');
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.pushGitBranch).mockImplementation(async ({ sourceRef }) => ({
@@ -1452,7 +1468,7 @@ describe('TaskIntegrationService', () => {
   });
 
   describe('repo/ref serialization', () => {
-    it('holds the advisory lease across merge and publish', async () => {
+    it('holds the repo/ref lease across merge and publish', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
       vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
         sha: 'merge-sha',
@@ -1462,26 +1478,38 @@ describe('TaskIntegrationService', () => {
 
       await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' });
 
-      expect(mockDb.transaction).toHaveBeenCalledTimes(1);
-      expect(mockTxExecute).toHaveBeenCalledTimes(1);
-      expect(mockTxExecute.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(mockLeaseModel.acquire).toHaveBeenCalledTimes(1);
+      const acquireOrder = mockLeaseModel.acquire.mock.invocationCallOrder[0];
+      expect(acquireOrder).toBeLessThan(
         vi.mocked(deviceGateway.mergeGitBranch).mock.invocationCallOrder[0],
       );
-      expect(mockTxExecute.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(acquireOrder).toBeLessThan(
+        vi.mocked(deviceGateway.pushGitBranch).mock.invocationCallOrder[0],
+      );
+      // Ownership fencing renews before each remote mutation phase.
+      const renewedPhases = mockLeaseModel.renew.mock.calls.map((call) => call[3]);
+      expect(renewedPhases).toEqual(expect.arrayContaining(['merge', 'publish']));
+      expect(mockLeaseModel.release.mock.invocationCallOrder[0]).toBeGreaterThan(
         vi.mocked(deviceGateway.pushGitBranch).mock.invocationCallOrder[0],
       );
     });
 
     it('serializes concurrent integrations onto the same repo/base', async () => {
-      // Serialize transactions like the real advisory lock does.
-      let tail = Promise.resolve();
-      mockDb.transaction.mockImplementation(async (run) => {
-        const result = tail.then(() => run({ execute: mockTxExecute }));
-        tail = result.then(
-          () => undefined,
-          () => undefined,
-        );
-        return result;
+      // Model-side semantics: one live holder per key — contenders poll until
+      // the holder releases, just like the real INSERT..ON CONFLICT path.
+      let holding = false;
+      mockLeaseModel.acquire.mockImplementation(async () => {
+        if (holding) return { lease: undefined };
+        holding = true;
+        return { lease: { id: 'lease-serial' }, prior: undefined };
+      });
+      mockLeaseModel.release.mockImplementation(async () => {
+        holding = false;
+      });
+      const svc = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1', {
+        deferMs: 1,
+        pollMs: 1,
+        waitMs: 30_000,
       });
 
       const events: string[] = [];
@@ -1506,8 +1534,8 @@ describe('TaskIntegrationService', () => {
       mockTaskTopicModel.findByTaskId.mockImplementation(async () => Object.values(topics));
 
       const [outcomeA, outcomeB] = await Promise.all([
-        service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_a' }),
-        service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_b' }),
+        svc.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_a' }),
+        svc.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_b' }),
       ]);
 
       expect(outcomeA).toBe('settled');
@@ -1616,6 +1644,104 @@ describe('TaskIntegrationService', () => {
       expect(outcome).toBe('hold');
       expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
       expect(deviceGateway.pushGitBranch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('repo/ref lease lifecycle (R02)', () => {
+    const pacing = { deferMs: 1, pollMs: 1, waitMs: 20 };
+
+    it('holds and defers re-entry when another owner keeps the lease', async () => {
+      mockLeaseModel.acquire.mockResolvedValue({
+        lease: undefined,
+        prior: {
+          id: 'other-lease',
+          key: 'ws-1:dev-1:/repos/orvilo#main',
+          ownerToken: 'someone-else',
+          releasedAt: null,
+        },
+      });
+      const svc = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1', pacing);
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+
+      const outcome = await svc.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(mockLeaseModel.acquire.mock.calls.length).toBeGreaterThan(1);
+      expect(mockAfter).toHaveBeenCalled();
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.release).not.toHaveBeenCalled();
+      // The claim row is freed so the deferred re-entry can claim it again.
+      expect(mockTaskTopicModel.releaseIntegration).toHaveBeenCalled();
+    });
+
+    it('re-verifies dispatch ownership after winning a contended lease', async () => {
+      const svc = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1', pacing);
+      mockTaskTopicModel.findByTopicId
+        .mockResolvedValueOnce(asTopic(seedRecord()))
+        .mockResolvedValueOnce({ ...asTopic(seedRecord()), dispatchId: null } as TaskTopicItem);
+
+      const outcome = await svc.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('stale');
+      expect(mockTaskTopicModel.claimIntegration).toHaveBeenCalled();
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.release).toHaveBeenCalledWith('lease-1', expect.any(String));
+    });
+
+    it('stops before remote writes when the lease is stolen mid-run', async () => {
+      mockLeaseModel.renew.mockResolvedValue(false);
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('stale');
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      // A release by a displaced owner is a filtered no-op; nothing ran, so
+      // there is no ambiguous outcome to record.
+      expect(mockLeaseModel.markOutcomeUnknown).not.toHaveBeenCalled();
+    });
+
+    it('marks outcome_unknown (not release) when a mutation-phase write fails', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+      vi.mocked(deviceGateway.mergeGitBranch).mockRejectedValue(
+        new Error('device offline mid-merge'),
+      );
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('blocked');
+      expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalledWith('lease-1', expect.any(String));
+      expect(mockLeaseModel.release).not.toHaveBeenCalled();
+    });
+
+    it('releases the lease on the clean happy path', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'clean-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      expect(mockLeaseModel.release).toHaveBeenCalledWith('lease-1', expect.any(String));
     });
   });
 });

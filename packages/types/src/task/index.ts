@@ -330,6 +330,14 @@ export interface TaskWorkspaceConfig {
 }
 
 /**
+ * Repo/ref integration lease phases (R02 fencing). 'claimed' rows have not yet
+ * issued any remote side effect; the mutation phases record which write class
+ * was in flight so an ambiguous failure can persist `outcomeUnknown` on the
+ * lease row instead of letting a retry re-issue writes blind.
+ */
+export type IntegrationLeasePhase = 'claimed' | 'merge' | 'prepare' | 'publish' | 'dispatch';
+
+/**
  * Per-run workspace/integration record persisted on `task_topics.integration`.
  * Written by the task runner at provision time and advanced by
  * TaskIntegrationService once the run's topic completes.

@@ -2117,6 +2117,31 @@ table hatchet_workflow_steps {
   }
 }
 
+table integration_leases {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text
+  key text [not null]
+  target text [not null]
+  ref text [not null]
+  owner_token text [not null]
+  owner_task_id text
+  owner_topic_id text
+  phase text [not null, default: 'claimed']
+  expected_base_sha text
+  expected_head_sha text
+  outcome_unknown boolean [not null, default: false]
+  context jsonb
+  deadline "timestamp with time zone" [not null]
+  released_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    key [name: 'integration_leases_key_unique', unique]
+  }
+}
+
 table linear_external_comments {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
@@ -4135,6 +4160,28 @@ table tasks {
   }
 }
 
+table task_inputs {
+  id text [pk, not null]
+  workspace_id text
+  task_id text [not null]
+  author_user_id text [not null]
+  sequence integer [not null]
+  base_task_version integer
+  intent_type text [not null]
+  payload jsonb [not null, default: `{}`]
+  status text [not null, default: 'pending']
+  idempotency_key text [unique]
+  decided_by text
+  decided_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (task_id, sequence) [name: 'task_inputs_task_id_sequence_unique', unique]
+    task_id [name: 'task_inputs_task_id_idx']
+    workspace_id [name: 'task_inputs_workspace_id_idx']
+  }
+}
+
 table project_teams {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   project_id text [not null]
@@ -4242,28 +4289,6 @@ table teams {
     workspace_id [name: 'teams_workspace_id_idx']
     (workspace_id, visibility) [name: 'teams_workspace_visibility_idx']
     status [name: 'teams_status_idx']
-  }
-}
-
-table task_inputs {
-  id text [pk, not null]
-  workspace_id text
-  task_id text [not null]
-  author_user_id text [not null]
-  sequence integer [not null]
-  base_task_version integer
-  intent_type text [not null]
-  payload jsonb [not null, default: `{}`]
-  status text [not null, default: 'pending']
-  idempotency_key text [unique]
-  decided_by text
-  decided_at "timestamp with time zone"
-  created_at "timestamp with time zone" [not null, default: `now()`]
-
-  indexes {
-    (task_id, sequence) [name: 'task_inputs_task_id_sequence_unique', unique]
-    task_id [name: 'task_inputs_task_id_idx']
-    workspace_id [name: 'task_inputs_workspace_id_idx']
   }
 }
 

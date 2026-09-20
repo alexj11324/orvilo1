@@ -1,9 +1,12 @@
 // @vitest-environment node
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectUnknownErrorLines,
+  diagnosticEvidenceError,
   EnvelopeError,
   matchWaivers,
   parseDiagnostics,
@@ -83,6 +86,92 @@ describe('parseDiagnostics', () => {
     const [d] = parseDiagnostics(text, '', []);
     expect(d).toMatchObject({ code: 'TS2322', file: 'src/app/(main)/x.ts' });
   });
+
+  it('parses file-less global diagnostics — `error TS5083:` is evidence, not noise (CE07)', () => {
+    const text = `error TS5083: Cannot read file 'tsconfig.json'.\nsrc/a.ts(1,1): error TS2345: boom`;
+    const diags = parseDiagnostics(text, '', []);
+    expect(diags).toHaveLength(2);
+    expect(diags[0]).toMatchObject({
+      code: 'TS5083',
+      col: 0,
+      file: '<global>',
+      line: 0,
+    });
+    expect(diags[0].bucket).toBe("<global>|TS5083|Cannot read file 'tsconfig.json'.");
+    expect(diags[1].file).toBe('src/a.ts');
+  });
+
+  it('a global diagnostic alone leaves a nonzero exit with parseable evidence', () => {
+    const text = `error TS5023: Unknown compiler option 'foo'.`;
+    const diags = parseDiagnostics(text, '', []);
+    expect(diags).toHaveLength(1);
+    expect(
+      diagnosticEvidenceError({ diagCount: diags.length, exit: 2, text, where: 't' }),
+    ).toBeNull();
+  });
+
+  it('parses the colon-format `file:l:c - error TS####:` spelling', () => {
+    const [d] = parseDiagnostics(`src/a.ts:4:2 - error TS2304: nope`, '', []);
+    expect(d).toMatchObject({ code: 'TS2304', col: 2, file: 'src/a.ts', line: 4 });
+  });
+});
+
+describe('collectUnknownErrorLines / diagnosticEvidenceError', () => {
+  it('flags unknown error categories instead of dropping them as noise', () => {
+    const lines = [
+      'src/a.ts(1,1): error ESLint9: bad', // located, non-TS code
+      'error ESLint: boom', // global, non-TS code
+      'error TS5023', // malformed — no colon
+      'error: codeless', // no code at all
+      'warning TS18003: x', // warning kind is not an accepted category
+      'src/a.ts:1:2 - warning TS6133: x', // colon-format warning
+      'Error: Cannot find module', // crash-shaped
+    ];
+    expect(collectUnknownErrorLines(lines.join('\n'))).toHaveLength(lines.length);
+  });
+
+  it('does not flag runner chatter or recognized diagnostics', () => {
+    const text = [
+      'src/a.ts(1,1): error TS2345: boom',
+      'error TS5083: Cannot read file',
+      'Scope: all 114 workspace projects',
+      '../.. | [WARN] deprecated foo@1',
+      '[ELIFECYCLE] Command failed with exit code 2.',
+      'ERROR Command failed with exit code 2.',
+      'ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL',
+      'npm ERR! code 1',
+      'Found 1 error in src/a.ts',
+    ].join('\n');
+    expect(collectUnknownErrorLines(text)).toHaveLength(0);
+  });
+
+  it('diagnosticEvidenceError blocks a nonzero exit with zero parseable diagnostics (CE08)', () => {
+    expect(
+      diagnosticEvidenceError({
+        diagCount: 0,
+        exit: 2,
+        text: 'garbage\n',
+        where: 'head log replay',
+      }),
+    ).toMatch(/zero parseable diagnostics/);
+    expect(
+      diagnosticEvidenceError({
+        diagCount: 1,
+        exit: 1,
+        text: 'src/a.ts(1,1): error TS2345: boom\nerror ESLint: sneaky\n',
+        where: 'head live run',
+      }),
+    ).toMatch(/unrecognized error line/);
+    expect(
+      diagnosticEvidenceError({
+        diagCount: 1,
+        exit: 1,
+        text: 'src/a.ts(1,1): error TS2345: boom\n',
+        where: 't',
+      }),
+    ).toBeNull();
+    expect(diagnosticEvidenceError({ diagCount: 0, exit: 0, text: '', where: 't' })).toBeNull();
+  });
 });
 
 describe('validateHeadLog', () => {
@@ -138,6 +227,49 @@ describe('validateHeadLog', () => {
 
   it('rejects an empty payload — zero evidence', () => {
     expect(() => validateHeadLog(envelope({}, ''), opts)).toThrow(/empty/);
+  });
+
+  it('rejects a non-hex tc-tree-sha (CE09)', () => {
+    expect(() => validateHeadLog(envelope({ 'tc-tree-sha': 'not-a-tree' }, good), opts)).toThrow(
+      /tc-tree-sha/,
+    );
+  });
+
+  describe('with repoRoot git binding', () => {
+    const headSha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    const treeSha = execSync('git rev-parse HEAD^{tree}', { encoding: 'utf8' }).trim();
+    const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+    const gitOpts = { envFingerprint: ENV_FP, headSha, repoRoot, scope: null };
+
+    it('accepts an envelope whose tree-sha is the commit’s actual git tree', () => {
+      const { payload, exit } = validateHeadLog(
+        envelope({ 'tc-head-sha': headSha, 'tc-tree-sha': treeSha }, good),
+        gitOpts,
+      );
+      expect(payload).toBe(good);
+      expect(exit).toBe(1);
+    });
+
+    it('rejects a tree-sha that is not the claimed commit’s tree', () => {
+      const wrongTree = execSync('git rev-parse HEAD^{tree}', { encoding: 'utf8' })
+        .trim()
+        .replace(/^../, '00');
+      expect(() =>
+        validateHeadLog(
+          envelope({ 'tc-head-sha': headSha, 'tc-tree-sha': wrongTree }, good),
+          gitOpts,
+        ),
+      ).toThrow(/not bound to that commit's tree/);
+    });
+
+    it('rejects a head-sha this repo cannot resolve', () => {
+      expect(() =>
+        validateHeadLog(envelope({ 'tc-head-sha': 'f'.repeat(40), 'tc-tree-sha': treeSha }, good), {
+          ...gitOpts,
+          headSha: 'f'.repeat(40),
+        }),
+      ).toThrow(/cannot resolve/);
+    });
   });
 });
 

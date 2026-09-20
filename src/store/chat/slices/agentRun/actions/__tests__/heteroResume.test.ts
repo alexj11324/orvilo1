@@ -24,7 +24,6 @@ describe('resolveHeteroResume', () => {
 
     expect(resolveNative(metadata, '/Users/me/projA')).toEqual({
       cwdChanged: false,
-      resumeBindingKey: nativeKey,
       resumeSessionId: 'session-proj-a',
     });
   });
@@ -38,7 +37,6 @@ describe('resolveHeteroResume', () => {
 
     expect(resolveNative(metadata, '/Users/me/projA')).toEqual({
       cwdChanged: false,
-      resumeBindingKey: nativeKey,
       resumeSessionId: 'session-123',
     });
   });
@@ -65,7 +63,6 @@ describe('resolveHeteroResume', () => {
 
     expect(resolveNative(metadata, undefined)).toEqual({
       cwdChanged: false,
-      resumeBindingKey: nativeKey,
       resumeSessionId: 'session-123',
     });
   });
@@ -151,7 +148,7 @@ describe('resolveHeteroResume', () => {
     });
   });
 
-  it('rejects an explicit provider-bound session under native subscription auth', () => {
+  it('rejects a session saved under a retired provider binding', () => {
     const metadata: ChatTopicMetadata = {
       heteroSessionBindingKey: 'provider-binding:v1:old',
       heteroSessionId: 'provider-session',
@@ -162,33 +159,6 @@ describe('resolveHeteroResume', () => {
       cwdChanged: false,
       reason: 'binding_changed',
       resumeSessionId: undefined,
-    });
-  });
-
-  it('passes the saved binding key to Desktop main for authoritative provider resolution', () => {
-    const metadata: ChatTopicMetadata = {
-      heteroSessionBindingKey: 'provider-binding:v1:old',
-      heteroSessionId: 'session-123',
-      workingDirectory: '/repo',
-    };
-
-    expect(resolveHeteroResume(metadata, '/repo', { providerBinding: true })).toEqual({
-      cwdChanged: false,
-      resumeBindingKey: 'provider-binding:v1:old',
-      resumeSessionId: 'session-123',
-    });
-  });
-
-  it('lets Desktop main reject a legacy session without a provider binding key', () => {
-    const metadata: ChatTopicMetadata = {
-      heteroSessionId: 'legacy-session',
-      workingDirectory: '/repo',
-    };
-
-    expect(resolveHeteroResume(metadata, '/repo', { providerBinding: true })).toEqual({
-      cwdChanged: false,
-      resumeBindingKey: undefined,
-      resumeSessionId: 'legacy-session',
     });
   });
 });

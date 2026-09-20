@@ -32,6 +32,7 @@ const MANUAL_SCROLL_UP_DELTA = 200;
 interface ScrollSnapshot {
   bottomCompensationHeight: number;
   clientHeight: number;
+  debugFlag: string | null;
   distanceToBottom: number;
   scrollHeight: number;
   scrollTop: number;
@@ -70,6 +71,7 @@ async function getScrollSnapshot(world: CustomWorld): Promise<ScrollSnapshot | n
     return {
       bottomCompensationHeight,
       clientHeight: el.clientHeight,
+      debugFlag: window.localStorage.getItem('debug'),
       distanceToBottom: el.scrollHeight - el.scrollTop - el.clientHeight,
       scrollHeight: el.scrollHeight,
       scrollTop: el.scrollTop,

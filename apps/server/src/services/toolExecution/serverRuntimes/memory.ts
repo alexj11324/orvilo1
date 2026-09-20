@@ -46,7 +46,7 @@ import {
 import { userSettings } from '@/database/schemas';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
 import {
-  initModelRuntimeFromDB,
+  initModelRuntimeFromDeploymentConfig,
   initModelRuntimeWithUserPayload,
 } from '@/server/modules/ModelRuntime';
 import {
@@ -100,8 +100,7 @@ const getEmbeddingRuntime = async (
   const { provider, model: embeddingModel } =
     getServerDefaultFilesConfig().embeddingModel || DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM;
 
-  const agentRuntime = await initModelRuntimeFromDB(
-    serverDB,
+  const agentRuntime = await initModelRuntimeFromDeploymentConfig(
     userId,
     ENABLE_BUSINESS_FEATURES ? BRANDING_PROVIDER : provider,
     workspaceId,
@@ -235,8 +234,7 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
           this.memoryEmbeddingRuntime.payload,
           { userId: this.userId },
         )
-      : await initModelRuntimeFromDB(
-          this.serverDB,
+      : await initModelRuntimeFromDeploymentConfig(
           this.userId,
           defaultEmbeddingConfig.provider,
           this.workspaceId,

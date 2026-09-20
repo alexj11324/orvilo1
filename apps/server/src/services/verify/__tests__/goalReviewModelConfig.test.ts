@@ -30,7 +30,9 @@ vi.mock('@/database/repositories/aiInfra', () => ({
 vi.mock('@/server/globalConfig', () => ({
   getServerGlobalConfig: vi.fn().mockResolvedValue({ aiProvider: {} }),
 }));
-vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDB: mocks.init }));
+vi.mock('@/server/modules/ModelRuntime', () => ({
+  initModelRuntimeFromDeploymentConfig: mocks.init,
+}));
 vi.mock('@/server/services/goal/modelConfig', () => ({ resolveGoalModelConfig: mocks.goal }));
 vi.mock('../modelConfig', () => ({
   REVIEW_PREDICT_MODEL_CONFIG: { model: 'gemini', provider: 'google' },
@@ -47,7 +49,7 @@ beforeEach(() => {
   mocks.task.mockResolvedValue({ config: configured });
   mocks.goal.mockResolvedValue({ model: 'unavailable', provider: 'google' });
   mocks.models.mockResolvedValue([{ id: 'gpt-4o', abilities: { vision: true } }]);
-  mocks.init.mockImplementation(async (_db, _user, provider) => {
+  mocks.init.mockImplementation(async (_user, provider) => {
     if (provider === 'google') throw new Error('Google credentials are absent');
     return {};
   });
@@ -57,7 +59,7 @@ describe('Goal review model selection', () => {
   it('uses an explicitly configured verifier without initializing Google', async () => {
     mocks.agent.mockResolvedValue(configured);
     expect(await resolve(true, 'verifier')).toEqual(configured);
-    expect(mocks.init).toHaveBeenCalledExactlyOnceWith(db, 'u1', 'openai', 'w1');
+    expect(mocks.init).toHaveBeenCalledExactlyOnceWith('u1', 'openai', 'w1');
   });
   it('keeps the pinned reviewer when the deployment can initialize it', async () => {
     mocks.init.mockResolvedValue({});
@@ -80,6 +82,6 @@ describe('Goal review model selection', () => {
   it('does not treat a CLI agent as an LLM review provider', async () => {
     mocks.task.mockResolvedValue({ config: { model: 'codex-model', provider: 'codex' } });
     expect(await resolve()).toBeUndefined();
-    expect(mocks.init.mock.calls.some((call) => call[2] === 'codex')).toBe(false);
+    expect(mocks.init.mock.calls.some((call) => call[1] === 'codex')).toBe(false);
   });
 });

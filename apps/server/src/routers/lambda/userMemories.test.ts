@@ -6,7 +6,7 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import type * as UserMemoryModule from '@/database/models/userMemory';
 import { UserMemoryModel } from '@/database/models/userMemory';
 import { FtsSearchCandidateError } from '@/database/repositories/ftsSearch';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 import { userMemoriesRouter } from './userMemories';
 
@@ -21,7 +21,7 @@ vi.mock('@/server/globalConfig', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 vi.mock('@/database/models/userMemory', async (importOriginal) => {
@@ -56,7 +56,7 @@ beforeEach(() => {
     return items.map((_, index) => [index + 1]);
   });
 
-  vi.mocked(initModelRuntimeFromDB).mockResolvedValue({
+  vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
     embeddings: embeddingsMock,
   } as any);
 });

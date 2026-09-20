@@ -57,7 +57,6 @@ export interface TBatchTarget {
 export * from './agent.type';
 export * from './agent-group.type';
 export * from './api-key.type';
-export * from './chat.type';
 export * from './common.type';
 export * from './eval.type';
 export * from './file.type';

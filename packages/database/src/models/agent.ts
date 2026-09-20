@@ -5,7 +5,6 @@ import {
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
-import { toRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -85,7 +84,6 @@ import { rehomeAgentQuotaBindingsForRecipient } from '../utils/agentQuotaBinding
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
-import { sanitizeAgentApiConfig } from '../utils/sanitizeAgentApiConfig';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from './agentCopyJob';
@@ -1077,9 +1075,7 @@ export class AgentModel {
    */
   create = async (input: Partial<AgentItem>): Promise<AgentItem> => {
     const config = this.stripReservedSlug(input);
-    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(
-      sanitizeAgentApiConfig(config.agencyConfig),
-    );
+    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(config.agencyConfig);
 
     await this.assertWorkspaceDeviceBinding(this.workspaceId ?? null, agencyConfig);
     await this.assertFixedExecutionTarget(this.workspaceId ?? null, agencyConfig);
@@ -1110,9 +1106,7 @@ export class AgentModel {
 
     const normalizedConfigs = configs.map((config) => ({
       ...this.stripReservedSlug(config),
-      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
-        sanitizeAgentApiConfig(config.agencyConfig),
-      ),
+      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(config.agencyConfig),
     }));
 
     await Promise.all(
@@ -1139,12 +1133,9 @@ export class AgentModel {
   };
 
   update = async (agentId: string, data: Partial<AgentItem>) => {
-    const apiSafeData = Object.hasOwn(data, 'agencyConfig')
-      ? { ...data, agencyConfig: sanitizeAgentApiConfig(data.agencyConfig) }
-      : data;
     const sanitizedData = await this.stripAgentBuilderProtectedFields(
       agentId,
-      this.stripImmutableFields(apiSafeData),
+      this.stripImmutableFields(data),
     );
 
     return this.db
@@ -1435,21 +1426,6 @@ export class AgentModel {
     }
 
     const mergedValue = merge(agent, restData);
-
-    // API bindings follow updateConfig's partial deep-merge contract. A user-provider patch must
-    // only clear the deployment discriminator retained from a previous server-default binding.
-    const apiConfigPatch = toRecord(data.agencyConfig?.heterogeneousProvider?.apiConfig);
-    const mergedApiConfig = toRecord(mergedValue.agencyConfig?.heterogeneousProvider?.apiConfig);
-    if (
-      apiConfigPatch &&
-      apiConfigPatch.source !== 'server-default' &&
-      typeof apiConfigPatch.providerId === 'string' &&
-      mergedApiConfig
-    ) {
-      delete mergedApiConfig.source;
-    }
-
-    mergedValue.agencyConfig = sanitizeAgentApiConfig(mergedValue.agencyConfig) ?? null;
 
     // The inbox is Orvilo's built-in default cloud agent; it must never be
     // turned into a heterogeneous (external-CLI) agent. Two independent inputs can

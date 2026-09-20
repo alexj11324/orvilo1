@@ -29,9 +29,6 @@ vi.mock('@/database/models/device', () => ({
 }));
 
 vi.mock('@/database/models/agentQuota', () => ({
-  AgentAccountBindingModel: vi.fn(function () {
-    return {};
-  }),
   AgentProviderAccountModel: vi.fn(function () {
     return {};
   }),

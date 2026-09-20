@@ -17,7 +17,7 @@ vi.mock('@/business/server/aiProvider', () => ({
 vi.mock('@/server/globalConfig');
 vi.mock('@/database/repositories/aiInfra');
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 vi.mock('@orvilo/business-const', async () => {
   const actual = await vi.importActual<typeof BusinessConst>('@orvilo/business-const');

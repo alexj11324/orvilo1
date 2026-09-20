@@ -48,7 +48,7 @@ import {
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import {
   recordUserMemoryLexicalSearchDecision,
@@ -132,7 +132,7 @@ const searchUserMemories = async (
   const normalizedInput = normalizeSearchMemoryParams(input);
   const { provider, model: embeddingModel } =
     getServerDefaultFilesConfig().embeddingModel || DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM;
-  const modelRuntime = await initModelRuntimeFromDB(ctx.serverDB, ctx.userId, provider);
+  const modelRuntime = await initModelRuntimeFromDeploymentConfig(ctx.userId, provider);
   const normalizedQueries = normalizeUserMemorySearchQueries(normalizedInput.queries);
 
   const queryEmbeddings =
@@ -174,12 +174,10 @@ const searchUserMemories = async (
   ) as Promise<SearchMemoryResult>;
 };
 
-const getEmbeddingRuntime = async (serverDB: OrviloDatabase, userId: string) => {
+const getEmbeddingRuntime = async (userId: string) => {
   const { provider, model: embeddingModel } =
     getServerDefaultFilesConfig().embeddingModel || DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM;
-  // Read user's provider config from database
-  const agentRuntime = await initModelRuntimeFromDB(
-    serverDB,
+  const agentRuntime = await initModelRuntimeFromDeploymentConfig(
     userId,
     ENABLE_BUSINESS_FEATURES ? BRANDING_PROVIDER : provider,
   );
@@ -499,10 +497,7 @@ export const userMemoriesRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         const options = input ?? {};
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const concurrency = options.concurrency ?? 10;
         const shouldProcess = (key: ReEmbedTableKey) =>
           !options.only || options.only.length === 0 || options.only.includes(key);
@@ -1015,10 +1010,7 @@ export const userMemoriesRouter = router({
     .input(ActivityMemoryItemSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const embed = createEmbedder(agentRuntime, embeddingModel, ctx.userId);
 
         const summaryEmbedding = await embed(input.summary);
@@ -1077,10 +1069,7 @@ export const userMemoriesRouter = router({
     .input(ContextMemoryItemSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const embed = createEmbedder(agentRuntime, embeddingModel, ctx.userId);
 
         const summaryEmbedding = await embed(input.summary);
@@ -1132,10 +1121,7 @@ export const userMemoriesRouter = router({
     .input(ExperienceMemoryItemSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const embed = createEmbedder(agentRuntime, embeddingModel, ctx.userId);
 
         const summaryEmbedding = await embed(input.summary);
@@ -1188,10 +1174,7 @@ export const userMemoriesRouter = router({
     .input(AddIdentityActionSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const embed = createEmbedder(agentRuntime, embeddingModel, ctx.userId);
 
         const summaryEmbedding = await embed(input.summary);
@@ -1256,10 +1239,7 @@ export const userMemoriesRouter = router({
     .input(PreferenceMemoryItemSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const embed = createEmbedder(agentRuntime, embeddingModel, ctx.userId);
 
         const summaryEmbedding = await embed(input.summary);
@@ -1351,10 +1331,7 @@ export const userMemoriesRouter = router({
     .input(UpdateIdentityActionSchema)
     .mutation(async ({ input, ctx }) => {
       try {
-        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
-          ctx.serverDB,
-          ctx.userId,
-        );
+        const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(ctx.userId);
         const embed = createEmbedder(agentRuntime, embeddingModel, ctx.userId);
 
         let summaryVector1024: number[] | null | undefined;

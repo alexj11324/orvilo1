@@ -7,7 +7,7 @@ import { TaskModel } from '@/database/models/task';
 import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import type { OrviloDatabase } from '@/database/type';
 import { getServerGlobalConfig } from '@/server/globalConfig';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { resolveGoalModelConfig } from '@/server/services/goal/modelConfig';
 
 import type { VerifyModelConfig } from './modelConfig';
@@ -48,7 +48,7 @@ export const resolveGoalReviewModelConfig = async (
     try {
       // Uses the same user/workspace vaults and deployment credentials as generation.
       // No paid probe call: missing credentials fail during runtime construction.
-      await initModelRuntimeFromDB(db, userId, config.provider, workspaceId);
+      await initModelRuntimeFromDeploymentConfig(userId, config.provider, workspaceId);
       return config;
     } catch (error) {
       console.error('[goal-review] Could not initialize review provider:', config.provider, error);

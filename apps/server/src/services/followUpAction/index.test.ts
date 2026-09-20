@@ -32,7 +32,9 @@ describe('FollowUpActionService.extract', () => {
     };
 
     runtimeMock = { generateObject: vi.fn() };
-    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockResolvedValue(runtimeMock as any);
+    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDeploymentConfig').mockResolvedValue(
+      runtimeMock as any,
+    );
 
     svc = new FollowUpActionService(dbMock, TEST_USER);
   });
@@ -45,8 +47,8 @@ describe('FollowUpActionService.extract', () => {
   it('reuses the source topic in outgoing OpenCode requests across extractions', async () => {
     const sessions: (string | null)[] = [];
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'Choose a next step.' });
-    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockImplementation(async () =>
-      ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),
+    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDeploymentConfig').mockImplementation(
+      async () => ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),
     );
     vi.stubGlobal(
       'fetch',
@@ -147,8 +149,7 @@ describe('FollowUpActionService.extract', () => {
       },
     });
 
-    expect(ModelRuntimeModule.initModelRuntimeFromDB).toHaveBeenCalledWith(
-      dbMock,
+    expect(ModelRuntimeModule.initModelRuntimeFromDeploymentConfig).toHaveBeenCalledWith(
       TEST_USER,
       'custom-provider',
     );
@@ -279,8 +280,7 @@ describe('FollowUpActionService.extract', () => {
 
     const { parts, table } = captureWhereOps();
     expect(parts).toContainEqual({ col: table.workspaceId, op: 'eq', value: 'workspace-1' });
-    expect(ModelRuntimeModule.initModelRuntimeFromDB).toHaveBeenCalledWith(
-      dbMock,
+    expect(ModelRuntimeModule.initModelRuntimeFromDeploymentConfig).toHaveBeenCalledWith(
       TEST_USER,
       MODEL_CONFIG.provider,
       'workspace-1',

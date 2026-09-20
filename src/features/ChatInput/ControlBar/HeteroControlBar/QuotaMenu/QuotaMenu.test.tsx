@@ -718,6 +718,32 @@ describe('ClaudeCodeQuotaMenu', () => {
     expect(screen.queryByText('100%')).toBeNull();
   });
 
+  it('an ok-but-unidentifiable live sample revokes the confirmed identity', async () => {
+    // F11: the context previously confirmed ext-1; a fresh live sample arrives
+    // 'ok' but carries no externalAccountId — the login on the device may have
+    // switched. The panel must drop ext-1's confirmation and render only the
+    // sample's own windows as unknown, not keep painting ext-1's history.
+    mockQuotaService.listAccounts.mockResolvedValue([persistedAccount(Date.now() - 60 * 60_000)]);
+    mockQuotaService.getLatestReadings.mockResolvedValue([
+      { ...persistedSessionReading(Date.now() - 60 * 60_000), utilization: 0 },
+    ]);
+    mockService.getClaudeCodeQuota.mockResolvedValue(
+      claudeSnapshot({
+        identity: undefined,
+        session: { resetsAt: null, usedPercent: 4, windowMinutes: 300 },
+      }),
+    );
+    await confirmQuotaIdentity('ext-1');
+
+    render(<ClaudeCodeQuotaMenu />);
+
+    // 96% left comes from the unidentifiable sample itself — labeled unknown,
+    // with ext-1's persisted 'refilled' window (100%) never borrowed.
+    expect(await screen.findByText('96%')).toBeTruthy();
+    expect(screen.getByText('heteroAgent.claudeQuota.unknownIdentity')).toBeTruthy();
+    expect(screen.queryByText('100%')).toBeNull();
+  });
+
   it('keeps each execution context bound to its own confirmed identity', async () => {
     // Two devices, two logins, one local profile. A context may only ever
     // paint the account its own sampler confirmed — the deleted first-row
@@ -746,9 +772,7 @@ describe('ClaudeCodeQuotaMenu', () => {
     mockQuotaService.listAccounts.mockResolvedValue([accountAlpha, accountBeta, accountGamma]);
     mockQuotaService.getLatestReadings.mockImplementation(async (accountId?: string) => {
       const utilization =
-        (({ 'acc-a': 44, 'acc-b': 88, 'acc-c': 77 }) as Record<string, number>)[
-          accountId ?? ''
-        ] ?? 0;
+        ({ 'acc-a': 44, 'acc-b': 88, 'acc-c': 77 } as Record<string, number>)[accountId ?? ''] ?? 0;
       return [{ ...persistedSessionReading(Date.now() - 10_000), utilization }];
     });
     mockLambdaDeviceQuota
@@ -910,7 +934,11 @@ describe('ClaudeCodeQuotaMenu', () => {
     mockQuotaService.getLatestReadings.mockResolvedValue([
       persistedSessionReading(Date.now() - 31 * 60_000),
     ]);
-    mockService.getClaudeCodeQuota.mockResolvedValue(claudeSnapshot());
+    // An attributable refresh: the live sample names the same identity the
+    // context confirmed, so the persisted view stays mounted.
+    mockService.getClaudeCodeQuota.mockResolvedValue(
+      claudeSnapshot({ identity: { externalAccountId: 'ext-1' } }),
+    );
     await confirmQuotaIdentity('ext-1');
 
     render(<ClaudeCodeQuotaMenu />);
@@ -944,7 +972,7 @@ describe('ClaudeCodeQuotaMenu', () => {
     expect((screen.getByTestId('refresh') as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => {
-      requests[0](claudeSnapshot());
+      requests[0](claudeSnapshot({ identity: { externalAccountId: 'ext-1' } }));
     });
 
     expect(screen.getByText('92%')).toBeTruthy();

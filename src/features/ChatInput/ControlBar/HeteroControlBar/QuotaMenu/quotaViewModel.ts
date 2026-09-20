@@ -31,6 +31,12 @@ export interface QuotaAccountRow {
  */
 export interface ClaudeCodePanelSnapshot extends ClaudeCodeQuotaSnapshot {
   /**
+   * The painted identity is the last confirmed one for this context — the
+   * current live sample failed to verify it (fetch error / non-ok status).
+   * Never render this as a current confirmed identity.
+   */
+  identityUnverified?: boolean;
+  /**
    * The live sample's identity was confirmed for this execution context but
    * its readings could not be bound to a persisted account row (the ingest
    * failed, or the row is not visible to this user/workspace). The panel still
@@ -83,6 +89,38 @@ export const pruneQuotaIdentityTrust = (visibleExternalAccountIds: ReadonlySet<s
 /** Clear every binding — renderer sign-out and test isolation. */
 export const resetQuotaIdentityTrust = (): void => {
   quotaIdentityTrust.clear();
+};
+
+/**
+ * Decide which persisted account a live sample authorizes this context to
+ * show, mutating the trust map accordingly:
+ *
+ *   - `live.status === 'ok'` with an `externalAccountId` → (re)binds the
+ *     context to that identity and returns the matching visible account row;
+ *   - `live.status === 'ok'` with NO identifiable identity → REVOKES the
+ *     context's prior confirmation (the current sample may be a different
+ *     login) and returns no account — the panel then renders the sample's own
+ *     windows as unknown, never the previously-confirmed account's history;
+ *   - no successful live sample → returns the still-trusted account, if any,
+ *     for the caller to paint flagged `identityUnverified`.
+ */
+export const resolveQuotaIdentityForLive = <TAccount extends QuotaAccountRow>(params: {
+  accounts: TAccount[];
+  contextKey: string;
+  live: ClaudeCodeQuotaSnapshot | null;
+}): { account?: TAccount; unidentifiableLive?: boolean } => {
+  const { accounts, contextKey, live } = params;
+  if (live?.status === 'ok') {
+    const liveId = live.identity?.externalAccountId;
+    if (!liveId) {
+      quotaIdentityTrust.delete(contextKey);
+      return { unidentifiableLive: true };
+    }
+    quotaIdentityTrust.set(contextKey, liveId);
+    return { account: accounts.find((a) => a.externalAccountId === liveId) };
+  }
+  const trusted = quotaIdentityTrust.get(contextKey);
+  return { account: trusted ? accounts.find((a) => a.externalAccountId === trusted) : undefined };
 };
 
 const toMs = (v: Date | string | null | undefined): number | null => {

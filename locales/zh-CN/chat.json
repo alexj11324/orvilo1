@@ -845,6 +845,7 @@
   "heteroAgent.claudeQuota.calendar.windowUtilization": "已用 {{percent}}%",
   "heteroAgent.claudeQuota.errorGeneric": "无法连接额度服务，点击刷新重试。",
   "heteroAgent.claudeQuota.errorRateLimited": "Claude Code 额度查询暂时被限流，请稍后再试。",
+  "heteroAgent.claudeQuota.identityUnverified": "显示上次确认的身份——当前实时状态未能验证。",
   "heteroAgent.claudeQuota.persistFailed": "当前显示实时读数——尚未能写入历史记录。",
   "heteroAgent.claudeQuota.refreshRateLimited": "额度刷新暂时被限流，当前显示上次获取的数据。",
   "heteroAgent.claudeQuota.scopedWeekly": "每周（{{model}}）",

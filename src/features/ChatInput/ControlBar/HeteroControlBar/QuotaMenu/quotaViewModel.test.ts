@@ -9,6 +9,7 @@ import {
   newestCapturedAt,
   pruneQuotaIdentityTrust,
   resetQuotaIdentityTrust,
+  resolveQuotaIdentityForLive,
   trustedQuotaIdentity,
   trustQuotaIdentity,
 } from './quotaViewModel';
@@ -275,6 +276,97 @@ describe('quota identity trust', () => {
     resetQuotaIdentityTrust();
 
     expect(trustedQuotaIdentity('claude-code:local')).toBeUndefined();
+  });
+});
+
+describe('resolveQuotaIdentityForLive', () => {
+  beforeEach(() => resetQuotaIdentityTrust());
+
+  const contextKey = 'claude-code:local';
+  const accountA = { externalAccountId: 'ext-a', id: 'a' };
+  const accountB = { externalAccountId: 'ext-b', id: 'b' };
+  const okSample = (externalAccountId?: string): ClaudeCodeQuotaSnapshot => ({
+    error: null,
+    ...(externalAccountId ? { identity: { externalAccountId } } : {}),
+    provider: 'claude-code',
+    status: 'ok',
+    updatedAt: now,
+  });
+
+  it('an ok sample with no identity revokes the context confirmation', () => {
+    // A → unidentifiable: the current sample cannot be attributed, so the
+    // previously confirmed account must drop immediately — nothing may keep
+    // painting A as the current login.
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const first = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: okSample(),
+    });
+
+    expect(first.unidentifiableLive).toBe(true);
+    expect(first.account).toBeUndefined();
+    expect(trustedQuotaIdentity(contextKey)).toBeUndefined();
+  });
+
+  it('A → unidentifiable → B rebinds only after B samples an identity', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+    resolveQuotaIdentityForLive({ accounts: [accountA, accountB], contextKey, live: okSample() });
+
+    const next = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: okSample('ext-b'),
+    });
+
+    expect(next.account?.externalAccountId).toBe('ext-b');
+    expect(trustedQuotaIdentity(contextKey)).toBe('ext-b');
+  });
+
+  it('an ok sample rebinds directly between two identifiable logins', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const res = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: okSample('ext-b'),
+    });
+
+    expect(res.account?.externalAccountId).toBe('ext-b');
+    expect(trustedQuotaIdentity(contextKey)).toBe('ext-b');
+  });
+
+  it('a failed live probe keeps the trusted account for the unverified view', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const res = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: { ...okSample(), error: 'fetch failed', status: 'error' },
+    });
+
+    expect(res.unidentifiableLive).toBeUndefined();
+    expect(res.account?.externalAccountId).toBe('ext-a');
+  });
+
+  it('no live sample at all also keeps the trusted account flagged by the caller', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const res = resolveQuotaIdentityForLive({ accounts: [accountA], contextKey, live: null });
+
+    expect(res.account?.externalAccountId).toBe('ext-a');
+  });
+
+  it('an unidentifiable ok sample with no prior confirmation returns nothing', () => {
+    const res = resolveQuotaIdentityForLive({
+      accounts: [accountA],
+      contextKey,
+      live: okSample(),
+    });
+
+    expect(res.account).toBeUndefined();
+    expect(trustedQuotaIdentity(contextKey)).toBeUndefined();
   });
 });
 

@@ -4,7 +4,10 @@ import { AGENT_RUNTIME_ERROR_SET } from '@orvilo/model-runtime';
 import { ChatErrorType } from '@orvilo/types';
 
 import { checkAuth } from '@/app/(backend)/middleware/auth';
-import { createTraceOptions, initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import {
+  createTraceOptions,
+  initModelRuntimeFromDeploymentConfig,
+} from '@/server/modules/ModelRuntime';
 import { type ChatStreamPayload } from '@/types/openai/chat';
 import { createErrorResponse } from '@/utils/errorResponse';
 import { getTracePayload } from '@/utils/trace';
@@ -25,7 +28,7 @@ export const POST = checkAuth(async (req: Request, { params, userId, serverDB })
     const workspaceId = await resolveValidWorkspaceIdFromRequest({ req, serverDB, userId });
 
     // ============  1. init chat model   ============ //
-    const modelRuntime = await initModelRuntimeFromDB(serverDB, userId, provider, workspaceId);
+    const modelRuntime = await initModelRuntimeFromDeploymentConfig(userId, provider, workspaceId);
 
     // ============  2. create chat completion   ============ //
 

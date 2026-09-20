@@ -1,18 +1,10 @@
 import { type GoogleGenAIOptions } from '@google/genai';
-import type { ServerDefaultHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import {
-  isServerDefaultHeterogeneousProfileModel,
-  SERVER_DEFAULT_HETEROGENEOUS_AGENT_CONFIG,
-  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
-} from '@orvilo/heterogeneous-agents';
 import {
   AgentRuntimeError,
   mergeModelRuntimeHooks,
   ModelRuntime,
   type ModelRuntimeHooks,
 } from '@orvilo/model-runtime';
-import { parseClaudeModelId } from '@orvilo/model-runtime/providers/anthropic/modelId';
-import { isResponsesAPIModel } from '@orvilo/model-runtime/providers/openai/modelId';
 import { OrviloVertexAI } from '@orvilo/model-runtime/vertexai';
 import {
   type AWSBedrockKeyVault,
@@ -27,28 +19,20 @@ import {
   type SuperGrokKeyVault,
   type VertexAIKeyVault,
 } from '@orvilo/types';
-import { isCodexServerDefaultCustomModel } from '@orvilo/types';
 import { safeParseJSON } from '@orvilo/utils';
 import type { AiFullModelCard } from 'model-bank';
-import { isAiModelVisible, ModelProvider } from 'model-bank';
+import { ModelProvider } from 'model-bank';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
-import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 
 import { loadModels } from '@/business/client/model-bank/loadModels';
 import { getBusinessModelRuntimeHooks } from '@/business/server/model-runtime';
-import { AiProviderModel } from '@/database/models/aiProvider';
-import { type OrviloDatabase } from '@/database/type';
 import { getLLMConfig } from '@/envs/llm';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { createLLMGenerationTracingHook } from '@/server/services/llmGenerationTracing/hook';
-import { ensureFreshOAuthToken } from '@/server/services/oauthDeviceFlow/refresh';
 
-import { KeyVaultsGateKeeper } from '../KeyVaultsEncrypt';
 import apiKeyManager from './apiKeyManager';
 
 export * from './trace';
-export type { ServerDefaultHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-export { SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
 
 /**
  * Combined KeyVaults type for all providers
@@ -63,23 +47,8 @@ type ProviderKeyVaults = OpenAICompatibleKeyVault &
   SuperGrokKeyVault &
   VertexAIKeyVault;
 
-/**
- * Resolve the runtime provider for a given provider.
- *
- * This is the server-side equivalent of the frontend's resolveRuntimeProvider function.
- * For builtin providers, returns the provider as-is.
- * For custom providers, returns the sdkType from settings (defaults to 'openai').
- *
- * @param provider - The provider id
- * @param sdkType - The sdkType from provider settings
- * @returns The resolved runtime provider
- */
-const resolveRuntimeProvider = (provider: string, sdkType?: string): string => {
-  const isBuiltin = Object.values(ModelProvider).includes(provider as ModelProvider);
-  if (isBuiltin) return provider;
-
-  return sdkType || 'openai';
-};
+/** Payload for the retired BYOK read path — empty; only env fallbacks remain. */
+const EMPTY_KEY_VAULTS = {} as ProviderKeyVaults;
 
 /**
  * Build ClientSecretPayload from keyVaults stored in database
@@ -457,131 +426,47 @@ export const initModelRuntimeWithUserPayload = (
 };
 
 /**
- * Initialize ModelRuntime by reading user's provider configuration from database
+ * Initialize ModelRuntime with deployment-owned provider configuration.
  *
- * This function replaces the pattern of passing userPayload from frontend.
- * It reads the user's AI provider configuration from the database, decrypts
- * the keyVaults, and initializes the ModelRuntime.
+ * Provider management (BYOK) is retired. User-scoped `ai_providers` rows are
+ * inert history: their persisted `keyVaults`/`baseURL` must never drive a
+ * server-side model call again, and a caller-invented custom provider id can
+ * never resolve credentials (custom providers only ever resolved them through
+ * user rows).
  *
- * @param db - The database instance
- * @param userId - The user ID
- * @param provider - The model provider (e.g., 'openai', 'azure')
+ * Credentials therefore come from deployment-owned configuration only:
+ * `{PROVIDER}_API_KEY` / `{PROVIDER}_PROXY_URL` envs inside
+ * `buildPayloadFromKeyVaults` / `getParamsFromPayload`, or the
+ * `ModelProvider.Orvilo` deployment relay, which needs no payload at all.
+ *
+ * @param userId - The user ID (billing/tracing attribution)
+ * @param provider - Builtin provider id (e.g. 'openai', 'orvilo')
  * @returns Promise<ModelRuntime> - The initialized ModelRuntime instance
  *
  * @example
  * ```typescript
- * const modelRuntime = await initModelRuntimeFromDB(db, userId, 'openai');
+ * const modelRuntime = await initModelRuntimeFromDeploymentConfig(userId, 'openai');
  * const response = await modelRuntime.chat({ messages, model });
  * ```
  */
-export const initModelRuntimeFromDB = async (
-  db: OrviloDatabase,
+export const initModelRuntimeFromDeploymentConfig = async (
   userId: string,
   provider: string,
   workspaceId?: string,
 ): Promise<ModelRuntime> => {
-  // 1. Get user's provider configuration from database
-  const aiProviderModel = new AiProviderModel(db, userId, workspaceId);
-
-  // Use getAiProviderById with KeyVaultsGateKeeper.getUserKeyVaults as decryptor
-  const providerConfig = await aiProviderModel.getAiProviderById(
-    provider,
-    KeyVaultsGateKeeper.getUserKeyVaults,
-  );
-
-  // 2. Resolve the runtime provider for custom providers
-  // For custom providers, use sdkType from settings (defaults to 'openai')
-  const sdkType = providerConfig?.settings?.sdkType;
-  const runtimeProvider = resolveRuntimeProvider(provider, sdkType);
-
-  // 3. Build ClientSecretPayload from keyVaults based on runtimeProvider
-  // This ensures provider-specific fields (e.g., cloudflareBaseURLOrAccountID) are included
-  let keyVaults = (providerConfig?.keyVaults || {}) as ProviderKeyVaults;
-
-  // 3.5. OAuth device-flow providers with rotating refresh tokens (e.g.
-  // SuperGrok): proactively refresh + persist the token pair before building
-  // the payload. Mounted here because every server-side LLM call path (webapi
-  // chat, agent runtime transport, async image/video, lambda routers)
-  // converges on this function.
-  const oauthDeviceFlowConfig = DEFAULT_MODEL_PROVIDER_LIST.find((p) => p.id === provider)?.settings
-    ?.oauthDeviceFlow;
-  if (oauthDeviceFlowConfig?.refreshTokenGrant) {
-    const freshKeyVaults = await ensureFreshOAuthToken({
-      config: oauthDeviceFlowConfig,
-      db,
-      keyVaults,
-      providerId: provider,
-      userId,
-      workspaceId,
+  if (!Object.values(ModelProvider).includes(provider as ModelProvider)) {
+    throw AgentRuntimeError.createError(ChatErrorType.BadRequest, {
+      message: `Provider '${provider}' is not a deployment-managed provider`,
     });
-    keyVaults = { ...keyVaults, ...freshKeyVaults } as ProviderKeyVaults;
   }
 
-  const payload = buildPayloadFromKeyVaults(keyVaults, runtimeProvider);
+  const payload = buildPayloadFromKeyVaults(EMPTY_KEY_VAULTS, provider);
 
-  // 4. Get business hooks (billing in cloud, undefined in OSS)
   const businessHooks = getBusinessModelRuntimeHooks(userId, provider, workspaceId);
-
-  // 5. Compose with the per-call llm_generation_tracing hook (no-op when the
-  //    service is unconfigured, so OSS / self-hosted setups pay nothing for it).
   const tracingHooks = createLLMGenerationTracingHook(userId, provider, workspaceId);
   const hooks = mergeModelRuntimeHooks(businessHooks, tracingHooks);
 
-  // 6. Initialize ModelRuntime with the payload and hooks
   return initModelRuntimeWithUserPayload(provider, payload, { userId, workspaceId }, hooks);
-};
-
-export interface ServerDefaultHeterogeneousModelReference {
-  model: string;
-}
-
-export type ServerDefaultHeterogeneousModels = Record<
-  ServerDefaultHeterogeneousAgentType,
-  ServerDefaultHeterogeneousModelReference[]
->;
-
-/**
- * Every supported CLI uses the single Orvilo relay provider. `orvilo` is a
- * deployment-owned router slot, not a hosted-only upstream: official and
- * private distributions provide their own model catalog and RouterRuntime
- * behind it.
- *
- * The shared agent matrix selects either the Anthropic Messages or OpenAI
- * Responses ingress. Both translate the wire protocol in both directions
- * rather than proxying it, and every CLI addresses the relay as
- * `aspectlylabs/${catalogId}`. The operation token remains the source of truth and
- * the request must match that selection.
- *
- * Legacy agent policies accept any tool-capable chat model; the
- * `parseClaudeModelId` arm keeps Claude ids eligible in deployments whose
- * catalog omits `abilities`. Profile-attested agents instead require a tested
- * client payload/continuation contract. Codex retains its narrower policy: it
- * accepts native Responses models plus an explicit set of tool-capable relay
- * models configured through its custom model-catalog path.
- */
-const supportsServerDefaultHeterogeneousAgent = (
-  agentType: ServerDefaultHeterogeneousAgentType,
-  model: Pick<AiFullModelCard, 'abilities' | 'agentCompatibility' | 'id' | 'visible'>,
-) => {
-  if (!isAiModelVisible(model)) return false;
-
-  const config = SERVER_DEFAULT_HETEROGENEOUS_AGENT_CONFIG[agentType];
-  const { modelPolicy } = config;
-  if (modelPolicy === 'tool-capable') {
-    return parseClaudeModelId(model.id) !== undefined || model.abilities?.functionCall === true;
-  }
-  if (modelPolicy === 'profile-attested') {
-    if (model.abilities?.functionCall === false) return false;
-    const deploymentProfiles = model.agentCompatibility?.serverDefaultHeterogeneousProfiles;
-    return deploymentProfiles
-      ? deploymentProfiles.includes(config.compatibilityProfile)
-      : isServerDefaultHeterogeneousProfileModel(config.compatibilityProfile, model.id);
-  }
-
-  return (
-    isResponsesAPIModel(model.id) ||
-    (isCodexServerDefaultCustomModel(model.id) && model.abilities?.functionCall === true)
-  );
 };
 
 const getEnabledServerChatModels = async (provider: ModelProvider) => {
@@ -617,70 +502,6 @@ const toServerModelSelection = (provider: string, modelConfig: AiFullModelCard) 
   provider,
 });
 
-/** Return compatible models from the single deployment-owned relay provider. */
-export const getServerDefaultHeterogeneousModels = async () => {
-  const models = {} as ServerDefaultHeterogeneousModels;
-  for (const agentType of SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES) {
-    models[agentType] = [];
-  }
-
-  for (const model of await getEnabledServerChatModels(ModelProvider.Orvilo)) {
-    for (const agentType of SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES) {
-      if (supportsServerDefaultHeterogeneousAgent(agentType, model)) {
-        models[agentType].push({ model: model.id });
-      }
-    }
-  }
-
-  return models;
-};
-
 /** Resolve a user selection against the deployment-owned, enabled chat model catalog. */
 export const resolveServerModel = async (provider: string, model: string) =>
   toServerModelSelection(provider, await findEnabledServerChatModel(provider, model));
-
-/** Resolve a model only when it belongs to the selected CLI's relay runtime path. */
-export const resolveServerDefaultHeterogeneousModel = async (
-  agentType: ServerDefaultHeterogeneousAgentType,
-  model: string,
-) => {
-  const modelConfig = await findEnabledServerChatModel(ModelProvider.Orvilo, model);
-  if (!supportsServerDefaultHeterogeneousAgent(agentType, modelConfig)) {
-    throw new Error('The selected server model is not compatible with this heterogeneous agent');
-  }
-
-  return {
-    ...toServerModelSelection(ModelProvider.Orvilo, modelConfig),
-    supportsAdaptiveThinking:
-      modelConfig.settings?.extendParams?.includes('enableAdaptiveThinking') === true,
-  };
-};
-
-/**
- * Initialize the deployment's single relay directly.
- *
- * Do not resolve `DEFAULT_AGENT_CONFIG` here or translate this into OpenAI /
- * Anthropic environment credentials. Those names describe the two CLI ingress
- * protocols only; the deployment-owned Orvilo RouterRuntime owns the one
- * upstream endpoint, credentials, model routing, fallback, and billing policy.
- */
-export const initModelRuntimeFromServerConfig = async (params: {
-  actorUserId: string;
-  workspaceId?: string;
-}): Promise<ModelRuntime> => {
-  const businessHooks = getBusinessModelRuntimeHooks(
-    params.actorUserId,
-    ModelProvider.Orvilo,
-    params.workspaceId,
-  );
-  const tracingHooks = createLLMGenerationTracingHook(
-    params.actorUserId,
-    ModelProvider.Orvilo,
-    params.workspaceId,
-  );
-  return ModelRuntime.initializeWithProvider(
-    ModelProvider.Orvilo,
-    { userId: params.actorUserId, workspaceId: params.workspaceId },
-    mergeModelRuntimeHooks(businessHooks, tracingHooks),
-  );
-};

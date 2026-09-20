@@ -101,26 +101,6 @@ export class MessageController extends BaseController {
   }
 
   /**
-   * Creates a user message and generates an AI reply
-   * POST /api/v1/messages/replies
-   * Body: { content: string, role: 'user', topicId?: string, model?: string, provider?: string, files?: string[] }
-   */
-  async handleCreateMessageWithAIReply(c: Context) {
-    try {
-      const userId = this.getUserId(c)!;
-      const messageData = (await this.getBody<MessagesCreateRequest>(c))!;
-
-      const db = await this.getDatabase();
-      const messageService = new MessageService(db, userId, this.getWorkspaceId(c));
-      const result = await messageService.createMessageWithAIReply(messageData);
-
-      return this.success(c, result, 'Message created and AI reply generated successfully');
-    } catch (error) {
-      return this.handleError(c, error);
-    }
-  }
-
-  /**
    * Deletes a single message
    * DELETE /api/v1/messages/:id
    * Params: { id: string }

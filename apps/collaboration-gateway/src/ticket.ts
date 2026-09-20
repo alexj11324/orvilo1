@@ -1,6 +1,6 @@
 import {
   COLLABORATION_TICKET_AUDIENCE,
-  COLLABORATION_TICKET_ISSUER,
+  COLLABORATION_TICKET_ISSUERS,
   COLLABORATION_TICKET_PURPOSE,
   type CollaborationActor,
 } from '@orvilo/types';
@@ -74,7 +74,7 @@ export const verifyRoomTicket = async (token: string): Promise<GatewayTicket | n
     const { payload } = await jwtVerify(token, publicKey, {
       algorithms: ['RS256'],
       audience: COLLABORATION_TICKET_AUDIENCE,
-      issuer: COLLABORATION_TICKET_ISSUER,
+      issuer: [...COLLABORATION_TICKET_ISSUERS],
     });
 
     if (
@@ -127,7 +127,7 @@ export const verifyPublishToken = async (token: string): Promise<boolean> => {
     const { payload } = await jwtVerify(token, publicKey, {
       algorithms: ['RS256'],
       audience: COLLABORATION_TICKET_AUDIENCE,
-      issuer: COLLABORATION_TICKET_ISSUER,
+      issuer: [...COLLABORATION_TICKET_ISSUERS],
     });
     return payload.purpose === GATEWAY_PUBLISH_PURPOSE;
   } catch {

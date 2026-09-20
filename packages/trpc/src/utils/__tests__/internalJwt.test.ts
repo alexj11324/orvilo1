@@ -123,7 +123,7 @@ describe('internalJwt', () => {
       const { signHeteroOperationJWT } = await import('../internalJwt');
 
       await signHeteroOperationJWT({
-        capabilities: ['model:invoke'],
+        capabilities: ['hetero:ingest', 'hetero:finish'],
         model: 'gpt-server',
         operationId: 'op-server',
         providerId: 'openai',
@@ -131,7 +131,7 @@ describe('internalJwt', () => {
       });
 
       expect(SignJWTMock).toHaveBeenCalledWith({
-        capabilities: ['model:invoke'],
+        capabilities: ['hetero:ingest', 'hetero:finish'],
         model: 'gpt-server',
         operation_id: 'op-server',
         provider_id: 'openai',

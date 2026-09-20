@@ -41,7 +41,16 @@ describe('generate-openapi', () => {
     // Provider management is retired — the public spec must not expose a
     // `Provider` component at all (user keyVaults can never leak through it).
     expect(spec.components.schemas.Provider).toBeUndefined();
-    expect(spec.components.schemas.ChatResponse.additionalProperties).toBe(false);
+    // Direct model-invoke endpoints are retired: no app-owned completion or
+    // translation route may remain in the public spec.
+    expect(spec.components.schemas.ChatResponse).toBeUndefined();
+    expect(spec.paths['/api/v1/chat']).toBeUndefined();
+    expect(spec.paths['/api/v1/chat/translate']).toBeUndefined();
+    expect(spec.paths['/api/v1/chat/generate-reply']).toBeUndefined();
+    expect(spec.paths['/api/v1/messages/replies']).toBeUndefined();
+    expect(Object.keys(spec.paths['/api/v1/message-translations/{messageId}'])).not.toContain(
+      'post',
+    );
     expect(spec.components.schemas.McpServer.properties).not.toHaveProperty('credentials');
     expect(spec.components.schemas.McpServer.properties).not.toHaveProperty('oidcConfig');
     expect(spec.components.schemas.ApiKey.properties.scopes.items.enum).toEqual(
@@ -51,9 +60,6 @@ describe('generate-openapi', () => {
       spec.paths['/api/v1/api-keys'].post.requestBody.content['application/json'].schema.properties
         .scopes.anyOf[0].items.enum,
     ).toEqual(expect.arrayContaining(['mcp:read', 'mcp:write', 'usage:read']));
-    expect(spec.paths['/api/v1/chat'].post.responses['200'].content).toBeTruthy();
-    expect(spec.paths['/api/v1/chat/translate'].post.responses['200'].content).toBeTruthy();
-    expect(spec.paths['/api/v1/chat/generate-reply'].post.responses['200'].content).toBeTruthy();
 
     const operations = Object.values(spec.paths as Record<string, object>).flatMap((item) =>
       Object.keys(item).filter((method) =>

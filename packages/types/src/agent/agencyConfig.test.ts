@@ -6,10 +6,7 @@ import {
   buildHeteroExecArgs,
   buildHeteroSpawnArgs,
   canPublishAgentTopicLink,
-  formatServerDefaultHeterogeneousModel,
   getOrviloEngineCapabilities,
-  isServerDefaultHeterogeneousModel,
-  isServerDefaultHeterogeneousRelayInvocation,
   normalizeHeterogeneousProviderConfig,
   pruneWorkingDirByDeviceDeletes,
   resolveAgencyConfig,
@@ -20,7 +17,6 @@ import {
   resolveHeterogeneousProviderTopicModel,
   resolveOrviloCliAgentType,
   resolveOrviloEngine,
-  unwrapServerDefaultHeterogeneousModel,
 } from './agencyConfig';
 import {
   AMP_AGENT_MODES,
@@ -34,57 +30,6 @@ import {
   resolveCodexReasoningEffort,
   resolveCodexSpeedMode,
 } from './heteroSelectorCapabilities';
-
-describe('server-default heterogeneous model request', () => {
-  it('only accepts the namespaced operation model used for CLI metadata', () => {
-    expect(formatServerDefaultHeterogeneousModel('gpt-5.4')).toBe('aspectlylabs/gpt-5.4');
-    expect(isServerDefaultHeterogeneousModel('aspectlylabs/gpt-5.4', 'gpt-5.4')).toBe(true);
-    expect(isServerDefaultHeterogeneousModel('orvilo-default', 'gpt-5.4')).toBe(false);
-    expect(isServerDefaultHeterogeneousModel('aspectlylabs/gpt-5.5', 'gpt-5.4')).toBe(false);
-  });
-
-  it('unwraps namespaced CLI reports and the legacy Claude Code alias', () => {
-    expect(unwrapServerDefaultHeterogeneousModel('aspectlylabs/claude-sonnet-4-6')).toBe(
-      'claude-sonnet-4-6',
-    );
-    expect(unwrapServerDefaultHeterogeneousModel('aspectlylabs/gpt-5.4', 'ignored')).toBe(
-      'gpt-5.4',
-    );
-    expect(unwrapServerDefaultHeterogeneousModel('orvilo-default', 'claude-sonnet-4-6')).toBe(
-      'claude-sonnet-4-6',
-    );
-    expect(unwrapServerDefaultHeterogeneousModel('orvilo-default')).toBe('orvilo-default');
-    expect(unwrapServerDefaultHeterogeneousModel('claude-opus-4-6', 'claude-sonnet-4-6')).toBe(
-      'claude-opus-4-6',
-    );
-    expect(unwrapServerDefaultHeterogeneousModel(undefined, 'claude-sonnet-4-6')).toBe(
-      'claude-sonnet-4-6',
-    );
-  });
-
-  it('recognizes only complete official-relay attestations', () => {
-    const invocation = {
-      acceptedAt: '2026-09-01T00:00:00.000Z',
-      agentType: 'trae',
-      ingress: 'openai-responses',
-      model: 'gpt-5.4',
-      operationId: 'operation-1',
-      provider: 'orvilo',
-    };
-
-    expect(isServerDefaultHeterogeneousRelayInvocation(invocation)).toBe(true);
-    expect(isServerDefaultHeterogeneousRelayInvocation(null)).toBe(false);
-    expect(isServerDefaultHeterogeneousRelayInvocation({ ...invocation, ingress: undefined })).toBe(
-      false,
-    );
-    expect(
-      isServerDefaultHeterogeneousRelayInvocation({ ...invocation, operationId: undefined }),
-    ).toBe(false);
-    expect(
-      isServerDefaultHeterogeneousRelayInvocation({ ...invocation, ingress: 'openai-chat' }),
-    ).toBe(false);
-  });
-});
 
 describe('normalizeHeterogeneousProviderConfig', () => {
   it('recovers a legacy adapterType before considering the command', () => {
@@ -181,22 +126,6 @@ describe('heterogeneous topic models', () => {
     ).toEqual({ model: 'gpt-5.5', provider: 'codex' });
   });
 
-  it('keeps server-default API models Agent-scoped and ignores stale topic bindings', () => {
-    const config = {
-      apiConfig: { model: 'server-model', source: 'server-default' },
-      authMode: 'api',
-      type: 'claude-code',
-    } as const;
-
-    expect(resolveHeterogeneousProviderTopicModel(config)).toBeUndefined();
-    expect(
-      applyTopicModelToHeterogeneousProvider(config, {
-        model: 'stale-topic-model',
-        provider: 'anthropic',
-      }),
-    ).toBe(config);
-  });
-
   it('overrides a CLI model without retaining a conflicting global flag', () => {
     const effective = applyTopicModelToHeterogeneousProvider(
       {
@@ -213,27 +142,6 @@ describe('heterogeneous topic models', () => {
       type: 'cursor',
     });
     expect(buildHeteroSpawnArgs(effective)).toEqual(['--mode', 'plan', '--model', 'topic-model']);
-  });
-
-  it('overrides an API binding and drops a provider-specific fast model', () => {
-    expect(
-      applyTopicModelToHeterogeneousProvider(
-        {
-          apiConfig: {
-            model: 'global-model',
-            providerId: 'openai',
-            smallFastModel: 'gpt-4.1-mini',
-          },
-          authMode: 'api',
-          type: 'cursor',
-        },
-        { model: 'topic-model', provider: 'anthropic' },
-      ),
-    ).toMatchObject({
-      apiConfig: { model: 'topic-model', providerId: 'anthropic' },
-      authMode: 'api',
-      type: 'cursor',
-    });
   });
 
   it('ignores a topic model pinned for another heterogeneous runtime', () => {
@@ -851,12 +759,6 @@ describe('codex reasoning effort capabilities', () => {
     expect(getCodexReasoningEffortLevels('gpt-5.6-luna')).toEqual(maxLevels);
   });
 
-  it('uses the model-specific levels supported by custom server-default models', () => {
-    expect(getCodexReasoningEffortLevels('deepseek-v4-flash')).toEqual(['low', 'high', 'max']);
-    expect(getCodexReasoningEffortLevels('deepseek-v4-pro')).toEqual(['low', 'high', 'max']);
-    expect(getCodexReasoningEffortLevels('glm-5.2')).toEqual(['high', 'max']);
-  });
-
   it('uses conservative common levels for old, unknown, and default models', () => {
     expect(getCodexReasoningEffortLevels('gpt-5.5')).toEqual(commonLevels);
     expect(getCodexReasoningEffortLevels('gpt-5.4-mini')).toEqual(commonLevels);
@@ -1200,27 +1102,6 @@ describe('canPublishAgentTopicLink', () => {
 });
 
 describe('applyTopicModelToHeterogeneousProvider - effort pin', () => {
-  it.each(['server-default', 'user-provider'] as const)(
-    'drops an unsupported effort when an API binding rejects the old model pin (%s)',
-    (source) => {
-      const effective = applyTopicModelToHeterogeneousProvider(
-        {
-          type: 'codex',
-          authMode: 'api',
-          apiConfig:
-            source === 'server-default'
-              ? { source, model: 'deepseek-v4-pro' }
-              : { providerId: 'deepseek', model: 'deepseek-v4-pro' },
-          args: ['-c', 'model_reasoning_effort="ultra"'],
-        },
-        { model: 'gpt-5.6-sol', provider: 'codex', effort: 'ultra' },
-      );
-      expect(effective.apiConfig?.model).toBe('deepseek-v4-pro');
-      expect(effective.effort).toBe('default');
-      expect(buildHeteroExecArgs(effective)?.join(' ') ?? '').not.toContain('ultra');
-    },
-  );
-
   it('validates effort after applying a supported model pin', () => {
     const effective = applyTopicModelToHeterogeneousProvider(
       { type: 'codex', model: 'gpt-5.4' },

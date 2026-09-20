@@ -129,9 +129,7 @@ describe('buildHarnessProviderPatch', () => {
 
   it('nulls harness-scoped fields carried by the previous harness', () => {
     const current: HeterogeneousProviderConfig = {
-      apiConfig: { model: 'm', providerId: 'p' },
       args: ['--model', 'opus'],
-      authMode: 'api',
       command: 'claude',
       effort: 'max',
       env: { FOO: '1' },
@@ -140,9 +138,7 @@ describe('buildHarnessProviderPatch', () => {
     };
     const patch = buildHarnessProviderPatch(current, 'codex') as Record<string, unknown>;
     expect(patch).toEqual({
-      apiConfig: null,
       args: null,
-      authMode: null,
       command: null,
       effort: null,
       env: null,
@@ -196,9 +192,7 @@ describe('buildEngineProviderPatch', () => {
   it('clears old engine fields, preserves context, and keeps a valid effort', () => {
     const patch = buildEngineProviderPatch(
       {
-        apiConfig: { model: 'legacy-model', providerId: 'legacy-provider' },
         args: ['--model', 'opus'],
-        authMode: 'api',
         command: 'claude',
         effort: 'high',
         engine: 'claude-sdk',
@@ -213,11 +207,9 @@ describe('buildEngineProviderPatch', () => {
       'codex-app-server',
     );
     expect(patch).toEqual({
-      apiConfig: null,
       args: null,
       effort: 'high',
       engine: 'codex-app-server',
-      authMode: null,
       command: null,
       env: null,
       mode: null,

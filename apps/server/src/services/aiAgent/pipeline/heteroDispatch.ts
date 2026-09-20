@@ -4,7 +4,6 @@ import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   getNativeHeteroSessionBindingKey,
-  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
   isLocalHeterogeneousType,
   isRemoteHeterogeneousType,
 } from '@orvilo/heterogeneous-agents';
@@ -949,31 +948,6 @@ export const dispatchHeteroAgent = async (
       log('execAgent: failed to persist hetero operation metadata: %O', err);
     }
   };
-
-  if (agentConfig.agencyConfig?.heterogeneousProvider?.authMode === 'api') {
-    await finalizeHeteroDispatchError(deps, {
-      agentId: resolvedAgentId,
-      assistantMessageId,
-      detail: HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-      message: 'Provider-bound heterogeneous agents do not support this execution target',
-      operationId,
-      topicId,
-    });
-    return {
-      agentId: resolvedAgentId,
-      assistantMessageId,
-      autoStarted: false,
-      createdAt: new Date().toISOString(),
-      error: HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-      message: 'Heterogeneous agent provider binding requires Desktop local execution',
-      operationId,
-      status: 'error',
-      success: false,
-      timestamp: new Date().toISOString(),
-      topicId,
-      userMessageId: userMessageId ?? parentMessageId ?? '',
-    };
-  }
 
   // Notify-based platform agents (openclaw / hermes) communicate back via
   // agentNotify.notify. A local run uses the requesting desktop's device ID;

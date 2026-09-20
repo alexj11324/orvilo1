@@ -75,9 +75,7 @@ export const applyEngineAwareSelection = (
  * over.
  */
 const CLEARABLE_PROVIDER_FIELDS = [
-  'apiConfig',
   'args',
-  'authMode',
   'command',
   'effort',
   'engine',
@@ -91,8 +89,6 @@ const CLEARABLE_PROVIDER_FIELDS = [
 type ClearableProviderField = (typeof CLEARABLE_PROVIDER_FIELDS)[number];
 
 const ENGINE_SWITCH_CLEARABLE_FIELDS = [
-  'apiConfig',
-  'authMode',
   'command',
   'env',
   'mode',
@@ -131,7 +127,7 @@ const clearProviderField = <K extends ClearableProviderField>(
  * `updateAgentConfig` deep-merges `heterogeneousProvider` over the stored row,
  * so fields the new harness does not share have to be nulled out explicitly —
  * `undefined` is skipped by the merge and would silently keep a stale
- * `model`/`command`/`apiConfig` from the previous harness. `systemContext`
+ * `model`/`command` from the previous harness. `systemContext`
  * is harness-agnostic and survives the switch.
  */
 export const buildHarnessProviderPatch = (

@@ -173,12 +173,13 @@ describe('UserPersonaService', () => {
         model: 'claude-mock',
         provider: 'anthropic',
       }),
-      expect.any(Object),
       expect.objectContaining({
         fallback: {
           apiKey: undefined,
           baseURL: undefined,
         },
+        preferred: { providerIds: ['anthropic'] },
+        userId: 'user-persona-service',
       }),
       undefined,
     );

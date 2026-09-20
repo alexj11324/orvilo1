@@ -6,7 +6,7 @@ import type { ToolExecutionContext } from '../../types';
 const mocks = vi.hoisted(() => ({
   createFtsSearchRepo: vi.fn(async () => ({ ftsSearchCandidateEnabled: false })),
   embeddings: vi.fn(),
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
   initModelRuntimeWithUserPayload: vi.fn(),
   normalizeUserMemorySearchQueries: vi.fn(function (queries?: string[]) {
     return queries ?? [];
@@ -39,7 +39,7 @@ vi.mock('@/server/globalConfig', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: mocks.initModelRuntimeFromDB,
+  initModelRuntimeFromDeploymentConfig: mocks.initModelRuntimeFromDeploymentConfig,
   initModelRuntimeWithUserPayload: mocks.initModelRuntimeWithUserPayload,
 }));
 
@@ -114,7 +114,7 @@ describe('memoryRuntime', () => {
       },
       { userId: 'synthetic-user' },
     );
-    expect(mocks.initModelRuntimeFromDB).not.toHaveBeenCalled();
+    expect(mocks.initModelRuntimeFromDeploymentConfig).not.toHaveBeenCalled();
     expect(mocks.embeddings).toHaveBeenCalledWith(
       expect.objectContaining({
         input: ['renewal timeline'],

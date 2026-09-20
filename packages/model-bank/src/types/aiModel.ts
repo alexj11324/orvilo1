@@ -25,11 +25,7 @@ export const AiModelTypeSchema = z.enum([
 
 export type AiModelType = z.infer<typeof AiModelTypeSchema>;
 
-export const AgentCompatibilitySchema = z
-  .object({
-    serverDefaultHeterogeneousProfiles: z.array(z.string().min(1)).optional(),
-  })
-  .passthrough();
+export const AgentCompatibilitySchema = z.object({}).passthrough();
 
 export type AgentCompatibility = z.infer<typeof AgentCompatibilitySchema>;
 

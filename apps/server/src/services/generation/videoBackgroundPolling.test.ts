@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { GenerationModel } from '@/database/models/generation';
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { VideoGenerationService } from '@/server/services/generation/video';
 import { processBackgroundVideoPolling } from '@/server/services/generation/videoBackgroundPolling';
 import { AsyncTaskError, AsyncTaskStatus } from '@/types/asyncTask';
@@ -23,7 +23,7 @@ vi.mock('debug', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 describe('videoBackgroundPolling', () => {
@@ -80,7 +80,7 @@ describe('videoBackgroundPolling', () => {
     vi.mocked(VideoGenerationService).mockImplementation(function () {
       return mockVideoService as any;
     });
-    vi.mocked(initModelRuntimeFromDB).mockResolvedValue(mockModelRuntime as any);
+    vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue(mockModelRuntime as any);
   });
 
   afterEach(() => {
@@ -206,7 +206,9 @@ describe('videoBackgroundPolling', () => {
     });
 
     it('should handle model runtime initialization error', async () => {
-      vi.mocked(initModelRuntimeFromDB).mockRejectedValue(new Error('Runtime init failed'));
+      vi.mocked(initModelRuntimeFromDeploymentConfig).mockRejectedValue(
+        new Error('Runtime init failed'),
+      );
 
       await processBackgroundVideoPolling(mockDb, mockParams);
 

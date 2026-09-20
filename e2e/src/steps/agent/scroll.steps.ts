@@ -14,6 +14,7 @@ import { expect } from '@playwright/test';
 
 import { llmMockManager, presetResponses } from '../../mocks/llm';
 import { classifyScrollTrace, startScrollTrace, stopScrollTrace } from '../../probes/scrollTrace';
+import { TEST_USER } from '../../support/seedTestUser';
 import type { CustomWorld } from '../../support/world';
 
 // How close to the scroll container's bottom is considered "at bottom".
@@ -407,7 +408,37 @@ Then('视口不应贴近聊天列表底部', async function (this: CustomWorld) 
     return info;
   });
   console.log(`   📍 scroll dump: ${JSON.stringify(dump)}`);
-  await expect.poll(overflow, { timeout: 10_000 }).toBeGreaterThan(AT_BOTTOM_EPSILON);
+  try {
+    await expect.poll(overflow, { timeout: 10_000 }).toBeGreaterThan(AT_BOTTOM_EPSILON);
+  } catch (error) {
+    // When the reply is an error bubble instead of the mock article the fold
+    // math can never pass — surface the real failure: pull the last assistant
+    // message's error payload from the DB so the log names the abort stage.
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) {
+      try {
+        const { default: pg } = await import('pg');
+        const client = new pg.Client({ connectionString: databaseUrl });
+        await client.connect();
+        try {
+          const { rows } = await client.query(
+            `select role, error, left(content, 80) as head
+             from messages
+             where user_id = $1
+             order by created_at desc
+             limit 3`,
+            [TEST_USER.id],
+          );
+          console.log(`   📍 last messages: ${JSON.stringify(rows)}`);
+        } finally {
+          await client.end();
+        }
+      } catch (dbError) {
+        console.log(`   📍 message error dump failed: ${String(dbError)}`);
+      }
+    }
+    throw error;
+  }
 });
 
 // Reset LLM mock timing overrides so the slowdown from scenario 3 does not

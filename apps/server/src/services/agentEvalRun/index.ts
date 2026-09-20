@@ -34,7 +34,7 @@ import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { agentEvalRunTopics, messagePlugins, messages, topics } from '@/database/schemas';
 import { AgentService } from '@/server/services/agent';
-import type { EvalRuntimeContext } from '@/server/services/agentRuntime/types';
+import type { EvalRuntimeContext } from '@/server/services/agentExecution/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
   AgentEvalRunWorkflow,

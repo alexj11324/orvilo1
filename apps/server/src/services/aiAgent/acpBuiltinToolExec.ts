@@ -16,7 +16,7 @@ import type { OrviloDatabase } from '@/database/type';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
-} from '@/server/services/agentRuntime/types';
+} from '@/server/services/agentExecution/types';
 import { BuiltinToolsExecutor } from '@/server/services/toolExecution/builtin';
 import type {
   ToolExecutionContext,

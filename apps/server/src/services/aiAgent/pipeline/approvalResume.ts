@@ -1,4 +1,4 @@
-import type { AgentRuntimeContext } from '@orvilo/agent-runtime';
+import type { AgentRuntimeContext } from '@orvilo/agent-execution';
 import type { ExecAgentResult, MessagePluginItem } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';

@@ -1,4 +1,4 @@
-import { isParkedStatus } from '@orvilo/agent-runtime';
+import { isParkedStatus } from '@orvilo/agent-execution';
 import { RequestTrigger } from '@orvilo/types';
 import { deserializeParts } from '@orvilo/utils';
 import { isRecord } from '@orvilo/utils/object';

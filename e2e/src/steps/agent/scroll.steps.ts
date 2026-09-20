@@ -88,6 +88,51 @@ async function getScrollDiag(world: CustomWorld): Promise<string[]> {
     .catch(() => []);
 }
 
+// Reads the exposed chat store snapshot (exposed because the scroll @Before
+// sets localStorage.debug — see src/store/middleware/expose.ts) so a failure
+// dump can tell a held queued send from a dispatched-but-starved one.
+async function getChatQueueSnapshot(world: CustomWorld): Promise<unknown> {
+  return world.page
+    .evaluate(() => {
+      const stores = (globalThis as { __ORVILO_STORES?: Record<string, () => unknown> })
+        .__ORVILO_STORES;
+      const state = stores?.chat?.() as
+        | {
+            queuedMessages?: Record<string, unknown[]>;
+            operationsByContext?: Record<string, string[]>;
+            operations?: Record<string, { status?: string; type?: string }>;
+            creatingTopicIds?: string[];
+          }
+        | undefined;
+      if (!state) return null;
+      return {
+        creatingTopicIds: state.creatingTopicIds,
+        operations: Object.fromEntries(
+          Object.entries(state.operations ?? {}).map(([id, op]) => [
+            id,
+            { status: op.status, type: op.type },
+          ]),
+        ),
+        operationsByContext: Object.fromEntries(
+          Object.entries(state.operationsByContext ?? {}).map(([key, ids]) => [key, ids.length]),
+        ),
+        queuedMessages: Object.fromEntries(
+          Object.entries(state.queuedMessages ?? {}).map(([key, msgs]) => [key, msgs.length]),
+        ),
+      };
+    })
+    .catch(() => null);
+}
+
+async function dumpScrollDiagnostics(world: CustomWorld): Promise<void> {
+  console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(world))}`);
+  const scrollDiag = await getScrollDiag(world);
+  if (scrollDiag.length > 0)
+    console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
+  const queue = await getChatQueueSnapshot(world);
+  if (queue) console.log(`   📍 chat queue: ${JSON.stringify(queue)}`);
+}
+
 async function getScrollPgClient(world: CustomWorld) {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) return undefined;
@@ -183,6 +228,8 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
     // already clear — Enter on an empty composer is a no-op, so the re-press
     // is safe and the second poll window still catches the row).
     console.log('   📍 persist poll exhausted; pressing Enter once more');
+    const queue = await getChatQueueSnapshot(world);
+    if (queue) console.log(`   📍 chat queue: ${JSON.stringify(queue)}`);
     await input.press('Enter');
     await pollPersisted();
   }
@@ -656,10 +703,7 @@ Then('用户消息应固定在聊天列表顶部', { timeout: 90_000 }, async fu
       )
       .toBeLessThanOrEqual(PIN_SLACK);
   } catch (error) {
-    console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
-    const scrollDiag = await getScrollDiag(this);
-    if (scrollDiag.length > 0)
-      console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
+    await dumpScrollDiagnostics(this);
     throw error;
   }
 });
@@ -693,10 +737,7 @@ Then(
       console.log(
         `   📍 trace ${JSON.stringify(classifyScrollTrace(result.samples))} calls=${JSON.stringify(result.calls)}`,
       );
-      console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
-      const scrollDiag = await getScrollDiag(this);
-      if (scrollDiag.length > 0)
-        console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
+      await dumpScrollDiagnostics(this);
       throw error;
     }
     console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);

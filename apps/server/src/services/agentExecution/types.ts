@@ -186,6 +186,38 @@ export interface PendingInterventionsResult {
   totalCount: number;
 }
 
+/**
+ * Why a run-start request was rejected before any execution side effect.
+ *
+ * - `deferred_start_unsupported` — the caller asked for the retired lobehub
+ *   deferred-start contract (`autoStart:false`). Under ACP every accepted run
+ *   is dispatched inside `execAgent`; there is no queued intent a later call
+ *   could release. To defer a run, callers use `scheduleAgentRun`.
+ * - `never_dispatched` — the operation exists but was never dispatched
+ *   (`idle` row / orphan metadata: engine-era leftover or a crashed
+ *   dispatch). There is no server-side way to start it; the caller must
+ *   submit a fresh run.
+ * - `not_found` — no operation row or runtime metadata for the id.
+ * - `terminal` — the operation already reached a terminal status.
+ */
+export type AgentStartDenial =
+  'deferred_start_unsupported' | 'never_dispatched' | 'not_found' | 'terminal';
+
+/**
+ * Start-intent contract violation, thrown BEFORE any execution side effect.
+ * Routers map `denial` to the public status code — see
+ * `routers/lambda/_helpers/agentStartError.ts`.
+ */
+export class AgentStartError extends Error {
+  readonly denial: AgentStartDenial;
+
+  constructor(denial: AgentStartDenial, message: string) {
+    super(message);
+    this.name = 'AgentStartError';
+    this.denial = denial;
+  }
+}
+
 export interface StartExecutionParams {
   context?: AgentRuntimeContext;
   delay?: number;
@@ -194,8 +226,15 @@ export interface StartExecutionParams {
 }
 
 export interface StartExecutionResult {
+  /**
+   * True when the operation was already dispatched — an idempotent
+   * acknowledgement that the requested end state holds, NOT a fresh start.
+   * The only success shape under ACP.
+   */
+  alreadyStarted?: boolean;
   messageId?: string;
   operationId: string;
+  /** Always false under ACP: there is no step queue to schedule onto. */
   scheduled: boolean;
   success: boolean;
 }

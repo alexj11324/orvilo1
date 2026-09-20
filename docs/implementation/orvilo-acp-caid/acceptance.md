@@ -155,4 +155,6 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 | F11     | P2       | R09         | OPEN               | Quota 菜单无 `deviceId` 回退 `claude[0]`，可能显示他人身份读数                                                                                                              |
 | F12     | 发布阻塞 | R00/R10/R11 | OPEN               | 复合 PASS 已拆（本文件）；缺 `caid_dispatch_enabled` 服务端开关；固定 SHA 正路径验收未跑                                                                                    |
 
+- F09 → R05：修复已在 #158（`fix/execution-start-intent-contract`，draft）实现 —— `idle`/ 孤儿 metadata → `PRECONDITION_FAILED`，终态 → `CONFLICT`，不存在 → `NOT_FOUND`，`running`/parked → 幂等 `alreadyStarted:true`；`autoStart:false` 在任何副作用前拒绝（`BAD_REQUEST` / batch `results` 失败项）。合并门禁复核前保持 OPEN。
+
 状态口径：本表 `OPEN` 表示整改 PR 未合入并通过门禁；各项收口后由 R11 在固定整合 SHA 上重跑对应回归行（`03-regression-matrix.md`）。

@@ -26,10 +26,11 @@ trpc procedures (`aiAgent.getOperationStatus`, `getPendingInterventions`,
 `aiAgent` service delegation keep working unchanged. It builds the shared
 deps once and forwards each call exactly once — no duplicated side-effects.
 
-`startExecution` stays on the facade: under ACP every op is dispatched
-synchronously by `execAgent`/`recordStart`, so the lobehub-era queued start
-is already a validate-only compat surface (`scheduled: false`); retiring or
-replacing it belongs to the queued-intent PRs.
+`startExecution` stays on the facade as an **ensure-started** assertion: under
+ACP every op is dispatched synchronously by `execAgent`/`recordStart`, so there
+is no queued step it could ever release. Live runs get an idempotent
+`alreadyStarted` ack; terminal/never-dispatched/unknown operations are rejected
+with typed errors. See [start-intent-contract.md](./start-intent-contract.md).
 
 New code should depend on the `services/agentExecution` services (or their
 types in `agentExecution/types.ts`) directly, not on the facade.

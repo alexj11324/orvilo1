@@ -53,6 +53,7 @@ import type {
   GroupActionMemberBridgeParams,
   SubAgentBridgeParams,
 } from '@/server/services/agentExecution/types';
+import { AgentStartError } from '@/server/services/agentExecution/types';
 import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';
@@ -461,6 +462,18 @@ export class AiAgentService {
    *   → AgentRuntimeService.createOperation(...)
    */
   async execAgent(inputParams: InternalExecAgentParams): Promise<ExecAgentResult> {
+    // `autoStart:false` was the lobehub deferred-start contract. Under ACP
+    // every accepted run is dispatched inside this call — there is no queued
+    // intent left for a later `startExecution` to release — so reject BEFORE
+    // any side effect (thread/message/operation rows, topic reservation,
+    // dispatch) instead of silently starting anyway.
+    if (inputParams.autoStart === false) {
+      throw new AgentStartError(
+        'deferred_start_unsupported',
+        'autoStart:false is not supported — every accepted run is dispatched immediately. To defer a run to a later time, use scheduleAgentRun.',
+      );
+    }
+
     // Creating the thread here (rather than inside the turn) means a run that
     // asked for one is already a thread run by the time the reservation check
     // below reads `appContext.threadId` — same isolation as a follow-up inside

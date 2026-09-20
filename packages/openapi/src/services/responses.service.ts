@@ -429,7 +429,9 @@ export class ResponsesService extends BaseService {
         prompt: prompt.slice(0, 50),
       });
 
-      // 1. Create agent operation without auto-start
+      // 1. Create the agent operation and dispatch it — under ACP the
+      // operation executes on its execution binding; we then poll the durable
+      // status surface below instead of driving an in-process step loop.
       // model field is used as agentId
       const additionalPluginIds = this.extractHostedToolIds(params.tools);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
@@ -439,7 +441,7 @@ export class ResponsesService extends BaseService {
         additionalPluginIds: additionalPluginIds.length > 0 ? additionalPluginIds : undefined,
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
-        autoStart: false,
+        autoStart: true,
         instructions,
         prompt,
         stream: false,
@@ -540,7 +542,7 @@ export class ResponsesService extends BaseService {
         additionalPluginIds: additionalPluginIds.length > 0 ? additionalPluginIds : undefined,
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
-        autoStart: false,
+        autoStart: true,
         instructions,
         prompt,
         stream: true,

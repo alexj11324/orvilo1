@@ -19,6 +19,7 @@ import { OperationInterruptService } from './OperationInterruptService';
 import { OperationStatusService } from './OperationStatusService';
 import {
   type AgentExecutionServiceDeps,
+  AgentStartError,
   type GroupActionMemberBridgeParams,
   type GroupActionOnComplete,
   type OperationStatusResult,
@@ -164,46 +165,62 @@ export class AgentRuntimeService {
   }
 
   /**
-   * Explicitly start operation execution.
+   * Assert an operation's run is started (idempotent start intent).
    *
    * Under ACP every operation is dispatched synchronously inside `execAgent`
-   * (hetero `recordStart`) — there is no queued step to kick off. An existing
-   * op is therefore already started: the method validates existence/state like
-   * the lobehub original and reports `scheduled: false` rather than enqueueing
-   * a step nobody would consume.
+   * (hetero `recordStart` writes the durable row already `running`) — there
+   * is no queued step this method could release, so it can NEVER mint a new
+   * run. The contract is therefore "ensure started":
+   *
+   *   - live op (`running` / parked) → idempotent ack
+   *     `{ alreadyStarted: true, scheduled: false }`; repeat intents return
+   *     the same result and never dispatch a second run;
+   *   - terminal op (`done` / `error` / `interrupted` / `abandoned`) →
+   *     `AgentStartError('terminal')`;
+   *   - `idle` op or orphan metadata → `AgentStartError('never_dispatched')`:
+   *     the intent was prepared but no dispatch exists to release, and there
+   *     is no server-side way to start it — the caller must submit a fresh
+   *     run instead of reading `success:true` as one;
+   *   - unknown operation → `AgentStartError('not_found')`.
    */
   async startExecution(params: StartExecutionParams): Promise<StartExecutionResult> {
     const { operationId } = params;
 
     try {
-      log('Starting execution for operation %s', operationId);
+      log('Start requested for operation %s', operationId);
 
       const operationMetadata = await this.stateManager.getOperationMetadata(operationId);
       const operation = await this.agentOperationModel.findById(operationId);
       if (!operationMetadata && !operation) {
-        throw new Error(`Operation ${operationId} not found`);
+        throw new AgentStartError('not_found', `Operation ${operationId} not found`);
       }
 
       const currentState = await this.stateManager.loadAgentState(operationId);
       const status = currentState?.status ?? operation?.status;
       if (status === 'running' || isParkedStatus(status as AgentState['status'])) {
-        throw new Error(`Operation ${operationId} is already running`);
+        return {
+          alreadyStarted: true,
+          operationId,
+          scheduled: false,
+          success: true,
+        };
       }
-      if (status === 'done') {
-        throw new Error(`Operation ${operationId} is already completed`);
-      }
-      if (status === 'error') {
-        throw new Error(`Operation ${operationId} is in error state`);
-      }
-      if (status === 'interrupted') {
-        throw new Error(`Operation ${operationId} is interrupted`);
+      if (
+        status === 'done' ||
+        status === 'error' ||
+        status === 'interrupted' ||
+        status === 'abandoned'
+      ) {
+        throw new AgentStartError(
+          'terminal',
+          `Operation ${operationId} already finished with status '${status}'`,
+        );
       }
 
-      return {
-        operationId,
-        scheduled: false,
-        success: true,
-      };
+      throw new AgentStartError(
+        'never_dispatched',
+        `Operation ${operationId} was never dispatched and cannot be started; submit a new run instead`,
+      );
     } catch (error) {
       log('Failed to start execution for operation %s: %O', operationId, error);
       throw error;

@@ -9,12 +9,14 @@ const packages = {
     ['packages/utils', '@orvilo/utils'],
     ['packages/agent-signal', '@orvilo/agent-signal'],
     ['packages/agent-runtime', '@orvilo/agent-runtime'],
+    ['packages/desktop-bridge', '@orvilo/desktop-bridge'],
     ['packages/local-file-shell', '@orvilo/local-file-shell'],
   ]),
   reverseDependencies: new Map([
     ['@orvilo/types', new Set(['@orvilo/agent-runtime'])],
     ['@orvilo/agent-runtime', new Set(['@orvilo/agent-manager-runtime'])],
   ]),
+  consumerScopes: new Map([['@orvilo/desktop-bridge', new Set(['desktop'])]]),
   testPackageNames: new Set([
     '@orvilo/agent-runtime',
     '@orvilo/agent-manager-runtime',
@@ -32,7 +34,7 @@ test('keeps a small web change on the web path', () => {
   assert.equal(plan.run_server, false);
   assert.equal(plan.run_database, false);
   assert.equal(plan.run_desktop, false);
-  assert.equal(plan.run_typecheck, false);
+  assert.equal(plan.run_typecheck, true);
   assert.equal(plan.run_e2e, false);
 });
 
@@ -74,6 +76,32 @@ test('routes the Windows shell to its platform check', () => {
   assert.equal(plan.run_windows_shell, true);
   assert.equal(plan.run_app, false);
   assert.equal(plan.run_server, false);
+});
+
+test('propagates a package change to application consumers', () => {
+  const plan = planAffectedChecks(['packages/desktop-bridge/src/index.ts'], { packages });
+
+  assert.equal(plan.run_desktop, true);
+});
+
+test('fails closed when a package manifest changes the dependency graph', () => {
+  const plan = planAffectedChecks(['packages/agent-signal/package.json'], { packages });
+
+  assert.equal(plan.run_typecheck, true);
+  assert.equal(plan.run_desktop, true);
+});
+
+test('keeps executable documentation tooling out of the documentation exemption', () => {
+  const plan = planAffectedChecks(['docs/development/audit-merge-pipeline.sh'], { packages });
+
+  assert.equal(plan.run_typecheck, true);
+});
+
+test('runs both app and server checks for backend route shells', () => {
+  const plan = planAffectedChecks(['src/app/(backend)/webapi/ping/route.test.ts'], { packages });
+
+  assert.equal(plan.run_app, true);
+  assert.equal(plan.run_server, true);
 });
 
 test('keeps test-bearing packages outside the former fixed list in the plan', () => {

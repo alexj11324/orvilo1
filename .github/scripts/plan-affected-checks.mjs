@@ -11,8 +11,9 @@ const FULL_SUITE_PATHS = [
   /^(?:package\.json|pnpm-lock\.yaml|tsconfig\.json|vitest\.config\.mts|scripts\/type-check\.mjs)$/,
 ];
 
-const DOC_OR_METADATA_PATHS = [
-  /^(?:docs|\.github\/ISSUE_TEMPLATE)\//,
+const DOCUMENTATION_PATHS = [
+  /^docs\/.*\.(?:md|mdx|txt|pdf|png|jpe?g|gif|webp|avif|svg)$/i,
+  /^\.github\/ISSUE_TEMPLATE\//,
   /^(?:README|CONTRIBUTING|CODE_OF_CONDUCT|SECURITY|LICENSE|NOTICE)(?:\.|$)/,
   /^\.gitignore$/,
 ];
@@ -31,6 +32,8 @@ const SHARED_PACKAGE_NAMES = new Set([
   '@orvilo/types',
   '@orvilo/utils',
 ]);
+
+const TYPED_SOURCE_PATH = /\.(?:[cm]?tsx?)$/;
 
 const packageNameForPath = (file, packages) => {
   // Some workspaces are nested (for example packages/achaos/core); resolving
@@ -67,6 +70,7 @@ const packageGraph = (rootDir) => {
 
   const byDirectory = new Map(manifests.map(({ directory, name }) => [directory, name]));
   const reverseDependencies = new Map();
+  const consumerScopes = new Map();
   const names = new Set(manifests.map(({ name }) => name));
   for (const { name, dependencies } of manifests) {
     for (const dependency of Object.keys(dependencies)) {
@@ -77,8 +81,30 @@ const packageGraph = (rootDir) => {
     }
   }
 
+  for (const { file, scope } of [
+    { file: 'apps/cli/package.json', scope: 'cli' },
+    { file: 'apps/desktop/package.json', scope: 'desktop' },
+    { file: 'apps/server/package.json', scope: 'server' },
+  ]) {
+    const manifestPath = resolve(rootDir, file);
+    if (!existsSync(manifestPath)) continue;
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const dependencies = {
+      ...manifest.dependencies,
+      ...manifest.devDependencies,
+      ...manifest.peerDependencies,
+    };
+    for (const dependency of Object.keys(dependencies)) {
+      if (!names.has(dependency)) continue;
+      const scopes = consumerScopes.get(dependency) ?? new Set();
+      scopes.add(scope);
+      consumerScopes.set(dependency, scopes);
+    }
+  }
+
   return {
     byDirectory,
+    consumerScopes,
     reverseDependencies,
     testPackageNames: new Set(manifests.filter(({ testable }) => testable).map(({ name }) => name)),
   };
@@ -139,6 +165,7 @@ export const planAffectedChecks = (files, { forceE2E = false, forceFull = false,
   const plan = newPlan();
   const graph = packages ?? {
     byDirectory: new Map(),
+    consumerScopes: new Map(),
     reverseDependencies: new Map(),
     testPackageNames: new Set(),
   };
@@ -153,9 +180,10 @@ export const planAffectedChecks = (files, { forceE2E = false, forceFull = false,
       markFullSuite(plan, graph, `high-fan-out CI or tooling change: ${file}`);
       return plan;
     }
-    if (DOC_OR_METADATA_PATHS.some((pattern) => pattern.test(file))) continue;
+    if (DOCUMENTATION_PATHS.some((pattern) => pattern.test(file))) continue;
 
     plan.run_static = true;
+    if (TYPED_SOURCE_PATH.test(file)) plan.run_typecheck = true;
     if (file.startsWith('e2e/')) {
       plan.run_e2e = true;
       plan.reasons.push(`E2E suite changed: ${file}`);
@@ -182,10 +210,19 @@ export const planAffectedChecks = (files, { forceE2E = false, forceFull = false,
       plan.reasons.push(`CLI changed: ${file}`);
       continue;
     }
-    if (file.startsWith('apps/server/') || file.startsWith('src/app/(backend)/')) {
+    if (file.startsWith('apps/server/')) {
       plan.run_server = true;
       plan.reasons.push(`server changed: ${file}`);
       continue;
+    }
+    if (file.startsWith('src/app/(backend)/')) {
+      Object.assign(plan, { run_app: true, run_server: true });
+      plan.reasons.push(`backend route shell changed: ${file}`);
+      continue;
+    }
+    if (file.startsWith('packages/') && file.endsWith('/package.json')) {
+      markFullSuite(plan, graph, `package manifest changed: ${file}`);
+      return plan;
     }
     if (file.startsWith('packages/local-file-shell/')) {
       plan.run_windows_shell = true;
@@ -205,6 +242,11 @@ export const planAffectedChecks = (files, { forceE2E = false, forceFull = false,
       Object.assign(plan, { run_app: true, run_server: true });
       if (SHARED_PACKAGE_NAMES.has(packageName)) {
         Object.assign(plan, { run_desktop: true, run_typecheck: true });
+      }
+      for (const scope of graph.consumerScopes.get(packageName) ?? []) {
+        if (scope === 'desktop') plan.run_desktop = true;
+        if (scope === 'server') plan.run_server = true;
+        if (scope === 'cli') plan.run_cli = true;
       }
       plan.reasons.push(`workspace package changed: ${packageName}`);
       continue;

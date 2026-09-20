@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   interruptTask: vi.fn(),
   messageFindById: vi.fn(),
   operationFindById: vi.fn(),
+  operationFindByJudgmentIntent: vi.fn(),
   tracingIsEnabled: vi.fn(),
   tracingRecord: vi.fn(),
 }));
@@ -34,7 +35,10 @@ vi.mock('@/database/models/agent', () => ({
 }));
 vi.mock('@/database/models/agentOperation', () => ({
   AgentOperationModel: vi.fn(function () {
-    return { findById: mocks.operationFindById };
+    return {
+      findById: mocks.operationFindById,
+      findByJudgmentIntent: mocks.operationFindByJudgmentIntent,
+    };
   }),
 }));
 vi.mock('@/database/models/message', () => ({
@@ -91,8 +95,9 @@ beforeEach(() => {
   mocks.agentExistsById.mockResolvedValue(false);
   mocks.agentGetBuiltin.mockResolvedValue(null);
   mocks.execAgent.mockResolvedValue({ operationId: 'op-1' });
-  mocks.interruptTask.mockResolvedValue(undefined);
+  mocks.interruptTask.mockResolvedValue({ cancelState: 'confirmed', success: true });
   mocks.operationFindById.mockResolvedValue(doneOperation);
+  mocks.operationFindByJudgmentIntent.mockResolvedValue(null);
   mocks.messageFindById.mockResolvedValue({ content: '{"verdict":"passed"}' });
   mocks.tracingIsEnabled.mockReturnValue(true);
   mocks.tracingRecord.mockResolvedValue({ tracingId: 'tr-1' });
@@ -175,11 +180,12 @@ describe('runAcpJudgment', () => {
       trigger: 'acp_judgment',
       userInterventionConfig: { approvalMode: 'headless' },
     });
-    // Operation/attempt/budget recorded on the durable row.
+    // Operation/attempt/budget/intent recorded on the durable row.
     expect(execArgs.appContext).toMatchObject({
       judgment: {
         attempt: 2,
         budget: { maxSteps: 4, maxWaitMs: 180_000 },
+        intentKey: expect.stringContaining('verify.judge:2:'),
         purpose: 'verify.judge',
       },
       suppressSignal: true,
@@ -276,6 +282,12 @@ describe('runAcpJudgment', () => {
   it('interrupts the operation when the wait budget is exceeded', async () => {
     mocks.agentExistsById.mockResolvedValue(true);
     mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'running' });
+    // Cover the deadline landing inside dispatch: the intent reconcile finds
+    // the same row the operationId path would.
+    mocks.operationFindByJudgmentIntent.mockResolvedValue({
+      ...doneOperation,
+      status: 'running',
+    });
 
     await expect(
       runAcpJudgment(db, 'u1', {
@@ -291,8 +303,14 @@ describe('runAcpJudgment', () => {
     expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
   });
 
-  it('propagates caller cancellation to interruptTask and confirms via the durable row', async () => {
+  it('propagates caller cancellation to interruptTask and reports the cancel authority', async () => {
     mocks.agentExistsById.mockResolvedValue(true);
+    // The abort can win the dispatch race before execAgent resolves — the
+    // landed row is recovered through the intentKey reconcile, not a re-issue.
+    mocks.operationFindByJudgmentIntent.mockResolvedValue({
+      ...doneOperation,
+      status: 'running',
+    });
     mocks.operationFindById
       .mockResolvedValueOnce({ ...doneOperation, status: 'running' })
       .mockResolvedValue({ ...doneOperation, status: 'interrupted' });
@@ -321,7 +339,12 @@ describe('runAcpJudgment', () => {
     mocks.agentExistsById.mockResolvedValue(true);
     // The row stays 'running' even after interruptTask resolves: the cancel
     // outcome is unknown and must not be reported as interrupted.
+    mocks.operationFindByJudgmentIntent.mockResolvedValue({
+      ...doneOperation,
+      status: 'running',
+    });
     mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'running' });
+    mocks.interruptTask.mockResolvedValue({ cancelState: 'unknown', success: true });
     const controller = new AbortController();
     controller.abort();
 
@@ -355,6 +378,12 @@ describe('runAcpJudgment', () => {
             setTimeout(() => resolve({ operationId: 'op-1' }), 5_000);
           }),
       );
+      // The dispatch return is lost to the deadline — the landed row is
+      // recovered through appContext.judgment.intentKey, never re-dispatched.
+      mocks.operationFindByJudgmentIntent.mockResolvedValue({
+        ...doneOperation,
+        status: 'running',
+      });
 
       const promise = runAcpJudgment(db, 'u1', {
         input: JUDGMENT_INPUT,
@@ -450,6 +479,175 @@ describe('runAcpJudgment', () => {
       provider: 'anthropic',
       slug: 'verify-agent',
     });
+  });
+
+  it('hard-blocks an explicit slug that does not resolve — env agents are never substituted (SA06-B)', async () => {
+    process.env[ACP_JUDGMENT_AGENT_ENV] = 'env-agent';
+    mocks.agentExistsById.mockResolvedValue(true); // env agent exists — must not be consulted
+
+    await expect(
+      resolveAcpJudgmentAgent(db, 'u1', { slug: 'missing-builtin' }),
+    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_NO_BINDING' });
+    expect(mocks.agentExistsById).not.toHaveBeenCalled();
+  });
+
+  it('keeps cancelResult unknown even when the row reads interrupted — DB is not physical authority (SA06-A)', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.operationFindByJudgmentIntent.mockResolvedValue({
+      ...doneOperation,
+      status: 'running',
+    });
+    // interruptTask reports the signal never provably landed, while the row
+    // independently converges to 'interrupted' — the cancel authority stays
+    // unknown, the honest terminal status is still reported.
+    mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'interrupted' });
+    mocks.interruptTask.mockResolvedValue({ cancelState: 'unknown', success: true });
+    const controller = new AbortController();
+    controller.abort();
+
+    const error = await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+        signal: controller.signal,
+      },
+    }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({
+      cancelResult: 'unknown',
+      code: 'ACP_JUDGMENT_RUN_FAILED',
+      status: 'interrupted',
+    });
+  });
+
+  it('reports a natural done — never fabricates interrupted — when the cancel races a completed run (SA06-A)', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.operationFindByJudgmentIntent.mockResolvedValue({
+      ...doneOperation,
+      status: 'running',
+    });
+    mocks.operationFindById.mockResolvedValue(doneOperation);
+    const controller = new AbortController();
+    controller.abort();
+
+    const error = await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+        signal: controller.signal,
+      },
+    }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({
+      cancelResult: 'confirmed',
+      code: 'ACP_JUDGMENT_RUN_FAILED',
+      status: 'done',
+    });
+  });
+
+  it('reconciles a hung dispatch by intentKey and interrupts it — never a second writer (SA06-A)', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.agentExistsById.mockResolvedValue(true);
+      mocks.execAgent.mockImplementation(() => new Promise(() => {})); // never returns
+      mocks.operationFindByJudgmentIntent.mockResolvedValue({
+        ...doneOperation,
+        id: 'op-late',
+        status: 'running',
+      });
+      mocks.operationFindById.mockResolvedValue({
+        ...doneOperation,
+        id: 'op-late',
+        status: 'running',
+      });
+
+      const promise = runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          pollIntervalMs: 100,
+          purpose: 'verify.judge',
+          timeoutMs: 1_000,
+        },
+      });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(promise).rejects.toMatchObject({
+        code: 'ACP_JUDGMENT_RUN_FAILED',
+        operationId: 'op-late',
+        status: 'interrupted',
+      });
+      expect(mocks.execAgent).toHaveBeenCalledTimes(1);
+      expect(mocks.operationFindByJudgmentIntent).toHaveBeenCalledWith(
+        expect.stringContaining('verify.judge:0:'),
+      );
+      expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-late' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('enforces the deadline even when the op goes done late — the landed row is accounted for (SA06-A)', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.agentExistsById.mockResolvedValue(true);
+      mocks.execAgent.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve({ operationId: 'op-1' }), 5_000);
+          }),
+      );
+      // The intent lookup finds the row already at 'done' — it is reported
+      // honestly and no interrupt is fired at a finished run.
+      mocks.operationFindByJudgmentIntent.mockResolvedValue(doneOperation);
+      mocks.operationFindById.mockResolvedValue(doneOperation);
+
+      const promise = runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          pollIntervalMs: 100,
+          purpose: 'verify.judge',
+          timeoutMs: 1_000,
+        },
+      });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(6_000);
+
+      await expect(promise).rejects.toMatchObject({
+        code: 'ACP_JUDGMENT_RUN_FAILED',
+        operationId: 'op-1',
+        status: 'done',
+      });
+      expect(mocks.execAgent).toHaveBeenCalledTimes(1);
+      expect(mocks.interruptTask).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['plain text reply', 'no json here at all'],
+    ['truncated JSON', '{"verdict":"pas'],
+    ['JSON null literal', 'null'],
+  ])('traces a %s as success=false with errorCode no_json (SA06-B)', async (_label, content) => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.messageFindById.mockResolvedValue({ content });
+
+    await expect(
+      runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+      }),
+    ).rejects.toBeInstanceOf(AcpJudgmentRunError);
+    expect(mocks.tracingRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ errorCode: 'no_json', success: false }),
+    );
   });
 });
 

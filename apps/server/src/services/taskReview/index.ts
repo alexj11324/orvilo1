@@ -5,7 +5,7 @@ import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 import { resolveSystemAgentModelConfig } from '../systemAgent/modelConfig';
 
@@ -66,8 +66,7 @@ export class TaskReviewService {
     );
 
     // 2. Initialize ModelRuntime for LLM-based rubrics
-    const modelRuntime = await initModelRuntimeFromDB(
-      this.db,
+    const modelRuntime = await initModelRuntimeFromDeploymentConfig(
       this.userId,
       provider,
       this.workspaceId,

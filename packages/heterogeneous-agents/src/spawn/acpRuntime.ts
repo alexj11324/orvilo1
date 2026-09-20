@@ -36,6 +36,12 @@ export interface AcpBridgeSpec {
   /** Install hint surfaced when the bridge binary cannot be found. */
   installCommand: string;
   /**
+   * Deprecated `LOBE_*` predecessor of `overrideEnv`, still honoured while
+   * the dual-read window is open so existing installs don't break (owner:
+   * P04 identity migration; deadline: P21 retirement).
+   */
+  legacyOverrideEnv?: string;
+  /**
    * Env var the bridge reads to locate the vendor CLI. The resolved native
    * command is forwarded here so the bridge drives the same install the user
    * configured — leaving it unset lets the bridge use its own default lookup.
@@ -66,7 +72,8 @@ export const ACP_AGENT_RUNTIMES = {
       package: 'amp-acp',
       packageVersion: '0.9.0',
       nativeCommandEnv: 'AMP_CLI_PATH',
-      overrideEnv: 'LOBE_AMP_ACP_COMMAND',
+      overrideEnv: 'ORVILO_AMP_ACP_COMMAND',
+      legacyOverrideEnv: 'LOBE_AMP_ACP_COMMAND',
     },
     eventPrefix: 'amp',
     label: 'Amp ACP',
@@ -80,7 +87,8 @@ export const ACP_AGENT_RUNTIMES = {
       package: '@agentclientprotocol/claude-agent-acp',
       packageVersion: '0.76.0',
       nativeCommandEnv: 'CLAUDE_CODE_EXECUTABLE',
-      overrideEnv: 'LOBE_CLAUDE_CODE_ACP_COMMAND',
+      overrideEnv: 'ORVILO_CLAUDE_CODE_ACP_COMMAND',
+      legacyOverrideEnv: 'LOBE_CLAUDE_CODE_ACP_COMMAND',
     },
     eventPrefix: 'claude_code',
     label: 'Claude Code ACP',
@@ -101,7 +109,8 @@ export const ACP_AGENT_RUNTIMES = {
       package: '@agentclientprotocol/codex-acp',
       packageVersion: '1.11.0',
       nativeCommandEnv: 'CODEX_PATH',
-      overrideEnv: 'LOBE_CODEX_ACP_COMMAND',
+      overrideEnv: 'ORVILO_CODEX_ACP_COMMAND',
+      legacyOverrideEnv: 'LOBE_CODEX_ACP_COMMAND',
     },
     eventPrefix: 'codex',
     label: 'Codex ACP',
@@ -129,7 +138,8 @@ export const ACP_AGENT_RUNTIMES = {
       package: 'pi-acp',
       packageVersion: '0.0.33',
       nativeCommandEnv: 'PI_ACP_PI_COMMAND',
-      overrideEnv: 'LOBE_PI_ACP_COMMAND',
+      overrideEnv: 'ORVILO_PI_ACP_COMMAND',
+      legacyOverrideEnv: 'LOBE_PI_ACP_COMMAND',
     },
     eventPrefix: 'pi',
     label: 'Pi ACP',
@@ -180,10 +190,29 @@ const getWellKnownBridgeCommandPaths = (command: string): string[] => {
 const BRIDGE_VERSION_PATTERN = /v?\d+\.\d+\.\d+/;
 
 /**
+ * Read the bridge-command override env var, preferring the `ORVILO_*` name
+ * and falling back to its deprecated `LOBE_*` predecessor for existing
+ * installs (dual-read window; see `AcpBridgeSpec.legacyOverrideEnv`).
+ */
+export const readAcpBridgeOverrideEnv = (
+  spec: AcpBridgeSpec,
+  probeEnv?: NodeJS.ProcessEnv,
+): string | undefined => {
+  const read = (name?: string) => {
+    if (!name) return undefined;
+    const value = probeEnv?.[name] ?? process.env[name];
+    const trimmed = value?.trim();
+    return trimmed || undefined;
+  };
+  return read(spec.overrideEnv) ?? read(spec.legacyOverrideEnv);
+};
+
+/**
  * Resolve the ACP bridge binary for an agent. Candidates, in order:
- * `spec.overrideEnv` → bare `spec.command` on PATH → well-known npm/bun/pnpm
- * global bin locations. `--version` (semver banner) validates each candidate;
- * the bridge package names are unique enough that no keyword match is needed.
+ * `spec.overrideEnv` → `spec.legacyOverrideEnv` (deprecated dual-read) → bare
+ * `spec.command` on PATH → well-known npm/bun/pnpm global bin locations.
+ * `--version` (semver banner) validates each candidate; the bridge package
+ * names are unique enough that no keyword match is needed.
  */
 export const detectAcpBridgeCommand = async (
   spec: AcpBridgeSpec,
@@ -195,8 +224,8 @@ export const detectAcpBridgeCommand = async (
   const { detectValidatedCommandCandidates } = await import('./resolveCliCommand');
 
   const candidates: string[] = [];
-  const override = probeEnv?.[spec.overrideEnv] ?? process.env[spec.overrideEnv];
-  if (override?.trim()) candidates.push(override.trim());
+  const override = readAcpBridgeOverrideEnv(spec, probeEnv);
+  if (override) candidates.push(override);
   candidates.push(spec.command, ...getWellKnownBridgeCommandPaths(spec.command));
 
   return detectValidatedCommandCandidates(

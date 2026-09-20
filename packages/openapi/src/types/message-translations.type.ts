@@ -18,41 +18,21 @@ export const MessageTranslateQueryRequestSchema = z.object({
  */
 export type MessageTranslateParams = MessageTranslateQueryRequest;
 
-// ==================== Message Translation Trigger Types ====================
-
-/**
- * Message translation body request parameters
- */
-export interface MessageTranslateBody {
-  from?: string;
-  model?: string;
-  provider?: string;
-  to: string;
-}
-
-export const MessageTranslateTriggerRequestSchema = z.object({
-  from: z.string().optional(),
-  model: z.string().nullish(),
-  provider: z.string().nullish(),
-  to: z.string().min(1, 'target language is required, e.g. en-US, zh-CN'),
-});
-
-/**
- * Full message translation trigger request parameters
- */
-export type MessageTranslateTriggerRequest = MessageTranslateQueryRequest & MessageTranslateBody;
-
 // ==================== Message Translation Update Types ====================
 
 /**
  * Update translation info request parameters
  */
-export type MessageTranslateInfoUpdate = MessageTranslateTriggerRequest & {
+export type MessageTranslateInfoUpdate = MessageTranslateQueryRequest & {
   content?: string;
+  from?: string;
+  to: string;
 };
 
-export const MessageTranslateInfoUpdateSchema = MessageTranslateTriggerRequestSchema.extend({
+export const MessageTranslateInfoUpdateSchema = z.object({
   content: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().min(1, 'target language is required, e.g. en-US, zh-CN'),
 });
 
 // ==================== Message Translation Response Types ====================

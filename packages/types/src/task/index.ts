@@ -338,6 +338,15 @@ export interface TaskWorkspaceConfig {
 export type IntegrationLeasePhase = 'claimed' | 'merge' | 'prepare' | 'publish' | 'dispatch';
 
 /**
+ * Delivery-review remote-observation stages (F08). Each stage owns a failure
+ * budget: a read may only clear the counter for the stage it actually
+ * observed, so a healthy first snapshot cannot erase failures accumulated at
+ * the merge boundary.
+ */
+export type VerificationPollStage =
+  'branch_read' | 'merge_confirm' | 'merge_decision' | 'pr_establish' | 'snapshot' | 'sweep';
+
+/**
  * Per-run workspace/integration record persisted on `task_topics.integration`.
  * Written by the task runner at provision time and advanced by
  * TaskIntegrationService once the run's topic completes.
@@ -389,6 +398,13 @@ export interface TaskTopicIntegration {
     | 'remote_verification_unavailable'
     | 'workspace_unavailable'
     | null;
+  /**
+   * Set when GitHub accepted the merge request but the confirmation read has
+   * not yet landed: later sweep passes reconcile (re-read the merged state)
+   * instead of re-issuing the merge — a lost acknowledgement must not
+   * double-merge the delivery.
+   */
+  mergeIssuedAt?: string;
   /** Pull request number bound to this delivery, when known. */
   prNumber?: number;
   /** Short lease protecting completion/retry handling from duplicate delivery. */
@@ -428,10 +444,14 @@ export interface TaskTopicIntegration {
     | 'skipped';
   /**
    * Consecutive sweep passes that could not read the delivery's remote state
-   * (auth/permission/network). Bounded by the review sweep — reaching the cap
-   * marks the record 'blocked' instead of waiting silently forever.
+   * (auth/permission/network), keyed by the observation stage that failed.
+   * A stage's counter resets only when that stage is re-observed successfully
+   * or a later stage succeeds (valid stage advance); reaching the per-stage
+   * cap marks the record 'blocked' instead of waiting silently forever.
+   * Business-CI pending is not counted here — it is a merge gate, not an
+   * observation error.
    */
-  verificationPollFailures?: number;
+  verificationPollFailures?: Partial<Record<VerificationPollStage, number>>;
   /**
    * Original verified delivery waiting for this corrective integration chain.
    * Once the chain settles, the lifecycle re-drives that Verify run so task

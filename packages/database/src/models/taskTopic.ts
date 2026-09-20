@@ -6,6 +6,7 @@ import type {
   TaskExecutionEnvironmentSnapshot,
   TaskTopicHandoff,
   TaskTopicIntegration,
+  VerificationPollStage,
 } from '@orvilo/types';
 import { and, count, desc, eq, exists, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 
@@ -261,14 +262,20 @@ export class TaskTopicModel {
   }
 
   /**
-   * Patch the run's workspace-integration record in place. Used by
+   * Merge `patch` into the integration record — used by
    * TaskIntegrationService as the merge state machine advances (pending →
-   * conflict → integrated/…).
+   * conflict → integrated/…). When `expectPollFailures` is
+   * provided it becomes a CAS guard on the poll-failure map: the update only
+   * lands when the stored `verificationPollFailures` still equals what the
+   * caller read (`null`/`undefined` expects the field absent) — a concurrent
+   * pass that already moved a counter makes this return false so the loser
+   * defers to the next sweep instead of double-counting.
    */
   async updateIntegration(
     taskId: string,
     topicId: string,
     patch: { [K in keyof TaskTopicIntegration]?: TaskTopicIntegration[K] | null },
+    expectPollFailures?: null | Partial<Record<VerificationPollStage, number>>,
   ): Promise<boolean> {
     const updated = await this.db
       .update(taskTopics)
@@ -281,6 +288,11 @@ export class TaskTopicModel {
           eq(taskTopics.topicId, topicId),
           isNotNull(taskTopics.integration),
           this.ownership(),
+          expectPollFailures === undefined
+            ? undefined
+            : expectPollFailures === null
+              ? sql`${taskTopics.integration}->'verificationPollFailures' is null`
+              : sql`${taskTopics.integration}->'verificationPollFailures' is not distinct from ${JSON.stringify(expectPollFailures)}::jsonb`,
         ),
       )
       .returning({ id: taskTopics.id });

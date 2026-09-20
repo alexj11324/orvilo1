@@ -69,15 +69,27 @@ snapshot, a merge-boundary re-read that fails, or a post-merge confirmation
 that stays unreadable — every pass logged and waited again, spending the
 10-minute sweep budget on a credential or permission that does not self-heal.
 
-`TaskTopicIntegration.verificationPollFailures` now counts consecutive
-remote-observation failures (jsonb field, no migration). At
-`MAX_VERIFICATION_POLL_FAILURES` (10) the record transitions to `blocked` with
-`lastErrorCode: 'remote_verification_unavailable'` and surfaces as a human gate
-instead of spinning. A successful remote read resets the counter, so transient
-outages keep their budget across passes rather than accumulating toward a cap.
+`TaskTopicIntegration.verificationPollFailures` counts consecutive
+remote-observation failures **per observation stage** (jsonb map, no
+migration): `branch_read`, `pr_establish`, `snapshot`, `merge_decision`,
+`merge_confirm`, `sweep`. A stage's counter resets only when that stage is
+successfully re-observed or a later stage succeeds — a healthy first snapshot
+can no longer erase failures accumulated at the merge boundary. Writes are
+CAS-guarded on the map (`updateIntegration`'s `expectPollFailures`) so two
+overlapping passes cannot double-count. At `MAX_VERIFICATION_POLL_FAILURES`
+(10 per stage) the record transitions to `blocked` with
+`lastErrorCode: 'remote_verification_unavailable'`, keeps the counter map as
+evidence, and surfaces as a human gate instead of spinning. Business waits
+(CI pending, review feedback) do not consume the observation budget.
 
-Coverage: `reviewController.cases.ts` adds counter-below-cap waiting, cap→
-`blocked`, and reset-on-success; an exception mid-review routes through the
+Once GitHub accepts a merge, `mergeIssuedAt` is persisted before the
+confirmation read — a lost acknowledgement reconciles by re-reading the
+merged state on the next pass, never by re-issuing the merge.
+
+Coverage: `reviewController.cases.ts` adds counter-below-cap waiting, per-stage
+cap→`blocked`, stage-scoped reset, merge-boundary preservation across healthy
+snapshots, accepted-merge reconcile without re-issue, and the 11-round bounded
+stop; an exception mid-review routes through the
 same bound via the sweep's catch.
 
 ## Explicitly unchanged

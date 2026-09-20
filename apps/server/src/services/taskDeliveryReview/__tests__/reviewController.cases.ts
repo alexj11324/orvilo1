@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 
+import type { VerificationPollStage } from '@orvilo/types';
 import { vi } from 'vitest';
 
 import {
@@ -23,12 +24,14 @@ type Row = {
     branch: string;
     expectedHeadSha?: string;
     integratedSha?: string;
+    lastError?: null | string;
     lastErrorCode?: string;
+    mergeIssuedAt?: string;
     prNumber?: number;
     repo: string;
     role: string;
     state: string;
-    verificationPollFailures?: number;
+    verificationPollFailures?: Partial<Record<VerificationPollStage, number>>;
   };
   seq: number;
   status: string;
@@ -82,7 +85,9 @@ function setup(
     liveTopic?: boolean;
     missingPr?: boolean;
     missingRemote?: boolean;
-    pollFailures?: number;
+    pollFailures?: Partial<Record<VerificationPollStage, number>>;
+    /** Ordered per-call snapshot overrides — 'unavailable' makes the read fail. */
+    reads?: (Partial<RemotePrReviewSnapshot> | 'unavailable')[];
     runningTask?: boolean;
     noMatchingRowsAtConfirmation?: boolean;
     otherRepositoryRow?: boolean;
@@ -242,13 +247,16 @@ function setup(
         expected?: ExpectedPullRequestIdentity,
       ) => {
         state.expected.push(expected);
-        if (options.unavailable) return undefined;
+        const callIndex = state.expected.length - 1;
+        const queued = options.reads?.[callIndex];
+        if (options.unavailable || queued === 'unavailable') return undefined;
         // Call 1 is the sweep read, call 2 the merge-boundary revalidation,
-        // calls >= 3 the post-merge confirmation.
-        const result =
-          state.expected.length === 1
+        // calls >= 3 the post-merge confirmation. `reads` overrides per call.
+        const result = queued
+          ? snapshot(queued)
+          : callIndex === 0
             ? snapshot(options.first)
-            : state.expected.length === 2
+            : callIndex === 1
               ? snapshot(options.premerge)
               : snapshot({
                   merged: true,
@@ -522,7 +530,7 @@ add(
     const f = setup({ unavailable: true });
     const result = await (await load(f.mocks))(f.db);
     assert.deepEqual(result.waiting, ['T-1']);
-    assert.equal(f.state.rows[0].integration.verificationPollFailures, 1);
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, { snapshot: 1 });
     assert.equal(f.state.rows[0].integration.state, 'verification_pending');
     assert.equal(f.state.merges.length, 0);
   },
@@ -532,23 +540,99 @@ add(
 add(
   'a permanently unreadable remote bounds the delivery into blocked',
   async (load) => {
-    const f = setup({ pollFailures: 9, unavailable: true });
+    const f = setup({ pollFailures: { snapshot: 9 }, unavailable: true });
     const result = await (await load(f.mocks))(f.db);
     assert.deepEqual(result.paused, ['T-1']);
     assert.equal(f.state.rows[0].integration.state, 'blocked');
     assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
-    assert.equal(f.state.rows[0].integration.verificationPollFailures, 10);
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, { snapshot: 10 });
     assert.equal(f.state.merges.length, 0);
     assert.equal(f.state.completed.length, 0);
   },
   false,
 );
 
-add('a successful remote read resets the verification poll counter', async (load) => {
-  const f = setup({ pollFailures: 3 });
+add('a successful remote read resets only the stage that was re-observed', async (load) => {
+  const f = setup({ pollFailures: { snapshot: 3 } });
   const result = await (await load(f.mocks))(f.db);
   assert.deepEqual(result.merged, ['T-1']);
-  assert.equal(f.state.rows[0].integration.verificationPollFailures, 0);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {});
+});
+
+// F08: a healthy first snapshot must not erase failures accumulated at the
+// merge boundary — merge_decision's budget is owned by that stage alone.
+add('a healthy snapshot preserves merge-boundary failure budgets', async (load) => {
+  const f = setup({
+    reads: [
+      // Pass 1: snapshot healthy, merge-boundary re-read unavailable.
+      {},
+      'unavailable',
+      // Pass 2: snapshot healthy again, then business-CI pending keeps the
+      // pass waiting before the merge boundary — budgets must survive.
+      { checks: { failed: [], pending: ['CI'], skipped: [], successful: [] } },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+    merge_decision: 1,
+  });
+  const second = await sweep(f.db);
+  assert.deepEqual(second.waiting, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+    merge_decision: 1,
+  });
+});
+
+// F08: a merge GitHub already accepted is never re-issued — a lost
+// confirmation reconciles by re-reading the merged state only.
+add('a merge accepted but unconfirmed reconciles without a second merge call', async (load) => {
+  const f = setup({
+    reads: [
+      // Pass 1: healthy reads, merge issued, confirmation unreadable.
+      {},
+      {},
+      'unavailable',
+      // Pass 2: still unmerged at both reads, mergeIssuedAt suppresses the
+      // duplicate merge call, then the confirmation finally lands.
+      { merged: false },
+      { merged: false },
+      { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.equal(f.state.merges.length, 1);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+    merge_confirm: 1,
+  });
+  assert.ok(f.state.rows[0].integration.mergeIssuedAt);
+  const second = await sweep(f.db);
+  assert.deepEqual(second.merged, ['T-1']);
+  // The merge RPC ran exactly once — the second pass reconciled by reading.
+  assert.equal(f.state.merges.length, 1);
+  assert.equal(f.state.completed.length, 1);
+});
+
+// Merge gate: first snapshot always succeeds, merge-boundary reads always
+// fail — 11 rounds must reach a bounded stop.
+add('a merge boundary that never confirms blocks after the per-stage cap', async (load) => {
+  const f = setup({
+    reads: Array.from({ length: 22 }, (_, i) => (i % 2 === 0 ? {} : 'unavailable')),
+  });
+  const sweep = await load(f.mocks);
+  for (let round = 0; round < 11; round++) await sweep(f.db);
+  assert.equal(f.state.merges.length, 0);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+    merge_decision: 10,
+  });
+  assert.equal(f.state.rows[0].integration.state, 'blocked');
+  assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
+  // Bounded: the blocked row leaves the active-delivery set entirely.
+  const twelfth = await sweep(f.db);
+  assert.equal(twelfth.checked, 0);
 });
 
 export { cases as reviewControllerCases };

@@ -1,4 +1,9 @@
-import { cloudSandboxRepoPath, type TaskItem, type TaskTopicIntegration } from '@orvilo/types';
+import {
+  cloudSandboxRepoPath,
+  type TaskItem,
+  type TaskTopicIntegration,
+  type VerificationPollStage,
+} from '@orvilo/types';
 import debug from 'debug';
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 
@@ -130,19 +135,22 @@ const persistReviewContext = async (
  * Bounded handling for "we cannot observe the remote truth" outcomes: a
  * missing branch/PR read, a snapshot that cannot be verified, a merge
  * decision or confirmation that comes back unreadable, or an exception thrown
- * mid-review. Each pass increments `verificationPollFailures` on the durable
- * record; reaching the cap parks the delivery at 'blocked' instead of waiting
+ * mid-review. Each pass increments the failing `stage`'s counter on the
+ * durable record (per-stage budgets — a healthy first snapshot must not
+ * clear merge-boundary failures); reaching the cap parks the delivery at
+ * 'blocked' with the counter map kept as evidence instead of waiting
  * silently forever — auth, permission and quota failures do not self-heal.
  */
 const noteVerificationPollFailure = async (params: {
   detail: string;
   record: TaskTopicIntegration;
   row: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>[number];
+  stage: VerificationPollStage;
   task: TaskItem;
   taskModel: TaskModel;
   topicModel: TaskTopicModel;
 }): Promise<'blocked' | 'waiting'> => {
-  const { detail, record, row, task, taskModel, topicModel } = params;
+  const { detail, record, row, stage, task, taskModel, topicModel } = params;
   // A row with no topicId cannot be patched — the failure stays a waiting
   // outcome on the task's error field rather than a counter that cannot
   // persist.
@@ -150,23 +158,60 @@ const noteVerificationPollFailure = async (params: {
     await taskModel.update(task.id, { error: detail });
     return 'waiting';
   }
-  const failures = (record.verificationPollFailures ?? 0) + 1;
-  const lastError = `${detail} (verification poll ${failures}/${MAX_VERIFICATION_POLL_FAILURES})`;
-  if (failures >= MAX_VERIFICATION_POLL_FAILURES) {
-    await topicModel.updateIntegration(task.id, row.topicId, {
-      lastError,
-      lastErrorCode: 'remote_verification_unavailable',
-      state: 'blocked',
-      verificationPollFailures: failures,
-    });
-  } else {
-    await topicModel.updateIntegration(task.id, row.topicId, {
-      lastError,
-      verificationPollFailures: failures,
-    });
+  const failures = (record.verificationPollFailures?.[stage] ?? 0) + 1;
+  const lastError = `${detail} (${stage} poll ${failures}/${MAX_VERIFICATION_POLL_FAILURES})`;
+  const next = { ...record.verificationPollFailures, [stage]: failures };
+  const persisted = await topicModel.updateIntegration(
+    task.id,
+    row.topicId,
+    failures >= MAX_VERIFICATION_POLL_FAILURES
+      ? {
+          lastError,
+          lastErrorCode: 'remote_verification_unavailable',
+          state: 'blocked',
+          verificationPollFailures: next,
+        }
+      : {
+          lastError,
+          verificationPollFailures: next,
+        },
+    record.verificationPollFailures ?? null,
+  );
+  // A concurrent pass already moved the counters — keep waiting; the next
+  // sweep re-reads the fresh record rather than double-counting.
+  if (!persisted) {
+    await taskModel.update(task.id, { error: lastError });
+    return 'waiting';
   }
   await taskModel.update(task.id, { error: lastError });
   return failures >= MAX_VERIFICATION_POLL_FAILURES ? 'blocked' : 'waiting';
+};
+
+/**
+ * A successful read clears the budgets of every stage it proves healthy — a
+ * stage that was skipped because durable identity already exists is also
+ * cleared (valid stage advance). Bounded by CAS: if a concurrent pass moved
+ * the counters, this pass keeps its stale view and defers to the next sweep.
+ */
+const clearVerificationPollStages = async (params: {
+  record: TaskTopicIntegration;
+  row: Awaited<ReturnType<TaskTopicModel['findByTaskId']>>[number];
+  stages: VerificationPollStage[];
+  task: TaskItem;
+  topicModel: TaskTopicModel;
+}): Promise<TaskTopicIntegration> => {
+  const { record, row, stages, task, topicModel } = params;
+  const failures = record.verificationPollFailures;
+  if (!row.topicId || !failures || !stages.some((stage) => failures[stage])) return record;
+  const next = { ...failures };
+  for (const stage of stages) delete next[stage];
+  const persisted = await topicModel.updateIntegration(
+    task.id,
+    row.topicId,
+    { verificationPollFailures: next },
+    failures,
+  );
+  return persisted ? { ...record, verificationPollFailures: next } : record;
 };
 
 const markDeliveryMerged = async (params: {
@@ -462,6 +507,7 @@ export const runTaskDeliveryReviewSweep = async (
             detail: 'Delivery branch is not published to GitHub yet; review has not started.',
             record,
             row,
+            stage: 'branch_read',
             task,
             taskModel,
             topicModel,
@@ -498,6 +544,7 @@ export const runTaskDeliveryReviewSweep = async (
           detail: 'Pull request could not be established; review has not started.',
           record,
           row,
+          stage: 'pr_establish',
           task,
           taskModel,
           topicModel,
@@ -517,6 +564,7 @@ export const runTaskDeliveryReviewSweep = async (
             'GitHub PR identity or revision could not be verified; review remains blocked and will retry.',
           record,
           row,
+          stage: 'snapshot',
           task,
           taskModel,
           topicModel,
@@ -524,12 +572,15 @@ export const runTaskDeliveryReviewSweep = async (
         result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
       }
-      if (record.verificationPollFailures) {
-        await topicModel.updateIntegration(task.id, row.topicId, {
-          verificationPollFailures: 0,
-        });
-        deliveryRecord = { ...deliveryRecord, verificationPollFailures: 0 };
-      }
+      // Reaching a verified snapshot proves the pre-merge read chain healthy —
+      // clear those stages' budgets. Merge-boundary stages keep theirs.
+      deliveryRecord = await clearVerificationPollStages({
+        record: deliveryRecord,
+        row,
+        stages: ['branch_read', 'pr_establish', 'snapshot'],
+        task,
+        topicModel,
+      });
 
       // Read the canonical PR even when its head moved, then reject the moved
       // revision explicitly. Returning generic "unavailable" would hide a
@@ -679,6 +730,7 @@ export const runTaskDeliveryReviewSweep = async (
             'GitHub PR state could not be re-verified at the merge boundary; the next sweep will retry.',
           record: deliveryRecord,
           row,
+          stage: 'merge_decision',
           task,
           taskModel,
           topicModel,
@@ -686,6 +738,13 @@ export const runTaskDeliveryReviewSweep = async (
         result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
       }
+      deliveryRecord = await clearVerificationPollStages({
+        record: deliveryRecord,
+        row,
+        stages: ['merge_decision'],
+        task,
+        topicModel,
+      });
       if (decision.merged) {
         await markDeliveryMerged({
           db,
@@ -704,26 +763,41 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
-      const merge = await mergePullRequest({
-        expectedHeadSha: decision.headSha,
-        mergeMethod: 'squash',
-        prNumber: snapshot.number,
-        repo,
-        token,
-      });
-      if (!merge.merged) {
-        await persistReviewContext(taskModel, task.id, {
-          ...context,
-          lastMergeError: merge.message ?? 'GitHub rejected the merge request',
-          lastReviewedHeadSha: snapshot.headSha,
+      // A merge GitHub already accepted must not be re-issued — a lost
+      // confirmation would otherwise double-request the merge. The durable
+      // `mergeIssuedAt` marks that boundary: later passes reconcile by
+      // re-reading the merged state only.
+      if (!deliveryRecord.mergeIssuedAt) {
+        const merge = await mergePullRequest({
+          expectedHeadSha: decision.headSha,
+          mergeMethod: 'squash',
+          prNumber: snapshot.number,
+          repo,
+          token,
         });
-        await taskModel.update(task.id, {
-          error: merge.message
-            ? `Waiting to merge: ${merge.message}`
-            : 'Waiting for GitHub merge gates.',
-        });
-        result.waiting.push(task.identifier);
-        continue;
+        if (!merge.merged) {
+          await persistReviewContext(taskModel, task.id, {
+            ...context,
+            lastMergeError: merge.message ?? 'GitHub rejected the merge request',
+            lastReviewedHeadSha: snapshot.headSha,
+          });
+          await taskModel.update(task.id, {
+            error: merge.message
+              ? `Waiting to merge: ${merge.message}`
+              : 'Waiting for GitHub merge gates.',
+          });
+          result.waiting.push(task.identifier);
+          continue;
+        }
+        deliveryRecord = {
+          ...deliveryRecord,
+          mergeIssuedAt: new Date().toISOString(),
+        };
+        await topicModel
+          .updateIntegration(task.id, row.topicId, {
+            mergeIssuedAt: deliveryRecord.mergeIssuedAt,
+          })
+          .catch((error) => log('merge acceptance marker failed to persist — %O', error));
       }
 
       const confirmed = await getPullRequestReviewSnapshot(repo, snapshot.number, token, {
@@ -739,6 +813,7 @@ export const runTaskDeliveryReviewSweep = async (
           detail: 'GitHub accepted the merge request, but merge confirmation is pending.',
           record: deliveryRecord,
           row,
+          stage: 'merge_confirm',
           task,
           taskModel,
           topicModel,
@@ -746,6 +821,13 @@ export const runTaskDeliveryReviewSweep = async (
         result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
         continue;
       }
+      deliveryRecord = await clearVerificationPollStages({
+        record: deliveryRecord,
+        row,
+        stages: ['merge_confirm'],
+        task,
+        topicModel,
+      });
 
       await markDeliveryMerged({
         db,
@@ -764,6 +846,7 @@ export const runTaskDeliveryReviewSweep = async (
         detail: `PR review orchestration: ${message}`,
         record,
         row,
+        stage: 'sweep',
         task,
         taskModel,
         topicModel,

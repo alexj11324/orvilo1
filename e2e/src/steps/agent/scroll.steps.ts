@@ -363,13 +363,30 @@ Then('视口应贴近聊天列表底部', async function (this: CustomWorld) {
 });
 
 Then('视口不应贴近聊天列表底部', async function (this: CustomWorld) {
-  // The pin animation settles asynchronously after the stream finishes; a
-  // one-shot read can race the last layout pass and see distanceToBottom=0
-  // even though the final state keeps the viewport off the bottom.
+  // The pin keeps the user's message at the container top with a bottom
+  // compensation spacer, so scrollTop legitimately equals the maximum when
+  // pinned — distanceToBottom can never distinguish "pinned" from
+  // "followed to the bottom". Check the real contract instead: the latest
+  // assistant reply extends below the visible fold (it would be fully in
+  // view if the viewport had followed the stream to the bottom).
   await expect
-    .poll(async () => (await getScrollSnapshot(this))?.distanceToBottom ?? -1, {
-      timeout: 10_000,
-    })
+    .poll(
+      async () =>
+        this.page.evaluate(() => {
+          const messages = document.querySelectorAll('.message-wrapper');
+          const last = messages.at(-1);
+          if (!last) return null;
+          let el = last.parentElement;
+          while (el) {
+            const { overflowY } = window.getComputedStyle(el);
+            if (overflowY === 'auto' || overflowY === 'scroll') break;
+            el = el.parentElement;
+          }
+          if (!el) return null;
+          return last.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom;
+        }),
+      { timeout: 10_000 },
+    )
     .toBeGreaterThan(AT_BOTTOM_EPSILON);
 });
 

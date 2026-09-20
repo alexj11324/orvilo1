@@ -120,7 +120,7 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
         // under E2E_PARALLEL=3 the tail of that mutation (getMessagesAndTopics
         // over a multi-thousand-line conversation) can sit behind streaming
         // ingest flushes from sibling workers for tens of seconds.
-        timeout: 45_000,
+        timeout: 90_000,
       },
     )
     .toBeTruthy();
@@ -137,10 +137,12 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
  * leave stale `running` rows on unrelated topics. When DATABASE_URL is absent
  * the gate degrades to "idle" so it never blocks.
  */
-async function hasRunningOperation(world: CustomWorld): Promise<boolean> {
+type RunState = 'done' | 'pending' | 'running';
+
+async function runState(world: CustomWorld): Promise<RunState> {
   const databaseUrl = process.env.DATABASE_URL;
   const lastSent = world.testContext.lastSentUserMessageId;
-  if (!databaseUrl || !lastSent) return false;
+  if (!databaseUrl || !lastSent) return 'pending';
 
   // One client per world: opening a fresh connection per 250ms poll is itself
   // a load spike on CI's shared Postgres (a checkpoint there took ~270s), and
@@ -151,27 +153,51 @@ async function hasRunningOperation(world: CustomWorld): Promise<boolean> {
   let client = world.testContext.scrollPgClient;
   if (!client) {
     const { default: pg } = await import('pg');
-    client = new pg.Client({ connectionString: databaseUrl });
+    client = new pg.Client({
+      connectionString: databaseUrl,
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 10_000,
+    });
     try {
       await client.connect();
     } catch {
-      return false;
+      return 'pending';
     }
     world.testContext.scrollPgClient = client;
   }
   try {
+    // The op row for this send is created at dispatch — right after
+    // `sendMessageInServer` re-keys the tmp_ id — so it can be created, run to
+    // completion, and flip `done` entirely between the re-key and this poll's
+    // first tick. "Latest op on the topic is terminal AND started after this
+    // message was written" therefore means THIS send's run already finished —
+    // don't require having caught the running window. An older (stale) op's
+    // started_at precedes the message and reads as 'pending' instead.
     const res = await client.query(
-      `select count(*)::int as n
-       from agent_operations
-       where status = 'running'
-         and topic_id = (select topic_id from messages where id = $1)`,
+      `select o.status,
+              o.started_at is not null
+                and o.started_at >= (select created_at - interval '10 seconds'
+                                     from messages where id = $1) as fresh
+       from agent_operations o
+       where o.topic_id = (select topic_id from messages where id = $1)
+       order by o.started_at desc nulls last
+       limit 1`,
       [lastSent],
     );
-    const running = (res.rows[0]?.n ?? 0) > 0;
-    world.testContext.scrollLastRunning = running;
-    return running;
+    const row = res.rows[0];
+    let state: RunState;
+    if (!row) state = 'pending';
+    else if (row.status === 'running') state = 'running';
+    else state = row.fresh ? 'done' : 'pending';
+    world.testContext.scrollLastRunState = state;
+    return state;
   } catch {
-    return world.testContext.scrollLastRunning ?? false;
+    // A dead connection must not pin the reading forever: drop the client so
+    // the next poll reconnects, but report the last reading this once — a
+    // transient blip shouldn't read as a spurious 'idle'.
+    world.testContext.scrollPgClient = undefined;
+    await client.end().catch(() => {});
+    return world.testContext.scrollLastRunState ?? 'pending';
   }
 }
 
@@ -187,13 +213,14 @@ async function waitForAssistantMessageToSettle(
   await expect(assistantMessage).toBeVisible({ timeout: 15_000 });
 
   // Settle on the run lifecycle, not text stability: streaming renders ticking
-  // indicators inside the wrapper so innerText may never sit still. Require the
-  // run to have been *observed* running (the op row lands a few hundred ms
-  // after send) before trusting "idle", otherwise a stale long reply from the
-  // previous turn would release the next send into the client-side queue.
+  // indicators inside the wrapper so innerText may never sit still. Require a
+  // terminal op row for THIS send before trusting "idle", otherwise a stale
+  // long reply from the previous turn would release the next send into the
+  // client-side queue. 'done' covers both orderings: the poll observed the run
+  // while it streamed, or the whole run finished before the first poll tick
+  // (dispatch+stream+finish can outrun the re-key observation).
   const deadline = Date.now() + 150_000;
   let lastLength = 0;
-  let sawRunning = false;
   while (Date.now() < deadline) {
     const length = await assistantMessage
       .innerText()
@@ -201,9 +228,8 @@ async function waitForAssistantMessageToSettle(
       .catch(() => 0);
     lastLength = length;
 
-    const running = await hasRunningOperation(world);
-    sawRunning = sawRunning || running;
-    if (sawRunning && length > minLength && !running) {
+    const state = await runState(world);
+    if (state === 'done' && length > minLength) {
       // Run is over — give the UI one beat to apply the final pushed events.
       await world.page.waitForTimeout(400);
       return;
@@ -509,7 +535,7 @@ After({ tags: '@scroll' }, async function (this: CustomWorld) {
   const client = this.testContext.scrollPgClient;
   if (client) {
     this.testContext.scrollPgClient = undefined;
-    this.testContext.scrollLastRunning = undefined;
+    this.testContext.scrollLastRunState = undefined;
     await client.end().catch(() => {});
   }
 });

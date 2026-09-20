@@ -13,6 +13,12 @@ import { useUserStore } from '@/store/user';
 
 import { type AgentStore } from '../../store';
 
+// A null workspaceId means the caller's own unfiled row — readable under any
+// active workspace (union scope semantics). Only a row filed under a
+// *different* workspace is a stale-scope response.
+const isActiveScopeOrUnfiled = (workspaceId?: string | null): boolean =>
+  workspaceId == null || workspaceId === getActiveWorkspaceId();
+
 interface UseInitBuiltinAgentContext {
   /**
    * Whether the user is logged in.
@@ -44,13 +50,11 @@ export class BuiltinAgentSliceActionImpl {
     const scope = getCacheScope();
     const data = await agentService.getBuiltinAgent(slug);
     // Builtin slugs are per-scope singletons resolved strictly server-side, so a
-    // row whose workspace differs from the header that was actually sent is a
-    // stale-scope response — never let it pin this partition's builtin map.
-    if (
-      data?.id &&
-      scope === getCacheScope() &&
-      (data.workspaceId ?? null) === getActiveWorkspaceId()
-    ) {
+    // row filed under a different workspace is a stale-scope response — never
+    // let it pin this partition's builtin map. A null workspaceId is the
+    // caller's own unfiled row (union semantics), which stays readable under
+    // any active workspace.
+    if (data?.id && scope === getCacheScope() && isActiveScopeOrUnfiled(data.workspaceId)) {
       this.#get().internal_dispatchAgentMap(data.id, data as PartialDeep<OrviloAgentConfig>);
       // Mirror useInitBuiltinAgent's hydration: keep builtinAgentIdMap in sync
       // so callers can rely on this as a real "ensure" path instead of just a
@@ -79,7 +83,7 @@ export class BuiltinAgentSliceActionImpl {
       async () => {
         const data = await agentService.getBuiltinAgent(slug);
 
-        if (data && (data.workspaceId ?? null) !== getActiveWorkspaceId()) return null;
+        if (data && !isActiveScopeOrUnfiled(data.workspaceId)) return null;
         return scope === getCacheScope() ? (data as AgentItem | null) : null;
       },
       {
@@ -100,7 +104,7 @@ export class BuiltinAgentSliceActionImpl {
         context?.isLogin === false ||
         !data?.id ||
         scope !== getCacheScope() ||
-        (data.workspaceId ?? null) !== getActiveWorkspaceId()
+        !isActiveScopeOrUnfiled(data.workspaceId)
       )
         return;
 

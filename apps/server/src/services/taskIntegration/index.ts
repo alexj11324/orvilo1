@@ -878,6 +878,9 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
+    // Property narrowing does not cross into `fenced` closures — capture the
+    // verified fields once for the remote calls below.
+    const deviceId = record.deviceId;
 
     const ownedIntegrationWorktreePath = deriveWorktreePath(
       record.repoPath,
@@ -906,7 +909,7 @@ export class TaskIntegrationService {
     const ensured = await lease.fenced('prepare', () =>
       this.ensureIntegrationWorktree({
         baseRef: this.baseRef(record),
-        deviceId: record.deviceId,
+        deviceId,
         integrationWorktreePath,
         repoPath: record.repoPath,
       }),
@@ -1278,10 +1281,14 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
+    // See integrateTaskRun: capture narrowed fields for the fenced closure.
+    const deviceId = record.deviceId;
+    const expectedHead = record.expectedHeadSha;
+
     const finalized = await lease.fenced('merge', () =>
       deviceGateway.finalizeGitMerge({
-        deviceId: record.deviceId,
-        expectedHead: record.expectedHeadSha,
+        deviceId,
+        expectedHead,
         path: finalizePath,
         userId: this.userId,
         workspaceId: this.workspaceId,
@@ -1438,12 +1445,13 @@ export class TaskIntegrationService {
       });
       return 'blocked';
     }
+    const deviceId = record.deviceId;
 
     let pushedToRemote: boolean | undefined;
     if (record.baseBranch !== 'HEAD') {
       const pushed = await lease.fenced('publish', () =>
         deviceGateway.pushGitBranch({
-          deviceId: record.deviceId,
+          deviceId,
           expectedSha: sha,
           path: publishPath,
           remoteBranch: record.baseBranch,

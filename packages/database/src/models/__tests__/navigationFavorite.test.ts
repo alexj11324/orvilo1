@@ -70,6 +70,19 @@ describe('NavigationFavoriteModel', () => {
     expect(listed.find((row) => row.targetId === 'task_secret')?.title).toBeNull();
   });
 
+  it('resolves a task title when the pin stores the route identifier', async () => {
+    // The sidebar pins by the identifier the route uses ('T-1'), not the row
+    // id — a lookup that only matches `tasks.id` can never resolve the title.
+    const tasks = new TaskModel(serverDB, userId, workspaceId);
+    const task = await tasks.create({ instruction: 'Pin me', name: 'Pinned task' });
+    const mine = new NavigationFavoriteModel(serverDB, userId, workspaceId);
+    await mine.pin({ targetId: task.identifier, targetType: 'task' });
+
+    expect((await mine.list()).find((row) => row.targetId === task.identifier)?.title).toBe(
+      'Pinned task',
+    );
+  });
+
   it('resolves task, team, and project titles the caller can still read', async () => {
     const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
     const visitorTasks = new TaskModel(serverDB, otherUserId, workspaceId);

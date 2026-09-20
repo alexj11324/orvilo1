@@ -744,9 +744,11 @@ describe('ClaudeCodeQuotaMenu', () => {
       updatedAt: new Date(),
     };
     mockQuotaService.listAccounts.mockResolvedValue([accountAlpha, accountBeta, accountGamma]);
-    mockQuotaService.getLatestReadings.mockImplementation(async (accountId: string) => {
+    mockQuotaService.getLatestReadings.mockImplementation(async (accountId?: string) => {
       const utilization =
-        (({ 'acc-a': 44, 'acc-b': 88, 'acc-c': 77 }) as Record<string, number>)[accountId] ?? 0;
+        (({ 'acc-a': 44, 'acc-b': 88, 'acc-c': 77 }) as Record<string, number>)[
+          accountId ?? ''
+        ] ?? 0;
       return [{ ...persistedSessionReading(Date.now() - 10_000), utilization }];
     });
     mockLambdaDeviceQuota

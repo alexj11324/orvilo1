@@ -34,6 +34,11 @@ const diag = (entry: string) => {
   pushScrollDiag(entry);
 };
 
+// Module-load stamp: if a failure dump shows an empty buffer despite a live
+// chat page, the page either reloaded (wiping window state) or this bundle
+// never loaded there — the stamp disambiguates that without console lines.
+pushScrollDiag(`useConversationScroll module loaded t=${Math.round(performance.now())}`);
+
 export const CONVERSATION_SPACER_ID = '__conversation_spacer__';
 export const CONVERSATION_SPACER_TRANSITION_MS = 200;
 
@@ -582,6 +587,7 @@ export const useConversationScroll = ({
     if (prevContextKeyRef.current === contextKey) return;
     prevContextKeyRef.current = contextKey;
 
+    diag(`context switch ${prevContextKeyRef.current} len=${dataSource.length}`);
     prevLengthRef.current = dataSource.length;
     unresolvedTailIds.clear();
     pinnedUserIds.clear();
@@ -592,7 +598,7 @@ export const useConversationScroll = ({
     setMounted(false);
     setScrollReduction(() => 0);
     prevScrollOffsetRef.current = null;
-  }, [contextKey]);
+  }, [contextKey, clearPin, dataSource.length, setMounted, setScrollReduction]);
 
   // --- send detection: single source of truth ---
   useEffect(() => {
@@ -619,6 +625,7 @@ export const useConversationScroll = ({
       }
       const fresh = lastUserIndex >= 0 && Date.now() - lastUserCreatedAt < 120_000;
       if (!fresh) {
+        diag(`switch pin disarmed (no fresh user row, lastUserIndex=${lastUserIndex})`);
         switchPinArmedRef.current = false;
       } else if (isAIGenerating) {
         switchPinArmedRef.current = false;

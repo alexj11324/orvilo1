@@ -35,6 +35,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
 
 import { TaskService } from '../task';
@@ -1799,6 +1800,19 @@ export class GoalService {
     effects: GoalAdvanceEffect[],
   ): Promise<GoalTickResult> => {
     const goalId = graph.goal.id;
+
+    // CAID rollout gate: orchestrated fan-out only dispatches when the
+    // deployment/workspace is admitted. The node stays untouched (ready) —
+    // no claim, no error — so flipping the flag back on re-drives it.
+    if (!(await isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }))) {
+      return {
+        goalId,
+        message: 'CAID dispatch admission is disabled for this deployment/workspace',
+        nodeId,
+        outcome: 'waiting_external',
+        taskId: task.id,
+      };
+    }
 
     // Advances arrive from independent sources — an event hook, a manual nudge,
     // the sweep — and can overlap. `runTask` decides whether a run is already

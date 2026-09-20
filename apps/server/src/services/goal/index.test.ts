@@ -76,6 +76,13 @@ vi.mock('@/database/models/goalGraph', async (importOriginal) => {
   return { ...mod, GoalGraphModel: InjectableGoalGraphModel };
 });
 
+// CAID admission (R10) is default-off; this suite exercises the orchestrated
+// dispatch path, so admission is allowed by default — one test flips it off.
+const caidAdmission = vi.hoisted(() => ({ allowed: vi.fn(async () => true) }));
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: caidAdmission.allowed,
+}));
+
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'goal-service-test-user';
 
@@ -379,6 +386,30 @@ describe('GoalService', () => {
 
     expect(runSpy).toHaveBeenCalledTimes(1);
     expect(results.filter((result) => result.message.startsWith('Started task'))).toHaveLength(1);
+  });
+
+  it('does not claim or start a Task while CAID dispatch admission is off (R10)', async () => {
+    caidAdmission.allowed.mockResolvedValue(false);
+    try {
+      const runSpy = vi
+        .spyOn(TaskRunnerService.prototype, 'runTask')
+        .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
+      const service = new GoalService(serverDB, userId);
+      const taskModel = new TaskModel(serverDB, userId);
+      const graph = await service.create({ title: 'Gated dispatch', tasks: ['Stay gated'] });
+      // First tick materializes the task node; the second reaches dispatchWork.
+      await service.tick(graph.goal.id);
+
+      const result = await service.tick(graph.goal.id);
+
+      // No claim, no run, no error — the node just waits for admission to open.
+      expect(result.outcome).toBe('waiting_external');
+      expect(result.message).toContain('CAID dispatch admission');
+      expect(runSpy).not.toHaveBeenCalled();
+      expect((await taskModel.findById(result.taskId!))?.status).not.toBe('running');
+    } finally {
+      caidAdmission.allowed.mockResolvedValue(true);
+    }
   });
 
   it('retries a failed verification once when advances race on recovery', async () => {

@@ -100,7 +100,10 @@ async function getChatQueueSnapshot(world: CustomWorld): Promise<unknown> {
         | {
             queuedMessages?: Record<string, unknown[]>;
             operationsByContext?: Record<string, string[]>;
-            operations?: Record<string, { status?: string; type?: string }>;
+            operations?: Record<
+              string,
+              { metadata?: { serverOperationId?: string }; status?: string; type?: string }
+            >;
             creatingTopicIds?: string[];
           }
         | undefined;
@@ -110,7 +113,11 @@ async function getChatQueueSnapshot(world: CustomWorld): Promise<unknown> {
         operations: Object.fromEntries(
           Object.entries(state.operations ?? {}).map(([id, op]) => [
             id,
-            { status: op.status, type: op.type },
+            {
+              serverOperationId: op.metadata?.serverOperationId,
+              status: op.status,
+              type: op.type,
+            },
           ]),
         ),
         operationsByContext: Object.fromEntries(
@@ -130,7 +137,34 @@ async function dumpScrollDiagnostics(world: CustomWorld): Promise<void> {
   if (scrollDiag.length > 0)
     console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
   const queue = await getChatQueueSnapshot(world);
-  if (queue) console.log(`   📍 chat queue: ${JSON.stringify(queue)}`);
+  if (queue) {
+    console.log(`   📍 chat queue: ${JSON.stringify(queue)}`);
+    // For each client op still `running`, ask the fake gateway what it
+    // recorded for the matching server op — proves whether the server pushed
+    // `agent_runtime_end` at all (a dropped push strands the op).
+    const runningServerOpIds = Object.values(
+      (queue as { operations?: Record<string, { serverOperationId?: string; status?: string }> })
+        .operations ?? {},
+    )
+      .filter((op) => op.status === 'running' && op.serverOperationId)
+      .map((op) => op.serverOperationId as string);
+    const gatewayPort = process.env.E2E_MOCK_GATEWAY_PORT || 3407;
+    for (const serverOpId of runningServerOpIds) {
+      try {
+        const res = await fetch(`http://localhost:${gatewayPort}/api/operations/${serverOpId}`);
+        console.log(
+          `   📍 gateway ledger ${serverOpId}: ${res.ok ? JSON.stringify(await res.json()) : `HTTP ${res.status}`}`,
+        );
+      } catch {
+        console.log(`   📍 gateway ledger ${serverOpId}: fetch failed`);
+      }
+    }
+  }
+  const gatewayDiag = await world.page
+    .evaluate(() => (globalThis as { __orviloGatewayDiag?: string[] }).__orviloGatewayDiag ?? [])
+    .catch(() => [] as string[]);
+  if (gatewayDiag.length > 0)
+    console.log(`   📍 gateway client diag: ${JSON.stringify(gatewayDiag.slice(-40))}`);
 }
 
 async function getScrollPgClient(world: CustomWorld) {

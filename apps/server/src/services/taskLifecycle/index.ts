@@ -42,7 +42,7 @@ import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { SystemAgentService } from '@/server/services/systemAgent';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
@@ -1078,8 +1078,7 @@ export class TaskLifecycleService {
         taskName: currentTask?.name || taskIdentifier,
       });
 
-      const modelRuntime = await initModelRuntimeFromDB(
-        this.db,
+      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
         this.userId,
         provider,
         this.workspaceId,
@@ -1192,8 +1191,7 @@ export class TaskLifecycleService {
           taskName: currentTask.name || taskIdentifier,
         });
 
-        const modelRuntime = await initModelRuntimeFromDB(
-          this.db,
+        const modelRuntime = await initModelRuntimeFromDeploymentConfig(
           this.userId,
           provider,
           this.workspaceId,
@@ -1257,8 +1255,7 @@ export class TaskLifecycleService {
         taskName: currentTask.name || taskIdentifier,
       });
 
-      const modelRuntime = await initModelRuntimeFromDB(
-        this.db,
+      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
         this.userId,
         provider,
         this.workspaceId,

@@ -22,7 +22,7 @@ afterEach(() => {
 describe('SystemAgentService.generateTopicTitle', () => {
   it('retains the requested topic identity across calls on a shared runtime', async () => {
     const generateObject = vi.fn().mockResolvedValue({ title: ' Generated title ' });
-    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockResolvedValue({
+    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDeploymentConfig').mockResolvedValue({
       generateObject,
     } as unknown as ModelRuntime);
     const service = new SystemAgentService({} as OrviloDatabase, 'user-1');

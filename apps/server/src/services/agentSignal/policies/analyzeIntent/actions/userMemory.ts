@@ -233,7 +233,7 @@ export const runMemoryActionAgent = async (
   // eagerly touch server-only env at module init. This policy action sits on
   // the light agentSignal request path imported by aiAgent, so static imports
   // would couple that whole subsystem into every aiAgent import.
-  const [{ initModelRuntimeFromDB }, { memoryRuntime }] = await Promise.all([
+  const [{ initModelRuntimeFromDeploymentConfig }, { memoryRuntime }] = await Promise.all([
     import('@/server/modules/ModelRuntime'),
     import('@/server/services/toolExecution/serverRuntimes/memory'),
   ]);
@@ -273,8 +273,7 @@ export const runMemoryActionAgent = async (
       .filter((pair): pair is readonly [string, string] => Boolean(pair[0] && pair[1])),
   );
 
-  const modelRuntime = await initModelRuntimeFromDB(
-    options.db,
+  const modelRuntime = await initModelRuntimeFromDeploymentConfig(
     options.userId,
     DEFAULT_MINI_SYSTEM_AGENT_ITEM.provider,
     options.workspaceId,

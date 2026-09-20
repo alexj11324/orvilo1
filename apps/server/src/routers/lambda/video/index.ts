@@ -32,7 +32,7 @@ import { getServerDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { FileService } from '@/server/services/file';
 import { processBackgroundVideoPolling } from '@/server/services/generation/videoBackgroundPolling';
 import { after } from '@/server/utils/scheduleAfterResponse';
@@ -254,7 +254,7 @@ export const videoRouter = router({
 
       // Step 2: Call model runtime to submit video generation task
       try {
-        const modelRuntime = await initModelRuntimeFromDB(serverDB, userId, provider, wsId);
+        const modelRuntime = await initModelRuntimeFromDeploymentConfig(userId, provider, wsId);
 
         const callbackBaseUrl = process.env.WEBHOOK_PROXY_URL || appEnv.APP_URL;
         const callbackUrl = `${callbackBaseUrl}/api/webhooks/video/${provider}?token=${webhookToken}`;

@@ -3,7 +3,7 @@ import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 import {
   classifySkillIntent,
@@ -12,7 +12,7 @@ import {
 } from '../skillIntent';
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 describe('skillIntent classifier', () => {
@@ -20,7 +20,7 @@ describe('skillIntent classifier', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(initModelRuntimeFromDB).mockResolvedValue({
+    vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
       generateObject: mockGenerateObject,
     } as never);
   });
@@ -296,8 +296,7 @@ describe('skillIntent classifier', () => {
       topicLabel: 'login-debugging',
     });
 
-    expect(initModelRuntimeFromDB).toHaveBeenCalledWith(
-      {} as OrviloDatabase,
+    expect(initModelRuntimeFromDeploymentConfig).toHaveBeenCalledWith(
       'user_1',
       'openai',
       undefined,

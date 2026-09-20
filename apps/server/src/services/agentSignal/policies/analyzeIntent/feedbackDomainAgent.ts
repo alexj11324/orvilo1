@@ -10,7 +10,7 @@ import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 import type {
   AgentSignalFeedbackEvidence,
@@ -108,8 +108,7 @@ export class FeedbackDomainJudgeAgentService {
    */
   async judgeDomains(params: JudgeFeedbackDomainsParams): Promise<FeedbackDomainJudgeAgentResult> {
     const payload = chainAgentSignalAnalyzeIntentRoute(params);
-    const modelRuntime = await initModelRuntimeFromDB(
-      this.db,
+    const modelRuntime = await initModelRuntimeFromDeploymentConfig(
       this.userId,
       this.modelConfig.provider,
       this.workspaceId,

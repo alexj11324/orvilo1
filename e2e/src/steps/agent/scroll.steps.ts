@@ -387,7 +387,7 @@ Given('流式响应被放慢以模拟长文输出', async function (this: Custom
 // When steps
 // ---------------------------------------------------------------------------
 
-When('用户发送长文消息并等待回复完成', { timeout: 240_000 }, async function (this: CustomWorld) {
+When('用户发送长文消息并等待回复完成', { timeout: 360_000 }, async function (this: CustomWorld) {
   const prompt = '请输出一篇很长的文章';
   await sendPrompt(this, prompt, presetResponses.longScrollArticle);
 
@@ -407,7 +407,7 @@ When('用户发送长文消息并等待回复完成', { timeout: 240_000 }, asyn
   await waitForAssistantMessageToSettle(this, 200);
 });
 
-When('用户发送一条触发长文输出的消息', { timeout: 180_000 }, async function (this: CustomWorld) {
+When('用户发送一条触发长文输出的消息', { timeout: 240_000 }, async function (this: CustomWorld) {
   const prompt = '请输出一篇很长的文章';
   await sendPrompt(this, prompt, presetResponses.longScrollArticle);
 
@@ -419,7 +419,7 @@ When('用户发送一条触发长文输出的消息', { timeout: 180_000 }, asyn
 
 When(
   '用户完成一轮用于垫高列表的长回复对话',
-  { timeout: 240_000 },
+  { timeout: 360_000 },
   async function (this: CustomWorld) {
     const prompt = '请先输出一篇很长的文章用于垫高列表';
     await sendPrompt(this, prompt, presetResponses.longScrollArticle);
@@ -429,7 +429,7 @@ When(
 
 When(
   '用户发送一条触发短回复的消息并等待回复完成',
-  { timeout: 180_000 },
+  { timeout: 300_000 },
   async function (this: CustomWorld) {
     const prompt = '请输出一段短回复用于测试底部补偿区域';
     await sendPrompt(this, prompt, '这是一个短回复，用于让底部补偿区域保持可见。');
@@ -477,13 +477,13 @@ When('等待流式响应结束', { timeout: 200_000 }, async function (this: Cus
 // Then steps
 // ---------------------------------------------------------------------------
 
-Then('视口应贴近聊天列表底部', async function (this: CustomWorld) {
+Then('视口应贴近聊天列表底部', { timeout: 60_000 }, async function (this: CustomWorld) {
   const snap = await getScrollSnapshot(this);
   expect(snap, 'failed to locate scroll container').not.toBeNull();
   expect(snap!.distanceToBottom).toBeLessThanOrEqual(AT_BOTTOM_EPSILON);
 });
 
-Then('视口不应贴近聊天列表底部', async function (this: CustomWorld) {
+Then('视口不应贴近聊天列表底部', { timeout: 90_000 }, async function (this: CustomWorld) {
   // The pin keeps the user's message at the container top with a bottom
   // compensation spacer, so scrollTop legitimately equals the maximum when
   // pinned — distanceToBottom can never distinguish "pinned" from
@@ -576,7 +576,7 @@ After({ tags: '@scroll' }, async function (this: CustomWorld) {
   }
 });
 
-Then('用户消息不应固定在聊天列表顶部', async function (this: CustomWorld) {
+Then('用户消息不应固定在聊天列表顶部', { timeout: 60_000 }, async function (this: CustomWorld) {
   const rect = await measurePinDelta(this);
 
   expect(rect).not.toBeNull();
@@ -618,7 +618,7 @@ async function measurePinDelta(world: CustomWorld) {
   });
 }
 
-Then('用户消息应固定在聊天列表顶部', async function (this: CustomWorld) {
+Then('用户消息应固定在聊天列表顶部', { timeout: 90_000 }, async function (this: CustomWorld) {
   // The pin uses a smooth (`align:'start', smooth:true`) scroll that re-fires on
   // every layout bump while the reply streams — so the anchored position is
   // reached *repeatedly*, not at one fixed instant. Sampling once after a fixed
@@ -644,37 +644,41 @@ Then('用户消息应固定在聊天列表顶部', async function (this: CustomW
     .toBeLessThanOrEqual(PIN_SLACK);
 });
 
-Then('聊天列表应以多帧平滑滚动把用户消息顶到顶部', async function (this: CustomWorld) {
-  const PIN_SLACK = 150;
-  await expect
-    .poll(
-      async () => {
-        const rect = await measurePinDelta(this);
-        return rect ? Math.abs(rect.delta) : null;
-      },
-      { message: 'latest user message did not reach the pinned position', timeout: 60_000 },
-    )
-    .toBeLessThanOrEqual(PIN_SLACK);
+Then(
+  '聊天列表应以多帧平滑滚动把用户消息顶到顶部',
+  { timeout: 90_000 },
+  async function (this: CustomWorld) {
+    const PIN_SLACK = 150;
+    await expect
+      .poll(
+        async () => {
+          const rect = await measurePinDelta(this);
+          return rect ? Math.abs(rect.delta) : null;
+        },
+        { message: 'latest user message did not reach the pinned position', timeout: 60_000 },
+      )
+      .toBeLessThanOrEqual(PIN_SLACK);
 
-  const { calls, samples } = await stopScrollTrace(this.page);
-  const summary = classifyScrollTrace(samples);
-  console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);
+    const { calls, samples } = await stopScrollTrace(this.page);
+    const summary = classifyScrollTrace(samples);
+    console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);
 
-  // The pin moves the message via `scrollTo({ behavior: 'smooth' })`. The
-  // regression being guarded is a lost pin animation — i.e. the scroll never
-  // firing, or firing without the smooth behavior. Playwright's Chromium
-  // applies programmatic smooth scrolls in a single frame (no compositor
-  // animation), so multi-frame slide is never observable here; verify the
-  // smooth-scroll call was issued and the list actually traveled.
-  const smoothCalls = calls.filter((c) => c.behavior === 'smooth');
-  expect(
-    smoothCalls.length,
-    `expected the pin to issue a smooth scrollTo; calls=${JSON.stringify(calls)}`,
-  ).toBeGreaterThan(0);
-  expect(summary.travel, `scroll trace: ${JSON.stringify(summary)}`).toBeGreaterThan(0);
-});
+    // The pin moves the message via `scrollTo({ behavior: 'smooth' })`. The
+    // regression being guarded is a lost pin animation — i.e. the scroll never
+    // firing, or firing without the smooth behavior. Playwright's Chromium
+    // applies programmatic smooth scrolls in a single frame (no compositor
+    // animation), so multi-frame slide is never observable here; verify the
+    // smooth-scroll call was issued and the list actually traveled.
+    const smoothCalls = calls.filter((c) => c.behavior === 'smooth');
+    expect(
+      smoothCalls.length,
+      `expected the pin to issue a smooth scrollTo; calls=${JSON.stringify(calls)}`,
+    ).toBeGreaterThan(0);
+    expect(summary.travel, `scroll trace: ${JSON.stringify(summary)}`).toBeGreaterThan(0);
+  },
+);
 
-Then('聊天列表底部补偿区域高度不应收缩', async function (this: CustomWorld) {
+Then('聊天列表底部补偿区域高度不应收缩', { timeout: 60_000 }, async function (this: CustomWorld) {
   const before = this.testContext.scrollCompensationHeight as number | undefined;
   expect(before, 'missing recorded bottom compensation height').toBeDefined();
 

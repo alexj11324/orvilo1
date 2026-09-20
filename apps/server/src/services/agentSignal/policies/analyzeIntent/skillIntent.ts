@@ -10,7 +10,7 @@ import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
+import { AiGenerationService, isAcpJudgmentBindingError } from '@/server/services/aiGeneration';
 
 import type {
   ClassifierDiagnosticsService,
@@ -212,6 +212,9 @@ export const classifySkillIntent = async (
       stage: 'skill-intent',
     });
 
+    // A missing ACP binding is an explicit block, not weak evidence.
+    if (isAcpJudgmentBindingError(error)) throw error;
+
     return {
       actionIntent: 'maintain',
       classifierError,
@@ -280,30 +283,38 @@ export class SkillIntentClassifierAgentService implements SkillIntentClassifierS
    * - One Zod-validated skill-intent classification
    */
   async classify(input: SkillIntentClassifierInput): Promise<AgentSignalSkillIntentClassification> {
-    const modelRuntime = await initModelRuntimeFromDeploymentConfig(
-      this.userId,
-      this.modelConfig.provider,
-      this.workspaceId,
-    );
-
     log(
       'classifySkillIntent model=%s provider=%s',
       this.modelConfig.model,
       this.modelConfig.provider,
     );
 
-    const result = await modelRuntime.generateObject(
+    // Skill-intent classification is a retained machine judgment — run it as an
+    // explicitly authorized ACP operation bound to the feedback target's agent.
+    const result = await new AiGenerationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).generateObject(
       {
         messages: chainAgentSignalSkillIntent(input),
         model: this.modelConfig.model,
+        provider: this.modelConfig.provider,
         schema: AGENT_SIGNAL_SKILL_INTENT_JSON_SCHEMA,
       },
       {
+        judgment: {
+          binding: { agentId: input.agentId },
+          purpose: 'agentSignal.skillIntent',
+        },
+        kind: 'judgment',
         metadata: { trigger: RequestTrigger.AgentSignal },
         tracing: {
+          agentId: input.agentId,
           promptVersion: AGENT_SIGNAL_SKILL_INTENT_PROMPT_VERSION,
           scenario: TRACING_SCENARIOS.SignalSkillIntent,
           schemaName: AGENT_SIGNAL_SKILL_INTENT_JSON_SCHEMA.name,
+          topicId: input.topicId,
         } satisfies TracingOptions,
       },
     );

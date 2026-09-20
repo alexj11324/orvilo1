@@ -40,6 +40,8 @@ describe('GoalExplorationPlanner', () => {
     expect(generateObject).toHaveBeenCalledWith(
       expect.objectContaining({ model: 'goal-model', provider: 'goal-provider' }),
       {
+        judgment: { binding: { agentId: undefined }, purpose: 'goal.explore' },
+        kind: 'judgment',
         tracing: { scenario: 'goal_explore', promptVersion: 'v2', schemaName: 'goal_exploration' },
       },
     );

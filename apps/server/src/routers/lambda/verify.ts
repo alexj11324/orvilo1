@@ -40,6 +40,7 @@ import { isUuid } from '@/database/utils/uuid';
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { FileService } from '@/server/services/file';
 import { GoalCriteriaGeneratorService } from '@/server/services/goal/criteriaGenerator';
 import {
@@ -545,6 +546,17 @@ export const verifyRouter = router({
       try {
         return await ctx.planGenerator.generateCriteria(input);
       } catch (error) {
+        // Missing ACP judgment binding is a precondition, not a 500: the user
+        // must bind a judgment agent (or the operator must set one) first.
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -575,6 +587,17 @@ export const verifyRouter = router({
       try {
         return await ctx.goalCriteriaGenerator.generate(input);
       } catch (error) {
+        // Missing ACP judgment binding is a precondition, not a 500: the user
+        // must bind a judgment agent (or the operator must set one) first.
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -603,6 +626,17 @@ export const verifyRouter = router({
       try {
         return await ctx.goalCriteriaGenerator.generatePlan(input);
       } catch (error) {
+        // Missing ACP judgment binding is a precondition, not a 500: the user
+        // must bind a judgment agent (or the operator must set one) first.
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({

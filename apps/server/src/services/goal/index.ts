@@ -37,6 +37,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
@@ -2183,7 +2184,15 @@ export class GoalService {
       }
 
       const generator = new GoalCriteriaGeneratorService(this.db, this.userId, this.workspaceId);
-      const plan = await generator.decompose({ requirement }).catch(() => undefined);
+      const plan = await generator
+        .decompose({ agentId: graph.goal.agentId, requirement })
+        .catch((error) => {
+          // A missing authorized judgment binding must not be swallowed into
+          // the single-task degrade — it means the goal's coordinator agent is
+          // gone or unbound, which is an explicit block, not a planner miss.
+          if (isAcpJudgmentBindingError(error)) throw error;
+          return undefined;
+        });
 
       const draftTasks: GoalDecompositionDraft['tasks'] = plan?.tasks ?? [
         { instruction: problem?.description ?? requirement, title: graph.goal.title },

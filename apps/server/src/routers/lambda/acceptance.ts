@@ -863,6 +863,9 @@ export const acceptanceRouter = router({
             predictor.predict({
               checkResultId: check.result!.id,
               instructionDocumentId: check.planItem?.documentId,
+              // The Acceptance's pinned verifier is the authorized judgment
+              // binding (builtin verify agent + env are the fallbacks).
+              judgmentAgentId: acceptance.config?.verifierAgentId,
               modelConfig,
               requirement: acceptance.requirement,
               surface: check.surface,

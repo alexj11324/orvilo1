@@ -3,7 +3,7 @@ import type { CreateMessageParams } from '@orvilo/types';
 import { AgentRuntimeErrorType, ChatErrorType, ThreadType } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import type { Mock } from 'vitest';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
 import { MessageModel } from '@/database/models/message';
@@ -15,6 +15,10 @@ import { aiChatRouter } from '../aiChat';
 
 const flushAsyncTasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+const aiGenerationMocks = vi.hoisted(() => ({
+  generateObject: vi.fn(),
+}));
+
 vi.mock('@/database/models/agent');
 vi.mock('@/database/models/message');
 vi.mock('@/database/models/thread');
@@ -22,6 +26,12 @@ vi.mock('@/database/models/topic');
 vi.mock('@/server/services/aiChat');
 vi.mock('@/server/services/file', () => ({
   FileService: vi.fn(),
+}));
+vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  AiGenerationService: vi.fn(function () {
+    return { generateObject: aiGenerationMocks.generateObject };
+  }),
 }));
 vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDeploymentConfig: vi.fn(),
@@ -1174,18 +1184,22 @@ describe('aiChatRouter', () => {
   });
 
   describe('outputJSON', () => {
-    it('should successfully generate structured output', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
+    const generateObject = aiGenerationMocks.generateObject;
 
+    const callOutputJSON = (input: Record<string, unknown>) =>
+      aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any).outputJSON(input as any);
+
+    beforeEach(() => {
+      generateObject.mockReset();
+      // `ctx.topicModel` is the auto-mocked class — `findById` resolves
+      // `undefined`, so no traced topicId binding is in play unless a test
+      // configures one.
+      vi.mocked(TopicModel).mockClear();
+    });
+
+    it('should successfully generate structured output as a judgment run', async () => {
       const mockResult = { object: { name: 'John', age: 30 } };
-      const mockGenerateObject = vi.fn().mockResolvedValue(mockResult);
-
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockResolvedValue(mockResult);
 
       const input = {
         messages: [{ content: 'test', role: 'user' }],
@@ -1200,17 +1214,22 @@ describe('aiChatRouter', () => {
         },
       };
 
-      const result = await caller.outputJSON(input);
+      const result = await callOutputJSON(input);
 
-      expect(initModelRuntimeFromDeploymentConfig).toHaveBeenCalledWith('u1', 'openai');
-      expect(mockGenerateObject).toHaveBeenCalledWith(
+      expect(generateObject).toHaveBeenCalledWith(
         {
           messages: input.messages,
           model: 'gpt-4o',
+          provider: 'openai',
           schema: input.schema,
           tools: undefined,
         },
         {
+          judgment: {
+            binding: { agentId: undefined },
+            purpose: 'outputJSON.generic',
+          },
+          kind: 'judgment',
           metadata: { trigger: 'chat' },
           tracing: { tracingId: expect.stringMatching(/^[0-9a-f-]{36}$/) },
         },
@@ -1219,20 +1238,51 @@ describe('aiChatRouter', () => {
       expect(result.tracingId).toMatch(/^[0-9a-f-]{36}$/);
     });
 
+    it('binds the judgment to the traced agent when provided', async () => {
+      generateObject.mockResolvedValue({});
+
+      await callOutputJSON({
+        messages: [{ content: 'test', role: 'user' }],
+        model: 'gpt-4o',
+        provider: 'openai',
+        tracing: { agentId: 'agent-9', scenario: 'builder_suggestion' },
+      });
+
+      expect(generateObject.mock.calls[0][1].judgment).toEqual({
+        binding: { agentId: 'agent-9' },
+        purpose: 'outputJSON.builder_suggestion',
+      });
+    });
+
+    it('surfaces a missing ACP binding as a precondition failure', async () => {
+      const { AcpJudgmentBindingError } = await import('@/server/services/aiGeneration');
+      const bindingError = new AcpJudgmentBindingError('outputJSON.generic');
+      generateObject.mockRejectedValue(bindingError);
+
+      await expect(
+        callOutputJSON({
+          messages: [{ content: 'test', role: 'user' }],
+          model: 'gpt-4o',
+          provider: 'openai',
+        }),
+      ).rejects.toMatchObject({
+        cause: bindingError,
+        code: 'PRECONDITION_FAILED',
+        message: 'ACP_JUDGMENT_NO_BINDING',
+      });
+      expect((bindingError as any).__orviloSilentTRPCErrorLog).toBe(true);
+    });
+
     it('maps provider auth runtime errors to UNAUTHORIZED instead of leaking as internal errors', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const runtimeError = {
         error: undefined,
         errorType: AgentRuntimeErrorType.InvalidProviderAPIKey,
       };
 
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockRejectedValueOnce(runtimeError);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValueOnce(runtimeError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'gpt-4o',
           provider: 'openai',
@@ -1249,19 +1299,15 @@ describe('aiChatRouter', () => {
     });
 
     it('maps known runtime errors with their configured transport status', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const runtimeError = {
         error: { message: 'rate limited' },
         errorType: AgentRuntimeErrorType.RateLimitExceeded,
       };
 
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockRejectedValueOnce(runtimeError);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValueOnce(runtimeError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'gpt-4o',
           provider: 'openai',
@@ -1278,19 +1324,15 @@ describe('aiChatRouter', () => {
     });
 
     it('marks input completion runtime 4xx errors to skip tRPC handler logging', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const runtimeError = {
         error: { message: 'rate limited' },
         errorType: AgentRuntimeErrorType.RateLimitExceeded,
       };
 
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockRejectedValueOnce(runtimeError);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValueOnce(runtimeError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'gpt-4o',
           provider: 'openai',
@@ -1304,19 +1346,15 @@ describe('aiChatRouter', () => {
     });
 
     it('does not mark non-input-completion runtime errors as silent', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const runtimeError = {
         error: { message: 'rate limited' },
         errorType: AgentRuntimeErrorType.RateLimitExceeded,
       };
 
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockRejectedValueOnce(runtimeError);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValueOnce(runtimeError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'gpt-4o',
           provider: 'openai',
@@ -1330,23 +1368,15 @@ describe('aiChatRouter', () => {
     });
 
     it('maps numeric chat error types to their tRPC status', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const accessError = {
         error: { message: ChatErrorType.Forbidden },
         errorType: ChatErrorType.Forbidden,
         message: 'Forbidden',
       };
-      const mockGenerateObject = vi.fn().mockRejectedValue(accessError);
-
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValue(accessError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
           provider: 'orvilo',
@@ -1381,18 +1411,10 @@ describe('aiChatRouter', () => {
         source: 'legacy errorMessage',
       },
     ])('preserves $source for numeric chat errors', async ({ accessError, expectedMessage }) => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
-      const mockGenerateObject = vi.fn().mockRejectedValue(accessError);
-
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValue(accessError);
 
       await expect(
-        caller.outputJSON({
+        callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
           provider: 'orvilo',
@@ -1411,19 +1433,11 @@ describe('aiChatRouter', () => {
     ])(
       'maps numeric status $errorType to $expectedCode with a generic message',
       async ({ errorType, expectedCode }) => {
-        const { initModelRuntimeFromDeploymentConfig } =
-          await import('@/server/modules/ModelRuntime');
         const accessError = { error: {}, errorType };
-        const mockGenerateObject = vi.fn().mockRejectedValue(accessError);
-
-        vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-          generateObject: mockGenerateObject,
-        } as any);
-
-        const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+        generateObject.mockRejectedValue(accessError);
 
         await expect(
-          caller.outputJSON({
+          callOutputJSON({
             messages: [{ content: 'test', role: 'user' }],
             model: 'claude-fable-5',
             provider: 'orvilo',
@@ -1437,22 +1451,14 @@ describe('aiChatRouter', () => {
     );
 
     it('does not silence numeric runtime 5xx errors', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const runtimeError = {
         error: { message: 'Provider unavailable' },
         errorType: 503,
       };
-      const mockGenerateObject = vi.fn().mockRejectedValue(runtimeError);
-
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValue(runtimeError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
           provider: 'orvilo',
@@ -1470,19 +1476,11 @@ describe('aiChatRouter', () => {
     });
 
     it.each([399, 600])('does not map out-of-range numeric error type %i', async (errorType) => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
       const runtimeError = { errorType };
-      const mockGenerateObject = vi.fn().mockRejectedValue(runtimeError);
-
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValue(runtimeError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'claude-fable-5',
           provider: 'orvilo',
@@ -1498,9 +1496,6 @@ describe('aiChatRouter', () => {
     });
 
     it('maps raw provider 4xx errors to BAD_REQUEST instead of internal errors', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
-
       // Raw SDK APIError shape: carries an HTTP status but no errorType — the
       // generateObject path rethrows upstream errors verbatim (e.g. a BYOK
       // gateway rejecting response_format json_schema).
@@ -1510,16 +1505,10 @@ describe('aiChatRouter', () => {
         ),
         { status: 400 },
       );
-      const mockGenerateObject = vi.fn().mockRejectedValue(providerError);
-
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
+      generateObject.mockRejectedValue(providerError);
 
       try {
-        await caller.outputJSON({
+        await callOutputJSON({
           messages: [{ content: 'test', role: 'user' }],
           model: 'deepseek-v4-flash-free',
           provider: 'opencodezen',
@@ -1535,10 +1524,7 @@ describe('aiChatRouter', () => {
       }
     });
 
-    it('should handle tools parameter when provided', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
-
+    it('rejects tools on the judgment path (judgment runs are tool-free)', async () => {
       const mockTools = [
         {
           type: 'function' as const,
@@ -1551,47 +1537,30 @@ describe('aiChatRouter', () => {
           },
         },
       ];
-      const mockGenerateObject = vi.fn().mockResolvedValue({ object: {} });
+      const toolError = new Error('Judgment runs are tool-free; drop `tools` or use kind "basic"');
+      generateObject.mockRejectedValue(toolError);
 
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
-
-      const input = {
-        messages: [],
-        model: 'gpt-4o',
-        provider: 'openai',
-        tools: mockTools,
-      };
-
-      await caller.outputJSON(input);
-
-      expect(mockGenerateObject).toHaveBeenCalledWith(
-        {
+      await expect(
+        callOutputJSON({
           messages: [],
           model: 'gpt-4o',
-          schema: undefined,
+          provider: 'openai',
           tools: mockTools,
-        },
-        {
-          metadata: { trigger: 'chat' },
-          tracing: { tracingId: expect.stringMatching(/^[0-9a-f-]{36}$/) },
-        },
-      );
+        }),
+      ).rejects.toMatchObject({
+        cause: toolError,
+        code: 'INTERNAL_SERVER_ERROR',
+      });
+
+      // The router still forwards `tools` verbatim — the judgment service arm
+      // is what rejects them.
+      expect(generateObject.mock.calls[0][0].tools).toEqual(mockTools);
     });
 
     it('merges caller metadata over the default trigger and forwards tracing', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
-      const mockGenerateObject = vi.fn().mockResolvedValue({ completion: 'hi there' });
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
+      generateObject.mockResolvedValue({ completion: 'hi there' });
 
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
-      const result = await caller.outputJSON({
+      const result = await callOutputJSON({
         messages: [{ content: 'be helpful', role: 'system' }],
         metadata: { correlationId: 'cid-1' },
         model: 'gpt-4o-mini',
@@ -1612,7 +1581,12 @@ describe('aiChatRouter', () => {
         },
       });
 
-      expect(mockGenerateObject.mock.calls[0][1]).toEqual({
+      expect(generateObject.mock.calls[0][1]).toEqual({
+        judgment: {
+          binding: { agentId: undefined },
+          purpose: 'outputJSON.input_completion',
+        },
+        kind: 'judgment',
         metadata: { correlationId: 'cid-1', trigger: 'chat' },
         tracing: {
           promptVersion: 'v2.0',
@@ -1625,17 +1599,8 @@ describe('aiChatRouter', () => {
     });
 
     it('rejects a caller-supplied tracing.tracingId that is not a UUID', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
-      const mockGenerateObject = vi.fn();
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
-
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
-
       await expect(
-        caller.outputJSON({
+        callOutputJSON({
           messages: [],
           model: 'gpt-4o-mini',
           provider: 'openai',
@@ -1643,20 +1608,14 @@ describe('aiChatRouter', () => {
         }),
       ).rejects.toThrow();
 
-      expect(mockGenerateObject).not.toHaveBeenCalled();
+      expect(generateObject).not.toHaveBeenCalled();
     });
 
     it('honours caller-supplied tracing.tracingId instead of generating a new one', async () => {
-      const { initModelRuntimeFromDeploymentConfig } =
-        await import('@/server/modules/ModelRuntime');
-      const mockGenerateObject = vi.fn().mockResolvedValue({ completion: 'ok' });
-      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({
-        generateObject: mockGenerateObject,
-      } as any);
+      generateObject.mockResolvedValue({ completion: 'ok' });
 
       const callerSuppliedId = '00000000-0000-4000-8000-000000000001';
-      const caller = aiChatRouter.createCaller({ ...mockCtx, serverDB: {} } as any);
-      const result = await caller.outputJSON({
+      const result = await callOutputJSON({
         messages: [],
         model: 'gpt-4o-mini',
         provider: 'openai',
@@ -1664,7 +1623,7 @@ describe('aiChatRouter', () => {
       });
 
       expect(result.tracingId).toBe(callerSuppliedId);
-      expect(mockGenerateObject.mock.calls[0][1].tracing.tracingId).toBe(callerSuppliedId);
+      expect(generateObject.mock.calls[0][1].tracing.tracingId).toBe(callerSuppliedId);
     });
   });
 });

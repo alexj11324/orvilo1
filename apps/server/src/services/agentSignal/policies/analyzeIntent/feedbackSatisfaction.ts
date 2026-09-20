@@ -12,7 +12,7 @@ import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
+import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { classifySatisfaction, transitionToSignals } from '../../processors';
 import { defineSourceHandler } from '../../runtime/middleware';
@@ -37,8 +37,12 @@ const FeedbackSatisfactionStagePayloadSchema = z.object({
  * One normalized satisfaction-judge input.
  */
 export interface JudgeFeedbackSatisfactionParams {
+  /** The agent whose turn the feedback targets — the ACP judgment binding. */
+  agentId?: string;
   message: string;
   serializedContext?: string;
+  /** The topic the feedback turn belongs to. */
+  topicId?: string;
 }
 
 /**
@@ -135,11 +139,6 @@ export class FeedbackSatisfactionJudgeAgentService implements FeedbackSatisfacti
     params: JudgeFeedbackSatisfactionParams,
   ): Promise<AgentSignalFeedbackSatisfactionStagePayload> {
     const payload = chainAgentSignalAnalyzeIntentFeedbackSatisfaction(params);
-    const modelRuntime = await initModelRuntimeFromDeploymentConfig(
-      this.userId,
-      this.modelConfig.provider,
-      this.workspaceId,
-    );
 
     log(
       'judgeSatisfaction model=%s provider=%s',
@@ -147,18 +146,32 @@ export class FeedbackSatisfactionJudgeAgentService implements FeedbackSatisfacti
       this.modelConfig.provider,
     );
 
-    const result = await modelRuntime.generateObject(
+    // Satisfaction is a retained machine judgment — run it as an explicitly
+    // authorized ACP operation bound to the feedback target's agent.
+    const result = await new AiGenerationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).generateObject(
       {
         messages: payload.messages,
         model: this.modelConfig.model,
+        provider: this.modelConfig.provider,
         schema: AGENT_SIGNAL_FEEDBACK_SATISFACTION_JSON_SCHEMA,
       },
       {
+        judgment: {
+          binding: { agentId: params.agentId },
+          purpose: 'agentSignal.feedbackSatisfaction',
+        },
+        kind: 'judgment',
         metadata: { trigger: RequestTrigger.AgentSignal },
         tracing: {
+          agentId: params.agentId,
           promptVersion: AGENT_SIGNAL_FEEDBACK_SATISFACTION_PROMPT_VERSION,
           scenario: TRACING_SCENARIOS.SignalFeedbackSatisfaction,
           schemaName: AGENT_SIGNAL_FEEDBACK_SATISFACTION_JSON_SCHEMA.name,
+          topicId: params.topicId,
         } satisfies TracingOptions,
       },
     );

@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import {
@@ -24,6 +25,11 @@ export interface GenerateReportParams {
   deliverable: string;
   goal: string;
   modelConfig: { model: string; provider: string };
+  /**
+   * Preferred ACP binding for the narrative judgment (task-pinned verifier).
+   * Falls back to the builtin verify agent slug, then the env binding.
+   */
+  verifierAgentId?: string;
   /** The verification session to summarize (the canonical run-anchor). */
   verifyRunId: string;
 }
@@ -56,7 +62,7 @@ export class VerifyReporterService {
   }
 
   async generateReport(params: GenerateReportParams) {
-    const { verifyRunId, goal, deliverable, modelConfig } = params;
+    const { verifyRunId, goal, deliverable, modelConfig, verifierAgentId } = params;
 
     const results = await this.resultModel.listByRun(verifyRunId);
     if (results.length === 0) {
@@ -101,7 +107,7 @@ export class VerifyReporterService {
       verdict,
     });
 
-    const narrative = await this.buildNarrative(chain, modelConfig);
+    const narrative = await this.buildNarrative(chain, modelConfig, verifierAgentId);
 
     return this.reportModel.upsertByRun({
       content: narrative?.content ?? null,
@@ -122,6 +128,7 @@ export class VerifyReporterService {
   private async buildNarrative(
     chain: ReturnType<typeof chainVerifyReport>,
     modelConfig: { model: string; provider: string },
+    verifierAgentId?: string,
   ) {
     try {
       const ai = new AiGenerationService(this.db, this.userId);
@@ -133,6 +140,14 @@ export class VerifyReporterService {
           schema: REPORT_NARRATIVE_JSON_SCHEMA,
         },
         {
+          judgment: {
+            binding: {
+              agentId: verifierAgentId,
+              slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+            },
+            purpose: 'verify.report',
+          },
+          kind: 'judgment',
           tracing: {
             promptVersion: VERIFY_REPORT_PROMPT_VERSION,
             scenario: TRACING_SCENARIOS.VerifyReport,

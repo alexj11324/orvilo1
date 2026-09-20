@@ -4,10 +4,12 @@ import { TRPCError } from '@trpc/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskModel } from '@/database/models/task';
+import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 
+import { buildTaskPrompt } from './buildTaskPrompt';
 import { TaskRunnerService } from './index';
 
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
@@ -174,14 +176,12 @@ describe('TaskRunnerService delegated runs', () => {
       success: true,
       topicId: 'tpc_1',
     });
-    const assertMayCommit = vi
-      .fn()
-      .mockRejectedValue(
-        new TRPCError({
-          code: 'CONFLICT',
-          message: 'Execution superseded by a newer delegation epoch',
-        }),
-      );
+    const assertMayCommit = vi.fn().mockRejectedValue(
+      new TRPCError({
+        code: 'CONFLICT',
+        message: 'Execution superseded by a newer delegation epoch',
+      }),
+    );
     const { service } = newRunner({ assertMayCommit });
     const updateHeartbeat = vi.mocked(TaskModel.prototype.updateHeartbeat);
 
@@ -237,6 +237,38 @@ describe('TaskRunnerService delegated runs', () => {
     expect(TaskTopicModel.prototype.startRun).not.toHaveBeenCalled();
     expect(interruptTask).toHaveBeenCalledWith(
       expect.objectContaining({ operationId: 'op-1', topicId: 'tpc_1' }),
+    );
+  });
+
+  it('releases a dependency-blocked claim back to backlog — not paused', async () => {
+    const task = baseTask();
+    setupHappyPath(task, {
+      operationId: 'op-1',
+      success: true,
+      topicId: 'tpc_1',
+    });
+    // Claim-time dependency gate refuses: the upstream has no valid delivery.
+    vi.mocked(buildTaskPrompt).mockRejectedValueOnce(
+      new TaskDependencyError(
+        'Dependency deliveries are not current/valid for: T-9',
+        'PRECONDITION_FAILED',
+      ),
+    );
+    const failRunReservation = vi.mocked(TaskModel.prototype.failRunReservation);
+    const { service } = newRunner();
+
+    await expect(service.runTask(runParams)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+
+    // 'paused' would drop the task out of getUnlockedTasksForMany discovery
+    // forever; a blocked claim must stay claimable for the next completion.
+    expect(failRunReservation).toHaveBeenCalledWith(
+      task.id,
+      expect.any(String),
+      'backlog',
+      'Dependency deliveries are not current/valid for: T-9',
     );
   });
 });

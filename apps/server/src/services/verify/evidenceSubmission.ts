@@ -114,6 +114,9 @@ export const startEvidenceSubmission = async (params: {
     ephemeralUserMessage: evidencePrompt,
     exclusivePluginIds: [AcceptanceEvidenceIdentifier],
     hooks,
+    // The exclusive surface is also the required one — an evidence run that
+    // cannot mount its submission tool is a contract failure, not a degrade.
+    requiredToolIds: [AcceptanceEvidenceIdentifier],
     parentOperationId,
     // Heterogeneous CLI adapters execute `prompt` directly, while the native
     // runtime also renders the ephemeral user message in the existing topic.

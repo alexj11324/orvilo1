@@ -82,8 +82,11 @@ const EPILOGUE_RE = /^(?:Found \d+ errors?|Errors {2}Files|Total time|Watching f
 
 /**
  * Parse `tsc`/`tsgo` output into diagnostics. Multi-line messages are joined:
- * every line following a diagnostic that does not itself start a diagnostic
- * (and is not epilogue noise) is part of that diagnostic's message.
+ * tsc indents message continuations, so only indented lines following a
+ * diagnostic extend its message. Any unindented non-diagnostic line (epilogue
+ * noise, package-manager chatter like `Scope:`/`[WARN]`/`[ELIFECYCLE]` lines
+ * after the last diagnostic) terminates the current diagnostic instead of
+ * contaminating its bucket.
  */
 export const parseDiagnostics = (text, stripPrefix, msgRoots) => {
   const diags = [];
@@ -114,11 +117,11 @@ export const parseDiagnostics = (text, stripPrefix, msgRoots) => {
         line: Number(m.groups.line),
         msgLines: [msg],
       };
-    } else if (current && line && !EPILOGUE_RE.test(line)) {
+    } else if (current && line && !EPILOGUE_RE.test(line) && /^\s/.test(rawLine)) {
       let cont = line;
       for (const root of roots) cont = cont.replaceAll(root, '<root>');
       current.msgLines.push(cont);
-    } else if (current && EPILOGUE_RE.test(line)) {
+    } else if (current && (EPILOGUE_RE.test(line) || (line && !/^\s/.test(rawLine)))) {
       diags.push(current);
       current = null;
     }

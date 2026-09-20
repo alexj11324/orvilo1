@@ -64,6 +64,20 @@ describe('parseDiagnostics', () => {
     expect(d.msg).toBe('boom');
   });
 
+  it('does not let unindented runner noise extend the last diagnostic — real capture regression', () => {
+    const diag = `../../src/utils/client/systemLanguage.ts(7,44): error TS2339: Property 'orviloEnv' does not exist on type 'Window & typeof globalThis'.`;
+    const head = parseDiagnostics(
+      `${diag}\nScope: all 114 workspace projects\n../.. | [WARN] deprecated foo@1`,
+      '',
+      [],
+    );
+    const base = parseDiagnostics(`${diag}\n[ELIFECYCLE] Command failed with exit code 1.`, '', []);
+    expect(head[0].msg).toBe(
+      `Property 'orviloEnv' does not exist on type 'Window & typeof globalThis'.`,
+    );
+    expect(head[0].bucket).toBe(base[0].bucket);
+  });
+
   it('parses parenthesized route-group file paths', () => {
     const text = `src/app/(main)/x.ts(3,9): error TS2322: bad`;
     const [d] = parseDiagnostics(text, '', []);

@@ -90,4 +90,23 @@ describe('buildTaskExecutionContract', () => {
     tools.push('extra-tool');
     expect(contract.tools).toEqual(['task']);
   });
+
+  it('E01 — carries contract identity: id, revision ordinal and source lineage', () => {
+    const contract = buildTaskExecutionContract(task, {
+      ...baseInput,
+      contractId: 'contract-2',
+      contractRevision: 2,
+      sourceContractId: 'contract-1',
+    });
+
+    expect(contract.contractId).toBe('contract-2');
+    expect(contract.revision).toBe(2);
+    expect(contract.sourceContractId).toBe('contract-1');
+  });
+
+  it('E01 — a first-run contract has no source lineage', () => {
+    const contract = buildTaskExecutionContract(task, baseInput);
+    expect(contract.sourceContractId).toBeUndefined();
+    expect('sourceContractId' in contract).toBe(false);
+  });
 });

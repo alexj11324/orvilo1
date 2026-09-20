@@ -344,6 +344,22 @@ export class TaskIntegrationService {
           : record.state === 'merging');
       if (!processable) return 'blocked';
 
+      // Integrate-side dependency re-verify: the contract's `blocks` receipts
+      // must still name each upstream's current valid delivery. An upstream
+      // reopen/revert/redelivery since claim means this attempt's frozen
+      // inputs no longer stand on valid deliveries — hold, don't integrate.
+      const staleReceipt = await this.findStaleDependencyReceipt(taskTopic);
+      if (staleReceipt) {
+        await this.updateIntegrationOrThrow(task.id, topicId, {
+          lastError:
+            `Dependency ${staleReceipt.identifier ?? staleReceipt.dependsOnId} no longer ` +
+            'stands on the delivery this run was built on — run held for a fresh attempt',
+        }).catch((markerError) =>
+          log('integrateOnComplete: stale-dependency marker write failed — %O', markerError),
+        );
+        return 'hold';
+      }
+
       const integrationOwnerTopicId =
         record.integrationOwnerTopicId ??
         this.resolveIntegrationOwnerTopicId(topicId, record, relatedRows ?? []);
@@ -1786,6 +1802,38 @@ export class TaskIntegrationService {
   /** Prefer the remote-tracking ref so merges land on the published tip. */
   private baseRef(record: TaskTopicIntegration): string {
     return record.baseBranch === 'HEAD' ? 'HEAD' : `origin/${record.baseBranch}`;
+  }
+
+  /**
+   * Integrate-side receipt check: the contract's `blocks` receipts must still
+   * be each upstream's current valid delivery — upstream task still `completed`
+   * and its latest completed attempt still the recorded one (same topic and
+   * SHAs). A missing contract (pre-contract rows) is not a gate.
+   */
+  private async findStaleDependencyReceipt(
+    topic: Awaited<ReturnType<TaskTopicModel['findByTopicId']>>,
+  ) {
+    const receipts = topic?.contract?.content?.dependencies;
+    if (!receipts?.length) return undefined;
+    for (const receipt of receipts) {
+      if (receipt.type !== 'blocks') continue;
+      const [upstreamTask, upstreamTopics] = await Promise.all([
+        this.taskModel.findById(receipt.dependsOnId).catch(() => undefined),
+        this.taskTopicModel.findByTaskId(receipt.dependsOnId).catch(() => []),
+      ]);
+      const delivered = [...upstreamTopics]
+        .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
+        .find((t) => t.status === 'completed' && t.topicId);
+      const stillValid =
+        delivered !== undefined &&
+        upstreamTask?.status === 'completed' &&
+        (!receipt.delivery ||
+          (delivered.topicId === receipt.delivery.topicId &&
+            delivered.integration?.integratedSha === receipt.delivery.integratedSha &&
+            delivered.integration?.expectedHeadSha === receipt.delivery.sourceSha));
+      if (!stillValid) return receipt;
+    }
+    return undefined;
   }
 
   private hasCorrectiveSuccessor(

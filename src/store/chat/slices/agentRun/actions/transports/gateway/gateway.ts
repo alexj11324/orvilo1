@@ -1219,6 +1219,11 @@ export class GatewayActionImpl {
       ?.runningOperation?.operationId;
     if (topicOpIdAfterRefresh && topicOpIdAfterRefresh !== operationId) return;
 
+    // Same race on the connection itself: the send path's connectToGateway may
+    // have landed during the token-refresh await — bail before disconnecting it.
+    const connStatusAfterRefresh = this.#get().gatewayConnections[operationId]?.status;
+    if (connStatusAfterRefresh && connStatusAfterRefresh !== 'disconnected') return;
+
     const agentId = params.agentId ?? this.#get().activeAgentId;
     // Carry agentShareId the same way executeGatewayAgent's execution context
     // does — `createGatewayEventHandler` branches on `context.agentShareId` to
@@ -1250,16 +1255,35 @@ export class GatewayActionImpl {
       ? new Date(assistantMessage.createdAt).getTime()
       : undefined;
 
+    // Reuse a live local op already bound to this server op instead of minting
+    // a duplicate: `executeGatewayAgent` registers one at send time, and a
+    // second op re-keying `connectToGateway` under the same server id would
+    // sever the first op's socket mid-flight and leave it `running` forever —
+    // observed on e2e as two ops sharing `serverOperationId` (one completed,
+    // one stuck) with the input queue blocked behind the zombie.
+    const existingLocalOp = Object.values(this.#get().operations ?? {}).find(
+      (op) =>
+        op.type === 'execServerAgentRuntime' &&
+        op.metadata?.serverOperationId === operationId &&
+        (op.status === 'pending' || op.status === 'paused' || op.status === 'running'),
+    );
+
     // Create a local operation for UI loading state, stashing the server op id
     // so intervention flows can find it after reconnect as well.
-    const { operationId: gatewayOpId } = this.#get().startOperation({
-      context,
-      metadata: {
-        serverOperationId: operationId,
-        ...(Number.isFinite(startTime) ? { startTime } : {}),
-      },
-      type: 'execServerAgentRuntime',
-    });
+    const gatewayOpId =
+      existingLocalOp?.id ??
+      this.#get().startOperation({
+        context,
+        metadata: {
+          serverOperationId: operationId,
+          ...(Number.isFinite(startTime) ? { startTime } : {}),
+        },
+        type: 'execServerAgentRuntime',
+      }).operationId;
+
+    if (existingLocalOp) {
+      pushGatewayDiag(`op=${gatewayOpId} reconnect reuses local op for ${operationId}`);
+    }
 
     this.#get().associateMessageWithOperation(assistantMessageId, gatewayOpId);
 

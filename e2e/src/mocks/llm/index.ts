@@ -392,12 +392,14 @@ export const presetResponses = {
   error: 'I apologize, but I encountered an error processing your request.',
   greeting: 'Hello! I am Orvilo AI, your AI assistant. How can I help you today?',
 
-  // Much longer response so the chat surely exceeds the viewport and scroll
-  // behavior is observable (used by @AGENT-SCROLL-* scenarios).
+  // Longer response so the chat exceeds the viewport and scroll behavior is
+  // observable (used by @AGENT-SCROLL-* scenarios). Sized ~4.5k chars — far
+  // beyond the ~500px viewport — while keeping per-reply ingest flushes and
+  // message-payload costs low enough for parallel CI.
   longScrollArticle: Array.from({ length: 60 }, (_, i) => `这是第 ${i + 1} 段内容。`)
     .concat(
       Array.from(
-        { length: 90 },
+        { length: 40 },
         (_, i) =>
           `段落 ${i + 1}：人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。研究领域包括机器人、语言识别、图像识别、自然语言处理和专家系统等。`,
       ),

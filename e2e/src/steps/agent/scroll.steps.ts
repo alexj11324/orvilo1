@@ -146,13 +146,34 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
   // line conversation, which can sit behind a multi-minute CI Postgres
   // checkpoint. The user row itself commits in the mutation's first write and
   // the real id is client-minted + server-honoured, so read it directly.
+  const pollPersisted = () =>
+    expect
+      .poll(async () => (messageId = await fetchLatestUserMessageId(world, prompt, sentAt)), {
+        message: `user message was not persisted after sending prompt: ${prompt}`,
+        timeout: 90_000,
+      })
+      .toBeTruthy();
+
   let messageId: string | undefined;
-  await expect
-    .poll(async () => (messageId = await fetchLatestUserMessageId(world, prompt, sentAt)), {
-      message: `user message was not persisted after sending prompt: ${prompt}`,
-      timeout: 90_000,
-    })
-    .toBeTruthy();
+  try {
+    await pollPersisted();
+  } catch {
+    // Enter can be swallowed while the composer re-renders under streaming
+    // load: if the input still holds the prompt, no send happened, so press
+    // again and keep watching for the row. A cleared input means the send did
+    // dispatch — then the row is the missing signal, so just fail.
+    const stillTyped = await input
+      .textContent()
+      .then((text) => !!text?.includes(prompt))
+      .catch(() => false);
+    if (stillTyped) {
+      console.log('   📍 first Enter did not dispatch; retrying send');
+      await input.press('Enter');
+      await pollPersisted();
+    } else {
+      throw new Error(`user message was not persisted after sending prompt: ${prompt}`);
+    }
+  }
 
   world.testContext.lastSentUserMessageId = messageId;
   world.testContext.lastSentUserPrompt = prompt;

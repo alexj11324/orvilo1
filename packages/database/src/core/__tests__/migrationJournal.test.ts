@@ -219,7 +219,7 @@ describe('staged upgrade replay (PGlite)', () => {
             AND table_name = 'integration_leases'
             AND column_name = 'fence_seq'`,
     );
-    return result.rows as FenceSeqColumn[];
+    return result.rows as unknown as FenceSeqColumn[];
   };
 
   const appliedMillis = async (db: ReturnType<typeof pgliteDrizzle>) => {
@@ -376,7 +376,6 @@ describe.skipIf(!isServerDB)('staged migration upgrade', () => {
     assertTestDatabaseUrl(adminUrl);
 
     const journal = readJournal(migrationsFolder);
-    const last = journal.entries.at(-1)!;
     const boundary = journal.entries.at(-2)!;
 
     // Scratch database so the real migrator runs against a clean slate.

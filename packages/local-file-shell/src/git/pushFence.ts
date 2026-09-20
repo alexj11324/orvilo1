@@ -1,9 +1,9 @@
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { createLogger } from '../logger';
+import { readJsonRegistry, withRepoFileMutex, writeJsonRegistry } from './registryFile';
 
 const log = createLogger('local-file-shell:git');
 
@@ -50,26 +50,38 @@ const fenceRegistryPath = async (dirPath: string): Promise<string | undefined> =
   }
 };
 
-const readRegistry = async (file: string): Promise<FenceRegistry> => {
-  try {
-    const parsed = JSON.parse(await readFile(file, 'utf8'));
-    if (parsed && typeof parsed === 'object') return parsed as FenceRegistry;
-  } catch (error: any) {
-    if (error?.code !== 'ENOENT') {
-      log.warn('[pushFence] registry unreadable — treating as empty', {
-        file,
-        message: error?.message,
-      });
-    }
-  }
-  return {};
-};
+interface FenceRegistryEntry {
+  operationId: string;
+  seq: number;
+}
 
-const writeRegistry = async (file: string, registry: FenceRegistry): Promise<void> => {
-  await mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(tmp, JSON.stringify(registry));
-  await rename(tmp, file);
+const isFenceEntry = (value: unknown): value is FenceRegistryEntry =>
+  value !== null &&
+  typeof value === 'object' &&
+  typeof (value as FenceRegistryEntry).operationId === 'string' &&
+  typeof (value as FenceRegistryEntry).seq === 'number' &&
+  Number.isFinite((value as FenceRegistryEntry).seq);
+
+/**
+ * Fail-closed registry read: a missing file is an empty registry, but a
+ * corrupt file must refuse fencing — treating it as empty would let an old
+ * epoch claim over a persisted high-water mark.
+ */
+const readRegistryStrict = async (
+  file: string,
+): Promise<{ registry?: FenceRegistry; error?: string }> => {
+  const read = await readJsonRegistry(file);
+  if (read.status === 'corrupt') {
+    return { error: `Push fence registry corrupt (${read.reason})` };
+  }
+  const registry: FenceRegistry = {};
+  for (const [ref, entry] of Object.entries(read.value)) {
+    if (!isFenceEntry(entry)) {
+      return { error: `Push fence registry corrupt (bad entry for ${ref})` };
+    }
+    registry[ref] = entry;
+  }
+  return { registry };
 };
 
 /**
@@ -79,6 +91,12 @@ const writeRegistry = async (file: string, registry: FenceRegistry): Promise<voi
  * before the caller performs the remote mutation, so a crashed operation
  * still bumps the persisted maximum (conservative: the next owner mints an
  * even higher seq).
+ *
+ * The read-check-write runs inside the repo-common-dir file mutex — two
+ * processes racing a claim on the same physical ref serialize on it, so an
+ * out-of-order arrival cannot overwrite a higher epoch with a lower one.
+ * Registry reads are strict: a corrupt file fails closed rather than fencing
+ * a stale writer over a live high-water mark.
  *
  * Returns undefined on success, or a rejection reason string.
  */
@@ -91,15 +109,18 @@ export const claimGitPushFence = async (
   }
   const file = await fenceRegistryPath(dirPath);
   if (!file) return 'Push fence registry unavailable';
-  const registry = await readRegistry(file);
-  const held = registry[fence.ref];
-  // `seq` is the acquisition epoch — strictly monotone per lease handover.
-  // Equal seq means the same owning acquisition (one logical writer issues
-  // several fenced ops); only a strictly older epoch is a stale writer.
-  if (held && fence.seq < held.seq) {
-    return `Stale push fence: ${fence.operationId} epoch ${fence.seq} is superseded by epoch ${held.seq}`;
-  }
-  registry[fence.ref] = { operationId: fence.operationId, seq: fence.seq };
-  await writeRegistry(file, registry);
-  return undefined;
+  return withRepoFileMutex(file, async () => {
+    const { registry, error } = await readRegistryStrict(file);
+    if (!registry) return `${error} — refusing to fence ${fence.ref}`;
+    const held = registry[fence.ref];
+    // `seq` is the acquisition epoch — strictly monotone per lease handover.
+    // Equal seq means the same owning acquisition (one logical writer issues
+    // several fenced ops); only a strictly older epoch is a stale writer.
+    if (held && fence.seq < held.seq) {
+      return `Stale push fence: ${fence.operationId} epoch ${fence.seq} is superseded by epoch ${held.seq}`;
+    }
+    registry[fence.ref] = { operationId: fence.operationId, seq: fence.seq };
+    await writeJsonRegistry(file, registry);
+    return undefined;
+  });
 };

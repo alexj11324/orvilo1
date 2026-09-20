@@ -79,6 +79,15 @@ async function getScrollSnapshot(world: CustomWorld): Promise<ScrollSnapshot | n
   });
 }
 
+// The scroll hook records its verdicts into a window ring buffer — read it
+// directly so a failure dump shows the hook's own view (console forwarding
+// races on CI workers and silently drops lines).
+async function getScrollDiag(world: CustomWorld): Promise<string[]> {
+  return world.page
+    .evaluate(() => (globalThis as { __orviloScrollDiag?: string[] }).__orviloScrollDiag ?? [])
+    .catch(() => []);
+}
+
 async function getScrollPgClient(world: CustomWorld) {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) return undefined;
@@ -648,6 +657,9 @@ Then('用户消息应固定在聊天列表顶部', { timeout: 90_000 }, async fu
       .toBeLessThanOrEqual(PIN_SLACK);
   } catch (error) {
     console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
+    const scrollDiag = await getScrollDiag(this);
+    if (scrollDiag.length > 0)
+      console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
     throw error;
   }
 });
@@ -682,6 +694,9 @@ Then(
         `   📍 trace ${JSON.stringify(classifyScrollTrace(result.samples))} calls=${JSON.stringify(result.calls)}`,
       );
       console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
+      const scrollDiag = await getScrollDiag(this);
+      if (scrollDiag.length > 0)
+        console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
       throw error;
     }
     console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);

@@ -158,6 +158,13 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   parentMessageId?: string;
   queueRetries?: number;
   queueRetryDelay?: string;
+  /**
+   * Tool identifiers this run cannot start without — task-tool requirements
+   * and evidence-submission capabilities land here. Every id must resolve to a
+   * mounted outcome before dispatch; a partial mount is an admission error, not
+   * a degraded run. Mutually incompatible with `disableTools`.
+   */
+  requiredToolIds?: string[];
   /** Whether to continue execution from an existing persisted message */
   resume?: boolean;
   /**

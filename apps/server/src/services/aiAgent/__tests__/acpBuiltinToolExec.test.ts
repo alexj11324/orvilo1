@@ -6,16 +6,67 @@ import {
   execAcpBuiltinTool,
 } from '../acpBuiltinToolExec';
 
-const { mockExecute, mockMemberRunner, mockRegisterWork, mockSubAgentRunner } = vi.hoisted(() => ({
+const {
+  mockConnectorTools,
+  mockExecute,
+  mockExecuteTool,
+  mockFindPlugin,
+  mockMemberRunner,
+  mockRegisterWork,
+  mockResolveConnectors,
+  mockSubAgentRunner,
+} = vi.hoisted(() => ({
+  mockConnectorTools: vi.fn(),
   mockExecute: vi.fn(),
+  mockExecuteTool: vi.fn(),
+  mockFindPlugin: vi.fn(),
   mockMemberRunner: { run: vi.fn() },
   mockRegisterWork: vi.fn(),
+  mockResolveConnectors: vi.fn(),
   mockSubAgentRunner: { run: vi.fn() },
 }));
 
 vi.mock('@/server/services/toolExecution/builtin', () => ({
   BuiltinToolsExecutor: vi.fn().mockImplementation(function () {
     return { execute: mockExecute };
+  }),
+}));
+
+vi.mock('@/server/services/toolExecution', () => ({
+  ToolExecutionService: vi.fn().mockImplementation(function () {
+    return { executeTool: mockExecuteTool };
+  }),
+}));
+
+vi.mock('@/server/services/mcp', () => ({ mcpService: {} }));
+
+vi.mock('@/server/services/connector/sync', () => ({
+  buildConnectorMcpParams: vi.fn((connector: any) => ({
+    auth: { token: connector.credentials?.token ?? 'none' },
+    type: 'http',
+    url: connector.mcpServerUrl,
+  })),
+}));
+
+vi.mock('@/server/services/connector/tokens', () => ({
+  ensureFreshConnectorToken: vi.fn(async (connector: any) => connector),
+}));
+
+vi.mock('@/database/models/connector', () => ({
+  ConnectorModel: vi.fn().mockImplementation(function () {
+    return { resolveByIdentifiers: mockResolveConnectors };
+  }),
+}));
+
+vi.mock('@/database/models/connectorTool', () => ({
+  ConnectorToolModel: vi.fn().mockImplementation(function () {
+    return { queryByConnector: mockConnectorTools };
+  }),
+}));
+
+vi.mock('@/database/models/plugin', () => ({
+  PluginModel: vi.fn().mockImplementation(function () {
+    return { findById: mockFindPlugin };
   }),
 }));
 
@@ -194,6 +245,131 @@ describe('execAcpBuiltinTool', () => {
       error: { code: 'X', message: 'broke' },
       state: undefined,
       success: false,
+    });
+  });
+
+  describe('external connector / plugin tools', () => {
+    const externalOp = {
+      ...baseOp,
+      metadata: {
+        ...baseOp.metadata,
+        externalTools: { 'my-conn': { apis: ['do_thing'], source: 'connector' } },
+      },
+    };
+    const externalInput = { ...baseInput, apiName: 'do_thing', identifier: 'my-conn' };
+
+    beforeEach(() => {
+      mockResolveConnectors.mockResolvedValue([
+        {
+          credentials: { token: 'tok' },
+          id: 'conn_row_1',
+          isEnabled: true,
+          mcpServerUrl: 'https://mcp.example.com',
+        },
+      ]);
+      mockConnectorTools.mockResolvedValue([
+        {
+          description: 'Do a thing',
+          inputSchema: { type: 'object' },
+          permission: 'auto',
+          toolName: 'do_thing',
+        },
+      ]);
+      mockExecuteTool.mockResolvedValue({ content: 'external done', success: true });
+    });
+
+    it('executes a connector tool through the MCP path with fresh credentials', async () => {
+      const result = await execAcpBuiltinTool(buildDeps({ op: externalOp }), externalInput);
+
+      expect(mockResolveConnectors).toHaveBeenCalledWith(['my-conn'], 'agt_1');
+      expect(mockExecute).not.toHaveBeenCalled();
+      expect(mockExecuteTool).toHaveBeenCalledOnce();
+      const [payload, ctx] = mockExecuteTool.mock.calls[0];
+      expect(payload.type).toBe('mcp');
+      expect(payload.identifier).toBe('my-conn');
+      expect(ctx.toolManifestMap['my-conn'].mcpParams).toEqual({
+        auth: { token: 'tok' },
+        type: 'http',
+        url: 'https://mcp.example.com',
+      });
+      expect(result).toMatchObject({ content: 'external done', success: true });
+    });
+
+    it('rejects a disabled connector at call time, not dispatch time', async () => {
+      mockResolveConnectors.mockResolvedValue([{ id: 'conn_row_1', isEnabled: false }]);
+      await expect(
+        execAcpBuiltinTool(buildDeps({ op: externalOp }), externalInput),
+      ).rejects.toThrow(AcpBuiltinToolForbiddenError);
+      expect(mockExecuteTool).not.toHaveBeenCalled();
+    });
+
+    it('rejects a connector tool name that is no longer synced', async () => {
+      mockConnectorTools.mockResolvedValue([]);
+      await expect(
+        execAcpBuiltinTool(buildDeps({ op: externalOp }), externalInput),
+      ).rejects.toThrow(AcpBuiltinToolNotFoundError);
+      expect(mockExecuteTool).not.toHaveBeenCalled();
+    });
+
+    it('rejects an external api outside the dispatch-time mount', async () => {
+      await expect(
+        execAcpBuiltinTool(buildDeps({ op: externalOp }), {
+          ...externalInput,
+          apiName: 'dropTable',
+        }),
+      ).rejects.toThrow(AcpBuiltinToolForbiddenError);
+      expect(mockResolveConnectors).not.toHaveBeenCalled();
+    });
+
+    it('executes an installed MCP plugin via its customParams.mcp transport', async () => {
+      const op = {
+        ...baseOp,
+        metadata: {
+          ...baseOp.metadata,
+          externalTools: { 'my-plugin': { apis: ['query'], source: 'mcp-plugin' } },
+        },
+      };
+      mockFindPlugin.mockResolvedValue({
+        customParams: { mcp: { command: 'npx', args: ['my-mcp'], type: 'stdio' } },
+        manifest: {
+          api: [{ name: 'query', parameters: {} }],
+          identifier: 'my-plugin',
+        },
+      });
+      const result = await execAcpBuiltinTool(buildDeps({ op }), {
+        ...baseInput,
+        apiName: 'query',
+        identifier: 'my-plugin',
+      });
+      const [payload, ctx] = mockExecuteTool.mock.calls[0];
+      expect(payload.type).toBe('mcp');
+      expect(ctx.toolManifestMap['my-plugin'].mcpParams).toEqual({
+        args: ['my-mcp'],
+        command: 'npx',
+        type: 'stdio',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects an mcp-plugin that lost its transport config', async () => {
+      const op = {
+        ...baseOp,
+        metadata: {
+          ...baseOp.metadata,
+          externalTools: { 'my-plugin': { apis: ['query'], source: 'mcp-plugin' } },
+        },
+      };
+      mockFindPlugin.mockResolvedValue({
+        customParams: {},
+        manifest: { api: [{ name: 'query', parameters: {} }] },
+      });
+      await expect(
+        execAcpBuiltinTool(buildDeps({ op }), {
+          ...baseInput,
+          apiName: 'query',
+          identifier: 'my-plugin',
+        }),
+      ).rejects.toThrow(AcpBuiltinToolNotFoundError);
     });
   });
 });

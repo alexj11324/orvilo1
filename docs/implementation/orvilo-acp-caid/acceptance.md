@@ -140,19 +140,19 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 独立审查发现 12 项问题；完成定义按 `IMPLEMENTED / UNIT_OR_CONTRACT_TESTED / INTEGRATION_TESTED / LIVE_ACCEPTED / RELEASE_READY` 分级记录，互不相冒。
 
-| Finding | 级别     | 整改        | 状态 | 摘要                                                                                                                               |
-| ------- | -------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| F01     | P0       | R01         | OPEN | taskWorkspace 按目录名推断归属，`同路径不同分支` 触发 `worktree remove --force` —— 潜在数据丢失，停自动强删                        |
-| F02     | P1       | R01         | OPEN | 「孤儿目录清理」调用只认已登记 worktree 的 `removeGitWorktree`，恢复链实际不通                                                     |
-| F03     | P1       | R02         | OPEN | `withRepoRefLease` 在 pg\_advisory\_xact\_lock 事务内做远程 I/O，回调仍用原连接 —— 连接池饥饿风险                                  |
-| F04     | P1       | R03         | OPEN | 外部 MCP/Connector 仍 `no-server-executor/unsupported`，装配链未实现                                                               |
-| F05     | P1       | R03         | OPEN | 必需工具仅在 `mountedTools.length===0` 时阻塞；部分失败 /`disableTools` 冲突不拦                                                   |
-| F06     | P1       | R04         | OPEN | `tryResumeParentFromAsyncTool` 不回投 ACP 继续；`awaitAcpBuiltinToolChildren` 只认 `running`，`waiting_for_human` 会被误判 settled |
-| F07     | P1       | R06         | OPEN | TaskExecutionContract 只是快照：prompt / 准入不同源，base 用 `origin/<branch>` 可变引用                                            |
-| F08     | P1       | R07         | OPEN | 首快照成功即清零失败计数，merge-boundary 连续失败永远停在第 1 次                                                                   |
-| F09     | P1       | R05         | OPEN | `startExecution` 对合法 `idle` 返回 `success:true/scheduled:false` 成功无动作                                                      |
-| F10     | P1       | R08         | OPEN | 后台判断链（规划 / Verify / 反思）仍经 `initModelRuntimeFromDeploymentConfig` 部署密钥直连，未 ACP 化                              |
-| F11     | P2       | R09         | OPEN | Quota 菜单无 `deviceId` 回退 `claude[0]`，可能显示他人身份读数                                                                     |
-| F12     | 发布阻塞 | R00/R10/R11 | OPEN | 复合 PASS 已拆（本文件）；缺 `caid_dispatch_enabled` 服务端开关；固定 SHA 正路径验收未跑                                           |
+| Finding | 级别     | 整改        | 状态 | 摘要                                                                                                                                                           |
+| ------- | -------- | ----------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F01     | P0       | R01         | OPEN | taskWorkspace 按目录名推断归属，`同路径不同分支` 触发 `worktree remove --force` —— 潜在数据丢失，停自动强删                                                    |
+| F02     | P1       | R01         | OPEN | 「孤儿目录清理」调用只认已登记 worktree 的 `removeGitWorktree`，恢复链实际不通                                                                                 |
+| F03     | P1       | R02         | OPEN | `withRepoRefLease` 在 pg\_advisory\_xact\_lock 事务内做远程 I/O，回调仍用原连接 —— 连接池饥饿风险                                                              |
+| F04     | P1       | R03         | OPEN | 外部 MCP/Connector 装配链已实现（`resolveExternalToolSurface` + `metadata.externalTools` + `heteroExecBuiltinTool` 回调经 `ToolExecutionService`），待合入门禁 |
+| F05     | P1       | R03         | OPEN | `requiredToolIds` 准入已实现（部分失败即拒绝、`disableTools` 冲突显式拒绝、TaskRunner 传 `requiredToolIds`），待合入门禁                                       |
+| F06     | P1       | R04         | OPEN | `tryResumeParentFromAsyncTool` 不回投 ACP 继续；`awaitAcpBuiltinToolChildren` 只认 `running`，`waiting_for_human` 会被误判 settled                             |
+| F07     | P1       | R06         | OPEN | TaskExecutionContract 只是快照：prompt / 准入不同源，base 用 `origin/<branch>` 可变引用                                                                        |
+| F08     | P1       | R07         | OPEN | 首快照成功即清零失败计数，merge-boundary 连续失败永远停在第 1 次                                                                                               |
+| F09     | P1       | R05         | OPEN | `startExecution` 对合法 `idle` 返回 `success:true/scheduled:false` 成功无动作                                                                                  |
+| F10     | P1       | R08         | OPEN | 后台判断链（规划 / Verify / 反思）仍经 `initModelRuntimeFromDeploymentConfig` 部署密钥直连，未 ACP 化                                                          |
+| F11     | P2       | R09         | OPEN | Quota 菜单无 `deviceId` 回退 `claude[0]`，可能显示他人身份读数                                                                                                 |
+| F12     | 发布阻塞 | R00/R10/R11 | OPEN | 复合 PASS 已拆（本文件）；缺 `caid_dispatch_enabled` 服务端开关；固定 SHA 正路径验收未跑                                                                       |
 
 状态口径：本表 `OPEN` 表示整改 PR 未合入并通过门禁；各项收口后由 R11 在固定整合 SHA 上重跑对应回归行（`03-regression-matrix.md`）。

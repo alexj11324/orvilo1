@@ -1,5 +1,7 @@
 import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
+import { builtinSkills } from '@orvilo/builtin-skills';
+import { isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
 import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
 import type {
@@ -14,6 +16,7 @@ import type {
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
+  getActivePluginIds,
   getWorkingDirEffectivePath,
   RequestTrigger,
   resolveOrviloCliAgentType,
@@ -59,6 +62,7 @@ import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
 import { claimApprovalResume, tryReuseInterventionContinuation } from './pipeline/approvalResume';
 import { dispatchHeteroAgent } from './pipeline/heteroDispatch';
+import { resolveExternalToolSurface } from './pipeline/resolveExternalToolSurface';
 import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
 import { resolveRunToolSurface } from './pipeline/runToolSurface';
 import { resolveNewTopicSnapshot, setupTurn } from './pipeline/turnSetup';
@@ -671,6 +675,7 @@ export class AiAgentService {
       skipTaskVerification,
       parentMessageId,
       parentOperationId,
+      requiredToolIds,
       resume,
       resumeApproval,
       resumeApprovals,
@@ -972,6 +977,29 @@ export class AiAgentService {
     // The retired loop mounted Orvilo builtin tools/skills directly; ACP runs
     // receive them as a per-run MCP surface (`builtinToolSpecs`) plus inline
     // capability instructions (`capabilityContext`) — see `runToolSurface`.
+    // Non-builtin ids (connectors, installed MCP plugins) are resolved against
+    // the caller's own rows first; mounts carry no credentials — the exec
+    // callback re-resolves the connection at call time.
+    const externalCandidates = [
+      ...new Set([
+        ...(additionalPluginIds ?? []),
+        ...(exclusivePluginIds ?? []),
+        ...(requiredToolIds ?? []),
+        ...(selectedToolIds ?? []),
+        ...getActivePluginIds(agentConfig.plugins),
+      ]),
+    ].filter(
+      (identifier) =>
+        !isBuiltinToolIdentifier(identifier) &&
+        !builtinSkills.some((skill) => skill.identifier === identifier),
+    );
+    const externalTools = await resolveExternalToolSurface({
+      agentId: resolvedAgentId,
+      candidateIds: externalCandidates,
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
     const toolSurface = resolveRunToolSurface({
       additionalPluginIds,
       agentPlugins: agentConfig.plugins,
@@ -980,6 +1008,8 @@ export class AiAgentService {
       disableTools,
       enableAgentMode: agentConfig.chatConfig?.enableAgentMode,
       exclusivePluginIds,
+      externalTools,
+      requiredToolIds,
       selectedToolIds,
       // MCP-mountable harnesses are the standard-ACP runtimes; remote platform
       // types and the non-standard adapters (cursor/devin/droid/grok/trae)
@@ -1008,6 +1038,7 @@ export class AiAgentService {
         beforeOperationStart,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
         canManageAgent,
+        externalToolMounts: toolSurface.externalTools,
         toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
         effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,

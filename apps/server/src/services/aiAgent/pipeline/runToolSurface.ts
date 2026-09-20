@@ -43,8 +43,33 @@ export interface RunToolSurface {
    * instructions plus each mounted tool's usage guidance (`manifest.systemRole`).
    */
   capabilityContext?: string;
+  /**
+   * External (connector / installed-plugin MCP) tools that mounted this run,
+   * keyed by identifier. Persisted on the operation so the exec callback can
+   * re-resolve the connection and enforce the per-tool allowlist — carries no
+   * credentials or `mcpParams`.
+   */
+  externalTools?: Record<string, ExternalToolSurfaceEntry>;
   /** Outcome for every requested tool id, in request order. */
   outcomes: ToolSurfaceOutcome[];
+}
+
+/**
+ * A resolved external tool surface for one identifier — produced upstream from
+ * `user_connectors`/`user_connector_tools` or `user_installed_plugins` by
+ * `resolveExternalToolSurface`. `callable` is false when a plugin manifest
+ * exists but carries no transport params (`customParams.mcp`); such an entry
+ * resolves as `unsupported`/`no-server-executor` rather than mounting a spec
+ * the exec path cannot fulfil.
+ */
+export interface ExternalToolSurfaceEntry {
+  apis: Array<{
+    description?: string;
+    name: string;
+    parameters?: Record<string, unknown>;
+  }>;
+  callable: boolean;
+  source: 'connector' | 'mcp-plugin';
 }
 
 interface ResolveRunToolSurfaceInput {
@@ -56,6 +81,13 @@ interface ResolveRunToolSurfaceInput {
   /** `chatConfig.enableAgentMode === false` restricts the surface to `chatModeAllowedToolIds`. */
   enableAgentMode?: boolean;
   exclusivePluginIds?: string[];
+  externalTools?: Record<string, ExternalToolSurfaceEntry>;
+  /**
+   * Tool identifiers this run cannot start without — task-tool requirements,
+   * exclusive surfaces and evidence tools all land here. Every id must resolve
+   * to `mounted` or resolution throws before dispatch.
+   */
+  requiredToolIds?: string[];
   selectedToolIds?: string[];
   /**
    * Whether the resolved execution harness can mount MCP servers in its ACP
@@ -80,12 +112,16 @@ interface ResolveRunToolSurfaceInput {
  *   - builtin tools with a `serverRuntimes` registration → `builtinToolSpecs`;
  *     device-proxy runtimes (local-system / browser / remote-device) count —
  *     their factory routes the call back to the bound device via the gateway
- *   - everything else (MCP/market/custom plugins) → `unsupported` outcome;
- *     they have no server-side executor to call back into.
+ *   - external MCP / connector / installed-plugin tools resolved upstream into
+ *     `externalTools` → `builtinToolSpecs` (same per-run MCP wire; the exec
+ *     callback re-resolves the connection at call time)
+ *   - anything unresolved → an `unsupported`/`unauthorized`/`failed` outcome
+ *     with a machine-readable reason — never silently dropped.
  *
- * Throws when an `exclusivePluginIds` run ends up with every builtin tool
- * unresolved — an exclusive surface that mounts nothing is a required-tool
- * failure, not a degraded run.
+ * Throws before dispatch when any id in `requiredToolIds`/`exclusivePluginIds`
+ * fails to mount — a required surface that cannot run is an admission error,
+ * not a degraded run. `disableTools` combined with required ids is a conflict
+ * and throws rather than silently dropping them.
  */
 export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToolSurface => {
   const {
@@ -96,21 +132,38 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
     disableTools,
     enableAgentMode,
     exclusivePluginIds,
+    externalTools,
+    requiredToolIds,
     selectedToolIds,
     supportsBuiltinToolMount = true,
   } = input;
 
+  // required = every id must reach `mounted`: exclusive surfaces are required
+  // by definition, and `requiredToolIds` names non-negotiable capabilities
+  // (task tools, evidence submission). A required id that resolves to
+  // unauthorized/unsupported/failed — or was never requested — fails the run
+  // instead of dispatching a degraded one.
+  const required = new Set([...(requiredToolIds ?? []), ...(exclusivePluginIds ?? [])]);
+
   const outcomes: ToolSurfaceOutcome[] = [];
   const push = (outcome: ToolSurfaceOutcome) => outcomes.push(outcome);
 
-  if (disableTools) return { builtinToolSpecs: [], outcomes };
+  if (disableTools) {
+    if (required.size) {
+      throw new Error(
+        `Required tools cannot mount: tools are disabled for this run (${[...required].join(', ')})`,
+      );
+    }
+    return { builtinToolSpecs: [], outcomes };
+  }
 
   const requested = exclusivePluginIds
-    ? [...new Set(exclusivePluginIds)]
+    ? [...new Set([...exclusivePluginIds, ...(requiredToolIds ?? [])])]
     : [
         ...new Set([
           ...getActivePluginIds(agentPlugins),
           ...(additionalPluginIds ?? []),
+          ...(requiredToolIds ?? []),
           ...(selectedToolIds ?? []),
         ]),
       ];
@@ -121,6 +174,7 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
   const skillBlocks: string[] = [];
   const toolGuidance: string[] = [];
   const specs: AcpBuiltinToolSpec[] = [];
+  const mountedExternal: Record<string, ExternalToolSurfaceEntry> = {};
 
   for (const identifier of requested) {
     try {
@@ -203,9 +257,35 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
         continue;
       }
 
-      // MCP / market / custom plugins: mounting remote MCP servers onto the ACP
-      // session is a separate surface; record it so the gap is visible.
-      push({ identifier, kind: 'tool', reason: 'no-server-executor', status: 'unsupported' });
+      // External MCP / connector / installed-plugin tools: resolved upstream
+      // into `externalTools`; their calls ride the same per-run MCP surface and
+      // the server-side exec callback re-resolves the connection (fresh OAuth
+      // token / `customParams.mcp`) at call time.
+      const external = externalTools?.[identifier];
+      if (!external) {
+        push({ identifier, kind: 'tool', reason: 'plugin-not-installed', status: 'unsupported' });
+        continue;
+      }
+      if (!supportsBuiltinToolMount) {
+        push({
+          identifier,
+          kind: 'tool',
+          reason: 'harness-cannot-mount-mcp',
+          status: 'unsupported',
+        });
+        continue;
+      }
+      if (!external.callable) {
+        push({ identifier, kind: 'tool', reason: 'no-server-executor', status: 'unsupported' });
+        continue;
+      }
+      if (!external.apis.length) {
+        push({ identifier, kind: 'tool', reason: 'no-api-surface', status: 'unsupported' });
+        continue;
+      }
+      specs.push({ apis: external.apis, identifier });
+      mountedExternal[identifier] = external;
+      push({ identifier, kind: 'tool', reason: '', status: 'mounted' });
     } catch (error) {
       push({
         identifier,
@@ -216,22 +296,17 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
     }
   }
 
-  // `exclusivePluginIds` is a caller's required surface: if it named builtin
-  // tool ids and none of them resolved, the run cannot do what was asked —
-  // refuse rather than dispatch a tool-less run.
-  if (exclusivePluginIds?.length) {
-    const exclusiveTools = outcomes.filter((o) => o.kind === 'tool');
-    const mountedTools = exclusiveTools.filter((o) => o.status === 'mounted');
-    if (
-      exclusivePluginIds.some((id) => isBuiltinToolIdentifier(id)) &&
-      exclusiveTools.length > 0 &&
-      mountedTools.length === 0
-    ) {
-      throw new Error(
-        `Required tools failed to mount: ${exclusiveTools
-          .map((o) => `${o.identifier} (${o.status}: ${o.reason})`)
-          .join(', ')}`,
-      );
+  if (required.size) {
+    const unmet = [...required].map((id) => {
+      const outcome = outcomes.find((o) => o.identifier === id);
+      if (outcome?.status === 'mounted') return undefined;
+      return outcome
+        ? `${id} (${outcome.status}${outcome.reason ? `: ${outcome.reason}` : ''})`
+        : `${id} (not requested)`;
+    });
+    const failures = unmet.filter(Boolean) as string[];
+    if (failures.length) {
+      throw new Error(`Required tools failed to mount: ${failures.join(', ')}`);
     }
   }
 
@@ -244,5 +319,10 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
   const capabilityContext =
     [...skillBlocks, ...toolGuidance].filter(Boolean).join('\n\n') || undefined;
 
-  return { builtinToolSpecs: specs, capabilityContext, outcomes };
+  return {
+    builtinToolSpecs: specs,
+    capabilityContext,
+    ...(Object.keys(mountedExternal).length ? { externalTools: mountedExternal } : {}),
+    outcomes,
+  };
 };

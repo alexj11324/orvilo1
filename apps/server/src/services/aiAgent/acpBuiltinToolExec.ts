@@ -10,13 +10,25 @@ import debug from 'debug';
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
 import { ChatGroupModel } from '@/database/models/chatGroup';
+import { ConnectorModel } from '@/database/models/connector';
+import { ConnectorToolModel } from '@/database/models/connectorTool';
 import { MessageModel } from '@/database/models/message';
-import { agentOperations, agents, messagePlugins } from '@/database/schemas';
+import { PluginModel } from '@/database/models/plugin';
+import {
+  agentOperations,
+  agents,
+  ConnectorToolPermission,
+  messagePlugins,
+} from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
 } from '@/server/services/agentExecution/types';
+import { buildConnectorMcpParams } from '@/server/services/connector/sync';
+import { ensureFreshConnectorToken } from '@/server/services/connector/tokens';
+import { mcpService } from '@/server/services/mcp';
+import { ToolExecutionService } from '@/server/services/toolExecution';
 import { BuiltinToolsExecutor } from '@/server/services/toolExecution/builtin';
 import type {
   ToolExecutionContext,
@@ -139,29 +151,46 @@ export const loadAcpToolOperation = async (
 };
 
 /**
- * Check `identifier:apiName` against the run's dispatch-time allowlist
- * (`metadata.builtinTools`). The allowlist — not the caller's claim — decides
- * what is invocable, so a stolen or replayed operation token cannot reach a
- * runtime the tool-surface resolver never mounted.
+ * External (connector / installed-plugin MCP) mount persisted at dispatch on
+ * `metadata.externalTools` — api names + source only, never transport params
+ * or credentials. The exec callback re-resolves the connection at call time.
+ */
+interface ExternalToolMountMetadata {
+  apis: string[];
+  source: 'connector' | 'mcp-plugin';
+}
+
+const readExternalMounts = (
+  operation: OperationRow,
+): Record<string, ExternalToolMountMetadata> | undefined =>
+  operation.metadata?.externalTools as Record<string, ExternalToolMountMetadata> | undefined;
+
+/**
+ * Check `identifier:apiName` against the run's dispatch-time allowlist — the
+ * union of `metadata.builtinTools` and `metadata.externalTools` api names. The
+ * allowlist — not the caller's claim — decides what is invocable, so a stolen
+ * or replayed operation token cannot reach a runtime the tool-surface resolver
+ * never mounted.
  */
 const resolveToolAllowlist = (
   operation: OperationRow,
   identifier: string,
   apiName: string,
 ): Record<string, string[]> => {
-  const allowlist = operation.metadata?.builtinTools as Record<string, string[]> | undefined;
-  if (!allowlist) {
+  const builtinAllowlist = operation.metadata?.builtinTools as Record<string, string[]> | undefined;
+  const externalMount = readExternalMounts(operation)?.[identifier];
+  if (!builtinAllowlist && !externalMount) {
     throw new AcpBuiltinToolForbiddenError(
       'This operation was dispatched without a builtin tool surface',
     );
   }
-  const apiNames = allowlist[identifier];
+  const apiNames = builtinAllowlist?.[identifier] ?? externalMount?.apis;
   if (!apiNames?.includes(apiName)) {
     throw new AcpBuiltinToolForbiddenError(
       `Tool ${identifier}:${apiName} is not part of this run's tool surface`,
     );
   }
-  return allowlist;
+  return builtinAllowlist ?? {};
 };
 
 /**
@@ -328,6 +357,24 @@ export const execAcpBuiltinTool = async (
     workspaceId: operation.workspaceId ?? workspaceId,
   };
 
+  // External connector / installed-plugin tools share the per-run MCP surface
+  // and this callback, but their connection is resolved fresh on every call —
+  // revoked credentials, disabled connectors or desynced tool names are caught
+  // here, not at dispatch time.
+  const externalMount = readExternalMounts(operation)?.[identifier];
+  if (externalMount) {
+    return execAcpExternalTool({
+      context,
+      db,
+      identifier,
+      mount: externalMount,
+      operationAgentId: operation.agentId ?? undefined,
+      payload: chatToolPayload,
+      userId,
+      workspaceId: operation.workspaceId ?? workspaceId,
+    });
+  }
+
   const result: ToolExecutionResult = await new BuiltinToolsExecutor(db, userId).execute(
     chatToolPayload,
     context,
@@ -361,6 +408,100 @@ export const execAcpBuiltinTool = async (
       success: true,
     };
   }
+
+  return {
+    content: result.content,
+    error: result.error
+      ? { code: result.error.code, message: result.error.message ?? String(result.error) }
+      : undefined,
+    state: result.state,
+    success: result.success,
+  };
+};
+
+/**
+ * Execute one external (connector / installed-plugin MCP) tool call for an ACP
+ * run. The dispatch-time mount only stored api names + source; this re-reads
+ * the live row on every call:
+ *   - connector: agent-aware `resolveByIdentifiers` + `isEnabled` + synced,
+ *     non-disabled tool name + fresh OAuth token → `buildConnectorMcpParams`
+ *   - mcp-plugin: installed manifest api list + `customParams.mcp` transport
+ * Either way the actual call goes through `ToolExecutionService.executeTool`
+ * (`type: 'mcp'`), so permission gating, device tunnelling and truncation all
+ * behave identically to the classic path.
+ */
+const execAcpExternalTool = async (input: {
+  context: ToolExecutionContext;
+  db: OrviloDatabase;
+  identifier: string;
+  mount: ExternalToolMountMetadata;
+  operationAgentId?: string;
+  payload: ChatToolPayload;
+  userId: string;
+  workspaceId?: string;
+}): Promise<AcpBuiltinToolExecResult> => {
+  const { context, db, identifier, mount, operationAgentId, payload, userId, workspaceId } = input;
+
+  let manifest: OrviloToolManifest;
+  if (mount.source === 'connector') {
+    const connectorModel = new ConnectorModel(db, userId, workspaceId);
+    const [connector] = await connectorModel.resolveByIdentifiers([identifier], operationAgentId);
+    if (!connector) {
+      throw new AcpBuiltinToolNotFoundError(`Connector '${identifier}' not found`);
+    }
+    if (!connector.isEnabled) {
+      throw new AcpBuiltinToolForbiddenError(`Connector '${identifier}' is disabled`);
+    }
+
+    const connectorToolModel = new ConnectorToolModel(db, userId, workspaceId);
+    const tools = await connectorToolModel.queryByConnector(connector.id);
+    const tool = tools.find((item) => item.toolName === payload.apiName);
+    if (!tool) {
+      throw new AcpBuiltinToolNotFoundError(
+        `Tool '${payload.apiName}' is not synced on connector '${identifier}'`,
+      );
+    }
+    if (tool.permission === ConnectorToolPermission.disabled) {
+      throw new AcpBuiltinToolForbiddenError(
+        `Tool '${payload.apiName}' is disabled on connector '${identifier}'`,
+      );
+    }
+
+    const fresh = await ensureFreshConnectorToken(connector, connectorModel);
+    manifest = {
+      api: tools.map((item) => ({
+        description: item.description ?? undefined,
+        name: item.toolName,
+        parameters: (item.inputSchema ?? {}) as Record<string, unknown>,
+      })),
+      identifier,
+      meta: {},
+      mcpParams: buildConnectorMcpParams(fresh),
+      type: 'mcp',
+    } as unknown as OrviloToolManifest;
+  } else {
+    const plugin = await new PluginModel(db, userId, workspaceId).findById(identifier);
+    const mcpParams =
+      plugin?.customParams?.mcp ??
+      (plugin?.manifest as { mcpParams?: unknown } | null | undefined)?.mcpParams;
+    if (!plugin?.manifest?.api?.length || !mcpParams) {
+      throw new AcpBuiltinToolNotFoundError(
+        `Plugin '${identifier}' is not installed or has no callable MCP transport`,
+      );
+    }
+    manifest = { ...(plugin.manifest as OrviloToolManifest), mcpParams } as OrviloToolManifest;
+  }
+
+  const result = await new ToolExecutionService({
+    builtinToolsExecutor: new BuiltinToolsExecutor(db, userId),
+    mcpService,
+  }).executeTool(
+    { ...payload, type: 'mcp' },
+    {
+      ...context,
+      toolManifestMap: { ...context.toolManifestMap, [identifier]: manifest },
+    },
+  );
 
   return {
     content: result.content,

@@ -511,7 +511,10 @@ export class TaskRunnerService {
 
       const result = await aiAgentService.execAgent({
         ...(isSlug ? { slug: agentRef } : { agentId: agentRef }),
-        additionalPluginIds: pluginIds,
+        // Task contract tools are admission requirements, not hints: a run
+        // whose evidence/brief surface cannot mount must be refused before
+        // dispatch instead of executing without them.
+        requiredToolIds: pluginIds,
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         skipTaskVerification,

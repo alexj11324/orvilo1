@@ -238,6 +238,117 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     expect(res.events[0].data.cancelled).toBeUndefined();
   });
 
+  const insertApprovalReceipt = async (params: {
+    operationId: string;
+    payload?: Record<string, unknown>;
+    toolCallId: string;
+  }) => {
+    const { eventOutbox } = await import('@/database/schemas');
+    await serverDB.insert(eventOutbox).values({
+      aggregateId: params.operationId,
+      aggregateType: 'agent_operation',
+      eventId: `tool-approval:${params.operationId}:${params.toolCallId}`,
+      eventType: 'agent_operation.tool_approval',
+      id: `evt_${params.operationId}_${params.toolCallId}`,
+      payload: {
+        argsHash: 'h',
+        expiresAt: Date.now() + 60_000,
+        scopeHash: 'scope_a',
+        windowId: 'w1',
+        windowVersion: 1,
+        ...params.payload,
+      },
+      status: 'pending',
+    });
+  };
+
+  const readApprovalReceipt = async (operationId: string, toolCallId: string) => {
+    const { eventOutbox } = await import('@/database/schemas');
+    const [row] = await serverDB
+      .select()
+      .from(eventOutbox)
+      .where(eq(eventOutbox.eventId, `tool-approval:${operationId}:${toolCallId}`));
+    return row?.payload as Record<string, unknown> | undefined;
+  };
+
+  it('SA02-C: the approval decision lands on the durable receipt BEFORE the card resolves', async () => {
+    const operationId = 'op-decision-first';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_card' });
+
+    await expect(
+      userCaller().submitHeteroIntervention({
+        operationId,
+        result: { approved: true },
+        toolCallId: 'tc_card',
+        windowId: 'w1',
+      }),
+    ).resolves.toEqual({ status: 'resolving', success: true });
+
+    // The durable receipt already carries the decision — the exec retry
+    // consumes it; the card resolution is downstream, never upstream.
+    const payload = await readApprovalReceipt(operationId, 'tc_card');
+    expect(payload?.decision).toMatchObject({ action: 'approved', windowId: 'w1' });
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_card',
+      ),
+    ).toBe(true);
+  });
+
+  it('SA02-C: a stale-window card submit cannot decide the renewed window', async () => {
+    const operationId = 'op-stale-window';
+    await insertOperation(operationId, userId);
+    // The receipt rotated to window w2 (renew) — a card minted under w1 is
+    // stale by the time it submits.
+    await insertApprovalReceipt({
+      operationId,
+      payload: { windowId: 'w2', windowVersion: 2 },
+      toolCallId: 'tc_card',
+    });
+
+    await expect(
+      userCaller().submitHeteroIntervention({
+        operationId,
+        result: { approved: true },
+        toolCallId: 'tc_card',
+        windowId: 'w1',
+      }),
+    ).resolves.toEqual({ status: 'resolving', success: true });
+
+    // Decision NOT written to the live window…
+    const payload = await readApprovalReceipt(operationId, 'tc_card');
+    expect(payload?.decision).toBeUndefined();
+    // …but the card still resolves — the exec retry re-pends under w2.
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_card',
+      ),
+    ).toBe(true);
+  });
+
+  it('SA02-C: a submit with no windowId cannot approve a windowed receipt', async () => {
+    // Legacy clients that never echo the window still resolve their card,
+    // but the receipt decision requires the explicit window contract — a
+    // window-less submit must not silently upgrade a stale card's say-so.
+    const operationId = 'op-legacy-windowless';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_card' });
+
+    await expect(
+      userCaller().submitHeteroIntervention({
+        operationId,
+        result: { approved: true },
+        toolCallId: 'tc_card',
+      }),
+    ).resolves.toEqual({ status: 'resolving', success: true });
+
+    // Legacy path: no expected window → the write is allowed on legacy
+    // (windowless) receipts only; a windowed row refuses it via the CAS…
+    const payload = await readApprovalReceipt(operationId, 'tc_card');
+    expect(payload?.decision).toBeUndefined();
+  });
+
   it('looks up cold-start review by a strict 32-byte base64url token', async () => {
     const reviewToken = 'a'.repeat(43);
     business.getHeteroInterventionReview.mockResolvedValueOnce({

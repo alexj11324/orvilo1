@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { getComposioAppByIdentifier } from '@orvilo/const';
 import { upsertPluginMode } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -309,8 +311,12 @@ export const connectorRouter = router({
       // Drop any client-supplied `composio.linkedByUserId` — it is server-owned
       // (written by the OAuth connect path), and trusting it here would let a
       // member spoof connector attribution. No existing row on create → the
-      // field is simply removed.
-      metadata: withTrustedLinkedByUserId(input.metadata, undefined) ?? null,
+      // field is simply removed. `grantEpoch` mints a fresh grant generation
+      // for every create/re-add so exec pins never outlive the credential set.
+      metadata: {
+        ...withTrustedLinkedByUserId(input.metadata, undefined),
+        grantEpoch: randomUUID(),
+      },
       name: input.name,
       oidcConfig: input.oidcConfig ?? null,
     };
@@ -644,9 +650,15 @@ export const connectorRouter = router({
       // silently clear) the connector's authorizer. Untouched when the patch
       // omits metadata.
       const metadata = withTrustedLinkedByUserId(patch.metadata, target.metadata);
+      // Any credential patch — set, replace, or clear — is a new grant epoch,
+      // so exec-time pins minted under the old credentials refuse to execute
+      // (SA02-C). Plain OAuth token refresh never reaches this procedure.
+      const grantEpoch = credentials === undefined ? undefined : randomUUID();
       await ctx.connectorModel.update(input.id, {
         ...patch,
-        ...(patch.metadata === undefined ? {} : { metadata }),
+        ...(patch.metadata === undefined && grantEpoch === undefined
+          ? {}
+          : { metadata: { ...metadata, ...(grantEpoch ? { grantEpoch } : {}) } }),
         // undefined → leave untouched; null → clear; object → encrypt the JSON string.
         // When credentials are cleared, also drop the cached expiry timestamp so
         // token-refresh logic doesn't act on a stale value for the new server.

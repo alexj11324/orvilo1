@@ -13,7 +13,7 @@ import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { ChatGroupModel } from '@/database/models/chatGroup';
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
-import { EventOutboxModel } from '@/database/models/eventOutbox';
+import { EventOutboxModel, newEventId } from '@/database/models/eventOutbox';
 import { MessageModel } from '@/database/models/message';
 import { PluginModel } from '@/database/models/plugin';
 import {
@@ -49,6 +49,8 @@ import {
   buildToolApprovalEvent,
   TOOL_APPROVAL_TTL_MS,
   toolApprovalEventId,
+  type ToolApprovalScope,
+  toolApprovalScopeHash,
 } from '../agentExecution/toolApprovalReceipt';
 import { buildGroupAgentContext } from './helpers/groupContext';
 import {
@@ -680,44 +682,63 @@ const gateAcpExternalToolApproval = async (params: {
 
   const expiresAt = now + TOOL_APPROVAL_TTL_MS;
   const argsHash = sha256Hex(stableStringify(safeParseJson(params.argsJson)));
-  const event = buildToolApprovalEvent({
+  // The canonical approval scope this call must match at consume time — the
+  // receipt persists its digest (`scopeHash`) so an approval minted for tool
+  // A can never be spent by a same-toolCallId/same-args call to tool B.
+  const scope: ToolApprovalScope = {
     agentId: operation.agentId ?? undefined,
     apiName: params.apiName,
     argsHash,
     authRevision: params.authRevision,
     connectorId: params.connectorId,
-    expiresAt,
     executionGeneration: (appContext.executionGeneration as number | undefined) ?? undefined,
     identifier: params.identifier,
     kind: params.kind,
-    now,
     operationId: operation.id,
     pluginInstallId: params.pluginInstallId,
     schemaDigest: params.schemaDigest,
     toolCallId,
     userId: operation.userId,
     workspaceId: params.workspaceId ?? operation.workspaceId ?? '',
+  };
+  const scopeHash = toolApprovalScopeHash(scope);
+  const event = buildToolApprovalEvent({
+    ...scope,
+    expiresAt,
+    now,
+    windowId: newEventId(),
   });
   // Insert is dedupe-stable on eventId — retries/concurrent polls converge on
   // the same receipt rather than stacking approvals.
   await new EventOutboxModel(db).upsertDeliveryReceipt({ event });
 
-  const status = await authorizeToolApprovalReceipt(db, {
+  const authorization = await authorizeToolApprovalReceipt(db, {
     argsHash,
+    // The stable invocation id is the toolCallId itself — the host mints it
+    // once per logical call and reuses it across crash/renew retries, which
+    // is also what makes the consume CAS idempotent for that invocation.
+    invocationId: toolCallId,
     now,
     operationId: operation.id,
+    scopeHash,
     toolCallId,
   });
+  const status = authorization.status;
   if (status === 'approved') return undefined;
 
   if (status === 'expired') {
     // An expired receipt with no terminal decision re-pends under a fresh
     // window; a stale APPROVAL inside the dead window is cleared by the renew
-    // CAS so it can never ride the new window.
+    // CAS so it can never ride the new window. Each renew rotates `windowId`
+    // (+ bumps `windowVersion`) and re-binds the scope to THIS call, so a
+    // card answered for a previous window is rejected as `stale_window`.
+    const renewWindowId = newEventId();
     const renewed = await new EventOutboxModel(db).renewToolApprovalReceipt({
       eventId: toolApprovalEventId(operation.id, toolCallId),
       expiresAt,
       now,
+      scopeHash,
+      windowId: renewWindowId,
     });
     if (renewed) {
       return {
@@ -725,7 +746,7 @@ const gateAcpExternalToolApproval = async (params: {
           code: 'acp_tool_approval_pending',
           message: `Tool '${params.identifier}.${params.apiName}' requires human approval`,
         },
-        state: { toolApproval: { expiresAt, renewed: true } },
+        state: { toolApproval: { expiresAt, renewed: true, windowId: renewWindowId } },
         success: false,
       };
     }
@@ -738,9 +759,11 @@ const gateAcpExternalToolApproval = async (params: {
         ? 'acp_tool_approval_consumed'
         : status === 'args_mismatch'
           ? 'acp_tool_approval_args_mismatch'
-          : status === 'expired'
-            ? 'acp_tool_approval_expired'
-            : 'acp_tool_approval_pending';
+          : status === 'scope_mismatch'
+            ? 'acp_tool_approval_scope_mismatch'
+            : status === 'expired'
+              ? 'acp_tool_approval_expired'
+              : 'acp_tool_approval_pending';
   return {
     error: {
       code: reason,
@@ -751,11 +774,19 @@ const gateAcpExternalToolApproval = async (params: {
             ? `Approval for '${params.identifier}.${params.apiName}' was already consumed`
             : status === 'args_mismatch'
               ? `Approval for '${params.identifier}.${params.apiName}' covered different arguments`
-              : status === 'expired'
-                ? `Approval for '${params.identifier}.${params.apiName}' expired`
-                : `Tool '${params.identifier}.${params.apiName}' requires human approval`,
+              : status === 'scope_mismatch'
+                ? `Approval for '${params.identifier}.${params.apiName}' covered a different tool scope`
+                : status === 'expired'
+                  ? `Approval for '${params.identifier}.${params.apiName}' expired`
+                  : `Tool '${params.identifier}.${params.apiName}' requires human approval`,
     },
-    state: { toolApproval: { expiresAt } },
+    state: {
+      toolApproval: {
+        expiresAt: authorization.expiresAt ?? expiresAt,
+        windowId: authorization.windowId,
+        windowVersion: authorization.windowVersion,
+      },
+    },
     success: false,
   };
 };
@@ -778,7 +809,7 @@ export interface AcpBuiltinToolChildResult {
 /** One child result's ledger position returned on a v2 settle. */
 export interface AcpChildResultDelivery {
   childOperationId: string;
-  deliveryState: 'acked' | 'offered' | 'superseded';
+  deliveryState: 'acked' | 'offered' | 'received' | 'superseded';
   /** `event_outbox` dedupe key the parent acks against. */
   eventId: string;
 }
@@ -891,6 +922,11 @@ export const awaitAcpBuiltinToolChildren = async (
     );
   };
 
+  // The single authoritative deadline for this delegation (SA04-B): the
+  // keyed `await-anchor` outbox receipt, CAS-written below by whichever poll
+  // first observes a pending state. `undefined` until resolved this request.
+  let awaitDeadlineAt: number | undefined;
+
   // Long-poll: bounded server-side wait so one MCP call doesn't spin a request
   // per second. The CLI loops until `settled`/`timeout`.
   for (;;) {
@@ -994,9 +1030,18 @@ export const awaitAcpBuiltinToolChildren = async (
             },
           });
           await outbox.offerDeliveryReceiptByEventId(eventId);
+          // Report the REAL receipt state, not the transition we attempted:
+          // a replayed settle may find the row already `acked` (the previous
+          // ack landed but its response was lost) — reporting 'offered' then
+          // would make the host retry an ack that can only read as ignored.
+          const receiptState = await outbox.getDeliveryReceiptState({ eventId });
+          const state = receiptState?.deliveryState;
           deliveries.push({
             childOperationId: result.operationId,
-            deliveryState: 'offered',
+            deliveryState:
+              state === 'acked' || state === 'superseded' || state === 'received'
+                ? state
+                : 'offered',
             eventId,
           });
         } else {
@@ -1017,74 +1062,60 @@ export const awaitAcpBuiltinToolChildren = async (
       return { contractVersion, deliveries, results, status: 'settled' };
     }
 
+    // Resolve the authoritative wait deadline at first admission (any pending
+    // observation): read the await-anchor receipt; when absent, CAS-write
+    // `now + waitBudget`. A racing first poll that loses the CAS re-reads the
+    // winner's instant, so every poll — including reconnects and ones that
+    // later gain a message anchor — converges on ONE server-determined
+    // deadline. Read/write failures throw instead of letting heartbeats pend
+    // forever. Legacy receipts storing a relative budget under the same key
+    // would still read as a number here; only absolute `awaitDeadlineAt`
+    // values are written by this contract.
+    if (input.toolCallId && awaitDeadlineAt === undefined) {
+      const outbox = new EventOutboxModel(db);
+      const anchorEventId = `await-anchor:${input.operationId}:${input.toolCallId}`;
+      const existing = await outbox.getDeliveryReceiptPayload(anchorEventId);
+      if (typeof existing?.awaitDeadlineAt === 'number') {
+        awaitDeadlineAt = existing.awaitDeadlineAt;
+      } else {
+        const proposed = Date.now() + (input.waitDeadlineMs ?? AWAIT_DEFAULT_DEADLINE_MS);
+        const outcome = await outbox.upsertDeliveryReceipt({
+          event: {
+            aggregateId: input.operationId,
+            aggregateType: 'agent_operation',
+            eventId: anchorEventId,
+            eventType: 'agent_operation.await_deadline',
+            nextAttemptAt: new Date(proposed),
+            payload: { awaitDeadlineAt: proposed },
+            workspaceId: parentRow?.workspaceId ?? workspaceId,
+          },
+        });
+        if (outcome === 'replayed') {
+          const winner = await outbox.getDeliveryReceiptPayload(anchorEventId);
+          if (typeof winner?.awaitDeadlineAt !== 'number') {
+            throw new Error(
+              `Await-deadline anchor '${anchorEventId}' exists but carries no readable deadline`,
+            );
+          }
+          awaitDeadlineAt = winner.awaitDeadlineAt;
+        } else {
+          awaitDeadlineAt = proposed;
+        }
+      }
+    }
+
     if (Date.now() >= deadline) {
-      // Server-side cumulative wait bound (F06): the anchor placeholder's
-      // `awaitDeadlineAt` is an ABSOLUTE instant stamped at first accept —
-      // `now + waitDeadlineMs` (the host's remaining budget at that poll).
-      // Later polls only compare against it; they can never extend or shorten
-      // it, so a host that re-sends remaining=deadline−elapsed no longer
-      // double-charges the elapsed half. Legacy rows carrying only
-      // `awaitStartedAt` are upgraded once to a stamped deadline.
-      if (input.toolCallId) {
+      // Server-side cumulative wait bound (F06 + SA04-B): `awaitDeadlineAt` is
+      // the authoritative ABSOLUTE instant from the anchor receipt — later
+      // polls only compare against it and the placeholder's copy is a pure
+      // projection (re-stamped whenever it drifts), so a late-appearing anchor
+      // or a re-sent `remaining` budget can never double-charge the wait.
+      if (input.toolCallId && awaitDeadlineAt !== undefined) {
         try {
           const owned = await ownedPlaceholderRows();
-          const anchor = owned.find((row) => row.toolCallId === input.toolCallId) ?? owned[0];
-          const anchorState = anchor?.state as
-            | {
-                awaitDeadlineAt?: number;
-                awaitStartedAt?: number;
-              }
-            | null
-            | undefined;
           const now = Date.now();
-          const waitBudget = input.waitDeadlineMs ?? AWAIT_DEFAULT_DEADLINE_MS;
-          if (!anchor) {
-            // No placeholder anchor exists (host awaited before exec wrote
-            // rows, or a dropped anchor). The deadline still must be durable:
-            // persist it on a keyed await-anchor receipt so reconnects and
-            // retries share one fixed instant and a missing anchor can never
-            // pend forever.
-            const outbox = new EventOutboxModel(db);
-            const anchorEventId = `await-anchor:${input.operationId}:${input.toolCallId}`;
-            const existing = await outbox.getDeliveryReceiptPayload(anchorEventId);
-            const deadlineAt =
-              typeof existing?.awaitDeadlineAt === 'number'
-                ? existing.awaitDeadlineAt
-                : now + waitBudget;
-            if (typeof existing?.awaitDeadlineAt !== 'number') {
-              await outbox.upsertDeliveryReceipt({
-                event: {
-                  aggregateId: input.operationId,
-                  aggregateType: 'agent_operation',
-                  eventId: anchorEventId,
-                  eventType: 'agent_operation.await_deadline',
-                  nextAttemptAt: new Date(deadlineAt),
-                  payload: { awaitDeadlineAt: deadlineAt },
-                  workspaceId: parentRow?.workspaceId ?? workspaceId,
-                },
-              });
-            }
-            if (now >= deadlineAt) {
-              return { contractVersion, pendingOperationIds: pendingIds, status: 'timeout' };
-            }
-          } else if (!anchorState?.awaitDeadlineAt) {
-            // First accept (or legacy anchor): stamp the fixed deadline plus
-            // the owning operation, so a foreign op's sweep can never claim
-            // these rows (D06).
-            const messageModel = new MessageModel(db, userId, workspaceId);
-            const deadlineAt = now + waitBudget;
-            for (const row of owned) {
-              await messageModel.updateToolMessage(row.id, {
-                pluginState: {
-                  awaitDeadlineAt: deadlineAt,
-                  awaitOwnerOperationId: input.operationId,
-                  awaitStartedAt:
-                    (row.state as { awaitStartedAt?: number } | null)?.awaitStartedAt ?? now,
-                },
-              });
-            }
-          } else if (now >= (anchorState?.awaitDeadlineAt ?? Infinity)) {
-            const messageModel = new MessageModel(db, userId, workspaceId);
+          const messageModel = new MessageModel(db, userId, workspaceId);
+          if (now >= awaitDeadlineAt) {
             for (const row of owned) {
               const status = (row.state as { status?: string } | null)?.status ?? 'pending';
               if (status !== 'pending') continue;
@@ -1094,6 +1125,32 @@ export const awaitAcpBuiltinToolChildren = async (
               });
             }
             return { contractVersion, pendingOperationIds: pendingIds, status: 'timeout' };
+          }
+          // Projection upkeep: stamp the authoritative deadline + owner onto
+          // placeholders that don't yet mirror it (first accept, a later-
+          // appearing anchor, or a legacy row that only had awaitStartedAt).
+          for (const row of owned) {
+            const rowState = row.state as
+              | {
+                  awaitDeadlineAt?: number;
+                  awaitOwnerOperationId?: string;
+                  awaitStartedAt?: number;
+                }
+              | null
+              | undefined;
+            if (
+              rowState?.awaitDeadlineAt === awaitDeadlineAt &&
+              rowState?.awaitOwnerOperationId === input.operationId
+            ) {
+              continue;
+            }
+            await messageModel.updateToolMessage(row.id, {
+              pluginState: {
+                awaitDeadlineAt,
+                awaitOwnerOperationId: input.operationId,
+                awaitStartedAt: rowState?.awaitStartedAt ?? now,
+              },
+            });
           }
         } catch (err) {
           log('awaitAcpBuiltinToolChildren: deadline bookkeeping failed: %O', err);
@@ -1128,7 +1185,20 @@ export const ackAcpChildResultDeliveries = async (
       aggregateId: input.operationId,
       eventId,
     });
-    (didAck ? acked : ignored).push(eventId);
+    if (didAck) {
+      acked.push(eventId);
+      continue;
+    }
+    // Verify the REAL receipt state before reporting a miss (SA04-A): an
+    // already-`acked` receipt — the previous ack landed but its response was
+    // lost — is an idempotent success, not an ignore. `ignored` is reserved
+    // for ids that genuinely never resolved under this operation, so the
+    // caller can treat the response as the authoritative consume state.
+    const receipt = await outbox.getDeliveryReceiptState({
+      aggregateId: input.operationId,
+      eventId,
+    });
+    (receipt?.deliveryState === 'acked' ? acked : ignored).push(eventId);
   }
   return { acked, ignored };
 };

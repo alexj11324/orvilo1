@@ -243,7 +243,7 @@ export class EventOutboxModel {
       .update(eventOutbox)
       .set({
         // create_missing=true lands the key on the first submit; the WHERE
-        // clause below (`payload->'decision' is null`) is the first-winner CAS.
+        // clause below (decision absent or JSON-null) is the first-winner CAS.
         payload: sql`jsonb_set(${eventOutbox.payload}, '{decision}', ${JSON.stringify(
           params.decision,
         )}::jsonb, true)`,
@@ -252,8 +252,8 @@ export class EventOutboxModel {
         and(
           eq(eventOutbox.eventId, params.eventId),
           eq(eventOutbox.status, 'pending'),
-          sql`${eventOutbox.payload}->>'consumedAt' is null`,
-          sql`${eventOutbox.payload}->'decision' is null`,
+          sql`COALESCE(${eventOutbox.payload}->>'consumedAt', '') = ''`,
+          sql`COALESCE(${eventOutbox.payload}->>'decision', '') = ''`,
         ),
       )
       .returning({ id: eventOutbox.id });
@@ -289,7 +289,7 @@ export class EventOutboxModel {
         and(
           eq(eventOutbox.eventId, params.eventId),
           eq(eventOutbox.status, 'pending'),
-          sql`${eventOutbox.payload}->>'consumedAt' is null`,
+          sql`COALESCE(${eventOutbox.payload}->>'consumedAt', '') = ''`,
           sql`${eventOutbox.payload}->'decision'->>'action' = 'approved'`,
           sql`(${eventOutbox.payload}->>'expiresAt')::numeric > ${params.now}`,
           sql`${eventOutbox.payload}->>'argsHash' = ${params.argsHash}`,
@@ -324,7 +324,7 @@ export class EventOutboxModel {
         and(
           eq(eventOutbox.eventId, params.eventId),
           eq(eventOutbox.status, 'pending'),
-          sql`${eventOutbox.payload}->>'consumedAt' is null`,
+          sql`COALESCE(${eventOutbox.payload}->>'consumedAt', '') = ''`,
           sql`(${eventOutbox.payload}->>'expiresAt')::numeric <= ${params.now}`,
         ),
       )

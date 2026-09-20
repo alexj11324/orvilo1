@@ -291,7 +291,7 @@ export class TaskTopicModel {
           expectPollFailures === undefined
             ? undefined
             : expectPollFailures === null
-              ? sql`${taskTopics.integration}->'verificationPollFailures' is null`
+              ? sql`COALESCE(${taskTopics.integration}->>'verificationPollFailures', '') = ''`
               : sql`${taskTopics.integration}->'verificationPollFailures' is not distinct from ${JSON.stringify(expectPollFailures)}::jsonb`,
         ),
       )

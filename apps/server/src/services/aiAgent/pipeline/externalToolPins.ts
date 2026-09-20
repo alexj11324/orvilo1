@@ -52,6 +52,10 @@ export const connectorAuthRevision = (connector: DecryptedConnector): string =>
       agentId: connector.agentId ?? null,
       composioAuthConfigId: connector.metadata?.composio?.authConfigId ?? null,
       composioConnectedAccountId: connector.metadata?.composio?.connectedAccountId ?? null,
+      // Grant epoch (SA02-C): rotates on re-auth/revoke, stable across token
+      // refresh — a same-URL/same-clientId re-authorization to a different
+      // account still invalidates old pins.
+      grantEpoch: connector.metadata?.grantEpoch ?? null,
       mcpConnectionType: connector.mcpConnectionType ?? null,
       mcpServerUrl: connector.mcpServerUrl ?? null,
       oidcClientId: connector.oidcConfig?.clientId ?? null,

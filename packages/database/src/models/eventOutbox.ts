@@ -234,19 +234,29 @@ export class EventOutboxModel {
    * receipt. The update only lands while the receipt is still unconsumed and
    * undecided — a second submit, or a submit after consumption, is dropped.
    * `resolutionRequestId` dedupes client retries.
+   *
+   * `expectedWindowId` binds the submit to the exact window the card showed:
+   * when provided, the CAS only lands while the receipt still carries that
+   * window (an absent receipt window is treated as legacy and always
+   * matches). The stored decision is stamped with the row's current
+   * `windowId` server-side so a renewed window can never inherit it.
    */
   recordToolApprovalDecision = async (params: {
     decision: Record<string, unknown>;
     eventId: string;
-  }): Promise<'closed' | 'decided' | 'already_decided'> => {
+    expectedWindowId?: string;
+  }): Promise<'already_decided' | 'closed' | 'decided' | 'stale_window'> => {
     const updated = await this.db
       .update(eventOutbox)
       .set({
         // create_missing=true lands the key on the first submit; the WHERE
         // clause below (decision absent or JSON-null) is the first-winner CAS.
-        payload: sql`jsonb_set(${eventOutbox.payload}, '{decision}', ${JSON.stringify(
+        // The inner jsonb_set stamps the row's CURRENT windowId into the
+        // decision so a later renew (window rotation) can never re-attribute
+        // it — and the consume CAS can require decision.windowId = windowId.
+        payload: sql`jsonb_set(${eventOutbox.payload}, '{decision}', jsonb_set(${JSON.stringify(
           params.decision,
-        )}::jsonb, true)`,
+        )}::jsonb, '{windowId}', COALESCE(${eventOutbox.payload}->'windowId', 'null'::jsonb), true), true)`,
       })
       .where(
         and(
@@ -254,6 +264,15 @@ export class EventOutboxModel {
           eq(eventOutbox.status, 'pending'),
           sql`COALESCE(${eventOutbox.payload}->>'consumedAt', '') = ''`,
           sql`COALESCE(${eventOutbox.payload}->>'decision', '') = ''`,
+          // Window contract: an explicit `expectedWindowId` must match the
+          // row's live window (legacy windowless rows still accept); a submit
+          // WITHOUT one may only decide legacy windowless receipts — a stale
+          // old client can never write the live window's decision.
+          ...(params.expectedWindowId === undefined
+            ? [sql`COALESCE(${eventOutbox.payload}->>'windowId', '') = ''`]
+            : [
+                sql`(COALESCE(${eventOutbox.payload}->>'windowId', '') = '' OR ${eventOutbox.payload}->>'windowId' = ${params.expectedWindowId})`,
+              ]),
         ),
       )
       .returning({ id: eventOutbox.id });
@@ -266,24 +285,44 @@ export class EventOutboxModel {
     if (!row) return 'closed';
     const payload = (row.payload ?? {}) as Record<string, unknown>;
     if (payload.decision !== null && payload.decision !== undefined) return 'already_decided';
+    if (
+      params.expectedWindowId !== undefined &&
+      typeof payload.windowId === 'string' &&
+      payload.windowId.length > 0 &&
+      payload.windowId !== params.expectedWindowId
+    ) {
+      return 'stale_window';
+    }
     return 'closed';
   };
 
   /**
    * One-time consume of an approved tool-approval receipt. Succeeds only when
-   * the receipt is pending, approved, unexpired, unconsumed, and the call
-   * presents the same `argsHash` the approval covered — the UPDATE itself is
-   * the CAS, so two racing executions cannot both observe the grant.
+   * the receipt is pending, approved, unexpired, unconsumed, the call
+   * presents the same `argsHash` AND the full `scopeHash` the approval
+   * covered, and the recorded decision belongs to the receipt's current
+   * window — the UPDATE itself is the CAS, so two racing executions cannot
+   * both observe the grant. The winning invocation id is reserved in the same
+   * write (`consumedInvocationId`) for audit and result-level dedupe.
+   *
+   * Legacy receipts minted before `scopeHash`/`windowId` existed can never
+   * satisfy these clauses — they fail closed instead of upgrading an
+   * incomplete approval into a strong authorization.
    */
   consumeToolApprovalReceipt = async (params: {
     argsHash: string;
     eventId: string;
+    invocationId: string;
     now: number;
+    scopeHash: string;
   }): Promise<boolean> => {
     const updated = await this.db
       .update(eventOutbox)
       .set({
-        payload: sql`jsonb_set(${eventOutbox.payload}, '{consumedAt}', to_jsonb(${params.now}::numeric), true)`,
+        payload: sql`${eventOutbox.payload} || jsonb_build_object(
+          'consumedAt', ${params.now}::numeric,
+          'consumedInvocationId', ${params.invocationId}::text
+        )`,
       })
       .where(
         and(
@@ -293,6 +332,8 @@ export class EventOutboxModel {
           sql`${eventOutbox.payload}->'decision'->>'action' = 'approved'`,
           sql`(${eventOutbox.payload}->>'expiresAt')::numeric > ${params.now}`,
           sql`${eventOutbox.payload}->>'argsHash' = ${params.argsHash}`,
+          sql`${eventOutbox.payload}->>'scopeHash' = ${params.scopeHash}`,
+          sql`${eventOutbox.payload}->'decision'->>'windowId' = ${eventOutbox.payload}->>'windowId'`,
         ),
       )
       .returning({ id: eventOutbox.id });
@@ -301,24 +342,31 @@ export class EventOutboxModel {
 
   /**
    * Re-pend an EXPIRED, still-undecided-or-unconsumed approval receipt under a
-   * fresh window. Any stale decision is cleared so an approval recorded inside
-   * the dead window can never ride the new one. Denied or consumed receipts
-   * stay terminal — the caller's read-back classifies them.
+   * fresh window. Every renew rotates `windowId` to the caller-minted value
+   * and bumps `windowVersion`, re-binds the receipt to the calling scope
+   * (`scopeHash`), and clears any stale decision so an approval recorded
+   * inside the dead window can never ride the new one. Denied or consumed
+   * receipts stay terminal — the denied-guard below makes resurrection
+   * impossible and the caller's read-back classifies them.
    */
   renewToolApprovalReceipt = async (params: {
     eventId: string;
     expiresAt: number;
     now: number;
+    scopeHash: string;
+    windowId: string;
   }): Promise<boolean> => {
     const updated = await this.db
       .update(eventOutbox)
       .set({
         nextAttemptAt: new Date(params.expiresAt),
-        payload: sql`jsonb_set(
-          jsonb_set(
-            ${eventOutbox.payload} #- '{decision}',
-            '{expiresAt}', to_jsonb(${params.expiresAt}::numeric), true),
-          '{requestedAt}', to_jsonb(${params.now}::numeric), true)`,
+        payload: sql`(${eventOutbox.payload} #- '{decision}') || jsonb_build_object(
+          'expiresAt', ${params.expiresAt}::numeric,
+          'requestedAt', ${params.now}::numeric,
+          'scopeHash', ${params.scopeHash}::text,
+          'windowId', ${params.windowId}::text,
+          'windowVersion', COALESCE((${eventOutbox.payload}->>'windowVersion')::numeric, 0) + 1
+        )`,
       })
       .where(
         and(
@@ -326,10 +374,41 @@ export class EventOutboxModel {
           eq(eventOutbox.status, 'pending'),
           sql`COALESCE(${eventOutbox.payload}->>'consumedAt', '') = ''`,
           sql`(${eventOutbox.payload}->>'expiresAt')::numeric <= ${params.now}`,
+          sql`COALESCE(${eventOutbox.payload}->'decision'->>'action', '') <> 'denied'`,
         ),
       )
       .returning({ id: eventOutbox.id });
     return updated.length > 0;
+  };
+
+  /**
+   * Authoritative consume-state read for a delivery receipt, optionally
+   * aggregate-scoped so an id belonging to another operation is never
+   * mistaken for ours. Callers use it to verify the REAL receipt state after
+   * an ack attempt — an already-`acked` row is an idempotent success, not a
+   * failure.
+   */
+  getDeliveryReceiptState = async (params: {
+    aggregateId?: string;
+    eventId: string;
+  }): Promise<{ deliveryState?: string; status: string } | undefined> => {
+    const [row] = await this.db
+      .select({
+        aggregateId: eventOutbox.aggregateId,
+        payload: eventOutbox.payload,
+        status: eventOutbox.status,
+      })
+      .from(eventOutbox)
+      .where(eq(eventOutbox.eventId, params.eventId));
+    if (!row) return undefined;
+    if (params.aggregateId !== undefined && row.aggregateId !== params.aggregateId) {
+      return undefined;
+    }
+    const payload = row.payload as { deliveryState?: unknown } | null;
+    return {
+      deliveryState: typeof payload?.deliveryState === 'string' ? payload.deliveryState : undefined,
+      status: row.status,
+    };
   };
 
   /**

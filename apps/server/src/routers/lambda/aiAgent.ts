@@ -1564,6 +1564,12 @@ const SubmitHeteroInterventionSchema = z.object({
   /** Producer step index; harmless placeholder — correlation is by toolCallId. */
   stepIndex: z.number().int().nonnegative().default(0),
   toolCallId: z.string().min(1),
+  /**
+   * The approval window the answered card was minted for — CAS-matched
+   * against the receipt's current `windowId` so a stale card can never
+   * decide a rotated window. Optional only for legacy clients.
+   */
+  windowId: z.string().min(1).max(128).optional(),
 });
 
 const HeteroInterventionReviewTokenSchema = z.object({
@@ -3508,6 +3514,34 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
+      // SA02/F04 + SA02-C: when this submit answers a `needs_approval` tool
+      // card, the exec-time gate's durable receipt records the decision
+      // BEFORE any claim resolution or publish — first-winner CAS bound to
+      // the card's `windowId`, so every approval entry lands the same atomic
+      // decision and a write that cannot land never surfaces as success.
+      // No receipt exists for ordinary askUser submits — the write is a no-op.
+      const receiptDecision = await new EventOutboxModel(ctx.serverDB).recordToolApprovalDecision({
+        decision: {
+          action: decodeToolApprovalAction({ cancelled, result }),
+          decidedAt: Date.now(),
+          decidedByUserId: ctx.userId,
+          resolutionRequestId,
+        },
+        eventId: toolApprovalEventId(operationId, toolCallId),
+        expectedWindowId: input.windowId,
+      });
+      if (receiptDecision === 'stale_window') {
+        // The card targeted a window a renew already rotated — the decision
+        // is intentionally NOT applied. The card still resolves below; the
+        // exec retry re-pends under the live window.
+        log(
+          'submitHeteroIntervention: stale-window decision dropped op=%s toolCallId=%s windowId=%s',
+          operationId,
+          toolCallId,
+          input.windowId,
+        );
+      }
+
       // Cloud overrides this as an atomic first-winner claim shared by Web and
       // Mobile. OSS returns `handled:false` and preserves the legacy stream
       // publish below. A claimed response is authoritative: client-supplied
@@ -3531,24 +3565,6 @@ export const aiAgentRouter = router({
           workspaceId: ctx.workspaceId,
         });
       }
-
-      // SA02/F04: when this submit answers a `needs_approval` tool card, the
-      // exec-time gate's durable receipt records the decision — first-winner
-      // CAS, so a double-submit or a stale retry can't flip it. No receipt
-      // exists for ordinary askUser submits — the write is a no-op.
-      await new EventOutboxModel(ctx.serverDB)
-        .recordToolApprovalDecision({
-          decision: {
-            action: decodeToolApprovalAction({ cancelled, result }),
-            decidedAt: Date.now(),
-            decidedByUserId: ctx.userId,
-            resolutionRequestId,
-          },
-          eventId: toolApprovalEventId(operationId, toolCallId),
-        })
-        .catch((error) =>
-          log('submitHeteroIntervention: tool-approval receipt write failed: %O', error),
-        );
 
       const streamEventManager = createStreamEventManager();
       await streamEventManager.publishStreamEvent(operationId, {

@@ -38,6 +38,7 @@ import type { Command } from 'commander';
 
 import { createLambdaClient, getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
+import { persistChildResultInboxRecord } from '../utils/childResultInbox';
 import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { HeteroTraceRecorder } from '../utils/HeteroTraceRecorder';
 import { log } from '../utils/logger';
@@ -593,11 +594,16 @@ const exec = async (options: ExecOptions): Promise<void> => {
         awaitChildren: (input) =>
           getBuiltinToolClient().aiAgent.heteroAwaitBuiltinToolChildren.query(input),
         exec: (input) => getBuiltinToolClient().aiAgent.heteroExecBuiltinTool.mutate(input),
+        // SA04-A: the host's durable inbox — settled child results land in
+        // ~/.orvilo/inbox/ BEFORE the ack flips their receipts to `acked`, so
+        // a crash between receive and ack stays recoverable and the retried
+        // call reuses the same stable invocation id.
+        persistChildResultInbox: (input) => persistChildResultInboxRecord(input),
         // F04: `needs_approval` external tools park as `acp_tool_approval_pending`;
         // surface the permission card on the run's AskUser bridge. No bridge
         // (headless producer) cancels immediately — the server receipt stays
         // pending and the call is refused.
-        requestApproval: async ({ apiName, args, expiresAt, identifier, toolCallId }) => {
+        requestApproval: async ({ apiName, args, expiresAt, identifier, toolCallId, windowId }) => {
           if (!askBridge) {
             return { cancelReason: 'session_ended' as const, cancelled: true };
           }
@@ -621,6 +627,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
               },
               interactionKind: 'permission',
               toolCallId,
+              windowId,
             },
             {
               timeoutMs: expiresAt === undefined ? undefined : Math.max(1, expiresAt - Date.now()),

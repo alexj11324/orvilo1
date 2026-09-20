@@ -163,7 +163,7 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 ## 10. R11 固定 SHA 验收（进行中）
 
-**整合 SHA（临时冻结，待 R08 子会话合入后再冻结终态）**: `cb02a617` —— `release/caid-remediation-integration`（P00–P21 + R00–R10 + R05/R09 侧支）合并进 `test/live-acp-caid-and-release-readiness`。
+**整合 SHA（终态冻结）**: `88284c85` —— `release/caid-remediation-integration`（P00–P21 + R00–R10 + R05/R09/R08 全部整改）合并进 `test/live-acp-caid-and-release-readiness`。R08 在最终树上并入后复核：`apps/server` 作用域 tsc = **302** 条 = 基线零新增；新增 `judgment.test.ts` 18/18 通过。
 
 ### 10.1 逐诊断 typecheck 对比（非总数免检）
 
@@ -181,6 +181,8 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 | `goal.submitPlan` 陈旧 token                                                                              | `409 CONFLICT "Stale planning input"` —— plan revision CAS 真实生效                                                                                                                                                                                                                           |
 | CAID 准入 OFF（默认）                                                                                     | `goal.tick` → `waiting_external`「CAID dispatch admission is disabled」，任务 T-1 保持 `backlog` 未被认领                                                                                                                                                                                     |
 | CAID 准入 ON（`orvilo:runtime-config:feature-flags:published` 写 `{"caid_dispatch":true}`，5s 缓存后）    | `goal.tick` → 进入 `dispatchWork` → 条件 UPDATE 认领任务（`started_at` 落库）→ 下达 `dispatchHeteroAgent` → 到达 agent-runtime queue 边界，因本地无 `HATCHET_CLIENT_TOKEN` 诚实失败；任务落 `paused` + `Critical webhook delivery failed` —— 证明门禁开启后真实走 orchestrated 派发而非假成功 |
+
+- **e2e 唯一实跑失败**：`Test Web App` 里 `agent-scroll.feature`「视口不应贴近聊天列表底部」失败（`scroll.steps.ts:364`）。栈未触碰任何 `e2e/` 或聊天滚动代码（diff 只含 hetero-agent 侧）；该失败此前一直被 `@hugeicons@4.3.4` 构建崩遮罩（e2e 从未跑完），上游 4.3.3 恢复可用后首次实跑即暴露 —— 倾向判定为基线遗留，但缺乏 canary 对照运行记录，按「待 canary 复核」记录不冒领 PASS。
 
 ### 10.3 仍 BLOCKED 的行（环境缺位，不降级）
 

@@ -12,6 +12,7 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { IntegrationLeaseItem } from '@/database/schemas';
+import type { RepoRefLeaseOutcomeContext } from '@/database/schemas/integrationLease';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -77,6 +78,31 @@ const MUTATION_LEASE_PHASES: ReadonlySet<IntegrationLeasePhase> = new Set([
 ]);
 
 /**
+ * Identity of one fenced remote mutation minted inside `fenced`. The stable
+ * `operationId` is persisted into the lease's outcome context when the
+ * mutation's result is lost, so a later reconcile can prove the old
+ * operation's terminal state instead of guessing from a successful read.
+ */
+export interface RepoRefLeaseOperation {
+  /** Post-state this write was trying to establish on the remote ref. */
+  expectedRemoteSha?: string;
+  /** Stable per-operation identity: `<lease fenceSeq>:<uuid>`. */
+  operationId: string;
+  /** Full remote ref the write targets (e.g. `refs/heads/main`). */
+  ref?: string;
+  /** Acquisition fence this operation belongs to (monotone per owner). */
+  seq: number;
+}
+
+/** Remote-write terms for a mutation phase — persisted on outcome loss. */
+interface RepoRefLeaseRemoteWrite {
+  /** Post-state the mutation was trying to establish on `ref`. */
+  expectedRemoteSha?: string;
+  /** Full remote ref the mutation writes (e.g. `refs/heads/main`). */
+  ref: string;
+}
+
+/**
  * Handle handed to the lease-protected section. `assert` renews the deadline
  * and proves ownership in one short statement — every remote side effect
  * calls it immediately before issuing the write so a stolen lease can never
@@ -93,15 +119,26 @@ interface RepoRefLeaseHandle {
    * heartbeat — a device/GitHub RPC may outlive the base TTL, so the lease
    * stays owned while the write is in flight. A failed renewal marks the
    * handle lost; the in-flight call completes but every later fenced call
-   * throws before issuing another write. Mutation phases additionally refuse
-   * to run while the lease still carries an unreconciled `outcomeUnknown`.
+   * throws before issuing another write. Ownership is re-verified again
+   * after `fn` resolves, before any business write-back may run. Mutation
+   * phases additionally refuse to run while the lease still carries an
+   * unreconciled `outcomeUnknown`.
    */
-  fenced: <T>(phase: IntegrationLeasePhase, fn: () => Promise<T>) => Promise<T>;
+  fenced: <T>(
+    phase: IntegrationLeasePhase,
+    fn: (operation?: RepoRefLeaseOperation) => Promise<T>,
+    remoteWrite?: RepoRefLeaseRemoteWrite,
+  ) => Promise<T>;
   /** Monotone claim fence from the lease row — evidence for diagnostics. */
   fenceSeq: number;
   id: string;
+  /** Operation minted by the latest fenced call (persisted on outcome loss). */
+  lastOperation?: RepoRefLeaseOperation;
   /** Last mutation phase asserted on this handle ('claimed' = none so far). */
   phase: IntegrationLeasePhase;
+  /** Outcome context persisted by the previous owner when this lease was
+   *  inherited ambiguous — reconcile proof inputs. */
+  recordedContext?: RepoRefLeaseOutcomeContext;
 }
 
 /** Lease pacing knobs — tests inject smaller windows; production uses defaults. */
@@ -114,7 +151,8 @@ interface RepoRefLeasePacing {
   waitMs: number;
 }
 /** Push rejections that mean the recorded merge commit's base moved. */
-const NON_FAST_FORWARD_PUSH = /non-fast-forward|fetch first|stale info|\[rejected\]/i;
+const NON_FAST_FORWARD_PUSH =
+  /non-fast-forward|fetch first|stale info|\[rejected\]|moved remote ref|refusing to publish over/i;
 /** Bounded scan for the pending-integration re-drive pass — same oldest-first
  * pattern as the delivery-review sweep so a busy watchdog never starves the
  * tail. */
@@ -603,7 +641,13 @@ export class TaskIntegrationService {
     // The stolen row keeps the previous holder's ambiguity flag (acquire
     // preserves it): this owner cannot issue mutations until a 'reconcile'
     // remote read has observed the prior operation's terminal state.
-    let unreconciled = lease.outcomeUnknown;
+    // Unreconciled covers both the explicit outcomeUnknown flag AND an
+    // unreleased prior mutation phase — a holder stolen mid-write may still
+    // be executing its remote operation, so the new owner must observe a
+    // terminal remote state before mutating even when no flag was recorded.
+    let unreconciled =
+      lease.outcomeUnknown ||
+      (!!prior && !prior.releasedAt && MUTATION_LEASE_PHASES.has(prior.phase));
     let lost = false;
     const renewAt = async (phase: IntegrationLeasePhase) => {
       const ok = await this.leaseModel.renew(leaseId, ownerToken, deadline(), phase);
@@ -615,12 +659,27 @@ export class TaskIntegrationService {
         await renewAt(phase);
         handle.phase = phase;
       },
-      fenced: async <T>(phase: IntegrationLeasePhase, fn: () => Promise<T>): Promise<T> => {
+      fenced: async <T>(
+        phase: IntegrationLeasePhase,
+        fn: (operation?: RepoRefLeaseOperation) => Promise<T>,
+        remoteWrite?: RepoRefLeaseRemoteWrite,
+      ): Promise<T> => {
         if (lost) throw new RepoRefLeaseLostError(key);
         if (unreconciled && MUTATION_LEASE_PHASES.has(phase))
           throw new RepoRefLeaseNotReconciledError(key, phase);
         await renewAt(phase);
         handle.phase = phase;
+        // Mint a stable identity for every mutation-phase call — if the
+        // remote outcome is later lost, the persisted context names exactly
+        // this operation and the post-state it tried to establish.
+        handle.lastOperation = MUTATION_LEASE_PHASES.has(phase)
+          ? {
+              expectedRemoteSha: remoteWrite?.expectedRemoteSha,
+              operationId: `${lease.fenceSeq}:${randomUUID()}`,
+              ref: remoteWrite?.ref,
+              seq: lease.fenceSeq,
+            }
+          : undefined;
         const heartbeat = setInterval(() => {
           void renewAt(phase).catch(() => {
             lost = true;
@@ -628,7 +687,13 @@ export class TaskIntegrationService {
         }, this.pacing.heartbeatMs);
         heartbeat.unref?.();
         try {
-          return await fn();
+          const result = await fn(handle.lastOperation);
+          // Post-flight ownership proof: if the lease was stolen while `fn`
+          // ran, this throw converts the return path into the lost-lease
+          // branch (which records outcome_unknown) instead of letting the
+          // caller's business write-back run for a lease we no longer hold.
+          await renewAt(phase);
+          return result;
         } finally {
           clearInterval(heartbeat);
         }
@@ -636,14 +701,17 @@ export class TaskIntegrationService {
       fenceSeq: lease.fenceSeq,
       id: leaseId,
       phase: 'claimed',
+      recordedContext: lease.context ?? undefined,
     };
     let ambiguousOutcome = false;
-    const outcomeContext = () => ({
+    const outcomeContext = (): RepoRefLeaseOutcomeContext => ({
       expectedBaseSha: lease.expectedBaseSha ?? undefined,
       expectedHeadSha: lease.expectedHeadSha ?? undefined,
+      expectedRemoteSha: handle.lastOperation?.expectedRemoteSha,
       fenceSeq: lease.fenceSeq,
       phase: handle.phase,
       recordedAt: new Date().toISOString(),
+      remoteOperationId: handle.lastOperation?.operationId,
     });
 
     try {
@@ -728,13 +796,30 @@ export class TaskIntegrationService {
           return !check.error;
         }
         if (record.deviceId && record.repoPath) {
-          const branches = await deviceGateway.listGitBranches({
+          // A branch-list read (even a non-empty one) proves nothing about
+          // the lost mutation — reconcile requires observing the remote
+          // ref's terminal value and comparing it against the persisted
+          // pre/post expectations recorded when the outcome was lost.
+          const probe = await deviceGateway.probeGitRemoteRef({
             deviceId: record.deviceId,
             path: record.repoPath,
+            ref: `refs/heads/${record.baseBranch}`,
             userId: this.userId,
             workspaceId: this.workspaceId,
           });
-          return branches !== undefined;
+          if (!probe || probe.state === 'unknown') return false;
+          // The ref is provably absent — no in-flight write of ours can land.
+          if (probe.state === 'missing') return true;
+          const context = lease.recordedContext;
+          // Post-state proof: the lost mutation reached the remote.
+          if (probe.sha === (context?.expectedRemoteSha ?? record.integratedSha)) return true;
+          // Pre-state proof: remote never moved off the claimed base, so the
+          // lost mutation provably did not execute.
+          if (probe.sha === (context?.expectedBaseSha ?? record.expectedBaseSha)) return true;
+          // Remote moved to an unrelated value. The lost operation only
+          // provably failed when it wrote under an atomic expected-old
+          // condition — identifiable by its recorded operation identity.
+          return context?.remoteOperationId !== undefined;
         }
         return false;
       });
@@ -1568,17 +1653,44 @@ export class TaskIntegrationService {
 
     let pushedToRemote: boolean | undefined;
     if (record.baseBranch !== 'HEAD') {
-      const pushed = await lease.fenced('publish', () =>
-        deviceGateway.pushGitBranch({
-          deviceId,
-          expectedSha: sha,
-          path: publishPath,
-          remoteBranch: record.baseBranch,
-          sourceRef: sha,
-          userId: this.userId,
-          workspaceId: this.workspaceId,
-        }),
+      const remoteRef = `refs/heads/${record.baseBranch}`;
+      const pushed = await lease.fenced(
+        'publish',
+        (operation) =>
+          deviceGateway.pushGitBranch({
+            deviceId,
+            // Atomic expected-old on the remote ref: the remote base must still
+            // equal the tip this integration was computed against (empty =
+            // must not exist). A moved remote refuses the write rather than
+            // publishing over another writer.
+            expectedRemoteSha: record.expectedBaseSha ?? '',
+            expectedSha: sha,
+            // Persistent single-writer fence on the device — a stale lease
+            // owner's retry is refused before it can touch the remote.
+            fence:
+              operation === undefined
+                ? undefined
+                : { operationId: operation.operationId, ref: remoteRef, seq: operation.seq },
+            path: publishPath,
+            remoteBranch: record.baseBranch,
+            sourceRef: sha,
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          }),
+        { expectedRemoteSha: sha, ref: remoteRef },
       );
+      if (pushed.success && pushed.fenceEnforced !== true) {
+        // Pre-fence device client: the write succeeded but was not fenced.
+        // Tolerated only because unreconciled leases are already blocked
+        // upstream by the probeGitRemoteRef reconcile — a client old enough
+        // to lack fencing also lacks the reconcile read, so it can never run
+        // a write on an ambiguous lease.
+        log(
+          'publishAndCleanup: device %s does not enforce push fencing (capability gap) for task %s',
+          deviceId,
+          taskId,
+        );
+      }
       if (!pushed.success || pushed.pushedSourceRef !== sha) {
         const immutableSourceUnconfirmed = pushed.success && pushed.pushedSourceRef !== sha;
         const reason = immutableSourceUnconfirmed
@@ -1824,13 +1936,26 @@ export class TaskIntegrationService {
       const delivered = [...upstreamTopics]
         .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
         .find((t) => t.status === 'completed' && t.topicId);
+      // Mutation-boundary re-verification (SA05-A): the recorded delivery must
+      // still be the upstream's current claim — same topic, same dispatch, same
+      // acceptance operation, and the upstream's live execution generation
+      // still equal to the generation the delivery belongs to. Fields absent
+      // from receipts persisted before this binding existed are skipped.
+      const receiptDelivery = receipt.delivery;
       const stillValid =
         delivered !== undefined &&
         upstreamTask?.status === 'completed' &&
-        (!receipt.delivery ||
-          (delivered.topicId === receipt.delivery.topicId &&
-            delivered.integration?.integratedSha === receipt.delivery.integratedSha &&
-            delivered.integration?.expectedHeadSha === receipt.delivery.sourceSha));
+        upstreamTask?.executionGeneration === delivered.executionGeneration &&
+        (!receiptDelivery ||
+          (delivered.topicId === receiptDelivery.topicId &&
+            delivered.integration?.integratedSha === receiptDelivery.integratedSha &&
+            delivered.integration?.expectedHeadSha === receiptDelivery.sourceSha &&
+            (receiptDelivery.dispatchId === undefined ||
+              delivered.dispatchId === receiptDelivery.dispatchId) &&
+            (receiptDelivery.executionGeneration === undefined ||
+              delivered.executionGeneration === receiptDelivery.executionGeneration) &&
+            (receiptDelivery.verifyOperationId === undefined ||
+              delivered.integration?.verifyOperationId === receiptDelivery.verifyOperationId)));
       if (!stillValid) return receipt;
     }
     return undefined;

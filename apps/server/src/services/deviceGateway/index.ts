@@ -30,6 +30,7 @@ import type {
   DeviceGitLinkedPullRequestResult,
   DeviceGitMergeResult,
   DeviceGitRemoteBranchListItem,
+  DeviceGitRemoteRefProbe,
   DeviceGitRemoveWorktreeResult,
   DeviceGitRenameBranchResult,
   DeviceGitSyncResult,
@@ -963,7 +964,11 @@ export class DeviceGateway {
    */
   async pushGitBranch(params: {
     deviceId: string;
+    /** Atomic expected-old value for the remote ref (fenced publish). */
+    expectedRemoteSha?: string;
     expectedSha?: string;
+    /** Lease fence (seq + operation identity) the device must persist first. */
+    fence?: { operationId: string; ref: string; seq: number };
     path: string;
     remoteBranch?: string;
     sourceRef?: string;
@@ -974,7 +979,9 @@ export class DeviceGateway {
     const {
       userId,
       deviceId,
+      expectedRemoteSha,
       expectedSha,
+      fence,
       path,
       remoteBranch,
       sourceRef,
@@ -987,7 +994,10 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitSyncResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'pushGitBranch', params: { expectedSha, path, remoteBranch, sourceRef } },
+        {
+          method: 'pushGitBranch',
+          params: { expectedRemoteSha, expectedSha, fence, path, remoteBranch, sourceRef },
+        },
       );
 
       if (!result.success || !result.data) {
@@ -1436,6 +1446,44 @@ export class DeviceGateway {
       return result.data;
     } catch (error) {
       log('listGitRemoteBranches: error for deviceId=%s — %O', deviceId, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Probe a remote ref on a device checkout via the `probeGitRemoteRef` RPC
+   * (`git ls-remote`) — the reconcile read for fenced publishes. Returns
+   * `undefined` when the device is unreachable or predates the method, which
+   * the lease reconciler treats as "cannot prove remote state" and holds
+   * further mutation.
+   */
+  async probeGitRemoteRef(params: {
+    deviceId: string;
+    path: string;
+    ref: string;
+    remote?: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+  }): Promise<DeviceGitRemoteRefProbe | undefined> {
+    const { userId, deviceId, path, ref, remote, timeout = 30_000, workspaceId } = params;
+    const client = this.getClient();
+    if (!client) return undefined;
+
+    try {
+      const result = await client.invokeRpc<DeviceGitRemoteRefProbe>(
+        { deviceId, timeout, userId, workspaceId },
+        { method: 'probeGitRemoteRef', params: { path, ref, remote } },
+      );
+
+      if (!result.success || !result.data) {
+        log('probeGitRemoteRef: failed for deviceId=%s — %s', deviceId, result.error);
+        return undefined;
+      }
+
+      return result.data;
+    } catch (error) {
+      log('probeGitRemoteRef: error for deviceId=%s — %O', deviceId, error);
       return undefined;
     }
   }

@@ -61,6 +61,28 @@ export type TaskDispatchPhase =
   | 'succeeded'
   | 'outcome_unknown';
 
+/**
+ * Authoritative execution origin persisted on a dispatch row (SA05-B):
+ * `caid` = a new orchestrated writer (goal/planner/cascade entry);
+ * `internal` = settlement work continuing an existing dispatch (corrective
+ * merges, reservation handoffs); `external` = direct user/schedule
+ * invocation. `null` on rows persisted before the column existed.
+ */
+export type TaskDispatchOrigin = 'caid' | 'external' | 'internal';
+
+/**
+ * Verified settlement evidence persisted with an `internal` dispatch —
+ * the real association that authorized continuing an existing dispatch's
+ * work, resolved server-side at claim time (never caller-asserted).
+ */
+export interface TaskDispatchSettlementGrant {
+  kind: 'integration_seed' | 'parent_operation' | 'reservation_takeover';
+  /** Upstream delivery operation the settlement corrects/settles. */
+  sourceOperationId?: string;
+  /** task_topics row the settlement continues. */
+  sourceTopicId?: string;
+}
+
 export interface TaskExecutionEnvironmentSnapshot {
   branch?: string;
   deviceId?: string;
@@ -85,6 +107,11 @@ export interface TaskExecutionEnvironmentSnapshot {
 export interface TaskDependencyReceipt {
   /** Settled delivery the downstream run is built on, when known. */
   delivery?: {
+    /** Dispatch identity that produced the delivery — binds the receipt to a
+     * specific claim, not just "some completed topic". */
+    dispatchId?: string;
+    /** Upstream task's execution generation the delivery belongs to. */
+    executionGeneration?: number;
     /** Merge SHA once the upstream delivery integrated, if it integrated. */
     integratedSha?: string;
     operationId?: string;
@@ -92,6 +119,8 @@ export interface TaskDependencyReceipt {
     /** Immutable source commit accepted for the upstream delivery. */
     sourceSha?: string;
     topicId: string;
+    /** Verification operation that accepted the delivery, when recorded. */
+    verifyOperationId?: string;
   };
   /**
    * Whether the recorded delivery is the upstream's *current* valid delivery

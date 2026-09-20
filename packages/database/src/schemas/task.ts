@@ -6,7 +6,9 @@ import type {
   TaskAssignmentMode,
   TaskCreationSubjectKind,
   TaskCreationSubjectSnapshot,
+  TaskDispatchOrigin,
   TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskHumanLock,
@@ -248,6 +250,21 @@ export const taskDispatches = pgTable(
     operationId: text('operation_id'),
     idempotencyKey: text('idempotency_key').notNull(),
     requestedBy: text('requested_by').notNull(),
+    /**
+     * Authoritative execution origin recorded at claim (SA05-B): 'caid' =
+     * new orchestrated writer; 'internal' = settlement continuing an
+     * existing dispatch; 'external' = direct user/schedule invocation.
+     * NULL on rows persisted before this column existed — readers derive
+     * the legacy equivalent from `requestedBy`.
+     */
+    origin: text('origin').$type<TaskDispatchOrigin>(),
+    /** Raw actor identity, kept separate from the `trigger:actor` audit
+     *  string stored in `requestedBy`. */
+    initiator: text('initiator'),
+    /** The dispatch this settlement run continues (origin='internal'). */
+    sourceDispatchId: text('source_dispatch_id'),
+    /** Server-verified settlement evidence recorded at claim. */
+    settlementGrant: jsonb('settlement_grant').$type<TaskDispatchSettlementGrant>(),
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamptz('lease_expires_at'),
     waitingReason: text('waiting_reason'),

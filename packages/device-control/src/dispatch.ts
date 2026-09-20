@@ -16,6 +16,7 @@ import {
   listGitRemoteBranches,
   listGitWorktrees,
   mergeGitBranch,
+  probeGitRemoteRef,
   pullGitBranch,
   pushGitBranch,
   removeGitWorktree,
@@ -89,6 +90,7 @@ export const DEVICE_RPC_METHODS = [
   'mergeGitBranch',
   'finalizeGitMerge',
   'pullGitBranch',
+  'probeGitRemoteRef',
   'pushGitBranch',
   'revertGitFile',
 ] as const;
@@ -294,10 +296,16 @@ export const executeDeviceRpc = async (
       return pullGitBranch(params as { path: string });
     }
 
+    case 'probeGitRemoteRef': {
+      return probeGitRemoteRef(params as { path: string; ref: string; remote?: string });
+    }
+
     case 'pushGitBranch': {
       return pushGitBranch(
         params as {
+          expectedRemoteSha?: string;
           expectedSha?: string;
+          fence?: { operationId: string; ref: string; seq: number };
           path: string;
           remoteBranch?: string;
           sourceRef?: string;

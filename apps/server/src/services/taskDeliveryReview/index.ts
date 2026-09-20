@@ -848,9 +848,11 @@ export const runTaskDeliveryReviewSweep = async (
           result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
           continue;
         }
-        if (!merge.merged) {
-          // Explicit refusal — the intent is released (CAS back to unset) so
-          // the next sweep may retry once remote gates allow the merge again.
+        if (merge.outcome === 'confirmed_rejected') {
+          // Explicit refusal — GitHub evaluated the request and rejected it,
+          // so the merge provably did not execute. The intent is released
+          // (CAS back to unset) so the next sweep may retry once remote gates
+          // allow the merge again.
           const released = await topicModel.updateIntegration(
             task.id,
             row.topicId,
@@ -877,6 +879,27 @@ export const runTaskDeliveryReviewSweep = async (
               : 'Waiting for GitHub merge gates.',
           });
           result.waiting.push(task.identifier);
+          continue;
+        }
+        if (merge.outcome === 'outcome_unknown') {
+          // The response was lost or unverifiable — the remote may already
+          // have merged. Keep the persisted intent so the next sweep
+          // reconciles by re-reading merged state and never re-issues.
+          log(
+            'merge outcome unknown for %s — intent persisted — %s',
+            task.identifier,
+            merge.message ?? 'no message',
+          );
+          const outcome = await noteVerificationPollFailure({
+            detail: `Merge request outcome unknown: ${merge.message ?? 'unconfirmed response'}`,
+            record: deliveryRecord,
+            row,
+            stage: 'merge_decision',
+            task,
+            taskModel,
+            topicModel,
+          });
+          result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
           continue;
         }
       }

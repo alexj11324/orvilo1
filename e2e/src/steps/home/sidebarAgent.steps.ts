@@ -263,9 +263,22 @@ When('用户点击更多操作按钮', async function (this: CustomWorld) {
   console.log('   ✅ 已点击更多操作按钮');
 });
 
+// The context menu can unmount between the trigger step and the item lookup
+// (hover loss re-renders the row). Re-open it once if nothing is visible.
+async function ensureContextMenuOpen(world: CustomWorld) {
+  const anyItem = world.page.getByRole('menuitem').first();
+  if (await anyItem.isVisible().catch(() => false)) return;
+  const row = world.page.locator(world.testContext.targetRowSelector).first();
+  await row.hover();
+  await world.page.waitForTimeout(200);
+  await row.click({ button: 'right', force: true });
+  await expect(anyItem).toBeVisible({ timeout: 5000 });
+}
+
 When('用户在菜单中选择重命名', async function (this: CustomWorld) {
   console.log('   📍 Step: 选择重命名选项...');
 
+  await ensureContextMenuOpen(this);
   const menuItemNames = await this.page.getByRole('menuitem').allTextContents();
   console.log(`   📍 Context menu items: ${JSON.stringify(menuItemNames)}`);
   const renameOption = this.page.getByRole('menuitem', { name: /rename|重命名/i });
@@ -279,6 +292,7 @@ When('用户在菜单中选择重命名', async function (this: CustomWorld) {
 When('用户在菜单中选择删除', async function (this: CustomWorld) {
   console.log('   📍 Step: 选择删除选项...');
 
+  await ensureContextMenuOpen(this);
   const menuItemNames = await this.page.getByRole('menuitem').allTextContents();
   console.log(`   📍 Context menu items: ${JSON.stringify(menuItemNames)}`);
   const deleteOption = this.page.getByRole('menuitem', { name: /delete|删除/i });

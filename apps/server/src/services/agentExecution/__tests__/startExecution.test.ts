@@ -141,16 +141,36 @@ describe('AgentRuntimeService.startExecution', () => {
       expect(stateManager.createOperationMetadata).not.toHaveBeenCalled();
     });
 
-    it('reads the live state snapshot ahead of a stale row status', async () => {
+    it('durable idle wins over a stale running snapshot (F09)', async () => {
+      // A legacy 'running' snapshot over an `idle` row means no dispatch ever
+      // happened — the snapshot is historical input, not proof of a live run.
       findByIdMock.mockResolvedValue(operationRow('idle'));
       const stateManager = buildStateManager({ status: 'running' });
       const service = buildService(stateManager);
 
-      await expect(service.startExecution({ operationId: 'op_1' })).resolves.toEqual({
-        alreadyStarted: true,
-        operationId: 'op_1',
-        scheduled: false,
-        success: true,
+      await expect(service.startExecution({ operationId: 'op_1' })).rejects.toMatchObject({
+        denial: 'never_dispatched',
+      });
+    });
+
+    it('durable terminal wins over a stale running snapshot (F09)', async () => {
+      findByIdMock.mockResolvedValue(operationRow('done'));
+      const stateManager = buildStateManager({ status: 'running' });
+      const service = buildService(stateManager);
+
+      await expect(service.startExecution({ operationId: 'op_1' })).rejects.toMatchObject({
+        denial: 'terminal',
+      });
+    });
+
+    it('rejects a running snapshot with no durable row at all (F09)', async () => {
+      // Orphan snapshot: metadata exists but no durable dispatch was written —
+      // cannot be claimed as already-started.
+      const stateManager = buildStateManager({ status: 'running' }, { userId: 'user_1' });
+      const service = buildService(stateManager);
+
+      await expect(service.startExecution({ operationId: 'op_1' })).rejects.toMatchObject({
+        denial: 'never_dispatched',
       });
     });
   });

@@ -2,6 +2,7 @@ import { computePromptHash, resolveScenario } from '@orvilo/llm-generation-traci
 import type { GenerateObjectPayload, GenerateObjectSchema } from '@orvilo/model-runtime';
 import type { AgentOperationStatus, OpenAIChatMessage } from '@orvilo/types';
 import { isTerminalAgentOperationStatus } from '@orvilo/types';
+import Ajv from 'ajv';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
@@ -38,9 +39,9 @@ const DEFAULT_TIMEOUT_MS = 180_000;
 export class AcpJudgmentBindingError extends Error {
   readonly code = 'ACP_JUDGMENT_NO_BINDING' as const;
 
-  constructor(purpose: string) {
+  constructor(purpose: string, reason?: string) {
     super(
-      `No authorized ACP judgment agent for "${purpose}". Bind an agent (domain binding or ${ACP_JUDGMENT_AGENT_ENV}) — deployment credentials are never used as a fallback for judgments.`,
+      `No authorized ACP judgment agent for "${purpose}". ${reason ?? `Bind an agent (domain binding or ${ACP_JUDGMENT_AGENT_ENV}) — deployment credentials are never used as a fallback for judgments.`}`,
     );
     this.name = 'AcpJudgmentBindingError';
   }
@@ -57,15 +58,22 @@ export class AcpJudgmentRunError extends Error {
   readonly code = 'ACP_JUDGMENT_RUN_FAILED' as const;
   readonly operationId?: string;
   readonly status?: AgentOperationStatus;
+  /** Result of the interrupt attempt — 'unknown' must not be read as stopped. */
+  readonly cancelResult?: 'confirmed' | 'unknown';
 
   constructor(
     message: string,
-    detail: { operationId?: string; status?: AgentOperationStatus } = {},
+    detail: {
+      cancelResult?: 'confirmed' | 'unknown';
+      operationId?: string;
+      status?: AgentOperationStatus;
+    } = {},
   ) {
     super(message);
     this.name = 'AcpJudgmentRunError';
     this.operationId = detail.operationId;
     this.status = detail.status;
+    this.cancelResult = detail.cancelResult;
   }
 }
 
@@ -74,6 +82,30 @@ export const isAcpJudgmentRunError = (error: unknown): error is AcpJudgmentRunEr
   (typeof error === 'object' &&
     error !== null &&
     (error as { code?: unknown }).code === 'ACP_JUDGMENT_RUN_FAILED');
+
+/**
+ * The bound agent replied, but the payload fails the declared schema. Typed
+ * separately from a run failure: the operation may have completed `done`, yet
+ * the answer is unusable and must never reach a planning/acceptance write.
+ */
+export class AcpJudgmentValidationError extends Error {
+  readonly code = 'ACP_JUDGMENT_SCHEMA_MISMATCH' as const;
+  readonly issues: string[];
+  readonly operationId?: string;
+
+  constructor(purpose: string, issues: string[], operationId?: string) {
+    super(`Judgment "${purpose}" reply failed schema validation: ${issues.join('; ')}`);
+    this.name = 'AcpJudgmentValidationError';
+    this.issues = issues;
+    this.operationId = operationId;
+  }
+}
+
+export const isAcpJudgmentValidationError = (error: unknown): error is AcpJudgmentValidationError =>
+  error instanceof AcpJudgmentValidationError ||
+  (typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === 'ACP_JUDGMENT_SCHEMA_MISMATCH');
 
 /**
  * The binding a consumer offers for one judgment. `agentId` pins a user agent
@@ -103,11 +135,15 @@ export const resolveAcpJudgmentAgent = async (
 ): Promise<ResolvedAcpJudgmentAgent | undefined> => {
   const agents = new AgentModel(db, userId, workspaceId);
 
-  if (binding.agentId && (await agents.existsById(binding.agentId))) {
-    return { agentId: binding.agentId };
-  }
   if (binding.agentId) {
-    log('pinned judgment agent %s not found, falling through', binding.agentId);
+    if (await agents.existsById(binding.agentId)) return { agentId: binding.agentId };
+    // An explicitly pinned execution identity that no longer exists is a hard
+    // boundary — falling through to slug/env would run the judgment as a
+    // different identity than the caller authorized.
+    throw new AcpJudgmentBindingError(
+      `pinned:${binding.agentId}`,
+      'the explicitly pinned agent no longer exists — no slug/env fallthrough',
+    );
   }
 
   if (binding.slug && (await agents.getBuiltinAgent(binding.slug))) {
@@ -289,6 +325,27 @@ const sleep = (ms: number, signal?: AbortSignal) =>
     signal?.addEventListener('abort', onAbort, { once: true });
   });
 
+let ajvInstance: Ajv | undefined;
+const getAjv = () => (ajvInstance ??= new Ajv({ allErrors: true, strict: false }));
+
+/**
+ * Server-side validation of a judgment reply against the declared JSON Schema.
+ * Returns the list of validation issues (empty = valid). An uncompilable
+ * schema is reported as an issue — the run cannot be treated as conformant.
+ */
+const validateJudgmentData = (schema: GenerateObjectSchema['schema'], data: unknown): string[] => {
+  let validate: ReturnType<Ajv['compile']>;
+  try {
+    validate = getAjv().compile(schema);
+  } catch (error) {
+    return [`schema is not a valid JSON Schema: ${(error as Error).message}`];
+  }
+  if (validate(data)) return [];
+  return (validate.errors ?? []).map(
+    (issue) => `${issue.instancePath || '/'} ${issue.message ?? 'invalid'}`,
+  );
+};
+
 const pickTracingString = (value: unknown): string | undefined =>
   typeof value === 'string' ? value : undefined;
 
@@ -325,6 +382,8 @@ const recordJudgmentTracing = async (params: {
   output: unknown;
   purpose: string;
   schema?: GenerateObjectSchema;
+  /** False when the reply failed schema validation — success needs both halves. */
+  succeeded?: boolean;
   systemPrompt?: string;
   tracing?: Record<string, unknown>;
   userId: string;
@@ -344,14 +403,18 @@ const recordJudgmentTracing = async (params: {
     scenario: tracing.scenario ?? params.purpose,
     trigger: tracing.trigger ?? ACP_JUDGMENT_TRIGGER,
   });
-  const success = params.operation.status === 'done';
+  const success = (params.succeeded ?? true) && params.operation.status === 'done';
 
   let persisted: string | null = null;
   try {
     const result = await service.record({
       agentId: params.operation.agentId ?? tracing.agentId,
       costUsd: params.operation.totalCost,
-      errorCode: success ? null : params.operation.status,
+      errorCode: success
+        ? null
+        : params.operation.status === 'done'
+          ? 'schema_mismatch'
+          : params.operation.status,
       inputHint: tracing.inputHint,
       inputTokens: params.operation.totalInputTokens,
       latencyMs: params.operation.processingTimeMs,
@@ -434,6 +497,9 @@ export const runAcpJudgment = async <T = unknown>(
   const slugBound = 'slug' in binding;
   const maxSteps = judgment.maxSteps ?? DEFAULT_MAX_STEPS;
   const timeoutMs = judgment.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  // The wait budget covers dispatch latency too — establish the deadline
+  // before the execAgent side-effect so a slow start cannot escape it.
+  const deadline = Date.now() + timeoutMs;
 
   const exec = await new AiAgentService(db, userId, { workspaceId }).execAgent({
     ...binding,
@@ -467,13 +533,20 @@ export const runAcpJudgment = async <T = unknown>(
   const operationId = exec.operationId;
   const operations = new AgentOperationModel(db, userId, workspaceId);
   const messages = new MessageModel(db, userId, workspaceId);
-  const deadline = Date.now() + timeoutMs;
 
-  const interrupt = async (reason: string) => {
+  /**
+   * Interrupt the run and confirm via the durable row. Returns 'unknown' when
+   * the interrupt request failed or the row did not reach a terminal status —
+   * callers must treat 'unknown' as possibly-still-running, never as stopped.
+   */
+  const interrupt = async (reason: string): Promise<'confirmed' | 'unknown'> => {
     try {
       await new AiAgentService(db, userId, { workspaceId }).interruptTask({ operationId });
+      const after = await operations.findById(operationId).catch(() => undefined);
+      return after && isTerminalAgentOperationStatus(after.status) ? 'confirmed' : 'unknown';
     } catch (error) {
       log('judgment %s interrupt failed (%s, non-fatal): %O', operationId, reason, error);
+      return 'unknown';
     }
   };
 
@@ -481,27 +554,35 @@ export const runAcpJudgment = async <T = unknown>(
   for (;;) {
     if (operation && isTerminalAgentOperationStatus(operation.status)) break;
     if (judgment.signal?.aborted) {
-      await interrupt('caller signal aborted');
+      const cancelResult = await interrupt('caller signal aborted');
       throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+        cancelResult,
         operationId,
-        status: 'interrupted',
+        // Only a confirmed interrupt may claim 'interrupted' — an unconfirmed
+        // cancel reports the last durable status, not a state we never proved.
+        status: cancelResult === 'confirmed' ? 'interrupted' : operation?.status,
       });
     }
     if (Date.now() > deadline) {
-      await interrupt('wait budget exceeded');
+      const cancelResult = await interrupt('wait budget exceeded');
       throw new AcpJudgmentRunError(
-        `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms wait budget`,
-        { operationId, status: operation?.status ?? undefined },
+        `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
+        {
+          cancelResult,
+          operationId,
+          status: cancelResult === 'confirmed' ? 'interrupted' : operation?.status,
+        },
       );
     }
     if (
       (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
       'aborted'
     ) {
-      await interrupt('caller signal aborted');
+      const cancelResult = await interrupt('caller signal aborted');
       throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+        cancelResult,
         operationId,
-        status: 'interrupted',
+        status: cancelResult === 'confirmed' ? 'interrupted' : operation?.status,
       });
     }
     operation = await operations.findById(operationId);
@@ -540,12 +621,20 @@ export const runAcpJudgment = async <T = unknown>(
   const reply = run.assistantMessageId ? await messages.findById(run.assistantMessageId) : null;
   const content = typeof reply?.content === 'string' ? reply.content : '';
   const data = content ? extractJudgmentJson(content) : undefined;
+  // Server-side contract check: a `done` operation with a malformed payload is
+  // still a failed judgment. Validation precedes tracing so the recorded
+  // `success` flag means execution AND contract conformance.
+  const validationIssues =
+    data !== undefined && data !== null && input.schema
+      ? validateJudgmentData(input.schema.schema, data)
+      : [];
   const tracingId = await recordJudgmentTracing({
     input: input.messages,
     operation: operation!,
-    output: data ?? null,
+    output: validationIssues.length ? null : (data ?? null),
     purpose: judgment.purpose,
     schema: input.schema,
+    succeeded: validationIssues.length === 0,
     systemPrompt: instructions,
     tracing: judgment.tracing,
     userId,
@@ -557,6 +646,9 @@ export const runAcpJudgment = async <T = unknown>(
       `Judgment "${judgment.purpose}" returned no parseable JSON (op ${operationId})`,
       { operationId, status: operation!.status },
     );
+  }
+  if (validationIssues.length) {
+    throw new AcpJudgmentValidationError(judgment.purpose, validationIssues, operationId);
   }
 
   return { data: data as T, run, tracingId };

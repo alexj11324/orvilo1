@@ -83,9 +83,9 @@ vi.mock('@/database/models/connector', () => ({
 vi.mock('@/database/models/connectorTool', () => ({
   ConnectorToolModel: vi.fn().mockImplementation(function () {
     return {
-      queryAllByConnectorIds: mockConnectorToolQueryAll,
+      queryAllByConnectorIds: vi.fn().mockResolvedValue([]),
       queryByConnector: vi.fn().mockResolvedValue([]),
-      queryByConnectorIds: vi.fn().mockResolvedValue([]),
+      queryByConnectorIds: mockConnectorToolQueryAll,
     };
   }),
 }));
@@ -196,6 +196,17 @@ const builtinSpecIds = () =>
     (spec) => spec.identifier,
   );
 
+// Connector/MCP-resolved tools ride a separate `externalToolMounts` record
+// keyed by candidate identifier — disjoint from `builtinToolSpecs`.
+const externalMounts = () =>
+  (mockDispatchHeteroAgent.mock.calls[0][2].externalToolMounts ?? {}) as Record<
+    string,
+    { apis: Array<{ name: string }> }
+  >;
+const externalMountIds = () => Object.keys(externalMounts());
+const externalMountToolNames = () =>
+  Object.values(externalMounts()).flatMap((entry) => entry.apis.map((api) => api.name));
+
 describe('AiAgentService.execAgent - connector/plugin overlap', () => {
   let service: AiAgentService;
 
@@ -235,10 +246,13 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
     // 'plugin-a' is not a builtin tool — nothing mounts on the ACP surface.
+    // The connector store IS consulted now (external-tool discovery is the
+    // contract); a disabled connector stops before its tools are fetched.
     expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
     expect(builtinSpecIds()).not.toContain('plugin-a');
-    expect(mockConnectorQueryByIdentifiers).not.toHaveBeenCalled();
+    expect(mockConnectorQueryByIdentifiers).toHaveBeenCalledWith(['plugin-a'], 'agent-1');
     expect(mockConnectorToolQueryAll).not.toHaveBeenCalled();
+    expect(externalMountIds()).not.toContain('plugin-a');
   });
 
   it('ignores a same-named connector with no synced tools', async () => {
@@ -248,21 +262,31 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
     expect(builtinSpecIds()).not.toContain('plugin-a');
-    expect(mockConnectorQueryByIdentifiers).not.toHaveBeenCalled();
+    expect(mockConnectorQueryByIdentifiers).toHaveBeenCalledWith(['plugin-a'], 'agent-1');
+    // Enabled → the tool inventory is fetched and finds nothing to mount.
+    expect(mockConnectorToolQueryAll).toHaveBeenCalledWith(['c1']);
+    expect(externalMountIds()).not.toContain('plugin-a');
   });
 
-  it('ignores a same-named connector even when it has synced tools', async () => {
+  it('mounts a same-named connector tool as external, never as builtin', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: true })]);
     mockConnectorToolQueryAll.mockResolvedValue([
-      { permission: 'auto', toolName: 'x', userConnectorId: 'c1' },
+      { permission: 'auto', toolName: 'connector-tool-x', userConnectorId: 'c1' },
     ]);
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    // Connector-produced tools never enter the ACP builtin surface — a
+    // The connector's synced tools DO mount — under the connector identifier —
+    // but only through the external surface (per-run MCP wire), and the
+    // installed-plugin path (empty manifest map) contributes nothing, so a
     // connector row can no longer shadow or replace the plugin entry.
-    expect(builtinSpecIds()).not.toContain('plugin-a');
-    expect(mockConnectorQueryByIdentifiers).not.toHaveBeenCalled();
-    expect(mockConnectorToolQueryAll).not.toHaveBeenCalled();
+    expect(mockConnectorQueryByIdentifiers).toHaveBeenCalledWith(['plugin-a'], 'agent-1');
+    expect(mockConnectorToolQueryAll).toHaveBeenCalledWith(['c1']);
+    expect(externalMounts()['plugin-a']?.source).toBe('connector');
+    expect(externalMountToolNames()).toEqual(['connector-tool-x']);
+    const pluginASpec = (mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs as any[]).find(
+      (spec) => spec.identifier === 'plugin-a',
+    );
+    expect(pluginASpec?.apis.map((api) => api.name)).toEqual(['connector-tool-x']);
   });
 });

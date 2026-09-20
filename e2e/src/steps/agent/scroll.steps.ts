@@ -158,21 +158,14 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
   try {
     await pollPersisted();
   } catch {
-    // Enter can be swallowed while the composer re-renders under streaming
-    // load: if the input still holds the prompt, no send happened, so press
-    // again and keep watching for the row. A cleared input means the send did
-    // dispatch — then the row is the missing signal, so just fail.
-    const stillTyped = await input
-      .textContent()
-      .then((text) => !!text?.includes(prompt))
-      .catch(() => false);
-    if (stillTyped) {
-      console.log('   📍 first Enter did not dispatch; retrying send');
-      await input.press('Enter');
-      await pollPersisted();
-    } else {
-      throw new Error(`user message was not persisted after sending prompt: ${prompt}`);
-    }
+    // Two distinct misses land here: Enter swallowed by a composer re-render
+    // (row never INSERTed — pressing again on the still-typed input resends),
+    // or a dispatched send whose INSERT is starved mid-checkpoint (input is
+    // already clear — Enter on an empty composer is a no-op, so the re-press
+    // is safe and the second poll window still catches the row).
+    console.log('   📍 persist poll exhausted; pressing Enter once more');
+    await input.press('Enter');
+    await pollPersisted();
   }
 
   world.testContext.lastSentUserMessageId = messageId;
@@ -627,21 +620,26 @@ Then('用户消息应固定在聊天列表顶部', { timeout: 90_000 }, async fu
   // never lands, the loop exhausts and the final assertion still fails with the
   // real delta — so a true regression is not masked.
   const PIN_SLACK = 150;
-  await expect
-    .poll(
-      async () => {
-        const rect = await measurePinDelta(this);
-        return rect ? Math.abs(rect.delta) : null;
-      },
-      {
-        message: 'latest user message did not reach the pinned position',
-        // The poll must outlast the DOM re-key (tmp_ → persisted id) which
-        // waits on the send mutation's getMessagesAndTopics tail — under CI
-        // load that tail can trail the user-row insert by tens of seconds.
-        timeout: 60_000,
-      },
-    )
-    .toBeLessThanOrEqual(PIN_SLACK);
+  try {
+    await expect
+      .poll(
+        async () => {
+          const rect = await measurePinDelta(this);
+          return rect ? Math.abs(rect.delta) : null;
+        },
+        {
+          message: 'latest user message did not reach the pinned position',
+          // The poll must outlast the DOM re-key (tmp_ → persisted id) which
+          // waits on the send mutation's getMessagesAndTopics tail — under CI
+          // load that tail can trail the user-row insert by tens of seconds.
+          timeout: 60_000,
+        },
+      )
+      .toBeLessThanOrEqual(PIN_SLACK);
+  } catch (error) {
+    console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
+    throw error;
+  }
 });
 
 Then(
@@ -649,19 +647,26 @@ Then(
   { timeout: 90_000 },
   async function (this: CustomWorld) {
     const PIN_SLACK = 150;
-    await expect
-      .poll(
-        async () => {
-          const rect = await measurePinDelta(this);
-          return rect ? Math.abs(rect.delta) : null;
-        },
-        { message: 'latest user message did not reach the pinned position', timeout: 60_000 },
-      )
-      .toBeLessThanOrEqual(PIN_SLACK);
-
+    // Stop the trace BEFORE the pin poll so a poll failure still surfaces the
+    // recorded scrollTo calls — calls=[] vs a fired-but-mislanded pin is the
+    // difference between a dropped send-detection and a virtua layout race.
     const { calls, samples } = await stopScrollTrace(this.page);
     const summary = classifyScrollTrace(samples);
     console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);
+    try {
+      await expect
+        .poll(
+          async () => {
+            const rect = await measurePinDelta(this);
+            return rect ? Math.abs(rect.delta) : null;
+          },
+          { message: 'latest user message did not reach the pinned position', timeout: 60_000 },
+        )
+        .toBeLessThanOrEqual(PIN_SLACK);
+    } catch (error) {
+      console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
+      throw error;
+    }
 
     // The pin moves the message via `scrollTo({ behavior: 'smooth' })`. The
     // regression being guarded is a lost pin animation — i.e. the scroll never

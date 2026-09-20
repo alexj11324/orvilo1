@@ -169,7 +169,8 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 - 工具：`scripts/ci/typecheckDiff.mjs` —— 以 `file:line:col TS####` 为键做集合差，另报每文件数量漂移；判定硬新增（file+code 在 base 全集里不存在）才算新增。
 - 已知修正：`pnpm type-check` 根脚本本地拒跑（`scripts/type-check.mjs` CI-only guard），脚本需 `CI=true`；作用域模式 `--scope apps/server` 走包内 `tsc --noEmit`。
-- head（`cb02a617`，整合树）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。base (canary) 侧实测对比在跑，JSON 报告 `/tmp/typecheck-diff-server.json`。
+- head（`cb02a617`，整合树）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。
+- **结果（已跑完，PASS）**：base `origin/canary` = 309 条，head = 302 条；added keys 11（均为同文件行号漂移，base 中同 file+code 已存在）、removed 18、perFileCountDrift 1 个文件；**hard-new file+code = 0**。复跑：`node scripts/ci/typecheckDiff.mjs --base origin/canary --head HEAD --scope apps/server`（head 用 `--head-log` 复用日志）。
 
 ### 10.2 真机探针（dockerless：brew Postgres\@5432 + Redis\@6379 + s3rver\@29000，Next\@37620）
 

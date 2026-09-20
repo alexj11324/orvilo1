@@ -67,6 +67,13 @@ vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
+// These tests exercise the orchestrated-dispatch path (cascade, batch run):
+// keep the CAID admission gate open here — the flag-off hold is covered in
+// `services/taskDispatch`'s unit tests.
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: vi.fn(async () => true),
+}));
+
 // Mock the assignment-notification business slot (default impl is a no-op;
 // the router must fire it only on an actual assignee change to someone else).
 const mockNotifyTaskAssigned = vi.fn().mockResolvedValue(undefined);

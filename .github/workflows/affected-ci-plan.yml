@@ -1,0 +1,53 @@
+name: Affected CI Plan
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Plan affected checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      # The planner is deliberately executed from the protected base revision.
+      # We fetch the PR object only to inspect its file-name diff; no PR code is
+      # checked out or executed in this pull_request_target workflow.
+      - name: Fetch PR head for diff only
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git remote add ci-pr-head "https://github.com/${HEAD_REPOSITORY}.git"
+          git fetch --no-tags --depth=1 ci-pr-head "$HEAD_SHA"
+          git update-ref refs/ci/affected-head FETCH_HEAD
+
+      - name: Classify changed modules and required checks
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FORCE_E2E: ${{ contains(github.event.pull_request.labels.*.name, 'ci:e2e') }}
+          HEAD_SHA: refs/ci/affected-head
+        run: |
+          args=(--base "$BASE_SHA" --head "$HEAD_SHA")
+          [ "$FORCE_E2E" = 'true' ] && args+=(--force-e2e)
+          node .github/scripts/plan-affected-checks.mjs "${args[@]}" | tee ci-plan.json
+
+      - name: Publish plan summary
+        run: |
+          {
+            echo '## Affected CI plan'
+            echo
+            echo '```json'
+            cat ci-plan.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

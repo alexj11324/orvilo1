@@ -13,6 +13,10 @@ export interface BuildTaskExecutionContractInput {
    * so the contract is the prompt's provenance, not a parallel snapshot.
    */
   content?: TaskExecutionContractContent;
+  /** Stable identity minted per attempt by the runner. */
+  contractId?: string;
+  /** Monotonic ordinal within the task's contract chain. */
+  contractRevision?: number;
   /** Version pins snapshotted on the dispatch row at claim time. */
   dispatch: {
     generation: number;
@@ -33,6 +37,8 @@ export interface BuildTaskExecutionContractInput {
     expectedHeadSha?: string;
     repo?: string;
   } | null;
+  /** Contract this attempt's content descends from, when one exists. */
+  sourceContractId?: string;
   /** Tool identifiers mounted for the run (builtin required-tool set). */
   tools: string[];
 }
@@ -50,6 +56,9 @@ export function buildTaskExecutionContract(
   const contract: TaskExecutionContract = {
     acceptance: { enabled: input.acceptanceEnabled },
     ...(input.content ? { content: input.content } : {}),
+    ...(input.contractId ? { contractId: input.contractId } : {}),
+    ...(input.contractRevision != null ? { revision: input.contractRevision } : {}),
+    ...(input.sourceContractId ? { sourceContractId: input.sourceContractId } : {}),
     budget: {
       maxRounds: input.goalLoop?.maxRounds ?? null,
       round: input.goalLoop?.round ?? (task.totalTopics || 0) + 1,

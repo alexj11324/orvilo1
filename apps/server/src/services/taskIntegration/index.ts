@@ -55,6 +55,28 @@ class RepoRefLeaseLostError extends Error {
 }
 
 /**
+ * The holder inherited an `outcomeUnknown` lease and tried to issue a mutation
+ * phase before reconciling the remote terminal state — only the 'reconcile'
+ * read phase is allowed until `clearOutcomeUnknown` lands.
+ */
+class RepoRefLeaseNotReconciledError extends Error {
+  constructor(key: string, phase: IntegrationLeasePhase) {
+    super(
+      `repo/ref integration lease ${key} has an unreconciled outcome — mutation phase '${phase}' blocked`,
+    );
+    this.name = 'RepoRefLeaseNotReconciledError';
+  }
+}
+
+/** Phases that may issue remote side effects — blocked while unreconciled. */
+const MUTATION_LEASE_PHASES: ReadonlySet<IntegrationLeasePhase> = new Set([
+  'dispatch',
+  'merge',
+  'prepare',
+  'publish',
+]);
+
+/**
  * Handle handed to the lease-protected section. `assert` renews the deadline
  * and proves ownership in one short statement — every remote side effect
  * calls it immediately before issuing the write so a stolen lease can never
@@ -71,9 +93,12 @@ interface RepoRefLeaseHandle {
    * heartbeat — a device/GitHub RPC may outlive the base TTL, so the lease
    * stays owned while the write is in flight. A failed renewal marks the
    * handle lost; the in-flight call completes but every later fenced call
-   * throws before issuing another write.
+   * throws before issuing another write. Mutation phases additionally refuse
+   * to run while the lease still carries an unreconciled `outcomeUnknown`.
    */
   fenced: <T>(phase: IntegrationLeasePhase, fn: () => Promise<T>) => Promise<T>;
+  /** Monotone claim fence from the lease row — evidence for diagnostics. */
+  fenceSeq: number;
   id: string;
   /** Last mutation phase asserted on this handle ('claimed' = none so far). */
   phase: IntegrationLeasePhase;
@@ -319,6 +344,22 @@ export class TaskIntegrationService {
           : record.state === 'merging');
       if (!processable) return 'blocked';
 
+      // Integrate-side dependency re-verify: the contract's `blocks` receipts
+      // must still name each upstream's current valid delivery. An upstream
+      // reopen/revert/redelivery since claim means this attempt's frozen
+      // inputs no longer stand on valid deliveries — hold, don't integrate.
+      const staleReceipt = await this.findStaleDependencyReceipt(taskTopic);
+      if (staleReceipt) {
+        await this.updateIntegrationOrThrow(task.id, topicId, {
+          lastError:
+            `Dependency ${staleReceipt.identifier ?? staleReceipt.dependsOnId} no longer ` +
+            'stands on the delivery this run was built on — run held for a fresh attempt',
+        }).catch((markerError) =>
+          log('integrateOnComplete: stale-dependency marker write failed — %O', markerError),
+        );
+        return 'hold';
+      }
+
       const integrationOwnerTopicId =
         record.integrationOwnerTopicId ??
         this.resolveIntegrationOwnerTopicId(topicId, record, relatedRows ?? []);
@@ -503,7 +544,9 @@ export class TaskIntegrationService {
     run: (lease: RepoRefLeaseHandle) => Promise<IntegrationOutcome>,
   ): Promise<IntegrationOutcome> {
     const target = record.repo ?? `${record.deviceId}:${record.repoPath}`;
-    const key = `${this.workspaceId ?? 'global'}:${target}#${record.baseBranch}`;
+    // Physical repo/ref identity only — two workspaces that can reach the
+    // same target contend on ONE lock; workspaceId stays on the row for audit.
+    const key = `${target}#${record.baseBranch}`;
     const ownerToken = randomUUID();
     const deadline = () => new Date(Date.now() + this.pacing.ttlMs);
     const waitUntil = Date.now() + this.pacing.waitMs;
@@ -549,7 +592,7 @@ export class TaskIntegrationService {
 
     if (prior && (prior.outcomeUnknown || !prior.releasedAt)) {
       log(
-        'repo/ref lease %s reclaimed from an ambiguous owner (phase=%s, outcomeUnknown=%s) — run body reconciles before writing',
+        'repo/ref lease %s reclaimed from an ambiguous owner (phase=%s, outcomeUnknown=%s) — reconciling remote state before any mutation',
         key,
         prior.phase,
         prior.outcomeUnknown,
@@ -557,6 +600,10 @@ export class TaskIntegrationService {
     }
 
     const leaseId = lease.id;
+    // The stolen row keeps the previous holder's ambiguity flag (acquire
+    // preserves it): this owner cannot issue mutations until a 'reconcile'
+    // remote read has observed the prior operation's terminal state.
+    let unreconciled = lease.outcomeUnknown;
     let lost = false;
     const renewAt = async (phase: IntegrationLeasePhase) => {
       const ok = await this.leaseModel.renew(leaseId, ownerToken, deadline(), phase);
@@ -570,6 +617,8 @@ export class TaskIntegrationService {
       },
       fenced: async <T>(phase: IntegrationLeasePhase, fn: () => Promise<T>): Promise<T> => {
         if (lost) throw new RepoRefLeaseLostError(key);
+        if (unreconciled && MUTATION_LEASE_PHASES.has(phase))
+          throw new RepoRefLeaseNotReconciledError(key, phase);
         await renewAt(phase);
         handle.phase = phase;
         const heartbeat = setInterval(() => {
@@ -584,16 +633,32 @@ export class TaskIntegrationService {
           clearInterval(heartbeat);
         }
       },
+      fenceSeq: lease.fenceSeq,
       id: leaseId,
       phase: 'claimed',
     };
     let ambiguousOutcome = false;
+    const outcomeContext = () => ({
+      expectedBaseSha: lease.expectedBaseSha ?? undefined,
+      expectedHeadSha: lease.expectedHeadSha ?? undefined,
+      fenceSeq: lease.fenceSeq,
+      phase: handle.phase,
+      recordedAt: new Date().toISOString(),
+    });
 
     try {
       // The queue wait may have superseded this owner — re-verify the dispatch
       // fence before running, so a callback that lost its window never writes.
       if (!(await this.resolveCurrentOwner(ctx.taskId, ctx.topicId))) {
         return 'stale';
+      }
+      // Inherited ambiguity: observe the remote terminal state before this
+      // owner may mutate. A failed reconcile read defers the section — the
+      // flag stays on the row so the next claimant retries reconciliation.
+      if (unreconciled) {
+        const reconciled = await this.reconcileLeaseOutcome(record, ctx, handle, ownerToken);
+        if (!reconciled) return 'hold';
+        unreconciled = false;
       }
       return await run(handle);
     } catch (error) {
@@ -605,7 +670,7 @@ export class TaskIntegrationService {
         ambiguousOutcome = handle.phase !== 'claimed';
         if (ambiguousOutcome) {
           await this.leaseModel
-            .markOutcomeUnknown(leaseId, ownerToken)
+            .markOutcomeUnknown(leaseId, ownerToken, outcomeContext())
             .catch((e) => log('repo/ref lease %s outcome_unknown mark failed — %O', key, e));
         }
         log(
@@ -621,7 +686,7 @@ export class TaskIntegrationService {
       ambiguousOutcome = handle.phase !== 'claimed';
       if (ambiguousOutcome) {
         await this.leaseModel
-          .markOutcomeUnknown(leaseId, ownerToken)
+          .markOutcomeUnknown(leaseId, ownerToken, outcomeContext())
           .catch((e) => log('repo/ref lease %s outcome_unknown mark failed — %O', key, e));
       }
       throw error;
@@ -633,6 +698,59 @@ export class TaskIntegrationService {
           .release(leaseId, ownerToken)
           .catch((e) => log('repo/ref lease %s release failed — expires at deadline: %O', key, e));
       }
+    }
+  }
+
+  /**
+   * Reconcile an inherited `outcomeUnknown` lease: the previous holder's
+   * mutation may or may not have landed remotely, so this owner must observe
+   * the remote terminal state before issuing its own writes. GitHub
+   * deliveries re-read the merge/head state; device worktrees re-read the
+   * branch list (a pure remote observation). Only a successful read clears
+   * the flag — an unreachable remote keeps the section parked ('hold') so a
+   * later sweep retries reconciliation instead of writing blind.
+   */
+  private async reconcileLeaseOutcome(
+    record: TaskTopicIntegration,
+    ctx: {
+      params: { task: TaskItem };
+      taskId: string;
+      topicId: string;
+    },
+    lease: RepoRefLeaseHandle,
+    ownerToken: string,
+  ): Promise<boolean> {
+    const key = `${record.repo ?? `${record.deviceId}:${record.repoPath}`}#${record.baseBranch}`;
+    try {
+      const observed = await lease.fenced('reconcile', async () => {
+        if (record.repo) {
+          const check = await this.verifyRemoteMerge(record, ctx.params.task);
+          return !check.error;
+        }
+        if (record.deviceId && record.repoPath) {
+          const branches = await deviceGateway.listGitBranches({
+            deviceId: record.deviceId,
+            path: record.repoPath,
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          });
+          return branches !== undefined;
+        }
+        return false;
+      });
+      if (!observed) {
+        log('repo/ref lease %s reconcile read could not observe remote — holding', key);
+        return false;
+      }
+      const cleared = await this.leaseModel.clearOutcomeUnknown(lease.id, ownerToken);
+      if (!cleared) {
+        log('repo/ref lease %s lost while clearing outcome_unknown — holding', key);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      log('repo/ref lease %s reconcile failed — %O', key, error);
+      return false;
     }
   }
 
@@ -1684,6 +1802,38 @@ export class TaskIntegrationService {
   /** Prefer the remote-tracking ref so merges land on the published tip. */
   private baseRef(record: TaskTopicIntegration): string {
     return record.baseBranch === 'HEAD' ? 'HEAD' : `origin/${record.baseBranch}`;
+  }
+
+  /**
+   * Integrate-side receipt check: the contract's `blocks` receipts must still
+   * be each upstream's current valid delivery — upstream task still `completed`
+   * and its latest completed attempt still the recorded one (same topic and
+   * SHAs). A missing contract (pre-contract rows) is not a gate.
+   */
+  private async findStaleDependencyReceipt(
+    topic: Awaited<ReturnType<TaskTopicModel['findByTopicId']>>,
+  ) {
+    const receipts = topic?.contract?.content?.dependencies;
+    if (!receipts?.length) return undefined;
+    for (const receipt of receipts) {
+      if (receipt.type !== 'blocks') continue;
+      const [upstreamTask, upstreamTopics] = await Promise.all([
+        this.taskModel.findById(receipt.dependsOnId).catch(() => undefined),
+        this.taskTopicModel.findByTaskId(receipt.dependsOnId).catch(() => []),
+      ]);
+      const delivered = [...upstreamTopics]
+        .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
+        .find((t) => t.status === 'completed' && t.topicId);
+      const stillValid =
+        delivered !== undefined &&
+        upstreamTask?.status === 'completed' &&
+        (!receipt.delivery ||
+          (delivered.topicId === receipt.delivery.topicId &&
+            delivered.integration?.integratedSha === receipt.delivery.integratedSha &&
+            delivered.integration?.expectedHeadSha === receipt.delivery.sourceSha));
+      if (!stillValid) return receipt;
+    }
+    return undefined;
   }
 
   private hasCorrectiveSuccessor(

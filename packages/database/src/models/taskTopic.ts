@@ -18,6 +18,21 @@ import { buildWorkspaceWhere } from '../utils/workspace';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
 
+/**
+ * Normalized poll-failure stage map for CAS guards: the versioned
+ * `verificationPollFailureStages` key wins; a legacy bare number stored under
+ * `verificationPollFailures` normalizes to `{sweep: n}` and a legacy map
+ * passes through — rows written by either predecessor shape stay comparable.
+ */
+const POLL_FAILURE_STAGES = sql`coalesce(
+  ${taskTopics.integration}->'verificationPollFailureStages',
+  case
+    when jsonb_typeof(${taskTopics.integration}->'verificationPollFailures') = 'number'
+      then jsonb_build_object('sweep', ${taskTopics.integration}->'verificationPollFailures')
+    else ${taskTopics.integration}->'verificationPollFailures'
+  end
+)`;
+
 const runStateForStatus = (status: string) => {
   if (status === 'completed') return 'succeeded' as const;
   if (status === 'canceled') return 'canceled' as const;
@@ -265,17 +280,23 @@ export class TaskTopicModel {
    * Merge `patch` into the integration record — used by
    * TaskIntegrationService as the merge state machine advances (pending →
    * conflict → integrated/…). When `expectPollFailures` is
-   * provided it becomes a CAS guard on the poll-failure map: the update only
-   * lands when the stored `verificationPollFailures` still equals what the
-   * caller read (`null`/`undefined` expects the field absent) — a concurrent
-   * pass that already moved a counter makes this return false so the loser
-   * defers to the next sweep instead of double-counting.
+   * provided it becomes a CAS guard on the poll-failure stage map: the update
+   * only lands when the normalized stored value (`verificationPollFailureStages`,
+   * with legacy `verificationPollFailures` scalar/map normalized through) still
+   * equals what the caller read (`null`/`undefined` expects the field absent) —
+   * a concurrent pass that already moved a counter makes this return false so
+   * the loser defers to the next sweep instead of double-counting.
+   *
+   * `expectMergeIssuedAt` guards the merge-intent marker the same way: the
+   * update lands only when the stored `mergeIssuedAt` still equals the given
+   * value (`null` = unset), so two sweep passes cannot both claim a merge.
    */
   async updateIntegration(
     taskId: string,
     topicId: string,
     patch: { [K in keyof TaskTopicIntegration]?: TaskTopicIntegration[K] | null },
     expectPollFailures?: null | Partial<Record<VerificationPollStage, number>>,
+    expectMergeIssuedAt?: null | string,
   ): Promise<boolean> {
     const updated = await this.db
       .update(taskTopics)
@@ -291,8 +312,15 @@ export class TaskTopicModel {
           expectPollFailures === undefined
             ? undefined
             : expectPollFailures === null
-              ? sql`${taskTopics.integration}->'verificationPollFailures' is null`
-              : sql`${taskTopics.integration}->'verificationPollFailures' is not distinct from ${JSON.stringify(expectPollFailures)}::jsonb`,
+              ? sql`${POLL_FAILURE_STAGES} is null`
+              : sql`${POLL_FAILURE_STAGES} is not distinct from ${JSON.stringify(expectPollFailures)}::jsonb`,
+          expectMergeIssuedAt === undefined
+            ? undefined
+            : sql`${taskTopics.integration}->'mergeIssuedAt' is not distinct from ${
+                expectMergeIssuedAt === null
+                  ? sql`null`
+                  : sql`${JSON.stringify(expectMergeIssuedAt)}::jsonb`
+              }`,
         ),
       )
       .returning({ id: taskTopics.id });

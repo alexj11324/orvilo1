@@ -11,6 +11,7 @@ import { AcceptanceModel } from '@/database/models/acceptance';
 import type { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
 import type { TaskModel } from '@/database/models/task';
+import { TaskDependencyError } from '@/database/models/taskDependency';
 import type { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyCriterionModel } from '@/database/models/verifyCriterion';
@@ -152,8 +153,15 @@ const collectDependencyReceipts = async (
       receipts.push(receipt);
       continue;
     }
-    const topics = await deps.taskTopicModel.findByTaskId(dep.dependsOnId).catch(() => []);
-    const delivered = topics.find((topic) => topic.status === 'completed' && topic.topicId);
+    // Read failures must propagate — degrading to "no delivery observed" would
+    // let a claim freeze receipts that never saw the upstream's real state.
+    const topics = await deps.taskTopicModel.findByTaskId(dep.dependsOnId);
+    // The receipt's delivery is the upstream's LATEST completed attempt — not
+    // the first completed row in history, which would let a fresh failing
+    // attempt ride on a delivery the current generation no longer stands on.
+    const delivered = [...topics]
+      .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
+      .find((topic) => topic.status === 'completed' && topic.topicId);
     if (delivered?.topicId) {
       receipt.delivery = {
         integratedSha: delivered.integration?.integratedSha,
@@ -163,6 +171,11 @@ const collectDependencyReceipts = async (
         topicId: delivered.topicId,
       };
     }
+    // Valid only while the upstream is still standing on that delivery: a
+    // reopened/reverted/re-running upstream (status left 'completed')
+    // invalidates the receipt even though the historical delivery row exists.
+    receipt.deliveryValid =
+      delivered !== undefined && depStatusById.get(dep.dependsOnId) === 'completed';
     receipts.push(receipt);
   }
   return receipts;
@@ -261,6 +274,25 @@ export async function buildTaskPrompt(
   const contractDependencies =
     inherited?.dependencies ??
     (await collectDependencyReceipts(liveDependencies, deps, depIdToIdentifier, depStatusById));
+
+  // Claim-side dependency gate (fresh attempts only — a continuation executes
+  // the frozen contract verbatim): a `blocks` receipt that is not the
+  // upstream's current valid delivery refuses the claim instead of freezing
+  // a receipt built on a superseded or revoked delivery.
+  if (!inherited) {
+    const invalidDeps = contractDependencies.filter(
+      (receipt) => receipt.type === 'blocks' && receipt.deliveryValid === false,
+    );
+    if (invalidDeps.length > 0) {
+      const names = invalidDeps
+        .map((receipt) => receipt.identifier ?? receipt.dependsOnId)
+        .join(', ');
+      throw new TaskDependencyError(
+        `Dependency deliveries are not current/valid for: ${names}`,
+        'PRECONDITION_FAILED',
+      );
+    }
+  }
 
   let parentIdentifier: string | null = null;
   let parentTaskContext:

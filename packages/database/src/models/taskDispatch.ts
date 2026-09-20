@@ -403,6 +403,10 @@ export class TaskDispatchModel {
           task.assigneeAgentId &&
           (existing.waitingReason === 'no_eligible_agent' ||
             existing.waitingReason === 'goal_paused' ||
+            // `caid_dispatch_disabled` resumes optimistically — the service
+            // layer re-checks the admission flag after request() returns and
+            // re-parks the row if rollout is still off.
+            existing.waitingReason === 'caid_dispatch_disabled' ||
             resumedWaitingReason === null)
         ) {
           const [resumed] = await tx

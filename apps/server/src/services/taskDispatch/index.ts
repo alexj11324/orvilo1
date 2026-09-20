@@ -13,6 +13,7 @@ import {
 } from '@/database/models/taskDispatch';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
 
@@ -33,6 +34,14 @@ export class TaskDispatchWaitingError extends Error {
     super(message);
   }
 }
+
+/**
+ * Execution origin recorded on the dispatch intent. `caid` = a new
+ * orchestrated writer (goal/planner/cascade entry); `internal` = settlement
+ * work continuing an existing dispatch (corrective merges, reservation
+ * handoffs); `external` = direct user/schedule invocation.
+ */
+export type TaskDispatchOrigin = 'caid' | 'external' | 'internal';
 
 export interface PreparedTaskDispatch {
   dispatch: TaskDispatchItem;
@@ -73,6 +82,7 @@ export class TaskDispatchService {
 
   async prepare(input: {
     idempotencyKey: string;
+    origin: TaskDispatchOrigin;
     planRevision?: number;
     requestedBy: string;
     task: TaskItem;
@@ -101,6 +111,37 @@ export class TaskDispatchService {
     }
 
     const dispatch = requested.dispatch;
+
+    // Final CAID admission boundary: every new orchestrated claim funnels
+    // here — goal fan-out, planner wakes, AND the dependency cascade — so a
+    // flag flip between an earlier front-check and this claim cannot leak a
+    // new writer. The intent is persisted as `waiting` (auditable, resumable
+    // once admission re-opens); settlement/internal runs never reach this.
+    if (
+      input.origin === 'caid' &&
+      dispatch.phase !== 'waiting' &&
+      !(await isCaidDispatchAllowed({ userId: input.requestedBy, workspaceId: this.workspaceId }))
+    ) {
+      await this.model.markWaiting(dispatch.id, 'caid_dispatch_disabled');
+      throw new TaskDispatchWaitingError(
+        'Orchestrated dispatch is disabled for this workspace (caid_dispatch)',
+        dispatch.id,
+      );
+    }
+    if (
+      input.origin === 'caid' &&
+      dispatch.phase === 'waiting' && // Re-check admission for a persisted hold too: a waiting row resumes
+      // only through this same gate (its `waiting` throw below covers the
+      // still-disabled case).
+
+      dispatch.waitingReason === 'caid_dispatch_disabled' &&
+      !(await isCaidDispatchAllowed({ userId: input.requestedBy, workspaceId: this.workspaceId }))
+    ) {
+      throw new TaskDispatchWaitingError(
+        'Orchestrated dispatch is disabled for this workspace (caid_dispatch)',
+        dispatch.id,
+      );
+    }
     const currentTask = requested.task;
     if (dispatch.phase === 'waiting') {
       throw new TaskDispatchWaitingError(

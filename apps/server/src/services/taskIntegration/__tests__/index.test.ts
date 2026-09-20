@@ -51,6 +51,7 @@ const { mockTaskServiceUpdateStatus } = vi.hoisted(() => ({
 const { mockLeaseModel } = vi.hoisted(() => ({
   mockLeaseModel: {
     acquire: vi.fn(),
+    clearOutcomeUnknown: vi.fn(),
     markOutcomeUnknown: vi.fn(),
     release: vi.fn(),
     renew: vi.fn(),
@@ -66,12 +67,18 @@ const mockDb = {};
 
 const leaseGranted = () => {
   mockLeaseModel.acquire.mockResolvedValue({
-    lease: { id: 'lease-1', key: 'ws-1:dev-1:/repos/orvilo#main' },
+    lease: {
+      fenceSeq: 1,
+      id: 'lease-1',
+      key: 'dev-1:/repos/orvilo#main',
+      outcomeUnknown: false,
+    },
     prior: undefined,
   });
   mockLeaseModel.renew.mockResolvedValue(true);
   mockLeaseModel.release.mockResolvedValue(undefined);
   mockLeaseModel.markOutcomeUnknown.mockResolvedValue(undefined);
+  mockLeaseModel.clearOutcomeUnknown.mockResolvedValue(true);
 };
 
 vi.mock('@/database/models/integrationLease', () => ({
@@ -115,6 +122,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
     addGitWorktree: vi.fn(),
     finalizeGitMerge: vi.fn(),
+    listGitBranches: vi.fn(),
     mergeGitBranch: vi.fn(),
     pushGitBranch: vi.fn(),
     removeGitWorktree: vi.fn(),
@@ -1807,7 +1815,11 @@ describe('TaskIntegrationService', () => {
       });
 
       expect(outcome).toBe('blocked');
-      expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalledWith('lease-1', expect.any(String));
+      expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalledWith(
+        'lease-1',
+        expect.any(String),
+        expect.objectContaining({ fenceSeq: 1, phase: 'merge' }),
+      );
       expect(mockLeaseModel.release).not.toHaveBeenCalled();
     });
 

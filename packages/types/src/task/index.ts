@@ -93,6 +93,14 @@ export interface TaskDependencyReceipt {
     sourceSha?: string;
     topicId: string;
   };
+  /**
+   * Whether the recorded delivery is the upstream's *current* valid delivery
+   * at freeze time. `false` = the upstream has no usable delivery right now
+   * (never delivered, superseded by a newer attempt, or reopened) — admission
+   * must refuse, not silently execute on a stale/historical receipt.
+   * `undefined` on receipts persisted before this field existed.
+   */
+  deliveryValid?: boolean;
   /** Upstream task id (`task_dependencies.depends_on_id`). */
   dependsOnId: string;
   /** Upstream identifier rendered into the prompt. */
@@ -134,6 +142,8 @@ export interface TaskExecutionContract {
   budget: { maxRounds: number | null; round: number };
   /** Frozen policy payload — instruction, verify gate, dependency receipts. */
   content?: TaskExecutionContractContent;
+  /** Stable identity of this contract row (unique per attempt). */
+  contractId?: string;
   /** Delegated-execution grant bound at registration, when delegated. */
   delegation?: { grantId: string };
   /** Frozen execution environment (repo/branch/workdir/device identity). */
@@ -152,11 +162,19 @@ export interface TaskExecutionContract {
     expectedHeadSha?: string;
     repo?: string;
   };
+  /** Monotonic ordinal within the task's contract chain (1 for the first). */
+  revision?: number;
   /**
    * Contract schema version. Bumped on incompatible shape changes so readers
    * can tell which assembler produced a persisted row.
    */
   schemaVersion: 1;
+  /**
+   * The contract this attempt's content descends from: the continued topic's
+   * contract for continuations, or the previous attempt's contract for a fresh
+   * repair/retry. `undefined` only on the first contract a task ever writes.
+   */
+  sourceContractId?: string;
   /** Tool identifiers mounted for this run (builtin required-tool set). */
   tools: string[];
   /** Version pins the run was dispatched under. */
@@ -353,7 +371,8 @@ export type TaskWorkspaceRecoveryStatus = 'dismissed' | 'pending' | 'resolved';
  * was in flight so an ambiguous failure can persist `outcomeUnknown` on the
  * lease row instead of letting a retry re-issue writes blind.
  */
-export type IntegrationLeasePhase = 'claimed' | 'merge' | 'prepare' | 'publish' | 'dispatch';
+export type IntegrationLeasePhase =
+  'claimed' | 'dispatch' | 'merge' | 'prepare' | 'publish' | 'reconcile';
 
 /**
  * Delivery-review remote-observation stages (F08). Each stage owns a failure
@@ -461,6 +480,13 @@ export interface TaskTopicIntegration {
     | 'blocked'
     | 'skipped';
   /**
+   * @deprecated Legacy pre-R07 scalar counter stored under this key, later
+   * briefly written as an unversioned map. Kept for mixed-version reads: new
+   * code MUST read via the normalized accessor (legacy number → `{sweep: n}`,
+   * legacy map → the map) and write only `verificationPollFailureStages`.
+   */
+  verificationPollFailures?: number | Partial<Record<VerificationPollStage, number>>;
+  /**
    * Consecutive sweep passes that could not read the delivery's remote state
    * (auth/permission/network), keyed by the observation stage that failed.
    * A stage's counter resets only when that stage is re-observed successfully
@@ -468,8 +494,13 @@ export interface TaskTopicIntegration {
    * cap marks the record 'blocked' instead of waiting silently forever.
    * Business-CI pending is not counted here — it is a merge gate, not an
    * observation error.
+   *
+   * Stored under a new JSON key deliberately: the old `verificationPollFailures`
+   * field carried a bare number, and a rolled-back writer would corrupt a map
+   * written under the same key (`(value ?? 0) + 1` → `[object Object]1`).
+   * Minimum rollback version = the first release that understands this key.
    */
-  verificationPollFailures?: Partial<Record<VerificationPollStage, number>>;
+  verificationPollFailureStages?: Partial<Record<VerificationPollStage, number>>;
   /**
    * Original verified delivery waiting for this corrective integration chain.
    * Once the chain settles, the lifecycle re-drives that Verify run so task

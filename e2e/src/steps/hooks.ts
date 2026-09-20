@@ -2,6 +2,7 @@ import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@
 import { type Cookie, request } from 'playwright';
 
 import { clearMockLLMWorkerState } from '../mocks/llm/registry';
+import { bindTestUserExecutionDevice } from '../support/bindExecutionDevice';
 import { seedTestUser, TEST_USER } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
@@ -103,6 +104,16 @@ Before(async function (this: CustomWorld, { pickle }) {
   if (sessionCookies.length > 0) {
     await this.browserContext.addCookies(sessionCookies);
     console.log('🍪 Session cookies restored');
+
+    // The in-process runtime is retired: web sends resolve a device/sandbox
+    // execution plan, else the run lands on the "No device bound" stub. Bind
+    // the fake-gateway device to the inbox agent (idempotent — also covers
+    // workspaces a scenario just created).
+    try {
+      await bindTestUserExecutionDevice(this.browserContext.request);
+    } catch (error) {
+      console.warn('[e2e] execution-device binding failed:', error);
+    }
   }
 });
 

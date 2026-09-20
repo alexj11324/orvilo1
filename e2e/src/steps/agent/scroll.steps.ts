@@ -373,7 +373,7 @@ Then('视口不应贴近聊天列表底部', async function (this: CustomWorld) 
     .poll(
       async () =>
         this.page.evaluate(() => {
-          const messages = document.querySelectorAll('.message-wrapper');
+          const messages = Array.from(document.querySelectorAll('.message-wrapper'));
           const last = messages.at(-1);
           if (!last) return null;
           let el = last.parentElement;

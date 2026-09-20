@@ -111,13 +111,41 @@ Given('用户有多个对话历史', { timeout: 180_000 }, async function (this:
   await this.page.keyboard.press('Enter');
 
   // Confirm the second topic actually registered in the sidebar before the
-  // scenario proceeds to click it.
-  await expect
-    .poll(async () => this.page.locator('[data-testid="topic-item"]').count(), {
-      message: 'second conversation never appeared in the sidebar topic list',
-      timeout: 60_000,
-    })
-    .toBeGreaterThanOrEqual(2);
+  // scenario proceeds to click it. The sidebar is SWR-driven and only refetches
+  // after the send mutation's getMessagesAndTopics tail resolves — that tail
+  // can sit behind a CI Postgres stall, so a one-shot count reads a slow
+  // refetch as "topic never created".
+  try {
+    await expect
+      .poll(async () => this.page.locator('[data-testid="topic-item"]').count(), {
+        timeout: 120_000,
+      })
+      .toBeGreaterThanOrEqual(2);
+  } catch (error) {
+    // Was the topic created server-side at all? pg evidence separates "send
+    // never dispatched" from "sidebar refetch lagged".
+    const agentId = this.page.url().match(/\/agent\/([^/?#]+)/)?.[1];
+    if (agentId && process.env.DATABASE_URL) {
+      try {
+        const { default: pg } = await import('pg');
+        const client = new pg.Client({
+          connectionString: process.env.DATABASE_URL,
+          connectionTimeoutMillis: 10_000,
+          query_timeout: 10_000,
+        });
+        await client.connect();
+        const res = await client.query(
+          'select count(*)::int as c from topics where agent_id = $1',
+          [agentId],
+        );
+        console.log(`   📍 pg topics for ${agentId}: ${res.rows[0]?.c}`);
+        await client.end();
+      } catch (queryError) {
+        console.log(`   📍 topic count query failed: ${String(queryError)}`);
+      }
+    }
+    throw error;
+  }
 
   console.log('   ✅ 已创建多个对话');
 });

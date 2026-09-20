@@ -85,7 +85,11 @@ describe('IntegrationLeaseModel', () => {
     const { lease } = await model.acquire(params(key, 'owner-a'));
     // Ambiguous crash: the holder marked the outcome unknown and never
     // released — the row only frees by deadline expiry.
-    await model.markOutcomeUnknown(lease!.id, 'owner-a');
+    await model.markOutcomeUnknown(lease!.id, 'owner-a', {
+      expectedBaseSha: 'sha-base',
+      fenceSeq: lease!.fenceSeq,
+      phase: 'merge',
+    });
     await serverDB
       .update(integrationLeases)
       .set({ deadline: new Date(Date.now() - 1) })
@@ -96,7 +100,32 @@ describe('IntegrationLeaseModel', () => {
     expect(second.lease?.ownerToken).toBe('owner-b');
     expect(second.prior?.outcomeUnknown).toBe(true);
     expect(second.prior?.phase).toBe('claimed');
-    // Reacquisition resets the ambiguity for this ownership.
-    expect(second.lease?.outcomeUnknown).toBe(false);
+    // SA03: the ambiguity is inherited, not cleared — the stolen row still
+    // carries outcome_unknown + the reconciliation context, so the new owner
+    // must prove the remote terminal state before mutating.
+    expect(second.lease?.outcomeUnknown).toBe(true);
+    expect(second.lease?.context).toMatchObject({
+      fenceSeq: lease!.fenceSeq,
+      phase: 'merge',
+    });
+    // The monotone fence bumped on the steal.
+    expect(second.lease?.fenceSeq).toBe(lease!.fenceSeq + 1);
+
+    // Only the new owner may clear the inherited flag (fenced on token).
+    await expect(model.clearOutcomeUnknown(second.lease!.id, 'owner-a')).resolves.toBe(false);
+    await expect(model.clearOutcomeUnknown(second.lease!.id, 'owner-b')).resolves.toBe(true);
+    expect((await model.findByKey(key))?.outcomeUnknown).toBe(false);
+  });
+
+  it('monotone fence increments on every successful claim', async () => {
+    const key = 'ws:test-fence-seq';
+    const first = await model.acquire(params(key, 'owner-a'));
+    expect(first.lease?.fenceSeq).toBe(0);
+    await model.release(first.lease!.id, 'owner-a');
+    const second = await model.acquire(params(key, 'owner-b'));
+    expect(second.lease?.fenceSeq).toBe(1);
+    await model.release(second.lease!.id, 'owner-b');
+    const third = await model.acquire(params(key, 'owner-c'));
+    expect(third.lease?.fenceSeq).toBe(2);
   });
 });

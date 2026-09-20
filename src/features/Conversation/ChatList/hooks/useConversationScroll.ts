@@ -441,6 +441,7 @@ export interface UseConversationScrollOptions {
    * calls translate by this offset.
    */
   headerOffset?: number;
+  /** Retained for caller compatibility — send detection scans the appended tail itself. */
   isSecondLastMessageFromUser: boolean;
   virtuaRef: RefObject<VListHandle | null>;
 }
@@ -464,7 +465,6 @@ export const useConversationScroll = ({
   contextKey,
   dataSource,
   headerOffset = 0,
-  isSecondLastMessageFromUser,
   virtuaRef,
 }: UseConversationScrollOptions): UseConversationScrollResult => {
   const displayMessages = useConversationStore(dataSelectors.displayMessages);
@@ -549,14 +549,27 @@ export const useConversationScroll = ({
     const newMessageCount = dataSource.length - prevLengthRef.current;
     prevLengthRef.current = dataSource.length;
 
-    if (newMessageCount !== 2 || !isSecondLastMessageFromUser) return;
+    if (newMessageCount <= 0) return;
 
-    const userMessage = displayMessages.at(-2);
-    const assistantMessage = displayMessages.at(-1);
-    if (userMessage?.role !== 'user' || !assistantMessage) return;
+    // A send appends a (user, assistant, …) tail — usually one +2 commit, but
+    // under load the pair can split across commits or carry extra rows (tool,
+    // receipt, steer), which an exact `+2 & second-last-is-user` gate silently
+    // drops. The durable signal is a user message inside the appended tail
+    // segment; pin it wherever the tail boundary actually fell.
+    const lastUserMessage = displayMessages.findLast((message) => message.role === 'user');
+    const userIndex = lastUserMessage ? dataSource.lastIndexOf(lastUserMessage.id) : -1;
+    if (
+      !lastUserMessage ||
+      userIndex < 0 ||
+      userIndex < dataSource.length - newMessageCount ||
+      pinRef.current?.index === userIndex
+    )
+      return;
 
-    const userIndex = dataSource.length - 2;
-    const assistantIndex = dataSource.length - 1;
+    // The assistant bubble usually lands in the same commit; on a split commit
+    // it may not exist yet — the growth branch below adopts it when it does.
+    const nextIndex = userIndex + 1;
+    const assistantIndex = nextIndex < dataSource.length ? nextIndex : null;
 
     log('send detected userIndex=%d', userIndex);
 
@@ -574,10 +587,10 @@ export const useConversationScroll = ({
       updateSpacerHeight();
     });
   }, [
+    assistantMessageIndex,
     dataSource,
     displayMessages,
     getScrollOffset,
-    isSecondLastMessageFromUser,
     mountedRef,
     pinRef,
     prevScrollOffsetRef,
@@ -585,6 +598,18 @@ export const useConversationScroll = ({
     setScrollReduction,
     updateSpacerHeight,
   ]);
+
+  // A pin fired on a split commit may not have an assistant row yet — adopt it
+  // when it lands so the spacer signature tracks the live reply.
+  useEffect(() => {
+    const pin = pinRef.current;
+    if (!pin || assistantMessageIndex !== null) return;
+
+    const nextIndex = pin.index + 1;
+    if (nextIndex < dataSource.length) {
+      setAssistantMessageIndex(nextIndex);
+    }
+  }, [assistantMessageIndex, dataSource, pinRef]);
 
   // --- pin re-fire: every time spacer layout settles ---
   useEffect(() => {

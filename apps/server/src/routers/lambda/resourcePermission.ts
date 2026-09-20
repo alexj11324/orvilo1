@@ -22,6 +22,7 @@ import {
   getResourceMeta,
   isAccessLevelAllowed,
   isCollaborativeBuiltinAgent,
+  isWorkspaceScopedMeta,
 } from '@/server/services/resourcePermission';
 
 import { getWorkspaceGroupVirtualAgentIds } from './_helpers/workspaceAgentGuard';
@@ -70,7 +71,10 @@ const loadManageableResource = async (
   input: { resourceId: string; resourceType: (typeof PERMISSION_RESOURCE_TYPES)[number] },
 ): Promise<ResourceMeta> => {
   const meta = await getResourceMeta(ctx.serverDB, input.resourceType, input.resourceId);
-  if (!meta || meta.workspaceId !== ctx.workspaceId) {
+  // Union scope: the caller's own unfiled rows (workspace_id IS NULL) follow
+  // them into the workspace; foreign-workspace and teammates' unfiled rows
+  // still read as NOT_FOUND.
+  if (!meta || !isWorkspaceScopedMeta(meta, ctx.workspaceId, ctx.userId)) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
   }
   if (meta.visibility === 'private' && meta.userId !== ctx.userId) {
@@ -167,8 +171,9 @@ export const resourcePermissionRouter = router({
    */
   getGeneralAccess: permissionProcedure.input(resourceInput).query(async ({ ctx, input }) => {
     const meta = await getResourceMeta(ctx.serverDB, input.resourceType, input.resourceId);
-    // Cross-workspace probing gets NOT_FOUND, same as a missing resource.
-    if (!meta || meta.workspaceId !== ctx.workspaceId) {
+    // Cross-workspace probing gets NOT_FOUND, same as a missing resource; the
+    // caller's own unfiled rows stay in scope (union semantics).
+    if (!meta || !isWorkspaceScopedMeta(meta, ctx.workspaceId, ctx.userId)) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
     }
     // Private rows are creator-only (mirrors `canPerformResourceAction`):
@@ -278,7 +283,7 @@ export const resourcePermissionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const meta = await getResourceMeta(ctx.serverDB, input.resourceType, input.resourceId);
-      if (!meta || meta.workspaceId !== ctx.workspaceId) {
+      if (!meta || !isWorkspaceScopedMeta(meta, ctx.workspaceId, ctx.userId)) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
       }
       // Same private-row existence guard as `getGeneralAccess`.

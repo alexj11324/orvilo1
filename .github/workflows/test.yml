@@ -33,11 +33,128 @@ jobs:
           skip_after_successful_duplicate: 'true'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
+  # Path triage — one cheap job diffs the PR and reports which test areas
+  # actually need to run. Leaf jobs skip when their area is untouched, and the
+  # quality gate accepts a *filter* skip while still failing on any other.
+  changes:
+    name: Detect changed areas
+    needs: check-duplicate-run
+    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      code: ${{ steps.filter.outputs.code }}
+      database: ${{ steps.filter.outputs.database }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      packages: ${{ steps.filter.outputs.packages }}
+      server: ${{ steps.filter.outputs.server }}
+      windows_shell: ${{ steps.filter.outputs.windows_shell }}
+    steps:
+      # paths-filter runs `git` to resolve the current ref and, on push runs,
+      # diffs the before..after SHAs locally — a checkout with full history is
+      # required. A tag/first push with no resolvable base reports every area
+      # changed (full coverage).
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - '**/*.ts'
+              - '**/*.tsx'
+              - '**/*.mts'
+              - '**/*.cts'
+              - '**/*.sql'
+            packages:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+            app:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'src/**'
+              - 'apps/server/**'
+              - 'public/**'
+              - 'locales/**'
+            server:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'apps/server/**'
+            desktop:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'apps/desktop/**'
+            windows_shell:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/local-file-shell/**'
+            database:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/database/**'
+
   # Full-repo type-check - CI-only; scripts/type-check.mjs fails fast locally
   # because root `tsgo --noEmit` OOMs developer machines.
   typecheck:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
@@ -72,8 +189,8 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-packages:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     name: Test Packages
     env:
@@ -174,8 +291,8 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-app:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.app == 'true'
     strategy:
       matrix:
         shard: [1, 2]
@@ -268,8 +385,8 @@ jobs:
   # detection cascade against real install paths. The driver script only needs
   # node builtins, so this job skips the monorepo install entirely.
   test-windows-shell:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.windows_shell == 'true'
     name: Test Windows Shell
 
     runs-on: windows-latest
@@ -297,8 +414,8 @@ jobs:
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
   test-desktop:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.desktop == 'true'
     name: Test Desktop App
 
     runs-on: ubuntu-latest
@@ -358,8 +475,8 @@ jobs:
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
   test-server:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.server == 'true'
     strategy:
       matrix:
         shard: [1, 2]
@@ -448,8 +565,8 @@ jobs:
           flags: server
 
   test-database:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.database == 'true'
     name: Test Database
 
     runs-on: ubuntu-latest
@@ -523,6 +640,7 @@ jobs:
     name: Required Quality Gate
     needs:
       - check-duplicate-run
+      - changes
       - typecheck
       - test-packages
       - test-app
@@ -612,11 +730,25 @@ jobs:
             merge-app-coverage
             merge-server-coverage
           )
+          # A job skipped because its area filter did not match is a pass —
+          # any other non-success keeps the gate red.
+          declare -A area_of=(
+            [typecheck]=code [test-packages]=packages [test-app]=app
+            [merge-app-coverage]=app [test-windows-shell]=windows_shell
+            [test-desktop]=desktop [test-server]=server
+            [merge-server-coverage]=server [test-database]=database
+          )
           failed=0
           for job in "${required[@]}"; do
             result=$(echo "$NEEDS" | jq -r ".[\"$job\"].result")
-            echo "$job: $result"
-            [ "$result" = "success" ] || failed=1
+            area=${area_of[$job]}
+            filter=$(echo "$NEEDS" | jq -r ".changes.outputs.${area} // \"\"")
+            if [ "$result" != "success" ] && ! { [ "$result" = "skipped" ] && [ "$filter" = "false" ]; }; then
+              echo "::error::$job: $result (filter ${area}=${filter})"
+              failed=1
+            else
+              echo "$job: $result (filter ${area}=${filter})"
+            fi
           done
           if [ "$failed" -ne 0 ]; then
             echo "::error::Required jobs failed or were skipped — quality gate stays red."

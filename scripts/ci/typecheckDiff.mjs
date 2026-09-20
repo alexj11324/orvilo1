@@ -3,34 +3,46 @@
  * Base-vs-head `tsc`/`tsgo` diagnostic diff for the frozen remediation SHA (R11).
  *
  * The review requires a per-diagnostic comparison — not "error count went
- * down" — so this script captures the full type-check output on two commits
- * and reports the set difference:
+ * down" and not "same file+code existed before" — so this script captures the
+ * full type-check output on two commits and multiset-matches diagnostics by
+ * `<file>|<TScode>|<normalized message>` (line/col deliberately excluded: a
+ * diagnostic that merely shifted lines still matches, but any *new*
+ * diagnostic — same file, same code, new or moved count — is a hard failure).
  *
  *   node scripts/ci/typecheckDiff.mjs --base canary --head HEAD
+ *     [--scope <pkgdir>]        # `pnpm --dir <pkgdir> type-check`
+ *     [--head-log <file> --head-sha <sha>]  # reuse a captured head log
+ *     [--waiver-file <json>]    # explicit per-diagnostic waivers (see below)
  *     [--worktree-dir <dir>] [--out <report.json>]
- *     [--scope <pkgdir>]   # `pnpm --dir <pkgdir> type-check` instead of root
- *     [--head-log <file>]  # reuse a captured head log instead of re-running
  *
- * A diagnostic is keyed by `<relpath>:<line>:<col> <TScode>` (message text is
- * NOT part of the key — messages embed moveable identifiers that would make
- * every moved line look new). Pass criteria:
+ * Hard-fail conditions (never a silent green):
+ *   - typecheck process fails to spawn, is signalled, OOMs, or exits with a
+ *     non-diagnostic status (tsc uses 1 for diagnostics, 2 for config errors);
+ *   - zero diagnostics parsed on a non-zero exit (crash mid-run looks like
+ *     "clean" otherwise);
+ *   - any head diagnostic has no unmatched base counterpart in its
+ *     file+code+message bucket (including count increases — CE-01);
+ *   - --head-log without --head-sha, or a --head-sha that does not match the
+ *     log's embedded `# tc-head-sha` marker when present (J05).
  *
- *   - every head diagnostic must exist in the base set (zero NEW keys), and
- *   - the report lists removed/added keys so a human can audit the delta.
+ * Waivers: a JSON array of {file, code, msg, reason, expires} entries. Each
+ * unmatched head diagnostic consumes exactly one matching waiver (prefix match
+ * on msg); an expired or absent waiver leaves the diagnostic failing.
  *
- * The head is always typechecked in the caller's working tree (so run this
- * with the frozen SHA checked out). The base is typechecked in a temp git
- * worktree so the caller's files are never touched.
- *
- * Caveat: `line:col` keys shift when a file gains lines above an existing
- * error — the report therefore also emits a per-file error COUNT delta so
- * shifted-but-identical errors are visible as `same-file` churn, not silent
- * new keys. Both views are in the JSON report; the gate reads `added` (exact
- * keys) and `perFileDelta` (count drift) and fails only when `added` contains
- * a diagnostic whose file+code did not exist anywhere in the base set.
+ * The head is typechecked in the caller's working tree; the base is
+ * typechecked in a detached temp worktree after `pnpm install` (frozen when a
+ * lockfile exists; the repo currently ships none, so resolved versions and the
+ * env summary are recorded in the report for auditability).
  */
-import { execFileSync, execSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, execSync, spawnSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -40,54 +52,114 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : args[i + 1];
 };
 
+const fail = (why) => {
+  console.error(`typecheckDiff BLOCKED: ${why}`);
+  process.exit(2);
+};
+
 const base = flag('base', 'canary');
 const head = flag('head', 'HEAD');
 const outFile = flag('out', null);
 const scope = flag('scope', null);
 const headLog = flag('head-log', null);
+const headShaArg = flag('head-sha', null);
+const waiverFile = flag('waiver-file', null);
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
-const DIAG_RE =
-  /^(?<file>[^()\s][^()]*)\((?<line>\d+),(?<col>\d+)\): error (?<code>TS\d+):(?<msg>.*)$/;
+// File paths may contain parens (Next.js route groups, e.g. `app/(main)/x.ts`),
+// so the matcher is a lazy file part + strict `(<line>,<col>): error TS####:`.
+const DIAG_RE = /^(?<file>.+?)\((?<line>\d+),(?<col>\d+)\): error (?<code>TS\d+):(?<msg>.*)$/;
 
-const parseDiagnostics = (text, stripPrefix) =>
+const parseDiagnostics = (text, stripPrefix, msgRoots) =>
   text
     .split('\n')
     .map((l) => DIAG_RE.exec(l.trim()))
     .filter(Boolean)
-    .map((m) => ({
-      code: m.groups.code,
-      file: m.groups.file.replace(stripPrefix, '').replace(/^\.\.\/\.\.\//, ''),
-      key: `${m.groups.file.replace(stripPrefix, '').replace(/^\.\.\/\.\.\//, '')}:${m.groups.line}:${m.groups.col} ${m.groups.code}`,
-      line: Number(m.groups.line),
-      msg: m.groups.msg.trim().slice(0, 160),
-    }));
+    .map((m) => {
+      const file = m.groups.file
+        .replace(stripPrefix, '')
+        .replace(/^\.\.\/\.\.\//, '')
+        .replace(/^\.\//, '');
+      // tsc embeds absolute paths in some messages (import("/abs/...") module
+      // names, node_modules resolution paths). Base runs in a temp worktree,
+      // so identical diagnostics would never bucket-match without stripping
+      // each side's checkout root to a shared placeholder. macOS resolves
+      // /tmp → /private/tmp inside spawned processes, so both the given root
+      // and its realpath must normalize.
+      let msg = m.groups.msg.trim().slice(0, 300);
+      for (const root of msgRoots) msg = msg.replaceAll(root, '<root>');
+      return {
+        code: m.groups.code,
+        col: Number(m.groups.col),
+        file,
+        line: Number(m.groups.line),
+        msg,
+        // Multiset bucket: identical (file, code, msg) entries match across
+        // line shifts; count drift inside a bucket is therefore a real new
+        // diagnostic, not churn.
+        bucket: `${file}|${m.groups.code}|${msg}`,
+        key: `${file}:${m.groups.line}:${m.groups.col} ${m.groups.code}`,
+      };
+    });
 
 const runTypecheck = (cwd) => {
-  // Scoped runs print paths relative to the package dir — the caller passes
-  // a matching stripPrefix so base and head keys compare on equal footing.
   const argv = scope ? ['--dir', scope, 'type-check'] : ['type-check'];
-  try {
-    return execFileSync('pnpm', argv, {
-      cwd,
-      encoding: 'utf8',
-      env: { ...process.env, CI: 'true', NODE_OPTIONS: '--max-old-space-size=12288' },
-      maxBuffer: 1024 * 1024 * 64,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    // tsc/tsgo exits non-zero when diagnostics exist — that's the normal path.
-    return `${error.stdout ?? ''}${error.stderr ?? ''}`;
-  }
+  const res = spawnSync('pnpm', argv, {
+    cwd,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      CI: 'true',
+      NODE_OPTIONS: '--max-old-space-size=12288',
+    },
+    maxBuffer: 1024 * 1024 * 64,
+  });
+  if (res.error) fail(`typecheck process failed to spawn: ${res.error.message}`);
+  const out = `${res.stdout ?? ''}${res.stderr ?? ''}`;
+  const status = res.status;
+  // tsc: 0 clean / 1 diagnostics / 2 config error. Anything else or a signal
+  // means the run did not complete normally — refuse to treat it as evidence.
+  if (res.signal)
+    fail(
+      `typecheck killed by signal ${res.signal} (possible OOM/crash) — output tail:\n${out.slice(-2000)}`,
+    );
+  if (status !== 0 && status !== 1 && status !== 2)
+    fail(`typecheck exited ${status} — not a normal diagnostics exit`);
+  const diags = parseDiagnostics(out, null, [cwd, realpathSync(cwd)]).length;
+  if (status !== 0 && diags === 0)
+    fail(
+      `typecheck exited ${status} with zero parseable diagnostics — run did not produce evidence`,
+    );
+  return { out, status };
 };
 
-const stripFor = scope ? `${scope}/` : null;
+const envSummary = () => ({
+  node: execSync('node --version', { encoding: 'utf8' }).trim(),
+  pnpm: execSync('pnpm --version', { encoding: 'utf8' }).trim(),
+});
 
-// --- head diagnostics (caller's working tree) ---
-const headDiags = parseDiagnostics(
-  headLog ? readFileSync(resolve(headLog), 'utf8') : runTypecheck(repoRoot),
-  stripFor ?? repoRoot,
-);
+// --- head diagnostics (caller's working tree or a captured log) ---
+let headDiags;
+let headSha;
+if (headLog) {
+  if (!headShaArg)
+    fail('--head-log requires --head-sha <sha> naming the commit the log was produced on');
+  const text = readFileSync(resolve(headLog), 'utf8');
+  const marker = /^# tc-head-sha (?<sha>[0-9a-f]{40})/m.exec(text);
+  if (marker && marker.groups.sha !== headShaArg)
+    fail(`--head-sha ${headShaArg} does not match log marker ${marker.groups.sha}`);
+  headDiags = parseDiagnostics(text, scope ? `${scope}/` : repoRoot, [
+    repoRoot,
+    realpathSync(repoRoot),
+  ]);
+  headSha = headShaArg;
+} else {
+  headSha = execSync(`git rev-parse ${head}`, { cwd: repoRoot, encoding: 'utf8' }).trim();
+  headDiags = parseDiagnostics(runTypecheck(repoRoot).out, scope ? `${scope}/` : repoRoot, [
+    repoRoot,
+    realpathSync(repoRoot),
+  ]);
+}
 
 // --- base diagnostics (detached temp worktree so the caller's tree is safe) ---
 const worktreeDir = flag('worktree-dir', null) ?? mkdtempSync(join(tmpdir(), 'tc-base-'));
@@ -96,51 +168,100 @@ execFileSync('git', ['worktree', 'add', '--detach', worktreeDir, base], {
   stdio: 'inherit',
 });
 try {
-  execFileSync('pnpm', ['install', '--frozen-lockfile=false'], {
+  const lockfile = join(worktreeDir, 'pnpm-lock.yaml');
+  const installArgs = existsSync(lockfile) ? ['install', '--frozen-lockfile'] : ['install'];
+  const install = spawnSync('pnpm', installArgs, {
     cwd: worktreeDir,
     encoding: 'utf8',
     env: { ...process.env, CI: 'true' },
     maxBuffer: 1024 * 1024 * 64,
-    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  const baseDiags = parseDiagnostics(runTypecheck(worktreeDir), stripFor ?? worktreeDir);
+  if (install.status !== 0 || install.error)
+    fail(
+      `base pnpm install failed (status=${install.status}, err=${install.error?.message ?? 'none'})`,
+    );
+  const baseSha = execSync('git rev-parse HEAD', {
+    cwd: worktreeDir,
+    encoding: 'utf8',
+  }).trim();
+  const baseDiags = parseDiagnostics(
+    runTypecheck(worktreeDir).out,
+    scope ? `${scope}/` : worktreeDir,
+    [worktreeDir, realpathSync(worktreeDir)],
+  );
+
+  // Multiset match: every head diagnostic consumes one base bucket entry.
+  const buckets = new Map();
+  for (const d of baseDiags) {
+    const n = buckets.get(d.bucket) ?? 0;
+    buckets.set(d.bucket, n + 1);
+  }
+  const unmatched = [];
+  for (const d of headDiags) {
+    const n = buckets.get(d.bucket) ?? 0;
+    if (n > 0) buckets.set(d.bucket, n - 1);
+    else unmatched.push(d);
+  }
+  const removed = [];
+  for (const d of baseDiags) {
+    const n = buckets.get(d.bucket) ?? 0;
+    if (n > 0) {
+      buckets.set(d.bucket, n - 1);
+      removed.push(d);
+    }
+  }
+
+  const waivers = waiverFile ? JSON.parse(readFileSync(resolve(waiverFile), 'utf8')) : [];
+  const now = Date.now();
+  const unwaived = [];
+  const usedWaivers = [];
+  for (const d of unmatched) {
+    const i = waivers.findIndex(
+      (w) =>
+        w.file === d.file &&
+        w.code === d.code &&
+        (d.msg === w.msg || d.msg.startsWith(w.msg)) &&
+        (!w.expires || Date.parse(w.expires) > now),
+    );
+    if (i === -1) unwaived.push(d);
+    else {
+      usedWaivers.push({ diag: `${d.key} — ${d.msg}`, waiver: waivers[i] });
+      waivers.splice(i, 1);
+    }
+  }
 
   const baseKeys = new Set(baseDiags.map((d) => d.key));
   const headKeys = new Set(headDiags.map((d) => d.key));
-  const added = headDiags.filter((d) => !baseKeys.has(d.key));
-  const removed = baseDiags.filter((d) => !headKeys.has(d.key));
-
-  // Strict gate: a diagnostic is only "new" if no diagnostic with the same
-  // file+code existed in base (same-file line shifts are tolerated as churn).
-  const baseFileCodes = new Set(baseDiags.map((d) => `${d.file} ${d.code}`));
-  const hardAdded = added.filter((d) => !baseFileCodes.has(`${d.file} ${d.code}`));
-
-  const perFileDelta = {};
-  for (const d of headDiags) perFileDelta[d.file] = (perFileDelta[d.file] ?? 0) + 1;
-  for (const d of baseDiags) perFileDelta[d.file] = (perFileDelta[d.file] ?? 0) - 1;
-  const driftedFiles = Object.entries(perFileDelta).filter(([, n]) => n !== 0);
+  const exactAdded = headDiags.filter((d) => !baseKeys.has(d.key));
 
   const report = {
-    added: added.map((d) => `${d.key} — ${d.msg}`),
-    base: { count: baseDiags.length, ref: base },
-    head: { count: headDiags.length, ref: head },
-    newFileCodeDiagnostics: hardAdded.map((d) => `${d.key} — ${d.msg}`),
-    pass: hardAdded.length === 0,
-    perFileCountDrift: Object.fromEntries(driftedFiles),
+    base: { count: baseDiags.length, ref: base, sha: baseSha },
+    env: envSummary(),
+    exactKeyChurn: {
+      added: exactAdded.map((d) => `${d.key} — ${d.msg}`),
+      removed: baseDiags.filter((d) => !headKeys.has(d.key)).map((d) => `${d.key} — ${d.msg}`),
+    },
+    head: { count: headDiags.length, ref: head, sha: headSha },
+    newDiagnostics: unwaived.map((d) => `${d.key} — ${d.msg}`),
+    pass: unwaived.length === 0,
     removed: removed.map((d) => `${d.key} — ${d.msg}`),
     scope,
+    waived: usedWaivers,
   };
 
   if (outFile) writeFileSync(resolve(outFile), JSON.stringify(report, null, 2));
-  console.log(`base(${base}): ${baseDiags.length} diagnostics`);
-  console.log(`head(${head}): ${headDiags.length} diagnostics`);
-  console.log(`added keys: ${added.length} — hard-new file+code: ${hardAdded.length}`);
-  console.log(`removed keys: ${removed.length} — files with count drift: ${driftedFiles.length}`);
-  if (hardAdded.length) {
-    console.log('\nNEW diagnostics (file+code absent from base):');
-    for (const d of hardAdded) console.log(`  ${d.key} — ${d.msg}`);
+  console.log(`base(${base}@${baseSha.slice(0, 8)}): ${baseDiags.length} diagnostics`);
+  console.log(`head(${head}@${headSha.slice(0, 8)}): ${headDiags.length} diagnostics`);
+  console.log(
+    `unmatched head diagnostics: ${unmatched.length} — waived: ${usedWaivers.length} — hard-new: ${unwaived.length}`,
+  );
+  console.log(`removed: ${removed.length}`);
+  if (unwaived.length) {
+    console.log('\nNEW diagnostics (no base file+code+message counterpart):');
+    for (const d of unwaived) console.log(`  ${d.key} — ${d.msg}`);
+    process.exit(1);
   }
-  process.exit(hardAdded.length ? 1 : 0);
+  process.exit(0);
 } finally {
   execFileSync('git', ['worktree', 'remove', '--force', worktreeDir], {
     cwd: repoRoot,

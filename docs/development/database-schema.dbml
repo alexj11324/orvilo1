@@ -2124,6 +2124,7 @@ table integration_leases {
   target text [not null]
   ref text [not null]
   owner_token text [not null]
+  fence_seq bigint [not null, default: 0]
   owner_task_id text
   owner_topic_id text
   phase text [not null, default: 'claimed']

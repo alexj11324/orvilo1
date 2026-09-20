@@ -141,6 +141,25 @@ const persistReviewContext = async (
  * 'blocked' with the counter map kept as evidence instead of waiting
  * silently forever — auth, permission and quota failures do not self-heal.
  */
+/**
+ * Mixed-version reader for the per-stage poll-failure counters. The map now
+ * lives under `verificationPollFailureStages`; the legacy
+ * `verificationPollFailures` key carried a bare number (pre-R07) or an
+ * unversioned map (R07), so old rows still count correctly instead of being
+ * silently dropped — and a rolled-back reader never sees a map under the
+ * key it expects to be a number.
+ */
+const normalizedPollFailureStages = (
+  record: TaskTopicIntegration,
+): Partial<Record<VerificationPollStage, number>> | undefined => {
+  if (record.verificationPollFailureStages) return record.verificationPollFailureStages;
+  const legacy = record.verificationPollFailures;
+  // The pre-map scalar normalizes to a 'sweep' bucket — the SAME shape the
+  // SQL-side CAS guard normalizes it to, so comparisons stay consistent.
+  if (typeof legacy === 'number') return { sweep: legacy };
+  return legacy;
+};
+
 const noteVerificationPollFailure = async (params: {
   detail: string;
   record: TaskTopicIntegration;
@@ -158,24 +177,34 @@ const noteVerificationPollFailure = async (params: {
     await taskModel.update(task.id, { error: detail });
     return 'waiting';
   }
-  const failures = (record.verificationPollFailures?.[stage] ?? 0) + 1;
+  // A legacy scalar counter also bounds the failing stage — the scalar
+  // counted any stage's failures, so it must not silently reset the budget
+  // of whichever stage runs next.
+  const legacyScalar =
+    typeof record.verificationPollFailures === 'number' ? record.verificationPollFailures : 0;
+  const normalized = normalizedPollFailureStages(record);
+  const failures = Math.max(normalized?.[stage] ?? 0, legacyScalar) + 1;
   const lastError = `${detail} (${stage} poll ${failures}/${MAX_VERIFICATION_POLL_FAILURES})`;
-  const next = { ...record.verificationPollFailures, [stage]: failures };
+  const next = { ...normalized, [stage]: failures };
   const persisted = await topicModel.updateIntegration(
     task.id,
     row.topicId,
+    // The null patch on the legacy key removes it — old-shaped rows are
+    // upgraded in place so no version ever reads both keys at once.
     failures >= MAX_VERIFICATION_POLL_FAILURES
       ? {
           lastError,
           lastErrorCode: 'remote_verification_unavailable',
           state: 'blocked',
-          verificationPollFailures: next,
+          verificationPollFailures: null,
+          verificationPollFailureStages: next,
         }
       : {
           lastError,
-          verificationPollFailures: next,
+          verificationPollFailures: null,
+          verificationPollFailureStages: next,
         },
-    record.verificationPollFailures ?? null,
+    normalized ?? null,
   );
   // A concurrent pass already moved the counters — keep waiting; the next
   // sweep re-reads the fresh record rather than double-counting.
@@ -201,17 +230,23 @@ const clearVerificationPollStages = async (params: {
   topicModel: TaskTopicModel;
 }): Promise<TaskTopicIntegration> => {
   const { record, row, stages, task, topicModel } = params;
-  const failures = record.verificationPollFailures;
+  const failures = normalizedPollFailureStages(record);
   if (!row.topicId || !failures || !stages.some((stage) => failures[stage])) return record;
   const next = { ...failures };
   for (const stage of stages) delete next[stage];
   const persisted = await topicModel.updateIntegration(
     task.id,
     row.topicId,
-    { verificationPollFailures: next },
+    { verificationPollFailures: null, verificationPollFailureStages: next },
     failures,
   );
-  return persisted ? { ...record, verificationPollFailures: next } : record;
+  return persisted
+    ? {
+        ...record,
+        verificationPollFailures: undefined,
+        verificationPollFailureStages: next,
+      }
+    : record;
 };
 
 const markDeliveryMerged = async (params: {
@@ -765,17 +800,72 @@ export const runTaskDeliveryReviewSweep = async (
 
       // A merge GitHub already accepted must not be re-issued — a lost
       // confirmation would otherwise double-request the merge. The durable
-      // `mergeIssuedAt` marks that boundary: later passes reconcile by
-      // re-reading the merged state only.
+      // `mergeIssuedAt` intent is claimed BEFORE the remote call via CAS: a
+      // pass that loses the claim never issues a mutation, and a lost merge
+      // acknowledgement leaves the marker persisted so the next sweep
+      // reconciles by re-reading the merged state only.
       if (!deliveryRecord.mergeIssuedAt) {
-        const merge = await mergePullRequest({
-          expectedHeadSha: decision.headSha,
-          mergeMethod: 'squash',
-          prNumber: snapshot.number,
-          repo,
-          token,
-        });
+        const intentIssuedAt = new Date().toISOString();
+        const claimed = await topicModel.updateIntegration(
+          task.id,
+          row.topicId,
+          { mergeIssuedAt: intentIssuedAt },
+          undefined,
+          null,
+        );
+        if (!claimed) {
+          // Another sweep owns the intent (or the record moved) — defer to it.
+          result.waiting.push(task.identifier);
+          continue;
+        }
+        deliveryRecord = { ...deliveryRecord, mergeIssuedAt: intentIssuedAt };
+        let merge: Awaited<ReturnType<typeof mergePullRequest>>;
+        try {
+          merge = await mergePullRequest({
+            expectedHeadSha: decision.headSha,
+            mergeMethod: 'squash',
+            prNumber: snapshot.number,
+            repo,
+            token,
+          });
+        } catch (error) {
+          // Unknown outcome with a persisted intent — the next sweep
+          // reconciles by reading merged state, never by re-issuing.
+          log(
+            'merge request outcome unknown for %s — intent persisted — %O',
+            task.identifier,
+            error,
+          );
+          const outcome = await noteVerificationPollFailure({
+            detail: `Merge request acknowledgement lost: ${error instanceof Error ? error.message : String(error)}`,
+            record: deliveryRecord,
+            row,
+            stage: 'merge_decision',
+            task,
+            taskModel,
+            topicModel,
+          });
+          result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
+          continue;
+        }
         if (!merge.merged) {
+          // Explicit refusal — the intent is released (CAS back to unset) so
+          // the next sweep may retry once remote gates allow the merge again.
+          const released = await topicModel.updateIntegration(
+            task.id,
+            row.topicId,
+            { mergeIssuedAt: null },
+            undefined,
+            intentIssuedAt,
+          );
+          if (!released) {
+            log(
+              'merge-intent release lost its CAS for %s — leaving marker for reconcile path',
+              task.identifier,
+            );
+          } else {
+            deliveryRecord = { ...deliveryRecord, mergeIssuedAt: undefined };
+          }
           await persistReviewContext(taskModel, task.id, {
             ...context,
             lastMergeError: merge.message ?? 'GitHub rejected the merge request',
@@ -789,15 +879,6 @@ export const runTaskDeliveryReviewSweep = async (
           result.waiting.push(task.identifier);
           continue;
         }
-        deliveryRecord = {
-          ...deliveryRecord,
-          mergeIssuedAt: new Date().toISOString(),
-        };
-        await topicModel
-          .updateIntegration(task.id, row.topicId, {
-            mergeIssuedAt: deliveryRecord.mergeIssuedAt,
-          })
-          .catch((error) => log('merge acceptance marker failed to persist — %O', error));
       }
 
       const confirmed = await getPullRequestReviewSnapshot(repo, snapshot.number, token, {

@@ -1,5 +1,5 @@
 import type { IntegrationLeasePhase } from '@orvilo/types';
-import { boolean, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { timestamps, timestamptz } from './_helpers';
 import { workspaces } from './workspace';
@@ -25,8 +25,10 @@ export const integrationLeases = pgTable(
     }),
 
     /**
-     * Serialized lease key: `${scopeKey}:${target}#${ref}` where target is the
-     * canonical repo identity (`owner/repo` or `device:<deviceId>:<repoPath>`).
+     * Serialized lease key: the *physical* coordinate `${target}#${ref}` —
+     * workspace scope is deliberately excluded so two workspaces that can
+     * reach the same repo/ref contend on one lock (authorization stays
+     * workspace-scoped on the caller side).
      */
     key: text('key').notNull(),
     /** Canonical repo identity — remote coordinate or device path. */
@@ -36,6 +38,8 @@ export const integrationLeases = pgTable(
 
     /** Fencing token — a fresh UUID per acquisition. */
     ownerToken: text('owner_token').notNull(),
+    /** Monotone fence, incremented by every successful claim/steal. */
+    fenceSeq: bigint('fence_seq', { mode: 'number' }).notNull().default(0),
     ownerTaskId: text('owner_task_id'),
     ownerTopicId: text('owner_topic_id'),
     /** Write class currently in flight — see `IntegrationLeasePhase`. */

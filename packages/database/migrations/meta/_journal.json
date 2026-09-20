@@ -1246,6 +1246,13 @@
       "when": 1789871969944,
       "tag": "0177_shallow_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 179,
+      "version": "7",
+      "when": 1789885516032,
+      "tag": "0179_lean_metal_master",
+      "breakpoints": true
     }
   ],
   "version": "6"

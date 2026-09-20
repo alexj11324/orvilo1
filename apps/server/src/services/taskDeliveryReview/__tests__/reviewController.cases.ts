@@ -31,7 +31,8 @@ type Row = {
     repo: string;
     role: string;
     state: string;
-    verificationPollFailures?: Partial<Record<VerificationPollStage, number>>;
+    verificationPollFailures?: number | Partial<Record<VerificationPollStage, number>>;
+    verificationPollFailureStages?: Partial<Record<VerificationPollStage, number>>;
   };
   seq: number;
   status: string;
@@ -85,6 +86,10 @@ function setup(
     liveTopic?: boolean;
     missingPr?: boolean;
     missingRemote?: boolean;
+    /** Seed the legacy scalar shape under the old key (mixed-version read). */
+    legacyPollFailures?: number;
+    /** mergePullRequest throws — the accepted-merge acknowledgement is lost. */
+    mergeThrows?: boolean;
     pollFailures?: Partial<Record<VerificationPollStage, number>>;
     /** Ordered per-call snapshot overrides — 'unavailable' makes the read fail. */
     reads?: (Partial<RemotePrReviewSnapshot> | 'unavailable')[];
@@ -111,7 +116,7 @@ function setup(
       repo: 'acme/widgets',
       role: 'task',
       state: options.rowState ?? 'verification_pending',
-      verificationPollFailures: options.pollFailures,
+      verificationPollFailures: options.legacyPollFailures ?? options.pollFailures,
     },
     seq: 1,
     status: options.liveTopic ? 'running' : 'completed',
@@ -201,12 +206,39 @@ function setup(
         async findByTaskId() {
           return structuredClone(state.rows);
         }
-        async updateIntegration(_task: string, topic: string, patch: Partial<Row['integration']>) {
+        async updateIntegration(
+          _task: string,
+          topic: string,
+          patch: Partial<Row['integration']>,
+          _expectPollFailures?: unknown,
+          expectMergeIssuedAt?: null | string,
+        ) {
           state.events.push('persist-pr');
-          if (options.failPersistence) return false;
+          // failPersistence simulates durable-write failure EXCEPT the
+          // merge-intent claim — under SA03 that write happens before the
+          // remote call, so a proof-write failure is exercised separately.
+          if (
+            options.failPersistence &&
+            !(Object.keys(patch).length === 1 && 'mergeIssuedAt' in patch)
+          )
+            return false;
           const found = state.rows.find((item) => item.topicId === topic);
           if (!found) return false;
-          Object.assign(found.integration, patch);
+          // Emulate the mergeIssuedAt CAS guard — only the claimant that sees
+          // the marker in its expected state may write.
+          if (
+            expectMergeIssuedAt !== undefined &&
+            (found.integration.mergeIssuedAt ?? null) !== expectMergeIssuedAt
+          )
+            return false;
+          // Emulate jsonb_strip_nulls: keys patched to null are removed.
+          for (const [key, value] of Object.entries(patch)) {
+            if (value === null) {
+              delete (found.integration as Record<string, unknown>)[key];
+            } else {
+              (found.integration as Record<string, unknown>)[key] = value;
+            }
+          }
           return true;
         }
       },
@@ -236,6 +268,7 @@ function setup(
       isRemotePrMergeReady,
       mergePullRequest: async (args: { expectedHeadSha: string }) => {
         state.merges.push(args);
+        if (options.mergeThrows) throw new Error('connection reset');
         // The confirmation, not this response body, is the authority for the merge SHA.
         return { merged: true, sha: 'wrong-response-sha' };
       },
@@ -323,6 +356,9 @@ add('confirmation cannot silently change target branch or repository identity', 
   }
 });
 
+// SA03/F08: with the write-ahead intent the only durable failure left at
+// merge time is the proof write — the merge itself already landed remotely,
+// so the pass must error (reconcile path) rather than complete or re-issue.
 add('failed proof persistence does not call completed', async (load) => {
   const f = setup({ failPersistence: true });
   await (
@@ -530,7 +566,7 @@ add(
     const f = setup({ unavailable: true });
     const result = await (await load(f.mocks))(f.db);
     assert.deepEqual(result.waiting, ['T-1']);
-    assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, { snapshot: 1 });
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, { snapshot: 1 });
     assert.equal(f.state.rows[0].integration.state, 'verification_pending');
     assert.equal(f.state.merges.length, 0);
   },
@@ -545,7 +581,7 @@ add(
     assert.deepEqual(result.paused, ['T-1']);
     assert.equal(f.state.rows[0].integration.state, 'blocked');
     assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
-    assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, { snapshot: 10 });
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, { snapshot: 10 });
     assert.equal(f.state.merges.length, 0);
     assert.equal(f.state.completed.length, 0);
   },
@@ -556,7 +592,7 @@ add('a successful remote read resets only the stage that was re-observed', async
   const f = setup({ pollFailures: { snapshot: 3 } });
   const result = await (await load(f.mocks))(f.db);
   assert.deepEqual(result.merged, ['T-1']);
-  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {});
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {});
 });
 
 // F08: a healthy first snapshot must not erase failures accumulated at the
@@ -575,12 +611,12 @@ add('a healthy snapshot preserves merge-boundary failure budgets', async (load) 
   const sweep = await load(f.mocks);
   const first = await sweep(f.db);
   assert.deepEqual(first.waiting, ['T-1']);
-  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
     merge_decision: 1,
   });
   const second = await sweep(f.db);
   assert.deepEqual(second.waiting, ['T-1']);
-  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
     merge_decision: 1,
   });
 });
@@ -605,7 +641,7 @@ add('a merge accepted but unconfirmed reconciles without a second merge call', a
   const first = await sweep(f.db);
   assert.equal(f.state.merges.length, 1);
   assert.deepEqual(first.waiting, ['T-1']);
-  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
     merge_confirm: 1,
   });
   assert.ok(f.state.rows[0].integration.mergeIssuedAt);
@@ -625,7 +661,7 @@ add('a merge boundary that never confirms blocks after the per-stage cap', async
   const sweep = await load(f.mocks);
   for (let round = 0; round < 11; round++) await sweep(f.db);
   assert.equal(f.state.merges.length, 0);
-  assert.deepEqual(f.state.rows[0].integration.verificationPollFailures, {
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
     merge_decision: 10,
   });
   assert.equal(f.state.rows[0].integration.state, 'blocked');
@@ -633,6 +669,67 @@ add('a merge boundary that never confirms blocks after the per-stage cap', async
   // Bounded: the blocked row leaves the active-delivery set entirely.
   const twelfth = await sweep(f.db);
   assert.equal(twelfth.checked, 0);
+});
+
+// SA03/F08 (F02T): the merge acknowledgement is lost mid-flight — the intent
+// marker was already persisted, so the next sweep reconciles by re-reading
+// merged state and never issues a second merge mutation.
+add('a lost merge acknowledgement reconciles instead of re-issuing', async (load) => {
+  const f = setup({
+    mergeThrows: true,
+    reads: [
+      // Pass 1: healthy reads, merge RPC issued then the response is lost.
+      {},
+      {},
+      // Pass 2: head/base reads still show the unmerged PR; the confirmation
+      // read finally lands.
+      { merged: false },
+      { merged: false },
+      { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.equal(f.state.merges.length, 1);
+  // The durable intent survived the lost acknowledgement.
+  assert.ok(f.state.rows[0].integration.mergeIssuedAt);
+  const second = await sweep(f.db);
+  // No second merge call — the persisted intent forces reconcile-by-read.
+  assert.equal(f.state.merges.length, 1);
+  assert.deepEqual(second.merged, ['T-1']);
+});
+
+// SA03/F08 (F03T): a sweep that observes an already-claimed merge intent
+// issues no mutation — only the claim owner may call mergePullRequest; the
+// sweep reconciles by reading remote state.
+add('a second sweep never issues a second merge mutation', async (load) => {
+  const f = setup();
+  const sweep = await load(f.mocks);
+  // Simulate a concurrently-claimed intent before this pass runs.
+  f.state.rows[0].integration.mergeIssuedAt = 'claimed-by-other-sweep';
+  await sweep(f.db);
+  // Zero merge calls — the persisted intent suppressed re-issue entirely.
+  assert.equal(f.state.merges.length, 0);
+});
+
+// SA03/F08 (F04T): rows written by the pre-map schema version carry a bare
+// number — the normalized reader counts it instead of producing
+// `[object Object]1` or dropping the budget.
+add('a legacy scalar poll-failure counter normalizes into the stage map', async (load) => {
+  const f = setup({ legacyPollFailures: 9, unavailable: true });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.paused, ['T-1']);
+  // The legacy scalar still bounds whichever stage runs next — 9 + this
+  // pass = 10 → capped into blocked, and the scalar is retained as evidence.
+  assert.equal(f.state.rows[0].integration.state, 'blocked');
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+    snapshot: 10,
+    sweep: 9,
+  });
+  // The legacy key was removed — a rolled-back reader never sees a map where
+  // it expects a number.
+  assert.equal(f.state.rows[0].integration.verificationPollFailures, undefined);
 });
 
 export { cases as reviewControllerCases };

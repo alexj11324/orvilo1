@@ -173,6 +173,7 @@ SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/f
 - 已知修正：`pnpm type-check` 根脚本本地拒跑（`scripts/type-check.mjs` CI-only guard），脚本需 `CI=true`；作用域模式 `--scope apps/server` 走包内 `tsc --noEmit`。
 - head（`cb02a617`，整合树）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。
 - **结果（已跑完，PASS）**：base `origin/canary` = 309 条，head = 302 条；added keys 11（均为同文件行号漂移，base 中同 file+code 已存在）、removed 18、perFileCountDrift 1 个文件；**hard-new file+code = 0**。复跑：`node scripts/ci/typecheckDiff.mjs --base origin/canary --head HEAD --scope apps/server`（head 用 `--head-log` 复用日志）。
+- **SB12 协议收紧**：诊断消息不再截断 300 字符、多行 continuation 参与 bucket 匹配；`--head-log` 只接受带强制 envelope 的采集产物（`--capture <file>` 生成：head SHA/tree SHA、dirty 状态 + 补丁哈希、exit/signal/completed、scope、node+pnpm+lockfile+tsconfig 指纹、日志 sha256）。envelope 缺失 / 篡改 / 脏树 / 指纹漂移均拒绝；live `--head` 必须等于当前 checkout 且工作树干净；豁免条目必须有非空 `reason` + 未过期 `expires`。回归测试 `scripts/ci/typecheckDiff.test.ts`（26 例）。
 
 ### 10.2 真机探针（dockerless：brew Postgres\@5432 + Redis\@6379 + s3rver\@29000，Next\@37620）
 

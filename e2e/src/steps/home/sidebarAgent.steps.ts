@@ -266,6 +266,8 @@ When('用户点击更多操作按钮', async function (this: CustomWorld) {
 When('用户在菜单中选择重命名', async function (this: CustomWorld) {
   console.log('   📍 Step: 选择重命名选项...');
 
+  const menuItemNames = await this.page.getByRole('menuitem').allTextContents();
+  console.log(`   📍 Context menu items: ${JSON.stringify(menuItemNames)}`);
   const renameOption = this.page.getByRole('menuitem', { name: /rename|重命名/i });
   await expect(renameOption).toBeVisible({ timeout: 5000 });
   await renameOption.click();
@@ -277,6 +279,8 @@ When('用户在菜单中选择重命名', async function (this: CustomWorld) {
 When('用户在菜单中选择删除', async function (this: CustomWorld) {
   console.log('   📍 Step: 选择删除选项...');
 
+  const menuItemNames = await this.page.getByRole('menuitem').allTextContents();
+  console.log(`   📍 Context menu items: ${JSON.stringify(menuItemNames)}`);
   const deleteOption = this.page.getByRole('menuitem', { name: /delete|删除/i });
   await expect(deleteOption).toBeVisible({ timeout: 5000 });
   await deleteOption.click();

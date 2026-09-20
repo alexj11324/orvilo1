@@ -2,6 +2,7 @@ import type * as ModelBankModule from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
+import type { ExternalToolSurfaceEntry } from '../pipeline/runToolSurface';
 
 const {
   mockConnectorQueryByIdentifiers,
@@ -201,7 +202,7 @@ const builtinSpecIds = () =>
 const externalMounts = () =>
   (mockDispatchHeteroAgent.mock.calls[0][2].externalToolMounts ?? {}) as Record<
     string,
-    { apis: Array<{ name: string }> }
+    Pick<ExternalToolSurfaceEntry, 'apis' | 'source'>
   >;
 const externalMountIds = () => Object.keys(externalMounts());
 const externalMountToolNames = () =>
@@ -287,6 +288,8 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
     const pluginASpec = (mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs as any[]).find(
       (spec) => spec.identifier === 'plugin-a',
     );
-    expect(pluginASpec?.apis.map((api) => api.name)).toEqual(['connector-tool-x']);
+    expect(pluginASpec?.apis.map((api: { name: string }) => api.name)).toEqual([
+      'connector-tool-x',
+    ]);
   });
 });

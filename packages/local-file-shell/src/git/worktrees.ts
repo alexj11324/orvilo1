@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { realpath } from 'node:fs/promises';
+import { readdir, realpath, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -98,6 +98,94 @@ export const parseGitWorktreeList = (stdout: string): ParsedWorktree[] => {
 const readStatus = async (worktree: ParsedWorktree): Promise<GitWorkingTreeStatus | undefined> => {
   if (worktree.bare || worktree.prunable) return undefined;
   return getGitWorkingTreeStatus(worktree.path);
+};
+
+export const inspectGitWorktreePath = async (payload: {
+  path: string;
+  worktreePath: string;
+}): Promise<GitWorktreePathInspection> => {
+  const { path: dirPath, worktreePath } = payload;
+  if (!dirPath?.trim()) return { error: 'Working directory is required', kind: 'unknown' };
+  if (!worktreePath?.trim()) return { error: 'Worktree path is required', kind: 'unknown' };
+
+  let worktrees: GitWorktreeListItem[];
+  try {
+    const [{ stdout: rootStdout }, { stdout }] = await Promise.all([
+      execFileAsync('git', ['rev-parse', '--show-toplevel'], { cwd: dirPath, timeout: 5000 }),
+      execFileAsync('git', ['worktree', 'list', '--porcelain', '-z'], {
+        cwd: dirPath,
+        timeout: 5000,
+      }),
+    ]);
+    const currentRoot = await safeRealpath(rootStdout.trim());
+    const parsed = parseGitWorktreeList(stdout);
+    const statuses = await Promise.all(parsed.map(readStatus));
+    worktrees = await Promise.all(
+      parsed.map(async (worktree, index) => ({
+        ...worktree,
+        current: (await safeRealpath(worktree.path)) === currentRoot,
+        status: statuses[index],
+      })),
+    );
+  } catch (error: any) {
+    const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
+    return { error: stderr || 'git worktree list failed', kind: 'unknown' };
+  }
+
+  const targetPath = await safeRealpath(worktreePath);
+  let found: GitWorktreeListItem | undefined;
+  for (const worktree of worktrees) {
+    if ((await safeRealpath(worktree.path)) === targetPath) {
+      found = worktree;
+      break;
+    }
+  }
+  if (found) return { kind: 'listed', listed: found };
+
+  try {
+    const dirStat = await stat(targetPath);
+    if (!dirStat.isDirectory()) return { kind: 'orphan-foreign' };
+  } catch {
+    return { kind: 'absent' };
+  }
+
+  const entries = await readdir(targetPath);
+  if (entries.length === 0) return { kind: 'orphan-safe' };
+  if (entries.length === 1 && entries[0] === '.git') {
+    const gitEntry = await stat(path.join(targetPath, '.git'));
+    // A crashed `worktree add` leaves only a gitfile — the directory carries no
+    // user content. Anything more is foreign content we must not touch.
+    if (gitEntry.isFile()) return { kind: 'orphan-safe' };
+  }
+  return { kind: 'orphan-foreign' };
+};
+
+export const clearOrphanedWorktreePath = async (payload: {
+  path: string;
+  worktreePath: string;
+}): Promise<GitRemoveWorktreeResult> => {
+  const inspection = await inspectGitWorktreePath(payload);
+  if (inspection.kind === 'absent') return { success: true };
+  if (inspection.kind !== 'orphan-safe') {
+    return {
+      error: `Refusing to clear ${payload.worktreePath}: ${inspection.kind} — ${
+        inspection.listed
+          ? `listed on branch ${inspection.listed.branch ?? '(detached)'}`
+          : (inspection.error ?? 'directory contents are not provably a crashed add')
+      }`,
+      success: false,
+    };
+  }
+
+  const target = await safeRealpath(payload.worktreePath);
+  try {
+    await rm(target, { recursive: true });
+    const after = await inspectGitWorktreePath(payload);
+    if (after.kind === 'absent') return { success: true };
+    return { error: `Directory still present after cleanup (${after.kind})`, success: false };
+  } catch (error: any) {
+    return { error: error?.message ?? 'orphan directory cleanup failed', success: false };
+  }
 };
 
 export const listGitWorktrees = async (dirPath: string): Promise<GitWorktreeListItem[]> => {

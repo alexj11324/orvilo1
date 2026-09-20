@@ -494,6 +494,18 @@ export interface DeviceGitWorktreeListItem {
 }
 
 /**
+ * Occupancy classification for a candidate worktree path, returned by the
+ * `inspectGitWorktreePath` device RPC. Mirrors the desktop
+ * `GitWorktreePathInspection`. `unknown` means the worktree listing itself
+ * failed — never treat it as an empty list.
+ */
+export interface DeviceGitWorktreePathInspection {
+  error?: string;
+  kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
+  listed?: DeviceGitWorktreeListItem;
+}
+
+/**
  * Commit divergence vs the upstream tracking ref, returned by the
  * `getGitAheadBehind` device RPC. Mirrors the desktop shape.
  */

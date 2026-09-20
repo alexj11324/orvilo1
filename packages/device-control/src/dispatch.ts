@@ -2,6 +2,7 @@ import { moveLocalFiles, renameLocalFile, writeLocalFile } from '@orvilo/local-f
 import {
   addGitWorktree,
   checkoutGitBranch,
+  clearOrphanedWorktreePath,
   deleteGitBranch,
   finalizeGitMerge,
   getGitAheadBehind,
@@ -11,6 +12,7 @@ import {
   getGitWorkingTreePatches,
   getGitWorkingTreeStatus,
   getLinkedPullRequest,
+  inspectGitWorktreePath,
   listGitBranches,
   listGitRemoteBranches,
   listGitWorktrees,
@@ -79,6 +81,8 @@ export const DEVICE_RPC_METHODS = [
   'listGitBranches',
   'listGitRemoteBranches',
   'listGitWorktrees',
+  'inspectGitWorktreePath',
+  'clearOrphanedWorktreePath',
   'checkoutGitBranch',
   'renameGitBranch',
   'deleteGitBranch',
@@ -236,6 +240,14 @@ export const executeDeviceRpc = async (
 
     case 'listGitWorktrees': {
       return listGitWorktrees((params as { path: string }).path);
+    }
+
+    case 'inspectGitWorktreePath': {
+      return inspectGitWorktreePath(params as { path: string; worktreePath: string });
+    }
+
+    case 'clearOrphanedWorktreePath': {
+      return clearOrphanedWorktreePath(params as { path: string; worktreePath: string });
     }
 
     case 'checkoutGitBranch': {

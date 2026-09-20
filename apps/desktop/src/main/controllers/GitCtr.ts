@@ -149,6 +149,24 @@ export default class GitController extends ControllerModule {
   }
 
   @IpcMethod()
+  async inspectGitWorktreePath(payload: {
+    path: string;
+    worktreePath: string;
+  }): Promise<GitWorktreePathInspection> {
+    const { inspectGitWorktreePath: runInspectGitWorktreePath } = await loadGit();
+    return runInspectGitWorktreePath(payload);
+  }
+
+  @IpcMethod()
+  async clearOrphanedWorktreePath(payload: {
+    path: string;
+    worktreePath: string;
+  }): Promise<GitRemoveWorktreeResult> {
+    const { clearOrphanedWorktreePath: runClearOrphanedWorktreePath } = await loadGit();
+    return runClearOrphanedWorktreePath(payload);
+  }
+
+  @IpcMethod()
   async addGitWorktree(payload: {
     branch: string;
     detach?: boolean;

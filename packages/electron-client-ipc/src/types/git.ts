@@ -88,6 +88,18 @@ export interface GitWorktreeListItem {
   status?: GitWorkingTreeStatus;
 }
 
+/**
+ * Occupancy classification for a candidate worktree path. `orphan-safe` means
+ * the unregistered directory is provably a crashed `worktree add` remnant
+ * (empty, or only the `.git` gitfile); `unknown` means the listing failed —
+ * never treat a failed list as an empty one.
+ */
+export interface GitWorktreePathInspection {
+  error?: string;
+  kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
+  listed?: GitWorktreeListItem;
+}
+
 export interface GitWorkingTreeFiles {
   /** Repo-relative paths for untracked + staged-as-added files */
   added: string[];

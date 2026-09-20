@@ -200,62 +200,57 @@ export class TaskWorkspaceService {
     const { baseBranch, forkRef } = await this.resolveBase(task, config, repoPath, deviceId);
 
     const branch = taskBranchName(task.identifier, seq);
-    const worktreePath = deriveWorktreePath(repoPath, branch);
+    // The task id fragment keeps the on-disk path unique across workspaces that
+    // share a repo and a human-readable task identifier — a path that matches
+    // the naming convention is a hint, never proof of ownership.
+    const worktreePath = deriveWorktreePath(repoPath, `${branch}@${task.id.slice(0, 8)}`);
 
-    // Recovery from an interrupted provisioning: the convention-derived path
-    // is only ever created by this service and nothing has ever run inside it
-    // (topic registration happens after the add), so reusing an identical one
-    // or clearing a stale same-path leftover is idempotent — never a user
-    // worktree.
-    const existing = await deviceGateway.listGitWorktrees({
-      deviceId,
-      path: repoPath,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
-    });
-    const leftover = existing?.find((worktree) => worktree.path === worktreePath);
-    let added: DeviceGitAddWorktreeResult;
-    if (leftover?.branch === branch) {
-      // Identical provision call replayed after a crash between add and
-      // registration; the worktree is already ours.
-      added = { success: true };
-    } else {
-      if (leftover) {
-        const removed = await deviceGateway.removeGitWorktree({
-          deviceId,
-          force: true,
-          path: repoPath,
-          userId: this.userId,
-          workspaceId: this.workspaceId,
-          worktreePath,
-        });
-        if (!removed.success) {
-          throw new Error(
-            `Failed to provision task workspace: stale worktree at ${worktreePath} could not be removed`,
-          );
-        }
-      }
-      added = await deviceGateway.addGitWorktree({
-        branch,
+    // Ownership rule: this service only ever *reuses* a listed worktree when
+    // every identity signal matches — our exact branch name, clean tree, no
+    // lock, not prunable — which can only come from a replayed provisioning of
+    // the same attempt. Anything else at the path (a different branch, dirty
+    // files, a lock, an unexplainable directory) blocks provisioning and
+    // preserves the scene for a human instead of force-removing it.
+    let added: DeviceGitAddWorktreeResult | undefined;
+    let lastError: string | undefined;
+    for (let attempt = 0; attempt < 2 && !added; attempt += 1) {
+      const inspection = await deviceGateway.inspectGitWorktreePath({
         deviceId,
         path: repoPath,
-        ref: forkRef,
         userId: this.userId,
-        workspaceId: this.workspaceId,
         worktreePath,
+        workspaceId: this.workspaceId,
       });
-      if (!added.success && !leftover) {
-        // A crashed `worktree add` can leave a directory git no longer lists.
-        // Clearing our own convention path once is the bounded recovery.
-        const removed = await deviceGateway.removeGitWorktree({
-          deviceId,
-          force: true,
-          path: repoPath,
-          userId: this.userId,
-          workspaceId: this.workspaceId,
-          worktreePath,
-        });
-        if (removed.success) {
+      if (!inspection || inspection.kind === 'unknown') {
+        throw new Error(
+          `Failed to provision task workspace: cannot inspect ${worktreePath} on the device` +
+            (inspection?.error
+              ? ` (${inspection.error})`
+              : ' — the device client does not support worktree inspection'),
+        );
+      }
+
+      switch (inspection.kind) {
+        case 'listed': {
+          const listed = inspection.listed!;
+          const reusable =
+            listed.branch === branch &&
+            !listed.locked &&
+            !listed.prunable &&
+            listed.status?.clean === true;
+          if (!reusable) {
+            throw new Error(
+              `Failed to provision task workspace: ${worktreePath} is occupied by ` +
+                `an unrelated or modified worktree (branch ${listed.branch ?? '(detached)'}` +
+                `${listed.locked ? ', locked' : ''}${listed.status?.clean === false ? ', dirty' : ''})` +
+                ' — preserved for manual resolution',
+            );
+          }
+          // Same attempt replaying after a crash between add and registration.
+          added = { success: true };
+          break;
+        }
+        case 'absent': {
           added = await deviceGateway.addGitWorktree({
             branch,
             deviceId,
@@ -265,13 +260,44 @@ export class TaskWorkspaceService {
             workspaceId: this.workspaceId,
             worktreePath,
           });
+          if (!added.success) {
+            lastError = added.error;
+            added = undefined;
+            // A leftover branch under our convention name may carry work we
+            // cannot verify — stop with an explicit error, don't loop `add -b`.
+            if (lastError?.includes('already exists')) {
+              throw new Error(
+                `Failed to provision task workspace: ${lastError} — resolve or rename the leftover branch manually`,
+              );
+            }
+          }
+          break;
+        }
+        case 'orphan-safe': {
+          const cleared = await deviceGateway.clearOrphanedWorktreePath({
+            deviceId,
+            path: repoPath,
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+            worktreePath,
+          });
+          if (!cleared.success) {
+            throw new Error(
+              `Failed to provision task workspace: ${cleared.error ?? 'orphan cleanup refused'}`,
+            );
+          }
+          break; // re-inspect, then add
+        }
+        default: {
+          throw new Error(
+            `Failed to provision task workspace: ${worktreePath} contains an unregistered ` +
+              'directory with content that cannot be proven safe to remove — preserved for manual resolution',
+          );
         }
       }
     }
-    if (!added.success) {
-      throw new Error(
-        `Failed to provision task workspace: ${added.error ?? 'worktree add failed'}`,
-      );
+    if (!added?.success) {
+      throw new Error(`Failed to provision task workspace: ${lastError ?? 'worktree add failed'}`);
     }
 
     const workingDirectoryConfig: WorkingDirConfig = {

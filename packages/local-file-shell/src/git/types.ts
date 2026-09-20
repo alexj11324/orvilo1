@@ -239,6 +239,23 @@ export interface GitAddWorktreeResult {
   worktreePath?: string;
 }
 
+/**
+ * What occupies a candidate worktree path, per `inspectGitWorktreePath`:
+ * - `listed` — git already tracks a worktree there (`listed` carries branch/head/dirty/locked).
+ * - `absent` — nothing on disk.
+ * - `orphan-safe` — unregistered directory whose contents are provably a crashed
+ *   `worktree add` remnant (empty, or only the `.git` gitfile): safe to clear.
+ * - `orphan-foreign` — unregistered directory holding content we cannot prove
+ *   disposable: preserve and block.
+ * - `unknown` — the worktree listing itself failed (`error` set); a failed list
+ *   is not an empty list.
+ */
+export interface GitWorktreePathInspection {
+  error?: string;
+  kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
+  listed?: GitWorktreeListItem;
+}
+
 export interface GitPullResult {
   error?: string;
   /** True when `git pull` reported the branch was already up-to-date */

@@ -37,9 +37,10 @@ vi.mock('@/database/models/repository', () => ({
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
     addGitWorktree: vi.fn(),
+    clearOrphanedWorktreePath: vi.fn(),
+    inspectGitWorktreePath: vi.fn(),
     isConfigured: false,
     listGitRemoteBranches: vi.fn(),
-    listGitWorktrees: vi.fn(),
     removeGitWorktree: vi.fn(),
   },
 }));
@@ -104,9 +105,10 @@ describe('TaskWorkspaceService', () => {
     vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
       { isDefault: true, name: 'origin/main' },
     ]);
-    vi.mocked(deviceGateway.listGitWorktrees).mockResolvedValue([]);
+    vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({ kind: 'absent' });
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
+    vi.mocked(deviceGateway.clearOrphanedWorktreePath).mockResolvedValue({ success: true });
   });
 
   describe('resolveWorkspaceConfig', () => {
@@ -169,7 +171,7 @@ describe('TaskWorkspaceService', () => {
         path: '/repos/orvilo',
         userId: 'user-1',
         workspaceId: 'ws-1',
-        worktreePath: '/repos/orvilo-task-T-1',
+        worktreePath: '/repos/orvilo-task-T-1@task_1',
       });
     });
 
@@ -185,9 +187,9 @@ describe('TaskWorkspaceService', () => {
         ref: 'origin/main',
         userId: 'user-1',
         workspaceId: 'ws-1',
-        worktreePath: '/repos/orvilo-task-T-1',
+        worktreePath: '/repos/orvilo-task-T-1@task_1',
       });
-      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
+      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1@task_1');
       expect(result?.integration).toMatchObject({
         attempts: 0,
         baseBranch: 'main',
@@ -256,78 +258,154 @@ describe('TaskWorkspaceService', () => {
     });
 
     it('reuses the same-path worktree when an identical provision replays after a crash', async () => {
-      vi.mocked(deviceGateway.listGitWorktrees).mockResolvedValue([
-        {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        kind: 'listed',
+        listed: {
           branch: 'task/T-1',
           current: false,
-          path: '/repos/orvilo-task-T-1',
+          path: '/repos/orvilo-task-T-1@task_1',
+          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
         },
-      ]);
+      });
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       const result = await service.provision({ seq: 1, task });
 
-      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
+      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1@task_1');
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
       expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.clearOrphanedWorktreePath).not.toHaveBeenCalled();
     });
 
-    it('clears a stale same-path leftover before re-provisioning', async () => {
-      vi.mocked(deviceGateway.listGitWorktrees).mockResolvedValue([
-        {
+    it('blocks on a same-path worktree checked out to a different branch', async () => {
+      // F01: a matching directory name is never proof of ownership — the
+      // occupant is preserved, not force-removed.
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        kind: 'listed',
+        listed: {
           branch: 'task/T-9',
           current: false,
-          path: '/repos/orvilo-task-T-1',
+          path: '/repos/orvilo-task-T-1@task_1',
+          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
         },
-      ]);
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'preserved for manual resolution',
+      );
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.clearOrphanedWorktreePath).not.toHaveBeenCalled();
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('blocks on a same-branch worktree that is dirty or locked', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        kind: 'listed',
+        listed: {
+          branch: 'task/T-1',
+          current: false,
+          path: '/repos/orvilo-task-T-1@task_1',
+          status: { added: 0, clean: false, deleted: 0, modified: 2, total: 2 },
+        },
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'preserved for manual resolution',
+      );
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('clears a provably safe orphan directory and re-provisions', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath)
+        .mockResolvedValueOnce({ kind: 'orphan-safe' })
+        .mockResolvedValueOnce({ kind: 'absent' });
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       const result = await service.provision({ seq: 1, task });
 
-      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({ force: true, worktreePath: '/repos/orvilo-task-T-1' }),
+      expect(result?.branch).toBe('task/T-1');
+      expect(deviceGateway.clearOrphanedWorktreePath).toHaveBeenCalledWith({
+        deviceId: 'dev-1',
+        path: '/repos/orvilo',
+        userId: 'user-1',
+        workspaceId: 'ws-1',
+        worktreePath: '/repos/orvilo-task-T-1@task_1',
+      });
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(1);
+    });
+
+    it('blocks on an unregistered directory with foreign content', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        kind: 'orphan-foreign',
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'cannot be proven safe to remove',
+      );
+      expect(deviceGateway.clearOrphanedWorktreePath).not.toHaveBeenCalled();
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('blocks when the inspection itself fails instead of treating the path as free', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        error: 'spawn git ENOENT',
+        kind: 'unknown',
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow('cannot inspect');
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('blocks when the device client does not implement the inspection RPC', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(undefined);
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow('cannot inspect');
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('blocks when orphan cleanup is refused, keeping the orphan in place', async () => {
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({
+        kind: 'orphan-safe',
+      });
+      vi.mocked(deviceGateway.clearOrphanedWorktreePath).mockResolvedValue({
+        error: 'refused',
+        success: false,
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'Failed to provision task workspace',
+      );
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('stops with an explicit error when a leftover branch already exists', async () => {
+      vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({
+        error: "branch 'task/T-1' already exists",
+        success: false,
+      });
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'resolve or rename the leftover branch manually',
       );
       expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(1);
-      expect(result?.branch).toBe('task/T-1');
     });
 
-    it('clears an unlisted leftover directory once after a crashed worktree add', async () => {
-      vi.mocked(deviceGateway.addGitWorktree)
-        .mockResolvedValueOnce({ error: 'path already exists', success: false })
-        .mockResolvedValueOnce({ success: true });
-      const task = baseTask({ config: { workspace: workspaceConfig } });
-
-      const result = await service.provision({ seq: 1, task });
-
-      expect(result?.branch).toBe('task/T-1');
-      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledTimes(1);
-      expect(deviceGateway.addGitWorktree).toHaveBeenCalledTimes(2);
-    });
-
-    it('surfaces the add failure when recovery cannot clear it', async () => {
+    it('surfaces the add failure when the re-inspection cannot clear it', async () => {
       vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({
         error: 'permission denied',
         success: false,
       });
-      vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({
-        error: 'permission denied',
-        success: false,
-      });
       const task = baseTask({ config: { workspace: workspaceConfig } });
-      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
-        'Failed to provision task workspace',
-      );
-    });
-
-    it('throws when the worktree RPC fails', async () => {
-      vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({
-        error: 'worktree add failed: already exists',
-        success: false,
-      });
-      const task = baseTask({ config: { workspace: workspaceConfig } });
-      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
-        'Failed to provision task workspace',
-      );
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow('permission denied');
     });
 
     it('fails when no remote default branch resolves on the device', async () => {
@@ -454,7 +532,7 @@ describe('TaskWorkspaceService', () => {
 
       expect(deviceGateway.addGitWorktree).toHaveBeenCalled();
       expect(result?.repos).toBeUndefined();
-      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1');
+      expect(result?.workingDirectory).toBe('/repos/orvilo-task-T-1@task_1');
     });
 
     it('fails a default (unset-target) hetero assignee even with the gateway configured', async () => {

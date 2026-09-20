@@ -19,6 +19,34 @@ authorization step before `ToolExecutionService.executeTool` runs:
   via `recordToolApprovalDecision` with a `decision IS NULL` CAS so a second
   submit can never flip a settled receipt; expiry renews into a fresh pending
   window rather than silently reopening.
+- **Canonical approval scope.** The receipt payload stores `scopeHash` =
+  `toolApprovalScopeHash` — a sha256 over a canonical `ToolApprovalScope`
+  (principal/workspace/operation/generation/toolCallId/tool
+  identifier+apiName/pinned connectorId/authRevision/schemaDigest/argsHash/
+  windowId). The consume `UPDATE … WHERE` matches the full hash, so two
+  mounted tools sharing `toolCallId` + args can never cross-consume: tool B
+  cannot spend tool A's approval. Execution also dedupes on the stable
+  `invocationId` (`consumedInvocationId`) — not just on approval
+  consumption. Receipts persisted before this contract (no `scopeHash`/
+  `windowId`) fail closed: the caller re-pends a fresh window instead of
+  upgrading a weak record.
+- **Consume-CAS is the only authorization.** `authorizeToolApprovalReceipt`
+  is a bounded CAS loop: read-back states (pending/denied/expired/consumed)
+  produce refusal/wait/retry reasons only; an observed `approved` row
+  re-enters the consume CAS, and only the caller that wins it returns
+  executable authorization. An approval that lands between a failed CAS and
+  a read-back can no longer leak through unconsumed.
+- **Window rotation + grant epoch.** Every renew mints a new `windowId` and
+  bumps `windowVersion`; decision submits carry `expectedWindowId` and
+  CAS-match it (windowless submits decide only legacy windowless receipts),
+  so an expired-window card never decides a new window, and
+  denied/consumed receipts cannot be resurrected. Connectors carry
+  `metadata.grantEpoch` rotated on OAuth callback / credential update /
+  create — token refresh keeps it, so re-auth to a different account or
+  scope refuses the old pin even when URL/clientId are unchanged. All
+  approval entries (`submitHeteroIntervention`, conversation control, CLI)
+  write the same receipt decision before notifying the host; a critical
+  receipt write failure no longer reports success.
 - **Headless is not auto-approve.** When `appContext.interventionApprovalMode`
   is `headless` (or no intervention path exists), the gate returns
   `acp_tool_approval_unavailable` — the call refuses/pends instead of
@@ -64,14 +92,29 @@ default set) separately:
   → `ackDeliveryReceiptByEventId({aggregateId: parentOperationId})` marks a
   result consumed, so a committed result is re-playable after a parent crash
   or a lost response (D02). Scoping acks by the parent's aggregate id blocks
-  cross-operation backfill (D06).
-- **Fixed deadline.** At first accept the server stamps
-  `pluginState.awaitDeadlineAt` (+ owner/started markers) once; later polls
-  read, never extend or shorten it, and `serverNow >= deadlineAt` is the only
-  expiry. Hosts awaiting before a placeholder anchor exists get a keyed
-  `await-anchor:{op}:{toolCallId}` receipt so the wait still cannot pend
-  forever. Child deadline and parent wait budget are independent.
-- **Version negotiation.** `contractVersion: 1` preserves legacy
-  `delivered: true` semantics for old hosts; `contractVersion: 2` enables the
-  receipt/ack flow. The server normalizes unknown versions to v1 — no
-  breaking change is claimed from optionality alone.
+  cross-operation backfill (D06). The settle reports each delivery's true
+  receipt state via `getDeliveryReceiptState`, and the host treats a
+  CAS-missed already-`acked` row as idempotent success — `superseded`,
+  foreign and missing rows stay `ignored`.
+- **Inbox before ACK, stable invocation.** The host settles under a stable
+  toolCallId — the adapter's `claudecode/toolUseId` `_meta` when present,
+  else `mcp_<sha256(stableStringify({apiName,args,identifier,operationId}))>`
+  — so a crash reuses the original invocation instead of minting a new id.
+  Before ACKing, `persistChildResultInbox` durably records the results
+  (CLI: `~/.orvilo/inbox/<operationId>.jsonl`, deduped by eventId, carrying
+  a `resultHash`); an inbox write failure aborts with an error — nothing is
+  acked. ACK drops and `ignored` responses re-poll until the host deadline
+  rather than claiming reliable consumption.
+- **One authoritative deadline.** First admission CAS-writes a single
+  `await-anchor:{op}:{toolCallId}` receipt carrying `awaitDeadlineAt`; the
+  message anchor (`pluginState.awaitDeadlineAt`) is only a projection of
+  it. A reconnect or a newly-appearing anchor reads the same deadline — a
+  no-anchor accept followed by a late anchor never re-initializes from
+  `now + budget`. Read/write failure on the authority row is an explicit
+  error, not unbounded pending. `serverNow >= deadlineAt` is the only
+  expiry. Child deadline and parent wait budget are independent.
+- **Version negotiation.** `contractVersion` is negotiated by capability:
+  the host sends `2` only when it implements `ackChildResults`, else `1`.
+  A v2 settle on a host without ack capability fails explicitly; a
+  v1-shaped settle is never treated as v2. The server normalizes unknown
+  versions to v1 — no breaking change is claimed from optionality alone.

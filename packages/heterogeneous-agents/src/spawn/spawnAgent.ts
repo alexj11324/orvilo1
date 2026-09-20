@@ -412,7 +412,7 @@ const spawnStandardAcpAgent = async (
   const session = createStandardAcpSession(options.agentType, {
     args: selectors.args,
     askUserBridge: options.askUserBridge,
-    clientVersion: 'lobehub-cli',
+    clientVersion: 'orvilo-cli',
     commandArgs: target.commandArgs,
     commandPath: target.commandPath,
     configOptions,

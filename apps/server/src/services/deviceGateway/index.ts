@@ -517,7 +517,9 @@ export class DeviceGateway {
    * Occupancy classification of a candidate worktree path on a remote device,
    * via the `inspectGitWorktreePath` device RPC. `undefined` covers both RPC
    * failure and older device clients that don't know this method — callers must
-   * treat it as "cannot prove ownership", not as a free path.
+   * treat it as an unsupported-capability signal, never as a free path. The
+   * result's `activeWriter` field reports writer presence when the host has a
+   * run registry; its absence is likewise "cannot prove safe", not "no writer".
    */
   inspectGitWorktreePath(params: {
     deviceId: string;
@@ -531,45 +533,6 @@ export class DeviceGateway {
       params,
       { path: params.path, worktreePath: params.worktreePath },
     );
-  }
-
-  /**
-   * Remove a directory the device has proven to be a crashed `worktree add`
-   * remnant (empty or `.git`-gitfile-only), via the `clearOrphanedWorktreePath`
-   * device RPC. The device re-inspects before deleting and refuses listed or
-   * foreign directories — no force flag, no arbitrary path removal.
-   */
-  async clearOrphanedWorktreePath(params: {
-    deviceId: string;
-    path: string;
-    timeout?: number;
-    userId: string;
-    workspaceId?: string;
-    worktreePath: string;
-  }): Promise<DeviceGitRemoveWorktreeResult> {
-    const { userId, deviceId, path, worktreePath, workspaceId, timeout = 30_000 } = params;
-    const client = this.getClient();
-    if (!client) return { error: 'Device gateway not configured', success: false };
-
-    try {
-      const result = await client.invokeRpc<DeviceGitRemoveWorktreeResult>(
-        { deviceId, timeout, userId, workspaceId },
-        { method: 'clearOrphanedWorktreePath', params: { path, worktreePath } },
-      );
-
-      if (!result.success || !result.data) {
-        log('clearOrphanedWorktreePath: failed for deviceId=%s — %s', deviceId, result.error);
-        return { error: result.error || 'Clear orphaned worktree path failed', success: false };
-      }
-
-      return result.data;
-    } catch (error) {
-      log('clearOrphanedWorktreePath: error for deviceId=%s — %O', deviceId, error);
-      return {
-        error: (error as Error)?.message || 'Clear orphaned worktree path failed',
-        success: false,
-      };
-    }
   }
 
   /** Query a heterogeneous CLI's model catalog on the device that will execute it. */

@@ -1,52 +1,82 @@
-# Task Worktree Ownership and Safe Recovery (R01)
+# Task Worktree Ownership and Safe Recovery
 
 `TaskWorkspaceService.provisionOnDevice` creates a linked git worktree on the
 bound device for every task attempt. This document defines who owns a worktree
 path, when it may be reused, and what recovery is permitted when a previous
-provisioning attempt left debris. It is the contract the F01/F02 remediation
-(R01) puts in place.
+provisioning attempt left debris. It is the contract the F01/F02/F07
+remediation (SA01) puts in place.
 
 ## Ownership
 
 A path that matches the provisioning naming convention is **a hint, never
-proof**. Ownership of a path at `<repoDir>/<repo>-<folded branch>@<taskId8>` is
-established only by the on-device inspection RPC `inspectGitWorktreePath`,
-which classifies the path as:
+proof**. Ownership is established by two independent proofs, both required:
 
-| kind             | meaning                                                                                   | provisioning decision                                                                                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listed`         | `git worktree list` knows the path; carries branch, head, lock, prune and dirty state     | reuse **only** when the listed branch equals this attempt's branch AND the tree is clean AND unlocked AND not prunable; any other listed occupant blocks provisioning and is preserved |
-| `absent`         | no git record and no directory                                                            | `worktree add`                                                                                                                                                                         |
-| `orphan-safe`    | unregistered directory that is empty, or holds only the `.git` gitfile of a crashed add   | `clearOrphanedWorktreePath`, re-inspect, then add                                                                                                                                      |
-| `orphan-foreign` | unregistered directory containing anything else (files, a `.git` _dir_, a non-dir entry)  | block — preserved for manual resolution                                                                                                                                                |
-| `unknown`        | the git listing itself failed, or the device client does not implement the inspection RPC | block — a failed list is never treated as an empty list                                                                                                                                |
+1. **A durable claim.** Before touching the path the server mints a row in
+   `task_workspace_claims`, keyed by the physical identity
+   `deviceId:repoPath::worktreePath`, carrying `taskId`, `dispatchId`,
+   `generation`, a random `ownerToken`, `expectedBaseSha`, and `issuedAt`. The
+   insert is `ON CONFLICT DO NOTHING` — a row held by another dispatch is a
+   claim conflict: the occupant is preserved, a recovery request is queued,
+   and the provision fails. Git state alone never proves ownership.
 
-Replays of the same attempt (same task id, same seq) land on the same branch
-and path and are the only case where reuse is legal. A dirty, locked, or
-different-branch occupant — even under a path named exactly like ours — is
-someone else's work and is never removed. `removeGitWorktree({force: true})`
-is no longer called from provisioning; a human resolves blocked paths.
+2. **A device inspection.** The on-device `inspectGitWorktreePath` RPC
+   classifies the path and reports writer presence (`activeWriter`):
+
+   | kind             | meaning                                                                                      | provisioning decision                                                                                                                                                                                                                                                           |
+   | ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `listed`         | `git worktree list` knows the path; carries branch, head, lock, prune and dirty state        | reuse **only** when the persisted claim matches this dispatch AND the listed branch equals this attempt's branch AND `head == claim.expectedBaseSha` AND the tree is clean/unlocked/not-prunable AND `activeWriter` is `null`; anything else is preserved for manual resolution |
+   | `absent`         | no git record and no directory                                                               | `worktree add` pinned to `expectedBaseSha`                                                                                                                                                                                                                                      |
+   | `orphan-safe`    | unregistered directory that is empty, or holds only the `.git` gitfile of a crashed add      | queued for manual cleanup — **never auto-deleted**                                                                                                                                                                                                                              |
+   | `orphan-foreign` | unregistered directory containing anything else, or a symlink at the path                    | queued for manual cleanup                                                                                                                                                                                                                                                       |
+   | `unknown`        | the listing failed, or `stat`/`readdir` errored (EACCES, EIO, …) — only `ENOENT` is `absent` | queued for manual cleanup (`inspection_unknown`)                                                                                                                                                                                                                                |
+
+   `activeWriter` is a three-state signal: `null` = host verified no run writes
+   inside the path, an object = a live writer (`operationId`, `pid`,
+   `topicId`), `undefined` = the host cannot answer (older client / no run
+   registry) — treated as "cannot prove safe", never "free".
+
+   An unanswered RPC (`undefined` result) is an explicit capability failure —
+   the older host predates inspection — and blocks with an "unsupported
+   capability" error, distinct from "directory absent".
+
+## Base pinning (F07)
+
+`resolveBase` resolves `expectedBaseSha` **before** `worktree add`: the remote
+branch listing carries `%(objectname)` per ref, and an explicit or default
+`origin/<base>` must resolve to a concrete SHA — a listing that answers
+without one (lookup failure, older device client) blocks the provision. The
+`worktree add` checks out the pinned SHA, not the mutable ref, so a fetch
+racing the add cannot shift the checkout. After the add (or after a
+claim-matched reuse) the worktree is re-inspected and `HEAD` must equal
+`expectedBaseSha`; a drifted checkout fails the provision — the run never
+records whatever HEAD happens to be as its base.
+
+On the sandbox path (`provisionOnRemote`) `getRemoteBranchSha` resolves the
+same pin before the cloud clone; a failure there also blocks.
 
 ## Orphan recovery
 
-`clearOrphanedWorktreePath` re-inspects the target on the device before
-deleting, removes only `orphan-safe` directories via `fs.rm(recursive)`, and
-re-verifies the path is gone. It refuses `listed` and `orphan-foreign` targets
-and never invokes `git worktree remove`, so it can never delete a registered
-worktree or user content.
+There is no automatic recursive delete anywhere in the provisioning path.
+`clearOrphanedWorktreePath` was removed entirely: unknown or orphaned
+directories produce a row in `task_workspace_recoveries` (kind +
+device + path, deduplicated by key; a recurring failure re-opens the resolved
+row) and the provision stops. A human resolves the queue.
 
-When `worktree add` itself fails, the service re-inspects once instead of
-blindly clearing: a leftover `task/...` branch under our convention may carry
-unverifiable work, so an `already exists` branch error stops provisioning with
-an explicit "resolve or rename the leftover branch manually" message rather
-than looping `add -b` or deleting the branch.
+Classification never follows unvalidated symlinks: `lstat` on the raw path
+keeps a symlink foreign on its face, `stat`/`readdir` errors map only `ENOENT`
+to `absent` — everything else is `unknown`.
 
 ## Device contract
 
-Two new device RPCs (`inspectGitWorktreePath`, `clearOrphanedWorktreePath`)
-are registered in `packages/device-control/src/dispatch.ts`, implemented in
+`inspectGitWorktreePath` is registered in
+`packages/device-control/src/dispatch.ts`, implemented in
 `packages/local-file-shell/src/git/worktrees.ts`, mirrored for the desktop IPC
-layer (`GitCtr` + `packages/electron-client-ipc/src/types/git.ts`) and typed in
-`@orvilo/types` (`DeviceGitWorktreePathInspection`). Older device clients that
-lack the methods return `undefined`, which the service treats as `unknown` —
-provisioning blocks instead of falling back to the old force-remove path.
+layer (`GitCtr` + `packages/electron-client-ipc/src/types/git.ts`) and typed
+in `@orvilo/types` (`DeviceGitWorktreePathInspection`). Writer presence is
+answered by a new `DeviceControlDeps.getActiveWorktreeWriter` hook: the
+desktop gateway scans its in-memory `platformTasks` registry by entry `cwd`,
+the CLI daemon scans its persisted `taskRegistry.json` — a dep-less host
+simply omits the field, which the server reads as "cannot prove safe".
+
+`listGitRemoteBranches` now emits `%(refname:short) %(objectname)` so each
+remote ref carries its current `sha` — the physical pin for `expectedBaseSha`.

@@ -2,7 +2,6 @@ import { moveLocalFiles, renameLocalFile, writeLocalFile } from '@orvilo/local-f
 import {
   addGitWorktree,
   checkoutGitBranch,
-  clearOrphanedWorktreePath,
   deleteGitBranch,
   finalizeGitMerge,
   getGitAheadBehind,
@@ -82,7 +81,6 @@ export const DEVICE_RPC_METHODS = [
   'listGitRemoteBranches',
   'listGitWorktrees',
   'inspectGitWorktreePath',
-  'clearOrphanedWorktreePath',
   'checkoutGitBranch',
   'renameGitBranch',
   'deleteGitBranch',
@@ -243,11 +241,15 @@ export const executeDeviceRpc = async (
     }
 
     case 'inspectGitWorktreePath': {
-      return inspectGitWorktreePath(params as { path: string; worktreePath: string });
-    }
-
-    case 'clearOrphanedWorktreePath': {
-      return clearOrphanedWorktreePath(params as { path: string; worktreePath: string });
+      const payload = params as { path: string; worktreePath: string };
+      const inspection = await inspectGitWorktreePath(payload);
+      // Writer presence is the host's signal: when the host exposes a run
+      // registry the dep answers which run owns the path; without one the
+      // field stays undefined — "cannot prove safe", never "free".
+      if (deps.getActiveWorktreeWriter) {
+        inspection.activeWriter = await deps.getActiveWorktreeWriter(payload.worktreePath);
+      }
+      return inspection;
     }
 
     case 'checkoutGitBranch': {

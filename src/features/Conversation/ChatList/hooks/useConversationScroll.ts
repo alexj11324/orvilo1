@@ -11,6 +11,8 @@ import {
 } from 'react';
 import { type VListHandle } from 'virtua';
 
+import { useSingleton } from '@/hooks/useSingleton';
+
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../../store';
 
 const log = debug('orvilo:conversation:scroll');
@@ -498,6 +500,13 @@ export const useConversationScroll = ({
   const [userMessageIndex, setUserMessageIndex] = useState<number | null>(null);
   const [assistantMessageIndex, setAssistantMessageIndex] = useState<number | null>(null);
   const prevLengthRef = useRef(dataSource.length);
+  // Tail-appended ids whose role wasn't resolvable on arrival — under load the
+  // displayMessages role map can lag dataSource by a commit, which would drop
+  // the pin for a split user+assistant commit. Re-checked every pass.
+  const unresolvedTailIds = useSingleton(() => new Set<string>());
+  // User ids already pinned this context — dedupes re-keys (tmp_ → real id)
+  // landing inside a later tail segment.
+  const pinnedUserIds = useSingleton(() => new Set<string>());
 
   const { registerSpacerNode, spacerLayoutVersion } = useSpacerLayoutSignal();
 
@@ -551,6 +560,8 @@ export const useConversationScroll = ({
     prevContextKeyRef.current = contextKey;
 
     prevLengthRef.current = dataSource.length;
+    unresolvedTailIds.clear();
+    pinnedUserIds.clear();
     clearPin('context switch');
     setUserMessageIndex(null);
     setAssistantMessageIndex(null);
@@ -564,22 +575,39 @@ export const useConversationScroll = ({
     const newMessageCount = dataSource.length - prevLengthRef.current;
     prevLengthRef.current = dataSource.length;
 
-    if (newMessageCount <= 0) return;
+    if (newMessageCount <= 0 && unresolvedTailIds.size === 0) return;
 
     // A send appends a (user, assistant, …) tail — usually one +2 commit, but
     // under load the pair can split across commits or carry extra rows (tool,
     // receipt, steer), which an exact `+2 & second-last-is-user` gate silently
-    // drops. The durable signal is a user message inside the appended tail
-    // segment; pin it wherever the tail boundary actually fell.
-    const lastUserMessage = displayMessages.findLast((message) => message.role === 'user');
-    const userIndex = lastUserMessage ? dataSource.lastIndexOf(lastUserMessage.id) : -1;
-    if (
-      !lastUserMessage ||
-      userIndex < 0 ||
-      userIndex < dataSource.length - newMessageCount ||
-      pinRef.current?.index === userIndex
-    )
+    // drops. Candidates are the ids appended in this pass (the tail segment —
+    // prepends never qualify) plus earlier tail ids whose role was not
+    // resolvable when they landed; the pin targets the latest new user row.
+    const tailStart = Math.max(0, dataSource.length - Math.max(newMessageCount, 0));
+    const candidates = new Set<string>([...unresolvedTailIds, ...dataSource.slice(tailStart)]);
+    unresolvedTailIds.clear();
+
+    let userIndex = -1;
+    for (const id of candidates) {
+      const message = displayMessages.find((m) => m.id === id);
+      if (!message) {
+        unresolvedTailIds.add(id);
+        continue;
+      }
+      if (message.role !== 'user' || pinnedUserIds.has(id)) continue;
+      const index = dataSource.indexOf(id);
+      if (index > userIndex) userIndex = index;
+    }
+
+    if (userIndex < 0) {
+      if (newMessageCount > 0)
+        log('send detection: no new user row in appended tail (+%d)', newMessageCount);
       return;
+    }
+
+    const userId = dataSource[userIndex];
+    pinnedUserIds.add(userId);
+    if (pinRef.current?.index === userIndex) return;
 
     // The assistant bubble usually lands in the same commit; on a split commit
     // it may not exist yet — the growth branch below adopts it when it does.

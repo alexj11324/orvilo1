@@ -325,6 +325,8 @@ const recordJudgmentTracing = async (params: {
   output: unknown;
   purpose: string;
   schema?: GenerateObjectSchema;
+  /** Failure status for runs cut short by abort/timeout (op row still runs). */
+  statusOverride?: string;
   systemPrompt?: string;
   tracing?: Record<string, unknown>;
   userId: string;
@@ -344,14 +346,15 @@ const recordJudgmentTracing = async (params: {
     scenario: tracing.scenario ?? params.purpose,
     trigger: tracing.trigger ?? ACP_JUDGMENT_TRIGGER,
   });
-  const success = params.operation.status === 'done';
+  const outcomeStatus = params.statusOverride ?? params.operation.status;
+  const success = outcomeStatus === 'done';
 
   let persisted: string | null = null;
   try {
     const result = await service.record({
       agentId: params.operation.agentId ?? tracing.agentId,
       costUsd: params.operation.totalCost,
-      errorCode: success ? null : params.operation.status,
+      errorCode: success ? null : outcomeStatus,
       inputHint: tracing.inputHint,
       inputTokens: params.operation.totalInputTokens,
       latencyMs: params.operation.processingTimeMs,
@@ -478,20 +481,48 @@ export const runAcpJudgment = async <T = unknown>(
   };
 
   let operation = await operations.findById(operationId);
+
+  // Abort/timeout legs still write the failure tracing row — every judgment
+  // attempt stays traceable even when the operation itself never settles.
+  const failAndTrace = async (
+    message: string,
+    status: AgentOperationStatus | undefined,
+    tracingStatus: string,
+  ): Promise<never> => {
+    await recordJudgmentTracing({
+      input: input.messages,
+      operation: {
+        ...operation,
+        id: operationId,
+        status,
+      } as AgentOperationItem,
+      output: null,
+      purpose: judgment.purpose,
+      schema: input.schema,
+      statusOverride: tracingStatus,
+      tracing: judgment.tracing,
+      userId,
+      workspaceId,
+    });
+    throw new AcpJudgmentRunError(message, { operationId, status });
+  };
+
   for (;;) {
     if (operation && isTerminalAgentOperationStatus(operation.status)) break;
     if (judgment.signal?.aborted) {
       await interrupt('caller signal aborted');
-      throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-        operationId,
-        status: 'interrupted',
-      });
+      await failAndTrace(
+        `Judgment "${judgment.purpose}" aborted by caller`,
+        'interrupted',
+        'interrupted',
+      );
     }
     if (Date.now() > deadline) {
       await interrupt('wait budget exceeded');
-      throw new AcpJudgmentRunError(
+      await failAndTrace(
         `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms wait budget`,
-        { operationId, status: operation?.status ?? undefined },
+        operation?.status,
+        'timeout',
       );
     }
     if (
@@ -499,10 +530,11 @@ export const runAcpJudgment = async <T = unknown>(
       'aborted'
     ) {
       await interrupt('caller signal aborted');
-      throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-        operationId,
-        status: 'interrupted',
-      });
+      await failAndTrace(
+        `Judgment "${judgment.purpose}" aborted by caller`,
+        'interrupted',
+        'interrupted',
+      );
     }
     operation = await operations.findById(operationId);
   }

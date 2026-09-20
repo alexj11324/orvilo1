@@ -34,3 +34,34 @@
 - `waiting_for_async_tool` 状态谓词与消费方仍保留（KEEP\_HISTORY → P21）。
 - `ClientSubAgentTransport` 的 30min 超时 / 3s 轮询属 UI 等待体验，非存活条件；
   若后续要展示中断恢复态，可在线程页复用 `sourceMessageId` 回写结果。
+
+## R04 加固（F06 修复）
+
+投递链路在 R04 补齐了四个环节：
+
+1. **子态终态白名单** — `@orvilo/types` 新增
+   `TERMINAL_AGENT_OPERATION_STATUSES`（`done|error|interrupted|abandoned`）+
+   `isTerminalAgentOperationStatus`。`awaitAcpBuiltinToolChildren` 不再以
+   `status !== 'running'` 判 settled：`waiting_for_human` / `waiting_for_async_tool`
+   / `idle` / `paused` 等非终态一律返回 `pending`，不再把 "等待审批 / 挂起" 的子运行
+   误判为完成。
+
+2. **持久投递账本** — `completeSubAgentBridge` / `completeGroupActionMember` 在
+   回填占位消息前，先向 `event_outbox` 写入 `agent_operation.child_result` 事件
+   （`childResultEventId` = `child-result:{parent}:{child}:{toolCallId}:{generation}`，
+   唯一索引去重：重投返回 `replayed`，不重复结算）。消费点：
+   - ACP 等待路径（`awaitAcpBuiltinToolChildren`）结算成功时标记 `delivered`；
+   - 兼容路径 `tryResumeParentFromAsyncTool` CAS 成功时标记 `delivered`。
+     父忙期间结果保持在 pending 占位 + outbox 行，空闲后经合法 ACP 路径消费。
+
+3. **跨调用前缀防串** — 占位清扫改用 `isOwnedToolCallId`（精确匹配或
+   `{id}::m\d+` 锚定后缀），`tc_9` 的结算不再误伤 `tc_9extra` 这类共享前缀、
+   属于其他工具调用的消息。
+
+4. **等待期限与陈旧结果** — `heteroAwaitBuiltinToolChildren` 接受
+   `waitDeadlineMs`（CLI 侧 `CHILD_WAIT_BUDGET_MS` 按剩余预算逐轮下传）。首个
+   pending 接触时在自有占位上盖 `awaitStartedAt`（跨重连存活）；超期后占位落
+   `status:'error', waitDeadlineExceeded:true` 并返回 `timeout`，供人工 / 门禁处理。
+   迟到的 bridge 回调遇到 "已终态且非本事件键" 的占位时识别为 superseded：跳过
+   回填（不覆盖死线结算），但仍以 `delivered:true` + `superseded` 记入账本并继续
+   尝试 CAS 恢复，保证审计面完整。

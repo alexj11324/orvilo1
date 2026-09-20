@@ -13,8 +13,10 @@ const meter = metrics.getMeter('server-services-agent-execution');
 export const tracer = trace.getTracer('@orvilo/agent-execution', '0.0.1');
 
 /**
- * Count of async sub-agent parent resume attempts grouped by `outcome`:
- * - `resumed`         — won the resume CAS and scheduled the parent's next step
+ * Count of async sub-agent parent resume-claim attempts grouped by `outcome`:
+ * - `cas_won`         — won the resume CAS (accounting only — under ACP the
+ *                       host's own deferred-tool await consumes the result;
+ *                       this claim does NOT wake a parent)
  * - `barrier_held`    — pending tools not all fulfilled yet, re-check armed
  * - `no_pending`      — parked op had no pending tools (snapshot lag), fallback armed
  * - `no_state`        — parent state missing/expired in Redis, cannot resume
@@ -26,7 +28,7 @@ export const tracer = trace.getTracer('@orvilo/agent-execution', '0.0.1');
  * accumulating silently. For details see: async sub-agent suspend/resume stability hardening — bounded watchdog retry with exponential backoff.
  */
 export const asyncToolResumeCounter = meter.createCounter('agent_runtime_async_tool_resume_total', {
-  description: 'Count of async sub-agent parent resume attempts grouped by outcome.',
+  description: 'Count of async sub-agent parent resume-claim attempts grouped by outcome.',
   unit: '{resume}',
 });
 

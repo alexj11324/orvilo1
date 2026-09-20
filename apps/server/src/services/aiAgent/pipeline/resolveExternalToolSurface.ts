@@ -62,7 +62,7 @@ export const resolveExternalToolSurface = async (input: {
       const apis = (toolsByConnector.get(connector.id) ?? []).map((tool) => ({
         description: tool.description ?? undefined,
         name: tool.toolName,
-        parameters: tool.inputSchema ?? undefined,
+        parameters: tool.inputSchema as Record<string, unknown> | undefined,
       }));
       result[connector.identifier] = { apis, callable: true, source: 'connector' };
     }

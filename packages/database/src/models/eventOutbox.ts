@@ -17,10 +17,8 @@ export const newEventId = (): string => randomUUID();
  * already hold the enclosing transaction — the row commits atomically with the
  * business change it announces.
  */
-export const insertOutboxEvent = (
-  executor: Transaction | OrviloDatabase,
-  params: NewOutboxEvent,
-) => new EventOutboxModel(executor as OrviloDatabase).insertOutboxEvent(executor, params);
+export const insertOutboxEvent = (executor: Transaction | OrviloDatabase, params: NewOutboxEvent) =>
+  new EventOutboxModel(executor as OrviloDatabase).insertOutboxEvent(executor, params);
 
 export interface NewOutboxEvent {
   aggregateId: string;
@@ -127,6 +125,49 @@ export class EventOutboxModel {
       .where(and(eq(eventOutbox.id, id), eq(eventOutbox.status, 'pending')))
       .returning({ id: eventOutbox.id });
     return updated.length > 0;
+  };
+
+  /**
+   * `markDelivered` addressed by the producer-chosen `eventId` — for consumers
+   * that know the dedupe key but not the row id.
+   */
+  markDeliveredByEventId = async (eventId: string): Promise<boolean> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({ deliveredAt: new Date(), status: 'delivered' })
+      .where(and(eq(eventOutbox.eventId, eventId), eq(eventOutbox.status, 'pending')))
+      .returning({ id: eventOutbox.id });
+    return updated.length > 0;
+  };
+
+  /**
+   * Insert the event unless its `eventId` already exists (the dedupe contract),
+   * then optionally flip it to delivered in the same call. Returns the row's
+   * outcome so callers can distinguish a fresh persist from a replay.
+   */
+  upsertDeliveryReceipt = async (params: {
+    delivered?: boolean;
+    event: NewOutboxEvent;
+  }): Promise<'delivered' | 'inserted' | 'replayed'> => {
+    const inserted = await this.db
+      .insert(eventOutbox)
+      .values({
+        aggregateId: params.event.aggregateId,
+        aggregateType: params.event.aggregateType,
+        eventId: params.event.eventId,
+        eventType: params.event.eventType,
+        payload: params.event.payload ?? {},
+        status: 'pending',
+        workspaceId: params.event.workspaceId,
+      })
+      .onConflictDoNothing({ target: eventOutbox.eventId })
+      .returning({ id: eventOutbox.id });
+
+    if (params.delivered) {
+      await this.markDeliveredByEventId(params.event.eventId);
+      return 'delivered';
+    }
+    return inserted.length > 0 ? 'inserted' : 'replayed';
   };
 
   /**

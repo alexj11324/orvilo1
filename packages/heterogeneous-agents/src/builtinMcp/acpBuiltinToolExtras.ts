@@ -21,12 +21,18 @@ export interface AcpBuiltinToolCaller {
     operationId: string;
     timeoutMs?: number;
     toolCallId: string;
+    /**
+     * Server-side cumulative bound for this wait — the server stamps the
+     * placeholder's `awaitStartedAt` on first contact, so the bound survives
+     * reconnects. Expiry settles owned placeholders to `error` → `timeout`.
+     */
+    waitDeadlineMs?: number;
   }) => Promise<
     | {
         results: Array<{ content?: string; error?: string; operationId: string; status: string }>;
         status: 'settled';
       }
-    | { pendingOperationIds: string[]; status: 'pending' }
+    | { pendingOperationIds: string[]; status: 'pending' | 'timeout' }
   >;
   exec: (input: {
     apiName: string;
@@ -102,6 +108,9 @@ export const buildAcpBuiltinToolExtras = (
                 operationId,
                 timeoutMs: CHILD_POLL_TIMEOUT_MS,
                 toolCallId,
+                // Remaining budget as the server-side bound — a restarted host
+                // resumes polling with the same placeholder-stamped deadline.
+                waitDeadlineMs: Math.max(1, deadline - Date.now()),
               });
             } catch (error) {
               return errorText(String((error as Error)?.message ?? error));
@@ -119,7 +128,7 @@ export const buildAcpBuiltinToolExtras = (
               }
               return text(summary || result.content || 'Done.');
             }
-            if (Date.now() >= deadline) {
+            if (poll.status === 'timeout' || Date.now() >= deadline) {
               return errorText(
                 `Timed out waiting for child operations: ${poll.pendingOperationIds.join(', ')}`,
               );

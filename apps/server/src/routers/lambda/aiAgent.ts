@@ -1500,6 +1500,17 @@ const HeteroAwaitBuiltinToolChildrenSchema = z.object({
   operationId: z.string().min(1),
   timeoutMs: z.number().int().positive().max(30_000).default(25_000),
   toolCallId: z.string().min(1).optional(),
+  /**
+   * Server-side cumulative bound for this await — keyed by the placeholder's
+   * stamped `awaitStartedAt`, so it survives host reconnects. On expiry the
+   * owned placeholders settle to `error` and the call returns `timeout`.
+   */
+  waitDeadlineMs: z
+    .number()
+    .int()
+    .positive()
+    .max(60 * 60_000)
+    .optional(),
 });
 
 /**
@@ -3168,7 +3179,7 @@ export const aiAgentRouter = router({
   heteroAwaitBuiltinToolChildren: heteroAgentProcedure
     .input(HeteroAwaitBuiltinToolChildrenSchema)
     .query(async ({ input, ctx }) => {
-      const { childOperationIds, operationId, timeoutMs, toolCallId } = input;
+      const { childOperationIds, operationId, timeoutMs, toolCallId, waitDeadlineMs } = input;
 
       await authorizeOperationCallback(ctx, operationId, 'hetero:tool:exec');
 
@@ -3189,7 +3200,7 @@ export const aiAgentRouter = router({
 
       return awaitAcpBuiltinToolChildren(
         { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-        { childOperationIds, operationId, timeoutMs, toolCallId },
+        { childOperationIds, operationId, timeoutMs, toolCallId, waitDeadlineMs },
       );
     }),
 

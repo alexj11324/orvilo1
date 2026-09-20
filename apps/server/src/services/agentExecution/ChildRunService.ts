@@ -5,8 +5,10 @@ import { type ChatToolPayload } from '@orvilo/types';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { FileService } from '@/server/services/file';
 
+import { CHILD_RESULT_EVENT_TYPE, childResultEventId } from './childResultDelivery';
 import {
   extractTextFromMessage,
   findLastAssistantMessage,
@@ -52,7 +54,15 @@ const formatSubAgentErrorReason = (error: unknown): string | undefined => {
  * runs on a host that tracks its own deferred tool calls — the engine-era
  * step-queue wake no longer exists — so the resume path keeps its accounting
  * (barrier check + durable CAS) for surviving pre-migration parked ops while
- * the actual wake is owned by the host.
+ * the actual wake is owned by the host's `heteroAwaitBuiltinToolChildren`
+ * long-poll.
+ *
+ * Every bridge persists the child's result into the `event_outbox` delivery
+ * ledger (`agent_operation.child_result`, pending until consumed) keyed by
+ * parent/child/toolCall/generation — a redelivered webhook is idempotent, and
+ * a result arriving after its placeholder was already settled (e.g. by the
+ * await deadline sweep) is recorded as superseded rather than overwriting the
+ * newer terminal state.
  */
 export class ChildRunService {
   private readonly agentOperationModel: AgentExecutionServiceDeps['agentOperationModel'];
@@ -135,6 +145,20 @@ export class ChildRunService {
         : `Sub-agent did not complete (${reason}).`
       : lastAssistantContent || 'Sub-agent completed without a textual answer.';
 
+    const delivery = await this.persistChildResultDelivery({
+      anchorMessageId: toolMessageId,
+      childOperationId: operationId,
+      parentOperationId,
+      status: failed ? 'error' : 'done',
+    });
+    if (delivery.superseded) {
+      log(
+        '[%s] child result superseded — placeholder already settled under another key, skipping backfill',
+        operationId,
+      );
+      return this.tryResumeParentFromAsyncTool({ parentOperationId }, {});
+    }
+
     const backfill = await this.messageModel.updateToolMessage(toolMessageId, {
       content,
       pluginError: failed ? formatErrorForMetadata(finalState?.error) : undefined,
@@ -152,6 +176,10 @@ export class ChildRunService {
         totalOutputTokens: finalState?.usage?.llm?.tokens?.output,
         totalToolCalls: finalState?.usage?.tools?.totalCalls,
         totalTokens: finalState?.usage?.llm?.tokens?.total,
+        // Records which delivery produced this terminal write — a later
+        // duplicate with the same key stays idempotent, a foreign key is
+        // superseded (checked in `persistChildResultDelivery`).
+        childResultDelivery: { childOperationId: operationId, eventId: delivery.eventId },
       },
     });
     if (!backfill.success) {
@@ -162,7 +190,7 @@ export class ChildRunService {
 
     return this.tryResumeParentFromAsyncTool(
       { parentOperationId },
-      { knownFulfilledMessageId: toolMessageId },
+      { deliveryEventId: delivery.eventId, knownFulfilledMessageId: toolMessageId },
     );
   }
 
@@ -235,10 +263,28 @@ export class ChildRunService {
         ? `Agent ${agentLabel} responded in the group.`
         : lastAssistantContent || 'Agent member completed without a textual answer.';
 
+    const delivery = await this.persistChildResultDelivery({
+      anchorMessageId,
+      childOperationId: operationId,
+      parentOperationId,
+      status: failed ? 'error' : 'done',
+    });
+    if (delivery.superseded) {
+      log(
+        '[%s] member result superseded — anchor already settled under another key, skipping backfill',
+        operationId,
+      );
+      return this.tryResumeParentFromAsyncTool(
+        { parentOperationId },
+        { deliveryEventId: delivery.eventId, onComplete: params.onComplete },
+      );
+    }
+
     const anchorBackfill = await this.messageModel.updateToolMessage(anchorMessageId, {
       content: anchorContent,
       pluginError: failed ? formatErrorForMetadata(finalState?.error) : undefined,
       pluginState: {
+        childResultDelivery: { childOperationId: operationId, eventId: delivery.eventId },
         model: finalState?.modelRuntimeConfig?.model,
         status: failed ? 'error' : 'completed',
         threadId,
@@ -281,7 +327,10 @@ export class ChildRunService {
       }
     }
 
-    return this.tryResumeParentFromAsyncTool({ parentOperationId }, {});
+    return this.tryResumeParentFromAsyncTool(
+      { parentOperationId },
+      { deliveryEventId: delivery.eventId },
+    );
   }
 
   /**
@@ -298,6 +347,12 @@ export class ChildRunService {
   async tryResumeParentFromAsyncTool(
     params: { parentOperationId: string },
     options?: {
+      /**
+       * `event_outbox` eventId of the child-result receipt this resume claim
+       * consumes — flipped to `delivered` only when the CAS wins, so an
+       * unconsumed result stays pending for a real consumer.
+       */
+      deliveryEventId?: string;
       /**
        * Message id of a tool placeholder the caller just backfilled to a
        * terminal state. Trusted by the barrier as fulfilled without re-reading
@@ -348,9 +403,92 @@ export class ChildRunService {
       return false;
     }
 
-    asyncToolResumeCounter.add(1, { outcome: 'resumed' });
+    if (options?.deliveryEventId) {
+      await new EventOutboxModel(this.serverDB)
+        .markDeliveredByEventId(options.deliveryEventId)
+        .catch((error) =>
+          log(
+            '[%s] delivery ledger mark failed for %s: %O',
+            parentOperationId,
+            options.deliveryEventId,
+            error,
+          ),
+        );
+    }
+
+    asyncToolResumeCounter.add(1, { outcome: 'cas_won' });
     log('[%s] won async-tool resume CAS (ACP: host owns the wake)', parentOperationId);
     return true;
+  }
+
+  /**
+   * Persist the child-result receipt into `event_outbox` (status `pending`
+   * until a consumer marks it delivered) and decide whether the anchor
+   * placeholder may still be written: an anchor already terminal under a
+   * DIFFERENT delivery key means this completion arrived late (superseded,
+   * e.g. by the await deadline sweep) and must not overwrite it.
+   */
+  private async persistChildResultDelivery(params: {
+    anchorMessageId: string;
+    childOperationId: string;
+    parentOperationId: string;
+    status: string;
+  }): Promise<{ eventId: string; superseded: boolean }> {
+    const [plugin, parentOp] = await Promise.all([
+      this.serverDB.query.messagePlugins.findFirst({
+        where: (mp, { eq }) => eq(mp.id, params.anchorMessageId),
+      }),
+      this.serverDB.query.agentOperations.findFirst({
+        where: (op, { eq }) => eq(op.id, params.parentOperationId),
+      }),
+    ]);
+    const generation =
+      ((parentOp?.appContext as Record<string, unknown> | null)?.executionGeneration as
+        number | undefined) ?? 0;
+    const eventId = childResultEventId({
+      childOperationId: params.childOperationId,
+      generation,
+      parentOperationId: params.parentOperationId,
+      toolCallId: plugin?.toolCallId ?? undefined,
+    });
+
+    const state = plugin?.state as {
+      childResultDelivery?: { eventId?: string };
+      status?: string;
+    } | null;
+    const terminal = state?.status === 'completed' || state?.status === 'error';
+    const superseded = terminal && state?.childResultDelivery?.eventId !== eventId;
+
+    await new EventOutboxModel(this.serverDB)
+      .upsertDeliveryReceipt({
+        // A superseded result is durably recorded but can never be consumed —
+        // the placeholder it would fill is already settled — so it lands
+        // delivered for audit rather than queueing forever.
+        delivered: superseded,
+        event: {
+          aggregateId: params.parentOperationId,
+          aggregateType: 'agent_operation',
+          eventId,
+          eventType: CHILD_RESULT_EVENT_TYPE,
+          payload: {
+            anchorMessageId: params.anchorMessageId,
+            childOperationId: params.childOperationId,
+            status: params.status,
+            superseded,
+          },
+          workspaceId: parentOp?.workspaceId ?? undefined,
+        },
+      })
+      .catch((error) =>
+        log(
+          '[%s] delivery ledger insert failed for child %s: %O',
+          params.parentOperationId,
+          params.childOperationId,
+          error,
+        ),
+      );
+
+    return { eventId, superseded };
   }
 
   /**

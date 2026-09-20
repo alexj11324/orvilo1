@@ -6,12 +6,14 @@ import type {
   ExecSubAgentResult,
   ExecVirtualSubAgentParams,
 } from '@orvilo/types';
+import { isTerminalAgentOperationStatus } from '@orvilo/types';
 import debug from 'debug';
-import { and, eq, inArray, like, sql } from 'drizzle-orm';
+import { and, eq, inArray, like } from 'drizzle-orm';
 
 import { ChatGroupModel } from '@/database/models/chatGroup';
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
+import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { MessageModel } from '@/database/models/message';
 import { PluginModel } from '@/database/models/plugin';
 import {
@@ -35,6 +37,11 @@ import type {
   ToolExecutionResult,
 } from '@/server/services/toolExecution/types';
 
+import {
+  CHILD_RESULT_EVENT_TYPE,
+  childResultEventId,
+  isOwnedToolCallId,
+} from '../agentExecution/childResultDelivery';
 import { buildGroupAgentContext } from './helpers/groupContext';
 import {
   buildServerAgentMemberRunner,
@@ -521,12 +528,24 @@ export interface AcpBuiltinToolChildResult {
 }
 
 /**
- * Poll the children a deferred builtin tool forked. Returns `pending` while
- * any child op is still running; once all are terminal, resolves each child's
- * final assistant message content and sweeps still-pending placeholder tool
- * rows (`tool_call_id` = toolCallId or `${toolCallId}::m*`) to a terminal
- * state — the group/sub-agent completion bridges normally backfill them, but
- * this sweep guarantees none strand on `pending` if a bridge misfires.
+ * Poll the children a deferred builtin tool forked. A child counts as pending
+ * until it reaches a TERMINAL status — `idle`, `waiting_for_human` and
+ * `waiting_for_async_tool` children are still alive and must not settle the
+ * parent's tool call.
+ *
+ * Once all are terminal the call resolves each child's final assistant
+ * content, sweeps the placeholder tool rows OWNED by this invocation
+ * (`tool_call_id` = toolCallId or `${toolCallId}::m<index>` — anchored, so a
+ * prefix-sharing call's rows are never swept), and records each child's
+ * result in the `event_outbox` delivery ledger: the completion bridge's
+ * `pending` row flips to `delivered` (parent consumed), or a fresh
+ * delivered row is written when no bridge ran.
+ *
+ * `waitDeadlineMs` is a server-side cumulative bound keyed by the placeholder
+ * row's `awaitStartedAt`, so it survives host reconnects: when a child
+ * heartbeats forever, the owned placeholders are settled to `error` and the
+ * call returns `timeout` — surfacing the stall for human handling instead of
+ * hanging.
  */
 export const awaitAcpBuiltinToolChildren = async (
   deps: Pick<AcpBuiltinToolExecDeps, 'db' | 'userId' | 'workspaceId'>,
@@ -535,18 +554,37 @@ export const awaitAcpBuiltinToolChildren = async (
     operationId: string;
     timeoutMs?: number;
     toolCallId?: string;
+    waitDeadlineMs?: number;
   },
 ): Promise<
   | { results: AcpBuiltinToolChildResult[]; status: 'settled' }
-  | { pendingOperationIds: string[]; status: 'pending' }
+  | { pendingOperationIds: string[]; status: 'pending' | 'timeout' }
 > => {
   const { db, userId, workspaceId } = deps;
   const deadline = Date.now() + Math.min(input.timeoutMs ?? 25_000, 30_000);
   const wanted = [...new Set(input.childOperationIds)];
   if (wanted.length === 0) return { results: [], status: 'settled' };
 
+  const ownedPlaceholderRows = async () => {
+    if (!input.toolCallId) return [];
+    const candidates = await db
+      .select({
+        id: messagePlugins.id,
+        state: messagePlugins.state,
+        toolCallId: messagePlugins.toolCallId,
+      })
+      .from(messagePlugins)
+      .where(
+        and(
+          like(messagePlugins.toolCallId, `${input.toolCallId}%`),
+          eq(messagePlugins.userId, userId),
+        ),
+      );
+    return candidates.filter((row) => isOwnedToolCallId(row.toolCallId, input.toolCallId!));
+  };
+
   // Long-poll: bounded server-side wait so one MCP call doesn't spin a request
-  // per second. The CLI loops until `settled`.
+  // per second. The CLI loops until `settled`/`timeout`.
   for (;;) {
     const rows = await db
       .select({
@@ -564,7 +602,7 @@ export const awaitAcpBuiltinToolChildren = async (
       );
 
     const byId = new Map(rows.map((row) => [row.id, row]));
-    const pendingIds = wanted.filter((id) => byId.get(id)?.status === 'running');
+    const pendingIds = wanted.filter((id) => !isTerminalAgentOperationStatus(byId.get(id)?.status));
     const allSeen = wanted.every((id) => byId.has(id));
 
     if (allSeen && pendingIds.length === 0) {
@@ -590,20 +628,14 @@ export const awaitAcpBuiltinToolChildren = async (
       // sub-agent placeholder whose bridge failed) must not stay `pending`.
       if (input.toolCallId) {
         try {
-          const pendingRows = await db
-            .select({ id: messagePlugins.id })
-            .from(messagePlugins)
-            .where(
-              and(
-                like(messagePlugins.toolCallId, `${input.toolCallId}%`),
-                sql`coalesce(${messagePlugins.state}->>'status', 'pending') = 'pending'`,
-              ),
-            );
+          const owned = await ownedPlaceholderRows();
           const summary = results
             .map((r) => r.content ?? r.error ?? `(${r.status})`)
             .filter(Boolean)
             .join('\n\n');
-          for (const row of pendingRows) {
+          for (const row of owned) {
+            const status = (row.state as { status?: string } | null)?.status ?? 'pending';
+            if (status !== 'pending') continue;
             await messageModel.updateToolMessage(row.id, {
               content: summary,
               pluginState: {
@@ -616,10 +648,83 @@ export const awaitAcpBuiltinToolChildren = async (
         }
       }
 
+      // Delivery ledger: the bridge writes `pending` when the child's result
+      // was persisted; handing it to the caller here is the consume point, so
+      // mark each child's receipt delivered (inserting it first when no
+      // bridge ran — e.g. a placeholder swept above).
+      try {
+        const outbox = new EventOutboxModel(db);
+        const [parentRow] = await db
+          .select({
+            appContext: agentOperations.appContext,
+            workspaceId: agentOperations.workspaceId,
+          })
+          .from(agentOperations)
+          .where(eq(agentOperations.id, input.operationId))
+          .limit(1);
+        const generation =
+          ((parentRow?.appContext as Record<string, unknown> | null)?.executionGeneration as
+            number | undefined) ?? 0;
+        for (const result of results) {
+          await outbox.upsertDeliveryReceipt({
+            delivered: true,
+            event: {
+              aggregateId: input.operationId,
+              aggregateType: 'agent_operation',
+              eventId: childResultEventId({
+                childOperationId: result.operationId,
+                generation,
+                parentOperationId: input.operationId,
+                toolCallId: input.toolCallId,
+              }),
+              eventType: CHILD_RESULT_EVENT_TYPE,
+              payload: { status: result.status },
+              workspaceId: parentRow?.workspaceId ?? workspaceId,
+            },
+          });
+        }
+      } catch (err) {
+        log('awaitAcpBuiltinToolChildren: delivery ledger write failed: %O', err);
+      }
+
       return { results, status: 'settled' };
     }
 
     if (Date.now() >= deadline) {
+      // Server-side cumulative wait bound: the placeholder's `awaitStartedAt`
+      // stamps the first poll that found live children, so the bound is
+      // durable across host reconnects. Crossing it settles the owned
+      // placeholders to `error` — the stall becomes a visible failure a human
+      // can act on instead of an infinite pending.
+      if (input.waitDeadlineMs && input.toolCallId) {
+        try {
+          const owned = await ownedPlaceholderRows();
+          const anchor = owned.find((row) => row.toolCallId === input.toolCallId) ?? owned[0];
+          const startedAt = (anchor?.state as { awaitStartedAt?: number } | null)?.awaitStartedAt;
+          const now = Date.now();
+          if (!startedAt) {
+            const messageModel = new MessageModel(db, userId, workspaceId);
+            for (const row of owned) {
+              await messageModel.updateToolMessage(row.id, {
+                pluginState: { awaitStartedAt: now },
+              });
+            }
+          } else if (now - startedAt >= input.waitDeadlineMs) {
+            const messageModel = new MessageModel(db, userId, workspaceId);
+            for (const row of owned) {
+              const status = (row.state as { status?: string } | null)?.status ?? 'pending';
+              if (status !== 'pending') continue;
+              await messageModel.updateToolMessage(row.id, {
+                content: `Timed out waiting for child operations: ${pendingIds.join(', ')}`,
+                pluginState: { status: 'error', waitDeadlineExceeded: true },
+              });
+            }
+            return { pendingOperationIds: pendingIds, status: 'timeout' };
+          }
+        } catch (err) {
+          log('awaitAcpBuiltinToolChildren: deadline bookkeeping failed: %O', err);
+        }
+      }
       return { pendingOperationIds: allSeen ? pendingIds : wanted, status: 'pending' };
     }
     await new Promise((resolve) => setTimeout(resolve, 500));

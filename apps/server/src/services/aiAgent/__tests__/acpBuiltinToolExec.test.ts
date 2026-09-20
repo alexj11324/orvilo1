@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AcpBuiltinToolForbiddenError,
   AcpBuiltinToolNotFoundError,
+  awaitAcpBuiltinToolChildren,
   execAcpBuiltinTool,
 } from '../acpBuiltinToolExec';
 
@@ -10,20 +11,26 @@ const {
   mockConnectorTools,
   mockExecute,
   mockExecuteTool,
+  mockFindMessage,
   mockFindPlugin,
   mockMemberRunner,
   mockRegisterWork,
   mockResolveConnectors,
   mockSubAgentRunner,
+  mockUpdateToolMessage,
+  mockUpsertReceipt,
 } = vi.hoisted(() => ({
   mockConnectorTools: vi.fn(),
   mockExecute: vi.fn(),
   mockExecuteTool: vi.fn(),
+  mockFindMessage: vi.fn(),
   mockFindPlugin: vi.fn(),
   mockMemberRunner: { run: vi.fn() },
   mockRegisterWork: vi.fn(),
   mockResolveConnectors: vi.fn(),
   mockSubAgentRunner: { run: vi.fn() },
+  mockUpdateToolMessage: vi.fn(),
+  mockUpsertReceipt: vi.fn(),
 }));
 
 vi.mock('@/server/services/toolExecution/builtin', () => ({
@@ -78,7 +85,13 @@ vi.mock('../orchestrationRunners', () => ({
 
 vi.mock('@/database/models/message', () => ({
   MessageModel: vi.fn().mockImplementation(function () {
-    return {};
+    return { findById: mockFindMessage, updateToolMessage: mockUpdateToolMessage };
+  }),
+}));
+
+vi.mock('@/database/models/eventOutbox', () => ({
+  EventOutboxModel: vi.fn().mockImplementation(function () {
+    return { upsertDeliveryReceipt: mockUpsertReceipt };
   }),
 }));
 
@@ -370,6 +383,158 @@ describe('execAcpBuiltinTool', () => {
           identifier: 'my-plugin',
         }),
       ).rejects.toThrow(AcpBuiltinToolNotFoundError);
+    });
+  });
+});
+
+/**
+ * `awaitAcpBuiltinToolChildren` — the long-poll the `orvilo_cc` MCP server
+ * drives for deferred orchestration calls (sub-agents / group members).
+ */
+describe('awaitAcpBuiltinToolChildren', () => {
+  const awaitDb = ({
+    children,
+    parent,
+    plugins,
+  }: {
+    children: any[];
+    parent?: any;
+    plugins?: any[];
+  }) => ({
+    select: vi.fn().mockImplementation((cols: any) => {
+      const rows =
+        'toolCallId' in cols ? (plugins ?? []) : 'appContext' in cols ? [parent ?? {}] : children;
+      // Thenable with `.limit` so both `.where()` (awaited) and
+      // `.where().limit()` chains resolve to the same rows.
+      const resolved: any = Promise.resolve(rows);
+      resolved.limit = () => Promise.resolve(rows);
+      return { from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue(resolved) }) };
+    }),
+  });
+
+  const deps = { userId: 'user_1', workspaceId: 'ws_1' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpdateToolMessage.mockResolvedValue({ success: true });
+    mockUpsertReceipt.mockResolvedValue('delivered');
+  });
+
+  it('keeps a waiting_for_human child pending instead of settling the parent', async () => {
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'waiting_for_human' }],
+    });
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1 },
+    );
+    expect(result).toEqual({ pendingOperationIds: ['op_c1'], status: 'pending' });
+  });
+
+  it('keeps an idle (dispatched, not started) child pending', async () => {
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'idle' }],
+    });
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1 },
+    );
+    expect(result.status).toBe('pending');
+  });
+
+  it('settles only when every child is terminal and sweeps only owned placeholders', async () => {
+    const plugins = [
+      // Owned by this call — pending, must be swept.
+      { id: 'msg_own', state: { status: 'pending' }, toolCallId: 'tc_9' },
+      // Member anchor of this call — pending, must be swept.
+      { id: 'msg_member', state: { status: 'pending' }, toolCallId: 'tc_9::m2' },
+      // Prefix-sharing row owned by a DIFFERENT call — must never be touched.
+      { id: 'msg_foreign', state: { status: 'pending' }, toolCallId: 'tc_9extra' },
+      // Owned but already terminal — left alone.
+      { id: 'msg_done', state: { status: 'completed' }, toolCallId: 'tc_9::m1' },
+    ];
+    const db = awaitDb({
+      children: [
+        { error: null, id: 'op_c1', metadata: { assistantMessageId: 'm_a' }, status: 'done' },
+      ],
+      parent: { appContext: { executionGeneration: 3 }, workspaceId: 'ws_1' },
+      plugins,
+    });
+    mockFindMessage.mockResolvedValue({ content: 'child answer' });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1, toolCallId: 'tc_9' },
+    );
+
+    expect(result.status).toBe('settled');
+    expect(result).toMatchObject({
+      results: [{ content: 'child answer', operationId: 'op_c1', status: 'done' }],
+    });
+    const sweptIds = mockUpdateToolMessage.mock.calls.map((c) => c[0]);
+    expect(sweptIds).toEqual(['msg_own', 'msg_member']);
+    // Delivery ledger: one receipt per child, marked delivered (consumed).
+    expect(mockUpsertReceipt).toHaveBeenCalledOnce();
+    expect(mockUpsertReceipt.mock.calls[0][0]).toMatchObject({
+      delivered: true,
+      event: {
+        eventId: 'child-result:op_1:op_c1:tc_9:3',
+        eventType: 'agent_operation.child_result',
+      },
+    });
+  });
+
+  it('returns timeout and settles owned placeholders to error past the wait deadline', async () => {
+    const stale = Date.now() - 10 * 60_000;
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [
+        {
+          id: 'msg_own',
+          state: { awaitStartedAt: stale, status: 'pending' },
+          toolCallId: 'tc_9',
+        },
+      ],
+    });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      {
+        childOperationIds: ['op_c1'],
+        operationId: 'op_1',
+        timeoutMs: 1,
+        toolCallId: 'tc_9',
+        waitDeadlineMs: 60_000,
+      },
+    );
+
+    expect(result).toEqual({ pendingOperationIds: ['op_c1'], status: 'timeout' });
+    expect(mockUpdateToolMessage).toHaveBeenCalledWith('msg_own', {
+      content: expect.stringContaining('op_c1'),
+      pluginState: { status: 'error', waitDeadlineExceeded: true },
+    });
+  });
+
+  it('stamps awaitStartedAt on first contact inside the deadline', async () => {
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [{ id: 'msg_own', state: { status: 'pending' }, toolCallId: 'tc_9' }],
+    });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      {
+        childOperationIds: ['op_c1'],
+        operationId: 'op_1',
+        timeoutMs: 1,
+        toolCallId: 'tc_9',
+        waitDeadlineMs: 60_000,
+      },
+    );
+
+    expect(result.status).toBe('pending');
+    expect(mockUpdateToolMessage).toHaveBeenCalledWith('msg_own', {
+      pluginState: { awaitStartedAt: expect.any(Number) },
     });
   });
 });

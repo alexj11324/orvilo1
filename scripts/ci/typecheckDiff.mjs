@@ -85,9 +85,11 @@ const parseDiagnostics = (text, stripPrefix, msgRoots) =>
       // so identical diagnostics would never bucket-match without stripping
       // each side's checkout root to a shared placeholder. macOS resolves
       // /tmp → /private/tmp inside spawned processes, so both the given root
-      // and its realpath must normalize.
+      // and its realpath must normalize. Longest first — /tmp/x is a substring
+      // of /private/tmp/x, so a plain root must never preempt its realpath.
       let msg = m.groups.msg.trim().slice(0, 300);
-      for (const root of msgRoots) msg = msg.replaceAll(root, '<root>');
+      for (const root of [...msgRoots].sort((a, b) => b.length - a.length))
+        msg = msg.replaceAll(root, '<root>');
       return {
         code: m.groups.code,
         col: Number(m.groups.col),

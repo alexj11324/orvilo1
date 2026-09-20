@@ -573,7 +573,10 @@ async function measurePinDelta(world: CustomWorld) {
   expect(prompt, 'missing the latest sent user prompt').toBeDefined();
 
   const userMessage = world.page.locator('.message-wrapper').filter({ hasText: prompt! }).last();
-  await expect(userMessage, `latest user message is not mounted: ${prompt}`).toBeVisible();
+  // Must not throw: callers wrap this in expect.poll, and a thrown assertion
+  // aborts the poll outright. The wrapper can be briefly absent while the list
+  // re-renders/virtualizes around the pin — null keeps the poll retrying.
+  if (!(await userMessage.isVisible().catch(() => false))) return null;
 
   return userMessage.evaluate((message) => {
     let el: HTMLElement | null = message.parentElement;

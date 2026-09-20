@@ -216,7 +216,12 @@ export interface ExecAgentParams {
   agentId?: string;
   /** Application context for message storage */
   appContext?: ExecAgentAppContext;
-  /** Whether to auto-start execution after creating operation (default: true) */
+  /**
+   * Retired lobehub deferred-start flag. Under ACP every accepted run is
+   * dispatched inside `execAgent` — there is no queued intent a later
+   * `startExecution` could release — so `false` is rejected before any side
+   * effect. Omit it (or pass `true`); to defer a run, use `scheduleAgentRun`.
+   */
   autoStart?: boolean;
   /** Client-minted ids for the rows this run creates (fresh sends only). */
   clientIds?: ExecAgentClientIds;

@@ -65,6 +65,7 @@ import {
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
 import { mapAgentInterventionTRPCError } from '@/server/routers/lambda/_helpers/agentInterventionError';
+import { mapAgentStartTRPCError } from '@/server/routers/lambda/_helpers/agentStartError';
 import {
   assertCanUseMessageTargets,
   assertCanUseTopicTargets,
@@ -77,6 +78,7 @@ import {
   ResolveAgentInterventionBySourceSchema,
   ResolveAgentInterventionSchema,
 } from '@/server/routers/lambda/_schema/agentIntervention';
+import { AgentStartError } from '@/server/services/agentExecution/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
   AcpBuiltinToolForbiddenError,
@@ -977,7 +979,12 @@ const ExecAgentSchema = z
         topicId: z.string().nullish(),
       })
       .optional(),
-    /** Whether to auto-start execution after creating operation */
+    /**
+     * Retired lobehub deferred-start flag. Under ACP every accepted run is
+     * dispatched inside this call — there is no queued intent a later
+     * `startExecution` could release — so `false` is rejected (BAD_REQUEST)
+     * before any side effect. To defer a run, use `scheduleAgentRun`.
+     */
     autoStart: z.boolean().optional().default(true),
     /**
      * Client-minted ids for the rows this run creates, honoured verbatim —
@@ -2144,6 +2151,12 @@ export const aiAgentRouter = router({
           code: 'CONFLICT',
           message: 'This approval has already been resolved.',
         });
+      }
+
+      // `autoStart:false` and other start-intent contract violations are
+      // caller-correctable 4xx, not server faults.
+      if (error instanceof AgentStartError) {
+        throw mapAgentStartTRPCError(error);
       }
 
       // A primary-key collision on a client-supplied id (a retried send
@@ -3630,19 +3643,24 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
-      // Start execution using AgentRuntimeService
-      const result = await ctx.agentRuntimeService.startExecution({
-        context,
-        delay,
-        operationId,
-        priority,
-      });
+      try {
+        const result = await ctx.agentRuntimeService.startExecution({
+          context,
+          delay,
+          operationId,
+          priority,
+        });
 
-      return {
-        ...result,
-        message: 'Agent execution started successfully',
-        timestamp: new Date().toISOString(),
-      };
+        return {
+          ...result,
+          message: result.alreadyStarted
+            ? 'Agent execution is already running'
+            : 'Agent execution started successfully',
+          timestamp: new Date().toISOString(),
+        };
+      } catch (error) {
+        throw mapAgentStartTRPCError(error);
+      }
     }),
 
   /**

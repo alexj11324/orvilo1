@@ -26,6 +26,31 @@ const safeRealpath = async (target: string): Promise<string> => {
   }
 };
 
+/**
+ * Canonical spelling of `target`: realpath the deepest existing ancestor
+ * (collapsing symlink/alias/case variants of every real component), then
+ * rejoin the tail that does not exist yet. Falls back to `path.resolve` when
+ * nothing resolves or the fs errors — this never throws, so it is safe inside
+ * liveness and ownership checks.
+ */
+export const canonicalizePath = async (target: string): Promise<string> => {
+  const resolved = path.resolve(target);
+  let ancestor = resolved;
+  let tail = '';
+  for (;;) {
+    try {
+      const real = await realpath(ancestor);
+      return tail ? path.join(real, tail) : real;
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') return resolved;
+      const parent = path.dirname(ancestor);
+      if (parent === ancestor) return resolved;
+      tail = tail ? path.join(path.basename(ancestor), tail) : path.basename(ancestor);
+      ancestor = parent;
+    }
+  }
+};
+
 interface ParsedWorktree {
   bare?: boolean;
   branch?: string;
@@ -110,15 +135,21 @@ export const inspectGitWorktreePath = async (payload: {
   if (!worktreePath?.trim()) return { error: 'Worktree path is required', kind: 'unknown' };
 
   let worktrees: GitWorktreeListItem[];
+  let repoRoot: string;
+  let repoCommonDir: string;
   try {
-    const [{ stdout: rootStdout }, { stdout }] = await Promise.all([
+    const [{ stdout: rootStdout }, { stdout: commonStdout }, { stdout }] = await Promise.all([
       execFileAsync('git', ['rev-parse', '--show-toplevel'], { cwd: dirPath, timeout: 5000 }),
+      execFileAsync('git', ['rev-parse', '--git-common-dir'], { cwd: dirPath, timeout: 5000 }),
       execFileAsync('git', ['worktree', 'list', '--porcelain', '-z'], {
         cwd: dirPath,
         timeout: 5000,
       }),
     ]);
-    const currentRoot = await safeRealpath(rootStdout.trim());
+    repoRoot = await safeRealpath(rootStdout.trim());
+    // `--git-common-dir` may answer relative to `dirPath` — anchor it first.
+    repoCommonDir = await safeRealpath(path.resolve(dirPath, commonStdout.trim()));
+    const currentRoot = repoRoot;
     const parsed = parseGitWorktreeList(stdout);
     const statuses = await Promise.all(parsed.map(readStatus));
     worktrees = await Promise.all(
@@ -133,7 +164,14 @@ export const inspectGitWorktreePath = async (payload: {
     return { error: stderr || 'git worktree list failed', kind: 'unknown' };
   }
 
-  const targetPath = await safeRealpath(worktreePath);
+  const targetPath = await canonicalizePath(worktreePath);
+  // The repo + path identity the caller binds claims to — every spelling of
+  // the same physical directory collapses onto these canonical strings.
+  const identity = {
+    canonicalWorktreePath: targetPath,
+    repoCommonDir,
+    repoRoot,
+  };
   let found: GitWorktreeListItem | undefined;
   for (const worktree of worktrees) {
     if ((await safeRealpath(worktree.path)) === targetPath) {
@@ -141,7 +179,7 @@ export const inspectGitWorktreePath = async (payload: {
       break;
     }
   }
-  if (found) return { kind: 'listed', listed: found };
+  if (found) return { kind: 'listed', listed: found, ...identity };
 
   // Classify the candidate without following unvalidated links: `lstat` keeps
   // a symlink at the path foreign (its target is unproven content), and only
@@ -150,32 +188,33 @@ export const inspectGitWorktreePath = async (payload: {
   try {
     dirStat = await lstat(worktreePath);
   } catch (error: any) {
-    if (error?.code === 'ENOENT') return { kind: 'absent' };
+    if (error?.code === 'ENOENT') return { kind: 'absent', ...identity };
     return {
       error: `Cannot stat ${worktreePath}: ${error?.code ?? error?.message ?? 'unknown error'}`,
       kind: 'unknown',
     };
   }
-  if (dirStat.isSymbolicLink() || !dirStat.isDirectory()) return { kind: 'orphan-foreign' };
+  if (dirStat.isSymbolicLink() || !dirStat.isDirectory())
+    return { kind: 'orphan-foreign', ...identity };
 
   let entries: string[];
   try {
     entries = await readdir(targetPath);
   } catch (error: any) {
-    if (error?.code === 'ENOENT') return { kind: 'absent' };
+    if (error?.code === 'ENOENT') return { kind: 'absent', ...identity };
     return {
       error: `Cannot read ${worktreePath}: ${error?.code ?? error?.message ?? 'unknown error'}`,
       kind: 'unknown',
     };
   }
-  if (entries.length === 0) return { kind: 'orphan-safe' };
+  if (entries.length === 0) return { kind: 'orphan-safe', ...identity };
   if (entries.length === 1 && entries[0] === '.git') {
     const gitEntry = await stat(path.join(targetPath, '.git'));
     // A crashed `worktree add` leaves only a gitfile — the directory carries no
     // user content. Anything more is foreign content we must not touch.
-    if (gitEntry.isFile()) return { kind: 'orphan-safe' };
+    if (gitEntry.isFile()) return { kind: 'orphan-safe', ...identity };
   }
-  return { kind: 'orphan-foreign' };
+  return { kind: 'orphan-foreign', ...identity };
 };
 
 export const listGitWorktrees = async (dirPath: string): Promise<GitWorktreeListItem[]> => {

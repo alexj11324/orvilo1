@@ -19,6 +19,7 @@ import {
   taskWorkspaceClaimKey,
   TaskWorkspaceClaimModel,
 } from '@/database/models/taskWorkspaceClaim';
+import type { TaskWorkspaceClaimItem } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { resolveExecutionPlan } from '@/helpers/executionTarget';
 import { supportsCloudHeterogeneousSandbox } from '@/server/services/aiAgent/helpers/heteroErrors';
@@ -36,6 +37,12 @@ const WORKSPACE_INHERIT_DEPTH = 10;
 export interface ProvisionedWorkspace {
   baseBranch: string;
   branch: string;
+  /**
+   * The durable claim this provision minted or re-adopted — carries the
+   * claim id/key, the immutable `ownerToken` fencing cleanup, and the
+   * dispatch/generation ownership triple. Absent for sandbox provisions.
+   */
+  claim?: TaskWorkspaceClaimItem;
   deviceId?: string;
   integration: TaskTopicIntegration;
   /** Branch/push/PR delivery contract appended to the task prompt. */
@@ -73,24 +80,68 @@ export class TaskWorkspaceService {
     const { deviceId, repoPath, worktreePath } = workspace.integration;
     if (!deviceId || !repoPath || !worktreePath || worktreePath === repoPath) return true;
 
-    const claimKey = taskWorkspaceClaimKey({ deviceId, repoPath, worktreePath });
-    const claim = await this.claimModel.lookup(claimKey);
+    // Cleanup is fenced on the immutable token minted with THIS provision —
+    // never the row's current `ownerToken`, which a newer dispatch may
+    // already hold. Without that proof the directory is not ours to touch.
+    const claim = workspace.claim;
+    if (!claim) {
+      log('discardUnregistered: %s carries no claim identity — preserving', worktreePath);
+      return false;
+    }
+    const row = await this.claimModel.lookup(claim.key);
+    if (row && row.ownerToken !== claim.ownerToken) {
+      // The key was reclaimed after this provision's claim was released — the
+      // worktree belongs to the new owner now, not to this cleanup.
+      log(
+        'discardUnregistered: %s reclaimed by %s/%s — leaving it alone',
+        worktreePath,
+        row.taskId,
+        row.dispatchId,
+      );
+      return true;
+    }
+
+    // The writer bound to this claim must be provably stopped: `undefined`
+    // means the host cannot answer — never read it as "no writer".
+    const inspection = await deviceGateway.inspectGitWorktreePath({
+      deviceId,
+      path: repoPath,
+      userId: this.userId,
+      worktreePath,
+      workspaceId: this.workspaceId,
+    });
+    if (!inspection || inspection.activeWriter === undefined || inspection.activeWriter) {
+      log(
+        'discardUnregistered: writer presence unproven or a live writer owns %s — preserving',
+        worktreePath,
+      );
+      return false;
+    }
+    if (inspection.kind === 'absent') {
+      // Nothing left on the device — just release our own claim.
+      await this.claimModel.release(claim.key, claim.ownerToken);
+      return true;
+    }
+
     const removed = await deviceGateway.removeGitWorktree({
+      claimToken: claim.ownerToken,
       deviceId,
       path: repoPath,
       userId: this.userId,
       workspaceId: this.workspaceId,
       worktreePath,
     });
-    if (!removed.success) {
+    if (!removed.success || removed.claimTokenVerified !== true) {
+      // A host that silently ignores the token reports no verification — the
+      // claim stays so a later cleanup retry can complete the proof.
       log(
-        'discardUnregistered: remove failed for %s — %s',
+        'discardUnregistered: remove failed or unverified for %s — %s',
         worktreePath,
         removed.error ?? 'unknown error',
       );
       return false;
     }
-    if (claim) await this.claimModel.release(claimKey, claim.ownerToken);
+    await this.claimModel.release(claim.key, claim.ownerToken);
     return true;
   }
 
@@ -198,13 +249,13 @@ export class TaskWorkspaceService {
   /**
    * Create a run-owned worktree. When `repo` is present it is also PR-bound.
    *
-   * Ownership is a durable claim, not a name match: before touching the path
-   * this mints a persisted claim keyed by (deviceId, repoPath, worktreePath)
-   * carrying (taskId, dispatchId, generation, ownerToken, expectedBaseSha).
-   * Reuse is allowed only when the persisted claim matches this dispatch AND
-   * the device reports a clean tree on the pinned base AND no live writer —
-   * every other outcome blocks and queues manual recovery instead of touching
-   * foreign content.
+   * Ownership is a durable claim bound to physical identity: the device
+   * inspection proves the repo's canonical common-dir and the worktree path's
+   * canonical spelling BEFORE any claim is minted, and the claim key binds
+   * those — aliases of the same directory share one claim, and an existing
+   * directory without a live claim is never adopted by minting after the
+   * fact. A replay of the same dispatch reuses the claim's pinned
+   * `expectedBaseSha`; only a fresh attempt resolves a new base.
    */
   private async provisionOnDevice(params: {
     config: TaskWorkspaceConfig;
@@ -223,15 +274,6 @@ export class TaskWorkspaceService {
     if (!looksAbsolute) {
       throw new Error(`Workspace repoPath must be an absolute path on the device: ${repoPath}`);
     }
-    // Resolve the base commit BEFORE any `worktree add` — `origin/<base>` is a
-    // mutable ref, so the pinned SHA is what the add must land on and what the
-    // post-add verification compares against.
-    const { baseBranch, expectedBaseSha } = await this.resolveBase(
-      task,
-      config,
-      repoPath,
-      deviceId,
-    );
 
     const branch = taskBranchName(task.identifier, seq);
     // The task id fragment keeps the on-disk path unique across workspaces that
@@ -239,36 +281,8 @@ export class TaskWorkspaceService {
     // the naming convention is a hint, never proof of ownership.
     const worktreePath = deriveWorktreePath(repoPath, `${branch}@${task.id.slice(0, 8)}`);
 
-    // Mint the durable claim first: insert-or-read against the unique physical
-    // key. A row held by a different dispatch is a claim conflict — the
-    // occupant (whatever it is) is preserved and queued for a human.
-    const claim = await this.claimModel.mint({
-      deviceId,
-      dispatchId,
-      expectedBaseSha,
-      generation,
-      ownerToken: randomUUID(),
-      repoPath,
-      taskId: task.id,
-      workspaceId: this.workspaceId,
-      worktreePath,
-    });
-    const owner = { dispatchId, generation, taskId: task.id };
-    if (!this.claimModel.matches(claim, owner)) {
-      await this.requestRecovery({
-        detail: { claimedByDispatchId: claim.dispatchId, claimedTaskId: claim.taskId },
-        deviceId,
-        kind: 'claim_conflict',
-        repoPath,
-        taskId: task.id,
-        worktreePath,
-      });
-      throw new Error(
-        `Failed to provision task workspace: ${worktreePath} is claimed by another dispatch ` +
-          `(${claim.taskId}/${claim.dispatchId}) — preserved for manual resolution`,
-      );
-    }
-
+    // Inspect before claiming: the answer proves the physical identity
+    // (canonical worktree path + git common-dir) the claim key binds.
     const inspection = await deviceGateway.inspectGitWorktreePath({
       deviceId,
       path: repoPath,
@@ -284,10 +298,89 @@ export class TaskWorkspaceService {
           `worktree inspection (unsupported capability) for ${worktreePath}`,
       );
     }
+    if (inspection.kind === 'unknown') {
+      await this.requestRecovery({
+        detail: { error: inspection.error },
+        deviceId,
+        kind: 'inspection_unknown',
+        repoPath,
+        taskId: task.id,
+        worktreePath,
+      });
+      throw new Error(
+        `Failed to provision task workspace: cannot inspect ${worktreePath} on the device` +
+          (inspection.error ? ` (${inspection.error})` : ''),
+      );
+    }
+    if (!inspection.repoCommonDir || !inspection.canonicalWorktreePath) {
+      // A host that answers inspection without identity fields predates the
+      // claim binding — block instead of keying a claim on raw spellings.
+      throw new Error(
+        `Failed to provision task workspace: the device client does not report ` +
+          `canonical path identity (unsupported capability) for ${worktreePath}`,
+      );
+    }
+
+    const claimKey = taskWorkspaceClaimKey({
+      deviceId,
+      repoCommonDir: inspection.repoCommonDir,
+      worktreePath: inspection.canonicalWorktreePath,
+    });
+    const stored = await this.claimModel.lookup(claimKey);
+    const liveClaim = stored && !stored.releasedAt ? stored : undefined;
+    const owner = { dispatchId, generation, taskId: task.id };
+    const ownClaim = liveClaim && this.claimModel.matches(liveClaim, owner) ? liveClaim : undefined;
+    let claim = ownClaim;
+
+    const conflicted = async (row: TaskWorkspaceClaimItem): Promise<never> => {
+      await this.requestRecovery({
+        detail: { claimedByDispatchId: row.dispatchId, claimedTaskId: row.taskId },
+        deviceId,
+        kind: 'claim_conflict',
+        repoPath,
+        taskId: task.id,
+        worktreePath,
+      });
+      throw new Error(
+        `Failed to provision task workspace: ${worktreePath} is claimed by another dispatch ` +
+          `(${row.taskId}/${row.dispatchId}) — preserved for manual resolution`,
+      );
+    };
 
     switch (inspection.kind) {
       case 'listed': {
         const listed = inspection.listed!;
+        if (!liveClaim) {
+          // A registered worktree with no claim row at all — minting one now
+          // would adopt a directory we never proved ours. Queue a human.
+          await this.requestRecovery({
+            detail: { branch: listed.branch, head: listed.head, reason: 'listed_without_claim' },
+            deviceId,
+            kind: 'orphan_directory',
+            repoPath,
+            taskId: task.id,
+            worktreePath,
+          });
+          throw new Error(
+            `Failed to provision task workspace: ${worktreePath} holds a worktree with no ` +
+              'registered claim — preserved for manual resolution',
+          );
+        }
+        if (!ownClaim) return conflicted(liveClaim);
+        if (!ownClaim.expectedBaseSha) {
+          await this.requestRecovery({
+            detail: { branch: listed.branch, head: listed.head, reason: 'claim_without_base' },
+            deviceId,
+            kind: 'orphan_directory',
+            repoPath,
+            taskId: task.id,
+            worktreePath,
+          });
+          throw new Error(
+            `Failed to provision task workspace: the claim on ${worktreePath} carries no ` +
+              'pinned base — preserved for manual resolution',
+          );
+        }
         const writerNote =
           inspection.activeWriter === undefined
             ? 'writer presence unverifiable'
@@ -297,7 +390,7 @@ export class TaskWorkspaceService {
         const reusable =
           !writerNote &&
           listed.branch === branch &&
-          listed.head === claim.expectedBaseSha &&
+          listed.head === ownClaim.expectedBaseSha &&
           !listed.locked &&
           !listed.prunable &&
           listed.status?.clean === true;
@@ -320,7 +413,7 @@ export class TaskWorkspaceService {
           throw new Error(
             `Failed to provision task workspace: ${worktreePath} is occupied by ` +
               `an unrelated or modified worktree (branch ${listed.branch ?? '(detached)'}` +
-              `${listed.head && listed.head !== claim.expectedBaseSha ? `, head ${listed.head} ≠ claimed base` : ''}` +
+              `${listed.head && listed.head !== ownClaim.expectedBaseSha ? `, head ${listed.head} ≠ claimed base` : ''}` +
               `${listed.locked ? ', locked' : ''}${listed.status?.clean === false ? ', dirty' : ''}` +
               `${writerNote ? `, ${writerNote}` : ''}) — preserved for manual resolution`,
           );
@@ -329,13 +422,61 @@ export class TaskWorkspaceService {
         break;
       }
       case 'absent': {
+        if (liveClaim && !ownClaim) return conflicted(liveClaim);
+        if (!ownClaim) {
+          // A fresh attempt — the ONLY place a new base resolves. `origin/<base>`
+          // is a mutable ref, so the pinned SHA is what the add must land on
+          // and what replays compare against, forever fixed on the claim row.
+          const { baseBranch, expectedBaseSha } = await this.resolveBase(
+            task,
+            config,
+            repoPath,
+            deviceId,
+          );
+          const minted = await this.claimModel.mint({
+            baseBranch,
+            deviceId,
+            dispatchId,
+            expectedBaseSha,
+            generation,
+            ownerToken: randomUUID(),
+            repoCommonDir: inspection.repoCommonDir,
+            repoPath,
+            taskId: task.id,
+            workspaceId: this.workspaceId,
+            worktreePath: inspection.canonicalWorktreePath,
+          });
+          if (!this.claimModel.matches(minted, owner)) return conflicted(minted);
+          claim = minted;
+        }
+        if (!claim) {
+          // Unreachable — either ownClaim was live or mint produced a row.
+          throw new Error(
+            `Failed to provision task workspace: no claim could be established for ${worktreePath}`,
+          );
+        }
+        if (!claim.expectedBaseSha) {
+          await this.requestRecovery({
+            detail: { reason: 'claim_without_base' },
+            deviceId,
+            kind: 'orphan_directory',
+            repoPath,
+            taskId: task.id,
+            worktreePath,
+          });
+          throw new Error(
+            `Failed to provision task workspace: the claim on ${worktreePath} carries no ` +
+              'pinned base — preserved for manual resolution',
+          );
+        }
         const added = await deviceGateway.addGitWorktree({
           branch,
           deviceId,
           path: repoPath,
-          // Pin the resolved commit, not the mutable ref — a fetch racing the
-          // add cannot shift the checkout away from the claimed base.
-          ref: expectedBaseSha,
+          // Pin the claim's commit, not the mutable ref — a fetch racing the
+          // add cannot shift the checkout away from the claimed base, and a
+          // replay lands on the same pin even after the remote moved.
+          ref: claim.expectedBaseSha,
           userId: this.userId,
           workspaceId: this.workspaceId,
           worktreePath,
@@ -353,24 +494,12 @@ export class TaskWorkspaceService {
         }
         break;
       }
-      case 'unknown': {
-        await this.requestRecovery({
-          detail: { error: inspection.error },
-          deviceId,
-          kind: 'inspection_unknown',
-          repoPath,
-          taskId: task.id,
-          worktreePath,
-        });
-        throw new Error(
-          `Failed to provision task workspace: cannot inspect ${worktreePath} on the device` +
-            (inspection.error ? ` (${inspection.error})` : ''),
-        );
-      }
       default: {
-        // `orphan-safe` / `orphan-foreign`: never delete automatically. Queue a
-        // manual cleanup request and stop — the directory's content belongs to
-        // someone until a human proves otherwise.
+        // `orphan-safe` / `orphan-foreign`: never delete automatically. A live
+        // foreign claim reports as a conflict; anything else queues a manual
+        // cleanup request — the directory's content belongs to someone until
+        // a human proves otherwise.
+        if (liveClaim && !ownClaim) return conflicted(liveClaim);
         await this.requestRecovery({
           detail: { kind: inspection.kind },
           deviceId,
@@ -386,9 +515,17 @@ export class TaskWorkspaceService {
       }
     }
 
+    if (!claim?.expectedBaseSha || !claim.baseBranch) {
+      // Unreachable on every switch arm — kept as the terminal guard so the
+      // integration below never reads an unpinned claim.
+      throw new Error(
+        `Failed to provision task workspace: the claim on ${worktreePath} cannot prove its pinned base`,
+      );
+    }
+
     // Post-provision verification: re-inspect the worktree and require the
-    // checkout to sit on the pinned base — never record whatever HEAD happens
-    // to be as the run's baseSha after the fact.
+    // checkout to sit on the claim's pinned base — never record whatever HEAD
+    // happens to be as the run's baseSha after the fact.
     const checkout = await deviceGateway.inspectGitWorktreePath({
       deviceId,
       path: repoPath,
@@ -401,13 +538,14 @@ export class TaskWorkspaceService {
         `Failed to provision task workspace: could not verify the new checkout at ${worktreePath}`,
       );
     }
-    if (checkout.listed.head !== expectedBaseSha) {
+    if (checkout.listed.head !== claim.expectedBaseSha) {
       throw new Error(
         `Failed to provision task workspace: ${worktreePath} checked out ` +
-          `${checkout.listed.head ?? '(unknown)'} instead of the pinned base ${expectedBaseSha}`,
+          `${checkout.listed.head ?? '(unknown)'} instead of the pinned base ${claim.expectedBaseSha}`,
       );
     }
-    const baseSha = expectedBaseSha;
+    const baseBranch = claim.baseBranch;
+    const baseSha = claim.expectedBaseSha;
 
     const workingDirectoryConfig: WorkingDirConfig = {
       git: { branch, isWorktree: true },
@@ -430,6 +568,7 @@ export class TaskWorkspaceService {
     return {
       baseBranch,
       branch,
+      claim,
       deviceId,
       integration,
       prompt: config.repo

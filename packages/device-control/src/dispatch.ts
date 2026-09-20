@@ -267,7 +267,37 @@ export const executeDeviceRpc = async (
     }
 
     case 'removeGitWorktree': {
-      return removeGitWorktree(params as { force?: boolean; path: string; worktreePath: string });
+      const payload = params as {
+        claimToken?: string;
+        force?: boolean;
+        path: string;
+        worktreePath: string;
+      };
+      // A cleanup presenting a claim token must prove no live writer owns the
+      // path first — a host that cannot answer writer presence refuses rather
+      // than treating "no registry" as "no writer". `claimTokenVerified` on
+      // the result is what lets the caller distinguish a verified remove from
+      // a silently ignored token on a stale host.
+      if (payload.claimToken !== undefined) {
+        if (!deps.getActiveWorktreeWriter) {
+          return {
+            claimTokenVerified: false,
+            error: 'cannot verify the claim token: this host has no run registry',
+            success: false,
+          };
+        }
+        const writer = await deps.getActiveWorktreeWriter(payload.worktreePath);
+        if (writer) {
+          return {
+            claimTokenVerified: false,
+            error: `worktree has a live writer (op=${writer.operationId ?? 'unknown'})`,
+            success: false,
+          };
+        }
+        const result = await removeGitWorktree(payload);
+        return { ...result, claimTokenVerified: true };
+      }
+      return removeGitWorktree(payload);
     }
 
     case 'addGitWorktree': {

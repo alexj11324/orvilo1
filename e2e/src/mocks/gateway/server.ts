@@ -14,6 +14,13 @@
  *    POST /api/operations/tool-execute  { operationId, data }   → fanned out as
  *                                         a `tool_execute` agent_event
  *
+ *  Server → fake gateway (device dispatch — the fake gateway IS the device):
+ *    POST /api/device/agent/run         agent_run_request → synthesized `lh
+ *                                         hetero exec` turn: mock-LLM reply
+ *                                         streamed back through the real
+ *                                         aiAgent.heteroIngest/heteroFinish
+ *                                         pipeline (see fakeDevice.ts)
+ *
  *  Browser → fake gateway:
  *    WS /ws?operationId=...
  *      ← {type:'auth'}            → {type:'auth_success'}
@@ -25,6 +32,8 @@
  *
  * Runs under Bun (`bun e2e/scripts/mockServices.ts`) for the built-in WS.
  */
+
+import { type DeviceAgentRunRequest, runSyntheticHeteroTurn } from './fakeDevice';
 
 interface BufferedEvent {
   event: Record<string, unknown>;
@@ -62,9 +71,12 @@ const STATUS_BY_END_REASON: Record<string, OperationState['status']> = {
 export const MOCK_GATEWAY_PORT = Number(process.env.E2E_MOCK_GATEWAY_PORT || 3407);
 
 export interface FakeGatewayOptions {
+  /** Mock LLM base URL — where synthesized device turns fetch reply text. */
+  llmBaseUrl?: string;
   /**
    * Orvilo server base URL — where `tool_result` WS messages are forwarded
-   * (`POST /api/agent/tool-result`). Defaults to the E2E server port.
+   * (`POST /api/agent/tool-result`) and synthesized device turns ingest
+   * (`/trpc/lambda/aiAgent.hetero*`). Defaults to the E2E server port.
    */
   orviloBaseUrl?: string;
   /** Bearer token the Orvilo server uses for /api/operations/* pushes. */
@@ -76,6 +88,8 @@ export const startFakeGateway = (
   options: FakeGatewayOptions = {},
 ): unknown => {
   const orviloBaseUrl = options.orviloBaseUrl ?? 'http://localhost:3006';
+  const llmBaseUrl =
+    options.llmBaseUrl ?? `http://localhost:${process.env.E2E_MOCK_LLM_PORT || 3406}`;
   // Default matches the token setup.ts / e2e.yml hand to the Orvilo server.
   const serviceToken =
     options.serviceToken ?? process.env.AGENT_GATEWAY_SERVICE_TOKEN ?? 'e2e-mock-service-token';
@@ -83,6 +97,7 @@ export const startFakeGateway = (
   const operations = new Map<string, OperationState>();
   const subscribers = new Map<string, Set<WsLike>>();
   let nextEventId = 1;
+  let lastDispatchedDeviceId = '';
 
   const pushToSubscribers = (operationId: string, message: Record<string, unknown>) => {
     const subs = subscribers.get(operationId);
@@ -148,6 +163,51 @@ export const startFakeGateway = (
         req.headers.get('authorization') !== `Bearer ${serviceToken}`
       ) {
         return json({ error: 'unauthorized' }, 401);
+      }
+
+      // Device presence reads: the runtime bar / device pool queries the
+      // gateway for online devices. Report the last dispatched device (falling
+      // back to the seeded e2e device) as online so bound-device surfaces read
+      // truthfully — a 404 here used to read as "all devices offline".
+      if (req.method === 'POST' && path === '/api/device/status') {
+        return json({ deviceCount: 1, online: true });
+      }
+
+      if (req.method === 'POST' && path === '/api/device/devices') {
+        const deviceId = lastDispatchedDeviceId || 'e2e-mock-device';
+        const connectedAt = new Date().toISOString();
+        return json({
+          devices: [
+            {
+              channels: [{ channel: 'default', connectedAt, connectionId: 'e2e-mock-conn' }],
+              connectedAt,
+              deviceId,
+              hostname: 'E2E Mock Device',
+              platform: 'darwin',
+            },
+          ],
+        });
+      }
+
+      // Device dispatch channel: the server hands the gateway an
+      // `agent_run_request`; a real gateway relays it to a connected device
+      // running `lh hetero exec`. The fake gateway plays the device itself —
+      // ack the dispatch, then stream a mock-LLM reply back through the real
+      // hetero ingest pipeline so e2e sends produce a genuine assistant turn.
+      if (req.method === 'POST' && path === '/api/device/agent/run') {
+        return (async () => {
+          const body = (await req.json()) as DeviceAgentRunRequest;
+          if (!body.operationId || !body.jwt) {
+            return json({ error: 'operationId and jwt required' }, 400);
+          }
+          if (body.deviceId) lastDispatchedDeviceId = body.deviceId;
+          void runSyntheticHeteroTurn({
+            llmBaseUrl,
+            orviloBaseUrl,
+            request: body,
+          }).catch((error) => console.error('[e2e-gateway] device turn crashed:', error));
+          return json({ success: true });
+        })();
       }
 
       if (req.method === 'POST' && path === '/api/operations/init') {

@@ -14,6 +14,58 @@ import { expect } from '@playwright/test';
 import { llmMockManager } from '../../mocks/llm';
 import type { CustomWorld } from '../../support/world';
 
+// A send fired while another turn's agent_operation is live gets held
+// client-side until that op goes terminal — under a CI Postgres stall the
+// first turn can run for minutes, and the second conversation's topic row is
+// only created by ITS run, so the sidebar never shows a second topic. Poll pg
+// for the first turn to settle before opening the next topic.
+const LIVE_OP_STATUSES = ['idle', 'running', 'waiting_for_async_tool', 'waiting_for_human'];
+
+async function waitForTurnSettled(world: CustomWorld, prompt: string, sentAt: number) {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    await world.page.waitForTimeout(5_000);
+    return;
+  }
+  const { default: pg } = await import('pg');
+  const client = new pg.Client({
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 10_000,
+  });
+  try {
+    await client.connect();
+  } catch {
+    return;
+  }
+  try {
+    await expect
+      .poll(
+        async () => {
+          try {
+            const res = await client.query(
+              `select o.status from agent_operations o
+               where o.topic_id = (select topic_id from messages
+                                   where role = 'user' and content = $1
+                                     and created_at >= to_timestamp($2 / 1000.0) - interval '15 seconds'
+                                   order by created_at desc limit 1)
+               order by o.started_at desc nulls last limit 1`,
+              [prompt, sentAt],
+            );
+            const status: string | undefined = res.rows[0]?.status;
+            return status && !LIVE_OP_STATUSES.includes(status) ? status : null;
+          } catch {
+            return null;
+          }
+        },
+        { message: `first turn operation never settled for prompt: ${prompt}`, timeout: 150_000 },
+      )
+      .toBeTruthy();
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 // ============================================
 // Given Steps
 // ============================================
@@ -51,7 +103,7 @@ Given('用户已有一个对话', async function (this: CustomWorld) {
   console.log('   ✅ 已创建一个对话');
 });
 
-Given('用户有多个对话历史', { timeout: 180_000 }, async function (this: CustomWorld) {
+Given('用户有多个对话历史', { timeout: 300_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 创建多个对话...');
 
   // Keep the search fixture self-contained. Without a deterministic title,
@@ -76,7 +128,13 @@ Given('用户有多个对话历史', { timeout: 180_000 }, async function (this:
   await chatInputContainer.click();
   await this.page.waitForTimeout(300);
   await this.page.keyboard.type('测试对话内容', { delay: 30 });
+  const firstSentAt = Date.now();
   await this.page.keyboard.press('Enter');
+
+  // The second send is held client-side while the first turn's operation is
+  // live, so its topic would never be created inside the poll window — wait
+  // for this turn to finish before opening the new topic.
+  await waitForTurnSettled(this, '测试对话内容', firstSentAt);
 
   // Store first conversation reference
   this.testContext.firstConversation = 'first';

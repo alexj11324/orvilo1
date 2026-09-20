@@ -82,25 +82,6 @@ const resourceSchemas: Record<string, SchemaObject> = {
     required: ['id', 'name', 'createdAt', 'updatedAt'],
     type: 'object',
   },
-  ChatResponse: {
-    additionalProperties: false,
-    properties: {
-      content: { type: 'string' },
-      model: nullableString,
-      provider: nullableString,
-      usage: {
-        additionalProperties: false,
-        properties: {
-          completion_tokens: { type: ['integer', 'null'] },
-          prompt_tokens: { type: ['integer', 'null'] },
-          total_tokens: { type: ['integer', 'null'] },
-        },
-        type: ['object', 'null'],
-      },
-    },
-    required: ['content'],
-    type: 'object',
-  },
   EvalRun: {
     additionalProperties: false,
     properties: {
@@ -450,28 +431,6 @@ const getSuccessSchema = (group: string, rest: string, method: string): SchemaOb
       required: ['id', 'object', 'output', 'status'],
       type: 'object',
     };
-  }
-
-  if (group === 'chat') {
-    if (rest === 'translate') {
-      return successEnvelope({
-        additionalProperties: false,
-        properties: { translatedText: { type: 'string' } },
-        required: ['translatedText'],
-        type: 'object',
-      });
-    }
-
-    if (rest === 'generate-reply') {
-      return successEnvelope({
-        additionalProperties: false,
-        properties: { reply: { type: 'string' } },
-        required: ['reply'],
-        type: 'object',
-      });
-    }
-
-    return successEnvelope(ref('ChatResponse'));
   }
 
   if (group === 'eval') return successEnvelope(evalResponseSchema(method, rest));

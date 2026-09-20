@@ -71,7 +71,18 @@ export type CollaborationServerMessage =
 // ── Room ticket (authorize response → gateway proof) ───
 
 export const COLLABORATION_TICKET_PURPOSE = 'collaboration-room' as const;
-export const COLLABORATION_TICKET_ISSUER = 'urn:lobehub:internal' as const;
+export const COLLABORATION_TICKET_ISSUER = 'urn:orvilo:internal' as const;
+/**
+ * Pre-P04 issuer value. Verification accepts it alongside the new issuer so
+ * tickets minted before the rename keep working through their short TTL
+ * (dual-read window; drop at P21).
+ */
+export const LEGACY_COLLABORATION_TICKET_ISSUER = 'urn:lobehub:internal' as const;
+/** Issuers accepted at verify time — new first, legacy during the window. */
+export const COLLABORATION_TICKET_ISSUERS: readonly string[] = [
+  COLLABORATION_TICKET_ISSUER,
+  LEGACY_COLLABORATION_TICKET_ISSUER,
+];
 export const COLLABORATION_TICKET_AUDIENCE = 'urn:orvilo:collaboration-gateway' as const;
 
 /** Claims the gateway re-verifies after RS256 validation. */

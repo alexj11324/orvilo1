@@ -170,12 +170,6 @@ export const MessagesCreateRequestSchema = z.object({
   favorite: z.boolean().nullish().default(false), // Whether favorited
 });
 
-export const MessagesCreateWithReplyRequestSchema = MessagesCreateRequestSchema.extend({
-  role: z.literal('user', { error: 'Role must be user when creating an AI reply' }),
-});
-
-export type MessagesCreateWithReplyRequest = z.infer<typeof MessagesCreateWithReplyRequestSchema>;
-
 export interface MessagesUpdateRequest {
   content?: string;
   error?: any;

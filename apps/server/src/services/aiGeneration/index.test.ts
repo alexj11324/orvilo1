@@ -7,7 +7,7 @@ import { AiGenerationService } from './index';
 
 describe('AiGenerationService.generateObject', () => {
   const generateObject = vi.fn();
-  const initSpy = vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB');
+  const initSpy = vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDeploymentConfig');
 
   beforeEach(() => {
     generateObject.mockReset();
@@ -23,7 +23,7 @@ describe('AiGenerationService.generateObject', () => {
       model: 'gpt-4o',
       provider: 'openai',
     });
-    expect(initSpy).toHaveBeenCalledWith({}, 'user-1', 'openai');
+    expect(initSpy).toHaveBeenCalledWith('user-1', 'openai');
   });
 
   it('forwards messages / model / schema / tools / thinking verbatim to the runtime', async () => {

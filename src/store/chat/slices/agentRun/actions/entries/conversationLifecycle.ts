@@ -1635,15 +1635,11 @@ export class ConversationLifecycleActionImpl {
           (heteroContext.topicId
             ? topicSelectors.getTopicById(heteroContext.topicId)(this.#get())
             : undefined) ?? existingTopic;
-        const providerBinding = heterogeneousProvider.authMode === 'api';
-        const { cwdChanged, reason, resumeBindingKey, resumeSessionId } = resolveHeteroResume(
+        const { cwdChanged, reason, resumeSessionId } = resolveHeteroResume(
           topic?.metadata,
           workingDirectory,
           {
-            currentBindingKey: providerBinding
-              ? undefined
-              : getHeteroProviderSessionBindingKey(heterogeneousProvider),
-            providerBinding,
+            currentBindingKey: getHeteroProviderSessionBindingKey(heterogeneousProvider),
           },
         );
         if (cwdChanged) {
@@ -1666,7 +1662,6 @@ export class ConversationLifecycleActionImpl {
           message,
           operationId: heteroOpId,
           pageSelections: effectivePageSelections,
-          resumeBindingKey,
           resumeSessionId,
           workingDirectory,
           workingDirectoryConfig,

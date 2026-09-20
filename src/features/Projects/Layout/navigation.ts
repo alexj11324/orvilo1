@@ -9,7 +9,7 @@ export const getProjectConversationStartPath = (projectId: string, message: stri
 export const getProjectLibraryPath = (projectId: string, libraryId: string) =>
   `/project/${projectId}/library/${libraryId}`;
 
-export const getProjectOverviewPath = (projectId: string) => `/project/${projectId}`;
+export const getProjectOverviewPath = (projectId: string) => `/project/${projectId}/overview`;
 
 export const getProjectTasksPath = (projectId: string) => `/project/${projectId}/tasks`;
 

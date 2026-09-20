@@ -622,13 +622,20 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
+        // Linear shape: a project opens on its issue collection; the chat-composer
+        // overview keeps its own address instead of owning the index.
+        element: redirectElement('tasks'),
+        handle: { meta: projectsRouteMeta },
+        index: true,
+      },
+      {
         element: dynamicElement(
           () => import('@/routes/(main)/project/[projectId]'),
           'Desktop > Project Overview',
           { preloadId: 'project' },
         ),
         handle: { meta: projectsRouteMeta },
-        index: true,
+        path: 'overview',
       },
       {
         element: dynamicElement(

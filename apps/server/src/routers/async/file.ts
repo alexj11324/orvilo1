@@ -17,7 +17,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { fileEnv } from '@/envs/file';
 import { asyncAuthedProcedure, asyncRouter as router } from '@/libs/trpc/async';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { ChunkService } from '@/server/services/chunk';
 import { DocumentService } from '@/server/services/document';
 import { FileService } from '@/server/services/file';
@@ -122,8 +122,7 @@ export const fileRouter = router({
               requestArray,
               async (chunks) => {
                 // Read user's provider config from database
-                const modelRuntime = await initModelRuntimeFromDB(
-                  ctx.serverDB,
+                const modelRuntime = await initModelRuntimeFromDeploymentConfig(
                   ctx.userId,
                   provider,
                   workspaceId,

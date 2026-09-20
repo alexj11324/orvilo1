@@ -2,6 +2,7 @@ import { BRANDING_PROVIDER } from '@orvilo/business-const';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AsyncTaskModel } from '@/database/models/asyncTask';
+import type * as WorkspaceModels from '@/database/models/workspace';
 import { FileService } from '@/server/services/file';
 import { AsyncTaskStatus } from '@/types/asyncTask';
 
@@ -65,14 +66,14 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModels>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 vi.mock('@/database/server', () => ({
   getServerDB: vi.fn().mockResolvedValue(mockServerDB),
 }));
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn().mockResolvedValue({ createVideo: mockCreateVideo }),
+  initModelRuntimeFromDeploymentConfig: vi.fn().mockResolvedValue({ createVideo: mockCreateVideo }),
 }));
 vi.mock('@/business/server/video-generation/chargeBeforeGenerate', () => ({
   chargeBeforeGenerate: vi.fn().mockResolvedValue({ errorBatch: null, prechargeResult: null }),

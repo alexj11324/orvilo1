@@ -1861,7 +1861,6 @@ describe('Generation Actions', () => {
       expect(executeHeterogeneousAgentSpy).toHaveBeenCalledWith(
         expect.any(Function),
         expect.objectContaining({
-          resumeBindingKey: undefined,
           resumeSessionId: 'legacy-session',
           workingDirectory: '/repo',
         }),

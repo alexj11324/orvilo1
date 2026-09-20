@@ -8,7 +8,7 @@ import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { FileModel } from '@/database/models/file';
 import { GenerationModel } from '@/database/models/generation';
 import { GenerationBatchModel } from '@/database/models/generationBatch';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { GenerationService } from '@/server/services/generation';
 
 import { imageRouter } from '../image';
@@ -19,7 +19,7 @@ vi.mock('@/database/models/file', () => ({ FileModel: vi.fn() }));
 vi.mock('@/database/models/generation', () => ({ GenerationModel: vi.fn() }));
 vi.mock('@/database/models/generationBatch', () => ({ GenerationBatchModel: vi.fn() }));
 vi.mock('@/server/services/generation', () => ({ GenerationService: vi.fn() }));
-vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDB: vi.fn() }));
+vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDeploymentConfig: vi.fn() }));
 
 // Business slots.
 vi.mock('@/business/server/getProviderContentPolicyErrorMessage', () => ({
@@ -106,7 +106,7 @@ describe('imageRouter.createImage — model mapping failure reconciles billing',
     vi.mocked(FileModel).mockImplementation(function () {
       return {} as any;
     });
-    vi.mocked(initModelRuntimeFromDB).mockResolvedValue({} as any);
+    vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue({} as any);
 
     // The batch must exist so the route proceeds into the guarded section.
     generationBatchModelMock.findById.mockResolvedValue({ id: 'batch-1', createdAt: new Date() });

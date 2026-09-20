@@ -84,35 +84,14 @@ describe('snapshotAgentModel', () => {
     expect(snapshotAgentModel(id)).toEqual({ model: 'stale-model', provider: 'cursor' });
   });
 
-  it('snapshots a heterogeneous API binding', () => {
-    const id = seedAgent('cursor-api', {
+  it('snapshots only the provider type for a heterogeneous agent without selection', () => {
+    const id = seedAgent('hetero-type-only', {
       agencyConfig: {
-        heterogeneousProvider: {
-          apiConfig: { model: 'claude-sonnet-4-6', providerId: 'anthropic' },
-          authMode: 'api',
-          type: 'cursor',
-        },
+        heterogeneousProvider: { type: 'claude-code' },
       },
     });
 
-    expect(snapshotAgentModel(id)).toEqual({
-      model: 'claude-sonnet-4-6',
-      provider: 'anthropic',
-    });
-  });
-
-  it('keeps a server-default API model Agent-scoped', () => {
-    const id = seedAgent('claude-server-default', {
-      agencyConfig: {
-        heterogeneousProvider: {
-          apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' },
-          authMode: 'api',
-          type: 'claude-code',
-        },
-      },
-    });
-
-    expect(snapshotAgentModel(id)).toEqual({ provider: 'claude-code' });
+    expect(snapshotAgentModel(id)).toEqual({ model: 'default', provider: 'claude-code' });
   });
 
   it('pins nothing when a heterogeneous config carries no type', () => {

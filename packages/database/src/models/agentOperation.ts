@@ -1,12 +1,16 @@
 import {
   type AgentOperationCompletionReason,
+  type AgentOperationLaunchStatus,
   type AgentOperationStatus,
+  LIVE_AGENT_OPERATION_LAUNCH_STATUSES,
   type VerifyRunStatus,
 } from '@orvilo/types';
-import { and, desc, eq, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { today } from '@/utils/time';
 
+import type { AgentOperationLaunchItem } from '../schemas/agentOperationLaunch';
+import { agentOperationLaunches } from '../schemas/agentOperationLaunch';
 import type {
   AgentOperationAppContext,
   AgentOperationError,
@@ -484,6 +488,154 @@ export class AgentOperationModel {
       .orderBy(desc(agentOperations.createdAt))
       .limit(1);
     return operation ?? null;
+  }
+
+  /**
+   * Atomically register a judgment launch BEFORE any external side effect —
+   * the admission record behind every `runAcpJudgment` dispatch. The unique
+   * key is (principal, workspace, purpose, intentKey, attempt); a conflicting
+   * key returns `claimed:false` plus the existing row, so the caller adopts or
+   * reconciles it instead of spawning a second writer.
+   */
+  async claimOperationLaunch(input: {
+    attempt: number;
+    deadlineAt?: Date;
+    intentKey: string;
+    purpose: string;
+  }): Promise<{ claimed: boolean; launch: AgentOperationLaunchItem }> {
+    const [inserted] = await this.db
+      .insert(agentOperationLaunches)
+      .values({
+        attempt: input.attempt,
+        deadlineAt: input.deadlineAt,
+        intentKey: input.intentKey,
+        purpose: input.purpose,
+        userId: this.userId,
+        workspaceId: this.workspaceId ?? null,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (inserted) return { claimed: true, launch: inserted };
+
+    const existing = await this.findOperationLaunchByKey(input);
+    if (!existing) {
+      throw new Error(
+        `agent_operation_launches unique conflict for intent ${input.intentKey} resolved to no row`,
+      );
+    }
+    return { claimed: false, launch: existing };
+  }
+
+  /**
+   * Launch rows are principal-scoped: the unique key pins `user_id` plus the
+   * workspace slot, so workspace members can never adopt or reconcile each
+   * other's launches.
+   */
+  private launchOwnership = () =>
+    and(
+      eq(agentOperationLaunches.userId, this.userId),
+      this.workspaceId === undefined
+        ? isNull(agentOperationLaunches.workspaceId)
+        : eq(agentOperationLaunches.workspaceId, this.workspaceId),
+    );
+
+  /** Look up a launch by its natural identity (same key the unique index covers). */
+  async findOperationLaunchByKey(input: {
+    attempt: number;
+    intentKey: string;
+    purpose: string;
+  }): Promise<AgentOperationLaunchItem | null> {
+    const [row] = await this.db
+      .select()
+      .from(agentOperationLaunches)
+      .where(
+        and(
+          this.launchOwnership(),
+          eq(agentOperationLaunches.purpose, input.purpose),
+          eq(agentOperationLaunches.intentKey, input.intentKey),
+          eq(agentOperationLaunches.attempt, input.attempt),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findOperationLaunchById(id: string): Promise<AgentOperationLaunchItem | null> {
+    const [row] = await this.db
+      .select()
+      .from(agentOperationLaunches)
+      .where(and(eq(agentOperationLaunches.id, id), this.launchOwnership()))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /**
+   * Bind the operation that landed for a live launch. CAS on
+   * `claimed|dispatched` so a cancel that already recorded intent is never
+   * overwritten — returns the updated row, or null when the launch already
+   * moved past dispatch.
+   */
+  async bindOperationLaunch(
+    launchId: string,
+    operationId: string,
+  ): Promise<AgentOperationLaunchItem | null> {
+    const [row] = await this.db
+      .update(agentOperationLaunches)
+      .set({ operationId, status: 'dispatched' })
+      .where(
+        and(
+          eq(agentOperationLaunches.id, launchId),
+          inArray(agentOperationLaunches.status, ['claimed', 'dispatched']),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /**
+   * Persist a durable cancel intent on a live launch — survives the caller's
+   * process dying; reconcile then interrupts whatever operation lands.
+   */
+  async requestOperationLaunchCancel(
+    launchId: string,
+    reason: string,
+  ): Promise<AgentOperationLaunchItem | null> {
+    const [row] = await this.db
+      .update(agentOperationLaunches)
+      .set({ cancelReason: reason, status: 'cancel_requested' })
+      .where(
+        and(
+          eq(agentOperationLaunches.id, launchId),
+          inArray(agentOperationLaunches.status, ['claimed', 'dispatched']),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /**
+   * Terminal write on a launch: 'settled' when the run produced a terminal
+   * operation (the outcome is re-derived from the op row), 'failed' when the
+   * launch never produced a usable writer. Cancel intent still resolves to
+   * 'failed'; 'settled' only applies while the launch is live.
+   */
+  async settleOperationLaunch(
+    launchId: string,
+    status: 'failed' | 'settled',
+  ): Promise<AgentOperationLaunchItem | null> {
+    const allowed: readonly AgentOperationLaunchStatus[] =
+      status === 'settled' ? ['claimed', 'dispatched'] : LIVE_AGENT_OPERATION_LAUNCH_STATUSES;
+    const [row] = await this.db
+      .update(agentOperationLaunches)
+      .set({ status })
+      .where(
+        and(
+          eq(agentOperationLaunches.id, launchId),
+          inArray(agentOperationLaunches.status, allowed),
+        ),
+      )
+      .returning();
+    return row ?? null;
   }
 
   /** Match a server-minted turn identity when a diagnostic dispatch receipt was lost. */

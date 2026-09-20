@@ -969,12 +969,37 @@ describe('persisted dispatch origin + final admission re-check (SA05-B)', () => 
     const task = await seedAssigned('ORG-1', 50);
     const model = new TaskDispatchModel(db, workspaceId);
 
+    // An `internal` claim only persists with a bound grant: the source
+    // dispatch must exist on this task's current delivery chain (SB09).
+    await db.update(tasks).set({ executionGeneration: 1 }).where(eq(tasks.id, task.id));
+    await db.insert(taskDispatches).values({
+      generation: 1,
+      id: 'dsp-src',
+      idempotencyKey: 'manual:org-1-src',
+      phase: 'succeeded',
+      policyRevision: 0,
+      requestedBy: `manual:${userId}`,
+      requirementRevision: 0,
+      taskId: task.id,
+      taskRevision: 0,
+      workspaceId,
+    });
+    task.executionGeneration = 1;
+
+    const settlementGrant = {
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      kind: 'integration_seed' as const,
+      sourceDispatchId: 'dsp-src',
+      sourceGeneration: 1,
+      sourceTopicId: 'tpc_src',
+      workspaceId,
+    };
     const requested = await model.request({
       idempotencyKey: 'orchestrator:ORG-1:settle-1',
       initiator: 'user-actor-9',
       origin: 'internal',
       requestedBy: 'planner',
-      settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+      settlementGrant,
       sourceDispatchId: 'dsp-src',
       taskId: task.id,
       trigger: 'orchestrator',
@@ -985,7 +1010,7 @@ describe('persisted dispatch origin + final admission re-check (SA05-B)', () => 
       initiator: 'user-actor-9',
       origin: 'internal',
       requestedBy: 'orchestrator:planner',
-      settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+      settlementGrant,
       sourceDispatchId: 'dsp-src',
     });
 

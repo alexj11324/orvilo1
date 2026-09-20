@@ -12,6 +12,7 @@ import type {
 import {
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
+  TaskDispatchSettlementGrantError,
 } from '@/database/models/taskDispatch';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -112,6 +113,12 @@ export class TaskDispatchService {
       });
     } catch (error) {
       if (error instanceof TaskDispatchIdempotencyConflictError) {
+        throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
+      }
+      if (error instanceof TaskDispatchSettlementGrantError) {
+        // A stale settlement grant is a hard rejection — the run must
+        // re-enter as `external` (facing normal admission) rather than
+        // inherit an internal claim it can no longer prove (SB09).
         throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
       }
       throw error;

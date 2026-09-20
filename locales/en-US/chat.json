@@ -1707,6 +1707,8 @@
   "taskDetail.openDetail": "Open detail",
   "taskDetail.openRunChat": "Open this run’s conversation",
   "taskDetail.pauseTask": "Pause task",
+  "taskDetail.pendingContractEdits.content": "The goal or acceptance changed after contract revision {{revision}} was adopted. Running now uses the frozen contract; the edits stay pending until an approved replan adopts them.",
+  "taskDetail.pendingContractEdits.title": "Constraints changed since the last run",
   "taskDetail.prerequisites.active": "Pause or reopen this task before adding an unfinished prerequisite.",
   "taskDetail.prerequisites.add": "Add",
   "taskDetail.prerequisites.blocked": "Blocked until every prerequisite is completed.",

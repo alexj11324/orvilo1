@@ -10,6 +10,7 @@ import type {
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
+  TaskRunIntent,
   TaskRunTrigger,
   TaskTopicIntegration,
   WorkingDirConfig,
@@ -24,7 +25,7 @@ import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
-import { AgentDelegationService } from '@/server/services/agentDelegation';
+import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
   type PreparedTaskDispatch,
@@ -41,6 +42,13 @@ import { taskRunIdempotencyKey } from './idempotency';
 
 const log = debug('task-runner');
 const RUN_KICKOFF_CLAIM_TTL_MS = 15 * 60 * 1000;
+/**
+ * Bounded window a minted settlement grant may be exercised within (SB09):
+ * corrective/settlement runs dispatch seconds after their source delivery —
+ * a grant that outlived this window is stale evidence, re-enters as
+ * `external`, and faces the normal admission boundary.
+ */
+const SETTLEMENT_GRANT_TTL_MS = 30 * 60 * 1000;
 
 export interface RunTaskParams {
   continueTopicId?: string;
@@ -62,14 +70,18 @@ export interface RunTaskParams {
    */
   integrationSeed?: TaskTopicIntegration;
   /**
-   * Run intent (SA05-A): `continue` resumes the continued topic's frozen
-   * contract (implied by `continueTopicId`); `repair` — the default —
-   * re-executes the immutable source contract for a new attempt, so live
-   * Task edits cannot silently rewrite a repair's constraints;
-   * `authorized_replan` rebuilds constraints from the live task and writes
-   * a new contract revision, which requires `replanApprovedBy`.
+   * Run intent (SA05-A/SB08): `continue` resumes the continued topic's frozen
+   * contract (implied by `continueTopicId`); `repair` re-executes the
+   * immutable source contract for a new attempt, so live Task edits cannot
+   * silently rewrite a repair's constraints; `authorized_replan` rebuilds
+   * constraints from the live task under a consumed task-replan approval,
+   * which requires `replanApprovalId`.
+   *
+   * A manual call that omits `intent` while the live constraints drifted
+   * from the source contract is ambiguous and conflicts — old clients must
+   * name the contract they mean instead of silently adopting old or new.
    */
-  intent?: 'authorized_replan' | 'continue' | 'repair';
+  intent?: TaskRunIntent;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
   /** Parent delivery operation for internal corrective runs. */
@@ -78,14 +90,22 @@ export interface RunTaskParams {
   /** Atomically transfer a completion lease into this continuation dispatch. */
   replaceReservationId?: string;
   /**
-   * Explicit approver identity required when `intent` is
-   * `authorized_replan` — the evidence that changed constraints may write
-   * a new contract revision instead of executing the frozen source.
+   * `action_approvals` row consumed by an `authorized_replan` — the
+   * single-use server-side grant this run mints its new contract revision
+   * from. The approver identity, target binding and base revision are read
+   * off the row; the API never accepts a caller-supplied approver string as
+   * evidence.
    */
-  replanApprovedBy?: string;
+  replanApprovalId?: string;
   requestedBy?: string;
   /** Internal corrective runs stay bound to the original task Verify plan. */
   skipTaskVerification?: boolean;
+  /**
+   * Pin the exact contract this repair/replan descends from — names the
+   * delivery being repaired instead of inferring it from the latest seq.
+   * Unknown ids are rejected; callers that never ran this task simply omit it.
+   */
+  sourceContractId?: string;
   taskId: string;
   /**
    * What triggered this run. Defaults to `'manual'` — the ad-hoc "run now"
@@ -111,6 +131,21 @@ export interface RunTaskParams {
 }
 
 export interface RunTaskResult extends ExecAgentResult {
+  /** The contract this run adopted — what the caller must see to know which
+   * constraints executed, including whether live edits stayed pending. */
+  contract?: {
+    contractId?: string;
+    /**
+     * `'pending'` — the task's live constraint edits exist but this run
+     * re-executed the frozen source contract (continue/repair).
+     * `'adopted'` — an authorized replan folded them into this revision.
+     * `'none'` — constraints matched the source contract.
+     */
+    constraintEdits: 'adopted' | 'none' | 'pending';
+    intent: TaskRunIntent;
+    revision?: number;
+    sourceContractId?: string;
+  };
   taskId: string;
   taskIdentifier: string;
 }
@@ -163,8 +198,9 @@ export class TaskRunnerService {
       parentOperationId,
       planRevision,
       replaceReservationId,
-      replanApprovedBy,
+      replanApprovalId,
       requestedBy = this.userId,
+      sourceContractId,
       skipTaskVerification,
       trigger = 'manual',
       workspaceOverride,
@@ -377,21 +413,137 @@ export class TaskRunnerService {
       const continuedTopic = continueTopicId
         ? existingTopics.find((topic) => topic.topicId === continueTopicId)
         : undefined;
-
-      // Contract lineage + run intent (SA05-A): `sourceContractId` names the
-      // immutable source this run descends from — the continued topic's
-      // contract for continuations, the latest attempt's contract otherwise.
-      const priorContract = (continuedTopic?.contract ??
-        [...existingTopics].sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0)).find((t) => t.contract)
-          ?.contract) as TaskExecutionContract | undefined;
-      const runIntent = continueTopicId ? 'continue' : (intent ?? 'repair');
-      if (runIntent === 'authorized_replan' && !replanApprovedBy) {
-        // Constraint changes write a new contract revision — that is only
-        // admissible with explicit approval, never as a silent side effect
-        // of editing the live task and re-running it.
+      if (continueTopicId && !continuedTopic) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'authorized_replan requires replanApprovedBy.',
+          message: `Topic ${continueTopicId} is not part of this task.`,
+        });
+      }
+      if (intent && intent !== 'continue' && continueTopicId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'continueTopicId already implies intent "continue".',
+        });
+      }
+      if (intent === 'continue' && !continueTopicId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'intent "continue" requires continueTopicId.',
+        });
+      }
+      if (continueTopicId && sourceContractId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'sourceContractId only applies to repair/replan intents.',
+        });
+      }
+
+      // Contract lineage + run intent (SB08): `sourceContractId` names the
+      // immutable source this run descends from — the continued topic's
+      // contract for continuations; for repairs the caller may pin the exact
+      // delivery being repaired, and only without a pin does the historical
+      // latest-seq contract apply.
+      const priorContract = (
+        continueTopicId
+          ? continuedTopic?.contract
+          : sourceContractId
+            ? existingTopics.find((t) => t.contract?.contractId === sourceContractId)?.contract
+            : [...existingTopics]
+                .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
+                .find((t) => t.contract)?.contract
+      ) as TaskExecutionContract | undefined;
+      if (sourceContractId && !priorContract) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `sourceContractId "${sourceContractId}" does not name a contract of this task.`,
+        });
+      }
+      const runIntent: TaskRunIntent = continueTopicId ? 'continue' : (intent ?? 'repair');
+
+      // Constraint drift vs the source contract's version pins. Older
+      // contracts missing a pin count as drifted — an unverifiable pin is
+      // never proof the constraints still match.
+      const constraintDrift =
+        priorContract !== undefined &&
+        (priorContract.versions?.requirementRevision !== task.requirementRevision ||
+          priorContract.versions?.policyRevision !== task.policyRevision);
+
+      // Ambiguity gate (SB08): a manual caller that never named an intent
+      // must not silently re-execute a contract whose pinned revisions
+      // drifted from the live task — edits are either explicitly repaired
+      // (frozen) or adopted through an authorized replan.
+      if (trigger === 'manual' && !continueTopicId && intent === undefined && constraintDrift) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            `Task constraints changed since contract revision ${priorContract!.revision ?? '?'} was adopted. ` +
+            'Retry with intent "repair" to re-run the frozen contract, or intent "authorized_replan" with a replanApprovalId to adopt the edits.',
+        });
+      }
+
+      // authorized_replan consumes a task-scoped action approval — the
+      // approver identity, target binding and base revision are all read off
+      // the consumed row. A caller-supplied approver string is never evidence.
+      let replanEvidence: TaskExecutionContract['replan'] | undefined;
+      if (runIntent === 'authorized_replan') {
+        if (!replanApprovalId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'authorized_replan requires replanApprovalId.',
+          });
+        }
+        const approval = await new ActionApprovalService(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).consume(replanApprovalId);
+        if (!approval) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Replan approval is missing, undecided, or already consumed.',
+          });
+        }
+        if (
+          approval.actionType !== 'task.replan' ||
+          approval.targetType !== 'task' ||
+          approval.targetId !== task.id ||
+          approval.workspaceId !== (task.workspaceId ?? null)
+        ) {
+          // The grant is consumed regardless — an approval minted for another
+          // target must never be replayable here.
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Replan approval does not target this task.',
+          });
+        }
+        if (approval.expiresAt && new Date(approval.expiresAt).getTime() <= Date.now()) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Replan approval expired.' });
+        }
+        if (approval.baseVersion != null && approval.baseVersion !== task.requirementRevision) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Replan approval was granted against an older constraint revision.',
+          });
+        }
+        if (!approval.approverUserId) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Replan approval has no recorded approver.',
+          });
+        }
+        replanEvidence = { approvalId: approval.id, approvedBy: approval.approverUserId };
+      }
+
+      // A settlement grant is also bounded on intent: the repair kinds it
+      // authorizes were minted with the evidence, so a takeover grant can
+      // never be stretched into a different claim kind.
+      if (
+        settlement?.grant?.allowedIntents &&
+        !settlement.grant.allowedIntents.includes(runIntent)
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Settlement evidence does not authorize intent "${runIntent}".`,
         });
       }
 
@@ -565,6 +717,29 @@ export class TaskRunnerService {
         workingDirectory: initialWorkingDirectory ?? initialWorkingDirectoryConfig?.path,
       };
 
+      // Server-derived diff for an authorized replan — which constraint
+      // fields the new contract actually changed vs the source it descends
+      // from. The caller never supplies this; it is computed from the two
+      // contract contents.
+      if (replanEvidence) {
+        const changedFields: string[] = [];
+        if (priorContract?.content?.instruction !== contractContent.instruction) {
+          changedFields.push('instruction');
+        }
+        if (
+          JSON.stringify(priorContract?.content?.verify) !== JSON.stringify(contractContent.verify)
+        ) {
+          changedFields.push('verify');
+        }
+        if (
+          JSON.stringify(priorContract?.content?.dependencies) !==
+          JSON.stringify(contractContent.dependencies)
+        ) {
+          changedFields.push('dependencies');
+        }
+        replanEvidence.changedFields = changedFields;
+      }
+
       // Freeze the run contract alongside the environment snapshot — retries,
       // continuations and corrective runs rebind to this persisted row rather
       // than re-deriving constraints from mutable task config.
@@ -579,8 +754,21 @@ export class TaskRunnerService {
         goalLoop,
         grantId: delegation?.grantId,
         integration: runIntegration,
+        intent: runIntent,
+        replan: replanEvidence,
         tools: pluginIds,
       });
+      // What the caller must see: which contract ran and whether live
+      // constraint edits were adopted (replan), left pending (repair), or
+      // absent — the run never silently ignores an edit.
+      const contractResult: NonNullable<RunTaskResult['contract']> = {
+        constraintEdits:
+          runIntent === 'authorized_replan' ? 'adopted' : constraintDrift ? 'pending' : 'none',
+        contractId: executionContract.contractId,
+        intent: runIntent,
+        revision: executionContract.revision,
+        sourceContractId: executionContract.sourceContractId,
+      };
 
       log('runTask: %s (continue=%s)', taskIdentifier, continueTopicId);
 
@@ -805,6 +993,7 @@ export class TaskRunnerService {
         ownsKickoffClaim = false;
         return {
           ...result,
+          contract: contractResult,
           taskId: task.id,
           taskIdentifier: task.identifier,
         };
@@ -902,6 +1091,7 @@ export class TaskRunnerService {
 
       return {
         ...result,
+        contract: contractResult,
         taskId: task.id,
         taskIdentifier: task.identifier,
       };
@@ -1110,15 +1300,57 @@ export class TaskRunnerService {
     task: TaskItem;
   }): Promise<{ grant: TaskDispatchSettlementGrant; sourceDispatchId?: string } | undefined> {
     const { integrationSeed, parentOperationId, replaceReservationId, task } = params;
+    const now = Date.now();
 
     // Reservation takeover: the caller must present the task's live run
-    // reservation — the token the completing run is handing off.
+    // reservation — the token the completing run is handing off. String
+    // equality alone is not enough: an expired reservation is stale evidence,
+    // rejected the same as a wrong token (SB09).
     if (replaceReservationId && task.runReservationId === replaceReservationId) {
-      return { grant: { kind: 'reservation_takeover' } };
+      const expiresAt = task.runReservationExpiresAt
+        ? new Date(task.runReservationExpiresAt).getTime()
+        : null;
+      if (expiresAt == null || expiresAt <= now) return undefined;
+      return {
+        grant: {
+          allowedIntents: ['continue', 'repair'],
+          expiresAt: new Date(expiresAt).toISOString(),
+          kind: 'reservation_takeover',
+          reservationId: replaceReservationId,
+          workspaceId: task.workspaceId ?? null,
+        },
+      };
     }
 
     if (!integrationSeed?.runTopicId && !parentOperationId) return undefined;
     const rows = await this.taskTopicModel.findByTaskId(task.id).catch(() => []);
+
+    // A grant binds the CURRENT delivery chain: the source must be a
+    // dispatched topic of this task whose executionGeneration is still the
+    // task's current generation. Anything older is historical evidence —
+    // rejected as stale rather than minted as internal authority (SB09).
+    const boundGrant = (
+      kind: 'integration_seed' | 'parent_operation',
+      source: (typeof rows)[number],
+      sourceOperationId: string | undefined,
+    ): { grant: TaskDispatchSettlementGrant; sourceDispatchId?: string } | undefined => {
+      if (!source.topicId || !source.dispatchId) return undefined;
+      if (source.executionGeneration !== task.executionGeneration) return undefined;
+      return {
+        grant: {
+          allowedIntents: ['repair'],
+          budget: { maxRounds: source.contract?.budget?.maxRounds ?? null },
+          expiresAt: new Date(now + SETTLEMENT_GRANT_TTL_MS).toISOString(),
+          kind,
+          sourceDispatchId: source.dispatchId,
+          sourceGeneration: source.executionGeneration ?? undefined,
+          sourceOperationId,
+          sourceTopicId: source.topicId,
+          workspaceId: task.workspaceId ?? null,
+        },
+        sourceDispatchId: source.dispatchId,
+      };
+    };
 
     // Integration seed: must name an existing topic of this task that
     // already carries an integration record — the row being corrected.
@@ -1126,15 +1358,9 @@ export class TaskRunnerService {
       const source = rows.find(
         (row) => row.topicId === integrationSeed.runTopicId && row.integration != null,
       );
-      if (source?.topicId) {
-        return {
-          grant: {
-            kind: 'integration_seed',
-            sourceOperationId: source.operationId ?? undefined,
-            sourceTopicId: source.topicId,
-          },
-          sourceDispatchId: source.dispatchId ?? undefined,
-        };
+      if (source) {
+        const bound = boundGrant('integration_seed', source, source.operationId ?? undefined);
+        if (bound) return bound;
       }
     }
 
@@ -1142,15 +1368,9 @@ export class TaskRunnerService {
     // of this same task.
     if (parentOperationId) {
       const parent = rows.find((row) => row.operationId === parentOperationId);
-      if (parent?.topicId) {
-        return {
-          grant: {
-            kind: 'parent_operation',
-            sourceOperationId: parentOperationId,
-            sourceTopicId: parent.topicId,
-          },
-          sourceDispatchId: parent.dispatchId ?? undefined,
-        };
+      if (parent) {
+        const bound = boundGrant('parent_operation', parent, parentOperationId);
+        if (bound) return bound;
       }
     }
     return undefined;

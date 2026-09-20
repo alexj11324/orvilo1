@@ -185,49 +185,79 @@ export const runSyntheticHeteroTurn = async (params: {
       ingestWorkspaceId,
     );
 
-    let reply: string;
-    try {
-      // Collect the full mock reply first, then ship the stream in ONE ingest
-      // batch. A separate ingest call per delta costs a full persistence flush
-      // each (~700ms), and the ~750ms gap lets the client's text-settle poll
-      // declare the reply "done" mid-stream — the next send then queues behind
-      // the still-running turn. Ingest batches events atomically while the
-      // publish fan-out stays per-event, so the UI still sees progression.
-      reply = await fetchMockReply(llmBaseUrl, prompt ?? '', async () => {});
-    } catch (error) {
-      console.error('[e2e-gateway] mock LLM reply failed, using canned text:', error);
-      reply = 'E2E mock reply';
-    }
-
-    const events: StreamEvent[] = [];
-    if (reply) {
-      // ~12 snapshots keep the burst granular without a per-event flush cost.
-      const segments = Math.min(12, Math.max(1, Math.ceil(reply.length / 200)));
-      const step = Math.ceil(reply.length / segments);
-      for (let index = 0; index < segments; index++) {
-        const content = reply.slice(0, (index + 1) * step);
-        events.push(
-          makeEvent(operationId, 'stream_chunk', {
-            chunkType: 'text',
-            content,
-            snapshotMode: 'replace',
-            snapshotSeq: index + 1,
-          }),
-        );
-      }
-    }
-    events.push(
+    // Stream the reply the way a real device does: pump one `stream_chunk`
+    // `replace` snapshot per ingest as mock-LLM deltas land. An ingest call
+    // costs a full persistence+publish flush (~700ms), so the pump's natural
+    // cadence resembles live token streaming — small early snapshots, growing
+    // later ones — which is what the pin-scroll journeys need: text arriving
+    // in a single burst collapses the bottom-compensation spacer in one frame
+    // (recorded as "jump") instead of sliding across frames.
+    const terminal = [
       makeEvent(operationId, 'stream_end', {}),
       makeEvent(operationId, 'visible_output_end', {}),
       makeEvent(operationId, 'agent_runtime_end', {}),
-    );
-    await trpcWithRetry(
-      orviloBaseUrl,
-      jwt,
-      'aiAgent.heteroIngest',
-      ingestInput(events),
-      ingestWorkspaceId,
-    );
+    ];
+    let latest = '';
+    let streamDone = false;
+    let streamError: unknown;
+    const replyPromise = fetchMockReply(llmBaseUrl, prompt ?? '', async (full) => {
+      latest = full;
+    })
+      .then(() => {
+        streamDone = true;
+      })
+      .catch((error) => {
+        streamError = error;
+        streamDone = true;
+      });
+
+    let lastSentLength = 0;
+    let snapshotSeq = 0;
+    let terminalSent = false;
+    while (!streamDone || latest.length > lastSentLength) {
+      const end = latest.length;
+      if (end === lastSentLength) {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        continue;
+      }
+      snapshotSeq += 1;
+      const events: StreamEvent[] = [
+        makeEvent(operationId, 'stream_chunk', {
+          chunkType: 'text',
+          content: latest.slice(0, end),
+          snapshotMode: 'replace',
+          snapshotSeq,
+        }),
+      ];
+      // Attach terminal events to the final chunk once the stream is over so
+      // they cannot interleave with later chunks across separate calls.
+      const isFinal = streamDone;
+      if (isFinal) {
+        events.push(...terminal);
+        terminalSent = true;
+      }
+      await trpcWithRetry(
+        orviloBaseUrl,
+        jwt,
+        'aiAgent.heteroIngest',
+        ingestInput(events),
+        ingestWorkspaceId,
+      );
+      lastSentLength = end;
+    }
+    if (streamError) {
+      throw streamError;
+    }
+    if (!terminalSent) {
+      await trpcWithRetry(
+        orviloBaseUrl,
+        jwt,
+        'aiAgent.heteroIngest',
+        ingestInput(terminal),
+        ingestWorkspaceId,
+      );
+    }
+    await replyPromise;
 
     await trpcWithRetry(
       orviloBaseUrl,

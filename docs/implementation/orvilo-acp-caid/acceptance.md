@@ -163,7 +163,9 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 ## 10. R11 固定 SHA 验收（进行中）
 
-**整合 SHA（终态冻结）**: `88284c85` —— `release/caid-remediation-integration`（P00–P21 + R00–R10 + R05/R09/R08 全部整改）合并进 `test/live-acp-caid-and-release-readiness`。R08 在最终树上并入后复核：`apps/server` 作用域 tsc = **302** 条 = 基线零新增；新增 `judgment.test.ts` 18/18 通过。
+**整合 SHA（终态冻结）**: `12e2a017` —— `release/caid-remediation-integration`（P00–P21 + R00–R11 + SA01–SA08 全部整改）合并进 `test/live-acp-caid-and-release-readiness`（合并 tip `6b463093`）。合并树复核：受影响套件（agentExecution + aiAgent + quota 摄取）579/579 绿；`apps/server` 作用域 tsc = **302** 条 = 基线零新增。
+
+SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/fence/merge-intent、SA05 contract 链 + CAID claim 准入、SA06 durable 状态权威 + judgment 加固、SA07 quota 身份撤销 + principal/workspace 信任键、SA02/SA04 外部工具授权 pins + 子结果 ACK 账本（CI 修复含 jsonb coalesce 哨兵、`pins` 断言、judgment binding mock）。SA09 真机验收保持 BLOCKED（环境缺位）。
 
 ### 10.1 逐诊断 typecheck 对比（非总数免检）
 

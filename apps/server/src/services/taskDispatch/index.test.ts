@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
@@ -19,6 +19,13 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { TaskDispatchService, TaskDispatchWaitingError } from './index';
 
+vi.mock('@/server/featureFlags/caidAdmission', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...(actual as Record<string, unknown>), isCaidDispatchAllowed: vi.fn(async () => true) };
+});
+
+const { isCaidDispatchAllowed } = await import('@/server/featureFlags/caidAdmission');
+
 const db: OrviloDatabase = await getTestDB();
 const userId = 'task-dispatch-service-user';
 const workspaceId = 'task-dispatch-service-workspace';
@@ -33,6 +40,7 @@ const cleanup = async () => {
 };
 
 beforeEach(async () => {
+  vi.mocked(isCaidDispatchAllowed).mockResolvedValue(true);
   await cleanup();
   await db.insert(users).values({ id: userId });
   await db.insert(workspaces).values({
@@ -102,6 +110,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'linear:auto:LIN-1',
         requestedBy: 'linear-installation-1',
         task,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
@@ -128,6 +137,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'schedule:SCH-1:2026-09-16T16:00:00Z',
         requestedBy: userId,
         task,
+        origin: 'external',
         trigger: 'schedule',
       }),
     ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
@@ -151,6 +161,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'manual:MAN-1:request-1',
         requestedBy: userId,
         task,
+        origin: 'external',
         trigger: 'manual',
       }),
     ).resolves.toMatchObject({ dispatch: { agentId: null, phase: 'claimed' } });
@@ -184,6 +195,7 @@ describe('TaskDispatchService', () => {
       idempotencyKey: 'manual:CURRENT-1:request-1',
       requestedBy: userId,
       task: staleTask,
+      origin: 'external',
       trigger: 'manual',
     });
 
@@ -210,6 +222,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'orchestrator:REPAIR-1:plan-1',
         requestedBy: 'planning:first',
         task,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
@@ -229,6 +242,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'orchestrator:REPAIR-1:plan-2',
         requestedBy: 'planning:second',
         task: repaired,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).resolves.toMatchObject({
@@ -262,6 +276,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-1:revision-1',
         requestedBy: 'planner',
         task,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).rejects.toMatchObject({
@@ -287,6 +302,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-1:revision-1',
         requestedBy: 'planner',
         task,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
@@ -311,6 +327,7 @@ describe('TaskDispatchService', () => {
       idempotencyKey: 'policy:POL-1B:revision-1',
       requestedBy: 'planner',
       task,
+      origin: 'caid',
       trigger: 'orchestrator',
     });
     await service.transition(prepared, { expected: ['claimed'], phase: 'provisioning' });
@@ -363,6 +380,7 @@ describe('TaskDispatchService', () => {
       idempotencyKey: 'policy:POL-2:revision-1',
       requestedBy: 'planner',
       task: firstTask,
+      origin: 'caid',
       trigger: 'orchestrator',
     });
     await expect(
@@ -370,6 +388,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-3:revision-1',
         requestedBy: 'planner',
         task: secondTask,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).rejects.toMatchObject({ message: 'project_concurrency_limit' });
@@ -386,6 +405,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-3:revision-1',
         requestedBy: 'planner',
         task: secondTask,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
@@ -427,6 +447,7 @@ describe('TaskDispatchService', () => {
           idempotencyKey: key,
           requestedBy: 'planner',
           task,
+          origin: 'caid',
           trigger: 'orchestrator',
         }),
       ).rejects.toMatchObject({ message: 'project_auto_dispatch_disabled' });
@@ -441,6 +462,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-4:revision-1',
         requestedBy: 'planner',
         task: firstTask,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).resolves.toMatchObject({ dispatch: { phase: 'claimed' } });
@@ -466,6 +488,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-6:revision-1',
         requestedBy: 'planner',
         task,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).rejects.toMatchObject({ message: 'Task has no eligible execution Agent' });
@@ -483,6 +506,7 @@ describe('TaskDispatchService', () => {
         idempotencyKey: 'policy:POL-6:revision-1',
         requestedBy: 'planner',
         task,
+        origin: 'caid',
         trigger: 'orchestrator',
       }),
     ).rejects.toMatchObject({ message: 'project_auto_dispatch_disabled' });
@@ -544,6 +568,7 @@ describe('TaskDispatchService', () => {
           idempotencyKey: `policy:${nextTask.identifier}:revision-1`,
           requestedBy: 'planner',
           task: nextTask,
+          origin: 'caid',
           trigger: 'orchestrator',
         }),
       ).rejects.toMatchObject({ message: expectedReason });
@@ -594,6 +619,7 @@ describe('TaskDispatchService', () => {
       await expect(
         new TaskDispatchService(db, workspaceId).prepare({
           idempotencyKey: `${trigger}:${nextTask.id}:tick-1`,
+          origin: 'external',
           requestedBy: 'scheduler',
           task: nextTask,
           trigger,
@@ -601,4 +627,99 @@ describe('TaskDispatchService', () => {
       ).rejects.toMatchObject({ message: 'project_run_budget_exhausted' });
     },
   );
+
+  describe('CAID admission at the claim boundary (F12/J01–J02)', () => {
+    const seedAssignedTask = async (identifier: string) => {
+      await db.insert(agents).values({ id: `agent-${identifier}`, userId, workspaceId });
+      const [task] = await db
+        .insert(tasks)
+        .values({
+          assigneeAgentId: `agent-${identifier}`,
+          createdByUserId: userId,
+          identifier,
+          instruction: 'Orchestrated follow-on',
+          seq: 20,
+          workspaceId,
+        })
+        .returning();
+      return task;
+    };
+
+    it('J02 — holds a new CAID claim when admission is off at the final boundary', async () => {
+      vi.mocked(isCaidDispatchAllowed).mockResolvedValue(false);
+      const task = await seedAssignedTask('CAID-HOLD-1');
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: 'orchestrator:CAID-HOLD-1:cascade-1',
+          origin: 'caid',
+          requestedBy: userId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
+
+      const [dispatch] = await db.select().from(taskDispatches);
+      expect(dispatch).toMatchObject({
+        phase: 'waiting',
+        waitingReason: 'caid_dispatch_disabled',
+      });
+    });
+
+    it('J01 — a manual/external claim is unaffected while CAID admission is off', async () => {
+      vi.mocked(isCaidDispatchAllowed).mockResolvedValue(false);
+      const task = await seedAssignedTask('MANUAL-1');
+
+      const prepared = await new TaskDispatchService(db, workspaceId).prepare({
+        idempotencyKey: 'manual:MANUAL-1:request-1',
+        origin: 'external',
+        requestedBy: userId,
+        task,
+        trigger: 'manual',
+      });
+      expect(prepared.dispatch.phase).toBe('claimed');
+      expect(isCaidDispatchAllowed).not.toHaveBeenCalled();
+    });
+
+    it('J02 — a held dispatch re-parks while off and resumes once admission turns on', async () => {
+      const task = await seedAssignedTask('CAID-RESUME-1');
+      const service = new TaskDispatchService(db, workspaceId);
+
+      vi.mocked(isCaidDispatchAllowed).mockResolvedValue(false);
+      await expect(
+        service.prepare({
+          idempotencyKey: 'orchestrator:CAID-RESUME-1:cascade-1',
+          origin: 'caid',
+          requestedBy: userId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
+
+      // Still off: the replayed wake claims the waiting row, then the boundary
+      // re-parks it instead of letting a new writer through.
+      await expect(
+        service.prepare({
+          idempotencyKey: 'orchestrator:CAID-RESUME-1:cascade-2',
+          origin: 'caid',
+          requestedBy: userId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
+      const [held] = await db.select().from(taskDispatches);
+      expect(held).toMatchObject({ phase: 'waiting', waitingReason: 'caid_dispatch_disabled' });
+
+      // On: the same task's next wake resumes into a claimed dispatch.
+      vi.mocked(isCaidDispatchAllowed).mockResolvedValue(true);
+      const prepared = await service.prepare({
+        idempotencyKey: 'orchestrator:CAID-RESUME-1:cascade-3',
+        origin: 'caid',
+        requestedBy: userId,
+        task,
+        trigger: 'orchestrator',
+      });
+      expect(prepared.dispatch.phase).toBe('claimed');
+    });
+  });
 });

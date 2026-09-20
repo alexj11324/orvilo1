@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { AcceptanceModel } from '@/database/models/acceptance';
@@ -15,17 +16,32 @@ import {
   goalEvents,
   goalNodes,
   goals,
+  taskDependencies,
   tasks,
+  taskTopics,
+  topics,
   users,
+  workspaces,
 } from '@/database/schemas';
 
 import { buildTaskPrompt } from './buildTaskPrompt';
+
+const workspaceId = 'goal-work-prompt-test-workspace';
 
 const db = await getTestDB();
 const userId = 'goal-work-prompt-test-user';
 
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
+  await db
+    .insert(workspaces)
+    .values({
+      id: workspaceId,
+      name: 'Prompt test workspace',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    })
+    .onConflictDoNothing();
 });
 
 afterEach(async () => {
@@ -34,8 +50,12 @@ afterEach(async () => {
   await db.delete(goalEvents);
   await db.delete(goalNodes);
   await db.delete(goals);
+  await db.delete(taskDependencies);
+  await db.delete(taskTopics);
+  await db.delete(topics);
   await db.delete(tasks);
   await db.delete(users);
+  await db.delete(workspaces);
 });
 
 describe('buildTaskPrompt Goal loop context', () => {
@@ -129,5 +149,141 @@ describe('buildTaskPrompt delivery acceptance', () => {
     const result = await buildFor(task.id);
 
     expect(result.prompt).not.toContain('Verify — delivery acceptance');
+  });
+});
+
+describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
+  const taskModel = new TaskModel(db, userId, workspaceId);
+  const taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
+
+  const seedUpstreamWithDelivery = async () => {
+    const upstream = await taskModel.create({
+      instruction: 'Upstream delivery.',
+      workspaceId,
+    });
+    const dependent = await taskModel.create({
+      instruction: 'Downstream work.',
+      workspaceId,
+    });
+    await db.insert(taskDependencies).values({
+      dependsOnId: upstream.id,
+      taskId: dependent.id,
+      type: 'blocks',
+      userId,
+      workspaceId,
+    });
+    const [topic] = await db.insert(topics).values({ userId, workspaceId }).returning();
+    return { dependent, upstream, topicId: topic.id };
+  };
+
+  const seedCompletedAttempt = async (taskId: string, seq: number) => {
+    const [topic] = await db.insert(topics).values({ userId, workspaceId }).returning();
+    await db.insert(taskTopics).values({
+      integration: {
+        attempts: 0,
+        baseBranch: 'main',
+        branch: `task/UP-${seq}`,
+        expectedHeadSha: `sha-head-${seq}`,
+        integratedSha: `sha-int-${seq}`,
+        role: 'task',
+        state: 'integrated',
+      },
+      seq,
+      status: 'completed',
+      taskId,
+      topicId: topic.id,
+      userId,
+      workspaceId,
+    });
+    return topic.id;
+  };
+
+  const buildFor = (taskId: string) =>
+    taskModel.findById(taskId).then((current) =>
+      buildTaskPrompt(current!, {
+        briefModel: new BriefModel(db, userId, workspaceId),
+        db,
+        taskModel,
+        taskTopicModel,
+        userId,
+        workspaceId,
+      }),
+    );
+
+  it('E05 — freezes a valid receipt when the upstream stands on its delivery', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    const topicId = await seedCompletedAttempt(upstream.id, 1);
+    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+
+    const result = await buildFor(dependent.id);
+
+    expect(result.contractContent.dependencies).toMatchObject([
+      {
+        delivery: {
+          integratedSha: 'sha-int-1',
+          sourceSha: 'sha-head-1',
+          topicId,
+        },
+        deliveryValid: true,
+        dependsOnId: upstream.id,
+        type: 'blocks',
+      },
+    ]);
+  });
+
+  it('E05 — refuses a fresh claim after the upstream reopened', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    await seedCompletedAttempt(upstream.id, 1);
+    // Reopened: the task left 'completed' — the historical delivery can no
+    // longer carry a fresh downstream claim.
+    await db.update(tasks).set({ status: 'backlog' }).where(eq(tasks.id, upstream.id));
+
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+  });
+
+  it('E04 — a failed new attempt does not ride on the historical delivery', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    await seedCompletedAttempt(upstream.id, 1);
+    // A newer attempt failed: the task no longer stands on the old delivery.
+    const [topic2] = await db.insert(topics).values({ userId, workspaceId }).returning();
+    await db.insert(taskTopics).values({
+      seq: 2,
+      status: 'failed',
+      taskId: upstream.id,
+      topicId: topic2.id,
+      userId,
+      workspaceId,
+    });
+    await db.update(tasks).set({ status: 'failed' }).where(eq(tasks.id, upstream.id));
+
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+  });
+
+  it('propagates a delivery-read failure instead of freezing blind receipts', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    const failingTopicModel = {
+      ...taskTopicModel,
+      findByTaskId: vi.fn().mockRejectedValue(new Error('db read failed')),
+      findWithHandoff: taskTopicModel.findWithHandoff.bind(taskTopicModel),
+    } as unknown as TaskTopicModel;
+    const current = await taskModel.findById(dependent.id);
+
+    await expect(
+      buildTaskPrompt(current!, {
+        briefModel: new BriefModel(db, userId, workspaceId),
+        db,
+        taskModel,
+        taskTopicModel: failingTopicModel,
+        userId,
+        workspaceId,
+      }),
+    ).rejects.toThrow('db read failed');
+    void upstream;
   });
 });

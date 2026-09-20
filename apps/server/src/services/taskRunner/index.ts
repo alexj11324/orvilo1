@@ -6,6 +6,7 @@ import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
+  TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
@@ -157,6 +158,18 @@ export class TaskRunnerService {
     }
     let task: TaskItem = resolvedTask;
 
+    // Settlement/corrective runs (integration merges, delivery-review fixes,
+    // reservation takeovers) carry verifiable markers — they continue work an
+    // earlier dispatch already started, so the CAID admission gate must not
+    // count them as new orchestrated claims.
+    const internalSettlement = Boolean(
+      workspaceOverride ||
+      integrationSeed ||
+      replaceReservationId ||
+      parentOperationId ||
+      skipTaskVerification,
+    );
+
     // Automated callers must provide a durable command identity. Manual
     // callers retain one-request-per-click behavior for older clients.
     const resolvedIdempotencyKey =
@@ -215,6 +228,15 @@ export class TaskRunnerService {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
           idempotencyKey: resolvedIdempotencyKey,
+          // Execution origin for the shared admission boundary. `internal`
+          // covers settlement/corrective runs (verify markers, not caller
+          // claims); anything else reaching a CAID-orchestrated trigger is a
+          // new orchestrated writer and must pass the rollout gate.
+          origin: internalSettlement
+            ? 'internal'
+            : trigger === 'orchestrator' || trigger === 'goal'
+              ? 'caid'
+              : 'external',
           planRevision,
           requestedBy,
           task,
@@ -225,7 +247,14 @@ export class TaskRunnerService {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
         if (error instanceof TaskDispatchWaitingError) {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+          // Keep the typed cause: callers like the completion cascade treat a
+          // held dispatch differently from a hard failure — the task must stay
+          // claimable, not get relabeled paused-with-error.
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
         }
         throw error;
       }
@@ -493,10 +522,20 @@ export class TaskRunnerService {
       // Freeze the run contract alongside the environment snapshot — retries,
       // continuations and corrective runs rebind to this persisted row rather
       // than re-deriving constraints from mutable task config.
+      // Contract lineage: a continuation descends from the continued topic's
+      // contract; a fresh repair/retry still binds the previous attempt's
+      // contract as its source so `sourceContractId` always names the prior
+      // policy this run replaces.
+      const priorContract = (continuedTopic?.contract ??
+        [...existingTopics].sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0)).find((t) => t.contract)
+          ?.contract) as TaskExecutionContract | undefined;
       const executionContract = buildTaskExecutionContract(task, {
         acceptanceEnabled,
         content: contractContent,
+        contractId: randomUUID(),
+        contractRevision: (priorContract?.revision ?? 0) + 1,
         dispatch: preparedDispatch!.dispatch,
+        sourceContractId: priorContract?.contractId,
         environment: environmentSnapshot,
         goalLoop,
         grantId: delegation?.grantId,
@@ -984,6 +1023,12 @@ export class TaskRunnerService {
         if (error instanceof TRPCError && error.code === 'CONFLICT') {
           // Another cascade/manual request won the atomic run reservation.
           // Its task is live; the loser must not pause or relabel it.
+          continue;
+        }
+        if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
+          // The admission gate (or project/goal policy) held this dispatch —
+          // the intent is persisted as `waiting`, the task stays claimable,
+          // and nothing may be marked paused/failed for a policy hold.
           continue;
         }
         const message = error instanceof Error ? error.message : 'Failed to start task';

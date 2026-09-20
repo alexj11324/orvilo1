@@ -62,9 +62,9 @@ vi.mock('@/server/services/taskReview', () => ({
   }),
 }));
 
-// Mock initModelRuntimeFromDB
+// Mock initModelRuntimeFromDeploymentConfig
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 // Mock the assignment-notification business slot (default impl is a no-op;

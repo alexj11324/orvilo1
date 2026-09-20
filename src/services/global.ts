@@ -9,18 +9,20 @@ import { electronSyncSelectors } from '@/store/electron/selectors';
 import { type OrviloAgentConfig } from '@/types/agent';
 import { type GlobalRuntimeConfig } from '@/types/serverConfig';
 
-const VERSION_URL = 'https://registry.npmmirror.com/@lobehub/chat/latest';
+// Orvilo's own release feed — the upstream product's package feed must not
+// drive our "update available" badge.
+const VERSION_URL = 'https://api.github.com/repos/alexj11324/orvilo1/releases/latest';
 const SERVER_VERSION_URL = '/api/version';
 
 class GlobalService extends BusinessGlobalService {
   /**
-   * get latest version from npm
+   * get latest release version from the Orvilo GitHub releases feed
    */
   getLatestVersion = async (): Promise<string> => {
     const res = await fetch(VERSION_URL);
     const data = await res.json();
 
-    return data['version'];
+    return data['tag_name'];
   };
 
   /**

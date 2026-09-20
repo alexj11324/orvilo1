@@ -50,6 +50,7 @@ import type {
 import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { ModelProvider } from 'model-bank';
 import { join } from 'pathe';
 import { z } from 'zod';
 
@@ -77,6 +78,7 @@ import { getServerGlobalConfig } from '@/server/globalConfig';
 import { type MemoryAgentConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
+import { initModelRuntimeWithUserPayload } from '@/server/modules/ModelRuntime';
 import { S3 } from '@/server/modules/S3';
 import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProviderAccess';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
@@ -266,11 +268,6 @@ export interface TopicBatchWorkflowPayload extends MemoryExtractionPayloadInput 
   userId: string;
 }
 
-export type ProviderKeyVaultMap = Record<
-  string,
-  AiProviderRuntimeState['runtimeConfig'][string]['keyVaults'] | undefined
->;
-
 export const buildWorkflowPayloadInput = (
   payload: MemoryExtractionNormalizedPayload,
 ): MemoryExtractionPayloadInput => ({
@@ -298,16 +295,6 @@ export const buildWorkflowPayloadInput = (
 });
 
 const normalizeProvider = (provider: string) => provider.toLowerCase();
-
-const extractCredentialsFromVault = (vault?: Record<string, unknown>) => {
-  if (!vault || typeof vault !== 'object') return {};
-
-  const apiKey = 'apiKey' in vault && typeof vault.apiKey === 'string' ? vault.apiKey : undefined;
-  const baseURL =
-    'baseURL' in vault && typeof vault.baseURL === 'string' ? vault.baseURL : undefined;
-
-  return { apiKey, baseURL };
-};
 
 const getStringErrorProperty = (error: unknown, key: string) => {
   if (!error || typeof error !== 'object') return undefined;
@@ -512,7 +499,6 @@ export type RuntimeResolveOptions = {
 
 export const resolveRuntimeAgentConfig = (
   agent: MemoryAgentConfig,
-  keyVaults?: ProviderKeyVaultMap,
   options?: RuntimeResolveOptions,
   hooks?: ModelRuntimeHooks,
 ) => {
@@ -520,62 +506,50 @@ export const resolveRuntimeAgentConfig = (
     .map(normalizeProvider)
     .filter(Boolean);
 
-  const providerOrder = Array.from(
-    new Set([
-      ...normalizedPreferredProviders,
-      normalizeProvider(agent.provider || 'openai'),
-      ...Object.keys(keyVaults || {}),
-    ]),
-  );
+  const configuredProvider = normalizeProvider(agent.provider || 'openai');
+  const providerOrder = Array.from(new Set([...normalizedPreferredProviders, configuredProvider]));
 
   for (const provider of providerOrder) {
     if (provider === 'orvilo') {
       debugRuntimeInit(agent, {
         provider,
-        source: 'user-vault' as const,
+        source: 'deployment-config' as const,
       });
 
       return ModelRuntime.initializeWithProvider(provider, { userId: options?.userId }, hooks);
     }
 
-    const { apiKey: userApiKey, baseURL: userBaseURL } = extractCredentialsFromVault(
-      keyVaults?.[provider],
-    );
-    if (!userApiKey) {
+    if (!Object.values(ModelProvider).includes(provider as ModelProvider)) {
       console.warn(
-        `[memory-extraction] skipping provider ${provider} due to missing API key in user vault`,
+        `[memory-extraction] skipping provider ${provider}: not a deployment-managed provider`,
       );
       continue;
     }
 
+    // Deployment-configured credentials only apply to the provider they were configured for;
+    // other matched providers resolve their own deployment env credentials.
+    const apiKey =
+      provider === configuredProvider ? agent.apiKey || options?.fallback?.apiKey : undefined;
+    const baseURL =
+      provider === configuredProvider ? agent.baseURL || options?.fallback?.baseURL : undefined;
     debugRuntimeInit(agent, {
-      apiKey: userApiKey,
-      baseURL: userBaseURL,
+      apiKey,
+      baseURL,
       provider,
-      source: 'user-vault' as const,
+      source: 'deployment-config' as const,
     });
 
-    // Only use the user baseURL if we are also using their API key; otherwise fall back entirely
-    // to system config to avoid mixing credentials.
-    return ModelRuntime.initializeWithProvider(provider, {
-      apiKey: userApiKey,
-      baseURL: userBaseURL,
-      userId: options?.userId,
-    });
+    return initModelRuntimeWithUserPayload(
+      provider,
+      { apiKey, baseURL, runtimeProvider: provider },
+      { userId: options?.userId },
+      hooks,
+    );
   }
 
-  debugRuntimeInit(agent, {
-    apiKey: agent.apiKey || options?.fallback?.apiKey,
-    baseURL: agent.baseURL || options?.fallback?.baseURL,
-    provider: agent.provider || 'openai',
-    source: 'system-config' as const,
-  });
-
-  return ModelRuntime.initializeWithProvider(agent.provider || 'openai', {
-    apiKey: agent.apiKey || options?.fallback?.apiKey,
-    baseURL: agent.baseURL || options?.fallback?.baseURL,
-    userId: options?.userId,
-  });
+  throw new Error(
+    `[memory-extraction] no deployment-managed provider resolved for ${agent.provider || 'openai'}`,
+  );
 };
 
 const logRuntime = debug('orvilo-server:memory:user-memory:runtime');
@@ -586,7 +560,7 @@ const debugRuntimeInit = (
     apiKey?: string;
     baseURL?: string;
     provider: string;
-    source: 'user-vault' | 'system-config';
+    source: 'deployment-config' | 'system-config';
   },
 ) => {
   if (!logRuntime.enabled) return;
@@ -615,6 +589,12 @@ type RuntimeBundle = {
   gatekeeper: ModelRuntime;
   layerExtractor: ModelRuntime;
 };
+
+interface RuntimeProviderIds {
+  embedding: string;
+  gatekeeper: string;
+  layerExtractors: string[];
+}
 
 interface MemoryExtractionModelConfig {
   embeddingsModel: string;
@@ -1616,13 +1596,13 @@ export class MemoryExtractionExecutor {
           const memoryServiceConfig = this.resolveUserMemoryServiceConfig(
             userState.settings?.systemAgent as Partial<UserServiceModelConfig> | undefined,
           );
-          const keyVaults = await this.resolveRuntimeKeyVaults(
+          const providers = await this.resolveRuntimeProviders(
             aiProviderRuntimeState,
             memoryServiceConfig,
           );
           const language = userState.settings?.general?.responseLanguage;
 
-          const runtimes = await this.getRuntime(job.userId, memoryServiceConfig, keyVaults);
+          const runtimes = await this.getRuntime(job.userId, memoryServiceConfig, providers);
 
           const conversations = await this.listConversationsForTopic(
             job.userId,
@@ -2409,26 +2389,19 @@ export class MemoryExtractionExecutor {
     const db = await this.db;
     const aiInfraRepos = new AiInfraRepos(db, userId, this.aiProviderConfig, workspaceId);
 
+    // Provider matching only needs the deployment catalog (enabled providers/models); it must
+    // not decrypt user key vaults — credentials are deployment-managed since BYOK retirement.
     return getUserScopedAiProviderRuntimeState(
       userId,
-      () => aiInfraRepos.getAiProviderRuntimeState(KeyVaultsGateKeeper.getUserKeyVaults),
+      () => aiInfraRepos.getAiProviderRuntimeState(),
       { throwOnUnresolvedAccess: true },
     );
   }
 
-  private async resolveRuntimeKeyVaults(
+  private async resolveRuntimeProviders(
     runtimeState: AiProviderRuntimeState,
     memoryServiceConfig: ResolvedMemoryServiceConfig,
-  ): Promise<ProviderKeyVaultMap> {
-    const normalizedRuntimeConfig = Object.fromEntries(
-      Object.entries(runtimeState.runtimeConfig || {}).map(([providerId, config]) => [
-        normalizeProvider(providerId),
-        config,
-      ]),
-    );
-
-    const keyVaults: ProviderKeyVaultMap = {};
-
+  ): Promise<RuntimeProviderIds> {
     const gatekeeperProvider = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
       fallbackProvider: memoryServiceConfig.agents.gatekeeper.provider,
       label: 'gatekeeper',
@@ -2440,10 +2413,6 @@ export class MemoryExtractionExecutor {
         ? undefined
         : this.gatekeeperPreferredProviders,
     });
-    const gatekeeperRuntime = normalizedRuntimeConfig[gatekeeperProvider];
-    if (gatekeeperRuntime?.keyVaults) {
-      keyVaults[gatekeeperProvider] = gatekeeperRuntime.keyVaults;
-    }
 
     const embeddingProvider = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
       fallbackProvider: memoryServiceConfig.agents.embedding.provider,
@@ -2456,11 +2425,8 @@ export class MemoryExtractionExecutor {
         ? undefined
         : this.embeddingPreferredProviders,
     });
-    const embeddingRuntime = normalizedRuntimeConfig[embeddingProvider];
-    if (embeddingRuntime?.keyVaults) {
-      keyVaults[embeddingProvider] = embeddingRuntime.keyVaults;
-    }
 
+    const layerExtractorProviders: string[] = [];
     for (const model of Object.values(memoryServiceConfig.modelConfig.layerModels)) {
       if (!model) continue;
       const providerId = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
@@ -2474,19 +2440,22 @@ export class MemoryExtractionExecutor {
           ? undefined
           : this.layerPreferredProviders,
       });
-      const runtime = normalizedRuntimeConfig[providerId];
-      if (runtime?.keyVaults) {
-        keyVaults[providerId] = runtime.keyVaults;
+      if (!layerExtractorProviders.includes(providerId)) {
+        layerExtractorProviders.push(providerId);
       }
     }
 
-    return keyVaults;
+    return {
+      embedding: embeddingProvider,
+      gatekeeper: gatekeeperProvider,
+      layerExtractors: layerExtractorProviders,
+    };
   }
 
   private async getRuntime(
     userId: string,
     memoryServiceConfig: ResolvedMemoryServiceConfig,
-    keyVaults?: ProviderKeyVaultMap,
+    providers: RuntimeProviderIds,
   ): Promise<RuntimeBundle> {
     // TODO: implement a better cache eviction strategy
     // TODO: make cache size configurable
@@ -2496,9 +2465,9 @@ export class MemoryExtractionExecutor {
 
     const cacheKey = [
       userId,
-      memoryServiceConfig.agents.embedding.provider,
-      memoryServiceConfig.agents.gatekeeper.provider,
-      memoryServiceConfig.agents.layerExtractor.provider,
+      providers.embedding,
+      providers.gatekeeper,
+      providers.layerExtractors.join('|'),
     ].join(':');
     const cached = this.runtimeCache.get(cacheKey);
     if (cached) return cached;
@@ -2509,9 +2478,12 @@ export class MemoryExtractionExecutor {
         baseURL: memoryServiceConfig.agents.embedding.baseURL,
       },
       preferred: {
-        providerIds: memoryServiceConfig.overrides.embedding.provider
-          ? undefined
-          : this.embeddingPreferredProviders,
+        providerIds: [
+          providers.embedding,
+          ...(memoryServiceConfig.overrides.embedding.provider
+            ? []
+            : (this.embeddingPreferredProviders ?? [])),
+        ],
       },
       userId,
     };
@@ -2522,9 +2494,12 @@ export class MemoryExtractionExecutor {
         baseURL: memoryServiceConfig.agents.gatekeeper.baseURL,
       },
       preferred: {
-        providerIds: memoryServiceConfig.overrides.gatekeeper.provider
-          ? undefined
-          : this.gatekeeperPreferredProviders,
+        providerIds: [
+          providers.gatekeeper,
+          ...(memoryServiceConfig.overrides.gatekeeper.provider
+            ? []
+            : (this.gatekeeperPreferredProviders ?? [])),
+        ],
       },
       userId,
     };
@@ -2535,9 +2510,12 @@ export class MemoryExtractionExecutor {
         baseURL: memoryServiceConfig.agents.layerExtractor.baseURL,
       },
       preferred: {
-        providerIds: memoryServiceConfig.overrides.layerExtractor.provider
-          ? undefined
-          : this.layerPreferredProviders,
+        providerIds: [
+          ...providers.layerExtractors,
+          ...(memoryServiceConfig.overrides.layerExtractor.provider
+            ? []
+            : (this.layerPreferredProviders ?? [])),
+        ],
       },
       userId,
     };
@@ -2547,19 +2525,16 @@ export class MemoryExtractionExecutor {
     const runtimes: RuntimeBundle = {
       embeddings: await resolveRuntimeAgentConfig(
         memoryServiceConfig.agents.embedding,
-        keyVaults,
         embeddingOptions,
         hooks,
       ),
       gatekeeper: await resolveRuntimeAgentConfig(
         memoryServiceConfig.agents.gatekeeper,
-        keyVaults,
         gatekeeperOptions,
         hooks,
       ),
       layerExtractor: await resolveRuntimeAgentConfig(
         memoryServiceConfig.agents.layerExtractor,
-        keyVaults,
         layerExtractorOptions,
         hooks,
       ),
@@ -2604,13 +2579,13 @@ export class MemoryExtractionExecutor {
           const memoryServiceConfig = this.resolveUserMemoryServiceConfig(
             userState.settings?.systemAgent as Partial<UserServiceModelConfig> | undefined,
           );
-          const keyVaults = await this.resolveRuntimeKeyVaults(
+          const providers = await this.resolveRuntimeProviders(
             aiProviderRuntimeState,
             memoryServiceConfig,
           );
           const language = params.language || userState.settings?.general?.responseLanguage;
 
-          const runtimes = await this.getRuntime(params.userId, memoryServiceConfig, keyVaults);
+          const runtimes = await this.getRuntime(params.userId, memoryServiceConfig, providers);
           const contextProvider =
             params.contextProvider ||
             new BenchmarkLocomoContextProvider({

@@ -1,17 +1,14 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CalendarDaysIcon } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { openQuotaCalendarModal } from '@/features/AgentQuotaCalendar';
-import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
-
-import { openQuotaAccountManagerModal } from './QuotaAccountManagerModal';
 
 const styles = createStaticStyles(({ css }) => ({
   // Divider faces the quota windows: below when on top, above when it trails.
@@ -26,23 +23,18 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 /**
- * Compact account line in the quota panel: shows the account this quota belongs
- * to and a "Manage" entry into the full account-pool modal (mode / rotation /
- * per-account controls). The heavy lifting lives in QuotaAccountManagerModal.
+ * Read-only account line in the quota panel: which provider identity these
+ * quota numbers belong to, plus the calendar entry. Observation only — there
+ * is no account pool to manage or switch.
  */
-const QuotaAccountSwitcher = memo<{
+const QuotaAccountIdentity = memo<{
   placement?: 'top' | 'bottom';
   snapshot: ClaudeCodeQuotaSnapshot;
 }>(({ snapshot, placement = 'top' }) => {
   const { t } = useTranslation('chat');
-  const agentId = useAgentId();
   const identity = snapshot.identity;
 
-  const openManager = useCallback(() => {
-    if (agentId) openQuotaAccountManagerModal(agentId);
-  }, [agentId]);
-
-  if (!agentId) return null;
+  if (!identity) return null;
 
   return (
     <Flexbox
@@ -54,28 +46,25 @@ const QuotaAccountSwitcher = memo<{
     >
       <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
         <Text ellipsis style={{ fontSize: 12 }}>
-          {identity?.displayName || identity?.email || t('heteroAgent.claudeQuota.accounts')}
+          {identity.displayName || identity.email || t('heteroAgent.claudeQuota.accounts')}
         </Text>
-        {identity?.planTier && (
+        {identity.planTier && (
           <Text style={{ flex: 'none', fontSize: 12 }} type={'secondary'}>
             {identity.planTier}
           </Text>
         )}
-        <ActionIcon
-          icon={CalendarDaysIcon}
-          size={'small'}
-          style={{ flex: 'none' }}
-          title={t('heteroAgent.claudeQuota.calendar.entry')}
-          onClick={() => openQuotaCalendarModal({ externalAccountId: identity?.externalAccountId })}
-        />
       </Flexbox>
-      <Button size={'small'} style={{ flex: 'none' }} onClick={openManager}>
-        {t('heteroAgent.claudeQuota.manage.entry')}
-      </Button>
+      <ActionIcon
+        icon={CalendarDaysIcon}
+        size={'small'}
+        style={{ flex: 'none' }}
+        title={t('heteroAgent.claudeQuota.calendar.entry')}
+        onClick={() => openQuotaCalendarModal({ externalAccountId: identity.externalAccountId })}
+      />
     </Flexbox>
   );
 });
 
-QuotaAccountSwitcher.displayName = 'QuotaAccountSwitcher';
+QuotaAccountIdentity.displayName = 'QuotaAccountIdentity';
 
-export default QuotaAccountSwitcher;
+export default QuotaAccountIdentity;

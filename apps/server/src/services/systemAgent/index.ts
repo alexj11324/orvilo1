@@ -17,7 +17,7 @@ import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 import { resolveSystemAgentModelConfig } from './modelConfig';
 
@@ -68,8 +68,7 @@ export class SystemAgentService {
 
       const payload = chainSummaryTitle(messages, locale);
 
-      const modelRuntime = await initModelRuntimeFromDB(
-        this.db,
+      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
         this.userId,
         provider,
         this.workspaceId,
@@ -131,8 +130,7 @@ export class SystemAgentService {
       const payload = chainGenerateSkillMeta({ content, responseLanguage: locale });
       const tracingId = randomUUID();
 
-      const modelRuntime = await initModelRuntimeFromDB(
-        this.db,
+      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
         this.userId,
         provider,
         this.workspaceId,

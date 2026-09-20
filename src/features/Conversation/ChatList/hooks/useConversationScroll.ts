@@ -17,6 +17,23 @@ import { dataSelectors, messageStateSelectors, useConversationStore } from '../.
 
 const log = debug('orvilo:conversation:scroll');
 
+// In-page ring buffer so e2e can read the hook's verdicts directly from the
+// DOM instead of relying on console forwarding (which races on CI workers).
+const pushScrollDiag = (entry: string) => {
+  try {
+    const w = globalThis as { __orviloScrollDiag?: string[] };
+    const buf = (w.__orviloScrollDiag ??= []);
+    buf.push(entry);
+    if (buf.length > 300) buf.splice(0, 100);
+  } catch {
+    // diagnostics must never break rendering
+  }
+};
+const diag = (entry: string) => {
+  log('%s', entry);
+  pushScrollDiag(entry);
+};
+
 export const CONVERSATION_SPACER_ID = '__conversation_spacer__';
 export const CONVERSATION_SPACER_TRANSITION_MS = 200;
 
@@ -332,13 +349,13 @@ const usePinController = ({
 
       const scrollToIndex = virtuaRef.current?.scrollToIndex;
       if (!scrollToIndex) {
-        log('scrollToPinned skipped: virtua not ready (%s) index=%d', reason, pin.index);
+        diag(`scrollToPinned skipped: virtua not ready (${reason}) index=${pin.index}`);
         return;
       }
 
       const smooth = Date.now() - pin.sentAt < SEND_SCROLL_ANIMATION_WINDOW_MS;
 
-      log('scrollToPinned (%s) index=%d smooth=%s', reason, pin.index, smooth);
+      diag(`scrollToPinned (${reason}) index=${pin.index} smooth=${smooth}`);
       // pin.index is a message index; the header slot row shifts virtua rows.
       scrollToIndex(pin.index + headerOffset, { align: 'start', smooth });
     },
@@ -347,7 +364,7 @@ const usePinController = ({
 
   const clearPin = useCallback((reason: string) => {
     if (!pinRef.current) return;
-    log('clearPin (%s) index=%d', reason, pinRef.current.index);
+    diag(`clearPin (${reason}) index=${pinRef.current.index}`);
     pinRef.current = null;
   }, []);
 
@@ -575,8 +592,7 @@ export const useConversationScroll = ({
     const newMessageCount = dataSource.length - prevLengthRef.current;
     prevLengthRef.current = dataSource.length;
 
-    if (newMessageCount > 0)
-      log('dataSource grew +%d → len=%d', newMessageCount, dataSource.length);
+    if (newMessageCount > 0) diag(`dataSource grew +${newMessageCount} → len=${dataSource.length}`);
     if (newMessageCount <= 0 && unresolvedTailIds.size === 0) return;
 
     // A send appends a (user, assistant, …) tail — usually one +2 commit, but
@@ -603,7 +619,7 @@ export const useConversationScroll = ({
 
     if (userIndex < 0) {
       if (newMessageCount > 0)
-        log('send detection: no new user row in appended tail (+%d)', newMessageCount);
+        diag(`send detection: no new user row in appended tail (+${newMessageCount})`);
       return;
     }
 
@@ -616,7 +632,7 @@ export const useConversationScroll = ({
     const nextIndex = userIndex + 1;
     const assistantIndex = nextIndex < dataSource.length ? nextIndex : null;
 
-    log('send detected userIndex=%d', userIndex);
+    diag(`send detected userIndex=${userIndex}`);
 
     setScrollReduction(() => 0);
     prevScrollOffsetRef.current = getScrollOffset?.() ?? null;

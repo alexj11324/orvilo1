@@ -43,6 +43,26 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      # The service container runs a stock ParadeDB config; on CI runners its
+      # checkpoints degrade into multi-minute write storms that starve queries.
+      # This is a disposable test database, so trade durability for a fast write
+      # path — fsync off and checkpoints spread out. Every setting is
+      # SIGHUP-reloadable; `options` can't pass postgres args (they'd be docker
+      # args). Same tuning as e2e.yml's "Tune test Postgres for CI" step.
+      - name: Tune test Postgres for CI
+        run: |
+          CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
+          docker exec "$CONTAINER" psql -U postgres -d postgres -c "
+            ALTER SYSTEM SET fsync = 'off';
+            ALTER SYSTEM SET synchronous_commit = 'off';
+            ALTER SYSTEM SET full_page_writes = 'off';
+            ALTER SYSTEM SET checkpoint_timeout = '1800s';
+            ALTER SYSTEM SET checkpoint_completion_target = '0.9';
+            ALTER SYSTEM SET max_wal_size = '4GB';
+            ALTER SYSTEM SET autovacuum = 'off';
+            SELECT pg_reload_conf();
+          "
+
       - name: Lint
         run: bun run lint
 

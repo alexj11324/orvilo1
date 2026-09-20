@@ -369,26 +369,45 @@ Then('视口不应贴近聊天列表底部', async function (this: CustomWorld) 
   // "followed to the bottom". Check the real contract instead: the latest
   // assistant reply extends below the visible fold (it would be fully in
   // view if the viewport had followed the stream to the bottom).
-  await expect
-    .poll(
-      async () =>
-        this.page.evaluate(() => {
-          const messages = document.querySelectorAll('.message-wrapper');
-          // NodeList has no .at() in the page context — use .item().
-          const last = messages.item(messages.length - 1);
-          if (!last) return null;
-          let el = last.parentElement;
-          while (el) {
-            const { overflowY } = window.getComputedStyle(el);
-            if (overflowY === 'auto' || overflowY === 'scroll') break;
-            el = el.parentElement;
-          }
-          if (!el) return null;
-          return last.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom;
-        }),
-      { timeout: 10_000 },
-    )
-    .toBeGreaterThan(AT_BOTTOM_EPSILON);
+  const overflow = async () =>
+    this.page.evaluate(() => {
+      const messages = document.querySelectorAll('.message-wrapper');
+      // NodeList has no .at() in the page context — use .item().
+      const last = messages.item(messages.length - 1);
+      if (!last) return null;
+      let el = last.parentElement;
+      while (el) {
+        const { overflowY } = window.getComputedStyle(el);
+        if (overflowY === 'auto' || overflowY === 'scroll') break;
+        el = el.parentElement;
+      }
+      if (!el) return null;
+      return last.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom;
+    });
+  const dump = await this.page.evaluate(() => {
+    const messages = [...document.querySelectorAll('.message-wrapper')];
+    const last = messages.at(-1);
+    const info = last
+      ? {
+          lastText: last.textContent?.slice(0, 60),
+          chain: (() => {
+            const out: string[] = [];
+            let el: Element | null = last;
+            while (el && out.length < 8) {
+              const { overflowY } = window.getComputedStyle(el);
+              out.push(
+                `${el.tagName}.${(el.className || '').toString().slice(0, 40)}[${overflowY} h=${el.scrollHeight}/${el.clientHeight} st=${el.scrollTop}]`,
+              );
+              el = el.parentElement;
+            }
+            return out;
+          })(),
+        }
+      : { count: messages.length };
+    return info;
+  });
+  console.log(`   📍 scroll dump: ${JSON.stringify(dump)}`);
+  await expect.poll(overflow, { timeout: 10_000 }).toBeGreaterThan(AT_BOTTOM_EPSILON);
 });
 
 // Reset LLM mock timing overrides so the slowdown from scenario 3 does not

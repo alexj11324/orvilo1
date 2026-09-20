@@ -32,6 +32,7 @@ import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import type { ChatStore } from '@/store/chat/store';
 import { notifyDesktopHumanApprovalRequired } from '@/store/chat/utils/desktopNotification';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { pushGatewayDiag } from '@/store/chat/utils/pushGatewayDiag';
 
 // `agent_runtime_end` reasons that are NOT a clean completion: a mid-stream
 // cancel and a deferred-tool park. These must NOT mark the topic unread, and
@@ -1211,6 +1212,7 @@ export const createGatewayEventHandler = (
       case 'agent_runtime_end': {
         enqueue(async () => {
           const data = event.data as { reason?: string; uiMessages?: UIChatMessage[] } | undefined;
+          pushGatewayDiag(`op=${operationId} runtime_end start reason=${data?.reason ?? '-'}`);
 
           void emitAgentSignal({
             payload: {
@@ -1299,10 +1301,17 @@ export const createGatewayEventHandler = (
           //     no queue drain, no notification) — same as the old inline path.
           if (runtimeType === 'gateway' && runLifecycle) {
             const status = isCompletedRuntimeEnd(data?.reason) ? 'completed' : 'cancelled';
-            const { requeued } = await runLifecycle.completeRun({
-              ...lifecycleEventBase,
-              status,
-            });
+            let requeued: boolean;
+            try {
+              ({ requeued } = await runLifecycle.completeRun({
+                ...lifecycleEventBase,
+                status,
+              }));
+            } catch (error) {
+              pushGatewayDiag(`op=${operationId} completeRun threw: ${String(error)}`);
+              throw error;
+            }
+            pushGatewayDiag(`op=${operationId} completeRun status=${status} requeued=${requeued}`);
             if (!requeued && status === 'completed') {
               // Notification body, resolved most-authoritative first:
               //

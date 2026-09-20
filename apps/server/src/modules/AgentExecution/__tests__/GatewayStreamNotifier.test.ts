@@ -489,6 +489,50 @@ describe('GatewayStreamNotifier', () => {
       const body = JSON.parse(pushCall![1].body);
       expect(body.event.data).not.toHaveProperty('uiMessages');
     });
+
+    it('does not drop the terminal push when the event lane is saturated', async () => {
+      // A dropped `agent_runtime_end` strands the client op in `running`
+      // forever — and stalls every queued send behind it — so terminal pushes
+      // must bypass the MAX_INFLIGHT event-lane drop.
+      const pending: Array<{ resolve: () => void; url: string }> = [];
+      mockFetch.mockImplementation(
+        (url: string) =>
+          new Promise((resolve) => {
+            pending.push({
+              resolve: () => resolve({ ok: true, text: () => Promise.resolve('') }),
+              url,
+            });
+          }),
+      );
+
+      // Saturate the droppable lane: 20 in-flight pushes hit MAX_INFLIGHT.
+      for (let index = 0; index < 20; index++) {
+        await notifier.publishStreamEvent(`op-event-${index}`, {
+          data: {},
+          stepIndex: 0,
+          type: 'step_start',
+        });
+      }
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(20));
+
+      await notifier.publishAgentRuntimeEnd({
+        finalState: { status: 'done' },
+        operationId: 'op-end',
+        reason: 'completed',
+        stepIndex: 0,
+      });
+
+      await vi.waitFor(() => {
+        expect(
+          pending.some(
+            ({ url }, index) => index >= 20 && url.endsWith('/api/operations/push-event'),
+          ),
+        ).toBe(true);
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(21);
+
+      for (const request of pending) request.resolve();
+    });
   });
 
   // ─── Read/subscribe methods: must delegate directly to inner ───

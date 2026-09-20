@@ -171,10 +171,25 @@ describe('resolveRunToolSurface', () => {
       expect(surface.outcomes).toEqual([]);
     });
 
-    it('throws when an exclusive tool surface resolves nothing', () => {
+    it('treats exclusive as a ceiling, not a must-have list (F05)', () => {
+      // Old semantics folded exclusive ids into `required`, so an exclusive
+      // surface resolving nothing threw. A ceiling cannot fail a run — the
+      // ids are a cap on what MAY mount; `requiredToolIds` owns must-mount.
+      const surface = resolveRunToolSurface({
+        exclusivePluginIds: ['orvilo-task'],
+        supportsBuiltinToolMount: false,
+      });
+      expect(surface.builtinToolSpecs).toHaveLength(0);
+      expect(surface.outcomes.find((o) => o.identifier === 'orvilo-task')?.status).toBe(
+        'unsupported',
+      );
+    });
+
+    it('throws when an exclusive surface that IS required resolves nothing', () => {
       expect(() =>
         resolveRunToolSurface({
           exclusivePluginIds: ['orvilo-task'],
+          requiredToolIds: ['orvilo-task'],
           supportsBuiltinToolMount: false,
         }),
       ).toThrow('Required tools failed to mount');
@@ -232,6 +247,41 @@ describe('resolveRunToolSurface', () => {
       expect(surface.outcomes.find((o) => o.identifier === 'custom-plugin-xyz')?.status).toBe(
         'unsupported',
       );
+    });
+
+    it('rejects a required tool outside the exclusive ceiling (C04)', () => {
+      // exclusive=[read] + required=[write] must NOT mount write — the old
+      // union widened `requested` to fit required. Now it is a contract
+      // conflict that throws before anything is dispatched.
+      expect(() =>
+        resolveRunToolSurface({
+          exclusivePluginIds: ['orvilo-task'],
+          requiredToolIds: ['orvilo-agent'],
+        }),
+      ).toThrow(/Required tools conflict with the exclusive surface: orvilo-agent/);
+    });
+
+    it('never widens the exclusive surface to fit required ids', () => {
+      expect(() =>
+        resolveRunToolSurface({
+          additionalPluginIds: ['orvilo-task'],
+          exclusivePluginIds: ['orvilo-task'],
+          requiredToolIds: ['orvilo-agent'],
+        }),
+      ).toThrow('Required tools conflict with the exclusive surface');
+    });
+
+    it('blocks dispatch when a required tool mounts partially (C05)', () => {
+      // supportsBuiltinToolMount=false stands in for a host that cannot
+      // confirm the mount — specPrepared ≠ hostConfirmed, so the task must
+      // never reach executable state.
+      expect(() =>
+        resolveRunToolSurface({
+          additionalPluginIds: ['orvilo-task'],
+          requiredToolIds: ['orvilo-task'],
+          supportsBuiltinToolMount: false,
+        }),
+      ).toThrow(/orvilo-task \(unsupported: harness-cannot-mount-mcp\)/);
     });
   });
 

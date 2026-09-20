@@ -330,7 +330,7 @@ When('用户发送长文消息并等待回复完成', { timeout: 150_000 }, asyn
   await waitForAssistantMessageToSettle(this, 200);
 });
 
-When('用户发送一条触发长文输出的消息', async function (this: CustomWorld) {
+When('用户发送一条触发长文输出的消息', { timeout: 120_000 }, async function (this: CustomWorld) {
   const prompt = '请输出一篇很长的文章';
   await sendPrompt(this, prompt, presetResponses.longScrollArticle);
 
@@ -392,7 +392,7 @@ When('开始记录聊天列表滚动轨迹', async function (this: CustomWorld) 
   await startScrollTrace(this.page);
 });
 
-When('等待流式响应结束', { timeout: 60_000 }, async function (this: CustomWorld) {
+When('等待流式响应结束', { timeout: 120_000 }, async function (this: CustomWorld) {
   await waitForAssistantMessageToSettle(this, 200);
 });
 

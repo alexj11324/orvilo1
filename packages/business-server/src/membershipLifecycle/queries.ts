@@ -116,15 +116,16 @@ export const listMembersWithProfiles = async (
   includeDeleted: boolean,
 ): Promise<MemberWithProfile[]> => {
   const rows = await db
+    // Flat columns + post-map: a nested `user: { avatar, ... }` select maps
+    // the whole object to null whenever the nested selection's first field is
+    // null (drizzle-orm 0.45.2), so any avatar-less member rendered nameless.
     .select({
       member: workspaceMembers,
-      user: {
-        avatar: users.avatar,
-        email: users.email,
-        fullName: users.fullName,
-        id: users.id,
-        username: users.username,
-      },
+      userAvatar: users.avatar,
+      userEmail: users.email,
+      userFullName: users.fullName,
+      userId: users.id,
+      userUsername: users.username,
     })
     .from(workspaceMembers)
     .leftJoin(users, eq(users.id, workspaceMembers.userId))
@@ -135,7 +136,18 @@ export const listMembersWithProfiles = async (
     )
     .orderBy(asc(workspaceMembers.joinedAt), asc(workspaceMembers.userId))
     .limit(MEMBER_LIST_LIMIT);
-  return rows;
+  return rows.map(({ member, userAvatar, userEmail, userFullName, userId, userUsername }) => ({
+    member,
+    user: userId
+      ? {
+          avatar: userAvatar,
+          email: userEmail,
+          fullName: userFullName,
+          id: userId,
+          username: userUsername,
+        }
+      : null,
+  }));
 };
 
 const openTaskWhere = (workspaceId: string, userId: string, column: 'assignee' | 'reviewer') =>

@@ -117,7 +117,7 @@ describe('useConversationScroll — pin behavior', () => {
    * to verify "user + assistant pair was just appended".
    */
   type StoreFixture = {
-    displayMessages: Array<{ id: string; role: 'user' | 'assistant' }>;
+    displayMessages: Array<{ id: string; role: 'user' | 'assistant'; createdAt: number }>;
     isAIGenerating: boolean;
     virtuaScrollMethods: {
       getItemOffset?: (i: number) => number;
@@ -138,10 +138,13 @@ describe('useConversationScroll — pin behavior', () => {
   // real list: ids the harness names user*/u<N> render as user rows,
   // everything else as assistant. The boolean flag is retained for option
   // compatibility but no longer drives the message list.
-  const deriveDisplayMessages = (dataSource: string[]) =>
+  // Rows default to createdAt 0 (long-ago history); ids in freshIds get
+  // Date.now() to model an optimistic just-sent row.
+  const deriveDisplayMessages = (dataSource: string[], freshIds: ReadonlySet<string> = new Set()) =>
     dataSource.map((id) => ({
       id,
       role: (id === userId || /^u\d+$/.test(id) ? 'user' : 'assistant') as 'user' | 'assistant',
+      createdAt: freshIds.has(id) ? Date.now() : 0,
     }));
 
   const installStoreMock = () => {
@@ -197,13 +200,13 @@ describe('useConversationScroll — pin behavior', () => {
         dataSource: string[];
         isSecondLastMessageFromUser: boolean;
       },
-      opts?: { lagDisplayMessages?: boolean },
+      opts?: { lagDisplayMessages?: boolean; freshIds?: string[] },
     ) => {
       currentFixture = {
         ...currentFixture,
         displayMessages: opts?.lagDisplayMessages
           ? currentFixture.displayMessages
-          : deriveDisplayMessages(next.dataSource),
+          : deriveDisplayMessages(next.dataSource, new Set(opts?.freshIds)),
       };
       hook.rerender({ contextKey: undefined, ...next });
     };
@@ -573,6 +576,49 @@ describe('useConversationScroll — pin behavior', () => {
     });
 
     expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
+  });
+
+  // Regression: a send that mints its topic has the new contextKey adopt the
+  // optimistic (user, assistant) tail in the same commit that seeds
+  // prevLengthRef — the growth scan then sees zero new rows and stays silent,
+  // so the pin never fired on CI. While the new context's turn is live, the
+  // freshest tail user row is still the just-sent message.
+  it('pins the just-sent user row when topic adoption lands it pre-seeded', () => {
+    const { rerender } = renderScrollHook({
+      contextKey: 'main_agt_1_new',
+      dataSource: [],
+      isSecondLastMessageFromUser: false,
+      fixture: { isAIGenerating: true },
+    });
+
+    rerender(
+      {
+        contextKey: 'main_agt_1_tpc_1',
+        dataSource: [userId, assistantId],
+        isSecondLastMessageFromUser: true,
+      },
+      { freshIds: [userId] },
+    );
+
+    expect(scrollToIndex).toHaveBeenCalledWith(0, { align: 'start', smooth: true });
+  });
+
+  it('does not pin a stale tail user row on a plain topic switch', () => {
+    const { rerender } = renderScrollHook({
+      contextKey: 'main_agt_1_new',
+      dataSource: [],
+      isSecondLastMessageFromUser: false,
+      fixture: { isAIGenerating: true },
+    });
+
+    // Browsing to an old topic mid-run must not pin: its tail user row is old.
+    rerender({
+      contextKey: 'main_agt_1_tpc_old',
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+
+    expect(scrollToIndex).not.toHaveBeenCalled();
   });
 
   it('targets the correct index when multiple turns accumulate', () => {

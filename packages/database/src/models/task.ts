@@ -2293,7 +2293,7 @@ export class TaskModel {
   async failRunReservation(
     id: string,
     reservationId: string,
-    status: 'paused' | 'scheduled',
+    status: 'backlog' | 'paused' | 'scheduled',
     error: string,
   ): Promise<boolean> {
     const released = await this.db

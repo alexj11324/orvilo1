@@ -16,6 +16,7 @@ import type {
   HeterogeneousTopicPin,
   OrviloAgentAgencyConfig,
   RequestTrigger,
+  UserInterventionConfig,
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
@@ -472,6 +473,12 @@ export interface HeteroDispatchInput {
   topicStartOwnerOperationId?: string;
   /** Source attribution persisted onto the operation row's appContext. */
   userAgent?: string;
+  /**
+   * Caller-declared intervention mode (`ExecAgentParams.userInterventionConfig`).
+   * Persisted as `appContext.interventionApprovalMode` so the exec-time
+   * approval gate knows whether this run can reach a human.
+   */
+  userInterventionConfig?: UserInterventionConfig;
 }
 
 /**
@@ -531,6 +538,7 @@ export const dispatchHeteroAgent = async (
     skipTaskVerification,
     topicStartOwnerOperationId,
     userAgent,
+    userInterventionConfig,
   } = input;
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
@@ -576,7 +584,16 @@ export const dispatchHeteroAgent = async (
     deps.workspaceId,
   ).recordStart({
     agentId: persistAgentId,
-    appContext: { ...appContext, clientIp, sourceMessageId: userMessageId, userAgent },
+    appContext: {
+      ...appContext,
+      clientIp,
+      // Headless runs cannot reach a human — `execAcpExternalTool` refuses
+      // `needs_approval` calls outright instead of treating the absence of an
+      // interaction surface as approval.
+      interventionApprovalMode: userInterventionConfig?.approvalMode,
+      sourceMessageId: userMessageId,
+      userAgent,
+    },
     chatGroupId: appContext?.groupId ?? null,
     // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
     // runtime loop — owns this operation. `heteroAgentType` records the CLI
@@ -613,14 +630,15 @@ export const dispatchHeteroAgent = async (
           }
         : {}),
       // External mounts share the builtin-tool callback wire but re-resolve
-      // their connection (fresh OAuth token / customParams.mcp) on each call —
-      // persist only api names + source, never transport params or secrets.
+      // their connection (fresh OAuth token / customParams.mcp) on each call.
+      // Persist api names + source + the identity pins the exec callback
+      // re-authorizes against — never transport params or secrets.
       ...(externalToolMounts && Object.keys(externalToolMounts).length
         ? {
             externalTools: Object.fromEntries(
               Object.entries(externalToolMounts).map(([identifier, entry]) => [
                 identifier,
-                { apis: entry.apis.map((api) => api.name), source: entry.source },
+                { apis: entry.apis.map((api) => api.name), pins: entry.pins, source: entry.source },
               ]),
             ),
           }

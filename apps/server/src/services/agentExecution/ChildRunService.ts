@@ -8,7 +8,11 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { FileService } from '@/server/services/file';
 
-import { CHILD_RESULT_EVENT_TYPE, childResultEventId } from './childResultDelivery';
+import {
+  CHILD_RESULT_EVENT_TYPE,
+  CHILD_RESULT_RECEIPT_TTL_MS,
+  childResultEventId,
+} from './childResultDelivery';
 import {
   extractTextFromMessage,
   findLastAssistantMessage,
@@ -404,11 +408,18 @@ export class ChildRunService {
     }
 
     if (options?.deliveryEventId) {
+      // The CAS-winning resume IS the parent-side durable consume for
+      // pre-ACP parked ops — mark the receipt `acked` (consumed). A lost ack
+      // leaves the row `offered`, which a later consumer may re-drive; the
+      // barrier above already ran, so a re-offer can never double-resume.
       await new EventOutboxModel(this.serverDB)
-        .markDeliveredByEventId(options.deliveryEventId)
+        .ackDeliveryReceiptByEventId({
+          aggregateId: parentOperationId,
+          eventId: options.deliveryEventId,
+        })
         .catch((error) =>
           log(
-            '[%s] delivery ledger mark failed for %s: %O',
+            '[%s] delivery ledger ack failed for %s: %O',
             parentOperationId,
             options.deliveryEventId,
             error,
@@ -458,35 +469,37 @@ export class ChildRunService {
     } | null;
     const terminal = state?.status === 'completed' || state?.status === 'error';
     const superseded = terminal && state?.childResultDelivery?.eventId !== eventId;
+    const now = Date.now();
+    // Results that never reach a live await must not pend forever: the
+    // receipt's persisted deadline doubles as its sweep-shield
+    // (`nextAttemptAt`), so the room projector skips it until expiry.
+    const deadlineAt = now + CHILD_RESULT_RECEIPT_TTL_MS;
 
-    await new EventOutboxModel(this.serverDB)
-      .upsertDeliveryReceipt({
-        // A superseded result is durably recorded but can never be consumed —
-        // the placeholder it would fill is already settled — so it lands
-        // delivered for audit rather than queueing forever.
-        delivered: superseded,
-        event: {
-          aggregateId: params.parentOperationId,
-          aggregateType: 'agent_operation',
-          eventId,
-          eventType: CHILD_RESULT_EVENT_TYPE,
-          payload: {
-            anchorMessageId: params.anchorMessageId,
-            childOperationId: params.childOperationId,
-            status: params.status,
-            superseded,
-          },
-          workspaceId: parentOp?.workspaceId ?? undefined,
+    // A failed ledger write must surface — a completion reported as durably
+    // persisted when the outbox lost it is exactly the F06 false-success
+    // contract this ledger exists to prevent.
+    await new EventOutboxModel(this.serverDB).upsertDeliveryReceipt({
+      // A superseded result is durably recorded but can never be consumed —
+      // the placeholder it would fill is already settled — so it lands
+      // delivered for audit rather than queueing forever.
+      delivered: superseded,
+      event: {
+        aggregateId: params.parentOperationId,
+        aggregateType: 'agent_operation',
+        eventId,
+        eventType: CHILD_RESULT_EVENT_TYPE,
+        nextAttemptAt: new Date(deadlineAt),
+        payload: {
+          anchorMessageId: params.anchorMessageId,
+          childOperationId: params.childOperationId,
+          deadlineAt,
+          deliveryState: superseded ? 'superseded' : 'received',
+          status: params.status,
+          superseded,
         },
-      })
-      .catch((error) =>
-        log(
-          '[%s] delivery ledger insert failed for child %s: %O',
-          params.parentOperationId,
-          params.childOperationId,
-          error,
-        ),
-      );
+        workspaceId: parentOp?.workspaceId ?? undefined,
+      },
+    });
 
     return { eventId, superseded };
   }

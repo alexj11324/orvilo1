@@ -3276,7 +3276,19 @@ describe('ConversationControl actions', () => {
         result: payload,
         toolCallId: 'cc_call_1',
       });
-      expect(lambdaClient.aiAgent.submitHeteroIntervention.mutate).not.toHaveBeenCalled();
+      // F04: a desktop-local decision is also mirrored through the remote
+      // mutation so the server-side one-time approval receipt closes — awaited
+      // AFTER the IPC submit (the producer's retry reads the receipt).
+      const mirrorSubmit = vi.mocked(lambdaClient.aiAgent.submitHeteroIntervention.mutate);
+      expect(mirrorSubmit).toHaveBeenCalledTimes(1);
+      expect(mirrorSubmit).toHaveBeenCalledWith({
+        operationId: executionOpId,
+        result: payload,
+        toolCallId: 'cc_call_1',
+      });
+      expect(submitInterventionSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        mirrorSubmit.mock.invocationCallOrder[0],
+      );
     });
 
     it("falls back to global-state optimistic context and routes a GC'd op to the remote tRPC transport", async () => {

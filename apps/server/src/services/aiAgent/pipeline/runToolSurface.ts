@@ -13,6 +13,8 @@ import debug from 'debug';
 
 import { hasServerRuntime } from '@/server/services/toolExecution/serverRuntimes';
 
+import type { ExternalToolPins } from './externalToolPins';
+
 const log = debug('orvilo-server:ai-agent:tool-surface');
 
 /**
@@ -69,6 +71,12 @@ export interface ExternalToolSurfaceEntry {
     parameters?: Record<string, unknown>;
   }>;
   callable: boolean;
+  /**
+   * Identity pins persisted on the operation (SA02/F04): the exec callback
+   * re-authorizes the SAME connection/install + grant revision + schema
+   * digest — never a same-identifier substitute.
+   */
+  pins?: ExternalToolPins;
   source: 'connector' | 'mcp-plugin';
 }
 
@@ -138,12 +146,26 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
     supportsBuiltinToolMount = true,
   } = input;
 
-  // required = every id must reach `mounted`: exclusive surfaces are required
-  // by definition, and `requiredToolIds` names non-negotiable capabilities
-  // (task tools, evidence submission). A required id that resolves to
-  // unauthorized/unsupported/failed — or was never requested — fails the run
-  // instead of dispatching a degraded one.
-  const required = new Set([...(requiredToolIds ?? []), ...(exclusivePluginIds ?? [])]);
+  // The three sets are modelled separately (F05):
+  //   - `allowed`  — the exclusive ceiling; when `exclusivePluginIds` is set,
+  //     ONLY these ids may mount. It is a ceiling, not a must-have list:
+  //     whether an exclusive item is also required is explicit in
+  //     `requiredToolIds`, never assumed.
+  //   - `required` — ids that must reach a verifiable `mounted` state before
+  //     the task is executable; a partial or failed mount is a dispatch
+  //     blocker, not a degraded run (specPrepared ≠ hostConfirmed).
+  //   - `requested` — the ids actually resolved: the exclusive ceiling when
+  //     present, else the union of every admission channel.
+  const allowed = exclusivePluginIds ? new Set(exclusivePluginIds) : undefined;
+  const required = new Set(requiredToolIds ?? []);
+
+  // required ⊄ allowed → contract conflict: refusing the run is correct, and
+  // widening `allowed` to fit `required` is the bug this guards against
+  // (exclusive=[read] + required=[write] must NOT mount write).
+  const offCeiling = [...required].filter((id) => allowed && !allowed.has(id));
+  if (offCeiling.length) {
+    throw new Error(`Required tools conflict with the exclusive surface: ${offCeiling.join(', ')}`);
+  }
 
   const outcomes: ToolSurfaceOutcome[] = [];
   const push = (outcome: ToolSurfaceOutcome) => outcomes.push(outcome);
@@ -157,8 +179,8 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
     return { builtinToolSpecs: [], outcomes };
   }
 
-  const requested = exclusivePluginIds
-    ? [...new Set([...exclusivePluginIds, ...(requiredToolIds ?? [])])]
+  const requested = allowed
+    ? [...allowed]
     : [
         ...new Set([
           ...getActivePluginIds(agentPlugins),

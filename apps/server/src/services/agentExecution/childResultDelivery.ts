@@ -12,6 +12,29 @@
  */
 export const CHILD_RESULT_EVENT_TYPE = 'agent_operation.child_result';
 
+/**
+ * Delivery state machine for a child-result receipt (SA04/F06):
+ * - `received` — the completion bridge committed the result into the ledger;
+ * - `offered` — the parent await settled and handed the result to the host
+ *   (the HTTP/MCP response may still be lost in flight — this is NOT consume);
+ * - `acked` — the parent-side durable inbox acknowledged the delivery; the
+ *   ONLY state that marks consumption;
+ * - `superseded` — the anchor's generation went terminal under a different
+ *   event id; the row is terminal and never consumed.
+ *
+ * The ledger row's `status` stays `pending` until `acked`/`superseded`; the
+ * sweep shield is `nextAttemptAt` = `deadlineAt` (see {@link CHILD_RESULT_RECEIPT_TTL_MS}),
+ * so the room projector cannot flip a live receipt to `delivered` early.
+ */
+export type ChildResultDeliveryState = 'acked' | 'offered' | 'received' | 'superseded';
+
+/**
+ * Persisted deadline every delegation receipt carries: results committed
+ * longer than this ago are no longer offerable — the parent polls its own
+ * deadline, so a receipt outliving any possible consumer is inspection noise.
+ */
+export const CHILD_RESULT_RECEIPT_TTL_MS = 60 * 60 * 1000;
+
 export interface ChildResultDedupeParts {
   childOperationId: string;
   /** Parent `appContext.executionGeneration` — separates re-dispatch waves. */

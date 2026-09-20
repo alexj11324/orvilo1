@@ -35,6 +35,12 @@ export interface AgentOperationAppContext {
   documentId?: string | null;
   executionGeneration?: number;
   groupId?: string | null;
+  /**
+   * Caller-declared intervention surface (`UserInterventionConfig.approvalMode`).
+   * 'headless' runs cannot reach a human — exec-time approval gates refuse
+   * instead of treating the missing surface as approval.
+   */
+  interventionApprovalMode?: 'allow-list' | 'auto-run' | 'headless' | 'manual';
   /** ACP judgment-run marker — see `ExecAgentAppContext.judgment`. */
   judgment?: AgentOperationJudgmentContext;
   scope?: string | null;

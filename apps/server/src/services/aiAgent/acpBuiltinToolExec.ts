@@ -8,7 +8,7 @@ import type {
 } from '@orvilo/types';
 import { isTerminalAgentOperationStatus } from '@orvilo/types';
 import debug from 'debug';
-import { and, eq, inArray, like } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
 import { ChatGroupModel } from '@/database/models/chatGroup';
 import { ConnectorModel } from '@/database/models/connector';
@@ -21,6 +21,7 @@ import {
   agents,
   ConnectorToolPermission,
   messagePlugins,
+  messages,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import type {
@@ -39,9 +40,16 @@ import type {
 
 import {
   CHILD_RESULT_EVENT_TYPE,
+  CHILD_RESULT_RECEIPT_TTL_MS,
   childResultEventId,
   isOwnedToolCallId,
 } from '../agentExecution/childResultDelivery';
+import {
+  authorizeToolApprovalReceipt,
+  buildToolApprovalEvent,
+  TOOL_APPROVAL_TTL_MS,
+  toolApprovalEventId,
+} from '../agentExecution/toolApprovalReceipt';
 import { buildGroupAgentContext } from './helpers/groupContext';
 import {
   buildServerAgentMemberRunner,
@@ -50,6 +58,14 @@ import {
   type OrchestrationRunnerState,
   registerWorkFromIntent,
 } from './orchestrationRunners';
+import {
+  apiSchemaDigest,
+  connectorAuthRevision,
+  type ExternalToolPins,
+  pluginInstallPin,
+  sha256Hex,
+  stableStringify,
+} from './pipeline/externalToolPins';
 
 const log = debug('orvilo-server:ai-agent:acp-builtin-tool');
 
@@ -164,6 +180,13 @@ export const loadAcpToolOperation = async (
  */
 interface ExternalToolMountMetadata {
   apis: string[];
+  /**
+   * Mount-time identity pins (SA02/F04): the exact connection/install + grant
+   * revision + per-api schema digests the dispatch authorized. Exec
+   * re-authorizes the SAME row — never a different connection that happens to
+   * share the identifier.
+   */
+  pins?: ExternalToolPins;
   source: 'connector' | 'mcp-plugin';
 }
 
@@ -375,7 +398,7 @@ export const execAcpBuiltinTool = async (
       db,
       identifier,
       mount: externalMount,
-      operationAgentId: operation.agentId ?? undefined,
+      operation,
       payload: chatToolPayload,
       userId,
       workspaceId: operation.workspaceId ?? workspaceId,
@@ -442,22 +465,48 @@ const execAcpExternalTool = async (input: {
   db: OrviloDatabase;
   identifier: string;
   mount: ExternalToolMountMetadata;
-  operationAgentId?: string;
+  operation: OperationRow;
   payload: ChatToolPayload;
   userId: string;
   workspaceId?: string;
 }): Promise<AcpBuiltinToolExecResult> => {
-  const { context, db, identifier, mount, operationAgentId, payload, userId, workspaceId } = input;
+  const { context, db, identifier, mount, operation, payload, userId, workspaceId } = input;
+  const pins = mount.pins;
+
+  // The approval contract mounted with this run: the receipt binds the
+  // pinned connection/install, grant revision, per-api schema and args hash.
+  let authRevision: string | undefined;
+  let schemaDigest: string | undefined;
 
   let manifest: OrviloToolManifest;
   if (mount.source === 'connector') {
     const connectorModel = new ConnectorModel(db, userId, workspaceId);
-    const [connector] = await connectorModel.resolveByIdentifiers([identifier], operationAgentId);
+    // Pinned mounts re-load the exact authorized row; a same-identifier row is
+    // never substituted (C03). Only legacy mounts recorded before pins existed
+    // fall back to identifier resolution.
+    const connector = pins?.connectorId
+      ? await connectorModel.findById(pins.connectorId)
+      : (
+          await connectorModel.resolveByIdentifiers([identifier], operation.agentId ?? undefined)
+        )[0];
     if (!connector) {
       throw new AcpBuiltinToolNotFoundError(`Connector '${identifier}' not found`);
     }
+    if (connector.identifier !== identifier) {
+      // The pinned row no longer claims this identifier (re-link / row reuse)
+      // — refuse rather than let the mount drift onto a different connection.
+      throw new AcpBuiltinToolForbiddenError(
+        `Pinned connector for '${identifier}' no longer carries that identifier`,
+      );
+    }
     if (!connector.isEnabled) {
       throw new AcpBuiltinToolForbiddenError(`Connector '${identifier}' is disabled`);
+    }
+    authRevision = connectorAuthRevision(connector);
+    if (pins?.authRevision && authRevision !== pins.authRevision) {
+      throw new AcpBuiltinToolForbiddenError(
+        `Connector '${identifier}' was re-authorized since dispatch; remount required`,
+      );
     }
 
     const connectorToolModel = new ConnectorToolModel(db, userId, workspaceId);
@@ -472,6 +521,30 @@ const execAcpExternalTool = async (input: {
       throw new AcpBuiltinToolForbiddenError(
         `Tool '${payload.apiName}' is disabled on connector '${identifier}'`,
       );
+    }
+    schemaDigest = apiSchemaDigest(tool.inputSchema ?? {});
+    const pinnedDigest = pins?.schemaDigests?.[payload.apiName];
+    if (pinnedDigest && pinnedDigest !== schemaDigest) {
+      throw new AcpBuiltinToolForbiddenError(
+        `Tool '${payload.apiName}' schema changed since dispatch; remount required`,
+      );
+    }
+    if (tool.permission === ConnectorToolPermission.needs_approval) {
+      const refused = await gateAcpExternalToolApproval({
+        apiName: payload.apiName,
+        argsJson: payload.arguments,
+        authRevision,
+        connectorId: connector.id,
+        db,
+        identifier,
+        kind: 'connector_tool',
+        operation,
+        schemaDigest,
+        toolCallId: payload.id,
+        userId,
+        workspaceId,
+      });
+      if (refused) return refused;
     }
 
     const fresh = await ensureFreshConnectorToken(connector, connectorModel);
@@ -496,6 +569,48 @@ const execAcpExternalTool = async (input: {
         `Plugin '${identifier}' is not installed or has no callable MCP transport`,
       );
     }
+    const installPin = pluginInstallPin(plugin);
+    if (pins?.pluginInstallId && installPin !== pins.pluginInstallId) {
+      // A different install generation now owns the identifier — the mount
+      // authorized a specific install, refuse the substitution.
+      throw new AcpBuiltinToolForbiddenError(
+        `Plugin '${identifier}' was reinstalled since dispatch; remount required`,
+      );
+    }
+    const pluginApi = plugin.manifest.api.find((api) => api.name === payload.apiName);
+    schemaDigest = apiSchemaDigest(pluginApi?.parameters ?? {});
+    const pinnedDigest = pins?.schemaDigests?.[payload.apiName];
+    if (pinnedDigest && pinnedDigest !== schemaDigest) {
+      throw new AcpBuiltinToolForbiddenError(
+        `Tool '${payload.apiName}' schema changed since dispatch; remount required`,
+      );
+    }
+    // Manifest-declared intervention policies ride the same receipt contract
+    // as connector `needs_approval` rows — the host surfaces a permission
+    // card, the server consumes a one-time receipt.
+    const apiPolicy = pluginApi?.humanIntervention;
+    const manifestPolicy = (plugin.manifest as { humanIntervention?: unknown }).humanIntervention;
+    const requiresApproval =
+      apiPolicy === 'required' ||
+      apiPolicy === 'always' ||
+      (apiPolicy === undefined && (manifestPolicy === 'required' || manifestPolicy === 'always'));
+    if (requiresApproval) {
+      const refused = await gateAcpExternalToolApproval({
+        apiName: payload.apiName,
+        argsJson: payload.arguments,
+        db,
+        identifier,
+        kind: 'plugin_tool',
+        operation,
+        pluginInstallId: installPin,
+        schemaDigest,
+        toolCallId: payload.id,
+        userId,
+        workspaceId,
+      });
+      if (refused) return refused;
+    }
+
     manifest = { ...(plugin.manifest as OrviloToolManifest), mcpParams } as OrviloToolManifest;
   }
 
@@ -520,12 +635,160 @@ const execAcpExternalTool = async (input: {
   };
 };
 
+/**
+ * Unified tool-authorization step for approval-gated external calls (F04).
+ *
+ * The gate runs BEFORE `ToolExecutionService.executeTool` — a refused call
+ * produces zero network side effects (`mcpService.callTool` never runs). A
+ * missing receipt creates a pending one bound to
+ * principal/workspace/operation/generation/toolCallId/connection/argsHash and
+ * returns a `pending` result the host turns into an intervention card; the
+ * human decision lands via `submitHeteroIntervention` (user-auth channel —
+ * the op-token path can only ever create or observe a receipt, never decide
+ * it). Headless runs and runs with no interaction surface refuse explicitly.
+ */
+const gateAcpExternalToolApproval = async (params: {
+  apiName: string;
+  argsJson: string;
+  authRevision?: string;
+  connectorId?: string;
+  db: OrviloDatabase;
+  identifier: string;
+  kind: 'connector_tool' | 'plugin_tool';
+  operation: OperationRow;
+  pluginInstallId?: string;
+  schemaDigest?: string;
+  toolCallId: string;
+  userId: string;
+  workspaceId?: string;
+}): Promise<AcpBuiltinToolExecResult | undefined> => {
+  const { db, operation, toolCallId } = params;
+  const appContext = (operation.appContext ?? {}) as Record<string, unknown>;
+  const now = Date.now();
+
+  // Headless / no-interaction runs are not auto-approve — the call cannot
+  // reach a human, so it refuses outright without creating a receipt.
+  if (appContext.interventionApprovalMode === 'headless') {
+    return {
+      error: {
+        code: 'acp_tool_approval_unavailable',
+        message: `Tool '${params.identifier}.${params.apiName}' requires human approval and this run has no interaction surface`,
+      },
+      success: false,
+    };
+  }
+
+  const expiresAt = now + TOOL_APPROVAL_TTL_MS;
+  const argsHash = sha256Hex(stableStringify(safeParseJson(params.argsJson)));
+  const event = buildToolApprovalEvent({
+    agentId: operation.agentId ?? undefined,
+    apiName: params.apiName,
+    argsHash,
+    authRevision: params.authRevision,
+    connectorId: params.connectorId,
+    expiresAt,
+    executionGeneration: (appContext.executionGeneration as number | undefined) ?? undefined,
+    identifier: params.identifier,
+    kind: params.kind,
+    now,
+    operationId: operation.id,
+    pluginInstallId: params.pluginInstallId,
+    schemaDigest: params.schemaDigest,
+    toolCallId,
+    userId: operation.userId,
+    workspaceId: params.workspaceId ?? operation.workspaceId ?? '',
+  });
+  // Insert is dedupe-stable on eventId — retries/concurrent polls converge on
+  // the same receipt rather than stacking approvals.
+  await new EventOutboxModel(db).upsertDeliveryReceipt({ event });
+
+  const status = await authorizeToolApprovalReceipt(db, {
+    argsHash,
+    now,
+    operationId: operation.id,
+    toolCallId,
+  });
+  if (status === 'approved') return undefined;
+
+  if (status === 'expired') {
+    // An expired receipt with no terminal decision re-pends under a fresh
+    // window; a stale APPROVAL inside the dead window is cleared by the renew
+    // CAS so it can never ride the new window.
+    const renewed = await new EventOutboxModel(db).renewToolApprovalReceipt({
+      eventId: toolApprovalEventId(operation.id, toolCallId),
+      expiresAt,
+      now,
+    });
+    if (renewed) {
+      return {
+        error: {
+          code: 'acp_tool_approval_pending',
+          message: `Tool '${params.identifier}.${params.apiName}' requires human approval`,
+        },
+        state: { toolApproval: { expiresAt, renewed: true } },
+        success: false,
+      };
+    }
+  }
+
+  const reason =
+    status === 'denied'
+      ? 'acp_tool_approval_denied'
+      : status === 'consumed'
+        ? 'acp_tool_approval_consumed'
+        : status === 'args_mismatch'
+          ? 'acp_tool_approval_args_mismatch'
+          : status === 'expired'
+            ? 'acp_tool_approval_expired'
+            : 'acp_tool_approval_pending';
+  return {
+    error: {
+      code: reason,
+      message:
+        status === 'denied'
+          ? `The user denied '${params.identifier}.${params.apiName}'`
+          : status === 'consumed'
+            ? `Approval for '${params.identifier}.${params.apiName}' was already consumed`
+            : status === 'args_mismatch'
+              ? `Approval for '${params.identifier}.${params.apiName}' covered different arguments`
+              : status === 'expired'
+                ? `Approval for '${params.identifier}.${params.apiName}' expired`
+                : `Tool '${params.identifier}.${params.apiName}' requires human approval`,
+    },
+    state: { toolApproval: { expiresAt } },
+    success: false,
+  };
+};
+
+const safeParseJson = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+};
+
 export interface AcpBuiltinToolChildResult {
   content?: string;
   error?: string;
   operationId: string;
   status: string;
 }
+
+/** One child result's ledger position returned on a v2 settle. */
+export interface AcpChildResultDelivery {
+  childOperationId: string;
+  deliveryState: 'acked' | 'offered' | 'superseded';
+  /** `event_outbox` dedupe key the parent acks against. */
+  eventId: string;
+}
+
+/**
+ * Default cumulative bound for awaits that never pass `waitDeadlineMs`
+ * (legacy/old hosts): the anchor's deadline is still persisted so a missing
+ * anchor can never pend forever.
+ */
+const AWAIT_DEFAULT_DEADLINE_MS = 60 * 60 * 1000;
 
 /**
  * Poll the children a deferred builtin tool forked. A child counts as pending
@@ -551,36 +814,81 @@ export const awaitAcpBuiltinToolChildren = async (
   deps: Pick<AcpBuiltinToolExecDeps, 'db' | 'userId' | 'workspaceId'>,
   input: {
     childOperationIds: string[];
+    /**
+     * Ledger contract the host understands. `1` (default, legacy hosts):
+     * settle flips receipts straight to `delivered` — preserved for
+     * backward compatibility. `2`: settle writes `offered` and returns
+     * `deliveries[]`; the parent durably consumes via
+     * `heteroAckChildResultDeliveries`, so a lost HTTP response replays
+     * instead of losing the result.
+     */
+    contractVersion?: number;
     operationId: string;
     timeoutMs?: number;
     toolCallId?: string;
     waitDeadlineMs?: number;
   },
 ): Promise<
-  | { results: AcpBuiltinToolChildResult[]; status: 'settled' }
-  | { pendingOperationIds: string[]; status: 'pending' | 'timeout' }
+  | {
+      contractVersion: number;
+      deliveries?: AcpChildResultDelivery[];
+      results: AcpBuiltinToolChildResult[];
+      status: 'settled';
+    }
+  | { contractVersion: number; pendingOperationIds: string[]; status: 'pending' | 'timeout' }
 > => {
   const { db, userId, workspaceId } = deps;
   const deadline = Date.now() + Math.min(input.timeoutMs ?? 25_000, 30_000);
   const wanted = [...new Set(input.childOperationIds)];
-  if (wanted.length === 0) return { results: [], status: 'settled' };
+  const contractVersion = input.contractVersion === 2 ? 2 : 1;
+  if (wanted.length === 0) return { contractVersion, results: [], status: 'settled' };
+
+  // Parent row once: the generation keys every child-result event id, and the
+  // topic scopes the placeholder sweep (D06 — a placeholder in another
+  // operation's topic sharing this user + toolCallId must never be swept).
+  const [parentRow] = await db
+    .select({
+      appContext: agentOperations.appContext,
+      topicId: agentOperations.topicId,
+      workspaceId: agentOperations.workspaceId,
+    })
+    .from(agentOperations)
+    .where(eq(agentOperations.id, input.operationId))
+    .limit(1);
+  const parentTopicId = parentRow?.topicId ?? null;
+  const generation =
+    ((parentRow?.appContext as Record<string, unknown> | null)?.executionGeneration as
+      number | undefined) ?? 0;
 
   const ownedPlaceholderRows = async () => {
     if (!input.toolCallId) return [];
     const candidates = await db
       .select({
         id: messagePlugins.id,
+        messageTopicId: messages.topicId,
+        ownerOperationId: sql<string | null>`${messagePlugins.state}->>'awaitOwnerOperationId'`,
         state: messagePlugins.state,
         toolCallId: messagePlugins.toolCallId,
       })
       .from(messagePlugins)
+      // The placeholder's scoping message carries the topic — placeholders
+      // live one-per-message, and the tool call's topic is the parent's.
+      .innerJoin(messages, eq(messagePlugins.id, messages.id))
       .where(
         and(
           like(messagePlugins.toolCallId, `${input.toolCallId}%`),
           eq(messagePlugins.userId, userId),
         ),
       );
-    return candidates.filter((row) => isOwnedToolCallId(row.toolCallId, input.toolCallId!));
+    return candidates.filter(
+      (row) =>
+        isOwnedToolCallId(row.toolCallId, input.toolCallId!) &&
+        // Cross-operation isolation: the row must live in THIS operation's
+        // topic, and once another operation has claimed it
+        // (`awaitOwnerOperationId`) it is never ours.
+        (!parentTopicId || row.messageTopicId === parentTopicId) &&
+        (!row.ownerOperationId || row.ownerOperationId === input.operationId),
+    );
   };
 
   // Long-poll: bounded server-side wait so one MCP call doesn't spin a request
@@ -648,68 +956,134 @@ export const awaitAcpBuiltinToolChildren = async (
         }
       }
 
-      // Delivery ledger: the bridge writes `pending` when the child's result
-      // was persisted; handing it to the caller here is the consume point, so
-      // mark each child's receipt delivered (inserting it first when no
-      // bridge ran — e.g. a placeholder swept above).
-      try {
-        const outbox = new EventOutboxModel(db);
-        const [parentRow] = await db
-          .select({
-            appContext: agentOperations.appContext,
-            workspaceId: agentOperations.workspaceId,
-          })
-          .from(agentOperations)
-          .where(eq(agentOperations.id, input.operationId))
-          .limit(1);
-        const generation =
-          ((parentRow?.appContext as Record<string, unknown> | null)?.executionGeneration as
-            number | undefined) ?? 0;
-        for (const result of results) {
+      // Delivery ledger (F06): the bridge commits `received` when the child's
+      // result is persisted; a v2 settle moves it to `offered` — handed to the
+      // caller but NOT consumed — and returns `deliveries[]` for the parent's
+      // durable inbox ACK (`heteroAckChildResultDeliveries`). A lost HTTP
+      // response then replays: the next poll re-derives the results and
+      // re-offers idempotently. Legacy v1 callers keep consume-on-settle.
+      // The ledger write is NOT swallowed: a settle that cannot persist its
+      // delivery state must fail rather than report reliable delivery.
+      const outbox = new EventOutboxModel(db);
+      const deliveries: AcpChildResultDelivery[] = [];
+      for (const result of results) {
+        const eventId = childResultEventId({
+          childOperationId: result.operationId,
+          generation,
+          parentOperationId: input.operationId,
+          toolCallId: input.toolCallId,
+        });
+        if (contractVersion === 2) {
+          // Ensure the row exists (no bridge ran — e.g. a placeholder swept
+          // above), then `received → offered`. `acked`/`superseded` rows are
+          // untouched — replay never downgrades a consumed receipt.
+          const deadlineAt = Date.now() + CHILD_RESULT_RECEIPT_TTL_MS;
+          await outbox.upsertDeliveryReceipt({
+            event: {
+              aggregateId: input.operationId,
+              aggregateType: 'agent_operation',
+              eventId,
+              eventType: CHILD_RESULT_EVENT_TYPE,
+              nextAttemptAt: new Date(deadlineAt),
+              payload: {
+                deadlineAt,
+                deliveryState: 'received',
+                status: result.status,
+              },
+              workspaceId: parentRow?.workspaceId ?? workspaceId,
+            },
+          });
+          await outbox.offerDeliveryReceiptByEventId(eventId);
+          deliveries.push({
+            childOperationId: result.operationId,
+            deliveryState: 'offered',
+            eventId,
+          });
+        } else {
           await outbox.upsertDeliveryReceipt({
             delivered: true,
             event: {
               aggregateId: input.operationId,
               aggregateType: 'agent_operation',
-              eventId: childResultEventId({
-                childOperationId: result.operationId,
-                generation,
-                parentOperationId: input.operationId,
-                toolCallId: input.toolCallId,
-              }),
+              eventId,
               eventType: CHILD_RESULT_EVENT_TYPE,
               payload: { status: result.status },
               workspaceId: parentRow?.workspaceId ?? workspaceId,
             },
           });
         }
-      } catch (err) {
-        log('awaitAcpBuiltinToolChildren: delivery ledger write failed: %O', err);
       }
 
-      return { results, status: 'settled' };
+      return { contractVersion, deliveries, results, status: 'settled' };
     }
 
     if (Date.now() >= deadline) {
-      // Server-side cumulative wait bound: the placeholder's `awaitStartedAt`
-      // stamps the first poll that found live children, so the bound is
-      // durable across host reconnects. Crossing it settles the owned
-      // placeholders to `error` — the stall becomes a visible failure a human
-      // can act on instead of an infinite pending.
-      if (input.waitDeadlineMs && input.toolCallId) {
+      // Server-side cumulative wait bound (F06): the anchor placeholder's
+      // `awaitDeadlineAt` is an ABSOLUTE instant stamped at first accept —
+      // `now + waitDeadlineMs` (the host's remaining budget at that poll).
+      // Later polls only compare against it; they can never extend or shorten
+      // it, so a host that re-sends remaining=deadline−elapsed no longer
+      // double-charges the elapsed half. Legacy rows carrying only
+      // `awaitStartedAt` are upgraded once to a stamped deadline.
+      if (input.toolCallId) {
         try {
           const owned = await ownedPlaceholderRows();
           const anchor = owned.find((row) => row.toolCallId === input.toolCallId) ?? owned[0];
-          const startedAt = (anchor?.state as { awaitStartedAt?: number } | null)?.awaitStartedAt;
+          const anchorState = anchor?.state as
+            | {
+                awaitDeadlineAt?: number;
+                awaitStartedAt?: number;
+              }
+            | null
+            | undefined;
           const now = Date.now();
-          if (!startedAt) {
-            const messageModel = new MessageModel(db, userId, workspaceId);
-            for (const row of owned) {
-              await messageModel.updateToolMessage(row.id, {
-                pluginState: { awaitStartedAt: now },
+          const waitBudget = input.waitDeadlineMs ?? AWAIT_DEFAULT_DEADLINE_MS;
+          if (!anchor) {
+            // No placeholder anchor exists (host awaited before exec wrote
+            // rows, or a dropped anchor). The deadline still must be durable:
+            // persist it on a keyed await-anchor receipt so reconnects and
+            // retries share one fixed instant and a missing anchor can never
+            // pend forever.
+            const outbox = new EventOutboxModel(db);
+            const anchorEventId = `await-anchor:${input.operationId}:${input.toolCallId}`;
+            const existing = await outbox.getDeliveryReceiptPayload(anchorEventId);
+            const deadlineAt =
+              typeof existing?.awaitDeadlineAt === 'number'
+                ? existing.awaitDeadlineAt
+                : now + waitBudget;
+            if (typeof existing?.awaitDeadlineAt !== 'number') {
+              await outbox.upsertDeliveryReceipt({
+                event: {
+                  aggregateId: input.operationId,
+                  aggregateType: 'agent_operation',
+                  eventId: anchorEventId,
+                  eventType: 'agent_operation.await_deadline',
+                  nextAttemptAt: new Date(deadlineAt),
+                  payload: { awaitDeadlineAt: deadlineAt },
+                  workspaceId: parentRow?.workspaceId ?? workspaceId,
+                },
               });
             }
-          } else if (now - startedAt >= input.waitDeadlineMs) {
+            if (now >= deadlineAt) {
+              return { contractVersion, pendingOperationIds: pendingIds, status: 'timeout' };
+            }
+          } else if (!anchorState?.awaitDeadlineAt) {
+            // First accept (or legacy anchor): stamp the fixed deadline plus
+            // the owning operation, so a foreign op's sweep can never claim
+            // these rows (D06).
+            const messageModel = new MessageModel(db, userId, workspaceId);
+            const deadlineAt = now + waitBudget;
+            for (const row of owned) {
+              await messageModel.updateToolMessage(row.id, {
+                pluginState: {
+                  awaitDeadlineAt: deadlineAt,
+                  awaitOwnerOperationId: input.operationId,
+                  awaitStartedAt:
+                    (row.state as { awaitStartedAt?: number } | null)?.awaitStartedAt ?? now,
+                },
+              });
+            }
+          } else if (now >= (anchorState?.awaitDeadlineAt ?? Infinity)) {
             const messageModel = new MessageModel(db, userId, workspaceId);
             for (const row of owned) {
               const status = (row.state as { status?: string } | null)?.status ?? 'pending';
@@ -719,14 +1093,42 @@ export const awaitAcpBuiltinToolChildren = async (
                 pluginState: { status: 'error', waitDeadlineExceeded: true },
               });
             }
-            return { pendingOperationIds: pendingIds, status: 'timeout' };
+            return { contractVersion, pendingOperationIds: pendingIds, status: 'timeout' };
           }
         } catch (err) {
           log('awaitAcpBuiltinToolChildren: deadline bookkeeping failed: %O', err);
         }
       }
-      return { pendingOperationIds: allSeen ? pendingIds : wanted, status: 'pending' };
+      return {
+        contractVersion,
+        pendingOperationIds: allSeen ? pendingIds : wanted,
+        status: 'pending',
+      };
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
+};
+
+/**
+ * Parent-side durable inbox ACK (F06/v2 contract): the ONLY transition that
+ * consumes a child-result delivery. Each eventId is bound to the calling
+ * operation via `aggregateId`, so a leaked or forged id can never consume
+ * another operation's receipt. Unacked receipts stay `offered` — replayable
+ * after a parent crash.
+ */
+export const ackAcpChildResultDeliveries = async (
+  deps: Pick<AcpBuiltinToolExecDeps, 'db'>,
+  input: { deliveryEventIds: string[]; operationId: string },
+): Promise<{ acked: string[]; ignored: string[] }> => {
+  const outbox = new EventOutboxModel(deps.db);
+  const acked: string[] = [];
+  const ignored: string[] = [];
+  for (const eventId of [...new Set(input.deliveryEventIds)].slice(0, 64)) {
+    const didAck = await outbox.ackDeliveryReceiptByEventId({
+      aggregateId: input.operationId,
+      eventId,
+    });
+    (didAck ? acked : ignored).push(eventId);
+  }
+  return { acked, ignored };
 };

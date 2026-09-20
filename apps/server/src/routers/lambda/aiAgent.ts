@@ -48,6 +48,7 @@ import {
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
@@ -78,9 +79,14 @@ import {
   ResolveAgentInterventionBySourceSchema,
   ResolveAgentInterventionSchema,
 } from '@/server/routers/lambda/_schema/agentIntervention';
+import {
+  decodeToolApprovalAction,
+  toolApprovalEventId,
+} from '@/server/services/agentExecution/toolApprovalReceipt';
 import { AgentStartError } from '@/server/services/agentExecution/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
+  ackAcpChildResultDeliveries,
   AcpBuiltinToolForbiddenError,
   AcpBuiltinToolNotFoundError,
   awaitAcpBuiltinToolChildren,
@@ -1504,13 +1510,22 @@ const HeteroExecBuiltinToolSchema = z.object({
  */
 const HeteroAwaitBuiltinToolChildrenSchema = z.object({
   childOperationIds: z.array(z.string().min(1)).min(1).max(64),
+  /**
+   * Delivery-ledger contract the host understands (F06). `1` = legacy
+   * consume-on-settle; `2` = settle returns `offered` deliveries the host
+   * acks via `heteroAckChildResultDeliveries`. Omitted means `1` — older
+   * hosts keep their exact old semantics, never accidentally opting into
+   * fields they cannot interpret.
+   */
+  contractVersion: z.union([z.literal(1), z.literal(2)]).optional(),
   operationId: z.string().min(1),
   timeoutMs: z.number().int().positive().max(30_000).default(25_000),
   toolCallId: z.string().min(1).optional(),
   /**
-   * Server-side cumulative bound for this await — keyed by the placeholder's
-   * stamped `awaitStartedAt`, so it survives host reconnects. On expiry the
-   * owned placeholders settle to `error` and the call returns `timeout`.
+   * Server-side cumulative bound for this await — the host's remaining
+   * budget at THIS poll. The server stamps an absolute `awaitDeadlineAt` on
+   * the anchor once (first accept) and only compares against it afterwards,
+   * so a shrinking remaining budget can never re-charge elapsed time.
    */
   waitDeadlineMs: z
     .number()
@@ -1518,6 +1533,17 @@ const HeteroAwaitBuiltinToolChildrenSchema = z.object({
     .positive()
     .max(60 * 60_000)
     .optional(),
+});
+
+/**
+ * Schema for `aiAgent.heteroAckChildResultDeliveries` — the parent's durable
+ * inbox ACK for v2 child-result deliveries. Each `eventId` is rebound to the
+ * calling operation's `aggregateId` inside the update, so a captured op token
+ * cannot consume receipts that belong to another operation.
+ */
+const HeteroAckChildResultDeliveriesSchema = z.object({
+  deliveryEventIds: z.array(z.string().min(1)).min(1).max(64),
+  operationId: z.string().min(1),
 });
 
 /**
@@ -3213,8 +3239,46 @@ export const aiAgentRouter = router({
 
       return awaitAcpBuiltinToolChildren(
         { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-        { childOperationIds, operationId, timeoutMs, toolCallId, waitDeadlineMs },
+        {
+          childOperationIds,
+          contractVersion: input.contractVersion,
+          operationId,
+          timeoutMs,
+          toolCallId,
+          waitDeadlineMs,
+        },
       );
+    }),
+
+  /**
+   * Parent-side durable inbox ACK for v2 child-result deliveries (F06).
+   * Settle only OFFERS a result — this mutation is the consume point, keyed
+   * by the same op token as the await (`hetero:tool:exec`) plus the
+   * `aggregateId` binding inside each acked row.
+   */
+  heteroAckChildResultDeliveries: heteroAgentProcedure
+    .input(HeteroAckChildResultDeliveriesSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { operationId } = input;
+
+      await authorizeOperationCallback(ctx, operationId, 'hetero:tool:exec');
+
+      if (ctx.heteroAuthKind !== 'operation') {
+        const [operationRow] = await ctx.serverDB
+          .select({ userId: agentOperations.userId })
+          .from(agentOperations)
+          .where(eq(agentOperations.id, operationId))
+          .limit(1);
+
+        if (operationRow?.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Operation not found or not owned by the caller',
+          });
+        }
+      }
+
+      return ackAcpChildResultDeliveries({ db: ctx.serverDB }, input);
     }),
 
   /**
@@ -3467,6 +3531,24 @@ export const aiAgentRouter = router({
           workspaceId: ctx.workspaceId,
         });
       }
+
+      // SA02/F04: when this submit answers a `needs_approval` tool card, the
+      // exec-time gate's durable receipt records the decision — first-winner
+      // CAS, so a double-submit or a stale retry can't flip it. No receipt
+      // exists for ordinary askUser submits — the write is a no-op.
+      await new EventOutboxModel(ctx.serverDB)
+        .recordToolApprovalDecision({
+          decision: {
+            action: decodeToolApprovalAction({ cancelled, result }),
+            decidedAt: Date.now(),
+            decidedByUserId: ctx.userId,
+            resolutionRequestId,
+          },
+          eventId: toolApprovalEventId(operationId, toolCallId),
+        })
+        .catch((error) =>
+          log('submitHeteroIntervention: tool-approval receipt write failed: %O', error),
+        );
 
       const streamEventManager = createStreamEventManager();
       await streamEventManager.publishStreamEvent(operationId, {

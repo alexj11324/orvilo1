@@ -5,6 +5,12 @@ import { ConnectorToolModel } from '@/database/models/connectorTool';
 import { PluginModel } from '@/database/models/plugin';
 import type { OrviloDatabase } from '@/database/type';
 
+import {
+  connectorAuthRevision,
+  type ExternalToolPins,
+  pluginInstallPin,
+  surfaceSchemaDigests,
+} from './externalToolPins';
 import type { ExternalToolSurfaceEntry } from './runToolSurface';
 
 const log = debug('orvilo-server:ai-agent:external-tool-surface');
@@ -64,7 +70,15 @@ export const resolveExternalToolSurface = async (input: {
         name: tool.toolName,
         parameters: tool.inputSchema as Record<string, unknown> | undefined,
       }));
-      result[connector.identifier] = { apis, callable: true, source: 'connector' };
+      // Pin the exact authorized connection + grant revision + per-api schema
+      // digests so exec re-authorizes THIS row — a re-linked, re-synced or
+      // re-authorized same-identifier connection is refused, not substituted.
+      const pins: ExternalToolPins = {
+        authRevision: connectorAuthRevision(connector),
+        connectorId: connector.id,
+        schemaDigests: surfaceSchemaDigests(apis),
+      };
+      result[connector.identifier] = { apis, callable: true, pins, source: 'connector' };
     }
   }
 
@@ -82,13 +96,18 @@ export const resolveExternalToolSurface = async (input: {
     if (!plugin || !apis?.length) continue;
     const mcpParams =
       plugin.customParams?.mcp ?? (plugin.manifest as { mcpParams?: unknown })?.mcpParams;
+    const mountedApis = apis.map((api) => ({
+      description: api.description,
+      name: api.name,
+      parameters: api.parameters as Record<string, unknown> | undefined,
+    }));
     result[identifier] = {
-      apis: apis.map((api) => ({
-        description: api.description,
-        name: api.name,
-        parameters: api.parameters as Record<string, unknown> | undefined,
-      })),
+      apis: mountedApis,
       callable: Boolean(mcpParams),
+      pins: {
+        pluginInstallId: pluginInstallPin(plugin),
+        schemaDigests: surfaceSchemaDigests(mountedApis),
+      } satisfies ExternalToolPins,
       source: 'mcp-plugin',
     };
   }

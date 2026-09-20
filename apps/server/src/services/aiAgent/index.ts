@@ -1078,6 +1078,7 @@ export class AiAgentService {
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
         userAgent,
+        userInterventionConfig: params.userInterventionConfig,
       },
     );
 

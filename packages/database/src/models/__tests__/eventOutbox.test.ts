@@ -202,4 +202,218 @@ describe('EventOutboxModel', () => {
       expect(await model.markDelivered(row.id)).toBe(false);
     });
   });
+
+  describe('delivery ledger transitions (SA04/F06)', () => {
+    const insertReceipt = (payload: Record<string, unknown> = {}) =>
+      new EventOutboxModel(serverDB).insertOutboxEvent(serverDB, {
+        aggregateId: 'op_1',
+        aggregateType: 'agent_operation',
+        eventId: newEventId(),
+        eventType: 'agent_operation.child_result',
+        payload: { deliveryState: 'received', ...payload },
+        workspaceId,
+      });
+
+    it('received → offered → acked, each transition idempotent', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const row = await insertReceipt();
+
+      expect(await model.offerDeliveryReceiptByEventId(row.eventId)).toBe(true);
+      // Re-offer is a no-op — a replayed settle never downgrades.
+      expect(await model.offerDeliveryReceiptByEventId(row.eventId)).toBe(false);
+
+      expect(
+        await model.ackDeliveryReceiptByEventId({
+          aggregateId: 'op_1',
+          eventId: row.eventId,
+        }),
+      ).toBe(true);
+
+      const [stored] = await serverDB
+        .select()
+        .from(eventOutbox)
+        .where(eq(eventOutbox.eventId, row.eventId));
+      expect(stored.status).toBe('delivered');
+      expect((stored.payload as Record<string, unknown>).deliveryState).toBe('acked');
+      expect(stored.deliveredAt).not.toBeNull();
+
+      // Re-ack is a no-op.
+      expect(
+        await model.ackDeliveryReceiptByEventId({ aggregateId: 'op_1', eventId: row.eventId }),
+      ).toBe(false);
+    });
+
+    it('ack against a foreign aggregateId is refused', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const row = await insertReceipt();
+
+      expect(
+        await model.ackDeliveryReceiptByEventId({
+          aggregateId: 'op_other',
+          eventId: row.eventId,
+        }),
+      ).toBe(false);
+      const [stored] = await serverDB
+        .select()
+        .from(eventOutbox)
+        .where(eq(eventOutbox.eventId, row.eventId));
+      expect(stored.status).toBe('pending');
+    });
+
+    it('a superseded receipt can never be acked', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const row = await insertReceipt({ deliveryState: 'superseded' });
+
+      expect(
+        await model.ackDeliveryReceiptByEventId({ aggregateId: 'op_1', eventId: row.eventId }),
+      ).toBe(false);
+    });
+
+    it('nextAttemptAt shields a live receipt from the pending sweep', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const row = await model.insertOutboxEvent(serverDB, {
+        aggregateId: 'op_1',
+        aggregateType: 'agent_operation',
+        eventId: newEventId(),
+        eventType: 'agent_operation.child_result',
+        nextAttemptAt: new Date(Date.now() + 60 * 60_000),
+        payload: { deliveryState: 'offered' },
+        workspaceId,
+      });
+
+      const pending = await model.fetchPending({ limit: 10 });
+      expect(pending.map((r) => r.id)).not.toContain(row.id);
+    });
+  });
+
+  describe('tool-approval receipts (SA02/F04)', () => {
+    const approvalEvent = (payload: Record<string, unknown> = {}) => ({
+      aggregateId: 'op_1',
+      aggregateType: 'agent_operation' as const,
+      eventId: newEventId(),
+      eventType: 'agent_operation.tool_approval',
+      payload: {
+        argsHash: 'hash_a',
+        expiresAt: Date.now() + 60_000,
+        ...payload,
+      },
+      workspaceId,
+    });
+
+    it('decision CAS lands once — a second submit is dropped', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent();
+      await model.upsertDeliveryReceipt({ event });
+
+      const decision = { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId };
+      expect(await model.recordToolApprovalDecision({ decision, eventId: event.eventId })).toBe(
+        'decided',
+      );
+      // Second submit (double-click / retry) cannot flip the decision.
+      expect(
+        await model.recordToolApprovalDecision({
+          decision: { ...decision, action: 'denied' },
+          eventId: event.eventId,
+        }),
+      ).toBe('already_decided');
+    });
+
+    it('consume CAS grants an approved, unexpired, args-matched receipt exactly once', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent();
+      await model.upsertDeliveryReceipt({ event });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
+        eventId: event.eventId,
+      });
+
+      const params = { argsHash: 'hash_a', eventId: event.eventId, now: Date.now() };
+      expect(await model.consumeToolApprovalReceipt(params)).toBe(true);
+      // One-time: the same grant cannot be spent twice.
+      expect(await model.consumeToolApprovalReceipt(params)).toBe(false);
+    });
+
+    it('refuses consume on wrong argsHash, denied decision, or expiry', async () => {
+      const model = new EventOutboxModel(serverDB);
+
+      const approved = approvalEvent();
+      await model.upsertDeliveryReceipt({ event: approved });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
+        eventId: approved.eventId,
+      });
+      // Approval covers `hash_a` — a call presenting different args refuses.
+      expect(
+        await model.consumeToolApprovalReceipt({
+          argsHash: 'hash_b',
+          eventId: approved.eventId,
+          now: Date.now(),
+        }),
+      ).toBe(false);
+
+      const denied = approvalEvent();
+      await model.upsertDeliveryReceipt({ event: denied });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'denied', decidedAt: Date.now(), decidedByUserId: userId },
+        eventId: denied.eventId,
+      });
+      expect(
+        await model.consumeToolApprovalReceipt({
+          argsHash: 'hash_a',
+          eventId: denied.eventId,
+          now: Date.now(),
+        }),
+      ).toBe(false);
+
+      const expired = approvalEvent({ expiresAt: Date.now() - 1 });
+      await model.upsertDeliveryReceipt({ event: expired });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'approved', decidedAt: Date.now() - 60_000, decidedByUserId: userId },
+        eventId: expired.eventId,
+      });
+      expect(
+        await model.consumeToolApprovalReceipt({
+          argsHash: 'hash_a',
+          eventId: expired.eventId,
+          now: Date.now(),
+        }),
+      ).toBe(false);
+    });
+
+    it('renew re-pends an expired receipt and clears any stale decision', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent({ expiresAt: Date.now() - 1 });
+      await model.upsertDeliveryReceipt({ event });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'approved', decidedAt: Date.now() - 120_000, decidedByUserId: userId },
+        eventId: event.eventId,
+      });
+
+      const now = Date.now();
+      const freshExpiry = now + 60_000;
+      expect(
+        await model.renewToolApprovalReceipt({
+          eventId: event.eventId,
+          expiresAt: freshExpiry,
+          now,
+        }),
+      ).toBe(true);
+
+      const payload = await model.getDeliveryReceiptPayload(event.eventId);
+      expect(payload?.decision).toBeUndefined();
+      expect(payload?.expiresAt).toBe(freshExpiry);
+      expect(payload?.requestedAt).toBe(now);
+
+      // A non-expired receipt cannot be renewed.
+      const live = approvalEvent();
+      await model.upsertDeliveryReceipt({ event: live });
+      expect(
+        await model.renewToolApprovalReceipt({
+          eventId: live.eventId,
+          expiresAt: freshExpiry,
+          now,
+        }),
+      ).toBe(false);
+    });
+  });
 });

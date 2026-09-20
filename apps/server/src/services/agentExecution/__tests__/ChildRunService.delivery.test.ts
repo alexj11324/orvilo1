@@ -4,17 +4,17 @@ import { childResultEventId } from '../childResultDelivery';
 import { ChildRunService } from '../ChildRunService';
 
 const {
+  mockAckReceipt,
   mockFindMessage,
   mockMessageQuery,
   mockResumeCas,
-  mockMarkDeliveredByEventId,
   mockPluginFind,
   mockOpFind,
   mockUpdateToolMessage,
   mockUpsertReceipt,
 } = vi.hoisted(() => ({
+  mockAckReceipt: vi.fn(),
   mockFindMessage: vi.fn(),
-  mockMarkDeliveredByEventId: vi.fn(),
   mockMessageQuery: vi.fn(),
   mockOpFind: vi.fn(),
   mockPluginFind: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock('@/database/models/agentOperation', () => ({
 vi.mock('@/database/models/eventOutbox', () => ({
   EventOutboxModel: vi.fn().mockImplementation(function () {
     return {
-      markDeliveredByEventId: mockMarkDeliveredByEventId,
+      ackDeliveryReceiptByEventId: mockAckReceipt,
       upsertDeliveryReceipt: mockUpsertReceipt,
     };
   }),
@@ -74,7 +74,7 @@ const buildService = ({
   mockMessageQuery.mockResolvedValue([]);
   mockUpdateToolMessage.mockResolvedValue({ success: true });
   mockUpsertReceipt.mockResolvedValue('inserted');
-  mockMarkDeliveredByEventId.mockResolvedValue(true);
+  mockAckReceipt.mockResolvedValue(true);
   mockResumeCas.mockResolvedValue(false);
 
   return new ChildRunService({
@@ -140,8 +140,12 @@ describe('completeSubAgentBridge delivery ledger', () => {
       delivered: false,
       event: expect.objectContaining({ eventId, eventType: 'agent_operation.child_result' }),
     });
-    // The CAS win is the consume point for the legacy parked path.
-    expect(mockMarkDeliveredByEventId).toHaveBeenCalledWith(eventId);
+    // The CAS win is the consume point for the legacy parked path — the
+    // durable inbox ACK, bound to this parent operation.
+    expect(mockAckReceipt).toHaveBeenCalledWith({
+      aggregateId: 'op-parent-1',
+      eventId,
+    });
   });
 
   it('skips backfill for a superseded delivery (placeholder terminal under a foreign key)', async () => {

@@ -1433,6 +1433,25 @@ export class ConversationControlActionImpl {
             ? { operationId, result: payload ?? {}, toolCallId }
             : { cancelReason: 'user_cancelled', cancelled: true, operationId, toolCallId },
         );
+        // F04: the exec-time `needs_approval` gate reads the durable receipt
+        // server-side — mirror this decision through the same mutation the
+        // remote path uses so a desktop-local op's receipt actually closes.
+        // Awaited (ordering: the producer's retry reads it), but best-effort
+        // (a failed write leaves the receipt pending → refuse, never grant).
+        await lambdaClient.aiAgent.submitHeteroIntervention
+          .mutate(
+            actionType === 'submit'
+              ? { operationId, result: payload ?? {}, toolCallId }
+              : {
+                  cancelReason: 'user_cancelled',
+                  cancelled: true,
+                  operationId,
+                  toolCallId,
+                },
+          )
+          .catch((err) => {
+            console.warn('[submitHeteroIntervention] tool-approval receipt write failed:', err);
+          });
       } else {
         const resolutionIntent = JSON.stringify(
           canonicalizeResolutionPayload({ actionType, payload: payload ?? {} }),

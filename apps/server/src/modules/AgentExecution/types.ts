@@ -1,5 +1,5 @@
+import { type AgentState } from '@orvilo/agent-execution';
 import type { ToolExecuteData } from '@orvilo/agent-gateway-client';
-import { type AgentState } from '@orvilo/agent-runtime';
 import { type UIChatMessage } from '@orvilo/types';
 
 import { type AgentOperationMetadata, type StepResult } from './AgentStateManager';

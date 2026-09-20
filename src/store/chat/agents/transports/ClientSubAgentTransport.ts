@@ -1,4 +1,4 @@
-import type { SubAgentExecutionResult, SubAgentTransport } from '@orvilo/agent-runtime';
+import type { SubAgentExecutionResult, SubAgentTransport } from '@orvilo/agent-execution';
 import type { ExecSubAgentParams, ExecVirtualSubAgentParams } from '@orvilo/types';
 
 import { aiAgentService } from '@/services/aiAgent';

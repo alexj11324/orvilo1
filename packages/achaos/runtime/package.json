@@ -9,6 +9,6 @@
   "main": "./src/index.ts",
   "dependencies": {
     "@achaos/core": "workspace:*",
-    "@orvilo/agent-runtime": "workspace:*"
+    "@orvilo/agent-execution": "workspace:*"
   }
 }

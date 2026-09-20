@@ -1,4 +1,4 @@
-import { type AgentState } from '@orvilo/agent-runtime';
+import { type AgentState } from '@orvilo/agent-execution';
 import { dispatchWorkRegistrationIntent } from '@orvilo/builtin-tools/workRegistration';
 import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
 import {
@@ -18,7 +18,7 @@ import { type OrviloDatabase } from '@/database/type';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
-} from '@/server/services/agentRuntime/types';
+} from '@/server/services/agentExecution/types';
 import {
   type ServerAgentMemberRunner,
   type ServerSubAgentRunner,

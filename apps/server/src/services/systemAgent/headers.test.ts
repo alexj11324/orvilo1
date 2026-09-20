@@ -29,8 +29,8 @@ describe('SystemAgentService.generateTopicTitle', () => {
       responseLanguage: 'en-US',
       userName: 'User',
     });
-    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockImplementation(async () =>
-      ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),
+    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDeploymentConfig').mockImplementation(
+      async () => ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),
     );
     vi.stubGlobal(
       'fetch',

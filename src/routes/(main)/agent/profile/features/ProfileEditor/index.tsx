@@ -4,11 +4,7 @@ import { Flexbox } from '@lobehub/ui';
 import type { TabsItem } from '@lobehub/ui/base-ui';
 import { Tabs } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
-import {
-  isRemoteHeterogeneousType,
-  isServerDefaultHeterogeneousAgentType,
-} from '@orvilo/heterogeneous-agents';
-import type { HeterogeneousApiConfig, HeterogeneousAuthMode } from '@orvilo/types';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Wrench } from 'lucide-react';
@@ -16,12 +12,9 @@ import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import { resolveServerDefaultAgentModels } from '@/features/HeterogeneousAgent/modelPicker';
 import ModelSelect from '@/features/ModelSelect';
 import ReasoningEffortSelect from '@/features/ModelSelect/ReasoningEffortSelect';
 import RunPriorityHint from '@/features/ProfileEditor/AgentUserTools/RunPriorityHint';
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
-import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
@@ -67,8 +60,6 @@ const ProfileEditor = memo(() => {
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const heterogeneousProvider = config?.agencyConfig?.heterogeneousProvider;
-  const { agencyConfig: effectiveAgencyConfig, workspaceScoped } =
-    useEffectiveAgencyConfig(agentId);
 
   const updateHeterogeneousCommand = async (command: string) => {
     if (!canEdit) return;
@@ -90,27 +81,6 @@ const ProfileEditor = memo(() => {
     });
   };
 
-  const updateHeterogeneousAuthMode = async (
-    authMode: HeterogeneousAuthMode,
-    apiConfig?: HeterogeneousApiConfig,
-  ) => {
-    if (!canEdit || !heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, apiConfig, authMode },
-      },
-    });
-  };
-
-  const updateHeterogeneousApiConfig = async (apiConfig: HeterogeneousApiConfig | undefined) => {
-    if (!canEdit || !heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, apiConfig },
-      },
-    });
-  };
-
   const updateBoundDeviceId = async (boundDeviceId: string) => {
     await updateAgentConfigById(agentId, {
       agencyConfig: { ...config?.agencyConfig, boundDeviceId, executionTarget: 'device' },
@@ -127,44 +97,6 @@ const ProfileEditor = memo(() => {
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
   const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
-  const localDesktopAvailable =
-    isDesktop &&
-    !!heterogeneousProvider &&
-    isServerDefaultHeterogeneousAgentType(heterogeneousProvider.type) &&
-    resolveExecutionTarget(effectiveAgencyConfig, {
-      clientExecutionAvailable: true,
-      isHetero: true,
-      workspaceScoped,
-    }) === 'local';
-  const useFetchServerDefaultCapability = useAgentStore(
-    (s) => s.useFetchServerDefaultHeterogeneousCapability,
-  );
-  // The shared matrix owns which native drivers can reach the deployment relay;
-  // model/runtime compatibility continues to come from the server capability below.
-  const serverDefaultAgentType =
-    heterogeneousProvider && isServerDefaultHeterogeneousAgentType(heterogeneousProvider.type)
-      ? heterogeneousProvider.type
-      : undefined;
-  const serverCapabilityEnabled = localDesktopAvailable && !!serverDefaultAgentType;
-  const serverCapability = useFetchServerDefaultCapability(serverCapabilityEnabled);
-  const serverDefaultModels =
-    serverCapability.data?.enabled === true && serverDefaultAgentType
-      ? resolveServerDefaultAgentModels(serverCapability.data.models, serverDefaultAgentType)
-      : [];
-  const serverDefaultAvailable = serverCapabilityEnabled && serverDefaultModels.length > 0;
-  const serverDefaultUnavailableReason = !localDesktopAvailable
-    ? t('heterogeneousStatus.apiMode.localOnly')
-    : serverCapability.error
-      ? t('heterogeneousStatus.apiMode.serverDefault.loadFailed')
-      : serverCapability.data?.enabled === false
-        ? t(
-            serverCapability.data.reason === 'disabled'
-              ? 'heterogeneousStatus.apiMode.serverDefault.disabled'
-              : 'heterogeneousStatus.apiMode.serverDefault.invalidConfiguration',
-          )
-        : serverCapabilityEnabled && !serverCapability.isLoading && !serverDefaultAvailable
-          ? t('heterogeneousStatus.apiMode.serverDefault.unsupported')
-          : undefined;
   const heterogeneousTabItems: TabsItem[] = heterogeneousProvider
     ? [
         ...(showCloudHeterogeneousTab
@@ -188,16 +120,7 @@ const ProfileEditor = memo(() => {
           children: (
             <HeterogeneousAgentStatusCard
               provider={heterogeneousProvider}
-              serverDefaultAvailable={serverDefaultAvailable}
-              serverDefaultLoading={serverCapabilityEnabled && serverCapability.isLoading}
-              serverDefaultModels={serverDefaultModels}
-              serverDefaultUnavailableReason={serverDefaultUnavailableReason}
-              onApiConfigChange={updateHeterogeneousApiConfig}
-              onAuthModeChange={updateHeterogeneousAuthMode}
               onCommandChange={updateHeterogeneousCommand}
-              onServerDefaultRetry={() => {
-                void serverCapability.mutate();
-              }}
             />
           ),
         },

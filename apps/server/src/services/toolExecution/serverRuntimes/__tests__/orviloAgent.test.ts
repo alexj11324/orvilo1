@@ -69,7 +69,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: (...args: any[]) => mockInitModelRuntimeFromDB(...args),
+  initModelRuntimeFromDeploymentConfig: (...args: any[]) => mockInitModelRuntimeFromDB(...args),
 }));
 
 vi.mock('@orvilo/model-runtime', () => ({
@@ -383,7 +383,6 @@ describe('orviloAgentRuntime', () => {
     });
 
     expect(mockInitModelRuntimeFromDB).toHaveBeenCalledWith(
-      baseContext.serverDB,
       'user-1',
       'test-provider',
       'workspace-1',

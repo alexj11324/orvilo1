@@ -236,7 +236,7 @@ export interface AgentRunCancelRecord {
 /**
  * A builtin Orvilo tool surface carried through the ACP dispatch wire
  * (device `agent_run_request` / cloud-sandbox stdin envelope). The execution
- * host mounts each api on its per-run MCP server (`lobe_cc` / `orvilo_cc`);
+ * host mounts each api on its per-run MCP server (`orvilo_cc`);
  * invocations call back to the server, where the matching
  * `serverRuntimes` registration executes them — so server-side builtin tools
  * (verify writeback, brief, goal supervisor, acceptance evidence, ...) stay

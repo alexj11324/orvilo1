@@ -654,11 +654,13 @@ describe('DataImporter', () => {
     });
   });
 
-  describe('aiModels (non-composite skip strategy on unique constraint)', () => {
-    it('should skip a new model whose providerId already exists and map its id', async () => {
-      // aiModels config: conflictStrategy 'skip', uniqueConstraints ['id','providerId'].
-      // Import a first model with providerId 'prov-x'.
-      const firstData: ImportPgDataStructure = {
+  describe('retired BYOK tables (aiProviders / aiModels)', () => {
+    it('should ignore imported aiProviders/aiModels payloads entirely', async () => {
+      // Provider management is retired: user-scoped provider/model rows are inert
+      // history and must never be resurrected through the importer. Both tables are
+      // absent from IMPORT_TABLE_CONFIG, so their payload keys produce no results
+      // entry and insert no rows.
+      const data: ImportPgDataStructure = {
         data: {
           aiModels: [
             {
@@ -669,57 +671,6 @@ describe('DataImporter', () => {
               updatedAt: '2025-01-01T00:00:00Z',
             },
           ],
-        },
-        mode: 'pglite',
-        schemaHash: 'test',
-      } as any;
-
-      const firstResult = await importer.importPgData(firstData);
-      expect(firstResult.success).toBe(true);
-      expect(firstResult.results.aiModels).toMatchObject({ added: 1, errors: 0 });
-
-      // A second, different model (new id) but same providerId -> providerId unique
-      // constraint conflict -> skip branch (no providers imported here so providerId is
-      // not remapped and keeps colliding).
-      const importer2 = new DataImporterRepos(clientDB, userId);
-      const secondData: ImportPgDataStructure = {
-        data: {
-          aiModels: [
-            {
-              id: 'model-b',
-              providerId: 'prov-x',
-              type: 'chat',
-              createdAt: '2025-02-01T00:00:00Z',
-              updatedAt: '2025-02-01T00:00:00Z',
-            },
-          ],
-        },
-        mode: 'pglite',
-        schemaHash: 'test',
-      } as any;
-
-      const secondResult = await importer2.importPgData(secondData);
-      expect(secondResult.success).toBe(true);
-      expect(secondResult.results.aiModels?.added).toBe(0);
-      expect(secondResult.results.aiModels?.skips).toBeGreaterThanOrEqual(1);
-
-      const models = await clientDB.query.aiModels.findMany({
-        where: eq(Schema.aiModels.userId, userId),
-      });
-      // model-b was skipped, only model-a persisted.
-      expect(models).toHaveLength(1);
-      expect(models[0].id).toBe('model-a');
-    });
-  });
-
-  describe('aiProviders (preserveId dedup on same id)', () => {
-    it('should skip re-import of the same provider id via the preserveId/id match path', async () => {
-      // aiProviders has NO clientId column and preserveId=true. On re-import the existing
-      // record is discovered through the preserveId id lookup, and the dedup filter then
-      // matches on `preserveId && !isCompositeKey && record.id === item.id` (the right arm
-      // of the || at line 447, since the clientId left arm is always falsy here).
-      const data: ImportPgDataStructure = {
-        data: {
           aiProviders: [
             {
               id: 'prov-keep',
@@ -734,22 +685,19 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const firstResult = await importer.importPgData(data);
-      expect(firstResult.success).toBe(true);
-      expect(firstResult.results.aiProviders).toMatchObject({ added: 1, errors: 0 });
-
-      // Re-import the exact same id with a fresh importer -> existing record found by id,
-      // recordsToInsert becomes empty -> early return with skips=1.
-      const importer2 = new DataImporterRepos(clientDB, userId);
-      const secondResult = await importer2.importPgData(data);
-      expect(secondResult.success).toBe(true);
-      expect(secondResult.results.aiProviders).toMatchObject({ added: 0, skips: 1 });
+      const result = await importer.importPgData(data);
+      expect(result.success).toBe(true);
+      expect(result.results.aiProviders).toBeUndefined();
+      expect(result.results.aiModels).toBeUndefined();
 
       const providers = await clientDB.query.aiProviders.findMany({
         where: eq(Schema.aiProviders.userId, userId),
       });
-      expect(providers).toHaveLength(1);
-      expect(providers[0].id).toBe('prov-keep');
+      const models = await clientDB.query.aiModels.findMany({
+        where: eq(Schema.aiModels.userId, userId),
+      });
+      expect(providers).toHaveLength(0);
+      expect(models).toHaveLength(0);
     });
   });
 

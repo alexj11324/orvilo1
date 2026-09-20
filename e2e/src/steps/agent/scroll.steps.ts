@@ -71,16 +71,57 @@ async function getScrollSnapshot(world: CustomWorld): Promise<ScrollSnapshot | n
   });
 }
 
+async function getScrollPgClient(world: CustomWorld) {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) return undefined;
+
+  let client = world.testContext.scrollPgClient;
+  if (!client) {
+    const { default: pg } = await import('pg');
+    client = new pg.Client({
+      connectionString: databaseUrl,
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 10_000,
+    });
+    try {
+      await client.connect();
+    } catch {
+      return undefined;
+    }
+    world.testContext.scrollPgClient = client;
+  }
+  return client;
+}
+
+async function dropScrollPgClient(world: CustomWorld, client: { end: () => Promise<void> }) {
+  world.testContext.scrollPgClient = undefined;
+  await client.end().catch(() => {});
+}
+
+async function fetchLatestUserMessageId(
+  world: CustomWorld,
+  prompt: string,
+  sentAt: number,
+): Promise<string | undefined> {
+  const client = await getScrollPgClient(world);
+  if (!client) return undefined;
+  try {
+    const res = await client.query(
+      `select id from messages
+       where role = 'user' and content = $1
+         and created_at >= to_timestamp($2 / 1000.0) - interval '15 seconds'
+       order by created_at desc limit 1`,
+      [prompt, sentAt],
+    );
+    return res.rows[0]?.id;
+  } catch {
+    await dropScrollPgClient(world, client);
+    return undefined;
+  }
+}
+
 async function sendPrompt(world: CustomWorld, prompt: string, response: string): Promise<void> {
   llmMockManager.setResponse(prompt, response);
-
-  const existingMessageIds = new Set(
-    await world.page
-      .locator('.message-wrapper')
-      .evaluateAll((messages) =>
-        messages.flatMap((message) => message.getAttribute('data-message-id') || []),
-      ),
-  );
 
   const input = world.page
     .locator(
@@ -97,35 +138,24 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
   await input.click();
   await world.page.keyboard.type(prompt, { delay: 20 });
   await expect(input, `chat input did not receive prompt text: ${prompt}`).toContainText(prompt);
+  const sentAt = Date.now();
   await world.page.keyboard.press('Enter');
 
-  const sentMessage = world.page.locator('.message-wrapper').filter({ hasText: prompt });
+  // The DOM re-key waits for the whole `sendMessageInServer` mutation to
+  // resolve — including the getMessagesAndTopics tail over a multi-thousand-
+  // line conversation, which can sit behind a multi-minute CI Postgres
+  // checkpoint. The user row itself commits in the mutation's first write and
+  // the real id is client-minted + server-honoured, so read it directly.
   let messageId: string | undefined;
   await expect
-    .poll(
-      async () => {
-        const matchingIds = await sentMessage.evaluateAll((messages) =>
-          messages.flatMap((message) => message.getAttribute('data-message-id') || []),
-        );
-        // The optimistic message renders under a `tmp_` id and is re-keyed to the
-        // persisted id a moment later. Anchoring the assertion to the temp id
-        // would leave it pointing at a node that no longer exists, which reads as
-        // "the pin never landed" no matter where the viewport actually is.
-        messageId = matchingIds.find((id) => !existingMessageIds.has(id) && !id.startsWith('tmp_'));
-        return messageId;
-      },
-      {
-        message: `user message was not persisted after sending prompt: ${prompt}`,
-        // The send mutation re-keys tmp_ once `sendMessageInServer` resolves;
-        // under E2E_PARALLEL=3 the tail of that mutation (getMessagesAndTopics
-        // over a multi-thousand-line conversation) can sit behind streaming
-        // ingest flushes from sibling workers for tens of seconds.
-        timeout: 90_000,
-      },
-    )
+    .poll(async () => (messageId = await fetchLatestUserMessageId(world, prompt, sentAt)), {
+      message: `user message was not persisted after sending prompt: ${prompt}`,
+      timeout: 90_000,
+    })
     .toBeTruthy();
 
   world.testContext.lastSentUserMessageId = messageId;
+  world.testContext.lastSentUserPrompt = prompt;
 }
 
 /**
@@ -140,9 +170,8 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
 type RunState = 'done' | 'pending' | 'running';
 
 async function runState(world: CustomWorld): Promise<RunState> {
-  const databaseUrl = process.env.DATABASE_URL;
   const lastSent = world.testContext.lastSentUserMessageId;
-  if (!databaseUrl || !lastSent) return 'pending';
+  if (!lastSent) return 'pending';
 
   // One client per world: opening a fresh connection per 250ms poll is itself
   // a load spike on CI's shared Postgres (a checkpoint there took ~270s), and
@@ -150,21 +179,8 @@ async function runState(world: CustomWorld): Promise<RunState> {
   // releases sends into the client-side queue while the run is still live and
   // hides the `running` observation the settle loop requires. On error, reuse
   // the last reading; only a fresh successful query changes the answer.
-  let client = world.testContext.scrollPgClient;
-  if (!client) {
-    const { default: pg } = await import('pg');
-    client = new pg.Client({
-      connectionString: databaseUrl,
-      connectionTimeoutMillis: 10_000,
-      query_timeout: 10_000,
-    });
-    try {
-      await client.connect();
-    } catch {
-      return 'pending';
-    }
-    world.testContext.scrollPgClient = client;
-  }
+  const client = await getScrollPgClient(world);
+  if (!client) return 'pending';
   try {
     // The op row for this send is created at dispatch — right after
     // `sendMessageInServer` re-keys the tmp_ id — so it can be created, run to
@@ -195,8 +211,7 @@ async function runState(world: CustomWorld): Promise<RunState> {
     // A dead connection must not pin the reading forever: drop the client so
     // the next poll reconnects, but report the last reading this once — a
     // transient blip shouldn't read as a spurious 'idle'.
-    world.testContext.scrollPgClient = undefined;
-    await client.end().catch(() => {});
+    await dropScrollPgClient(world, client);
     return world.testContext.scrollLastRunState ?? 'pending';
   }
 }
@@ -551,11 +566,14 @@ Then('用户消息不应固定在聊天列表顶部', async function (this: Cust
 });
 
 async function measurePinDelta(world: CustomWorld) {
-  const messageId = world.testContext.lastSentUserMessageId as string | undefined;
-  expect(messageId, 'missing the latest sent user message id').toBeDefined();
+  // Anchor by the prompt text, not data-message-id: the optimistic wrapper
+  // renders under `tmp_` until the send mutation resolves and re-keys it — the
+  // pin position is a layout fact that must not wait on that bookkeeping.
+  const prompt = world.testContext.lastSentUserPrompt as string | undefined;
+  expect(prompt, 'missing the latest sent user prompt').toBeDefined();
 
-  const userMessage = world.page.locator(`.message-wrapper[data-message-id="${messageId}"]`);
-  await expect(userMessage, `latest user message ${messageId} is not mounted`).toBeVisible();
+  const userMessage = world.page.locator('.message-wrapper').filter({ hasText: prompt! }).last();
+  await expect(userMessage, `latest user message is not mounted: ${prompt}`).toBeVisible();
 
   return userMessage.evaluate((message) => {
     let el: HTMLElement | null = message.parentElement;
@@ -593,7 +611,10 @@ Then('用户消息应固定在聊天列表顶部', async function (this: CustomW
       },
       {
         message: 'latest user message did not reach the pinned position',
-        timeout: 5000,
+        // The poll must outlast the DOM re-key (tmp_ → persisted id) which
+        // waits on the send mutation's getMessagesAndTopics tail — under CI
+        // load that tail can trail the user-row insert by tens of seconds.
+        timeout: 60_000,
       },
     )
     .toBeLessThanOrEqual(PIN_SLACK);
@@ -607,7 +628,7 @@ Then('聊天列表应以多帧平滑滚动把用户消息顶到顶部', async fu
         const rect = await measurePinDelta(this);
         return rect ? Math.abs(rect.delta) : null;
       },
-      { message: 'latest user message did not reach the pinned position', timeout: 5000 },
+      { message: 'latest user message did not reach the pinned position', timeout: 60_000 },
     )
     .toBeLessThanOrEqual(PIN_SLACK);
 

@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import type { ConversationContext, UIChatMessage } from '@orvilo/types';
 
 import type { AgentRuntimeType } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
@@ -110,7 +110,7 @@ export interface RunErrorEvent extends RunLifecycleEventBase {
  * decide where title / signal / queue-drain / notification / metadata effects run.
  *
  * NOT to be confused with the runtime-internal, bidirectional, BLOCKING hooks in
- * `@orvilo/agent-runtime` (`beforeStep` / `beforeToolCall` / `onComplete` …)
+ * `@orvilo/agent-execution` (`beforeStep` / `beforeToolCall` / `onComplete` …)
  * that intercept execution and can mock/halt it. This layer is one-way and only
  * reacts to a run's lifecycle — the two must not be conflated.
  */

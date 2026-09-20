@@ -1,11 +1,11 @@
 /**
  * Agent Runtime Hooks — external lifecycle hook system
  *
- * Hook event types are defined in @orvilo/agent-runtime (shared).
+ * Hook event types are defined in @orvilo/agent-execution (shared).
  * Hook registration, webhook delivery, and serialization types are server-specific.
  */
 
-import type { AgentHookEvent, AgentHookType } from '@orvilo/agent-runtime';
+import type { AgentHookEvent, AgentHookType } from '@orvilo/agent-execution';
 import type { AgentHookWebhookConfig, SerializedAgentHook } from '@orvilo/types';
 
 export type {
@@ -25,7 +25,7 @@ export type {
   StopByHumanInterventionHookEvent,
   ToolCallErrorHookEvent,
   ToolCallHookEvent,
-} from '@orvilo/agent-runtime';
+} from '@orvilo/agent-execution';
 
 // ── Server-side Hook Types ───────────────────────────────
 

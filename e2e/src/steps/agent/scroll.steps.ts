@@ -373,8 +373,9 @@ Then('视口不应贴近聊天列表底部', async function (this: CustomWorld) 
     .poll(
       async () =>
         this.page.evaluate(() => {
-          const messages = Array.from(document.querySelectorAll('.message-wrapper'));
-          const last = messages.at(-1);
+          const messages = document.querySelectorAll('.message-wrapper');
+          // NodeList has no .at() in the page context — use .item().
+          const last = messages.item(messages.length - 1);
           if (!last) return null;
           let el = last.parentElement;
           while (el) {

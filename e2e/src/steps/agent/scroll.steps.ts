@@ -116,7 +116,11 @@ async function sendPrompt(world: CustomWorld, prompt: string, response: string):
       },
       {
         message: `user message was not persisted after sending prompt: ${prompt}`,
-        timeout: 15_000,
+        // The send mutation re-keys tmp_ once `sendMessageInServer` resolves;
+        // under E2E_PARALLEL=3 the tail of that mutation (getMessagesAndTopics
+        // over a multi-thousand-line conversation) can sit behind streaming
+        // ingest flushes from sibling workers for tens of seconds.
+        timeout: 45_000,
       },
     )
     .toBeTruthy();

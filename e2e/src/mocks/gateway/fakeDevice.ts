@@ -212,14 +212,24 @@ export const runSyntheticHeteroTurn = async (params: {
       });
 
     let lastSentLength = 0;
+    let lastSentAt = 0;
     let snapshotSeq = 0;
     let terminalSent = false;
     while (!streamDone || latest.length > lastSentLength) {
       const end = latest.length;
-      if (end === lastSentLength) {
+      // Mid-stream sends are gated on accumulated growth: every ingest is a
+      // full persist+publish flush on the app server, so emitting one per loop
+      // tick would hammer CI's shared runner (~1 flush per delta burst ×3
+      // parallel workers). Real devices also batch renderer updates — waiting
+      // for a meaningful chunk keeps the stream progressive without turning
+      // the suite into a load test. The final chunk always flushes.
+      const pendingChars = end - lastSentLength;
+      const elapsed = Date.now() - lastSentAt;
+      if (!streamDone && (pendingChars < 700 || elapsed < 250)) {
         await new Promise((resolve) => setTimeout(resolve, 60));
         continue;
       }
+      if (streamDone && end === lastSentLength) break;
       snapshotSeq += 1;
       const events: StreamEvent[] = [
         makeEvent(operationId, 'stream_chunk', {
@@ -244,6 +254,7 @@ export const runSyntheticHeteroTurn = async (params: {
         ingestWorkspaceId,
       );
       lastSentLength = end;
+      lastSentAt = Date.now();
     }
     if (streamError) {
       throw streamError;

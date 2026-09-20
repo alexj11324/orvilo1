@@ -1,4 +1,4 @@
-import { type AgentState, isParkedStatus } from '@orvilo/agent-execution';
+import { type AgentState } from '@orvilo/agent-execution';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -172,7 +172,7 @@ export class AgentRuntimeService {
    * is no queued step this method could release, so it can NEVER mint a new
    * run. The contract is therefore "ensure started":
    *
-   *   - live op (`running` / parked) → idempotent ack
+   *   - live op (durable `running` / `waiting_for_*`) → idempotent ack
    *     `{ alreadyStarted: true, scheduled: false }`; repeat intents return
    *     the same result and never dispatch a second run;
    *   - terminal op (`done` / `error` / `interrupted` / `abandoned`) →
@@ -195,9 +195,16 @@ export class AgentRuntimeService {
         throw new AgentStartError('not_found', `Operation ${operationId} not found`);
       }
 
-      const currentState = await this.stateManager.loadAgentState(operationId);
-      const status = currentState?.status ?? operation?.status;
-      if (status === 'running' || isParkedStatus(status as AgentState['status'])) {
+      // The durable operation row is the only authority on whether a run
+      // exists. A state snapshot is historical read input: a stale 'running'
+      // snapshot over an `idle` or absent durable row must never mint an
+      // `alreadyStarted` ack for a dispatch that does not exist.
+      const status = operation?.status;
+      if (
+        status === 'running' ||
+        status === 'waiting_for_human' ||
+        status === 'waiting_for_async_tool'
+      ) {
         return {
           alreadyStarted: true,
           operationId,

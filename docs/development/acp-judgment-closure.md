@@ -32,9 +32,13 @@ exception table below, and `apps/server/src/acpJudgmentGuards.test.ts`.
    `{ slug? }` names a builtin (BUILTIN\_AGENT\_SLUGS). Resolution order:
    `agentId` exists → `slug` resolves → `ACP_JUDGMENT_AGENT_ID` env (agent id
    or builtin slug) unless `allowEnvFallback: false` → `undefined`. `undefined`
-   → `AcpJudgmentBindingError`. The env var is the operator-level fallback for
-   consumers with no natural domain agent — it is an agent reference, never a
-   key.
+   → `AcpJudgmentBindingError`. A pinned `agentId` that no longer exists is a
+   hard boundary — `resolveAcpJudgmentAgent` throws
+   `ACP_JUDGMENT_NO_BINDING` immediately and never falls through to slug/env,
+   because running under a different identity than the caller authorized is a
+   silent identity change, not a degrade. The env var is the operator-level
+   fallback for consumers with no natural domain agent — it is an agent
+   reference, never a key.
 2. **Dispatch**: `AiAgentService.execAgent` with `autoStart: true`,
    `disableTools: true`, `trigger: 'acp_judgment'`,
    `userInterventionConfig.approvalMode: 'headless'`, `title:
@@ -43,19 +47,32 @@ exception table below, and `apps/server/src/acpJudgmentGuards.test.ts`.
    `parentOperationId`/`taskId`/`fileIds` propagate to the operation row.
    Model/provider overrides apply only to slug-bound builtins — a pinned agent
    keeps its own runtime config.
-3. **Wait**: synchronous callers poll the durable `agent_operations` row
-   (default every 1s, up to `timeoutMs`, default 180s) for a terminal status
+3. **Wait**: the total budget deadline is established **before** `execAgent`
+   dispatches, so slow dispatch latency counts against `timeoutMs` (default
+   180s) — not just post-dispatch waiting. Callers then poll the durable
+   `agent_operations` row (default every 1s) for a terminal status
    (`done`/`error`/`interrupted`/`abandoned`). Caller abort and budget expiry
-   both propagate cancel via `AiAgentService.interruptTask`.
+   propagate cancel via `AiAgentService.interruptTask` and re-read the durable
+   row to confirm: a confirmed interrupt may report `status: 'interrupted'`;
+   an unconfirmed cancel reports `cancelResult: 'unknown'` and the last durable
+   status — 'unknown' is never presented as stopped, so a caller cannot
+   mistake it for safe-to-replace.
 4. **Result**: the run's `assistantMessageId` (operation metadata) is read back
-   and JSON is extracted (bare → fenced → embedded object). `status !== 'done'`
+   and JSON is extracted (bare → fenced → embedded object), then validated
+   **server-side** against the declared `schema` (ajv). `status !== 'done'`
    or unparseable output → `AcpJudgmentRunError`
-   (`ACP_JUDGMENT_RUN_FAILED`, carries `operationId`/`status`).
+   (`ACP_JUDGMENT_RUN_FAILED`, carries `operationId`/`status`/`cancelResult`);
+   a schema mismatch on a `done` run → `AcpJudgmentValidationError`
+   (`ACP_JUDGMENT_SCHEMA_MISMATCH`, carries `issues`/`operationId`) — the
+   payload never reaches the consumer's planning/acceptance write.
 5. **Trace**: every run — success or failure — writes an
    `llm_generation_tracing` row stamped with `metadata.operationId`, the
    operation's model/provider/cost/tokens, and `trigger: 'acp_judgment'`;
-   caller `tracing.onPersisted` fires as before. Identity, cost, cancel, and
-   evidence are therefore auditable from one operation row.
+   `success` requires both a `done` operation AND schema conformance (a
+   `done`-but-invalid reply is recorded `success: false` /
+   `errorCode: 'schema_mismatch'`); caller `tracing.onPersisted` fires as
+   before. Identity, cost, cancel, and evidence are therefore auditable from
+   one operation row.
 
 ## Consumer classification
 
@@ -120,10 +137,13 @@ The textual allowlist is enforced by `apps/server/src/acpJudgmentGuards.test.ts`
 
 ## Rollback boundary
 
-This PR is additive on top of `feat/caid-admission-rollout-gate`: the retired
-deployment-key path is removed only inside `generateObject`'s judgment arm and
-the listed consumers. Reverting this commit restores the pre-R08 behavior
-verbatim — no schema changes, no data migration, no flag state. The
+Judgment disablement is **not** "unset `ACP_JUDGMENT_AGENT_ID`" — explicit
+domain bindings still authorize runs. Disabling judgments requires the shared
+admission boundary (the `caid_dispatch` gate for CAID-originated work, plus
+consumer-level `allowEnvFallback: false`); unsetting the env var only narrows
+resolution to explicit bindings. Reverting the R08 commit restores the
+pre-R08 judgment call graph but does NOT restore a deployment-key fallback —
+that capability was retired upstream (P05/P08) and stays retired. The
 `agent_operations`/`llm_generation_tracing` rows written by judgment runs are
 ordinary rows of tables that already existed; they remain valid after a
 rollback.

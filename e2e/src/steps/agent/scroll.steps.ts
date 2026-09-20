@@ -13,7 +13,13 @@ import { After, Given, Then, When } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 
 import { llmMockManager, presetResponses } from '../../mocks/llm';
-import { classifyScrollTrace, startScrollTrace, stopScrollTrace } from '../../probes/scrollTrace';
+import {
+  classifyScrollTrace,
+  type ScrollCallRecord,
+  type ScrollTraceSummary,
+  startScrollTrace,
+  stopScrollTrace,
+} from '../../probes/scrollTrace';
 import { TEST_USER } from '../../support/seedTestUser';
 import type { CustomWorld } from '../../support/world';
 
@@ -647,12 +653,12 @@ Then(
   { timeout: 90_000 },
   async function (this: CustomWorld) {
     const PIN_SLACK = 150;
-    // Stop the trace BEFORE the pin poll so a poll failure still surfaces the
-    // recorded scrollTo calls — calls=[] vs a fired-but-mislanded pin is the
-    // difference between a dropped send-detection and a virtua layout race.
-    const { calls, samples } = await stopScrollTrace(this.page);
-    const summary = classifyScrollTrace(samples);
-    console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);
+    // Keep the trace running through the pin poll: under a starved renderer
+    // the optimistic commit can land *after* sendPrompt's pg persist check
+    // returns, so the pin scroll may fire inside this window. Stopping early
+    // reads a legitimate pin as calls=[] / travel=0.
+    let calls: ScrollCallRecord[];
+    let summary: ScrollTraceSummary;
     try {
       await expect
         .poll(
@@ -663,10 +669,18 @@ Then(
           { message: 'latest user message did not reach the pinned position', timeout: 60_000 },
         )
         .toBeLessThanOrEqual(PIN_SLACK);
+      const result = await stopScrollTrace(this.page);
+      calls = result.calls;
+      summary = classifyScrollTrace(result.samples);
     } catch (error) {
+      const result = await stopScrollTrace(this.page);
+      console.log(
+        `   📍 trace ${JSON.stringify(classifyScrollTrace(result.samples))} calls=${JSON.stringify(result.calls)}`,
+      );
       console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(this))}`);
       throw error;
     }
+    console.log(`   📍 trace ${JSON.stringify(summary)} calls=${JSON.stringify(calls)}`);
 
     // The pin moves the message via `scrollTo({ behavior: 'smooth' })`. The
     // regression being guarded is a lost pin animation — i.e. the scroll never

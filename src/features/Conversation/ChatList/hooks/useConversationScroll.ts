@@ -140,6 +140,7 @@ interface UseSpacerHeightArgs {
   getItemOffset: ((index: number) => number) | undefined;
   getItemSize: ((index: number) => number) | undefined;
   getViewportSize: (() => number) | undefined;
+  isAIGeneratingRef: RefObject<boolean>;
   latestAssistantSignature: string;
   userMessageIndex: number | null;
 }
@@ -149,6 +150,7 @@ const useSpacerHeight = ({
   getItemOffset,
   getItemSize,
   getViewportSize,
+  isAIGeneratingRef,
   latestAssistantSignature,
   userMessageIndex,
   assistantMessageIndex,
@@ -223,7 +225,19 @@ const useSpacerHeight = ({
 
     if (nextHeight === 0) {
       setNaturalHeight(0);
-      scheduleSpacerUnmount();
+      if (!isAIGeneratingRef.current) {
+        scheduleSpacerUnmount();
+        return;
+      }
+      // While the reply is still streaming, a zero spacer means it already
+      // outgrew the viewport — the pin position is self-sustaining and must
+      // stay armed. Unmounting here flips `spacerActive` off, which remounts
+      // the trailing AutoScroll; with the pinned spot still inside the
+      // at-bottom threshold the next stream chunk would drag the viewport to
+      // the tail and strand the user message far above. Keep the row mounted
+      // at height 0; the unmount is deferred to the first recompute after
+      // generation ends.
+      setMounted(true);
       return;
     }
 
@@ -235,6 +249,7 @@ const useSpacerHeight = ({
     getItemOffset,
     getItemSize,
     getViewportSize,
+    isAIGeneratingRef,
     scheduleSpacerUnmount,
   ]);
 
@@ -476,7 +491,6 @@ export const useConversationScroll = ({
 
   const isAIGeneratingRef = useRef(isAIGenerating);
   isAIGeneratingRef.current = isAIGenerating;
-
   // State (not ref) so that downstream memos / effects re-run when a new turn
   // is pinned. The pin indices are only set from the send-detection effect;
   // using state keeps the observer & signature in sync on the very next
@@ -511,6 +525,7 @@ export const useConversationScroll = ({
     getItemOffset,
     getItemSize,
     getViewportSize,
+    isAIGeneratingRef,
     latestAssistantSignature,
     userMessageIndex,
   });

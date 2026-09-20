@@ -43,6 +43,7 @@ const loadIndexIntegrationModule = async (options: LoadIndexIntegrationModuleOpt
   vi.doUnmock('../sources');
   vi.doUnmock('@/server/services/agentDocuments');
   vi.doUnmock('@/server/modules/ModelRuntime');
+  vi.doUnmock('@/server/services/aiGeneration/judgment');
 
   const persistAgentSignalObservability = vi.fn().mockResolvedValue(undefined);
   const isAgentSignalEnabledForUser = vi.fn().mockResolvedValue(options.featureGateEnabled ?? true);
@@ -57,6 +58,15 @@ const loadIndexIntegrationModule = async (options: LoadIndexIntegrationModuleOpt
   if (options.mockInitModelRuntimeFromDB) {
     vi.doMock('@/server/modules/ModelRuntime', () => ({
       initModelRuntimeFromDeploymentConfig: options.mockInitModelRuntimeFromDB,
+    }));
+    // Retained judgments route through runAcpJudgment; this harness fakes the
+    // ACP binding by delegating the judgment input to the same stubbed runtime.
+    vi.doMock('@/server/services/aiGeneration/judgment', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      runAcpJudgment: vi.fn(async (_db: never, _userId: string, params: { input: unknown }) => {
+        const runtime = await options.mockInitModelRuntimeFromDB!();
+        return { data: await runtime.generateObject(params.input), run: {} };
+      }),
     }));
   }
 

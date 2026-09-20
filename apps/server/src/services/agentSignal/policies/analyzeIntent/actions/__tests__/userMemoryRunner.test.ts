@@ -9,9 +9,15 @@ const initModelRuntimeFromDeploymentConfigMock = vi.hoisted(() => vi.fn());
 const memoryRuntimeFactoryMock = vi.hoisted(() => vi.fn());
 const getAllIdentitiesWithMemoryMock = vi.hoisted(() => vi.fn());
 const persistAgentSignalReceiptsMock = vi.hoisted(() => vi.fn());
+const runAcpJudgmentMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDeploymentConfig: initModelRuntimeFromDeploymentConfigMock,
+}));
+
+vi.mock('@/server/services/aiGeneration/judgment', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  runAcpJudgment: runAcpJudgmentMock,
 }));
 
 vi.mock('@/server/services/toolExecution/serverRuntimes/memory', () => ({
@@ -58,6 +64,14 @@ describe('runMemoryActionAgent', () => {
     initModelRuntimeFromDeploymentConfigMock.mockResolvedValue({
       generateObject: generateObjectMock,
     });
+    // The write decision is a retained judgment; delegate it to the stubbed
+    // decision generator so the harness never touches the real ACP binding.
+    runAcpJudgmentMock.mockImplementation(
+      async (_db: never, _userId: string, params: { input: unknown }) => ({
+        data: await generateObjectMock(params.input),
+        run: {},
+      }),
+    );
     getAllIdentitiesWithMemoryMock.mockResolvedValue([]);
     persistAgentSignalReceiptsMock.mockResolvedValue(undefined);
   });

@@ -161,12 +161,13 @@ describe('useConversationScroll — pin behavior', () => {
   const renderScrollHook = (props: {
     contextKey?: string;
     dataSource: string[];
+    freshIds?: string[];
     headerOffset?: number;
     isSecondLastMessageFromUser: boolean;
     fixture?: Partial<StoreFixture>;
   }) => {
     currentFixture = {
-      displayMessages: deriveDisplayMessages(props.dataSource),
+      displayMessages: deriveDisplayMessages(props.dataSource, new Set(props.freshIds)),
       isAIGenerating: false,
       virtuaScrollMethods: {
         getScrollOffset: () => 0,
@@ -464,6 +465,21 @@ describe('useConversationScroll — pin behavior', () => {
     });
 
     expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  // Regression: ChatList renders the welcome screen while the conversation is
+  // empty, so the first send's optimistic tail mounts this list already
+  // present — prevLengthRef seeds past it and the growth scan stays silent.
+  // A fresh tail user row under a live turn must still pin.
+  it('pins a fresh tail user row already present at list mount', () => {
+    renderScrollHook({
+      dataSource: [userId, assistantId],
+      freshIds: [userId],
+      isSecondLastMessageFromUser: true,
+      fixture: { isAIGenerating: true },
+    });
+
+    expect(scrollToIndex).toHaveBeenCalledWith(0, { align: 'start', smooth: true });
   });
 
   it('pins the user message when the send pair lands in split commits', () => {

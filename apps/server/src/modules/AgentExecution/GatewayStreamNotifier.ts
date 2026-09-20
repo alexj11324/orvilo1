@@ -391,12 +391,22 @@ export class GatewayStreamNotifier implements IStreamEventManager {
       event.data === undefined
         ? event
         : { ...event, data: sanitizeGatewayEventData(event.data, redaction, event.type) };
-    const pushes: Promise<void>[] = [
-      this.httpPost('/api/operations/push-event', {
-        event: sanitizedEvent,
-        operationId,
-      }),
-    ];
+
+    // Terminal control-plane events must not take the bounded best-effort
+    // lane: dropping `agent_runtime_end`/`error` at MAX_INFLIGHT strands the
+    // client's op in `running` for the life of the session (only a page-reload
+    // resume recovers it) and stalls every queued send behind it. Route them
+    // through the non-droppable lane, still swallowing transport errors so the
+    // fire-and-forget contract holds.
+    const isTerminal = event.type === 'agent_runtime_end' || event.type === 'error';
+    const post = isTerminal
+      ? (body: Record<string, unknown>) =>
+          this.httpPostAwait('/api/operations/push-event', body).catch((error) => {
+            log('Gateway push-event terminal push failed: %O', error);
+          })
+      : (body: Record<string, unknown>) => this.httpPost('/api/operations/push-event', body);
+
+    const pushes: Promise<void>[] = [post({ event: sanitizedEvent, operationId })];
 
     // Single-connection multiplexing: also deliver to the mirror op's channel so
     // the event rides down that connection's WebSocket. The event payload keeps
@@ -404,7 +414,7 @@ export class GatewayStreamNotifier implements IStreamEventManager {
     // back to the right member column. Only the delivery channel changes.
     const mirrorTo = this.mirrorTargets.get(operationId);
     if (mirrorTo) {
-      pushes.push(this.mirrorPush(mirrorTo, sanitizedEvent));
+      pushes.push(post({ event: sanitizedEvent, operationId: mirrorTo }));
       await Promise.all(pushes);
       return;
     }
@@ -414,19 +424,12 @@ export class GatewayStreamNotifier implements IStreamEventManager {
     if (!this.mirrorResolved.has(operationId)) {
       pushes.push(
         this.resolveMirror(operationId).then(async (target) => {
-          if (target) await this.mirrorPush(target, sanitizedEvent);
+          if (target) await post({ event: sanitizedEvent, operationId: target });
         }),
       );
     }
 
     await Promise.all(pushes);
-  }
-
-  private mirrorPush(mirrorTo: string, event: Record<string, unknown>): Promise<void> {
-    return this.httpPost('/api/operations/push-event', {
-      event,
-      operationId: mirrorTo,
-    });
   }
 
   /**

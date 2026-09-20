@@ -1,11 +1,15 @@
 'use client';
 
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { agentQuotaService } from '@/services/agentQuota';
 import { fetchClaudeCodeQuotaSnapshot } from '@/services/heteroAgentQuota';
+import { useAgentStore } from '@/store/agent';
+import { agentByIdSelectors } from '@/store/agent/selectors';
+import { useUserStore } from '@/store/user';
+import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
 import QuotaAccountIdentity from './QuotaAccountIdentity';
 import type { FetchQuotaOptions, QuotaWindowItem } from './QuotaMenu';
@@ -18,8 +22,9 @@ import {
   isQuotaStale,
   newestCapturedAt,
   pruneQuotaIdentityTrust,
+  resetQuotaIdentityTrust,
+  resolveQuotaIdentityForLive,
   trustedQuotaIdentity,
-  trustQuotaIdentity,
 } from './quotaViewModel';
 
 /**
@@ -57,18 +62,42 @@ const unavailableSnapshot = (
 const isRateLimitError = (quota: ClaudeCodeQuotaSnapshot) => quota.error?.includes('429') ?? false;
 
 interface ClaudeCodeQuotaMenuProps {
+  /** The agent this input serves — contributes its workspace to the trust key. */
+  agentId?: string;
   /** Bound execution device to sample instead of the local desktop login. */
   deviceId?: string;
   env?: Record<string, string>;
 }
 
-const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) => {
+const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ agentId, deviceId, env }) => {
   const { t } = useTranslation('chat');
   // The observation source is the execution context itself — provider +
-  // execution device (or 'local') + CLI profile env. Identity bindings are
-  // recorded per context, so switching device or profile can never inherit a
-  // binding confirmed elsewhere.
-  const sourceKey = createQuotaSourceKey('claude-code', deviceId ?? 'local', env);
+  // execution device (or 'local') + CLI profile env + principal + workspace.
+  // Identity bindings are recorded per context, so switching device, profile,
+  // signed-in user or workspace can never inherit a binding confirmed
+  // elsewhere.
+  const userId = useUserStore(userProfileSelectors.userId);
+  const isLogin = useUserStore(authSelectors.isLogin);
+  const workspaceId = useAgentStore(
+    useCallback(
+      (s) => (agentId ? agentByIdSelectors.getAgentById(agentId)(s)?.workspaceId : undefined),
+      [agentId],
+    ),
+  );
+  const sourceKey = createQuotaSourceKey('claude-code', deviceId ?? 'local', env, {
+    principal: isLogin ? userId || 'unresolved' : 'anonymous',
+    workspace: workspaceId ?? 'personal',
+  });
+
+  // Sign-out revokes every identity binding — nothing from the old principal
+  // may paint under a different signed-in user. Only a login→logout
+  // transition wipes: mounting anonymous must not drop bindings other
+  // anonymous contexts legitimately confirmed.
+  const wasLogin = useRef(isLogin);
+  useEffect(() => {
+    if (wasLogin.current && !isLogin) resetQuotaIdentityTrust();
+    wasLogin.current = isLogin;
+  }, [isLogin]);
 
   /**
    * DB-first: render the persisted windows from our own database, and go to the
@@ -109,7 +138,7 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
       let account = trustedExternalAccountId
         ? claude.find((a) => a.externalAccountId === trustedExternalAccountId)
         : undefined;
-      let readings = account
+      let readings = account?.id
         ? await agentQuotaService.getLatestReadings(account.id).catch(() => [])
         : [];
 
@@ -126,20 +155,31 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
         isQuotaStale(account.updatedAt, Date.now(), QUOTA_REFRESH_MS)
       ) {
         if (account && readings.length > 0) {
+          // A persisted-only interim is the last confirmed identity, not a
+          // verified current one — flag it so the header notice can say so.
           const interim = buildClaudePanelSnapshot(account, readings, null);
-          if (hasRenderableWindow(interim)) options?.onInterim?.(interim);
+          if (hasRenderableWindow(interim)) {
+            options?.onInterim?.({ ...interim, identityUnverified: true });
+          }
         }
         live = await fetchClaudeCodeQuotaSnapshot({ deviceId, env, force }).catch(() => null);
 
+        const resolution = resolveQuotaIdentityForLive({
+          accounts: claude,
+          contextKey: sourceKey,
+          live,
+        });
+        if (resolution.unidentifiableLive) {
+          // 'ok' sample with no externalAccountId: revoke this context's
+          // confirmation. The panel must show the sample's own windows as
+          // unknown — never the previously confirmed account's history.
+          account = undefined;
+          readings = [];
+        }
+
         if (live?.status === 'ok' && live.identity?.externalAccountId) {
           const liveExternalAccountId = live.identity.externalAccountId;
-          // The live sample is authoritative for who this context runs as —
-          // rebind even when it carries no flat readings to persist, so a
-          // login switch on the device immediately drops the previous account.
-          trustQuotaIdentity(sourceKey, liveExternalAccountId);
-          const matchingAccount = claude.find(
-            (candidate) => candidate.externalAccountId === liveExternalAccountId,
-          );
+          const matchingAccount = resolution.account;
 
           if (live.readings?.length) {
             // A revalidation inside the main-process cache's fresh window gets
@@ -147,10 +187,7 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
             // Snapshots are append-only, so re-ingesting an echo would
             // duplicate history rows and rerun calibration without new
             // evidence — skip it.
-            const liveCapturedAt = live.readings.reduce(
-              (max, r) => Math.max(max, r.capturedAt),
-              0,
-            );
+            const liveCapturedAt = live.readings.reduce((max, r) => Math.max(max, r.capturedAt), 0);
             const matchingReadings = matchingAccount
               ? await agentQuotaService.getLatestReadings(matchingAccount.id).catch(() => [])
               : [];
@@ -171,7 +208,8 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
               if (persisted) {
                 claude = (
                   (await agentQuotaService.listAccounts().catch(() => null)) ??
-                  (accountRows ?? [])
+                  accountRows ??
+                  []
                 ).filter((a) => isObservableQuotaAccount(a, 'claude-code'));
                 account = claude.find((a) => a.externalAccountId === liveExternalAccountId);
                 readings = account
@@ -195,10 +233,18 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
       // 3) The merged view exists only for the confirmed identity; it never
       // falls back to an arbitrary first row. With no resolved account the
       // live sample stands on its own — an unidentified one renders as
-      // 'unknown' and gets no borrowed window.
+      // 'unknown' and gets no borrowed window. A view painted from a
+      // last-confirmed identity while the live probe failed is flagged
+      // identityUnverified — historical, never "current confirmed".
+      const liveOk = live?.status === 'ok';
       const merged = account ? buildClaudePanelSnapshot(account, readings, live) : null;
       if (merged && hasRenderableWindow(merged)) {
-        return persistenceFailed ? { ...merged, persistenceFailed: true } : merged;
+        const flagged = {
+          ...merged,
+          ...(liveOk ? {} : { identityUnverified: true }),
+          ...(persistenceFailed ? { persistenceFailed: true } : {}),
+        };
+        return flagged;
       }
       if (live && persistenceFailed) return { ...live, persistenceFailed: true };
       return live ?? merged ?? unavailableSnapshot();
@@ -277,8 +323,11 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
   );
 
   const getNoticeText = useCallback(
-    (quota: ClaudeCodePanelSnapshot) =>
-      quota.persistenceFailed ? t('heteroAgent.claudeQuota.persistFailed') : undefined,
+    (quota: ClaudeCodePanelSnapshot) => {
+      if (quota.persistenceFailed) return t('heteroAgent.claudeQuota.persistFailed');
+      if (quota.identityUnverified) return t('heteroAgent.claudeQuota.identityUnverified');
+      return undefined;
+    },
     [t],
   );
 

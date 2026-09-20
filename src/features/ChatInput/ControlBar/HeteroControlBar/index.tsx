@@ -191,7 +191,11 @@ const HeteroControlBar = memo(() => {
         </Flexbox>
         {shouldShowClaudeQuota && quotaDeviceId && (
           <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
-            <ClaudeCodeQuotaMenu deviceId={quotaDeviceId} env={heteroProvider?.env} />
+            <ClaudeCodeQuotaMenu
+              agentId={agentId}
+              deviceId={quotaDeviceId}
+              env={heteroProvider?.env}
+            />
           </Flexbox>
         )}
       </Flexbox>
@@ -266,7 +270,11 @@ const HeteroControlBar = memo(() => {
           <CodexQuotaMenu command={heteroProvider?.command} env={heteroProvider?.env} />
         )}
         {shouldShowClaudeQuota && (
-          <ClaudeCodeQuotaMenu deviceId={quotaDeviceId} env={heteroProvider?.env} />
+          <ClaudeCodeQuotaMenu
+            agentId={agentId}
+            deviceId={quotaDeviceId}
+            env={heteroProvider?.env}
+          />
         )}
         {sdkRuntimeBadge}
         <Tooltip title={tChat('heteroAgent.fullAccess.tooltip')}>{fullAccessBadge}</Tooltip>

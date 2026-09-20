@@ -174,8 +174,13 @@ const collectDependencyReceipts = async (
     // Valid only while the upstream is still standing on that delivery: a
     // reopened/reverted/re-running upstream (status left 'completed')
     // invalidates the receipt even though the historical delivery row exists.
+    // An upstream completed with no recorded attempt (a manual status flip)
+    // is itself the delivery — the receipt honestly records `delivery`
+    // absent rather than pretending an artifact exists. An in-flight attempt
+    // alongside a 'completed' status is contradictory, so it still refuses.
     receipt.deliveryValid =
-      delivered !== undefined && depStatusById.get(dep.dependsOnId) === 'completed';
+      depStatusById.get(dep.dependsOnId) === 'completed' &&
+      (delivered !== undefined || !topics.some((topic) => topic.status === 'running'));
     receipts.push(receipt);
   }
   return receipts;

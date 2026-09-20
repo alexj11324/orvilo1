@@ -34,6 +34,13 @@ export interface AgentOperationJudgmentContext {
     /** Agent step cap the run was dispatched with. */
     maxSteps?: number;
   };
+  /**
+   * Launch identity minted before dispatch. When `execAgent`'s return is lost
+   * (throw, caller abort, or hang past the total budget), the runner looks up
+   * the operation row by this key and interrupts whatever landed — a judgment
+   * never dispatches a second writer for the same launch.
+   */
+  intentKey?: string;
   /** Stable consumer identifier, e.g. 'verify.judge', 'goal.criteriaDraft'. */
   purpose: string;
 }

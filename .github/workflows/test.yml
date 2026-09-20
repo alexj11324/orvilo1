@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test Packages
     env:
-      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-runtime @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
+      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-execution @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
 
     steps:
       - name: Checkout

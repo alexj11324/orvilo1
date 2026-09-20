@@ -54,6 +54,12 @@ records whatever HEAD happens to be as its base.
 On the sandbox path (`provisionOnRemote`) `getRemoteBranchSha` resolves the
 same pin before the cloud clone; a failure there also blocks.
 
+## Rollback
+
+Reverting this change stops new claim/recovery writes; existing rows stay for
+audit. The `0178` migration is additive — drop `task_workspace_claims` and
+`task_workspace_recoveries` only if the rollback must be schema-clean.
+
 ## Orphan recovery
 
 There is no automatic recursive delete anywhere in the provisioning path.

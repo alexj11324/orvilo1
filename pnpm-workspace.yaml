@@ -55,6 +55,10 @@ allowBuilds:
 
 overrides:
   '@ant-design/icons': 6.3.2
+  # 4.3.4 ships an esm index with case-mismatched icon filenames
+  # (Grid2x2CheckIcon.js vs Grid2X2CheckIcon.js) — broken on case-sensitive
+  # filesystems until upstream republishes.
+  '@hugeicons/core-free-icons': 4.3.3
   '@react-pdf/image': 3.0.4
   '@types/react': 19.2.13
   '@vitest/coverage-v8': 5.0.0

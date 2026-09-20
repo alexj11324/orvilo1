@@ -498,6 +498,51 @@ describe('useConversationScroll — pin behavior', () => {
     expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
   });
 
+  // Regression: on a slowed stream the assistant reply outgrows the viewport
+  // mid-flight and the spacer's natural height hits 0. Unmounting it then
+  // flips `spacerActive` off, which remounts the trailing AutoScroll — with
+  // the pinned spot inside the at-bottom threshold, the next stream chunk
+  // drags the viewport to the tail and strands the user message far above.
+  // The spacer must stay mounted (at height 0) until generation ends.
+  it('keeps the spacer mounted while the streaming reply outgrows the viewport', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          // userTop=200, assistantBottom=300+2000 → span 2100 > viewport 800.
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(result.current.spacerActive).toBe(true);
+    expect(result.current.spacerHeight).toBe(0);
+
+    // Once generation ends the next recompute releases it normally.
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(false);
+  });
+
   it('targets the correct index when multiple turns accumulate', () => {
     const { rerender } = renderScrollHook({
       dataSource: ['a', 'b', 'c', 'd'],

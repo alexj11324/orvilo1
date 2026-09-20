@@ -8,9 +8,17 @@ import { workspaces } from './workspace';
 export interface RepoRefLeaseOutcomeContext {
   expectedBaseSha?: string;
   expectedHeadSha?: string;
+  /**
+   * Post-state the lost remote mutation was trying to establish — reconcile
+   * compares the observed remote ref against this value (`expectedBaseSha` is
+   * the pre-state) to prove whether the old operation landed.
+   */
+  expectedRemoteSha?: string;
   fenceSeq?: number;
   phase?: IntegrationLeasePhase;
   recordedAt?: string;
+  /** Stable identity of the remote operation whose outcome was lost. */
+  remoteOperationId?: string;
 }
 
 /**

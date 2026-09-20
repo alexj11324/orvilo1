@@ -1,5 +1,6 @@
 export * from './branches';
 export * from './info';
+export * from './pushFence';
 export * from './repoType';
 export * from './types';
 export * from './upstream';

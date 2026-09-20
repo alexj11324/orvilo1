@@ -117,6 +117,37 @@ describe('IntegrationLeaseModel', () => {
     expect((await model.findByKey(key))?.outcomeUnknown).toBe(false);
   });
 
+  it('persists the remote operation identity + expected post-state through a steal', async () => {
+    const key = 'ws:test-remote-context';
+    const { lease } = await model.acquire(params(key, 'owner-a'));
+    // The holder entered the publish phase (renew persists it), then the
+    // lost publish recorded exactly which remote op it issued and the
+    // post-state it was trying to establish — reconcile needs both.
+    await model.renew(lease!.id, 'owner-a', new Date(Date.now() + 60_000), 'publish');
+    await model.markOutcomeUnknown(lease!.id, 'owner-a', {
+      expectedRemoteSha: 'sha-post',
+      fenceSeq: lease!.fenceSeq,
+      phase: 'publish',
+      remoteOperationId: `${lease!.fenceSeq}:op-abc`,
+    });
+    await serverDB
+      .update(integrationLeases)
+      .set({ deadline: new Date(Date.now() - 1) })
+      .where(eq(integrationLeases.id, lease!.id));
+
+    const second = await model.acquire(params(key, 'owner-b'));
+
+    expect(second.lease?.context).toMatchObject({
+      expectedRemoteSha: 'sha-post',
+      phase: 'publish',
+      remoteOperationId: '0:op-abc',
+    });
+    // The prior row still reports the phase it died in, so an unreleased
+    // mutation phase is visible to the next claimant's unreconciled check.
+    expect(second.prior?.phase).toBe('publish');
+    expect(second.prior?.releasedAt).toBeNull();
+  });
+
   it('monotone fence increments on every successful claim', async () => {
     const key = 'ws:test-fence-seq';
     const first = await model.acquire(params(key, 'owner-a'));

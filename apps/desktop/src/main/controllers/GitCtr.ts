@@ -14,6 +14,7 @@ import type {
   GitPullResult,
   GitPushResult,
   GitRemoteBranchListItem,
+  GitRemoteRefProbe,
   GitRemoveWorktreeResult,
   GitRenameBranchResult,
   GitWorkingTreeFiles,
@@ -198,13 +199,25 @@ export default class GitController extends ControllerModule {
 
   @IpcMethod()
   async pushGitBranch(payload: {
+    expectedRemoteSha?: string;
     expectedSha?: string;
+    fence?: { operationId: string; ref: string; seq: number };
     path: string;
     remoteBranch?: string;
     sourceRef?: string;
   }): Promise<GitPushResult> {
     const { pushGitBranch: runPushGitBranch } = await loadGit();
     return runPushGitBranch(payload);
+  }
+
+  @IpcMethod()
+  async probeGitRemoteRef(payload: {
+    path: string;
+    ref: string;
+    remote?: string;
+  }): Promise<GitRemoteRefProbe> {
+    const { probeGitRemoteRef: runProbeGitRemoteRef } = await loadGit();
+    return runProbeGitRemoteRef(payload);
   }
 
   @IpcMethod()

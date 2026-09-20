@@ -4,6 +4,8 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { createLogger } from '../logger';
+import type { GitPushFence } from './pushFence';
+import { claimGitPushFence } from './pushFence';
 import type {
   GitBranchListItem,
   GitCheckoutResult,
@@ -14,6 +16,7 @@ import type {
   GitPullResult,
   GitPushResult,
   GitRemoteBranchListItem,
+  GitRemoteRefProbe,
   GitRenameBranchResult,
 } from './types';
 
@@ -222,14 +225,36 @@ export const pullGitBranch = async (payload: { path: string }): Promise<GitPullR
  * differs from the configured upstream. `remoteBranch` overrides the published
  * ref (`git push -u origin HEAD:refs/heads/<remoteBranch>`) — how a detached
  * integration worktree lands its merge result onto `origin/<base>`.
+ *
+ * Two fencing layers protect serialized remote writes (SA03-B):
+ *
+ * - `fence` — the lease fence (`seq`/`operationId` minted by the repo/ref
+ *   lease) is persisted locally as the maximum admitted writer per ref; a
+ *   stale operation's retry is refused before touching the remote.
+ * - `expectedRemoteSha` — the remote ref must currently equal this value (or
+ *   be absent when empty). Enforced atomically server-side-of-git via
+ *   `git push --force-with-lease=<ref>:<expect>` and additionally kept
+ *   fast-forward by an explicit ancestry check — `--force-with-lease` would
+ *   otherwise also permit non-ff updates while the lease holds.
  */
 export const pushGitBranch = async (payload: {
   expectedSha?: string;
+  /** Remote ref must currently equal this SHA (empty/'' requires it absent). */
+  expectedRemoteSha?: string;
+  /** Persistent single-writer fence claimed before the push. */
+  fence?: GitPushFence;
   path: string;
   remoteBranch?: string;
   sourceRef?: string;
 }): Promise<GitPushResult> => {
-  const { path: dirPath, expectedSha, remoteBranch, sourceRef = 'HEAD' } = payload;
+  const {
+    path: dirPath,
+    expectedSha,
+    expectedRemoteSha,
+    fence,
+    remoteBranch,
+    sourceRef = 'HEAD',
+  } = payload;
   if (remoteBranch && isInvalidBranchRef(remoteBranch)) {
     return { error: `Invalid remote branch name: ${remoteBranch}`, success: false };
   }
@@ -240,8 +265,15 @@ export const pushGitBranch = async (payload: {
   ) {
     return { error: `Invalid source ref: ${sourceRef}`, success: false };
   }
-  const refspec = remoteBranch ? `${sourceRef}:refs/heads/${remoteBranch}` : sourceRef;
+  const remoteRef = remoteBranch ? `refs/heads/${remoteBranch}` : undefined;
+  const refspec = remoteBranch ? `${sourceRef}:${remoteRef}` : sourceRef;
   try {
+    if (fence) {
+      const rejected = await claimGitPushFence(dirPath, { ...fence, ref: remoteRef ?? fence.ref });
+      if (rejected) {
+        return { error: rejected, fenceEnforced: false, success: false };
+      }
+    }
     if (expectedSha) {
       const sourceSha = await readRevisionSha(dirPath, sourceRef);
       if (sourceSha !== expectedSha) {
@@ -251,17 +283,119 @@ export const pushGitBranch = async (payload: {
         };
       }
     }
-    const { stderr } = await execFileAsync('git', ['push', '-u', 'origin', refspec], {
+    let remoteSha: string | undefined;
+    const leaseArgs: string[] = [];
+    if (expectedRemoteSha !== undefined && remoteRef) {
+      // Observe the real remote ref before mutating it; the lease below makes
+      // any move between this fetch and the push reject the update.
+      await execFileAsync('git', ['fetch', 'origin', remoteBranch!], {
+        cwd: dirPath,
+        timeout: 60_000,
+      }).catch((error: any) => {
+        // A missing remote branch makes fetch fail; that is a legal
+        // expectation when `expectedRemoteSha` is '' (ref must not exist).
+        log.debug('[pushGitBranch] expectation fetch failed', {
+          message: error?.message,
+          stderr: error?.stderr?.toString?.() ?? error?.stderr,
+        });
+      });
+      remoteSha = await readRevisionSha(dirPath, `refs/remotes/origin/${remoteBranch}`);
+      if (expectedRemoteSha === '' ? remoteSha !== undefined : remoteSha !== expectedRemoteSha) {
+        return {
+          error: `Refusing to publish over moved remote ref: origin/${remoteBranch} is ${remoteSha ?? 'missing'}; expected ${expectedRemoteSha || 'absent'}`,
+          remoteSha,
+          success: false,
+        };
+      }
+      // Keep the no-non-fast-forward policy: the pushed revision must build on
+      // the expected remote tip (a brand-new ref is trivially fast-forward).
+      if (expectedRemoteSha && !(await isAncestorSha(dirPath, expectedRemoteSha, sourceRef))) {
+        return {
+          error: `Refusing non-fast-forward publish: ${expectedRemoteSha} is not an ancestor of ${sourceRef}`,
+          remoteSha,
+          success: false,
+        };
+      }
+      leaseArgs.push(`--force-with-lease=${remoteRef}:${expectedRemoteSha}`);
+    }
+    const { stderr } = await execFileAsync('git', ['push', '-u', 'origin', ...leaseArgs, refspec], {
       cwd: dirPath,
       timeout: 60_000,
     });
     // git push writes progress/status to stderr even on success
     const noop = /Everything up-to-date/i.test(stderr);
-    return { noop, pushedSourceRef: sourceRef, success: true };
+    return {
+      fenceEnforced: fence !== undefined,
+      noop,
+      pushedSourceRef: sourceRef,
+      remoteSha,
+      success: true,
+    };
   } catch (error: any) {
     const stderr: string = (error?.stderr ?? error?.message ?? '').toString().trim();
     log.debug('[pushGitBranch] failed', { stderr });
-    return { error: stderr || 'git push failed', success: false };
+    return {
+      error: stderr || 'git push failed',
+      fenceEnforced: fence !== undefined,
+      success: false,
+    };
+  }
+};
+
+const isAncestorSha = async (
+  dirPath: string,
+  ancestor: string,
+  descendant: string,
+): Promise<boolean> => {
+  try {
+    await execFileAsync('git', ['merge-base', '--is-ancestor', ancestor, descendant], {
+      cwd: dirPath,
+      timeout: 5000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Probe the remote for the current value of a branch ref (`git ls-remote`).
+ * This is the reconcile-side read for fenced publishes: unlike
+ * `listGitBranches`/`listGitRemoteBranches` it distinguishes "remote
+ * unreachable" (`unknown`) from "ref absent" (`missing`), and reports the
+ * remote's live value rather than a possibly stale remote-tracking ref.
+ */
+export const probeGitRemoteRef = async (payload: {
+  path: string;
+  /** Short remote name; defaults to 'origin'. */
+  remote?: string;
+  /** Full remote ref or short branch name, e.g. `main` or `refs/heads/main`. */
+  ref: string;
+}): Promise<GitRemoteRefProbe> => {
+  const { path: dirPath, ref, remote = 'origin' } = payload;
+  const qualified = ref.startsWith('refs/') ? ref : `refs/heads/${ref}`;
+  if (!remote?.trim() || remote.startsWith('-') || !/^[\w-]+$/.test(remote)) {
+    return { state: 'unknown' };
+  }
+  if (!/^[\w\-./]+$/.test(qualified)) {
+    return { state: 'unknown' };
+  }
+  try {
+    const { stdout } = await execFileAsync('git', ['ls-remote', remote, qualified], {
+      cwd: dirPath,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      timeout: 30_000,
+    });
+    const line = stdout.split('\n').find((entry) => entry.trim().length > 0);
+    if (!line) return { ref: qualified, state: 'missing' };
+    const [sha] = line.split(/\s+/);
+    return { ref: qualified, sha, state: 'found' };
+  } catch (error: any) {
+    log.debug('[probeGitRemoteRef] remote read failed', {
+      message: error?.message,
+      stderr: error?.stderr?.toString?.() ?? error?.stderr,
+    });
+    return { ref: qualified, state: 'unknown' };
   }
 };
 

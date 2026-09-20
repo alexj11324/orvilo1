@@ -44,6 +44,26 @@ const packageNameForPath = (file, packages) => {
   return matchingDirectory ? packages.byDirectory.get(matchingDirectory) : undefined;
 };
 
+export const consumerScopesForApplications = (applicationDependencies, workspaceDependencies) => {
+  const consumerScopes = new Map();
+  for (const { dependencies, scope } of applicationDependencies) {
+    for (const dependency of dependencies) {
+      const queue = [dependency];
+      const seen = new Set();
+      while (queue.length > 0) {
+        const current = queue.shift();
+        if (seen.has(current)) continue;
+        seen.add(current);
+        const scopes = consumerScopes.get(current) ?? new Set();
+        scopes.add(scope);
+        consumerScopes.set(current, scopes);
+        queue.push(...(workspaceDependencies.get(current) ?? []));
+      }
+    }
+  }
+  return consumerScopes;
+};
+
 const packageGraph = (rootDir) => {
   const manifests = [];
   const candidates = execFileSync('git', ['ls-files', 'packages/**/package.json'], {
@@ -70,17 +90,21 @@ const packageGraph = (rootDir) => {
 
   const byDirectory = new Map(manifests.map(({ directory, name }) => [directory, name]));
   const reverseDependencies = new Map();
-  const consumerScopes = new Map();
   const names = new Set(manifests.map(({ name }) => name));
+  const workspaceDependencies = new Map();
   for (const { name, dependencies } of manifests) {
-    for (const dependency of Object.keys(dependencies)) {
-      if (!names.has(dependency)) continue;
+    const workspaceDependenciesForPackage = Object.keys(dependencies).filter((dependency) =>
+      names.has(dependency),
+    );
+    workspaceDependencies.set(name, new Set(workspaceDependenciesForPackage));
+    for (const dependency of workspaceDependenciesForPackage) {
       const consumers = reverseDependencies.get(dependency) ?? new Set();
       consumers.add(name);
       reverseDependencies.set(dependency, consumers);
     }
   }
 
+  const applicationDependencies = [];
   for (const { file, scope } of [
     { file: 'apps/cli/package.json', scope: 'cli' },
     { file: 'apps/desktop/package.json', scope: 'desktop' },
@@ -94,19 +118,18 @@ const packageGraph = (rootDir) => {
       ...manifest.devDependencies,
       ...manifest.peerDependencies,
     };
-    for (const dependency of Object.keys(dependencies)) {
-      if (!names.has(dependency)) continue;
-      const scopes = consumerScopes.get(dependency) ?? new Set();
-      scopes.add(scope);
-      consumerScopes.set(dependency, scopes);
-    }
+    applicationDependencies.push({
+      dependencies: Object.keys(dependencies).filter((dependency) => names.has(dependency)),
+      scope,
+    });
   }
 
   return {
     byDirectory,
-    consumerScopes,
+    consumerScopes: consumerScopesForApplications(applicationDependencies, workspaceDependencies),
     reverseDependencies,
     testPackageNames: new Set(manifests.filter(({ testable }) => testable).map(({ name }) => name)),
+    workspaceDependencies,
   };
 };
 
@@ -168,6 +191,7 @@ export const planAffectedChecks = (files, { forceE2E = false, forceFull = false,
     consumerScopes: new Map(),
     reverseDependencies: new Map(),
     testPackageNames: new Set(),
+    workspaceDependencies: new Map(),
   };
   if (forceFull) {
     markFullSuite(plan, graph, 'protected branch push');

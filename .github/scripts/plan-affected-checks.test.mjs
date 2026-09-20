@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { planAffectedChecks } from './plan-affected-checks.mjs';
+import { consumerScopesForApplications, planAffectedChecks } from './plan-affected-checks.mjs';
 
 const packages = {
   byDirectory: new Map([
@@ -10,13 +10,18 @@ const packages = {
     ['packages/agent-signal', '@orvilo/agent-signal'],
     ['packages/agent-runtime', '@orvilo/agent-runtime'],
     ['packages/desktop-bridge', '@orvilo/desktop-bridge'],
+    ['packages/device-control', '@orvilo/device-control'],
+    ['packages/html-artifact', '@orvilo/html-artifact'],
     ['packages/local-file-shell', '@orvilo/local-file-shell'],
   ]),
   reverseDependencies: new Map([
     ['@orvilo/types', new Set(['@orvilo/agent-runtime'])],
     ['@orvilo/agent-runtime', new Set(['@orvilo/agent-manager-runtime'])],
   ]),
-  consumerScopes: new Map([['@orvilo/desktop-bridge', new Set(['desktop'])]]),
+  consumerScopes: new Map([
+    ['@orvilo/desktop-bridge', new Set(['desktop'])],
+    ['@orvilo/html-artifact', new Set(['desktop'])],
+  ]),
   testPackageNames: new Set([
     '@orvilo/agent-runtime',
     '@orvilo/agent-manager-runtime',
@@ -82,6 +87,24 @@ test('propagates a package change to application consumers', () => {
   const plan = planAffectedChecks(['packages/desktop-bridge/src/index.ts'], { packages });
 
   assert.equal(plan.run_desktop, true);
+});
+
+test('propagates a package change through workspace dependencies to an application consumer', () => {
+  const plan = planAffectedChecks(['packages/html-artifact/src/index.ts'], { packages });
+
+  assert.equal(plan.run_desktop, true);
+});
+
+test('derives consumer scopes through transitive workspace dependencies', () => {
+  const scopes = consumerScopesForApplications(
+    [{ dependencies: ['@orvilo/device-control'], scope: 'desktop' }],
+    new Map([
+      ['@orvilo/device-control', new Set(['@orvilo/html-artifact'])],
+      ['@orvilo/html-artifact', new Set()],
+    ]),
+  );
+
+  assert.deepEqual(scopes.get('@orvilo/html-artifact'), new Set(['desktop']));
 });
 
 test('fails closed when a package manifest changes the dependency graph', () => {

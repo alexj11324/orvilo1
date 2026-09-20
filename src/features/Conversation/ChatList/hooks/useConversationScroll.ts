@@ -14,6 +14,7 @@ import { type VListHandle } from 'virtua';
 import { useSingleton } from '@/hooks/useSingleton';
 
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../../store';
+import { useAutoScrollEnabled } from '../components/AutoScroll/useAutoScrollEnabled';
 
 const log = debug('orvilo:conversation:scroll');
 
@@ -508,6 +509,8 @@ export const useConversationScroll = ({
 }: UseConversationScrollOptions): UseConversationScrollResult => {
   const displayMessages = useConversationStore(dataSelectors.displayMessages);
   const isAIGenerating = useConversationStore(messageStateSelectors.isAIGenerating);
+  const scrollToBottom = useConversationStore((s) => s.scrollToBottom);
+  const autoScrollEnabled = useAutoScrollEnabled();
   const getItemOffset = useConversationStore((s) => s.virtuaScrollMethods?.getItemOffset);
   const getItemSize = useConversationStore((s) => s.virtuaScrollMethods?.getItemSize);
   const getScrollOffset = useConversationStore((s) => s.virtuaScrollMethods?.getScrollOffset);
@@ -749,11 +752,28 @@ export const useConversationScroll = ({
     // closes — either we've reached the target or the user scrolled away.
     if (pin.seenActive && !mounted) {
       clearPin('spacer unmounted after activation');
+      // The pin anchored the viewport to the user row for the whole stream,
+      // keeping `atBottom` false — so AutoScroll's streaming follower never
+      // fires and, on generation end, the viewport would stay stranded at the
+      // pin (distanceToBottom ≈ the retired spacer's height). A user scroll-up
+      // clears the pin before the unmount, so reaching this branch means the
+      // stream ended naturally: with auto-scroll enabled, settle at bottom.
+      if (autoScrollEnabled) {
+        scrollToBottom(false);
+      }
       return;
     }
 
     scrollToPinned('spacer layout settle');
-  }, [clearPin, mounted, pinRef, scrollToPinned, spacerLayoutVersion]);
+  }, [
+    autoScrollEnabled,
+    clearPin,
+    mounted,
+    pinRef,
+    scrollToBottom,
+    scrollToPinned,
+    spacerLayoutVersion,
+  ]);
 
   // Collapse spacer to unmount once the user has shrunk it to zero.
   useEffect(() => {

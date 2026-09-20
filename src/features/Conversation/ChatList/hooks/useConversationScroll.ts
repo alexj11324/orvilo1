@@ -575,6 +575,8 @@ export const useConversationScroll = ({
     const newMessageCount = dataSource.length - prevLengthRef.current;
     prevLengthRef.current = dataSource.length;
 
+    if (newMessageCount > 0)
+      log('dataSource grew +%d → len=%d', newMessageCount, dataSource.length);
     if (newMessageCount <= 0 && unresolvedTailIds.size === 0) return;
 
     // A send appends a (user, assistant, …) tail — usually one +2 commit, but

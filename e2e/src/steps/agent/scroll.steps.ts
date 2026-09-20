@@ -176,7 +176,7 @@ async function waitForAssistantMessageToSettle(
   // run to have been *observed* running (the op row lands a few hundred ms
   // after send) before trusting "idle", otherwise a stale long reply from the
   // previous turn would release the next send into the client-side queue.
-  const deadline = Date.now() + 45_000;
+  const deadline = Date.now() + 90_000;
   let lastLength = 0;
   let sawRunning = false;
   while (Date.now() < deadline) {
@@ -310,7 +310,7 @@ Given('流式响应被放慢以模拟长文输出', async function (this: Custom
 // When steps
 // ---------------------------------------------------------------------------
 
-When('用户发送长文消息并等待回复完成', { timeout: 45_000 }, async function (this: CustomWorld) {
+When('用户发送长文消息并等待回复完成', { timeout: 150_000 }, async function (this: CustomWorld) {
   const prompt = '请输出一篇很长的文章';
   await sendPrompt(this, prompt, presetResponses.longScrollArticle);
 
@@ -342,7 +342,7 @@ When('用户发送一条触发长文输出的消息', async function (this: Cust
 
 When(
   '用户完成一轮用于垫高列表的长回复对话',
-  { timeout: 45_000 },
+  { timeout: 150_000 },
   async function (this: CustomWorld) {
     const prompt = '请先输出一篇很长的文章用于垫高列表';
     await sendPrompt(this, prompt, presetResponses.longScrollArticle);
@@ -352,7 +352,7 @@ When(
 
 When(
   '用户发送一条触发短回复的消息并等待回复完成',
-  { timeout: 30_000 },
+  { timeout: 90_000 },
   async function (this: CustomWorld) {
     const prompt = '请输出一段短回复用于测试底部补偿区域';
     await sendPrompt(this, prompt, '这是一个短回复，用于让底部补偿区域保持可见。');

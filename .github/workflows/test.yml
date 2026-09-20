@@ -50,9 +50,14 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       windows_shell: ${{ steps.filter.outputs.windows_shell }}
     steps:
-      # paths-filter diffs the PR's head against its base via the GitHub API;
-      # on push runs it diffs the push's before..after SHAs. A tag/first push
-      # with no resolvable base reports every area changed (full coverage).
+      # paths-filter runs `git` to resolve the current ref and, on push runs,
+      # diffs the before..after SHAs locally — a checkout with full history is
+      # required. A tag/first push with no resolvable base reports every area
+      # changed (full coverage).
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:

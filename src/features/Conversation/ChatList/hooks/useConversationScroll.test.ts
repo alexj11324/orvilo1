@@ -134,13 +134,15 @@ describe('useConversationScroll — pin behavior', () => {
     virtuaScrollMethods: null,
   };
 
-  const deriveDisplayMessages = (isSecondLastFromUser: boolean) =>
-    isSecondLastFromUser
-      ? [
-          { id: userId, role: 'user' as const },
-          { id: assistantId, role: 'assistant' as const },
-        ]
-      : [{ id: assistantId, role: 'assistant' as const }];
+  // displayMessages mirrors dataSource one-to-one, like rowIds does in the
+  // real list: ids the harness names user*/u<N> render as user rows,
+  // everything else as assistant. The boolean flag is retained for option
+  // compatibility but no longer drives the message list.
+  const deriveDisplayMessages = (dataSource: string[]) =>
+    dataSource.map((id) => ({
+      id,
+      role: (id === userId || /^u\d+$/.test(id) ? 'user' : 'assistant') as 'user' | 'assistant',
+    }));
 
   const installStoreMock = () => {
     vi.mocked(useConversationStore).mockImplementation((selector: any) => {
@@ -161,7 +163,7 @@ describe('useConversationScroll — pin behavior', () => {
     fixture?: Partial<StoreFixture>;
   }) => {
     currentFixture = {
-      displayMessages: deriveDisplayMessages(props.isSecondLastMessageFromUser),
+      displayMessages: deriveDisplayMessages(props.dataSource),
       isAIGenerating: false,
       virtuaScrollMethods: {
         getScrollOffset: () => 0,
@@ -196,7 +198,7 @@ describe('useConversationScroll — pin behavior', () => {
     }) => {
       currentFixture = {
         ...currentFixture,
-        displayMessages: deriveDisplayMessages(next.isSecondLastMessageFromUser),
+        displayMessages: deriveDisplayMessages(next.dataSource),
       };
       hook.rerender({ contextKey: undefined, ...next });
     };
@@ -454,6 +456,46 @@ describe('useConversationScroll — pin behavior', () => {
     });
 
     expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it('pins the user message when the send pair lands in split commits', () => {
+    const { rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+    });
+
+    // Under load the optimistic user row and the assistant placeholder can
+    // commit separately (+1 then +1) — the pin must fire on the user commit,
+    // not require the exact pair.
+    rerender({
+      dataSource: ['m0', 'm1', userId],
+      isSecondLastMessageFromUser: true,
+    });
+    expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
+
+    // The assistant row arriving a commit later must not double-fire the pin.
+    scrollToIndex.mockClear();
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it('pins the user message when extra rows land in the same send commit', () => {
+    const { rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+    });
+
+    // A tool/receipt row riding the send commit makes the delta +3 — the old
+    // `+2 and second-last-is-user` gate silently dropped this pin.
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId, 'tool-receipt'],
+      isSecondLastMessageFromUser: true,
+    });
+
+    expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
   });
 
   it('targets the correct index when multiple turns accumulate', () => {

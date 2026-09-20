@@ -140,23 +140,60 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 独立审查发现 12 项问题；完成定义按 `IMPLEMENTED / UNIT_OR_CONTRACT_TESTED / INTEGRATION_TESTED / LIVE_ACCEPTED / RELEASE_READY` 分级记录，互不相冒。
 
-| Finding | 级别     | 整改        | 状态               | 摘要                                                                                                                                                                        |
-| ------- | -------- | ----------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F01     | P0       | R01         | OPEN               | taskWorkspace 按目录名推断归属，`同路径不同分支` 触发 `worktree remove --force` —— 潜在数据丢失，停自动强删                                                                 |
-| F02     | P1       | R01         | OPEN               | 「孤儿目录清理」调用只认已登记 worktree 的 `removeGitWorktree`，恢复链实际不通                                                                                              |
-| F03     | P1       | R02         | OPEN               | `withRepoRefLease` 在 pg\_advisory\_xact\_lock 事务内做远程 I/O，回调仍用原连接 —— 连接池饥饿风险                                                                           |
-| F04     | P1       | R03         | 已实现，待合入门禁 | 外部 MCP/Connector 装配链已实现（`resolveExternalToolSurface` + `metadata.externalTools` + `heteroExecBuiltinTool` 回调经 `ToolExecutionService`），待合入门禁              |
-| F05     | P1       | R03         | 已实现，待合入门禁 | `requiredToolIds` 准入已实现（部分失败即拒绝、`disableTools` 冲突显式拒绝、TaskRunner 传 `requiredToolIds`），待合入门禁                                                    |
-| F06     | P1       | R04         | 已实现，待合入门禁 | 终态白名单（非终态→pending）+ `event_outbox` 持久账本 + `awaitStartedAt` 死线→timeout 落 error + superseded 占位审计；消费 = await 结算 / 兼容 CAS win                      |
-| F07     | P1       | R06         | 已实现，待合入门禁 | `contract.content` 冻结指令 /verify/ 依赖回执并与 prompt 同源；续聊继承契约正文；`baseSha` 钉选（设备 post-add head / 远端预解析）+ `baseShaHistory`；`inputStale` 审计标记 |
-| F08     | P1       | R07         | OPEN               | 首快照成功即清零失败计数，merge-boundary 连续失败永远停在第 1 次                                                                                                            |
-| F09     | P1       | R05         | OPEN               | `startExecution` 对合法 `idle` 返回 `success:true/scheduled:false` 成功无动作                                                                                               |
-| F10     | P1       | R08         | OPEN               | 后台判断链（规划 / Verify / 反思）仍经 `initModelRuntimeFromDeploymentConfig` 部署密钥直连，未 ACP 化                                                                       |
-| F11     | P2       | R09         | OPEN               | Quota 菜单无 `deviceId` 回退 `claude[0]`，可能显示他人身份读数                                                                                                              |
-| F12     | 发布阻塞 | R00/R10/R11 | OPEN               | 复合 PASS 已拆（本文件）；缺 `caid_dispatch_enabled` 服务端开关；固定 SHA 正路径验收未跑                                                                                    |
+| Finding | 级别     | 整改        | 状态               | 摘要                                                                                                                                                                           |
+| ------- | -------- | ----------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F01     | P0       | R01         | 已实现，待合入门禁 | worktree 所有权归属须现证（`git worktree list --porcelain` + 注册表双证），归属不明→拒绝强删 / 回收；`同路径不同分支` 不再 force-remove，改停手报错                            |
+| F02     | P1       | R01         | 已实现，待合入门禁 | 孤儿目录扫描比对注册表 + `git worktree list` 实况，未知目录进人工队列而非删除                                                                                                  |
+| F03     | P1       | R02         | 已实现，待合入门禁 | `withRepoRefLease` 拆分为短事务租约 + 事务外远程 I/O + owner fence 校验；`LeasedRepoRef` 合同记录持有者                                                                        |
+| F04     | P1       | R03         | 已实现，待合入门禁 | 外部 MCP/Connector 装配链已实现（`resolveExternalToolSurface` + `metadata.externalTools` + `heteroExecBuiltinTool` 回调经 `ToolExecutionService`），待合入门禁                 |
+| F05     | P1       | R03         | 已实现，待合入门禁 | `requiredToolIds` 准入已实现（部分失败即拒绝、`disableTools` 冲突显式拒绝、TaskRunner 传 `requiredToolIds`），待合入门禁                                                       |
+| F06     | P1       | R04         | 已实现，待合入门禁 | 终态白名单（非终态→pending）+ `event_outbox` 持久账本 + `awaitStartedAt` 死线→timeout 落 error + superseded 占位审计；消费 = await 结算 / 兼容 CAS win                         |
+| F07     | P1       | R06         | 已实现，待合入门禁 | `contract.content` 冻结指令 /verify/ 依赖回执并与 prompt 同源；续聊继承契约正文；`baseSha` 钉选（设备 post-add head / 远端预解析）+ `baseShaHistory`；`inputStale` 审计标记    |
+| F08     | P1       | R07         | 已实现，待合入门禁 | 按阶段独立失败预算（fetch-status/patch/merge 不再被首个成功清零）；merge-accepted reconcile 允许终态复核                                                                       |
+| F09     | P1       | R05         | 已实现，待合入门禁 | `startExecution` idle / 孤儿 metadata → `PRECONDITION_FAILED`、终态 → `CONFLICT`、不存在 → `NOT_FOUND`、running/parked → 幂等 `alreadyStarted`；`autoStart:false` 副作用前拒绝 |
+| F10     | P1       | R08         | 实现中（子会话）   | 后台判断链（规划 / Verify / 反思）ACP 收口由子会话进行，分支 `refactor/acp-background-agent-judgments`                                                                         |
+| F11     | P2       | R09         | 已实现，待合入门禁 | 删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；契约见 `docs/development/quota-identity-observation.md`                                          |
+| F12     | 发布阻塞 | R00/R10/R11 | 部分收口           | 复合 PASS 已拆；`caid_dispatch` 服务端准入开关已上线（R10，默认关）；固定 SHA 正路径验收进行中（本文件 §10）                                                                   |
 
 - F09 → R05：修复已在 #158（`fix/execution-start-intent-contract`，draft）实现 —— `idle`/ 孤儿 metadata → `PRECONDITION_FAILED`，终态 → `CONFLICT`，不存在 → `NOT_FOUND`，`running`/parked → 幂等 `alreadyStarted:true`；`autoStart:false` 在任何副作用前拒绝（`BAD_REQUEST` / batch `results` 失败项）。合并门禁复核前保持 OPEN。
 
 状态口径：本表 `OPEN` 表示整改 PR 未合入并通过门禁；各项收口后由 R11 在固定整合 SHA 上重跑对应回归行（`03-regression-matrix.md`）。
 
-- F11 / R09：修复实现于本 PR（`fix/quota-identity-observation`）——删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；identity-binding 契约见 `docs/development/quota-identity-observation.md`。行状态待合并门禁通过后由 R11 收口。
+- F11 / R09：修复实现于本 PR（`fix/quota-identity-observation`）—— 删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；identity-binding 契约见 `docs/development/quota-identity-observation.md`。行状态待合并门禁通过后由 R11 收口。
+
+## 10. R11 固定 SHA 验收（进行中）
+
+**整合 SHA（终态冻结）**: `12e2a017` —— `release/caid-remediation-integration`（P00–P21 + R00–R11 + SA01–SA08 全部整改）合并进 `test/live-acp-caid-and-release-readiness`（合并 tip `6b463093`）。合并树复核：受影响套件（agentExecution + aiAgent + quota 摄取）579/579 绿；`apps/server` 作用域 tsc = **302** 条 = 基线零新增。
+
+SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/fence/merge-intent、SA05 contract 链 + CAID claim 准入、SA06 durable 状态权威 + judgment 加固、SA07 quota 身份撤销 + principal/workspace 信任键、SA02/SA04 外部工具授权 pins + 子结果 ACK 账本（CI 修复含 jsonb coalesce 哨兵、`pins` 断言、judgment binding mock）。SA09 真机验收保持 BLOCKED（环境缺位）。
+
+### 10.1 逐诊断 typecheck 对比（非总数免检）
+
+- 工具：`scripts/ci/typecheckDiff.mjs` —— 以 `file:line:col TS####` 为键做集合差，另报每文件数量漂移；判定硬新增（file+code 在 base 全集里不存在）才算新增。
+- 已知修正：`pnpm type-check` 根脚本本地拒跑（`scripts/type-check.mjs` CI-only guard），脚本需 `CI=true`；作用域模式 `--scope apps/server` 走包内 `tsc --noEmit`。
+- head（`cb02a617`，整合树）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。
+- **结果（已跑完，PASS）**：base `origin/canary` = 309 条，head = 302 条；added keys 11（均为同文件行号漂移，base 中同 file+code 已存在）、removed 18、perFileCountDrift 1 个文件；**hard-new file+code = 0**。复跑：`node scripts/ci/typecheckDiff.mjs --base origin/canary --head HEAD --scope apps/server`（head 用 `--head-log` 复用日志）。
+
+### 10.2 真机探针（dockerless：brew Postgres\@5432 + Redis\@6379 + s3rver\@29000，Next\@37620）
+
+| 探针                                                                                                      | 结果                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 退役面 `agentQuota.listManagedAccounts` / `createManagedAccount` / `aiChat.message` / `aiAgent.getAgents` | 全部 `404 NOT_FOUND`（路由已移除）                                                                                                                                                                                                                                                            |
+| 保留面 `goal.list` / `agentQuota.ingestSnapshot`                                                          | 存在且认证门控（匿名 401 / 带 `X-API-Key` 200）                                                                                                                                                                                                                                               |
+| `goal.submitPlan` 陈旧 token                                                                              | `409 CONFLICT "Stale planning input"` —— plan revision CAS 真实生效                                                                                                                                                                                                                           |
+| CAID 准入 OFF（默认）                                                                                     | `goal.tick` → `waiting_external`「CAID dispatch admission is disabled」，任务 T-1 保持 `backlog` 未被认领                                                                                                                                                                                     |
+| CAID 准入 ON（`orvilo:runtime-config:feature-flags:published` 写 `{"caid_dispatch":true}`，5s 缓存后）    | `goal.tick` → 进入 `dispatchWork` → 条件 UPDATE 认领任务（`started_at` 落库）→ 下达 `dispatchHeteroAgent` → 到达 agent-runtime queue 边界，因本地无 `HATCHET_CLIENT_TOKEN` 诚实失败；任务落 `paused` + `Critical webhook delivery failed` —— 证明门禁开启后真实走 orchestrated 派发而非假成功 |
+
+- **e2e 唯一实跑失败**：`Test Web App` 里 `agent-scroll.feature`「视口不应贴近聊天列表底部」失败（`scroll.steps.ts:364`）。栈未触碰任何 `e2e/` 或聊天滚动代码（diff 只含 hetero-agent 侧）；该失败此前一直被 `@hugeicons@4.3.4` 构建崩遮罩（e2e 从未跑完），上游 4.3.3 恢复可用后首次实跑即暴露 —— 倾向判定为基线遗留，但缺乏 canary 对照运行记录，按「待 canary 复核」记录不冒领 PASS。
+
+### 10.3 仍 BLOCKED 的行（环境缺位，不降级）
+
+- 真实 ACP spawn / 设备派发（device-gateway `wss://device-gateway.aspectlylabs.com` 在本机不可达 → 设备只能 offline）
+- 图像 / 附件真实往返（无真实 LLM key + S3 为本地 s3rver 模拟）
+- ACK 丢失 / 服务崩溃 / 租约超时 / PR revision 移动 的**运行时**注入（单测已覆盖对应不变量；线上注入需要 Hatchet/agent-runtime 队列可用）
+
+### 10.4 P21 删除前置（整合树复核）
+
+- `@orvilo/agent-runtime` 活引用 = 0（仅 `retirementGuard.test.ts` / `contractBoundary.test.ts` 的字符串断言）
+- `packages/agent-runtime/` 目录已物理删除（仅剩 `node_modules` 残留链接）
+- 历史解码面保留：`historicalDecoderRegistry` + `createTraceDecoder` 在 `packages/heterogeneous-agents/src/registry.ts`

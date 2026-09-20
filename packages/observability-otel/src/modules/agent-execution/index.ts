@@ -1,16 +1,16 @@
 import { metrics, trace } from '@opentelemetry/api';
 
-const meter = metrics.getMeter('server-services-agent-runtime');
+const meter = metrics.getMeter('server-services-agent-execution');
 
 /**
- * Tracer for Agent Runtime semantic spans (invoke_agent / chat / execute_tool /
- * context_engineering). Shared across `AgentRuntimeService`, `RuntimeExecutors`,
+ * Tracer for Agent execution semantic spans (invoke_agent / chat / execute_tool /
+ * context_engineering). Shared across `AgentRuntimeService` (agentExecution facade), `RuntimeExecutors`,
  * and the server-side `serverMessagesEngine`.
  *
  * When OTEL is not initialized, `getTracer` returns a no-op provider, so calling
  * `tracer.startActiveSpan` is safe and cheap in environments without telemetry.
  */
-export const tracer = trace.getTracer('@orvilo/agent-runtime', '0.0.1');
+export const tracer = trace.getTracer('@orvilo/agent-execution', '0.0.1');
 
 /**
  * Count of async sub-agent parent resume attempts grouped by `outcome`:

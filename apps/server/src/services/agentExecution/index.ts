@@ -1,6 +1,7 @@
 export * from './AbandonOperationService';
 export * from './abort';
 export * from './agentInterventionNotification';
+export * from './AgentRuntimeService';
 export * from './ChildRunService';
 export * from './CompletionLifecycle';
 export * from './hooks';

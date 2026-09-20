@@ -1,6 +1,6 @@
 import { type AgentState } from '@orvilo/agent-execution';
 import { parse } from '@orvilo/conversation-flow';
-import { asyncToolResumeCounter } from '@orvilo/observability-otel/modules/agent-runtime';
+import { asyncToolResumeCounter } from '@orvilo/observability-otel/modules/agent-execution';
 import { type ChatToolPayload } from '@orvilo/types';
 import debug from 'debug';
 

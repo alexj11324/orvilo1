@@ -246,7 +246,6 @@
     "@orvilo/agent-execution": "workspace:*",
     "@orvilo/agent-gateway-client": "workspace:*",
     "@orvilo/agent-mock": "workspace:*",
-    "@orvilo/agent-runtime": "workspace:*",
     "@orvilo/agent-signal": "workspace:*",
     "@orvilo/agent-templates": "workspace:*",
     "@orvilo/artifact-template": "workspace:*",

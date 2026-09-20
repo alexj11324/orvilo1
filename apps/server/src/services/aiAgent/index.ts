@@ -39,6 +39,10 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
+import {
+  AgentRuntimeService,
+  type AgentRuntimeServiceOptions,
+} from '@/server/services/agentExecution';
 import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   ExecGroupMemberParams,
@@ -46,8 +50,6 @@ import type {
   GroupActionMemberBridgeParams,
   SubAgentBridgeParams,
 } from '@/server/services/agentExecution/types';
-import type { AgentRuntimeServiceOptions } from '@/server/services/agentRuntime';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';

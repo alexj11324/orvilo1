@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
+import { AgentRuntimeService } from '@/server/services/agentExecution';
 
 import { AiAgentService } from '../index';
 
@@ -10,7 +10,7 @@ vi.mock('@/libs/trusted-client', () => ({
   isTrustedClientEnabled: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {};
   }),

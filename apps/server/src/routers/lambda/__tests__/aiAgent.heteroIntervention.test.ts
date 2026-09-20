@@ -79,7 +79,7 @@ vi.mock('@/server/modules/AgentExecution/factory', () => ({
 
 // Services constructed by the aiAgentProcedure / heteroAgentProcedure middleware
 // — stub so the test stays isolated from their real deps.
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {};
   }),

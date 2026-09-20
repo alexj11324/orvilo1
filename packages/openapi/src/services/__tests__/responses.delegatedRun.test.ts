@@ -39,7 +39,7 @@ vi.mock('@/server/modules/AgentExecution/InMemoryStreamEventManager', () => ({
   },
 }));
 vi.mock('@/server/modules/AgentExecution/StreamEventManager', () => ({}));
-vi.mock('@/server/services/agentRuntime', () => ({ AgentRuntimeService: class {} }));
+vi.mock('@/server/services/agentExecution', () => ({ AgentRuntimeService: class {} }));
 
 const lastRuntime: { current?: MockRuntime } = {};
 vi.mock('@/server/services/aiAgent', () => ({

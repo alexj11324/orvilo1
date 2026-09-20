@@ -41,7 +41,7 @@ vi.mock('@/database/models/workspace', async (importOriginal) => ({
 }));
 
 // Mock AgentRuntimeService since we only want to test the router's business logic
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({

@@ -19,7 +19,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 
 // Mock AgentRuntimeService
 const mockGetOperationStatus = vi.fn();
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       getOperationStatus: mockGetOperationStatus,

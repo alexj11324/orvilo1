@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { agentRuntimeClient } from '../client';
+import { agentStreamClient } from '../client';
 
 // Mock fetchEventSource
 const mockFetchEventSource = vi.fn();
@@ -18,7 +18,7 @@ describe('AgentRuntimeClient', () => {
     it('should create connection with correct URL and parameters', () => {
       const operationId = 'agent_1758302563222_0g28qmdmu';
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         includeHistory: false,
         lastEventId: '0',
       });
@@ -64,7 +64,7 @@ describe('AgentRuntimeClient', () => {
         }, 20);
       });
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         includeHistory: false,
         onConnect: () => {
           connectCalled = true;
@@ -105,7 +105,7 @@ describe('AgentRuntimeClient', () => {
         }, 10);
       });
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         onEvent: (event) => {
           events.push(event);
         },
@@ -128,7 +128,7 @@ describe('AgentRuntimeClient', () => {
         }, 10);
       });
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         onError: (error) => {
           errorOccurred = true;
           expect(error.message).toBe('Connection failed');
@@ -151,7 +151,7 @@ describe('AgentRuntimeClient', () => {
         }, 10);
       });
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         onEvent: (event) => {
           events.push(event);
         },
@@ -176,7 +176,7 @@ describe('AgentRuntimeClient', () => {
         }, 10);
       });
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         onDisconnect: () => {
           disconnectCalled = true;
         },
@@ -190,7 +190,7 @@ describe('AgentRuntimeClient', () => {
     it('should include correct parameters in URL', () => {
       const operationId = 'test-operation-123';
 
-      agentRuntimeClient.createStreamConnection(operationId, {
+      agentStreamClient.createStreamConnection(operationId, {
         includeHistory: true,
         lastEventId: '12345',
       });
@@ -204,7 +204,7 @@ describe('AgentRuntimeClient', () => {
     it('should use default parameters when not provided', () => {
       const operationId = 'test-operation';
 
-      agentRuntimeClient.createStreamConnection(operationId);
+      agentStreamClient.createStreamConnection(operationId);
 
       expect(mockFetchEventSource).toHaveBeenCalledWith(
         '/api/agent/stream?includeHistory=false&lastEventId=0&operationId=test-operation',
@@ -215,7 +215,7 @@ describe('AgentRuntimeClient', () => {
     it('should return AbortController for cancellation', () => {
       const operationId = 'test-operation';
 
-      const controller = agentRuntimeClient.createStreamConnection(operationId);
+      const controller = agentStreamClient.createStreamConnection(operationId);
 
       expect(controller).toBeInstanceOf(AbortController);
       expect(controller.signal).toBeInstanceOf(AbortSignal);

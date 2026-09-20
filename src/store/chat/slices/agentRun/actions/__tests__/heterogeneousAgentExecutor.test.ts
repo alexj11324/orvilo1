@@ -3298,7 +3298,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
           codexCommandCompleted(
             'item_6',
             `/bin/zsh -lc 'rg -n "tool_call_id|tool_calls" src packages | head -n 10'`,
-            'packages/agent-runtime/src/agents/GeneralChatAgent.ts:34:...\n',
+            'packages/heterogeneous-agents/src/spawn/standardAcpSession.ts:200:...\n',
           ),
           codexAgentMessage(
             'item_7',

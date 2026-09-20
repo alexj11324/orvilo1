@@ -37,7 +37,7 @@ vi.mock('@/envs/app', () => ({
   appEnv: { APP_URL: 'https://test.example.com' },
 }));
 
-vi.mock('@/server/services/agentRuntime/AgentRuntimeService', () => ({
+vi.mock('@/server/services/agentExecution/AgentRuntimeService', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       interruptOperation: vi.fn().mockResolvedValue(true),

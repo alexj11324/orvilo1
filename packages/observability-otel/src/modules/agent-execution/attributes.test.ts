@@ -14,7 +14,7 @@ import {
   invokeAgentSpanName,
 } from './attributes';
 
-describe('agent-runtime attribute builders', () => {
+describe('agent-execution attribute builders', () => {
   it('builds invoke_agent attributes and drops undefined fields', () => {
     const attrs = buildInvokeAgentAttributes({
       agentId: 'agent_123',

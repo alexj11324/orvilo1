@@ -3,12 +3,12 @@ import debug from 'debug';
 
 import { type StreamConnectionOptions, type StreamEvent } from './type';
 
-const log = debug('orvilo-agent-runtime:client');
+const log = debug('orvilo-agent-execution:client');
 
 /**
- * Agent Client Service for communicating with durable agents
+ * SSE stream client for live operation events (`/api/agent/stream`).
  */
-class AgentRuntimeClient {
+class AgentExecutionStreamClient {
   private baseUrl = '/api/agent';
 
   /**
@@ -74,4 +74,4 @@ class AgentRuntimeClient {
   }
 }
 
-export const agentRuntimeClient = new AgentRuntimeClient();
+export const agentStreamClient = new AgentExecutionStreamClient();

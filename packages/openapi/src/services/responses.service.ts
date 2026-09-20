@@ -6,12 +6,12 @@ import type {
   StreamChunkData,
   StreamEvent,
 } from '@/server/modules/AgentExecution/StreamEventManager';
+import type { AgentRuntimeService } from '@/server/services/agentExecution';
 import {
   extractTextFromMessage,
   findLastAssistantMessage,
   normalizeCompletionMessages,
 } from '@/server/services/agentExecution/CompletionLifecycle';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { BaseService } from '../common/base.service';

@@ -372,7 +372,6 @@ export default defineConfig({
         './packages/prompts/src/**/*.ts',
         './packages/model-bank/src/**/*.ts',
         './packages/model-runtime/src/**/*.ts',
-        './packages/agent-runtime/src/**/*.ts',
         './packages/conversation-flow/src/**/*.ts',
         './packages/electron-client-ipc/src/**/*.ts',
         './packages/builtin-agents/src/**/*.ts',

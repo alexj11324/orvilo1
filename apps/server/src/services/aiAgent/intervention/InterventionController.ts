@@ -18,7 +18,7 @@ import type { MessageModel } from '@/database/models/message';
 import { HumanApprovalAlreadyResolvedError } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
 import type { TopicModel } from '@/database/models/topic';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
+import type { AgentRuntimeService } from '@/server/services/agentExecution';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
   markRemoteCancelRequested,

@@ -13,10 +13,10 @@ import {
   type IStreamEventManager,
 } from '@/server/modules/AgentExecution/types';
 
-import { ChildRunService } from '../agentExecution/ChildRunService';
-import { InterventionService } from '../agentExecution/InterventionService';
-import { OperationInterruptService } from '../agentExecution/OperationInterruptService';
-import { OperationStatusService } from '../agentExecution/OperationStatusService';
+import { ChildRunService } from './ChildRunService';
+import { InterventionService } from './InterventionService';
+import { OperationInterruptService } from './OperationInterruptService';
+import { OperationStatusService } from './OperationStatusService';
 import {
   type AgentExecutionServiceDeps,
   type GroupActionMemberBridgeParams,
@@ -26,7 +26,7 @@ import {
   type StartExecutionParams,
   type StartExecutionResult,
   type SubAgentBridgeParams,
-} from '../agentExecution/types';
+} from './types';
 
 if (process.env.VERCEL) {
   debug.log = console.info.bind(console);

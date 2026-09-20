@@ -289,8 +289,11 @@ describe('resolveQuotaIdentityForLive', () => {
     error: null,
     ...(externalAccountId ? { identity: { externalAccountId } } : {}),
     provider: 'claude-code',
+    scopedWeekly: null,
+    session: null,
     status: 'ok',
     updatedAt: now,
+    weekly: null,
   });
 
   it('an ok sample with no identity revokes the context confirmation', () => {

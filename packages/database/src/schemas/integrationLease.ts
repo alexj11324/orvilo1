@@ -4,6 +4,15 @@ import { bigint, boolean, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzl
 import { timestamps, timestamptz } from './_helpers';
 import { workspaces } from './workspace';
 
+/** Reconciliation context persisted when a mutation-phase outcome is lost. */
+export interface RepoRefLeaseOutcomeContext {
+  expectedBaseSha?: string;
+  expectedHeadSha?: string;
+  fenceSeq?: number;
+  phase?: IntegrationLeasePhase;
+  recordedAt?: string;
+}
+
 /**
  * Durable repo/ref lease serializing the merge+publish critical section of
  * CAID integration (R02). One row per (scope, target, ref): claim is a short
@@ -53,7 +62,7 @@ export const integrationLeases = pgTable(
      */
     outcomeUnknown: boolean('outcome_unknown').notNull().default(false),
     /** Snapshot of the prior phase context for post-crash reconciliation. */
-    context: jsonb('context').$type<Record<string, unknown>>(),
+    context: jsonb('context').$type<RepoRefLeaseOutcomeContext>(),
     /** Heartbeat deadline — expiry makes the row stealable, never auto-clean. */
     deadline: timestamptz('deadline').notNull(),
     releasedAt: timestamptz('released_at'),

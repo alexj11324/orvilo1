@@ -401,7 +401,7 @@ export class GatewayActionImpl {
     // Handle session completion
     client.on('session_complete', (completion) => {
       pushGatewayDiag(
-        `op=${operationId} session_complete src=${completion?.source ?? 'raw'} status=${completion?.status ?? '-'} terminal=${receivedTerminalEvent}`,
+        `op=${operationId} session_complete src=${completion?.source ?? 'raw'} status=${completion && 'status' in completion ? String(completion.status) : '-'} terminal=${receivedTerminalEvent}`,
       );
       this.internal_cleanupGatewayConnection(operationId);
       fireSessionComplete({ completion });

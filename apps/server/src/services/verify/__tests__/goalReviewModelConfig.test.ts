@@ -30,6 +30,9 @@ vi.mock('@/database/repositories/aiInfra', () => ({
 vi.mock('@/server/globalConfig', () => ({
   getServerGlobalConfig: vi.fn().mockResolvedValue({ aiProvider: {} }),
 }));
+// The R08 contract: this module must not probe deployment credentials at all.
+// Keeping the mock registered means a regression that re-imports the runtime
+// initializer turns red on the `init` assertions below.
 vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDeploymentConfig: mocks.init,
 }));
@@ -49,39 +52,41 @@ beforeEach(() => {
   mocks.task.mockResolvedValue({ config: configured });
   mocks.goal.mockResolvedValue({ model: 'unavailable', provider: 'google' });
   mocks.models.mockResolvedValue([{ id: 'gpt-4o', abilities: { vision: true } }]);
-  mocks.init.mockImplementation(async (_user, provider) => {
-    if (provider === 'google') throw new Error('Google credentials are absent');
-    return {};
-  });
+  mocks.init.mockRejectedValue(new Error('deployment credentials must not be probed'));
 });
 
 describe('Goal review model selection', () => {
-  it('uses an explicitly configured verifier without initializing Google', async () => {
+  it('uses an explicitly configured verifier without probing deployment credentials', async () => {
     mocks.agent.mockResolvedValue(configured);
     expect(await resolve(true, 'verifier')).toEqual(configured);
-    expect(mocks.init).toHaveBeenCalledExactlyOnceWith('u1', 'openai', 'w1');
+    expect(mocks.init).not.toHaveBeenCalled();
   });
-  it('keeps the pinned reviewer when the deployment can initialize it', async () => {
-    mocks.init.mockResolvedValue({});
+  it('keeps the pinned reviewer identity without any credential probe', async () => {
+    // The recorded model/provider is the reviewing agent's identity — the
+    // judgment itself runs as an authorized ACP operation, so the pinned
+    // reviewer is selected even though Google credentials are absent here.
     expect(await resolve()).toEqual({ model: 'gemini', provider: 'google' });
+    expect(mocks.init).not.toHaveBeenCalled();
   });
-  it('falls back to the configured task model for program checks without Google', async () => {
-    expect(await resolve()).toEqual(configured);
-  });
-  it('uses a vision-capable fallback for screenshot evidence', async () => {
+  it('keeps the vision gate while selecting identity candidates', async () => {
+    // The pinned gemini reviewer is not in the vision-capable list, so the
+    // task's vision-capable model wins.
     expect(await resolve(true)).toEqual(configured);
+    expect(mocks.init).not.toHaveBeenCalled();
   });
   it('never silently sends screenshots to a text-only fallback', async () => {
     mocks.models.mockResolvedValue([{ id: 'gpt-4o', abilities: { vision: false } }]);
     expect(await resolve(true)).toBeUndefined();
   });
   it('allows a configured text-only model for text evidence', async () => {
+    mocks.agent.mockResolvedValue(configured);
     mocks.models.mockResolvedValue([]);
-    expect(await resolve()).toEqual(configured);
+    expect(await resolve(false, 'verifier')).toEqual(configured);
   });
   it('does not treat a CLI agent as an LLM review provider', async () => {
     mocks.task.mockResolvedValue({ config: { model: 'codex-model', provider: 'codex' } });
-    expect(await resolve()).toBeUndefined();
+    // Pinned reviewer still wins; the codex task model is filtered out.
+    expect(await resolve()).toEqual({ model: 'gemini', provider: 'google' });
     expect(mocks.init.mock.calls.some((call) => call[1] === 'codex')).toBe(false);
   });
 });

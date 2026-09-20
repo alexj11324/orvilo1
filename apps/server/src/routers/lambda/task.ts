@@ -38,6 +38,7 @@ import {
   TASK_INPUT_STATUSES,
   TaskInputService,
 } from '@/server/services/agentDelegation';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
@@ -558,6 +559,15 @@ export const taskRouter = router({
       try {
         return await ctx.taskIntentService.analyze(input);
       } catch (error) {
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -593,6 +603,15 @@ export const taskRouter = router({
       try {
         return await ctx.taskIntentService.synthesize(input);
       } catch (error) {
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({

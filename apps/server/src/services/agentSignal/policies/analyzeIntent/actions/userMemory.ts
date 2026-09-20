@@ -229,12 +229,12 @@ export const runMemoryActionAgent = async (
   const memoryLanguage = input.memoryLanguage ?? 'English';
   const operationId = `agent-signal-memory-${nanoid()}`;
 
-  // Lazy-loaded on purpose: the memory server runtime + model-runtime core
-  // eagerly touch server-only env at module init. This policy action sits on
-  // the light agentSignal request path imported by aiAgent, so static imports
-  // would couple that whole subsystem into every aiAgent import.
-  const [{ initModelRuntimeFromDeploymentConfig }, { memoryRuntime }] = await Promise.all([
-    import('@/server/modules/ModelRuntime'),
+  // Lazy-loaded on purpose: the memory server runtime + the ACP judgment
+  // service eagerly touch server-only env at module init. This policy action
+  // sits on the light agentSignal request path imported by aiAgent, so static
+  // imports would couple that whole subsystem into every aiAgent import.
+  const [{ AiGenerationService }, { memoryRuntime }] = await Promise.all([
+    import('@/server/services/aiGeneration'),
     import('@/server/services/toolExecution/serverRuntimes/memory'),
   ]);
 
@@ -273,12 +273,6 @@ export const runMemoryActionAgent = async (
       .filter((pair): pair is readonly [string, string] => Boolean(pair[0] && pair[1])),
   );
 
-  const modelRuntime = await initModelRuntimeFromDeploymentConfig(
-    options.userId,
-    DEFAULT_MINI_SYSTEM_AGENT_ITEM.provider,
-    options.workspaceId,
-  );
-
   const existingContext = {
     identities: identities.slice(0, 50).map(({ identity, memory }) => ({
       ...identity,
@@ -293,7 +287,13 @@ export const runMemoryActionAgent = async (
     'Instead of calling the tool, return a JSON decision: pick exactly one memory API name as "action" and pass its arguments as "params" matching that API\'s input schema. Choose "skip" when no durable write is justified.',
   ].join('\n\n');
 
-  const decision = (await modelRuntime.generateObject(
+  // The memory-write decision is a retained machine judgment — run it as an
+  // explicitly authorized ACP operation bound to the feedback target's agent.
+  const decision = (await new AiGenerationService(
+    options.db,
+    options.userId,
+    options.workspaceId,
+  ).generateObject(
     {
       messages: [
         { content: systemRole, role: 'system' },
@@ -305,9 +305,18 @@ export const runMemoryActionAgent = async (
         },
       ],
       model: DEFAULT_MINI_SYSTEM_AGENT_ITEM.model,
+      provider: DEFAULT_MINI_SYSTEM_AGENT_ITEM.provider,
       schema: MEMORY_WRITE_DECISION_SCHEMA,
     },
-    { metadata: { trigger: RequestTrigger.AgentSignal } },
+    {
+      judgment: {
+        binding: { agentId: input.agentId },
+        purpose: 'agentSignal.memoryWriteDecision',
+      },
+      kind: 'judgment',
+      metadata: { trigger: RequestTrigger.AgentSignal },
+      tracing: { agentId: input.agentId, topicId: input.topicId },
+    },
   )) as { action?: string; params?: Record<string, unknown>; reasoning?: string };
 
   if (!isMemoryWriteAction(decision.action)) {

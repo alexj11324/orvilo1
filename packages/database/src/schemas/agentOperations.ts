@@ -1,6 +1,7 @@
 import { verifyRunStatuses } from '@orvilo/const/verify';
 import type {
   AgentOperationCompletionReason,
+  AgentOperationJudgmentContext,
   AgentOperationStatus,
   VerifyCheckItem,
 } from '@orvilo/types';
@@ -34,6 +35,8 @@ export interface AgentOperationAppContext {
   documentId?: string | null;
   executionGeneration?: number;
   groupId?: string | null;
+  /** ACP judgment-run marker — see `ExecAgentAppContext.judgment`. */
+  judgment?: AgentOperationJudgmentContext;
   scope?: string | null;
   sessionId?: string;
   sourceMessageId?: string;

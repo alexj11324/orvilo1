@@ -97,6 +97,15 @@ export const createLinearCoordinatorPlanner =
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          // The project's coordinator agent IS the authorized binding for this
+          // planning judgment — a deleted agent blocks explicitly, and the
+          // deterministic proposal path is reserved for projects with no
+          // coordinator configured.
+          binding: { agentId: project.coordinatorAgentId },
+          purpose: 'linearSync.coordinatorPlan',
+        },
+        kind: 'judgment',
         metadata: {
           scopeId: snapshot.scope.id,
           scopeType: snapshot.scope.scopeType,

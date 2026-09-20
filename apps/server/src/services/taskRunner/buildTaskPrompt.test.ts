@@ -17,6 +17,7 @@ import {
   goalNodes,
   goals,
   taskDependencies,
+  taskDispatches,
   tasks,
   taskTopics,
   topics,
@@ -45,12 +46,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await db.delete(acceptances);
   await db.delete(goalEdges);
   await db.delete(goalEvents);
   await db.delete(goalNodes);
   await db.delete(goals);
   await db.delete(taskDependencies);
+  await db.delete(taskDispatches);
   await db.delete(taskTopics);
   await db.delete(topics);
   await db.delete(tasks);
@@ -176,9 +179,30 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
     return { dependent, upstream, topicId: topic.id };
   };
 
-  const seedCompletedAttempt = async (taskId: string, seq: number) => {
+  const seedCompletedAttempt = async (
+    taskId: string,
+    seq: number,
+    opts?: { dispatchId?: string; executionGeneration?: number },
+  ) => {
     const [topic] = await db.insert(topics).values({ userId, workspaceId }).returning();
+    const dispatchId = opts?.dispatchId ?? `dsp-up-${seq}`;
+    await db.insert(taskDispatches).values({
+      generation: 0,
+      id: dispatchId,
+      idempotencyKey: `seed:${taskId}:${seq}`,
+      policyRevision: 0,
+      requestedBy: userId,
+      requirementRevision: 0,
+      taskId,
+      taskRevision: 0,
+      workspaceId,
+    });
     await db.insert(taskTopics).values({
+      dispatchId,
+      // The receipt binds the dispatch identity + the upstream's execution
+      // generation (SA05-A): a completed row without either is not a
+      // provable delivery.
+      executionGeneration: opts?.executionGeneration ?? 0,
       integration: {
         attempts: 0,
         baseBranch: 'main',
@@ -302,6 +326,98 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       code: 'PRECONDITION_FAILED',
       name: 'TaskDependencyError',
     });
+  });
+
+  it('SA05-A — a delivery from a superseded execution generation is not valid', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    await seedCompletedAttempt(upstream.id, 1, { executionGeneration: 0 });
+    // The upstream entered a new generation that failed — the historical
+    // completed row no longer names the current delivery.
+    await db
+      .update(tasks)
+      .set({ executionGeneration: 1, status: 'completed' })
+      .where(eq(tasks.id, upstream.id));
+
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+  });
+
+  it('SA05-A — a completed row with no dispatch identity is not a provable delivery', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    const [topic] = await db.insert(topics).values({ userId, workspaceId }).returning();
+    // A completed attempt lacking dispatchId/executionGeneration binding —
+    // e.g. a hand-written row — cannot anchor a downstream claim.
+    await db.insert(taskTopics).values({
+      integration: {
+        attempts: 0,
+        baseBranch: 'main',
+        branch: 'task/UP-9',
+        expectedHeadSha: 'sha-head-9',
+        integratedSha: 'sha-int-9',
+        role: 'task',
+        state: 'integrated',
+      },
+      seq: 1,
+      status: 'completed',
+      taskId: upstream.id,
+      topicId: topic.id,
+      userId,
+      workspaceId,
+    });
+    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+  });
+
+  it('SA05-A — a revoked integration record invalidates the delivery receipt', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    const topicId = await seedCompletedAttempt(upstream.id, 1);
+    // Integration revoked: the landed merge was undone, so the historical
+    // completed row no longer proves a landed delivery.
+    await db
+      .update(taskTopics)
+      .set({
+        integration: {
+          attempts: 0,
+          baseBranch: 'main',
+          branch: 'task/UP-1',
+          expectedHeadSha: 'sha-head-1',
+          role: 'task',
+          state: 'blocked',
+        },
+      })
+      .where(eq(taskTopics.topicId, topicId));
+    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+  });
+
+  it('SA05-A — a failed dependency-list read blocks the claim instead of freezing an empty contract', async () => {
+    const { dependent } = await seedUpstreamWithDelivery();
+    vi.spyOn(taskModel, 'getDependencies').mockRejectedValue(new Error('dependency read failed'));
+    const failingTaskModel = taskModel;
+    const current = await taskModel.findById(dependent.id);
+
+    // The read failure propagates: no prompt, and therefore no authoritative
+    // contract with silently-empty dependencies is ever persisted.
+    await expect(
+      buildTaskPrompt(current!, {
+        briefModel: new BriefModel(db, userId, workspaceId),
+        db,
+        taskModel: failingTaskModel,
+        taskTopicModel,
+        userId,
+        workspaceId,
+      }),
+    ).rejects.toThrow('dependency read failed');
   });
 
   it('propagates a delivery-read failure instead of freezing blind receipts', async () => {

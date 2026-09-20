@@ -721,5 +721,69 @@ describe('TaskDispatchService', () => {
       });
       expect(prepared.dispatch.phase).toBe('claimed');
     });
+
+    it('SA05-B — a flag flip after prepare parks the claim at the dispatched boundary', async () => {
+      const task = await seedAssignedTask('CAID-FLIP-1');
+      const service = new TaskDispatchService(db, workspaceId);
+
+      // Prepare allowed while the flag was on; rollout flips before the host
+      // admits the writer.
+      const prepared = await service.prepare({
+        idempotencyKey: 'orchestrator:CAID-FLIP-1:cascade-1',
+        origin: 'caid',
+        requestedBy: userId,
+        task,
+        trigger: 'orchestrator',
+      });
+      expect(prepared.dispatch.phase).toBe('claimed');
+      await service.transition(prepared, { expected: ['claimed'], phase: 'provisioning' });
+      vi.mocked(isCaidDispatchAllowed).mockResolvedValue(false);
+
+      await expect(
+        service.transition(prepared, { expected: ['provisioning'], phase: 'dispatched' }),
+      ).rejects.toBeInstanceOf(TaskDispatchWaitingError);
+
+      const [held] = await db.select().from(taskDispatches);
+      expect(held).toMatchObject({
+        leaseOwner: null,
+        origin: 'caid',
+        phase: 'waiting',
+        waitingReason: 'caid_dispatch_disabled',
+      });
+      // No writer was produced: the dispatch never reached 'dispatched'/'running'.
+      expect(held.operationId).toBeNull();
+    });
+
+    it('SA05-B — a verified internal settlement completes while admission is off', async () => {
+      vi.mocked(isCaidDispatchAllowed).mockResolvedValue(false);
+      const task = await seedAssignedTask('CAID-SETTLE-1');
+      const service = new TaskDispatchService(db, workspaceId);
+
+      const prepared = await service.prepare({
+        idempotencyKey: 'orchestrator:CAID-SETTLE-1:settle-1',
+        initiator: 'planner-actor',
+        origin: 'internal',
+        requestedBy: 'planner',
+        settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+        task,
+        trigger: 'orchestrator',
+      });
+      // Settlement work is evidence-verified upstream — the CAID rollout flag
+      // does not gate it, and the row records its provenance.
+      expect(prepared.dispatch).toMatchObject({
+        initiator: 'planner-actor',
+        origin: 'internal',
+        phase: 'claimed',
+        settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+      });
+
+      await expect(
+        service.transition(prepared, {
+          expected: ['claimed'],
+          operationId: 'op-settle',
+          phase: 'dispatched',
+        }),
+      ).resolves.toMatchObject({ phase: 'dispatched' });
+    });
   });
 });

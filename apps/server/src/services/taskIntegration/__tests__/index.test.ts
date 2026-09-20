@@ -124,6 +124,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
     finalizeGitMerge: vi.fn(),
     listGitBranches: vi.fn(),
     mergeGitBranch: vi.fn(),
+    probeGitRemoteRef: vi.fn(),
     pushGitBranch: vi.fn(),
     removeGitWorktree: vi.fn(),
   },
@@ -1890,6 +1891,313 @@ describe('TaskIntegrationService', () => {
 
       expect(outcome).toBe('settled');
       expect(mockLeaseModel.release).toHaveBeenCalledWith('lease-1', expect.any(String));
+    });
+  });
+
+  describe('remote fencing / reconcile (SA03-B)', () => {
+    /** A prior acquisition stolen while it held a mutation phase — never
+     *  released, never flagged unknown. */
+    const priorMutation = {
+      id: 'lease-0',
+      key: 'dev-1:/repos/orvilo#main',
+      outcomeUnknown: false,
+      ownerToken: 'old-owner',
+      phase: 'publish',
+      releasedAt: null,
+    };
+    const stolenAcquisition = (prior = priorMutation) => {
+      mockLeaseModel.acquire.mockResolvedValue({
+        lease: {
+          fenceSeq: 2,
+          id: 'lease-1',
+          key: 'dev-1:/repos/orvilo#main',
+          outcomeUnknown: false,
+        },
+        prior,
+      });
+    };
+
+    it('blocks mutation until the remote ref is probed — a successful branch-list read is not proof', async () => {
+      stolenAcquisition();
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha', integratedSha: 'merged-sha' })),
+      );
+      // The old contract: a non-undefined listGitBranches "reconciled" the
+      // lease. It must contribute nothing now — only the ref probe can.
+      vi.mocked(deviceGateway.listGitBranches).mockResolvedValue([]);
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        state: 'unknown',
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.probeGitRemoteRef).toHaveBeenCalledWith(
+        expect.objectContaining({ ref: 'refs/heads/main' }),
+      );
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.clearOutcomeUnknown).not.toHaveBeenCalled();
+    });
+
+    it('proceeds when the probe proves the remote still holds the pre-state', async () => {
+      stolenAcquisition();
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha' })),
+      );
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        sha: 'base-sha',
+        state: 'found',
+      });
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(mockLeaseModel.clearOutcomeUnknown).toHaveBeenCalled();
+      expect(deviceGateway.mergeGitBranch).toHaveBeenCalled();
+      expect(outcome).toBe('settled');
+    });
+
+    it('proceeds when the probe proves the lost publish already landed', async () => {
+      stolenAcquisition();
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha', integratedSha: 'merged-sha' })),
+      );
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        sha: 'merged-sha',
+        state: 'found',
+      });
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(mockLeaseModel.clearOutcomeUnknown).toHaveBeenCalled();
+      expect(outcome).toBe('settled');
+    });
+
+    it('does not reconcile on an unrelated remote value without a recorded operation identity', async () => {
+      stolenAcquisition();
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha', integratedSha: 'merged-sha' })),
+      );
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        sha: 'someone-else-sha',
+        state: 'found',
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.clearOutcomeUnknown).not.toHaveBeenCalled();
+    });
+
+    it('marks outcome_unknown with the minted operation identity when the lease is stolen mid-mutation', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
+      vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(async () => {
+        // Ownership stolen while the merge RPC is in flight — the post-flight
+        // re-verification must fail so no business write-back commits under a
+        // superseded owner.
+        mockLeaseModel.renew.mockResolvedValue(false);
+        return { sha: 'merge-sha', state: 'merged', success: true };
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      // The merge's write-back never ran, and publish never fired.
+      expect(
+        mockTaskTopicModel.updateIntegration.mock.calls.some(
+          (call) => call[2] && 'expectedHeadSha' in call[2],
+        ),
+      ).toBe(false);
+      expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalledWith(
+        'lease-1',
+        expect.any(String),
+        expect.objectContaining({
+          phase: 'merge',
+          remoteOperationId: expect.stringMatching(/^1:/),
+        }),
+      );
+      expect(mockLeaseModel.release).not.toHaveBeenCalled();
+    });
+
+    it('passes the fence and expected-old remote ref to the publish push', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha' })),
+      );
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+      vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({
+        fenceEnforced: true,
+        pushedSourceRef: 'merged-sha',
+        remoteSha: 'base-sha',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      expect(deviceGateway.pushGitBranch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expectedRemoteSha: 'base-sha',
+          fence: expect.objectContaining({ ref: 'refs/heads/main', seq: 1 }),
+        }),
+      );
+    });
+  });
+
+  describe('dependency receipt re-verification at the mutation boundary (SA05-A)', () => {
+    const deliveredReceipt = {
+      dependsOnId: 'task_up',
+      identifier: 'UP-1',
+      status: 'completed',
+      type: 'blocks',
+      delivery: {
+        dispatchId: 'dsp-up',
+        executionGeneration: 1,
+        integratedSha: 'sha-int-up',
+        sourceSha: 'sha-head-up',
+        topicId: 'tpc_up',
+        verifyOperationId: 'verify-op-up',
+      },
+    };
+    const topicWithReceipt = (record = seedRecord()): TaskTopicItem =>
+      ({
+        ...asTopic(record),
+        contract: {
+          content: { dependencies: [deliveredReceipt], instruction: 'x' },
+        },
+      }) as TaskTopicItem;
+
+    const upstreamTopic = (overrides: Partial<TaskTopicItem> = {}): TaskTopicItem =>
+      ({
+        dispatchId: 'dsp-up',
+        executionGeneration: 1,
+        integration: {
+          attempts: 0,
+          baseBranch: 'main',
+          branch: 'task/UP-1',
+          expectedHeadSha: 'sha-head-up',
+          integratedSha: 'sha-int-up',
+          role: 'task',
+          state: 'integrated',
+          verifyOperationId: 'verify-op-up',
+        },
+        seq: 1,
+        status: 'completed',
+        taskId: 'task_up',
+        topicId: 'tpc_up',
+        ...overrides,
+      }) as TaskTopicItem;
+
+    it('holds the integration when the upstream re-delivered under a different dispatch', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(topicWithReceipt());
+      mockTaskTopicModel.findByTaskId.mockImplementation(async (taskId: string) =>
+        taskId === 'task_up'
+          ? [upstreamTopic({ dispatchId: 'dsp-up-2', topicId: 'tpc_up_2' })]
+          : [asTopic(seedRecord())],
+      );
+      mockTaskModel.findById.mockImplementation(async (taskId: string) =>
+        taskId === 'task_up' ? baseTask({ id: 'task_up', status: 'completed' }) : baseTask(),
+      );
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({
+          lastError: expect.stringContaining('no longer stands on the delivery'),
+        }),
+      );
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    });
+
+    it('holds the integration when the upstream advanced its execution generation', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(topicWithReceipt());
+      mockTaskTopicModel.findByTaskId.mockImplementation(async (taskId: string) =>
+        taskId === 'task_up' ? [upstreamTopic()] : [asTopic(seedRecord())],
+      );
+      // Upstream's live generation moved past the recorded delivery.
+      mockTaskModel.findById.mockImplementation(async (taskId: string) =>
+        taskId === 'task_up'
+          ? baseTask({ executionGeneration: 2, id: 'task_up', status: 'completed' })
+          : baseTask(),
+      );
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    });
+
+    it("integrates when the recorded delivery is still the upstream's current claim", async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(topicWithReceipt());
+      mockTaskTopicModel.findByTaskId.mockImplementation(async (taskId: string) =>
+        taskId === 'task_up' ? [upstreamTopic()] : [asTopic(seedRecord())],
+      );
+      mockTaskModel.findById.mockImplementation(async (taskId: string) =>
+        taskId === 'task_up' ? baseTask({ id: 'task_up', status: 'completed' }) : baseTask(),
+      );
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+      vi.mocked(deviceGateway.pushGitBranch).mockImplementation(async ({ sourceRef }) => ({
+        fenceEnforced: true,
+        pushedSourceRef: sourceRef,
+        success: true,
+      }));
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
     });
   });
 });

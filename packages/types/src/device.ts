@@ -557,11 +557,32 @@ export interface DeviceGitCheckoutResult {
  */
 export interface DeviceGitSyncResult {
   error?: string;
+  /**
+   * Capability negotiation: true when the server sent a lease `fence` and the
+   * device persisted/enforced it before pushing. Absent on pre-fence clients —
+   * callers must not treat a successful unflagged push as fenced.
+   */
+  fenceEnforced?: boolean;
   /** True when git reported the branch was already up-to-date. */
   noop?: boolean;
   /** Proves the device pushed the requested immutable source ref. */
   pushedSourceRef?: string;
+  /** Remote ref value observed while enforcing `expectedRemoteSha`. */
+  remoteSha?: string;
   success: boolean;
+}
+
+/**
+ * Result of the `probeGitRemoteRef` device RPC — the remote observation used
+ * to reconcile a fenced publish whose outcome was lost. `unknown` means the
+ * remote could not be read at all (not proof of anything), `missing` means the
+ * remote was reached and the ref is absent.
+ */
+export interface DeviceGitRemoteRefProbe {
+  ref?: string;
+  /** Live sha the remote advertises for the ref. */
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
 }
 
 /**

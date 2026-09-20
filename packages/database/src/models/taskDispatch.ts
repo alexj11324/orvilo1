@@ -1,5 +1,7 @@
 import type {
+  TaskDispatchOrigin,
   TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
@@ -67,8 +69,20 @@ export class TaskDispatchIdempotencyConflictError extends Error {}
 export interface RequestTaskDispatchInput {
   dispatchId?: string;
   idempotencyKey: string;
+  /** Raw actor identity persisted separately from the `trigger:actor`
+   *  `requestedBy` audit string (SA05-B). */
+  initiator?: string;
+  /**
+   * Authoritative execution origin persisted on the row — resolved
+   *  server-side from verified settlement evidence, not caller-supplied
+   *  marker presence. First write wins: idempotent retries never relabel.
+   */
+  origin?: TaskDispatchOrigin;
   planRevision?: number | null;
   requestedBy: string;
+  /** Server-verified settlement evidence for `origin: 'internal'` rows. */
+  settlementGrant?: TaskDispatchSettlementGrant;
+  sourceDispatchId?: string;
   taskId: string;
   trigger: TaskRunTrigger;
 }
@@ -487,12 +501,16 @@ export class TaskDispatchModel {
           generation,
           id: input.dispatchId ?? idGenerator('taskDispatches'),
           idempotencyKey: input.idempotencyKey,
+          initiator: input.initiator ?? null,
+          origin: input.origin ?? null,
           phase: waitingReason ? 'waiting' : 'requested',
           planRevision: input.planRevision,
           policyRevision: task.policyRevision,
           projectId: task.projectId,
           requestedBy: `${input.trigger}:${input.requestedBy}`,
           requirementRevision: task.requirementRevision,
+          settlementGrant: input.settlementGrant ?? null,
+          sourceDispatchId: input.sourceDispatchId ?? null,
           taskId: task.id,
           taskRevision: task.domainRevision,
           waitingReason,
@@ -681,6 +699,14 @@ export class TaskDispatchModel {
   }
 
   async transition(input: {
+    /**
+     * Optional admission re-check run inside the claim transaction after
+     * the row is locked — the final host-admission gate. Called for
+     * transitions into `dispatched` when the persisted (or legacy-derived)
+     * origin is `caid`; returning `false` parks the row `waiting` with
+     * `caid_dispatch_disabled` instead of starting a new writer (SA05-B).
+     */
+    admissionRecheck?: (dispatch: TaskDispatchItem) => Promise<boolean>;
     agentId?: string | null;
     dispatchId: string;
     environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
@@ -776,6 +802,39 @@ export class TaskDispatchModel {
               ),
             );
           return null;
+        }
+
+        // Final CAID admission re-check (SA05-B): the persisted origin is
+        // the authority — a rollout flip after prepare must park the claim
+        // as `waiting`, not start a new orchestrated writer. Rows written
+        // before the `origin` column existed derive the origin from the
+        // `trigger:` prefix of `requestedBy`.
+        if (input.phase === 'dispatched' && input.admissionRecheck) {
+          const persistedOrigin: TaskDispatchOrigin =
+            dispatch.origin ??
+            (requestedTrigger === 'goal' || requestedTrigger === 'orchestrator'
+              ? 'caid'
+              : 'external');
+          if (persistedOrigin === 'caid' && !(await input.admissionRecheck(dispatch))) {
+            const [waiting] = await tx
+              .update(taskDispatches)
+              .set({
+                leaseExpiresAt: null,
+                leaseOwner: null,
+                phase: 'waiting',
+                waitingReason: 'caid_dispatch_disabled',
+              })
+              .where(
+                and(
+                  eq(taskDispatches.id, dispatch.id),
+                  eq(taskDispatches.fence, input.fence),
+                  eq(taskDispatches.leaseOwner, input.owner),
+                  inArray(taskDispatches.phase, input.expected),
+                ),
+              )
+              .returning();
+            return waiting ?? null;
+          }
         }
       }
 

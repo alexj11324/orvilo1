@@ -281,11 +281,32 @@ export interface GitPullResult {
 
 export interface GitPushResult {
   error?: string;
+  /**
+   * Capability negotiation flag — true when a `fence` argument was supplied
+   * and this client persisted/enforced it. Absent on pre-fence clients, so
+   * the caller can tell "fenced push" from "legacy push" after the fact.
+   */
+  fenceEnforced?: boolean;
   /** True when `git push` reported everything is already up-to-date */
   noop?: boolean;
   /** Proves this client pushed the requested immutable source ref. */
   pushedSourceRef?: string;
+  /** Remote ref value observed while enforcing `expectedRemoteSha`. */
+  remoteSha?: string;
   success: boolean;
+}
+
+/**
+ * Result of the `probeGitRemoteRef` remote observation — the reconcile-side
+ * read for a fenced publish. `unknown` means the remote could not be read
+ * (unreachable/credentials), `missing` means the remote was reached and the
+ * ref does not exist, `found` carries the live sha.
+ */
+export interface GitRemoteRefProbe {
+  ref?: string;
+  /** Live sha the remote advertises for the ref. */
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
 }
 
 export interface GitMergeResult {

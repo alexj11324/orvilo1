@@ -10,6 +10,7 @@ import {
   MERGE,
   NEW_HEAD,
 } from '../../githubRepo/__tests__/reviewSnapshot.fixtures';
+import type * as GithubMerge from '../../githubRepo/mergePullRequest';
 import { isRemotePrMergeReady } from '../../githubRepo/reviewGate';
 import type {
   ExpectedPullRequestIdentity,
@@ -88,6 +89,21 @@ function setup(
     missingRemote?: boolean;
     /** Seed the legacy scalar shape under the old key (mixed-version read). */
     legacyPollFailures?: number;
+    /**
+     * Route the merge through the REAL `mergePullRequest` implementation with a
+     * stubbed global fetch — injection happens at the HTTP boundary, not by
+     * rewriting the helper's semantics. `'drop'` rejects the fetch call
+     * (response lost in flight); a number answers with that HTTP status. Only
+     * the first merge call is routed — later calls use the default success,
+     * so a released intent can be observed retrying.
+     */
+    mergeHttp?: 'drop' | number;
+    /**
+     * The fake remote is self-consistent: reads reflect whether a merge
+     * mutation actually executed, instead of a fixed call-index sequence.
+     * Needed when several sweeps interleave and call order is unpredictable.
+     */
+    followRemote?: boolean;
     /** mergePullRequest throws — the accepted-merge acknowledgement is lost. */
     mergeThrows?: boolean;
     pollFailures?: Partial<Record<VerificationPollStage, number>>;
@@ -172,7 +188,13 @@ function setup(
     }),
   };
   const mocks: Record<string, Record<string, unknown>> = {
-    '@orvilo/types': { cloudSandboxRepoPath: () => '/workspace/widgets' },
+    '@orvilo/types': {
+      // The mergeHttp path imports the REAL githubRepo module — its transitive
+      // imports reach into @orvilo/types, so the mock must provide every
+      // top-level binding those modules touch.
+      AgentChatConfigSchema: {},
+      cloudSandboxRepoPath: () => '/workspace/widgets',
+    },
     'debug': { __esModule: true, default: () => () => {} },
     'drizzle-orm': {
       ...Object.fromEntries(
@@ -266,11 +288,47 @@ function setup(
       findBranchPr: async () => undefined,
       getRemoteBranchSha: async () => (options.missingRemote ? undefined : HEAD),
       isRemotePrMergeReady,
-      mergePullRequest: async (args: { expectedHeadSha: string }) => {
+      mergePullRequest: async (args: {
+        expectedHeadSha: string;
+        mergeMethod?: 'merge' | 'rebase' | 'squash';
+        prNumber: number;
+        repo: string;
+        token?: string;
+      }) => {
         state.merges.push(args);
+        if (options.mergeHttp !== undefined && state.merges.length === 1) {
+          // Dependency-light leaf module — the real merge implementation with
+          // only the fetch layer beneath it, so importActual stays real even
+          // while the heavy '@/server/services/githubRepo' barrel is mocked.
+          const actual = await vi.importActual<typeof GithubMerge>(
+            '../../githubRepo/mergePullRequest',
+          );
+          const mergeHttp = options.mergeHttp;
+          vi.stubGlobal(
+            'fetch',
+            mergeHttp === 'drop'
+              ? async () => {
+                  throw new Error('ECONNRESET: merge response lost in flight');
+                }
+              : async () =>
+                  new Response(JSON.stringify({ message: `HTTP ${mergeHttp}` }), {
+                    status: mergeHttp,
+                  }),
+          );
+          try {
+            const mergeResult = await actual.mergePullRequest(args);
+            state.events.push(`merge-outcome:${mergeResult.outcome}`);
+            return mergeResult;
+          } catch (mergeError) {
+            state.events.push(`merge-threw:${String(mergeError)}`);
+            throw mergeError;
+          } finally {
+            vi.unstubAllGlobals();
+          }
+        }
         if (options.mergeThrows) throw new Error('connection reset');
         // The confirmation, not this response body, is the authority for the merge SHA.
-        return { merged: true, sha: 'wrong-response-sha' };
+        return { outcome: 'confirmed_success', sha: 'wrong-response-sha' };
       },
       resolveGithubAccessToken: async () => 'fixture-token',
       getPullRequestReviewSnapshot: async (
@@ -280,6 +338,25 @@ function setup(
         expected?: ExpectedPullRequestIdentity,
       ) => {
         state.expected.push(expected);
+        if (options.followRemote) {
+          const result = snapshot({
+            merged: state.merges.length > 0,
+            mergedAt: state.merges.length > 0 ? DATE : undefined,
+            mergeCommitSha: state.merges.length > 0 ? MERGE : undefined,
+            open: state.merges.length === 0,
+          });
+          if (
+            expected &&
+            (result.baseBranch !== expected.baseBranch ||
+              result.headBranch !== expected.headBranch ||
+              (expected.headSha !== undefined && expected.headSha !== result.headSha) ||
+              (expected.nodeId !== undefined && expected.nodeId !== result.nodeId) ||
+              (expected.repositoryId !== undefined &&
+                expected.repositoryId !== result.repositoryId))
+          )
+            return undefined;
+          return result;
+        }
         const callIndex = state.expected.length - 1;
         const queued = options.reads?.[callIndex];
         if (options.unavailable || queued === 'unavailable') return undefined;
@@ -669,6 +746,90 @@ add('a merge boundary that never confirms blocks after the per-stage cap', async
   // Bounded: the blocked row leaves the active-delivery set entirely.
   const twelfth = await sweep(f.db);
   assert.equal(twelfth.checked, 0);
+});
+
+// SA03-A: the same lost-acknowledgement exercised at the REAL fetch boundary
+// — githubFetch swallows the transport failure, mergePullRequest reports
+// outcome_unknown, and the controller keeps the durable intent instead of
+// releasing it as a "rejection". The second pass reconciles by reading merged
+// state; the merge mutation ran exactly once.
+add(
+  'a merge response lost at the real fetch boundary reconciles without re-issuing',
+  async (load) => {
+    const f = setup({
+      mergeHttp: 'drop',
+      reads: [
+        // Pass 1: healthy reads, real merge PUT issued, response dropped.
+        {},
+        {},
+        // Pass 2: head/base reads still show the unmerged PR; the persisted
+        // intent suppresses re-issue; the confirmation read finally lands.
+        { merged: false },
+        { merged: false },
+        { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+      ],
+    });
+    const sweep = await load(f.mocks);
+    const first = await sweep(f.db);
+    assert.deepEqual(first.waiting, ['T-1']);
+    assert.equal(f.state.merges.length, 1);
+    // The durable intent survived the dropped merge response.
+    assert.ok(f.state.rows[0].integration.mergeIssuedAt);
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+      merge_decision: 1,
+    });
+    const second = await sweep(f.db);
+    // Still exactly one merge call — the intent forced reconcile-by-read.
+    assert.equal(f.state.merges.length, 1);
+    assert.deepEqual(second.merged, ['T-1']);
+  },
+);
+
+// SA03-A: an evidenced refusal (4xx — permission denied, head mismatch, not
+// mergeable) is the ONLY outcome allowed to release the write-ahead intent.
+// The marker clears and a later healthy pass may issue the merge again.
+add('a proven merge refusal releases the intent so a later sweep may retry', async (load) => {
+  const f = setup({
+    mergeHttp: 405,
+    reads: [
+      {},
+      {},
+      // Pass 2: healthy reads again — the released intent lets the merge
+      // mutation run once more, then the confirmation lands.
+      {},
+      {},
+      { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.equal(f.state.merges.length, 1);
+  // Rejection released the CAS marker and surfaced the remote reason.
+  assert.equal(f.state.rows[0].integration.mergeIssuedAt, undefined);
+  assert.ok(f.state.errors.some((error) => error?.includes('Waiting to merge')));
+  const second = await sweep(f.db);
+  assert.equal(f.state.merges.length, 2);
+  assert.deepEqual(second.merged, ['T-1']);
+});
+
+// SA03-A: two sweeps racing the same delivery row share a single durable
+// intent — the mergeIssuedAt CAS admits exactly one owner, so the merge
+// mutation runs exactly once even under concurrent sweep execution.
+add('concurrent sweeps admit exactly one merge owner', async (load) => {
+  const f = setup({ followRemote: true });
+  const sweep = await load(f.mocks);
+  const [a, b] = await Promise.all([sweep(f.db), sweep(f.db)]);
+  // Exactly one durable intent owner — the merge mutation ran once no matter
+  // how the sweeps interleaved.
+  assert.equal(f.state.merges.length, 1);
+  // The owner merged through proof; the loser either deferred to the CAS claim
+  // (waiting) or reconciled by observing the already-merged remote (merged).
+  assert.ok(f.state.completed.length >= 1);
+  for (const res of [a, b]) {
+    assert.equal(res.corrected.length + res.paused.length, 0);
+    assert.ok(res.merged.includes('T-1') || res.waiting.includes('T-1'));
+  }
 });
 
 // SA03/F08 (F02T): the merge acknowledgement is lost mid-flight — the intent

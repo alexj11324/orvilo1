@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import { MemoryApiName, MemoryIdentifier } from '@orvilo/builtin-tool-memory';
 import { LayersEnum } from '@orvilo/types';
 import { isRecord, pickTrimmedString } from '@orvilo/utils';

@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import type { OrviloDatabase } from '@orvilo/database';
 import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
@@ -41,15 +41,13 @@ import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
 import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
-  AgentRuntimeServiceOptions,
-  SubAgentBridgeParams,
-} from '@/server/services/agentRuntime';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
-import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
   GroupActionMemberBridgeParams,
-} from '@/server/services/agentRuntime/types';
+  SubAgentBridgeParams,
+} from '@/server/services/agentExecution/types';
+import type { AgentRuntimeServiceOptions } from '@/server/services/agentRuntime';
+import { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';

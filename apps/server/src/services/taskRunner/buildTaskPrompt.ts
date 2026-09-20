@@ -140,6 +140,7 @@ const collectDependencyReceipts = async (
   deps: BuildTaskPromptDeps,
   depIdToIdentifier: Map<string, string>,
   depStatusById: Map<string, string>,
+  depGenerationById: Map<string, number | undefined>,
 ): Promise<TaskDependencyReceipt[]> => {
   const receipts: TaskDependencyReceipt[] = [];
   for (const dep of dependencies) {
@@ -164,18 +165,28 @@ const collectDependencyReceipts = async (
       .find((topic) => topic.status === 'completed' && topic.topicId);
     if (delivered?.topicId) {
       receipt.delivery = {
+        dispatchId: delivered.dispatchId ?? undefined,
+        executionGeneration: delivered.executionGeneration ?? undefined,
         integratedSha: delivered.integration?.integratedSha,
         operationId: delivered.operationId ?? undefined,
         seq: delivered.seq ?? undefined,
         sourceSha: delivered.integration?.expectedHeadSha,
         topicId: delivered.topicId,
+        verifyOperationId: delivered.integration?.verifyOperationId,
       };
     }
     // Valid only while the upstream is still standing on that delivery: a
-    // reopened/reverted/re-running upstream (status left 'completed')
+    // reopened/reverted/re-running upstream (status left 'completed'), a
+    // newer execution generation, or a revoked/non-landed integration record
     // invalidates the receipt even though the historical delivery row exists.
+    // `dispatchId` binds the receipt to a specific upstream claim: a completed
+    // row with no dispatch identity is not a provable delivery.
     receipt.deliveryValid =
-      delivered !== undefined && depStatusById.get(dep.dependsOnId) === 'completed';
+      delivered !== undefined &&
+      depStatusById.get(dep.dependsOnId) === 'completed' &&
+      delivered.dispatchId != null &&
+      delivered.executionGeneration === depGenerationById.get(dep.dependsOnId) &&
+      (delivered.integration == null || delivered.integration.state === 'integrated');
     receipts.push(receipt);
   }
   return receipts;
@@ -205,7 +216,9 @@ export async function buildTaskPrompt(
     briefModel.findByTaskId(task.id).catch(() => []),
     taskModel.getComments(task.id).catch(() => []),
     taskModel.findSubtasks(task.id).catch(() => []),
-    taskModel.getDependencies(task.id).catch(() => []),
+    // Initial dependency reads are fail-closed (SA05-A): a failed read must
+    // block the claim rather than freeze an empty authoritative contract.
+    taskModel.getDependencies(task.id),
     taskModel
       .getTreePinnedDocuments(task.id)
       .catch((): WorkspaceData => ({ nodeMap: {}, tree: [] })),
@@ -262,6 +275,9 @@ export async function buildTaskPrompt(
   const depTasks = await taskModel.findByIds(depTaskIds);
   const depIdToIdentifier = new Map(depTasks.map((t: any) => [t.id, t.identifier]));
   const depStatusById = new Map(depTasks.map((t: any) => [t.id, t.status]));
+  const depGenerationById = new Map(
+    depTasks.map((t: any) => [t.id, t.executionGeneration as number | undefined]),
+  );
 
   // Contract content is the policy source: an inherited contract renders its
   // frozen dependency view; a fresh run freezes what the gate just verified.
@@ -273,7 +289,13 @@ export async function buildTaskPrompt(
     : liveDependencies;
   const contractDependencies =
     inherited?.dependencies ??
-    (await collectDependencyReceipts(liveDependencies, deps, depIdToIdentifier, depStatusById));
+    (await collectDependencyReceipts(
+      liveDependencies,
+      deps,
+      depIdToIdentifier,
+      depStatusById,
+      depGenerationById,
+    ));
 
   // Claim-side dependency gate (fresh attempts only — a continuation executes
   // the frozen contract verbatim): a `blocks` receipt that is not the

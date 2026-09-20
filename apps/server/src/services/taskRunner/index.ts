@@ -6,6 +6,7 @@ import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
+  TaskDispatchSettlementGrant,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
@@ -60,6 +61,15 @@ export interface RunTaskParams {
    * dispatches a corrective merge run.
    */
   integrationSeed?: TaskTopicIntegration;
+  /**
+   * Run intent (SA05-A): `continue` resumes the continued topic's frozen
+   * contract (implied by `continueTopicId`); `repair` — the default —
+   * re-executes the immutable source contract for a new attempt, so live
+   * Task edits cannot silently rewrite a repair's constraints;
+   * `authorized_replan` rebuilds constraints from the live task and writes
+   * a new contract revision, which requires `replanApprovedBy`.
+   */
+  intent?: 'authorized_replan' | 'continue' | 'repair';
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
   /** Parent delivery operation for internal corrective runs. */
@@ -67,6 +77,12 @@ export interface RunTaskParams {
   planRevision?: number;
   /** Atomically transfer a completion lease into this continuation dispatch. */
   replaceReservationId?: string;
+  /**
+   * Explicit approver identity required when `intent` is
+   * `authorized_replan` — the evidence that changed constraints may write
+   * a new contract revision instead of executing the frozen source.
+   */
+  replanApprovedBy?: string;
   requestedBy?: string;
   /** Internal corrective runs stay bound to the original task Verify plan. */
   skipTaskVerification?: boolean;
@@ -142,10 +158,12 @@ export class TaskRunnerService {
       extraPrompt,
       integrationSeed,
       idempotencyKey,
+      intent,
       maxSteps,
       parentOperationId,
       planRevision,
       replaceReservationId,
+      replanApprovedBy,
       requestedBy = this.userId,
       skipTaskVerification,
       trigger = 'manual',
@@ -159,16 +177,19 @@ export class TaskRunnerService {
     let task: TaskItem = resolvedTask;
 
     // Settlement/corrective runs (integration merges, delivery-review fixes,
-    // reservation takeovers) carry verifiable markers — they continue work an
-    // earlier dispatch already started, so the CAID admission gate must not
-    // count them as new orchestrated claims.
-    const internalSettlement = Boolean(
-      workspaceOverride ||
-      integrationSeed ||
-      replaceReservationId ||
-      parentOperationId ||
-      skipTaskVerification,
-    );
+    // reservation takeovers) continue work an earlier dispatch already
+    // started, so the CAID admission gate must not count them as new
+    // orchestrated claims. Marker presence alone is not proof (SA05-B): the
+    // server must verify a real association — a live reservation token, a
+    // same-task topic owned by the parent operation, or the integration row
+    // the seed corrects — before the run may enter as `internal`.
+    const settlement = await this.resolveSettlementEvidence({
+      integrationSeed,
+      parentOperationId,
+      replaceReservationId,
+      task,
+    });
+    const internalSettlement = settlement !== undefined;
 
     // Automated callers must provide a durable command identity. Manual
     // callers retain one-request-per-click behavior for older clients.
@@ -228,10 +249,14 @@ export class TaskRunnerService {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
           idempotencyKey: resolvedIdempotencyKey,
+          // Raw actor persisted separately from the `trigger:actor` audit
+          // string — the persisted origin's initiator is what the final
+          // admission re-check authorizes against.
+          initiator: requestedBy,
           // Execution origin for the shared admission boundary. `internal`
-          // covers settlement/corrective runs (verify markers, not caller
-          // claims); anything else reaching a CAID-orchestrated trigger is a
-          // new orchestrated writer and must pass the rollout gate.
+          // requires verified settlement evidence (verify association, not
+          // marker presence); anything else reaching a CAID-orchestrated
+          // trigger is a new orchestrated writer and must pass the gate.
           origin: internalSettlement
             ? 'internal'
             : trigger === 'orchestrator' || trigger === 'goal'
@@ -239,6 +264,8 @@ export class TaskRunnerService {
               : 'external',
           planRevision,
           requestedBy,
+          settlementGrant: settlement?.grant,
+          sourceDispatchId: settlement?.sourceDispatchId,
           task,
           trigger,
         });
@@ -351,6 +378,23 @@ export class TaskRunnerService {
         ? existingTopics.find((topic) => topic.topicId === continueTopicId)
         : undefined;
 
+      // Contract lineage + run intent (SA05-A): `sourceContractId` names the
+      // immutable source this run descends from — the continued topic's
+      // contract for continuations, the latest attempt's contract otherwise.
+      const priorContract = (continuedTopic?.contract ??
+        [...existingTopics].sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0)).find((t) => t.contract)
+          ?.contract) as TaskExecutionContract | undefined;
+      const runIntent = continueTopicId ? 'continue' : (intent ?? 'repair');
+      if (runIntent === 'authorized_replan' && !replanApprovedBy) {
+        // Constraint changes write a new contract revision — that is only
+        // admissible with explicit approval, never as a silent side effect
+        // of editing the live task and re-running it.
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'authorized_replan requires replanApprovedBy.',
+        });
+      }
+
       if (continueTopicId) {
         if (continuedTopic?.status === 'running') {
           throw new TRPCError({
@@ -410,14 +454,14 @@ export class TaskRunnerService {
         }
       }
 
-      // A continuation inherits the persisted contract content: instruction,
-      // verify gate and dependency receipts re-render from the contract, so
-      // editing the Task mid-flight cannot silently rewrite this attempt.
-      // Changing constraints requires a new contract revision — a fresh run.
+      // Frozen contract content for `continue`/`repair`: instruction, verify
+      // gate and dependency receipts re-render from the immutable source
+      // contract, so editing the Task mid-flight can never silently rewrite
+      // an in-flight or repaired attempt. Only an authorized replan rebuilds
+      // constraints from the live task (new contract revision, approved).
       const inheritedContractContent =
-        continueTopicId && continuedTopic?.contract?.content
-          ? continuedTopic.contract.content
-          : undefined;
+        continuedTopic?.contract?.content ??
+        (runIntent !== 'authorized_replan' ? priorContract?.content : undefined);
       const {
         acceptanceEnabled,
         contractContent,
@@ -524,13 +568,6 @@ export class TaskRunnerService {
       // Freeze the run contract alongside the environment snapshot — retries,
       // continuations and corrective runs rebind to this persisted row rather
       // than re-deriving constraints from mutable task config.
-      // Contract lineage: a continuation descends from the continued topic's
-      // contract; a fresh repair/retry still binds the previous attempt's
-      // contract as its source so `sourceContractId` always names the prior
-      // policy this run replaces.
-      const priorContract = (continuedTopic?.contract ??
-        [...existingTopics].sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0)).find((t) => t.contract)
-          ?.contract) as TaskExecutionContract | undefined;
       const executionContract = buildTaskExecutionContract(task, {
         acceptanceEnabled,
         content: contractContent,
@@ -1048,6 +1085,68 @@ export class TaskRunnerService {
     }
 
     return result;
+  }
+
+  /**
+   * Verify a settlement claim's real association (SA05-B): behaviour flags
+   * like `workspaceOverride`/`skipTaskVerification` are hints, never
+   * evidence — `internal` origin requires a live reservation token, a
+   * same-task integration row the seed corrects, or a same-task topic that
+   * owns the parent operation. Returns the verified grant (plus the source
+   * dispatch when the association names one) or `undefined` when nothing
+   * verifiable was supplied.
+   */
+  private async resolveSettlementEvidence(params: {
+    integrationSeed?: TaskTopicIntegration;
+    parentOperationId?: string;
+    replaceReservationId?: string;
+    task: TaskItem;
+  }): Promise<{ grant: TaskDispatchSettlementGrant; sourceDispatchId?: string } | undefined> {
+    const { integrationSeed, parentOperationId, replaceReservationId, task } = params;
+
+    // Reservation takeover: the caller must present the task's live run
+    // reservation — the token the completing run is handing off.
+    if (replaceReservationId && task.runReservationId === replaceReservationId) {
+      return { grant: { kind: 'reservation_takeover' } };
+    }
+
+    if (!integrationSeed?.runTopicId && !parentOperationId) return undefined;
+    const rows = await this.taskTopicModel.findByTaskId(task.id).catch(() => []);
+
+    // Integration seed: must name an existing topic of this task that
+    // already carries an integration record — the row being corrected.
+    if (integrationSeed?.runTopicId) {
+      const source = rows.find(
+        (row) => row.topicId === integrationSeed.runTopicId && row.integration != null,
+      );
+      if (source?.topicId) {
+        return {
+          grant: {
+            kind: 'integration_seed',
+            sourceOperationId: source.operationId ?? undefined,
+            sourceTopicId: source.topicId,
+          },
+          sourceDispatchId: source.dispatchId ?? undefined,
+        };
+      }
+    }
+
+    // Parent operation: must name a delivery operation recorded on a topic
+    // of this same task.
+    if (parentOperationId) {
+      const parent = rows.find((row) => row.operationId === parentOperationId);
+      if (parent?.topicId) {
+        return {
+          grant: {
+            kind: 'parent_operation',
+            sourceOperationId: parentOperationId,
+            sourceTopicId: parent.topicId,
+          },
+          sourceDispatchId: parent.dispatchId ?? undefined,
+        };
+      }
+    }
+    return undefined;
   }
 
   private async shouldHoldForCheckpoint(task: TaskItem): Promise<boolean> {

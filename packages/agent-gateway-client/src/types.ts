@@ -258,6 +258,12 @@ export interface AgentInterventionRequestData {
   provider?: AgentInterventionProvider;
   /** Correlation key. Stable for the lifetime of the intervention. */
   toolCallId: string;
+  /**
+   * Tool-approval window this request was minted for (SA02-C). Present only
+   * on approval cards; the submit echoes it so the receipt decision CAS
+   * refuses stale windows.
+   */
+  windowId?: string;
 }
 
 /**

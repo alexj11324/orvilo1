@@ -295,10 +295,38 @@ describe('EventOutboxModel', () => {
       payload: {
         argsHash: 'hash_a',
         expiresAt: Date.now() + 60_000,
+        scopeHash: 'scope_a',
+        windowId: 'w1',
+        windowVersion: 1,
         ...payload,
       },
       workspaceId,
     });
+
+    const consumeParams = (event: { eventId: string }) => ({
+      argsHash: 'hash_a',
+      eventId: event.eventId,
+      invocationId: 'inv_1',
+      now: Date.now(),
+      scopeHash: 'scope_a',
+    });
+
+    const approve = async (
+      model: EventOutboxModel,
+      eventId: string,
+      decision: Record<string, unknown> = {},
+      expectedWindowId = 'w1',
+    ) =>
+      model.recordToolApprovalDecision({
+        decision: {
+          action: 'approved',
+          decidedAt: Date.now(),
+          decidedByUserId: userId,
+          ...decision,
+        },
+        eventId,
+        expectedWindowId,
+      });
 
     it('decision CAS lands once — a second submit is dropped', async () => {
       const model = new EventOutboxModel(serverDB);
@@ -306,48 +334,105 @@ describe('EventOutboxModel', () => {
       await model.upsertDeliveryReceipt({ event });
 
       const decision = { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId };
-      expect(await model.recordToolApprovalDecision({ decision, eventId: event.eventId })).toBe(
-        'decided',
-      );
+      expect(
+        await model.recordToolApprovalDecision({
+          decision,
+          eventId: event.eventId,
+          expectedWindowId: 'w1',
+        }),
+      ).toBe('decided');
       // Second submit (double-click / retry) cannot flip the decision.
       expect(
         await model.recordToolApprovalDecision({
           decision: { ...decision, action: 'denied' },
           eventId: event.eventId,
+          expectedWindowId: 'w1',
         }),
       ).toBe('already_decided');
     });
 
-    it('consume CAS grants an approved, unexpired, args-matched receipt exactly once', async () => {
+    it('stamps the live windowId into the decision and binds consume to that window', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent({ windowId: 'w_live' });
+      await model.upsertDeliveryReceipt({ event });
+
+      await approve(model, event.eventId, {}, 'w_live');
+      const payload = await model.getDeliveryReceiptPayload(event.eventId);
+      // The decision is stamped with the window the receipt currently
+      // carries — a decision written under a stale window cannot authorize
+      // the new one.
+      expect((payload?.decision as { windowId?: string })?.windowId).toBe('w_live');
+      expect(await model.consumeToolApprovalReceipt(consumeParams(event))).toBe(true);
+    });
+
+    it('refuses a decision submit scoped to a stale window (SA02-C)', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent({ windowId: 'w2' });
+      await model.upsertDeliveryReceipt({ event });
+
+      // A card rendered under window `w1` submits after the receipt moved to
+      // `w2` — the write must not land on the new window.
+      expect(
+        await model.recordToolApprovalDecision({
+          decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
+          eventId: event.eventId,
+          expectedWindowId: 'w1',
+        }),
+      ).toBe('stale_window');
+      const payload = await model.getDeliveryReceiptPayload(event.eventId);
+      expect(payload?.decision).toBeUndefined();
+
+      // The same submit against the CURRENT window lands.
+      expect(
+        await model.recordToolApprovalDecision({
+          decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
+          eventId: event.eventId,
+          expectedWindowId: 'w2',
+        }),
+      ).toBe('decided');
+    });
+
+    it('consume CAS grants an approved, unexpired, scope+args-matched receipt exactly once', async () => {
       const model = new EventOutboxModel(serverDB);
       const event = approvalEvent();
       await model.upsertDeliveryReceipt({ event });
-      await model.recordToolApprovalDecision({
-        decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
-        eventId: event.eventId,
-      });
+      await approve(model, event.eventId);
 
-      const params = { argsHash: 'hash_a', eventId: event.eventId, now: Date.now() };
+      const params = consumeParams(event);
       expect(await model.consumeToolApprovalReceipt(params)).toBe(true);
-      // One-time: the same grant cannot be spent twice.
+      // One-time: the same grant cannot be spent twice — same invocation OR
+      // a brand new one, consumed stays consumed.
       expect(await model.consumeToolApprovalReceipt(params)).toBe(false);
+      expect(await model.consumeToolApprovalReceipt({ ...params, invocationId: 'inv_2' })).toBe(
+        false,
+      );
+
+      const payload = await model.getDeliveryReceiptPayload(event.eventId);
+      expect(payload?.consumedInvocationId).toBe('inv_1');
     });
 
-    it('refuses consume on wrong argsHash, denied decision, or expiry', async () => {
+    it('refuses consume on wrong argsHash or a foreign scopeHash (SA02-A)', async () => {
       const model = new EventOutboxModel(serverDB);
 
       const approved = approvalEvent();
       await model.upsertDeliveryReceipt({ event: approved });
-      await model.recordToolApprovalDecision({
-        decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
-        eventId: approved.eventId,
-      });
+      await approve(model, approved.eventId);
+
       // Approval covers `hash_a` — a call presenting different args refuses.
       expect(
         await model.consumeToolApprovalReceipt({
+          ...consumeParams(approved),
           argsHash: 'hash_b',
-          eventId: approved.eventId,
-          now: Date.now(),
+        }),
+      ).toBe(false);
+
+      // Same argsHash + same toolCallId but a DIFFERENT canonical scope (a
+      // sibling tool B reusing tool A's approval): the full-hash match is
+      // what separates authorization scopes.
+      expect(
+        await model.consumeToolApprovalReceipt({
+          ...consumeParams(approved),
+          scopeHash: 'scope_b',
         }),
       ).toBe(false);
 
@@ -356,38 +441,44 @@ describe('EventOutboxModel', () => {
       await model.recordToolApprovalDecision({
         decision: { action: 'denied', decidedAt: Date.now(), decidedByUserId: userId },
         eventId: denied.eventId,
+        expectedWindowId: 'w1',
       });
-      expect(
-        await model.consumeToolApprovalReceipt({
-          argsHash: 'hash_a',
-          eventId: denied.eventId,
-          now: Date.now(),
-        }),
-      ).toBe(false);
+      expect(await model.consumeToolApprovalReceipt(consumeParams(denied))).toBe(false);
 
       const expired = approvalEvent({ expiresAt: Date.now() - 1 });
       await model.upsertDeliveryReceipt({ event: expired });
-      await model.recordToolApprovalDecision({
-        decision: { action: 'approved', decidedAt: Date.now() - 60_000, decidedByUserId: userId },
-        eventId: expired.eventId,
-      });
-      expect(
-        await model.consumeToolApprovalReceipt({
-          argsHash: 'hash_a',
-          eventId: expired.eventId,
-          now: Date.now(),
-        }),
-      ).toBe(false);
+      await approve(model, expired.eventId, { decidedAt: Date.now() - 60_000 }, 'w1');
+      expect(await model.consumeToolApprovalReceipt(consumeParams(expired))).toBe(false);
     });
 
-    it('renew re-pends an expired receipt and clears any stale decision', async () => {
+    it('legacy receipts without scopeHash/windowId fail closed (SA02-A rollback boundary)', async () => {
+      const model = new EventOutboxModel(serverDB);
+      // A receipt persisted by the pre-scopeHash build: argsHash only, no
+      // window binding. It must never authorize — the caller re-pends a
+      // fresh window instead of upgrading the weak record. Build the
+      // payload without those keys entirely.
+      const legacy = approvalEvent();
+      legacy.payload = {
+        argsHash: 'hash_a',
+        expiresAt: Date.now() + 60_000,
+      } as typeof legacy.payload;
+      await model.upsertDeliveryReceipt({ event: legacy });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
+        eventId: legacy.eventId,
+      });
+
+      expect(await model.consumeToolApprovalReceipt(consumeParams(legacy))).toBe(false);
+      // The row stays unconsumed — it is a historical record, not a grant.
+      const payload = await model.getDeliveryReceiptPayload(legacy.eventId);
+      expect(payload?.consumedAt).toBeUndefined();
+    });
+
+    it('renew re-pends an expired receipt under a NEW windowId and clears any stale decision', async () => {
       const model = new EventOutboxModel(serverDB);
       const event = approvalEvent({ expiresAt: Date.now() - 1 });
       await model.upsertDeliveryReceipt({ event });
-      await model.recordToolApprovalDecision({
-        decision: { action: 'approved', decidedAt: Date.now() - 120_000, decidedByUserId: userId },
-        eventId: event.eventId,
-      });
+      await approve(model, event.eventId, { decidedAt: Date.now() - 120_000 });
 
       const now = Date.now();
       const freshExpiry = now + 60_000;
@@ -396,6 +487,8 @@ describe('EventOutboxModel', () => {
           eventId: event.eventId,
           expiresAt: freshExpiry,
           now,
+          scopeHash: 'scope_a',
+          windowId: 'w2',
         }),
       ).toBe(true);
 
@@ -403,6 +496,8 @@ describe('EventOutboxModel', () => {
       expect(payload?.decision).toBeUndefined();
       expect(payload?.expiresAt).toBe(freshExpiry);
       expect(payload?.requestedAt).toBe(now);
+      expect(payload?.windowId).toBe('w2');
+      expect(payload?.windowVersion).toBe(2);
 
       // A non-expired receipt cannot be renewed.
       const live = approvalEvent();
@@ -412,8 +507,58 @@ describe('EventOutboxModel', () => {
           eventId: live.eventId,
           expiresAt: freshExpiry,
           now,
+          scopeHash: 'scope_a',
+          windowId: 'w3',
         }),
       ).toBe(false);
+    });
+
+    it('a denied receipt can never be resurrected by renew (SA02-C)', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent({ expiresAt: Date.now() - 1 });
+      await model.upsertDeliveryReceipt({ event });
+      await model.recordToolApprovalDecision({
+        decision: { action: 'denied', decidedAt: Date.now() - 30_000, decidedByUserId: userId },
+        eventId: event.eventId,
+        expectedWindowId: 'w1',
+      });
+
+      expect(
+        await model.renewToolApprovalReceipt({
+          eventId: event.eventId,
+          expiresAt: Date.now() + 60_000,
+          now: Date.now(),
+          scopeHash: 'scope_a',
+          windowId: 'w2',
+        }),
+      ).toBe(false);
+      // The denial stands.
+      const payload = await model.getDeliveryReceiptPayload(event.eventId);
+      expect((payload?.decision as { action?: string })?.action).toBe('denied');
+      expect(payload?.windowId).toBe('w1');
+    });
+
+    it('a decision written under an old window cannot authorize the renewed window', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent({ expiresAt: Date.now() - 1 });
+      await model.upsertDeliveryReceipt({ event });
+      // Race: the card approves under `w1` while the exec loop renews to `w2`.
+      // Whichever lands first — renew clears the stale decision or the stale
+      // decision is cleared by the renew — the receipt cannot be consumed
+      // until a decision exists under the CURRENT window.
+      await approve(model, event.eventId, {}, 'w1');
+      await model.renewToolApprovalReceipt({
+        eventId: event.eventId,
+        expiresAt: Date.now() + 60_000,
+        now: Date.now(),
+        scopeHash: 'scope_a',
+        windowId: 'w2',
+      });
+      expect(await model.consumeToolApprovalReceipt(consumeParams(event))).toBe(false);
+
+      // Approving under the live window (the fresh card's windowId) consumes.
+      await approve(model, event.eventId, {}, 'w2');
+      expect(await model.consumeToolApprovalReceipt(consumeParams(event))).toBe(true);
     });
   });
 });

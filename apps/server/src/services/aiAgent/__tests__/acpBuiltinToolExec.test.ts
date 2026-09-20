@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DecryptedConnector } from '@/database/models/connector';
 
+import { toolApprovalScopeHash } from '../../agentExecution/toolApprovalReceipt';
 import {
   ackAcpChildResultDeliveries,
   AcpBuiltinToolForbiddenError,
@@ -9,7 +10,12 @@ import {
   awaitAcpBuiltinToolChildren,
   execAcpBuiltinTool,
 } from '../acpBuiltinToolExec';
-import { connectorAuthRevision } from '../pipeline/externalToolPins';
+import {
+  apiSchemaDigest,
+  connectorAuthRevision,
+  sha256Hex,
+  stableStringify,
+} from '../pipeline/externalToolPins';
 
 const {
   mockAckReceipt,
@@ -21,6 +27,7 @@ const {
   mockFindMessage,
   mockFindPlugin,
   mockGetReceiptPayload,
+  mockGetReceiptState,
   mockMemberRunner,
   mockOfferReceipt,
   mockRecordApprovalDecision,
@@ -40,6 +47,7 @@ const {
   mockFindMessage: vi.fn(),
   mockFindPlugin: vi.fn(),
   mockGetReceiptPayload: vi.fn(),
+  mockGetReceiptState: vi.fn(),
   mockMemberRunner: { run: vi.fn() },
   mockOfferReceipt: vi.fn(),
   mockRecordApprovalDecision: vi.fn(),
@@ -113,6 +121,7 @@ vi.mock('@/database/models/eventOutbox', () => ({
       ackDeliveryReceiptByEventId: mockAckReceipt,
       consumeToolApprovalReceipt: mockConsumeApprovalReceipt,
       getDeliveryReceiptPayload: mockGetReceiptPayload,
+      getDeliveryReceiptState: mockGetReceiptState,
       offerDeliveryReceiptByEventId: mockOfferReceipt,
       recordToolApprovalDecision: mockRecordApprovalDecision,
       renewToolApprovalReceipt: mockRenewApprovalReceipt,
@@ -491,6 +500,45 @@ describe('execAcpBuiltinTool', () => {
         expect(mockExecuteTool).not.toHaveBeenCalled();
       });
 
+      it('SA02-C: re-authorization that rotated grantEpoch refuses the old pin — same URL/clientId', async () => {
+        // The grant epoch is the authorization generation, not the config
+        // fingerprint: a same-URL re-auth to a different account rotates it.
+        const pinnedRevision = connectorAuthRevision({
+          ...pinnedConnector,
+          metadata: { grantEpoch: 'epoch_1' },
+        } as DecryptedConnector);
+        mockFindConnectorById.mockResolvedValue({
+          ...pinnedConnector,
+          metadata: { grantEpoch: 'epoch_2' },
+        });
+
+        await expect(
+          execAcpBuiltinTool(
+            buildDeps({
+              op: pinnedOp({ authRevision: pinnedRevision, connectorId: 'conn_row_1' }),
+            }),
+            externalInput,
+          ),
+        ).rejects.toThrow(/re-authorized since dispatch/);
+        expect(mockExecuteTool).not.toHaveBeenCalled();
+      });
+
+      it('SA02-C: a token refresh alone does not rotate the grant pin', () => {
+        // Refresh only rewrites credentials/tokenExpiresAt — the same grant
+        // epoch keeps the mounted authorization valid.
+        const before = connectorAuthRevision({
+          ...pinnedConnector,
+          credentials: { token: 'tok_old' },
+          metadata: { grantEpoch: 'epoch_1' },
+        } as DecryptedConnector);
+        const after = connectorAuthRevision({
+          ...pinnedConnector,
+          credentials: { token: 'tok_refreshed' },
+          metadata: { grantEpoch: 'epoch_1' },
+        } as DecryptedConnector);
+        expect(before).toBe(after);
+      });
+
       it('refuses a per-api schema change since dispatch', async () => {
         mockFindConnectorById.mockResolvedValue(pinnedConnector);
 
@@ -555,6 +603,44 @@ describe('execAcpBuiltinTool', () => {
         },
       });
 
+      // The canonical scope the gate computes for `externalInput` — mirrors
+      // the call site (resolved connector row, api schema digest, generation).
+      const gateConnector = {
+        credentials: { token: 'tok' },
+        id: 'conn_row_1',
+        identifier: 'my-conn',
+        isEnabled: true,
+        mcpServerUrl: 'https://mcp.example.com',
+      } as unknown as DecryptedConnector;
+      const gateArgsHash = sha256Hex(stableStringify({ title: 'x' }));
+      const gateScope = (overrides: Record<string, unknown> = {}) => ({
+        agentId: 'agt_1',
+        apiName: 'do_thing',
+        argsHash: gateArgsHash,
+        authRevision: connectorAuthRevision(gateConnector),
+        connectorId: 'conn_row_1',
+        executionGeneration: 1,
+        identifier: 'my-conn',
+        kind: 'connector_tool' as const,
+        operationId: 'op_1',
+        schemaDigest: apiSchemaDigest({ type: 'object' }),
+        toolCallId: 'tc_1',
+        userId: 'user_1',
+        workspaceId: 'ws_1',
+        ...overrides,
+      });
+      const gateScopeHash = () => toolApprovalScopeHash(gateScope());
+      // A live APPROVED receipt payload as read back after a lost consume CAS.
+      const approvedReceipt = (overrides: Record<string, unknown> = {}) => ({
+        argsHash: gateArgsHash,
+        decision: { action: 'approved', decidedAt: Date.now(), windowId: 'w1' },
+        expiresAt: Date.now() + 60_000,
+        scopeHash: gateScopeHash(),
+        windowId: 'w1',
+        windowVersion: 1,
+        ...overrides,
+      });
+
       beforeEach(() => {
         mockConnectorTools.mockResolvedValue([needsApprovalTool]);
         mockConsumeApprovalReceipt.mockResolvedValue(false);
@@ -614,6 +700,18 @@ describe('execAcpBuiltinTool', () => {
         expect(mockExecuteTool).not.toHaveBeenCalled();
       });
 
+      it('C02: a denied receipt stays terminal — renew cannot resurrect it (SA02-C)', async () => {
+        mockGetReceiptPayload.mockResolvedValue({
+          decision: { action: 'denied', decidedAt: Date.now() - 30_000 },
+          expiresAt: Date.now() - 1,
+        });
+
+        const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
+        expect(result.error?.code).toBe('acp_tool_approval_denied');
+        expect(mockRenewApprovalReceipt).not.toHaveBeenCalled();
+        expect(mockExecuteTool).not.toHaveBeenCalled();
+      });
+
       it('C02: an already-consumed approval cannot replay', async () => {
         mockGetReceiptPayload.mockResolvedValue({
           consumedAt: Date.now() - 1000,
@@ -638,6 +736,97 @@ describe('execAcpBuiltinTool', () => {
         const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
         expect(result.error?.code).toBe('acp_tool_approval_args_mismatch');
         expect(mockExecuteTool).not.toHaveBeenCalled();
+      });
+
+      it('SA02-A: the minted receipt persists the canonical scopeHash + window identity', async () => {
+        const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
+        expect(result.error?.code).toBe('acp_tool_approval_pending');
+
+        const event = mockUpsertReceipt.mock.calls[0][0].event;
+        expect(event.payload).toMatchObject({
+          argsHash: gateArgsHash,
+          scopeHash: gateScopeHash(),
+          windowId: 'evt_test',
+          windowVersion: 1,
+        });
+        // The consume CAS is presented with the same full-scope hash — and
+        // the stable invocation id (the toolCallId) is reserved with it.
+        expect(mockConsumeApprovalReceipt).toHaveBeenCalledWith(
+          expect.objectContaining({
+            argsHash: gateArgsHash,
+            invocationId: 'tc_1',
+            scopeHash: gateScopeHash(),
+          }),
+        );
+      });
+
+      it('SA02-A: a receipt approved for a different tool scope refuses (same toolCallId + args)', async () => {
+        // A sibling tool B reuses A's toolCallId/argsHash — the receipt's
+        // scopeHash differs from this call's canonical scope, so the consume
+        // CAS can never match and the read-back classifies scope_mismatch.
+        mockGetReceiptPayload.mockResolvedValue(approvedReceipt({ scopeHash: 'scope_for_tool_b' }));
+
+        const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
+        expect(result.error?.code).toBe('acp_tool_approval_scope_mismatch');
+        expect(mockExecuteTool).not.toHaveBeenCalled();
+      });
+
+      it('SA02-A: the scopeHash separates api/connector/schema/generation identities', () => {
+        const base = gateScope();
+        const variants = [
+          { apiName: 'other_api' },
+          { connectorId: 'conn_row_2' },
+          { executionGeneration: 2 },
+          { schemaDigest: 'other-schema' },
+          { authRevision: 'other-rev' },
+          { identifier: 'other-conn' },
+        ];
+        for (const variant of variants) {
+          expect(toolApprovalScopeHash({ ...base, ...variant })).not.toBe(gateScopeHash());
+        }
+      });
+
+      it('SA02-B: a read-back approved that never wins the consume CAS is refused', async () => {
+        // consume CAS keeps losing (a racing invocation owns the grant); the
+        // read-back still classifies approved — the loop re-runs the full CAS
+        // and must NEVER return the observed approval as authorization.
+        mockConsumeApprovalReceipt.mockResolvedValue(false);
+        mockGetReceiptPayload.mockResolvedValue(approvedReceipt());
+
+        const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
+        expect(result.error?.code).toBe('acp_tool_approval_consumed');
+        expect(mockConsumeApprovalReceipt).toHaveBeenCalledTimes(3);
+        expect(mockExecuteTool).not.toHaveBeenCalled();
+      });
+
+      it('SA02-B: the call that wins the consume CAS on retry is the sole executor', async () => {
+        // consume fails once (approval lands mid-flight), then wins — the
+        // winning invocation, not the read-back, carries the authorization.
+        mockConsumeApprovalReceipt.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+        mockGetReceiptPayload.mockResolvedValue(approvedReceipt());
+
+        const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
+        expect(result.success).toBe(true);
+        expect(mockConsumeApprovalReceipt).toHaveBeenCalledTimes(2);
+        expect(mockExecuteTool).toHaveBeenCalledOnce();
+      });
+
+      it('SA02-C: renew rotates to a fresh windowId bound to this call’s scope', async () => {
+        mockGetReceiptPayload.mockResolvedValue({ expiresAt: Date.now() - 1 });
+        mockRenewApprovalReceipt.mockResolvedValue(true);
+
+        const result = await execAcpBuiltinTool(buildDeps({ op: approvalOp() }), externalInput);
+        expect(mockRenewApprovalReceipt).toHaveBeenCalledWith(
+          expect.objectContaining({
+            eventId: 'tool-approval:op_1:tc_1',
+            scopeHash: gateScopeHash(),
+            windowId: 'evt_test',
+          }),
+        );
+        expect(result.state?.toolApproval).toMatchObject({
+          renewed: true,
+          windowId: 'evt_test',
+        });
       });
 
       it('C02: headless runs refuse outright — never auto-approve', async () => {
@@ -696,6 +885,7 @@ describe('awaitAcpBuiltinToolChildren', () => {
     mockOfferReceipt.mockResolvedValue(true);
     mockAckReceipt.mockResolvedValue(true);
     mockGetReceiptPayload.mockResolvedValue(undefined);
+    mockGetReceiptState.mockResolvedValue({ deliveryState: 'offered', status: 'pending' });
   });
 
   it('keeps a waiting_for_human child pending instead of settling the parent', async () => {
@@ -789,7 +979,9 @@ describe('awaitAcpBuiltinToolChildren', () => {
 
   it('returns timeout and settles owned placeholders to error past the wait deadline', async () => {
     // The stamped `awaitDeadlineAt` is already past — this poll observes the
-    // expired absolute deadline.
+    // expired absolute deadline. The placeholder copy is only a projection:
+    // the anchor receipt is the authority, so the test seeds it there.
+    mockGetReceiptPayload.mockResolvedValue({ awaitDeadlineAt: Date.now() - 1 });
     const db = awaitDb({
       children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
       plugins: [
@@ -951,6 +1143,137 @@ describe('awaitAcpBuiltinToolChildren', () => {
     expect(third.status).toBe('timeout');
   });
 
+  it('SA04-B: a first poll losing the anchor CAS converges on the winner’s deadline', async () => {
+    const winnerDeadline = Date.now() + 42_000;
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [{ id: 'msg_own', state: { status: 'pending' }, toolCallId: 'tc_9' }],
+    });
+
+    // Two racing first-admissions: this caller's upsert loses (replayed), the
+    // winner's row carries the authoritative instant — the loser must adopt
+    // it verbatim instead of stamping its own now+budget.
+    mockGetReceiptPayload
+      .mockResolvedValueOnce(undefined) // pre-CAS read: no anchor yet
+      .mockResolvedValue({ awaitDeadlineAt: winnerDeadline }); // post-replay read
+    mockUpsertReceipt.mockResolvedValue('replayed');
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      {
+        childOperationIds: ['op_c1'],
+        operationId: 'op_1',
+        timeoutMs: 1,
+        toolCallId: 'tc_9',
+        waitDeadlineMs: 60_000,
+      },
+    );
+
+    expect(result.status).toBe('pending');
+    // The projection stamp mirrors the winner's instant exactly.
+    expect(mockUpdateToolMessage).toHaveBeenCalledWith('msg_own', {
+      pluginState: expect.objectContaining({ awaitDeadlineAt: winnerDeadline }),
+    });
+  });
+
+  it('SA04-B: an anchor appearing after a no-anchor admission does not extend the deadline', async () => {
+    const originalDeadline = Date.now() + 30 * 60_000;
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [],
+    });
+
+    // First admission: no placeholder rows, authority written to the receipt.
+    await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      {
+        childOperationIds: ['op_c1'],
+        operationId: 'op_1',
+        timeoutMs: 1,
+        toolCallId: 'tc_9',
+        waitDeadlineMs: 30 * 60_000,
+      },
+    );
+    const anchorCall = mockUpsertReceipt.mock.calls.find(
+      (c) => c[0].event.eventType === 'agent_operation.await_deadline',
+    );
+    expect(anchorCall).toBeDefined();
+
+    // Later poll — a placeholder row materialized (anchor appears). The
+    // authority read returns the ORIGINAL instant; the projection re-stamps
+    // it on the new row rather than re-deriving from the remaining budget.
+    mockGetReceiptPayload.mockResolvedValue({ awaitDeadlineAt: originalDeadline });
+    const db2 = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [{ id: 'msg_late', state: { status: 'pending' }, toolCallId: 'tc_9' }],
+    });
+    const second = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db2 as any },
+      {
+        childOperationIds: ['op_c1'],
+        operationId: 'op_1',
+        timeoutMs: 1,
+        toolCallId: 'tc_9',
+        waitDeadlineMs: 55 * 60_000, // a fresh budget must not stretch the wait
+      },
+    );
+
+    expect(second.status).toBe('pending');
+    expect(
+      mockUpsertReceipt.mock.calls.filter(
+        (c) => c[0].event.eventType === 'agent_operation.await_deadline',
+      ),
+    ).toHaveLength(1);
+    expect(mockUpdateToolMessage).toHaveBeenCalledWith('msg_late', {
+      pluginState: expect.objectContaining({ awaitDeadlineAt: originalDeadline }),
+    });
+  });
+
+  it('SA04-B: a corrupt anchor (CAS won but deadline unreadable) is an explicit error', async () => {
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [],
+    });
+    mockGetReceiptPayload
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue({ notADeadline: true });
+    mockUpsertReceipt.mockResolvedValue('replayed');
+
+    await expect(
+      awaitAcpBuiltinToolChildren(
+        { ...deps, db: db as any },
+        {
+          childOperationIds: ['op_c1'],
+          operationId: 'op_1',
+          timeoutMs: 1,
+          toolCallId: 'tc_9',
+          waitDeadlineMs: 60_000,
+        },
+      ),
+    ).rejects.toThrow('await-anchor');
+  });
+
+  it('SA04-B: an authority read failure is an explicit error, not unbounded pending', async () => {
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [],
+    });
+    mockGetReceiptPayload.mockRejectedValue(new Error('event_outbox read failed'));
+
+    await expect(
+      awaitAcpBuiltinToolChildren(
+        { ...deps, db: db as any },
+        {
+          childOperationIds: ['op_c1'],
+          operationId: 'op_1',
+          timeoutMs: 1,
+          toolCallId: 'tc_9',
+          waitDeadlineMs: 60_000,
+        },
+      ),
+    ).rejects.toThrow('event_outbox read failed');
+  });
+
   it('D02: v2 settle offers deliveries; only the parent ack consumes them', async () => {
     const db = awaitDb({
       children: [
@@ -977,6 +1300,8 @@ describe('awaitAcpBuiltinToolChildren', () => {
     expect(result).toMatchObject({
       deliveries: [{ childOperationId: 'op_c1', deliveryState: 'offered', eventId }],
     });
+    // The settle reports the REAL post-offer receipt state.
+    expect(mockGetReceiptState).toHaveBeenCalledWith({ eventId });
     // The receipt is written `received` then CAS-offered — never delivered.
     expect(mockUpsertReceipt).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -997,6 +1322,61 @@ describe('awaitAcpBuiltinToolChildren', () => {
     );
     expect(mockAckReceipt).toHaveBeenCalledWith({ aggregateId: 'op_1', eventId });
     expect(ack).toEqual({ acked: [eventId], ignored: [] });
+  });
+
+  it('SA04-A: an ack that lost its response re-verifies the receipt — already-acked is idempotent', async () => {
+    const db = awaitDb({ children: [] });
+    // The CAS missed because the row is already `acked` (previous ack landed
+    // but its HTTP response was lost). The state read-back confirms the real
+    // receipt state — this must count as consumed, not ignored.
+    mockAckReceipt.mockResolvedValue(false);
+    mockGetReceiptState.mockResolvedValue({ deliveryState: 'acked', status: 'delivered' });
+
+    const ack = await ackAcpChildResultDeliveries(
+      { db: db as any },
+      { deliveryEventIds: ['e_1'], operationId: 'op_1' },
+    );
+    expect(ack).toEqual({ acked: ['e_1'], ignored: [] });
+    expect(mockGetReceiptState).toHaveBeenCalledWith({ aggregateId: 'op_1', eventId: 'e_1' });
+  });
+
+  it('SA04-A: ids that are foreign or superseded stay ignored — never claimed as consumed', async () => {
+    const db = awaitDb({ children: [] });
+    mockAckReceipt.mockResolvedValue(false);
+    mockGetReceiptState
+      .mockResolvedValueOnce(undefined) // foreign aggregate — read scoped out
+      .mockResolvedValueOnce({ deliveryState: 'superseded', status: 'pending' });
+
+    const ack = await ackAcpChildResultDeliveries(
+      { db: db as any },
+      { deliveryEventIds: ['e_foreign', 'e_superseded'], operationId: 'op_1' },
+    );
+    expect(ack).toEqual({ acked: [], ignored: ['e_foreign', 'e_superseded'] });
+  });
+
+  it('D02: a v2 settle replay reports already-acked receipts instead of re-offering', async () => {
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'done' }],
+    });
+    // The prior ack landed but its response was lost — the replayed settle
+    // must surface the TRUE receipt state so the host doesn't spin on an
+    // ack that can only ever read ignored.
+    mockGetReceiptState.mockResolvedValue({ deliveryState: 'acked', status: 'delivered' });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      {
+        childOperationIds: ['op_c1'],
+        contractVersion: 2,
+        operationId: 'op_1',
+        timeoutMs: 1,
+        toolCallId: 'tc_9',
+      },
+    );
+    expect(result).toMatchObject({
+      deliveries: [expect.objectContaining({ deliveryState: 'acked' })],
+      status: 'settled',
+    });
   });
 
   it('D02: a v2 settle replay re-offers idempotently (acked/superseded untouched)', async () => {

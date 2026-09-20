@@ -1,9 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
 
 import { jsonSchemaToZodRawShape } from './jsonSchemaToZod';
-import type { McpExtraTool, McpToolResult } from './OrviloBuiltinMcpServer';
+import type { McpExtraTool, McpExtraToolCallExtra, McpToolResult } from './OrviloBuiltinMcpServer';
 
 /**
  * Server-backed builtin tools mounted on the per-run `orvilo_cc` MCP server
@@ -20,12 +20,13 @@ export interface AcpBuiltinToolCaller {
    * v2 ledger consume: acknowledges `deliveryEventIds` from a settled
    * `awaitChildren` response via `heteroAckChildResultDeliveries` — the only
    * transition that marks a child result consumed. Optional so older hosts
-   * (v1 contract) need no change.
+   * (v1 contract) need no change; its presence is ALSO the capability bit the
+   * host uses to negotiate `contractVersion: 2`.
    */
   ackChildResults?: (input: {
     deliveryEventIds: string[];
     operationId: string;
-  }) => Promise<unknown>;
+  }) => Promise<{ acked?: string[]; ignored?: string[] }>;
   awaitChildren: (input: {
     childOperationIds: string[];
     /**
@@ -48,7 +49,7 @@ export interface AcpBuiltinToolCaller {
         contractVersion?: number;
         deliveries?: Array<{
           childOperationId: string;
-          deliveryState: 'acked' | 'offered' | 'superseded';
+          deliveryState: 'acked' | 'offered' | 'received' | 'superseded';
           eventId: string;
         }>;
         results: Array<{ content?: string; error?: string; operationId: string; status: string }>;
@@ -71,6 +72,21 @@ export interface AcpBuiltinToolCaller {
     success: boolean;
   }>;
   /**
+   * Durable receiver-side inbox write (SA04-A): invoked with the settled
+   * deliveries BEFORE the idempotent ack is sent. The host persists the
+   * result content/references keyed by the stable invocation so a crash
+   * between "results received" and "ack sent" leaves the records replayable —
+   * the next settle re-delivers them and the retried call reuses the same
+   * invocation id. Optional: hosts without durable storage still consume v2
+   * correctly but lose crash-recovery of unacked results.
+   */
+  persistChildResultInbox?: (input: {
+    deliveries: Array<{ childOperationId: string; eventId: string }>;
+    operationId: string;
+    results: Array<{ content?: string; error?: string; operationId: string; status: string }>;
+    toolCallId: string;
+  }) => Promise<void>;
+  /**
    * Human-interaction surface for `needs_approval` external tools (F04): the
    * server returns `acp_tool_approval_pending`; the host asks the user
    * through the run's bridge (`AskUserBridge.pending`, permission kind). The
@@ -84,6 +100,8 @@ export interface AcpBuiltinToolCaller {
     identifier: string;
     operationId: string;
     toolCallId: string;
+    /** Approval-window id the card must echo back on submit (SA02-C). */
+    windowId?: string;
   }) => Promise<{ cancelled?: boolean; cancelReason?: string; result?: unknown }>;
 }
 
@@ -95,6 +113,18 @@ const errorText = (value: string): McpToolResult => ({
   content: [{ text: value, type: 'text' }],
   isError: true,
 });
+
+/** Canonical JSON with sorted keys — deterministic across key order. */
+const stableStringify = (value: unknown): string => {
+  if (value === undefined) return 'null';
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+    .join(',')}}`;
+};
 
 /** MCP tool name — `[a-zA-Z0-9_-]` only, so `identifier__apiName`. */
 const toolName = (identifier: string, apiName: string) =>
@@ -112,8 +142,27 @@ export const buildAcpBuiltinToolExtras = (
   specs.flatMap((spec) =>
     spec.apis.map((api) => ({
       description: api.description ?? `Orvilo builtin tool ${spec.identifier}.${api.name}`,
-      handler: async (operationId, args) => {
-        const toolCallId = `mcp_${randomUUID()}`;
+      handler: async (operationId, args, extra?: McpExtraToolCallExtra) => {
+        // Stable invocation id (SA04-A): prefer the host's own toolUseId when
+        // the MCP call carries it; otherwise derive a deterministic digest of
+        // the logical call. Crash/retry paths re-derive the SAME id instead
+        // of minting a fresh one — which is what makes approval receipts and
+        // child-result deliveries idempotent for one logical invocation.
+        const metaToolUseId = extra?._meta?.['claudecode/toolUseId'];
+        const toolCallId =
+          typeof metaToolUseId === 'string' && metaToolUseId.length > 0
+            ? metaToolUseId
+            : `mcp_${createHash('sha256')
+                .update(
+                  stableStringify({
+                    apiName: api.name,
+                    args,
+                    identifier: spec.identifier,
+                    operationId,
+                  }),
+                )
+                .digest('hex')
+                .slice(0, 48)}`;
         let result: Awaited<ReturnType<AcpBuiltinToolCaller['exec']>>;
         try {
           result = await caller.exec({
@@ -137,17 +186,18 @@ export const buildAcpBuiltinToolExtras = (
           result.error?.code === 'acp_tool_approval_pending' &&
           caller.requestApproval
         ) {
-          const expiresAt =
-            typeof result.state?.toolApproval === 'object' && result.state?.toolApproval !== null
-              ? (result.state.toolApproval as { expiresAt?: number }).expiresAt
+          const toolApproval =
+            typeof result.state?.toolApproval === 'object' && result.state.toolApproval !== null
+              ? (result.state.toolApproval as { expiresAt?: number; windowId?: string })
               : undefined;
           const answer = await caller.requestApproval({
             apiName: api.name,
             args,
-            expiresAt,
+            expiresAt: toolApproval?.expiresAt,
             identifier: spec.identifier,
             operationId,
             toolCallId,
+            windowId: toolApproval?.windowId,
           });
           if (answer.cancelled) {
             return errorText(`Tool call was not approved (${answer.cancelReason ?? 'cancelled'})`);
@@ -180,10 +230,12 @@ export const buildAcpBuiltinToolExtras = (
             try {
               poll = await caller.awaitChildren({
                 childOperationIds: children,
-                // v2: settle returns offered deliveries; ack below is the
-                // durable consume. A host that cannot ack (old server) simply
-                // falls back to v1 on the next field-negotiation round.
-                contractVersion: 2,
+                // contractVersion is negotiated by capability (SA04-A): only
+                // a host that can durably consume (inbox + ack) asks for v2;
+                // v1 keeps consume-on-settle. Never ask v2 while ack is
+                // optional-missing — that is what turned `offered` receipts
+                // into silent loss.
+                contractVersion: caller.ackChildResults ? 2 : 1,
                 operationId,
                 timeoutMs: CHILD_POLL_TIMEOUT_MS,
                 toolCallId,
@@ -196,16 +248,68 @@ export const buildAcpBuiltinToolExtras = (
               return errorText(String((error as Error)?.message ?? error));
             }
             if (poll.status === 'settled') {
-              // Durable consume for v2 deliveries — the server stays
-              // `offered` until this ack lands; a lost response replays the
-              // settle on the next poll instead of losing the result.
-              const eventIds = poll.deliveries?.map((d) => d.eventId) ?? [];
-              if (eventIds.length > 0 && caller.ackChildResults) {
+              // v2 only counts when the server echoes it — a v1-shaped settle
+              // (`contractVersion !== 2`) already consumed at the server and
+              // must not be treated as awaiting host ack.
+              const settledVersion = poll.contractVersion === 2 ? 2 : 1;
+              const pendingDeliveries = (poll.deliveries ?? []).filter(
+                (delivery) =>
+                  delivery.deliveryState !== 'acked' && delivery.deliveryState !== 'superseded',
+              );
+              if (settledVersion === 2 && pendingDeliveries.length > 0) {
+                if (!caller.ackChildResults) {
+                  return errorText(
+                    'Child results settled under delivery contract v2 but this host cannot acknowledge them — upgrade the host caller',
+                  );
+                }
+                // Durable receiver inbox BEFORE ack (SA04-A): a crash between
+                // receiving the results and acknowledging must not lose them.
+                // The write failing is reported, not swallowed — the receipts
+                // stay `offered` and the next settle re-delivers.
                 try {
-                  await caller.ackChildResults({ deliveryEventIds: eventIds, operationId });
+                  await caller.persistChildResultInbox?.({
+                    deliveries: pendingDeliveries.map((delivery) => ({
+                      childOperationId: delivery.childOperationId,
+                      eventId: delivery.eventId,
+                    })),
+                    operationId,
+                    results: poll.results,
+                    toolCallId,
+                  });
+                } catch (error) {
+                  return errorText(
+                    `Could not durably record child results before acknowledging: ${String(
+                      (error as Error)?.message ?? error,
+                    )}`,
+                  );
+                }
+                let ack: { acked?: string[]; ignored?: string[] } | undefined;
+                try {
+                  ack = await caller.ackChildResults({
+                    deliveryEventIds: pendingDeliveries.map((delivery) => delivery.eventId),
+                    operationId,
+                  });
                 } catch {
-                  // Ack failure only defers consumption — the receipt stays
-                  // `offered` and a later poll re-offers it.
+                  // The ack may have landed even though the response was
+                  // lost — verify against the real receipt state below and
+                  // retry rather than assuming.
+                  ack = undefined;
+                }
+                const acked = new Set(ack?.acked ?? []);
+                const unacked = pendingDeliveries
+                  .map((delivery) => delivery.eventId)
+                  .filter((eventId) => !acked.has(eventId));
+                if (unacked.length > 0) {
+                  // Unconfirmed consumes are never claimed — `ignored` or
+                  // dropped acks re-loop so the next poll re-derives and
+                  // re-acks them until the wait deadline.
+                  if (Date.now() >= deadline) {
+                    return errorText(
+                      `Child results received but ${unacked.length} delivery receipt(s) could not be acknowledged before the wait deadline`,
+                    );
+                  }
+                  await new Promise((resolve) => setTimeout(resolve, CHILD_POLL_INTERVAL_MS));
+                  continue;
                 }
               }
               const summary = poll.results

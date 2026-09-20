@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { discoverAuthorizationServerMetadata } from '@modelcontextprotocol/sdk/client/auth.js';
 import debug from 'debug';
 import { type NextRequest, NextResponse } from 'next/server';
@@ -125,8 +127,12 @@ export const GET = async (req: NextRequest) => {
       clientSecret: oidc.clientSecret,
     });
 
+    // Re-authorization (or first authorization) rotates the grant epoch —
+    // exec-time connector pins minted under the previous grant refuse to run
+    // against the new one (SA02-C).
     await connectorModel.update(payload.connectorId, {
       credentials: JSON.stringify(credentials),
+      metadata: { ...connector.metadata, grantEpoch: randomUUID() },
       tokenExpiresAt,
     });
 

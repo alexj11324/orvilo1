@@ -120,6 +120,8 @@ export const sanitizeAgentInterventionRequestForReview = (
     });
   }
 
+  const windowId = boundedString(request.windowId, 128);
+
   return {
     apiName: request.apiName,
     arguments: JSON.stringify({ questions } satisfies AgentInterventionRenderArguments),
@@ -128,5 +130,6 @@ export const sanitizeAgentInterventionRequestForReview = (
     interactionKind: request.interactionKind,
     provider: request.provider,
     toolCallId: request.toolCallId,
+    ...(windowId ? { windowId } : {}),
   };
 };

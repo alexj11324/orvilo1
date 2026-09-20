@@ -3276,9 +3276,9 @@ describe('ConversationControl actions', () => {
         result: payload,
         toolCallId: 'cc_call_1',
       });
-      // F04: a desktop-local decision is also mirrored through the remote
-      // mutation so the server-side one-time approval receipt closes — awaited
-      // AFTER the IPC submit (the producer's retry reads the receipt).
+      // SA02-C: the receipt decision lands BEFORE the IPC bridge resolve —
+      // a failed mirror write must leave the card pending rather than let the
+      // producer's retry read a receipt that was never decided.
       const mirrorSubmit = vi.mocked(lambdaClient.aiAgent.submitHeteroIntervention.mutate);
       expect(mirrorSubmit).toHaveBeenCalledTimes(1);
       expect(mirrorSubmit).toHaveBeenCalledWith({
@@ -3286,8 +3286,8 @@ describe('ConversationControl actions', () => {
         result: payload,
         toolCallId: 'cc_call_1',
       });
-      expect(submitInterventionSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        mirrorSubmit.mock.invocationCallOrder[0],
+      expect(mirrorSubmit.mock.invocationCallOrder[0]).toBeLessThan(
+        submitInterventionSpy.mock.invocationCallOrder[0],
       );
     });
 

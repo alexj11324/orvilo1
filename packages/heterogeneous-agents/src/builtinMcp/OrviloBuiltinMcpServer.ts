@@ -85,6 +85,15 @@ export interface McpToolResult {
 }
 
 /**
+ * Call-site metadata forwarded to `McpExtraTool` handlers. `_meta` carries
+ * the host's own invocation identity (e.g. `claudecode/toolUseId` for Claude
+ * Code), which handlers use as the stable toolCallId (SA04-A).
+ */
+export interface McpExtraToolCallExtra {
+  _meta?: Record<string, unknown>;
+}
+
+/**
  * An additional tool the producer mounts on this MCP server next to
  * `ask_user_question`. The handler receives the operationId resolved from the
  * MCP session (same `?op=<opId>` routing as the ask-user tool), so one
@@ -92,7 +101,11 @@ export interface McpToolResult {
  */
 export interface McpExtraTool {
   description: string;
-  handler: (operationId: string, args: Record<string, unknown>) => Promise<McpToolResult>;
+  handler: (
+    operationId: string,
+    args: Record<string, unknown>,
+    extra?: McpExtraToolCallExtra,
+  ) => Promise<McpToolResult>;
   inputSchema: z.ZodRawShape;
   name: string;
   title?: string;
@@ -419,7 +432,9 @@ export class OrviloBuiltinMcpServer {
           );
         }
         try {
-          return await tool.handler(operationId, (args ?? {}) as Record<string, unknown>);
+          return await tool.handler(operationId, (args ?? {}) as Record<string, unknown>, {
+            _meta: extra._meta,
+          });
         } catch (error) {
           return errorResult(String((error as Error)?.message ?? error));
         }

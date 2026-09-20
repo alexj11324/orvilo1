@@ -3,6 +3,7 @@ import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 
 import type { IntegrationLeaseItem } from '../schemas';
 import { integrationLeases } from '../schemas';
+import type { RepoRefLeaseOutcomeContext } from '../schemas/integrationLease';
 import type { OrviloDatabase } from '../type';
 
 export interface RepoRefLeaseAcquireParams {
@@ -34,14 +35,7 @@ export interface RepoRefLeaseAcquireResult {
   prior?: IntegrationLeaseItem;
 }
 
-/** Reconciliation context persisted when a mutation-phase outcome is lost. */
-export interface RepoRefLeaseOutcomeContext {
-  expectedBaseSha?: string;
-  expectedHeadSha?: string;
-  fenceSeq?: number;
-  phase?: IntegrationLeasePhase;
-  recordedAt?: string;
-}
+export type { RepoRefLeaseOutcomeContext };
 
 /**
  * IntegrationLeaseModel — the durable repo/ref lease behind

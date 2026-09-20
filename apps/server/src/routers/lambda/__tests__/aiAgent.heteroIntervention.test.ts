@@ -220,7 +220,11 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
         result: { 'Which env?': 'prod' },
         toolCallId: 't1',
       }),
-    ).resolves.toEqual({ status: 'resolving', success: true });
+    ).resolves.toEqual({
+      approval: { state: 'not_tool_approval' },
+      status: 'resolving',
+      success: true,
+    });
 
     const res = await heteroCaller(operationId).waitInterventionResponse({
       lastEventId: '0',
@@ -283,7 +287,11 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
         toolCallId: 'tc_card',
         windowId: 'w1',
       }),
-    ).resolves.toEqual({ status: 'resolving', success: true });
+    ).resolves.toEqual({
+      approval: { action: 'approved', state: 'decided' },
+      status: 'resolving',
+      success: true,
+    });
 
     // The durable receipt already carries the decision — the exec retry
     // consumes it; the card resolution is downstream, never upstream.
@@ -296,7 +304,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     ).toBe(true);
   });
 
-  it('SA02-C: a stale-window card submit cannot decide the renewed window', async () => {
+  it('A03/SB03: a stale-window card submit is a retriable conflict — nothing resolves or publishes', async () => {
     const operationId = 'op-stale-window';
     await insertOperation(operationId, userId);
     // The receipt rotated to window w2 (renew) — a card minted under w1 is
@@ -307,6 +315,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       toolCallId: 'tc_card',
     });
 
+    // The refused outcome is an error — a 2xx success here was the SB03 bug:
+    // the host treated the unaccepted answer as resolved and the live window
+    // lost its interaction.
     await expect(
       userCaller().submitHeteroIntervention({
         operationId,
@@ -314,23 +325,131 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
         toolCallId: 'tc_card',
         windowId: 'w1',
       }),
-    ).resolves.toEqual({ status: 'resolving', success: true });
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
 
-    // Decision NOT written to the live window…
+    // The live window is untouched — no decision written, no card resolved,
+    // nothing broadcast, and no other window woken.
     const payload = await readApprovalReceipt(operationId, 'tc_card');
     expect(payload?.decision).toBeUndefined();
-    // …but the card still resolves — the exec retry re-pends under w2.
+    expect(payload?.windowId).toBe('w2');
     expect(
       store.events.some(
         (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_card',
       ),
-    ).toBe(true);
+    ).toBe(false);
+    // The business slot must never see a refused submit.
+    expect(business.resolveHeteroIntervention).not.toHaveBeenCalled();
+  });
+
+  it('A03/SB03: an opposite-answer double submit projects the stored winner, never the loser', async () => {
+    const operationId = 'op-double-submit';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_card' });
+
+    // First submit wins the CAS — approved.
+    const first = await userCaller().submitHeteroIntervention({
+      operationId,
+      result: { approved: true },
+      toolCallId: 'tc_card',
+      windowId: 'w1',
+    });
+    expect(first.approval).toMatchObject({ action: 'approved', state: 'decided' });
+
+    // The late-arriving opposite submit (cancel) loses the CAS — but what
+    // propagates is the WINNER's answer, not the loser's input.
+    const second = await userCaller().submitHeteroIntervention({
+      cancelled: true,
+      operationId,
+      toolCallId: 'tc_card',
+      windowId: 'w1',
+    });
+    expect(second.approval).toMatchObject({ action: 'approved', state: 'already_decided' });
+
+    // Both published responses carry the winner — the cancelled projection
+    // of the loser can never reach the exec or the renderer.
+    const responses = store.events.filter(
+      (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_card',
+    );
+    expect(responses).toHaveLength(2);
+    for (const event of responses) {
+      expect(event.data.cancelled).toBeFalsy();
+      expect(event.data.result).toEqual({ approved: true });
+    }
+
+    const payload = await readApprovalReceipt(operationId, 'tc_card');
+    expect(payload?.decision).toMatchObject({ action: 'approved' });
+  });
+
+  it('A03/SB03: concurrent same-window submits resolve to one durable winner both callers see', async () => {
+    const operationId = 'op-concurrent';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_card' });
+
+    const [approve, cancel] = await Promise.all([
+      userCaller().submitHeteroIntervention({
+        operationId,
+        result: { approved: true },
+        toolCallId: 'tc_card',
+        windowId: 'w1',
+      }),
+      userCaller().submitHeteroIntervention({
+        cancelled: true,
+        operationId,
+        toolCallId: 'tc_card',
+        windowId: 'w1',
+      }),
+    ]);
+
+    // Exactly one decision landed; both responses agree on the winner.
+    const payload = await readApprovalReceipt(operationId, 'tc_card');
+    const winnerAction = (payload?.decision as { action?: string } | undefined)?.action;
+    expect(winnerAction).toMatch(/^(approved|denied)$/);
+    expect(approve.approval?.action).toBe(winnerAction);
+    expect(cancel.approval?.action).toBe(winnerAction);
+    for (const event of store.events.filter(
+      (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_card',
+    )) {
+      expect(event.data.cancelled === true).toBe(winnerAction === 'denied');
+    }
+  });
+
+  it('A04/SB03: a failed receipt write reports failure — nothing is resolved or notified', async () => {
+    const operationId = 'op-write-fail';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_card' });
+
+    const spy = vi.spyOn(serverDB, 'update').mockImplementation(() => {
+      throw new Error('event_outbox write failed');
+    });
+    try {
+      await expect(
+        userCaller().submitHeteroIntervention({
+          operationId,
+          result: { approved: true },
+          toolCallId: 'tc_card',
+          windowId: 'w1',
+        }),
+      ).rejects.toThrow('event_outbox write failed');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // A decision that cannot durably commit never surfaces as success —
+    // no card resolution, no published response, no business call.
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_card',
+      ),
+    ).toBe(false);
+    expect(business.resolveHeteroIntervention).not.toHaveBeenCalled();
+    const payload = await readApprovalReceipt(operationId, 'tc_card');
+    expect(payload?.decision).toBeUndefined();
   });
 
   it('SA02-C: a submit with no windowId cannot approve a windowed receipt', async () => {
-    // Legacy clients that never echo the window still resolve their card,
-    // but the receipt decision requires the explicit window contract — a
-    // window-less submit must not silently upgrade a stale card's say-so.
+    // Legacy clients that never echo the window: the receipt decision
+    // requires the explicit window contract — a windowless submit on a
+    // windowed row is stale and is refused as a retriable conflict.
     const operationId = 'op-legacy-windowless';
     await insertOperation(operationId, userId);
     await insertApprovalReceipt({ operationId, toolCallId: 'tc_card' });
@@ -341,12 +460,139 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
         result: { approved: true },
         toolCallId: 'tc_card',
       }),
-    ).resolves.toEqual({ status: 'resolving', success: true });
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
 
-    // Legacy path: no expected window → the write is allowed on legacy
-    // (windowless) receipts only; a windowed row refuses it via the CAS…
     const payload = await readApprovalReceipt(operationId, 'tc_card');
     expect(payload?.decision).toBeUndefined();
+  });
+
+  it('A04/SB03: the Mobile token path lands the SAME durable decision before notifying', async () => {
+    const operationId = 'op-mobile';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_m' });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_m',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000aa',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+    });
+
+    const res = await userCaller().resolveHeteroIntervention({
+      action: 'submit',
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000aa',
+      result: { approved: true },
+      reviewToken: 'a'.repeat(43),
+    });
+
+    expect(res).toMatchObject({ status: 'resolving', success: true });
+    // The receipt carries the decision BEFORE the publish — same function
+    // every other entry funnels through (bind-any window: the claim is the
+    // first-winner authority).
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toMatchObject({ action: 'approved', windowId: 'w1' });
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(true);
+  });
+
+  it('A04/SB03: a token submit on an already-decided receipt projects the stored winner', async () => {
+    const operationId = 'op-mobile-replay';
+    await insertOperation(operationId, userId);
+    // The receipt was already decided 'denied' by an earlier Web submit —
+    // the business claim still wins (the earlier publish had failed), so
+    // the published response must project DENIED, not this submit's say-so.
+    await insertApprovalReceipt({
+      operationId,
+      payload: {
+        decision: {
+          action: 'denied',
+          decidedAt: Date.now(),
+          decidedByUserId: userId,
+          windowId: 'w1',
+        },
+      },
+      toolCallId: 'tc_m',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_m2',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000bb',
+      response: { result: { anything: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+    });
+
+    const res = await userCaller().resolveHeteroIntervention({
+      action: 'submit',
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000bb',
+      result: { anything: true },
+      reviewToken: 'a'.repeat(43),
+    });
+
+    expect(res).toMatchObject({
+      approval: { action: 'denied', state: 'already_decided' },
+      status: 'resolving',
+    });
+    const event = store.events.findLast(
+      (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+    );
+    expect(event?.data.cancelled).toBe(true);
+    expect(event?.data.cancelReason).toBe('user_cancelled');
+    expect(event?.data.result).toBeUndefined();
+  });
+
+  it('A04/SB03: a token submit on a closed receipt rolls the claim back — no phantom resolve', async () => {
+    const operationId = 'op-mobile-closed';
+    await insertOperation(operationId, userId);
+    // Terminal swept row: pending undecided but no longer writable.
+    const { eventOutbox } = await import('@/database/schemas');
+    await serverDB.insert(eventOutbox).values({
+      aggregateId: operationId,
+      aggregateType: 'agent_operation',
+      eventId: `tool-approval:${operationId}:tc_m`,
+      eventType: 'agent_operation.tool_approval',
+      id: `evt_${operationId}_tc_m`,
+      payload: {
+        argsHash: 'h',
+        expiresAt: Date.now() + 60_000,
+        scopeHash: 'scope_a',
+        windowId: 'w1',
+        windowVersion: 1,
+      },
+      status: 'failed',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_m3',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000cc',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+    });
+
+    await expect(
+      userCaller().resolveHeteroIntervention({
+        action: 'submit',
+        resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000cc',
+        result: { approved: true },
+        reviewToken: 'a'.repeat(43),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    // The claim is rolled back so the intervention stays live for the real
+    // window — and nothing was published as a success.
+    expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
+      expect.objectContaining({ claimId: 'cl_m3', operationId }),
+    );
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(false);
   });
 
   it('looks up cold-start review by a strict 32-byte base64url token', async () => {
@@ -1454,7 +1700,11 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
         result: { approved: true },
         toolCallId: 't-claimed',
       }),
-    ).resolves.toEqual({ status: 'resolving', success: true });
+    ).resolves.toEqual({
+      approval: { state: 'not_tool_approval' },
+      status: 'resolving',
+      success: true,
+    });
 
     expect(store.events[0].data).toMatchObject({
       producerAck: false,

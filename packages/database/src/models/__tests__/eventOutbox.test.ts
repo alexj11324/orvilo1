@@ -340,15 +340,17 @@ describe('EventOutboxModel', () => {
           eventId: event.eventId,
           expectedWindowId: 'w1',
         }),
-      ).toBe('decided');
-      // Second submit (double-click / retry) cannot flip the decision.
-      expect(
-        await model.recordToolApprovalDecision({
-          decision: { ...decision, action: 'denied' },
-          eventId: event.eventId,
-          expectedWindowId: 'w1',
-        }),
-      ).toBe('already_decided');
+      ).toEqual({ status: 'decided' });
+      // Second submit (double-click / retry) cannot flip the decision — the
+      // outcome echoes the stored winner so callers project it, not the
+      // losing input (SC-SB03).
+      const second = await model.recordToolApprovalDecision({
+        decision: { ...decision, action: 'denied' },
+        eventId: event.eventId,
+        expectedWindowId: 'w1',
+      });
+      expect(second.status).toBe('already_decided');
+      expect((second.decision as { action?: string })?.action).toBe('approved');
     });
 
     it('stamps the live windowId into the decision and binds consume to that window', async () => {
@@ -371,14 +373,15 @@ describe('EventOutboxModel', () => {
       await model.upsertDeliveryReceipt({ event });
 
       // A card rendered under window `w1` submits after the receipt moved to
-      // `w2` — the write must not land on the new window.
+      // `w2` — the write must not land on the new window; the outcome names
+      // the live window so the caller can retry against it (SC-SB03).
       expect(
         await model.recordToolApprovalDecision({
           decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
           eventId: event.eventId,
           expectedWindowId: 'w1',
         }),
-      ).toBe('stale_window');
+      ).toEqual({ status: 'stale_window', windowId: 'w2', windowVersion: 1 });
       const payload = await model.getDeliveryReceiptPayload(event.eventId);
       expect(payload?.decision).toBeUndefined();
 
@@ -389,7 +392,7 @@ describe('EventOutboxModel', () => {
           eventId: event.eventId,
           expectedWindowId: 'w2',
         }),
-      ).toBe('decided');
+      ).toEqual({ status: 'decided' });
     });
 
     it('consume CAS grants an approved, unexpired, scope+args-matched receipt exactly once', async () => {

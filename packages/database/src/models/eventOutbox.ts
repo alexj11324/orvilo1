@@ -20,6 +20,22 @@ export const newEventId = (): string => randomUUID();
 export const insertOutboxEvent = (executor: Transaction | OrviloDatabase, params: NewOutboxEvent) =>
   new EventOutboxModel(executor as OrviloDatabase).insertOutboxEvent(executor, params);
 
+/**
+ * Discriminated outcome of `recordToolApprovalDecision` (SC-SB03): the
+ * caller learns not just whether its submit won, but the durable winner's
+ * decision to project (`already_decided`) or the live window coordinates of
+ * a retriable `stale_window` conflict — a refused submit is never reported
+ * as handled.
+ */
+export interface ToolApprovalDecisionOutcome {
+  /** The stored winner — only present on `already_decided`. */
+  decision?: Record<string, unknown>;
+  status: 'already_decided' | 'closed' | 'decided' | 'not_tool_approval' | 'stale_window';
+  /** Live window coordinates on `stale_window` / `closed` / `already_decided`. */
+  windowId?: string;
+  windowVersion?: number;
+}
+
 export interface NewOutboxEvent {
   aggregateId: string;
   aggregateType: string;
@@ -230,22 +246,54 @@ export class EventOutboxModel {
   };
 
   /**
+   * Additive merge into an existing receipt's payload (`payload || patch`),
+   * regardless of status — `upsertDeliveryReceipt` is INSERT-only and cannot
+   * touch a written row. Used for durable bookkeeping flags on receipts that
+   * may already be swept terminal, e.g. the await anchor's deferred-projection
+   * marker (SC-SB07): an outbox sweeper moving the row off `pending` must not
+   * lose the compensation debt recorded here.
+   */
+  mergeDeliveryReceiptPayload = async (params: {
+    eventId: string;
+    patch: Record<string, unknown>;
+  }): Promise<boolean> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({
+        payload: sql`${eventOutbox.payload} || ${JSON.stringify(params.patch)}::jsonb`,
+      })
+      .where(eq(eventOutbox.eventId, params.eventId))
+      .returning({ id: eventOutbox.id });
+    return updated.length > 0;
+  };
+
+  /**
    * First-winner CAS recording the human decision on a pending tool-approval
    * receipt. The update only lands while the receipt is still unconsumed and
    * undecided — a second submit, or a submit after consumption, is dropped.
    * `resolutionRequestId` dedupes client retries.
    *
-   * `expectedWindowId` binds the submit to the exact window the card showed:
-   * when provided, the CAS only lands while the receipt still carries that
-   * window (an absent receipt window is treated as legacy and always
-   * matches). The stored decision is stamped with the row's current
+   * `expectedWindowId` binds the submit to the exact window the card showed
+   * and is tri-state (SC-SB03): a `string` only lands while the row is
+   * windowless-legacy or still carries that window; `undefined` means the
+   * submitter declared no window so only windowless rows accept; `null` is
+   * bind-any for callers whose own durable claim is already the first-winner
+   * authority (the Mobile token path) — the decision stamps whichever window
+   * is live. The stored decision is always stamped with the row's current
    * `windowId` server-side so a renewed window can never inherit it.
+   *
+   * The refused-CAS read-back classifies into a discriminated outcome:
+   * `not_tool_approval` (no receipt — an ordinary askUser, proceed),
+   * `already_decided` + the stored winner decision, `stale_window` + the
+   * LIVE window coordinates (a retriable conflict — never resolved), or
+   * `closed` (consumed / swept-terminal row that can never accept a
+   * decision).
    */
   recordToolApprovalDecision = async (params: {
     decision: Record<string, unknown>;
     eventId: string;
-    expectedWindowId?: string;
-  }): Promise<'already_decided' | 'closed' | 'decided' | 'stale_window'> => {
+    expectedWindowId?: string | null;
+  }): Promise<ToolApprovalDecisionOutcome> => {
     const updated = await this.db
       .update(eventOutbox)
       .set({
@@ -267,33 +315,57 @@ export class EventOutboxModel {
           // Window contract: an explicit `expectedWindowId` must match the
           // row's live window (legacy windowless rows still accept); a submit
           // WITHOUT one may only decide legacy windowless receipts — a stale
-          // old client can never write the live window's decision.
-          ...(params.expectedWindowId === undefined
-            ? [sql`COALESCE(${eventOutbox.payload}->>'windowId', '') = ''`]
-            : [
-                sql`(COALESCE(${eventOutbox.payload}->>'windowId', '') = '' OR ${eventOutbox.payload}->>'windowId' = ${params.expectedWindowId})`,
-              ]),
+          // old client can never write the live window's decision. `null`
+          // binds whichever window is live.
+          ...(params.expectedWindowId === null
+            ? []
+            : params.expectedWindowId === undefined
+              ? [sql`COALESCE(${eventOutbox.payload}->>'windowId', '') = ''`]
+              : [
+                  sql`(COALESCE(${eventOutbox.payload}->>'windowId', '') = '' OR ${eventOutbox.payload}->>'windowId' = ${params.expectedWindowId})`,
+                ]),
         ),
       )
       .returning({ id: eventOutbox.id });
-    if (updated.length > 0) return 'decided';
+    if (updated.length > 0) return { status: 'decided' };
 
     const [row] = await this.db
-      .select({ payload: eventOutbox.payload })
+      .select({ payload: eventOutbox.payload, status: eventOutbox.status })
       .from(eventOutbox)
       .where(eq(eventOutbox.eventId, params.eventId));
-    if (!row) return 'closed';
+    if (!row) return { status: 'not_tool_approval' };
     const payload = (row.payload ?? {}) as Record<string, unknown>;
-    if (payload.decision !== null && payload.decision !== undefined) return 'already_decided';
-    if (
-      params.expectedWindowId !== undefined &&
-      typeof payload.windowId === 'string' &&
-      payload.windowId.length > 0 &&
-      payload.windowId !== params.expectedWindowId
-    ) {
-      return 'stale_window';
+    const windowId =
+      typeof payload.windowId === 'string' && payload.windowId ? payload.windowId : undefined;
+    const windowVersion =
+      typeof payload.windowVersion === 'number' ? payload.windowVersion : undefined;
+    if (payload.decision !== null && payload.decision !== undefined) {
+      return {
+        decision: payload.decision as Record<string, unknown>,
+        status: 'already_decided',
+        windowId,
+        windowVersion,
+      };
     }
-    return 'closed';
+    const consumed =
+      typeof payload.consumedAt === 'number' ||
+      (typeof payload.consumedAt === 'string' && payload.consumedAt !== '');
+    // A consumed or non-pending row can never accept a decision again.
+    if (consumed || row.status !== 'pending') {
+      return { status: 'closed', windowId, windowVersion };
+    }
+    // Still pending and undecided but the CAS refused → the row's live window
+    // differs from the one the card displayed (a windowless submit on a
+    // windowed row is stale too — `expectedWindowId === undefined` mismatches
+    // a live window). `null` (bind-any) can never be stale.
+    if (
+      windowId !== undefined &&
+      params.expectedWindowId !== null &&
+      params.expectedWindowId !== windowId
+    ) {
+      return { status: 'stale_window', windowId, windowVersion };
+    }
+    return { status: 'closed', windowId, windowVersion };
   };
 
   /**

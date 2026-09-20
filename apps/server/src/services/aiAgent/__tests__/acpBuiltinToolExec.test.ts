@@ -29,6 +29,7 @@ const {
   mockGetReceiptPayload,
   mockGetReceiptState,
   mockMemberRunner,
+  mockMergeReceiptPayload,
   mockOfferReceipt,
   mockRecordApprovalDecision,
   mockRegisterWork,
@@ -49,6 +50,7 @@ const {
   mockGetReceiptPayload: vi.fn(),
   mockGetReceiptState: vi.fn(),
   mockMemberRunner: { run: vi.fn() },
+  mockMergeReceiptPayload: vi.fn(),
   mockOfferReceipt: vi.fn(),
   mockRecordApprovalDecision: vi.fn(),
   mockRegisterWork: vi.fn(),
@@ -122,6 +124,7 @@ vi.mock('@/database/models/eventOutbox', () => ({
       consumeToolApprovalReceipt: mockConsumeApprovalReceipt,
       getDeliveryReceiptPayload: mockGetReceiptPayload,
       getDeliveryReceiptState: mockGetReceiptState,
+      mergeDeliveryReceiptPayload: mockMergeReceiptPayload,
       offerDeliveryReceiptByEventId: mockOfferReceipt,
       recordToolApprovalDecision: mockRecordApprovalDecision,
       renewToolApprovalReceipt: mockRenewApprovalReceipt,
@@ -886,6 +889,7 @@ describe('awaitAcpBuiltinToolChildren', () => {
     mockAckReceipt.mockResolvedValue(true);
     mockGetReceiptPayload.mockResolvedValue(undefined);
     mockGetReceiptState.mockResolvedValue({ deliveryState: 'offered', status: 'pending' });
+    mockMergeReceiptPayload.mockResolvedValue(true);
   });
 
   it('keeps a waiting_for_human child pending instead of settling the parent', async () => {
@@ -1272,6 +1276,120 @@ describe('awaitAcpBuiltinToolChildren', () => {
         },
       ),
     ).rejects.toThrow('event_outbox read failed');
+  });
+
+  it('D05: an expired authoritative deadline returns timeout even when every projection write fails', async () => {
+    // The anchor carries a past deadline; the placeholder mirror write
+    // rejects — the verdict must still be the protocol timeout. The bug
+    // being covered: the projection was in the same try as the verdict, so
+    // its failure produced `pending` and silently resurrected the wait.
+    mockGetReceiptPayload.mockResolvedValue({ awaitDeadlineAt: Date.now() - 1 });
+    mockUpdateToolMessage.mockRejectedValue(new Error('plugin row write failed'));
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [{ id: 'msg_own', state: { status: 'pending' }, toolCallId: 'tc_9' }],
+    });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1, toolCallId: 'tc_9' },
+    );
+
+    expect(result).toMatchObject({ pendingOperationIds: ['op_c1'], status: 'timeout' });
+    // …and the skipped projection was recorded durably on the anchor — the
+    // compensation debt survives the sweep so a later pass can replay it.
+    expect(mockMergeReceiptPayload).toHaveBeenCalledWith({
+      eventId: 'await-anchor:op_1:tc_9',
+      patch: { projectionPending: true },
+    });
+  });
+
+  it('D05: an expired deadline is still timeout when the placeholder READ fails', async () => {
+    mockGetReceiptPayload.mockResolvedValue({ awaitDeadlineAt: Date.now() - 1 });
+    const baseDb = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+    });
+    const db = {
+      select: vi.fn().mockImplementation((cols: any) => {
+        if ('toolCallId' in cols) {
+          return {
+            from: vi.fn().mockReturnValue({
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockRejectedValue(new Error('plugin read failed')),
+              }),
+              where: vi.fn().mockRejectedValue(new Error('plugin read failed')),
+            }),
+          };
+        }
+        return baseDb.select(cols);
+      }),
+    };
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1, toolCallId: 'tc_9' },
+    );
+
+    expect(result.status).toBe('timeout');
+    expect(mockMergeReceiptPayload).toHaveBeenCalledWith({
+      eventId: 'await-anchor:op_1:tc_9',
+      patch: { projectionPending: true },
+    });
+  });
+
+  it('D05: a queued projection debt is retried on the next pass and cleared on success', async () => {
+    // A reconnecting poll reads the anchor still carrying the marker.
+    mockGetReceiptPayload.mockResolvedValue({
+      awaitDeadlineAt: Date.now() - 1,
+      projectionPending: true,
+    });
+    const db = awaitDb({
+      children: [{ error: null, id: 'op_c1', metadata: {}, status: 'running' }],
+      plugins: [{ id: 'msg_own', state: { status: 'pending' }, toolCallId: 'tc_9' }],
+    });
+    mockUpdateToolMessage.mockResolvedValue({ success: true });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1, toolCallId: 'tc_9' },
+    );
+
+    expect(result.status).toBe('timeout');
+    // The retried projection succeeded → the durable marker clears.
+    expect(mockUpdateToolMessage).toHaveBeenCalledWith('msg_own', {
+      content: expect.stringContaining('op_c1'),
+      pluginState: { status: 'error', waitDeadlineExceeded: true },
+    });
+    expect(mockMergeReceiptPayload).toHaveBeenCalledWith({
+      eventId: 'await-anchor:op_1:tc_9',
+      patch: expect.objectContaining({ projectionPending: false }),
+    });
+  });
+
+  it('D05: an all-terminal observation still settles when the deadline is already past', async () => {
+    // Race policy, as published in the contract: the children-status read
+    // runs BEFORE the deadline check on every pass, so results that arrived
+    // just under the wire are reported truthfully — the deadline bounds only
+    // still-pending waits.
+    mockGetReceiptPayload.mockResolvedValue({ awaitDeadlineAt: Date.now() - 1 });
+    const db = awaitDb({
+      children: [
+        { error: null, id: 'op_c1', metadata: { assistantMessageId: 'm_a' }, status: 'done' },
+      ],
+      parent: { appContext: { executionGeneration: 3 }, workspaceId: 'ws_1' },
+      plugins: [],
+    });
+    mockFindMessage.mockResolvedValue({ content: 'child answer' });
+
+    const result = await awaitAcpBuiltinToolChildren(
+      { ...deps, db: db as any },
+      { childOperationIds: ['op_c1'], operationId: 'op_1', timeoutMs: 1, toolCallId: 'tc_9' },
+    );
+
+    expect(result.status).toBe('settled');
+    expect(result).toMatchObject({
+      results: [{ content: 'child answer', operationId: 'op_c1', status: 'done' }],
+    });
   });
 
   it('D02: v2 settle offers deliveries; only the parent ack consumes them', async () => {

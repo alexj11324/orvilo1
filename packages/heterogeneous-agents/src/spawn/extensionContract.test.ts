@@ -136,7 +136,7 @@ const createSession = (overrides: Record<string, unknown> = {}) => {
       clientVersion: '9.9.9',
       commandPath: 'fake-harness-acp',
       cwd: '/tmp/fake-workspace',
-      env: {},
+      env: process.env,
       onEvents: (batch) => {
         events.push(...(batch as { data: unknown; type: string }[]));
       },

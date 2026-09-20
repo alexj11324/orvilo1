@@ -3986,6 +3986,10 @@ table task_dispatches {
   operation_id text
   idempotency_key text [not null]
   requested_by text [not null]
+  origin text
+  initiator text
+  source_dispatch_id text
+  settlement_grant jsonb
   lease_owner text
   lease_expires_at "timestamp with time zone"
   waiting_reason text

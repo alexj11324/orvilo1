@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  TaskDispatchOrigin,
   TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
@@ -39,9 +41,11 @@ export class TaskDispatchWaitingError extends Error {
  * Execution origin recorded on the dispatch intent. `caid` = a new
  * orchestrated writer (goal/planner/cascade entry); `internal` = settlement
  * work continuing an existing dispatch (corrective merges, reservation
- * handoffs); `external` = direct user/schedule invocation.
+ * handoffs); `external` = direct user/schedule invocation. The canonical
+ * definition lives in `@orvilo/types` so the database schema can type the
+ * persisted column; re-exported here for the service's existing consumers.
  */
-export type TaskDispatchOrigin = 'caid' | 'external' | 'internal';
+export type { TaskDispatchOrigin, TaskDispatchSettlementGrant } from '@orvilo/types';
 
 export interface PreparedTaskDispatch {
   dispatch: TaskDispatchItem;
@@ -82,9 +86,14 @@ export class TaskDispatchService {
 
   async prepare(input: {
     idempotencyKey: string;
+    /** Raw actor identity persisted separately from `requestedBy`. */
+    initiator?: string;
     origin: TaskDispatchOrigin;
     planRevision?: number;
     requestedBy: string;
+    /** Server-verified settlement evidence when `origin === 'internal'`. */
+    settlementGrant?: TaskDispatchSettlementGrant;
+    sourceDispatchId?: string;
     task: TaskItem;
     trigger: TaskRunTrigger;
   }): Promise<PreparedTaskDispatch> {
@@ -92,8 +101,12 @@ export class TaskDispatchService {
     try {
       requested = await this.model.request({
         idempotencyKey: input.idempotencyKey,
+        initiator: input.initiator,
+        origin: input.origin,
         planRevision: input.planRevision,
         requestedBy: input.requestedBy,
+        settlementGrant: input.settlementGrant,
+        sourceDispatchId: input.sourceDispatchId,
         taskId: input.task.id,
         trigger: input.trigger,
       });
@@ -174,6 +187,18 @@ export class TaskDispatchService {
   async transition(prepared: PreparedTaskDispatch, input: TaskDispatchTransitionInput) {
     const updated = await this.model.transition({
       ...input,
+      // Final host-admission re-check (SA05-B): before the runtime starts,
+      // the persisted origin must still pass the CAID gate — a rollout
+      // flip after prepare parks the claim `waiting` instead of starting
+      // a new orchestrated writer.
+      admissionRecheck:
+        input.phase === 'dispatched'
+          ? (dispatch) =>
+              isCaidDispatchAllowed({
+                userId: dispatch.initiator ?? undefined,
+                workspaceId: dispatch.workspaceId ?? this.workspaceId,
+              })
+          : undefined,
       dispatchId: prepared.dispatch.id,
       fence: prepared.fence,
       owner: prepared.owner,
@@ -182,6 +207,14 @@ export class TaskDispatchService {
       throw new TaskDispatchConflictError(
         `Dispatch ${prepared.dispatch.id} lost its lease or changed phase`,
         prepared.dispatch.id,
+      );
+    }
+    // The admission re-check parks (not cancels) the claim — surface the
+    // typed hold so callers keep the task claimable.
+    if (updated.phase === 'waiting' && input.phase !== 'waiting') {
+      throw new TaskDispatchWaitingError(
+        updated.waitingReason ?? 'Task execution is waiting',
+        updated.id,
       );
     }
     return updated;

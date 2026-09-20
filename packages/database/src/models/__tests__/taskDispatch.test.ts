@@ -953,3 +953,153 @@ describe('goal dispatch fence', () => {
     });
   });
 });
+
+describe('persisted dispatch origin + final admission re-check (SA05-B)', () => {
+  const seedAssigned = async (identifier: string, seq: number) => {
+    await db.insert(agents).values({ id: `agent-${identifier}`, userId, workspaceId });
+    const task = await createTask(identifier, seq);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: `agent-${identifier}` })
+      .where(eq(tasks.id, task.id));
+    return task;
+  };
+
+  it('persists origin, initiator and settlement evidence on the dispatch row', async () => {
+    const task = await seedAssigned('ORG-1', 50);
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:ORG-1:settle-1',
+      initiator: 'user-actor-9',
+      origin: 'internal',
+      requestedBy: 'planner',
+      settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+      sourceDispatchId: 'dsp-src',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+
+    expect(requested.dispatch).toMatchObject({
+      initiator: 'user-actor-9',
+      origin: 'internal',
+      requestedBy: 'orchestrator:planner',
+      settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+      sourceDispatchId: 'dsp-src',
+    });
+
+    // First write wins: an idempotent replay carrying different labels cannot
+    // relabel the persisted origin.
+    const replay = await model.request({
+      idempotencyKey: 'orchestrator:ORG-1:settle-1',
+      initiator: 'other',
+      origin: 'external',
+      requestedBy: 'planner',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (replay.state === 'busy') throw new Error('unexpected busy');
+    expect(replay.dispatch.origin).toBe('internal');
+    expect(replay.dispatch.initiator).toBe('user-actor-9');
+  });
+
+  it('parks a caid dispatch at the dispatched boundary when admission flipped off', async () => {
+    const task = await seedAssigned('ORG-2', 51);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:ORG-2:plan-1',
+      origin: 'caid',
+      requestedBy: 'planner',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+
+    const parked = await model.transition({
+      admissionRecheck: async () => false,
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: claim.fence,
+      owner: 'worker-a',
+      phase: 'dispatched',
+    });
+
+    expect(parked).toMatchObject({
+      leaseOwner: null,
+      phase: 'waiting',
+      waitingReason: 'caid_dispatch_disabled',
+    });
+  });
+
+  it('lets a caid dispatch through when admission still holds, and never gates external rows', async () => {
+    const caidTask = await seedAssigned('ORG-3', 52);
+    const manualTask = await seedAssigned('ORG-4', 53);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const recheck = async () => false;
+
+    const caid = await model.request({
+      idempotencyKey: 'orchestrator:ORG-3:plan-1',
+      origin: 'caid',
+      requestedBy: 'planner',
+      taskId: caidTask.id,
+      trigger: 'orchestrator',
+    });
+    const manual = await model.request({
+      idempotencyKey: 'manual:ORG-4:request-1',
+      origin: 'external',
+      requestedBy: userId,
+      taskId: manualTask.id,
+      trigger: 'manual',
+    });
+    if (caid.state === 'busy' || manual.state === 'busy') throw new Error('unexpected busy');
+
+    for (const [dispatch, allowed] of [
+      [caid.dispatch, true],
+      [manual.dispatch, false],
+    ] as const) {
+      const claim = await model.claimForProvisioning(dispatch.id, 'worker-a', 60_000);
+      if (!claim) throw new Error('dispatch was not claimed');
+      await expect(
+        model.transition({
+          admissionRecheck: allowed ? async () => true : recheck,
+          dispatchId: dispatch.id,
+          expected: ['claimed'],
+          fence: claim.fence,
+          owner: 'worker-a',
+          phase: 'dispatched',
+        }),
+      ).resolves.toMatchObject({ phase: 'dispatched' });
+    }
+  });
+
+  it("derives a legacy row's origin from the requestedBy trigger prefix", async () => {
+    const task = await seedAssigned('ORG-5', 54);
+    const model = new TaskDispatchModel(db, workspaceId);
+    // Pre-origin schema row: no origin column value — the trigger prefix of
+    // `requestedBy` ('orchestrator:…') still classifies it as caid.
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:ORG-5:plan-1',
+      requestedBy: 'planner',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch.origin).toBeNull();
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+
+    const parked = await model.transition({
+      admissionRecheck: async () => false,
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: claim.fence,
+      owner: 'worker-a',
+      phase: 'dispatched',
+    });
+
+    expect(parked?.waitingReason).toBe('caid_dispatch_disabled');
+  });
+});

@@ -230,6 +230,12 @@ export interface GitDeleteBranchResult {
 }
 
 export interface GitRemoveWorktreeResult {
+  /**
+   * Set when the request carried a `claimToken`: `true` = the host verified
+   * no live writer owns the path before removing; absent/false on hosts that
+   * cannot answer writer presence, which callers must treat as unverified.
+   */
+  claimTokenVerified?: boolean;
   error?: string;
   success: boolean;
 }
@@ -260,9 +266,22 @@ export interface GitWorktreePathInspection {
    * cannot answer, which callers must treat as "cannot prove safe".
    */
   activeWriter?: GitWorktreeActiveWriter | null;
+  /**
+   * Canonical spelling of `worktreePath` — every symlink/alias/case variant
+   * of the same physical directory collapses to this. Present whenever the
+   * repo listing succeeded; absent on `unknown`.
+   */
+  canonicalWorktreePath?: string;
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: GitWorktreeListItem;
+  /**
+   * Canonical git common-dir of the repo — the physical repo identity that
+   * survives path aliases.
+   */
+  repoCommonDir?: string;
+  /** Canonical main-checkout root of the repo. */
+  repoRoot?: string;
 }
 
 /** A live agent run writing inside an inspected worktree path. */

@@ -95,9 +95,15 @@ export interface GitWorktreeListItem {
  * never treat a failed list as an empty one.
  */
 export interface GitWorktreePathInspection {
+  /** Canonical spelling of `worktreePath` — aliases collapse onto it. */
+  canonicalWorktreePath?: string;
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: GitWorktreeListItem;
+  /** Canonical git common-dir of the repo the path was inspected against. */
+  repoCommonDir?: string;
+  /** Canonical main-checkout root of the repo. */
+  repoRoot?: string;
 }
 
 export interface GitWorkingTreeFiles {

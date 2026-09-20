@@ -6,15 +6,18 @@ import { taskWorkspaceClaims, taskWorkspaceRecoveries } from '../schemas';
 import type { OrviloDatabase } from '../type';
 
 /**
- * Physical identity of one claimable worktree directory on one device.
- * The serialized `key` is the uniqueness boundary — a directory name that
- * merely matches our naming convention is not proof of ownership.
+ * Physical identity of one claimable worktree directory on one device:
+ * the canonical git common-dir + canonical worktree path proven by the
+ * device inspection. Every path spelling (symlink, alias, case variant) of
+ * the same physical directory collapses onto one key — the serialized `key`
+ * is the uniqueness boundary and a directory name that merely matches our
+ * naming convention is not proof of ownership.
  */
 export const taskWorkspaceClaimKey = (params: {
   deviceId: string;
-  repoPath: string;
+  repoCommonDir: string;
   worktreePath: string;
-}): string => `${params.deviceId}:${params.repoPath}::${params.worktreePath}`;
+}): string => `${params.deviceId}:${params.repoCommonDir}::${params.worktreePath}`;
 
 export const taskWorkspaceRecoveryKey = (params: {
   deviceId: string;
@@ -23,14 +26,20 @@ export const taskWorkspaceRecoveryKey = (params: {
 }): string => `${params.kind}:${params.deviceId}:${params.worktreePath}`;
 
 export interface TaskWorkspaceClaimMintParams {
+  /** Base branch name resolved for this attempt — replays read it back. */
+  baseBranch: string;
   deviceId: string;
   dispatchId: string;
   expectedBaseSha?: string;
   generation: number;
   ownerToken: string;
+  /** Canonical git common-dir proven by the device inspection — key input. */
+  repoCommonDir: string;
+  /** Repo path as spelled by the caller — audit/display only. */
   repoPath: string;
   taskId: string;
   workspaceId?: string;
+  /** Canonical worktree path proven by the device inspection — key input. */
   worktreePath: string;
 }
 
@@ -73,12 +82,14 @@ export class TaskWorkspaceClaimModel {
     await this.db
       .insert(taskWorkspaceClaims)
       .values({
+        baseBranch: params.baseBranch,
         deviceId: params.deviceId,
         dispatchId: params.dispatchId,
         expectedBaseSha: params.expectedBaseSha,
         generation: params.generation,
         key,
         ownerToken: params.ownerToken,
+        repoCommonDir: params.repoCommonDir,
         repoPath: params.repoPath,
         taskId: params.taskId,
         workspaceId: params.workspaceId,
@@ -93,6 +104,7 @@ export class TaskWorkspaceClaimModel {
     await this.db
       .update(taskWorkspaceClaims)
       .set({
+        baseBranch: params.baseBranch,
         dispatchId: params.dispatchId,
         expectedBaseSha: params.expectedBaseSha,
         generation: params.generation,

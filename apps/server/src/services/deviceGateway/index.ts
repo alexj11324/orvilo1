@@ -745,9 +745,14 @@ export class DeviceGateway {
 
   /**
    * Remove a worktree in a directory's repository on a remote device via
-   * the `removeGitWorktree` device RPC.
+   * the `removeGitWorktree` device RPC. Callers cleaning up a claimed
+   * provision pass `claimToken` — the device must then verify no live writer
+   * owns the path before removing and echo `claimTokenVerified`; a host that
+   * cannot answer refuses, and a host too old to know the field leaves it
+   * absent, which callers must read as "unverified", not "no writer".
    */
   async removeGitWorktree(params: {
+    claimToken?: string;
     deviceId: string;
     force?: boolean;
     path: string;
@@ -756,14 +761,23 @@ export class DeviceGateway {
     workspaceId?: string;
     worktreePath: string;
   }): Promise<DeviceGitRemoveWorktreeResult> {
-    const { userId, deviceId, force, path, worktreePath, workspaceId, timeout = 30_000 } = params;
+    const {
+      userId,
+      deviceId,
+      claimToken,
+      force,
+      path,
+      worktreePath,
+      workspaceId,
+      timeout = 30_000,
+    } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitRemoveWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'removeGitWorktree', params: { force, path, worktreePath } },
+        { method: 'removeGitWorktree', params: { claimToken, force, path, worktreePath } },
       );
 
       if (!result.success || !result.data) {

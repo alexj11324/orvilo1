@@ -287,4 +287,50 @@ describe('executeDeviceRpc', () => {
     )) as { success: boolean };
     expect(result.success).toBe(false);
   });
+
+  it('SA01-A: refuses a claimToken remove when the host has no run registry', async () => {
+    const result = (await executeDeviceRpc(
+      'removeGitWorktree',
+      { claimToken: 'tok-1', path: root, worktreePath: root },
+      makeDeps(),
+    )) as { claimTokenVerified?: boolean; error?: string; success: boolean };
+
+    expect(result.success).toBe(false);
+    expect(result.claimTokenVerified).toBe(false);
+    expect(result.error).toContain('run registry');
+  });
+
+  it('SA01-A: refuses a claimToken remove while a live writer owns the path', async () => {
+    const deps = {
+      ...makeDeps(),
+      getActiveWorktreeWriter: vi.fn(async () => ({ operationId: 'op-live', pid: 42 })),
+    };
+    const result = (await executeDeviceRpc(
+      'removeGitWorktree',
+      { claimToken: 'tok-1', path: root, worktreePath: root },
+      deps,
+    )) as { claimTokenVerified?: boolean; error?: string; success: boolean };
+
+    expect(result.success).toBe(false);
+    expect(result.claimTokenVerified).toBe(false);
+    expect(result.error).toContain('live writer');
+    expect(deps.getActiveWorktreeWriter).toHaveBeenCalledWith(root);
+  });
+
+  it('SA01-A: a claimToken remove proceeds once the writer check clears', async () => {
+    const deps = {
+      ...makeDeps(),
+      getActiveWorktreeWriter: vi.fn(async () => null),
+    };
+    const result = (await executeDeviceRpc(
+      'removeGitWorktree',
+      { claimToken: 'tok-1', path: root, worktreePath: root },
+      deps,
+    )) as { claimTokenVerified?: boolean; success: boolean };
+
+    // `root` is not a git repo so the remove itself fails — but the host DID
+    // verify writer absence first, and reports so via claimTokenVerified.
+    expect(result.claimTokenVerified).toBe(true);
+    expect(deps.getActiveWorktreeWriter).toHaveBeenCalledWith(root);
+  });
 });

@@ -77,25 +77,47 @@ Given('用户有多个对话历史', async function (this: CustomWorld) {
   await this.page.waitForTimeout(300);
   await this.page.keyboard.type('测试对话内容', { delay: 30 });
   await this.page.keyboard.press('Enter');
-  await this.page.waitForTimeout(2000);
 
   // Store first conversation reference
   this.testContext.firstConversation = 'first';
 
   // Create new topic and second conversation
   console.log('   📍 Creating second conversation...');
-  const addTopicButton = this.page.locator('svg.lucide-message-square-plus').locator('..');
-  if ((await addTopicButton.count()) > 0) {
-    await addTopicButton.first().click();
-    await this.page.waitForTimeout(1000);
+  // svg → Center wrapper → NavItem Block row (which carries the disabled
+  // opacity style and owns the click handler).
+  const addTopicButton = this.page
+    .locator('svg.lucide-message-square-plus')
+    .first()
+    .locator('xpath=../..');
+  await expect(addTopicButton, 'new-topic button is not rendered').toBeVisible({
+    timeout: 30_000,
+  });
 
-    // Send message in second conversation - different content
-    await chatInputContainer.click();
-    await this.page.waitForTimeout(300);
-    await this.page.keyboard.type('hello world', { delay: 30 });
-    await this.page.keyboard.press('Enter');
-    await this.page.waitForTimeout(2000);
-  }
+  // The new-topic NavItem ignores clicks while a new-topic send is in flight
+  // (isNewTopicSendInFlight) — it only dims (opacity 0.5), never errors, so a
+  // bare sleep raced the flag under load and the "second" message silently
+  // landed on topic 1. Wait for the send to settle before clicking.
+  await expect
+    .poll(async () => (await addTopicButton.getAttribute('style')) ?? '', {
+      message: 'new-topic button stayed disabled — in-flight send never settled',
+      timeout: 60_000,
+    })
+    .not.toContain('opacity: 0.5');
+
+  await addTopicButton.click();
+  await chatInputContainer.click();
+  await this.page.waitForTimeout(300);
+  await this.page.keyboard.type('hello world', { delay: 30 });
+  await this.page.keyboard.press('Enter');
+
+  // Confirm the second topic actually registered in the sidebar before the
+  // scenario proceeds to click it.
+  await expect
+    .poll(async () => this.page.locator('[data-testid="topic-item"]').count(), {
+      message: 'second conversation never appeared in the sidebar topic list',
+      timeout: 60_000,
+    })
+    .toBeGreaterThanOrEqual(2);
 
   console.log('   ✅ 已创建多个对话');
 });

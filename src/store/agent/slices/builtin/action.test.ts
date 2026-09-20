@@ -51,11 +51,14 @@ describe('refreshBuiltinAgent', () => {
     expect(useAgentStore.getState().builtinAgentIdMap.inbox).toBeUndefined();
   });
 
-  it('never pins an unfiled row under a workspace scope', async () => {
+  // Unfiled rows (workspaceId null) are the caller's own pre-workspace agents —
+  // union scope semantics keep them readable after workspace activation, so
+  // they must still pin instead of dead-ending the builtin slug.
+  it("pins the caller's unfiled row under a workspace scope", async () => {
     getBuiltinMock.mockResolvedValue({ id: 'agent-unfiled', workspaceId: null } as never);
 
     await useAgentStore.getState().refreshBuiltinAgent('inbox');
 
-    expect(useAgentStore.getState().builtinAgentIdMap.inbox).toBeUndefined();
+    expect(useAgentStore.getState().builtinAgentIdMap.inbox).toBe('agent-unfiled');
   });
 });

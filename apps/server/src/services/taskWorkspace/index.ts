@@ -471,6 +471,10 @@ export class TaskWorkspaceService {
         }
         const added = await deviceGateway.addGitWorktree({
           branch,
+          // The host must register the minted claim token against the
+          // physical checkout — `claimRegistered` in the response is the
+          // capability proof that verified cleanup is possible later.
+          claimToken: claim.ownerToken,
           deviceId,
           path: repoPath,
           // Pin the claim's commit, not the mutable ref — a fetch racing the
@@ -491,6 +495,27 @@ export class TaskWorkspaceService {
             );
           }
           throw new Error(`Failed to provision task workspace: ${lastError}`);
+        }
+        if (added.claimRegistered !== true) {
+          // Old host: the RPC accepted the token silently but registered no
+          // claim — a later verified delete would be unverifiable. Remove what
+          // was just created (plain remove works on every host) and stop with
+          // an explicit unsupported signal rather than ever deleting blind.
+          await deviceGateway
+            .removeGitWorktree({
+              deviceId,
+              path: repoPath,
+              userId: this.userId,
+              workspaceId: this.workspaceId,
+              worktreePath,
+            })
+            .catch((error) =>
+              log('provision rollback remove failed for %s — %O', worktreePath, error),
+            );
+          throw new Error(
+            `Failed to provision task workspace: the device host cannot register worktree ` +
+              `claims — verified cleanup is unsupported until the client is upgraded`,
+          );
         }
         break;
       }

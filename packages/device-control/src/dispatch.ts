@@ -19,7 +19,9 @@ import {
   probeGitRemoteRef,
   pullGitBranch,
   pushGitBranch,
+  registerWorktreeClaim,
   removeGitWorktree,
+  removeGitWorktreeVerified,
   renameGitBranch,
   revertGitFile,
 } from '@orvilo/local-file-shell/git';
@@ -273,43 +275,57 @@ export const executeDeviceRpc = async (
         path: string;
         worktreePath: string;
       };
-      // A cleanup presenting a claim token must prove no live writer owns the
-      // path first — a host that cannot answer writer presence refuses rather
-      // than treating "no registry" as "no writer". `claimTokenVerified` on
-      // the result is what lets the caller distinguish a verified remove from
-      // a silently ignored token on a stale host.
+      // A cleanup presenting a claim token must prove it against the claim
+      // this host registered for that physical checkout — inside the registry
+      // mutation section, together with the writer check, before any delete.
+      // `claimTokenVerified` on the result is only ever set after that real
+      // compare; a host that cannot answer (no run registry, no claims
+      // registry, no registered claim) refuses instead of deleting blind.
       if (payload.claimToken !== undefined) {
-        if (!deps.getActiveWorktreeWriter) {
-          return {
-            claimTokenVerified: false,
-            error: 'cannot verify the claim token: this host has no run registry',
-            success: false,
-          };
-        }
-        const writer = await deps.getActiveWorktreeWriter(payload.worktreePath);
-        if (writer) {
-          return {
-            claimTokenVerified: false,
-            error: `worktree has a live writer (op=${writer.operationId ?? 'unknown'})`,
-            success: false,
-          };
-        }
-        const result = await removeGitWorktree(payload);
-        return { ...result, claimTokenVerified: true };
+        return removeGitWorktreeVerified({
+          claimToken: payload.claimToken,
+          force: payload.force,
+          getActiveWriter: deps.getActiveWorktreeWriter,
+          path: payload.path,
+          worktreePath: payload.worktreePath,
+        });
       }
       return removeGitWorktree(payload);
     }
 
     case 'addGitWorktree': {
-      return addGitWorktree(
-        params as {
-          branch: string;
-          detach?: boolean;
-          path: string;
-          ref?: string;
-          worktreePath: string;
-        },
-      );
+      const payload = params as {
+        branch: string;
+        claimToken?: string;
+        detach?: boolean;
+        path: string;
+        ref?: string;
+        worktreePath: string;
+      };
+      const result = await addGitWorktree(payload);
+      if (!result.success || payload.claimToken === undefined) return result;
+      // Bind the server-issued claim token to the physical checkout on this
+      // host — the delete path later verifies against this registration. The
+      // `claimRegistered` flag in the result is the capability signal callers
+      // use to distinguish "host can verify claims" from "host silently
+      // dropped the token"; a failed registration rolls the worktree back.
+      const registered = await registerWorktreeClaim({
+        claimToken: payload.claimToken,
+        path: payload.path,
+        worktreePath: payload.worktreePath,
+      });
+      if (!registered.success) {
+        await removeGitWorktree({
+          force: true,
+          path: payload.path,
+          worktreePath: payload.worktreePath,
+        }).catch(() => undefined);
+        return {
+          error: `claim registration failed: ${registered.error ?? 'unknown'}`,
+          success: false,
+        };
+      }
+      return { ...result, claimRegistered: true };
     }
 
     case 'mergeGitBranch': {

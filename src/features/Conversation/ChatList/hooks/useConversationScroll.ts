@@ -529,12 +529,14 @@ export const useConversationScroll = ({
   // User ids already pinned this context — dedupes re-keys (tmp_ → real id)
   // landing inside a later tail segment.
   const pinnedUserIds = useSingleton(() => new Set<string>());
-  // Armed by the context-switch effect below: a send mints its topic id
-  // before the context adopts it, so the optimistic tail can land under the
-  // new contextKey inside the same commit that seeds prevLengthRef — the
-  // growth scan would then stay silent forever. While armed, pin the freshest
-  // tail user row once the new turn is live.
-  const switchPinArmedRef = useRef(false);
+  // Armed on mount AND on every context switch: ChatList swaps the welcome
+  // screen for this list only once the optimistic tail exists, so mount
+  // already sees the just-sent rows with prevLengthRef seeded past them; a
+  // send can likewise mint its topic id before the context adopts it, landing
+  // the tail under the new contextKey inside the seeding commit. Both paths
+  // leave the growth scan silent — while armed, pin the freshest tail user
+  // row once the turn is live.
+  const switchPinArmedRef = useRef(true);
 
   const { registerSpacerNode, spacerLayoutVersion } = useSpacerLayoutSignal();
 

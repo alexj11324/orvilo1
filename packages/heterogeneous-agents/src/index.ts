@@ -96,6 +96,22 @@ export type {
   SetErrorIntent,
 } from './mainAgentCoordinator';
 export { createMainAgentRunState, reduceMainAgent } from './mainAgentCoordinator';
+export type {
+  HeterogeneousProviderBindingReference,
+  ServerDefaultHeterogeneousAgentType,
+  ServerDefaultHeterogeneousCompatibilityProfile,
+  ServerDefaultHeterogeneousIngress,
+  ServerDefaultHeterogeneousModelPolicy,
+  ServerDefaultHeterogeneousTokenHeader,
+} from './providerBinding';
+export {
+  getServerDefaultHeterogeneousAgentConfig,
+  isServerDefaultHeterogeneousAgentType,
+  isServerDefaultHeterogeneousProfileModel,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_CONFIG,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
+  SERVER_DEFAULT_HETEROGENEOUS_PROFILE_DEFAULT_MODELS,
+} from './providerBinding';
 export {
   createLiveAdapter,
   createTraceDecoder,

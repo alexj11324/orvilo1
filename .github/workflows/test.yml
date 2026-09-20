@@ -61,6 +61,16 @@ jobs:
         run: pnpm type-check
 
   # Package tests - all packages in single job to save runner resources
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-packages:
     needs: check-duplicate-run
     if: needs.check-duplicate-run.outputs.should_skip != 'true'
@@ -153,6 +163,16 @@ jobs:
           done
 
   # App tests - run sharded tests
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-app:
     needs: check-duplicate-run
     if: needs.check-duplicate-run.outputs.should_skip != 'true'
@@ -191,6 +211,16 @@ jobs:
           retention-days: 1
 
   # Merge sharded test reports and upload coverage
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-app-coverage:
     needs: test-app
     if: ${{ !cancelled() && needs.test-app.result == 'success' }}
@@ -256,6 +286,16 @@ jobs:
       - name: Verify Windows shell strategy
         run: bun run packages/local-file-shell/scripts/verify-windows-shell.ts
 
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   test-desktop:
     needs: check-duplicate-run
     if: needs.check-duplicate-run.outputs.should_skip != 'true'
@@ -307,6 +347,16 @@ jobs:
           files: ./apps/desktop/coverage/lcov.info
           flags: desktop
 
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   test-server:
     needs: check-duplicate-run
     if: needs.check-duplicate-run.outputs.should_skip != 'true'
@@ -347,6 +397,16 @@ jobs:
           retention-days: 1
 
   # Merge sharded test reports and upload coverage
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-server-coverage:
     needs: test-server
     if: ${{ !cancelled() && needs.test-server.result == 'success' }}
@@ -449,6 +509,16 @@ jobs:
   # MAINTENANCE: adding a CI job above requires updating both `needs` here
   # and the `required` list in the step below — a job absent from both is
   # silently excluded from the gate.
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   required-quality-gate:
     name: Required Quality Gate
     needs:

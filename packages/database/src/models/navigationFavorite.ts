@@ -53,7 +53,9 @@ export class NavigationFavoriteModel {
         ? new SavedViewModel(this.db, this.userId, workspaceId).list()
         : Promise.resolve([]),
       taskIds.length > 0
-        ? new TaskModel(this.db, this.userId, workspaceId).findByIds(taskIds)
+        ? // Pins store the route identifier ('T-1'), not the row id — resolve
+          // accepts both and the map below keys every alias the row carries.
+          new TaskModel(this.db, this.userId, workspaceId).resolveMany(taskIds)
         : Promise.resolve([]),
       teamIds.length > 0 && workspaceId
         ? new TeamModel(this.db, this.userId, workspaceId).listReadable()
@@ -69,7 +71,10 @@ export class NavigationFavoriteModel {
     }
     for (const task of tasks) {
       const title = taskTitle(task);
-      if (title) titles.set(favoriteKey('task', task.id), title);
+      if (title) {
+        titles.set(favoriteKey('task', task.id), title);
+        if (task.identifier) titles.set(favoriteKey('task', task.identifier), title);
+      }
     }
     const wantedTeams = new Set(teamIds);
     for (const team of readableTeams) {

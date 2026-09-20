@@ -8,6 +8,18 @@ import {
 } from './index';
 import { computeReviewSnapshotId } from './snapshot';
 
+const githubStatus = vi.hoisted(() => ({
+  getStatus: vi.fn<(id: string) => Promise<{ connected: boolean; success: boolean }>>(),
+}));
+
+// `clients()` only constructs MarketService when deps are not injected — most
+// tests inject both, so this mock only engages for the connection-probe tests.
+vi.mock('@/server/services/market', () => ({
+  MarketService: class {
+    market = { skills: { getStatus: githubStatus.getStatus } };
+  },
+}));
+
 const HEAD = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const HEAD_2 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const REVIEW_ID = 'gh:github.com:octo-org:octo-repo:42';
@@ -357,6 +369,23 @@ describe('pullRequest detail (RV01/RV05/RV06)', () => {
 });
 
 describe('reviewQueue (RV05)', () => {
+  it('maps a market status-probe failure to GITHUB_NOT_CONNECTED', async () => {
+    githubStatus.getStatus.mockRejectedValue(new Error('connect ECONNREFUSED'));
+    const probe = new PullRequestReviewService('user-1', 'ws-1');
+    await expect(probe.reviewQueue({ tab: 'for-me' })).rejects.toMatchObject({
+      code: 'GITHUB_NOT_CONNECTED',
+      name: 'PullRequestReviewError',
+    });
+  });
+
+  it('maps a disconnected status to GITHUB_NOT_CONNECTED', async () => {
+    githubStatus.getStatus.mockResolvedValue({ connected: false, success: true });
+    const probe = new PullRequestReviewService('user-1', 'ws-1');
+    await expect(probe.reviewQueue({ tab: 'for-me' })).rejects.toMatchObject({
+      code: 'GITHUB_NOT_CONNECTED',
+    });
+  });
+
   it('returns the cursor and totals so a truncated list is never silent', async () => {
     const transport = createTransport({
       PullRequestReviewQueue: () => ({

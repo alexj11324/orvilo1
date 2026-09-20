@@ -118,16 +118,17 @@ jobs:
       - name: Tune test Postgres for CI
         run: |
           CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
-          docker exec "$CONTAINER" psql -U postgres -d postgres -c "
-            ALTER SYSTEM SET fsync = 'off';
-            ALTER SYSTEM SET synchronous_commit = 'off';
-            ALTER SYSTEM SET full_page_writes = 'off';
-            ALTER SYSTEM SET checkpoint_timeout = '1800s';
-            ALTER SYSTEM SET checkpoint_completion_target = '0.9';
-            ALTER SYSTEM SET max_wal_size = '4GB';
-            ALTER SYSTEM SET autovacuum = 'off';
-            SELECT pg_reload_conf();
-          "
+          # One -c per statement: a multi-statement -c wraps everything in an
+          # implicit transaction and ALTER SYSTEM rejects transaction blocks.
+          docker exec "$CONTAINER" psql -U postgres -d postgres \
+            -c "ALTER SYSTEM SET fsync = 'off'" \
+            -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
+            -c "ALTER SYSTEM SET full_page_writes = 'off'" \
+            -c "ALTER SYSTEM SET checkpoint_timeout = '1800s'" \
+            -c "ALTER SYSTEM SET checkpoint_completion_target = '0.9'" \
+            -c "ALTER SYSTEM SET max_wal_size = '4GB'" \
+            -c "ALTER SYSTEM SET autovacuum = 'off'" \
+            -c "SELECT pg_reload_conf()"
 
       - name: Run database migrations
         run: bun run db:migrate

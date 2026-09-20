@@ -136,24 +136,26 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 - `Q0` 为只读独立验收，对固定组合 SHA 出证据矩阵，不接受 “测试全绿” 叙述代替行为证据。
 - 回滚底线：退到最近 ACP-only 版本或暂停 CAID 新调度；**不以复活 Lobe engine 为回滚**。
 
-## 9. 整改状态（F01–F12 → R01–R11）
+## 9. 整改状态（F01–F12 → R01–R11）【历史记录 — R 轮冻结账】
+
+> 本节是 R 轮整改时的快照；R01–R11 后续被 SA01–SA09、SB01–SB13 轮次接续整改并全部合入 `release/caid-remediation-integration`。行状态以 SB 轮终审裁决为准，本节不再更新，也不作为当前验收证明。
 
 独立审查发现 12 项问题；完成定义按 `IMPLEMENTED / UNIT_OR_CONTRACT_TESTED / INTEGRATION_TESTED / LIVE_ACCEPTED / RELEASE_READY` 分级记录，互不相冒。
 
-| Finding | 级别     | 整改        | 状态               | 摘要                                                                                                                                                                           |
-| ------- | -------- | ----------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| F01     | P0       | R01         | 已实现，待合入门禁 | worktree 所有权归属须现证（`git worktree list --porcelain` + 注册表双证），归属不明→拒绝强删 / 回收；`同路径不同分支` 不再 force-remove，改停手报错                            |
-| F02     | P1       | R01         | 已实现，待合入门禁 | 孤儿目录扫描比对注册表 + `git worktree list` 实况，未知目录进人工队列而非删除                                                                                                  |
-| F03     | P1       | R02         | 已实现，待合入门禁 | `withRepoRefLease` 拆分为短事务租约 + 事务外远程 I/O + owner fence 校验；`LeasedRepoRef` 合同记录持有者                                                                        |
-| F04     | P1       | R03         | 已实现，待合入门禁 | 外部 MCP/Connector 装配链已实现（`resolveExternalToolSurface` + `metadata.externalTools` + `heteroExecBuiltinTool` 回调经 `ToolExecutionService`），待合入门禁                 |
-| F05     | P1       | R03         | 已实现，待合入门禁 | `requiredToolIds` 准入已实现（部分失败即拒绝、`disableTools` 冲突显式拒绝、TaskRunner 传 `requiredToolIds`），待合入门禁                                                       |
-| F06     | P1       | R04         | 已实现，待合入门禁 | 终态白名单（非终态→pending）+ `event_outbox` 持久账本 + `awaitStartedAt` 死线→timeout 落 error + superseded 占位审计；消费 = await 结算 / 兼容 CAS win                         |
-| F07     | P1       | R06         | 已实现，待合入门禁 | `contract.content` 冻结指令 /verify/ 依赖回执并与 prompt 同源；续聊继承契约正文；`baseSha` 钉选（设备 post-add head / 远端预解析）+ `baseShaHistory`；`inputStale` 审计标记    |
-| F08     | P1       | R07         | 已实现，待合入门禁 | 按阶段独立失败预算（fetch-status/patch/merge 不再被首个成功清零）；merge-accepted reconcile 允许终态复核                                                                       |
-| F09     | P1       | R05         | 已实现，待合入门禁 | `startExecution` idle / 孤儿 metadata → `PRECONDITION_FAILED`、终态 → `CONFLICT`、不存在 → `NOT_FOUND`、running/parked → 幂等 `alreadyStarted`；`autoStart:false` 副作用前拒绝 |
-| F10     | P1       | R08         | 实现中（子会话）   | 后台判断链（规划 / Verify / 反思）ACP 收口由子会话进行，分支 `refactor/acp-background-agent-judgments`                                                                         |
-| F11     | P2       | R09         | 已实现，待合入门禁 | 删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；契约见 `docs/development/quota-identity-observation.md`                                          |
-| F12     | 发布阻塞 | R00/R10/R11 | 部分收口           | 复合 PASS 已拆；`caid_dispatch` 服务端准入开关已上线（R10，默认关）；固定 SHA 正路径验收进行中（本文件 §10）                                                                   |
+| Finding | 级别     | 整改        | 状态               | 摘要                                                                                                                                                                                                 |
+| ------- | -------- | ----------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F01     | P0       | R01         | 已实现，待合入门禁 | worktree 所有权归属须现证（`git worktree list --porcelain` + 注册表双证），归属不明→拒绝强删 / 回收；`同路径不同分支` 不再 force-remove，改停手报错                                                  |
+| F02     | P1       | R01         | 已实现，待合入门禁 | 孤儿目录扫描比对注册表 + `git worktree list` 实况，未知目录进人工队列而非删除                                                                                                                        |
+| F03     | P1       | R02         | 已实现，待合入门禁 | `withRepoRefLease` 拆分为短事务租约 + 事务外远程 I/O + owner fence 校验；`LeasedRepoRef` 合同记录持有者                                                                                              |
+| F04     | P1       | R03         | 已实现，待合入门禁 | 外部 MCP/Connector 装配链已实现（`resolveExternalToolSurface` + `metadata.externalTools` + `heteroExecBuiltinTool` 回调经 `ToolExecutionService`），待合入门禁                                       |
+| F05     | P1       | R03         | 已实现，待合入门禁 | `requiredToolIds` 准入已实现（部分失败即拒绝、`disableTools` 冲突显式拒绝、TaskRunner 传 `requiredToolIds`），待合入门禁                                                                             |
+| F06     | P1       | R04         | 已实现，待合入门禁 | 终态白名单（非终态→pending）+ `event_outbox` 持久账本 + `awaitStartedAt` 死线→timeout 落 error + superseded 占位审计；消费 = await 结算 / 兼容 CAS win                                               |
+| F07     | P1       | R06         | 已实现，待合入门禁 | `contract.content` 冻结指令 /verify/ 依赖回执并与 prompt 同源；续聊继承契约正文；`baseSha` 钉选（设备 post-add head / 远端预解析）+ `baseShaHistory`；`inputStale` 审计标记                          |
+| F08     | P1       | R07         | 已实现，待合入门禁 | 按阶段独立失败预算（fetch-status/patch/merge 不再被首个成功清零）；merge-accepted reconcile 允许终态复核                                                                                             |
+| F09     | P1       | R05         | 已实现，待合入门禁 | `startExecution` idle / 孤儿 metadata → `PRECONDITION_FAILED`、终态 → `CONFLICT`、不存在 → `NOT_FOUND`、running/parked → 幂等 `alreadyStarted`；`autoStart:false` 副作用前拒绝                       |
+| F10     | P1       | R08         | 已实现             | 后台判断链（规划 / Verify / 反思）经 `runAcpJudgment` 授权 ACP 收口（PR #165，`refactor/acp-background-agent-judgments`，已并入集成分支）；无 binding 显式 `ACP_JUDGMENT_NO_BINDING`，不部署密钥兜底 |
+| F11     | P2       | R09         | 已实现，待合入门禁 | 删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；契约见 `docs/development/quota-identity-observation.md`                                                                |
+| F12     | 发布阻塞 | R00/R10/R11 | 部分收口           | 复合 PASS 已拆；`caid_dispatch` 服务端准入开关已上线（R10，默认关）；固定 SHA 正路径验收进行中（本文件 §10）                                                                                         |
 
 - F09 → R05：修复已在 #158（`fix/execution-start-intent-contract`，draft）实现 —— `idle`/ 孤儿 metadata → `PRECONDITION_FAILED`，终态 → `CONFLICT`，不存在 → `NOT_FOUND`，`running`/parked → 幂等 `alreadyStarted:true`；`autoStart:false` 在任何副作用前拒绝（`BAD_REQUEST` / batch `results` 失败项）。合并门禁复核前保持 OPEN。
 
@@ -171,11 +173,14 @@ SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/f
 
 ### 10.1 逐诊断 typecheck 对比（非总数免检）
 
-- 工具：`scripts/ci/typecheckDiff.mjs` —— 以 `file:line:col TS####` 为键做集合差，另报每文件数量漂移；判定硬新增（file+code 在 base 全集里不存在）才算新增。
+> **以下 `cb02a617` 运行为 R11 时代历史记录（旧合并树）**，仅证明当时状态；当前冻结 SHA `0b58f21c` 的 typecheck 对比以最新复跑结果为准（见本节末尾 SB/SC 更新）。
+
+- 工具：`scripts/ci/typecheckDiff.mjs` —— 以 `file|code|完整多行消息` 为 bucket 做多重集合差（行 / 列不参与匹配，行号漂移不算新增）；任何 head 诊断无 base bucket 对应即硬新增。
 - 已知修正：`pnpm type-check` 根脚本本地拒跑（`scripts/type-check.mjs` CI-only guard），脚本需 `CI=true`；作用域模式 `--scope apps/server` 走包内 `tsc --noEmit`。
-- head（`cb02a617`，整合树）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。
-- **结果（已跑完，PASS）**：base `origin/canary` = 309 条，head = 302 条；added keys 11（均为同文件行号漂移，base 中同 file+code 已存在）、removed 18、perFileCountDrift 1 个文件；**hard-new file+code = 0**。复跑：`node scripts/ci/typecheckDiff.mjs --base origin/canary --head HEAD --scope apps/server`（head 用 `--head-log` 复用日志）。
-- **SB12 协议收紧**：诊断消息不再截断 300 字符、多行 continuation 参与 bucket 匹配；`--head-log` 只接受带强制 envelope 的采集产物（`--capture <file>` 生成：head SHA/tree SHA、dirty 状态 + 补丁哈希、exit/signal/completed、scope、node+pnpm+lockfile+tsconfig 指纹、日志 sha256）。envelope 缺失 / 篡改 / 脏树 / 指纹漂移均拒绝；live `--head` 必须等于当前 checkout 且工作树干净；豁免条目必须有非空 `reason` + 未过期 `expires`。回归测试 `scripts/ci/typecheckDiff.test.ts`（26 例）。
+- head（`cb02a617`，旧整合树，历史记录）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。
+- **结果（历史运行，PASS\@cb02a617）**：base `origin/canary` = 309 条，head = 302 条；added keys 11（均为同文件行号漂移，base 中同 file+code 已存在）、removed 18、perFileCountDrift 1 个文件；**hard-new file+code = 0**。复跑：`node scripts/ci/typecheckDiff.mjs --base origin/canary --head HEAD --scope apps/server`（head 用 `--head-log` 复用日志）。
+- **SB12 协议收紧**：诊断消息不再截断 300 字符、多行 continuation 参与 bucket 匹配；`--head-log` 只接受带强制 envelope 的采集产物（`--capture <file>` 生成：head SHA/tree SHA、dirty 状态 + 补丁哈希、exit/signal/completed、scope、node+pnpm+lockfile+tsconfig 指纹、日志 sha256）。envelope 缺失 / 篡改 / 脏树 / 指纹漂移均拒绝；live `--head` 必须等于当前 checkout 且工作树干净；豁免条目必须有非空 `reason` + 未过期 `expires`。
+- **SC12 轮（第三轮终审残留）**：file-less 全局诊断（`error TS5083:` 类无定位行）解析为 `<global>` 诊断参与 diff（CE07）；冒号格式 `file:l:c - error TS####:` 同样可解析；未被识别的 error/warning 类别行（非 TS code、`warning` 类别、无 code 的 `error:`、畸形 `error TS...` 无冒号）默认阻塞不再静默当 runner 噪声；`--head-log` 回放补回「非零退出 + 零可解析诊断 = 失败」（CE08）；`tc-tree-sha` 必须是 40-hex 且等于 `git rev-parse <head-sha>^{tree}`（CE09）；env 指纹增加 tsc/tsgo 版本与 tsconfig extends 链；live 采集前后校验 `HEAD^{tree}` + 干净工作树。回归测试 `scripts/ci/typecheckDiff.test.ts`（37 例）。
 
 ### 10.2 真机探针（dockerless：brew Postgres\@5432 + Redis\@6379 + s3rver\@29000，Next\@37620）
 
@@ -187,7 +192,7 @@ SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/f
 | CAID 准入 OFF（默认）                                                                                     | `goal.tick` → `waiting_external`「CAID dispatch admission is disabled」，任务 T-1 保持 `backlog` 未被认领                                                                                                                                                                                     |
 | CAID 准入 ON（`orvilo:runtime-config:feature-flags:published` 写 `{"caid_dispatch":true}`，5s 缓存后）    | `goal.tick` → 进入 `dispatchWork` → 条件 UPDATE 认领任务（`started_at` 落库）→ 下达 `dispatchHeteroAgent` → 到达 agent-runtime queue 边界，因本地无 `HATCHET_CLIENT_TOKEN` 诚实失败；任务落 `paused` + `Critical webhook delivery failed` —— 证明门禁开启后真实走 orchestrated 派发而非假成功 |
 
-- **e2e 唯一实跑失败**：`Test Web App` 里 `agent-scroll.feature`「视口不应贴近聊天列表底部」失败（`scroll.steps.ts:364`）。栈未触碰任何 `e2e/` 或聊天滚动代码（diff 只含 hetero-agent 侧）；该失败此前一直被 `@hugeicons@4.3.4` 构建崩遮罩（e2e 从未跑完），上游 4.3.3 恢复可用后首次实跑即暴露 —— 倾向判定为基线遗留，但缺乏 canary 对照运行记录，按「待 canary 复核」记录不冒领 PASS。
+- **e2e 已知基线失败（已对照确认，非本栈引入，亦非豁免 PASS）**：`Test Web App` 里 `agent-scroll.feature`「视口不应贴近聊天列表底部」失败（`scroll.steps.ts:364`，expected >320 /received 0）。canary 对照：canary push E2E run `35527292328`（canary @ `cb810785`，含 hugeicons 4.3.3 修复）与 `35518122478` 同一断言同一步骤同样失败（`scroll.steps.ts:364`，expected >320 /received 0，1/39 scenario），证实为 canary 同源基线缺陷（注：早前的 run `35526965367` 汇总虽 success 但 Test Web App job 实为 skipped，不作为覆盖证据）；本栈未触碰 `e2e/` 或聊天滚动代码。该行为确定性基线 FAIL，记 FAIL（基线），不登记为已获豁免的发布 PASS。
 
 ### 10.3 仍 BLOCKED 的行（环境缺位，不降级）
 

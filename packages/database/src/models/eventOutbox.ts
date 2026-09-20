@@ -25,6 +25,12 @@ export interface NewOutboxEvent {
   aggregateType: string;
   eventId: string;
   eventType: string;
+  /**
+   * Visibility gate for the sweeps (`fetchPending`/`claimPending`): rows stay
+   * hidden until this instant. Delivery-ledger receipts pass their deadline
+   * here so the room projector cannot mark them `delivered` before expiry.
+   */
+  nextAttemptAt?: Date;
   payload?: Record<string, unknown>;
   workspaceId?: string;
 }
@@ -56,6 +62,7 @@ export class EventOutboxModel {
         aggregateType: params.aggregateType,
         eventId: params.eventId,
         eventType: params.eventType,
+        nextAttemptAt: params.nextAttemptAt,
         payload: params.payload ?? {},
         workspaceId: params.workspaceId,
       })
@@ -156,6 +163,7 @@ export class EventOutboxModel {
         aggregateType: params.event.aggregateType,
         eventId: params.event.eventId,
         eventType: params.event.eventType,
+        nextAttemptAt: params.event.nextAttemptAt,
         payload: params.event.payload ?? {},
         status: 'pending',
         workspaceId: params.event.workspaceId,
@@ -168,6 +176,174 @@ export class EventOutboxModel {
       return 'delivered';
     }
     return inserted.length > 0 ? 'inserted' : 'replayed';
+  };
+
+  /**
+   * Delivery-ledger transition `received` → `offered` addressed by `eventId`.
+   * Idempotent: rows already `offered` (or past it) are untouched, so a
+   * replayed settle never downgrades an `acked`/`superseded` receipt.
+   */
+  offerDeliveryReceiptByEventId = async (eventId: string): Promise<boolean> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({
+        payload: sql`jsonb_set(${eventOutbox.payload}, '{deliveryState}', '"offered"', true)`,
+      })
+      .where(
+        and(
+          eq(eventOutbox.eventId, eventId),
+          eq(eventOutbox.status, 'pending'),
+          sql`${eventOutbox.payload}->>'deliveryState' = 'received'`,
+        ),
+      )
+      .returning({ id: eventOutbox.id });
+    return updated.length > 0;
+  };
+
+  /**
+   * Parent-side durable inbox ACK: the ONLY transition that marks a
+   * child-result receipt consumed — `deliveryState` → `acked`, status
+   * → `delivered`. Callers pass `aggregateId` so a leaked/forged eventId can
+   * never ack another operation's receipt.
+   */
+  ackDeliveryReceiptByEventId = async (params: {
+    aggregateId: string;
+    eventId: string;
+  }): Promise<boolean> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({
+        deliveredAt: new Date(),
+        payload: sql`jsonb_set(${eventOutbox.payload}, '{deliveryState}', '"acked"', true)`,
+        status: 'delivered',
+      })
+      .where(
+        and(
+          eq(eventOutbox.eventId, params.eventId),
+          eq(eventOutbox.aggregateId, params.aggregateId),
+          eq(eventOutbox.status, 'pending'),
+          sql`${eventOutbox.payload}->>'deliveryState' <> 'superseded'`,
+        ),
+      )
+      .returning({ id: eventOutbox.id });
+    return updated.length > 0;
+  };
+
+  /**
+   * First-winner CAS recording the human decision on a pending tool-approval
+   * receipt. The update only lands while the receipt is still unconsumed and
+   * undecided — a second submit, or a submit after consumption, is dropped.
+   * `resolutionRequestId` dedupes client retries.
+   */
+  recordToolApprovalDecision = async (params: {
+    decision: Record<string, unknown>;
+    eventId: string;
+  }): Promise<'closed' | 'decided' | 'already_decided'> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({
+        // create_missing=true lands the key on the first submit; the WHERE
+        // clause below (`payload->'decision' is null`) is the first-winner CAS.
+        payload: sql`jsonb_set(${eventOutbox.payload}, '{decision}', ${JSON.stringify(
+          params.decision,
+        )}::jsonb, true)`,
+      })
+      .where(
+        and(
+          eq(eventOutbox.eventId, params.eventId),
+          eq(eventOutbox.status, 'pending'),
+          sql`${eventOutbox.payload}->>'consumedAt' is null`,
+          sql`${eventOutbox.payload}->'decision' is null`,
+        ),
+      )
+      .returning({ id: eventOutbox.id });
+    if (updated.length > 0) return 'decided';
+
+    const [row] = await this.db
+      .select({ payload: eventOutbox.payload })
+      .from(eventOutbox)
+      .where(eq(eventOutbox.eventId, params.eventId));
+    if (!row) return 'closed';
+    const payload = (row.payload ?? {}) as Record<string, unknown>;
+    if (payload.decision !== null && payload.decision !== undefined) return 'already_decided';
+    return 'closed';
+  };
+
+  /**
+   * One-time consume of an approved tool-approval receipt. Succeeds only when
+   * the receipt is pending, approved, unexpired, unconsumed, and the call
+   * presents the same `argsHash` the approval covered — the UPDATE itself is
+   * the CAS, so two racing executions cannot both observe the grant.
+   */
+  consumeToolApprovalReceipt = async (params: {
+    argsHash: string;
+    eventId: string;
+    now: number;
+  }): Promise<boolean> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({
+        payload: sql`jsonb_set(${eventOutbox.payload}, '{consumedAt}', to_jsonb(${params.now}::numeric), true)`,
+      })
+      .where(
+        and(
+          eq(eventOutbox.eventId, params.eventId),
+          eq(eventOutbox.status, 'pending'),
+          sql`${eventOutbox.payload}->>'consumedAt' is null`,
+          sql`${eventOutbox.payload}->'decision'->>'action' = 'approved'`,
+          sql`(${eventOutbox.payload}->>'expiresAt')::numeric > ${params.now}`,
+          sql`${eventOutbox.payload}->>'argsHash' = ${params.argsHash}`,
+        ),
+      )
+      .returning({ id: eventOutbox.id });
+    return updated.length > 0;
+  };
+
+  /**
+   * Re-pend an EXPIRED, still-undecided-or-unconsumed approval receipt under a
+   * fresh window. Any stale decision is cleared so an approval recorded inside
+   * the dead window can never ride the new one. Denied or consumed receipts
+   * stay terminal — the caller's read-back classifies them.
+   */
+  renewToolApprovalReceipt = async (params: {
+    eventId: string;
+    expiresAt: number;
+    now: number;
+  }): Promise<boolean> => {
+    const updated = await this.db
+      .update(eventOutbox)
+      .set({
+        nextAttemptAt: new Date(params.expiresAt),
+        payload: sql`jsonb_set(
+          jsonb_set(
+            ${eventOutbox.payload} #- '{decision}',
+            '{expiresAt}', to_jsonb(${params.expiresAt}::numeric), true),
+          '{requestedAt}', to_jsonb(${params.now}::numeric), true)`,
+      })
+      .where(
+        and(
+          eq(eventOutbox.eventId, params.eventId),
+          eq(eventOutbox.status, 'pending'),
+          sql`${eventOutbox.payload}->>'consumedAt' is null`,
+          sql`(${eventOutbox.payload}->>'expiresAt')::numeric <= ${params.now}`,
+        ),
+      )
+      .returning({ id: eventOutbox.id });
+    return updated.length > 0;
+  };
+
+  /**
+   * Read-back for the approval/consume paths: the raw payload after a CAS
+   * attempt decides which refusal reason applies.
+   */
+  getDeliveryReceiptPayload = async (
+    eventId: string,
+  ): Promise<Record<string, unknown> | undefined> => {
+    const [row] = await this.db
+      .select({ payload: eventOutbox.payload })
+      .from(eventOutbox)
+      .where(eq(eventOutbox.eventId, eventId));
+    return row?.payload as Record<string, unknown> | undefined;
   };
 
   /**

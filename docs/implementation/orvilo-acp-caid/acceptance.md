@@ -9,21 +9,57 @@
 > seeded `agent-testing@orvilo.aspectlylabs.com`）。可证明的「退役 / 准入 / 门禁类」行已按
 > 实机 HTTP/DB 证据与已落地测试标 PASS；凡需真实 ACP harness、绑定可达设备、LLM 凭据或发布产物的行
 > 一律记 `BLOCKED` 并写明缺什么（汇总见 `cutover-runbook.md` §5）。
+>
+> **R00 更正（2026-09-20，组合树 HEAD `51a2b7ed` = PR #148 `refactor/finish-legacy-retirement`）**：
+> 独立审查（`01-review-report.md`）对 P00–P21 组合树发现 F01–F12。本矩阵已将复合行拆为
+> 「退役负路径（-neg）」与「保留正路径（-pos）」两列：负路径 PASS 不自动证明正路径能力。
+> 新增 `PARTIAL` 状态：已有部分证据但存在已知缺口，缺口由整改项 R01–R11 收口（见 `remediation/`）。
+> 以全部 `PASS` 行汇总宣称整体验收通过仍然不成立 —— 见 §9 整改状态。
+
+## 0. 组合树与 PR 清单（固定审查基线）
+
+| Plan | PR   | Head SHA    | 计划依赖                    | 审查结论摘要                                  |
+| ---- | ---- | ----------- | --------------------------- | --------------------------------------------- |
+| P00  | #126 | `f377b5111` | —                           | 清点文档已交付；非产品验证替代                |
+| P01  | #127 | `ac85ad500` | P00                         | 执行契约迁移已有成果                          |
+| P02  | #128 | `384664e78` | P01                         | facade 拆分形成；F06/F09 待收口               |
+| P03  | #129 | `848ca8433` | P02                         | 品牌清理有实改；产物 / 升级验证待补           |
+| P04  | #130 | `685d3a9af` | P03                         | 双读窗口实现；升级矩阵待补                    |
+| P05  | #132 | `c3ce5c95e` | P04                         | Provider 控制面退役；F10 待收口               |
+| P06  | #133 | `84482e8d5` | P05                         | 观测面保留；F11 待收口                        |
+| P07  | #134 | `348930214` | P06                         | live/historical registry 拆分                 |
+| P08  | #135 | `59a044077` | P07                         | doc-only 审计；正路径 BLOCKED                 |
+| P09  | #136 | `62df9e11e` | P08                         | 工具 outcomes 合同；F04/F05 待收口            |
+| P10  | #137 | `097d6b91b` | P09                         | doc-only 审计；F06 待收口                     |
+| P11  | #138 | `b68f9ff03` | P10                         | contract 元数据写入；F07 待收口               |
+| P12  | #139 | `1de79faf2` | P11                         | 增量 patch/CAS 有实改                         |
+| P13  | #140 | `571f55f13` | P12                         | 锁内依赖重验有实改                            |
+| P14  | #141 | `6511fdacd` | P13                         | 预检 / 恢复有实改；F01/F02 阻塞               |
+| P15  | #142 | `45bad7482` | P14                         | same-ref 串行化；F03 待收口                   |
+| P16  | #143 | `b027ff313` | P15                         | goal-stop fences；F08 待收口                  |
+| P17  | #144 | `2f34aab63` | P16                         | 集成状态 UI / 并发设置接线                    |
+| P18  | #145 | `318017a48` | P17                         | 合同测试有价值；非真实设备生命周期            |
+| P19  | #146 | `9d1a49042` | P04,P05,P06,P09,P10,P17,P18 | 防复活门禁有价值                              |
+| P20  | #147 | `2fc8943cd` | P19                         | negative probes + runbook；核心正路径 BLOCKED |
+| P21  | #148 | `51a2b7edc` | P20                         | 物理删除已提交；合并须待 R01–R11 门禁         |
+
+备注：`#131` 为无关 navigation/E2E PR，不属于本计划。并行链 #129–#133 已按依赖并入 P19 所在栈。
 
 ## 状态词汇
 
-`NOT_RUN` 未执行・`BLOCKED` 缺前置（记原因）・`PASS`（附证据链接）・`FAIL`（附缺陷）
+`NOT_RUN` 未执行・`BLOCKED` 缺前置（记原因）・`PASS`（附证据链接）・`FAIL`（附缺陷）・`PARTIAL` 部分证据，已知缺口挂到整改项
 
 ## 1. 退役与准入（旧体系不可复活）
 
-| ID    | 场景                                           | 通过标准                                                  | 状态    | 证据                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ----- | ---------------------------------------------- | --------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| E15   | 旧 Lobe engine/Provider 配置导入               | 历史可读；新执行拒绝并要求 ACP binding                    | PASS    | IMPORT\_TABLE\_CONFIG 不再含 `aiProviders`/`aiModels`（P19 importer guard `apps/server/src/retirementGuards.test.ts`）；异构执行必经 dispatchAuthorization 绑定设备（本机 op 落 `error`/`No bound device for hetero agent`）                                                                                                                                                                                 |
-| E16   | SDK/CLI/Labs/env 绕过                          | 不能恢复旧 LLM loop 或 Provider 凭据注入                  | PASS    | `resolveQuotaAccountEnv`/`claudeCodeDirectEnv` 已删且由 P19 guards 锁定；`LOBE_*_ACP_COMMAND` 双读仅选 ACP 二进制路径，不携带凭据注入                                                                                                                                                                                                                                                                        |
-| E21   | 退役隐藏路由 / 旧客户端                        | 任意认证方式返回一致退役错误；任务验收 /automation 仍工作 | PASS    | 实机（SHA `210a63a3` dev 栈）：`POST/GET /api/v1/chat{,/translate,/generate-reply}`、`/api/v1/anthropic/messages`、`/api/v1/openai/chat`、`/api/v1/heterogeneous-relay/operations` → 404；trpc `agentQuota.{createAccount,switchAccount,selectAccountForAgent}` → `No procedure found`；保留面 `messages/responses/agents/topics` 存活（400 schema 校验而非 404）、`agentQuota.listAccounts` 认证后返回 `[]` |
-| E22   | 发布 bundle 与默认出站                         | 产物不含旧引擎；不请求退役 Lobe 服务                      | BLOCKED | 源码侧已证（P19：hetero 包与 `src/` 无 `@orvilo/agent-runtime` import）；发布构建产物未扫 —— 缺一次固定 SHA 的 `bun run build` + dist 扫描（本机未跑 release build）                                                                                                                                                                                                                                         |
-| RB01a | 全入口拒绝旧 engine ID / 未知 runtime / 无绑定 | UI/API/CLI/import/cron/webhook 一致                       | PASS    | P19：production registry 仅含 live ACP 类型（registry 守卫 `extensionContract.test.ts` + `retirementGuard.test.ts`）；实机：goal.advance 派发的 hetero op 因无绑定设备显式落 `error`（无静默回退）                                                                                                                                                                                                           |
-| E14   | `autoStart:false` 旧调用                       | 明确 queued intent 或明确拒绝；不无声提前启动             | PASS    | 实机：`aiAgent.startExecution` 对不存在 op 显式报 `Operation ... not found`；代码路径返回 `scheduled:false` 且对终态显式报错（`AgentRuntimeService.startExecution`，SHA `210a63a3`）                                                                                                                                                                                                                         |
+| ID      | 场景                                           | 通过标准                                      | 状态    | 证据                                                                                                                                                                                                                                                                                   |
+| ------- | ---------------------------------------------- | --------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E15     | 旧 Lobe engine/Provider 配置导入               | 历史可读；新执行拒绝并要求 ACP binding        | PASS    | IMPORT\_TABLE\_CONFIG 不再含 `aiProviders`/`aiModels`（P19 importer guard `apps/server/src/retirementGuards.test.ts`）；异构执行必经 dispatchAuthorization 绑定设备（本机 op 落 `error`/`No bound device for hetero agent`）                                                           |
+| E16     | SDK/CLI/Labs/env 绕过                          | 不能恢复旧 LLM loop 或 Provider 凭据注入      | PASS    | `resolveQuotaAccountEnv`/`claudeCodeDirectEnv` 已删且由 P19 guards 锁定；`LOBE_*_ACP_COMMAND` 双读仅选 ACP 二进制路径，不携带凭据注入                                                                                                                                                  |
+| E21-neg | 退役隐藏路由 / 旧客户端（退役侧）              | 任意认证方式返回一致退役错误                  | PASS    | 实机（SHA `210a63a3` dev 栈）：`POST/GET /api/v1/chat{,/translate,/generate-reply}`、`/api/v1/anthropic/messages`、`/api/v1/openai/chat`、`/api/v1/heterogeneous-relay/operations` → 404；trpc `agentQuota.{createAccount,switchAccount,selectAccountForAgent}` → `No procedure found` |
+| E21-pos | 任务验收 /automation 等保留面正路径仍工作      | 保留功能真实可用，不仅 schema 校验活着        | BLOCKED | 保留面 `messages/responses/agents/topics` 存活证据仅为 400 schema 校验（非正向功能证据）、`agentQuota.listAccounts` 认证后返回 `[]`（空列表不证明正向能力）；正路径聊天 / 任务验收待 R11                                                                                               |
+| E22     | 发布 bundle 与默认出站                         | 产物不含旧引擎；不请求退役 Lobe 服务          | BLOCKED | 源码侧已证（P19：hetero 包与 `src/` 无 `@orvilo/agent-runtime` import）；发布构建产物未扫 —— 缺一次固定 SHA 的 `bun run build` + dist 扫描（本机未跑 release build）                                                                                                                   |
+| RB01a   | 全入口拒绝旧 engine ID / 未知 runtime / 无绑定 | UI/API/CLI/import/cron/webhook 一致           | PASS    | P19：production registry 仅含 live ACP 类型（registry 守卫 `extensionContract.test.ts` + `retirementGuard.test.ts`）；实机：goal.advance 派发的 hetero op 因无绑定设备显式落 `error`（无静默回退）                                                                                     |
+| E14     | `autoStart:false` 旧调用                       | 明确 queued intent 或明确拒绝；不无声提前启动 | PARTIAL | 实机：`aiAgent.startExecution` 对不存在 op 显式报 `Operation ... not found`，对终态显式报错（负路径已证）；**缺口 F09**：合法 `idle` op 仍落到 `scheduled:false / success:true` 成功无动作，未验证 `autoStart:false` 合法输入合同 —— 整改 R05                                          |
 
 ## 2. ACP 真实执行边界
 
@@ -69,14 +105,16 @@
 
 ## 6. Provider/Quota/ 品牌 / 数据
 
-| ID   | 场景                 | 通过标准                                                                                                 | 状态    | 证据                                                                                                                                                                                                                                     |
-| ---- | -------------------- | -------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P06a | Quota 观测           | 绑定所选执行设备；unknown≠0 / 满；无切号 / 托管 OAuth                                                    | PASS    | 实机：观测面 `listAccounts`/`getWindows`/`getLatestReadings`/`listSnapshots`/`listUsageTurns` 存活（schema 校验活着），控制面 `createAccount`/`switchAccount`/`selectAccountForAgent` 全部 `No procedure found`；UI 为只读行（P06 diff） |
-| P06b | 无 quota 服务时聊天  | 授权 ACP 运行仍按策略启动                                                                                | BLOCKED | quota 不进执行链已由退役证明（执行侧不再读 quota account env）；「仍按策略启动」的通过侧需真实 harness 运行                                                                                                                              |
-| E17  | 账号管理面退役       | create/bind/switch/select/loads 入口全部不可用                                                           | PASS    | 实机 404（见 E21 行）；P19 server guard 对九个退役 procedure 逐项锁定、对七个观测 procedure 锁定保留                                                                                                                                     |
-| E18  | 品牌全表面           | 新装 / 升级、Web/Desktop、通知 / 分享 / 导出 / CLI 均 Orvilo；第三方归属不误伤                           | BLOCKED | Web SPA HTML 实测 Orvilo 品牌零 lobehub（`210a63a3`）；桌面安装 / 升级、通知 / 分享 / 导出、CLI 全表面未实机跑 —— 缺安装包 / 升级通道                                                                                                    |
-| E19  | 数据升级与回滚       | 迁移幂等可重复；不触碰外部官方应用 / CLI 数据                                                            | PASS    | 本机 177 个迁移全部应用（0090/0093 pg\_search 按 marker 规则跳过 → FTS 缺席，已在 runbook §1 声明）；再跑 `init-dev-env.sh migrate` 为 no-op 幂等通过；本栈唯一迁移 `0176_task_topics_contract` 为 additive nullable jsonb               |
-| P05a | 非主聊天模型调用审计 | 标题 / 摘要 / 规划 / Verify/AgentSignal 逐消费者：ACP 绑定、确定性替代或退役；无隐藏 generateObject 后门 | PASS    | P05 `provider-retirement.md` 逐消费者处置；`initModelRuntimeFromDB` 已删（P19 server guard 零命中）                                                                                                                                      |
+| ID       | 场景                               | 通过标准                                                                       | 状态    | 证据                                                                                                                                                                                                                       |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P06a-neg | Quota 控制面退役                   | 无切号 / 托管 OAuth / 池路由入口                                               | PASS    | 实机：控制面 `createAccount`/`switchAccount`/`selectAccountForAgent` 全部 `No procedure found`；观测面 `listAccounts`/`getWindows`/`getLatestReadings`/`listSnapshots`/`listUsageTurns` 存活；UI 为只读行（P06 diff）      |
+| P06a-pos | Quota 观测身份归属                 | 绑定所选执行设备；unknown≠0 / 满                                               | PARTIAL | **缺口 F11**：本地无 `deviceId` 时 `QuotaMenu` 回退 `claude[0]`、ingest 失败后 `find(externalId) ?? claude[0]` 可能显示错误身份读数 —— 整改 R09                                                                            |
+| P06b     | 无 quota 服务时聊天                | 授权 ACP 运行仍按策略启动                                                      | BLOCKED | quota 不进执行链已由退役证明（执行侧不再读 quota account env）；「仍按策略启动」的通过侧需真实 harness 运行                                                                                                                |
+| E17      | 账号管理面退役                     | create/bind/switch/select/loads 入口全部不可用                                 | PASS    | 实机 404（见 E21 行）；P19 server guard 对九个退役 procedure 逐项锁定、对七个观测 procedure 锁定保留                                                                                                                       |
+| E18      | 品牌全表面                         | 新装 / 升级、Web/Desktop、通知 / 分享 / 导出 / CLI 均 Orvilo；第三方归属不误伤 | BLOCKED | Web SPA HTML 实测 Orvilo 品牌零 lobehub（`210a63a3`）；桌面安装 / 升级、通知 / 分享 / 导出、CLI 全表面未实机跑 —— 缺安装包 / 升级通道                                                                                      |
+| E19      | 数据升级与回滚                     | 迁移幂等可重复；不触碰外部官方应用 / CLI 数据                                  | PASS    | 本机 177 个迁移全部应用（0090/0093 pg\_search 按 marker 规则跳过 → FTS 缺席，已在 runbook §1 声明）；再跑 `init-dev-env.sh migrate` 为 no-op 幂等通过；本栈唯一迁移 `0176_task_topics_contract` 为 additive nullable jsonb |
+| P05a-neg | 非主聊天模型调用审计（退役侧）     | 用户 keyVault/BYOK 直连入口退役；无隐藏 generateObject 后门                    | PASS    | P05 `provider-retirement.md` 逐消费者处置；`initModelRuntimeFromDB` 已删（P19 server guard 零命中）                                                                                                                        |
+| P05a-pos | 保留的规划 / 评审 / 反思判断走 ACP | 后台 Agent 判断经授权 ACP 运行或显式批准的例外                                 | PARTIAL | **缺口 F10**：`AiGenerationService.generateObject` → `initModelRuntimeFromDeploymentConfig` 仍走部署级 PROVIDER\_API\_KEY/PROXY\_URL 直连；规划 / Verify judge 链未 ACP 化 —— 整改 R08（或维护者显式 ADR 裁决）            |
 
 ## 7. 发布判定硬条件（Q0 前置）
 
@@ -89,6 +127,7 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 异步路径无丢失证据/取消/超时保障            ← 服务测试已证；真实链路待 §4 行解锁
 保护功能有真实成功与拒绝用例                ← 拒绝用例已实机证明（bound-device 拒绝）；成功用例缺 harness
 固定整合 SHA 的全部必需 CI 与 Q0 通过        ← 待固定 SHA + CI 绿（@hugeicons 上游修复前置）
+整改 findings 全部收口（R01–R11）          ← F01–F12 未收口前 P21 保持 draft、不得合并发布
 ```
 
 ## 8. 验收纪律
@@ -96,3 +135,24 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 - 真实 ACP/Preview 用例必须真机执行；环境缺位记 `BLOCKED` 并写明缺什么（设备、登录、runner、Vercel 限流等）。
 - `Q0` 为只读独立验收，对固定组合 SHA 出证据矩阵，不接受 “测试全绿” 叙述代替行为证据。
 - 回滚底线：退到最近 ACP-only 版本或暂停 CAID 新调度；**不以复活 Lobe engine 为回滚**。
+
+## 9. 整改状态（F01–F12 → R01–R11）
+
+独立审查发现 12 项问题；完成定义按 `IMPLEMENTED / UNIT_OR_CONTRACT_TESTED / INTEGRATION_TESTED / LIVE_ACCEPTED / RELEASE_READY` 分级记录，互不相冒。
+
+| Finding | 级别     | 整改        | 状态 | 摘要                                                                                                                               |
+| ------- | -------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| F01     | P0       | R01         | OPEN | taskWorkspace 按目录名推断归属，`同路径不同分支` 触发 `worktree remove --force` —— 潜在数据丢失，停自动强删                        |
+| F02     | P1       | R01         | OPEN | 「孤儿目录清理」调用只认已登记 worktree 的 `removeGitWorktree`，恢复链实际不通                                                     |
+| F03     | P1       | R02         | OPEN | `withRepoRefLease` 在 pg\_advisory\_xact\_lock 事务内做远程 I/O，回调仍用原连接 —— 连接池饥饿风险                                  |
+| F04     | P1       | R03         | OPEN | 外部 MCP/Connector 仍 `no-server-executor/unsupported`，装配链未实现                                                               |
+| F05     | P1       | R03         | OPEN | 必需工具仅在 `mountedTools.length===0` 时阻塞；部分失败 /`disableTools` 冲突不拦                                                   |
+| F06     | P1       | R04         | OPEN | `tryResumeParentFromAsyncTool` 不回投 ACP 继续；`awaitAcpBuiltinToolChildren` 只认 `running`，`waiting_for_human` 会被误判 settled |
+| F07     | P1       | R06         | OPEN | TaskExecutionContract 只是快照：prompt / 准入不同源，base 用 `origin/<branch>` 可变引用                                            |
+| F08     | P1       | R07         | OPEN | 首快照成功即清零失败计数，merge-boundary 连续失败永远停在第 1 次                                                                   |
+| F09     | P1       | R05         | OPEN | `startExecution` 对合法 `idle` 返回 `success:true/scheduled:false` 成功无动作                                                      |
+| F10     | P1       | R08         | OPEN | 后台判断链（规划 / Verify / 反思）仍经 `initModelRuntimeFromDeploymentConfig` 部署密钥直连，未 ACP 化                              |
+| F11     | P2       | R09         | OPEN | Quota 菜单无 `deviceId` 回退 `claude[0]`，可能显示他人身份读数                                                                     |
+| F12     | 发布阻塞 | R00/R10/R11 | OPEN | 复合 PASS 已拆（本文件）；缺 `caid_dispatch_enabled` 服务端开关；固定 SHA 正路径验收未跑                                           |
+
+状态口径：本表 `OPEN` 表示整改 PR 未合入并通过门禁；各项收口后由 R11 在固定整合 SHA 上重跑对应回归行（`03-regression-matrix.md`）。

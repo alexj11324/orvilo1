@@ -9,6 +9,7 @@ export * from './agentEvals';
 export * from './agentHistoryJob';
 export * from './agentIntervention';
 export * from './agentLabel';
+export * from './agentOperationLaunch';
 export * from './agentOperations';
 export * from './agentQuota';
 export * from './agentShare';

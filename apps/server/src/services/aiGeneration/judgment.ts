@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto';
+
 import { computePromptHash, resolveScenario } from '@orvilo/llm-generation-tracing';
 import type { GenerateObjectPayload, GenerateObjectSchema } from '@orvilo/model-runtime';
 import type { AgentOperationStatus, OpenAIChatMessage } from '@orvilo/types';
 import { isTerminalAgentOperationStatus } from '@orvilo/types';
-import { nanoid } from '@orvilo/utils';
 import Ajv from 'ajv';
 import debug from 'debug';
 
@@ -61,11 +62,18 @@ export class AcpJudgmentRunError extends Error {
   readonly status?: AgentOperationStatus;
   /** Result of the interrupt attempt — 'unknown' must not be read as stopped. */
   readonly cancelResult?: 'confirmed' | 'unknown';
+  /**
+   * The launch identity the failure was recorded under — a caller that retries
+   * hands the same key back so the durable launch (and its reconcile state) is
+   * adopted instead of spawning a second writer.
+   */
+  readonly intentKey?: string;
 
   constructor(
     message: string,
     detail: {
       cancelResult?: 'confirmed' | 'unknown';
+      intentKey?: string;
       operationId?: string;
       status?: AgentOperationStatus;
     } = {},
@@ -75,6 +83,7 @@ export class AcpJudgmentRunError extends Error {
     this.operationId = detail.operationId;
     this.status = detail.status;
     this.cancelResult = detail.cancelResult;
+    this.intentKey = detail.intentKey;
   }
 }
 
@@ -511,16 +520,45 @@ export const runAcpJudgment = async <T = unknown>(
   const slugBound = 'slug' in binding;
   const maxSteps = judgment.maxSteps ?? DEFAULT_MAX_STEPS;
   const timeoutMs = judgment.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const attempt = judgment.attempt ?? 0;
   // The budget covers dispatch latency too — the deadline and the dispatch
   // abort controller are established BEFORE the execAgent side-effect so a
   // slow or lost start consumes the caller's budget instead of escaping it.
   const deadline = Date.now() + timeoutMs;
-  // Launch identity: minted before dispatch and stamped on the operation row,
-  // so a dispatch whose return value is lost (throw / caller abort / hang past
-  // the budget) is reconciled by intent — never re-dispatched as a second
-  // writer.
+  // Launch identity: a caller may pin `judgment.intentKey` to re-issue the same
+  // logical launch; otherwise the key is a content hash of the stable business
+  // request (purpose + subject + payload + schema) so a plain retry dedupes
+  // against the SAME durable launch — never a random id that defeats the
+  // admission record.
   const intentKey =
-    judgment.intentKey ?? `${judgment.purpose}:${judgment.attempt ?? 0}:${nanoid(10)}`;
+    judgment.intentKey ??
+    `${judgment.purpose}:${attempt}:${createHash('sha256')
+      .update(
+        JSON.stringify({
+          messages: input.messages,
+          parentOperationId: judgment.parentOperationId ?? null,
+          schema: input.schema ?? null,
+          taskId: judgment.taskId ?? null,
+        }),
+      )
+      .digest('hex')
+      .slice(0, 16)}`;
+
+  const operations = new AgentOperationModel(db, userId, workspaceId);
+  const messages = new MessageModel(db, userId, workspaceId);
+
+  /**
+   * Atomically register the launch BEFORE the execAgent side effect: the
+   * unique key (principal, workspace, purpose, intentKey, attempt) is the
+   * durable admission record — a same-intent concurrent call or a retry reads
+   * /takes over this launch instead of spawning a second writer.
+   */
+  const { claimed, launch } = await operations.claimOperationLaunch({
+    attempt,
+    deadlineAt: new Date(deadline),
+    intentKey,
+    purpose: judgment.purpose,
+  });
 
   const dispatchController = new AbortController();
   const onCallerAbort = () => dispatchController.abort(judgment.signal?.reason);
@@ -535,9 +573,6 @@ export const runAcpJudgment = async <T = unknown>(
     onDeadline();
   }, timeoutMs);
   deadlineTimer.unref();
-
-  const operations = new AgentOperationModel(db, userId, workspaceId);
-  const messages = new MessageModel(db, userId, workspaceId);
 
   /**
    * Interrupt a run and report PHYSICAL stop authority — `interruptTask`'s
@@ -581,160 +616,69 @@ export const runAcpJudgment = async <T = unknown>(
         ? 'interrupted'
         : latest?.status;
 
-  const execPromise = new AiAgentService(db, userId, { workspaceId }).execAgent({
-    ...binding,
-    appContext: {
-      judgment: {
-        attempt: judgment.attempt,
-        budget: { maxSteps, maxWaitMs: timeoutMs },
-        intentKey,
-        purpose: judgment.purpose,
-      },
-      suppressSignal: true,
-      taskId: judgment.taskId ?? null,
-    },
-    autoStart: true,
-    disableTools: true,
-    fileIds: judgment.fileIds,
-    instructions,
-    // Advisory override: a slug-bound builtin has no user tuning, so it takes
-    // the resolved model/provider. A pinned agent keeps its own runtime config.
-    ...(slugBound && judgment.model ? { model: judgment.model } : {}),
-    ...(slugBound && judgment.provider ? { provider: judgment.provider } : {}),
-    maxSteps,
-    parentOperationId: judgment.parentOperationId,
-    prompt: body,
-    signal: dispatchController.signal,
-    taskId: judgment.taskId,
-    title: `[judgment] ${judgment.purpose}`,
-    trigger: ACP_JUDGMENT_TRIGGER,
-    userInterventionConfig: { approvalMode: 'headless' },
-  });
-  // `settled` never rejects — the race below decides the outcome.
-  const settled = execPromise.then(
-    (value) => ({ kind: 'ok' as const, value }),
-    (error) => ({ error, kind: 'err' as const }),
-  );
-  const callerAborted = new Promise<{ kind: 'caller' }>((resolve) => {
-    if (!judgment.signal) return;
-    if (judgment.signal.aborted) resolve({ kind: 'caller' });
-    else
-      judgment.signal.addEventListener('abort', () => resolve({ kind: 'caller' }), { once: true });
-  });
+  /** Interrupt whatever operation landed — tolerates null and terminal rows. */
+  const interruptIfLanded = async (op: AgentOperationItem | null) =>
+    op && !isTerminalAgentOperationStatus(op.status)
+      ? interrupt('dispatch outcome lost', op.id)
+      : undefined;
 
-  try {
-    const raced = await Promise.race([
-      settled,
-      callerAborted,
-      deadlineReached.then(() => ({ kind: 'timeout' as const })),
-    ]);
-
-    if (raced.kind !== 'ok' || judgment.signal?.aborted) {
-      // Dispatch threw, the caller aborted, or the total budget was spent
-      // before execAgent returned. The operation row may still have landed —
-      // reconcile by intentKey so the landed writer is interrupted, not
-      // orphaned, and no second dispatch is ever attempted.
-      const interruptIfLanded = async (op: AgentOperationItem | null) =>
-        op && !isTerminalAgentOperationStatus(op.status)
-          ? interrupt('dispatch outcome lost', op.id)
-          : undefined;
-      // A still-pending exec that lands late is reconciled in the background —
-      // it can no longer answer the caller but must not leak a live writer.
-      void settled.then(async (s) => {
-        const late =
-          s.kind === 'ok'
-            ? await operations.findById(s.value.operationId).catch(() => null)
-            : await reconcileIntent();
-        await interruptIfLanded(late);
-      });
-      const landed =
-        raced.kind === 'ok'
-          ? await operations.findById(raced.value.operationId).catch(() => null)
-          : await reconcileIntent();
-      const cancelResult = await interruptIfLanded(landed);
-      // Re-read after the interrupt: a run that reached 'done' on its own
-      // while the cancel was in flight reports 'done', never 'interrupted'.
-      const latest = landed ? await operations.findById(landed.id).catch(() => landed) : landed;
-      const detail = {
-        cancelResult,
-        operationId: landed?.id ?? (raced.kind === 'ok' ? raced.value.operationId : undefined),
-        status: reportedStatus(cancelResult, latest ?? landed),
-      };
-      if (raced.kind === 'err' && !judgment.signal?.aborted && Date.now() <= deadline) {
-        const message = raced.error instanceof Error ? raced.error.message : String(raced.error);
-        throw new AcpJudgmentRunError(
-          `Judgment "${judgment.purpose}" dispatch failed: ${message}`,
-          detail,
-        );
-      }
-      throw new AcpJudgmentRunError(
-        judgment.signal?.aborted || raced.kind === 'caller'
-          ? `Judgment "${judgment.purpose}" aborted by caller`
-          : `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget during dispatch`,
-        detail,
-      );
+  /**
+   * Durable post-failure converge: the cancel intent is persisted on the
+   * launch row BEFORE the interrupt — if this process dies mid-reconcile, a
+   * later same-intent call still finds 'cancel_requested' and finishes the
+   * job instead of relying on an unawaited in-process promise.
+   */
+  const convergeLaunch = async (
+    reason: string,
+    knownOperationId?: string,
+  ): Promise<{
+    cancelResult?: 'confirmed' | 'unknown';
+    latest?: AgentOperationItem | null;
+  }> => {
+    await operations.requestOperationLaunchCancel(launch.id, reason).catch((error) => {
+      log('judgment launch %s cancel intent persist failed (%s): %O', launch.id, reason, error);
+    });
+    let landed = knownOperationId
+      ? await operations.findById(knownOperationId).catch(() => null)
+      : null;
+    landed = landed ?? (await reconcileIntent());
+    if (landed && !knownOperationId) {
+      await operations.bindOperationLaunch(launch.id, landed.id).catch(() => undefined);
     }
-    const operationId = raced.value.operationId;
+    const cancelResult = await interruptIfLanded(landed);
+    // Re-read after the interrupt: a run that reached 'done' on its own while
+    // the cancel was in flight reports 'done', never 'interrupted'.
+    const latest = landed ? await operations.findById(landed.id).catch(() => landed) : landed;
+    await operations.settleOperationLaunch(launch.id, 'failed').catch(() => undefined);
+    return { cancelResult, latest };
+  };
 
-    let operation = await operations.findById(operationId);
-    for (;;) {
-      if (Date.now() > deadline) {
-        // The budget is binding even against a row that flipped terminal late:
-        // a 'done' observed past the deadline is reported honestly but never
-        // accepted as a successful judgment.
-        const cancelResult = await interrupt('wait budget exceeded', operationId);
-        const latest = await operations.findById(operationId).catch(() => operation);
-        throw new AcpJudgmentRunError(
-          `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
-          {
-            cancelResult,
-            operationId,
-            status: reportedStatus(cancelResult, latest ?? operation),
-          },
-        );
-      }
-      if (operation && isTerminalAgentOperationStatus(operation.status)) break;
-      if (judgment.signal?.aborted) {
-        const cancelResult = await interrupt('caller signal aborted', operationId);
-        const latest = await operations.findById(operationId).catch(() => operation);
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-          cancelResult,
-          operationId,
-          status: reportedStatus(cancelResult, latest ?? operation),
-        });
-      }
-      if (
-        (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
-        'aborted'
-      ) {
-        const cancelResult = await interrupt('caller signal aborted', operationId);
-        const latest = await operations.findById(operationId).catch(() => operation);
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-          cancelResult,
-          operationId,
-          status: reportedStatus(cancelResult, latest ?? operation),
-        });
-      }
-      operation = await operations.findById(operationId);
-    }
-
+  /**
+   * Read the terminal outcome of an operation into the judgment result —
+   * shared by the claim owner and the same-intent adoption path, so a retry
+   * that adopted an existing launch derives the identical answer/failure from
+   * the durable row instead of re-dispatching.
+   */
+  const readJudgmentOutcome = async (
+    operation: AgentOperationItem,
+  ): Promise<AcpJudgmentResult<T>> => {
     const run: AcpJudgmentRunRecord = {
-      assistantMessageId: (operation!.metadata as { assistantMessageId?: string } | null)
+      assistantMessageId: (operation.metadata as { assistantMessageId?: string } | null)
         ?.assistantMessageId,
-      model: operation!.model,
-      operationId,
-      provider: operation!.provider,
-      status: operation!.status,
-      totalCost: operation!.totalCost,
-      totalInputTokens: operation!.totalInputTokens,
-      totalOutputTokens: operation!.totalOutputTokens,
+      model: operation.model,
+      operationId: operation.id,
+      provider: operation.provider,
+      status: operation.status,
+      totalCost: operation.totalCost,
+      totalInputTokens: operation.totalInputTokens,
+      totalOutputTokens: operation.totalOutputTokens,
     };
 
-    if (operation!.status !== 'done') {
-      const detail = (operation!.error as { message?: string } | null)?.message;
+    if (operation.status !== 'done') {
+      const detail = (operation.error as { message?: string } | null)?.message;
       await recordJudgmentTracing({
         input: input.messages,
-        operation: operation!,
+        operation,
         output: null,
         purpose: judgment.purpose,
         schema: input.schema,
@@ -743,8 +687,8 @@ export const runAcpJudgment = async <T = unknown>(
         workspaceId,
       });
       throw new AcpJudgmentRunError(
-        `Judgment "${judgment.purpose}" ended ${operation!.status}${detail ? `: ${detail}` : ''}`,
-        { operationId, status: operation!.status },
+        `Judgment "${judgment.purpose}" ended ${operation.status}${detail ? `: ${detail}` : ''}`,
+        { intentKey, operationId: operation.id, status: operation.status },
       );
     }
 
@@ -761,7 +705,7 @@ export const runAcpJudgment = async <T = unknown>(
     const tracingId = await recordJudgmentTracing({
       errorCode: succeeded ? undefined : hasJson ? 'schema_mismatch' : 'no_json',
       input: input.messages,
-      operation: operation!,
+      operation,
       output: succeeded ? data : null,
       purpose: judgment.purpose,
       schema: input.schema,
@@ -774,15 +718,274 @@ export const runAcpJudgment = async <T = unknown>(
 
     if (!hasJson) {
       throw new AcpJudgmentRunError(
-        `Judgment "${judgment.purpose}" returned no parseable JSON (op ${operationId})`,
-        { operationId, status: operation!.status },
+        `Judgment "${judgment.purpose}" returned no parseable JSON (op ${operation.id})`,
+        { intentKey, operationId: operation.id, status: operation.status },
       );
     }
     if (validationIssues.length) {
-      throw new AcpJudgmentValidationError(judgment.purpose, validationIssues, operationId);
+      throw new AcpJudgmentValidationError(judgment.purpose, validationIssues, operation.id);
     }
 
     return { data: data as T, run, tracingId };
+  };
+
+  /**
+   * Same-intent adoption: read or take over the recorded launch — never
+   * spawns a second writer. A `claimed` launch whose own deadline has lapsed
+   * is an orphaned claim (the winner died between claim and bind): reconcile
+   * by intent — bind a late-landed row if one exists — then converge.
+   */
+  const adoptExistingLaunch = async (): Promise<AcpJudgmentResult<T>> => {
+    for (;;) {
+      const current = await operations.findOperationLaunchById(launch.id).catch(() => null);
+      const live = current ?? launch;
+      const landed = live.operationId
+        ? await operations.findById(live.operationId).catch(() => null)
+        : await reconcileIntent();
+      // A row landed under this intent while the launch still awaits its
+      // bind — attach it so the durable record reflects reality.
+      if (landed && !live.operationId) {
+        await operations.bindOperationLaunch(live.id, landed.id).catch(() => undefined);
+      }
+
+      if (live.status === 'failed') {
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" launch already failed`, {
+          intentKey,
+          operationId: live.operationId ?? landed?.id,
+        });
+      }
+      if (live.status === 'cancel_requested') {
+        const { cancelResult, latest } = await convergeLaunch(
+          live.cancelReason ?? 'cancel requested',
+          landed?.id ?? live.operationId ?? undefined,
+        );
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" was canceled`, {
+          cancelResult,
+          intentKey,
+          operationId: latest?.id ?? live.operationId ?? undefined,
+          status: reportedStatus(cancelResult, latest),
+        });
+      }
+      if (landed && isTerminalAgentOperationStatus(landed.status)) {
+        await operations.settleOperationLaunch(live.id, 'settled').catch(() => undefined);
+        return await readJudgmentOutcome(landed);
+      }
+      if (judgment.signal?.aborted) {
+        const { cancelResult, latest } = await convergeLaunch(
+          'caller aborted',
+          landed?.id ?? live.operationId ?? undefined,
+        );
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+          cancelResult,
+          intentKey,
+          operationId: latest?.id ?? live.operationId ?? undefined,
+          status: reportedStatus(cancelResult, latest),
+        });
+      }
+      const launchDeadline = live.deadlineAt?.getTime() ?? deadline;
+      if (Date.now() > deadline || Date.now() > launchDeadline) {
+        // Orphaned claim (winner died pre-bind or mid-dispatch) or an
+        // over-budget live run: reconcile only — never re-spawn.
+        const { cancelResult, latest } = await convergeLaunch(
+          'launch deadline exceeded',
+          landed?.id ?? live.operationId ?? undefined,
+        );
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" launch missed its deadline`, {
+          cancelResult,
+          intentKey,
+          operationId: latest?.id ?? live.operationId ?? undefined,
+          status: reportedStatus(cancelResult, latest),
+        });
+      }
+      if (
+        (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
+        'aborted'
+      ) {
+        const { cancelResult, latest } = await convergeLaunch(
+          'caller aborted',
+          landed?.id ?? live.operationId ?? undefined,
+        );
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+          cancelResult,
+          intentKey,
+          operationId: latest?.id ?? live.operationId ?? undefined,
+          status: reportedStatus(cancelResult, latest),
+        });
+      }
+    }
+  };
+
+  const execPromise = claimed
+    ? new AiAgentService(db, userId, { workspaceId }).execAgent({
+        ...binding,
+        appContext: {
+          judgment: {
+            attempt: judgment.attempt,
+            budget: { maxSteps, maxWaitMs: timeoutMs },
+            intentKey,
+            purpose: judgment.purpose,
+          },
+          suppressSignal: true,
+          taskId: judgment.taskId ?? null,
+        },
+        autoStart: true,
+        disableTools: true,
+        fileIds: judgment.fileIds,
+        instructions,
+        // Advisory override: a slug-bound builtin has no user tuning, so it takes
+        // the resolved model/provider. A pinned agent keeps its own runtime config.
+        ...(slugBound && judgment.model ? { model: judgment.model } : {}),
+        ...(slugBound && judgment.provider ? { provider: judgment.provider } : {}),
+        maxSteps,
+        parentOperationId: judgment.parentOperationId,
+        prompt: body,
+        signal: dispatchController.signal,
+        taskId: judgment.taskId,
+        title: `[judgment] ${judgment.purpose}`,
+        trigger: ACP_JUDGMENT_TRIGGER,
+        userInterventionConfig: { approvalMode: 'headless' },
+      })
+    : null;
+  // `settled` never rejects — the race below decides the outcome.
+  const settled = execPromise?.then(
+    (value) => ({ kind: 'ok' as const, value }),
+    (error) => ({ error, kind: 'err' as const }),
+  );
+  const callerAborted = new Promise<{ kind: 'caller' }>((resolve) => {
+    if (!judgment.signal) return;
+    if (judgment.signal.aborted) resolve({ kind: 'caller' });
+    else
+      judgment.signal.addEventListener('abort', () => resolve({ kind: 'caller' }), { once: true });
+  });
+
+  try {
+    if (!claimed || !settled) {
+      // Same intent already registered — adopt or reconcile the recorded
+      // launch; a second writer is never spawned for the same launch.
+      return await adoptExistingLaunch();
+    }
+
+    const raced = await Promise.race([
+      settled,
+      callerAborted,
+      deadlineReached.then(() => ({ kind: 'timeout' as const })),
+    ]);
+
+    if (raced.kind !== 'ok' || judgment.signal?.aborted) {
+      // Dispatch threw, the caller aborted, or the total budget was spent
+      // before execAgent returned. Persist the cancel intent on the launch row
+      // FIRST so a reconcile survives this process dying; then interrupt
+      // whatever operation landed — never re-dispatched as a second writer.
+      // A still-pending exec that lands late is reconciled in the background —
+      // best-effort fast path; the durable cancel intent lives on the launch
+      // row, so a later same-intent call also finishes the job.
+      void settled.then(async (s) => {
+        if (s.kind === 'ok') {
+          await operations
+            .bindOperationLaunch(launch.id, s.value.operationId)
+            .catch(() => undefined);
+        }
+        const late =
+          s.kind === 'ok'
+            ? await operations.findById(s.value.operationId).catch(() => null)
+            : await reconcileIntent();
+        await interruptIfLanded(late);
+      });
+      const { cancelResult, latest } = await convergeLaunch(
+        judgment.signal?.aborted || raced.kind === 'caller'
+          ? 'caller aborted'
+          : raced.kind === 'timeout'
+            ? 'deadline exceeded during dispatch'
+            : 'dispatch failed',
+        raced.kind === 'ok' ? raced.value.operationId : undefined,
+      );
+      const detail = {
+        cancelResult,
+        intentKey,
+        operationId: latest?.id ?? (raced.kind === 'ok' ? raced.value.operationId : undefined),
+        status: reportedStatus(cancelResult, latest),
+      };
+      if (raced.kind === 'err' && !judgment.signal?.aborted && Date.now() <= deadline) {
+        const message = raced.error instanceof Error ? raced.error.message : String(raced.error);
+        throw new AcpJudgmentRunError(
+          `Judgment "${judgment.purpose}" dispatch failed: ${message}`,
+          detail,
+        );
+      }
+      throw new AcpJudgmentRunError(
+        judgment.signal?.aborted || raced.kind === 'caller'
+          ? `Judgment "${judgment.purpose}" aborted by caller`
+          : `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget during dispatch`,
+        detail,
+      );
+    }
+    const operationId = raced.value.operationId;
+    const boundLaunch = await operations
+      .bindOperationLaunch(launch.id, operationId)
+      .catch(() => null);
+    if (!boundLaunch) {
+      // The launch moved past dispatch while the ACK was in flight — a cancel
+      // intent already landed; converge against whatever exists.
+      const { cancelResult, latest } = await convergeLaunch(
+        'dispatch raced a cancel intent',
+        operationId,
+      );
+      throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" was canceled`, {
+        cancelResult,
+        intentKey,
+        operationId,
+        status: reportedStatus(cancelResult, latest),
+      });
+    }
+
+    let operation = await operations.findById(operationId);
+    for (;;) {
+      if (Date.now() > deadline) {
+        // The budget is binding even against a row that flipped terminal late:
+        // a 'done' observed past the deadline is reported honestly but never
+        // accepted as a successful judgment.
+        const { cancelResult, latest } = await convergeLaunch('wait budget exceeded', operationId);
+        throw new AcpJudgmentRunError(
+          `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
+          {
+            cancelResult,
+            intentKey,
+            operationId,
+            status: reportedStatus(cancelResult, latest ?? operation),
+          },
+        );
+      }
+      if (operation && isTerminalAgentOperationStatus(operation.status)) break;
+      if (judgment.signal?.aborted) {
+        const { cancelResult, latest } = await convergeLaunch('caller aborted', operationId);
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+          cancelResult,
+          intentKey,
+          operationId,
+          status: reportedStatus(cancelResult, latest ?? operation),
+        });
+      }
+      if (
+        (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
+        'aborted'
+      ) {
+        const { cancelResult, latest } = await convergeLaunch('caller aborted', operationId);
+        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
+          cancelResult,
+          intentKey,
+          operationId,
+          status: reportedStatus(cancelResult, latest ?? operation),
+        });
+      }
+      operation = await operations.findById(operationId);
+    }
+
+    // The operation reached a terminal state — mark the launch settled first
+    // so a same-intent retry derives the identical outcome from the row.
+    await operations.settleOperationLaunch(launch.id, 'settled').catch((error) => {
+      log('judgment launch %s settle failed (non-fatal): %O', launch.id, error);
+    });
+    return await readJudgmentOutcome(operation!);
   } finally {
     clearTimeout(deadlineTimer);
     judgment.signal?.removeEventListener('abort', onCallerAbort);

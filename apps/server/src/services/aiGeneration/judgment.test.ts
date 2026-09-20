@@ -19,8 +19,13 @@ const mocks = vi.hoisted(() => ({
   execAgent: vi.fn(),
   interruptTask: vi.fn(),
   messageFindById: vi.fn(),
+  operationBindLaunch: vi.fn(),
+  operationClaimLaunch: vi.fn(),
   operationFindById: vi.fn(),
   operationFindByJudgmentIntent: vi.fn(),
+  operationFindLaunchById: vi.fn(),
+  operationRequestLaunchCancel: vi.fn(),
+  operationSettleLaunch: vi.fn(),
   tracingIsEnabled: vi.fn(),
   tracingRecord: vi.fn(),
 }));
@@ -36,8 +41,13 @@ vi.mock('@/database/models/agent', () => ({
 vi.mock('@/database/models/agentOperation', () => ({
   AgentOperationModel: vi.fn(function () {
     return {
+      bindOperationLaunch: mocks.operationBindLaunch,
+      claimOperationLaunch: mocks.operationClaimLaunch,
       findById: mocks.operationFindById,
       findByJudgmentIntent: mocks.operationFindByJudgmentIntent,
+      findOperationLaunchById: mocks.operationFindLaunchById,
+      requestOperationLaunchCancel: mocks.operationRequestLaunchCancel,
+      settleOperationLaunch: mocks.operationSettleLaunch,
     };
   }),
 }));
@@ -96,6 +106,23 @@ beforeEach(() => {
   mocks.agentGetBuiltin.mockResolvedValue(null);
   mocks.execAgent.mockResolvedValue({ operationId: 'op-1' });
   mocks.interruptTask.mockResolvedValue({ cancelState: 'confirmed', success: true });
+  mocks.operationBindLaunch.mockImplementation(async (id: string, operationId: string) => ({
+    id,
+    operationId,
+    status: 'dispatched',
+  }));
+  mocks.operationClaimLaunch.mockImplementation(async (input: { intentKey: string }) => ({
+    claimed: true,
+    launch: {
+      deadlineAt: new Date(Date.now() + 180_000),
+      id: 'launch-1',
+      intentKey: input.intentKey,
+      status: 'claimed',
+    },
+  }));
+  mocks.operationFindLaunchById.mockResolvedValue(null);
+  mocks.operationRequestLaunchCancel.mockResolvedValue(null);
+  mocks.operationSettleLaunch.mockResolvedValue(null);
   mocks.operationFindById.mockResolvedValue(doneOperation);
   mocks.operationFindByJudgmentIntent.mockResolvedValue(null);
   mocks.messageFindById.mockResolvedValue({ content: '{"verdict":"passed"}' });
@@ -648,6 +675,186 @@ describe('runAcpJudgment', () => {
     expect(mocks.tracingRecord).toHaveBeenCalledWith(
       expect.objectContaining({ errorCode: 'no_json', success: false }),
     );
+  });
+});
+
+describe('runAcpJudgment launch registration (J01–J02)', () => {
+  const adoptedLaunch = (overrides: Record<string, unknown> = {}) => ({
+    deadlineAt: new Date(Date.now() + 180_000),
+    id: 'launch-1',
+    intentKey: 'ik-1',
+    operationId: null,
+    status: 'claimed',
+    ...overrides,
+  });
+
+  it('J01 — registers the durable launch BEFORE any dispatch side effect', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+
+    await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+    });
+
+    expect(mocks.operationClaimLaunch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intentKey: expect.stringContaining('verify.judge:0:'),
+        purpose: 'verify.judge',
+      }),
+    );
+    expect(mocks.operationClaimLaunch.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.execAgent.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('J01 — same intent concurrent calls share one launch and one operation', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.operationClaimLaunch
+      .mockResolvedValueOnce({ claimed: true, launch: adoptedLaunch() })
+      .mockResolvedValueOnce({
+        claimed: false,
+        launch: adoptedLaunch({ operationId: 'op-1', status: 'dispatched' }),
+      });
+    const params = {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        intentKey: 'ik-1',
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+      },
+    };
+
+    const first = runAcpJudgment<{ verdict: string }>(db, 'u1', params);
+    // Let the first caller register its claim before the second arrives —
+    // the second call is the concurrent same-intent retry.
+    await vi.waitFor(() => expect(mocks.operationClaimLaunch).toHaveBeenCalledTimes(1));
+    const second = runAcpJudgment<{ verdict: string }>(db, 'u1', params);
+    const [a, b] = await Promise.all([first, second]);
+
+    expect(a.run.operationId).toBe('op-1');
+    expect(b.run.operationId).toBe('op-1');
+    expect(mocks.execAgent).toHaveBeenCalledTimes(1);
+  });
+
+  it('J01 — a caller retry adopts the same launch after a lost spawn ACK', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    // The winner claimed the launch but died before binding the operation id;
+    // the operation row still landed under the intent. A retry finds the
+    // 'claimed' launch, late-binds the landed row, and reads its outcome —
+    // no second writer is ever spawned.
+    const orphaned = adoptedLaunch();
+    mocks.operationClaimLaunch.mockResolvedValue({ claimed: false, launch: orphaned });
+    mocks.operationFindLaunchById.mockResolvedValue(orphaned);
+    mocks.operationFindByJudgmentIntent.mockResolvedValue(doneOperation);
+
+    const result = await runAcpJudgment<{ verdict: string }>(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        intentKey: 'ik-1',
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+      },
+    });
+
+    expect(result.data).toEqual({ verdict: 'passed' });
+    expect(result.run.operationId).toBe('op-1');
+    expect(mocks.execAgent).not.toHaveBeenCalled();
+    expect(mocks.operationBindLaunch).toHaveBeenCalledWith('launch-1', 'op-1');
+    expect(mocks.operationSettleLaunch).toHaveBeenCalledWith('launch-1', 'settled');
+  });
+
+  it('J01 — failures carry the intentKey and converge the launch durably', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.execAgent.mockRejectedValue(new Error('spawn refused'));
+
+    const error = await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        intentKey: 'ik-fixed',
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+      },
+    }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ code: 'ACP_JUDGMENT_RUN_FAILED', intentKey: 'ik-fixed' });
+    // Cancel intent persisted on the launch row before the interrupt — the
+    // converge is durable, not an unawaited in-process promise.
+    expect(mocks.operationRequestLaunchCancel).toHaveBeenCalledWith(
+      'launch-1',
+      expect.stringContaining('dispatch failed'),
+    );
+    expect(mocks.operationSettleLaunch).toHaveBeenCalledWith('launch-1', 'failed');
+  });
+
+  it('J02 — an orphaned claim past its deadline is reconciled, never re-spawned', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    const stale = adoptedLaunch({ deadlineAt: new Date(Date.now() - 1000) });
+    mocks.operationClaimLaunch.mockResolvedValue({ claimed: false, launch: stale });
+    mocks.operationFindLaunchById.mockResolvedValue(stale);
+    mocks.operationFindByJudgmentIntent.mockResolvedValue(null);
+
+    const error = await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        intentKey: 'ik-1',
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+      },
+    }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ code: 'ACP_JUDGMENT_RUN_FAILED', intentKey: 'ik-1' });
+    expect(mocks.execAgent).not.toHaveBeenCalled();
+    expect(mocks.operationRequestLaunchCancel).toHaveBeenCalledWith(
+      'launch-1',
+      'launch deadline exceeded',
+    );
+    expect(mocks.operationSettleLaunch).toHaveBeenCalledWith('launch-1', 'failed');
+    // Nothing landed — there is no writer to interrupt and no fabricated stop.
+    expect(mocks.interruptTask).not.toHaveBeenCalled();
+  });
+
+  it('J02 — the cancel intent is durable even when the interrupt itself hangs', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'running' });
+    // The cancel request hangs forever — the durable record is what survives.
+    mocks.interruptTask.mockReturnValue(new Promise(() => {}));
+
+    const promise = runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        intentKey: 'ik-1',
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+        timeoutMs: 5,
+      },
+    });
+    promise.catch(() => {});
+
+    // The launch row carries the cancel intent BEFORE the interrupt call —
+    // a later same-intent reconcile finishes the job even if this process
+    // never returns from interruptTask.
+    await vi.waitFor(() => {
+      expect(mocks.operationRequestLaunchCancel).toHaveBeenCalledWith(
+        'launch-1',
+        'wait budget exceeded',
+      );
+    });
+    expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
+
+    // The caller's promise cannot resolve while the physical stop is
+    // unconfirmed — and the launch stays 'cancel_requested', recoverable.
+    let settledOutcome = false;
+    void promise.then(
+      () => (settledOutcome = true),
+      () => (settledOutcome = true),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(settledOutcome).toBe(false);
   });
 });
 

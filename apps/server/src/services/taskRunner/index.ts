@@ -399,6 +399,8 @@ export class TaskRunnerService {
             phase: 'provisioning',
           });
           provisioned = await this.taskWorkspace.provision({
+            dispatchId: preparedDispatch!.dispatch.id,
+            generation: preparedDispatch!.dispatch.generation,
             seq: (task.totalTopics || 0) + 1,
             task,
           });

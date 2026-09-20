@@ -348,6 +348,24 @@ export interface TaskWorkspaceConfig {
 }
 
 /**
+ * What a queued workspace-recovery entry asks a human to resolve (SA01). An
+ * unregistered directory at a provisioned path is never deleted by the
+ * pipeline — it lands here for manual review.
+ *
+ * - `orphan_directory` — device reported an unregistered/foreign directory at
+ *   the claim path (`orphan-safe`, `orphan-foreign`, or a symlink).
+ * - `claim_conflict` — the path already carries a claim owned by another
+ *   dispatch; the occupant is preserved until reconciled.
+ * - `inspection_unknown` — the device could not classify the path (I/O or stat
+ *   failure); retrying provision cannot proceed until a human looks.
+ */
+export type TaskWorkspaceRecoveryKind =
+  'claim_conflict' | 'inspection_unknown' | 'orphan_directory';
+
+/** Lifecycle of a manual workspace-recovery request. */
+export type TaskWorkspaceRecoveryStatus = 'dismissed' | 'pending' | 'resolved';
+
+/**
  * Repo/ref integration lease phases (R02 fencing). 'claimed' rows have not yet
  * issued any remote side effect; the mutation phases record which write class
  * was in flight so an ambiguous failure can persist `outcomeUnknown` on the

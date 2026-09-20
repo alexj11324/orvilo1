@@ -1,12 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { addGitWorktree, clearOrphanedWorktreePath, inspectGitWorktreePath } from '../worktrees';
+import { addGitWorktree, inspectGitWorktreePath } from '../worktrees';
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
@@ -121,48 +120,32 @@ describe('inspectGitWorktreePath', () => {
     expect(result.kind).toBe('unknown');
     expect(result.error).toBeTruthy();
   });
-});
 
-describe('clearOrphanedWorktreePath', () => {
-  it('removes an empty unregistered directory', async () => {
-    const target = path.join(path.dirname(repo), 'lfs-orphan');
+  it('A04: classifies a symlink to an external directory as orphan-foreign, never absent', async () => {
+    // A symlink at the worktree path must never be followed for a destructive
+    // decision — it is foreign content on its face.
+    const real = path.join(path.dirname(repo), 'lfs-real-dir');
+    const link = path.join(path.dirname(repo), 'lfs-link');
+    cleanup.push(real, link);
+    await mkdir(real);
+    await writeFile(path.join(real, 'user-data.txt'), 'keep\n');
+    await symlink(real, link);
+
+    const result = await inspectGitWorktreePath({ path: repo, worktreePath: link });
+
+    expect(result.kind).toBe('orphan-foreign');
+  });
+
+  it('A06: an unreadable directory is unknown, not absent (A06 EACCES)', async () => {
+    const target = path.join(path.dirname(repo), 'lfs-denied');
     cleanup.push(target);
     await mkdir(target);
-
-    const result = await clearOrphanedWorktreePath({ path: repo, worktreePath: target });
-
-    expect(result).toEqual({ success: true });
-    expect(existsSync(target)).toBe(false);
-  });
-
-  it('refuses to remove a listed worktree even when asked on its own path', async () => {
-    const target = path.join(path.dirname(repo), 'lfs-listed');
-    cleanup.push(target);
-    await addGitWorktree({ branch: 'task/T-1', path: repo, worktreePath: target });
-
-    const result = await clearOrphanedWorktreePath({ path: repo, worktreePath: target });
-
-    expect(result.success).toBe(false);
-    expect(existsSync(target)).toBe(true);
-  });
-
-  it('refuses to remove an unregistered directory containing content', async () => {
-    const target = path.join(path.dirname(repo), 'lfs-foreign');
-    cleanup.push(target);
-    await mkdir(target);
-    await writeFile(path.join(target, 'keep.me'), 'user data\n');
-
-    const result = await clearOrphanedWorktreePath({ path: repo, worktreePath: target });
-
-    expect(result.success).toBe(false);
-    expect(existsSync(path.join(target, 'keep.me'))).toBe(true);
-  });
-
-  it('is a no-op success when the path is already absent', async () => {
-    const result = await clearOrphanedWorktreePath({
-      path: repo,
-      worktreePath: path.join(repo, '..', 'lfs-nothing-here'),
-    });
-    expect(result).toEqual({ success: true });
+    await chmod(target, 0o000);
+    try {
+      const result = await inspectGitWorktreePath({ path: repo, worktreePath: target });
+      expect(result.kind).toBe('unknown');
+    } finally {
+      await chmod(target, 0o700).catch(() => undefined);
+    }
   });
 });

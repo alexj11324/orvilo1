@@ -436,6 +436,8 @@ export default {
   'heteroAgent.claudeQuota.errorGeneric': "Couldn't reach the quota service. Tap refresh to retry.",
   'heteroAgent.claudeQuota.errorRateLimited':
     'Claude Code quota is temporarily rate limited. Please try again later.',
+  'heteroAgent.claudeQuota.identityUnverified':
+    'Showing the last confirmed identity — its current state could not be verified.',
   'heteroAgent.claudeQuota.persistFailed':
     'Showing the live reading — it could not be saved to history yet.',
   'heteroAgent.claudeQuota.refreshRateLimited':

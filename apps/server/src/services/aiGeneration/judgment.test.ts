@@ -5,6 +5,7 @@ import {
   ACP_JUDGMENT_AGENT_ENV,
   AcpJudgmentBindingError,
   AcpJudgmentRunError,
+  AcpJudgmentValidationError,
   extractJudgmentJson,
   isAcpJudgmentBindingError,
   resolveAcpJudgmentAgent,
@@ -106,11 +107,15 @@ describe('resolveAcpJudgmentAgent — binding precedence, never deployment keys'
     expect(mocks.agentGetBuiltin).not.toHaveBeenCalled();
   });
 
-  it('falls through a stale agentId to a builtin slug', async () => {
+  it('blocks when a pinned agentId no longer exists — no slug/env fallthrough (F10)', async () => {
     mocks.agentGetBuiltin.mockResolvedValue({ id: 'builtin-verify' });
+    process.env[ACP_JUDGMENT_AGENT_ENV] = 'env-agent';
+    // An explicitly pinned execution identity that died is a hard boundary:
+    // slug/env candidates are never consulted.
     await expect(
       resolveAcpJudgmentAgent(db, 'u1', { agentId: 'gone', slug: 'verify-agent' }),
-    ).resolves.toEqual({ slug: 'verify-agent' });
+    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_NO_BINDING' });
+    expect(mocks.agentGetBuiltin).not.toHaveBeenCalled();
   });
 
   it('uses ACP_JUDGMENT_AGENT_ID only when the domain binding resolves to nothing', async () => {
@@ -286,9 +291,11 @@ describe('runAcpJudgment', () => {
     expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
   });
 
-  it('propagates caller cancellation to interruptTask', async () => {
+  it('propagates caller cancellation to interruptTask and confirms via the durable row', async () => {
     mocks.agentExistsById.mockResolvedValue(true);
-    mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'running' });
+    mocks.operationFindById
+      .mockResolvedValueOnce({ ...doneOperation, status: 'running' })
+      .mockResolvedValue({ ...doneOperation, status: 'interrupted' });
     const controller = new AbortController();
     controller.abort();
 
@@ -302,8 +309,106 @@ describe('runAcpJudgment', () => {
           signal: controller.signal,
         },
       }),
-    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_RUN_FAILED', status: 'interrupted' });
+    ).rejects.toMatchObject({
+      cancelResult: 'confirmed',
+      code: 'ACP_JUDGMENT_RUN_FAILED',
+      status: 'interrupted',
+    });
     expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
+  });
+
+  it('reports cancelResult unknown — never claims interrupted — when the cancel cannot be confirmed (F10)', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    // The row stays 'running' even after interruptTask resolves: the cancel
+    // outcome is unknown and must not be reported as interrupted.
+    mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'running' });
+    const controller = new AbortController();
+    controller.abort();
+
+    const error = await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        pollIntervalMs: 1,
+        purpose: 'verify.judge',
+        signal: controller.signal,
+      },
+    }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({
+      cancelResult: 'unknown',
+      code: 'ACP_JUDGMENT_RUN_FAILED',
+      status: 'running',
+    });
+  });
+
+  it('counts dispatch latency against the total budget — deadline precedes execAgent (F10)', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.agentExistsById.mockResolvedValue(true);
+      mocks.operationFindById.mockResolvedValue({ ...doneOperation, status: 'running' });
+      // Dispatch itself takes 5s while the judgment budget is 1s: the run
+      // must fail on the deadline the moment the dispatch resolves.
+      mocks.execAgent.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve({ operationId: 'op-1' }), 5_000);
+          }),
+      );
+
+      const promise = runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          pollIntervalMs: 100,
+          purpose: 'verify.judge',
+          timeoutMs: 1_000,
+        },
+      });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(6_000);
+
+      await expect(promise).rejects.toMatchObject({
+        code: 'ACP_JUDGMENT_RUN_FAILED',
+        operationId: 'op-1',
+      });
+      // Deadline exceeded: the op never got a full extra budget post-dispatch.
+      expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fails closed on a schema-mismatched reply and traces it as a failure (F10)', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.messageFindById.mockResolvedValue({ content: '{"unexpected":true}' });
+
+    const strictInput = {
+      messages: [{ content: 'Decide.', role: 'user' as const }],
+      schema: {
+        name: 'Verdict',
+        schema: {
+          properties: { verdict: { type: 'string' } },
+          required: ['verdict'],
+          type: 'object' as const,
+        },
+      },
+    };
+
+    const error = await runAcpJudgment(db, 'u1', {
+      input: strictInput,
+      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+    }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AcpJudgmentValidationError);
+    expect(error).toMatchObject({
+      code: 'ACP_JUDGMENT_SCHEMA_MISMATCH',
+      operationId: 'op-1',
+    });
+    // Execution succeeded but contract conformance failed — recorded as such.
+    expect(mocks.tracingRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ errorCode: 'schema_mismatch', success: false }),
+    );
   });
 
   it('keeps a pinned agent on its own model config — no advisory override leaks in', async () => {

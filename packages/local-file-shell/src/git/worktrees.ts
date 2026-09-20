@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readdir, realpath, rm, stat } from 'node:fs/promises';
+import { lstat, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -143,14 +143,31 @@ export const inspectGitWorktreePath = async (payload: {
   }
   if (found) return { kind: 'listed', listed: found };
 
+  // Classify the candidate without following unvalidated links: `lstat` keeps
+  // a symlink at the path foreign (its target is unproven content), and only
+  // ENOENT is "absent" — permission/IO failures must not look like a free path.
+  let dirStat;
   try {
-    const dirStat = await stat(targetPath);
-    if (!dirStat.isDirectory()) return { kind: 'orphan-foreign' };
-  } catch {
-    return { kind: 'absent' };
+    dirStat = await lstat(worktreePath);
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') return { kind: 'absent' };
+    return {
+      error: `Cannot stat ${worktreePath}: ${error?.code ?? error?.message ?? 'unknown error'}`,
+      kind: 'unknown',
+    };
   }
+  if (dirStat.isSymbolicLink() || !dirStat.isDirectory()) return { kind: 'orphan-foreign' };
 
-  const entries = await readdir(targetPath);
+  let entries: string[];
+  try {
+    entries = await readdir(targetPath);
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') return { kind: 'absent' };
+    return {
+      error: `Cannot read ${worktreePath}: ${error?.code ?? error?.message ?? 'unknown error'}`,
+      kind: 'unknown',
+    };
+  }
   if (entries.length === 0) return { kind: 'orphan-safe' };
   if (entries.length === 1 && entries[0] === '.git') {
     const gitEntry = await stat(path.join(targetPath, '.git'));
@@ -159,34 +176,6 @@ export const inspectGitWorktreePath = async (payload: {
     if (gitEntry.isFile()) return { kind: 'orphan-safe' };
   }
   return { kind: 'orphan-foreign' };
-};
-
-export const clearOrphanedWorktreePath = async (payload: {
-  path: string;
-  worktreePath: string;
-}): Promise<GitRemoveWorktreeResult> => {
-  const inspection = await inspectGitWorktreePath(payload);
-  if (inspection.kind === 'absent') return { success: true };
-  if (inspection.kind !== 'orphan-safe') {
-    return {
-      error: `Refusing to clear ${payload.worktreePath}: ${inspection.kind} — ${
-        inspection.listed
-          ? `listed on branch ${inspection.listed.branch ?? '(detached)'}`
-          : (inspection.error ?? 'directory contents are not provably a crashed add')
-      }`,
-      success: false,
-    };
-  }
-
-  const target = await safeRealpath(payload.worktreePath);
-  try {
-    await rm(target, { recursive: true });
-    const after = await inspectGitWorktreePath(payload);
-    if (after.kind === 'absent') return { success: true };
-    return { error: `Directory still present after cleanup (${after.kind})`, success: false };
-  } catch (error: any) {
-    return { error: error?.message ?? 'orphan directory cleanup failed', success: false };
-  }
 };
 
 export const listGitWorktrees = async (dirPath: string): Promise<GitWorktreeListItem[]> => {

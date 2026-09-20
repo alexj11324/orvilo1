@@ -113,6 +113,8 @@ export interface GitRemoteBranchListItem {
   isDefault: boolean;
   /** Short ref name, e.g. `origin/canary`. */
   name: string;
+  /** Commit SHA the ref currently points at (`%(objectname)`). */
+  sha?: string;
 }
 
 export interface GitWorkingTreeFiles {
@@ -251,9 +253,23 @@ export interface GitAddWorktreeResult {
  *   is not an empty list.
  */
 export interface GitWorktreePathInspection {
+  /**
+   * Live writer occupying the path, reported by the host's run registry (not
+   * by this function — the host annotates it at dispatch). `null` = verified
+   * no writer; an object = a live run owns the path; `undefined` = the host
+   * cannot answer, which callers must treat as "cannot prove safe".
+   */
+  activeWriter?: GitWorktreeActiveWriter | null;
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: GitWorktreeListItem;
+}
+
+/** A live agent run writing inside an inspected worktree path. */
+export interface GitWorktreeActiveWriter {
+  operationId?: string;
+  pid?: number;
+  topicId?: string;
 }
 
 export interface GitPullResult {

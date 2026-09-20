@@ -375,6 +375,7 @@ async function admitHeteroAgentRun(
       if (pid !== undefined) {
         saveTask({
           agentType,
+          cwd: workDir,
           operationId,
           pid,
           runGeneration,

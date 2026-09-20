@@ -524,6 +524,12 @@ export const useConversationScroll = ({
   // User ids already pinned this context — dedupes re-keys (tmp_ → real id)
   // landing inside a later tail segment.
   const pinnedUserIds = useSingleton(() => new Set<string>());
+  // Armed by the context-switch effect below: a send mints its topic id
+  // before the context adopts it, so the optimistic tail can land under the
+  // new contextKey inside the same commit that seeds prevLengthRef — the
+  // growth scan would then stay silent forever. While armed, pin the freshest
+  // tail user row once the new turn is live.
+  const switchPinArmedRef = useRef(false);
 
   const { registerSpacerNode, spacerLayoutVersion } = useSpacerLayoutSignal();
 
@@ -579,6 +585,7 @@ export const useConversationScroll = ({
     prevLengthRef.current = dataSource.length;
     unresolvedTailIds.clear();
     pinnedUserIds.clear();
+    switchPinArmedRef.current = true;
     clearPin('context switch');
     setUserMessageIndex(null);
     setAssistantMessageIndex(null);
@@ -593,6 +600,53 @@ export const useConversationScroll = ({
     prevLengthRef.current = dataSource.length;
 
     if (newMessageCount > 0) diag(`dataSource grew +${newMessageCount} → len=${dataSource.length}`);
+
+    // Topic-adoption rescue: the optimistic (user, assistant) tail can be
+    // already present in the first dataSource a fresh contextKey paints — the
+    // growth scan below then sees zero new rows. Pin the freshest tail user
+    // row once the new turn is live; freshness bounds this to just-sent rows
+    // so opening an older topic never triggers it.
+    if (switchPinArmedRef.current) {
+      let lastUserIndex = -1;
+      let lastUserCreatedAt = 0;
+      for (let i = dataSource.length - 1; i >= 0; i -= 1) {
+        const message = displayMessages.find((m) => m.id === dataSource[i]);
+        if (message?.role === 'user') {
+          lastUserIndex = i;
+          lastUserCreatedAt = message.createdAt;
+          break;
+        }
+      }
+      const fresh = lastUserIndex >= 0 && Date.now() - lastUserCreatedAt < 120_000;
+      if (!fresh) {
+        switchPinArmedRef.current = false;
+      } else if (isAIGenerating) {
+        switchPinArmedRef.current = false;
+        const userId = dataSource[lastUserIndex];
+        if (!pinnedUserIds.has(userId) && pinRef.current?.index !== lastUserIndex) {
+          pinnedUserIds.add(userId);
+          diag(`send detected via topic adoption userIndex=${lastUserIndex}`);
+          setScrollReduction(() => 0);
+          prevScrollOffsetRef.current = getScrollOffset?.() ?? null;
+          setUserMessageIndex(lastUserIndex);
+          const nextIndex = lastUserIndex + 1;
+          setAssistantMessageIndex(nextIndex < dataSource.length ? nextIndex : null);
+          pinRef.current = {
+            index: lastUserIndex,
+            seenActive: mountedRef.current,
+            sentAt: Date.now(),
+          };
+          scrollToPinned('send');
+          requestAnimationFrame(() => {
+            updateSpacerHeight();
+          });
+        }
+        return;
+      }
+      // fresh but the turn's op hasn't surfaced under this context yet — stay
+      // armed; isAIGenerating is a dep so the effect re-runs when it flips.
+    }
+
     if (newMessageCount <= 0 && unresolvedTailIds.size === 0) return;
 
     // A send appends a (user, assistant, …) tail — usually one +2 commit, but
@@ -652,6 +706,7 @@ export const useConversationScroll = ({
     dataSource,
     displayMessages,
     getScrollOffset,
+    isAIGenerating,
     mountedRef,
     pinRef,
     prevScrollOffsetRef,

@@ -881,6 +881,7 @@ export class TaskIntegrationService {
     // Property narrowing does not cross into `fenced` closures — capture the
     // verified fields once for the remote calls below.
     const deviceId = record.deviceId;
+    const repoPath = record.repoPath;
 
     const ownedIntegrationWorktreePath = deriveWorktreePath(
       record.repoPath,
@@ -911,7 +912,7 @@ export class TaskIntegrationService {
         baseRef: this.baseRef(record),
         deviceId,
         integrationWorktreePath,
-        repoPath: record.repoPath,
+        repoPath,
       }),
     );
     if (!ensured) {
@@ -935,7 +936,7 @@ export class TaskIntegrationService {
       deviceGateway.mergeGitBranch({
         baseRef: this.baseRef(record),
         branch: record.branch,
-        deviceId: record.deviceId,
+        deviceId,
         // Refresh the tracking ref so the serialized merge re-baselines onto the
         // published tip rather than a stale `origin/<base>`.
         fetchBase: record.baseBranch !== 'HEAD',

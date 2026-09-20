@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { TaskItem, TaskTopicIntegration } from '@orvilo/types';
+import type { DeviceGitMergeResult, TaskItem, TaskTopicIntegration } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskModel } from '@/database/models/task';
@@ -1727,8 +1727,7 @@ describe('TaskIntegrationService', () => {
     it('renews the lease while a remote mutation is in flight (fenced heartbeat)', async () => {
       vi.useFakeTimers();
       try {
-        let resolveMerge:
-          ((v: { sha: string; state: string; success: boolean }) => void) | undefined;
+        let resolveMerge: ((v: DeviceGitMergeResult) => void) | undefined;
         vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(
           () =>
             new Promise((resolve) => {
@@ -1765,7 +1764,7 @@ describe('TaskIntegrationService', () => {
     });
 
     it('blocks further fenced writes once a mid-flight heartbeat fails', async () => {
-      let resolveMerge: ((v: { sha: string; state: string; success: boolean }) => void) | undefined;
+      let resolveMerge: ((v: DeviceGitMergeResult) => void) | undefined;
       vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(
         () =>
           new Promise((resolve) => {

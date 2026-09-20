@@ -1706,6 +1706,8 @@
   "taskDetail.openDetail": "展开详情",
   "taskDetail.openRunChat": "打开这次运行的对话",
   "taskDetail.pauseTask": "暂停任务",
+  "taskDetail.pendingContractEdits.content": "目标或验收自合同版本 {{revision}} 采用后已修改。现在运行将使用冻结的合同；修改将保持待采用状态，直到经批准的重新规划将其采用。",
+  "taskDetail.pendingContractEdits.title": "自上次运行以来约束已更改",
   "taskDetail.prerequisites.active": "添加未完成的前置任务前，请先暂停或重新打开此任务。",
   "taskDetail.prerequisites.add": "添加",
   "taskDetail.prerequisites.blocked": "所有前置任务完成后才能推进。",

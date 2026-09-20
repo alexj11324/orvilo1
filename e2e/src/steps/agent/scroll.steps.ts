@@ -141,10 +141,25 @@ async function hasRunningOperation(world: CustomWorld): Promise<boolean> {
   const databaseUrl = process.env.DATABASE_URL;
   const lastSent = world.testContext.lastSentUserMessageId;
   if (!databaseUrl || !lastSent) return false;
-  const { default: pg } = await import('pg');
-  const client = new pg.Client({ connectionString: databaseUrl });
+
+  // One client per world: opening a fresh connection per 250ms poll is itself
+  // a load spike on CI's shared Postgres (a checkpoint there took ~270s), and
+  // a transient connect/query failure must NOT read as "idle" — that both
+  // releases sends into the client-side queue while the run is still live and
+  // hides the `running` observation the settle loop requires. On error, reuse
+  // the last reading; only a fresh successful query changes the answer.
+  let client = world.testContext.scrollPgClient;
+  if (!client) {
+    const { default: pg } = await import('pg');
+    client = new pg.Client({ connectionString: databaseUrl });
+    try {
+      await client.connect();
+    } catch {
+      return false;
+    }
+    world.testContext.scrollPgClient = client;
+  }
   try {
-    await client.connect();
     const res = await client.query(
       `select count(*)::int as n
        from agent_operations
@@ -152,11 +167,11 @@ async function hasRunningOperation(world: CustomWorld): Promise<boolean> {
          and topic_id = (select topic_id from messages where id = $1)`,
       [lastSent],
     );
-    return (res.rows[0]?.n ?? 0) > 0;
+    const running = (res.rows[0]?.n ?? 0) > 0;
+    world.testContext.scrollLastRunning = running;
+    return running;
   } catch {
-    return false;
-  } finally {
-    await client.end().catch(() => {});
+    return world.testContext.scrollLastRunning ?? false;
   }
 }
 
@@ -176,7 +191,7 @@ async function waitForAssistantMessageToSettle(
   // run to have been *observed* running (the op row lands a few hundred ms
   // after send) before trusting "idle", otherwise a stale long reply from the
   // previous turn would release the next send into the client-side queue.
-  const deadline = Date.now() + 90_000;
+  const deadline = Date.now() + 150_000;
   let lastLength = 0;
   let sawRunning = false;
   while (Date.now() < deadline) {
@@ -310,7 +325,7 @@ Given('流式响应被放慢以模拟长文输出', async function (this: Custom
 // When steps
 // ---------------------------------------------------------------------------
 
-When('用户发送长文消息并等待回复完成', { timeout: 150_000 }, async function (this: CustomWorld) {
+When('用户发送长文消息并等待回复完成', { timeout: 240_000 }, async function (this: CustomWorld) {
   const prompt = '请输出一篇很长的文章';
   await sendPrompt(this, prompt, presetResponses.longScrollArticle);
 
@@ -330,7 +345,7 @@ When('用户发送长文消息并等待回复完成', { timeout: 150_000 }, asyn
   await waitForAssistantMessageToSettle(this, 200);
 });
 
-When('用户发送一条触发长文输出的消息', { timeout: 120_000 }, async function (this: CustomWorld) {
+When('用户发送一条触发长文输出的消息', { timeout: 180_000 }, async function (this: CustomWorld) {
   const prompt = '请输出一篇很长的文章';
   await sendPrompt(this, prompt, presetResponses.longScrollArticle);
 
@@ -342,7 +357,7 @@ When('用户发送一条触发长文输出的消息', { timeout: 120_000 }, asyn
 
 When(
   '用户完成一轮用于垫高列表的长回复对话',
-  { timeout: 150_000 },
+  { timeout: 240_000 },
   async function (this: CustomWorld) {
     const prompt = '请先输出一篇很长的文章用于垫高列表';
     await sendPrompt(this, prompt, presetResponses.longScrollArticle);
@@ -352,7 +367,7 @@ When(
 
 When(
   '用户发送一条触发短回复的消息并等待回复完成',
-  { timeout: 90_000 },
+  { timeout: 180_000 },
   async function (this: CustomWorld) {
     const prompt = '请输出一段短回复用于测试底部补偿区域';
     await sendPrompt(this, prompt, '这是一个短回复，用于让底部补偿区域保持可见。');
@@ -392,7 +407,7 @@ When('开始记录聊天列表滚动轨迹', async function (this: CustomWorld) 
   await startScrollTrace(this.page);
 });
 
-When('等待流式响应结束', { timeout: 120_000 }, async function (this: CustomWorld) {
+When('等待流式响应结束', { timeout: 200_000 }, async function (this: CustomWorld) {
   await waitForAssistantMessageToSettle(this, 200);
 });
 
@@ -490,6 +505,12 @@ After({ tags: '@scroll' }, async function (this: CustomWorld) {
   if (this.testContext.scrollMockAdjusted) {
     llmMockManager.resetConfig();
     this.testContext.scrollMockAdjusted = false;
+  }
+  const client = this.testContext.scrollPgClient;
+  if (client) {
+    this.testContext.scrollPgClient = undefined;
+    this.testContext.scrollLastRunning = undefined;
+    await client.end().catch(() => {});
   }
 });
 

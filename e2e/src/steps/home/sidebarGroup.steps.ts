@@ -142,7 +142,13 @@ Given('用户在 Agents 页面有一个 Agent Group', async function (this: Cust
 When('用户右键点击该 Agent Group', { timeout: 30_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击 Agent Group...');
 
-  const targetItem = this.page.locator(this.testContext.targetRowSelector).first();
+  // The contextmenu handler lives on the row wrapper, not the anchor —
+  // right-clicking the <a> bubbles up into an agent-level menu. Target the
+  // row element that wraps the anchor.
+  const targetItem = this.page
+    .locator(this.testContext.targetRowSelector)
+    .first()
+    .locator('xpath=..');
 
   // Hover first to ensure element is interactive
   await targetItem.hover();

@@ -60,6 +60,11 @@ describe('TaskRecommendationWriter', () => {
       expect.objectContaining({ model: 'model-1', provider: 'provider-1' }),
     );
     expect(generatedCall.options).toEqual({
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        purpose: 'onboarding.taskRecommendation',
+      },
+      kind: 'judgment',
       metadata: { trigger: RequestTrigger.Onboarding },
       tracing: {
         promptVersion: 'v1',

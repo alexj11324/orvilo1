@@ -301,6 +301,12 @@ export class ExpertiseIngestionService {
         schema: EXPERTISE_TOPIC_INGESTION_JSON_SCHEMA,
       },
       {
+        judgment: {
+          // Ingestion judges as the agent whose expertise is being updated.
+          binding: { agentId: input.agentId },
+          purpose: 'expertise.topicIngestion',
+        },
+        kind: 'judgment',
         metadata: { trigger: 'expertise_topic_ingestion' },
         tracing: {
           agentId: input.agentId,

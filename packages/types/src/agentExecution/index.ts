@@ -16,6 +16,28 @@ export type AgentSignalOperationKind =
  * carries `agentId/operationId/topicId`). Runtime parsing/validation helpers live
  * server-side in `operationMarker.ts`.
  */
+/**
+ * Run-scoped marker for a retained background judgment executed as an
+ * explicitly-authorized ACP operation (R08). Stamped onto
+ * `appContext.judgment` at dispatch so the `agent_operations` row carries the
+ * consumer identity, the caller's attempt count, and the budget caps the run
+ * was dispatched under — this is the durable record behind every
+ * `kind: 'judgment'` generation.
+ */
+export interface AgentOperationJudgmentContext {
+  /** 1-based attempt index when the caller retries the same judgment. */
+  attempt?: number;
+  /** Budget caps applied to the run — the wait/steps envelope, not a token count. */
+  budget?: {
+    /** Wall-clock milliseconds the caller waited for a terminal state. */
+    maxWaitMs?: number;
+    /** Agent step cap the run was dispatched with. */
+    maxSteps?: number;
+  };
+  /** Stable consumer identifier, e.g. 'verify.judge', 'goal.criteriaDraft'. */
+  purpose: string;
+}
+
 export interface AgentSignalOperationMarker {
   /**
    * The reviewed user agent a resulting receipt should be attributed to. Needed
@@ -129,6 +151,13 @@ export interface ExecAgentAppContext {
    * recursive sub-agent dispatch.
    */
   isSubAgent?: boolean;
+  /**
+   * ACP judgment-run marker. Present on operations dispatched by the retained
+   * judgment path (`AiGenerationService.generateObject` with `kind: 'judgment'`
+   * / `runAcpJudgment`) — the durable proof the run was an explicitly
+   * authorized judgment rather than an untracked LLM call.
+   */
+  judgment?: AgentOperationJudgmentContext;
   /**
    * Branch this run into a NEW thread (subtopic) under `topicId`, persisting the
    * turn there instead of on the topic's main spine.

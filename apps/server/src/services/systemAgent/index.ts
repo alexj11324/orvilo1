@@ -15,9 +15,10 @@ import type { UserSystemAgentConfig, UserSystemAgentConfigKey } from '@orvilo/ty
 import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 
+import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
+import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { resolveSystemAgentModelConfig } from './modelConfig';
 
@@ -68,18 +69,25 @@ export class SystemAgentService {
 
       const payload = chainSummaryTitle(messages, locale);
 
-      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
+      // Title writing is a judgment — bind it to the topic's owning agent.
+      const topic = await new TopicModel(this.db, this.userId, this.workspaceId).findById(topicId);
+      const result = await new AiGenerationService(
+        this.db,
         this.userId,
-        provider,
         this.workspaceId,
-      );
-      const result = await modelRuntime.generateObject(
+      ).generateObject(
         {
           messages: payload.messages,
           model,
+          provider,
           schema: TOPIC_TITLE_JSON_SCHEMA,
         },
         {
+          judgment: {
+            binding: { agentId: topic?.agentId },
+            purpose: 'topic.title',
+          },
+          kind: 'judgment',
           metadata: { topicId, trigger: RequestTrigger.Topic },
           tracing: {
             promptVersion: TOPIC_TITLE_PROMPT_VERSION,
@@ -130,18 +138,23 @@ export class SystemAgentService {
       const payload = chainGenerateSkillMeta({ content, responseLanguage: locale });
       const tracingId = randomUUID();
 
-      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
+      const result = await new AiGenerationService(
+        this.db,
         this.userId,
-        provider,
         this.workspaceId,
-      );
-      const result = await modelRuntime.generateObject(
+      ).generateObject(
         {
           messages: payload.messages as any[],
           model,
+          provider,
           schema: GENERATE_SKILL_META_SCHEMA,
         },
         {
+          judgment: {
+            binding: { agentId },
+            purpose: 'skill.meta',
+          },
+          kind: 'judgment',
           metadata: { trigger: RequestTrigger.Api },
           tracing: {
             agentId,

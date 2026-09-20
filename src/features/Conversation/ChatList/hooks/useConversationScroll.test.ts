@@ -23,6 +23,11 @@ vi.mock('../../store', async (importOriginal) => {
   };
 });
 
+const autoScrollFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../components/AutoScroll/useAutoScrollEnabled', () => ({
+  useAutoScrollEnabled: () => autoScrollFlag.enabled,
+}));
+
 // ResizeObserver mock capturing the latest callback so tests can trigger it.
 class MockResizeObserver {
   static latest: MockResizeObserver | null = null;
@@ -108,6 +113,7 @@ describe('useConversationScroll — helpers', () => {
 
 describe('useConversationScroll — pin behavior', () => {
   const scrollToIndex = vi.fn();
+  const scrollToBottom = vi.fn();
   const virtuaRef: RefObject<VListHandle | null> = createRef<VListHandle>();
   const assistantId = 'assistant-1';
   const userId = 'user-1';
@@ -152,6 +158,7 @@ describe('useConversationScroll — pin behavior', () => {
       const probe: any = {
         displayMessages: currentFixture.displayMessages,
         operationState: { isAIGenerating: currentFixture.isAIGenerating },
+        scrollToBottom,
         virtuaScrollMethods: currentFixture.virtuaScrollMethods,
       };
       return selector(probe);
@@ -217,6 +224,8 @@ describe('useConversationScroll — pin behavior', () => {
 
   beforeEach(() => {
     scrollToIndex.mockReset();
+    scrollToBottom.mockReset();
+    autoScrollFlag.enabled = true;
     // Attach a live mock handle; scrollToPinned reads virtuaRef.current at call time.
     virtuaRef.current = { scrollToIndex } as unknown as VListHandle;
     vi.stubGlobal('ResizeObserver', MockResizeObserver);
@@ -565,6 +574,84 @@ describe('useConversationScroll — pin behavior', () => {
       await vi.advanceTimersByTimeAsync(500);
     });
     expect(result.current.spacerActive).toBe(false);
+  });
+
+  // Regression (AGENT-SCROLL-001 on CI): the pin anchors the viewport to the
+  // user row for the whole stream, so `atBottom` stays false and AutoScroll's
+  // follower never fires. Once the reply ends and the spacer retires, the
+  // viewport must settle at the real bottom when auto-scroll is enabled.
+  it('settles at the bottom when a pinned stream ends naturally and auto-scroll is on', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          // Reply outgrows the viewport: userTop=200, assistantBottom=300+2000.
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(true);
+    expect(scrollToBottom).not.toHaveBeenCalled();
+
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).toHaveBeenCalledWith(false);
+  });
+
+  it('stays at the pinned row when the stream ends and auto-scroll is off', async () => {
+    autoScrollFlag.enabled = false;
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).not.toHaveBeenCalled();
   });
 
   // Regression: under a starved renderer the optimistic user row can commit

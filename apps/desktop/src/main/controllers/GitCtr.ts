@@ -20,6 +20,7 @@ import type {
   GitWorkingTreePatches,
   GitWorkingTreeStatus,
   GitWorktreeListItem,
+  GitWorktreePathInspection,
 } from '@orvilo/electron-client-ipc';
 import type { DeviceGitInfo } from '@orvilo/local-file-shell/git';
 

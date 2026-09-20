@@ -10,6 +10,7 @@ import type {
   GitRemoveWorktreeResult,
   GitWorkingTreeStatus,
   GitWorktreeListItem,
+  GitWorktreePathInspection,
 } from './types';
 
 const execFileAsync = promisify(execFile);

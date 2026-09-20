@@ -163,18 +163,25 @@ When('用户点击另一个对话', async function (this: CustomWorld) {
     }
   }
 
-  // Fallback: try to find topic items in the sidebar
+  // Fallback: try to find topic items in the sidebar. The list is SWR-driven
+  // and lags the send that created the conversation — poll rather than read a
+  // one-shot count so a slow refetch isn't read as "only one topic exists".
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a second topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(2);
 
   // Click the second topic (first one is current/active)
-  if (topicCount >= 2) {
-    await sidebarTopics.nth(1).click();
-    console.log('   ✅ 已点击另一个对话');
-  } else {
-    throw new Error('Not enough topics to switch');
-  }
+  await sidebarTopics.nth(1).click();
+  console.log('   ✅ 已点击另一个对话');
 
   await this.page.waitForTimeout(500);
 });

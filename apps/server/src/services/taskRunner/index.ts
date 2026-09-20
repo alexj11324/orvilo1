@@ -979,10 +979,17 @@ export class TaskRunnerService {
           const errorText = error instanceof Error ? error.message : 'Unknown error';
           // A failed kickoff must not kill an automation task's schedule. The
           // token-fenced update is a no-op if another generation took over.
+          // A dependency-blocked claim is not a failure either: 'backlog'
+          // keeps the task discoverable by getUnlockedTasksForMany so the next
+          // upstream completion can retry the claim.
           await this.taskModel.failRunReservation(
             task.id,
             reservationId,
-            task.automationMode ? 'scheduled' : 'paused',
+            isTaskDependencyBlocked(error)
+              ? 'backlog'
+              : task.automationMode
+                ? 'scheduled'
+                : 'paused',
             errorText,
           );
         } catch {

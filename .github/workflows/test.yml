@@ -31,7 +31,15 @@ jobs:
         with:
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          # Push runs are the canonical owner: when a PR run and a push run
+          # for the same head SHA start within seconds of each other,
+          # `same_content_newer` on the push run sees the PR run as the newer
+          # sibling and cancels itself — while the PR run also skips its
+          # leafs and only mirrors a verdict. Both runs then die untested and
+          # the PR gate mirrors the cancelled owner's failure. Pinning push to
+          # do_not_skip gives the pair a deterministic owner: the push run
+          # always executes, the PR run always mirrors it.
+          do_not_skip: '["push", "workflow_dispatch", "schedule"]'
 
   # Path triage — one cheap job diffs the PR and reports which test areas
   # actually need to run. Leaf jobs skip when their area is untouched, and the

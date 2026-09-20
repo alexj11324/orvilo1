@@ -289,6 +289,45 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
     });
   });
 
+  it('E06 — a manual completion with no run history is itself a valid delivery', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    // Kanban/manual completion: the upstream was never executed, so no
+    // taskTopics exist — the 'completed' status is the delivery evidence.
+    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+
+    const result = await buildFor(dependent.id);
+
+    expect(result.contractContent.dependencies).toMatchObject([
+      {
+        deliveryValid: true,
+        dependsOnId: upstream.id,
+        status: 'completed',
+        type: 'blocks',
+      },
+    ]);
+    // No artifact existed — the frozen receipt must record none.
+    expect(result.contractContent.dependencies?.[0]?.delivery).toBeUndefined();
+  });
+
+  it('E06 — refuses a manual completion contradicted by an in-flight attempt', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    const [topic] = await db.insert(topics).values({ userId, workspaceId }).returning();
+    await db.insert(taskTopics).values({
+      seq: 1,
+      status: 'running',
+      taskId: upstream.id,
+      topicId: topic.id,
+      userId,
+      workspaceId,
+    });
+    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      name: 'TaskDependencyError',
+    });
+  });
+
   it('SA05-A — a delivery from a superseded execution generation is not valid', async () => {
     const { dependent, upstream } = await seedUpstreamWithDelivery();
     await seedCompletedAttempt(upstream.id, 1, { executionGeneration: 0 });

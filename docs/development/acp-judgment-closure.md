@@ -147,3 +147,37 @@ that capability was retired upstream (P05/P08) and stays retired. The
 `agent_operations`/`llm_generation_tracing` rows written by judgment runs are
 ordinary rows of tables that already existed; they remain valid after a
 rollback.
+
+## SB10/SB11 update — cancel authority, total budget, launch reconcile, honest traces
+
+Round-3 remediation hardened the judgment run contract:
+
+- **Cancel authority is physical, not durable.** `interrupt()` now reports
+  `interruptTask`'s `cancelState`: `confirmed` → `cancelResult: 'confirmed'`;
+  `requested` / `unknown` / a thrown interrupt / `deviceCancellationConfirmed === false` → `'unknown'`. The `agent_operations` row is never a substitute —
+  a row can read `interrupted` while the device writer is still alive, so the
+  error detail carries `cancelResult` separately from `status`. A run that
+  reached a real terminal state on its own (a natural `done` racing the
+  cancel) reports that status — `interrupted` is claimed only when the host
+  confirmed the stop.
+- **The total deadline bounds dispatch.** An `AbortController` minted before
+  `execAgent` is wired to its `signal`; the same deadline timer that bounds
+  the wait loop aborts a dispatch that never returns. `Promise.race` covers a
+  dispatch that ignores the abort entirely. A `done` observed past the
+  deadline is reported honestly but never accepted as a successful judgment.
+- **Launch reconcile by `intentKey`.** Every run stamps
+  `appContext.judgment.intentKey` (`purpose:attempt:nonce`, or a caller-pinned
+  `judgment.intentKey`). When `execAgent`'s return is lost — throw, caller
+  abort, or budget spent mid-dispatch — the row that landed is found via
+  `AgentOperationModel.findByJudgmentIntent` and interrupted; a late-settling
+  exec is reconciled in the background the same way. A judgment never
+  dispatches a second writer for one launch.
+- **Honest traces.** The `llm_generation_tracing` row records
+  `success=false` with `errorCode='no_json'` when the reply carries no
+  parseable JSON (plain text, truncated, or `null`), and
+  `errorCode='schema_mismatch'` when JSON parses but fails the schema — the
+  two failure modes are distinct in monitoring. `success` requires JSON
+  present AND schema-valid AND `status='done'`.
+- **Explicit slug is as strict as explicit agentId.** A `binding.slug` that
+  does not resolve to a builtin agent throws `ACP_JUDGMENT_NO_BINDING`
+  immediately — env fallback only applies when the caller pinned no identity.

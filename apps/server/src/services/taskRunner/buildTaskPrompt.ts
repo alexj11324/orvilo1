@@ -175,18 +175,21 @@ const collectDependencyReceipts = async (
         verifyOperationId: delivered.integration?.verifyOperationId,
       };
     }
-    // Valid only while the upstream is still standing on that delivery: a
-    // reopened/reverted/re-running upstream (status left 'completed'), a
-    // newer execution generation, or a revoked/non-landed integration record
-    // invalidates the receipt even though the historical delivery row exists.
-    // `dispatchId` binds the receipt to a specific upstream claim: a completed
-    // row with no dispatch identity is not a provable delivery.
+    // Valid only while the upstream is still standing on that delivery. An
+    // upstream completed with no recorded attempt (a manual status flip) is
+    // itself the delivery — the receipt honestly records `delivery` absent —
+    // but an in-flight attempt alongside a 'completed' status is
+    // contradictory and still refuses. When a completed attempt does exist it
+    // must bind the current upstream identity: no dispatch identity, a
+    // superseded execution generation, or a revoked/non-landed integration
+    // record invalidates the receipt even though the row exists.
     receipt.deliveryValid =
-      delivered !== undefined &&
       depStatusById.get(dep.dependsOnId) === 'completed' &&
-      delivered.dispatchId != null &&
-      delivered.executionGeneration === depGenerationById.get(dep.dependsOnId) &&
-      (delivered.integration == null || delivered.integration.state === 'integrated');
+      (delivered === undefined
+        ? !topics.some((topic) => topic.status === 'running')
+        : delivered.dispatchId != null &&
+          delivered.executionGeneration === depGenerationById.get(dep.dependsOnId) &&
+          (delivered.integration == null || delivered.integration.state === 'integrated'));
     receipts.push(receipt);
   }
   return receipts;

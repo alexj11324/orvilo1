@@ -156,3 +156,5 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 | F12     | 发布阻塞 | R00/R10/R11 | OPEN | 复合 PASS 已拆（本文件）；缺 `caid_dispatch_enabled` 服务端开关；固定 SHA 正路径验收未跑                                           |
 
 状态口径：本表 `OPEN` 表示整改 PR 未合入并通过门禁；各项收口后由 R11 在固定整合 SHA 上重跑对应回归行（`03-regression-matrix.md`）。
+
+- F11 / R09：修复实现于本 PR（`fix/quota-identity-observation`）——删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；identity-binding 契约见 `docs/development/quota-identity-observation.md`。行状态待合并门禁通过后由 R11 收口。

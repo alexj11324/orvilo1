@@ -38,6 +38,7 @@ import { consumePendingTopicRepos, getPendingTopicRepos } from '@/store/chat/pen
 import { topicSelectors } from '@/store/chat/selectors';
 import type { ChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { pushGatewayDiag } from '@/store/chat/utils/pushGatewayDiag';
 import { topicMapKey } from '@/store/chat/utils/topicMapKey';
 import { getFileStoreState } from '@/store/file/store';
 import type { StoreSetter } from '@/store/types';
@@ -318,6 +319,7 @@ export class GatewayActionImpl {
     this.disconnectFromGateway(operationId);
 
     const client = this.createClient({ gatewayUrl, operationId, resumeOnConnect, token });
+    pushGatewayDiag(`connect op=${operationId} resume=${Boolean(resumeOnConnect)}`);
 
     // Track connection in store
     this.#set(
@@ -333,6 +335,7 @@ export class GatewayActionImpl {
 
     // Wire up status changes
     client.on('status_changed', (status) => {
+      pushGatewayDiag(`op=${operationId} status=${status}`);
       this.#set(
         (state) => {
           const conn = state.gatewayConnections[operationId];
@@ -379,6 +382,7 @@ export class GatewayActionImpl {
       const isOwnOp = !event.operationId || event.operationId === operationId;
       if (isOwnOp && (event.type === 'agent_runtime_end' || event.type === 'error')) {
         receivedTerminalEvent = true;
+        pushGatewayDiag(`op=${operationId} event=${event.type}`);
       }
       // Only a clean completion counts as success — a cancel ('interrupted') or
       // deferred-tool park ('waiting_for_async_tool') must take the non-success
@@ -396,6 +400,9 @@ export class GatewayActionImpl {
 
     // Handle session completion
     client.on('session_complete', (completion) => {
+      pushGatewayDiag(
+        `op=${operationId} session_complete src=${completion?.source ?? 'raw'} status=${completion?.status ?? '-'} terminal=${receivedTerminalEvent}`,
+      );
       this.internal_cleanupGatewayConnection(operationId);
       fireSessionComplete({ completion });
     });
@@ -405,6 +412,7 @@ export class GatewayActionImpl {
     // non-terminal disconnects should NOT trigger onSessionComplete.
     // (auth_failed is handled separately below — it's also session-terminal.)
     client.on('disconnected', () => {
+      pushGatewayDiag(`op=${operationId} disconnected terminal=${receivedTerminalEvent}`);
       this.internal_cleanupGatewayConnection(operationId);
       if (receivedTerminalEvent) {
         fireSessionComplete();
@@ -419,6 +427,7 @@ export class GatewayActionImpl {
     // reconnect.
     client.on('auth_failed', (reason) => {
       console.error(`[Gateway] Auth failed for operation ${operationId}: ${reason}`);
+      pushGatewayDiag(`op=${operationId} auth_failed ${reason}`);
       this.internal_cleanupGatewayConnection(operationId);
       fireSessionComplete({ authFailed: true });
     });

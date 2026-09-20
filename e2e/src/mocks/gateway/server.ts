@@ -154,6 +154,22 @@ export const startFakeGateway = (
         return json({ ok: true });
       }
 
+      // Diagnostics ledger: `GET /api/operations/:id` returns what the gateway
+      // recorded for that op — the recorded event types, derived status and
+      // live subscriber count. Lets a failure dump distinguish "the server
+      // never pushed agent_runtime_end" from "the client received but
+      // mishandled it" when an op is stuck `running`.
+      if (req.method === 'GET' && path.startsWith('/api/operations/')) {
+        const operationId = path.split('/').pop() ?? '';
+        const op = operations.get(operationId);
+        if (!op) return json({ error: 'unknown operation' }, 404);
+        return json({
+          eventTypes: op.events.map(({ event }) => String(event.type)),
+          status: op.status,
+          subscribers: subscribers.get(operationId)?.size ?? 0,
+        });
+      }
+
       // The real gateway requires the service token on server pushes —
       // enforce it when configured so a missing AGENT_GATEWAY_SERVICE_TOKEN
       // on the Orvilo side can't false-green the suite.

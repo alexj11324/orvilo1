@@ -332,7 +332,21 @@ export class PullRequestReviewService {
     const market = new MarketService({
       userInfo: { userId: this.userId, workspaceId: this.workspaceId ?? undefined },
     });
-    const status = await market.market.skills.getStatus('github');
+    let status;
+    try {
+      status = await market.market.skills.getStatus('github');
+    } catch (error) {
+      // The probe only answers "is GitHub connected". When the market backend
+      // is absent or unreachable (self-hosted installs), a transport failure
+      // reads the same to the user as "not connected" — surface the connect
+      // path instead of an opaque provider error.
+      throw new PullRequestReviewError(
+        'GITHUB_NOT_CONNECTED',
+        `GitHub connection status could not be determined: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     if (!status.success || !status.connected) {
       throw new PullRequestReviewError(
         'GITHUB_NOT_CONNECTED',

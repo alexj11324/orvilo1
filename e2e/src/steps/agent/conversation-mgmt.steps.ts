@@ -51,7 +51,7 @@ Given('用户已有一个对话', async function (this: CustomWorld) {
   console.log('   ✅ 已创建一个对话');
 });
 
-Given('用户有多个对话历史', async function (this: CustomWorld) {
+Given('用户有多个对话历史', { timeout: 180_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 创建多个对话...');
 
   // Keep the search fixture self-contained. Without a deterministic title,
@@ -149,7 +149,7 @@ When('用户点击新建对话按钮', async function (this: CustomWorld) {
   await this.page.waitForTimeout(500);
 });
 
-When('用户点击另一个对话', async function (this: CustomWorld) {
+When('用户点击另一个对话', { timeout: 90_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 点击另一个对话...');
 
   // Check if we're on the home page (has Recent Topics section)

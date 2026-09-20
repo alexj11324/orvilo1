@@ -6,7 +6,7 @@ import type {
 import type { OpenAIChatMessage } from '@orvilo/types';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 export interface AiGenerationObjectInput {
   messages: OpenAIChatMessage[] | GenerateObjectPayload['messages'];
@@ -34,7 +34,7 @@ export interface AiGenerationObjectOptions {
 }
 
 /**
- * Thin wrapper around `initModelRuntimeFromDB` + `ModelRuntime.generateObject`.
+ * Thin wrapper around `initModelRuntimeFromDeploymentConfig` + `ModelRuntime.generateObject`.
  *
  * Almost every server-side caller that produces structured output goes through
  * the same two-step dance: resolve the user's provider config from the DB,
@@ -61,8 +61,8 @@ export class AiGenerationService {
     options: AiGenerationObjectOptions = {},
   ): Promise<T> {
     const runtime = this.workspaceId
-      ? await initModelRuntimeFromDB(this.db, this.userId, input.provider, this.workspaceId)
-      : await initModelRuntimeFromDB(this.db, this.userId, input.provider);
+      ? await initModelRuntimeFromDeploymentConfig(this.userId, input.provider, this.workspaceId)
+      : await initModelRuntimeFromDeploymentConfig(this.userId, input.provider);
     return (await runtime.generateObject(
       {
         messages: input.messages as GenerateObjectPayload['messages'],

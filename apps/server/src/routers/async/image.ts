@@ -20,7 +20,7 @@ import { FileModel } from '@/database/models/file';
 import { GenerationModel } from '@/database/models/generation';
 import { GenerationBatchModel } from '@/database/models/generationBatch';
 import { asyncAuthedProcedure, asyncRouter as router } from '@/libs/trpc/async';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { GenerationService } from '@/server/services/generation';
 import { sanitizeFileName } from '@/utils/sanitizeFileName';
 
@@ -161,8 +161,7 @@ export const imageRouter = router({
           log('Initializing agent runtime for provider: %s', provider);
 
           // Read user's provider config from database
-          const modelRuntime = await initModelRuntimeFromDB(
-            ctx.serverDB,
+          const modelRuntime = await initModelRuntimeFromDeploymentConfig(
             ctx.userId,
             provider,
             workspaceId,

@@ -4,12 +4,11 @@ import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useSingleton } from '@/hooks/useSingleton';
 import { agentQuotaService } from '@/services/agentQuota';
 import { fetchClaudeCodeQuotaSnapshot } from '@/services/heteroAgentQuota';
 
-import QuotaAccountSwitcher from './QuotaAccountSwitcher';
+import QuotaAccountIdentity from './QuotaAccountIdentity';
 import type { FetchQuotaOptions, QuotaWindowItem } from './QuotaMenu';
 import QuotaMenu, { createQuotaSourceKey } from './QuotaMenu';
 import {
@@ -61,7 +60,6 @@ interface ClaudeCodeQuotaMenuProps {
 
 const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) => {
   const { t } = useTranslation('chat');
-  const agentId = useAgentId();
   const sourceKey = createQuotaSourceKey('claude-code', deviceId ?? 'local', env);
   // A persisted account becomes eligible for a device only after this mounted
   // menu has observed that device return the same external account identity.
@@ -83,18 +81,14 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
     ): Promise<ClaudeCodeQuotaSnapshot> => {
       const force = !!options?.force;
 
-      // 1) Resolve the account to display — pinned for this agent, else the first.
-      const [initialAccounts, bindings] = await Promise.all([
-        agentQuotaService.listAccounts().catch(() => []),
-        agentId ? agentQuotaService.listBindings(agentId).catch(() => []) : [],
-      ]);
-      let accounts = initialAccounts;
+      // 1) Resolve the account to display — the identity this device reported,
+      // else the most recently observed account.
+      const accounts = await agentQuotaService.listAccounts().catch(() => []);
       let claude = accounts.filter((a) => a.provider === 'claude-code');
-      const pinnedId = bindings.find((b) => b.role === 'pinned')?.accountId;
       const trustedExternalAccountId = deviceId ? trustedDeviceAccounts.get(deviceId) : undefined;
       let account = deviceId
         ? claude.find((a) => a.externalAccountId === trustedExternalAccountId)
-        : (claude.find((a) => a.id === pinnedId) ?? claude[0]);
+        : claude[0];
       let readings = account
         ? await agentQuotaService.getLatestReadings(account.id).catch(() => [])
         : [];
@@ -136,12 +130,10 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
             await agentQuotaService
               .ingestClaudeSnapshot({ deviceId, identity: live.identity!, readings: live.readings })
               .catch(() => {});
-            accounts = await agentQuotaService.listAccounts().catch(() => accounts);
-            claude = accounts.filter((a) => a.provider === 'claude-code');
-            account =
-              claude.find((a) => a.externalAccountId === externalAccountId) ??
-              claude.find((a) => a.id === pinnedId) ??
-              claude[0];
+            claude = (await agentQuotaService.listAccounts().catch(() => accounts)).filter(
+              (a) => a.provider === 'claude-code',
+            );
+            account = claude.find((a) => a.externalAccountId === externalAccountId) ?? claude[0];
             readings = account
               ? await agentQuotaService.getLatestReadings(account.id).catch(() => readings)
               : readings;
@@ -161,7 +153,7 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
       if (merged && hasRenderableWindow(merged)) return merged;
       return live ?? merged ?? unavailableSnapshot();
     },
-    [agentId, deviceId, env, trustedDeviceAccounts],
+    [deviceId, env, trustedDeviceAccounts],
   );
 
   const getWindows = useCallback(
@@ -243,7 +235,7 @@ const ClaudeCodeQuotaMenu = memo<ClaudeCodeQuotaMenuProps>(({ deviceId, env }) =
       getRefreshErrorText={getRefreshErrorText}
       getUnavailableText={getUnavailableText}
       getWindows={getWindows}
-      renderHeader={(quota) => <QuotaAccountSwitcher placement="top" snapshot={quota} />}
+      renderHeader={(quota) => <QuotaAccountIdentity placement="top" snapshot={quota} />}
       sourceKey={sourceKey}
       title={t('heteroAgent.claudeQuota.title')}
       tooltip={t('heteroAgent.claudeQuota.tooltip')}

@@ -20,12 +20,8 @@ import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import { type OrviloDatabase } from '@/database/type';
 import { type MemoryAgentConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
-import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProviderAccess';
-import {
-  type ProviderKeyVaultMap,
-  type RuntimeResolveOptions,
-} from '@/server/services/memory/userMemory/extract';
+import { type RuntimeResolveOptions } from '@/server/services/memory/userMemory/extract';
 import { resolveRuntimeAgentConfig } from '@/server/services/memory/userMemory/extract';
 import { LayersEnum } from '@/types/userMemory';
 import { trimBasedOnBatchProbe } from '@/utils/chunkers';
@@ -101,9 +97,11 @@ export class UserPersonaService {
     // purely user-level feature with no workspace concept; the payload carries no
     // workspaceId, so provider config is resolved against the user's personal scope.
     const aiInfraRepos = new AiInfraRepos(this.db, payload.userId, {});
+    // Provider matching needs the deployment catalog only — user key vaults are never
+    // decrypted: credentials are deployment-managed since BYOK retirement.
     const runtimeState = await getUserScopedAiProviderRuntimeState(
       payload.userId,
-      () => aiInfraRepos.getAiProviderRuntimeState(KeyVaultsGateKeeper.getUserKeyVaults),
+      () => aiInfraRepos.getAiProviderRuntimeState(),
       { throwOnUnresolvedAccess: true },
     );
     const providerId = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
@@ -112,19 +110,10 @@ export class UserPersonaService {
       modelId: agentConfig.model,
     });
 
-    const keyVaults: ProviderKeyVaultMap = Object.entries(runtimeState.runtimeConfig || {}).reduce(
-      (acc, [provider, config]) => {
-        acc[provider.toLowerCase()] = config?.keyVaults;
-        return acc;
-      },
-      {} as ProviderKeyVaultMap,
-    );
-
     const hooks = getBusinessModelRuntimeHooks(payload.userId, 'orvilo');
 
     const runtime = await resolveRuntimeAgentConfig(
       agentConfig,
-      keyVaults,
       {
         fallback: {
           apiKey: agentConfig.apiKey,

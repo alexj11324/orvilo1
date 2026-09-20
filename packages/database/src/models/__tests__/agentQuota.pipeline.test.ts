@@ -2,17 +2,15 @@
 /**
  * End-to-end proof of the "fossilize the quota reading" pipeline against a real
  * (in-memory) Postgres, with no live Claude account:
- *   parse identity → account → snapshots → windows → ledger → calibrate → LB.
+ *   parse identity → account → snapshots → windows → ledger → calibrate.
  * Uses the same math that recovered ~$548 / 5h from real logs.
  */
 import {
-  type AccountLoad,
   calibrateCapacity,
   computeTurnCostUsd,
   parseClaudeAccountIdentity,
   projectWindows,
   type QuotaLimitReading,
-  selectAccount,
   windowsToCalibrationIntervals,
 } from '@orvilo/heterogeneous-agents/quota';
 import { eq } from 'drizzle-orm';
@@ -46,7 +44,7 @@ afterEach(async () => {
 });
 
 describe('quota fossilization pipeline', () => {
-  it('goes identity → account → snapshots → windows → ledger → calibration → LB', async () => {
+  it('goes identity → account → snapshots → windows → ledger → calibration', async () => {
     const accounts = new AgentProviderAccountModel(serverDB, userId);
     const snapshots = new AgentQuotaSnapshotModel(serverDB, userId);
     const windows = new AgentQuotaWindowModel(serverDB, userId);
@@ -172,12 +170,5 @@ describe('quota fossilization pipeline', () => {
     });
     const latest = await calibrations.latest(account.id, 'session');
     expect(Number(latest?.capacityUsd)).toBeCloseTo(calibration.capacityUsd, 3);
-
-    // 5) load-balance across this account + a second, weekly-heavier account
-    const loads: AccountLoad[] = [
-      { accountId: account.id, enabled: true, priority: 0, weeklyUtil: 72 },
-      { accountId: 'other', enabled: true, priority: 0, weeklyUtil: 30 },
-    ];
-    expect(selectAccount(loads, { now: Date.now() })?.accountId).toBe('other');
   });
 });

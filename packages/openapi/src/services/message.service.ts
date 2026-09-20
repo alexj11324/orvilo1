@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray } from 'drizzle-orm';
 
 import type { FileItem, MessageItem, SessionItem, TopicItem } from '@/database/schemas';
 import { messages, messagesFiles } from '@/database/schemas';
@@ -24,7 +24,6 @@ import type {
   MessagesListQuery,
   SearchMessagesByKeywordRequest,
 } from '../types/message.type';
-import { ChatService } from './chat.service';
 
 /**
  * Message count result type
@@ -512,135 +511,6 @@ export class MessageService extends BaseService {
       return completeMessageWithFiles[0];
     } catch (error) {
       this.handleServiceError(error, '创建消息');
-    }
-  }
-
-  /**
-   * Create a user message and generate an AI reply
-   * @param messageData User message data
-   * @returns User message ID and AI reply message ID
-   */
-  async createMessageWithAIReply(
-    messageData: MessagesCreateRequest,
-  ): ServiceResult<MessageResponse | null | undefined> {
-    this.log('info', '创建消息并生成AI回复', {
-      role: messageData.role,
-      topicId: messageData.topicId,
-      userId: this.userId,
-    });
-
-    try {
-      // Permission check
-      const permissionResult = await this.resolveOperationPermission(
-        'MESSAGE_CREATE',
-        messageData.topicId ? { targetTopicId: messageData.topicId } : undefined,
-      );
-      if (!permissionResult.isPermitted) {
-        throw this.createAuthorizationError(permissionResult.message || '无权创建消息');
-      }
-
-      // 1. Create user message
-      const userMessage = await this.createMessage(messageData);
-
-      // 2. If it is a user message, generate an AI reply
-      if (messageData.role === 'user') {
-        this.log('info', '开始获取对话历史');
-        // Get conversation history
-        const conversationHistory = await this.getConversationHistory(messageData.topicId);
-        this.log('info', '对话历史获取完成', { historyLength: conversationHistory.length });
-
-        // Use ChatService to generate reply
-        this.log('info', '开始生成AI回复', {
-          model: messageData.model,
-          provider: messageData.provider,
-          userId: this.userId,
-        });
-
-        const chatService = new ChatService(this.db, this.userId, this.workspaceId);
-        let aiReplyContent = '';
-
-        try {
-          aiReplyContent = await chatService.generateReply({
-            conversationHistory,
-            model: messageData.model,
-            provider: messageData.provider,
-            sessionId: null,
-            userMessage: messageData.content,
-          });
-          this.log('info', 'AI回复生成完成', { replyLength: aiReplyContent.length });
-        } catch (replyError) {
-          this.log('error', 'AI回复生成失败，使用默认回复', {
-            error: replyError instanceof Error ? replyError.message : String(replyError),
-          });
-          aiReplyContent = '抱歉，AI 服务暂时不可用，请稍后再试。';
-        }
-
-        // 3. Create AI reply message
-        const aiReplyData: MessagesCreateRequest = {
-          content: aiReplyContent,
-          model: messageData.model,
-          provider: messageData.provider,
-          role: 'assistant',
-          topicId: messageData.topicId,
-        };
-
-        this.log('info', '开始创建AI回复消息');
-        const aiReply = await this.createMessage(aiReplyData);
-        this.log('info', 'AI回复消息创建完成', { aiReplyId: aiReply.id });
-
-        this.log('info', '创建消息和AI回复完成', {
-          aiReplyId: aiReply.id,
-          userMessageId: userMessage.id,
-        });
-
-        return this.getMessageById(aiReply.id);
-      }
-
-      // If it is not a user message, return empty
-      return;
-    } catch (error) {
-      this.handleServiceError(error, '创建消息并生成AI回复');
-    }
-  }
-
-  /**
-   * Get conversation history
-   * @param topicId Topic ID
-   * @param limit Message count limit
-   * @returns Conversation history
-   */
-  private async getConversationHistory(
-    topicId: string | null,
-    limit: number = 10,
-  ): Promise<Array<{ content: string; role: 'user' | 'assistant' | 'system' }>> {
-    try {
-      const result = await this.db.query.messages.findMany({
-        columns: {
-          content: true,
-          role: true,
-        },
-        limit,
-        orderBy: desc(messages.createdAt),
-        where: and(
-          topicId === null ? isNull(messages.topicId) : eq(messages.topicId, topicId),
-          this.buildWorkspaceWhere(messages),
-        ),
-      });
-
-      // Reverse order so the latest messages are at the end
-      return result
-        .reverse()
-        .filter((msg) => msg.content && ['user', 'assistant'].includes(msg.role))
-        .map((msg) => ({
-          content: msg.content!,
-          role: msg.role as 'user' | 'assistant',
-        }));
-    } catch (error) {
-      this.log('error', '获取对话历史失败', {
-        error: error instanceof Error ? error.message : String(error),
-        topicId,
-      });
-      return [];
     }
   }
 

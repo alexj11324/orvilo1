@@ -87,99 +87,6 @@ export interface HeterogeneousAgentModelCatalogFailure {
 export type HeterogeneousAgentModelCatalog =
   HeterogeneousAgentModelCatalogFailure | HeterogeneousAgentModelCatalogSuccess;
 
-/** Authentication source used by a heterogeneous agent CLI. */
-export type HeterogeneousAuthMode = 'api' | 'subscription';
-
-/**
- * Reference-only user-provider API binding for a heterogeneous agent.
- * Provider credentials are resolved at launch and are never persisted here.
- */
-export interface HeterogeneousProviderApiConfig {
-  /** Primary model used by the CLI. */
-  model: string;
-  /** User provider whose runtime credentials are resolved locally. */
-  providerId: string;
-  /** Optional model used for fast/background work. Defaults to the primary model. */
-  smallFastModel?: string | null;
-  /** Omitted by existing records; any omitted source is a user-provider binding. */
-  source?: 'provider';
-}
-
-/** Legacy Claude Code request alias. Current CLIs send `aspectlylabs/${catalogId}`. */
-export const SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS = 'orvilo-default';
-
-const SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE = 'aspectlylabs/';
-
-export const formatServerDefaultHeterogeneousModel = (model: string): string =>
-  `${SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE}${model}`;
-
-export const isServerDefaultHeterogeneousModel = (
-  requestModel: unknown,
-  operationModel: string,
-): boolean => requestModel === formatServerDefaultHeterogeneousModel(operationModel);
-
-export interface ServerDefaultHeterogeneousRelayInvocation {
-  acceptedAt: string;
-  agentType: string;
-  ingress: 'anthropic-messages' | 'openai-responses';
-  model: string;
-  operationId: string;
-  provider: string;
-}
-
-/** Durable proof written only after the official relay accepts a model invocation. */
-export const isServerDefaultHeterogeneousRelayInvocation = (
-  value: unknown,
-): value is ServerDefaultHeterogeneousRelayInvocation => {
-  if (!value || typeof value !== 'object') return false;
-  const invocation = value as Partial<ServerDefaultHeterogeneousRelayInvocation>;
-  return (
-    typeof invocation.acceptedAt === 'string' &&
-    typeof invocation.agentType === 'string' &&
-    ['anthropic-messages', 'openai-responses'].includes(invocation.ingress ?? '') &&
-    typeof invocation.model === 'string' &&
-    typeof invocation.operationId === 'string' &&
-    typeof invocation.provider === 'string'
-  );
-};
-
-/**
- * Map a CLI-reported server-default model back to the catalog id.
- *
- * Supported CLIs request `aspectlylabs/${catalogId}`. Older Claude Code sessions used
- * {@link SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS}. Neither is the catalog id
- * the user picked.
- */
-export const unwrapServerDefaultHeterogeneousModel = (
-  reportedModel: string | undefined,
-  configuredModel?: string,
-): string | undefined => {
-  const configured = configuredModel?.trim() || undefined;
-
-  if (!reportedModel) return configured;
-
-  if (reportedModel === SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS) {
-    return configured ?? reportedModel;
-  }
-
-  if (reportedModel.startsWith(SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE)) {
-    const unwrapped = reportedModel.slice(SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE.length);
-    return unwrapped || reportedModel;
-  }
-
-  return reportedModel;
-};
-
-/** Deployment-owned API binding whose provider and credentials stay on the server. */
-export interface HeterogeneousServerDefaultApiConfig {
-  /** Model id from the deployment's enabled model catalog. */
-  model: string;
-  source: 'server-default';
-}
-
-export type HeterogeneousApiConfig =
-  HeterogeneousProviderApiConfig | HeterogeneousServerDefaultApiConfig;
-
 /**
  * Inner engine driving a builtin Orvilo harness session
  * (`HeterogeneousProviderConfig.type === 'orvilo'`).
@@ -300,12 +207,8 @@ export const resolveHeteroAgentSystemContext = (
  *   engine selected by `engine`; `command` overrides the engine binary path.
  */
 export interface HeterogeneousProviderConfig {
-  /** Credential-free API binding used when `authMode` is `api`. */
-  apiConfig?: HeterogeneousApiConfig;
   /** Additional CLI arguments for the agent command (local CLI only). */
   args?: string[];
-  /** Defaults to `subscription` for backwards compatibility. */
-  authMode?: HeterogeneousAuthMode;
   /**
    * Command to spawn the agent (e.g. 'claude') (local CLI only). For the
    * builtin Orvilo engine this overrides the binary resolved from `engine`.
@@ -387,22 +290,10 @@ export interface HeterogeneousTopicPin extends Partial<HeterogeneousTopicModel> 
   effort?: HeterogeneousReasoningEffort;
 }
 
-/**
- * Resolve the topic-level model snapshot for a heterogeneous provider.
- *
- * Server-default API models intentionally remain Agent-scoped: unlike a user-provider
- * binding, their deployment-owned provider identity cannot be represented by the topic's
- * model/provider pair. Their topic execution therefore ignores any stale pin from another
- * auth mode and follows the current Agent config.
- */
+/** Resolve the topic-level model snapshot for a heterogeneous provider. */
 export const resolveHeterogeneousProviderTopicModel = (
   config: HeterogeneousProviderConfig,
 ): HeterogeneousTopicModel | undefined => {
-  if (config.authMode === 'api') {
-    if (!config.apiConfig || config.apiConfig.source === 'server-default') return undefined;
-    return { model: config.apiConfig.model, provider: config.apiConfig.providerId };
-  }
-
   // Selector capabilities are keyed by CLI family. Persist that family as the
   // Orvilo topic identity so a Claude pin cannot be replayed by Codex later.
   const family = resolveHeteroCliAgentType(config);
@@ -438,24 +329,6 @@ const applyTopicModelPin = (
 ): HeterogeneousProviderConfig => {
   if (!topicModel?.model) return config;
 
-  if (config.authMode === 'api') {
-    const apiConfig = config.apiConfig;
-    // Server-default is Agent-scoped. In particular, do not turn it back into a
-    // user-provider binding when this topic retains a pin from an earlier auth mode.
-    if (apiConfig?.source === 'server-default') return config;
-    if (!topicModel.provider || topicModel.provider === config.type) return config;
-    return {
-      ...config,
-      apiConfig: {
-        model: topicModel.model,
-        providerId: topicModel.provider,
-        ...(apiConfig?.providerId === topicModel.provider
-          ? { smallFastModel: apiConfig.smallFastModel }
-          : {}),
-      },
-    };
-  }
-
   if (!isCompatibleHeterogeneousTopicModelPin(config, topicModel)) return config;
 
   const family = resolveHeteroCliAgentType(config);
@@ -467,8 +340,8 @@ const applyTopicModelPin = (
 
 /**
  * Overlay a topic's pins (model/provider + reasoning effort) on the agent's
- * heterogeneous provider config. The model pin follows the auth-mode rules of
- * {@link applyTopicModelPin}; the effort pin is a plain CLI-level override, so
+ * heterogeneous provider config. The model pin follows the compatibility rules
+ * of {@link applyTopicModelPin}; the effort pin is a plain CLI-level override, so
  * it applies when supported by the effective model — independent of whether
  * a model was pinned. `'default'` is a real pin (it means "drop the
  * agent's effort flag for this topic"), only `undefined` keeps the agent value.
@@ -477,11 +350,7 @@ export const applyTopicModelToHeterogeneousProvider = (
   config: HeterogeneousProviderConfig,
   topicModel: HeterogeneousTopicPin | undefined,
 ): HeterogeneousProviderConfig => {
-  if (
-    config.authMode !== 'api' &&
-    topicModel?.model &&
-    !isCompatibleHeterogeneousTopicModelPin(config, topicModel)
-  ) {
+  if (topicModel?.model && !isCompatibleHeterogeneousTopicModelPin(config, topicModel)) {
     return config;
   }
 
@@ -490,11 +359,8 @@ export const applyTopicModelToHeterogeneousProvider = (
   if (effort === undefined) return withModel;
   const capability = getHeteroSelectorCapability(resolveHeteroCliAgentType(withModel));
   if (!capability?.effort) return withModel;
-  const model =
-    withModel.authMode === 'api'
-      ? withModel.apiConfig?.model
-      : capability.model?.resolve(withModel);
-  /** Auth-mode changes can reject the topic model while leaving its old effort behind. */
+  const model = capability.model?.resolve(withModel);
+  /** A rejected topic model pin can leave its old effort behind. */
   if (effort !== 'default' && !capability.effort.levels(model ?? 'default').includes(effort)) {
     effort = 'default';
   }

@@ -43,6 +43,7 @@ import {
   stopDaemon,
   writeStatus,
 } from '../daemon/manager';
+import { listTasks } from '../daemon/taskRegistry';
 import { spawnHeteroAgentRun } from '../device/agentRun';
 import {
   mintWorkspaceConnectToken,
@@ -442,6 +443,15 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   // further below once the workspace-share machinery is in scope — every bound
   // connection reads this object by reference, so late attachment is safe.
   const deviceControlDeps: DeviceControlDeps = {
+    getActiveWorktreeWriter: async (worktreePath: string) => {
+      const target = path.resolve(worktreePath);
+      for (const entry of listTasks()) {
+        if (entry.cwd && path.resolve(entry.cwd) === target) {
+          return { operationId: entry.operationId, pid: entry.pid, topicId: entry.topicId };
+        }
+      }
+      return null;
+    },
     getLocalFilePreview: defaultGetLocalFilePreview,
     getProjectFileIndex: defaultGetProjectFileIndex,
     listHeterogeneousAgentModels: (params) =>

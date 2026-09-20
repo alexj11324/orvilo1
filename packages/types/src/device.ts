@@ -494,12 +494,28 @@ export interface DeviceGitWorktreeListItem {
 }
 
 /**
+ * A live agent run whose process working directory is the inspected worktree,
+ * reported by the device host's run registry.
+ */
+export interface DeviceGitWorktreeActiveWriter {
+  operationId?: string;
+  pid?: number;
+  topicId?: string;
+}
+
+/**
  * Occupancy classification for a candidate worktree path, returned by the
  * `inspectGitWorktreePath` device RPC. Mirrors the desktop
  * `GitWorktreePathInspection`. `unknown` means the worktree listing itself
  * failed — never treat it as an empty list.
+ *
+ * `activeWriter` is the device-side liveness signal: `null` means the host
+ * verified no run is writing inside the path, an object means a live run owns
+ * it, and `undefined` means the host cannot answer (older client / host with
+ * no run registry) — callers must treat it as "cannot prove safe", not "free".
  */
 export interface DeviceGitWorktreePathInspection {
+  activeWriter?: DeviceGitWorktreeActiveWriter | null;
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: DeviceGitWorktreeListItem;
@@ -623,6 +639,12 @@ export interface DeviceGitRemoteBranchListItem {
   isDefault: boolean;
   /** Short ref name, e.g. `origin/canary`. */
   name: string;
+  /**
+   * Commit SHA the ref currently points at (`%(objectname)`). Absent on older
+   * device clients — provisioning must treat a missing SHA as unresolvable,
+   * not as "checkout whatever the ref says at add time".
+   */
+  sha?: string;
 }
 
 /** Result of the `revertGitFile` device RPC. Mirrors the desktop `GitFileRevertResult`. */

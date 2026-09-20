@@ -87,15 +87,20 @@ export const listGitRemoteBranches = async (
   try {
     const { stdout } = await execFileAsync(
       'git',
-      ['for-each-ref', '--sort=-committerdate', '--format=%(refname:short)', 'refs/remotes/origin'],
+      [
+        'for-each-ref',
+        '--sort=-committerdate',
+        '--format=%(refname:short) %(objectname)',
+        'refs/remotes/origin',
+      ],
       { cwd: dirPath, timeout: 5000 },
     );
     return stdout
       .replaceAll('\r', '')
       .split('\n')
-      .map((line) => line.trim())
-      .filter((name) => name.length > 0 && name !== 'origin/HEAD' && !name.endsWith('/HEAD'))
-      .map((name) => ({ isDefault: name === defaultRef, name }));
+      .map((line) => line.trim().split(/\s+/))
+      .filter(([name]) => name && name !== 'origin/HEAD' && !name.endsWith('/HEAD'))
+      .map(([name, sha]) => ({ isDefault: name === defaultRef, name, sha }));
   } catch (error: any) {
     log.warn('[listGitRemoteBranches] git command failed', {
       code: error?.code,

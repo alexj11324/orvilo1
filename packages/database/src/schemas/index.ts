@@ -60,6 +60,7 @@ export * from './session';
 export * from './systemBotProvider';
 export * from './task';
 export * from './taskInput';
+export * from './taskWorkspace';
 export * from './team';
 export * from './topic';
 export * from './topicComment';

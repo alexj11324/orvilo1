@@ -158,3 +158,5 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 - F09 → R05：修复已在 #158（`fix/execution-start-intent-contract`，draft）实现 —— `idle`/ 孤儿 metadata → `PRECONDITION_FAILED`，终态 → `CONFLICT`，不存在 → `NOT_FOUND`，`running`/parked → 幂等 `alreadyStarted:true`；`autoStart:false` 在任何副作用前拒绝（`BAD_REQUEST` / batch `results` 失败项）。合并门禁复核前保持 OPEN。
 
 状态口径：本表 `OPEN` 表示整改 PR 未合入并通过门禁；各项收口后由 R11 在固定整合 SHA 上重跑对应回归行（`03-regression-matrix.md`）。
+
+- F11 / R09：修复实现于本 PR（`fix/quota-identity-observation`）——删除 `claude[0]` 身份兜底，观测键绑定执行节点 + runtime/profile + 已确认身份；identity-binding 契约见 `docs/development/quota-identity-observation.md`。行状态待合并门禁通过后由 R11 收口。

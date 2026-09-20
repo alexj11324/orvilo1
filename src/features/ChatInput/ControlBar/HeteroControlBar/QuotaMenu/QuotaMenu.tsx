@@ -215,6 +215,11 @@ interface QuotaMenuProps<S extends QuotaSnapshotBase> {
   fetchQuota: (options?: FetchQuotaOptions<S>) => Promise<S>;
   /** Localized explanation for `status: 'error'`; falls back to `error`. */
   getErrorText?: (quota: S) => string | undefined;
+  /**
+   * Localized notice rendered below the windows while quota data stays on
+   * screen (e.g. a live sample whose history write failed).
+   */
+  getNoticeText?: (quota: S) => string | undefined;
   /** Localized explanation for a manual refresh error when stale data is preserved. */
   getRefreshErrorText?: (quota: S) => string | undefined;
   /** Localized explanation for `status: 'unavailable'`; falls back to `error`. */
@@ -246,6 +251,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   createErrorSnapshot,
   fetchQuota,
   getErrorText,
+  getNoticeText,
   getRefreshErrorText,
   getUnavailableText,
   getWindows,
@@ -584,6 +590,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       ? getRefreshErrorText?.(quota) || t('heteroAgent.quota.refreshFailed')
       : undefined;
   const refreshErrorText = manualRefreshErrorText || staleSnapshotErrorText;
+  const noticeText = quota?.status === 'ok' ? getNoticeText?.(quota) : undefined;
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -689,6 +696,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
           <Flexbox gap={10}>{windows.map((item) => renderQuotaWindow(item))}</Flexbox>
           {quota && renderFooter?.(quota, { applyQuota, formatDuration, now })}
           {refreshErrorText && <div className={styles.refreshNotice}>{refreshErrorText}</div>}
+          {noticeText && <div className={styles.refreshNotice}>{noticeText}</div>}
         </>
       ) : (
         <div className={styles.emptyState}>{t('heteroAgent.quota.noData')}</div>

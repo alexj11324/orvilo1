@@ -1,8 +1,17 @@
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { QuotaReadingRow } from './quotaViewModel';
-import { buildClaudePanelSnapshot, isQuotaStale, newestCapturedAt } from './quotaViewModel';
+import {
+  buildClaudePanelSnapshot,
+  isObservableQuotaAccount,
+  isQuotaStale,
+  newestCapturedAt,
+  pruneQuotaIdentityTrust,
+  resetQuotaIdentityTrust,
+  trustedQuotaIdentity,
+  trustQuotaIdentity,
+} from './quotaViewModel';
 
 const reset = Date.parse('2026-07-21T14:00:00Z');
 const sessionReset = Date.parse('2026-07-18T20:50:00Z');
@@ -215,6 +224,57 @@ describe('buildClaudePanelSnapshot — folding in a live sample', () => {
     expect(buildClaudePanelSnapshot(account, readings, null, now).session).toMatchObject({
       usedPercent: 43,
     });
+  });
+});
+
+describe('isObservableQuotaAccount', () => {
+  it('keeps only enabled rows of the provider; revoked/disabled rows are not observable', () => {
+    const row = { provider: 'claude-code' };
+
+    expect(isObservableQuotaAccount(row, 'claude-code')).toBe(true);
+    expect(isObservableQuotaAccount({ provider: 'codex' }, 'claude-code')).toBe(false);
+    expect(isObservableQuotaAccount({ ...row, enabled: false }, 'claude-code')).toBe(false);
+    expect(isObservableQuotaAccount({ ...row, status: 'disabled' }, 'claude-code')).toBe(false);
+    // Error/expired rows still describe this account's real history.
+    expect(isObservableQuotaAccount({ ...row, status: 'expired' }, 'claude-code')).toBe(true);
+  });
+});
+
+describe('quota identity trust', () => {
+  beforeEach(() => resetQuotaIdentityTrust());
+
+  it('binds confirmed identities per execution context', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-local');
+    trustQuotaIdentity('claude-code:device-a', 'ext-remote');
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBe('ext-local');
+    expect(trustedQuotaIdentity('claude-code:device-a')).toBe('ext-remote');
+    expect(trustedQuotaIdentity('claude-code:device-b')).toBeUndefined();
+  });
+
+  it('rebinds a context when the live sampler confirms a different login', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-old');
+    trustQuotaIdentity('claude-code:local', 'ext-new');
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBe('ext-new');
+  });
+
+  it('drops bindings whose identity left the visible account set', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-local');
+    trustQuotaIdentity('claude-code:device-a', 'ext-remote');
+
+    // ext-remote was revoked or fell out of this user/workspace's scope.
+    pruneQuotaIdentityTrust(new Set(['ext-local']));
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBe('ext-local');
+    expect(trustedQuotaIdentity('claude-code:device-a')).toBeUndefined();
+  });
+
+  it('reset clears every binding', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-local');
+    resetQuotaIdentityTrust();
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBeUndefined();
   });
 });
 

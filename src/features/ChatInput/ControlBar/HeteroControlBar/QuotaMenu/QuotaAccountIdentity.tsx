@@ -25,7 +25,9 @@ const styles = createStaticStyles(({ css }) => ({
 /**
  * Read-only account line in the quota panel: which provider identity these
  * quota numbers belong to, plus the calendar entry. Observation only — there
- * is no account pool to manage or switch.
+ * is no account pool to manage or switch. An identity-less snapshot renders
+ * 'unknown' — the panel must admit it cannot name the account rather than
+ * leaving a borrowed name on screen.
  */
 const QuotaAccountIdentity = memo<{
   placement?: 'top' | 'bottom';
@@ -34,7 +36,9 @@ const QuotaAccountIdentity = memo<{
   const { t } = useTranslation('chat');
   const identity = snapshot.identity;
 
-  if (!identity) return null;
+  const label = identity
+    ? identity.displayName || identity.email || t('heteroAgent.claudeQuota.accounts')
+    : t('heteroAgent.claudeQuota.unknownIdentity');
 
   return (
     <Flexbox
@@ -45,22 +49,24 @@ const QuotaAccountIdentity = memo<{
       justify={'space-between'}
     >
       <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
-        <Text ellipsis style={{ fontSize: 12 }}>
-          {identity.displayName || identity.email || t('heteroAgent.claudeQuota.accounts')}
+        <Text ellipsis style={{ fontSize: 12 }} type={identity ? undefined : 'secondary'}>
+          {label}
         </Text>
-        {identity.planTier && (
+        {identity?.planTier && (
           <Text style={{ flex: 'none', fontSize: 12 }} type={'secondary'}>
             {identity.planTier}
           </Text>
         )}
       </Flexbox>
-      <ActionIcon
-        icon={CalendarDaysIcon}
-        size={'small'}
-        style={{ flex: 'none' }}
-        title={t('heteroAgent.claudeQuota.calendar.entry')}
-        onClick={() => openQuotaCalendarModal({ externalAccountId: identity.externalAccountId })}
-      />
+      {identity?.externalAccountId && (
+        <ActionIcon
+          icon={CalendarDaysIcon}
+          size={'small'}
+          style={{ flex: 'none' }}
+          title={t('heteroAgent.claudeQuota.calendar.entry')}
+          onClick={() => openQuotaCalendarModal({ externalAccountId: identity.externalAccountId })}
+        />
+      )}
     </Flexbox>
   );
 });

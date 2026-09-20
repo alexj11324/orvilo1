@@ -436,6 +436,8 @@ export default {
   'heteroAgent.claudeQuota.errorGeneric': "Couldn't reach the quota service. Tap refresh to retry.",
   'heteroAgent.claudeQuota.errorRateLimited':
     'Claude Code quota is temporarily rate limited. Please try again later.',
+  'heteroAgent.claudeQuota.persistFailed':
+    'Showing the live reading — it could not be saved to history yet.',
   'heteroAgent.claudeQuota.refreshRateLimited':
     'Quota refresh is temporarily rate limited. Showing the last available data.',
   'heteroAgent.claudeQuota.scopedWeekly': 'Weekly ({{model}})',
@@ -447,6 +449,7 @@ export default {
     'This agent uses an API key / custom endpoint, so subscription quota does not apply.',
   'heteroAgent.claudeQuota.unavailableNotFound':
     'No Claude Code login found. Run claude in a terminal to sign in first.',
+  'heteroAgent.claudeQuota.unknownIdentity': 'Unknown',
   'heteroAgent.claudeSdkRuntime.state.closed': 'SDK closed',
   'heteroAgent.claudeSdkRuntime.state.closing': 'SDK closing',
   'heteroAgent.claudeSdkRuntime.state.error': 'SDK error',

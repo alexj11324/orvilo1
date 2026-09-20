@@ -379,8 +379,17 @@ export class TaskRunnerService {
         }
       }
 
+      // A continuation inherits the persisted contract content: instruction,
+      // verify gate and dependency receipts re-render from the contract, so
+      // editing the Task mid-flight cannot silently rewrite this attempt.
+      // Changing constraints requires a new contract revision — a fresh run.
+      const inheritedContractContent =
+        continueTopicId && continuedTopic?.contract?.content
+          ? continuedTopic.contract.content
+          : undefined;
       const {
         acceptanceEnabled,
+        contractContent,
         fileIds: attachmentFileIds,
         goalLoop,
         prompt,
@@ -395,6 +404,7 @@ export class TaskRunnerService {
           workspaceId: this.workspaceId,
         },
         [extraPrompt, provisioned?.prompt].filter(Boolean).join('\n\n') || undefined,
+        { contractContent: inheritedContractContent },
       );
 
       const agentRef = executingAgentId;
@@ -485,6 +495,7 @@ export class TaskRunnerService {
       // than re-deriving constraints from mutable task config.
       const executionContract = buildTaskExecutionContract(task, {
         acceptanceEnabled,
+        content: contractContent,
         dispatch: preparedDispatch!.dispatch,
         environment: environmentSnapshot,
         goalLoop,
@@ -513,8 +524,9 @@ export class TaskRunnerService {
         ...(isSlug ? { slug: agentRef } : { agentId: agentRef }),
         // Task contract tools are admission requirements, not hints: a run
         // whose evidence/brief surface cannot mount must be refused before
-        // dispatch instead of executing without them.
-        requiredToolIds: pluginIds,
+        // dispatch instead of executing without them. Sourced from the
+        // persisted contract so admission and the contract cannot diverge.
+        requiredToolIds: executionContract.tools,
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         skipTaskVerification,
@@ -936,6 +948,7 @@ export class TaskRunnerService {
    * of N dependency walks.
    */
   async cascadeOnCompletionMany(completedTaskIds: string[]): Promise<CascadeResult> {
+    await this.markStaleDependencyInputs(completedTaskIds);
     const unlocked = await this.taskModel.getUnlockedTasksForMany(completedTaskIds);
     if (unlocked.length === 0) return TaskRunnerService.cascadeEmpty();
 
@@ -995,6 +1008,72 @@ export class TaskRunnerService {
     const parent = await this.taskModel.findById(task.parentTaskId);
     if (!parent) return false;
     return this.taskModel.shouldPauseBeforeStart(parent, task.identifier);
+  }
+
+  /**
+   * When an upstream task completes (fresh delivery or a re-delivery after a
+   * rollback), dependents whose in-flight run was dispatched against a
+   * different dependency receipt are marked `inputStale` on their running
+   * topic — the recorded receipt no longer names the upstream's latest
+   * delivery. New dispatches always freeze the freshest receipts, so the flag
+   * is the audit trail that separates "built on the delivery that exists" from
+   * "built on a delivery that was superseded mid-flight".
+   */
+  private async markStaleDependencyInputs(completedTaskIds: string[]): Promise<void> {
+    for (const completedTaskId of completedTaskIds) {
+      const [upstreamTopics, dependents] = await Promise.all([
+        this.taskTopicModel.findByTaskId(completedTaskId).catch(() => []),
+        this.taskModel.getDependents(completedTaskId).catch(() => []),
+      ]);
+      const latestDelivery = upstreamTopics.find((topic) => topic.status === 'completed');
+      const observedDelivery = latestDelivery
+        ? {
+            integratedSha: latestDelivery.integration?.integratedSha,
+            operationId: latestDelivery.operationId ?? undefined,
+            seq: latestDelivery.seq ?? undefined,
+            sourceSha: latestDelivery.integration?.expectedHeadSha,
+            topicId: latestDelivery.topicId,
+          }
+        : undefined;
+
+      for (const dep of dependents) {
+        if (dep.type !== 'blocks') continue;
+        const runningTopics = await this.taskTopicModel
+          .findRunningByTaskIds([dep.taskId])
+          .catch(() => []);
+        for (const topic of runningTopics) {
+          if (!topic.topicId) continue;
+          const recorded = topic.contract?.content?.dependencies?.find(
+            (receipt) => receipt.dependsOnId === completedTaskId,
+          );
+          if (!recorded) continue;
+          // Stale = the delivery this attempt was built on is not the delivery
+          // that now exists (redelivery), or the upstream has none at all
+          // (rollback). A same-topic redelivery of identical SHAs is not stale.
+          const sameDelivery =
+            recorded.delivery?.topicId === observedDelivery?.topicId &&
+            (!observedDelivery ||
+              (recorded.delivery?.sourceSha === observedDelivery.sourceSha &&
+                recorded.delivery?.integratedSha === observedDelivery.integratedSha));
+          if (sameDelivery) continue;
+          await this.taskTopicModel
+            .markInputStale(dep.taskId, topic.topicId, {
+              dependsOnId: completedTaskId,
+              detectedAt: new Date().toISOString(),
+              expectedDelivery: recorded.delivery ?? null,
+              observedDelivery: observedDelivery ?? null,
+            })
+            .catch((error) =>
+              log(
+                'markStaleDependencyInputs: failed for %s/%s — %O',
+                dep.taskId,
+                topic.topicId,
+                error,
+              ),
+            );
+        }
+      }
+    }
   }
 }
 

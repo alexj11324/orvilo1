@@ -40,6 +40,24 @@ const REPO_REF_INTEGRATION_LOCK_NAMESPACE = 0x69_6e_74_67;
 const NON_FAST_FORWARD_PUSH = /non-fast-forward|fetch first|stale info|\[rejected\]/i;
 
 /**
+ * Re-baselining must never erase provenance: when a check advances
+ * `expectedBaseSha` past the recorded value, the superseded commit is kept on
+ * `baseShaHistory` (oldest first) so a delivery stays traceable to the base it
+ * was originally verified against.
+ */
+const withBaseShaHistory = (
+  patch: Partial<TaskTopicIntegration>,
+  record: TaskTopicIntegration,
+): Partial<TaskTopicIntegration> => {
+  if (!patch.expectedBaseSha || patch.expectedBaseSha === record.expectedBaseSha) return patch;
+  const history = [...(record.baseShaHistory ?? [])];
+  if (record.expectedBaseSha && !history.some((entry) => entry.sha === record.expectedBaseSha)) {
+    history.push({ observedAt: new Date().toISOString(), sha: record.expectedBaseSha });
+  }
+  return history.length > 0 ? { ...patch, baseShaHistory: history } : patch;
+};
+
+/**
  * What the integration gate concluded for a completed run:
  * - 'settled' — nothing pending (unprovisioned run) or the branch merged/pushed;
  *   the lifecycle may proceed to its normal post-run transition.
@@ -107,14 +125,21 @@ export class TaskIntegrationService {
     const lastError = complete
       ? null
       : (check.error ?? 'Could not freeze the remote delivery commit and base at run completion');
-    const updated = await this.taskTopicModel.updateIntegration(task.id, topicId, {
-      expectedBaseSha: check.expectedBaseSha,
-      expectedHeadSha: check.expectedHeadSha,
-      lastError,
-      prNumber: check.prNumber,
-      prUrl: check.prUrl,
-      ...(complete ? {} : { state: 'blocked' as const }),
-    });
+    const updated = await this.taskTopicModel.updateIntegration(
+      task.id,
+      topicId,
+      withBaseShaHistory(
+        {
+          expectedBaseSha: check.expectedBaseSha,
+          expectedHeadSha: check.expectedHeadSha,
+          lastError,
+          prNumber: check.prNumber,
+          prUrl: check.prUrl,
+          ...(complete ? {} : { state: 'blocked' as const }),
+        },
+        record,
+      ),
+    );
     return complete && updated;
   }
 
@@ -758,8 +783,9 @@ export class TaskIntegrationService {
       patch.lastErrorCode = 'remote_verification_unavailable';
       patch.state = check.fatal ? 'blocked' : 'verification_pending';
     }
-    if (Object.keys(patch).length > 0) {
-      await this.updateIntegrationOrThrow(task.id, topicId, patch);
+    const historyPatch = withBaseShaHistory(patch, record);
+    if (Object.keys(historyPatch).length > 0) {
+      await this.updateIntegrationOrThrow(task.id, topicId, historyPatch);
     }
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
@@ -767,14 +793,14 @@ export class TaskIntegrationService {
     }
     if (check.error) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
-        ...patch,
+        ...historyPatch,
       });
       return check.fatal ? 'blocked' : 'hold';
     }
     return this.dispatchCorrective(
       task,
       topicId,
-      { ...record, ...patch },
+      { ...record, ...historyPatch },
       undefined,
       completionReservationId,
     );
@@ -798,6 +824,7 @@ export class TaskIntegrationService {
       patch.lastErrorCode = 'remote_verification_unavailable';
       patch.state = check.fatal ? 'blocked' : 'verification_pending';
     }
+    Object.assign(patch, withBaseShaHistory(patch, record));
 
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
@@ -966,7 +993,8 @@ export class TaskIntegrationService {
     // Multi-hop corrective chains (task → integrate → integrate → …) must all
     // land — `runTopicId` alone only walks one hop back and would strand the
     // original run's row at 'merging' after a 3+-hop chain. Fan out by branch
-    // like the device path's publish loop does.
+    // like the device path's publish loop does. Each row's own recorded base is
+    // what the history preserves, so history is computed per row, not once.
     const rows = await this.taskTopicModel.findByTaskId(taskId);
     for (const row of rows) {
       if (
@@ -974,7 +1002,11 @@ export class TaskIntegrationService {
         row.integration?.branch === record.branch &&
         row.integration.state !== 'blocked'
       ) {
-        await this.updateIntegrationOrThrow(taskId, row.topicId, patch);
+        await this.updateIntegrationOrThrow(
+          taskId,
+          row.topicId,
+          withBaseShaHistory(patch, row.integration),
+        );
       }
     }
   }

@@ -1,12 +1,18 @@
 import type { TaskRunPromptGoalLoop } from '@orvilo/prompts';
 import type {
   TaskExecutionContract,
+  TaskExecutionContractContent,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
 } from '@orvilo/types';
 
 export interface BuildTaskExecutionContractInput {
   acceptanceEnabled: boolean;
+  /**
+   * The frozen policy content the prompt was rendered from — carried verbatim
+   * so the contract is the prompt's provenance, not a parallel snapshot.
+   */
+  content?: TaskExecutionContractContent;
   /** Version pins snapshotted on the dispatch row at claim time. */
   dispatch: {
     generation: number;
@@ -20,6 +26,8 @@ export interface BuildTaskExecutionContractInput {
   grantId?: string;
   integration?: {
     baseBranch?: string;
+    /** Immutable base commit the checkout was built from, when resolved. */
+    baseSha?: string;
     branch?: string;
     expectedBaseSha?: string;
     expectedHeadSha?: string;
@@ -41,6 +49,7 @@ export function buildTaskExecutionContract(
 ): TaskExecutionContract {
   const contract: TaskExecutionContract = {
     acceptance: { enabled: input.acceptanceEnabled },
+    ...(input.content ? { content: input.content } : {}),
     budget: {
       maxRounds: input.goalLoop?.maxRounds ?? null,
       round: input.goalLoop?.round ?? (task.totalTopics || 0) + 1,
@@ -62,6 +71,7 @@ export function buildTaskExecutionContract(
   if (input.integration) {
     contract.integration = {
       baseBranch: input.integration.baseBranch,
+      baseSha: input.integration.baseSha,
       branch: input.integration.branch,
       expectedBaseSha: input.integration.expectedBaseSha,
       expectedHeadSha: input.integration.expectedHeadSha,

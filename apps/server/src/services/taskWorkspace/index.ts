@@ -19,6 +19,7 @@ import { resolveExecutionPlan } from '@/helpers/executionTarget';
 import { supportsCloudHeterogeneousSandbox } from '@/server/services/aiAgent/helpers/heteroErrors';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import {
+  getRemoteBranchSha,
   getRepoDefaultBranch,
   parseGithubRepo,
   resolveGithubAccessToken,
@@ -300,6 +301,24 @@ export class TaskWorkspaceService {
       throw new Error(`Failed to provision task workspace: ${lastError ?? 'worktree add failed'}`);
     }
 
+    // Post-provision verification: re-inspect the worktree and pin the exact
+    // commit the checkout was built from as the run's baseSha. `origin/<base>`
+    // is a mutable ref — only this SHA is durable provenance, and an add that
+    // landed on a different branch must not be trusted.
+    const checkout = await deviceGateway.inspectGitWorktreePath({
+      deviceId,
+      path: repoPath,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+      worktreePath,
+    });
+    if (checkout?.kind !== 'listed' || checkout.listed?.branch !== branch) {
+      throw new Error(
+        `Failed to provision task workspace: could not verify the new checkout at ${worktreePath}`,
+      );
+    }
+    const baseSha = checkout.listed.head;
+
     const workingDirectoryConfig: WorkingDirConfig = {
       git: { branch, isWorktree: true },
       path: worktreePath,
@@ -308,6 +327,7 @@ export class TaskWorkspaceService {
     const integration: TaskTopicIntegration = {
       attempts: 0,
       baseBranch,
+      baseSha,
       branch,
       deviceId,
       repo: config.repo,
@@ -357,9 +377,14 @@ export class TaskWorkspaceService {
 
     const branch = taskBranchName(task.identifier, seq);
     const workingDirectory = cloudSandboxRepoPath(repo);
+    // Pin the remote base commit before the sandbox clones — the agent fetches
+    // a mutable `origin/<base>` ref, but the delivery must stay traceable to
+    // the exact commit the run was built from.
+    const baseSha = await getRemoteBranchSha(repo, baseBranch, token).catch(() => undefined);
     const integration: TaskTopicIntegration = {
       attempts: 0,
       baseBranch,
+      baseSha,
       branch,
       repo,
       role: 'task',
@@ -370,7 +395,13 @@ export class TaskWorkspaceService {
       baseBranch,
       branch,
       integration,
-      prompt: buildRemoteContractPrompt({ baseBranch, branch, repo, workingDirectory }),
+      prompt: buildRemoteContractPrompt({
+        baseBranch,
+        baseSha,
+        branch,
+        repo,
+        workingDirectory,
+      }),
       repos: [repo],
       workingDirectory,
       workingDirectoryConfig: {
@@ -468,6 +499,7 @@ const runsInSandbox = (
 
 const buildRemoteContractPrompt = (params: {
   baseBranch: string;
+  baseSha?: string;
   branch: string;
   repo: string;
   workingDirectory: string;
@@ -475,7 +507,9 @@ const buildRemoteContractPrompt = (params: {
   [
     '[Workspace contract] This code task is delivered through one GitHub pull request.',
     `- Repository: \`${params.repo}\`; working directory: \`${params.workingDirectory}\`.`,
-    `- Before editing, fetch \`origin/${params.baseBranch}\` and work only on \`${params.branch}\`. If the branch does not exist yet, create it from \`origin/${params.baseBranch}\`.`,
+    `- Before editing, fetch \`origin/${params.baseBranch}\` and work only on \`${params.branch}\`. If the branch does not exist yet, create it from \`origin/${params.baseBranch}\`.${
+      params.baseSha ? ` The recorded base commit is \`${params.baseSha}\`.` : ''
+    }`,
     `- Commit changes on \`${params.branch}\` and push with \`git push -u origin ${params.branch}\`. Never push directly to \`${params.baseBranch}\`.`,
     `- Ensure exactly one pull request exists from \`${params.branch}\` to \`${params.baseBranch}\` (create it with \`gh pr create\` if needed).`,
     '- Leave the PR open. Do not merge it yourself. Orvilo will move the task into review, process CI and review comments on the same PR, and merge only after the gates pass.',

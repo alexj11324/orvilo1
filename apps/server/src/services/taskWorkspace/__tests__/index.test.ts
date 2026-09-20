@@ -6,7 +6,11 @@ import { AgentModel } from '@/database/models/agent';
 import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import { deviceGateway } from '@/server/services/deviceGateway';
-import { getRepoDefaultBranch, resolveGithubAccessToken } from '@/server/services/githubRepo';
+import {
+  getRemoteBranchSha,
+  getRepoDefaultBranch,
+  resolveGithubAccessToken,
+} from '@/server/services/githubRepo';
 
 import { TaskWorkspaceService } from '../index';
 
@@ -49,10 +53,15 @@ vi.mock('@/server/services/githubRepo', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
+    getRemoteBranchSha: vi.fn(),
     getRepoDefaultBranch: vi.fn(),
     resolveGithubAccessToken: vi.fn(),
   };
 });
+
+/** Whether the last `addGitWorktree` landed — drives the post-add inspection. */
+let worktreeAdded = false;
+let worktreeBranch: string | undefined;
 
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
@@ -95,6 +104,8 @@ describe('TaskWorkspaceService', () => {
     (RepositoryModel as any).mockImplementation(function () {
       return mockRepositoryModel;
     });
+    worktreeAdded = false;
+    worktreeBranch = undefined;
     service = new TaskWorkspaceService({} as any, 'user-1', 'ws-1');
     mockAgentModel.getAgentConfig.mockResolvedValue({
       agencyConfig: { boundDeviceId: 'dev-1' },
@@ -105,8 +116,27 @@ describe('TaskWorkspaceService', () => {
     vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
       { isDefault: true, name: 'origin/main' },
     ]);
-    vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue({ kind: 'absent' });
-    vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
+    // Post-provision verification re-inspects the path: absent until the add
+    // succeeds, then the fresh worktree lists with its checkout HEAD pinned
+    // as the run's immutable baseSha.
+    vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async () => {
+      if (!worktreeAdded) return { kind: 'absent' };
+      return {
+        kind: 'listed',
+        listed: {
+          branch: worktreeBranch,
+          current: false,
+          head: 'sha-base-1',
+          path: `/repos/orvilo-${worktreeBranch?.replace('/', '-')}@task_1`,
+          status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
+        },
+      };
+    });
+    vi.mocked(deviceGateway.addGitWorktree).mockImplementation(async ({ branch }) => {
+      worktreeAdded = true;
+      worktreeBranch = branch;
+      return { success: true };
+    });
     vi.mocked(deviceGateway.removeGitWorktree).mockResolvedValue({ success: true });
     vi.mocked(deviceGateway.clearOrphanedWorktreePath).mockResolvedValue({ success: true });
   });
@@ -193,11 +223,39 @@ describe('TaskWorkspaceService', () => {
       expect(result?.integration).toMatchObject({
         attempts: 0,
         baseBranch: 'main',
+        baseSha: 'sha-base-1',
         branch: 'task/T-1',
         deviceId: 'dev-1',
         role: 'task',
         state: 'pending',
       });
+    });
+
+    it('pins the checked-out base commit and fails when the checkout cannot be verified', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      const ok = await service.provision({ seq: 1, task });
+      expect(ok?.integration.baseSha).toBe('sha-base-1');
+
+      // The add landed but the re-inspection shows a different branch — the
+      // checkout is not what the contract asked for, so provisioning refuses.
+      worktreeAdded = false;
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockImplementation(async () => {
+        if (!worktreeAdded) return { kind: 'absent' };
+        return {
+          kind: 'listed',
+          listed: {
+            branch: 'task/T-9',
+            current: false,
+            head: 'sha-other',
+            path: '/repos/orvilo-task-T-1@task_1',
+            status: { added: 0, clean: true, deleted: 0, modified: 0, total: 0 },
+          },
+        };
+      });
+      await expect(service.provision({ seq: 1, task })).rejects.toThrow(
+        'could not verify the new checkout',
+      );
     });
 
     it('suffices the branch with the run seq on retries', async () => {
@@ -422,6 +480,7 @@ describe('TaskWorkspaceService', () => {
     beforeEach(() => {
       vi.mocked(resolveGithubAccessToken).mockResolvedValue('gh-token');
       vi.mocked(getRepoDefaultBranch).mockResolvedValue('main');
+      vi.mocked(getRemoteBranchSha).mockResolvedValue(undefined);
       mockAgentModel.getAgentConfig.mockResolvedValue(sandboxAgent);
     });
 
@@ -465,6 +524,17 @@ describe('TaskWorkspaceService', () => {
       expect(result?.prompt).toContain('git push -u origin task/T-1');
       expect(result?.prompt).toContain('gh pr create');
       expect(result?.prompt).toContain('Do not merge it yourself');
+    });
+
+    it('pins the remote base SHA on the integration record before the sandbox runs', async () => {
+      vi.mocked(getRemoteBranchSha).mockResolvedValue('sha-remote-base');
+      const task = baseTask({ config: { workspace: remoteWorkspaceConfig } });
+
+      const result = await service.provision({ seq: 1, task });
+
+      expect(getRemoteBranchSha).toHaveBeenCalledWith('acme/widgets', 'main', 'gh-token');
+      expect(result?.integration.baseSha).toBe('sha-remote-base');
+      expect(result?.prompt).toContain('`sha-remote-base`');
     });
 
     it('suffixes the remote branch with the run seq on retries', async () => {

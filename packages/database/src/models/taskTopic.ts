@@ -189,6 +189,42 @@ export class TaskTopicModel {
       });
   }
 
+  /**
+   * Append an `inputStale` marker to a still-running topic's handoff. The flag
+   * records that a `blocks` upstream redelivered (or rolled back) after this
+   * run was dispatched — the contract's recorded dependency receipt no longer
+   * names the upstream's latest delivery. jsonb merge preserves earlier
+   * markers and any handoff content written at completion.
+   */
+  async markInputStale(
+    taskId: string,
+    topicId: string,
+    entry: {
+      dependsOnId: string;
+      detectedAt: string;
+      expectedDelivery?: unknown;
+      observedDelivery?: unknown;
+    },
+  ): Promise<void> {
+    await this.db
+      .update(taskTopics)
+      .set({
+        handoff: sql`jsonb_set(
+          COALESCE(${taskTopics.handoff}, '{}'::jsonb),
+          '{inputStale}',
+          COALESCE(${taskTopics.handoff} -> 'inputStale', '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb
+        )`,
+      })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          eq(taskTopics.status, 'running'),
+          this.ownership(),
+        ),
+      );
+  }
+
   /** Settle history only while the topic row still belongs to that dispatch. */
   async settleHistoricalRun(
     taskId: string,

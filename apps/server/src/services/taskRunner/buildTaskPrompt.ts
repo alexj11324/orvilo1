@@ -1,5 +1,11 @@
 import { buildTaskRunPrompt, type TaskRunPromptGoalLoop } from '@orvilo/prompts';
-import type { TaskItem, TaskTopicHandoff, WorkspaceData } from '@orvilo/types';
+import type {
+  TaskDependencyReceipt,
+  TaskExecutionContractContent,
+  TaskItem,
+  TaskTopicHandoff,
+  WorkspaceData,
+} from '@orvilo/types';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
 import type { BriefModel } from '@/database/models/brief';
@@ -98,6 +104,12 @@ export interface BuiltTaskPrompt {
   /** The Task carries an active Acceptance, so the builder needs the evidence
    * tool mounted for the whole run — it submits while it works. */
   acceptanceEnabled: boolean;
+  /**
+   * The frozen policy content this prompt was rendered from — instruction,
+   * verify gate and dependency receipts. Persisted verbatim on the run
+   * contract so the prompt and the contract are provably same-source.
+   */
+  contractContent: TaskExecutionContractContent;
   /** Merged, deduplicated list of fileIds (task instruction + all comments)
    * to forward to execAgent so files arrive as multimodal inputs. */
   fileIds: string[];
@@ -116,14 +128,64 @@ export interface BuiltTaskPrompt {
  * Pure prompt rendering lives in `@orvilo/prompts` (`buildTaskRunPrompt`).
  * This wrapper is the DB-aware layer that assembles the input from models.
  */
+/**
+ * The delivery a `blocks` dependency's prompt line rests on: the upstream
+ * task's latest completed run topic, with the immutable SHAs it recorded.
+ * Absent delivery means the gate that admitted this run did not observe a
+ * settled upstream delivery — the receipt still records the upstream status.
+ */
+const collectDependencyReceipts = async (
+  dependencies: Array<{ dependsOnId: string; type: string }>,
+  deps: BuildTaskPromptDeps,
+  depIdToIdentifier: Map<string, string>,
+  depStatusById: Map<string, string>,
+): Promise<TaskDependencyReceipt[]> => {
+  const receipts: TaskDependencyReceipt[] = [];
+  for (const dep of dependencies) {
+    const receipt: TaskDependencyReceipt = {
+      dependsOnId: dep.dependsOnId,
+      identifier: depIdToIdentifier.get(dep.dependsOnId),
+      status: depStatusById.get(dep.dependsOnId),
+      type: dep.type,
+    };
+    if (dep.type !== 'blocks') {
+      receipts.push(receipt);
+      continue;
+    }
+    const topics = await deps.taskTopicModel.findByTaskId(dep.dependsOnId).catch(() => []);
+    const delivered = topics.find((topic) => topic.status === 'completed' && topic.topicId);
+    if (delivered?.topicId) {
+      receipt.delivery = {
+        integratedSha: delivered.integration?.integratedSha,
+        operationId: delivered.operationId ?? undefined,
+        seq: delivered.seq ?? undefined,
+        sourceSha: delivered.integration?.expectedHeadSha,
+        topicId: delivered.topicId,
+      };
+    }
+    receipts.push(receipt);
+  }
+  return receipts;
+};
+
 export async function buildTaskPrompt(
   task: TaskItem,
   deps: BuildTaskPromptDeps,
   extraPrompt?: string,
+  opts?: {
+    /**
+     * Persisted contract content inherited by a continuation/repair run.
+     * When present, instruction/verify/dependency policy render from the
+     * contract — not the live task — so an in-place Task edit mid-run can
+     * never silently rewrite an in-flight attempt's prompt.
+     */
+    contractContent?: TaskExecutionContractContent;
+  },
 ): Promise<BuiltTaskPrompt> {
   const { briefModel, db, taskModel, taskTopicModel, userId, workspaceId } = deps;
+  const inherited = opts?.contractContent;
 
-  const [topics, briefs, comments, subtasks, dependencies, documents] = await Promise.all([
+  const [topics, briefs, comments, subtasks, liveDependencies, documents] = await Promise.all([
     task.totalTopics && task.totalTopics > 0
       ? taskTopicModel.findWithHandoff(task.id, 4).catch(() => [])
       : Promise.resolve([]),
@@ -183,9 +245,22 @@ export async function buildTaskPrompt(
     if (depIdentifier) subtaskDepMap.set(dep.taskId, depIdentifier);
   }
 
-  const depTaskIds = [...new Set(dependencies.map((d: any) => d.dependsOnId))];
+  const depTaskIds = [...new Set(liveDependencies.map((d: any) => d.dependsOnId))];
   const depTasks = await taskModel.findByIds(depTaskIds);
   const depIdToIdentifier = new Map(depTasks.map((t: any) => [t.id, t.identifier]));
+  const depStatusById = new Map(depTasks.map((t: any) => [t.id, t.status]));
+
+  // Contract content is the policy source: an inherited contract renders its
+  // frozen dependency view; a fresh run freezes what the gate just verified.
+  const dependencies = inherited?.dependencies
+    ? inherited.dependencies.map((receipt) => ({
+        dependsOnId: receipt.dependsOnId,
+        type: receipt.type,
+      }))
+    : liveDependencies;
+  const contractDependencies =
+    inherited?.dependencies ??
+    (await collectDependencyReceipts(liveDependencies, deps, depIdToIdentifier, depStatusById));
 
   let parentIdentifier: string | null = null;
   let parentTaskContext:
@@ -245,16 +320,22 @@ export async function buildTaskPrompt(
   // Recurring tasks (schedule / heartbeat) never get a verify plan (see
   // instantiateVerifyPlanOnStart) — don't tell the builder to self-evidence
   // acceptance criteria whose run-time plan will never exist.
-  const resolvedAcceptance = task.automationMode
-    ? undefined
-    : await resolveTaskAcceptance(db, userId, task.id, workspaceId).catch(() => undefined);
+  // On an inherited contract the verify gate comes from the contract — the
+  // live Acceptance row may have been edited since the attempt started, and
+  // that edit must not retroactively change this run's requirements.
+  const resolvedAcceptance =
+    inherited || task.automationMode
+      ? undefined
+      : await resolveTaskAcceptance(db, userId, task.id, workspaceId).catch(() => undefined);
   const verifyConfig = resolvedAcceptance?.config;
-  const verifyEnabled = !!resolvedAcceptance && verifyConfig?.enabled !== false;
+  const verifyEnabled = inherited
+    ? (inherited.verify?.enabled ?? false)
+    : !!resolvedAcceptance && verifyConfig?.enabled !== false;
   let verifyCriteria: Array<{
     required?: boolean;
     requiredEvidence?: Array<{ hint?: string; type: string }>;
     title: string;
-  }> = [];
+  }> = inherited?.verify?.criteria ?? [];
   if (
     verifyEnabled &&
     verifyConfig &&
@@ -338,7 +419,11 @@ export async function buildTaskPrompt(
       assigneeAgentId: task.assigneeAgentId,
       automationMode: task.automationMode,
       dependencies: dependencies.map((d: any) => ({
-        dependsOn: depIdToIdentifier.get(d.dependsOnId) ?? 'Unavailable prerequisite',
+        dependsOn:
+          depIdToIdentifier.get(d.dependsOnId) ??
+          contractDependencies.find((receipt) => receipt.dependsOnId === d.dependsOnId)
+            ?.identifier ??
+          'Unavailable prerequisite',
         type: d.type,
       })),
       description: task.description,
@@ -346,7 +431,7 @@ export async function buildTaskPrompt(
       heartbeatInterval: task.heartbeatInterval,
       id: task.id,
       identifier: task.identifier,
-      instruction: task.instruction,
+      instruction: inherited?.instruction ?? task.instruction,
       name: task.name,
       parentIdentifier,
       priority: task.priority,
@@ -358,8 +443,8 @@ export async function buildTaskPrompt(
         ? {
             criteria: verifyCriteria,
             enabled: true,
-            maxIterations: verifyConfig?.maxIterations,
-            requirement: resolvedAcceptance?.requirement,
+            maxIterations: inherited?.verify?.maxIterations ?? verifyConfig?.maxIterations,
+            requirement: inherited?.verify?.requirement ?? resolvedAcceptance?.requirement,
           }
         : undefined,
       subtasks: subtasks.map((s: any) => ({
@@ -390,8 +475,24 @@ export async function buildTaskPrompt(
     }),
   });
 
+  const contractContent: TaskExecutionContractContent = inherited
+    ? { ...inherited }
+    : {
+        dependencies: contractDependencies,
+        instruction: task.instruction,
+        verify: verifyEnabled
+          ? {
+              criteria: verifyCriteria,
+              enabled: true,
+              maxIterations: verifyConfig?.maxIterations,
+              requirement: resolvedAcceptance?.requirement,
+            }
+          : { enabled: false },
+      };
+
   return {
     acceptanceEnabled: verifyEnabled,
+    contractContent,
     fileIds: allFileIds,
     ...(goalLoop ? { goalLoop } : {}),
     prompt,

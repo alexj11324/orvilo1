@@ -9,16 +9,17 @@
 `buildTaskExecutionContract`（纯装配器）从权威输入组装，写入
 `task_topics.contract`（jsonb，`0176_task_topics_contract.sql`）：
 
-| 字段                                                                     | 来源                                                                  |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| `versions`（task/requirement/policy/planRevision + executionGeneration） | `task_dispatches` 行在 claim 时的快照                                 |
-| `environment`（repo/branch/workdir/device）                              | 与 `environment_snapshot` 同一来源（provisioned workspace /override） |
-| `integration`（base/branch/expectedBaseSha/expectedHeadSha/repo）        | `TaskTopicIntegration` 关键字段钉选                                   |
-| `tools`                                                                  | 本轮挂载的 required builtin tool 集合（`pluginIds`）                  |
-| `acceptance.enabled`                                                     | `resolveTaskAcceptance`（与提示词同一判定）                           |
-| `budget`（round/maxRounds）                                              | `buildTaskPrompt` 的 goalLoop —— 与提示词渲染的是同一个值             |
-| `delegation.grantId`                                                     | 委托执行的授权凭证（仅 delegated run）                                |
-| `schemaVersion`                                                          | 契约 schema 版本（当前 `1`）                                          |
+| 字段                                                                      | 来源                                                                  |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `versions`（task/requirement/policy/planRevision + executionGeneration）  | `task_dispatches` 行在 claim 时的快照                                 |
+| `environment`（repo/branch/workdir/device）                               | 与 `environment_snapshot` 同一来源（provisioned workspace /override） |
+| `integration`（base/branch/baseSha/expectedBaseSha/expectedHeadSha/repo） | `TaskTopicIntegration` 关键字段钉选                                   |
+| `tools`                                                                   | 本轮挂载的 required builtin tool 集合（`pluginIds`）                  |
+| `acceptance.enabled`                                                      | `resolveTaskAcceptance`（与提示词同一判定）                           |
+| `budget`（round/maxRounds）                                               | `buildTaskPrompt` 的 goalLoop —— 与提示词渲染的是同一个值             |
+| `delegation.grantId`                                                      | 委托执行的授权凭证（仅 delegated run）                                |
+| `schemaVersion`                                                           | 契约 schema 版本（当前 `1`）                                          |
+| `content`（instruction/verify/dependency receipts）                       | R06 起：提示词策略正文冻结进契约（见下「不可变内容与依赖回执」）      |
 
 ## 装配语义
 
@@ -45,3 +46,32 @@ comments、subtasks、依赖、verify 准则、goalLoop 失败项）—— 不�
 - `buildTaskExecutionContract.test.ts`：钉选版本 / 工具 / 验收 / 环境、budget
   与 goalLoop 同源、delegation/integration 按需出现、工具列表拷贝防扩大。
 - `bun run check`：7 文件 lint + 61 tests 全绿。
+
+## R06 加固（F07 修复）
+
+### 不可变内容（contract.content）
+
+`content` 冻结本轮提示词的策略正文 —— `instruction`（含 verify 门禁与依赖
+回执的渲染源）、`verify` 配置、`dependencies` 回执列表。续聊 / 纠偏重开时
+`buildTaskPrompt` 以 `contractContent` 继承模式直接渲染契约内容，而不是
+重新从 `tasks` 当前值取 —— 任务运行期间被编辑不会隐式改变同一 attempt
+的指令与验收口径（指令冻结、依赖回执冻结；活体依赖仍按图调度）。
+
+### base 来源钉选（baseSha /baseShaHistory）
+
+- 设备路径：worktree add 后立刻 `inspectGitWorktreePath` 复检，取
+  `listed.head` 写入 `integration.baseSha`；复检不到正确 checkout 则拒绝
+  提供（不再信任 `origin/<branch>` 可变引用）。
+- 远端（sandbox）路径：`getRemoteBranchSha(repo, base)` 在 clone 前钉选
+  base 提交，写进 `integration.baseSha` 并附在 provision prompt 里。
+- 每次 re-baseline 修改 `expectedBaseSha` 时，旧值进入
+  `integration.baseShaHistory[]`（finalize /corrective/captureIdentity /
+  landMerge 四个写点统一经 `withBaseShaHistory`）。
+
+### 依赖输入过期标记（inputStale）
+
+`markStaleDependencyInputs` 挂进 `cascadeOnCompletionMany`：上游完成
+（新交付或回滚）后，依赖方仍在运行的 topic 若其契约回执与最新交付
+不匹配，则 `handoff.inputStale[]` 追加 `{dependsOnId, detectedAt,
+expectedDelivery, observedDelivery}` —— 审计上区分「构建在现存交付上」
+与「构建在已被取代的交付上」。同 topic 同 SHA 的重投递不算过期。

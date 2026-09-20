@@ -81,11 +81,59 @@ export interface TaskExecutionEnvironmentSnapshot {
  * provisioned workspace, the mounted tool surface, acceptance config, the
  * delegation grant) — never re-synthesized by the model.
  */
+/** Evidence that a `blocks` dependency was satisfied at dispatch time. */
+export interface TaskDependencyReceipt {
+  /** Settled delivery the downstream run is built on, when known. */
+  delivery?: {
+    /** Merge SHA once the upstream delivery integrated, if it integrated. */
+    integratedSha?: string;
+    operationId?: string;
+    seq?: number;
+    /** Immutable source commit accepted for the upstream delivery. */
+    sourceSha?: string;
+    topicId: string;
+  };
+  /** Upstream task id (`task_dependencies.depends_on_id`). */
+  dependsOnId: string;
+  /** Upstream identifier rendered into the prompt. */
+  identifier?: string;
+  /** Upstream task status observed at receipt time. */
+  status?: string;
+  type: string;
+}
+
+/**
+ * The frozen policy content a run executes under: what the prompt said, what
+ * the acceptance gate required, and which upstream deliveries the run relied
+ * on. Assembled once per attempt and persisted verbatim — continuations and
+ * repairs inherit it instead of re-reading live task rows, so editing a Task
+ * mid-run can never silently rewrite an in-flight attempt.
+ */
+export interface TaskExecutionContractContent {
+  /** Upstream delivery evidence for every `blocks` dependency at dispatch. */
+  dependencies?: TaskDependencyReceipt[];
+  /** `task.instruction` frozen at dispatch — the prompt's policy payload. */
+  instruction: string;
+  /** Frozen verify gate: criteria + requirement as rendered into the prompt. */
+  verify?: {
+    criteria?: Array<{
+      required?: boolean;
+      requiredEvidence?: Array<{ hint?: string; type: string }>;
+      title: string;
+    }>;
+    enabled: boolean;
+    maxIterations?: number;
+    requirement?: string | null;
+  };
+}
+
 export interface TaskExecutionContract {
   /** Acceptance gate the run must satisfy (required evidence exists). */
   acceptance: { enabled: boolean };
   /** Frozen budget: goal-loop round and attempt cap (`null` = unbounded). */
   budget: { maxRounds: number | null; round: number };
+  /** Frozen policy payload — instruction, verify gate, dependency receipts. */
+  content?: TaskExecutionContractContent;
   /** Delegated-execution grant bound at registration, when delegated. */
   delegation?: { grantId: string };
   /** Frozen execution environment (repo/branch/workdir/device identity). */
@@ -93,6 +141,12 @@ export interface TaskExecutionContract {
   /** Workspace-integration binding (base/head SHAs + branches) when provisioned. */
   integration?: {
     baseBranch?: string;
+    /**
+     * Immutable base commit the run's checkout was built from (`origin/<base>`
+     * resolved at provisioning). Pinning it here — rather than trusting the
+     * mutable branch ref — is what makes a delivery traceable to its real base.
+     */
+    baseSha?: string;
     branch?: string;
     expectedBaseSha?: string;
     expectedHeadSha?: string;
@@ -285,6 +339,18 @@ export interface TaskTopicIntegration {
   attempts: number;
   /** Integration target branch the task branch merges into. */
   baseBranch: string;
+  /**
+   * Immutable base commit the run's checkout was built from, resolved at
+   * provisioning (`origin/<baseBranch>` is mutable — this pin is the durable
+   * provenance). Absent when the base could not be resolved to a SHA.
+   */
+  baseSha?: string;
+  /**
+   * Re-baseline history: every previous `expectedBaseSha` this record advanced
+   * past, oldest first. Preserved so a delivery remains traceable to the base
+   * it was originally verified against even after a re-baseline.
+   */
+  baseShaHistory?: Array<{ observedAt?: string; sha: string }>;
   /** Branch created for the run (`task/<identifier>`). */
   branch: string;
   /** Repo-relative paths reported unmerged at the last attempt. */

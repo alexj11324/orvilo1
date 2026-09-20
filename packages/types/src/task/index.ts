@@ -71,16 +71,45 @@ export type TaskDispatchPhase =
 export type TaskDispatchOrigin = 'caid' | 'external' | 'internal';
 
 /**
+ * Run intent a dispatch was claimed under: `continue` resumes the continued
+ * topic's frozen contract; `repair` re-executes the immutable source
+ * contract for a new attempt; `authorized_replan` rebuilds constraints from
+ * the live task under an approved action grant.
+ */
+export type TaskRunIntent = 'authorized_replan' | 'continue' | 'repair';
+
+/**
  * Verified settlement evidence persisted with an `internal` dispatch —
  * the real association that authorized continuing an existing dispatch's
  * work, resolved server-side at claim time (never caller-asserted).
+ *
+ * A grant is only valid while it is *current and bounded*: it pins the exact
+ * source dispatch + generation it settles, the workspace it may run in, the
+ * run intents it authorizes, and the deadline/budget it inherits. Rows
+ * written before the binding fields existed — or whose source generation is
+ * no longer the task's current delivery chain — are rejected as stale at the
+ * persisted-claim boundary and again at the final dispatch transition.
  */
 export interface TaskDispatchSettlementGrant {
+  /** Run intents this grant may settle; rejected claims cannot stretch it. */
+  allowedIntents?: TaskRunIntent[];
+  /** Delivery budget bound to the source contract when resolvable. */
+  budget?: { maxRounds: number | null };
+  /** Grant deadline — reservation expiry for takeovers, a bounded window otherwise. */
+  expiresAt?: string;
   kind: 'integration_seed' | 'parent_operation' | 'reservation_takeover';
+  /** Reservation token being handed off (`reservation_takeover` only). */
+  reservationId?: string;
+  /** Dispatch row that produced the delivery being settled. */
+  sourceDispatchId?: string;
+  /** Execution generation of that source dispatch — pinned, never "latest". */
+  sourceGeneration?: number;
   /** Upstream delivery operation the settlement corrects/settles. */
   sourceOperationId?: string;
   /** task_topics row the settlement continues. */
   sourceTopicId?: string;
+  /** Workspace the settlement may execute in; a cross-workspace claim rejects. */
+  workspaceId?: string | null;
 }
 
 export interface TaskExecutionEnvironmentSnapshot {
@@ -132,6 +161,14 @@ export interface TaskDependencyReceipt {
   deliveryValid?: boolean;
   /** Upstream task id (`task_dependencies.depends_on_id`). */
   dependsOnId: string;
+  /**
+   * Evidence class the `deliveryValid` decision rests on: `'delivery'` = an
+   * agent-produced Git/CI delivery receipt (topic row + integration identity);
+   * `'manual_completion'` = the upstream was completed by a human status flip
+   * with no delivery topic — a legitimate completion, but never a stand-in
+   * for code evidence. `undefined` on receipts persisted before this field.
+   */
+  evidenceKind?: 'delivery' | 'manual_completion';
   /** Upstream identifier rendered into the prompt. */
   identifier?: string;
   /** Upstream task status observed at receipt time. */
@@ -190,6 +227,21 @@ export interface TaskExecutionContract {
     expectedBaseSha?: string;
     expectedHeadSha?: string;
     repo?: string;
+  };
+  /** Run intent this contract was minted under (`repair` when absent). */
+  intent?: TaskRunIntent;
+  /**
+   * Server-derived approval evidence for an `authorized_replan` contract —
+   * the consumed action approval, the recorded approver and which constraint
+   * fields the replan changed. Never caller-supplied.
+   */
+  replan?: {
+    /** Consumed `action_approvals` row id — single-use, never replayable. */
+    approvalId: string;
+    /** Recorded approver identity resolved from the approval row. */
+    approvedBy?: string;
+    /** Constraint fields whose content changed vs the source contract. */
+    changedFields?: string[];
   };
   /** Monotonic ordinal within the task's contract chain (1 for the first). */
   revision?: number;

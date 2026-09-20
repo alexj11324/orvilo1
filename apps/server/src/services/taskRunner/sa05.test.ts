@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import type { ActionApprovalItem } from '@/database/schemas/actionApproval';
 import type { TaskTopicItem } from '@/database/schemas/task';
+import type * as AgentDelegationModule from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 
@@ -13,6 +15,18 @@ import { TaskRunnerService } from './index';
 
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
+// `consume` is an instance field (arrow), not a prototype method — intercept the
+// class via the barrel so tests control the single-use approval lookup.
+const consumeApprovalMock = vi.fn<(approvalId: string) => Promise<ActionApprovalItem | null>>();
+vi.mock('@/server/services/agentDelegation', async (importOriginal) => {
+  const mod = await importOriginal<typeof AgentDelegationModule>();
+  return {
+    ...mod,
+    ActionApprovalService: function () {
+      return { consume: consumeApprovalMock };
+    },
+  };
+});
 vi.mock('./buildTaskPrompt', () => ({
   // Echo back the inherited contract content (or recompute the live
   // instruction) so the persisted run contract exposes which policy source
@@ -34,7 +48,10 @@ vi.mock('./buildTaskPrompt', () => ({
   ),
 }));
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  consumeApprovalMock.mockReset();
+  vi.restoreAllMocks();
+});
 
 const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   ({
@@ -172,7 +189,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     });
   });
 
-  it('refuses an authorized replan without an explicit approver', async () => {
+  it('C01 — refuses an authorized replan without an approval id', async () => {
     const task = baseTask();
     const { prepare, execAgent } = setupHappyPath(task, [priorTopic()]);
 
@@ -184,16 +201,95 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     void prepare;
   });
 
-  it('an approved replan rebuilds constraints from the live task as a new revision', async () => {
+  it('C01 — a caller-supplied approver string alone is never evidence', async () => {
     const task = baseTask();
     setupHappyPath(task, [priorTopic()]);
+    consumeApprovalMock.mockResolvedValue(null);
 
-    await newRunner().runTask({
+    await expect(
+      newRunner().runTask({
+        ...runParams,
+        intent: 'authorized_replan',
+        replanApprovalId: 'apv-missing',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(consumeApprovalMock).toHaveBeenCalledWith('apv-missing');
+  });
+
+  it('C01 — a replan approval minted for another task cannot authorize this one', async () => {
+    const task = baseTask();
+    setupHappyPath(task, [priorTopic()]);
+    consumeApprovalMock.mockResolvedValue({
+      actionType: 'task.replan',
+      approverUserId: 'user-reviewer',
+      baseVersion: null,
+      expiresAt: null,
+      id: 'apv-1',
+      targetId: 'task-OTHER',
+      targetType: 'task',
+      workspaceId: 'ws-1',
+    } as ActionApprovalItem);
+
+    await expect(
+      newRunner().runTask({
+        ...runParams,
+        intent: 'authorized_replan',
+        replanApprovalId: 'apv-1',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('C01 — an approval against a stale constraint revision cannot authorize the replan', async () => {
+    const task = baseTask({ requirementRevision: 3 });
+    setupHappyPath(task, [
+      priorTopic({
+        contract: {
+          ...priorContract,
+          versions: { ...priorContract.versions, requirementRevision: 2 },
+        },
+      }),
+    ]);
+    consumeApprovalMock.mockResolvedValue({
+      actionType: 'task.replan',
+      approverUserId: 'user-reviewer',
+      baseVersion: 2,
+      expiresAt: null,
+      id: 'apv-1',
+      targetId: 'task-1',
+      targetType: 'task',
+      workspaceId: 'ws-1',
+    } as ActionApprovalItem);
+
+    await expect(
+      newRunner().runTask({
+        ...runParams,
+        intent: 'authorized_replan',
+        replanApprovalId: 'apv-1',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('C01 — an approved replan derives approvedBy server-side and rebuilds from the live task', async () => {
+    const task = baseTask();
+    setupHappyPath(task, [priorTopic()]);
+    consumeApprovalMock.mockResolvedValue({
+      actionType: 'task.replan',
+      approverUserId: 'user-reviewer',
+      baseVersion: null,
+      expiresAt: null,
+      id: 'apv-1',
+      targetId: 'task-1',
+      targetType: 'task',
+      workspaceId: 'ws-1',
+    } as ActionApprovalItem);
+
+    const result = await newRunner().runTask({
       ...runParams,
       intent: 'authorized_replan',
-      replanApprovedBy: 'user-reviewer',
+      replanApprovalId: 'apv-1',
     });
 
+    expect(consumeApprovalMock).toHaveBeenCalledWith('apv-1');
     expect(vi.mocked(buildTaskPrompt).mock.calls[0]?.[3]).toEqual({
       contractContent: undefined,
     });
@@ -203,11 +299,115 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
       expect.objectContaining({
         contract: expect.objectContaining({
           content: { instruction: 'EDITED LIVE instruction' },
+          intent: 'authorized_replan',
+          replan: {
+            approvalId: 'apv-1',
+            approvedBy: 'user-reviewer',
+            changedFields: expect.arrayContaining(['instruction']),
+          },
           revision: 2,
           sourceContractId: 'contract-0',
         }),
       }),
     );
+    expect(result.contract).toEqual(
+      expect.objectContaining({ constraintEdits: 'adopted', intent: 'authorized_replan' }),
+    );
+  });
+
+  it('C01 — a manual run on a drifted contract conflicts instead of silently re-running it', async () => {
+    const task = baseTask({ requirementRevision: 2 });
+    const { execAgent } = setupHappyPath(task, [
+      priorTopic({
+        contract: {
+          ...priorContract,
+          versions: { ...priorContract.versions, requirementRevision: 1 },
+        },
+      }),
+    ]);
+
+    await expect(newRunner().runTask(runParams)).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(execAgent).not.toHaveBeenCalled();
+  });
+
+  it('C01 — an explicit repair on a drifted contract runs frozen and reports edits pending', async () => {
+    const task = baseTask({ requirementRevision: 2 });
+    setupHappyPath(task, [
+      priorTopic({
+        contract: {
+          ...priorContract,
+          versions: { ...priorContract.versions, requirementRevision: 1 },
+        },
+      }),
+    ]);
+
+    const result = await newRunner().runTask({ ...runParams, intent: 'repair' });
+
+    expect(vi.mocked(buildTaskPrompt).mock.calls[0]?.[3]).toEqual({
+      contractContent: priorContract.content,
+    });
+    expect(result.contract).toEqual(
+      expect.objectContaining({
+        constraintEdits: 'pending',
+        intent: 'repair',
+        sourceContractId: 'contract-0',
+      }),
+    );
+  });
+
+  it('C02 — sourceContractId pins the repaired delivery, not the latest seq', async () => {
+    const task = baseTask();
+    const olderContract = {
+      ...priorContract,
+      content: { instruction: 'OLDER frozen instruction' },
+      contractId: 'contract-A',
+      revision: 1,
+    } as TaskExecutionContract;
+    const newerContract = {
+      ...priorContract,
+      content: { instruction: 'NEWER frozen instruction' },
+      contractId: 'contract-B',
+      revision: 2,
+    } as TaskExecutionContract;
+    setupHappyPath(task, [
+      priorTopic({ contract: olderContract, seq: 1, topicId: 'tpc_a' }),
+      priorTopic({ contract: newerContract, seq: 2, topicId: 'tpc_b' }),
+    ]);
+
+    const result = await newRunner().runTask({
+      ...runParams,
+      intent: 'repair',
+      sourceContractId: 'contract-A',
+    });
+
+    expect(vi.mocked(buildTaskPrompt).mock.calls[0]?.[3]).toEqual({
+      contractContent: olderContract.content,
+    });
+    expect(result.contract).toEqual(expect.objectContaining({ sourceContractId: 'contract-A' }));
+    expect(vi.mocked(TaskTopicModel.prototype.startRun)).toHaveBeenCalledWith(
+      'task-1',
+      'tpc_1',
+      expect.objectContaining({
+        contract: expect.objectContaining({
+          content: expect.objectContaining({ instruction: 'OLDER frozen instruction' }),
+          sourceContractId: 'contract-A',
+        }),
+      }),
+    );
+  });
+
+  it('C02 — an unknown sourceContractId is an explicit error, not a fallback', async () => {
+    const task = baseTask();
+    const { execAgent } = setupHappyPath(task, [priorTopic()]);
+
+    await expect(
+      newRunner().runTask({
+        ...runParams,
+        intent: 'repair',
+        sourceContractId: 'contract-NOPE',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(execAgent).not.toHaveBeenCalled();
   });
 });
 
@@ -230,10 +430,11 @@ describe('TaskRunnerService settlement evidence (SA05-B)', () => {
     );
   });
 
-  it('a verified integration seed enters as internal with a persisted grant', async () => {
+  it('a verified integration seed enters as internal with a bound grant', async () => {
     const task = baseTask();
     const seedTopic = priorTopic({
       dispatchId: 'dsp-src',
+      executionGeneration: 1,
       integration: {
         attempts: 0,
         baseBranch: 'main',
@@ -254,18 +455,96 @@ describe('TaskRunnerService settlement evidence (SA05-B)', () => {
     expect(prepare).toHaveBeenCalledWith(
       expect.objectContaining({
         origin: 'internal',
-        settlementGrant: {
+        settlementGrant: expect.objectContaining({
+          allowedIntents: ['repair'],
+          expiresAt: expect.any(String),
           kind: 'integration_seed',
+          sourceDispatchId: 'dsp-src',
+          sourceGeneration: 1,
           sourceOperationId: 'op-src',
           sourceTopicId: 'tpc_0',
-        },
+          workspaceId: 'ws-1',
+        }),
         sourceDispatchId: 'dsp-src',
       }),
     );
   });
 
+  it('a parent operation enters as internal with a bound grant', async () => {
+    const task = baseTask();
+    const parentTopic = priorTopic({
+      dispatchId: 'dsp-parent',
+      executionGeneration: 1,
+      operationId: 'op-parent',
+    });
+    const { prepare } = setupHappyPath(task, [parentTopic]);
+
+    await newRunner().runTask({ ...runParams, parentOperationId: 'op-parent' });
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        origin: 'internal',
+        settlementGrant: expect.objectContaining({
+          allowedIntents: ['repair'],
+          kind: 'parent_operation',
+          sourceDispatchId: 'dsp-parent',
+          sourceGeneration: 1,
+          sourceOperationId: 'op-parent',
+          sourceTopicId: 'tpc_0',
+          workspaceId: 'ws-1',
+        }),
+        sourceDispatchId: 'dsp-parent',
+      }),
+    );
+  });
+
+  it('C03 — a historical parent from a superseded generation cannot claim internal settlement', async () => {
+    const task = baseTask({ executionGeneration: 2 });
+    const staleParent = priorTopic({
+      dispatchId: 'dsp-old',
+      executionGeneration: 1,
+      operationId: 'op-old',
+    });
+    const { prepare } = setupHappyPath(task, [staleParent]);
+
+    await newRunner().runTask({ ...runParams, parentOperationId: 'op-old' });
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: 'external', settlementGrant: undefined }),
+    );
+  });
+
+  it('C03 — a historical integration seed from a superseded generation cannot claim internal settlement', async () => {
+    const task = baseTask({ executionGeneration: 2 });
+    const staleSeed = priorTopic({
+      dispatchId: 'dsp-old',
+      executionGeneration: 1,
+      integration: {
+        attempts: 0,
+        baseBranch: 'main',
+        branch: 'task/T-1',
+        role: 'task',
+        runTopicId: 'tpc_0',
+        state: 'conflict',
+      },
+    });
+    const { prepare } = setupHappyPath(task, [staleSeed]);
+
+    await newRunner().runTask({
+      ...runParams,
+      integrationSeed: staleSeed.integration ?? undefined,
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: 'external', settlementGrant: undefined }),
+    );
+  });
+
   it('a reservation takeover enters as internal only for the live reservation token', async () => {
-    const task = baseTask({ runReservationId: 'reservation-9' });
+    const task = baseTask({
+      runReservationExpiresAt: new Date(Date.now() + 60_000),
+      runReservationId: 'reservation-9',
+    });
     const { prepare } = setupHappyPath(task);
 
     await newRunner().runTask({ ...runParams, replaceReservationId: 'reservation-9' });
@@ -273,17 +552,41 @@ describe('TaskRunnerService settlement evidence (SA05-B)', () => {
     expect(prepare).toHaveBeenCalledWith(
       expect.objectContaining({
         origin: 'internal',
-        settlementGrant: { kind: 'reservation_takeover' },
+        settlementGrant: expect.objectContaining({
+          allowedIntents: ['continue', 'repair'],
+          kind: 'reservation_takeover',
+          reservationId: 'reservation-9',
+          workspaceId: 'ws-1',
+        }),
       }),
     );
   });
 
   it('a stale reservation token cannot claim internal settlement', async () => {
-    const task = baseTask({ runReservationId: 'reservation-9' });
+    const task = baseTask({
+      runReservationExpiresAt: new Date(Date.now() + 60_000),
+      runReservationId: 'reservation-9',
+    });
     const { prepare } = setupHappyPath(task);
 
     await newRunner().runTask({ ...runParams, replaceReservationId: 'reservation-OLD' });
 
     expect(prepare).toHaveBeenCalledWith(expect.objectContaining({ origin: 'external' }));
+  });
+
+  it('C03 — an expired reservation cannot claim internal settlement', async () => {
+    const task = baseTask({
+      runReservationExpiresAt: new Date(Date.now() - 60_000),
+      runReservationId: 'reservation-9',
+    });
+    const { prepare } = setupHappyPath(task);
+
+    await newRunner().runTask({ ...runParams, replaceReservationId: 'reservation-9' });
+
+    // The token matches but its validity lapsed — stale evidence, so the
+    // claim enters as external and faces the normal admission boundary.
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: 'external', settlementGrant: undefined }),
+    );
   });
 });

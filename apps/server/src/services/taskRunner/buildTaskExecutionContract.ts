@@ -4,6 +4,7 @@ import type {
   TaskExecutionContractContent,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
+  TaskRunIntent,
 } from '@orvilo/types';
 
 export interface BuildTaskExecutionContractInput {
@@ -37,6 +38,10 @@ export interface BuildTaskExecutionContractInput {
     expectedHeadSha?: string;
     repo?: string;
   } | null;
+  /** Run intent this contract was minted under. */
+  intent?: TaskRunIntent;
+  /** Server-derived replan evidence (`authorized_replan` only). */
+  replan?: TaskExecutionContract['replan'];
   /** Contract this attempt's content descends from, when one exists. */
   sourceContractId?: string;
   /** Tool identifiers mounted for the run (builtin required-tool set). */
@@ -74,6 +79,10 @@ export function buildTaskExecutionContract(
       taskRevision: input.dispatch.taskRevision,
     },
   };
+
+  if (input.intent) contract.intent = input.intent;
+
+  if (input.replan) contract.replan = input.replan;
 
   if (input.grantId) contract.delegation = { grantId: input.grantId };
 

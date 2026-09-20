@@ -65,6 +65,11 @@ describe('resolveExternalToolSurface', () => {
     expect(surface['my-conn']).toEqual({
       apis: [{ description: 'Do a thing', name: 'do_thing', parameters: { type: 'object' } }],
       callable: true,
+      pins: {
+        authRevision: expect.any(String),
+        connectorId: 'conn_1',
+        schemaDigests: { do_thing: expect.any(String) },
+      },
       source: 'connector',
     });
   });

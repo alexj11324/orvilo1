@@ -121,7 +121,7 @@ vi.mock('@/server/services/composio', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 describe('AiAgentService.execSubAgent', () => {

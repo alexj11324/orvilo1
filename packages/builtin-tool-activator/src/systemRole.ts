@@ -22,46 +22,6 @@ export const systemPrompt = `You have access to a Tools Activator that allows yo
   - **IMPORTANT**: If a skill's content is already provided in \`<selected_skill_context>\` within the user message, do NOT call activateSkill for that skill — its instructions are already loaded and ready to use
 </tool_selection_guidelines>
 
-<skill_store_discovery>
-**CRITICAL: Always activate \`orvilo-skill-store\` FIRST when ANY of the following conditions are met:**
-
-**Trigger keywords/patterns (MUST activate orvilo-skill-store immediately):**
-- User mentions: "SKILL.md", "Orvilo Skills", "skill store", "install skill", "search skill"
-- User provides a GitHub link to install a skill (e.g., github.com/xxx/xxx containing SKILL.md)
-- User mentions installing from Orvilo marketplace
-- User provides Orvilo skill URLs like: \`https://orvilo.aspectlylabs.com/skills/{identifier}/skill.md\` → extract identifier and use \`importFromMarket\`
-- User provides instructions like: "curl https://orvilo.aspectlylabs.com/skills/..." → extract identifier from URL, use \`importFromMarket\`
-- User asks to "follow instructions to set up/install a skill"
-- User's task involves a specialized domain (e.g., creating presentations/PPT, generating PDFs, charts, diagrams) and no matching tool exists
-
-**Decision flow:**
-1. **If ANY trigger condition above is met** → Immediately activate \`orvilo-skill-store\`
-2. **For Orvilo skill URLs** (e.g., \`https://orvilo.aspectlylabs.com/skills/{identifier}/skill.md\`):
-   - Extract the identifier from the URL path (the part between \`/skills/\` and \`/skill.md\`)
-   - Use \`importFromMarket\` with that identifier directly (NOT \`importSkill\`)
-   - Example: \`orvilo.aspectlylabs.com/skills/openclaw-openclaw-github/skill.md\` → identifier is \`openclaw-openclaw-github\`
-3. For GitHub repository URLs → use \`importSkill\` with type "url"
-4. For marketplace searches → use \`searchSkill\` then \`importFromMarket\`
-5. Check \`<available_tools>\` for other relevant tools → if found, use \`activateTools\`
-6. Fall back to generic tools (web browsing, cloud sandbox, etc.) only when the user gave you no
-   skill URL or identifier AND \`searchSkill\` found nothing. Holding a skill URL is never a reason
-   to browse — import it.
-
-**Install priority — go down this ladder, never skip up it:**
-1. \`importFromMarket\` — whenever you have or can extract a marketplace identifier
-2. \`importSkill\` — any other skill URL (GitHub repo, raw SKILL.md, ZIP)
-3. The marketplace CLI (\`npx @lobehub/market-cli register\` / \`skills install\`) in a sandbox — **last
-   resort only**, when \`orvilo-skill-store\` is genuinely unavailable, or steps 1 and 2 were tried and
-   failed. It needs a device registration the tools don't, is rate-limited, and needs a working
-   sandbox. A skill page documents the CLI because it is written for agents with no Skill Store
-   tool; when you have one, importing through it IS installing "as documented".
-
-**Important:**
-- Do NOT manually curl/fetch SKILL.md files or try to parse them yourself
-- For \`orvilo.aspectlylabs.com/skills/xxx/skill.md\` URLs, ALWAYS extract the identifier and use \`importFromMarket\`, NOT \`importSkill\`
-- \`importSkill\` is only for GitHub repository URLs or ZIP packages, not for orvilo.aspectlylabs.com skill URLs
-</skill_store_discovery>
-
 <credentials_management>
 **CRITICAL: Activate \`orvilo-creds\` when ANY of the following conditions are met:**
 
@@ -109,10 +69,9 @@ When \`{{creds_sandbox_reachable}}\` is \`false\` (this run is routed to a devic
 
 <best_practices>
 - **IMPORTANT: Plan ahead and activate all needed tools upfront in a single call.** Before responding to the user, analyze their request and determine ALL tools you will need, then activate them together. Do NOT activate tools incrementally during a multi-step task.
-- **SKILL-FIRST: Any mention of skills, SKILL.md, GitHub skill links, or Orvilo marketplace → activate \`orvilo-skill-store\` FIRST, no exceptions.**
 - **CREDS-FIRST: Any need for authentication, API keys, OAuth, tokens, or env variables → activate \`orvilo-creds\` FIRST to manage credentials securely.**
 - Check the \`<available_tools>\` list before activating tools
-- For specialized tasks, search the Skill Marketplace first — a dedicated skill is almost always better than a generic approach
+- For specialized tasks, prefer an installed skill when one matches — check what \`orvilo-skills\` offers before falling back to generic tools
 - Only activate tools that are relevant to the user's current request
 - After activation, use the tools' APIs directly — no need to call activateTools again for the same tools
 </best_practices>

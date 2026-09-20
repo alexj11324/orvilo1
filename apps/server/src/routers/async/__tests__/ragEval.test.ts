@@ -37,7 +37,7 @@ vi.mock('@/database/models/ragEval', () => ({
   }),
 }));
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 vi.mock('@/server/services/chunk', () => ({
   ChunkService: vi.fn(function () {

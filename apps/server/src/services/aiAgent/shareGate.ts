@@ -282,7 +282,7 @@ const SUB_AGENT_DISPATCH_APIS: Record<string, string> = {
  *    consent-gated call is blocked here instead;
  * 4. the per-API data-tool rules ({@link isShareBlockedDataToolCall}).
  *
- * Non-builtin identifiers (MCP/market/custom plugins, LobeHub skills) pass
+ * Non-builtin identifiers (MCP/market/custom plugins, Orvilo skills) pass
  * through untouched: their id namespace does not reliably match
  * `toolGrants` identifiers.
  */

@@ -5,37 +5,14 @@ import { getAllScopePermissions } from '@/utils/rbac';
 import { zValidator } from '../common/validator';
 import { MessageTranslationController } from '../controllers';
 import { requireAuth } from '../middleware';
-import { requireAnyPermission, requireApiKeyScope } from '../middleware/permission-check';
+import { requireAnyPermission } from '../middleware/permission-check';
 import {
   MessageTranslateInfoUpdateSchema,
   MessageTranslateQueryRequestSchema,
-  MessageTranslateTriggerRequestSchema,
 } from '../types/message-translations.type';
 
 // Message Translate related routes
 const MessageTranslationRoutes = new Hono();
-
-// POST /api/v1/message-translates - Translate specified message
-MessageTranslationRoutes.post(
-  '/:messageId',
-  requireAuth,
-  requireAnyPermission(
-    getAllScopePermissions('MESSAGE_READ'),
-    'You do not have permission to read translated message',
-  ),
-  requireAnyPermission(
-    getAllScopePermissions('TRANSLATION_CREATE'),
-    'You do not have permission to translate message',
-  ),
-  // Translation invokes a model, so restricted API keys also need `model:invoke`
-  requireApiKeyScope('model:invoke'),
-  zValidator('param', MessageTranslateQueryRequestSchema),
-  zValidator('json', MessageTranslateTriggerRequestSchema),
-  (c) => {
-    const controller = new MessageTranslationController();
-    return controller.handleTranslateMessage(c);
-  },
-);
 
 // GET /api/v1/message-translates - Get translation info for specified message
 MessageTranslationRoutes.get(

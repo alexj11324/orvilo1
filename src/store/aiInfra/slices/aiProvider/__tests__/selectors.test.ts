@@ -20,7 +20,6 @@ const mockState = {
   enabledImageModelList: [{ id: 'p2', name: 'P2' }],
   enabledVideoModelList: [{ id: 'p3', name: 'P3' }],
   isInitAiProviderRuntimeState: true,
-  providerBindingAgentTypes: {},
 } as unknown as AIProviderStoreState;
 
 describe('aiProviderSelectors', () => {

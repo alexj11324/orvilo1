@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PullRequestReviewReceiptScope } from '@/database/models/pullRequestReviewReceipt';
-import type {
-  NewPullRequestReviewReceipt,
-  PullRequestReviewReceiptItem,
-} from '@/database/schemas/pullRequestReview';
+import type { PullRequestReviewReceiptItem } from '@/database/schemas/pullRequestReview';
 
 import {
   formatPullRequestReviewId,
@@ -76,21 +73,22 @@ const createMarket = (files: unknown[] = [], headSha: string = HEAD) => ({
 });
 
 /**
- * In-memory receipt store — mirrors `PullRequestReviewReceiptModel`: scope
- * lookup ignores the connection binding, `record` is insert-on-conflict on the
- * full identity and returns the existing row on conflict. Sharing one store
- * across two service instances simulates a process restart.
+ * In-memory claim/receipt store — mirrors `PullRequestReviewReceiptModel`:
+ * `claim` is insert-on-conflict returning null for the loser, scope lookup
+ * ignores the connection binding, `markDispatched`/`resolve` only move
+ * non-terminal rows. Sharing one store across two service instances simulates
+ * separate processes (and a process restart).
  */
 const createReceiptStore = () => {
   const rows: PullRequestReviewReceiptItem[] = [];
-  const sameIdentity = (row: PullRequestReviewReceiptItem, input: NewPullRequestReviewReceipt) =>
-    row.userId === input.userId &&
-    row.workspaceId === input.workspaceId &&
-    row.connectionId === input.connectionId &&
-    row.repoId === input.repoId &&
-    row.pullRequestId === input.pullRequestId &&
-    row.operation === input.operation &&
-    row.operationId === input.operationId;
+  const sameIdentity = (row: PullRequestReviewReceiptItem, scope: PullRequestReviewReceiptScope) =>
+    row.userId === scope.userId &&
+    row.workspaceId === scope.workspaceId &&
+    row.connectionId === (scope as { connectionId?: string }).connectionId &&
+    row.repoId === scope.repoId &&
+    row.pullRequestId === scope.pullRequestId &&
+    row.operation === scope.operation &&
+    row.operationId === scope.operationId;
   const inScope = (row: PullRequestReviewReceiptItem, scope: PullRequestReviewReceiptScope) =>
     row.userId === scope.userId &&
     row.workspaceId === scope.workspaceId &&
@@ -99,10 +97,9 @@ const createReceiptStore = () => {
     row.operation === scope.operation &&
     row.operationId === scope.operationId;
   const store: PullRequestReviewReceiptStore = {
-    findByOperationScope: async (scope) => rows.filter((row) => inScope(row, scope)),
-    record: async (input) => {
+    claim: async (input) => {
       const existing = rows.find((row) => sameIdentity(row, input));
-      if (existing) return existing;
+      if (existing) return null;
       const row: PullRequestReviewReceiptItem = {
         appliedHeadSha: input.appliedHeadSha ?? null,
         connectionId: input.connectionId,
@@ -114,6 +111,7 @@ const createReceiptStore = () => {
         operationId: input.operationId,
         pullRequestId: input.pullRequestId,
         reconciled: input.reconciled ?? false,
+        remoteId: input.remoteId ?? null,
         repoId: input.repoId,
         status: input.status,
         updatedAt: new Date(),
@@ -121,6 +119,24 @@ const createReceiptStore = () => {
         workspaceId: input.workspaceId,
       };
       rows.push(row);
+      return row;
+    },
+    findByIdentity: async (identity) => rows.find((row) => sameIdentity(row, identity)) ?? null,
+    findByOperationScope: async (scope) => rows.filter((row) => inScope(row, scope)),
+    markDispatched: async (identity, remoteId = null) => {
+      const row = rows.find((entry) => sameIdentity(entry, identity));
+      if (!row || (row.status !== 'prepared' && row.status !== 'dispatched')) return null;
+      row.status = 'dispatched';
+      if (remoteId != null) row.remoteId = remoteId;
+      row.updatedAt = new Date();
+      return row;
+    },
+    resolve: async (identity, patch, options) => {
+      const from = options?.from ?? ['prepared', 'dispatched'];
+      const row = rows.find((entry) => sameIdentity(entry, identity));
+      if (!row || !from.includes(row.status)) return null;
+      Object.assign(row, patch);
+      row.updatedAt = new Date();
       return row;
     },
   };
@@ -270,8 +286,22 @@ const contextResponse = (
   },
 });
 
-const reconcileEmpty = () => ({
-  repository: { pullRequest: { headRefOid: HEAD, id: PR_NODE_ID, reviews: { nodes: [] } } },
+const reconcileEmpty = () => ({ node: null });
+
+/** A `node(id:)` response for a review pinned to this PR by the viewer. */
+const remoteReviewNode = (over: Record<string, unknown> = {}) => ({
+  node: {
+    __typename: 'PullRequestReview',
+    author: { login: VIEWER },
+    body: '',
+    commit: { oid: HEAD },
+    databaseId: 77,
+    id: 'PR_op',
+    pullRequest: { id: PR_NODE_ID },
+    state: 'APPROVED',
+    url: 'https://github.com/octo-org/octo-repo/pull/42#pullrequestreview-77',
+    ...over,
+  },
 });
 
 const threadBindingNode = (over: Record<string, unknown> = {}) => ({
@@ -518,6 +548,7 @@ describe('submitReview (RV02/RV03)', () => {
       event: 'APPROVE',
       id: REVIEW_ID,
       observedHeadSha: HEAD,
+      operationId: 'op-submit-1',
     });
 
     const createCall = transport.calls.find((c) => c.operation === 'CreatePullRequestReview');
@@ -550,6 +581,7 @@ describe('submitReview (RV02/RV03)', () => {
       event: 'COMMENT',
       id: REVIEW_ID,
       observedHeadSha: HEAD,
+      operationId: 'op-submit-2',
       reviewSessionId: 'PENDING_1',
     });
     const submitted = transport.calls.find((c) => c.operation === 'SubmitPullRequestReview');
@@ -570,35 +602,20 @@ describe('submitReview (RV02/RV03)', () => {
         event: 'APPROVE',
         id: REVIEW_ID,
         observedHeadSha: HEAD,
+        operationId: 'op-submit-3',
       }),
     );
     expect(error.code).toBe('PENDING_REVIEW_CONFLICT');
     expect(transport.calls.find((c) => c.operation === 'SubmitPullRequestReview')).toBeUndefined();
   });
 
-  it('reconciles an already-submitted session review instead of double-submitting', async () => {
+  it('reconciles an already-submitted session review by node id, not body search', async () => {
     const transport = createTransport({
       PullRequestReviewContext: () => contextResponse(),
-      PullRequestReviewReconcile: () => ({
-        repository: {
-          pullRequest: {
-            headRefOid: HEAD,
-            id: PR_NODE_ID,
-            reviews: {
-              nodes: [
-                {
-                  author: { login: VIEWER },
-                  body: 'ship it',
-                  commit: { oid: HEAD },
-                  databaseId: 77,
-                  id: 'PR_landed',
-                  state: 'APPROVED',
-                },
-              ],
-            },
-          },
-        },
-      }),
+      PullRequestReviewNode: (variables) =>
+        variables.id === 'PENDING_GONE'
+          ? remoteReviewNode({ body: 'ship it', id: 'PR_landed', state: 'APPROVED' })
+          : reconcileEmpty(),
     });
     const market = createMarket();
     const receipt = await service({ market, transport }).submitReview({
@@ -606,10 +623,14 @@ describe('submitReview (RV02/RV03)', () => {
       event: 'APPROVE',
       id: REVIEW_ID,
       observedHeadSha: HEAD,
+      operationId: 'op-submit-4',
       reviewSessionId: 'PENDING_GONE',
     });
     expect(receipt.reconciled).toBe(true);
     expect(receipt.data.id).toBe('PR_landed');
+    const nodeCalls = transport.calls.filter((c) => c.operation === 'PullRequestReviewNode');
+    expect(nodeCalls).toHaveLength(1);
+    expect(nodeCalls[0]?.variables).toMatchObject({ id: 'PENDING_GONE' });
     expect(transport.calls.find((c) => c.operation === 'SubmitPullRequestReview')).toBeUndefined();
   });
 
@@ -623,6 +644,7 @@ describe('submitReview (RV02/RV03)', () => {
         event: 'APPROVE',
         id: REVIEW_ID,
         observedHeadSha: HEAD,
+        operationId: 'op-submit-5',
       }),
     );
     expect(error.code).toBe('HEAD_DRIFTED');
@@ -638,6 +660,7 @@ describe('submitReview (RV02/RV03)', () => {
         event: 'COMMENT',
         id: REVIEW_ID,
         observedHeadSha: HEAD,
+        operationId: 'op-submit-6',
         snapshotId: snapshotFor(),
       }),
     );
@@ -647,7 +670,7 @@ describe('submitReview (RV02/RV03)', () => {
   it('fails with OUTCOME_UNKNOWN on a null submit payload when nothing landed', async () => {
     const transport = createTransport({
       PullRequestReviewContext: () => contextResponse(),
-      PullRequestReviewReconcile: () => reconcileEmpty(),
+      PullRequestReviewNode: () => reconcileEmpty(),
       SubmitPullRequestReview: () => ({ submitPullRequestReview: { pullRequestReview: null } }),
       CreatePullRequestReview: () => ({
         addPullRequestReview: { pullRequestReview: { id: 'PR_new', state: 'PENDING' } },
@@ -659,6 +682,7 @@ describe('submitReview (RV02/RV03)', () => {
         event: 'APPROVE',
         id: REVIEW_ID,
         observedHeadSha: HEAD,
+        operationId: 'op-submit-7',
       }),
     );
     expect(error.code).toBe('OUTCOME_UNKNOWN');
@@ -784,26 +808,10 @@ describe('submitReview (RV02/RV03)', () => {
         addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
       }),
       PullRequestReviewContext: () => contextResponse(),
-      PullRequestReviewReconcile: () => ({
-        repository: {
-          pullRequest: {
-            headRefOid: HEAD,
-            id: PR_NODE_ID,
-            reviews: {
-              nodes: [
-                {
-                  author: { login: VIEWER },
-                  body: '',
-                  commit: null,
-                  databaseId: 77,
-                  id: 'PR_maybe',
-                  state: 'APPROVED',
-                },
-              ],
-            },
-          },
-        },
-      }),
+      PullRequestReviewNode: (variables) =>
+        variables.id === 'PR_op'
+          ? remoteReviewNode({ commit: null, id: 'PR_op', state: 'APPROVED' })
+          : reconcileEmpty(),
       SubmitPullRequestReview: () => {
         throw new Error('socket hangup after mutation');
       },
@@ -923,9 +931,238 @@ describe('submitReview (RV02/RV03)', () => {
         event: 'APPROVE',
         id: REVIEW_ID,
         observedHeadSha: HEAD,
+        operationId: 'op-submit-8',
       }),
     );
     expect(error.code).toBe('PERMISSION_DENIED');
+  });
+});
+
+describe('write claims (post-write dedup window)', () => {
+  const submitParams = (operationId: string, over: Record<string, unknown> = {}) => ({
+    event: 'APPROVE' as const,
+    id: REVIEW_ID,
+    observedHeadSha: HEAD,
+    operationId,
+    ...over,
+  });
+
+  it('dispatches exactly one remote write for concurrent same-operationId calls', async () => {
+    // The submit mutation blocks on a gate so the loser arrives while the
+    // winner is verifiably in-flight.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const remoteReviews = new Map<string, Record<string, unknown>>();
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      PullRequestReviewNode: (variables) => {
+        const node = remoteReviews.get(String(variables.id));
+        return node ? { node } : reconcileEmpty();
+      },
+      SubmitPullRequestReview: async (variables) => {
+        await gate;
+        const input = variables.input as Record<string, unknown>;
+        const node = remoteReviewNode({
+          id: String(input.pullRequestReviewId),
+          state: 'APPROVED',
+        }).node;
+        remoteReviews.set(node.id, node);
+        return { submitPullRequestReview: { pullRequestReview: node } };
+      },
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    // Two service instances over the same store — the two-process shape.
+    const svcA = service({ market, transport }, receipts.store);
+    const svcB = service({ market, transport }, receipts.store);
+    const params = submitParams('op-race-1');
+
+    const settled = (p: Promise<unknown>) =>
+      p.then(
+        (receipt) => ({
+          error: undefined as PullRequestReviewError | undefined,
+          receipt: receipt as { appliedHeadSha: string | null },
+        }),
+        (error) => ({
+          error: error as PullRequestReviewError,
+          receipt: undefined as { appliedHeadSha: string | null } | undefined,
+        }),
+      );
+    const a = settled(svcA.submitReview(params));
+    const b = settled(svcB.submitReview(params));
+
+    // The loser finishes first — it reads the in-flight claim and never dispatches.
+    const loser = await Promise.race([a, b]);
+    expect(loser.error?.code).toBe('OUTCOME_UNKNOWN');
+    release();
+    const winner = await Promise.all([a, b]).then((results) => results.find((r) => r.receipt));
+    expect(winner?.receipt?.appliedHeadSha).toBe(HEAD);
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]?.status).toBe('applied');
+    expect(transport.calls.filter((c) => c.operation === 'SubmitPullRequestReview')).toHaveLength(
+      1,
+    );
+    expect(transport.calls.filter((c) => c.operation === 'CreatePullRequestReview')).toHaveLength(
+      1,
+    );
+  });
+
+  it('rejects a same-operationId call with a different payload before any remote write', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: { commit: { oid: HEAD }, id: 'PR_op', state: 'COMMENTED' },
+        },
+      }),
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    const svc = service({ market, transport }, receipts.store);
+    await svc.submitReview(submitParams('op-digest', { body: 'first', event: 'COMMENT' as const }));
+    const callsAfterFirst = transport.calls.length;
+
+    const error = await errorOf(
+      svc.submitReview(submitParams('op-digest', { body: 'edited', event: 'COMMENT' as const })),
+    );
+    expect(error.code).toBe('OPERATION_CONFLICT');
+    // The loser ran its authorization context read and nothing else.
+    expect(transport.calls.length).toBe(callsAfterFirst + 1);
+    expect(transport.calls.slice(callsAfterFirst).map((c) => c.operation)).toEqual([
+      'PullRequestReviewContext',
+    ]);
+  });
+
+  it('crash between remote success and receipt persist recovers by remoteReviewId — never re-dispatches', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      PullRequestReviewNode: (variables) =>
+        variables.id === 'PR_op'
+          ? remoteReviewNode({ id: 'PR_op', state: 'APPROVED' })
+          : reconcileEmpty(),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: { commit: { oid: HEAD }, id: 'PR_op', state: 'APPROVED' },
+        },
+      }),
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    let resolves = 0;
+    const flakyStore: PullRequestReviewReceiptStore = {
+      ...receipts.store,
+      resolve: async (identity, patch, options) => {
+        resolves += 1;
+        if (resolves === 1) throw new Error('process died before the receipt write');
+        return receipts.store.resolve(identity, patch, options);
+      },
+    };
+    const params = submitParams('op-crash');
+
+    // The remote write landed; the receipt persist never completed.
+    await expect(service({ market, transport }, flakyStore).submitReview(params)).rejects.toThrow(
+      'process died',
+    );
+    expect(receipts.rows[0]).toMatchObject({ remoteId: 'PR_op', status: 'dispatched' });
+
+    // A restarted instance reconciles the claim's persisted remoteReviewId —
+    // identical empty reviews on the same head cannot cross-match.
+    const receipt = await service({ market, transport }, receipts.store).submitReview(params);
+    expect(receipt.reconciled).toBe(true);
+    expect(receipt.appliedHeadSha).toBe(HEAD);
+    expect(receipt.data.id).toBe('PR_op');
+    const nodeCalls = transport.calls.filter((c) => c.operation === 'PullRequestReviewNode');
+    expect(nodeCalls.map((c) => c.variables.id)).toEqual(['PR_op']);
+    expect(transport.calls.filter((c) => c.operation === 'SubmitPullRequestReview')).toHaveLength(
+      1,
+    );
+    expect(receipts.rows[0]?.status).toBe('applied');
+  });
+
+  it('re-reads the remote review when the submit response omits commit — no head fabrication', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      PullRequestReviewNode: (variables) =>
+        variables.id === 'PR_op'
+          ? remoteReviewNode({ commit: { oid: HEAD_2 }, id: 'PR_op', state: 'APPROVED' })
+          : reconcileEmpty(),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: {
+            commit: null,
+            databaseId: 77,
+            id: 'PR_op',
+            state: 'APPROVED',
+            url: 'https://github.com/octo-org/octo-repo/pull/42#pullrequestreview-77',
+          },
+        },
+      }),
+    });
+    const market = createMarket();
+    const receipt = await service({ market, transport }).submitReview(
+      submitParams('op-commit-reread'),
+    );
+    // The head comes from the re-read remote object — not the pre-write
+    // context value (HEAD). Reconciled marks the re-read evidence path.
+    expect(receipt.appliedHeadSha).toBe(HEAD_2);
+    expect(receipt.reconciled).toBe(true);
+    expect(receipt.data.id).toBe('PR_op');
+  });
+
+  it('stays outcome_unknown when the remote review still cannot be pinned down', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      PullRequestReviewNode: () => reconcileEmpty(),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: { pullRequestReview: null },
+      }),
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    const error = await errorOf(
+      service({ market, transport }, receipts.store).submitReview(submitParams('op-undetermined')),
+    );
+    expect(error.code).toBe('OUTCOME_UNKNOWN');
+    expect(receipts.rows[0]).toMatchObject({ remoteId: 'PR_op', status: 'outcome_unknown' });
+  });
+
+  it('covers reviewSessionId in the digest — adopting a different session conflicts', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      PullRequestReviewNode: () => reconcileEmpty(),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: { commit: { oid: HEAD }, id: 'PR_op', state: 'APPROVED' },
+        },
+      }),
+    });
+    const market = createMarket();
+    const svc = service({ market, transport });
+    await svc.submitReview(submitParams('op-session'));
+    const error = await errorOf(
+      svc.submitReview(submitParams('op-session', { reviewSessionId: 'PENDING_1' })),
+    );
+    expect(error.code).toBe('OPERATION_CONFLICT');
   });
 });
 
@@ -934,6 +1171,7 @@ describe('replyToThread (RV03/RV04)', () => {
     body: 'reply body',
     id: REVIEW_ID,
     observedHeadSha: HEAD,
+    operationId: 'op-reply-1',
     threadId: THREAD_ID,
     ...over,
   });

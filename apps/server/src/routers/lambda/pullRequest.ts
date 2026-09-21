@@ -42,7 +42,12 @@ const reviewWriteProcedure = reviewProcedure.use(async (opts) => {
   return opts.next();
 });
 
-const operationIdSchema = z.string().min(8).max(128).optional();
+/**
+ * Write-path idempotency key — required so every write lands inside a claimed
+ * operation identity. The review client derives it from the intent payload, so
+ * a retried click replays the same operation instead of minting a new write.
+ */
+const operationIdSchema = z.string().min(8).max(128);
 const observedHeadShaSchema = z
   .string()
   .regex(/^[0-9a-f]{7,64}$/i, 'observedHeadSha must be a git sha');

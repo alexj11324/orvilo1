@@ -10,12 +10,15 @@ import { users } from './user';
 import { workspaces } from './workspace';
 
 /**
- * Durable receipt for one review write operation. Keyed by the client-supplied
- * `operationId` inside the full caller/binding scope — (user, workspace,
- * connection, repo, pull request, operation) — so a retried operation replays
- * its recorded outcome instead of applying the remote write twice. Rows are
- * written once a remote mutation was attempted; `outcome_unknown` is the real
- * persisted status for a write whose landing could not be verified.
+ * Durable claim + receipt for one review write operation. Keyed by the
+ * client-supplied `operationId` inside the full caller/binding scope —
+ * (user, workspace, connection, repo, pull request, operation) — so a retried
+ * operation replays its recorded outcome instead of applying the remote write
+ * twice. The row is inserted as a `prepared` claim BEFORE any remote call: the
+ * unique index makes exactly one caller the dispatcher while concurrent losers
+ * read the pending or terminal state. `dispatched` marks the remote mutation
+ * in flight (with `remoteId` once known); `applied` and `outcome_unknown` are
+ * terminal.
  */
 export const pullRequestReviewReceipts = pgTable(
   'pull_request_review_receipts',
@@ -44,6 +47,13 @@ export const pullRequestReviewReceipts = pgTable(
     /** Hash of the operation payload; a mismatch on replay is OPERATION_CONFLICT. */
     digest: text('digest').notNull(),
     status: text('status').$type<PullRequestReviewReceiptStatus>().notNull(),
+    /**
+     * Remote object the operation acts on, persisted once known so a replay or
+     * crash-restart reconciles against the exact write — never a body search.
+     * The pull-request-review node id for submits; the created comment/thread
+     * node id for comment writes (known only once the mutation lands).
+     */
+    remoteId: text('remote_id'),
     /**
      * The pull-request head the write landed on. Only ever a SHA returned by a
      * GitHub response — null when GitHub did not report one.

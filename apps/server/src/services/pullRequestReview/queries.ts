@@ -290,27 +290,26 @@ query PullRequestThreadComments($threadId: ID!, $first: Int!, $after: String) {
 }`;
 
 /**
- * Reconcile lookup for a possibly-landed review: after a timeout or an empty
- * mutation payload we check the viewer's submitted reviews before retrying —
- * never blind-resubmit.
+ * Reconcile read for the exact remote review an operation persisted — a node
+ * lookup by id, never an author/body search (identical empty approvals on the
+ * same head would otherwise be indistinguishable). Returns the review's PR,
+ * author, state and landed commit so the caller can verify binding + outcome.
  */
-export const REVIEW_RECONCILE_QUERY = `
-query PullRequestReviewReconcile($owner: String!, $repo: String!, $number: Int!, $viewer: String!) {
-  repository(owner: $owner, name: $repo) {
-    pullRequest(number: $number) {
+export const REVIEW_NODE_QUERY = `
+query PullRequestReviewNode($id: ID!) {
+  rateLimit { cost remaining resetAt }
+  node(id: $id) {
+    __typename
+    ... on PullRequestReview {
       id
-      headRefOid
-      reviews(author: $viewer, first: 15) {
-        nodes {
-          id
-          databaseId
-          body
-          state
-          submittedAt
-          commit { oid }
-          author { login }
-        }
-      }
+      databaseId
+      state
+      body
+      url
+      submittedAt
+      commit { oid }
+      author { login }
+      pullRequest { id }
     }
   }
 }`;
@@ -352,7 +351,7 @@ export const GRAPHQL_DOCUMENTS = [
   { document: QUEUE_QUERY, name: 'PullRequestReviewQueue' },
   { document: REPLY_THREAD_MUTATION, name: 'AddPullRequestReviewThreadReply' },
   { document: REVIEW_CONTEXT_QUERY, name: 'PullRequestReviewContext' },
-  { document: REVIEW_RECONCILE_QUERY, name: 'PullRequestReviewReconcile' },
+  { document: REVIEW_NODE_QUERY, name: 'PullRequestReviewNode' },
   { document: REVIEWS_PAGE_QUERY, name: 'PullRequestReviewsPage' },
   { document: SUBMIT_REVIEW_MUTATION, name: 'SubmitPullRequestReview' },
   { document: THREAD_COMMENTS_QUERY, name: 'PullRequestThreadComments' },

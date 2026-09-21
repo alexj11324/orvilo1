@@ -3329,6 +3329,7 @@ table pull_request_review_receipts {
   operation_id text [not null]
   digest text [not null]
   status text [not null]
+  remote_id text
   applied_head_sha text
   data jsonb
   reconciled boolean [not null, default: false]

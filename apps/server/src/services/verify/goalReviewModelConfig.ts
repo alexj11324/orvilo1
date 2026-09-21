@@ -7,7 +7,6 @@ import { TaskModel } from '@/database/models/task';
 import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import type { OrviloDatabase } from '@/database/type';
 import { getServerGlobalConfig } from '@/server/globalConfig';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { resolveGoalModelConfig } from '@/server/services/goal/modelConfig';
 
 import type { VerifyModelConfig } from './modelConfig';
@@ -45,15 +44,10 @@ export const resolveGoalReviewModelConfig = async (
       const models = await infra.getAiProviderModelList(config.provider, { type: 'chat' });
       if (!models.some((model) => model.id === config.model && model.abilities?.vision)) return;
     }
-    try {
-      // Uses the same user/workspace vaults and deployment credentials as generation.
-      // No paid probe call: missing credentials fail during runtime construction.
-      await initModelRuntimeFromDB(db, userId, config.provider, workspaceId);
-      return config;
-    } catch (error) {
-      console.error('[goal-review] Could not initialize review provider:', config.provider, error);
-      return;
-    }
+    // The review judgment runs as an authorized ACP operation — the deployment
+    // provider credentials are never probed or used here (R08). The resolved
+    // config is only the recorded identity of the reviewing model.
+    return config;
   };
 
   if (params.verifierAgentId) {

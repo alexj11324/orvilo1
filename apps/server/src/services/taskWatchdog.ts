@@ -199,6 +199,25 @@ export async function runTaskWatchdog(
     log('Delivery review sweep failed: %O', error);
   }
 
+  // Device-bound integrations whose deferred re-entry died with the request —
+  // the review sweep above only covers repo-bound rows, so this pass re-drives
+  // pending/merging/conflict rows and completes 'integrated' orphans.
+  try {
+    const pending = await new TaskIntegrationService(
+      db,
+      options.createdByUserId ?? '',
+      options.workspaceId,
+    ).sweepPendingIntegrations(options);
+    log(
+      'Pending integrations: completed=%d blocked=%d held=%d',
+      pending.completed.length,
+      pending.blocked.length,
+      pending.held.length,
+    );
+  } catch (error) {
+    log('Pending integration sweep failed: %O', error);
+  }
+
   log(
     'Watchdog scan: checked=%d canceled=%d failed=%d callbacks=%d',
     stuckTasks.length,

@@ -89,7 +89,7 @@ vi.mock('@/server/services/agent', () => ({
 }));
 
 // Mock AgentRuntimeService
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -121,7 +121,7 @@ vi.mock('@/server/services/composio', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 describe('AiAgentService.execSubAgent', () => {

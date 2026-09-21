@@ -1,4 +1,4 @@
-import type { ToolRunResult } from '@orvilo/agent-runtime';
+import type { ToolRunResult } from '@orvilo/agent-execution';
 import type { SerializedAgentHook } from '@orvilo/types';
 import debug from 'debug';
 import urlJoin from 'url-join';

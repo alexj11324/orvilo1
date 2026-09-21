@@ -38,7 +38,6 @@ describe('aiModelSelectors', () => {
     isInitAiProviderRuntimeState: false,
     modelReasoningConfigMap: {},
     modelReasoningConfigUpdatingKeys: [],
-    providerBindingAgentTypes: {},
   };
 
   describe('model capability checks', () => {

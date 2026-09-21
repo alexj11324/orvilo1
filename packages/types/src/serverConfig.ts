@@ -25,6 +25,11 @@ export type IFeatureFlagsState = {
    */
   enableAgentShare: boolean | undefined;
   enableAuthCaptcha: boolean | undefined;
+  /**
+   * CAID rollout admission: user-level half of `caid_dispatch`. Workspace-granted
+   * admission does not reflect here; server gates the actual dispatch decision.
+   */
+  enableCaidDispatch: boolean | undefined;
   enableCheckUpdates: boolean | undefined;
   enableDevDock: boolean | undefined;
   enableKnowledgeBase: boolean | undefined;

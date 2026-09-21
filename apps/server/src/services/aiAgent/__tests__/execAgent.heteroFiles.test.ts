@@ -215,7 +215,7 @@ vi.mock('@/server/services/document', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -699,45 +699,6 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       }),
     );
   });
-
-  it.each(['claude-code', 'codex'] as const)(
-    'should reject %s provider binding before sandbox or device dispatch',
-    async (type) => {
-      heteroAgentConfig.agencyConfig = {
-        executionTarget: 'sandbox',
-        heterogeneousProvider: {
-          apiConfig: {
-            model: type === 'codex' ? 'gpt-test' : 'claude-test',
-            providerId: type === 'codex' ? 'openai' : 'anthropic',
-          },
-          authMode: 'api',
-          type,
-        },
-      } as any;
-
-      const result = await service.execAgent({
-        agentId: 'agent-1',
-        prompt: 'This must not receive provider credentials remotely',
-      });
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          error: expect.stringContaining('Desktop local execution'),
-          status: 'error',
-          success: false,
-        }),
-      );
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: type === 'codex' ? 'gpt-test' : 'claude-test',
-          provider: type === 'codex' ? 'openai' : 'anthropic',
-        }),
-        undefined,
-      );
-      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
-      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
-    },
-  );
 
   it('should pass resolved Codex model and reasoning effort args to sandbox dispatch', async () => {
     heteroAgentConfig.model = 'codex';

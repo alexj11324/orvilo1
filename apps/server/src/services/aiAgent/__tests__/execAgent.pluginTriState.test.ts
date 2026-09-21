@@ -78,7 +78,7 @@ vi.mock('@/database/models/thread', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({

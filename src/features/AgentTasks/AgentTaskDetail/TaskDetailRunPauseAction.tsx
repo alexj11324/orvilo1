@@ -1,11 +1,12 @@
 import { Flexbox } from '@lobehub/ui';
-import { Button, SplitButton, Text } from '@lobehub/ui/base-ui';
+import { Button, confirmModal, SplitButton, Text } from '@lobehub/ui/base-ui';
 import { CalendarOffIcon, PlayIcon, RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import StopLoadingIcon from '@/components/StopLoading';
 import { usePermission } from '@/hooks/usePermission';
+import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
@@ -68,6 +69,41 @@ const TaskDetailRunPauseAction = memo(() => {
   const [isCancellingSchedule, setIsCancellingSchedule] = useState(false);
   const [isRunningNow, setIsRunningNow] = useState(false);
 
+  /**
+   * Contract-aware run (SB08): when goal/acceptance drifted from the adopted
+   * contract's revisions, the run is explicitly a frozen-contract `repair`
+   * and the user is told the edits stay pending for an approved replan — a
+   * run never silently adopts or ignores constraint changes.
+   */
+  const runWithContractCheck = useCallback(
+    async (id: string) => {
+      if (shouldPersistFallbackAssignee(assigneeAgentId, assigneeUserId, inboxAgentId)) {
+        await updateTask(id, { assigneeAgentId: inboxAgentId });
+      }
+      const context = await lambdaClient.task.contractContext.query({ id }).catch(() => undefined);
+      if (context?.data?.pendingConstraintEdits) {
+        const revision = context.data.contract?.revision;
+        const confirmed = await new Promise<boolean>((resolve) => {
+          confirmModal({
+            cancelText: t('cancel', { ns: 'common' }),
+            content: t('taskDetail.pendingContractEdits.content', {
+              revision: revision ?? '?',
+            }),
+            okText: t('taskDetail.runNow'),
+            onCancel: () => resolve(false),
+            onOk: () => resolve(true),
+            title: t('taskDetail.pendingContractEdits.title'),
+          });
+        });
+        if (!confirmed) return;
+        await runTask(id, { intent: 'repair' });
+        return;
+      }
+      await runTask(id);
+    },
+    [assigneeAgentId, assigneeUserId, inboxAgentId, runTask, t, updateTask],
+  );
+
   const handleRunOrPause = useCallback(async () => {
     if (!canEditTask) return;
     if (!taskId) return;
@@ -78,48 +114,22 @@ const TaskDetailRunPauseAction = memo(() => {
     if (!canRun) return;
     setIsStarting(true);
     try {
-      if (shouldPersistFallbackAssignee(assigneeAgentId, assigneeUserId, inboxAgentId)) {
-        await updateTask(taskId, { assigneeAgentId: inboxAgentId });
-      }
-      await runTask(taskId);
+      await runWithContractCheck(taskId);
     } finally {
       setIsStarting(false);
     }
-  }, [
-    taskId,
-    canRun,
-    canPause,
-    assigneeAgentId,
-    assigneeUserId,
-    inboxAgentId,
-    runTask,
-    updateTask,
-    updateTaskStatus,
-    canEditTask,
-  ]);
+  }, [taskId, canRun, canPause, runWithContractCheck, updateTaskStatus, canEditTask]);
 
   const handleRunNow = useCallback(async () => {
     if (!canEditTask || isBlocked) return;
     if (!taskId) return;
     setIsRunningNow(true);
     try {
-      if (shouldPersistFallbackAssignee(assigneeAgentId, assigneeUserId, inboxAgentId)) {
-        await updateTask(taskId, { assigneeAgentId: inboxAgentId });
-      }
-      await runTask(taskId);
+      await runWithContractCheck(taskId);
     } finally {
       setIsRunningNow(false);
     }
-  }, [
-    canEditTask,
-    isBlocked,
-    taskId,
-    assigneeAgentId,
-    assigneeUserId,
-    inboxAgentId,
-    runTask,
-    updateTask,
-  ]);
+  }, [canEditTask, isBlocked, taskId, runWithContractCheck]);
 
   const handleCancelSchedule = useCallback(async () => {
     if (!canEditTask) return;

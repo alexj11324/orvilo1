@@ -6,6 +6,7 @@ import type {
   GoalGraphSnapshot,
   GoalItem,
   GoalNodeAcceptance,
+  GoalNodeIntegration,
   WorkType,
 } from '@orvilo/types';
 import { experimentMembers } from '@orvilo/utils/goalGraph';
@@ -90,6 +91,13 @@ export interface GoalNodeView {
   heartbeatAt: Date;
   /** Decisions on this node a human already resolved. */
   humanTouches: GoalGraphDecision[];
+  /**
+   * The newest run's workspace-integration record — where its branch stands
+   * on the way back onto the base branch. A child finishing is not its work
+   * landing; this is the difference, with the evidence (branch, conflicts,
+   * last error, PR) the chip's tooltip carries.
+   */
+  integration?: GoalNodeIntegration;
   /** Active for longer than the lease window with no heartbeat — the coordinator would reclaim it. */
   isStale: boolean;
   /** Delivered and waiting for its Acceptance judgment to settle. */
@@ -282,6 +290,7 @@ export const buildGoalGraphView = (
     edges,
     events,
     goal,
+    integrations,
     nodes,
     runHeartbeats,
     workVersions,
@@ -397,6 +406,7 @@ export const buildGoalGraphView = (
       gateSubjectId: gateSubject.get(node.id),
       heartbeatAt,
       humanTouches: nodeDecisions.filter((d) => d.status === 'resolved' && !!d.resolvedByUserId),
+      ...(integrations?.[node.id] ? { integration: integrations[node.id] } : {}),
       isStale:
         node.kind === 'task' &&
         node.status === 'active' &&

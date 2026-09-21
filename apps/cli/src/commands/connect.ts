@@ -18,7 +18,7 @@ import type {
 } from '@orvilo/device-gateway-client';
 import { GatewayClient } from '@orvilo/device-gateway-client';
 import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
-import { getShellInfo } from '@orvilo/local-file-shell';
+import { canonicalizePath, getShellInfo } from '@orvilo/local-file-shell';
 import type { Command } from 'commander';
 
 import { createLambdaClient } from '../api/client';
@@ -43,6 +43,7 @@ import {
   stopDaemon,
   writeStatus,
 } from '../daemon/manager';
+import { listTasks } from '../daemon/taskRegistry';
 import { spawnHeteroAgentRun } from '../device/agentRun';
 import {
   mintWorkspaceConnectToken,
@@ -442,6 +443,17 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   // further below once the workspace-share machinery is in scope — every bound
   // connection reads this object by reference, so late attachment is safe.
   const deviceControlDeps: DeviceControlDeps = {
+    getActiveWorktreeWriter: async (worktreePath: string) => {
+      // Compare canonical identities, not spellings — a run registered under
+      // a symlinked or aliased cwd still owns the same physical directory.
+      const target = await canonicalizePath(worktreePath);
+      for (const entry of listTasks()) {
+        if (entry.cwd && (await canonicalizePath(entry.cwd)) === target) {
+          return { operationId: entry.operationId, pid: entry.pid, topicId: entry.topicId };
+        }
+      }
+      return null;
+    },
     getLocalFilePreview: defaultGetLocalFilePreview,
     getProjectFileIndex: defaultGetProjectFileIndex,
     listHeterogeneousAgentModels: (params) =>

@@ -71,7 +71,7 @@ describe('heteroOperationAuth middleware', () => {
 
   it('accepts a hetero-operation token as kind "operation"', async () => {
     const token = await signHeteroOperationJWT({
-      capabilities: ['model:invoke'],
+      capabilities: ['hetero:ingest', 'hetero:finish'],
       model: 'gpt-server',
       operationId: 'op-1',
       providerId: 'openai',
@@ -88,7 +88,7 @@ describe('heteroOperationAuth middleware', () => {
     expect(result).toEqual({
       kind: 'operation',
       operation: expect.objectContaining({
-        capabilities: ['model:invoke'],
+        capabilities: ['hetero:ingest', 'hetero:finish'],
         iss: 'urn:orvilo:internal',
         model: 'gpt-server',
         operation_id: 'op-1',

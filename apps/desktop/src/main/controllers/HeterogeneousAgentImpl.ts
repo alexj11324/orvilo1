@@ -13,17 +13,15 @@ import type {
   HeterogeneousCliAgentType,
 } from '@orvilo/electron-client-ipc';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc/types/heterogeneous-agent';
-import type { HeterogeneousProviderBindingReference } from '@orvilo/heterogeneous-agents';
 import {
   buildHeterogeneousAgentAuthRequiredError,
   buildHeterogeneousAgentCliNotFoundError,
   getHeterogeneousAgentConfigOrThrow,
   isHeterogeneousAgentAuthRequired,
-  isServerDefaultHeterogeneousAgentType,
   resolveHeterogeneousAgentCommand,
 } from '@orvilo/heterogeneous-agents';
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
-import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
+import { ASK_USER_MCP_SERVER_NAME, AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import type { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
 import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
 import type {
@@ -89,7 +87,6 @@ import type {
   AcpBuiltinToolSpec,
   BuiltinHeterogeneousAgentType,
   HeterogeneousAgentModelCatalog,
-  HeterogeneousServerDefaultApiConfig,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
   OrviloEngineKind,
@@ -98,13 +95,11 @@ import { resolveOrviloCliAgentType, resolveOrviloEngine } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp, BrowserWindow } from 'electron';
 import { isPlainObject } from 'es-toolkit';
-import semver from 'semver';
 
 import { HETERO_AGENT_FILES_DIR, HETERO_AGENT_TRACING_DIR } from '@/const/heteroAgent';
 import type { App } from '@/core/App';
 import { detectHeterogeneousCliCommand } from '@/modules/binaries';
 import { resolveCliScript } from '@/modules/cliEmbedding';
-import { getHeterogeneousAgentDriver } from '@/modules/heterogeneousAgent';
 import {
   consumeCodexRateLimitResetCredit as consumeCodexRateLimitResetCreditRequest,
   fetchCodexQuota,
@@ -113,17 +108,6 @@ import {
   createLambdaFileStorePort,
   type RemoteServerAuth,
 } from '@/modules/heterogeneousAgent/fileStorePort';
-import type { HostedProviderBinding } from '@/modules/heterogeneousAgent/providerBindingHost';
-import {
-  gcHostedProviderBindingProfiles,
-  prepareHostedServerDefaultBinding,
-} from '@/modules/heterogeneousAgent/providerBindingHost';
-import {
-  beginServerDefaultOperation,
-  getServerDefaultEndpoint,
-  type ServerDefaultOperationSettlement,
-  settleServerDefaultOperation,
-} from '@/modules/heterogeneousAgent/providerBindingPort';
 import type { HeterogeneousAgentImageAttachment } from '@/modules/heterogeneousAgent/types';
 import { buildProxyEnv } from '@/modules/networkProxy/envBuilder';
 import { createLogger } from '@/utils/logger';
@@ -159,20 +143,6 @@ export const buildInheritedSpawnEnv = (
   return env;
 };
 
-const appendLoopbackNoProxy = (env: NodeJS.ProcessEnv): void => {
-  const entries = new Set(
-    [env.NO_PROXY, env.no_proxy]
-      .filter((value): value is string => !!value)
-      .flatMap((value) => value.split(','))
-      .map((value) => value.trim())
-      .filter(Boolean),
-  );
-  entries.add('127.0.0.1');
-  entries.add('localhost');
-  const noProxy = [...entries].join(',');
-  env.NO_PROXY = noProxy;
-  env.no_proxy = noProxy;
-};
 const CODEX_RESUME_THREAD_NOT_FOUND_PATTERNS = [
   /no conversation found/i,
   /thread .*not found/i,
@@ -241,14 +211,11 @@ interface StartSessionParams {
    * its ACP transport (`claude-agent-acp` / `codex-acp`).
    */
   orviloEngine?: OrviloEngineKind;
-  /** Credential-free Orvilo Provider reference. Desktop main resolves its secrets. */
-  providerBinding?: HeterogeneousProviderBindingReference;
   /** Session ID to resume (for multi-turn) */
   resumeSessionId?: string;
 }
 
 export interface StartSessionResult {
-  providerBindingKey?: string;
   sessionId: string;
 }
 
@@ -361,7 +328,6 @@ interface AgentSession {
   droidAcpSession?: DroidAcpSession;
   env?: Record<string, string>;
   grokAcpSession?: GrokAcpSession;
-  hostedProviderBinding?: HostedProviderBinding;
   model?: string;
   modelSource?: string;
   /**
@@ -386,9 +352,6 @@ interface AgentSession {
    */
   resolvedCommandSearchPath?: string;
   resumeSessionId?: string;
-  /** Present iff the session runs on the server-default (Orvilo) binding. */
-  serverDefaultApiConfig?: HeterogeneousServerDefaultApiConfig;
-  serverOperationToken?: string;
   sessionId: string;
   standardAcpSession?: StandardAcpSession;
   traeAcpSession?: TraeAcpSession;
@@ -795,35 +758,6 @@ export default class HeterogeneousAgentCtr {
         : await detectHeterogeneousCliCommand(session.agentType, command);
 
     if (!status || status.available) {
-      if (
-        session.agentType === 'kimi-code' &&
-        session.hostedProviderBinding &&
-        status?.version &&
-        semver.lt(status.version, '0.6.0')
-      ) {
-        return {
-          agentType: session.agentType,
-          code: 'cli_version_unsupported',
-          command,
-          message: `Kimi Code 0.6.0 or newer is required to use a Orvilo provider. Installed version: ${status.version}.`,
-          workingDirectory,
-        };
-      }
-      if (
-        session.agentType === 'trae' &&
-        session.hostedProviderBinding &&
-        status?.version &&
-        semver.lt(status.version, '0.201.2')
-      ) {
-        return {
-          agentType: session.agentType,
-          code: 'cli_version_unsupported',
-          command,
-          message: `TRAE CLI 0.201.2 or newer is required to use a Orvilo provider. Installed version: ${status.version}.`,
-          workingDirectory,
-        };
-      }
-
       // Spawn through the detector-resolved absolute path when the configured
       // command is bare — detection may have located the CLI somewhere plain
       // spawn() can't (login-shell PATH, app-bundled Codex CLI, …).
@@ -873,24 +807,6 @@ export default class HeterogeneousAgentCtr {
         : {}),
       ...session.env,
     };
-    const operationTokenEnvKey = session.hostedProviderBinding?.operationTokenEnvKey;
-    if (session.serverOperationToken && operationTokenEnvKey) {
-      env[operationTokenEnvKey] = session.serverOperationToken;
-    }
-    if (
-      session.agentType === 'kimi-code' &&
-      session.hostedProviderBinding &&
-      env.KIMI_MODEL_BASE_URL?.startsWith('http://127.0.0.1:')
-    ) {
-      appendLoopbackNoProxy(env);
-    }
-    if (session.agentType === 'grok-build' && session.hostedProviderBinding) {
-      // Empty XAI_API_KEY values still count as configured in Grok and can
-      // trigger an empty-key probe. Remove both current and legacy inherited
-      // credentials so the managed model's env_key is the only BYOK source.
-      delete env.GROK_CODE_XAI_API_KEY;
-      delete env.XAI_API_KEY;
-    }
     return env;
   }
 
@@ -1159,7 +1075,7 @@ export default class HeterogeneousAgentCtr {
   /**
    * Register a per-op bridge for a standard-ACP session. The bridge answers
    * `session/request_permission` + `elicitation/create` directly and also
-   * backs the `lobe_cc` MCP server when the agent mounts it (`session/new`'s
+   * backs the `orvilo_cc` MCP server when the agent mounts it (`session/new`'s
    * `mcpServers` carries the per-op HTTP URL — no temp `mcp.json` file).
    */
   private async setupStandardAcpInterventionForOp(
@@ -1171,7 +1087,7 @@ export default class HeterogeneousAgentCtr {
     mcpServers?: Record<string, unknown>[];
   }> {
     const provider = session.agentType as NonNullable<AskUserBridgeOptions['provider']>;
-    // claude-code / qoder mount the lobe_cc MCP server for the
+    // claude-code / qoder mount the orvilo_cc MCP server for the
     // `ask_user_question` tool (the builtin Orvilo claude-sdk engine resolves
     // to the claude-code family, so it is covered here; the codex engine
     // historically exposes no builtin tools). Other agents only need the
@@ -1207,7 +1123,7 @@ export default class HeterogeneousAgentCtr {
       },
       mcpServers: [
         {
-          name: 'lobe_cc',
+          name: ASK_USER_MCP_SERVER_NAME,
           type: 'http',
           url: server.urlForOperation(operationId),
         },
@@ -1241,73 +1157,22 @@ export default class HeterogeneousAgentCtr {
     const agentType: HeterogeneousCliAgentType = orviloEngine
       ? resolveOrviloCliAgentType(orviloEngine)
       : (declaredAgentType as HeterogeneousCliAgentType);
-    const driver = getHeterogeneousAgentDriver(agentType);
-    let hostedProviderBinding: HostedProviderBinding | undefined;
-
-    // User-provider (BYOK) bindings are retired — the only supported binding
-    // is the deployment-owned server-default relay. A `kind: 'provider'`
-    // reference can only arrive from a mismatched client; fail loudly instead
-    // of silently running unbound.
-    if (params.providerBinding && params.providerBinding.kind !== 'server-default') {
-      throw new Error('Orvilo Provider bindings are no longer supported.');
-    }
-
-    if (params.providerBinding?.kind === 'server-default') {
-      hostedProviderBinding = await prepareHostedServerDefaultBinding({
-        agentType,
-        appStoragePath: this.app.appStoragePath,
-        args: params.args || [],
-        driver,
-        endpoint: await getServerDefaultEndpoint(this.remoteServerAuth),
-        env: params.env,
-        model: params.providerBinding.apiConfig.model,
-        sessionId,
-      });
-    }
-
-    if (hostedProviderBinding) {
-      // Opportunistic sweep of long-unused binding profiles (provider deleted,
-      // endpoint changed, identity version bumped). The profile in use was just
-      // touched by prepare, so it is never a candidate. Never blocks the run.
-      gcHostedProviderBindingProfiles(this.app.appStoragePath)
-        .then((removedProfiles) => {
-          if (removedProfiles.length > 0)
-            logger.info('Removed stale provider-binding profiles:', removedProfiles);
-        })
-        .catch((error) => logger.warn('Provider-binding profile GC failed:', error));
-    }
-
-    const resumeSessionId =
-      !hostedProviderBinding ||
-      params.providerBinding?.resumeBindingKey === hostedProviderBinding.bindingKey
-        ? params.resumeSessionId
-        : undefined;
-
     this.sessions.set(sessionId, {
       // If resuming, pre-set the agent session ID so sendPrompt issues ACP session/load
-      agentSessionId: resumeSessionId,
+      agentSessionId: params.resumeSessionId,
       agentType,
-      args: hostedProviderBinding?.args ?? params.args ?? [],
+      args: params.args ?? [],
       command: params.command,
       cwd: params.cwd,
-      env: hostedProviderBinding?.env ?? params.env,
-      hostedProviderBinding,
-      serverDefaultApiConfig:
-        params.providerBinding?.kind === 'server-default'
-          ? params.providerBinding.apiConfig
-          : undefined,
-      model: agentType === 'trae' && hostedProviderBinding ? undefined : params.initialModel,
+      env: params.env,
+      model: params.initialModel,
       orviloEngine,
       sessionId,
-      resumeSessionId,
+      resumeSessionId: params.resumeSessionId,
     });
 
-    logger.info('Session created:', {
-      agentType,
-      providerBinding: !!hostedProviderBinding,
-      sessionId,
-    });
-    return { providerBindingKey: hostedProviderBinding?.bindingKey, sessionId };
+    logger.info('Session created:', { agentType, sessionId });
+    return { sessionId };
   }
 
   /**
@@ -1318,56 +1183,17 @@ export default class HeterogeneousAgentCtr {
    * toStreamEvent) and this controller broadcasts the resulting
    * `AgentStreamEvent`s on `heteroAgentEvent`.
    */
-  async sendPrompt(params: SendPromptParams): Promise<ServerDefaultOperationSettlement | void> {
+  async sendPrompt(params: SendPromptParams): Promise<void> {
     const session = this.sessions.get(params.sessionId);
     if (session) session.cancelledByUs = false;
-    const serverDefaultApiConfig = session?.serverDefaultApiConfig;
-    if (!session || !serverDefaultApiConfig) return this.sendPromptImpl(params);
-    if (!params.topicId) throw new Error('Server-default execution requires a topic');
-    if (!isServerDefaultHeterogeneousAgentType(session.agentType)) {
-      throw new Error(`Server-default execution does not support ${session.agentType}`);
-    }
-
-    const operation = await beginServerDefaultOperation(this.remoteServerAuth, {
-      agentType: session.agentType,
-      agentId: params.agentId,
-      model: serverDefaultApiConfig.model,
-      operationId: params.operationId,
-      topicId: params.topicId,
-    });
-    let result: 'done' | 'error' = 'error';
-    let settlement: ServerDefaultOperationSettlement | void;
-    try {
-      if (session.cancelledByUs) {
-        await this.completeCancelledSessionBeforeLaunch(session);
-        return;
-      }
-
-      session.serverOperationToken = operation.token;
-      await this.sendPromptImpl(params);
-      if (!session.cancelledByUs) result = 'done';
-    } finally {
-      session.serverOperationToken = undefined;
-      settlement = await settleServerDefaultOperation(this.remoteServerAuth, {
-        cancelled: session.cancelledByUs,
-        operationId: params.operationId,
-        result,
-      }).catch((error) => logger.warn('Failed to settle server-default operation:', error));
-    }
-    return settlement;
+    return this.sendPromptImpl(params);
   }
 
   private async sendPromptImpl(params: SendPromptParams): Promise<void> {
     const session = this.sessions.get(params.sessionId);
     if (!session) throw new Error(`Session not found: ${params.sessionId}`);
 
-    let preflightError;
-    try {
-      preflightError = await this.getSpawnPreflightError(session);
-    } catch (error) {
-      await session.hostedProviderBinding?.cleanup();
-      throw error;
-    }
+    const preflightError = await this.getSpawnPreflightError(session);
     if (session.cancelledByUs) {
       await this.completeCancelledSessionBeforeLaunch(session);
       return;
@@ -1377,7 +1203,6 @@ export default class HeterogeneousAgentCtr {
         error: preflightError,
         sessionId: session.sessionId,
       });
-      await session.hostedProviderBinding?.cleanup();
       throw new Error(preflightError.message);
     }
 
@@ -1395,7 +1220,6 @@ export default class HeterogeneousAgentCtr {
     ) {
       try {
         const ensured = await ensureClaudeCodeResumeTranscript({
-          configDir: session.hostedProviderBinding?.profileDir,
           cwd: session.cwd,
           messages: params.resumeReplayMessages,
           sessionId: session.agentSessionId,
@@ -1441,7 +1265,6 @@ export default class HeterogeneousAgentCtr {
       } finally {
         // The ACP helper owns cleanup once `run()` starts; this outer guard
         // also covers input/trace/session construction failures before that try/finally.
-        await session.hostedProviderBinding?.cleanup();
       }
     }
 
@@ -1449,7 +1272,6 @@ export default class HeterogeneousAgentCtr {
   }
 
   private async completeCancelledSessionBeforeLaunch(session: AgentSession): Promise<void> {
-    await session.hostedProviderBinding?.cleanup();
     this.broadcast('heteroAgentSessionComplete', { sessionId: session.sessionId });
   }
 
@@ -1557,7 +1379,6 @@ export default class HeterogeneousAgentCtr {
         cause: error,
       });
     } finally {
-      await session.hostedProviderBinding?.cleanup();
       if (session.grokAcpSession === acpSession) session.grokAcpSession = undefined;
     }
   }
@@ -1958,9 +1779,6 @@ export default class HeterogeneousAgentCtr {
     await this.runInteractiveAcpSession({
       acpSession: traeAcpSession,
       activeSessionKey: 'traeAcpSession',
-      cleanup: async () => {
-        await session.hostedProviderBinding?.cleanup();
-      },
       session,
       stderrChunks,
       traceSession,
@@ -2336,8 +2154,6 @@ export default class HeterogeneousAgentCtr {
       }
       return;
     }
-
-    await session.hostedProviderBinding?.cleanup();
   }
 
   /**
@@ -2377,7 +2193,6 @@ export default class HeterogeneousAgentCtr {
       session.standardAcpSession.close();
     }
 
-    await session.hostedProviderBinding?.cleanup();
     this.sessions.delete(params.sessionId);
   }
 
@@ -2416,7 +2231,6 @@ export default class HeterogeneousAgentCtr {
   afterAppReady() {
     electronApp.on('before-quit', () => {
       for (const [, session] of this.sessions) {
-        session.hostedProviderBinding?.cleanupSync();
         if (session.devinAcpSession) {
           session.cancelledByUs = true;
           session.devinAcpSession.close();

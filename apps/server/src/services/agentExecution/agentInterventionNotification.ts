@@ -1,4 +1,4 @@
-import { DEFAULT_SECURITY_BLACKLIST, InterventionChecker } from '@orvilo/agent-runtime';
+import { DEFAULT_SECURITY_BLACKLIST, InterventionChecker } from '@orvilo/agent-execution';
 import {
   type ChatToolPayload,
   classifyToolInterventionPresentation,

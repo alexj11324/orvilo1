@@ -4,6 +4,7 @@ import {
   type TaskPlanningDispatchCandidate,
 } from '@/database/models/taskDispatch';
 import type { OrviloDatabase } from '@/database/type';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { taskPlanningProposalSchema } from '@/server/services/linearSync/contract';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
@@ -25,6 +26,18 @@ export const processPlanningTaskDispatchStart = async (input: {
   if (!candidate.workspaceId) return { dispatchId: candidate.dispatchId, outcome: 'skipped' };
   const workspaceId = candidate.workspaceId;
   const dispatchModel = new TaskDispatchModel(input.db, workspaceId);
+
+  // CAID rollout gate: when orchestrated dispatch is disabled for this
+  // deployment/workspace the intent stays 'requested' (untouched — the sweep
+  // re-drives it the moment admission flips back on).
+  if (!(await isCaidDispatchAllowed({ userId: candidate.userId ?? undefined, workspaceId }))) {
+    return {
+      dispatchId: candidate.dispatchId,
+      outcome: 'waiting',
+      reason: 'caid_dispatch_disabled',
+    };
+  }
+
   const revision = await new LinearSyncModel(
     input.db,
     workspaceId,

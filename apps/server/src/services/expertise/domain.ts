@@ -97,6 +97,12 @@ export class ExpertiseDomainService {
           schema: EXPERTISE_DOMAIN_DRAFT_JSON_SCHEMA,
         },
         {
+          judgment: {
+            // The domain judgment binds to the agent the domain belongs to.
+            binding: { agentId: input.agentId },
+            purpose: 'expertise.domainDraft',
+          },
+          kind: 'judgment',
           metadata: { trigger: 'expertise_domain_draft' },
           tracing: {
             agentId: input.agentId,

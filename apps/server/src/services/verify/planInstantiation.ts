@@ -124,6 +124,7 @@ export const instantiateVerifyPlanOnStart = async (
       operationId: params.operationId,
       requirement,
       verifyCriteriaIds: verifyConfig.verifyCriteriaIds,
+      verifierAgentId: verifyConfig.verifierAgentId,
       verifyRubricId: verifyConfig.verifyRubricId,
     });
 

@@ -741,6 +741,12 @@ export interface RecentTopic {
 }
 
 export interface CreateTopicParams {
+  /**
+   * Owning agent for agent-first topics. Preferred over `sessionId`: the
+   * server resolves the legacy session row (if any) from this id.
+   * Wire schema is `z.string().optional()` — pass `undefined`, never `null`.
+   */
+  agentId?: string;
   favorite?: boolean;
   groupId?: string | null;
   messages?: string[];
@@ -748,6 +754,11 @@ export interface CreateTopicParams {
   /** Pinned model snapshot for the new topic (see `ChatTopic.model`). */
   model?: string;
   provider?: string;
+  /**
+   * Legacy session row id — only for session-backed (non-agent) contexts.
+   * Passing an agent id here violates the `topics.session_id` FK for
+   * agent-first agents, which have no `sessions` shadow row.
+   */
   sessionId?: string | null;
   title: string;
   trigger?: string;

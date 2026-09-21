@@ -6,7 +6,7 @@ import { trackProviderContentPolicyViolation } from '@/business/server/trackProv
 import { AsyncTaskModel } from '@/database/models/asyncTask';
 import { GenerationModel } from '@/database/models/generation';
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { VideoGenerationService } from '@/server/services/generation/video';
 import { buildVideoGenerationFilePayload } from '@/server/services/generation/videoFile';
 import { AsyncTaskError, AsyncTaskErrorType, AsyncTaskStatus } from '@/types/asyncTask';
@@ -57,7 +57,7 @@ export async function processBackgroundVideoPolling(
     const videoService = new VideoGenerationService(db, userId, workspaceId);
     const generationModel = new GenerationModel(db, userId, workspaceId);
 
-    const modelRuntime = await initModelRuntimeFromDB(db, userId, provider, workspaceId);
+    const modelRuntime = await initModelRuntimeFromDeploymentConfig(userId, provider, workspaceId);
     const pollResult = await pollUntilCompletion(modelRuntime, inferenceId);
 
     if (!pollResult) {

@@ -1,9 +1,5 @@
 import { isDesktop as defaultIsDesktop } from '@orvilo/const';
-import {
-  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-  HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR,
-  isRemoteHeterogeneousType,
-} from '@orvilo/heterogeneous-agents';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import { type DeviceExecutionTarget, type HeterogeneousProviderConfig } from '@orvilo/types';
 
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
@@ -142,41 +138,6 @@ export const selectRuntimeType = (
   ctx: RuntimeSelectionContext,
   { isDesktop = defaultIsDesktop }: SelectRuntimeTypeOptions = {},
 ): AgentRuntimeType => {
-  if (ctx.heterogeneousProvider?.authMode === 'api') {
-    // Personal-scope invariant: Desktop main resolves the binding's providerId
-    // with NO workspace header (see `providerBindingPort`), while a workspace
-    // agent's binding was configured against workspace-scoped providers. The
-    // author (or an explicitly overriding member) CAN spawn a workspace agent
-    // in-process — `workspaceScoped` alone does not block them — so a colliding
-    // personal provider id (e.g. builtin `anthropic`) would silently supply
-    // different credentials. Reject before any IPC.
-    // The deployment-default API source uses deployment-owned credentials
-    // rather than a user provider id, so this guard stays on user-provider
-    // bindings only.
-    if (
-      ctx.heterogeneousProvider.apiConfig &&
-      ctx.heterogeneousProvider.apiConfig?.source !== 'server-default' &&
-      ctx.isWorkspaceAgent
-    ) {
-      throw new Error(HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR);
-    }
-    const target = resolveExecutionTarget(
-      {
-        boundDeviceId: ctx.boundDeviceId,
-        executionTarget: ctx.executionTarget,
-        heterogeneousProvider: ctx.heterogeneousProvider,
-      },
-      {
-        isHetero: true,
-        clientExecutionAvailable: isDesktop,
-        workspaceScoped: ctx.workspaceScoped,
-      },
-    );
-    if (target !== 'local' || (ctx.parentRuntime && ctx.parentRuntime !== 'hetero')) {
-      throw new Error(HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR);
-    }
-  }
-
   // Group supervisor turns orchestrate members via server-side callbacks
   // (`ctx.agentMember` in the group-management server runtime). The retired
   // client runtime used to supply `groupOrchestration` locally; a local hetero

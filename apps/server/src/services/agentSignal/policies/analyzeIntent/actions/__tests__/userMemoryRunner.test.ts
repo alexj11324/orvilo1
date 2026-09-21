@@ -5,13 +5,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runMemoryActionAgent } from '../userMemory';
 
 const generateObjectMock = vi.hoisted(() => vi.fn());
-const initModelRuntimeFromDBMock = vi.hoisted(() => vi.fn());
+const initModelRuntimeFromDeploymentConfigMock = vi.hoisted(() => vi.fn());
 const memoryRuntimeFactoryMock = vi.hoisted(() => vi.fn());
 const getAllIdentitiesWithMemoryMock = vi.hoisted(() => vi.fn());
 const persistAgentSignalReceiptsMock = vi.hoisted(() => vi.fn());
+const runAcpJudgmentMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: initModelRuntimeFromDBMock,
+  initModelRuntimeFromDeploymentConfig: initModelRuntimeFromDeploymentConfigMock,
+}));
+
+vi.mock('@/server/services/aiGeneration/judgment', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  runAcpJudgment: runAcpJudgmentMock,
 }));
 
 vi.mock('@/server/services/toolExecution/serverRuntimes/memory', () => ({
@@ -55,7 +61,17 @@ const baseInput = {
 describe('runMemoryActionAgent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    initModelRuntimeFromDBMock.mockResolvedValue({ generateObject: generateObjectMock });
+    initModelRuntimeFromDeploymentConfigMock.mockResolvedValue({
+      generateObject: generateObjectMock,
+    });
+    // The write decision is a retained judgment; delegate it to the stubbed
+    // decision generator so the harness never touches the real ACP binding.
+    runAcpJudgmentMock.mockImplementation(
+      async (_db: never, _userId: string, params: { input: unknown }) => ({
+        data: await generateObjectMock(params.input),
+        run: {},
+      }),
+    );
     getAllIdentitiesWithMemoryMock.mockResolvedValue([]);
     persistAgentSignalReceiptsMock.mockResolvedValue(undefined);
   });
@@ -64,7 +80,7 @@ describe('runMemoryActionAgent', () => {
     const result = await runMemoryActionAgent({ ...baseInput, agentId: undefined }, options);
 
     expect(result).toEqual({ detail: 'Missing agentId for memory action.', status: 'skipped' });
-    expect(initModelRuntimeFromDBMock).not.toHaveBeenCalled();
+    expect(initModelRuntimeFromDeploymentConfigMock).not.toHaveBeenCalled();
     expect(memoryRuntimeFactoryMock).not.toHaveBeenCalled();
   });
 

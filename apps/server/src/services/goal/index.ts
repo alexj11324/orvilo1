@@ -10,6 +10,7 @@ import type {
   GoalItem,
   GoalMetricCriterion,
   GoalNodeAcceptance,
+  GoalNodeIntegration,
   GoalNodeKind,
   GoalNodeStatus,
   GoalPauseReason,
@@ -34,7 +35,9 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
@@ -561,13 +564,14 @@ export class GoalService {
 
   graph = async (goalId: string) => {
     const graph = await this.requireGraph(goalId);
-    const [runHeartbeats, deliveredAt, acceptances, spend] = await Promise.all([
+    const [runHeartbeats, deliveredAt, acceptances, integrations, spend] = await Promise.all([
       this.collectRunHeartbeats(graph),
       this.collectDeliveredAt(graph),
       this.collectAcceptances(graph),
+      this.collectIntegrations(graph),
       this.resolveSpend(graph),
     ]);
-    return { ...graph, acceptances, deliveredAt, runHeartbeats, spend };
+    return { ...graph, acceptances, deliveredAt, integrations, runHeartbeats, spend };
   };
 
   /**
@@ -600,6 +604,49 @@ export class GoalService {
       result[nodeId] = { id: row.id, status: row.status };
     }
     return Object.keys(result).length > 0 ? result : undefined;
+  };
+
+  /**
+   * Newest integration record per task node.
+   *
+   * `collectDeliveredAt` covers the acceptance wait; this covers what comes
+   * after — the run's branch making it back onto the base branch. A child
+   * completing is not its work landing: without these records the map reads a
+   * resolved node as delivered while its merge is still in flight, conflicted,
+   * or blocked, and "awaiting integration" has no evidence anywhere on the
+   * goal. `skipped` means the run had nothing to integrate, so it is the one
+   * state dropped; everything else (including `pending` on a run in flight)
+   * is a state a reader can act on.
+   */
+  private collectIntegrations = async (
+    graph: GoalGraphSnapshot,
+  ): Promise<Record<string, GoalNodeIntegration> | undefined> => {
+    const taskNodes = graph.nodes.filter(
+      (node): node is GoalGraphNode & { taskId: string } => node.kind === 'task' && !!node.taskId,
+    );
+    if (taskNodes.length === 0) return undefined;
+
+    const nodeByTaskId = new Map(taskNodes.map((node) => [node.taskId, node.id]));
+    // Newest run per task wins — `findWithHandoffByTaskIds` orders by seq
+    // desc, and an older run's record is history once a newer one exists.
+    const topics = await this.taskTopicModel.findWithHandoffByTaskIds(
+      taskNodes.map((n) => n.taskId),
+      taskNodes.length * 4,
+    );
+
+    const integrations: Record<string, GoalNodeIntegration> = {};
+    const seen = new Set<string>();
+    for (const topic of topics) {
+      const taskId = topic.sourceTaskId;
+      if (!taskId || seen.has(taskId)) continue;
+      seen.add(taskId);
+      const nodeId = nodeByTaskId.get(taskId);
+      const integration = topic.integration;
+      if (!nodeId || !integration || !topic.topicId || integration.state === 'skipped') continue;
+      integrations[nodeId] = { ...integration, topicId: topic.topicId };
+    }
+
+    return Object.keys(integrations).length > 0 ? integrations : undefined;
   };
 
   /**
@@ -1084,6 +1131,7 @@ export class GoalService {
     goalId: string,
     budget: {
       deadline?: string | null;
+      maxConcurrentTasks?: number | null;
       maxExperiments?: number;
       maxRounds?: number | null;
       maxTotalCost?: number | null;
@@ -1113,6 +1161,9 @@ export class GoalService {
     }
     if (budget.deadline !== undefined) {
       config.schedule = { ...config.schedule, deadline: budget.deadline };
+    }
+    if (budget.maxConcurrentTasks !== undefined) {
+      config.maxConcurrentTasks = budget.maxConcurrentTasks;
     }
 
     const goal = await this.goalModel.update(goalId, {
@@ -1751,6 +1802,19 @@ export class GoalService {
   ): Promise<GoalTickResult> => {
     const goalId = graph.goal.id;
 
+    // CAID rollout gate: orchestrated fan-out only dispatches when the
+    // deployment/workspace is admitted. The node stays untouched (ready) —
+    // no claim, no error — so flipping the flag back on re-drives it.
+    if (!(await isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }))) {
+      return {
+        goalId,
+        message: 'CAID dispatch admission is disabled for this deployment/workspace',
+        nodeId,
+        outcome: 'waiting_external',
+        taskId: task.id,
+      };
+    }
+
     // Advances arrive from independent sources — an event hook, a manual nudge,
     // the sweep — and can overlap. `runTask` decides whether a run is already
     // in flight by reading the task's topics and only then creating one, so two
@@ -1780,6 +1844,25 @@ export class GoalService {
         currentGraph.decisions.some((item) => item.status === 'pending')
       )
         return 'stopped' as const;
+
+      // The frontier was ranked off a snapshot that is already stale: a plan
+      // patch or a resolved decision can land between the tick's read and this
+      // claim. Readiness is re-derived under the lock from the CURRENT graph —
+      // a node that gained an unsatisfied depends_on edge, or was retired,
+      // since the decision must not dispatch on the old receipt.
+      const currentNode = currentGraph.nodes.find((node) => node.id === nodeId);
+      if (!currentNode || TERMINAL_NODE_STATUSES.has(currentNode.status)) return 'stopped' as const;
+      const resolvedNodeIds = new Set(
+        currentGraph.nodes.filter((node) => node.status === 'resolved').map((node) => node.id),
+      );
+      const blockedBy = currentGraph.edges.filter(
+        (edge) =>
+          edge.kind === 'depends_on' &&
+          edge.sourceNodeId === nodeId &&
+          !resolvedNodeIds.has(edge.targetNodeId),
+      );
+      if (blockedBy.length > 0) return 'blocked' as const;
+
       const currentBudget = await new GoalService(tx, this.userId, this.workspaceId).evaluateBudget(
         currentGoal,
         currentGraph,
@@ -1811,6 +1894,15 @@ export class GoalService {
         taskId: task.id,
       };
 
+    if (claimed === 'blocked') {
+      return {
+        goalId,
+        message: `Task ${task.identifier} was blocked by a newer plan revision before it could dispatch`,
+        nodeId,
+        outcome: 'waiting_external',
+        taskId: task.id,
+      };
+    }
     if (claimed === 'at-capacity') {
       return {
         goalId,
@@ -2092,7 +2184,15 @@ export class GoalService {
       }
 
       const generator = new GoalCriteriaGeneratorService(this.db, this.userId, this.workspaceId);
-      const plan = await generator.decompose({ requirement }).catch(() => undefined);
+      const plan = await generator
+        .decompose({ agentId: graph.goal.agentId, requirement })
+        .catch((error) => {
+          // A missing authorized judgment binding must not be swallowed into
+          // the single-task degrade — it means the goal's coordinator agent is
+          // gone or unbound, which is an explicit block, not a planner miss.
+          if (isAcpJudgmentBindingError(error)) throw error;
+          return undefined;
+        });
 
       const draftTasks: GoalDecompositionDraft['tasks'] = plan?.tasks ?? [
         { instruction: problem?.description ?? requirement, title: graph.goal.title },

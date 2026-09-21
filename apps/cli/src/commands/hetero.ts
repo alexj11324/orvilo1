@@ -38,6 +38,10 @@ import type { Command } from 'commander';
 
 import { createLambdaClient, getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
+import {
+  persistChildResultInboxRecord,
+  resolvePersistentToolCallId,
+} from '../utils/childResultInbox';
 import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { HeteroTraceRecorder } from '../utils/HeteroTraceRecorder';
 import { log } from '../utils/logger';
@@ -585,9 +589,59 @@ const exec = async (options: ExecOptions): Promise<void> => {
   };
   const builtinExtras = mountBuiltinTools
     ? buildAcpBuiltinToolExtras(builtinToolSpecs, {
+        // v2 delivery ledger: settle returns `offered` receipts; the ack is
+        // the durable consume (lost responses replay instead of losing the
+        // result).
+        ackChildResults: (input) =>
+          getBuiltinToolClient().aiAgent.heteroAckChildResultDeliveries.mutate(input),
         awaitChildren: (input) =>
           getBuiltinToolClient().aiAgent.heteroAwaitBuiltinToolChildren.query(input),
         exec: (input) => getBuiltinToolClient().aiAgent.heteroExecBuiltinTool.mutate(input),
+        // SA04-A: the host's durable inbox — settled child results land in
+        // ~/.orvilo/inbox/ BEFORE the ack flips their receipts to `acked`, so
+        // a crash between receive and ack stays recoverable and the retried
+        // call reuses the same stable invocation id.
+        persistChildResultInbox: (input) => persistChildResultInboxRecord(input),
+        // SC-SB06/P1-A: durable request→invocation map — a resend reuses the
+        // first minted toolCallId, a new occurrence (even same-args) gets a
+        // fresh one. ~/.orvilo/inbox/<op>.calls.jsonl persists it across
+        // restarts so a crash doesn't fork the invocation identity.
+        resolveToolCallId: (input) => resolvePersistentToolCallId(input),
+        // F04: `needs_approval` external tools park as `acp_tool_approval_pending`;
+        // surface the permission card on the run's AskUser bridge. No bridge
+        // (headless producer) cancels immediately — the server receipt stays
+        // pending and the call is refused.
+        requestApproval: async ({ apiName, args, expiresAt, identifier, toolCallId, windowId }) => {
+          if (!askBridge) {
+            return { cancelReason: 'session_ended' as const, cancelled: true };
+          }
+          const argsPreview = JSON.stringify(args);
+          return askBridge.pending(
+            {
+              arguments: {
+                questions: [
+                  {
+                    header: `${identifier}.${apiName}`,
+                    multiSelect: false,
+                    options: [
+                      { id: 'approve', label: 'Approve' },
+                      { id: 'deny', label: 'Deny' },
+                    ],
+                    question:
+                      `Allow tool "${identifier}.${apiName}" to run?\n\n` +
+                      (argsPreview.length > 2000 ? `${argsPreview.slice(0, 2000)}…` : argsPreview),
+                  },
+                ],
+              },
+              interactionKind: 'permission',
+              toolCallId,
+              windowId,
+            },
+            {
+              timeoutMs: expiresAt === undefined ? undefined : Math.max(1, expiresAt - Date.now()),
+            },
+          );
+        },
       })
     : [];
 
@@ -630,7 +684,10 @@ const exec = async (options: ExecOptions): Promise<void> => {
           new AskUserBridge(operationId, { identifier: agentType, provider: agentType }),
         );
       } else {
-        askServer.registerOperation(operationId);
+        // Non-askSupported standard-ACP runtimes still get a bridge — builtin
+        // tool approvals (`needs_approval` permission cards) ride it even
+        // though no `ask_user_question` tool is mounted.
+        askBridge = askServer.registerOperation(operationId);
       }
       // Standard-ACP agents mount the server through `session/new`'s
       // `mcpServers` — no temp `mcp.json` file.

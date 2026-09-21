@@ -6,7 +6,10 @@ import type {
   TaskAssignmentMode,
   TaskCreationSubjectKind,
   TaskCreationSubjectSnapshot,
+  TaskDispatchOrigin,
   TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
+  TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskHumanLock,
   TaskLockField,
@@ -270,6 +273,21 @@ export const taskDispatches = pgTable(
     operationId: text('operation_id'),
     idempotencyKey: text('idempotency_key').notNull(),
     requestedBy: text('requested_by').notNull(),
+    /**
+     * Authoritative execution origin recorded at claim (SA05-B): 'caid' =
+     * new orchestrated writer; 'internal' = settlement continuing an
+     * existing dispatch; 'external' = direct user/schedule invocation.
+     * NULL on rows persisted before this column existed — readers derive
+     * the legacy equivalent from `requestedBy`.
+     */
+    origin: text('origin').$type<TaskDispatchOrigin>(),
+    /** Raw actor identity, kept separate from the `trigger:actor` audit
+     *  string stored in `requestedBy`. */
+    initiator: text('initiator'),
+    /** The dispatch this settlement run continues (origin='internal'). */
+    sourceDispatchId: text('source_dispatch_id'),
+    /** Server-verified settlement evidence recorded at claim. */
+    settlementGrant: jsonb('settlement_grant').$type<TaskDispatchSettlementGrant>(),
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamptz('lease_expires_at'),
     waitingReason: text('waiting_reason'),
@@ -426,6 +444,13 @@ export const taskTopics = pgTable(
     // this run — a direct FK would make the two schemas mutually recursive).
     executionGrantId: text('execution_grant_id'),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
+    /**
+     * Frozen TaskExecutionContract for this run — the versioned binding of
+     * revisions, environment, mounted tools, acceptance gate and budget that
+     * the run was dispatched under. Retries/continuations rebind to it rather
+     * than re-deriving constraints from mutable task config.
+     */
+    contract: jsonb('contract').$type<TaskExecutionContract>(),
 
     // What triggered this run: 'manual' (ad-hoc run-now / agent tool call),
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy

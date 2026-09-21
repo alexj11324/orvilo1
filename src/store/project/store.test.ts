@@ -199,7 +199,7 @@ describe('project store cache scope', () => {
   it('updates project list and detail caches after renaming', async () => {
     const project = { id: 'project-1', name: 'Original', slug: 'launch' } as ProjectListItem;
     const renamed = { ...project, name: 'Renamed' };
-    const detail = { project } as ProjectDetail;
+    const detail = { project } as unknown as ProjectDetail;
     const refreshProjectList = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(projectService, 'update').mockResolvedValue({
       data: renamed,
@@ -233,7 +233,7 @@ describe('project store cache scope', () => {
       },
       orchestrationPolicyRevision: 1,
     } as ProjectListItem;
-    const detail = { project } as ProjectDetail;
+    const detail = { project } as unknown as ProjectDetail;
     vi.spyOn(projectService, 'updateOrchestrationPolicy').mockResolvedValue({
       data: {
         coordinatorAgentId: 'agent-after',

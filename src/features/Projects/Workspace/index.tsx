@@ -133,7 +133,7 @@ const ProjectWorkspace = memo(() => {
               <Text fontSize={13} weight={600}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
-              <Flexbox horizontal align={'center'} flexWrap={'wrap'} gap={8}>
+              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
                 <Tag
                   color={statusMeta.color}
                   icon={<Icon icon={statusMeta.icon} size={12} />}
@@ -182,7 +182,7 @@ const ProjectWorkspace = memo(() => {
               <Text fontSize={13} weight={600}>
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
               </Text>
-              <Flexbox horizontal align={'center'} flexWrap={'wrap'} gap={8}>
+              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
                 {knowledgeBases.map((link) => (
                   <Tag
                     icon={<Icon icon={Link2Icon} size={12} />}

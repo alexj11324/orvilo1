@@ -4,9 +4,6 @@ export const API_ENDPOINTS = {
   // trace
   trace: '/webapi/trace',
 
-  // chat
-  chat: (provider: string) => `/webapi/chat/${provider}`,
-
   // TTS
   tts: (provider: string) => `/webapi/tts/${provider}`,
 };

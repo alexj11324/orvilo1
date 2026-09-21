@@ -8,7 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LOADING_FLAT } from '@/const/message';
 import { mutate } from '@/libs/swr';
 import { aiChatService } from '@/services/aiChat';
-import { chatService } from '@/services/chat';
 import { messageService } from '@/services/message';
 import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
@@ -2780,13 +2779,10 @@ describe('topic action', () => {
           data: { title: '简单问候' },
           tracingId: 'tracing-1',
         } as any);
-        const completionSpy = vi.spyOn(chatService, 'fetchPresetTaskResult');
-
         await act(async () => {
           await result.current.summaryTopicTitle(topicId, messages);
         });
 
-        expect(completionSpy).not.toHaveBeenCalled();
         expect(generateSpy.mock.calls[0][0]).toMatchObject({
           schema: TOPIC_TITLE_JSON_SCHEMA,
           tracing: { scenario: 'topic_title', topicId },

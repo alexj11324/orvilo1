@@ -296,7 +296,6 @@ describe('the platform Skill management chain stays retired', () => {
     it('keeps the client readers that inline skill content into a run', () => {
       for (const file of [
         'src/services/chat/mecha/skillPreload.ts',
-        'src/services/chat/mecha/skillEngineering.ts',
         'src/services/electron/desktopSkillRuntime.ts',
         'src/store/tool/slices/builtin/loadBuiltinSkills.ts',
         'src/store/tool/slices/agentSkills/action.ts',

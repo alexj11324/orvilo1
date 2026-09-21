@@ -15,7 +15,7 @@ describe('chainLangDetect', () => {
       messages: [
         {
           content:
-            '你是一名精通全世界语言的语言专家，你需要识别用户输入的内容，以国际标准 locale 进行输出',
+            '你是一名精通全世界语言的语言专家，你需要识别用户输入的内容，以一个 JSON 对象 {"locale": "国际标准 locale"} 进行输出',
           role: 'system',
         },
         {
@@ -23,7 +23,7 @@ describe('chainLangDetect', () => {
           role: 'user',
         },
         {
-          content: 'zh-CN',
+          content: '{"locale": "zh-CN"}',
           role: 'assistant',
         },
         {
@@ -31,7 +31,7 @@ describe('chainLangDetect', () => {
           role: 'user',
         },
         {
-          content: 'en-US',
+          content: '{"locale": "en-US"}',
           role: 'assistant',
         },
         {

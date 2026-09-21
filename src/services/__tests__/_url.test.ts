@@ -9,7 +9,6 @@ describe('API_ENDPOINTS', () => {
   });
 
   it('should return correct dynamic URLs', () => {
-    expect(API_ENDPOINTS.chat('openai')).toBe('/webapi/chat/openai');
     expect(API_ENDPOINTS.tts('openai')).toBe('/webapi/tts/openai');
   });
 });

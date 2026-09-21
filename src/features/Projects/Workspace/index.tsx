@@ -1,72 +1,57 @@
 'use client';
 
-import { Center, Flexbox, TextArea } from '@lobehub/ui';
+import { Center, Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { SendHorizontalIcon, SparklesIcon } from 'lucide-react';
+import dayjs from 'dayjs';
+import { CalendarIcon, Link2Icon, SendHorizontalIcon, SparklesIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { getProjectConversationStartPath } from '@/features/Projects/Layout/navigation';
+import {
+  getProjectConversationStartPath,
+  getProjectResourcesPath,
+} from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
+import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
 import ProjectDashboard from './ProjectDashboard';
+import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
   composer: css`
     overflow: hidden;
-
     border: 1px solid ${cssVar.colorBorder};
-    border-radius: 18px;
-
+    border-radius: 12px;
     background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowSecondary};
   `,
   composerFooter: css`
-    padding-block: 6px 8px;
-    padding-inline: 14px 8px;
+    padding-block: 4px 6px;
+    padding-inline: 12px 6px;
   `,
   content: css`
     overflow: auto;
     width: 100%;
   `,
-  intro: css`
-    width: 100%;
-    max-width: 760px;
-  `,
   page: css`
     box-sizing: border-box;
-    width: min(1060px, calc(100% - 64px));
+    width: min(960px, calc(100% - 64px));
     margin-inline: auto;
-    padding-block: 42px 72px;
+    padding-block: 24px 72px;
 
     @media (width <= 720px) {
       width: calc(100% - 40px);
-      padding-block: 32px 48px;
-    }
-  `,
-  prompt: css`
-    cursor: pointer;
-
-    padding-block: 5px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
+      padding-block: 20px 48px;
     }
   `,
   shell: css`
@@ -75,11 +60,11 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorBgContainer};
   `,
   textarea: css`
-    padding-block: 15px 8px !important;
-    padding-inline: 16px !important;
+    padding-block: 10px 4px !important;
+    padding-inline: 12px !important;
     border: 0 !important;
 
-    font-size: 15px !important;
+    font-size: 14px !important;
 
     background: transparent !important;
     box-shadow: none !important;
@@ -94,6 +79,9 @@ const ProjectWorkspace = memo(() => {
   const detail = useCurrentProjectDetail(projectId);
   const [message, setMessage] = useState('');
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+  const workspaceId = useActiveWorkspaceId();
+  const membersEnabled = useTeammatesEnabled() && !!workspaceId;
+  const membersSWR = useProjectMembersQuery(projectId ?? '', membersEnabled && !!projectId);
 
   if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
@@ -104,77 +92,153 @@ const ProjectWorkspace = memo(() => {
       </Center>
     );
 
+  const project = detail.project;
+  const projectReference = project.slug ?? projectId!;
+  const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
+  const members = membersSWR.data ?? [];
+  const knowledgeBases = detail.knowledgeBases ?? [];
+
   const startConversation = () => {
     const content = message.trim();
     if (!content || !projectId) return;
-    navigate(getProjectConversationStartPath(detail.project.slug ?? projectId, content));
+    navigate(getProjectConversationStartPath(projectReference, content));
   };
-  const prompts = [
-    t('overview.prompts.summarizeProgress'),
-    t('overview.prompts.planMilestone'),
-    t('overview.prompts.findBlockers'),
-  ];
 
   return (
     <Flexbox className={styles.shell} flex={1}>
       <div className={styles.content}>
         <Flexbox className={styles.page} gap={0}>
-          <Flexbox className={styles.intro} gap={18}>
-            <Flexbox gap={5}>
-              <Text fontSize={26} weight={650}>
-                {t('overview.title')}
-              </Text>
-              <Text type={'secondary'}>{t('overview.description')}</Text>
-            </Flexbox>
+          <Flexbox gap={20}>
             <Flexbox gap={10}>
-              <Flexbox className={styles.composer}>
-                <TextArea
-                  autoFocus
-                  autoSize={{ maxRows: 7, minRows: 3 }}
-                  className={styles.textarea}
-                  placeholder={t('overview.composerPlaceholder')}
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter')
-                      startConversation();
-                  }}
-                />
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={styles.composerFooter}
-                  justify={'space-between'}
-                >
-                  <Flexbox horizontal align={'center'} gap={7}>
-                    <Tag icon={<SparklesIcon size={12} />}>{detail.project.name}</Tag>
-                    <Text fontSize={12} type={'secondary'}>
-                      {t('overview.contextEnabled')}
-                    </Text>
-                  </Flexbox>
-                  <Button
-                    disabled={!message.trim()}
-                    icon={SendHorizontalIcon}
-                    type={'primary'}
-                    onClick={startConversation}
-                  />
-                </Flexbox>
+              <Avatar
+                avatar={project.avatar || undefined}
+                name={project.name}
+                shape={'square'}
+                size={44}
+                title={project.name}
+              />
+              <Flexbox gap={2}>
+                <Text fontSize={22} weight={650}>
+                  {project.name}
+                </Text>
+                {project.description ? (
+                  <Text fontSize={14} type={'secondary'}>
+                    {project.description}
+                  </Text>
+                ) : null}
               </Flexbox>
-              <Flexbox horizontal gap={8} wrap={'wrap'}>
-                {prompts.map((prompt) => (
-                  <button
-                    className={styles.prompt}
-                    key={prompt}
-                    type={'button'}
-                    onClick={() => setMessage(prompt)}
+            </Flexbox>
+
+            <Flexbox gap={6}>
+              <Text fontSize={13} weight={600}>
+                {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
+              </Text>
+              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+                <Tag
+                  color={statusMeta.color}
+                  icon={<Icon icon={statusMeta.icon} size={12} />}
+                  size={'small'}
+                >
+                  {t(`acceptance.status.${project.status}`, {
+                    defaultValue: project.status,
+                  })}
+                </Tag>
+                {membersEnabled &&
+                  (members.length > 0 ? (
+                    <Flexbox horizontal align={'center'} gap={4}>
+                      {members.slice(0, 4).map((member) => (
+                        <Avatar
+                          avatar={member.user?.avatar ?? undefined}
+                          key={member.userId}
+                          size={18}
+                          title={member.user?.fullName || member.user?.username || undefined}
+                        />
+                      ))}
+                      {members.length > 4 && (
+                        <Text fontSize={12} type={'secondary'}>
+                          +{members.length - 4}
+                        </Text>
+                      )}
+                    </Flexbox>
+                  ) : (
+                    <Text fontSize={13} type={'secondary'}>
+                      {t('properties.membersEmpty', { defaultValue: 'Add members' })}
+                    </Text>
+                  ))}
+                {project.createdAt && (
+                  <Tag icon={<Icon icon={CalendarIcon} size={12} />} size={'small'}>
+                    {dayjs(project.createdAt).format('MMM D')}
+                  </Tag>
+                )}
+                <Tag size={'small'}>
+                  {t(`properties.visibilityValue.${project.visibility}`, {
+                    defaultValue: project.visibility,
+                  })}
+                </Tag>
+              </Flexbox>
+            </Flexbox>
+
+            <Flexbox gap={6}>
+              <Text fontSize={13} weight={600}>
+                {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
+              </Text>
+              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+                {knowledgeBases.map((link) => (
+                  <Tag
+                    icon={<Icon icon={Link2Icon} size={12} />}
+                    key={link.knowledgeBase.id}
+                    size={'small'}
                   >
-                    {prompt}
-                  </button>
+                    {link.knowledgeBase.name}
+                  </Tag>
                 ))}
+                <Button
+                  icon={Link2Icon}
+                  size={'small'}
+                  type={'text'}
+                  onClick={() => navigate(getProjectResourcesPath(projectReference))}
+                >
+                  {t('overview.resourcesAdd', {
+                    defaultValue: 'Add document or link…',
+                  })}
+                </Button>
+              </Flexbox>
+            </Flexbox>
+
+            <Flexbox className={styles.composer}>
+              <TextArea
+                autoSize={{ maxRows: 6, minRows: 2 }}
+                className={styles.textarea}
+                placeholder={t('overview.composerPlaceholder')}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter')
+                    startConversation();
+                }}
+              />
+              <Flexbox
+                horizontal
+                align={'center'}
+                className={styles.composerFooter}
+                justify={'space-between'}
+              >
+                <Flexbox horizontal align={'center'} gap={7}>
+                  <Tag icon={<SparklesIcon size={12} />}>{project.name}</Tag>
+                  <Text fontSize={12} type={'secondary'}>
+                    {t('overview.contextEnabled')}
+                  </Text>
+                </Flexbox>
+                <Button
+                  disabled={!message.trim()}
+                  icon={SendHorizontalIcon}
+                  type={'primary'}
+                  onClick={startConversation}
+                />
               </Flexbox>
             </Flexbox>
           </Flexbox>
-          <ProjectDashboard detail={detail} projectId={detail.project.id} />
+          <ProjectDashboard detail={detail} projectId={project.id} />
         </Flexbox>
       </div>
     </Flexbox>

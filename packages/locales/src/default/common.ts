@@ -755,6 +755,9 @@ export default {
   'savedViews.builtinName.in-progress': 'In progress',
   'savedViews.builtinName.projects': 'All projects',
   'savedViews.builtinName.review': 'Review',
+  'savedViews.column.layout': 'Layout',
+  'savedViews.column.name': 'Name',
+  'savedViews.column.updated': 'Updated',
   'savedViews.conflictDesc':
     'Your unsaved edits were built on an older version. Reload the latest, or keep your version as a copy.',
   'savedViews.conflictReload': 'Reload latest',
@@ -850,6 +853,7 @@ export default {
   'savedViews.visibilityPrivate': 'Only me',
   'savedViews.visibilityTeam': 'This team',
   'savedViews.visibilityWorkspace': 'This workspace',
+  'savedViews.visibilityUnknown': 'Unknown',
   'teams.accept': 'Accept',
   'teams.cycle': 'Cycle',
   'teams.cycleAll': 'All cycles',

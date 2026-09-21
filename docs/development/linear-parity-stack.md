@@ -88,6 +88,29 @@ only merge after the ones below it.
   properties/body/activity/comments sections; `TaskDetailPage` delegates to
   it and the Inbox owner mounts it inside `WorkSurfaceSplit` next wave.
 
+## v6 wave 2 — collection-skeleton adoption (pages)
+
+- `MyWorkPage`, `TeamPage`, `SavedViewsPage` and `SavedViewPage` mount
+  `WorkSurfaceCollection`: the page toolbar lives in `WorkSurfaceToolbar`
+  (tabs/scope stay primary; filters, the list/board switch, and secondary
+  actions ride `aside` and collapse into the popover under 560px surface
+  width). Pages that own a kanban bound the collection body to the
+  scrollport (`height: 100%` + column flex) only while board layout is
+  active, so column-internal scrollers engage and the list/board toggle
+  never changes shell width.
+- `/views` is a directory table (`LiteTable`): `Name | Layout | Sharing |
+Updated | row menu`, grouped Built-in / Mine / Shared with counts. Rows
+  click through to the editor, but the name cell keeps a real anchor so
+  open-in-new-tab still works; the row menu sits in a click-isolated cell
+  to stay out of the row's click-to-open path.
+- Project routes (`/project/*`) no longer swap the workspace nav panel:
+  `resolveNavPanelKey` maps them to `home`, and `Projects/Layout` renders
+  the project section nav (home/tasks/resources/goals + project switcher +
+  favorite) as a fixed 208px in-page rail. The rail reuses `SideBarLayout`
+  with an explicit `scrollKey="project"` so its scroll memory never
+  collides with the workspace panel's (both would otherwise bucket under
+  `home`).
+
 ## v6 wave 2 — inbox recovery
 
 - `WorkInbox` mounts `WorkSurfaceSplit`: a `splitList` feed + a `splitDetail`

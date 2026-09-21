@@ -1,9 +1,8 @@
 'use client';
 
-import { Block, Center, Empty, Flexbox, Icon } from '@lobehub/ui';
+import { Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Button, SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, WorkSummaryItem } from '@orvilo/types';
-import { Progress } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   BadgeCheckIcon,
@@ -24,6 +23,7 @@ import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { getProjectGoalsPath, getProjectTasksPath } from '@/features/Projects/Layout/navigation';
 import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
+import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { canInviteToProject } from '@/features/Teammates/api/roleCapabilities';
 import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
@@ -60,29 +60,16 @@ const styles = createStaticStyles(({ css }) => ({
       grid-template-columns: 1fr;
     }
   `,
-  goal: css`
-    padding-block: 12px;
-    padding-inline: 14px;
-    border-radius: 12px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  goalGrid: css`
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-
-    @media (width <= 760px) {
-      grid-template-columns: 1fr;
-    }
-  `,
   main: css`
     min-width: 0;
   `,
-  progress: css`
-    padding: 18px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-    background: color-mix(in srgb, ${cssVar.colorBgContainer} 84%, ${cssVar.colorFillQuaternary});
+  milestone: css`
+    padding-block: 6px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    &:last-child {
+      border-block-end: 0;
+    }
   `,
   rail: css`
     position: sticky;
@@ -175,8 +162,13 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
   return (
     <div className={styles.columns}>
       <Flexbox className={styles.main} gap={24}>
-        <Flexbox gap={12}>
-          <SectionTitle title={t('overview.goalProgress')} />
+        <Flexbox gap={10}>
+          <SectionTitle
+            action={t('overview.viewAllGoals', { defaultValue: 'View all' })}
+            count={goals.length}
+            title={t('overview.milestones', { defaultValue: 'Milestones' })}
+            onAction={() => navigate(getProjectGoalsPath(projectReference))}
+          />
           {goalSWR.error ? (
             <AsyncError
               error={goalSWR.error}
@@ -186,53 +178,40 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
           ) : goalSWR.isLoading && goals.length === 0 ? (
             <ArticleSkeleton rows={4} />
           ) : goals.length === 0 ? (
-            <Block padding={24} variant={'outlined'}>
-              <Center gap={10}>
-                <Icon icon={TargetIcon} size={24} />
-                <Text type={'secondary'}>{t('overview.goalsEmpty')}</Text>
-                <Button onClick={() => navigate(getProjectGoalsPath(projectReference))}>
-                  {t('goals.create')}
-                </Button>
-              </Center>
-            </Block>
+            <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
+              {t('overview.goalsEmpty')}
+            </Text>
           ) : (
-            <Flexbox className={styles.progress} gap={16}>
-              <Flexbox horizontal align={'flex-start'} justify={'space-between'}>
-                <Flexbox gap={4}>
-                  <Text weight={600}>{t('overview.goalSummary')}</Text>
-                  <Text fontSize={13} type={'secondary'}>
-                    {t('overview.goalCount', { completed: completedGoals, total: goals.length })}
+            <Flexbox gap={0}>
+              {goalPreview.map(({ goal }) => (
+                <Flexbox
+                  horizontal
+                  align={'center'}
+                  className={styles.milestone}
+                  gap={10}
+                  key={goal.id}
+                >
+                  <Icon
+                    color={goal.status === 'achieved' ? cssVar.colorSuccess : undefined}
+                    icon={goal.status === 'achieved' ? CheckCircle2Icon : TargetIcon}
+                    size={15}
+                  />
+                  <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
+                    {goal.title}
+                  </Text>
+                  <Text fontSize={12} type={'secondary'}>
+                    {t(`goals.status.${goal.status}`, { defaultValue: goal.status })}
                   </Text>
                 </Flexbox>
-                <Text fontSize={22} weight={650}>
-                  {progress}%
+              ))}
+              {goals.length > goalPreview.length && (
+                <Text fontSize={12} style={{ paddingBlock: 4 }} type={'secondary'}>
+                  {t('overview.goalCount', { completed: completedGoals, total: goals.length })}
                 </Text>
-              </Flexbox>
-              <Progress percent={progress} showInfo={false} />
-              <div className={styles.goalGrid}>
-                {goalPreview.map(({ goal }) => (
-                  <Flexbox className={styles.goal} gap={5} key={goal.id}>
-                    <Flexbox horizontal align={'center'} gap={6}>
-                      <Icon
-                        color={goal.status === 'achieved' ? cssVar.colorSuccess : undefined}
-                        icon={goal.status === 'achieved' ? CheckCircle2Icon : CircleDotIcon}
-                        size={15}
-                      />
-                      <Text ellipsis weight={500}>
-                        {goal.title}
-                      </Text>
-                    </Flexbox>
-                    <Text fontSize={12} type={'secondary'}>
-                      {t(`goals.status.${goal.status}`, { defaultValue: goal.status })}
-                    </Text>
-                  </Flexbox>
-                ))}
-              </div>
+              )}
             </Flexbox>
           )}
         </Flexbox>
-
-        <OrchestrationPolicyCard detail={detail} projectId={projectId} />
 
         <Flexbox className={styles.section} gap={8}>
           <SectionTitle
@@ -287,9 +266,14 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
             </div>
           )}
         </Flexbox>
+
+        <OrchestrationPolicyCard detail={detail} projectId={projectId} />
       </Flexbox>
 
       <Flexbox className={styles.rail} gap={16}>
+        <Flexbox className={styles.railCard} gap={12}>
+          <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={projectId} />
+        </Flexbox>
         <Flexbox className={styles.railCard} gap={12}>
           <SectionTitle count={attentionTasks.length} title={t('overview.needsAttention')} />
           {attentionTasks.length === 0 ? (

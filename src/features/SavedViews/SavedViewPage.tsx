@@ -27,6 +27,7 @@ import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -473,9 +474,10 @@ const SavedViewPage = memo(() => {
 
   const projectBoard =
     view?.entityType === 'project' && (evaluation?.layout ?? view?.layout) === 'board';
+  const boardActive = (evaluation?.layout ?? view?.layout) === 'board';
 
   return (
-    <Flexbox flex={1} height="100%">
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
@@ -503,120 +505,136 @@ const SavedViewPage = memo(() => {
           </Flexbox>
         }
       />
-      <Flexbox gap={12} padding={16} style={{ overflow: 'auto' }}>
-        {conflict ? (
-          <Alert
-            showIcon
-            description={t('savedViews.conflictDesc')}
-            title={t('savedViews.conflictTitle')}
-            type="warning"
-            action={
+      {/* Board mode bounds the collection body so the kanban's own column
+          scrollers engage; list mode lets the body grow and the scroll host
+          stays the single scroll owner. */}
+      <WorkSurfaceCollection
+        style={
+          boardActive
+            ? {
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+              }
+            : undefined
+        }
+      >
+        <Flexbox gap={12} style={boardActive ? { flex: 1, minHeight: 0 } : undefined}>
+          {conflict ? (
+            <Alert
+              showIcon
+              description={t('savedViews.conflictDesc')}
+              title={t('savedViews.conflictTitle')}
+              type="warning"
+              action={
+                <Flexbox horizontal gap={8}>
+                  <Button size="small" onClick={reloadDraft}>
+                    {t('savedViews.conflictReload')}
+                  </Button>
+                  <Button size="small" onClick={() => void saveCopy()}>
+                    {t('savedViews.saveAs')}
+                  </Button>
+                </Flexbox>
+              }
+            />
+          ) : null}
+          {isOwner && editing && draft ? (
+            <Flexbox gap={12}>
+              <ViewDefinitionEditor showName showShare value={draft} onChange={setDraft} />
               <Flexbox horizontal gap={8}>
+                <Button
+                  disabled={!dirty || !shareReady || !draft.name.trim()}
+                  size="small"
+                  type="primary"
+                  onClick={() => void saveView()}
+                >
+                  {t('save')}
+                </Button>
                 <Button size="small" onClick={reloadDraft}>
-                  {t('savedViews.conflictReload')}
-                </Button>
-                <Button size="small" onClick={() => void saveCopy()}>
-                  {t('savedViews.saveAs')}
+                  {t('cancel')}
                 </Button>
               </Flexbox>
-            }
-          />
-        ) : null}
-        {isOwner && editing && draft ? (
-          <Flexbox gap={12}>
-            <ViewDefinitionEditor showName showShare value={draft} onChange={setDraft} />
-            <Flexbox horizontal gap={8}>
-              <Button
-                disabled={!dirty || !shareReady || !draft.name.trim()}
-                size="small"
-                type="primary"
-                onClick={() => void saveView()}
-              >
-                {t('save')}
-              </Button>
-              <Button size="small" onClick={reloadDraft}>
-                {t('cancel')}
-              </Button>
             </Flexbox>
-          </Flexbox>
-        ) : null}
-        {error ? (
-          <AsyncError
-            error={error}
-            variant={view ? 'inline' : 'block'}
-            onRetry={() => void refreshView()}
-          />
-        ) : null}
-        {error && !view ? null : evaluation?.needsRepair ? (
-          <Alert
-            showIcon
-            description={t('savedViews.needsRepairDesc')}
-            title={t('savedViews.needsRepair')}
-            type="warning"
-          />
-        ) : null}
-        {evaluation?.needsRepair ? (
-          isLoading ? (
-            <Text type="secondary">{t('savedViews.loading')}</Text>
-          ) : (
-            <Empty description={t('savedViews.needsRepairEmpty')} />
-          )
-        ) : view?.entityType === 'project' ? (
-          <Flexbox gap={16}>
-            {isLoading ? (
-              <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
-            ) : projectBoard ? (
-              <SavedViewProjectBoard
-                groups={projectGroups}
-                loadMoreLabel={t('savedViews.loadMore')}
-                onLoadMoreGroup={loadMoreProjectGroup}
-              />
-            ) : projectRows.length === 0 ? (
-              <Center flex={1} padding={48}>
-                <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
-              </Center>
+          ) : null}
+          {error ? (
+            <AsyncError
+              error={error}
+              variant={view ? 'inline' : 'block'}
+              onRetry={() => void refreshView()}
+            />
+          ) : null}
+          {error && !view ? null : evaluation?.needsRepair ? (
+            <Alert
+              showIcon
+              description={t('savedViews.needsRepairDesc')}
+              title={t('savedViews.needsRepair')}
+              type="warning"
+            />
+          ) : null}
+          {evaluation?.needsRepair ? (
+            isLoading ? (
+              <Text type="secondary">{t('savedViews.loading')}</Text>
             ) : (
-              <Flexbox gap={2}>
-                {projectRows.map((project) => (
-                  <SavedViewProjectRow key={project.id} project={project} />
-                ))}
-              </Flexbox>
-            )}
-            {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
-              <Flexbox horizontal justify="center">
-                <Button size="small" onClick={() => void loadMore()}>
-                  {t('savedViews.loadMore')}
-                </Button>
-              </Flexbox>
-            ) : null}
-          </Flexbox>
-        ) : (
-          <WorkQueryResults
-            emptyLabel={t('savedViews.emptyResults')}
-            groupBy={evaluation?.groupBy}
-            groups={groups}
-            layout={evaluation?.layout ?? view?.layout ?? 'list'}
-            loadMoreLabel={t('savedViews.loadMore')}
-            loading={isLoading}
-            loadingLabel={t('savedViews.loading')}
-            movable={(evaluation?.layout ?? view?.layout) === 'board'}
-            sortMode={view?.queryAst.sortMode}
-            tasks={tasks}
-            total={evaluation?.total}
-            createContext={
-              workspaceId && joinedTeamOptions.length > 0
-                ? { teamOptions: joinedTeamOptions }
-                : undefined
-            }
-            onLoadMoreGroup={(key) => void loadMoreGroup(key)}
-            onMoved={() => void refreshView()}
-            onLoadMore={
-              (evaluation?.layout ?? view?.layout) === 'list' ? () => void loadMore() : undefined
-            }
-          />
-        )}
-      </Flexbox>
-    </Flexbox>
+              <Empty description={t('savedViews.needsRepairEmpty')} />
+            )
+          ) : view?.entityType === 'project' ? (
+            <Flexbox gap={16}>
+              {isLoading ? (
+                <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
+              ) : projectBoard ? (
+                <SavedViewProjectBoard
+                  groups={projectGroups}
+                  loadMoreLabel={t('savedViews.loadMore')}
+                  onLoadMoreGroup={loadMoreProjectGroup}
+                />
+              ) : projectRows.length === 0 ? (
+                <Center flex={1} padding={48}>
+                  <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
+                </Center>
+              ) : (
+                <Flexbox gap={2}>
+                  {projectRows.map((project) => (
+                    <SavedViewProjectRow key={project.id} project={project} />
+                  ))}
+                </Flexbox>
+              )}
+              {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
+                <Flexbox horizontal justify="center">
+                  <Button size="small" onClick={() => void loadMore()}>
+                    {t('savedViews.loadMore')}
+                  </Button>
+                </Flexbox>
+              ) : null}
+            </Flexbox>
+          ) : (
+            <WorkQueryResults
+              emptyLabel={t('savedViews.emptyResults')}
+              groupBy={evaluation?.groupBy}
+              groups={groups}
+              layout={evaluation?.layout ?? view?.layout ?? 'list'}
+              loadMoreLabel={t('savedViews.loadMore')}
+              loading={isLoading}
+              loadingLabel={t('savedViews.loading')}
+              movable={(evaluation?.layout ?? view?.layout) === 'board'}
+              sortMode={view?.queryAst.sortMode}
+              tasks={tasks}
+              total={evaluation?.total}
+              createContext={
+                workspaceId && joinedTeamOptions.length > 0
+                  ? { teamOptions: joinedTeamOptions }
+                  : undefined
+              }
+              onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+              onMoved={() => void refreshView()}
+              onLoadMore={
+                (evaluation?.layout ?? view?.layout) === 'list' ? () => void loadMore() : undefined
+              }
+            />
+          )}
+        </Flexbox>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

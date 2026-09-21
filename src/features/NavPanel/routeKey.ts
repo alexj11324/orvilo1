@@ -37,10 +37,6 @@ export const resolveNavPanelKey = (
       return 'page';
     }
 
-    case 'project': {
-      return 'project';
-    }
-
     case 'resource': {
       return childSegment === 'library' ? 'resourceLibrary' : 'resource';
     }

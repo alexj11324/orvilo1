@@ -49,6 +49,7 @@ export class TopicService {
   createTopic = (params: CreateTopicParams): Promise<string> => {
     return lambdaClient.topic.createTopic.mutate({
       ...params,
+      agentId: params.agentId ?? undefined,
       sessionId: this.toDbSessionId(params.sessionId),
     });
   };

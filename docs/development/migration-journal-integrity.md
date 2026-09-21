@@ -6,8 +6,8 @@ Drizzle's PG migrator decides which entries to run by comparing each journal
 wall-clock apply time. An entry journaled with a `when` earlier than an
 already-applied entry is **silently skipped** on staged upgrades — the deploy
 carrying it never applies it, while new code already reads the columns it
-adds. `0179` (which adds `integration_leases.fence_seq`) was journaled with
-`when` before `0178`'s and would have been skipped by exactly this path.
+adds. `0180` (which adds `integration_leases.fence_seq`) was journaled with
+`when` before `0179`'s and would have been skipped by exactly this path.
 
 ## Invariant
 
@@ -21,8 +21,8 @@ history.
 ## Guard
 
 `packages/database/src/core/__tests__/migrationJournal.test.ts` enforces the
-ordering statically in every test run (including an explicit `0178 → 0179 →
-0180 → 0181` boundary pin and a corrupt-journal gate), replays the three field
+ordering statically in every test run (including an explicit `0179 → 0180 →
+0181 → 0182` boundary pin and a corrupt-journal gate), replays the three field
 states below on a real Postgres engine (PGlite, same `PgDialect.migrate`
 selection logic), and — under the server-DB suite (`TEST_SERVER_DB=1`, CI
 `test-database` job) — replays the real two-stage path: a scratch database
@@ -31,35 +31,35 @@ asserting the tail migration's artifact actually exists.
 
 ## Migration inventory — `fence_seq` introduction point
 
-`integration_leases.fence_seq` is introduced by **`0179_lean_metal_master`**:
+`integration_leases.fence_seq` is introduced by **`0180_lean_metal_master`**:
 
 ```sql
 ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" bigint DEFAULT 0 NOT NULL;
 ```
 
-and conditionally repaired by **`0182_fence_seq_forward_repair`** (see below).
+and conditionally repaired by **`0183_fence_seq_forward_repair`** (see below).
 The boundary cluster:
 
 | idx  | tag                                  | when          | notes                                                                                                                                                                  |
 | ---- | ------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0178 | `0178_task_workspace_claims`         | 1789886344796 | creates `task_workspace_claims` + `task_workspace_recoveries`                                                                                                          |
-| 0179 | `0179_lean_metal_master`             | 1789886344797 | adds `integration_leases.fence_seq` — `when` was originally **below** 0178's (the journal-order bug); it is also non-idempotent (`ADD COLUMN` without `IF NOT EXISTS`) |
-| 0180 | `0180_task_dispatch_origin`          | 1789907068904 | `task_dispatches` origin/initiator/source\_dispatch\_id/settlement\_grant                                                                                              |
-| 0181 | `0181_task_workspace_claim_identity` | 1789907379748 | `task_workspace_claims` repo\_common\_dir/base\_branch                                                                                                                 |
-| 0182 | `0182_fence_seq_forward_repair`      | 1789933086797 | conditional `fence_seq` repair + definition verification                                                                                                               |
+| 0179 | `0179_task_workspace_claims`         | 1789886344796 | creates `task_workspace_claims` + `task_workspace_recoveries`                                                                                                          |
+| 0180 | `0180_lean_metal_master`             | 1789886344797 | adds `integration_leases.fence_seq` — `when` was originally **below** 0179's (the journal-order bug); it is also non-idempotent (`ADD COLUMN` without `IF NOT EXISTS`) |
+| 0181 | `0181_task_dispatch_origin`          | 1789907068904 | `task_dispatches` origin/initiator/source\_dispatch\_id/settlement\_grant                                                                                              |
+| 0182 | `0182_task_workspace_claim_identity` | 1789907379748 | `task_workspace_claims` repo\_common\_dir/base\_branch                                                                                                                 |
+| 0183 | `0183_fence_seq_forward_repair`      | 1789933086797 | conditional `fence_seq` repair + definition verification                                                                                                               |
 
-Full inventory as of this writing: 183 journal entries, `0000`–`0182`, gap-free.
+Full inventory as of this writing: 186 journal entries, `0000`–`0185`, gap-free.
 Regenerate with `bun run db:generate` / inspect `meta/_journal.json`; the
 appendix at the bottom lists every entry.
 
-## Three-scenario field matrix for 0179 (`fence_seq`)
+## Three-scenario field matrix for 0180 (`fence_seq`)
 
 Classify a target database before deploying the repaired journal:
 
 ```sql
--- Did 0179 ever apply, and under which journal timestamp?
+-- Did 0180 ever apply, and under which journal timestamp?
 SELECT created_at FROM drizzle.__drizzle_migrations
- WHERE hash = '<sha256 of 0179_lean_metal_master.sql>';   -- see below
+ WHERE hash = '<sha256 of 0180_lean_metal_master.sql>';   -- see below
 
 -- Both halves of the question in two probes:
 SELECT MAX(created_at) AS boundary FROM drizzle.__drizzle_migrations;
@@ -69,25 +69,25 @@ SELECT data_type, is_nullable, column_default FROM information_schema.columns
 ```
 
 sha256 of the file content matches drizzle's stored `hash`:
-`shasum -a 256 packages/database/migrations/0179_lean_metal_master.sql`.
+`shasum -a 256 packages/database/migrations/0180_lean_metal_master.sql`.
 
 | Field state                                                                                                              | Evidence                                                  | What the new journal does                                                                                                         | Required action                                                                                                                                                                                                          |
 | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **未应用** (0179 never reached; `MAX(created_at)` < `1789886344797` and column absent)                                   | column absent; boundary below 0179's `when`               | applies 0179 normally, then 0182 verifies the definition and no-ops                                                               | none — deploy as usual                                                                                                                                                                                                   |
-| **曾跳过** (column absent; `MAX(created_at)` > `1789886344797`, i.e. 0180/0181 already recorded)                         | column absent; boundary at ≥ 0180's `when`                | 0179 stays skipped; **0182 adds the column** and verifies the definition                                                          | none — 0182 converges it                                                                                                                                                                                                 |
-| **已应用** (column present; a `__drizzle_migrations` row matching 0179's hash has `created_at` < 0178's `1789886344796`) | column present; 0179 row timestamped under the old `when` | **fails hard**: 0179 is re-selected (`1789886344797` > recorded boundary) and crashes on the duplicate column before 0182 can run | controlled marker repair **before** deploying: `UPDATE drizzle.__drizzle_migrations SET created_at = 1789886344797 WHERE hash = '<0179 sha256>' AND created_at < 1789886344796;` — then deploy, and 0182 verifies/no-ops |
+| **未应用** (0180 never reached; `MAX(created_at)` < `1789886344797` and column absent)                                   | column absent; boundary below 0180's `when`               | applies 0180 normally, then 0183 verifies the definition and no-ops                                                               | none — deploy as usual                                                                                                                                                                                                   |
+| **曾跳过** (column absent; `MAX(created_at)` > `1789886344797`, i.e. 0181/0182 already recorded)                         | column absent; boundary at ≥ 0181's `when`                | 0180 stays skipped; **0183 adds the column** and verifies the definition                                                          | none — 0183 converges it                                                                                                                                                                                                 |
+| **已应用** (column present; a `__drizzle_migrations` row matching 0180's hash has `created_at` < 0179's `1789886344796`) | column present; 0180 row timestamped under the old `when` | **fails hard**: 0180 is re-selected (`1789886344797` > recorded boundary) and crashes on the duplicate column before 0183 can run | controlled marker repair **before** deploying: `UPDATE drizzle.__drizzle_migrations SET created_at = 1789886344797 WHERE hash = '<0180 sha256>' AND created_at < 1789886344796;` — then deploy, and 0183 verifies/no-ops |
 
 If no preserved database shows the 已应用 state (prove it by running the probe
 above on every environment that ever saw the pre-fix journal), no marker repair
 is needed anywhere. The marker update is not a blind history rewrite: it pins
-the already-applied row to the timestamp the repaired journal assigns 0179,
+the already-applied row to the timestamp the repaired journal assigns 0180,
 matched by content hash, and the PGlite replay test covers it end to end.
 
-**0182 is deliberately not a bare `ADD COLUMN IF NOT EXISTS`.** When the column
+**0183 is deliberately not a bare `ADD COLUMN IF NOT EXISTS`.** When the column
 exists it checks `data_type = bigint`, `is_nullable = NO`, `column_default = 0`
 and raises on any divergence — a column with the right name but a wrong shape
 must fail loudly, not masquerade as applied. When absent it creates the column
-exactly as 0179 defines it.
+exactly as 0180 defines it.
 
 ## Appendix — full journal inventory (idx / tag / when)
 
@@ -169,7 +169,7 @@ exactly as 0179 defines it.
 | 0073 | `0073_add_message_group_metadata`                     | 1769272397744 |
 | 0074 | `0074_add_fk_indexes_for_cascade_delete`              | 1769341100106 |
 | 0075 | `0075_add_user_memory_persona`                        | 1769362978088 |
-| 0076 | `0076_add_message_group_index`                        | 1770179814971 |
+| 0076 | `0076_add_message_group_index`                        | 1770180814971 |
 | 0077 | `0077_add_agent_skills`                               | 1770392264696 |
 | 0078 | `0078_added_id_nanoid_for_replacing_id`               | 1770621740632 |
 | 0079 | `0079_update_id_nanoid_from_casted_id`                | 1770621892194 |
@@ -271,8 +271,8 @@ exactly as 0179 defines it.
 | 0175 | `0175_task_pr_delivery_gate`                          | 1789770502747 |
 | 0176 | `0176_task_topics_contract`                           | 1789857483828 |
 | 0177 | `0177_shallow_gateway`                                | 1789871969944 |
-| 0178 | `0178_task_workspace_claims`                          | 1789886344796 |
-| 0179 | `0179_lean_metal_master`                              | 1789886344797 |
-| 0180 | `0180_task_dispatch_origin`                           | 1789907068904 |
-| 0181 | `0181_task_workspace_claim_identity`                  | 1789907379748 |
-| 0182 | `0182_fence_seq_forward_repair`                       | 1789933086797 |
+| 0179 | `0179_task_workspace_claims`                          | 1789886344796 |
+| 0180 | `0180_lean_metal_master`                              | 1789886344797 |
+| 0181 | `0181_task_dispatch_origin`                           | 1789907068904 |
+| 0182 | `0182_task_workspace_claim_identity`                  | 1789907379748 |
+| 0183 | `0183_fence_seq_forward_repair`                       | 1789933086797 |

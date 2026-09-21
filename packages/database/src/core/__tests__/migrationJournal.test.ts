@@ -31,9 +31,9 @@ import { assertTestDatabaseUrl } from '../../core/getTestDB';
  * journal `when` (folderMillis) against the max `created_at` already recorded
  * in `drizzle.__drizzle_migrations`. A journal whose `when` values are not
  * strictly increasing — e.g. a later migration recorded with an earlier
- * timestamp, as happened between 0178 and 0179 — makes a staged upgrade
- * silently skip entries: `0178` applies first, then the deploy carrying
- * `0179` sees `0179.when < max(created_at)` and never runs it, while the
+ * timestamp, as happened between 0179 and 0180 — makes a staged upgrade
+ * silently skip entries: `0179` applies first, then the deploy carrying
+ * `0180` sees `0180.when < max(created_at)` and never runs it, while the
  * code starts reading `integration_leases.fence_seq`.
  *
  * These tests pin both halves of that contract: the journal is monotone at
@@ -93,34 +93,34 @@ describe('migration journal integrity', () => {
     }
   });
 
-  it('pins the 0178 → 0179 → 0180 boundary that shipped the journal-order bug', () => {
+  it('pins the 0179 → 0180 → 0181 boundary that shipped the journal-order bug', () => {
     const byTag = (prefix: string) => journal.entries.find((e) => e.tag.startsWith(prefix));
-    const e178 = byTag('0178');
-    const e179 = byTag('0179');
-    const e180 = byTag('0180');
-    const e181 = byTag('0181');
-    expect(e178?.tag).toBe('0178_task_workspace_claims');
-    expect(e179?.tag).toBe('0179_lean_metal_master');
-    expect(e180?.tag).toBe('0180_task_dispatch_origin');
-    expect(e181?.tag).toBe('0181_task_workspace_claim_identity');
+    const e178 = byTag('0179');
+    const e179 = byTag('0180');
+    const e180 = byTag('0181');
+    const e181 = byTag('0182');
+    expect(e178?.tag).toBe('0179_task_workspace_claims');
+    expect(e179?.tag).toBe('0180_lean_metal_master');
+    expect(e180?.tag).toBe('0181_task_dispatch_origin');
+    expect(e181?.tag).toBe('0182_task_workspace_claim_identity');
     // Adjacency in journal order — nothing may interleave the repaired pair.
     expect(journal.entries.indexOf(e179!)).toBe(journal.entries.indexOf(e178!) + 1);
     expect(journal.entries.indexOf(e180!)).toBe(journal.entries.indexOf(e179!) + 1);
     expect(journal.entries.indexOf(e181!)).toBe(journal.entries.indexOf(e180!) + 1);
-    // The exact regression: 0179 must sort strictly after 0178 on `when`.
+    // The exact regression: 0180 must sort strictly after 0179 on `when`.
     expect(e179!.when).toBeGreaterThan(e178!.when);
     expect(e180!.when).toBeGreaterThan(e179!.when);
     expect(e181!.when).toBeGreaterThan(e180!.when);
   });
 
-  it('pins the 0179 → 0182 forward-repair pair for environments that skipped 0179', () => {
+  it('pins the 0180 → 0183 forward-repair pair for environments that skipped 0180', () => {
     const byTag = (prefix: string) => journal.entries.find((e) => e.tag.startsWith(prefix));
-    const e179 = byTag('0179');
-    const e181 = byTag('0181');
-    const e182 = byTag('0182');
-    // 0182 exists and carries the conditional repair — environments whose
-    // recorded `created_at` already passed 0179's `when` converge through it.
-    expect(e182?.tag).toBe('0182_fence_seq_forward_repair');
+    const e179 = byTag('0180');
+    const e181 = byTag('0182');
+    const e182 = byTag('0183');
+    // 0183 exists and carries the conditional repair — environments whose
+    // recorded `created_at` already passed 0180's `when` converge through it.
+    expect(e182?.tag).toBe('0183_fence_seq_forward_repair');
     expect(journal.entries.indexOf(e182!)).toBe(journal.entries.indexOf(e181!) + 1);
     expect(e182!.when).toBeGreaterThan(e181!.when);
     expect(e182!.when).toBeGreaterThan(e179!.when);
@@ -162,7 +162,7 @@ describe('migration journal integrity', () => {
  * migrator against the real boundary SQL without needing DATABASE_TEST_URL.
  *
  * The scenarios replay the three field states `docs/development/
- * migration-journal-integrity.md` defines for 0179 (`fence_seq`):
+ * migration-journal-integrity.md` defines for 0180 (`fence_seq`):
  * never applied, applied under the old reversed journal, and skipped past.
  */
 const realEntries = readJournal(migrationsFolder).entries;
@@ -173,7 +173,7 @@ const journalEntry = (prefix: string, when?: number): JournalEntry => {
   return { ...real, when: when ?? real.when };
 };
 
-const tailEntries = () => ['0178', '0179', '0180', '0181', '0182'].map((t) => journalEntry(t));
+const tailEntries = () => ['0179', '0180', '0181', '0182', '0183'].map((t) => journalEntry(t));
 
 /** A temp migrations folder: real SQL files symlinked in, journal as given. */
 const stageMigrationsFolder = (entries: JournalEntry[]): string => {
@@ -231,15 +231,15 @@ describe('staged upgrade replay (PGlite)', () => {
   };
 
   const tail = tailEntries();
-  const e178 = journalEntry('0178');
-  const e179 = journalEntry('0179');
-  const e180 = journalEntry('0180');
-  const e181 = journalEntry('0181');
-  const e182 = journalEntry('0182');
+  const e178 = journalEntry('0179');
+  const e179 = journalEntry('0180');
+  const e180 = journalEntry('0181');
+  const e181 = journalEntry('0182');
+  const e182 = journalEntry('0183');
 
-  it('M01: applies the boundary cluster in order — fence_seq arrives via 0179', async () => {
+  it('M01: applies the boundary cluster in order — fence_seq arrives via 0180', async () => {
     await runScenario(async (db) => {
-      // Deploy pinned at the 0178 boundary…
+      // Deploy pinned at the 0179 boundary…
       await pgliteMigrate(db, {
         migrationsFolder: stageMigrationsFolder([e178]),
       });
@@ -264,17 +264,17 @@ describe('staged upgrade replay (PGlite)', () => {
     });
   }, 120_000);
 
-  it('M02: repairs a database that skipped 0179 under the old reversed journal', async () => {
+  it('M02: repairs a database that skipped 0180 under the old reversed journal', async () => {
     await runScenario(async (db) => {
       await pgliteMigrate(db, {
         migrationsFolder: stageMigrationsFolder([e178]),
       });
-      // Deploy window where 0179's `when` still preceded 0178's but
-      // 0180/0181 were already present: both apply, 0179 is skipped forever.
+      // Deploy window where 0180's `when` still preceded 0179's but
+      // 0181/0182 were already present: both apply, 0180 is skipped forever.
       await pgliteMigrate(db, {
         migrationsFolder: stageMigrationsFolder([
           e178,
-          journalEntry('0179', e178.when - 1),
+          journalEntry('0180', e178.when - 1),
           e180,
           e181,
         ]),
@@ -282,7 +282,7 @@ describe('staged upgrade replay (PGlite)', () => {
       expect(await fenceSeqColumn(db)).toHaveLength(0);
       expect(await appliedMillis(db)).toEqual([e178.when, e180.when, e181.when]);
 
-      // The repaired journal selects only 0182 — it adds the column 0179
+      // The repaired journal selects only 0183 — it adds the column 0180
       // can never reach on this database, with no duplicate and no gap.
       await pgliteMigrate(db, { migrationsFolder: stageMigrationsFolder(tail) });
       const cols = await fenceSeqColumn(db);
@@ -296,19 +296,19 @@ describe('staged upgrade replay (PGlite)', () => {
     });
   }, 120_000);
 
-  it('M02: a database that applied 0179 under the reversed journal needs the documented marker repair', async () => {
+  it('M02: a database that applied 0180 under the reversed journal needs the documented marker repair', async () => {
     await runScenario(async (db) => {
       // Fresh apply under the pre-fix journal: every entry applies in order,
-      // 0179 lands with its old (earlier-than-0178) timestamp.
+      // 0180 lands with its old (earlier-than-0179) timestamp.
       const old179When = e178.when - 1;
       await pgliteMigrate(db, {
-        migrationsFolder: stageMigrationsFolder([e178, journalEntry('0179', old179When)]),
+        migrationsFolder: stageMigrationsFolder([e178, journalEntry('0180', old179When)]),
       });
       expect(await fenceSeqColumn(db)).toHaveLength(1);
 
-      // The fixed journal re-selects 0179 (its new `when` exceeds the recorded
+      // The fixed journal re-selects 0180 (its new `when` exceeds the recorded
       // boundary) and crashes on the duplicate column before it can reach
-      // 0182 — no in-band migration can rescue this environment, which is why
+      // 0183 — no in-band migration can rescue this environment, which is why
       // the integrity doc prescribes an explicit marker-row repair instead.
       await expect(
         pgliteMigrate(db, { migrationsFolder: stageMigrationsFolder(tail) }),
@@ -316,7 +316,7 @@ describe('staged upgrade replay (PGlite)', () => {
       // The single-transaction apply rolled back — nothing was recorded.
       expect(await appliedMillis(db)).toEqual([old179When, e178.when]);
 
-      // Documented repair: pin the already-applied 0179 row to its corrected
+      // Documented repair: pin the already-applied 0180 row to its corrected
       // journal timestamp, matched by content hash — never a blind rewrite.
       const hash = createHash('sha256')
         .update(readFileSync(path.join(migrationsFolder, `${e179.tag}.sql`)))
@@ -341,9 +341,9 @@ describe('staged upgrade replay (PGlite)', () => {
     });
   }, 120_000);
 
-  it('0182 verifies the schema definition — a divergent column fails loudly', async () => {
+  it('0183 verifies the schema definition — a divergent column fails loudly', async () => {
     const repairSql = readFileSync(
-      path.join(migrationsFolder, '0182_fence_seq_forward_repair.sql'),
+      path.join(migrationsFolder, '0183_fence_seq_forward_repair.sql'),
       'utf8',
     );
     await runScenario(async (db) => {
@@ -386,10 +386,10 @@ describe('staged upgrade replay (PGlite)', () => {
       shape: 'wrong type',
     },
   ])(
-    '0182 rejects a divergent fence_seq definition ($shape)',
+    '0183 rejects a divergent fence_seq definition ($shape)',
     async ({ ddl }) => {
       const repairSql = readFileSync(
-        path.join(migrationsFolder, '0182_fence_seq_forward_repair.sql'),
+        path.join(migrationsFolder, '0183_fence_seq_forward_repair.sql'),
         'utf8',
       );
       await runScenario(async (db) => {

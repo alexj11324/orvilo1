@@ -3367,6 +3367,30 @@ table project_works {
   }
 }
 
+table pull_request_review_receipts {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  workspace_id text [not null]
+  connection_id text [not null]
+  repo_id text [not null]
+  pull_request_id text [not null]
+  operation text [not null]
+  operation_id text [not null]
+  digest text [not null]
+  status text [not null]
+  remote_id text
+  applied_head_sha text
+  data jsonb
+  reconciled boolean [not null, default: false]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (user_id, workspace_id, connection_id, repo_id, pull_request_id, operation, operation_id) [name: 'pull_request_review_receipts_identity_unique', unique]
+    (user_id, workspace_id, repo_id, pull_request_id, operation, operation_id) [name: 'pull_request_review_receipts_scope_idx']
+  }
+}
+
 table push_live_activities {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   user_id text [not null]

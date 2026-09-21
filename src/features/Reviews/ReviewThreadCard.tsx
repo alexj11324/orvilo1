@@ -9,7 +9,7 @@ import Avatar from '@/components/Avatar';
 
 import CollectionFooter from './CollectionFooter';
 import CommentComposer from './CommentComposer';
-import type { ReviewThread, ReviewThreadComment } from './types';
+import type { ReviewThread, ReviewThreadComment, WriteOutcome } from './types';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -77,7 +77,7 @@ ThreadComment.displayName = 'ThreadComment';
 
 const ReviewThreadCard = memo<{
   onLoadMoreComments?: (threadId: string, cursor: string) => Promise<void> | void;
-  onReply: (threadId: string, body: string) => Promise<boolean>;
+  onReply: (threadId: string, body: string) => Promise<WriteOutcome>;
   stale?: boolean;
   thread: ReviewThread;
   writeDisabled?: boolean;
@@ -124,10 +124,11 @@ const ReviewThreadCard = memo<{
             disabled={writeDisabled}
             placeholder={t('reviews.replyPlaceholder')}
             submitLabel={t('reviews.reply')}
+            unknownHint={t('reviews.outcomeUnknown')}
             onSubmit={async (body) => {
-              const ok = await onReply(thread.id, body);
-              if (ok) setReplyOpen(false);
-              return ok;
+              const outcome = await onReply(thread.id, body);
+              if (outcome === 'applied') setReplyOpen(false);
+              return outcome;
             }}
           />
         ) : thread.viewerCanReply === false ? (

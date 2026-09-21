@@ -49,6 +49,7 @@ export * from './oidc';
 export * from './project';
 export * from './projectMember';
 export * from './projectWork';
+export * from './pullRequestReview';
 export * from './pushToken';
 export * from './rag';
 export * from './ragEvals';

@@ -715,6 +715,9 @@ export default {
   'reviews.inProductReviews': 'In-product approvals',
   'reviews.loadedCount': 'Showing {{loaded}} of {{total}}',
   'reviews.openInGitHub': 'Open in GitHub',
+  'reviews.outcomeUnknown':
+    'Could not confirm whether this was posted to GitHub — it may already be there. Your draft is kept; verify before retrying.',
+  'reviews.outcomeUnknownAction': 'Verify & retry',
   'reviews.pendingDraftBanner':
     'You have a pending review draft on GitHub — submitting will publish it',
   'reviews.pullRequests': 'Pull requests',

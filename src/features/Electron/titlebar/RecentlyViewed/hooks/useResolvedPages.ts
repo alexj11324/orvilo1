@@ -17,7 +17,9 @@ interface UseResolvedPagesResult {
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export const useResolvedPages = (): UseResolvedPagesResult => {
-  const { t } = useTranslation('electron');
+  // Route titleKeys live in either `electron` (navigation.*) or `common`
+  // (tab.*, navPanel.*) — bind both so either resolves.
+  const { t } = useTranslation(['electron', 'common']);
 
   const pinnedRefs = useElectronStore((s) => s.pinnedPages);
   const recentRefs = useElectronStore((s) => s.recentPages);

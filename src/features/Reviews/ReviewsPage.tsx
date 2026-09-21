@@ -14,8 +14,8 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
@@ -245,7 +245,7 @@ const ReviewsPage = memo(() => {
   const taskReviewError = error;
 
   return (
-    <Flexbox flex={1} height="100%">
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
@@ -253,92 +253,102 @@ const ReviewsPage = memo(() => {
           </Text>
         }
       />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewTab)}>
-          <TabsList>
-            <TabsIndicator />
-            {tabs.map((item) => (
-              <TabsTab key={item.key} value={item.key}>
-                {item.label}
-              </TabsTab>
-            ))}
-          </TabsList>
-        </TabsRoot>
-
-        <Flexbox gap={4}>
-          <Text type={'secondary'} weight={500}>
-            {t('reviews.pullRequests')}
-          </Text>
-          {queue.isLoading ? (
-            <SkeletonList />
-          ) : notConnected ? (
-            <Center gap={8} padding={24}>
-              <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
-              <Button onClick={() => navigate('/settings/connector')}>
-                {t('reviews.connectGitHubAction')}
-              </Button>
-            </Center>
-          ) : queue.error ? (
-            <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
-          ) : allPullRequests.length === 0 ? (
-            <Empty description={t('reviews.queueEmpty')} icon={GitPullRequestIcon} />
-          ) : (
-            <Flexbox gap={4}>
-              <Flexbox>
-                {allPullRequests.map((item) => (
-                  <PullRequestRow item={item} key={item.id} />
+      <WorkSurfaceCollection
+        toolbar={
+          <WorkSurfaceToolbar>
+            <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewTab)}>
+              <TabsList>
+                <TabsIndicator />
+                {tabs.map((item) => (
+                  <TabsTab key={item.key} value={item.key}>
+                    {item.label}
+                  </TabsTab>
                 ))}
-              </Flexbox>
-              {/* A partial queue is never presented as complete — the tail
-                  counts stay visible and pages load on demand. */}
-              {queueHasMore || queueTail.length > 0 ? (
-                <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={8}>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t('reviews.loadedCount', {
-                      loaded: allPullRequests.length,
-                      total: queueTotal ?? '…',
-                    })}
-                  </Text>
-                  {queueHasMore ? (
-                    <Button
-                      loading={queueLoadingMore}
-                      size={'small'}
-                      type={'text'}
-                      onClick={() => void loadMoreQueue()}
-                    >
-                      {t('myWork.loadMore')}
-                    </Button>
-                  ) : null}
+              </TabsList>
+            </TabsRoot>
+          </WorkSurfaceToolbar>
+        }
+      >
+        <Flexbox gap={16}>
+          <Flexbox gap={4}>
+            <Text type={'secondary'} weight={500}>
+              {t('reviews.pullRequests')}
+            </Text>
+            {queue.isLoading ? (
+              <SkeletonList />
+            ) : notConnected ? (
+              <Center gap={8} padding={24}>
+                <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+                <Button onClick={() => navigate('/settings/connector')}>
+                  {t('reviews.connectGitHubAction')}
+                </Button>
+              </Center>
+            ) : queue.error ? (
+              <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
+            ) : allPullRequests.length === 0 ? (
+              <Empty description={t('reviews.queueEmpty')} icon={GitPullRequestIcon} />
+            ) : (
+              <Flexbox gap={4}>
+                <Flexbox>
+                  {allPullRequests.map((item) => (
+                    <PullRequestRow item={item} key={item.id} />
+                  ))}
                 </Flexbox>
-              ) : null}
-            </Flexbox>
-          )}
-        </Flexbox>
+                {/* A partial queue is never presented as complete — the tail
+                  counts stay visible and pages load on demand. */}
+                {queueHasMore || queueTail.length > 0 ? (
+                  <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={8}>
+                    <Text fontSize={12} type={'secondary'}>
+                      {t('reviews.loadedCount', {
+                        loaded: allPullRequests.length,
+                        total: queueTotal ?? '…',
+                      })}
+                    </Text>
+                    {queueHasMore ? (
+                      <Button
+                        loading={queueLoadingMore}
+                        size={'small'}
+                        type={'text'}
+                        onClick={() => void loadMoreQueue()}
+                      >
+                        {t('myWork.loadMore')}
+                      </Button>
+                    ) : null}
+                  </Flexbox>
+                ) : null}
+              </Flexbox>
+            )}
+          </Flexbox>
 
-        <Flexbox gap={4}>
-          <Text type={'secondary'} weight={500}>
-            {t('reviews.inProductReviews')}
-          </Text>
-          {taskReviewError && tasks.length === 0 && externalReviews.length === 0 ? (
-            <AsyncError error={taskReviewError} variant={'block'} onRetry={() => void refresh()} />
-          ) : (
-            <WorkQueryResults
-              emptyLabel={t('myWork.externalReviewsEmpty')}
-              externalReviews={externalReviews}
-              groupBy={data?.data.groupBy}
-              groups={groups}
-              layout={'list'}
-              loadMoreLabel={t('myWork.loadMore')}
-              loading={isLoading}
-              loadingLabel={t('myWork.loading')}
-              tasks={tasks}
-              total={data?.data.total}
-              onLoadMoreGroup={(key) => void loadMoreGroup(key)}
-            />
-          )}
+          <Flexbox gap={4}>
+            <Text type={'secondary'} weight={500}>
+              {t('reviews.inProductReviews')}
+            </Text>
+            {taskReviewError && tasks.length === 0 && externalReviews.length === 0 ? (
+              <AsyncError
+                error={taskReviewError}
+                variant={'block'}
+                onRetry={() => void refresh()}
+              />
+            ) : (
+              <WorkQueryResults
+                emptyLabel={t('myWork.externalReviewsEmpty')}
+                externalReviews={externalReviews}
+                groupBy={data?.data.groupBy}
+                groups={groups}
+                layout={'list'}
+                loadMoreLabel={t('myWork.loadMore')}
+                loading={isLoading}
+                loadingLabel={t('myWork.loading')}
+                tasks={tasks}
+                total={data?.data.total}
+                onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+              />
+            )}
+          </Flexbox>
         </Flexbox>
-      </WideScreenContainer>
-    </Flexbox>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

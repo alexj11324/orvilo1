@@ -10,6 +10,7 @@ import {
   deriveAgentInterventionContinuationOperationId,
   deriveAgentInterventionQueueDeduplicationId,
 } from '@/business/server/agent-run/agentInterventionIdentity';
+import type * as ToolApprovalReceipt from '@/server/services/agentExecution/toolApprovalReceipt';
 
 import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestUser } from './integration/setup';
@@ -31,6 +32,23 @@ const businessV2 = vi.hoisted(() => ({
   rollbackAgentInterventionResolution: vi.fn(),
 }));
 vi.mock('@/business/server/agent-run/agentInterventionReview', () => businessV2);
+
+// SC03: a per-test switch that makes the shared decision-commit step throw —
+// the token path must roll the business claim back on receipt write failure.
+const receiptWrite = vi.hoisted(() => ({ failNextSubmit: false }));
+vi.mock('@/server/services/agentExecution/toolApprovalReceipt', async (importOriginal) => {
+  const mod = await importOriginal<typeof ToolApprovalReceipt>();
+  return {
+    ...mod,
+    submitToolApprovalDecision: async (db: unknown, params: unknown) => {
+      if (receiptWrite.failNextSubmit) {
+        receiptWrite.failNextSubmit = false;
+        throw new Error('receipt write failed');
+      }
+      return mod.submitToolApprovalDecision(db as never, params as never);
+    },
+  };
+});
 
 const aiAgentService = vi.hoisted(() => ({
   // The middleware builds ctx.agentRuntimeService through this facade.
@@ -488,8 +506,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
 
     expect(res).toMatchObject({ status: 'resolving', success: true });
     // The receipt carries the decision BEFORE the publish — same function
-    // every other entry funnels through (bind-any window: the claim is the
-    // first-winner authority).
+    // every other entry funnels through. SC03: the token path binds the
+    // claim-echoed window (or the live receipt's window as fallback), never
+    // the bind-any wildcard.
     const payload = await readApprovalReceipt(operationId, 'tc_m');
     expect(payload?.decision).toMatchObject({ action: 'approved', windowId: 'w1' });
     expect(
@@ -588,6 +607,127 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
       expect.objectContaining({ claimId: 'cl_m3', operationId }),
     );
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(false);
+  });
+
+  it('SC03: a claim minted under a rotated window can never decide the live one', async () => {
+    // The business claim captured window w1 at mint time — but the receipt
+    // already rotated to w2 (renew). The old bind-any (`null`) decision would
+    // have written w2's verdict; the claim-pinned submit refuses instead and
+    // rolls the claim back so the live window stays reachable.
+    const operationId = 'op-mobile-stale-claim';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({
+      operationId,
+      payload: { windowId: 'w2', windowVersion: 2 },
+      toolCallId: 'tc_m',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_rot',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000dd',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      scopeHash: 'scope_a',
+      state: 'claimed',
+      windowId: 'w1',
+      windowVersion: 1,
+    });
+
+    await expect(
+      userCaller().resolveHeteroIntervention({
+        action: 'submit',
+        resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000dd',
+        result: { approved: true },
+        reviewToken: 'a'.repeat(43),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    // Nothing was decided on the rotated window and the claim was released.
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toBeUndefined();
+    expect(payload?.windowId).toBe('w2');
+    expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
+      expect.objectContaining({ claimId: 'cl_rot', operationId }),
+    );
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(false);
+  });
+
+  it('SC03: a claim minted against a re-scoped receipt refuses as scope_mismatch', async () => {
+    // The claim pinned scope_a, the receipt was renewed onto scope_b — the
+    // decision CAS must refuse rather than write a decision for a scope the
+    // claim never covered.
+    const operationId = 'op-mobile-rescoped';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({
+      operationId,
+      payload: { scopeHash: 'scope_b' },
+      toolCallId: 'tc_m',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_scope',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000ee',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      scopeHash: 'scope_a',
+      state: 'claimed',
+      windowId: 'w1',
+    });
+
+    await expect(
+      userCaller().resolveHeteroIntervention({
+        action: 'submit',
+        resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000ee',
+        result: { approved: true },
+        reviewToken: 'a'.repeat(43),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toBeUndefined();
+    expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
+      expect.objectContaining({ claimId: 'cl_scope', operationId }),
+    );
+  });
+
+  it('SC03: a receipt write failure rolls the business claim back — no phantom resolve', async () => {
+    const operationId = 'op-mobile-write-fail';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({ operationId, toolCallId: 'tc_m' });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_wf',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000ff',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+    });
+    receiptWrite.failNextSubmit = true;
+
+    await expect(
+      userCaller().resolveHeteroIntervention({
+        action: 'submit',
+        resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000ff',
+        result: { approved: true },
+        reviewToken: 'a'.repeat(43),
+      }),
+    ).rejects.toThrow();
+
+    // The claim must not stay held when its decision never landed.
+    expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
+      expect.objectContaining({ claimId: 'cl_wf', operationId }),
+    );
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toBeUndefined();
     expect(
       store.events.some(
         (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',

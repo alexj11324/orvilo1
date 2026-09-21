@@ -6,9 +6,9 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "705037b9-7f63-4dff-add6-a13cb9f010a9",
+  "id": "99a5141e-1b70-4379-8d7e-cbae370ddea8",
   "policies": {},
-  "prevId": "9dbf9a4b-4cd2-4aed-8edc-5c2ddb52d0d2",
+  "prevId": "705037b9-7f63-4dff-add6-a13cb9f010a9",
   "roles": {},
   "schemas": {},
   "sequences": {
@@ -832,6 +832,12 @@
         "consumed_at": {
           "name": "consumed_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consumed_by_dispatch_id": {
+          "name": "consumed_by_dispatch_id",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

@@ -7,6 +7,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { ActionApprovalItem } from '@/database/schemas/actionApproval';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import type * as AgentDelegationModule from '@/server/services/agentDelegation';
+import type { ConsumeForDispatchOutcome } from '@/server/services/agentDelegation/actionApprovals';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 
@@ -15,15 +16,28 @@ import { TaskRunnerService } from './index';
 
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
-// `consume` is an instance field (arrow), not a prototype method — intercept the
-// class via the barrel so tests control the single-use approval lookup.
-const consumeApprovalMock = vi.fn<(approvalId: string) => Promise<ActionApprovalItem | null>>();
+// `consumeForDispatch` is an instance field (arrow), not a prototype method —
+// intercept the class via the barrel so tests control the scoped single-use
+// approval lookup bound to the prepared dispatch.
+const consumeApprovalMock = vi.fn<
+  (params: {
+    approvalId: string;
+    dispatchId: string;
+    expected: {
+      actionType: string;
+      baseVersion?: number | null;
+      targetId: string;
+      targetType: string;
+      workspaceId: string | null;
+    };
+  }) => Promise<ConsumeForDispatchOutcome>
+>();
 vi.mock('@/server/services/agentDelegation', async (importOriginal) => {
   const mod = await importOriginal<typeof AgentDelegationModule>();
   return {
     ...mod,
     ActionApprovalService: function () {
-      return { consume: consumeApprovalMock };
+      return { consumeForDispatch: consumeApprovalMock };
     },
   };
 });
@@ -66,6 +80,19 @@ const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
     workspaceId: 'ws-1',
     ...overrides,
   }) as TaskItem;
+
+const approvalGrant = (overrides: Partial<ActionApprovalItem> = {}): ActionApprovalItem =>
+  ({
+    actionType: 'task.replan',
+    approverUserId: 'user-reviewer',
+    baseVersion: null,
+    expiresAt: null,
+    id: 'apv-1',
+    targetId: 'task-1',
+    targetType: 'task',
+    workspaceId: 'ws-1',
+    ...overrides,
+  }) as ActionApprovalItem;
 
 const priorContract: TaskExecutionContract = {
   acceptance: { enabled: false },
@@ -204,7 +231,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
   it('C01 — a caller-supplied approver string alone is never evidence', async () => {
     const task = baseTask();
     setupHappyPath(task, [priorTopic()]);
-    consumeApprovalMock.mockResolvedValue(null);
+    consumeApprovalMock.mockResolvedValue({ kind: 'missing' });
 
     await expect(
       newRunner().runTask({
@@ -213,22 +240,18 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         replanApprovalId: 'apv-missing',
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
-    expect(consumeApprovalMock).toHaveBeenCalledWith('apv-missing');
+    expect(consumeApprovalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ approvalId: 'apv-missing' }),
+    );
   });
 
   it('C01 — a replan approval minted for another task cannot authorize this one', async () => {
     const task = baseTask();
     setupHappyPath(task, [priorTopic()]);
     consumeApprovalMock.mockResolvedValue({
-      actionType: 'task.replan',
-      approverUserId: 'user-reviewer',
-      baseVersion: null,
-      expiresAt: null,
-      id: 'apv-1',
-      targetId: 'task-OTHER',
-      targetType: 'task',
-      workspaceId: 'ws-1',
-    } as ActionApprovalItem);
+      approval: approvalGrant({ targetId: 'task-OTHER' }),
+      kind: 'scope_mismatch',
+    });
 
     await expect(
       newRunner().runTask({
@@ -250,15 +273,9 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
       }),
     ]);
     consumeApprovalMock.mockResolvedValue({
-      actionType: 'task.replan',
-      approverUserId: 'user-reviewer',
-      baseVersion: 2,
-      expiresAt: null,
-      id: 'apv-1',
-      targetId: 'task-1',
-      targetType: 'task',
-      workspaceId: 'ws-1',
-    } as ActionApprovalItem);
+      approval: approvalGrant({ baseVersion: 2 }),
+      kind: 'revision_mismatch',
+    });
 
     await expect(
       newRunner().runTask({
@@ -272,16 +289,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
   it('C01 — an approved replan derives approvedBy server-side and rebuilds from the live task', async () => {
     const task = baseTask();
     setupHappyPath(task, [priorTopic()]);
-    consumeApprovalMock.mockResolvedValue({
-      actionType: 'task.replan',
-      approverUserId: 'user-reviewer',
-      baseVersion: null,
-      expiresAt: null,
-      id: 'apv-1',
-      targetId: 'task-1',
-      targetType: 'task',
-      workspaceId: 'ws-1',
-    } as ActionApprovalItem);
+    consumeApprovalMock.mockResolvedValue({ approval: approvalGrant(), kind: 'consumed' });
 
     const result = await newRunner().runTask({
       ...runParams,
@@ -289,7 +297,18 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
       replanApprovalId: 'apv-1',
     });
 
-    expect(consumeApprovalMock).toHaveBeenCalledWith('apv-1');
+    expect(consumeApprovalMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        approvalId: 'apv-1',
+        expected: {
+          actionType: 'task.replan',
+          baseVersion: task.requirementRevision,
+          targetId: 'task-1',
+          targetType: 'task',
+          workspaceId: 'ws-1',
+        },
+      }),
+    );
     expect(vi.mocked(buildTaskPrompt).mock.calls[0]?.[3]).toEqual({
       contractContent: undefined,
     });
@@ -313,6 +332,43 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     expect(result.contract).toEqual(
       expect.objectContaining({ constraintEdits: 'adopted', intent: 'authorized_replan' }),
     );
+  });
+
+  it('SC05 — the consume binds the prepared dispatch and a same-dispatch retry re-adopts', async () => {
+    const task = baseTask();
+    setupHappyPath(task, [priorTopic()]);
+    // The dispatch prepared under THIS idempotency key already holds the
+    // grant — a transient failure followed by a retry must not demand a
+    // fresh approval nor attempt to consume twice.
+    consumeApprovalMock.mockResolvedValue({ approval: approvalGrant(), kind: 'adopted' });
+
+    const result = await newRunner().runTask({
+      ...runParams,
+      intent: 'authorized_replan',
+      replanApprovalId: 'apv-1',
+    });
+
+    expect(consumeApprovalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ approvalId: 'apv-1', dispatchId: 'dsp-1' }),
+    );
+    expect(result.contract).toEqual(expect.objectContaining({ intent: 'authorized_replan' }));
+  });
+
+  it('SC05 — a grant consumed by a different dispatch is a conflict, not a retryable spend', async () => {
+    const task = baseTask();
+    setupHappyPath(task, [priorTopic()]);
+    consumeApprovalMock.mockResolvedValue({
+      approval: approvalGrant({ consumedAt: new Date(), consumedByDispatchId: 'dsp-OTHER' }),
+      kind: 'unavailable',
+    });
+
+    await expect(
+      newRunner().runTask({
+        ...runParams,
+        intent: 'authorized_replan',
+        replanApprovalId: 'apv-1',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
   it('C01 — a manual run on a drifted contract conflicts instead of silently re-running it', async () => {

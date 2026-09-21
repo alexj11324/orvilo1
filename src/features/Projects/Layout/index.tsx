@@ -1,7 +1,7 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
@@ -18,11 +18,30 @@ import ProjectTabsBar from './TabsBar';
 // Orvilo-only sub-pages like conversation and library.
 const PANEL_SECTIONS = new Set(['overview', 'activity', 'tasks']);
 
+// Below this width the panel is not just hidden but unmounted — its hooks
+// drive several queries that should not run for a surface nobody can see.
+const PANEL_MEDIA = '(width > 960px)';
+
+const usePanelViewport = () => {
+  const [visible, setVisible] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(PANEL_MEDIA).matches,
+  );
+  useEffect(() => {
+    const media = window.matchMedia(PANEL_MEDIA);
+    const onChange = () => setVisible(media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+  return visible;
+};
+
 const ProjectLayout = memo(() => {
   const enabled = useUserStore(labPreferSelectors.enableProjects);
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const { pathname } = useLocation();
-  const showPanel = PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
+  const panelViewport = usePanelViewport();
+  const showPanel = panelViewport && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
 
   if (!enabled) return <ProjectDisabled />;
 

@@ -144,18 +144,28 @@ inputDigest}` → one `operationId`. After an unknown result the next attempt
   goals/resources render as Overview sections and keep deep links under
   `/project/:id/{goals,resources}`.
 - `/project/:id/activity` streams `task_activities` for the project
-  (`TaskModel.getProjectActivities`, `project.activityFeed`); rows reuse the
-  `taskDetail.activities.*` sentence keys.
+  (`TaskModel.getProjectActivities`, `project.activityFeed`) — keyset
+  pagination via `cursor`, parent tasks filtered through `TaskModel.ownership()`
+  (workspace + visibility + private-team readability); rows reuse the
+  `taskDetail.activities.*` sentence keys and link to the task page.
 - The right-hand properties rail moved from the Overview page into
   `Projects/Layout` (`ProjectSidePanel`) so it persists across all three
-  tabs — conversation/library sub-pages opt out via `PANEL_SECTIONS`.
-- `taskListViewMode` defaults to `list`; stored preferences still win.
-- My issues list groups by attention class, not raw status:
-  `urgent` (`tasks.priority = 1`) beats `blocking` (an open task has a
-  `task_dependencies` `blocks` edge onto it), else the task's status.
-  Implemented as one SQL CASE in `workQuery` (`attentionGroupExpr`) with a
-  `keyed_tasks` CTE so Postgres sees a single CASE expression for both
-  select and group-by. `stableBoardKeys('attention')` fixes the column
+  tabs — conversation/library sub-pages opt out via `PANEL_SECTIONS`, and
+  below 960px the panel unmounts entirely (`usePanelViewport`) instead of
+  CSS-hiding a still-querying tree. Member/goal APIs take `project.id`
+  resolved from the detail record — the route param is often the slug.
+- `taskListViewMode` stays unset (`undefined`) until the user chooses;
+  `AgentTasksPage` resolves the unset case to `list` inside a project
+  collection and `kanban` everywhere else, so the global default never
+  changed.
+- My issues Assigned list groups by attention class, not raw status:
+  `urgent` (open + `tasks.priority = 1`) beats `blocking` (open task with a
+  `task_dependencies` `blocks` edge onto a _readable_ open task), else the
+  task's status. Terminal rows stay in their status bucket; the EXISTS leg
+  applies the same workspace/visibility/team predicates to the downstream
+  row. Implemented as one SQL CASE in `workQuery` (`attentionGroupExpr`)
+  with a `keyed_tasks` CTE so Postgres sees a single CASE expression for
+  both select and group-by. `stableBoardKeys('attention')` fixes the column
   order; the dimension is read-only (rows still move via status).
 - Inbox header is a single funnel dropdown (`inbox.filterBy`) — no second
   segmented chip row.

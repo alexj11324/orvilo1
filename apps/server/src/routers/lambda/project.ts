@@ -83,12 +83,21 @@ export const projectRouter = router({
    * actor resolved so the row renders without a second fetch.
    */
   activityFeed: projectProcedure
-    .input(idInput.extend({ limit: z.number().int().min(1).max(100).default(50) }))
+    .input(
+      idInput.extend({
+        cursor: z.string().nullish(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       try {
         const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
         const taskModel = new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
-        const rows = await taskModel.getProjectActivities(project.id, input.limit);
+        const { items: rows, nextCursor } = await taskModel.getProjectActivities(
+          project.id,
+          input.limit,
+          input.cursor ?? undefined,
+        );
 
         const agentIds = new Set<string>();
         const userIds = new Set<string>();
@@ -132,24 +141,27 @@ export const projectRouter = router({
         }
 
         return {
-          data: rows.map((row) => ({
-            actor:
-              (row.activity.actorAgentId && actors.get(row.activity.actorAgentId)) ||
-              (row.activity.actorUserId && actors.get(row.activity.actorUserId)) ||
-              undefined,
-            createdAt: row.activity.createdAt.toISOString(),
-            fromTarget:
-              (row.activity.payload?.fromId && actors.get(row.activity.payload.fromId)) ||
-              undefined,
-            id: row.activity.id,
-            payload: row.activity.payload,
-            target:
-              (row.activity.payload?.toId && actors.get(row.activity.payload.toId)) || undefined,
-            taskId: row.taskId,
-            taskIdentifier: row.taskIdentifier,
-            taskTitle: row.taskTitle,
-            type: row.activity.type,
-          })),
+          data: {
+            items: rows.map((row) => ({
+              actor:
+                (row.activity.actorAgentId && actors.get(row.activity.actorAgentId)) ||
+                (row.activity.actorUserId && actors.get(row.activity.actorUserId)) ||
+                undefined,
+              createdAt: row.activity.createdAt.toISOString(),
+              fromTarget:
+                (row.activity.payload?.fromId && actors.get(row.activity.payload.fromId)) ||
+                undefined,
+              id: row.activity.id,
+              payload: row.activity.payload,
+              target:
+                (row.activity.payload?.toId && actors.get(row.activity.payload.toId)) || undefined,
+              taskId: row.taskId,
+              taskIdentifier: row.taskIdentifier,
+              taskTitle: row.taskTitle,
+              type: row.activity.type,
+            })),
+            nextCursor: nextCursor ?? null,
+          },
           success: true,
         };
       } catch (error) {

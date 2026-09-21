@@ -535,10 +535,10 @@ export const INITIAL_STATUS = {
     showSubTasks: false,
     subGroupBy: 'none',
   },
-  // Linear parity: an issues collection opens on the grouped list; the board
-  // stays a click away. A stored `'kanban'` value is a deliberate choice and is
-  // left alone.
-  taskListViewMode: 'list' as const,
+  // Left unset on purpose: `undefined` means the user never chose a mode, so
+  // surfaces can apply their own default (project issues open on the grouped
+  // list, everywhere else stays on the board). A stored value always wins.
+  taskListViewMode: undefined,
   taskKanbanHiddenColumns: ['canceled'],
   taskKanbanHiddenPanelCollapsed: false,
   disabledModelProvidersSortType: 'default',

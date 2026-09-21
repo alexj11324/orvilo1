@@ -208,6 +208,7 @@ export default {
   'sections.goals': 'Goals',
   'sections.home': 'Project home',
   'activity.empty': 'No activity yet',
+  'activity.loadMore': 'Load more',
   'sections.activity': 'Activity',
   'sections.issues': 'Issues',
   'sections.overview': 'Overview',

@@ -188,7 +188,9 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
     });
 
-    it('should default status without a task view mode to the list', () => {
+    it('should default status without a task view mode to the board', () => {
+      // The global default stays the board — the grouped list is only the
+      // project Issues surface's default, resolved in AgentTasksPage.
       const s: GlobalState = {
         ...initialState,
         status: {
@@ -197,7 +199,7 @@ describe('systemStatusSelectors', () => {
         },
       };
 
-      expect(systemStatusSelectors.taskListViewMode(s)).toBe('list');
+      expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
     });
 
     it('keeps an explicitly stored list preference', () => {
@@ -211,11 +213,11 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('list');
     });
 
-    it('seeds the grouped list — and only canceled folded away — for a brand-new user', () => {
-      // The store seed, not the selector fallback, is what a new user actually
-      // gets. Defaults for this live in both layers, so changing one without the
-      // other would leave the default silently split between them.
-      expect(INITIAL_STATUS.taskListViewMode).toBe('list');
+    it('leaves the view mode unset and folds only canceled away for a brand-new user', () => {
+      // Unset means "no choice recorded": surfaces pick their own default
+      // (project issues list, other collections board). A stored value is a
+      // deliberate choice and always wins.
+      expect(INITIAL_STATUS.taskListViewMode).toBeUndefined();
       expect(INITIAL_STATUS.taskKanbanHiddenColumns).toEqual(['canceled']);
     });
   });

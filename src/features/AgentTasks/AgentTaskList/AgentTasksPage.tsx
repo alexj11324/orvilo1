@@ -201,7 +201,11 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const navigate = useWorkspaceAwareNavigate();
   const isMobile = useIsMobile();
   const { allowed: canCreateTask, reason } = usePermission('create_content');
-  const viewMode = useGlobalStore(systemStatusSelectors.taskListViewMode);
+  const storedViewMode = useGlobalStore((s) => s.status.taskListViewMode);
+  // Linear parity scoped to this surface: a project's Issues collection opens
+  // on the grouped list; every other collection keeps the board default. A
+  // stored value is the user's own choice and always wins.
+  const viewMode = storedViewMode ?? (projectId ? 'list' : 'kanban');
   const [searchParams, setSearchParams] = useSearchParams();
   const [collectionPage, setCollectionPage] = useState(1);
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -502,6 +506,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
                   <TasksGroupConfig
                     options={viewOptions}
                     setOptions={setViewOptions}
+                    viewMode={viewMode}
                     pinnedOptions={
                       isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined
                     }

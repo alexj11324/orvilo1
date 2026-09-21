@@ -118,7 +118,7 @@ const taskListViewOptions = (s: GlobalState) =>
     subGroupBy: 'none',
   };
 
-const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list';
+const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'kanban';
 
 // Default the inline composer to collapsed so a populated task list keeps the
 // records at the top of the fold; the empty-state hero still shows the full

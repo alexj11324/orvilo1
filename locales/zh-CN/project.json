@@ -31,6 +31,7 @@
   "acceptance.success.start": "项目已启动",
   "acceptance.title": "验收",
   "activity.empty": "暂无动态",
+  "activity.loadMore": "加载更多",
   "create.action": "创建项目",
   "create.identifierDescription": "用于任务编号前缀，例如 ORVILO-123。",
   "create.identifierInvalid": "请输入 3–6 位大写字母或数字，并以字母开头。",

@@ -1,17 +1,19 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskActivityLogType } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ArrowRightLeft, CircleDot, HistoryIcon, Timer, UserRoundCog } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useClientDataSWR } from '@/libs/swr';
@@ -63,6 +65,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-size: 12px;
     color: ${cssVar.colorTextTertiary};
     white-space: nowrap;
+
+    &:hover {
+      color: ${cssVar.colorText};
+      text-decoration: underline;
+    }
   `,
   time: css`
     flex: none;
@@ -254,7 +261,39 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
     () => projectService.activityFeed(projectId),
   );
 
-  const rows = (data?.data ?? []) as FeedRow[];
+  // Older pages append below the first SWR page; keyset cursor keeps the
+  // feed stable while new rows land at the top.
+  const [tail, setTail] = useState<FeedRow[]>([]);
+  const [tailCursor, setTailCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<Error | undefined>();
+  useEffect(() => {
+    setTail([]);
+    setTailCursor(undefined);
+    setMoreError(undefined);
+  }, [projectId]);
+
+  const nextCursor = tailCursor ?? data?.data.nextCursor ?? undefined;
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    setMoreError(undefined);
+    try {
+      const next = await projectService.activityFeed(projectId, 50, nextCursor);
+      const items = (next.data?.items ?? []) as FeedRow[];
+      setTail((current) => {
+        const seen = new Set(current.map((row) => row.id));
+        return [...current, ...items.filter((row) => !seen.has(row.id))];
+      });
+      setTailCursor(next.data?.nextCursor ?? undefined);
+    } catch (loadError) {
+      setMoreError(loadError as Error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, nextCursor, projectId]);
+
+  const rows = [...((data?.data.items ?? []) as FeedRow[]), ...tail];
 
   if (isLoading && !data) return <SkeletonList padding={12} rows={8} />;
   if (error && rows.length === 0)
@@ -284,15 +323,27 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
               <div className={styles.sentence}>
                 <RowSentence row={row} />
               </div>
-              <Text ellipsis className={styles.taskRef}>
-                {row.taskIdentifier} · {row.taskTitle}
-              </Text>
+              <WorkspaceLink to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}>
+                <Text ellipsis className={styles.taskRef}>
+                  {row.taskIdentifier} · {row.taskTitle}
+                </Text>
+              </WorkspaceLink>
             </Flexbox>
             {row.actor ? <Avatar avatar={row.actor.avatar ?? undefined} size={20} /> : null}
             <RelTime time={row.createdAt} />
           </div>
         );
       })}
+      {moreError ? (
+        <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />
+      ) : null}
+      {nextCursor ? (
+        <Center paddingBlock={16}>
+          <Button loading={loadingMore} onClick={() => void loadMore()}>
+            {t('activity.loadMore', { defaultValue: 'Load more' })}
+          </Button>
+        </Center>
+      ) : null}
     </div>
   );
 };

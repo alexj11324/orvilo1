@@ -31,6 +31,7 @@
   "acceptance.success.start": "Project started",
   "acceptance.title": "Acceptance",
   "activity.empty": "No activity yet",
+  "activity.loadMore": "Load more",
   "create.action": "Create project",
   "create.identifierDescription": "Used as the task prefix, for example ORVILO-123.",
   "create.identifierInvalid": "Use 3–6 uppercase letters or numbers, starting with a letter.",

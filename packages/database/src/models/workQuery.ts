@@ -42,13 +42,13 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
-import { type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { actionApprovals } from '../schemas/actionApproval';
 import { executionGrants } from '../schemas/executionGrant';
 import { notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
-import { tasks } from '../schemas/task';
+import { taskDependencies, tasks } from '../schemas/task';
 import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -520,30 +520,59 @@ const OPEN_BLOCKED_STATUS_SQL = sql.join(
 );
 
 /**
+ * The blocked side of a `blocks` edge inside the attention EXISTS leg. The
+ * alias is declared in the raw `INNER JOIN` clause; its columns resolve to
+ * `attention_blocked.*` so the readability predicates bind to the downstream
+ * task, not the grouped row.
+ */
+const attentionBlockedTasks = alias(tasks, 'attention_blocked');
+
+/**
  * Linear's My issues grouping: urgent issues first, then issues that block
  * others, then the rest by status. Not a stored column — a CASE over
  * `priority` and a live `blocks` edge, so the bucket always reflects the
- * current graph. Raw table names in the subquery: drizzle's `alias()` columns
- * only render qualified once the alias is declared in the query, and this
- * EXISTS owns its own join.
+ * current graph.
+ *
+ * Two guards keep the buckets honest:
+ * - The grouped row itself must be open — a completed/canceled issue stays
+ *   in its status bucket even when it is urgent or still blocks work.
+ * - The blocked downstream task must be readable by the caller — otherwise
+ *   an invisible task could flip a visible one into the `blocking` group.
  */
-const attentionGroupExpr = sql<string>`CASE
-  WHEN ${tasks.priority} = 1 THEN 'urgent'
-  WHEN EXISTS (
+const attentionGroupExpr = (ctx: {
+  db: OrviloDatabase;
+  userId: string;
+  workspaceId?: string;
+}): SQL<string> =>
+  sql<string>`CASE
+  WHEN ${tasks.status} IN (${OPEN_BLOCKED_STATUS_SQL}) AND ${tasks.priority} = 1 THEN 'urgent'
+  WHEN ${tasks.status} IN (${OPEN_BLOCKED_STATUS_SQL}) AND EXISTS (
     SELECT 1
-    FROM task_dependencies attention_dep
-    INNER JOIN tasks attention_blocked
-      ON attention_dep.task_id = attention_blocked.id
-    WHERE attention_dep.depends_on_id = tasks.id
+    FROM ${taskDependencies} attention_dep
+    INNER JOIN ${tasks} attention_blocked
+      ON attention_dep.task_id = ${attentionBlockedTasks.id}
+    WHERE attention_dep.depends_on_id = ${tasks.id}
       AND attention_dep.type = 'blocks'
-      AND attention_blocked.status IN (${OPEN_BLOCKED_STATUS_SQL})
+      AND ${attentionBlockedTasks.status} IN (${OPEN_BLOCKED_STATUS_SQL})
+      AND ${buildWorkspaceWhere(
+        { userId: ctx.userId, workspaceId: ctx.workspaceId },
+        {
+          userId: attentionBlockedTasks.createdByUserId,
+          visibility: attentionBlockedTasks.visibility,
+          workspaceId: attentionBlockedTasks.workspaceId,
+        },
+      )}
+      AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks)}
   ) THEN 'blocking'
   ELSE ${tasks.status}
 END`;
 
-const groupExprFor = (groupBy: 'attention' | 'status' | 'workflowCategory'): SQL | AnyPgColumn =>
+const groupExprFor = (
+  groupBy: 'attention' | 'status' | 'workflowCategory',
+  attentionExpr: SQL,
+): SQL | AnyPgColumn =>
   groupBy === 'attention'
-    ? attentionGroupExpr
+    ? attentionExpr
     : groupBy === 'status'
       ? tasks.status
       : tasks.workflowCategory;
@@ -944,7 +973,14 @@ export class WorkQueryModel {
     // in-review issue never lands in a needs-input run-state bucket. The
     // grouping dimension is an expression, not always a stored column —
     // 'attention' derives urgent/blocking from priority + live blocks edges.
-    const dimension = groupExprFor(params.groupBy);
+    const dimension = groupExprFor(
+      params.groupBy,
+      attentionGroupExpr({
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }),
+    );
     const matchesKey = (key: string): SQL => sql`${dimension} = ${key}`;
     // Group over a derived `key` column: the dimension may carry params
     // (attention's NOT-IN list), and Postgres won't match a SELECT CASE whose

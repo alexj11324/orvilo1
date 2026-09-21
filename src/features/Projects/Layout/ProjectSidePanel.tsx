@@ -38,10 +38,6 @@ const styles = createStaticStyles(({ css }) => ({
     height: 100%;
     padding: 16px;
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    @media (width <= 960px) {
-      display: none;
-    }
   `,
   railCard: css`
     padding: 16px;
@@ -73,23 +69,28 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
   const teammatesEnabled = useTeammatesEnabled();
   const capabilities = useWorkspaceCapabilities();
   const currentUserId = useUserStore(userProfileSelectors.userId);
+  // The route param is often the slug, not the row id — members, goals and
+  // invite APIs all key on `project.id`, so wait for the detail record.
+  const databaseId = detail?.project.id;
   const membersEnabled = teammatesEnabled && !!workspaceId;
-  const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
-  const goalScope = `project:${projectId}`;
+  const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
+  const goalScope = `project:${databaseId ?? projectId}`;
   const goals = useGoalStore(goalSelectors.goalList(goalScope));
-  useGoalStore((s) => s.useFetchGoals)(undefined, projectId);
+  useGoalStore((s) => s.useFetchGoals)(undefined, databaseId);
 
-  if (!detail) return null;
+  if (!detail || !databaseId) return null;
 
   const tasks = detail.tasks ?? [];
   const attentionTasks = tasks.filter((task) => ATTENTION_STATUSES.has(task.status)).slice(0, 3);
   const completedGoals = goals.filter(({ goal }) => goal.status === 'achieved').length;
-  const progress = goals.length ? Math.round((completedGoals / goals.length) * 100) : 0;
+  // No goals (or a failed fetch) is not 0% progress — report it as unknown
+  // instead of letting an error render as a real zero.
+  const progress = goals.length ? Math.round((completedGoals / goals.length) * 100) : null;
 
   return (
     <Flexbox className={styles.panel} gap={16}>
       <Flexbox className={styles.railCard} gap={12}>
-        <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={projectId} />
+        <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={databaseId} />
       </Flexbox>
       <Flexbox className={styles.railCard} gap={12}>
         <SectionTitle count={attentionTasks.length} title={t('overview.needsAttention')} />
@@ -157,7 +158,7 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
                 <Button
                   size={'small'}
                   type={'text'}
-                  onClick={() => openInviteTeammateModal({ defaultProjectIds: [projectId] })}
+                  onClick={() => openInviteTeammateModal({ defaultProjectIds: [databaseId] })}
                 >
                   {t('sections.invite', { defaultValue: 'Invite' })}
                 </Button>

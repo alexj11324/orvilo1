@@ -81,7 +81,9 @@ const WRITABLE_STATUSES = (Object.keys(PROJECT_STATUS_META) as ProjectStatus[]).
 
 interface ProjectPropertiesCardProps {
   detail: ProjectDetail;
-  goalProgress: number;
+  /** null when the goal count is unknown or zero — renders “—”, never a
+      misleading 0%. */
+  goalProgress: number | null;
   projectId: string;
 }
 
@@ -186,10 +188,18 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(
             {t('properties.progress')}
           </Text>
           <Flexbox horizontal align={'center'} flex={1} gap={8}>
-            <Progress percent={goalProgress} showInfo={false} size={'small'} />
-            <Text fontSize={12} type={'secondary'}>
-              {goalProgress}%
-            </Text>
+            {goalProgress === null ? (
+              <Text fontSize={13} type={'secondary'}>
+                —
+              </Text>
+            ) : (
+              <>
+                <Progress percent={goalProgress} showInfo={false} size={'small'} />
+                <Text fontSize={12} type={'secondary'}>
+                  {goalProgress}%
+                </Text>
+              </>
+            )}
           </Flexbox>
         </div>
 

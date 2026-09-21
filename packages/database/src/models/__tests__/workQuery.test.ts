@@ -717,6 +717,78 @@ describe('WorkQueryModel', () => {
     expect(byKey.get('completed')?.tasks.map((task) => task.id)).toEqual([doneBlocked.id]);
   });
 
+  it('keeps terminal rows and unreadable downstreams out of attention buckets', async () => {
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    // A completed urgent issue is not an "Urgent issue" — terminal rows stay
+    // in their status bucket.
+    const urgentDone = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Shipped urgent',
+      priority: 1,
+      status: 'completed',
+    });
+    // A completed blocker no longer holds the edge — finished work does not
+    // surface as "Blocking issues".
+    const doneBlocker = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Retired blocker',
+      status: 'completed',
+    });
+    const open = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Still open',
+      status: 'backlog',
+    });
+    // A blocker whose only downstream is invisible to the caller must NOT be
+    // promoted — an unreadable task cannot change what the caller sees.
+    const hiddenDownstream = await createTask(otherUserId, {
+      name: 'Other member private task',
+      status: 'backlog',
+      visibility: 'private',
+    });
+    const blockerOfHidden = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Blocks hidden task',
+      status: 'running',
+    });
+    await serverDB.insert(taskDependencies).values([
+      {
+        dependsOnId: doneBlocker.id,
+        taskId: open.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: blockerOfHidden.id,
+        taskId: hiddenDownstream.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+
+    const query = applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list', 'attention');
+    const result = await model.queryTasks({ limit: 10, query });
+    const byKey = new Map(result.groups!.map((group) => [group.key, group]));
+
+    expect(byKey.get('urgent')?.total ?? 0).toBe(0);
+    expect(byKey.get('blocking')?.total ?? 0).toBe(0);
+    expect(
+      byKey
+        .get('completed')
+        ?.tasks.map((task) => task.id)
+        .sort(),
+    ).toEqual([doneBlocker.id, urgentDone.id].sort());
+    expect(byKey.get('running')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
+    // The private downstream row itself never leaks into the caller's list.
+    expect(result.groups!.flatMap((group) => group.tasks.map((task) => task.id))).not.toContain(
+      hiddenDownstream.id,
+    );
+  });
+
   it('lists a readable PR review without creating a Task', async () => {
     const before = await serverDB.select({ id: tasksTable.id }).from(tasksTable);
     await serverDB.insert(actionApprovals).values({

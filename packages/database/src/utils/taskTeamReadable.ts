@@ -9,21 +9,29 @@ import type { OrviloDatabase } from '../type';
  * Private-team tasks stay readable only when the viewer can still see the
  * team, administer the workspace, or personally own the work (assignee /
  * reviewer / creator). Matches Inbox `resourceReadable` (TRI05 / SEC06).
+ *
+ * `target` defaults to the tasks table; pass a `alias(tasks, …)` table to
+ * apply the same predicate to a joined/aliased task row (e.g. the downstream
+ * task inside an EXISTS leg).
  */
-export const buildTaskTeamReadableWhere = (db: OrviloDatabase, userId: string): SQL =>
+export const buildTaskTeamReadableWhere = (
+  db: OrviloDatabase,
+  userId: string,
+  target: typeof tasks = tasks,
+): SQL =>
   or(
-    isNull(tasks.teamId),
+    isNull(target.teamId),
     exists(
       db
         .select({ one: sql`1` })
         .from(teams)
-        .where(and(eq(teams.id, tasks.teamId), eq(teams.visibility, 'public'))),
+        .where(and(eq(teams.id, target.teamId), eq(teams.visibility, 'public'))),
     ),
     exists(
       db
         .select({ one: sql`1` })
         .from(teamMembers)
-        .where(and(eq(teamMembers.teamId, tasks.teamId), eq(teamMembers.userId, userId))),
+        .where(and(eq(teamMembers.teamId, target.teamId), eq(teamMembers.userId, userId))),
     ),
     exists(
       db
@@ -32,7 +40,7 @@ export const buildTaskTeamReadableWhere = (db: OrviloDatabase, userId: string): 
         .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
         .where(
           and(
-            eq(workspaceMembers.workspaceId, tasks.workspaceId),
+            eq(workspaceMembers.workspaceId, target.workspaceId),
             eq(workspaceMembers.userId, userId),
             isNull(workspaceMembers.deletedAt),
             isNull(workspaceMembers.suspendedAt),
@@ -43,7 +51,7 @@ export const buildTaskTeamReadableWhere = (db: OrviloDatabase, userId: string): 
           ),
         ),
     ),
-    eq(tasks.assigneeUserId, userId),
-    eq(tasks.reviewerUserId, userId),
-    eq(tasks.createdByUserId, userId),
+    eq(target.assigneeUserId, userId),
+    eq(target.reviewerUserId, userId),
+    eq(target.createdByUserId, userId),
   )!;

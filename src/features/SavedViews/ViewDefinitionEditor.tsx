@@ -54,7 +54,12 @@ const sortKey = (sort: WorkQuerySort[] | undefined): string => {
   return `${first.field === 'updatedAt' ? 'updated' : first.field === 'createdAt' ? 'created' : first.field}${first.direction === 'desc' ? 'Desc' : 'Asc'}`;
 };
 
-const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, WorkQueryGroupBy[]> = {
+// 'attention' is the My-issues default grouping, not a view-editor choice —
+// keep it out of the option union so the savedViews.groupBy.* key set stays
+// exactly the three translated groups.
+type EditableGroupBy = Exclude<WorkQueryGroupBy, 'attention'>;
+
+const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, EditableGroupBy[]> = {
   project: ['none', 'status'],
   task: ['none', 'status', 'workflowCategory'],
 };

@@ -165,9 +165,9 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 ## 10. R11 固定 SHA 验收（进行中）
 
-**整合 SHA（终态冻结）**: `b1f62e59f61581d1afb3ba3c7d456643f9dfa212` —— `release/caid-remediation-integration`（`9ac15902` 基础上再并入 **R5 残留整改**：`fix/sc-r5-approval-binding` `3bf901f6`（SC03+SC05）、`fix/sc-r5-inbox-unicode-tail` `2fe34fe3`（SC04）、`fix/sc-r6-launch-unknown` `a4299f6f`（SC06）、`fix/sc-r7-mig-0182` `d0ae1588`（SC07）、`fix/sc-r5-owner-mutex` `3078b592`/`6064671b`（SC02+SC01））。`9ac15902` 之前的构成（P00–P21 + R00–R11 + SA01–SA08 + SB01–SB13 + SC 主体整改 + PR #180 + judgment 追踪）不变。合并树复核（@`b1f62e59` 实测）：R5 残留触及套件 `taskWorkspace` 56/56、`judgment` 39/39、`device-control dispatch` 23/23、`local-file-shell` mutex/claimedAdd 8/8、`agentDelegation integration` 30/30、`sa05` 21/21、`aiAgent.heteroIntervention` 43/43、`eventOutbox` 23/23、`acpBuiltinToolExec` 60/60、`migrationJournal` 14 pass+1 skip；早前 1100/1100 摄取套件与 538+1 skip 数字为 `9ac15902` 实测（本 delta 未触及该面），残留套件均在新 tip 复跑。迁移 journal 0–184 连续（0182 修订版 + 0183 + 0184 action\_approval\_dispatch\_binding）。
+**整合 SHA（终态冻结）**: `455b591c5d1652a3ec857e366e82004c6f871300` —— `release/caid-remediation-integration`（`b1f62e59` 基础上再并入 **R6 残留整改**：`fix/sc-r6-dispatch-type` `a85968c3`（SC01 claimToken 编译收口）、`fix/sc-r6-mutex-reclaim` `eefa077b`（SC02 死锁回收单写票据仲裁 + inbox `acquireFileLock` 同修）、`fix/sc-r6-claim-window-pin` `8e2f419c`（SC03 windowed 批准强制 claim 钉住 windowId/scopeHash，coordless 旧 claim 拒绝 + 回滚）、`fix/sc-r6-dispatch-retry` `b49c9720`（SC05 可重试 prepare 失败公园 waiting/`dispatch_prepare_retryable`、同 key 重试经白名单恢复并走 consumeForDispatch `adopted`，确定性 TRPCError 拒绝仍终态 failed，dispatched 后失败不公园防双启））。`9ac15902` 之前的构成（P00–P21 + R00–R11 + SA01–SA08 + SB01–SB13 + SC 主体整改 + PR #180 + judgment 追踪）不变。合并树复核（@`455b591c` 实测）：R6 残留触及套件 `local-file-shell src/git` 123/123（含 reclaimRace 新增 + pushFence / 既有保护全绿）、`apps/cli childResultInbox` 15/15、`aiAgent.heteroIntervention` 47/47（含 SC03 四个新用例）、`taskDispatch` 27/27 + `sa05` 23/23（含 SC05 组合与分类用例）。早前各数字为对应冻结点实测（本 delta 未触及该面），残留套件均在新 tip 复跑。迁移 journal 0–184 连续不变。
 
-> 冻结历史：`0b58f21c` → `9ac15902`（SC 主体进场）→ `b1f62e59`（R5 残留进场，本次更正）。§10.1/§10.2 中标注 @`9ac15902` 的实测数字保留为采证点，残留 delta 的回归证据见上方套件清单与 R6 审查包。
+> 冻结历史：`0b58f21c` → `9ac15902`（SC 主体进场）→ `b1f62e59`（R5 残留进场）→ `455b591c`（R6 残留进场，本次更正）。§10.1/§10.2 中标注 @`9ac15902` 的实测数字保留为采证点，残留 delta 的回归证据见上方套件清单与 R7 审查包。
 
 > 更正：本节此前冻结 `0b58f21c`；SC 批次当时未进入被审组合树，相关完成声明（含原「SC12」段落）属声明漂移，本节已按实测重写。
 
@@ -177,7 +177,7 @@ SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/f
 
 ### 10.1 逐诊断 typecheck 对比（非总数免检）
 
-> **以下 `cb02a617` 运行为 R11 时代历史记录（旧合并树）**，仅证明当时状态；当前冻结 SHA `b1f62e59` 的 typecheck 基线仍 = 302 条（`apps/server` 作用域，`fix/sc-r5-owner-mutex` 子会话在其基线树实测 302 = 基线零新增；其余残留分支逐文件 lint/type 净）。
+> **以下 `cb02a617` 运行为 R11 时代历史记录（旧合并树）**，仅证明当时状态；当前冻结 SHA `455b591c` 的 typecheck 基线仍 = 302 条（`apps/server` 作用域，`fix/sc-r5-owner-mutex` 子会话在其基线树实测 302 = 基线零新增；其余残留分支逐文件 lint/type 净）。
 
 - 工具：`scripts/ci/typecheckDiff.mjs` —— 以 `file|code|完整多行消息` 为 bucket 做多重集合差（行 / 列不参与匹配，行号漂移不算新增）；任何 head 诊断无 base bucket 对应即硬新增。
 - 已知修正：`pnpm type-check` 根脚本本地拒跑（`scripts/type-check.mjs` CI-only guard），脚本需 `CI=true`；作用域模式 `--scope apps/server` 走包内 `tsc --noEmit`。
@@ -189,7 +189,7 @@ SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/f
 
 ### 10.2 真机探针（dockerless：brew Postgres\@5432 + Redis\@6379 + s3rver\@29000，Next\@30953）
 
-> 探针结果于 **2026-09-20 在冻结树 `9ac15902` 上重采**（SC 主体进场后的运行实例），下方各行即该采证点结果。`b1f62e59` 相对 `9ac15902` 的 delta 仅触及审批绑定（SC03/SC05）、inbox 断尾（SC04）、launch 收敛（SC06）、迁移 0182 判定（SC07）、宿主互斥（SC01/SC02）—— 均不在本节探针面（退役面 404 / 认证门控 /submitPlan 409 / CAID 派发链）上，故探针数据继续有效；如终审要求在新 tip 重采可随时重跑。
+> 探针结果于 **2026-09-20 在冻结树 `9ac15902` 上重采**（SC 主体进场后的运行实例），下方各行即该采证点结果。`455b591c` 相对 `9ac15902` 的 delta 仅触及审批绑定与派发重试（SC03/SC05）、inbox 断尾与回收竞态（SC04/SC02）、launch 收敛（SC06）、迁移 0182 判定（SC07）、宿主互斥与编译收口（SC01）—— 均不在本节探针面（退役面 404 / 认证门控 /submitPlan 409 / CAID 派发链）上，故探针数据继续有效；如终审要求在新 tip 重采可随时重跑。
 
 | 探针                                                                                                      | 结果                                                                                                                                                                                                                                                                                        |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

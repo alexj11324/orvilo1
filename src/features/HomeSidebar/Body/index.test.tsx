@@ -132,7 +132,9 @@ describe('Home sidebar body', () => {
   it('renders items strictly in sidebarItems order with the spacer at its stored position', () => {
     // Production has no bottom-group destinations left, so every item is a top
     // nav item; the render order still comes from `sidebarItems`, not from which
-    // list an item is declared in.
+    // list an item is declared in. `sidebarItems` is contract-owned: retired
+    // keys ('automations', 'recents', 'tasks', 'resource') never resurface, so
+    // only 'agent' — a fixed primary key — survives next to the spacer.
     mocks.navLayout = {
       bottomMenuItems: [],
       topNavItems: [
@@ -157,14 +159,12 @@ describe('Home sidebar body', () => {
       child.hasAttribute('data-sidebar-bottom-spacer'),
     );
 
-    expect(spacerIndex).toBe(2);
-    expect(children[0]).toHaveTextContent('Automations');
-    expect(children[1]).toHaveAttribute('data-testid', 'sidebar-accordion');
-    expect(children[3]).toHaveTextContent('Tasks');
-    expect(children[4]).toHaveTextContent('Resource');
+    expect(spacerIndex).toBe(1);
+    expect(children[0]).toHaveAttribute('data-testid', 'sidebar-accordion');
+    expect(children).toHaveLength(2);
   });
 
-  it('keeps a top item that was dragged past the spacer in its new position', () => {
+  it('discards a retired-key drag when the stored order is contract-filtered', () => {
     mocks.navLayout = {
       bottomMenuItems: [],
       topNavItems: [
@@ -172,7 +172,8 @@ describe('Home sidebar body', () => {
         { key: 'resource', title: 'Resource', url: '/resource' },
       ],
     };
-    // User dragged `tasks` from the top section to sit after `resource`.
+    // `tasks`/`resource`/`recents` are retired keys — the persisted order is
+    // contract-filtered before render, so the drag is intentionally discarded.
     mocks.globalState.status.sidebarItems = ['recents', 'agent', '__spacer__', 'resource', 'tasks'];
 
     render(<Body />);
@@ -181,9 +182,9 @@ describe('Home sidebar body', () => {
     const spacerIndex = children.findIndex((child) =>
       child.hasAttribute('data-sidebar-bottom-spacer'),
     );
-    const tasksIndex = children.findIndex((child) => child.textContent === 'Tasks');
 
-    // The drag survives: the item that was moved past the spacer stays below it.
-    expect(tasksIndex).toBeGreaterThan(spacerIndex);
+    expect(spacerIndex).toBe(1);
+    expect(children[0]).toHaveAttribute('data-testid', 'sidebar-accordion');
+    expect(children).toHaveLength(2);
   });
 });

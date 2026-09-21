@@ -15,6 +15,48 @@ import { TEST_USER } from '../../support/seedTestUser';
 import type { CustomWorld } from '../../support/world';
 import { WAIT_TIMEOUT } from '../../support/world';
 
+type DbClient = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
+};
+
+/**
+ * Resolve the signed-in test user's auto-provisioned workspace. Every account
+ * runs inside a workspace now, and rows without workspace_id are treated as
+ * foreign by the workspace permission guards (they render in the list but get
+ * reduced menus), so fixtures must file into the caller's workspace to
+ * exercise the real row actions.
+ */
+async function getTestWorkspaceId(client: DbClient): Promise<string> {
+  const { rows } = await client.query(
+    `SELECT workspace_id FROM workspace_members
+     WHERE user_id = $1 AND deleted_at IS NULL
+     ORDER BY joined_at LIMIT 1`,
+    [TEST_USER.id],
+  );
+  const workspaceId = rows[0]?.workspace_id as string | undefined;
+  if (workspaceId) return workspaceId;
+
+  // The app auto-provisions a default workspace on first load, but fixtures
+  // often seed before the test user has opened the app — mirror
+  // `workspace.ensureDefault` here so seeding does not depend on that ordering.
+  const suffix = randomBytes(4).toString('hex');
+  const sanitizedUserId = TEST_USER.id.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
+  const newWorkspaceId = `ws_e2e_${suffix}`;
+  const slug = `ws-${sanitizedUserId.slice(0, 12)}-${suffix}`;
+  await client.query(
+    `INSERT INTO workspaces (id, slug, name, primary_owner_id)
+     VALUES ($1, $2, $3, $4)`,
+    [newWorkspaceId, slug, `${TEST_USER.fullName}'s workspace`, TEST_USER.id],
+  );
+  await client.query(
+    `INSERT INTO workspace_members (workspace_id, user_id, role)
+     VALUES ($1, $2, 'owner')`,
+    [newWorkspaceId, TEST_USER.id],
+  );
+  console.log(`   📍 Provisioned test workspace ${newWorkspaceId} for ${TEST_USER.id}`);
+  return newWorkspaceId;
+}
+
 /**
  * Create a test chat group directly in database
  */
@@ -30,12 +72,13 @@ async function createTestGroup(title: string = 'Test Group'): Promise<string> {
 
     const now = new Date().toISOString();
     const groupId = `group_e2e_test_${randomBytes(6).toString('hex')}`;
+    const workspaceId = await getTestWorkspaceId(client);
 
     await client.query(
-      `INSERT INTO chat_groups (id, title, user_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $4)
+      `INSERT INTO chat_groups (id, title, user_id, workspace_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT DO NOTHING`,
-      [groupId, title, TEST_USER.id, now],
+      [groupId, title, TEST_USER.id, workspaceId, now, now],
     );
 
     console.log(`   📍 Created test group in DB: ${groupId}`);

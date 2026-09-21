@@ -8,14 +8,22 @@ import { type TopicGroupMode } from '@/types/topic';
 import { AsyncLocalStorage } from '@/utils/localStorage';
 
 export enum SidebarTabKey {
+  Agent = 'agent',
+  Agents = 'agents',
   Automations = 'automations',
   Chat = 'chat',
   Home = 'home',
+  Inbox = 'inbox',
   Knowledge = 'knowledge',
   Me = 'me',
+  MyIssues = 'my-issues',
+  MyWork = 'my-work',
   Resource = 'resource',
+  Reviews = 'reviews',
   Setting = 'settings',
   Tasks = 'tasks',
+  Teams = 'teams',
+  Views = 'views',
 }
 
 export enum ChatSettingsTabs {
@@ -137,7 +145,7 @@ export const MODEL_DETAIL_PANEL_EXPANDABLE_KEYS = [
 
 export type TaskViewMode = 'kanban' | 'list';
 
-export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['recents', 'agent', 'private'];
+export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['agent', 'workspace', 'favorites', 'teams'];
 
 export interface SystemStatus {
   /**
@@ -199,6 +207,10 @@ export interface SystemStatus {
   expandInputActionbar?: boolean;
   // which sessionGroup should expand
   expandSessionGroupKeys: string[];
+  /**
+   * number of pinned favorites to display in the sidebar before More
+   */
+  favoritePageSize?: number;
   fileManagerViewMode?: 'list' | 'masonry';
   filePanelWidth: number;
   /**
@@ -511,6 +523,7 @@ export const INITIAL_STATUS = {
   agentPageSize: 5,
   privateAgentPageSize: 5,
   chatInputHeight: 64,
+  favoritePageSize: 5,
   recentPageSize: 5,
   taskListViewOptions: {
     groupBy: 'status',

@@ -3539,12 +3539,13 @@ export const aiAgentRouter = router({
 
       // Decision BEFORE notify — the durable approval receipt is the
       // first-winner authority every entry shares. SC03: the token path must
-      // bind the receipt atomically too — the claim result echoes the exact
-      // window/scope it captured at mint time; when the claim impl doesn't
-      // return them, fall back to the live receipt coordinates read right
-      // after claiming. `expectedWindowId: null` (bind-any) is retired — a
-      // claim minted under one window/scope can never decide a rotated or
-      // re-scoped receipt.
+      // bind the receipt atomically too, but ONLY to the coordinates the
+      // trusted claim captured at mint time — `expectedWindowId: null`
+      // (bind-any) stays retired, and live receipt coordinates are never
+      // adopted for the CAS. Reading the current window only feeds the
+      // "this approval moved on" hint below: an exact-match CAS on re-read
+      // values can prove the row didn't drift after the read, never that the
+      // user approved THIS window.
       const receiptPayload = await new EventOutboxModel(ctx.serverDB)
         .getDeliveryReceiptPayload(
           toolApprovalEventId(resolution.operationId, resolution.response.toolCallId),
@@ -3557,16 +3558,48 @@ export const aiAgentRouter = router({
           );
           return undefined;
         });
-      const pinnedWindowId =
-        resolution.windowId ??
-        (receiptPayload && typeof receiptPayload.windowId === 'string' && receiptPayload.windowId
+      const liveWindowId =
+        receiptPayload && typeof receiptPayload.windowId === 'string' && receiptPayload.windowId
           ? receiptPayload.windowId
-          : undefined);
+          : undefined;
+      const pinnedWindowId =
+        typeof resolution.windowId === 'string' && resolution.windowId
+          ? resolution.windowId
+          : undefined;
       const pinnedScopeHash =
-        resolution.scopeHash ??
-        (receiptPayload && typeof receiptPayload.scopeHash === 'string' && receiptPayload.scopeHash
-          ? receiptPayload.scopeHash
-          : undefined);
+        typeof resolution.scopeHash === 'string' && resolution.scopeHash
+          ? resolution.scopeHash
+          : undefined;
+      if (
+        liveWindowId !== undefined &&
+        (pinnedWindowId === undefined || pinnedScopeHash === undefined)
+      ) {
+        // The receipt is windowed but the claim cannot pin the coordinates it
+        // was minted under (an impl predating the pinning contract, or a
+        // partial one) — refuse instead of re-scoping the stale approval
+        // onto the live window. The claim rolls back so the intervention
+        // stays reachable; the caller upgrades the claim impl or re-opens
+        // the approval to decide the live window. Legacy windowless receipts
+        // (liveWindowId undefined) skip this and keep compat semantics.
+        await rollbackHeteroInterventionResolution({
+          claimId: resolution.claimId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          toolCallId: resolution.response.toolCallId,
+          userId: ctx.userId,
+          workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+        }).catch((rollbackError) => {
+          log(
+            'unpinned-claim refusal rollback failed claim=%s: %O',
+            resolution.claimId,
+            rollbackError,
+          );
+        });
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `This approval was renewed after the review token was issued — reopen it on the live window '${liveWindowId}' to decide.`,
+        });
+      }
       let approvalOutcome: ToolApprovalSubmitOutcome;
       try {
         approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {

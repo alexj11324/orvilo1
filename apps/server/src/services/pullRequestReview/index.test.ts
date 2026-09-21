@@ -9,12 +9,24 @@ import {
 
 const githubStatus = vi.hoisted(() => ({
   getStatus: vi.fn<(id: string) => Promise<{ connected: boolean; success: boolean }>>(),
+  proxyOAuthRequest:
+    vi.fn<(args: { endpoint: string }) => Promise<{ data: unknown; status: number }>>(),
+}));
+
+const githubTransport = vi.hoisted(() => ({
+  getAuthenticatedUser: vi.fn<() => Promise<{ login: string }>>(),
+  request: vi.fn<(args: { operation: string; query: string }) => Promise<unknown>>(),
 }));
 
 vi.mock('@/server/services/market', () => ({
   MarketService: class {
     market = { skills: { getStatus: githubStatus.getStatus } };
+    proxyOAuthRequest = githubStatus.proxyOAuthRequest;
   },
+}));
+
+vi.mock('@orvilo/connector-data/github', () => ({
+  createGitHubMarketTransport: () => githubTransport,
 }));
 
 describe('pull request review id', () => {
@@ -62,5 +74,65 @@ describe('connection probe', () => {
     await expect(service.reviewQueue('for-me')).rejects.toMatchObject({
       code: 'GITHUB_NOT_CONNECTED',
     });
+  });
+});
+
+describe('pull request detail query', () => {
+  const reviewId = formatPullRequestReviewId({
+    host: 'github.com',
+    number: 95,
+    owner: 'alexj11324',
+    repo: 'orvilo1',
+  });
+
+  const detailResponse = {
+    repository: {
+      pullRequest: {
+        id: 'PR_1',
+        number: 95,
+        reviewThreads: {
+          nodes: [
+            {
+              comments: {
+                nodes: [
+                  {
+                    author: { login: 'reviewer' },
+                    body: 'comment',
+                    databaseId: 7,
+                    outdated: false,
+                  },
+                ],
+              },
+              diffSide: 'RIGHT',
+              id: 'thread-1',
+              isResolved: false,
+              line: 12,
+              path: 'src/a.ts',
+              startDiffSide: 'RIGHT',
+            },
+          ],
+        },
+        title: 'pr',
+        url: 'https://github.com/alexj11324/orvilo1/pull/95',
+      },
+    },
+  };
+
+  it('reads diff side from the thread, not the comment nodes', async () => {
+    githubStatus.getStatus.mockResolvedValue({ connected: true, success: true });
+    githubStatus.proxyOAuthRequest.mockResolvedValue({ data: [], status: 200 });
+    githubTransport.request.mockResolvedValue(detailResponse);
+
+    const service = new PullRequestReviewService('user-1', 'ws-1');
+    const detail = await service.pullRequest(reviewId);
+
+    const query = githubTransport.request.mock.calls[0]?.[0]?.query ?? '';
+    const commentBlock = query.match(/comments\(first: 20\) \{[\s\S]*?\}\s*\}/)?.[0] ?? '';
+    // PullRequestReviewComment has no `side` field; the diff side lives on the
+    // thread (diffSide / startDiffSide). Requesting it makes the query illegal.
+    expect(commentBlock).not.toMatch(/\bside\b/);
+    expect(query).toContain('diffSide');
+    expect(query).toContain('startDiffSide');
+    expect(detail.threads[0]?.comments[0]?.side).toBe('RIGHT');
   });
 });

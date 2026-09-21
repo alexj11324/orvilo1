@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { mkdir, open, readFile, truncate } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
+import { mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -100,8 +101,79 @@ const decodeLine = (line: string): Record<string, unknown> | undefined => {
  */
 const fileLocks = new Map<string, Promise<unknown>>();
 
+const LOCK_RETRY_MS = 25;
+/** A wedged holder blocks callers at most this long — then the call fails closed. */
+const LOCK_TIMEOUT_MS = 30_000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isProcessAlive = (pid: number): boolean => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: the holder exists but belongs to another user — liveness cannot
+    // be confirmed, so it is treated as alive (block, never steal).
+    return (error as NodeJS.ErrnoException)?.code === 'EPERM';
+  }
+};
+
+/**
+ * Cross-process mutex for one inbox file (the `<file>.lock` sibling). Every
+ * writer — repair, dedupe read, append — runs inside it, so separate CLI
+ * processes sharing the same inbox directory can never interleave a
+ * truncate with an append.
+ *
+ * Acquisition is an atomic O_EXCL create. The `<pid>:<token>` payload makes
+ * ownership verifiable in both directions: release removes the lock only
+ * while it still carries OUR token, and a dead holder's lock is removed only
+ * while it still carries that dead token — never a fresh owner's. Liveness
+ * is `kill(pid, 0)`; a holder that cannot be proven dead blocks callers
+ * until LOCK_TIMEOUT_MS rather than being stolen from (fail-closed).
+ */
+const acquireFileLock = async (filePath: string): Promise<() => Promise<void>> => {
+  const lockPath = `${filePath}.lock`;
+  await mkdir(path.dirname(lockPath), { recursive: true });
+  const token = `${process.pid}:${randomBytes(8).toString('hex')}`;
+  const started = Date.now();
+  for (;;) {
+    try {
+      await writeFile(lockPath, token, { flag: 'wx' });
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error;
+      const existing = await readFile(lockPath, 'utf8').catch(() => undefined);
+      if (existing === undefined) continue;
+      const ownerPid = Number.parseInt(existing, 10);
+      if (Number.isInteger(ownerPid) && ownerPid > 0 && !isProcessAlive(ownerPid)) {
+        // Dead holder — reclaim only if the lock still carries that same
+        // dead token, so a live owner's fresh lock is never unlinked.
+        const current = await readFile(lockPath, 'utf8').catch(() => undefined);
+        if (current === existing) await rm(lockPath, { force: true });
+        continue;
+      }
+      if (Date.now() - started > LOCK_TIMEOUT_MS) {
+        throw new Error(`Timed out acquiring inbox file lock ${lockPath}`, { cause: error });
+      }
+      await sleep(LOCK_RETRY_MS / 2 + Math.random() * LOCK_RETRY_MS);
+    }
+  }
+  return async () => {
+    const current = await readFile(lockPath, 'utf8').catch(() => undefined);
+    if (current === token) await rm(lockPath, { force: true });
+  };
+};
+
 const withFileLock = <T>(filePath: string, fn: () => Promise<T>): Promise<T> => {
-  const queued = (fileLocks.get(filePath) ?? Promise.resolve()).then(fn, fn);
+  const exclusive = async (): Promise<T> => {
+    const release = await acquireFileLock(filePath);
+    try {
+      return await fn();
+    } finally {
+      await release();
+    }
+  };
+  const queued = (fileLocks.get(filePath) ?? Promise.resolve()).then(exclusive, exclusive);
   fileLocks.set(
     filePath,
     queued.then(
@@ -124,24 +196,55 @@ const appendRecord = async (filePath: string, record: Record<string, unknown>): 
 };
 
 /**
- * Repair an unterminated tail left by a crash mid-append. A tail that still
- * parses as a complete record is re-framed canonically; dead bytes are
- * truncated. Without this the next append would fuse onto the torn line and
- * corrupt BOTH records — the exact SC-SB06 failure.
+ * Repair an unterminated tail left by a crash mid-append. The file is
+ * scanned as BYTES: 0x0A can never appear inside a multi-byte UTF-8
+ * sequence, so the last newline byte is a byte-exact frame boundary that
+ * `truncate` accepts directly — a UTF-16 code-unit index would cut inside a
+ * complete record's bytes whenever earlier frames carry CJK/emoji (the R5
+ * SC04 failure). A tail that still parses as a complete record is re-framed
+ * canonically; dead bytes are truncated. Only the final unterminated span
+ * is touched — corrupt content ahead of it is left for the fail-closed
+ * reader, never rewritten. Without this the next append would fuse onto the
+ * torn line and corrupt BOTH records — the exact SC-SB06 failure.
  */
 const repairTail = async (filePath: string): Promise<void> => {
-  let raw: string;
-  try {
-    raw = await readFile(filePath, 'utf8');
-  } catch {
-    return;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    let raw: Buffer;
+    try {
+      raw = await readFile(filePath);
+    } catch {
+      return;
+    }
+    if (raw.length === 0 || raw.at(-1) === 0x0a) return;
+    const boundary = raw.lastIndexOf(0x0a) + 1;
+    const salvaged = decodeLine(raw.subarray(boundary).toString('utf8'));
+
+    let handle: FileHandle;
+    try {
+      handle = await open(filePath, 'r+');
+    } catch {
+      return;
+    }
+    let repaired = false;
+    try {
+      // Truncate is byte-exact only if the file is still exactly what was
+      // scanned — otherwise rescan rather than cut a late-arriving append.
+      if ((await handle.stat()).size === raw.length) {
+        await handle.truncate(boundary);
+        // fsync before the repair counts as done — and before any ack the
+        // caller may send afterwards — so a crash cannot resurrect the tail.
+        await handle.sync();
+        repaired = true;
+      }
+    } finally {
+      await handle.close();
+    }
+    if (repaired) {
+      if (salvaged !== undefined) await appendRecord(filePath, salvaged);
+      return;
+    }
   }
-  if (raw.length === 0 || raw.endsWith('\n')) return;
-  const boundary = raw.lastIndexOf('\n') + 1;
-  const tail = raw.slice(boundary);
-  const salvaged = decodeLine(tail);
-  await truncate(filePath, boundary);
-  if (salvaged !== undefined) await appendRecord(filePath, salvaged);
+  throw new Error(`child-result inbox tail did not stabilize for repair: ${filePath}`);
 };
 
 const readRecords = async (filePath: string): Promise<Record<string, unknown>[]> => {
@@ -258,7 +361,10 @@ export interface ResolveInvocationCallInput {
    * Per-request identity from the MCP transport (e.g. `_meta.progressToken`).
    * A resend of the same protocol request carries the same key and resolves
    * to the persisted id; a new key is a new occurrence. `undefined` means no
-   * request identity reached this layer — the call is always fresh.
+   * request identity reached this layer — the call mints a random fresh id
+   * which is deliberately NOT replay-stable across restarts: without a
+   * transport-supplied key a resend cannot be matched, so it is always a new
+   * occurrence rather than a claimed replay of an earlier one.
    */
   requestKey?: string;
 }

@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { PullRequestReviewReceiptScope } from '@/database/models/pullRequestReviewReceipt';
+import type {
+  NewPullRequestReviewReceipt,
+  PullRequestReviewReceiptItem,
+} from '@/database/schemas/pullRequestReview';
+
 import {
   formatPullRequestReviewId,
   parsePullRequestReviewId,
   PullRequestReviewError,
+  type PullRequestReviewReceiptStore,
   PullRequestReviewService,
 } from './index';
 import { computeReviewSnapshotId } from './snapshot';
@@ -26,6 +33,7 @@ const REVIEW_ID = 'gh:github.com:octo-org:octo-repo:42';
 const PR_NODE_ID = 'PR_kwDOtest';
 const THREAD_ID = 'THREAD_node_1';
 const VIEWER = 'devin-reviewer';
+const VIEWER_DB_ID = 7;
 
 const rateLimit = { cost: 1, remaining: 4999, resetAt: '2030-01-01T00:00:00Z' };
 
@@ -67,8 +75,62 @@ const createMarket = (files: unknown[] = [], headSha: string = HEAD) => ({
   }),
 });
 
-const service = (deps: { market: ReturnType<typeof createMarket>; transport: FakeTransport }) =>
-  new PullRequestReviewService('user-1', 'ws-1', deps);
+/**
+ * In-memory receipt store — mirrors `PullRequestReviewReceiptModel`: scope
+ * lookup ignores the connection binding, `record` is insert-on-conflict on the
+ * full identity and returns the existing row on conflict. Sharing one store
+ * across two service instances simulates a process restart.
+ */
+const createReceiptStore = () => {
+  const rows: PullRequestReviewReceiptItem[] = [];
+  const sameIdentity = (row: PullRequestReviewReceiptItem, input: NewPullRequestReviewReceipt) =>
+    row.userId === input.userId &&
+    row.workspaceId === input.workspaceId &&
+    row.connectionId === input.connectionId &&
+    row.repoId === input.repoId &&
+    row.pullRequestId === input.pullRequestId &&
+    row.operation === input.operation &&
+    row.operationId === input.operationId;
+  const inScope = (row: PullRequestReviewReceiptItem, scope: PullRequestReviewReceiptScope) =>
+    row.userId === scope.userId &&
+    row.workspaceId === scope.workspaceId &&
+    row.repoId === scope.repoId &&
+    row.pullRequestId === scope.pullRequestId &&
+    row.operation === scope.operation &&
+    row.operationId === scope.operationId;
+  const store: PullRequestReviewReceiptStore = {
+    findByOperationScope: async (scope) => rows.filter((row) => inScope(row, scope)),
+    record: async (input) => {
+      const existing = rows.find((row) => sameIdentity(row, input));
+      if (existing) return existing;
+      const row: PullRequestReviewReceiptItem = {
+        appliedHeadSha: input.appliedHeadSha ?? null,
+        connectionId: input.connectionId,
+        createdAt: new Date(),
+        data: input.data ?? null,
+        digest: input.digest,
+        id: `receipt-${rows.length + 1}`,
+        operation: input.operation,
+        operationId: input.operationId,
+        pullRequestId: input.pullRequestId,
+        reconciled: input.reconciled ?? false,
+        repoId: input.repoId,
+        status: input.status,
+        updatedAt: new Date(),
+        userId: input.userId,
+        workspaceId: input.workspaceId,
+      };
+      rows.push(row);
+      return row;
+    },
+  };
+  return { rows, store };
+};
+
+const service = (
+  deps: { market: ReturnType<typeof createMarket>; transport: FakeTransport },
+  receipts: PullRequestReviewReceiptStore = createReceiptStore().store,
+) => new PullRequestReviewService('user-1', 'ws-1', { ...deps, receipts });
 
 const threadNode = (over: Record<string, unknown> = {}) => ({
   comments: {
@@ -171,6 +233,7 @@ const contextResponse = (
     permission?: string | null;
     reviews?: Record<string, unknown>[];
     threadIds?: string[];
+    viewerDatabaseId?: number | null;
   } = {},
 ) => ({
   rateLimit,
@@ -201,7 +264,10 @@ const contextResponse = (
     },
     viewerPermission: over.permission === undefined ? 'WRITE' : over.permission,
   },
-  viewer: { login: VIEWER },
+  viewer: {
+    databaseId: over.viewerDatabaseId === undefined ? VIEWER_DB_ID : over.viewerDatabaseId,
+    login: VIEWER,
+  },
 });
 
 const reconcileEmpty = () => ({
@@ -578,7 +644,7 @@ describe('submitReview (RV02/RV03)', () => {
     expect(error.code).toBe('STALE_SNAPSHOT');
   });
 
-  it('fails with REMOTE_EMPTY on a null submit payload when nothing landed', async () => {
+  it('fails with OUTCOME_UNKNOWN on a null submit payload when nothing landed', async () => {
     const transport = createTransport({
       PullRequestReviewContext: () => contextResponse(),
       PullRequestReviewReconcile: () => reconcileEmpty(),
@@ -595,7 +661,186 @@ describe('submitReview (RV02/RV03)', () => {
         observedHeadSha: HEAD,
       }),
     );
-    expect(error.code).toBe('REMOTE_EMPTY');
+    expect(error.code).toBe('OUTCOME_UNKNOWN');
+  });
+
+  it('persists the receipt so a fresh service instance replays it without resubmitting', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: { commit: { oid: HEAD }, id: 'PR_op', state: 'APPROVED' },
+        },
+      }),
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    const operationId = `op-${Math.random()}`;
+    const first = await service({ market, transport }, receipts.store).submitReview({
+      event: 'APPROVE',
+      id: REVIEW_ID,
+      observedHeadSha: HEAD,
+      operationId,
+    });
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]).toMatchObject({
+      appliedHeadSha: HEAD,
+      connectionId: String(VIEWER_DB_ID),
+      status: 'applied',
+    });
+
+    // A new service instance over the same store = the post-restart process.
+    const second = await service({ market, transport }, receipts.store).submitReview({
+      event: 'APPROVE',
+      id: REVIEW_ID,
+      observedHeadSha: HEAD,
+      operationId,
+    });
+    expect(second.digest).toBe(first.digest);
+    expect(transport.calls.filter((c) => c.operation === 'SubmitPullRequestReview')).toHaveLength(
+      1,
+    );
+  });
+
+  it('re-authorizes a replay: a revoked permission never sees the stored receipt', async () => {
+    let permission: string | null = 'WRITE';
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse({ permission }),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: { commit: { oid: HEAD }, id: 'PR_op', state: 'APPROVED' },
+        },
+      }),
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    const operationId = `op-${Math.random()}`;
+    await service({ market, transport }, receipts.store).submitReview({
+      event: 'APPROVE',
+      id: REVIEW_ID,
+      observedHeadSha: HEAD,
+      operationId,
+    });
+
+    permission = 'NONE';
+    const error = await errorOf(
+      service({ market, transport }, receipts.store).submitReview({
+        event: 'APPROVE',
+        id: REVIEW_ID,
+        observedHeadSha: HEAD,
+        operationId,
+      }),
+    );
+    expect(error.code).toBe('PERMISSION_DENIED');
+  });
+
+  it('rejects a replay when the GitHub connection binding changed', async () => {
+    let viewerDatabaseId = VIEWER_DB_ID;
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse({ viewerDatabaseId }),
+      SubmitPullRequestReview: () => ({
+        submitPullRequestReview: {
+          pullRequestReview: { commit: { oid: HEAD }, id: 'PR_op', state: 'APPROVED' },
+        },
+      }),
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    const operationId = `op-${Math.random()}`;
+    await service({ market, transport }, receipts.store).submitReview({
+      event: 'APPROVE',
+      id: REVIEW_ID,
+      observedHeadSha: HEAD,
+      operationId,
+    });
+
+    viewerDatabaseId = 9999;
+    const error = await errorOf(
+      service({ market, transport }, receipts.store).submitReview({
+        event: 'APPROVE',
+        id: REVIEW_ID,
+        observedHeadSha: HEAD,
+        operationId,
+      }),
+    );
+    expect(error.code).toBe('OPERATION_CONFLICT');
+    expect(transport.calls.filter((c) => c.operation === 'SubmitPullRequestReview')).toHaveLength(
+      1,
+    );
+  });
+
+  it('never fabricates a landed head — a reconciled review with no commit stays outcome_unknown', async () => {
+    const transport = createTransport({
+      CreatePullRequestReview: () => ({
+        addPullRequestReview: { pullRequestReview: { id: 'PR_op', state: 'PENDING' } },
+      }),
+      PullRequestReviewContext: () => contextResponse(),
+      PullRequestReviewReconcile: () => ({
+        repository: {
+          pullRequest: {
+            headRefOid: HEAD,
+            id: PR_NODE_ID,
+            reviews: {
+              nodes: [
+                {
+                  author: { login: VIEWER },
+                  body: '',
+                  commit: null,
+                  databaseId: 77,
+                  id: 'PR_maybe',
+                  state: 'APPROVED',
+                },
+              ],
+            },
+          },
+        },
+      }),
+      SubmitPullRequestReview: () => {
+        throw new Error('socket hangup after mutation');
+      },
+    });
+    const market = createMarket();
+    const receipts = createReceiptStore();
+    const operationId = `op-${Math.random()}`;
+    const error = await errorOf(
+      service({ market, transport }, receipts.store).submitReview({
+        event: 'APPROVE',
+        id: REVIEW_ID,
+        observedHeadSha: HEAD,
+        operationId,
+      }),
+    );
+    expect(error.code).toBe('OUTCOME_UNKNOWN');
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]).toMatchObject({
+      appliedHeadSha: null,
+      data: null,
+      status: 'outcome_unknown',
+    });
+
+    // Replaying the same operationId surfaces the persisted unknown outcome —
+    // it must not silently resubmit.
+    const replay = await errorOf(
+      service({ market, transport }, receipts.store).submitReview({
+        event: 'APPROVE',
+        id: REVIEW_ID,
+        observedHeadSha: HEAD,
+        operationId,
+      }),
+    );
+    expect(replay.code).toBe('OUTCOME_UNKNOWN');
+    expect(transport.calls.filter((c) => c.operation === 'SubmitPullRequestReview')).toHaveLength(
+      1,
+    );
   });
 
   it('replays a repeated operationId without resubmitting', async () => {
@@ -755,7 +1000,7 @@ describe('replyToThread (RV03/RV04)', () => {
     expect(error.code).toBe('PERMISSION_DENIED');
   });
 
-  it('fails with REMOTE_EMPTY when GitHub returns no comment', async () => {
+  it('fails with OUTCOME_UNKNOWN when GitHub returns no comment', async () => {
     const transport = createTransport({
       AddPullRequestReviewThreadReply: () => ({
         addPullRequestReviewThreadReply: { comment: null },
@@ -764,8 +1009,17 @@ describe('replyToThread (RV03/RV04)', () => {
       PullRequestThreadComments: () => ({ node: threadBindingNode(), rateLimit }),
     });
     const market = createMarket();
-    const error = await errorOf(service({ market, transport }).replyToThread(replyParams()));
-    expect(error.code).toBe('REMOTE_EMPTY');
+    const receipts = createReceiptStore();
+    const operationId = `op-${Math.random()}`;
+    const error = await errorOf(
+      service({ market, transport }, receipts.store).replyToThread({
+        ...replyParams(),
+        operationId,
+      }),
+    );
+    expect(error.code).toBe('OUTCOME_UNKNOWN');
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0].status).toBe('outcome_unknown');
   });
 });
 

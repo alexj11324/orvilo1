@@ -40,18 +40,25 @@ of appending. `comments` additionally requires `threadId`.
 
 `addFileComment`, `replyToThread`, and `submitReview` share the write contract:
 
-| Field             | Meaning                                                             |
-| ----------------- | ------------------------------------------------------------------- |
-| `observedHeadSha` | Required. The head the reviewer actually saw — writes bind to it.   |
-| `snapshotId`      | The detail snapshot being written against.                          |
-| `operationId`     | Idempotency key. Same operation + same payload replays the receipt. |
-| `reviewSessionId` | `submitReview` only — adopts an existing pending draft explicitly.  |
+| Field             | Meaning                                                                    |
+| ----------------- | -------------------------------------------------------------------------- |
+| `observedHeadSha` | Required. The head the reviewer actually saw — writes bind to it.          |
+| `snapshotId`      | The detail snapshot being written against.                                 |
+| `operationId`     | Idempotency key. Same operation + same payload replays the stored receipt. |
+| `reviewSessionId` | `submitReview` only — adopts an existing pending draft explicitly.         |
 
 Server behavior:
 
-- Re-verifies identity (`viewer.login`), repo permission
+- Re-verifies identity (`viewer.login` + `viewer.databaseId`), repo permission
   (`repository.viewerPermission`), PR existence, thread→PR binding, head, and
   snapshot digest on every write.
+- Receipts persist in `pull_request_review_receipts`, keyed by
+  `(userId, workspaceId, connectionId, repoId, pullRequestId, operation,
+operationId)` — a single insert-on-conflict write, so they survive restarts
+  and concurrent dupes converge on one row. A replayed `operationId`
+  re-authorizes against the live context (permission + connection binding)
+  before the stored outcome is returned; a binding change is
+  `OPERATION_CONFLICT`.
 - Head moved since `observedHeadSha` → `HEAD_DRIFTED`; snapshot digest
   mismatch → `STALE_SNAPSHOT`; a pending draft the client didn't adopt →
   `PENDING_REVIEW_CONFLICT`; same `operationId` with a different payload →
@@ -59,10 +66,15 @@ Server behavior:
 - `submitReview` without a pending draft creates an Orvilo-owned pending
   review pinned to `commitOID: observedHeadSha` and submits exactly that
   review id — never whatever pending review happens to exist.
-- A null/empty remote payload is `REMOTE_EMPTY`, not success: clients must
-  not toast success or clear drafts. Before failing an adopted session the
-  server reconciles the viewer's submitted reviews (`reviews(author:)` +
-  `commit.oid`) — a matching landed review returns a `reconciled` receipt.
+- Receipts only record head SHAs GitHub actually returned. When a mutation was
+  attempted but the remote outcome cannot be verified (empty payload, failed
+  request, reconcile miss, or a reconciled review whose `commit` GitHub did
+  not report), the receipt row is persisted with status `outcome_unknown` and
+  the call fails as `OUTCOME_UNKNOWN` — the client keeps its draft and a
+  replay returns the same answer instead of re-applying the write. Before
+  failing an adopted session the server reconciles the viewer's submitted
+  reviews (`reviews(author:)` + `commit.oid`) — a matching landed review
+  returns a `reconciled` receipt.
 - Receipts are `ReviewWriteReceipt<T>`: `{ appliedHeadSha, data, digest,
 reconciled }` — the head the write actually landed on.
 
@@ -87,9 +99,10 @@ Service error codes map to tRPC codes: `GITHUB_NOT_CONNECTED` →
 `PRECONDITION_FAILED`, `NOT_FOUND` → `NOT_FOUND`, `INVALID_REVIEW_ID` /
 `THREAD_MISMATCH` → `BAD_REQUEST`, `PERMISSION_DENIED` → `FORBIDDEN`,
 `HEAD_DRIFTED` / `STALE_SNAPSHOT` / `PENDING_REVIEW_CONFLICT` /
-`OPERATION_CONFLICT` → `CONFLICT`, `REMOTE_EMPTY` / `PROVIDER_ERROR` →
-`INTERNAL_SERVER_ERROR`. Domain codes are prefixed into the message
-(`CODE: message`) so clients can react to conflicts without parsing prose.
+`OPERATION_CONFLICT` / `OUTCOME_UNKNOWN` → `CONFLICT`, `REMOTE_EMPTY` /
+`PROVIDER_ERROR` → `INTERNAL_SERVER_ERROR`. Domain codes are prefixed into the
+message (`CODE: message`) so clients can react to conflicts without parsing
+prose.
 
 ## GraphQL schema validity
 
@@ -102,5 +115,7 @@ and update the hash together). CI never fetches the schema live.
 
 `bunx vitest run apps/server/src/services/pullRequestReview` covers the
 schema contract, the four pending-review states, pagination completeness,
-null-receipt rejection, stale-head gating, operation replay/conflict, host
-whitelisting, and thread binding.
+stale-head gating, persisted receipt replay/re-authorization/conflict,
+outcome-unknown persistence without head fabrication, host whitelisting, and
+thread binding. `packages/database` model tests cover the receipt store's
+atomic upsert and scope isolation.

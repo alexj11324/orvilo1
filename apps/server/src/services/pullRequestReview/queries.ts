@@ -134,7 +134,7 @@ query PullRequestDetail($owner: String!, $repo: String!, $number: Int!) {
 export const REVIEW_CONTEXT_QUERY = `
 query PullRequestReviewContext($owner: String!, $repo: String!, $number: Int!) {
   rateLimit { cost remaining resetAt }
-  viewer { login }
+  viewer { login databaseId }
   repository(owner: $owner, name: $repo) {
     viewerPermission
     pullRequest(number: $number) {

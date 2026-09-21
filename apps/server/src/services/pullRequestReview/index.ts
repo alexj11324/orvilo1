@@ -3,8 +3,14 @@ import {
   type GitHubMarketClient,
   type GitHubMarketProxyRequest,
 } from '@orvilo/connector-data/github';
+import type { PullRequestReviewOperation, PullRequestReviewReceiptData } from '@orvilo/types';
 import { z } from 'zod';
 
+import type { PullRequestReviewReceiptScope } from '@/database/models/pullRequestReviewReceipt';
+import type {
+  NewPullRequestReviewReceipt,
+  PullRequestReviewReceiptItem,
+} from '@/database/schemas/pullRequestReview';
 import { MarketService } from '@/server/services/market';
 
 import {
@@ -67,8 +73,6 @@ const CHECKS_PAGE_SIZE = 50;
 /** Permissions that allow the viewer to submit pull request reviews. */
 const REVIEWABLE_PERMISSIONS = new Set(['ADMIN', 'MAINTAIN', 'READ', 'TRIAGE', 'WRITE']);
 
-const OPERATION_LEDGER_LIMIT = 500;
-
 export interface PullRequestReviewId {
   host: string;
   number: number;
@@ -104,6 +108,7 @@ export type PullRequestReviewErrorCode =
   | 'INVALID_REVIEW_ID'
   | 'NOT_FOUND'
   | 'OPERATION_CONFLICT'
+  | 'OUTCOME_UNKNOWN'
   | 'PENDING_REVIEW_CONFLICT'
   | 'PERMISSION_DENIED'
   | 'PROVIDER_ERROR'
@@ -412,7 +417,10 @@ const contextResponseSchema = z.object({
       viewerPermission: z.string().nullable().optional(),
     })
     .nullable(),
-  viewer: z.object({ login: z.string().optional() }).nullable().optional(),
+  viewer: z
+    .object({ databaseId: z.number().nullable().optional(), login: z.string().optional() })
+    .nullable()
+    .optional(),
 });
 
 const threadsPageResponseSchema = z.object({
@@ -602,10 +610,34 @@ interface GraphQLTransport {
 /** Injectable clients — tests provide fakes; production uses Market. */
 export interface PullRequestReviewServiceDeps {
   market?: GitHubMarketClient;
+  /**
+   * Durable store for write receipts (the `PullRequestReviewReceiptModel` in
+   * production). Without it, `operationId` dedup is skipped — only acceptable
+   * where receipts cannot exist (tests, probes).
+   */
+  receipts?: PullRequestReviewReceiptStore;
   transport?: GraphQLTransport;
 }
 
+/**
+ * The persistence boundary the service needs — satisfied by
+ * `PullRequestReviewReceiptModel`; unit tests substitute an in-memory fake.
+ */
+export interface PullRequestReviewReceiptStore {
+  findByOperationScope: (
+    scope: PullRequestReviewReceiptScope,
+  ) => Promise<PullRequestReviewReceiptItem[]>;
+  record: (input: NewPullRequestReviewReceipt) => Promise<PullRequestReviewReceiptItem>;
+}
+
 interface WriteContext {
+  /**
+   * Identity of the GitHub account the write runs under — the viewer's numeric
+   * databaseId as a string, falling back to the login when GitHub omits the id.
+   * Receipts are bound to it, and replays verify the live context still maps to
+   * the same connection before a stored outcome is trusted.
+   */
+  connectionId: string | null;
   headSha: string;
   pendingReview: { createdAt: string | null; id: string; login: string | null } | null;
   pullRequestId: string;
@@ -621,21 +653,6 @@ interface WriteContext {
   snapshotId: string;
   viewerLogin: string | null;
 }
-
-interface OperationRecord {
-  digest: string;
-  receipt: ReviewWriteReceipt<unknown>;
-}
-
-const operationLedger = new Map<string, OperationRecord>();
-
-const rememberOperation = (operationId: string, record: OperationRecord) => {
-  if (operationLedger.size >= OPERATION_LEDGER_LIMIT) {
-    const oldest = operationLedger.keys().next().value;
-    if (oldest !== undefined) operationLedger.delete(oldest);
-  }
-  operationLedger.set(operationId, record);
-};
 
 const toRateLimit = (value: z.infer<typeof rateLimitSchema> | undefined): ReviewRateLimit | null =>
   value
@@ -1219,14 +1236,14 @@ export class PullRequestReviewService {
   };
 
   /**
-   * Re-resolve everything a write depends on: the viewer identity, repository
-   * permission, the current head, the pending review, and the snapshot the
-   * caller claims to have seen. Any drift is a hard error before the mutation.
+   * Re-resolve everything a write depends on: the viewer identity and
+   * connection binding, repository permission, the current head, the pending
+   * review, and the current snapshot. Runs on every write call — including
+   * `operationId` replays — so a stored receipt is only returned to a caller
+   * that still owns the binding.
    */
   private loadWriteContext = async (params: {
     id: PullRequestReviewId;
-    observedHeadSha?: string | null;
-    snapshotId?: string | null;
   }): Promise<WriteContext & { transport: GraphQLTransport }> => {
     const { transport } = await this.clients();
     const response = await transport.request<{ number: number; owner: string; repo: string }>({
@@ -1252,14 +1269,9 @@ export class PullRequestReviewService {
     }
 
     const headSha = pullRequest.headRefOid ?? null;
-    if (params.observedHeadSha && headSha !== params.observedHeadSha) {
-      throw new PullRequestReviewError(
-        'HEAD_DRIFTED',
-        `Pull request head moved (saw ${params.observedHeadSha.slice(0, 7)}, now ${(headSha ?? '').slice(0, 7)}) — re-review before submitting`,
-      );
-    }
-
     const viewerLogin = parsed.viewer?.login ?? null;
+    const connectionId =
+      parsed.viewer?.databaseId != null ? String(parsed.viewer.databaseId) : viewerLogin;
     const pendingNode = (pullRequest.pendingReviews?.nodes ?? []).find(
       (review) => review.author?.login === viewerLogin,
     );
@@ -1272,14 +1284,8 @@ export class PullRequestReviewService {
       reviewIds: reviewNodes.map((review) => review.id ?? ''),
       threadIds: threadNodes.map((thread) => thread.id),
     });
-    if (params.snapshotId && snapshotId !== params.snapshotId) {
-      throw new PullRequestReviewError(
-        'STALE_SNAPSHOT',
-        'The pull request conversation changed since you loaded it — reload before writing',
-      );
-    }
-
     return {
+      connectionId,
       headSha: headSha ?? '',
       pendingReview: pendingNode
         ? {
@@ -1304,28 +1310,159 @@ export class PullRequestReviewService {
     };
   };
 
-  private checkOperation = (operationId: string | undefined, digest: string) => {
-    if (!operationId) return;
-    const prior = operationLedger.get(operationId);
-    if (!prior) return;
-    if (prior.digest !== digest) {
+  /**
+   * Freshness gates apply to new writes only. A replayed operationId must
+   * return its stored receipt even when the head moved since — the write
+   * already landed, and failing it now would misreport a completed operation.
+   */
+  private assertWriteFreshness = (
+    context: WriteContext,
+    params: { observedHeadSha?: string | null; snapshotId?: string | null },
+  ) => {
+    if (params.observedHeadSha && context.headSha !== params.observedHeadSha) {
+      throw new PullRequestReviewError(
+        'HEAD_DRIFTED',
+        `Pull request head moved (saw ${params.observedHeadSha.slice(0, 7)}, now ${context.headSha.slice(0, 7)}) — re-review before submitting`,
+      );
+    }
+    if (params.snapshotId && context.snapshotId !== params.snapshotId) {
+      throw new PullRequestReviewError(
+        'STALE_SNAPSHOT',
+        'The pull request conversation changed since you loaded it — reload before writing',
+      );
+    }
+  };
+
+  /**
+   * The persisted receipt scope for this call. Null when no `operationId` was
+   * given or no store was injected — the write then runs unreceipted, exactly
+   * like before receipts existed.
+   */
+  private receiptScope = (
+    context: WriteContext,
+    id: PullRequestReviewId,
+    operation: PullRequestReviewOperation,
+    operationId: string | undefined,
+  ): (PullRequestReviewReceiptScope & { connectionId: string }) | null => {
+    if (!operationId || !this.deps.receipts) return null;
+    if (!this.workspaceId || !context.connectionId) {
+      throw new PullRequestReviewError(
+        'PROVIDER_ERROR',
+        'Cannot bind a review receipt — the workspace or GitHub viewer identity is unavailable',
+      );
+    }
+    return {
+      connectionId: context.connectionId,
+      operation,
+      operationId,
+      pullRequestId: formatPullRequestReviewId(id),
+      repoId: `${id.owner}/${id.repo}`,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    };
+  };
+
+  /**
+   * Replay path: the caller's identity, permission and connection were just
+   * re-verified by `loadWriteContext`; here the stored row must additionally
+   * match the live connection binding and the payload digest before its
+   * outcome is returned.
+   */
+  private lookupReceipt = async (params: {
+    digest: string;
+    scope: (PullRequestReviewReceiptScope & { connectionId: string }) | null;
+  }): Promise<ReviewWriteReceipt<unknown> | null> => {
+    const { digest, scope } = params;
+    if (!scope) return null;
+    const rows = await this.deps.receipts!.findByOperationScope(scope);
+    const row = rows.find((entry) => entry.connectionId === scope.connectionId) ?? rows[0];
+    if (!row) return null;
+    if (row.connectionId !== scope.connectionId) {
+      throw new PullRequestReviewError(
+        'OPERATION_CONFLICT',
+        'operationId was recorded under a different GitHub account binding',
+      );
+    }
+    if (row.digest !== digest) {
       throw new PullRequestReviewError(
         'OPERATION_CONFLICT',
         'operationId was already used for a different payload',
       );
     }
+    if (row.status === 'outcome_unknown') {
+      throw new PullRequestReviewError(
+        'OUTCOME_UNKNOWN',
+        'The remote outcome of this operation could not be verified — check the pull request on GitHub before retrying',
+      );
+    }
+    return {
+      appliedHeadSha: row.appliedHeadSha,
+      data: row.data,
+      digest: row.digest,
+      reconciled: row.reconciled,
+    };
   };
 
-  private replayOperation = <TData>(
-    operationId: string | undefined,
-    digest: string,
-  ): ReviewWriteReceipt<TData> | null => {
-    if (!operationId) return null;
-    const prior = operationLedger.get(operationId);
-    if (prior && prior.digest === digest) {
-      return prior.receipt as ReviewWriteReceipt<TData>;
+  private recordReceipt = async (params: {
+    receipt: ReviewWriteReceipt<unknown>;
+    scope: (PullRequestReviewReceiptScope & { connectionId: string }) | null;
+  }) => {
+    const { receipt, scope } = params;
+    if (!scope) return;
+    try {
+      await this.deps.receipts!.record({
+        ...scope,
+        appliedHeadSha: receipt.appliedHeadSha,
+        data: (receipt.data ?? null) as PullRequestReviewReceiptData | null,
+        digest: receipt.digest,
+        reconciled: receipt.reconciled,
+        status: 'applied',
+      });
+    } catch (error) {
+      // The write already landed — a receipt that cannot be persisted means a
+      // replay would re-apply it. Report the outcome as unknown instead of a
+      // clean success so the client keeps its draft and a human can check.
+      throw new PullRequestReviewError(
+        'OUTCOME_UNKNOWN',
+        `The write landed but its receipt could not be persisted — do not retry until the store recovers (${error instanceof Error ? error.message : String(error)})`,
+      );
     }
-    return null;
+  };
+
+  /**
+   * A mutation was attempted but the remote outcome could not be verified —
+   * persist the real `outcome_unknown` status so a replayed operationId never
+   * applies the write twice, then surface it (the client keeps its draft).
+   */
+  private recordUnknownAndThrow = async (params: {
+    digest: string;
+    error?: unknown;
+    scope: (PullRequestReviewReceiptScope & { connectionId: string }) | null;
+    what: string;
+  }): Promise<never> => {
+    const { digest, error, scope, what } = params;
+    if (scope) {
+      try {
+        await this.deps.receipts!.record({
+          ...scope,
+          appliedHeadSha: null,
+          data: null,
+          digest,
+          reconciled: false,
+          status: 'outcome_unknown',
+        });
+      } catch (storeError) {
+        // Even when the receipt write itself fails, the remote state is still
+        // unverified — the caller must hear OUTCOME_UNKNOWN either way.
+        console.error('[pullRequestReview] failed to persist outcome_unknown receipt', storeError);
+      }
+    }
+    const detail =
+      error === undefined ? null : error instanceof Error ? error.message : String(error);
+    throw new PullRequestReviewError(
+      'OUTCOME_UNKNOWN',
+      `${what} could not be verified — the write may still have landed on GitHub${detail ? ` (${detail})` : ''}`,
+    );
   };
 
   /**
@@ -1367,11 +1504,13 @@ export class PullRequestReviewService {
         review.state === expectedState &&
         review.body === params.body &&
         review.author?.login === params.viewerLogin &&
-        (review.commit?.oid ?? params.observedHeadSha) === params.observedHeadSha,
+        // Only a head SHA GitHub actually reported counts — a missing commit
+        // field never resolves to the caller-supplied observedHeadSha.
+        review.commit?.oid === params.observedHeadSha,
     );
     if (!landed) return null;
     return {
-      appliedHeadSha: landed.commit?.oid ?? params.observedHeadSha,
+      appliedHeadSha: landed.commit?.oid ?? null,
       data: {
         databaseId: landed.databaseId ?? null,
         id: landed.id ?? null,
@@ -1411,23 +1550,23 @@ export class PullRequestReviewService {
       op: 'submitReview',
       observedHeadSha: params.observedHeadSha,
     });
-    this.checkOperation(params.operationId, digest);
-    const replay = this.replayOperation<{
-      databaseId: number | null;
-      id: string | null;
-      state: string | null;
-      url: string | null;
-    }>(params.operationId, digest);
-    if (replay) return replay;
-
-    const context = await this.loadWriteContext({
-      id,
-      observedHeadSha: params.observedHeadSha,
-      snapshotId: params.snapshotId,
-    });
+    // Re-authorize first — the stored receipt is only replayed to a caller
+    // that still owns the session binding (user, workspace, connection).
+    const context = await this.loadWriteContext({ id });
+    const scope = this.receiptScope(context, id, 'submitReview', params.operationId);
+    const replay = await this.lookupReceipt({ digest, scope });
+    if (replay) {
+      return replay as ReviewWriteReceipt<{
+        databaseId: number | null;
+        id: string | null;
+        state: string | null;
+        url: string | null;
+      }>;
+    }
+    this.assertWriteFreshness(context, params);
     const { transport } = context;
 
-    let reviewId: string | null;
+    let reviewId: string | null = null;
     if (context.pendingReview) {
       // A pending review already exists on GitHub. It is only submitted when the
       // caller adopted it explicitly via reviewSessionId — otherwise the draft
@@ -1450,10 +1589,17 @@ export class PullRequestReviewService {
           viewerLogin: context.viewerLogin,
         });
         if (landed) {
-          const receipt = { ...landed, digest };
-          if (params.operationId) {
-            rememberOperation(params.operationId, { digest, receipt });
-          }
+          const receipt = {
+            ...landed,
+            data: landed.data as {
+              databaseId: number | null;
+              id: string | null;
+              state: string | null;
+              url: string | null;
+            },
+            digest,
+          };
+          await this.recordReceipt({ receipt, scope });
           return receipt;
         }
         throw new PullRequestReviewError(
@@ -1474,10 +1620,17 @@ export class PullRequestReviewService {
           viewerLogin: context.viewerLogin,
         });
         if (landed) {
-          const receipt = { ...landed, digest };
-          if (params.operationId) {
-            rememberOperation(params.operationId, { digest, receipt });
-          }
+          const receipt = {
+            ...landed,
+            data: landed.data as {
+              databaseId: number | null;
+              id: string | null;
+              state: string | null;
+              url: string | null;
+            },
+            digest,
+          };
+          await this.recordReceipt({ receipt, scope });
           return receipt;
         }
         throw new PullRequestReviewError(
@@ -1487,26 +1640,36 @@ export class PullRequestReviewService {
       }
       // No pending review anywhere — create an Orvilo-owned one pinned to the
       // head the reviewer saw, then submit exactly that review.
-      const created = await transport.request<{ input: Record<string, unknown> }>({
-        operation: 'CreatePullRequestReview',
-        query: CREATE_PENDING_REVIEW_MUTATION,
-        variables: {
-          input: {
-            commitOID: params.observedHeadSha,
-            pullRequestId: context.pullRequestId,
+      try {
+        const created = await transport.request<{ input: Record<string, unknown> }>({
+          operation: 'CreatePullRequestReview',
+          query: CREATE_PENDING_REVIEW_MUTATION,
+          variables: {
+            input: {
+              commitOID: params.observedHeadSha,
+              pullRequestId: context.pullRequestId,
+            },
           },
-        },
-      });
-      const createdParsed = requireParsed(
-        createReviewResponseSchema.safeParse(created),
-        'GitHub create review response invalid',
-      );
-      reviewId = createdParsed.addPullRequestReview?.pullRequestReview?.id ?? null;
-      if (!reviewId) {
-        throw new PullRequestReviewError(
-          'REMOTE_EMPTY',
-          'GitHub returned no pending review for the create operation',
+        });
+        const createdParsed = requireParsed(
+          createReviewResponseSchema.safeParse(created),
+          'GitHub create review response invalid',
         );
+        reviewId = createdParsed.addPullRequestReview?.pullRequestReview?.id ?? null;
+      } catch (error) {
+        await this.recordUnknownAndThrow({
+          digest,
+          error,
+          scope,
+          what: 'Create pull request review',
+        });
+      }
+      if (!reviewId) {
+        await this.recordUnknownAndThrow({
+          digest,
+          scope,
+          what: 'GitHub returned no pending review for the create operation',
+        });
       }
     }
 
@@ -1515,7 +1678,8 @@ export class PullRequestReviewService {
       id: string | null;
       state: string | null;
       url: string | null;
-    }>;
+    }> | null = null;
+    let submitError: unknown = null;
     try {
       const response = await transport.request<{ input: Record<string, unknown> }>({
         operation: 'SubmitPullRequestReview',
@@ -1533,27 +1697,9 @@ export class PullRequestReviewService {
         'GitHub submit review response invalid',
       );
       const review = parsed.submitPullRequestReview?.pullRequestReview ?? null;
-      if (!review) {
-        // A null payload is not a success — reconcile the original operation.
-        const landed = await this.reconcileSubmittedReview({
-          body,
-          event: params.event,
-          id,
-          observedHeadSha: params.observedHeadSha,
-          transport,
-          viewerLogin: context.viewerLogin,
-        });
-        if (landed) {
-          receipt = { ...landed, digest };
-        } else {
-          throw new PullRequestReviewError(
-            'REMOTE_EMPTY',
-            'GitHub returned an empty submit-review payload',
-          );
-        }
-      } else {
+      if (review) {
         receipt = {
-          appliedHeadSha: review.commit?.oid ?? context.headSha,
+          appliedHeadSha: review.commit?.oid ?? (context.headSha || null),
           data: {
             databaseId: review.databaseId ?? null,
             id: review.id ?? null,
@@ -1565,9 +1711,12 @@ export class PullRequestReviewService {
         };
       }
     } catch (error) {
-      if (error instanceof PullRequestReviewError) throw error;
-      // Submission failed with an unknown remote state — reconcile before
-      // reporting failure so a retried client can never double-submit.
+      submitError = error;
+    }
+
+    if (!receipt) {
+      // The submit request failed or returned nothing — reconcile the original
+      // operation against GitHub before reporting anything back.
       const landed = await this.reconcileSubmittedReview({
         body,
         event: params.event,
@@ -1575,17 +1724,33 @@ export class PullRequestReviewService {
         observedHeadSha: params.observedHeadSha,
         transport,
         viewerLogin: context.viewerLogin,
+      }).catch((reconcileError) => {
+        console.error('[pullRequestReview] submit reconcile failed', reconcileError);
+        return null;
       });
       if (landed) {
-        receipt = { ...landed, digest };
+        receipt = {
+          appliedHeadSha: landed.appliedHeadSha,
+          data: landed.data as {
+            databaseId: number | null;
+            id: string | null;
+            state: string | null;
+            url: string | null;
+          },
+          digest,
+          reconciled: landed.reconciled,
+        };
       } else {
-        throw error;
+        return this.recordUnknownAndThrow({
+          digest,
+          error: submitError ?? undefined,
+          scope,
+          what: 'Submit pull request review',
+        });
       }
     }
 
-    if (params.operationId) {
-      rememberOperation(params.operationId, { digest, receipt });
-    }
+    await this.recordReceipt({ receipt, scope });
     return receipt;
   };
 
@@ -1607,17 +1772,15 @@ export class PullRequestReviewService {
       observedHeadSha: params.observedHeadSha,
       threadId: params.threadId,
     });
-    this.checkOperation(params.operationId, digest);
-    const replay = this.replayOperation<{
-      comment: { databaseId: number | null; id: string | null };
-    }>(params.operationId, digest);
-    if (replay) return replay;
-
-    const context = await this.loadWriteContext({
-      id,
-      observedHeadSha: params.observedHeadSha,
-      snapshotId: params.snapshotId,
-    });
+    const context = await this.loadWriteContext({ id });
+    const scope = this.receiptScope(context, id, 'replyToThread', params.operationId);
+    const replay = await this.lookupReceipt({ digest, scope });
+    if (replay) {
+      return replay as ReviewWriteReceipt<{
+        comment: { databaseId: number | null; id: string | null };
+      }>;
+    }
+    this.assertWriteFreshness(context, params);
     const { transport } = context;
 
     // Thread↔PR binding: resolve the thread node to its owning pull request
@@ -1651,35 +1814,50 @@ export class PullRequestReviewService {
       );
     }
 
-    const response = await transport.request<{ input: Record<string, unknown> }>({
-      operation: 'AddPullRequestReviewThreadReply',
-      query: REPLY_THREAD_MUTATION,
-      variables: {
-        input: {
-          body: params.body,
-          pullRequestReviewThreadId: params.threadId,
-        },
-      },
-    });
-    const parsed = requireParsed(
-      replyThreadResponseSchema.safeParse(response),
-      'GitHub reply response invalid',
-    );
-    const comment = parsed.addPullRequestReviewThreadReply?.comment ?? null;
-    if (!comment || (comment.databaseId == null && !comment.id)) {
-      throw new PullRequestReviewError('REMOTE_EMPTY', 'GitHub returned an empty reply payload');
-    }
-    const receipt: ReviewWriteReceipt<{
+    let receipt: ReviewWriteReceipt<{
       comment: { databaseId: number | null; id: string | null };
-    }> = {
-      appliedHeadSha: context.headSha,
-      data: { comment: { databaseId: comment.databaseId ?? null, id: comment.id ?? null } },
-      digest,
-      reconciled: false,
-    };
-    if (params.operationId) {
-      rememberOperation(params.operationId, { digest, receipt });
+    }> | null = null;
+    try {
+      const response = await transport.request<{ input: Record<string, unknown> }>({
+        operation: 'AddPullRequestReviewThreadReply',
+        query: REPLY_THREAD_MUTATION,
+        variables: {
+          input: {
+            body: params.body,
+            pullRequestReviewThreadId: params.threadId,
+          },
+        },
+      });
+      const parsed = requireParsed(
+        replyThreadResponseSchema.safeParse(response),
+        'GitHub reply response invalid',
+      );
+      const comment = parsed.addPullRequestReviewThreadReply?.comment ?? null;
+      if (comment && (comment.databaseId != null || comment.id)) {
+        receipt = {
+          appliedHeadSha: context.headSha || null,
+          data: { comment: { databaseId: comment.databaseId ?? null, id: comment.id ?? null } },
+          digest,
+          reconciled: false,
+        };
+      }
+    } catch (error) {
+      await this.recordUnknownAndThrow({
+        digest,
+        error,
+        scope,
+        what: 'Reply to review thread',
+      });
     }
+    if (!receipt) {
+      return this.recordUnknownAndThrow({
+        digest,
+        scope,
+        what: 'GitHub returned an empty reply payload',
+      });
+    }
+
+    await this.recordReceipt({ receipt, scope });
     return receipt;
   };
 
@@ -1704,50 +1882,58 @@ export class PullRequestReviewService {
       path: params.path,
       side: params.side ?? 'RIGHT',
     });
-    this.checkOperation(params.operationId, digest);
-    const replay = this.replayOperation<{ thread: { id: string } }>(params.operationId, digest);
-    if (replay) return replay;
-
-    const context = await this.loadWriteContext({
-      id,
-      observedHeadSha: params.observedHeadSha,
-      snapshotId: params.snapshotId,
-    });
+    const context = await this.loadWriteContext({ id });
+    const scope = this.receiptScope(context, id, 'addFileComment', params.operationId);
+    const replay = await this.lookupReceipt({ digest, scope });
+    if (replay) return replay as ReviewWriteReceipt<{ thread: { id: string } }>;
+    this.assertWriteFreshness(context, params);
     const { transport } = context;
 
-    const response = await transport.request<{ input: Record<string, unknown> }>({
-      operation: 'AddPullRequestReviewThread',
-      query: ADD_THREAD_MUTATION,
-      variables: {
-        input: {
-          body: params.body,
-          line: params.line,
-          path: params.path,
-          pullRequestId: context.pullRequestId,
-          side: params.side ?? 'RIGHT',
+    let receipt: ReviewWriteReceipt<{ thread: { id: string } }> | null = null;
+    try {
+      const response = await transport.request<{ input: Record<string, unknown> }>({
+        operation: 'AddPullRequestReviewThread',
+        query: ADD_THREAD_MUTATION,
+        variables: {
+          input: {
+            body: params.body,
+            line: params.line,
+            path: params.path,
+            pullRequestId: context.pullRequestId,
+            side: params.side ?? 'RIGHT',
+          },
         },
-      },
-    });
-    const parsed = requireParsed(
-      addThreadResponseSchema.safeParse(response),
-      'GitHub add thread response invalid',
-    );
-    const thread = parsed.addPullRequestReviewThread?.thread ?? null;
-    if (!thread?.id) {
-      throw new PullRequestReviewError(
-        'REMOTE_EMPTY',
-        'GitHub returned an empty review thread payload',
+      });
+      const parsed = requireParsed(
+        addThreadResponseSchema.safeParse(response),
+        'GitHub add thread response invalid',
       );
+      const thread = parsed.addPullRequestReviewThread?.thread ?? null;
+      if (thread?.id) {
+        receipt = {
+          appliedHeadSha: context.headSha || null,
+          data: { thread: { id: thread.id } },
+          digest,
+          reconciled: false,
+        };
+      }
+    } catch (error) {
+      await this.recordUnknownAndThrow({
+        digest,
+        error,
+        scope,
+        what: 'Add file comment thread',
+      });
     }
-    const receipt: ReviewWriteReceipt<{ thread: { id: string } }> = {
-      appliedHeadSha: context.headSha,
-      data: { thread: { id: thread.id } },
-      digest,
-      reconciled: false,
-    };
-    if (params.operationId) {
-      rememberOperation(params.operationId, { digest, receipt });
+    if (!receipt) {
+      return this.recordUnknownAndThrow({
+        digest,
+        scope,
+        what: 'GitHub returned an empty review thread payload',
+      });
     }
+
+    await this.recordReceipt({ receipt, scope });
     return receipt;
   };
 }

@@ -1239,6 +1239,13 @@
       "when": 1789827475641,
       "tag": "0176_work_attention",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1789999336886,
+      "tag": "0177_pull_request_review_receipts",
+      "breakpoints": true
     }
   ],
   "version": "6"

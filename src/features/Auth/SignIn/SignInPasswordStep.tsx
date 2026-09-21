@@ -1,12 +1,46 @@
-import { Icon, InputPassword } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
-import { type FormInstance, type InputRef } from 'antd';
+import { Text } from '@lobehub/ui/base-ui';
+import { type FormInstance } from 'antd';
 import { Form } from 'antd';
-import { Lock } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { createStaticStyles } from 'antd-style';
+import { ArrowRightIcon, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button as ReuiButton } from '@/components/ui/button';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
+import { Spinner } from '@/components/ui/spinner';
 import AuthCard from '@/features/AuthCard';
+
+const styles = createStaticStyles(({ css }) => ({
+  form: css`
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  `,
+
+  formItem: css`
+    margin-block-end: 0;
+
+    .ant-form-item-label {
+      padding-block: 0 8px;
+    }
+
+    .ant-form-item-label > label {
+      height: auto;
+    }
+  `,
+
+  fieldLabel: css`
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+  `,
+}));
 
 export interface SignInPasswordStepProps {
   email: string;
@@ -28,7 +62,8 @@ export const SignInPasswordStep = ({
   onSubmit,
 }: SignInPasswordStepProps) => {
   const { t } = useTranslation('auth');
-  const passwordInputRef = useRef<InputRef>(null);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     passwordInputRef.current?.focus();
@@ -38,8 +73,9 @@ export const SignInPasswordStep = ({
     <AuthCard
       subtitle={email}
       title={t('betterAuth.signin.passwordStep.title')}
+      variant={'auth16'}
       footer={
-        <Text align={'center'} fontSize={13} style={{ marginTop: 8 }} type={'secondary'}>
+        <Text align={'center'} fontSize={12} type={'secondary'}>
           <a
             role="button"
             style={{ color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
@@ -58,28 +94,53 @@ export const SignInPasswordStep = ({
       }
     >
       <Form
+        className={styles.form}
         form={form}
         layout="vertical"
         onFinish={(values) => onSubmit(values as { password: string })}
       >
         <Form.Item
-          name="password"
-          rules={[{ message: t('betterAuth.errors.passwordRequired'), required: true }]}
+          className={styles.formItem}
+          htmlFor="auth-signin-password"
+          label={<span className={styles.fieldLabel}>{t('betterAuth.signin.passwordLabel')}</span>}
         >
-          <InputPassword
-            autoComplete="current-password"
-            placeholder={t('betterAuth.signin.passwordPlaceholder')}
-            prefix={<Icon icon={Lock} style={{ marginInline: 6 }} />}
-            ref={passwordInputRef}
-            size="large"
-            style={{ padding: 6 }}
-          />
+          <InputGroup className="h-10">
+            <Form.Item
+              noStyle
+              name="password"
+              rules={[{ message: t('betterAuth.errors.passwordRequired'), required: true }]}
+            >
+              <InputGroupInput
+                autoComplete="current-password"
+                id="auth-signin-password"
+                placeholder={t('betterAuth.signin.passwordPlaceholder')}
+                ref={passwordInputRef}
+                type={passwordVisible ? 'text' : 'password'}
+              />
+            </Form.Item>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                aria-pressed={passwordVisible}
+                size="icon-sm"
+                aria-label={
+                  passwordVisible
+                    ? t('betterAuth.signin.hidePassword')
+                    : t('betterAuth.signin.showPassword')
+                }
+                onClick={() => setPasswordVisible((visible) => !visible)}
+              >
+                {passwordVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
         </Form.Item>
-        <Button block htmlType="submit" loading={loading} size="large" type="primary">
+        <ReuiButton className="h-10 w-full gap-2" disabled={loading} type="submit">
+          {loading ? <Spinner /> : null}
           {t('betterAuth.signin.submit')}
-        </Button>
+          {!loading && <ArrowRightIcon aria-hidden="true" data-icon="inline-end" />}
+        </ReuiButton>
       </Form>
-      <Text align={'center'} fontSize={13} style={{ marginTop: 16 }} type={'secondary'}>
+      <Text align={'center'} fontSize={12} type={'secondary'}>
         <a
           aria-disabled={forgotLoading}
           role="button"

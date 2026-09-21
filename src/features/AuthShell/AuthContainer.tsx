@@ -1,13 +1,13 @@
 'use client';
 
+import '@/app/globals.css';
+
 import { Center, Flexbox } from '@lobehub/ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { Divider } from 'antd';
 import { cx } from 'antd-style';
 import { type FC, type PropsWithChildren } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
-import { useIsDark } from '@/hooks/useIsDark';
 
 import AuthFooterLinks from './AuthFooterLinks';
 import AuthLangButton from './AuthLangButton';
@@ -15,31 +15,23 @@ import AuthThemeButton from './AuthThemeButton';
 import { styles } from './style';
 
 const AuthContainer: FC<PropsWithChildren> = ({ children }) => {
-  const isDarkMode = useIsDark();
   return (
-    <Flexbox className={styles.outerContainer} height={'100%'} padding={8} width={'100%'}>
-      <Flexbox
-        className={cx(isDarkMode ? styles.innerContainerDark : styles.innerContainerLight)}
-        height={'100%'}
-        width={'100%'}
-      >
-        <Flexbox horizontal align={'center'} padding={16} width={'100%'}>
-          <a aria-label={BRANDING_NAME} href={'/'} style={{ display: 'inline-flex' }}>
-            <ProductLogo size={40} />
-          </a>
+    <Flexbox className={cx(styles.page, 'orvilo-entry-surface')} width={'100%'}>
+      <header className={styles.header}>
+        <a aria-label={BRANDING_NAME} className={styles.logoLink} href={'/'}>
+          <ProductLogo size={36} type={'combine'} />
+        </a>
+        <Flexbox horizontal align={'center'} className={styles.headerActions} gap={4}>
+          <AuthLangButton />
+          <AuthThemeButton size={18} />
         </Flexbox>
-        <Center height={'100%'} padding={16} width={'100%'}>
-          {children}
-        </Center>
-        <Flexbox horizontal align={'center'} justify={'space-between'} padding={16} width={'100%'}>
-          <Flexbox horizontal align={'center'}>
-            <AuthLangButton />
-            <Divider className={styles.divider} orientation={'vertical'} />
-            <AuthThemeButton size={18} />
-          </Flexbox>
-          <AuthFooterLinks />
-        </Flexbox>
-      </Flexbox>
+      </header>
+      <main className={styles.main}>
+        <Center width={'100%'}>{children}</Center>
+      </main>
+      <footer className={styles.footer}>
+        <AuthFooterLinks />
+      </footer>
     </Flexbox>
   );
 };

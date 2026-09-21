@@ -134,3 +134,8 @@
         @apply font-sans;
     }
 }
+/* The auth hosts also load Ant Design's unlayered button reset. Keep the
+   ReUI primary-action contrast within the login and onboarding surfaces. */
+.orvilo-entry-surface [data-slot='button'].text-primary-foreground {
+    color: var(--primary-foreground);
+}

@@ -1,6 +1,11 @@
 import { closestCenter, type CollisionDetection, pointerWithin } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { TaskMoveScope, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import type {
+  TaskMoveScope,
+  TaskStatus,
+  TaskWorkflowCategory,
+  WorkQuerySortMode,
+} from '@orvilo/types';
 import { WORK_QUERY_STATUS_COLUMNS, WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
 
 import type {
@@ -243,6 +248,29 @@ export const RAW_STATUS_KANBAN_COLUMNS: KanbanColumnDefinition[] = WORK_QUERY_ST
 );
 
 export type WorkQueryBoardGroupBy = 'status' | 'workflowCategory';
+
+export interface KanbanBoardCapabilities {
+  canMoveAcrossGroups: boolean;
+  canReorderWithinGroup: boolean;
+}
+
+/**
+ * Drag capabilities for an external (work-query) board. A `manual` sortMode
+ * board owns its row order, so same-column drops may persist `position`.
+ * A field-sorted view must never write manual position — same-column drops
+ * are refused while cross-column moves stay legal, since they only change
+ * the grouped field's value. `movable === false` disables both.
+ */
+export const kanbanBoardCapabilities = (input: {
+  movable?: boolean;
+  sortMode?: WorkQuerySortMode;
+}): KanbanBoardCapabilities => {
+  const movable = input.movable ?? true;
+  return {
+    canMoveAcrossGroups: movable,
+    canReorderWithinGroup: movable && (input.sortMode ?? 'manual') === 'manual',
+  };
+};
 
 export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanColumnDefinition[] =>
   groupBy === 'workflowCategory' ? WORKFLOW_KANBAN_COLUMNS : RAW_STATUS_KANBAN_COLUMNS;

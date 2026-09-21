@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { FileHandle } from 'node:fs/promises';
-import { mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -119,6 +119,47 @@ const isProcessAlive = (pid: number): boolean => {
 };
 
 /**
+ * Take over a lock whose holder is provably dead. A single-writer ticket
+ * (`<lock>.reclaim`, O_EXCL) arbitrates between reclaimers so the
+ * verify-then-replace section is held by at most one; the winner re-checks
+ * the lock still carries the dead record, then `rename`s its own token onto
+ * the lock path — the path never goes absent, so no new owner can land in a
+ * check-to-unlink gap. Returns true when this caller became the owner.
+ */
+const takeOverDeadFileLock = async (
+  lockPath: string,
+  deadRecord: string,
+  token: string,
+): Promise<boolean> => {
+  const ticketPath = `${lockPath}.reclaim`;
+  try {
+    await writeFile(ticketPath, token, { flag: 'wx' });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error;
+    // Another reclaimer holds the ticket. A dead ticket holder's stale ticket
+    // is cleared by the same verified-unlink rule — losing a ticket only
+    // costs the holder a retry, its pre-rename token check catches it.
+    const holder = await readFile(ticketPath, 'utf8').catch(() => undefined);
+    const holderPid = holder === undefined ? Number.NaN : Number.parseInt(holder, 10);
+    if (Number.isInteger(holderPid) && holderPid > 0 && !isProcessAlive(holderPid)) {
+      const current = await readFile(ticketPath, 'utf8').catch(() => undefined);
+      if (current === holder) await rm(ticketPath, { force: true });
+    }
+    return false;
+  }
+  try {
+    const now = await readFile(lockPath, 'utf8').catch(() => undefined);
+    const stillMine = (await readFile(ticketPath, 'utf8').catch(() => undefined)) === token;
+    if (now === undefined || now !== deadRecord || !stillMine) return false;
+    await rename(ticketPath, lockPath);
+    return (await readFile(lockPath, 'utf8').catch(() => undefined)) === token;
+  } finally {
+    const current = await readFile(ticketPath, 'utf8').catch(() => undefined);
+    if (current === token) await rm(ticketPath, { force: true });
+  }
+};
+
+/**
  * Cross-process mutex for one inbox file (the `<file>.lock` sibling). Every
  * writer — repair, dedupe read, append — runs inside it, so separate CLI
  * processes sharing the same inbox directory can never interleave a
@@ -126,10 +167,10 @@ const isProcessAlive = (pid: number): boolean => {
  *
  * Acquisition is an atomic O_EXCL create. The `<pid>:<token>` payload makes
  * ownership verifiable in both directions: release removes the lock only
- * while it still carries OUR token, and a dead holder's lock is removed only
- * while it still carries that dead token — never a fresh owner's. Liveness
- * is `kill(pid, 0)`; a holder that cannot be proven dead blocks callers
- * until LOCK_TIMEOUT_MS rather than being stolen from (fail-closed).
+ * while it still carries OUR token, and a dead holder's lock is taken over
+ * only while it still carries that dead token — never a fresh owner's.
+ * Liveness is `kill(pid, 0)`; a holder that cannot be proven dead blocks
+ * callers until LOCK_TIMEOUT_MS rather than being stolen from (fail-closed).
  */
 const acquireFileLock = async (filePath: string): Promise<() => Promise<void>> => {
   const lockPath = `${filePath}.lock`;
@@ -145,13 +186,10 @@ const acquireFileLock = async (filePath: string): Promise<() => Promise<void>> =
       const existing = await readFile(lockPath, 'utf8').catch(() => undefined);
       if (existing === undefined) continue;
       const ownerPid = Number.parseInt(existing, 10);
-      if (Number.isInteger(ownerPid) && ownerPid > 0 && !isProcessAlive(ownerPid)) {
-        // Dead holder — reclaim only if the lock still carries that same
-        // dead token, so a live owner's fresh lock is never unlinked.
-        const current = await readFile(lockPath, 'utf8').catch(() => undefined);
-        if (current === existing) await rm(lockPath, { force: true });
-        continue;
-      }
+      const deadHolder = Number.isInteger(ownerPid) && ownerPid > 0 && !isProcessAlive(ownerPid);
+      // Dead holder — take over under the single-writer reclaim ticket
+      // rather than unlinking a lock a fresh owner may already hold.
+      if (deadHolder && (await takeOverDeadFileLock(lockPath, existing, token))) break;
       if (Date.now() - started > LOCK_TIMEOUT_MS) {
         throw new Error(`Timed out acquiring inbox file lock ${lockPath}`, { cause: error });
       }

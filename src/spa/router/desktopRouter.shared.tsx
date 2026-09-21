@@ -60,7 +60,6 @@ import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import {
-  agentChannelRouteMeta,
   agentPermissionRouteMeta,
   agentProfileRouteMeta,
   agentRouteMeta,
@@ -249,22 +248,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
             ),
             handle: { meta: agentProfileRouteMeta },
             path: 'profile',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/channel'),
-              'Desktop > Chat > Channel',
-            ),
-            handle: { meta: agentChannelRouteMeta },
-            path: 'channel',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/channel/[platform]'),
-              'Desktop > Chat > Channel Platform',
-            ),
-            handle: { meta: agentChannelRouteMeta },
-            path: 'channel/:platform',
           },
           // Legacy `/agent/:aid/topics` URLs — the management page is gone,
           // keep deep-links landing on the agent chat instead of a phantom
@@ -993,7 +976,7 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         handle: { meta: settingsRouteMeta },
         path: ':tab',
       },
-      // Tabs that need a sub-segment (e.g. /settings/messenger/discord) reuse
+      // Tabs that need a sub-segment (e.g. /settings/xxx/yyy) reuse
       // the same tab page; nested feature components read `:sub` via useParams.
       {
         element: dynamicElement(
@@ -1226,23 +1209,7 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
                 path: 'hotkey',
               },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Desktop > Workspace > Settings > Messenger',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'messenger',
-              },
-              // Platform detail level — the page reads the platform from `sub`.
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Desktop > Workspace > Settings > Messenger > Platform',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'messenger/:sub',
-              },
+
               // Developer tools mirrored inside the workspace (user preferences).
               {
                 element: dynamicElement(
@@ -1339,7 +1306,7 @@ export const createMainAreaRouteFactory = (options: MainAreaRouteOptions = {}) =
 export interface SharedDesktopRouteOptions {
   mainAreaChildren: RouteObject[];
   onboardingRoute: RouteObject;
-  /** Routes that intentionally exist on only one runtime, such as Web `/verify-im`. */
+  /** Routes that intentionally exist on only one runtime. */
   platformRoutes?: RouteObject[];
 }
 

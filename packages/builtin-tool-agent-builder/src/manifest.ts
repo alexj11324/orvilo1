@@ -169,7 +169,7 @@ export const AgentBuilderManifest: BuiltinToolManifest = {
               },
               pluginId: {
                 description:
-                  'The identifier of the plugin to toggle (e.g., "orvilo-web-browsing", "orvilo-image-generation")',
+                  'The identifier of the plugin to toggle (e.g., "orvilo-web-browsing", "orvilo-agent-documents")',
                 type: 'string',
               },
             },

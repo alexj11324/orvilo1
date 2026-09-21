@@ -689,15 +689,6 @@ describe('DataImporter', () => {
       expect(result.success).toBe(true);
       expect(result.results.aiProviders).toBeUndefined();
       expect(result.results.aiModels).toBeUndefined();
-
-      const providers = await clientDB.query.aiProviders.findMany({
-        where: eq(Schema.aiProviders.userId, userId),
-      });
-      const models = await clientDB.query.aiModels.findMany({
-        where: eq(Schema.aiModels.userId, userId),
-      });
-      expect(providers).toHaveLength(0);
-      expect(models).toHaveLength(0);
     });
   });
 

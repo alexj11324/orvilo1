@@ -7,16 +7,6 @@ describe('Agent Signal scope key resolution', () => {
     expect(resolveProducerScopeKey({ topicId: 't1' })).toBe('topic:t1');
   });
 
-  it('falls back to bot scope for producer input when topicId is missing', () => {
-    expect(
-      resolveProducerScopeKey({
-        applicationId: 'app',
-        platform: 'wechat',
-        platformThreadId: 'th1',
-      }),
-    ).toBe('bot:wechat:app:th1');
-  });
-
   it('falls back to global scope for producer input when no routing identifiers exist', () => {
     expect(resolveProducerScopeKey({})).toBe('fallback:global');
   });
@@ -25,7 +15,6 @@ describe('Agent Signal scope key resolution', () => {
     expect(
       resolveRuntimeScopeKey({
         agentId: 'agent-1',
-        botScopeKey: 'bot:wechat:app:thread-1',
         taskId: 'task-1',
         topicId: 'topic-1',
         userId: 'user-1',
@@ -33,13 +22,7 @@ describe('Agent Signal scope key resolution', () => {
     ).toBe('topic:topic-1');
   });
 
-  it('falls back through bot, task, agent, then user scope for runtime input', () => {
-    expect(
-      resolveRuntimeScopeKey({
-        botScopeKey: 'bot:wechat:app:thread-1',
-        userId: 'user-1',
-      }),
-    ).toBe('bot:wechat:app:thread-1');
+  it('falls back through task, agent, then user scope for runtime input', () => {
     expect(
       resolveRuntimeScopeKey({
         taskId: 'task-1',

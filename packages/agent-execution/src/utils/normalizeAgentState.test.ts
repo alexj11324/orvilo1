@@ -29,11 +29,9 @@ describe('normalizeAgentState', () => {
         activeDeviceId: 'dev_1',
         agentConfig: { systemRole: 'hi' },
         agentGroup: { agentMap: {} },
-        botPlatformContext: { platformName: 'slack', supportsMarkdown: true },
         connectorOwnershipNote: 'note',
         devicePlatform: 'darwin',
         deviceSystemInfo: { workingDirectory: '/tmp' },
-        discordContext: { guildId: 'g' },
         evalContext: { caseId: 'c' },
         projectInstructions: [{ content: 'x', source: 'AGENTS.md' }],
         searchDecision: { enabledSearch: true },
@@ -47,10 +45,6 @@ describe('normalizeAgentState', () => {
 
     expect(normalized.world).toEqual({
       agent: { systemRole: 'hi' },
-      channel: {
-        botPlatform: { platformName: 'slack', supportsMarkdown: true },
-        discord: { guildId: 'g' },
-      },
       connectorOwnershipNote: 'note',
       eval: { caseId: 'c' },
       group: { agentMap: {} },
@@ -142,7 +136,6 @@ describe('normalizeAgentState', () => {
         _hooks: [{ id: 'h1', type: 'webhook', webhook: { url: 'https://x' } }],
         activeDeviceScope: 'workspace',
         agentShareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
-        botContext: { applicationId: 'app-1', isOwner: true, platform: 'discord' },
         clientIp: '10.0.0.1',
         deviceAccessPolicy: { canUseDevice: false, reason: 'external-bot' },
         evalRuntime: { caseId: 'case-1' },
@@ -161,7 +154,6 @@ describe('normalizeAgentState', () => {
 
     expect(normalized.principal).toEqual({
       actor: {
-        bot: { applicationId: 'app-1', isOwner: true, platform: 'discord' },
         deviceScope: 'workspace',
         shareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
       },

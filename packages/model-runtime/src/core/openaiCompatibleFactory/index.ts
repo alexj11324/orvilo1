@@ -33,18 +33,6 @@ import type {
 } from '../../types';
 import type { IOrviloAgentRuntimeErrorType } from '../../types/error';
 import { AgentRuntimeErrorType } from '../../types/error';
-import type {
-  CreateImageMethodOptions,
-  CreateImagePayload,
-  CreateImageResponse,
-} from '../../types/image';
-import type {
-  CreateVideoPayload,
-  CreateVideoResponse,
-  HandleCreateVideoWebhookPayload,
-  HandleCreateVideoWebhookResult,
-  PollVideoStatusResult,
-} from '../../types/video';
 import { AgentRuntimeError } from '../../utils/createError';
 import { debugPayload, debugResponse, debugStream } from '../../utils/debugStream';
 import { desensitizeUrl } from '../../utils/desensitizeUrl';
@@ -76,8 +64,6 @@ import { OpenAIResponsesStream, OpenAIStream } from '../streams';
 import { type ChatPayloadForTransformStream, readableFromAsyncIterable } from '../streams/protocol';
 import { convertOpenAIResponseUsage, convertOpenAIUsage } from '../usageConverters/openai';
 import { OpenAICompatibleClient } from './client';
-import { createOpenAICompatibleImage } from './createImage';
-import { createOpenAICompatibleVideo, pollOpenAICompatibleVideoStatus } from './createVideo';
 import { transformResponseAPIToStream, transformResponseToStream } from './nonStreamToStream';
 import {
   initializeOpenAIDiagnostics,
@@ -89,8 +75,6 @@ import {
   resolveOpenAIResponseWithMetadata,
 } from './providerDiagnostics';
 
-export type { PollVideoStatusResult };
-export * from './createVideo';
 export * from './nonStreamToStream';
 
 /**
@@ -140,16 +124,6 @@ type ResponseCreateParamsWithPromptCacheKey = (
   OpenAI.Responses.ResponseCreateParamsStreaming | OpenAI.Responses.ResponseCreateParams
 ) &
   OpenAIExtraParams;
-// Exclude openai's own `provider` (added in openai SDK 6.45.0 as `provider?: Provider`
-// for its third-party-provider feature) — otherwise intersecting it with our
-// `provider: string` collapses to `Provider & string`, breaking every call site
-// that passes a plain provider id string.
-export type CreateImageOptions = Omit<ClientOptions, 'apiKey' | 'provider'> &
-  ModelIdMappingOptions & {
-    apiKey: string;
-    provider: string;
-  };
-
 const getGenerateObjectReasoningParams = ({
   reasoning_effort,
   thinking,
@@ -177,13 +151,6 @@ const getGenerateObjectResponsesReasoningParams = ({
     ? { reasoning: { effort: reasoning_effort } }
     : {};
 };
-
-// See CreateImageOptions above: drop openai's `provider` so ours stays `string`.
-export type CreateVideoOptions = Omit<ClientOptions, 'apiKey' | 'provider'> &
-  ModelIdMappingOptions & {
-    apiKey: string;
-    provider: string;
-  };
 
 export interface CustomClientOptions<T extends Record<string, any> = any> {
   createChatCompletionStream?: (
@@ -255,14 +222,6 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
     useResponseModels?: Array<string | RegExp>;
   };
   constructorOptions?: ConstructorOptions<T>;
-  createImage?: (
-    payload: CreateImagePayload,
-    options: CreateImageOptions,
-  ) => Promise<CreateImageResponse>;
-  createVideo?: (
-    payload: CreateVideoPayload,
-    options: CreateVideoOptions,
-  ) => Promise<CreateVideoResponse>;
   customClient?: CustomClientOptions<T>;
   debug?: {
     chatCompletion: () => boolean;
@@ -299,14 +258,6 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
      */
     useToolsCalling?: boolean;
   };
-  handleCreateVideoWebhook?: (
-    payload: HandleCreateVideoWebhookPayload,
-    options: CreateVideoOptions,
-  ) => Promise<HandleCreateVideoWebhookResult>;
-  handlePollVideoStatus?: (
-    inferenceId: string,
-    options: CreateVideoOptions,
-  ) => Promise<PollVideoStatusResult>;
   models?:
     | ((params: { client: OpenAI; options?: ConstructorOptions<T> }) => Promise<ChatModelCard[]>)
     | {
@@ -345,10 +296,6 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
   customClient,
   responses,
   promptCacheKeyModels,
-  createImage: customCreateImage,
-  createVideo: customCreateVideo,
-  handleCreateVideoWebhook: customHandleCreateVideoWebhook,
-  handlePollVideoStatus: customHandlePollVideoStatus,
   generateObject: generateObjectConfig,
 }: OpenAICompatibleFactoryOptions<T>) => {
   const ErrorType = {
@@ -913,85 +860,6 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
       } catch (error) {
         throw this.handleError(error);
       }
-    }
-
-    async createImage(payload: CreateImagePayload, options?: CreateImageMethodOptions) {
-      const log = debug(`${this.logPrefix}:createImage`);
-
-      // If custom createImage implementation is provided, use it
-      if (customCreateImage) {
-        log('using custom createImage implementation');
-        return customCreateImage(payload, {
-          ...this._options,
-          apiKey: this._options.apiKey!,
-          modelIdMapping: this.modelIdMappingOptions.modelIdMapping,
-          provider,
-        });
-      }
-
-      log('using default createOpenAICompatibleImage');
-      // Use the new createOpenAICompatibleImage function
-      return createOpenAICompatibleImage(this.client, payload, this.id, {
-        pricingContext: options?.pricingContext,
-        pricingModel: payload.model,
-        requestModel: resolveMappedModelId(payload.model, this.modelIdMappingOptions),
-        routingModel: payload.model,
-      });
-    }
-
-    async createVideo(payload: CreateVideoPayload) {
-      const log = debug(`${this.logPrefix}:createVideo`);
-
-      if (customCreateVideo) {
-        log('using custom createVideo implementation');
-        return customCreateVideo(payload, {
-          ...this._options,
-          apiKey: this._options.apiKey!,
-          modelIdMapping: this.modelIdMappingOptions.modelIdMapping,
-          provider,
-        });
-      }
-
-      log('using default createOpenAICompatibleVideo');
-      return createOpenAICompatibleVideo(payload, {
-        ...this._options,
-        apiKey: this._options.apiKey!,
-        baseURL: this._options.baseURL || '',
-        modelIdMapping: this.modelIdMappingOptions.modelIdMapping,
-        provider,
-      });
-    }
-
-    async handleCreateVideoWebhook(payload: HandleCreateVideoWebhookPayload) {
-      if (!customHandleCreateVideoWebhook) {
-        throw new Error('handleCreateVideoWebhook is not supported by this provider');
-      }
-      return customHandleCreateVideoWebhook(payload, {
-        ...this._options,
-        apiKey: this._options.apiKey!,
-        provider,
-      });
-    }
-
-    async handlePollVideoStatus(inferenceId: string): Promise<PollVideoStatusResult> {
-      const log = debug(`${this.logPrefix}:handlePollVideoStatus`);
-
-      if (customHandlePollVideoStatus) {
-        log('using custom handlePollVideoStatus implementation');
-        return customHandlePollVideoStatus(inferenceId, {
-          ...this._options,
-          apiKey: this._options.apiKey!,
-          provider,
-        });
-      }
-
-      log('using default pollOpenAICompatibleVideoStatus');
-      return pollOpenAICompatibleVideoStatus(inferenceId, {
-        ...this._options,
-        apiKey: this._options.apiKey!,
-        baseURL: this._options.baseURL || '',
-        provider,
-      });
     }
 
     async models() {

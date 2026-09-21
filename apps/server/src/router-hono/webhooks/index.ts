@@ -7,7 +7,6 @@ import { memoryExtractionWebhook } from './handlers/memoryExtraction';
 import { memoryExtractionBenchmarkLocomo } from './handlers/memoryExtractionBenchmarkLocomo';
 import { memoryUserMemoryChatTopicCancel } from './handlers/memoryUserMemoryChatTopicCancel';
 import { memoryUserMemoryPersonaUpdateWriting } from './handlers/memoryUserMemoryPersonaUpdateWriting';
-import { videoWebhook } from './handlers/video';
 import { memoryWebhookAuth } from './middlewares/memoryWebhookAuth';
 
 const app = new Hono().basePath('/api/webhooks');
@@ -34,8 +33,5 @@ app.post(
   memoryWebhookAuth(),
   memoryUserMemoryChatTopicCancel,
 );
-
-// Async video generation callback; the token is verified per asyncTask.
-app.post('/video/:provider', videoWebhook);
 
 export default app;

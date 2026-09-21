@@ -659,8 +659,6 @@ export class AiAgentService {
       slug,
       prompt,
       appContext,
-      botContext,
-      botSender,
       beforeOperationStart,
       createdThreadId,
       clientIp,
@@ -932,8 +930,6 @@ export class AiAgentService {
         assistantAgentId,
         attachedFileIds,
         batchApprovalAnchorId,
-        botContext,
-        botSender,
         clientIds,
         continuationAssistantId,
         conversationAgentId,
@@ -957,7 +953,6 @@ export class AiAgentService {
     assistantMessageRef.current = turn.assistantMessageId;
     const {
       canUseDevice,
-      deviceAccessReason,
       model,
       provider,
       requestTriggerMetadata,
@@ -975,7 +970,6 @@ export class AiAgentService {
       appContext,
       assistantMessageId: turn.assistantMessageId,
       canUseDevice,
-      deviceAccessReason,
       model,
       parentMessageId,
       persistAgentId,

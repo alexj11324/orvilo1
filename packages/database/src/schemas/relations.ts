@@ -20,7 +20,6 @@ import { documentLikes } from './documentLike';
 import { eventOutbox } from './eventOutbox';
 import { executionGrants } from './executionGrant';
 import { documents, files, knowledgeBases } from './file';
-import { generationBatches, generations, generationTopics } from './generation';
 import { messageGroups, messages, messagesFiles, messageTranslates } from './message';
 import { projects } from './project';
 import { projectMembers } from './projectMember';
@@ -307,10 +306,6 @@ export const filesRelations = relations(files, ({ many, one }) => ({
   sessions: many(filesToSessions),
   agents: many(agentsFiles),
   documents: many(documents, { relationName: 'fileDocuments' }),
-  generation: one(generations, {
-    fields: [files.id],
-    references: [generations.fileId],
-  }),
   chunkingTask: one(asyncTasks, {
     fields: [files.chunkTaskId],
     references: [asyncTasks.id],
@@ -376,46 +371,6 @@ export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
   document: one(documents, {
     fields: [documentChunks.documentId],
     references: [documents.id],
-  }),
-}));
-
-// Generation-related relation definitions
-export const generationTopicsRelations = relations(generationTopics, ({ one, many }) => ({
-  user: one(users, {
-    fields: [generationTopics.userId],
-    references: [users.id],
-  }),
-  batches: many(generationBatches),
-}));
-
-export const generationBatchesRelations = relations(generationBatches, ({ one, many }) => ({
-  user: one(users, {
-    fields: [generationBatches.userId],
-    references: [users.id],
-  }),
-  topic: one(generationTopics, {
-    fields: [generationBatches.generationTopicId],
-    references: [generationTopics.id],
-  }),
-  generations: many(generations),
-}));
-
-export const generationsRelations = relations(generations, ({ one }) => ({
-  user: one(users, {
-    fields: [generations.userId],
-    references: [users.id],
-  }),
-  batch: one(generationBatches, {
-    fields: [generations.generationBatchId],
-    references: [generationBatches.id],
-  }),
-  asyncTask: one(asyncTasks, {
-    fields: [generations.asyncTaskId],
-    references: [asyncTasks.id],
-  }),
-  file: one(files, {
-    fields: [generations.fileId],
-    references: [files.id],
   }),
 }));
 

@@ -1,4 +1,4 @@
-import type { AIChatModelCard, AIImageModelCard } from '../types/aiModel';
+import type { AIChatModelCard } from '../types/aiModel';
 
 // https://platform.stepfun.com/docs/pricing/details
 
@@ -395,111 +395,6 @@ const stepfunChatModels: AIChatModelCard[] = [
   },
 ];
 
-const stepfunImageModels: AIImageModelCard[] = [
-  {
-    description:
-      'A lightweight editing model from Stepfun’s latest iteration that supports both text-to-image generation and image editing within a single model. Despite having fewer than 6 billion parameters, it achieves state-of-the-art performance at its scale, rivaling open-source models in the 12B–20B parameter range across tiers. Each editing task takes only 1–2 seconds, redefining the experience of real-time interactive image editing.',
-    displayName: 'Step Image Edit 2',
-    enabled: true,
-    id: 'step-image-edit-2',
-    parameters: {
-      cfg: { default: 1, max: 10, min: 1, step: 0.1 },
-      imageUrl: { default: null },
-      prompt: {
-        default: '',
-      },
-      seed: { default: null },
-      size: {
-        default: '1024x1024',
-        enum: ['1024x1024', '768x1360', '896x1184', '1360x768', '1184x896'],
-      },
-      steps: { default: 8, max: 50, min: 1 },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'imageGeneration', rate: 0.02, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2026-04-28',
-    type: 'image',
-  },
-  {
-    description:
-      'A new-generation StepFun image model focused on image generation, producing high-quality images from text prompts. It delivers more realistic texture and stronger Chinese/English text rendering.',
-    displayName: 'Step 2X Large',
-    id: 'step-2x-large',
-    parameters: {
-      cfg: { default: 7.5, max: 10, min: 1, step: 0.1 },
-      prompt: {
-        default: '',
-      },
-      seed: { default: null },
-      size: {
-        default: '1024x1024',
-        enum: ['256x256', '512x512', '768x768', '1024x1024', '1280x800', '800x1280'],
-      },
-      steps: { default: 50, max: 100, min: 1 },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'imageGeneration', rate: 0, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2024-08-07',
-    type: 'image',
-  },
-  {
-    description:
-      'This model offers strong image generation with text prompt input. With native Chinese support, it better understands Chinese descriptions, captures their semantics, and converts them into visual features for more accurate generation. It produces high-resolution, high-quality images and supports a degree of style transfer.',
-    displayName: 'Step 1X Medium',
-    enabled: true,
-    id: 'step-1x-medium',
-    parameters: {
-      cfg: { default: 7.5, max: 10, min: 1, step: 0.1 },
-      imageUrl: { default: null },
-      prompt: {
-        default: '',
-      },
-      seed: { default: null },
-      size: {
-        default: '1024x1024',
-        enum: ['256x256', '512x512', '768x768', '1024x1024', '1280x800', '800x1280'],
-      },
-      steps: { default: 50, max: 100, min: 1 },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'imageGeneration', rate: 0.1, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2025-07-15',
-    type: 'image',
-  },
-  {
-    description:
-      'This model focuses on image editing, modifying and enhancing images based on user-provided images and text. It supports multiple input formats, including text descriptions and example images, and generates edits aligned with user intent.',
-    displayName: 'Step 1X Edit',
-    enabled: true,
-    id: 'step-1x-edit',
-    parameters: {
-      cfg: { default: 6, max: 10, min: 1, step: 0.1 },
-      imageUrl: { default: null },
-      prompt: {
-        default: '',
-      },
-      seed: { default: null },
-      size: {
-        default: '1024x1024',
-        enum: ['512x512', '768x768', '1024x1024'],
-      },
-      steps: { default: 28, max: 100, min: 1 },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'imageGeneration', rate: 0, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2025-03-04',
-    type: 'image',
-  },
-];
-
-export const allModels = [...stepfunChatModels, ...stepfunImageModels];
+export const allModels = [...stepfunChatModels];
 
 export default allModels;

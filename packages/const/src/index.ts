@@ -2,7 +2,6 @@ export * from './agentDocument';
 export * from './agentName';
 export * from './agentShare';
 export * from './apiKeyScope';
-export * from './bot';
 export * from './composio';
 export * from './connectorCatalog';
 export * from './currency';

@@ -1,4 +1,4 @@
-import type { AIChatModelCard, AIImageModelCard, AIVideoModelCard } from '../types/aiModel';
+import type { AIChatModelCard } from '../types/aiModel';
 
 // https://cloud.tencent.com/document/product/1823/130051
 const hunyuanChatModels: AIChatModelCard[] = [
@@ -760,106 +760,6 @@ const hunyuanChatModels: AIChatModelCard[] = [
   },
 ];
 
-const hunyuanImageModels: AIImageModelCard[] = [
-  {
-    description:
-      'Based on the Hunyuan large model, it is capable of reasoning about image layout, composition, and brushwork, using world knowledge to infer commonsense visual scenes. It can also interpret complex semantics at the scale of thousands of characters, generate long-form textual content, complex comics, memes, and produce vivid and engaging educational illustrations.',
-    displayName: 'HY-Image-V3.0',
-    enabled: true,
-    id: 'hy-image-v3.0',
-    parameters: {
-      height: { default: 1024, max: 2048, min: 512, step: 1 },
-      imageUrls: { default: [], maxCount: 3 },
-      prompt: {
-        default: '',
-      },
-      seed: { default: null },
-      width: { default: 1024, max: 2048, min: 512, step: 1 },
-      promptExtend: { default: false },
-      watermark: { default: false },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'imageGeneration', rate: 0.2, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2026-03-10',
-    type: 'image',
-  },
-  {
-    description:
-      'It adopts an ultra-high compression codec to enable fast image generation while maintaining high-quality output. It supports use cases such as e-commerce product image enhancement, design asset generation for creative tools, and iterative game scene development.',
-    displayName: 'HY-Image-Lite',
-    enabled: true,
-    id: 'hy-image-lite',
-    parameters: {
-      height: { default: 1024, max: 4096, min: 160, step: 1 },
-      prompt: {
-        default: '',
-      },
-      seed: { default: null },
-      width: { default: 1024, max: 4096, min: 160, step: 1 },
-      watermark: { default: false },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'imageGeneration', rate: 0.099, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2025-09-12',
-    type: 'image',
-  },
-];
-
-const hunyuanVideoModels: AIVideoModelCard[] = [
-  {
-    description:
-      'It supports multimodal inputs including text and images to generate high-quality videos, enabling scene transitions and multi-character interactions. It streamlines production workflows and reduces costs, making it suitable for enterprise advertising, marketing, and individual creative applications.',
-    displayName: 'HY-Video-1.5',
-    enabled: true,
-    id: 'hy-video-1.5',
-    parameters: {
-      imageUrl: {
-        default: null,
-      },
-      prompt: { default: '' },
-      resolution: {
-        default: '720p',
-        enum: ['720p', '1080p'],
-      },
-      watermark: { default: false },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'videoGeneration', rate: 1.5, strategy: 'fixed', unit: 'second' }],
-    },
-    releasedAt: '2026-01-06',
-    type: 'video',
-  },
-  {
-    description:
-      'It generates highly temporally consistent videos from images, suitable for demanding applications such as advertising, film clips, and product showcase videos.',
-    displayName: 'YT-Video-2.0',
-    enabled: true,
-    id: 'yt-video-2.0',
-    parameters: {
-      imageUrl: {
-        default: null,
-      },
-      prompt: { default: '' },
-      resolution: {
-        default: '720p',
-        enum: ['480p', '720p', '1080p'],
-      },
-      watermark: { default: false },
-    },
-    pricing: {
-      currency: 'CNY',
-      units: [{ name: 'videoGeneration', rate: 5, strategy: 'fixed', unit: 'second' }],
-    },
-    releasedAt: '2025-11-27',
-    type: 'video',
-  },
-];
-
-export const allModels = [...hunyuanChatModels, ...hunyuanImageModels, ...hunyuanVideoModels];
+export const allModels = [...hunyuanChatModels];
 
 export default allModels;

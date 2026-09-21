@@ -2,8 +2,6 @@ import type {
   ActivatedStepSkill,
   ActivatedStepTool,
   AgentGroupConfig,
-  BotPlatformContext,
-  DiscordContext,
   EvalContext,
   OperationSkillSet,
   OperationToolSet,
@@ -16,7 +14,6 @@ import type {
   AgentShareVisitorContext,
   AgentSignalOperationMarker,
   ChatToolPayload,
-  ChatTopicBotContext,
   EvalToolForwardingConfig,
   ExecutionPlan,
   ExpertiseContextSnapshot,
@@ -113,7 +110,6 @@ export interface AgentRunPrincipal {
   /** Who the run acts as. */
   actor?: {
     /** Sender / owner identity for bot-originated runs. */
-    bot?: ChatTopicBotContext;
     /**
      * Principal pool the routed device lives in: `personal` when a workspace
      * run was routed to the caller's own device via a per-user `local` override.
@@ -208,11 +204,6 @@ export interface RunAgentSnapshot extends Partial<OrviloAgentConfig> {
 export interface AgentWorldSnapshot {
   /** Agent definition snapshot: systemRole, chatConfig, agencyConfig … */
   agent?: RunAgentSnapshot;
-  /** Channel-specific facts the model should know (bot platform, Discord …). */
-  channel?: {
-    botPlatform?: BotPlatformContext;
-    discord?: DiscordContext;
-  };
   /** Borrowed-connector attribution rendered into the system message. */
   connectorOwnershipNote?: string;
   /** Evaluation prompt data for eval runs. */

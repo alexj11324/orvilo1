@@ -3,7 +3,6 @@ import path from 'node:path';
 import { type DeviceAttachment } from '@orvilo/builtin-tool-remote-device';
 import {
   describeGatewayRequestFailure,
-  type DeviceMessageApiResult,
   type DeviceStatusResult,
   type DeviceSystemInfo,
   type DeviceToolCallResult,
@@ -1856,52 +1855,6 @@ export class DeviceGateway {
       log('executeMcpCall: error — %s', message);
       const failure = describeGatewayRequestFailure(error, 'tool call');
       return { content: failure.content, error: failure.error, success: false };
-    }
-  }
-
-  async executeMessageApi(
-    params: { deviceId: string; userId: string; workspaceId?: string },
-    api: { apiName: string; payload: Record<string, unknown>; platform: string },
-    timeout = 30_000,
-  ): Promise<DeviceMessageApiResult> {
-    const client = this.getClient();
-    if (!client) {
-      return {
-        content: 'Device Gateway is not configured',
-        error: 'GATEWAY_NOT_CONFIGURED',
-        errorCode: 'GATEWAY_NOT_CONFIGURED',
-        success: false,
-      };
-    }
-
-    log(
-      'executeMessageApi: userId=%s, deviceId=%s, api=%s/%s',
-      params.userId,
-      params.deviceId,
-      api.platform,
-      api.apiName,
-    );
-
-    try {
-      return await client.executeMessageApi(
-        {
-          deviceId: params.deviceId,
-          timeout,
-          userId: params.userId,
-          workspaceId: params.workspaceId,
-        },
-        api,
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      log('executeMessageApi: error — %s', message);
-      const failure = describeGatewayRequestFailure(error, 'message API call');
-      return {
-        content: failure.content,
-        error: failure.error,
-        errorCode: failure.code,
-        success: false,
-      };
     }
   }
 

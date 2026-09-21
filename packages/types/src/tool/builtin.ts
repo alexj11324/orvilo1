@@ -302,22 +302,6 @@ export const BuiltinToolManifestSchema = z.object({
  */
 export interface BuiltinToolResolveContext {
   /**
-   * IM platform the run originates from (bot conversations only). Lets platform-
-   * aware tools trim APIs the platform can't fulfil — e.g. the `orvilo-message`
-   * tool drops `readMessages` on WeChat, which has no history-read API and would
-   * otherwise throw `PlatformUnsupportedError` after the model dutifully calls it.
-   */
-  botPlatform?: {
-    /** Platform id (e.g. `wechat`, `discord`). */
-    id: string;
-    /**
-     * `orvilo-message` API names this platform does not support. Sourced from the
-     * platform definition (`PlatformDefinition.unsupportedMessageApis`) so the
-     * manifest trim stays in lock-step with the runtime that throws.
-     */
-    unsupportedMessageApis?: string[];
-  };
-  /**
    * Where this run executes, derived from the resolved `ExecutionPlan`. The
    * routed desktop-local target stays `local`; other plans mirror their `kind`
    * (`device` / `device-unrouted` / `sandbox` / `none`). Lets exec-capable tools (e.g. orvilo-skills)

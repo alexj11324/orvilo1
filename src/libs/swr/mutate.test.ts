@@ -26,40 +26,40 @@ describe('scoped mutate', () => {
   it('passes string keys through unchanged in personal mode', async () => {
     getActiveWorkspaceIdMock.mockReturnValue(null);
 
-    await mutate('image:generationTopics');
+    await mutate('topic:list');
 
-    expect(scopedMutateMock).toHaveBeenCalledWith('image:generationTopics');
+    expect(scopedMutateMock).toHaveBeenCalledWith('topic:list');
   });
 
   it('passes array keys through unchanged in personal mode', async () => {
     getActiveWorkspaceIdMock.mockReturnValue(null);
 
-    await mutate(['image:generationBatches', 'topic-1']);
+    await mutate(['topic:batches', 'topic-1']);
 
-    expect(scopedMutateMock).toHaveBeenCalledWith(['image:generationBatches', 'topic-1']);
+    expect(scopedMutateMock).toHaveBeenCalledWith(['topic:batches', 'topic-1']);
   });
 
   it('appends workspace id to array keys in workspace mode', async () => {
     getActiveWorkspaceIdMock.mockReturnValue('ws-1');
 
-    await mutate(['image:generationBatches', 'topic-1']);
+    await mutate(['topic:batches', 'topic-1']);
 
     // Mirrors the augmentKey used by useClientDataSWR — keys must stay
     // symmetric so the mutate actually matches the live subscriber.
-    expect(scopedMutateMock).toHaveBeenCalledWith(['image:generationBatches', 'topic-1', 'ws-1']);
+    expect(scopedMutateMock).toHaveBeenCalledWith(['topic:batches', 'topic-1', 'ws-1']);
   });
 
   it('wraps non-array keys into a tuple with workspace id in workspace mode', async () => {
     getActiveWorkspaceIdMock.mockReturnValue('ws-1');
 
-    await mutate('image:generationTopics');
+    await mutate('topic:list');
 
-    expect(scopedMutateMock).toHaveBeenCalledWith(['image:generationTopics', 'ws-1']);
+    expect(scopedMutateMock).toHaveBeenCalledWith(['topic:list', 'ws-1']);
   });
 
   it('passes function-form matcher keys through unchanged in workspace mode', async () => {
     getActiveWorkspaceIdMock.mockReturnValue('ws-1');
-    const matcher = (key: unknown) => Array.isArray(key) && key[0] === 'image:generationTopics';
+    const matcher = (key: unknown) => Array.isArray(key) && key[0] === 'topic:list';
 
     await mutate(matcher);
 
@@ -69,10 +69,10 @@ describe('scoped mutate', () => {
   it('forwards extra arguments (data + options) to the underlying mutator', async () => {
     getActiveWorkspaceIdMock.mockReturnValue('ws-1');
 
-    await mutate(['image:generationTopics'], { foo: 'bar' }, { revalidate: true });
+    await mutate(['topic:list'], { foo: 'bar' }, { revalidate: true });
 
     expect(scopedMutateMock).toHaveBeenCalledWith(
-      ['image:generationTopics', 'ws-1'],
+      ['topic:list', 'ws-1'],
       { foo: 'bar' },
       { revalidate: true },
     );

@@ -67,9 +67,6 @@ describe('settings search index', () => {
   });
 
   it('covers the high-volume zero-result phrases as tab keywords', () => {
-    expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Messenger]).toEqual(
-      expect.arrayContaining(['telegram', 'slack', 'discord', 'wechat']),
-    );
     expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Storage]).toEqual(
       expect.arrayContaining(['knowledge base']),
     );

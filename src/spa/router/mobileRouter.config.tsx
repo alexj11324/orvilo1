@@ -477,20 +477,6 @@ export const mobileRoutes: RouteObject[] = [
               },
               {
                 element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Mobile > Workspace > Settings > Messenger',
-                ),
-                path: 'messenger',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Mobile > Workspace > Settings > Messenger > Platform',
-                ),
-                path: 'messenger/:sub',
-              },
-              {
-                element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
                   'Mobile > Workspace > Settings > Advanced',
                 ),
@@ -661,11 +647,4 @@ export const mobileRoutes: RouteObject[] = [
     path: '/onboarding',
   },
   ...BusinessMobileRoutesWithoutMainLayout,
-
-  // Messenger verify route (outside main layout)
-  {
-    element: dynamicElement(() => import('@/routes/verify-im'), 'Mobile > VerifyIm'),
-    errorElement: <ErrorBoundary />,
-    path: '/verify-im',
-  },
 ];

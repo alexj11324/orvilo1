@@ -12,7 +12,6 @@ import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfi
 import { useToolStore } from '@/store/tool';
 import {
   composioStoreSelectors,
-  mcpStoreSelectors,
   orviloSkillStoreSelectors,
   pluginSelectors,
 } from '@/store/tool/selectors';
@@ -47,9 +46,6 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
     const orviloSkillServer = useToolStore((s) =>
       orviloSkillStoreSelectors.getServers(s).find((srv) => srv.identifier === identifier),
     );
-
-    // Get Market MCP plugin info
-    const marketPlugin = useToolStore((s) => mcpStoreSelectors.getPluginById(identifier)(s));
 
     // Get Builtin tool info
     const builtinTool = useToolStore((s) =>
@@ -180,8 +176,8 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
 
     // Render MCP marketplace plugin or Builtin tool
     // Note: The actual installation happens in ExecutionRuntime after user approves
-    const pluginName = marketPlugin?.name || builtinTool?.manifest?.meta?.title || identifier;
-    const pluginIcon = marketPlugin?.icon || builtinTool?.manifest?.meta?.avatar;
+    const pluginName = builtinTool?.manifest?.meta?.title || identifier;
+    const pluginIcon = builtinTool?.manifest?.meta?.avatar;
     const pluginType = source === 'market' ? 'MCP Plugin' : 'Builtin Tool';
 
     return (

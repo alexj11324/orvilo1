@@ -94,8 +94,8 @@ const LabsForm = memo(() => {
   // Cross-surface experiments. Platform-specific ones (Electron main-process
   // features) live in the Desktop group below; everything else is General.
   const generalItems = LAB_FEATURES.filter((feature) => !feature.desktopOnly);
-  // Desktop-only experiments: local agent runtimes, iMessage bridge, and the
-  // in-app browser (renderer-retained Electron webviews).
+  // Desktop-only experiments: local agent runtimes and the in-app browser
+  // (renderer-retained Electron webviews).
   const desktopItems = LAB_FEATURES.filter((feature) => feature.desktopOnly);
 
   const items: FormGroupItemType[] = [

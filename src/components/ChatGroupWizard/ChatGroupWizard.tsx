@@ -12,8 +12,6 @@ import { useTranslation } from 'react-i18next';
 import ImperativeModal from '@/components/ImperativeModal';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import GroupAvatar from '@/features/GroupAvatar';
-import ModelSelect from '@/features/ModelSelect';
-import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useSessionStore } from '@/store/session';
 import { type OrviloAgentSession } from '@/types/session';
 import { OrviloSessionType } from '@/types/session';
@@ -160,9 +158,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     display: block;
     padding-inline-end: 48px;
   `,
-  modelSelectDisabled: css`
-    pointer-events: none;
-  `,
   rightColumn: css`
     overflow-y: auto;
     display: flex;
@@ -201,7 +196,6 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
   }) => {
     const { t } = useTranslation(['chat', 'common']);
     const groupTemplates = useGroupTemplates();
-    const enabledModels = useEnabledChatModels();
     const agentSessions = useSessionStore((s) =>
       (s.sessions || []).filter((session) => session.type === OrviloSessionType.Agent),
     );
@@ -213,28 +207,12 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
 
     const memberDescriptionClass = cx(styles.description, styles.memberDescription);
 
-    const defaultModel = useMemo(() => {
-      if (enabledModels.length > 0 && enabledModels[0].children.length > 0) {
-        const firstProvider = enabledModels[0];
-        const firstModel = firstProvider.children[0];
-
-        return {
-          model: firstModel.id,
-          provider: firstProvider.id,
-        };
-      }
-      return { model: undefined, provider: undefined };
-    }, [enabledModels]);
-
     const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
     const [removedMembers, setRemovedMembers] = useState<Record<string, string[]>>({});
     const [isHostRemoved, setIsHostRemoved] = useState(false);
-    const [hostModelConfig, setHostModelConfig] = useState<{ model?: string; provider?: string }>(
-      defaultModel.model && defaultModel.provider ? defaultModel : {},
-    );
     const [isCreatingCustom, setIsCreatingCustom] = useState(false);
     const [activePanel, setActivePanel] = useState<'templates' | 'agents'>('templates');
 
@@ -278,16 +256,11 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
       setSearchTerm('');
       setRemovedMembers({});
       setIsHostRemoved(false);
-      setHostModelConfig(defaultModel.model && defaultModel.provider ? defaultModel : {});
 
       // Clear any pending debounce timer
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-    }, [defaultModel]);
-
-    const handleHostModelChange = useCallback((config: { model?: string; provider?: string }) => {
-      setHostModelConfig(config);
     }, []);
 
     const handleToggleMember = useCallback(
@@ -461,15 +434,6 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
 
         .filter((item): item is NonNullable<typeof item> => Boolean(item));
     }, [selectedAgents, agentSessions, t, handleRemoveAgent, memberDescriptionClass]);
-
-    const normalizedHostModelConfig = useMemo(() => {
-      const model = hostModelConfig.model ?? defaultModel.model;
-      const provider = hostModelConfig.provider ?? defaultModel.provider;
-
-      if (!model || !provider) return undefined;
-
-      return { model, provider };
-    }, [hostModelConfig, defaultModel]);
 
     const handleTemplateConfirm = useCallback(async () => {
       if (!selectedTemplate) return;
@@ -649,16 +613,6 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                   </Text>
                 </Flexbox>
                 <Flexbox horizontal align="center" gap={12}>
-                  <div
-                    className={cx(isHostRemoved && styles.modelSelectDisabled)}
-                    style={{ opacity: isHostRemoved ? 0.6 : 1 }}
-                  >
-                    <ModelSelect
-                      requiredAbilities={['functionCall']}
-                      value={normalizedHostModelConfig}
-                      onChange={handleHostModelChange}
-                    />
-                  </div>
                   <Tooltip title={t('groupWizard.host.tooltip')}>
                     <Switch
                       checked={!isHostRemoved}

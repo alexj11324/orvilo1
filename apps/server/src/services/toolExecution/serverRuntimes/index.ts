@@ -43,10 +43,8 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-group-agent-builder': async () =>
     (await import('./groupAgentBuilder')).groupAgentBuilderRuntime,
   'orvilo-group-management': async () => (await import('./groupManagement')).groupManagementRuntime,
-  'orvilo-image-generation': async () => (await import('./imageGeneration')).imageGenerationRuntime,
   'orvilo-knowledge-base': async () => (await import('./knowledgeBase')).knowledgeBaseRuntime,
   'orvilo-local-system': async () => (await import('./localSystem')).localSystemRuntime,
-  'orvilo-message': async () => (await import('./message')).messageRuntime,
   'orvilo-notebook': async () => (await import('./notebook')).notebookRuntime,
   'orvilo-page-agent': async () => (await import('./pageAgent')).pageAgentRuntime,
   'orvilo-remote-device': async () => (await import('./remoteDevice')).remoteDeviceRuntime,

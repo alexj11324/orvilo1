@@ -2,9 +2,6 @@ import { ModelProvider } from 'model-bank';
 
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import type { ChatStreamPayload } from '../../types';
-import { createVolcengineImage } from './createImage';
-import { createVolcengineVideo } from './video/createVideo';
-import { handleVolcengineVideoWebhook } from './video/handleCreateVideoWebhook';
 
 const isVolcengineReasoningEffortModel = (model: string) => {
   const normalizedModel = model.toLowerCase();
@@ -92,13 +89,10 @@ export const OrviloVolcengineAI = createOpenAICompatibleRuntime({
       } as any;
     },
   },
-  createImage: createVolcengineImage,
-  createVideo: createVolcengineVideo,
   debug: {
     chatCompletion: () => process.env.DEBUG_VOLCENGINE_CHAT_COMPLETION === '1',
     responses: () => process.env.DEBUG_VOLCENGINE_RESPONSES === '1',
   },
-  handleCreateVideoWebhook: handleVolcengineVideoWebhook,
   provider: ModelProvider.Volcengine,
   responses: {
     handlePayload: (payload) => {

@@ -14,7 +14,7 @@ Rules:
 - For work/projects, use work-related emojis (💼, 🚀, 💪) not cultural symbols
 - For pure emotions without specific topics, use face emojis (happy: 🎉, sad: 😢, thinking: 🤔)
 - For activities or subjects, use object or symbol emojis that represent the main topic
-- No explanations or additional text",
+- Return one JSON object with a single "emoji" string matching the supplied schema",
       "role": "system",
     },
     {
@@ -22,7 +22,7 @@ Rules:
       "role": "user",
     },
     {
-      "content": "✒️",
+      "content": "{"emoji": "✒️"}",
       "role": "assistant",
     },
     {
@@ -30,7 +30,7 @@ Rules:
       "role": "user",
     },
     {
-      "content": "🧙‍♂️",
+      "content": "{"emoji": "🧙‍♂️"}",
       "role": "assistant",
     },
     {
@@ -38,7 +38,7 @@ Rules:
       "role": "user",
     },
     {
-      "content": "🎉",
+      "content": "{"emoji": "🎉"}",
       "role": "assistant",
     },
     {
@@ -46,7 +46,7 @@ Rules:
       "role": "user",
     },
     {
-      "content": "🚀",
+      "content": "{"emoji": "🚀"}",
       "role": "assistant",
     },
     {

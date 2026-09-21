@@ -48,7 +48,7 @@ The boundary cluster:
 | 0184 | `0184_task_workspace_claim_identity` | 1790004829709 | `task_workspace_claims` repo\_common\_dir/base\_branch                                                                                                                 |
 | 0185 | `0185_fence_seq_forward_repair`      | 1790004830709 | conditional `fence_seq` repair + definition verification                                                                                                               |
 
-Full inventory as of this writing: 188 journal entries, `0000`–`0187`, gap-free.
+Full inventory as of this writing: 189 journal entries, `0000`–`0188`, gap-free.
 Regenerate with `bun run db:generate` / inspect `meta/_journal.json`; the
 appendix at the bottom lists every entry.
 
@@ -281,3 +281,4 @@ exactly as 0182 defines it.
 | 0185 | `0185_fence_seq_forward_repair`                       | 1790004830709 |
 | 0186 | `0186_agent_operation_launches`                       | 1790004831709 |
 | 0187 | `0187_action_approval_dispatch_binding`               | 1790004832709 |
+| 0188 | `0188_drop_retired_capability_tables`                 | 1790004833709 |

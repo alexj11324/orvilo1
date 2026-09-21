@@ -16,10 +16,8 @@ export const toContextSnapshot = ({
   agentGroup,
   agentIdentity,
   agentManagementContext,
-  botPlatformContext,
   capabilities,
   connectorOwnershipNote,
-  discordContext,
   enableAgentMode,
   enableExpertise,
   enableHistoryCount,
@@ -104,9 +102,7 @@ export const toContextSnapshot = ({
   },
   variables: additionalVariables,
   world: {
-    botPlatformContext,
     connectorOwnershipNote,
-    discordContext,
     evalContext,
     group: agentGroup,
     projectInstructions,
@@ -130,7 +126,6 @@ export const serverMessagesEngine = async (
 
 // Re-export types
 export type {
-  BotPlatformContext,
   EvalContext,
   ServerKnowledgeConfig,
   ServerMessagesEngineParams,

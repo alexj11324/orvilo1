@@ -1,19 +1,4 @@
 export default {
-  'marketSubmission.entry': 'Publish',
-  'marketSubmission.title': 'Publish to Market',
-  'marketSubmission.submit': 'Publish',
-  'marketSubmission.confirm':
-    '“{{name}}” will become a public agent when published to Market. Make sure its profile and prompt contain no private information or secrets.',
-  'marketSubmission.required': 'Add an agent name and prompt before publishing.',
-  'marketSubmission.success':
-    'Submitted. Your agent is under review and will appear in Market after approval.',
-  'marketSubmission.failed': 'Could not submit. Please try again.',
-  'marketSubmission.linkFailed':
-    'Submitted, but could not save the Market link locally ({{identifier}}). Keep this identifier and avoid resubmitting as a new agent.',
-  'marketPublish.status.published': 'Published',
-  'marketPublish.status.unpublished': 'Unpublished',
-  'marketPublish.status.archived': 'Archived',
-  'marketPublish.status.deprecated': 'Deprecated',
   'completionSound.title': 'In-app completion sound',
   'completionSound.enabled': 'Play completion sound',
   'completionSound.desc':
@@ -831,7 +816,6 @@ export default {
   'llm.proxyUrl.title': 'API proxy URL',
   'llm.waitingForMore': 'More models are <1>planned to be added</1>, stay tuned',
   'llm.waitingForMoreLinkAriaLabel': 'Open the Provider request form',
-  'marketPublish.status.underReview': 'Under Review',
   'memory.effort.desc': 'Control how aggressively the AI retrieves and updates memory.',
   'memory.effort.high': 'High — Proactive retrieval and updates',
   'memory.effort.level.high': 'High',
@@ -853,15 +837,6 @@ export default {
   'notification.channel.status.notLinked': 'Not linked',
   'notification.channel.types.title': 'Notification types',
   'notification.email.desc': 'Receive email notifications when important events occur',
-  'notification.im.banner.platformUnlinked': '{{platform}} is not linked yet',
-  'notification.im.desc':
-    'Deliver notifications to your linked messenger (Telegram, Discord, Slack, or WeChat) via the Orvilo bot',
-  'notification.im.linkAccount': 'Link account',
-  'notification.im.title': 'Messenger Notifications',
-  'notification.im.platform.desc':
-    'Deliver notifications to your {{platform}} DM via the Orvilo bot',
-  'notification.im.platform.enable': 'Enable {{platform}} notifications',
-  'notification.im.platform.viewSetup': 'View setup',
   'notification.email.title': 'Email Notifications',
   'notification.inbox.desc': 'Show notifications in the in-app inbox',
   'notification.inbox.title': 'Inbox Notifications',
@@ -1345,8 +1320,6 @@ export default {
   'settingsSearch.tabKeywords.labels': 'labels, tags, grouping',
   'settingsSearch.tabKeywords.labs': 'labs, experiment, beta, preview, developer',
   'settingsSearch.tabKeywords.memory': 'memory, memories, personalization',
-  'settingsSearch.tabKeywords.messenger':
-    'messenger, chat platform, bot, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.notification':
     'notification, email, push, alerts, inbox, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.oauthApps': 'oauth, oauth apps, developer apps',
@@ -1599,9 +1572,6 @@ export default {
   'systemAgent.followUpAction.modelDesc':
     'Model used to suggest one-click follow-up replies under each assistant message',
   'systemAgent.followUpAction.title': 'Follow-up Suggestions',
-  'systemAgent.generationTopic.label': 'Model',
-  'systemAgent.generationTopic.modelDesc': 'Model used to name AI image topics',
-  'systemAgent.generationTopic.title': 'AI Image Topic Naming',
   'systemAgent.helpInfo':
     'When creating a new agent, the default agent settings will be used as preset values.',
   'systemAgent.historyCompress.label': 'Model',
@@ -1685,7 +1655,6 @@ export default {
   'tab.manualFill': 'Manually Fill In',
   'tab.manualFill.desc': 'Configure a custom MCP skill manually',
   'tab.memory': 'Memory',
-  'tab.messenger': 'Messenger',
   'tab.notification': 'Notifications',
   'tab.profile': 'My Account',
   'tab.provider': 'Provider',
@@ -3811,11 +3780,6 @@ export default {
   'tools.builtins.orvilo-knowledge-base.description':
     'Find, browse, and read your uploaded files, and search organized knowledge bases via semantic vector search',
   'tools.builtins.orvilo-knowledge-base.title': 'Knowledge Base',
-  'tools.builtins.orvilo-message.description':
-    'Send, read, edit, and manage messages across multiple messaging platforms with a unified interface',
-  'tools.builtins.orvilo-message.readme':
-    'Cross-platform messaging tool supporting Discord, Telegram, Slack, Google Chat, and IRC. Provides unified APIs for message operations, reactions, pins, threads, channel management, and platform-specific features like polls.',
-  'tools.builtins.orvilo-message.title': 'Message',
   'tools.builtins.orvilo-page-agent.description':
     'Create, read, update, and delete nodes in XML-structured documents',
   'tools.builtins.orvilo-page-agent.readme':
@@ -3842,11 +3806,6 @@ export default {
   'tools.builtins.orvilo-web-browsing.readme':
     'Search the web for current information and crawl web pages to extract content. Supports multiple search engines, categories, and time ranges for comprehensive research.',
   'tools.builtins.orvilo-web-browsing.title': 'Web Browsing',
-  'tools.builtins.orvilo-image-generation.description':
-    'Generate images through Orvilo providers when the current chat model has no native image output.',
-  'tools.builtins.orvilo-image-generation.readme':
-    'Opt-in image generation for models without native image output. Pin this tool to enable it in chat or agent mode; leave unpinned to avoid the tool schema cost.',
-  'tools.builtins.orvilo-image-generation.title': 'Image Generation',
   'tools.builtins.orvilo-web-onboarding.description':
     'Drive the web onboarding flow with a controlled agent runtime',
   'tools.builtins.orvilo-web-onboarding.title': 'Web Onboarding',

@@ -7,7 +7,8 @@ exports[`chainTranslate > should create a payload with system and user messages 
       "content": "You are a professional translator. Translate the input text to zh-CN.
 
 Rules:
-- Output ONLY the translated text, no explanations or additional context
+- Return one JSON object with a single "translation" string matching the supplied schema
+- No explanations or additional fields
 - Preserve technical terms, code identifiers, API keys, and proper nouns exactly as they appear
 - Maintain the original formatting and structure
 - Use natural, idiomatic expressions in the target language",

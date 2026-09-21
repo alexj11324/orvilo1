@@ -1,10 +1,8 @@
 import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
-import { and, asc, count, eq, exists, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { devices } from '../schemas/device';
-import { messengerAccountLinks } from '../schemas/messengerAccountLink';
-import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
@@ -104,8 +102,8 @@ export class WorkspaceMemberModel {
   /**
    * Bounded assignee directory: active members whose role may own a task,
    * optionally narrowed by `query` — an exact (case-folded) user id, or a
-   * case-insensitive part of the display name, @handle, email, or a messenger
-   * identity linked under this workspace's scope — and capped by `limit`.
+   * case-insensitive part of the display name, @handle or email — and capped
+   * by `limit`.
    * The narrowing and the cap run in SQL so a large workspace costs one page
    * plus a count, never a full member scan on the application side. `total`
    * is the number of matches before the cap.
@@ -123,23 +121,6 @@ export class WorkspaceMemberModel {
           containsIgnoreCase(users.fullName, query),
           containsIgnoreCase(users.username, query),
           containsIgnoreCase(users.email, query),
-          // Same scope rule as `MessengerAccountLinkModel.findByUserIds`: only
-          // identities active under this workspace take part in resolution.
-          exists(
-            this.db
-              .select({ one: sql`1` })
-              .from(messengerAccountLinks)
-              .where(
-                and(
-                  eq(messengerAccountLinks.userId, workspaceMembers.userId),
-                  eq(messengerAccountLinks.workspaceId, workspaceId),
-                  or(
-                    containsIgnoreCase(messengerAccountLinks.platformUsername, query),
-                    sql`lower(${messengerAccountLinks.platformUserId}) = ${query}`,
-                  ),
-                ),
-              ),
-          ),
         )
       : undefined;
     const where = and(

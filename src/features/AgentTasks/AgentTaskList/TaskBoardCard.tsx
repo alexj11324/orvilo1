@@ -116,6 +116,11 @@ const toTaskStatus = (status: string): TaskStatus =>
 
 interface TaskBoardCardProps {
   /**
+   * Board-card glyph/context-menu status. Linear-linked cards go through
+   * `moveBoard`; omit to keep the store `changeTaskStatus` default.
+   */
+  onStatusChange?: (status: TaskStatus) => void | Promise<void>;
+  /**
    * Rendered inside the DragOverlay: skip the sortable listeners and hover
    * affordance — the lifted card is a preview, not an interactive copy.
    */
@@ -130,258 +135,258 @@ interface TaskBoardCardProps {
  * (priority / schedule / privacy), and a meta row carrying the human owner
  * (reviewer while paused) plus live-run and subtask affordances.
  */
-const TaskBoardCard = memo<TaskBoardCardProps>(({ overlay, routeScope = 'agent', task }) => {
-  const { t, i18n } = useTranslation('common');
-  const { t: tChat } = useTranslation('chat');
-  const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
-  const updateTask = useTaskStore((s) => s.updateTask);
-  const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
-  const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
-  const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } = useTaskItemContextMenu(
-    task,
-    routeScope,
-  );
-  const navigate = useWorkspaceAwareNavigate();
-  const activeWorkspaceId = useActiveWorkspaceId();
+const TaskBoardCard = memo<TaskBoardCardProps>(
+  ({ onStatusChange, overlay, routeScope = 'agent', task }) => {
+    const { t, i18n } = useTranslation('common');
+    const { t: tChat } = useTranslation('chat');
+    const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
+    const updateTask = useTaskStore((s) => s.updateTask);
+    const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
+    const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
+    const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } =
+      useTaskItemContextMenu(task, routeScope, onStatusChange);
+    const navigate = useWorkspaceAwareNavigate();
+    const activeWorkspaceId = useActiveWorkspaceId();
 
-  const status = toTaskStatus(task.status);
-  const hasName = Boolean(task.name?.trim());
-  const time = formatTaskItemDate(task.updatedAt || task.createdAt, {
-    formatOtherYear: t('time.formatOtherYear'),
-    formatThisYear: t('time.formatThisYear'),
-    locale: i18n.language,
-  });
+    const status = toTaskStatus(task.status);
+    const hasName = Boolean(task.name?.trim());
+    const time = formatTaskItemDate(task.updatedAt || task.createdAt, {
+      formatOtherYear: t('time.formatOtherYear'),
+      formatThisYear: t('time.formatThisYear'),
+      locale: i18n.language,
+    });
 
-  const handleClick = useCallback(() => {
-    navigate(
-      taskDetailPath(
-        task.identifier,
-        routeScope === 'agent' ? (task.assigneeAgentId ?? undefined) : undefined,
-        task.name,
-      ),
-    );
-  }, [navigate, routeScope, task.assigneeAgentId, task.identifier, task.name]);
-
-  const handleRequestSubtasks = useCallback(async () => {
-    const detail = await fetchTaskDetail(task.identifier);
-    return detail.subtasks ?? [];
-  }, [fetchTaskDetail, task.identifier]);
-
-  const handleSubtaskClick = useCallback(
-    (identifier: string, assigneeAgentId?: string, name?: string) => {
+    const handleClick = useCallback(() => {
       navigate(
-        taskDetailPath(identifier, routeScope === 'agent' ? assigneeAgentId : undefined, name),
+        taskDetailPath(
+          task.identifier,
+          routeScope === 'agent' ? (task.assigneeAgentId ?? undefined) : undefined,
+          task.name,
+        ),
       );
-    },
-    [navigate, routeScope],
-  );
+    }, [navigate, routeScope, task.assigneeAgentId, task.identifier, task.name]);
 
-  const isPrivate = task.visibility === 'private';
-  const privacyBadge = isPrivate ? (
-    <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-      <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
-    </Tooltip>
-  ) : null;
+    const handleRequestSubtasks = useCallback(async () => {
+      const detail = await fetchTaskDetail(task.identifier);
+      return detail.subtasks ?? [];
+    }, [fetchTaskDetail, task.identifier]);
 
-  // Executor slot (top-right): the agent — or the hover-revealed assign
-  // affordance when the card has none. Mirrors Cordy's board card.
-  const executorNode = (
-    <AssigneeAgentSelector
-      currentAgentId={task.assigneeAgentId}
-      disabled={status === 'running'}
-      taskIdentifier={task.identifier}
-      taskVisibility={task.visibility}
-    >
-      {task.assigneeAgentId ? (
-        <AssigneeAvatar agentId={task.assigneeAgentId} tooltip={status !== 'running'} />
-      ) : (
-        <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
-          <span className={styles.assignReveal} style={{ display: 'inline-flex' }}>
-            <UnassignedAssigneeIcon kind={'agent'} />
-          </span>
-        </Tooltip>
-      )}
-    </AssigneeAgentSelector>
-  );
-
-  // Owner slot (meta row, left): who is accountable to a human reader. While
-  // paused the reviewer owns the review — not the executor assignee.
-  const ownerNode =
-    status === 'paused'
-      ? shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
-          <AssigneeMemberSelector
-            currentUserId={task.reviewerUserId}
-            taskCreatorId={task.createdByUserId}
-            taskIdentifier={task.identifier}
-            taskVisibility={task.visibility}
-            onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
-          >
-            {task.reviewerUserId ? (
-              <Tooltip title={tChat('taskDetail.reviewer')}>
-                <span>
-                  <AssigneeUserAvatar userId={task.reviewerUserId} />
-                </span>
-              </Tooltip>
-            ) : (
-              <Tooltip title={tChat('taskDetail.reviewer')}>
-                <UnassignedAssigneeIcon kind={'human'} />
-              </Tooltip>
-            )}
-          </AssigneeMemberSelector>
-        )
-      : shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
-          <AssigneeMemberSelector
-            currentUserId={task.assigneeUserId}
-            disabled={status === 'running'}
-            taskCreatorId={task.createdByUserId}
-            taskIdentifier={task.identifier}
-            taskVisibility={task.visibility}
-          >
-            {task.assigneeUserId ? (
-              <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
-            ) : (
-              <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
-                <UnassignedAssigneeIcon kind={'human'} />
-              </Tooltip>
-            )}
-          </AssigneeMemberSelector>
+    const handleSubtaskClick = useCallback(
+      (identifier: string, assigneeAgentId?: string, name?: string) => {
+        navigate(
+          taskDetailPath(identifier, routeScope === 'agent' ? assigneeAgentId : undefined, name),
         );
+      },
+      [navigate, routeScope],
+    );
 
-  const openRunNode =
-    status === 'running' && task.currentTopicId ? (
-      <Tooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
-        <ActionIcon
-          icon={MessageSquareTextIcon}
-          size={'small'}
-          onClick={(event) => {
-            event.stopPropagation();
-            openTopicDrawer(task.currentTopicId!, {
-              agentId: task.assigneeAgentId ?? undefined,
-              taskId: task.identifier,
-              title: task.name ?? undefined,
-            });
-          }}
-        />
+    const isPrivate = task.visibility === 'private';
+    const privacyBadge = isPrivate ? (
+      <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
+        <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
       </Tooltip>
     ) : null;
 
-  const card = (
-    <div
-      data-task-board-card
-      className={cx(styles.card, overlay && styles.cardOverlay)}
-      data-collab-id={`task:${task.id}`}
-      data-collab-id-alt={`task:${task.identifier}`}
-      data-collab-private={isPrivate || undefined}
-      onClick={overlay ? undefined : handleClick}
-    >
-      {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
-          assigned executor top-right). */}
-      <Flexbox horizontal align={'center'} gap={8} style={{ minHeight: 24 }}>
-        <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} type={'secondary'}>
-          {task.identifier}
-        </Text>
-        {privacyBadge}
-        <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
-          {executorNode}
-        </Flexbox>
-      </Flexbox>
-
-      {/* Row 2 — status glyph + title, two lines max. */}
-      <Flexbox horizontal align={'flex-start'} gap={6} style={{ marginTop: 4, minWidth: 0 }}>
-        <span
-          data-collab-id={`task:${task.id}:status`}
-          data-collab-id-alt={`task:${task.identifier}:status`}
-          style={{ flex: 'none', marginTop: 2 }}
-        >
-          <TaskStatusIcon size={14} status={status} />
-        </span>
-        <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
-      </Flexbox>
-
-      {/* Optional description preview (Cordy shows one muted line). */}
-      {task.description?.trim() ? (
-        <p className={styles.description} style={{ margin: 0 }}>
-          {task.description.trim()}
-        </p>
-      ) : null}
-
-      {/* Chip row — priority, schedule, subtask progress. */}
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={6}
-        style={{ marginTop: 6, minHeight: 20, minWidth: 0 }}
-        wrap={'wrap'}
+    // Executor slot (top-right): the agent — or the hover-revealed assign
+    // affordance when the card has none. Mirrors Cordy's board card.
+    const executorNode = (
+      <AssigneeAgentSelector
+        currentAgentId={task.assigneeAgentId}
+        disabled={status === 'running'}
+        taskIdentifier={task.identifier}
+        taskVisibility={task.visibility}
       >
-        <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
-        <LinearTaskSyncStatus taskId={task.id} />
-        <TaskWorkflowBadge
-          executionStatus={task.status}
-          workflowCategory={task.workflowCategory}
-          workflowStateId={task.workflowStateId}
-        />
-        {task.automationMode ? (
-          <TaskTriggerTag
-            automationMode={task.automationMode}
-            heartbeatInterval={task.heartbeatInterval}
-            schedulePattern={task.schedulePattern}
-            scheduleTimezone={task.scheduleTimezone}
+        {task.assigneeAgentId ? (
+          <AssigneeAvatar agentId={task.assigneeAgentId} tooltip={status !== 'running'} />
+        ) : (
+          <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
+            <span className={styles.assignReveal} style={{ display: 'inline-flex' }}>
+              <UnassignedAssigneeIcon kind={'agent'} />
+            </span>
+          </Tooltip>
+        )}
+      </AssigneeAgentSelector>
+    );
+
+    // Owner slot (meta row, left): who is accountable to a human reader. While
+    // paused the reviewer owns the review — not the executor assignee.
+    const ownerNode =
+      status === 'paused'
+        ? shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
+            <AssigneeMemberSelector
+              currentUserId={task.reviewerUserId}
+              taskCreatorId={task.createdByUserId}
+              taskIdentifier={task.identifier}
+              taskVisibility={task.visibility}
+              onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
+            >
+              {task.reviewerUserId ? (
+                <Tooltip title={tChat('taskDetail.reviewer')}>
+                  <span>
+                    <AssigneeUserAvatar userId={task.reviewerUserId} />
+                  </span>
+                </Tooltip>
+              ) : (
+                <Tooltip title={tChat('taskDetail.reviewer')}>
+                  <UnassignedAssigneeIcon kind={'human'} />
+                </Tooltip>
+              )}
+            </AssigneeMemberSelector>
+          )
+        : shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
+            <AssigneeMemberSelector
+              currentUserId={task.assigneeUserId}
+              disabled={status === 'running'}
+              taskCreatorId={task.createdByUserId}
+              taskIdentifier={task.identifier}
+              taskVisibility={task.visibility}
+            >
+              {task.assigneeUserId ? (
+                <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
+              ) : (
+                <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
+                  <UnassignedAssigneeIcon kind={'human'} />
+                </Tooltip>
+              )}
+            </AssigneeMemberSelector>
+          );
+
+    const openRunNode =
+      status === 'running' && task.currentTopicId ? (
+        <Tooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
+          <ActionIcon
+            icon={MessageSquareTextIcon}
+            size={'small'}
+            onClick={(event) => {
+              event.stopPropagation();
+              openTopicDrawer(task.currentTopicId!, {
+                agentId: task.assigneeAgentId ?? undefined,
+                taskId: task.identifier,
+                title: task.name ?? undefined,
+              });
+            }}
           />
-        ) : null}
-        {status === 'scheduled' ? (
-          <Text fontSize={12} type={'secondary'}>
-            {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-          </Text>
-        ) : null}
-      </Flexbox>
+        </Tooltip>
+      ) : null;
 
-      {/* Meta row — human owner + date on the left, subtask progress and the
-          live-run entry on the right. */}
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
-        style={{ marginTop: 6, minHeight: 24, minWidth: 0 }}
+    const card = (
+      <div
+        data-task-board-card
+        className={cx(styles.card, overlay && styles.cardOverlay)}
+        data-collab-id={`task:${task.id}`}
+        data-collab-id-alt={`task:${task.identifier}`}
+        data-collab-private={isPrivate || undefined}
+        onClick={overlay ? undefined : handleClick}
       >
+        {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
+          assigned executor top-right). */}
+        <Flexbox horizontal align={'center'} gap={8} style={{ minHeight: 24 }}>
+          <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} type={'secondary'}>
+            {task.identifier}
+          </Text>
+          {privacyBadge}
+          <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+            {executorNode}
+          </Flexbox>
+        </Flexbox>
+
+        {/* Row 2 — status glyph + title, two lines max. */}
+        <Flexbox horizontal align={'flex-start'} gap={6} style={{ marginTop: 4, minWidth: 0 }}>
+          <span
+            data-collab-id={`task:${task.id}:status`}
+            data-collab-id-alt={`task:${task.identifier}:status`}
+            style={{ flex: 'none', marginTop: 2 }}
+          >
+            <TaskStatusIcon size={14} status={status} />
+          </span>
+          <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
+        </Flexbox>
+
+        {/* Optional description preview (Cordy shows one muted line). */}
+        {task.description?.trim() ? (
+          <p className={styles.description} style={{ margin: 0 }}>
+            {task.description.trim()}
+          </p>
+        ) : null}
+
+        {/* Chip row — priority, schedule, subtask progress. */}
         <Flexbox
           horizontal
           align={'center'}
-          data-collab-id={`task:${task.id}:assignee`}
-          data-collab-id-alt={`task:${task.identifier}:assignee`}
-          flex={'none'}
-          gap={4}
+          gap={6}
+          style={{ marginTop: 6, minHeight: 20, minWidth: 0 }}
+          wrap={'wrap'}
         >
-          {ownerNode}
-        </Flexbox>
-        {time ? (
-          <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
-            {time}
-          </Text>
-        ) : null}
-        <Flexbox horizontal align={'center'} flex={'none'} gap={4} style={{ marginLeft: 'auto' }}>
-          <TaskSubtaskProgressTag
-            currentIdentifier={task.identifier}
-            progress={task.subtaskProgress}
-            subtasks={taskDetail?.subtasks}
-            onRequestSubtasks={handleRequestSubtasks}
-            onSubtaskClick={handleSubtaskClick}
+          <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+          <LinearTaskSyncStatus taskId={task.id} />
+          <TaskWorkflowBadge
+            executionStatus={task.status}
+            workflowCategory={task.workflowCategory}
+            workflowStateId={task.workflowStateId}
           />
-          {openRunNode}
+          {task.automationMode ? (
+            <TaskTriggerTag
+              automationMode={task.automationMode}
+              heartbeatInterval={task.heartbeatInterval}
+              schedulePattern={task.schedulePattern}
+              scheduleTimezone={task.scheduleTimezone}
+            />
+          ) : null}
+          {status === 'scheduled' ? (
+            <Text fontSize={12} type={'secondary'}>
+              {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
+            </Text>
+          ) : null}
         </Flexbox>
-      </Flexbox>
-    </div>
-  );
 
-  const content = <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
+        {/* Meta row — human owner + date on the left, subtask progress and the
+          live-run entry on the right. */}
+        <Flexbox
+          horizontal
+          align={'center'}
+          gap={8}
+          style={{ marginTop: 6, minHeight: 24, minWidth: 0 }}
+        >
+          <Flexbox
+            horizontal
+            align={'center'}
+            data-collab-id={`task:${task.id}:assignee`}
+            data-collab-id-alt={`task:${task.identifier}:assignee`}
+            flex={'none'}
+            gap={4}
+          >
+            {ownerNode}
+          </Flexbox>
+          {time ? (
+            <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
+              {time}
+            </Text>
+          ) : null}
+          <Flexbox horizontal align={'center'} flex={'none'} gap={4} style={{ marginLeft: 'auto' }}>
+            <TaskSubtaskProgressTag
+              currentIdentifier={task.identifier}
+              progress={task.subtaskProgress}
+              subtasks={taskDetail?.subtasks}
+              onRequestSubtasks={handleRequestSubtasks}
+              onSubtaskClick={handleSubtaskClick}
+            />
+            {openRunNode}
+          </Flexbox>
+        </Flexbox>
+      </div>
+    );
 
-  // The overlay twin never opens menus — it only previews the dragged card.
-  if (overlay) return content;
+    const content = <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
 
-  return (
-    <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-      {content}
-    </ContextMenuTrigger>
-  );
-});
+    // The overlay twin never opens menus — it only previews the dragged card.
+    if (overlay) return content;
+
+    return (
+      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
+        {content}
+      </ContextMenuTrigger>
+    );
+  },
+);
 
 export default TaskBoardCard;

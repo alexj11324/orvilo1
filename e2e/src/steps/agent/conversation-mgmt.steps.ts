@@ -162,11 +162,34 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     })
     .not.toContain('opacity: 0.5');
 
+  const sendSecondMessage = async () => {
+    await chatInputContainer.click();
+    await this.page.waitForTimeout(300);
+    await this.page.keyboard.type('hello world', { delay: 30 });
+    await this.page.keyboard.press('Enter');
+  };
+
   await addTopicButton.click();
-  await chatInputContainer.click();
-  await this.page.waitForTimeout(300);
-  await this.page.keyboard.type('hello world', { delay: 30 });
-  await this.page.keyboard.press('Enter');
+  await sendSecondMessage();
+
+  // The new-topic click remounts the conversation view; an Enter fired while
+  // the composer re-mounts is swallowed and no user row is ever committed
+  // (pg showed topics=1 on CI). Verify the optimistic bubble exists and retry
+  // the send once if it was dropped.
+  const secondUserRow = this.page
+    .locator('.message-wrapper')
+    .filter({ hasText: 'hello world' })
+    .last();
+  try {
+    await expect(secondUserRow, 'second send never produced a user row').toBeVisible({
+      timeout: 20_000,
+    });
+  } catch {
+    await sendSecondMessage();
+    await expect(secondUserRow, 'second send still swallowed after retry').toBeVisible({
+      timeout: 20_000,
+    });
+  }
 
   // Confirm the second topic actually registered in the sidebar before the
   // scenario proceeds to click it. The sidebar is SWR-driven and only refetches

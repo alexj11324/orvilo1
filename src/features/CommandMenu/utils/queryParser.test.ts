@@ -89,6 +89,17 @@ describe('parseSearchQuery', () => {
     });
   });
 
+  it('should parse work sidecar types', () => {
+    expect(parseSearchQuery('type:task inbox')).toEqual({
+      cleanQuery: 'inbox',
+      typeFilter: 'task',
+    });
+    expect(parseSearchQuery('is:savedView all')).toEqual({
+      cleanQuery: 'all',
+      typeFilter: 'savedView',
+    });
+  });
+
   it('should handle all valid types', () => {
     // Derived from the parser's own list: a restated copy is how `memory` kept
     // being asserted long after the surface behind it was retired.

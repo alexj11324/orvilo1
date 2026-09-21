@@ -8,6 +8,7 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import Loading from '@/components/Loading/BrandTextLoading';
 import { RouteMetaBridge } from '@/features/RouteMeta';
+import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { stripWorkspaceSlug } from '@/features/Workspace/workspaceAwarePath';
 import dynamic from '@/libs/next/dynamic';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -24,7 +25,15 @@ const CloudBanner = dynamic(() => import('@/features/AlertBanner/CloudBanner'));
  * pathname would hide the tab bar inside a workspace — where it is the only
  * navigation a phone viewport gets.
  */
-const MOBILE_NAV_ROUTES = new Set(['/', '/tasks', '/me']);
+const MOBILE_NAV_ROUTES = [
+  '/',
+  '/inbox',
+  '/me',
+  '/my-issues',
+  '/tasks',
+  '/teams',
+  '/views',
+] as const;
 
 /**
  * Whether the tab bar belongs on this route.
@@ -35,12 +44,18 @@ const MOBILE_NAV_ROUTES = new Set(['/', '/tasks', '/me']);
 export const isMobileNavRoute = (
   pathname: string,
   activeSlug: string | null | undefined,
-): boolean => MOBILE_NAV_ROUTES.has(stripWorkspaceSlug(pathname, activeSlug));
+): boolean => {
+  const path = stripWorkspaceSlug(pathname, activeSlug);
+  return MOBILE_NAV_ROUTES.some((route) =>
+    route === '/' ? path === '/' : path === route || path.startsWith(`${route}/`),
+  );
+};
 
 const MobileMainLayout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
   const activeSlug = useActiveWorkspaceSlug();
   const { pathname } = useLocation();
+  useWorkspaceUrlSync();
 
   const showNav = isMobileNavRoute(pathname, activeSlug);
   return (

@@ -587,7 +587,7 @@ const AgentViewAllPage = memo(() => {
           </Center>
         ) : viewMode === 'card' ? (
           groupedItems ? (
-            <Flexbox gap={8}>
+            <Flexbox data-agent-list gap={8}>
               {groupedItems.map((group, index) => {
                 const collapsed = !expandedGroupSet.has(group.key);
                 return (
@@ -609,12 +609,14 @@ const AgentViewAllPage = memo(() => {
               })}
             </Flexbox>
           ) : (
-            <div className={cardStyles.grid}>{filteredItems.map(renderCard)}</div>
+            <div data-agent-list className={cardStyles.grid}>
+              {filteredItems.map(renderCard)}
+            </div>
           )
         ) : (
           // Grouped list shares the card branch's wrapper rhythm (outer gap 8,
           // bare GroupHeader) so toggling the view mode doesn't shift the bars.
-          <Flexbox gap={groupedItems ? 8 : 2}>
+          <Flexbox data-agent-list gap={groupedItems ? 8 : 2}>
             {groupedItems
               ? groupedItems.map((group, index) => {
                   const collapsed = !expandedGroupSet.has(group.key);

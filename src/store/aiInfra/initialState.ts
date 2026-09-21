@@ -1,13 +1,19 @@
-import { type AIModelsState } from './slices/aiModel';
-import { initialAIModelState } from './slices/aiModel';
-import { type AIProviderState } from './slices/aiProvider';
-import { initialAIProviderState } from './slices/aiProvider';
+import type { EnabledAiModel, OrviloDefaultAiModelListItem } from 'model-bank';
 
-export interface AIProviderStoreState extends AIProviderState, AIModelsState {
-  /* empty */
+import { type AiProviderRuntimeConfig, type EnabledProviderWithModels } from '@/types/aiProvider';
+
+export interface AIProviderStoreState {
+  aiProviderRuntimeConfig: Record<string, AiProviderRuntimeConfig>;
+  builtinAiModelList: OrviloDefaultAiModelListItem[];
+  enabledAiModels?: EnabledAiModel[];
+  // used for select
+  enabledChatModelList?: EnabledProviderWithModels[];
+  enabledImageModelList?: EnabledProviderWithModels[];
+  isInitAiProviderRuntimeState: boolean;
 }
 
 export const initialState: AIProviderStoreState = {
-  ...initialAIProviderState,
-  ...initialAIModelState,
+  aiProviderRuntimeConfig: {},
+  builtinAiModelList: [],
+  isInitAiProviderRuntimeState: false,
 };

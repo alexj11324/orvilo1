@@ -10,8 +10,6 @@ import type { StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { OptimisticEngine } from '@/store/utils/optimisticEngine';
-import { runMutation } from '@/store/utils/runMutation';
-import { saveToast } from '@/store/utils/saveToast';
 
 import type { TaskStore } from '../../store';
 import {
@@ -159,34 +157,6 @@ export class TaskConfigSliceActionImpl {
       // instead of proceeding as if the config write landed.
       throw error;
     }
-  };
-
-  // Safely merges model/provider into config via task.updateConfig without overwriting checkpoint/review
-  updateTaskModelConfig = async (
-    id: string,
-    modelConfig: { model?: string; provider?: string },
-  ): Promise<void> => {
-    // Optimistic update — immediately reflect new model/provider in UI
-    this.#get().internal_dispatchTaskDetail({
-      id,
-      type: 'updateTaskDetail',
-      value: { config: { ...this.#get().taskDetailMap[id]?.config, ...modelConfig } },
-    });
-    await runMutation(this.#set, this.#get, {
-      mutate: async () => {
-        await taskService.updateConfig(id, modelConfig);
-        await this.#get().internal_refreshTaskDetail(id);
-      },
-      name: 'updateTaskModelConfig',
-      onError: async (error) => {
-        console.error('[TaskStore] Failed to update task model config:', error);
-        await this.#get().internal_refreshTaskDetail(id);
-        saveToast(error, { retry: () => void this.#get().updateTaskModelConfig(id, modelConfig) });
-      },
-      // Best-effort toggle — the toast + refetch surface the failure, callers don't rethrow.
-      rethrow: false,
-      setStatus: (status) => this.#get().internal_setTaskSaveStatus(id, status),
-    });
   };
 
   // Configure periodic execution interval (heartbeatInterval in seconds).

@@ -12,13 +12,11 @@ import useSWR from 'swr';
 
 import { ModelIcon } from '@/components/OrviloIcons';
 import { ArticleSkeleton } from '@/components/Skeleton';
-import ModelSelect from '@/features/ModelSelect';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { agentProfileKeys } from '@/libs/swr/keys';
 import { agentService } from '@/services/agent';
-import { useAgentGroupStore } from '@/store/agentGroup';
 
 import AgentProfileCard from '.';
 
@@ -27,18 +25,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-block: 12px;
     padding-inline: 16px;
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  section: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-  `,
-  sectionTitle: css`
-    margin-block-end: 8px;
-
-    font-size: 11px;
-    font-weight: 600;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
   `,
   statItem: css`
     color: ${cssVar.colorTextSecondary};
@@ -68,7 +54,7 @@ interface AgentProfilePopupProps extends PropsWithChildren {
   /** Prefilled data for instant render; fetched data overrides once loaded. */
   agent?: Partial<AgentPreview>;
   agentId: string;
-  /** When set, enables group-specific actions (settings nav + model change). */
+  /** When set, enables group-specific actions (settings nav). */
   groupId?: string;
   trigger?: 'click' | 'hover';
 }
@@ -78,7 +64,6 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
     const { t } = useTranslation('chat');
     const navigate = useWorkspaceAwareNavigate();
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
     const { allowed: canEditContent } = usePermission('edit_own_content');
     const { canEditResource: canEditAgent, isAccessResolved: isAgentAccessResolved } =
       useResourceAccess('agent', open ? agentId : undefined);
@@ -89,8 +74,6 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
       isAgentAccessResolved &&
       canEditAgent &&
       (!groupId || (isGroupAccessResolved && canEditGroup));
-
-    const updateMemberAgentConfig = useAgentGroupStore((s) => s.updateMemberAgentConfig);
 
     const { data: fetched, isLoading } = useSWR(
       open && canConfigure ? agentProfileKeys.detail(agentId) : null,
@@ -106,19 +89,6 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
       name: fetched?.name ?? agent?.name,
       provider: fetched?.provider ?? agent?.provider,
       title: fetched?.title ?? agent?.title,
-    };
-
-    const handleModelChange = async (props: { model: string; provider: string }) => {
-      if (!groupId || !canConfigure) return;
-      setLoading(true);
-      try {
-        await updateMemberAgentConfig(groupId, agentId, {
-          model: props.model,
-          provider: props.provider,
-        });
-      } finally {
-        setLoading(false);
-      }
     };
 
     const handleSettings = () => {
@@ -143,59 +113,47 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
 
     const footerLoading = canConfigure && !groupId && isLoading && !fetched;
 
-    const modelSection =
-      canConfigure && groupId ? (
-        merged.model && (
-          <Flexbox className={styles.section} gap={4}>
-            <div className={styles.sectionTitle}>{t('groupSidebar.agentProfile.model')}</div>
-            <ModelSelect
-              loading={loading}
-              value={{ model: merged.model, provider: merged.provider ?? undefined }}
-              onChange={handleModelChange}
-            />
+    const modelSection = footerLoading ? (
+      <Flexbox horizontal align={'center'} className={styles.footer} gap={14}>
+        <Skeleton height={16} width={90} />
+        <Skeleton height={16} width={60} />
+      </Flexbox>
+    ) : canConfigure && (merged.model || hasStats) ? (
+      <Flexbox horizontal align={'center'} className={styles.footer} gap={14} wrap={'wrap'}>
+        {merged.model && (
+          <Flexbox horizontal align={'center'} className={styles.statItem} gap={6}>
+            <ModelIcon model={merged.model} size={14} />
+            <Text fontSize={12} type={'secondary'}>
+              {merged.model}
+            </Text>
           </Flexbox>
-        )
-      ) : footerLoading ? (
-        <Flexbox horizontal align={'center'} className={styles.footer} gap={14}>
-          <Skeleton height={16} width={90} />
-          <Skeleton height={16} width={60} />
-        </Flexbox>
-      ) : canConfigure && (merged.model || hasStats) ? (
-        <Flexbox horizontal align={'center'} className={styles.footer} gap={14} wrap={'wrap'}>
-          {merged.model && (
-            <Flexbox horizontal align={'center'} className={styles.statItem} gap={6}>
-              <ModelIcon model={merged.model} size={14} />
-              <Text fontSize={12} type={'secondary'}>
-                {merged.model}
-              </Text>
-            </Flexbox>
-          )}
-          {pluginCount > 0 && (
-            <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
-              <Icon icon={SkillsIcon} size={13} />
-              <Text fontSize={12} type={'secondary'}>
-                {t('agentProfile.skills', { count: pluginCount })}
-              </Text>
-            </Flexbox>
-          )}
-          {knowledgeCount > 0 && (
-            <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
-              <Icon icon={BookOpen} size={13} />
-              <Text fontSize={12} type={'secondary'}>
-                {t('agentProfile.knowledgeBases', { count: knowledgeCount })}
-              </Text>
-            </Flexbox>
-          )}
-          {fileCount > 0 && (
-            <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
-              <Icon icon={FileText} size={13} />
-              <Text fontSize={12} type={'secondary'}>
-                {t('agentProfile.files', { count: fileCount })}
-              </Text>
-            </Flexbox>
-          )}
-        </Flexbox>
-      ) : null;
+        )}
+        {pluginCount > 0 && (
+          <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
+            <Icon icon={SkillsIcon} size={13} />
+            <Text fontSize={12} type={'secondary'}>
+              {t('agentProfile.skills', { count: pluginCount })}
+            </Text>
+          </Flexbox>
+        )}
+        {knowledgeCount > 0 && (
+          <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
+            <Icon icon={BookOpen} size={13} />
+            <Text fontSize={12} type={'secondary'}>
+              {t('agentProfile.knowledgeBases', { count: knowledgeCount })}
+            </Text>
+          </Flexbox>
+        )}
+        {fileCount > 0 && (
+          <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
+            <Icon icon={FileText} size={13} />
+            <Text fontSize={12} type={'secondary'}>
+              {t('agentProfile.files', { count: fileCount })}
+            </Text>
+          </Flexbox>
+        )}
+      </Flexbox>
+    ) : null;
 
     const content = showSkeleton ? (
       <div style={{ padding: 16, width: 280 }}>

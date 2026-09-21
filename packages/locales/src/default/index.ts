@@ -26,7 +26,6 @@ import memory from './memory';
 import messenger from './messenger';
 import metadata from './metadata';
 import migration from './migration';
-import modelProvider from './modelProvider';
 import modelRuntime from './modelRuntime';
 import models from './models';
 import notification from './notification';
@@ -38,7 +37,6 @@ import pageShare from './pageShare';
 import plugin from './plugin';
 import portal from './portal';
 import project from './project';
-import providers from './providers';
 import ragEval from './ragEval';
 import selfLearning from './selfLearning';
 import setting from './setting';
@@ -81,7 +79,6 @@ const resources = {
   messenger,
   metadata,
   migration,
-  modelProvider,
   modelRuntime,
   models,
   notification,
@@ -92,7 +89,6 @@ const resources = {
   pageShare,
   plugin,
   portal,
-  providers,
   project,
   ragEval,
   selfLearning,

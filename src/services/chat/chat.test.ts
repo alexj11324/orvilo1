@@ -16,6 +16,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useChatStore } from '@/store/chat';
+import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 import { useToolStore } from '@/store/tool';
 import { settingsSelectors } from '@/store/user/selectors';
 
@@ -513,9 +514,9 @@ describe('ChatService', () => {
         // Mock aiModelSelectors for extend params support
         vi.spyOn(aiModelSelectors, 'isModelHasExtendParams').mockReturnValue(() => true);
         vi.spyOn(aiModelSelectors, 'modelExtendParams').mockReturnValue(() => ['reasoningEffort']);
-        // The user-level model-instance config supplies the effort; the legacy
+        // The topic's per-model pin supplies the effort; the legacy
         // agent chatConfig value below must be ignored by the resolver
-        vi.spyOn(aiModelSelectors, 'modelReasoningConfig').mockReturnValue(() => ({
+        vi.spyOn(topicSelectors, 'getTopicReasoningConfigForModel').mockReturnValue(() => ({
           reasoningEffort: 'high',
         }));
 
@@ -523,6 +524,7 @@ describe('ChatService', () => {
           messages,
           model: 'test-model',
           provider: 'test-provider',
+          topicId: 'topic-reasoning',
           resolvedAgentConfig: createMockResolvedConfig({
             agentConfig: { model: 'test-model', provider: 'test-provider' },
             chatConfig: { reasoningEffort: 'low' },
@@ -547,9 +549,9 @@ describe('ChatService', () => {
         vi.spyOn(aiModelSelectors, 'modelExtendParams').mockReturnValue(() => [
           'deepseekV4ReasoningEffort',
         ]);
-        // Reasoning fields are user-level model-instance settings now — agent
+        // Reasoning fields come from the topic's per-model pin — agent
         // chatConfig values are ignored by the resolver
-        vi.spyOn(aiModelSelectors, 'modelReasoningConfig').mockReturnValue(() => ({
+        vi.spyOn(topicSelectors, 'getTopicReasoningConfigForModel').mockReturnValue(() => ({
           deepseekV4ReasoningEffort: 'max',
         }));
 
@@ -557,6 +559,7 @@ describe('ChatService', () => {
           messages,
           model: 'deepseek-v4-pro',
           provider: 'deepseek',
+          topicId: 'topic-reasoning',
           resolvedAgentConfig: createMockResolvedConfig({
             agentConfig: { model: 'deepseek-v4-pro', provider: 'deepseek' },
           }),
@@ -583,7 +586,7 @@ describe('ChatService', () => {
         vi.spyOn(aiModelSelectors, 'modelExtendParams').mockReturnValue(() => [
           'deepseekV4ReasoningEffort',
         ]);
-        vi.spyOn(aiModelSelectors, 'modelReasoningConfig').mockReturnValue(() => ({
+        vi.spyOn(topicSelectors, 'getTopicReasoningConfigForModel').mockReturnValue(() => ({
           deepseekV4ReasoningEffort: 'none',
         }));
 
@@ -591,6 +594,7 @@ describe('ChatService', () => {
           messages,
           model: 'deepseek-v4-pro',
           provider: 'deepseek',
+          topicId: 'topic-reasoning',
           resolvedAgentConfig: createMockResolvedConfig({
             agentConfig: { model: 'deepseek-v4-pro', provider: 'deepseek' },
           }),
@@ -2156,9 +2160,9 @@ describe('ChatService private methods', () => {
       // Mock aiModelSelectors for extend params support
       vi.spyOn(aiModelSelectors, 'isModelHasExtendParams').mockReturnValue(() => true);
       vi.spyOn(aiModelSelectors, 'modelExtendParams').mockReturnValue(() => ['reasoningEffort']);
-      // The user-level model-instance config supplies the effort; the legacy
+      // The topic's per-model pin supplies the effort; the legacy
       // agent chatConfig value below must be ignored by the resolver
-      vi.spyOn(aiModelSelectors, 'modelReasoningConfig').mockReturnValue(() => ({
+      vi.spyOn(topicSelectors, 'getTopicReasoningConfigForModel').mockReturnValue(() => ({
         reasoningEffort: 'high',
       }));
 
@@ -2166,6 +2170,7 @@ describe('ChatService private methods', () => {
         messages,
         model: 'test-model',
         provider: 'test-provider',
+        topicId: 'topic-reasoning',
         resolvedAgentConfig: createMockResolvedConfig({
           agentConfig: { model: 'test-model', provider: 'test-provider' },
           chatConfig: { reasoningEffort: 'low' },

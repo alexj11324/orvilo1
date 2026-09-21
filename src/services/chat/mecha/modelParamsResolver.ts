@@ -63,9 +63,7 @@ export const resolveModelExtendParams = (ctx: ModelParamsContext): ModelExtendPa
 
   const effectiveChatConfig = resolveEffectiveReasoningChatConfig({
     agentChatConfig: chatConfig,
-    modelReasoningConfig:
-      topicReasoningConfig ??
-      aiModelSelectors.modelReasoningConfig(model, provider)(aiInfraStoreState),
+    modelReasoningConfig: topicReasoningConfig,
     subAgentReasoningOverrides: subAgentChatConfigOverride,
   });
 

@@ -30,7 +30,7 @@ vi.mock('@/store/user', () => ({
 
 vi.mock('@/components/Editor/AutoSaveHint', () => ({ default: () => null }));
 vi.mock('@/const/layoutTokens', () => ({ FORM_STYLE: {} }));
-vi.mock('@/features/ModelSwitchPanel/components/ControlsForm/LevelSlider', () => ({
+vi.mock('@/components/LevelSlider', () => ({
   default: () => null,
 }));
 

@@ -3,8 +3,6 @@ import { type ExtendParamsType, MODEL_REASONING_EXTEND_PARAMS } from 'model-bank
 import { type AIProviderStoreState } from '@/store/aiInfra/initialState';
 import { ModelSearchImplement } from '@/types/search';
 
-import { modelReasoningConfigKey } from './initialState';
-
 const getModelCard = (model: string, provider: string) => (s: AIProviderStoreState) =>
   s.enabledAiModels?.find(
     (item) => item.id === model && (provider ? item.providerId === provider : true),
@@ -96,25 +94,6 @@ const isModelHasNonReasoningExtendParams =
       (param) => !REASONING_EXTEND_PARAMS_SET.has(param),
     );
 
-/**
- * The user's saved per-model-instance reasoning defaults (personal scope).
- */
-const modelReasoningConfig = (id: string, provider: string) => (s: AIProviderStoreState) =>
-  s.modelReasoningConfigMap?.[modelReasoningConfigKey(provider, id)];
-
-/**
- * Whether `ensureModelReasoningConfig` / the SWR loader has settled the saved
- * config for this model (the key is kept even when nothing is saved). Topic
- * snapshots must not pin "model defaults" while the real value is still in
- * flight, so they skip pinning until this is true.
- */
-const isModelReasoningConfigLoaded = (id: string, provider: string) => (s: AIProviderStoreState) =>
-  modelReasoningConfigKey(provider, id) in (s.modelReasoningConfigMap ?? {});
-
-const isModelReasoningConfigUpdating =
-  (id: string, provider: string) => (s: AIProviderStoreState) =>
-    !!s.modelReasoningConfigUpdatingKeys?.includes(modelReasoningConfigKey(provider, id));
-
 const modelDisabledParams = (id: string, provider: string) => (s: AIProviderStoreState) => {
   const model = getEnabledModelById(id, provider)(s);
 
@@ -169,8 +148,6 @@ export const aiModelSelectors = {
   isModelHasExtendParams,
   isModelHasNonReasoningExtendParams,
   isModelHasReasoningExtendParams,
-  isModelReasoningConfigLoaded,
-  isModelReasoningConfigUpdating,
   isModelSupportAudio,
   isModelSupportImageOutput,
   isModelSupportReasoning,
@@ -181,6 +158,5 @@ export const aiModelSelectors = {
   modelContextWindowTokens,
   modelDisabledParams,
   modelExtendParams,
-  modelReasoningConfig,
   modelReasoningExtendParams,
 };

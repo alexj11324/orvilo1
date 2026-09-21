@@ -40,8 +40,6 @@ import { agentSkillsRouter } from './agentSkills';
 import { agentTraceRouter } from './agentTrace';
 import { aiAgentRouter } from './aiAgent';
 import { aiChatRouter } from './aiChat';
-import { aiModelRouter } from './aiModel';
-import { aiProviderRouter } from './aiProvider';
 import { apiKeyRouter } from './apiKey';
 import { asrRouter } from './asr';
 import { botMessageRouter } from './botMessage';
@@ -127,10 +125,8 @@ export const lambdaRouter = router({
   brief: briefRouter,
   aiAgent: aiAgentRouter,
   aiChat: aiChatRouter,
-  aiModel: aiModelRouter,
   agentQuota: agentQuotaRouter,
   agentShare: agentShareRouter,
-  aiProvider: aiProviderRouter,
   apiKey: apiKeyRouter,
   asr: asrRouter,
   chunk: chunkRouter,

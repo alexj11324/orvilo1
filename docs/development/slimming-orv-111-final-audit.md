@@ -42,29 +42,44 @@ recreates files under a DELETE glob and links them in — fails the required che
 importers listed. The ledger (`boundary.json`) is the machine-readable source of truth; this audit
 is a point-in-time rendering of it.
 
-## Residual INVESTIGATE items (explicit, owned)
+## Residual INVESTIGATE items — now zero (Gate D)
 
-- `knowledge-rag` — knowledge base / file loaders / chunk pipeline are wired into agent context;
-  keep-or-delete is a product call owned by @alexj11324 (54 files).
-- `misc-adjacent-packages` — `packages/achaos` chaos fixtures have zero inbound imports; pending an
-  explicit keep-or-delete call (32 files).
+Gate D (ORV-114/115/116) closed every residual:
+
+- `knowledge-rag` → split into `knowledge-context` KEEP + `file-ingestion` KEEP (ORV-114); `DataImporter`
+  exclusively `data-portability` (8 disposition conflicts → 0); `asr.ts` → `conversation-surface`.
+- `misc-adjacent-packages` / `packages/achaos` → DELETE + physical removal of all 7 workspace
+  packages and `.agents/chaos/**` (ORV-115); the cap is now a DELETE guard glob, so resurrection
+  fails the gate.
+- Census completeness: `UNCOVERED` 4,355 → 0 across 14 new domain-scoped KEEP capabilities;
+  unresolved internal imports 562 → 0 (85 non-import strings carried as explicit per-entry
+  `importExceptions`); `--check` is fail-closed on all six violation classes and its falsifiability
+  tests run in the required CI gate (ORV-116).
 
 ## Cumulative deltas vs the ORV-99 census baseline
 
-| Metric                               | Before | After  | Δ    |
-| ------------------------------------ | ------ | ------ | ---- |
-| Source files                         | 12 849 | 11 953 | −896 |
-| Workspace packages                   | 115    | 108    | −7   |
-| Next.js routes                       | 42     | 36     | −6   |
-| SPA route entries                    | 186    | 178    | −8   |
-| Lambda routers                       | 96     | 81     | −15  |
-| DB tables                            | 214    | 205    | −9   |
-| Locale files                         | 972    | 880    | −92  |
-| Default namespaces                   | 56     | 48     | −8   |
-| Doc files                            | 598    | 446    | −152 |
-| Test files                           | 3 437  | 3 153  | −284 |
-| Store files                          | 857    | 824    | −33  |
-| DELETE caps with unexplained inbound | 5      | 0      | —    |
+| Metric                               | Before | After     | Δ           |
+| ------------------------------------ | ------ | --------- | ----------- |
+| Source files                         | 12 849 | 11 920    | −929        |
+| Workspace packages                   | 115    | 101       | −14         |
+| Next.js routes                       | 42     | 36        | −6          |
+| SPA route entries                    | 186    | 178       | −8          |
+| Lambda routers                       | 96     | 81        | −15         |
+| DB tables                            | 214    | 205       | −9          |
+| Locale files                         | 972    | 880       | −92         |
+| Default namespaces                   | 56     | 48        | −8          |
+| Doc files                            | 598    | 452       | −146        |
+| Test files                           | 3 437  | 3 144     | −293        |
+| Store files                          | 857    | 824       | −33         |
+| Boundary capabilities                | —      | 40        | all covered |
+| UNCOVERED / INVESTIGATE / conflicts  | —      | 0 / 0 / 0 | —           |
+| DELETE caps with unexplained inbound | 5      | 0         | —           |
+| Unresolved internal imports          | 562    | 0         | —           |
 
-(Physical diff is larger than the file-count delta because the same commits also rewired survivors
-— e.g. OpenAPI model catalog → `AiInfraRepos`, preset tasks → `aiChatService.generateJSON`.)
+## Final verdict (re-audit, release head `052aed37`)
+
+`node scripts/slimming/census.mjs --check` → **0 boundary violations** on 11,920 source files;
+`node --test scripts/slimming/census.test.mjs` → 11/11 falsifiability tests pass (each violation
+class provably turns the gate red); `bunx tsgo --noEmit` clean. Every source file carries an
+explicit disposition inside the fixed product boundary — the architecture boundary is now
+CI-enforced, not just documented. **Project completion condition met.**

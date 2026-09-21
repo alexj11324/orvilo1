@@ -75,9 +75,6 @@ vi.mock('@/features/ChatInput/ControlBar/DirIcon', () => ({
 vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
   useActiveWorkspaceSlug: () => 'team',
 }));
-vi.mock('@/libs/platformIcon', () => ({
-  getPlatformIcon: () => null,
-}));
 vi.mock('@/store/agent', () => ({
   // `agentMap` is read by `agentSelectors.currentAgentVisibility`.
   useAgentStore: (

@@ -16,7 +16,7 @@ import {
   PlugIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router';
 
@@ -34,16 +34,17 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 import CollectionFooter from './CollectionFooter';
 import ReviewChecksPanel, { checkSummaryVisual } from './ReviewChecksPanel';
 import ReviewFileCard from './ReviewFileCard';
+import { reviewOperationId } from './reviewOperationId';
+import {
+  applyReviewPagerPage,
+  emptyReviewPager,
+  reviewPagerKey,
+  type ReviewPagerPage,
+  reviewPagerScope,
+} from './reviewPager';
 import ReviewSubmitPanel from './ReviewSubmitPanel';
 import ReviewThreadCard from './ReviewThreadCard';
-import type {
-  NormalizedCheckItem,
-  PullRequestDetail,
-  ReviewEntry,
-  ReviewFile,
-  ReviewThread,
-  ReviewThreadComment,
-} from './types';
+import type { PullRequestDetail, ReviewThread, WriteOutcome } from './types';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -174,68 +175,61 @@ const ReviewPullRequestPage = memo(() => {
   const pullRequest = data?.data as PullRequestDetail | undefined;
   const notConnected = isTrpcErrorCode(error, 'PRECONDITION_FAILED');
 
+  const [stale, setStale] = useState(false);
+  const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
+
+  // On-demand collection tails + cursors, bound to the exact snapshot they
+  // were fetched against (workspace · PR · snapshotId · head · viewer). When
+  // that generation moves on the whole pager is reset — a stale tail can
+  // never append under a new snapshot, and an in-flight response that lands
+  // after the reset is dropped instead of written back.
+  const pagerKey = reviewPagerKey(
+    reviewPagerScope(workspaceId, reviewId, pullRequest) ?? {
+      headSha: null,
+      pullRequestId: reviewId,
+      snapshotId: '',
+      viewerLogin: null,
+      workspaceId,
+    },
+  );
+  // Synchronous generation reset — tails/cursors from the previous snapshot
+  // are cleared in the same render that first observes the new identity.
+  const [pager, setPager] = useState(() => emptyReviewPager(pagerKey));
+  if (pager.key !== pagerKey) setPager(emptyReviewPager(pagerKey));
+  const activePager = pager.key === pagerKey ? pager : emptyReviewPager(pagerKey);
+  const pagerKeyRef = useRef(pagerKey);
+  pagerKeyRef.current = pagerKey;
+
   const refresh = useCallback(async () => {
-    setStale(false);
     await mutate(pullRequestKeys.detail(workspaceId, reviewId));
     await mutate(pullRequestKeys.queue(workspaceId, 'for-me'));
     await mutate(pullRequestKeys.queue(workspaceId, 'created'));
+    // Writes stay disabled until a complete, consistent new snapshot is in
+    // the cache — only then is the stale flag lifted.
+    setStale(false);
   }, [reviewId, workspaceId]);
-
-  const [stale, setStale] = useState(false);
-  const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
-  // On-demand collection tails — appended under the first page from detail().
-  const [filesTail, setFilesTail] = useState<ReviewFile[]>([]);
-  const [threadsTail, setThreadsTail] = useState<ReviewThread[]>([]);
-  const [reviewsTail, setReviewsTail] = useState<ReviewEntry[]>([]);
-  const [checksTail, setChecksTail] = useState<NormalizedCheckItem[]>([]);
-  const [commentsTail, setCommentsTail] = useState<Record<string, ReviewThreadComment[]>>({});
-  // Per-collection paging state, refreshed from every page() response so a
-  // loaded page's cursor/hasMore replace the first page's.
-  const [pageMeta, setPageMeta] = useState<
-    Record<string, { endCursor: string | null; hasMore: boolean; total: number | null }>
-  >({});
 
   const loadMore = useCallback(
     async (collection: ReviewPageCollection, cursor: string, threadId?: string) => {
+      // The generation this request belongs to — captured now so a response
+      // that lands after a refresh/drift is dropped rather than written back.
+      const generation = pagerKeyRef.current;
+      const headSha = pullRequest?.headSha;
+      if (!generation || !headSha) return;
       const response = await pullRequestService.page({
         collection,
         cursor,
-        expectedHeadSha: pullRequest?.headSha ?? null,
+        expectedHeadSha: headSha,
         id: reviewId,
         threadId,
       });
-      const page = response?.data as {
-        collection: string;
-        endCursor: string | null;
-        hasMore: boolean;
-        items: unknown[];
-        stale: boolean;
-        total: number | null;
-      };
+      const page = response?.data as ReviewPagerPage | undefined;
+      if (!page) return;
       if (page.stale) {
-        setStale(true);
+        if (pagerKeyRef.current === generation) setStale(true);
         return;
       }
-      const cursorKey = threadId ? `${collection}:${threadId}` : collection;
-      setPageMeta((current) => ({
-        ...current,
-        [cursorKey]: {
-          endCursor: page.endCursor,
-          hasMore: page.hasMore,
-          total: page.total,
-        },
-      }));
-      const items = page.items as never[];
-      if (collection === 'files') setFilesTail((current) => [...current, ...items]);
-      if (collection === 'threads') setThreadsTail((current) => [...current, ...items]);
-      if (collection === 'reviews') setReviewsTail((current) => [...current, ...items]);
-      if (collection === 'checks') setChecksTail((current) => [...current, ...items]);
-      if (collection === 'comments' && threadId) {
-        setCommentsTail((current) => ({
-          ...current,
-          [threadId]: [...(current[threadId] ?? []), ...(items as ReviewThreadComment[])],
-        }));
-      }
+      setPager((current) => applyReviewPagerPage(current, generation, page));
     },
     [pullRequest?.headSha, reviewId],
   );
@@ -265,20 +259,45 @@ const ReviewPullRequestPage = memo(() => {
     [refresh, t],
   );
 
+  /**
+   * A write whose response was lost — the operation may already be posted on
+   * GitHub. Refresh to reconcile (the detail snapshot re-reads remote state),
+   * surface the recoverable state, and keep the caller's draft. Retrying the
+   * same intent reuses the same operationId, so the server dedupes or
+   * reconciles instead of dispatching a duplicate.
+   */
+  const reportUnknownOutcome = useCallback((): WriteOutcome => {
+    toast.error(t('reviews.outcomeUnknown'));
+    void refresh();
+    return 'unknown';
+  }, [refresh, t]);
+
+  // Intent-derived operationIds: the same logical write (same workspace, PR,
+  // head, session, action and payload) produces the same id across retries
+  // and refreshes; any changed field is a new intent and gets a new id.
   const submit = useCallback(
     async (
       event: 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES',
       body: string,
-      operationId: string,
-    ): Promise<boolean> => {
-      if (!reviewId || !pullRequest?.headSha) return false;
+    ): Promise<WriteOutcome> => {
+      if (!reviewId || !pullRequest?.headSha) return 'failed';
       try {
         const result = await pullRequestService.submitReview({
           body: body || undefined,
           event,
           id: reviewId,
           observedHeadSha: pullRequest.headSha,
-          operationId,
+          operationId: reviewOperationId({
+            action: 'submitReview',
+            body,
+            event,
+            headSha: pullRequest.headSha,
+            pullRequestId: reviewId,
+            reviewSessionId: pullRequest.reviewSession.pendingReviewId,
+            snapshotId: pullRequest.snapshotId,
+            viewerLogin: pullRequest.viewerLogin,
+            workspaceId,
+          }),
           // Adopting a pending draft is explicit: the banner above the form
           // tells the reviewer the draft will be published.
           reviewSessionId: pullRequest.reviewSession.pendingReviewId ?? undefined,
@@ -288,43 +307,54 @@ const ReviewPullRequestPage = memo(() => {
         // A null/empty receipt is never a success — don't clear the draft.
         if (!receipt || (!receipt.data?.id && !receipt.data?.databaseId)) {
           toast.error(t('reviews.submitFailed'));
-          return false;
+          return 'failed';
         }
         toast.success(t('reviews.submitted'));
         await refresh();
-        return true;
+        return 'applied';
       } catch (submitError) {
+        if (writeErrorCode(submitError) === 'OUTCOME_UNKNOWN') return reportUnknownOutcome();
         onWriteError(submitError, 'reviews.submitFailed');
-        return false;
+        return 'failed';
       }
     },
-    [onWriteError, pullRequest, refresh, reviewId, t],
+    [onWriteError, pullRequest, refresh, reportUnknownOutcome, reviewId, t, workspaceId],
   );
 
   const replyToThread = useCallback(
-    async (threadId: string, body: string): Promise<boolean> => {
-      if (!pullRequest?.headSha) return false;
+    async (threadId: string, body: string): Promise<WriteOutcome> => {
+      if (!pullRequest?.headSha) return 'failed';
       try {
         const result = await pullRequestService.replyThread({
           body,
           id: reviewId,
           observedHeadSha: pullRequest.headSha,
-          operationId: crypto.randomUUID(),
+          operationId: reviewOperationId({
+            action: 'replyToThread',
+            body,
+            headSha: pullRequest.headSha,
+            pullRequestId: reviewId,
+            snapshotId: pullRequest.snapshotId,
+            threadId,
+            viewerLogin: pullRequest.viewerLogin,
+            workspaceId,
+          }),
           snapshotId: pullRequest.snapshotId,
           threadId,
         });
         if (!result?.data?.data?.comment?.id && !result?.data?.data?.comment?.databaseId) {
           toast.error(t('reviews.replyFailed'));
-          return false;
+          return 'failed';
         }
         await refresh();
-        return true;
+        return 'applied';
       } catch (replyError) {
+        if (writeErrorCode(replyError) === 'OUTCOME_UNKNOWN') return reportUnknownOutcome();
         onWriteError(replyError, 'reviews.replyFailed');
-        return false;
+        return 'failed';
       }
     },
-    [onWriteError, pullRequest, refresh, reviewId, t],
+    [onWriteError, pullRequest, refresh, reportUnknownOutcome, reviewId, t, workspaceId],
   );
 
   const addFileComment = useCallback(
@@ -333,58 +363,70 @@ const ReviewPullRequestPage = memo(() => {
       line: number;
       path: string;
       side: 'LEFT' | 'RIGHT';
-    }): Promise<boolean> => {
-      if (!pullRequest?.headSha) return false;
+    }): Promise<WriteOutcome> => {
+      if (!pullRequest?.headSha) return 'failed';
       try {
         const result = await pullRequestService.addFileComment({
           ...params,
           id: reviewId,
           observedHeadSha: pullRequest.headSha,
-          operationId: crypto.randomUUID(),
+          operationId: reviewOperationId({
+            action: 'addFileComment',
+            body: params.body,
+            headSha: pullRequest.headSha,
+            line: params.line,
+            path: params.path,
+            pullRequestId: reviewId,
+            side: params.side,
+            snapshotId: pullRequest.snapshotId,
+            viewerLogin: pullRequest.viewerLogin,
+            workspaceId,
+          }),
           snapshotId: pullRequest.snapshotId,
         });
         if (!result?.data?.data?.thread?.id) {
           toast.error(t('reviews.commentFailed'));
-          return false;
+          return 'failed';
         }
         await refresh();
-        return true;
+        return 'applied';
       } catch (commentError) {
+        if (writeErrorCode(commentError) === 'OUTCOME_UNKNOWN') return reportUnknownOutcome();
         onWriteError(commentError, 'reviews.commentFailed');
-        return false;
+        return 'failed';
       }
     },
-    [onWriteError, pullRequest, refresh, reviewId, t],
+    [onWriteError, pullRequest, refresh, reportUnknownOutcome, reviewId, t, workspaceId],
   );
 
   const allFiles = useMemo(
-    () => [...(pullRequest?.files.items ?? []), ...filesTail],
-    [pullRequest?.files.items, filesTail],
+    () => [...(pullRequest?.files.items ?? []), ...activePager.files],
+    [pullRequest?.files.items, activePager.files],
   );
   const allThreads = useMemo(
     () =>
-      [...(pullRequest?.threads.items ?? []), ...threadsTail].map((thread) => {
-        const meta = pageMeta[`comments:${thread.id}`];
+      [...(pullRequest?.threads.items ?? []), ...activePager.threads].map((thread) => {
+        const meta = activePager.meta[`comments:${thread.id}`];
         return {
           ...thread,
           comments: {
             ...thread.comments,
             endCursor: meta ? meta.endCursor : thread.comments.endCursor,
             hasMore: meta ? meta.hasMore : thread.comments.hasMore,
-            items: [...thread.comments.items, ...(commentsTail[thread.id] ?? [])],
+            items: [...thread.comments.items, ...(activePager.comments[thread.id] ?? [])],
             total: meta?.total ?? thread.comments.total,
           },
         };
       }),
-    [pullRequest?.threads.items, threadsTail, commentsTail, pageMeta],
+    [pullRequest?.threads.items, activePager],
   );
   const allReviews = useMemo(
-    () => [...(pullRequest?.reviews.items ?? []), ...reviewsTail],
-    [pullRequest?.reviews.items, reviewsTail],
+    () => [...(pullRequest?.reviews.items ?? []), ...activePager.reviews],
+    [pullRequest?.reviews.items, activePager.reviews],
   );
   const allChecks = useMemo(
-    () => [...(pullRequest?.checks.items ?? []), ...checksTail],
-    [pullRequest?.checks.items, checksTail],
+    () => [...(pullRequest?.checks.items ?? []), ...activePager.checks],
+    [pullRequest?.checks.items, activePager.checks],
   );
 
   const state = pullRequest ? prStateVisual(pullRequest) : null;
@@ -439,6 +481,7 @@ const ReviewPullRequestPage = memo(() => {
               pendingReviewId={pullRequest.reviewSession.pendingReviewId}
               stale={stale}
               onSubmit={submit}
+              onVerify={refresh}
             />
           ) : undefined
         }
@@ -470,15 +513,15 @@ const ReviewPullRequestPage = memo(() => {
                 </Flexbox>
               ))}
               <CollectionFooter
-                hasMore={pageMeta.files?.hasMore ?? pullRequest.files.hasMore}
+                hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
                 loaded={allFiles.length}
-                total={pageMeta.files?.total ?? pullRequest.files.total}
+                total={activePager.meta.files?.total ?? pullRequest.files.total}
                 onLoadMore={
-                  (pageMeta.files?.endCursor ?? pullRequest.files.endCursor)
+                  (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
                     ? () =>
                         void loadMore(
                           'files',
-                          (pageMeta.files?.endCursor ?? pullRequest.files.endCursor)!,
+                          (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
                         )
                     : undefined
                 }
@@ -574,11 +617,11 @@ const ReviewPullRequestPage = memo(() => {
                 <ReviewChecksPanel
                   checks={{
                     ...pullRequest.checks,
-                    endCursor: pageMeta.checks?.endCursor ?? pullRequest.checks.endCursor,
-                    hasMore: pageMeta.checks?.hasMore ?? pullRequest.checks.hasMore,
+                    endCursor: activePager.meta.checks?.endCursor ?? pullRequest.checks.endCursor,
+                    hasMore: activePager.meta.checks?.hasMore ?? pullRequest.checks.hasMore,
                     items: allChecks,
                     loaded: allChecks.length,
-                    total: pageMeta.checks?.total ?? pullRequest.checks.total,
+                    total: activePager.meta.checks?.total ?? pullRequest.checks.total,
                   }}
                   onLoadMore={(cursor) => void loadMore('checks', cursor)}
                 />
@@ -624,15 +667,15 @@ const ReviewPullRequestPage = memo(() => {
                     </Flexbox>
                   ))}
                   <CollectionFooter
-                    hasMore={pageMeta.files?.hasMore ?? pullRequest.files.hasMore}
+                    hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
                     loaded={allFiles.length}
-                    total={pageMeta.files?.total ?? pullRequest.files.total}
+                    total={activePager.meta.files?.total ?? pullRequest.files.total}
                     onLoadMore={
-                      (pageMeta.files?.endCursor ?? pullRequest.files.endCursor)
+                      (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
                         ? () =>
                             void loadMore(
                               'files',
-                              (pageMeta.files?.endCursor ?? pullRequest.files.endCursor)!,
+                              (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
                             )
                         : undefined
                     }
@@ -695,25 +738,27 @@ const ReviewPullRequestPage = memo(() => {
                   <CollectionFooter
                     loaded={allThreads.length + allReviews.length}
                     hasMore={
-                      (pageMeta.threads?.hasMore ?? pullRequest.threads.hasMore) ||
-                      (pageMeta.reviews?.hasMore ?? pullRequest.reviews.hasMore)
+                      (activePager.meta.threads?.hasMore ?? pullRequest.threads.hasMore) ||
+                      (activePager.meta.reviews?.hasMore ?? pullRequest.reviews.hasMore)
                     }
                     total={
-                      (pageMeta.threads?.total ?? pullRequest.threads.total ?? 0) +
-                      (pageMeta.reviews?.total ?? pullRequest.reviews.total ?? 0)
+                      (activePager.meta.threads?.total ?? pullRequest.threads.total ?? 0) +
+                      (activePager.meta.reviews?.total ?? pullRequest.reviews.total ?? 0)
                     }
                     onLoadMore={
-                      (pageMeta.threads?.endCursor ?? pullRequest.threads.endCursor)
+                      (activePager.meta.threads?.endCursor ?? pullRequest.threads.endCursor)
                         ? () =>
                             void loadMore(
                               'threads',
-                              (pageMeta.threads?.endCursor ?? pullRequest.threads.endCursor)!,
+                              (activePager.meta.threads?.endCursor ??
+                                pullRequest.threads.endCursor)!,
                             )
-                        : (pageMeta.reviews?.endCursor ?? pullRequest.reviews.endCursor)
+                        : (activePager.meta.reviews?.endCursor ?? pullRequest.reviews.endCursor)
                           ? () =>
                               void loadMore(
                                 'reviews',
-                                (pageMeta.reviews?.endCursor ?? pullRequest.reviews.endCursor)!,
+                                (activePager.meta.reviews?.endCursor ??
+                                  pullRequest.reviews.endCursor)!,
                               )
                           : undefined
                     }

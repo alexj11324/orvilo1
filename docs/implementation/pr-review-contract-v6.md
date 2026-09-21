@@ -52,31 +52,60 @@ Server behavior:
 - Re-verifies identity (`viewer.login` + `viewer.databaseId`), repo permission
   (`repository.viewerPermission`), PR existence, thread→PR binding, head, and
   snapshot digest on every write.
-- Receipts persist in `pull_request_review_receipts`, keyed by
+- Writes are claimed, not just deduped. After authorization and caller-error
+  gates (head drift, snapshot, pending-review, thread binding), the service
+  atomically inserts a `prepared` claim row keyed by the full operation
+  identity + payload digest — before any remote mutation runs. Only the
+  claim winner dispatches; concurrent same-`operationId` callers read the
+  in-flight or terminal claim and never re-dispatch, and a digest mismatch
+  on an existing key is `OPERATION_CONFLICT` before any remote call. No
+  database lock is held across the network call — progress is recorded via
+  conditional status transitions (`prepared` → `dispatched` → `applied` /
+  `outcome_unknown`).
+- Claims persist in `pull_request_review_receipts`, keyed by
   `(userId, workspaceId, connectionId, repoId, pullRequestId, operation,
 operationId)` — a single insert-on-conflict write, so they survive restarts
   and concurrent dupes converge on one row. A replayed `operationId`
   re-authorizes against the live context (permission + connection binding)
   before the stored outcome is returned; a binding change is
-  `OPERATION_CONFLICT`.
+  `OPERATION_CONFLICT`. `operationId` is required on every write.
+- `remote_id` records the known remote object for the operation as soon as
+  it exists — the review node id for submits, the comment/thread id for
+  comments. Blocked or crashed claims reconcile by reading exactly that
+  object via `node(id)` (verified against the routed PR and viewer login),
+  never by searching author+body+head, so identical empty approvals cannot
+  cross-match. A crash between remote success and receipt persist leaves a
+  `dispatched` row whose `remote_id` is reconciled on the next call — no
+  new remote write.
 - Head moved since `observedHeadSha` → `HEAD_DRIFTED`; snapshot digest
   mismatch → `STALE_SNAPSHOT`; a pending draft the client didn't adopt →
   `PENDING_REVIEW_CONFLICT`; same `operationId` with a different payload →
   `OPERATION_CONFLICT`.
 - `submitReview` without a pending draft creates an Orvilo-owned pending
   review pinned to `commitOID: observedHeadSha` and submits exactly that
-  review id — never whatever pending review happens to exist.
-- Receipts only record head SHAs GitHub actually returned. When a mutation was
-  attempted but the remote outcome cannot be verified (empty payload, failed
-  request, reconcile miss, or a reconciled review whose `commit` GitHub did
-  not report), the receipt row is persisted with status `outcome_unknown` and
-  the call fails as `OUTCOME_UNKNOWN` — the client keeps its draft and a
-  replay returns the same answer instead of re-applying the write. Before
-  failing an adopted session the server reconciles the viewer's submitted
-  reviews (`reviews(author:)` + `commit.oid`) — a matching landed review
-  returns a `reconciled` receipt.
+  review id — never whatever pending review happens to exist. The payload
+  digest covers `reviewSessionId`, so adopting a different session under a
+  reused id conflicts.
+- Receipts only record head SHAs GitHub actually returned. When a mutation
+  response omits `commit`, the server re-reads the review object via
+  `node(id)`; when the remote outcome still cannot be verified, the claim
+  row is persisted with status `outcome_unknown` and the call fails as
+  `OUTCOME_UNKNOWN` — the client keeps its draft, and a replay reconciles
+  the persisted `remote_id` (a still-PENDING adopted session is resumed on
+  that exact review, not re-submitted) instead of re-applying the write.
 - Receipts are `ReviewWriteReceipt<T>`: `{ appliedHeadSha, data, digest,
 reconciled }` — the head the write actually landed on.
+
+Client-side, every write's `operationId` is derived from the intent —
+`reviewOperationId` hashes (workspace, PR, head, snapshot, viewer, session,
+action, anchor, body) — so a retry of the same intent replays the same
+operation across failures and refreshes, and a changed intent is a fresh
+operation rather than a conflict. `OUTCOME_UNKNOWN` keeps the draft and
+surfaces an explicit recoverable state that reconciles before resending.
+Pagination tails live in a pager bound to `(workspace, PR, snapshotId, head,
+viewer)`: a generation change clears tails + cursors synchronously and
+in-flight responses from the old generation are dropped; writes stay
+disabled until a complete new snapshot lands.
 
 ### Thread binding
 
@@ -115,7 +144,11 @@ and update the hash together). CI never fetches the schema live.
 
 `bunx vitest run apps/server/src/services/pullRequestReview` covers the
 schema contract, the four pending-review states, pagination completeness,
-stale-head gating, persisted receipt replay/re-authorization/conflict,
-outcome-unknown persistence without head fabrication, host whitelisting, and
-thread binding. `packages/database` model tests cover the receipt store's
-atomic upsert and scope isolation.
+stale-head gating, claim replay/re-authorization/conflict, concurrent
+same-operationId dispatch dedup (one remote write), digest-mismatch
+rejection before any remote call, crash-restart reconciliation by persisted
+`remote_id`, commit-absent remote re-read, outcome-unknown persistence
+without head fabrication, host whitelisting, and thread binding.
+`packages/database` model tests cover the claim store's atomicity and scope
+isolation; `src/features/Reviews` covers the intent-derived operation ids
+and the generation-bound pager.

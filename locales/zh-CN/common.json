@@ -549,6 +549,8 @@
   "reviews.inProductReviews": "产品内审批",
   "reviews.loadedCount": "已显示 {{loaded}} / {{total}}",
   "reviews.openInGitHub": "在 GitHub 打开",
+  "reviews.outcomeUnknown": "无法确认此内容是否已发布到 GitHub —— 可能已提交成功。草稿已保留，请先验证再重试。",
+  "reviews.outcomeUnknownAction": "验证并重试",
   "reviews.pendingDraftBanner": "你在 GitHub 上有一个未提交的审核草稿，提交将发布该草稿",
   "reviews.pullRequests": "拉取请求",
   "reviews.queueEmpty": "目前没有需要你的拉取请求。",

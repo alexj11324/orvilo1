@@ -36,12 +36,12 @@ type LoginMethod = 'cloud' | 'selfhost';
 // Login status type
 type LoginStatus = 'idle' | 'loading' | 'success' | 'error';
 
-const authorizationPhaseI18nKeyMap: Record<AuthorizationPhase, string> = {
+const authorizationPhaseI18nKeyMap = {
   browser_opened: 'screen5.auth.phase.browserOpened',
   cancelled: 'screen5.actions.cancel',
   verifying: 'screen5.auth.phase.verifying',
   waiting_for_auth: 'screen5.auth.phase.waitingForAuth',
-};
+} as const satisfies Record<AuthorizationPhase, string>;
 
 // `status` hosts render this step as a connection panel for already-signed-in users,
 // where the wizard's "back" and "next" have no meaning.

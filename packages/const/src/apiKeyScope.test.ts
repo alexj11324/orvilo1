@@ -171,7 +171,7 @@ describe('requiredApiKeyScopeForTrpc', () => {
       blocked: true,
     });
     // the rest of the market surface keeps its agent scopes
-    expect(requiredApiKeyScopeForTrpc('market.getAgentsByPlugin', 'query')).toEqual({
+    expect(requiredApiKeyScopeForTrpc('market.getMcpDetail', 'query')).toEqual({
       scopes: ['agent:read'],
     });
   });

@@ -66,7 +66,6 @@ import { goalRouter } from './goal';
 import { homeRouter } from './home';
 import { imageRouter } from './image';
 import { importerRouter } from './importer';
-import { klavisRouter } from './klavis';
 import { knowledgeRouter } from './knowledge';
 import { knowledgeBaseRouter } from './knowledgeBase';
 import { linearSyncRouter } from './linearSync';
@@ -153,7 +152,6 @@ export const lambdaRouter = router({
   invitation: invitationRouter,
   composio: composioRouter,
 
-  klavis: klavisRouter,
   knowledge: knowledgeRouter,
   knowledgeBase: knowledgeBaseRouter,
   linearSync: linearSyncRouter,

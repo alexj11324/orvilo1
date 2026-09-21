@@ -612,82 +612,17 @@ export const serverConfigKeys = {
 // (see localStorageProvider.ts) so this key-convergence introduces no new
 // persistence — they stay memory-only exactly as before.
 export const discoverKeys = {
-  assistantCategories: def('discover:assistantCategories', (locale: string, params: unknown) => [
-    'discover:assistantCategories',
-    locale,
-    params,
-  ]),
-  assistantDetail: def('discover:assistantDetail', (locale: string, params: unknown) => [
-    'discover:assistantDetail',
-    locale,
-    params,
-  ]),
-  assistantIdentifiers: def('discover:assistantIdentifiers', (source?: string) => [
-    'discover:assistantIdentifiers',
-    source,
-  ]),
-  assistantList: def('discover:assistantList', (locale: string, params: unknown) => [
-    'discover:assistantList',
-    locale,
-    params,
-  ]),
-  groupAgentCategories: def('discover:groupAgentCategories', (locale: string, params: unknown) => [
-    'discover:groupAgentCategories',
-    locale,
-    params,
-  ]),
-  groupAgentDetail: def(
-    'discover:groupAgentDetail',
-    (locale: string, identifier: string, version?: string) => [
-      'discover:groupAgentDetail',
-      locale,
-      identifier,
-      version,
-    ],
-  ),
-  groupAgentIdentifiers: def('discover:groupAgentIdentifiers', () => [
-    'discover:groupAgentIdentifiers',
-  ]),
-  groupAgentList: def('discover:groupAgentList', (locale: string, params: unknown) => [
-    'discover:groupAgentList',
-    locale,
-    params,
-  ]),
-  mcpCategories: def('discover:mcpCategories', (locale: string, params: unknown) => [
-    'discover:mcpCategories',
-    locale,
-    params,
+  // -- marketplace detail "related agents" lists (UI) --
+  mcpAgents: def('discover:mcpAgents', (identifier: string, page: number) => [
+    'discover:mcpAgents',
+    identifier,
+    page,
   ]),
   mcpDetail: def('discover:mcpDetail', (locale: string, identifier: string, version?: string) => [
     'discover:mcpDetail',
     locale,
     identifier,
     version,
-  ]),
-  mcpList: def('discover:mcpList', (locale: string, params: unknown) => [
-    'discover:mcpList',
-    locale,
-    params,
-  ]),
-  modelCategories: def('discover:modelCategories', (params: unknown) => [
-    'discover:modelCategories',
-    params,
-  ]),
-  modelDetail: def('discover:modelDetail', (locale: string, identifier: string) => [
-    'discover:modelDetail',
-    locale,
-    identifier,
-  ]),
-  modelIdentifiers: def('discover:modelIdentifiers', () => ['discover:modelIdentifiers']),
-  modelList: def('discover:modelList', (locale: string, params: unknown) => [
-    'discover:modelList',
-    locale,
-    params,
-  ]),
-  pluginCategories: def('discover:pluginCategories', (locale: string, params: unknown) => [
-    'discover:pluginCategories',
-    locale,
-    params,
   ]),
   pluginDetail: def(
     'discover:pluginDetail',
@@ -696,85 +631,6 @@ export const discoverKeys = {
       locale,
       identifier,
       withManifest,
-    ],
-  ),
-  pluginIdentifiers: def('discover:pluginIdentifiers', () => ['discover:pluginIdentifiers']),
-  pluginList: def('discover:pluginList', (locale: string, params: unknown) => [
-    'discover:pluginList',
-    locale,
-    params,
-  ]),
-  providerDetail: def('discover:providerDetail', (locale: string, identifier: string) => [
-    'discover:providerDetail',
-    locale,
-    identifier,
-  ]),
-  providerIdentifiers: def('discover:providerIdentifiers', () => ['discover:providerIdentifiers']),
-  providerList: def('discover:providerList', (locale: string, params: unknown) => [
-    'discover:providerList',
-    locale,
-    params,
-  ]),
-  skillCategories: def('discover:skillCategories', (locale: string, params: unknown) => [
-    'discover:skillCategories',
-    locale,
-    params,
-  ]),
-  skillComments: def('discover:skillComments', (identifier: string, params: unknown) => [
-    'discover:skillComments',
-    identifier,
-    params,
-  ]),
-  skillDetail: def(
-    'discover:skillDetail',
-    (locale: string, identifier: string, version?: string) => [
-      'discover:skillDetail',
-      locale,
-      identifier,
-      version,
-    ],
-  ),
-  skillList: def('discover:skillList', (locale: string, params: unknown) => [
-    'discover:skillList',
-    locale,
-    params,
-  ]),
-  skillRatingDistribution: def('discover:skillRatingDistribution', (identifier: string) => [
-    'discover:skillRatingDistribution',
-    identifier,
-  ]),
-  skillRelated: def(
-    'discover:skillRelated',
-    (locale: string, category: string, identifier: string) => [
-      'discover:skillRelated',
-      locale,
-      category,
-      identifier,
-    ],
-  ),
-  userProfile: def('discover:userProfile', (locale: string, username: string) => [
-    'discover:userProfile',
-    locale,
-    username,
-  ]),
-  // -- marketplace detail "related agents" lists (UI) --
-  mcpAgents: def('discover:mcpAgents', (identifier: string, page: number) => [
-    'discover:mcpAgents',
-    identifier,
-    page,
-  ]),
-  skillAgents: def('discover:skillAgents', (identifier: string, page: number) => [
-    'discover:skillAgents',
-    identifier,
-    page,
-  ]),
-  skillStoreMarketSkills: def(
-    'discover:skillStoreMarketSkills',
-    (locale: string, keywords: string, page: number) => [
-      'discover:skillStoreMarketSkills',
-      locale,
-      keywords,
-      page,
     ],
   ),
 };
@@ -918,11 +774,6 @@ export const toolKeys = {
   orviloSkillTools: def('tool:orviloSkillTools', (provider: string) => [
     'tool:orviloSkillTools',
     provider,
-  ]),
-  mcpPluginList: def('tool:mcpPluginList', (locale: string, params: unknown) => [
-    'tool:mcpPluginList',
-    locale,
-    params,
   ]),
   uninstalledBuiltins: def('tool:uninstalledBuiltins', (workspaceId: string | null | undefined) => [
     'tool:uninstalledBuiltins',

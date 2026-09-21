@@ -1,19 +1,4 @@
 export default {
-  'marketSubmission.entry': 'Publish',
-  'marketSubmission.title': 'Publish to Market',
-  'marketSubmission.submit': 'Publish',
-  'marketSubmission.confirm':
-    '“{{name}}” will become a public agent when published to Market. Make sure its profile and prompt contain no private information or secrets.',
-  'marketSubmission.required': 'Add an agent name and prompt before publishing.',
-  'marketSubmission.success':
-    'Submitted. Your agent is under review and will appear in Market after approval.',
-  'marketSubmission.failed': 'Could not submit. Please try again.',
-  'marketSubmission.linkFailed':
-    'Submitted, but could not save the Market link locally ({{identifier}}). Keep this identifier and avoid resubmitting as a new agent.',
-  'marketPublish.status.published': 'Published',
-  'marketPublish.status.unpublished': 'Unpublished',
-  'marketPublish.status.archived': 'Archived',
-  'marketPublish.status.deprecated': 'Deprecated',
   'completionSound.title': 'In-app completion sound',
   'completionSound.enabled': 'Play completion sound',
   'completionSound.desc':
@@ -831,7 +816,6 @@ export default {
   'llm.proxyUrl.title': 'API proxy URL',
   'llm.waitingForMore': 'More models are <1>planned to be added</1>, stay tuned',
   'llm.waitingForMoreLinkAriaLabel': 'Open the Provider request form',
-  'marketPublish.status.underReview': 'Under Review',
   'memory.effort.desc': 'Control how aggressively the AI retrieves and updates memory.',
   'memory.effort.high': 'High — Proactive retrieval and updates',
   'memory.effort.level.high': 'High',

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AssistantStore } from '@/server/modules/AssistantStore';
 import { PluginStore } from '@/server/modules/PluginStore';
-import { ModelSorts, PluginSorts, ProviderSorts } from '@/types/discover';
 
 import { DiscoverService } from './index';
 
@@ -19,91 +18,9 @@ vi.mock('@/locales/resources', () => ({
 }));
 
 // Mock constants with inline data
-vi.mock('model-bank', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...(actual as any),
-    ORVILO_DEFAULT_MODEL_LIST: [
-      {
-        id: 'gpt-4',
-        displayName: 'GPT-4',
-        description: 'OpenAI GPT-4 model',
-        providerId: 'openai',
-        contextWindowTokens: 8192,
-        abilities: {
-          vision: true,
-          functionCall: true,
-          files: true,
-        },
-        pricing: {
-          input: 0.03,
-          output: 0.06,
-        },
-        releasedAt: '2023-03-01T00:00:00Z',
-      },
-      {
-        id: 'claude-3-opus',
-        displayName: 'Claude 3 Opus',
-        description: 'Anthropic Claude 3 Opus model',
-        providerId: 'anthropic',
-        contextWindowTokens: 200000,
-        abilities: {
-          vision: true,
-          reasoning: true,
-        },
-        pricing: {
-          input: 0.015,
-          output: 0.075,
-        },
-        releasedAt: '2024-02-01T00:00:00Z',
-      },
-      {
-        id: 'orvilo-onboarding-v1',
-        displayName: 'Orvilo Onboarding',
-        description: 'Runtime-only onboarding alias model',
-        providerId: 'orvilo',
-        contextWindowTokens: 1_000_000,
-        abilities: {
-          functionCall: true,
-          reasoning: true,
-        },
-        releasedAt: '2026-04-24T00:00:00Z',
-        visible: false,
-      },
-    ],
-  };
-});
-
-vi.mock('@/business/client/model-bank/loadModels', async () => {
-  const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
-  return {
-    loadModels: vi.fn().mockResolvedValue(ORVILO_DEFAULT_MODEL_LIST),
-  };
-});
-
-vi.mock('@/config/modelProviders', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...(actual as any),
-    DEFAULT_MODEL_PROVIDER_LIST: [
-      {
-        id: 'openai',
-        name: 'OpenAI',
-        description: 'OpenAI provider',
-      },
-      {
-        id: 'anthropic',
-        name: 'Anthropic',
-        description: 'Anthropic provider',
-      },
-    ],
-  };
-});
-
 vi.mock('@/const/discover', () => ({
   DEFAULT_DISCOVER_ASSISTANT_ITEM: {},
   DEFAULT_DISCOVER_PLUGIN_ITEM: {},
-  DEFAULT_DISCOVER_PROVIDER_ITEM: {},
 }));
 
 // Mock data - moved after mocks to avoid hoisting issues
@@ -401,458 +318,149 @@ describe('DiscoverService', () => {
       );
     });
 
-    it('getAssistantCategories should proxy to market SDK', async () => {
-      const result = await service.getAssistantCategories({ locale: 'en-US', q: 'market' });
+    describe('Assistant Market (legacy source)', () => {
+      describe('getAssistantList', () => {
+        it('should return formatted assistant list with default parameters', async () => {
+          const result = await service.getAssistantList({ source: 'legacy' });
 
-      expect(mockMarket.agents.getCategories).toHaveBeenCalledWith({
-        locale: 'en',
-        q: 'market',
+          expect(result).toEqual({
+            currentPage: 1,
+            pageSize: 20,
+            totalCount: 3,
+            totalPages: 1,
+            items: expect.arrayContaining([
+              expect.objectContaining({
+                identifier: 'assistant-1',
+                title: 'Test Assistant 1',
+              }),
+              expect.objectContaining({
+                identifier: 'assistant-2',
+                title: 'Test Assistant 2',
+              }),
+              expect.objectContaining({
+                identifier: 'assistant-3',
+                title: 'Test Assistant 3',
+              }),
+            ]),
+          });
+        });
+
+        it('should filter by category', async () => {
+          const result = await service.getAssistantList({
+            category: 'productivity',
+            source: 'legacy',
+          });
+
+          expect(result.items).toHaveLength(2);
+          expect(result.items.map((item) => item.identifier)).toContain('assistant-1');
+          expect(result.items.map((item) => item.identifier)).toContain('assistant-2');
+        });
+
+        it('should filter by search query', async () => {
+          const result = await service.getAssistantList({ q: 'creative', source: 'legacy' });
+
+          expect(result.items).toHaveLength(2);
+          expect(result.items.map((item) => item.identifier)).toContain('assistant-2');
+          expect(result.items.map((item) => item.identifier)).toContain('assistant-3');
+        });
+
+        it('should paginate results', async () => {
+          const result = await service.getAssistantList({ page: 1, pageSize: 1, source: 'legacy' });
+
+          expect(result.items).toHaveLength(1);
+          expect(result.currentPage).toBe(1);
+          expect(result.pageSize).toBe(1);
+          expect(result.totalPages).toBe(3);
+        });
       });
-      expect(result).toEqual([
-        { category: 'productivity', count: 10 },
-        { category: 'creativity', count: 5 },
-      ]);
-    });
 
-    it('getAssistantIdentifiers should read from market SDK', async () => {
-      const result = await service.getAssistantIdentifiers();
+      describe('getAssistantDetail', () => {
+        it('should return assistant detail with related items', async () => {
+          const result = await service.getAssistantDetail({
+            identifier: 'assistant-1',
+            source: 'legacy',
+          });
 
-      expect(mockMarket.agents.getPublishedIdentifiers).toHaveBeenCalled();
-      expect(result).toEqual([
-        { identifier: 'market-assistant-1', lastModified: '2024-02-02T00:00:00Z' },
-        { identifier: 'market-assistant-2', lastModified: '2024-02-05T00:00:00Z' },
-      ]);
-    });
-  });
-
-  describe('Assistant Market (legacy source)', () => {
-    describe('getAssistantList', () => {
-      it('should return formatted assistant list with default parameters', async () => {
-        const result = await service.getAssistantList({ source: 'legacy' });
-
-        expect(result).toEqual({
-          currentPage: 1,
-          pageSize: 20,
-          totalCount: 3,
-          totalPages: 1,
-          items: expect.arrayContaining([
+          expect(result).toEqual(
             expect.objectContaining({
               identifier: 'assistant-1',
               title: 'Test Assistant 1',
+              related: expect.any(Array),
             }),
-            expect.objectContaining({
-              identifier: 'assistant-2',
-              title: 'Test Assistant 2',
-            }),
-            expect.objectContaining({
-              identifier: 'assistant-3',
-              title: 'Test Assistant 3',
-            }),
-          ]),
-        });
-      });
-
-      it('should filter by category', async () => {
-        const result = await service.getAssistantList({
-          category: 'productivity',
-          source: 'legacy',
+          );
+          expect(result?.related).toHaveLength(1);
+          expect(result?.related[0].identifier).toBe('assistant-2');
         });
 
-        expect(result.items).toHaveLength(2);
-        expect(result.items.map((item) => item.identifier)).toContain('assistant-1');
-        expect(result.items.map((item) => item.identifier)).toContain('assistant-2');
-      });
+        it('should return undefined for non-existent assistant', async () => {
+          mockAssistantStore.getAgent.mockResolvedValue(null);
 
-      it('should filter by search query', async () => {
-        const result = await service.getAssistantList({ q: 'creative', source: 'legacy' });
+          const result = await service.getAssistantDetail({
+            identifier: 'non-existent',
+            source: 'legacy',
+          });
 
-        expect(result.items).toHaveLength(2);
-        expect(result.items.map((item) => item.identifier)).toContain('assistant-2');
-        expect(result.items.map((item) => item.identifier)).toContain('assistant-3');
-      });
-
-      it('should paginate results', async () => {
-        const result = await service.getAssistantList({ page: 1, pageSize: 1, source: 'legacy' });
-
-        expect(result.items).toHaveLength(1);
-        expect(result.currentPage).toBe(1);
-        expect(result.pageSize).toBe(1);
-        expect(result.totalPages).toBe(3);
+          expect(result).toBeUndefined();
+        });
       });
     });
 
-    describe('getAssistantDetail', () => {
-      it('should return assistant detail with related items', async () => {
-        const result = await service.getAssistantDetail({
-          identifier: 'assistant-1',
-          source: 'legacy',
-        });
+    describe('Plugin Market', () => {
+      describe('getPluginDetail', () => {
+        it('should return plugin detail with related items', async () => {
+          const result = await service.getPluginDetail({
+            identifier: 'plugin-1',
+          });
 
-        expect(result).toEqual(
-          expect.objectContaining({
-            identifier: 'assistant-1',
-            title: 'Test Assistant 1',
-            related: expect.any(Array),
-          }),
-        );
-        expect(result?.related).toHaveLength(1);
-        expect(result?.related[0].identifier).toBe('assistant-2');
-      });
-
-      it('should return undefined for non-existent assistant', async () => {
-        mockAssistantStore.getAgent.mockResolvedValue(null);
-
-        const result = await service.getAssistantDetail({
-          identifier: 'non-existent',
-          source: 'legacy',
-        });
-
-        expect(result).toBeUndefined();
-      });
-    });
-
-    describe('getAssistantCategories', () => {
-      it('should return category counts', async () => {
-        const result = await service.getAssistantCategories({ source: 'legacy' });
-
-        expect(result).toEqual([
-          { category: 'productivity', count: 2 },
-          { category: 'creativity', count: 1 },
-        ]);
-      });
-
-      it('should filter categories by search query', async () => {
-        const result = await service.getAssistantCategories({ q: 'creative', source: 'legacy' });
-
-        expect(result).toEqual([
-          {
-            category: 'productivity',
-            count: 1,
-          },
-          {
-            category: 'creativity',
-            count: 1,
-          },
-        ]);
-      });
-    });
-
-    describe('getAssistantIdentifiers', () => {
-      it('should return list of identifiers with lastModified dates', async () => {
-        const result = await service.getAssistantIdentifiers({ source: 'legacy' });
-
-        expect(result).toEqual([
-          { identifier: 'assistant-1', lastModified: '2024-01-01T00:00:00Z' },
-          { identifier: 'assistant-2', lastModified: '2024-01-02T00:00:00Z' },
-          { identifier: 'assistant-3', lastModified: '2024-01-03T00:00:00Z' },
-        ]);
-      });
-    });
-  });
-
-  describe('Plugin Market', () => {
-    describe('getPluginList', () => {
-      it('should return formatted plugin list with default parameters', async () => {
-        const result = await service.getPluginList();
-
-        expect(result).toEqual({
-          currentPage: 1,
-          pageSize: 20,
-          totalCount: 2,
-          totalPages: 1,
-          items: expect.arrayContaining([
+          expect(result).toEqual(
             expect.objectContaining({
               identifier: 'plugin-1',
               title: 'Test Plugin 1',
+              related: expect.any(Array),
             }),
+          );
+        });
+
+        it('should return undefined for non-existent plugin', async () => {
+          const result = await service.getPluginDetail({
+            identifier: 'non-existent',
+          });
+
+          expect(result).toBeUndefined();
+        });
+      });
+    });
+
+    describe('MCP Market', () => {
+      describe('getMcpList', () => {
+        it('should call market SDK with normalized locale', async () => {
+          await service.getMcpList({ locale: 'en-US' });
+
+          expect(mockMarket.plugins.getPluginList).toHaveBeenCalledWith(
             expect.objectContaining({
-              identifier: 'plugin-2',
-              title: 'Test Plugin 2',
+              locale: 'en',
             }),
-          ]),
+            expect.any(Object),
+          );
         });
       });
 
-      it('should filter by category', async () => {
-        const result = await service.getPluginList({ category: 'tools' });
+      describe('getMcpDetail', () => {
+        it('should return MCP detail with related items', async () => {
+          const mockMcp = { identifier: 'mcp-1', category: 'tools' };
+          mockMarket.plugins.getPluginDetail.mockResolvedValue(mockMcp);
 
-        expect(result.items).toHaveLength(1);
-        expect(result.items[0].identifier).toBe('plugin-1');
-      });
-
-      it('should sort by identifier', async () => {
-        const result = await service.getPluginList({
-          sort: PluginSorts.Identifier,
-          order: 'asc',
-        });
-
-        // Note: The service has reversed logic for identifier sorting
-        expect(result.items[0].identifier).toBe('plugin-2');
-        expect(result.items[1].identifier).toBe('plugin-1');
-      });
-    });
-
-    describe('getPluginDetail', () => {
-      it('should return plugin detail with related items', async () => {
-        const result = await service.getPluginDetail({
-          identifier: 'plugin-1',
-        });
-
-        expect(result).toEqual(
-          expect.objectContaining({
-            identifier: 'plugin-1',
-            title: 'Test Plugin 1',
-            related: expect.any(Array),
-          }),
-        );
-      });
-
-      it('should return undefined for non-existent plugin', async () => {
-        const result = await service.getPluginDetail({
-          identifier: 'non-existent',
-        });
-
-        expect(result).toBeUndefined();
-      });
-    });
-  });
-
-  describe('MCP Market', () => {
-    describe('getMcpList', () => {
-      it('should call market SDK with normalized locale', async () => {
-        await service.getMcpList({ locale: 'en-US' });
-
-        expect(mockMarket.plugins.getPluginList).toHaveBeenCalledWith(
-          expect.objectContaining({
-            locale: 'en',
-          }),
-          expect.any(Object),
-        );
-      });
-    });
-
-    describe('getMcpDetail', () => {
-      it('should return MCP detail with related items', async () => {
-        const mockMcp = { identifier: 'mcp-1', category: 'tools' };
-        mockMarket.plugins.getPluginDetail.mockResolvedValue(mockMcp);
-
-        const result = await service.getMcpDetail({
-          identifier: 'mcp-1',
-        });
-
-        expect(result).toEqual(
-          expect.objectContaining({
+          const result = await service.getMcpDetail({
             identifier: 'mcp-1',
-            related: expect.any(Array),
-          }),
-        );
-      });
-    });
-  });
+          });
 
-  describe('Provider Market', () => {
-    describe('getProviderList', () => {
-      it('should return formatted provider list', async () => {
-        const result = await service.getProviderList();
-
-        expect(result.items).toEqual(
-          expect.arrayContaining([
+          expect(result).toEqual(
             expect.objectContaining({
-              identifier: 'openai',
-              name: 'OpenAI',
-              modelCount: expect.any(Number),
+              identifier: 'mcp-1',
+              related: expect.any(Array),
             }),
-            expect.objectContaining({
-              identifier: 'anthropic',
-              name: 'Anthropic',
-              modelCount: expect.any(Number),
-            }),
-          ]),
-        );
-      });
-
-      it('should filter by search query', async () => {
-        const result = await service.getProviderList({ q: 'openai' });
-
-        expect(result.items.length).toBeGreaterThan(0);
-        expect(result.items).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              identifier: 'openai',
-            }),
-          ]),
-        );
-      });
-
-      it('should sort by model count', async () => {
-        const result = await service.getProviderList({
-          sort: ProviderSorts.ModelCount,
-          order: 'desc',
+          );
         });
-
-        expect(result.items.length).toBeGreaterThan(0);
-        for (let i = 1; i < result.items.length; i++) {
-          expect(result.items[i - 1].modelCount).toBeGreaterThanOrEqual(result.items[i].modelCount);
-        }
-      });
-    });
-
-    describe('getProviderDetail', () => {
-      it('should return provider detail', async () => {
-        const result = await service.getProviderDetail({
-          identifier: 'openai',
-        });
-
-        expect(result).toEqual(
-          expect.objectContaining({
-            identifier: 'openai',
-            name: 'OpenAI',
-            models: expect.any(Array),
-            related: expect.any(Array),
-          }),
-        );
-      });
-    });
-  });
-
-  describe('Model Market', () => {
-    describe('getModelList', () => {
-      it('should return deduplicated model list', async () => {
-        const result = await service.getModelList();
-
-        expect(result.items).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              identifier: expect.any(String),
-              displayName: expect.any(String),
-              providers: expect.any(Array),
-            }),
-          ]),
-        );
-      });
-
-      it('should filter by category', async () => {
-        const result = await service.getModelList({ category: 'openai' });
-
-        expect(result.items.length).toBeGreaterThan(0);
-      });
-
-      it('should sort by context window tokens', async () => {
-        const result = await service.getModelList({
-          sort: ModelSorts.ContextWindowTokens,
-          order: 'desc',
-        });
-
-        expect(result.items).toHaveLength(2);
-      });
-
-      it('should filter by search query', async () => {
-        const result = await service.getModelList({ q: 'gpt' });
-
-        expect(result.items.length).toBeGreaterThan(0);
-      });
-
-      it('should filter hidden runtime-only models', async () => {
-        const result = await service.getModelList({ q: 'onboarding' });
-
-        expect(result.items).toEqual([]);
-      });
-    });
-
-    describe('getModelDetail', () => {
-      it('should return model detail with providers', async () => {
-        const result = await service.getModelDetail({
-          identifier: 'gpt-4',
-        });
-
-        expect(result).toEqual(
-          expect.objectContaining({
-            identifier: 'gpt-4',
-            displayName: 'GPT-4',
-            providers: expect.any(Array),
-            related: expect.any(Array),
-          }),
-        );
-      });
-
-      it('should not expose hidden runtime-only model details', async () => {
-        const result = await service.getModelDetail({
-          identifier: 'orvilo-onboarding-v1',
-        });
-
-        expect(result).toBeUndefined();
-      });
-    });
-
-    describe('getModelCategories', () => {
-      it('should return model categories by provider', async () => {
-        const result = await service.getModelCategories();
-
-        expect(result).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              category: expect.any(String),
-              count: expect.any(Number),
-            }),
-          ]),
-        );
-      });
-
-      it('should not include categories that only have hidden models', async () => {
-        const result = await service.getModelCategories();
-
-        expect(result.some((item) => item.category === 'orvilo')).toBe(false);
-      });
-    });
-  });
-
-  describe('Helper Methods', () => {
-    describe('calculateAbilitiesScore', () => {
-      it('should calculate abilities score correctly', () => {
-        const abilities = {
-          vision: true,
-          functionCall: true,
-          files: false,
-        };
-
-        // Access private method for testing
-        const score = (service as any).calculateAbilitiesScore(abilities);
-        expect(score).toBe(2); // vision + functionCall
-      });
-
-      it('should return 0 for empty abilities', () => {
-        const score = (service as any).calculateAbilitiesScore(null);
-        expect(score).toBe(0);
-      });
-    });
-
-    describe('selectModelWithBestAbilities', () => {
-      it('should select model with best abilities', () => {
-        const models = [
-          {
-            identifier: 'model-1',
-            abilities: { vision: true },
-            contextWindowTokens: 4000,
-          },
-          {
-            identifier: 'model-1',
-            abilities: { vision: true, functionCall: true },
-            contextWindowTokens: 8000,
-          },
-        ];
-
-        const result = (service as any).selectModelWithBestAbilities(models);
-
-        expect(result.abilities).toEqual({ vision: true, functionCall: true });
-        expect(result.contextWindowTokens).toBe(8000);
-      });
-
-      it('should return single model if only one provided', () => {
-        const models = [{ identifier: 'model-1', abilities: {} }];
-
-        const result = (service as any).selectModelWithBestAbilities(models);
-
-        expect(result).toEqual(models[0]);
       });
     });
   });

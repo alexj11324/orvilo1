@@ -1,6 +1,5 @@
 import { type PluginManifest } from '@lobehub/market-sdk';
-import { type CallReportRequest } from '@lobehub/market-types';
-import { CURRENT_VERSION, isDesktop } from '@orvilo/const';
+import { isDesktop } from '@orvilo/const';
 import {
   type ChatToolPayload,
   type CheckMcpInstallResult,
@@ -14,21 +13,6 @@ import { toolsClient } from '@/libs/trpc/client';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 import { discoverService } from './discover';
-
-/**
- * Calculate byte size of object
- * @param obj Object to calculate size of
- * @returns Byte size
- */
-function calculateObjectSizeBytes(obj: any): number {
-  try {
-    const jsonString = JSON.stringify(obj);
-    return new TextEncoder().encode(jsonString).length;
-  } catch (error) {
-    console.warn('Failed to calculate object size:', error);
-    return 0;
-  }
-}
 
 class MCPService {
   async invokeMcpToolCall(
@@ -132,91 +116,35 @@ class MCPService {
       toolName: apiName,
     };
 
-    // Record call start time
-    const callStartTime = Date.now();
-    let success = false;
-    let errorCode: string | undefined;
-    let errorMessage: string | undefined;
     let result: MCPToolCallResult | undefined;
 
-    try {
-      // For cloud type, call via cloud gateway
-      if (isCloud) {
-        // Parse args
-        const apiParams = safeParseJSON(args) || {};
+    // For cloud type, call via cloud gateway
+    if (isCloud) {
+      // Parse args
+      const apiParams = safeParseJSON(args) || {};
 
-        // Call cloud gateway via tools market endpoint
-        // Server will automatically get user access token from database
-        // and format the result to MCPToolCallResult
-        // Server-side also handles telemetry reporting
-        result = await toolsClient.market.callCloudMcpEndpoint.mutate({
-          apiParams,
-          identifier,
-          meta,
-          toolName: apiName,
-        });
-      } else if (isDesktop && isStdio) {
-        // For desktop and stdio, use IPC (main process)
-        // Note: IPC doesn't support AbortSignal yet
-        const serialized = serializeMcpIpcPayload(data);
-        const serializedResult = await ensureElectronIpc().mcp.callTool(serialized as any);
-        result = deserializeMcpIpcPayload(serializedResult) as any;
-      } else {
-        // For other types, use the toolsClient
-        result = await toolsClient.mcp.callTool.mutate(data, { signal });
-      }
-
-      success = true;
-      return result;
-    } catch (error) {
-      const err = error as Error;
-      errorCode = 'CALL_FAILED';
-      errorMessage = err.message;
-
-      // Rethrow error, maintain original error handling logic
-      throw error;
-    } finally {
-      // HTTP/SSE/streamable types: reporting is handled by server-side via mcp.callTool
-      // Cloud type: reporting is handled by server-side via market.callCloudMcpEndpoint
-      // Only report from frontend for stdio types (desktop only)
-      if (isStdio) {
-        const callEndTime = Date.now();
-        const callDurationMs = callEndTime - callStartTime;
-
-        // Calculate request size
-        const inputParams = safeParseJSON(args) || args;
-        const requestSizeBytes = calculateObjectSizeBytes(inputParams);
-        // Calculate response size
-        const responseSizeBytes = success && result ? calculateObjectSizeBytes(result.state) : 0;
-
-        // Construct report data
-        const reportData: CallReportRequest = {
-          callDurationMs,
-          customPluginInfo: meta.customPluginInfo,
-          errorCode,
-          errorMessage,
-          identifier,
-          isCustomPlugin,
-          metadata: {
-            appVersion: CURRENT_VERSION,
-            command: plugin.customParams?.mcp?.command,
-            mcpType: plugin.customParams?.mcp?.type,
-          },
-          methodName: apiName,
-          methodType: 'tool' as const,
-          requestSizeBytes,
-          responseSizeBytes,
-          sessionId: topicId,
-          success,
-          version: meta.version,
-        };
-
-        // Asynchronously report without affecting main flow
-        discoverService.reportPluginCall(reportData).catch((reportError) => {
-          console.warn('Failed to report MCP tool call:', reportError);
-        });
-      }
+      // Call cloud gateway via tools market endpoint
+      // Server will automatically get user access token from database
+      // and format the result to MCPToolCallResult
+      // Server-side also handles telemetry reporting
+      result = await toolsClient.market.callCloudMcpEndpoint.mutate({
+        apiParams,
+        identifier,
+        meta,
+        toolName: apiName,
+      });
+    } else if (isDesktop && isStdio) {
+      // For desktop and stdio, use IPC (main process)
+      // Note: IPC doesn't support AbortSignal yet
+      const serialized = serializeMcpIpcPayload(data);
+      const serializedResult = await ensureElectronIpc().mcp.callTool(serialized as any);
+      result = deserializeMcpIpcPayload(serializedResult) as any;
+    } else {
+      // For other types, use the toolsClient
+      result = await toolsClient.mcp.callTool.mutate(data, { signal });
     }
+
+    return result;
   }
 
   async getStreamableMcpServerManifest(

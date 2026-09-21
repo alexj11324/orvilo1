@@ -240,7 +240,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // invitation accept/resend/revoke grants or revokes membership — same class
   // as workspace_member management, an interactive human decision
   invitation: 'blocked',
-  klavis: 'blocked',
   knowledge: rw('knowledge:read', 'knowledge:write'),
   knowledgeBase: rw('knowledge:read', 'knowledge:write'),
   linearSync: rw('workspace:read', 'workspace:write'),

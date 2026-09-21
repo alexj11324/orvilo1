@@ -2,11 +2,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { agentService } from '@/services/agent';
 import { discoverService } from '@/services/discover';
-import { marketApiService } from '@/services/marketApi';
 import { useAgentStore } from '@/store/agent';
 import { useHomeStore } from '@/store/home';
 
 import { installMarketplaceAgents } from './installMarketplaceAgents';
+
+const mocks = vi.hoisted(() => ({
+  forkAgent: vi.fn(),
+}));
+
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: {
+    market: {
+      agent: {
+        forkAgent: {
+          mutate: mocks.forkAgent,
+        },
+      },
+    },
+  },
+}));
 
 describe('installMarketplaceAgents', () => {
   const createAgent = vi.fn();
@@ -17,6 +32,7 @@ describe('installMarketplaceAgents', () => {
     createAgent.mockReset();
     refreshAgentList.mockReset();
     refreshAgentList.mockResolvedValue(undefined);
+    mocks.forkAgent.mockReset();
 
     vi.spyOn(useAgentStore, 'getState').mockReturnValue({
       createAgent,
@@ -24,7 +40,6 @@ describe('installMarketplaceAgents', () => {
     vi.spyOn(useHomeStore, 'getState').mockReturnValue({
       refreshAgentList,
     } as unknown as ReturnType<typeof useHomeStore.getState>);
-    vi.spyOn(discoverService, 'reportAgentEvent').mockResolvedValue(undefined);
   });
 
   it('sends a single batched fork call carrying every selected agent', async () => {
@@ -47,7 +62,7 @@ describe('installMarketplaceAgents', () => {
         }) as any,
     );
 
-    const forkSpy = vi.spyOn(marketApiService, 'forkAgent').mockImplementation(async (items) =>
+    const forkSpy = mocks.forkAgent.mockImplementation(async ({ items }) =>
       items.map((item) => ({
         data: {
           agent: {
@@ -74,7 +89,7 @@ describe('installMarketplaceAgents', () => {
     const result = await installMarketplaceAgents(sourceIds);
 
     expect(forkSpy).toHaveBeenCalledTimes(1);
-    const [items] = forkSpy.mock.calls[0];
+    const [{ items }] = forkSpy.mock.calls[0];
     expect(items).toHaveLength(3);
     expect(items.map((i) => i.sourceIdentifier)).toEqual(sourceIds);
 
@@ -105,7 +120,7 @@ describe('installMarketplaceAgents', () => {
           title: 'T',
         }) as any,
     );
-    const forkSpy = vi.spyOn(marketApiService, 'forkAgent').mockImplementation(async (items) =>
+    const forkSpy = mocks.forkAgent.mockImplementation(async ({ items }) =>
       items.map((item) => ({
         data: {
           agent: {
@@ -131,7 +146,7 @@ describe('installMarketplaceAgents', () => {
     const result = await installMarketplaceAgents(sourceIds);
 
     expect(forkSpy).toHaveBeenCalledTimes(1);
-    const [items] = forkSpy.mock.calls[0];
+    const [{ items }] = forkSpy.mock.calls[0];
     expect(items.map((i) => i.sourceIdentifier)).toEqual(['src-a']);
     expect(result.skippedAgentIds).toEqual(['src-b', 'src-c']);
     expect(result.installedAgentIds).toEqual(['agent-src-a']);

@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import { GitPullRequestIcon, PlugIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
@@ -15,6 +15,7 @@ import Avatar from '@/components/Avatar';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
@@ -83,7 +84,11 @@ type QueueItem = {
 
 const PullRequestRow = memo<{ item: QueueItem }>(({ item }) => {
   const { t } = useTranslation('common');
-  const navigate = useNavigate();
+  const navigate = useWorkspaceAwareNavigate();
+  const location = useLocation();
+  // Carry the list URL so the detail page's Back returns to this exact
+  // workspace + tab instead of dropping context.
+  const returnTo = `${location.pathname}${location.search}`;
   return (
     <Flexbox
       horizontal
@@ -91,9 +96,10 @@ const PullRequestRow = memo<{ item: QueueItem }>(({ item }) => {
       className={styles.row}
       role={'link'}
       tabIndex={0}
-      onClick={() => navigate(`/reviews/${encodeURIComponent(item.id)}`)}
+      onClick={() => navigate(`/reviews/${encodeURIComponent(item.id)}`, { state: { returnTo } })}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') navigate(`/reviews/${encodeURIComponent(item.id)}`);
+        if (event.key === 'Enter')
+          navigate(`/reviews/${encodeURIComponent(item.id)}`, { state: { returnTo } });
       }}
     >
       <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={16} />
@@ -140,7 +146,7 @@ PullRequestRow.displayName = 'PullRequestRow';
 const ReviewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceAwareNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = resolveTab(searchParams.get('tab'));
 
@@ -150,7 +156,42 @@ const ReviewsPage = memo(() => {
     { revalidateOnFocus: false },
   );
   const notConnected = isTrpcErrorCode(queue.error, 'PRECONDITION_FAILED');
-  const pullRequests: QueueItem[] = queue.data?.data.items ?? [];
+  const pullRequests: QueueItem[] = useMemo(() => queue.data?.data.items ?? [], [queue.data]);
+  const queueTotal = queue.data?.data.total ?? null;
+  const [queueTail, setQueueTail] = useState<QueueItem[]>([]);
+  const [queueLoadingMore, setQueueLoadingMore] = useState(false);
+  // Cursor for the NEXT page — advanced by every load-more response; falls
+  // back to the first page's cursor before any tail has been fetched.
+  const [queuePaging, setQueuePaging] = useState<{
+    endCursor: string | null;
+    hasMore: boolean;
+  } | null>(null);
+  const queueHasMore = queuePaging?.hasMore ?? queue.data?.data.hasMore ?? false;
+  const queueEndCursor = queuePaging?.endCursor ?? queue.data?.data.endCursor ?? null;
+  useEffect(() => {
+    setQueueTail([]);
+    setQueuePaging(null);
+  }, [tab, workspaceId]);
+  const allPullRequests = useMemo(() => [...pullRequests, ...queueTail], [pullRequests, queueTail]);
+  const loadMoreQueue = useCallback(async () => {
+    if (!queueEndCursor) return;
+    setQueueLoadingMore(true);
+    try {
+      const next = await pullRequestService.queue(tab, queueEndCursor);
+      setQueueTail((current) => [
+        ...current,
+        ...((next?.data?.items as QueueItem[] | undefined) ?? []),
+      ]);
+      setQueuePaging({
+        endCursor: next?.data?.endCursor ?? null,
+        hasMore: next?.data?.hasMore ?? false,
+      });
+    } catch (loadError) {
+      console.error('[reviews:queueMore]', loadError);
+    } finally {
+      setQueueLoadingMore(false);
+    }
+  }, [queueEndCursor, tab]);
 
   const { data, error, isLoading } = useClientDataSWR(
     workAttentionKeys.reviews(workspaceId, tab),
@@ -239,13 +280,37 @@ const ReviewsPage = memo(() => {
             </Center>
           ) : queue.error ? (
             <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
-          ) : pullRequests.length === 0 ? (
+          ) : allPullRequests.length === 0 ? (
             <Empty description={t('reviews.queueEmpty')} icon={GitPullRequestIcon} />
           ) : (
-            <Flexbox>
-              {pullRequests.map((item) => (
-                <PullRequestRow item={item} key={item.id} />
-              ))}
+            <Flexbox gap={4}>
+              <Flexbox>
+                {allPullRequests.map((item) => (
+                  <PullRequestRow item={item} key={item.id} />
+                ))}
+              </Flexbox>
+              {/* A partial queue is never presented as complete — the tail
+                  counts stay visible and pages load on demand. */}
+              {queueHasMore || queueTail.length > 0 ? (
+                <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={8}>
+                  <Text fontSize={12} type={'secondary'}>
+                    {t('reviews.loadedCount', {
+                      loaded: allPullRequests.length,
+                      total: queueTotal ?? '…',
+                    })}
+                  </Text>
+                  {queueHasMore ? (
+                    <Button
+                      loading={queueLoadingMore}
+                      size={'small'}
+                      type={'text'}
+                      onClick={() => void loadMoreQueue()}
+                    >
+                      {t('myWork.loadMore')}
+                    </Button>
+                  ) : null}
+                </Flexbox>
+              ) : null}
             </Flexbox>
           )}
         </Flexbox>

@@ -146,17 +146,12 @@
     "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts"
   },
   "lint-staged": {
-    "*.md": [
-      "remark --silent --output --",
-      "prettier --write --no-error-on-unmatched-pattern"
-    ],
+    "*.md": "node scripts/lint-staged-skip-packet.mjs md",
     "*.mdx": [
       "remark -r ./.remarkrc.mdx.mjs --silent --output --",
       "eslint --quiet --fix"
     ],
-    "*.json": [
-      "prettier --write --no-error-on-unmatched-pattern"
-    ],
+    "*.json": "node scripts/lint-staged-skip-packet.mjs json",
     "*.{mjs,cjs}": [
       "eslint --fix",
       "prettier --write"
@@ -556,6 +551,7 @@
     "fake-indexeddb": "^6.2.5",
     "fs-extra": "^11.4.0",
     "glob": "^13.0.6",
+    "graphql": "16.14.2",
     "happy-dom": "~20.11.15",
     "import-in-the-middle": "^2.0.6",
     "just-diff": "^6.0.2",

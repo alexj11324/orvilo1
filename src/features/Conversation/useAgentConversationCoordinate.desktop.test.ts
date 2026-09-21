@@ -51,4 +51,13 @@ describe('useAgentConversationCoordinate (desktop)', () => {
 
     expect(result.current).toEqual(['agent-route', null, null]);
   });
+
+  it('falls back to the store agent on routes without an aid param (project conversation)', () => {
+    route.params = {};
+    route.search = new URLSearchParams();
+
+    const { result } = renderHook(() => useAgentConversationCoordinate());
+
+    expect(result.current).toEqual(['agent-global', null, null]);
+  });
 });

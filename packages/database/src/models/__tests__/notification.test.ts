@@ -770,6 +770,20 @@ describe('NotificationModel (integration)', () => {
       });
     });
 
+    it('lookahead returns one row past the capped page size', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await serverDB.insert(notifications).values(
+        Array.from({ length: 51 }, (_, i) => ({
+          ...baseNotification({ title: `N${i}` }),
+          lastActivityAt: new Date(1_700_000_000_000 + i),
+          userId,
+        })),
+      );
+
+      expect(await model.listFeed({ limit: 50 })).toHaveLength(50);
+      expect(await model.listFeed({ limit: 50, lookahead: true })).toHaveLength(51);
+    });
+
     it('does not mark later feed revisions read during mark-all', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       await model.create(
@@ -799,6 +813,54 @@ describe('NotificationModel (integration)', () => {
       const rows = await model.list();
       expect(rows.find((row) => row.title === 'Old')?.isRead).toBe(true);
       expect(rows.find((row) => row.title === 'New')?.isRead).toBe(false);
+    });
+  });
+
+  describe('findFeedRowById', () => {
+    it('resolves a card that is not on the loaded pages', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({ dedupeKey: 'deep-link', kind: 'update', title: 'Deep linked' }),
+      );
+
+      const row = await model.findFeedRowById(created!.id);
+      expect(row?.title).toBe('Deep linked');
+    });
+
+    it('returns null for another user’s row — probing cannot distinguish foreign from missing', async () => {
+      const owner = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId: null });
+      const created = await owner.create(
+        baseNotification({ dedupeKey: 'foreign-row', kind: 'update', title: 'Foreign' }),
+      );
+
+      expect(await viewer.findFeedRowById(created!.id)).toBeNull();
+      expect(await viewer.findFeedRowById('00000000-0000-0000-0000-000000000000')).toBeNull();
+    });
+
+    it('still resolves an archived card — a deep link survives organizing', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({ dedupeKey: 'archived-deep', kind: 'update', title: 'Archived card' }),
+      );
+      await model.archive(created!.id);
+
+      expect(await model.listFeed()).toHaveLength(0);
+      expect((await model.findFeedRowById(created!.id))?.title).toBe('Archived card');
+    });
+
+    it('returns null when the linked resource is no longer readable', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const created = await model.create(
+        baseNotification({
+          dedupeKey: 'gone-resource',
+          resourceId: 'task_missing',
+          resourceType: 'task',
+          title: 'Secret title',
+        }),
+      );
+
+      expect(await model.findFeedRowById(created!.id)).toBeNull();
     });
   });
 

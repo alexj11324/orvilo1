@@ -9,7 +9,11 @@ import { ResourceTransferRequestModel } from '@/database/models/resourceTransfer
 import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAttention';
+import {
+  ActionSourceRegistry,
+  buildInboxFeed,
+  buildInboxFeedCard,
+} from '@/server/services/workAttention';
 
 const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -139,6 +143,26 @@ export const notificationRouter = router({
         projectModel: ctx.projectModel,
         taskModel: ctx.taskModel,
       });
+    }),
+
+  /**
+   * Single feed card by id — resolves deep links (`?item=<id>`) that point
+   * beyond the loaded pages, and re-reads one card to reconcile an
+   * `outcome_unknown` decision before the client resends. Same scope/ACL as
+   * `feed`; `null` when the row is absent or no longer readable.
+   */
+  feedCard: notificationReadProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      return buildInboxFeedCard(
+        {
+          actionSources: ctx.actionSources,
+          notificationModel: ctx.notificationModel,
+          projectModel: ctx.projectModel,
+          taskModel: ctx.taskModel,
+        },
+        input.id,
+      );
     }),
 
   feedSummary: notificationReadProcedure.query(async ({ ctx }) => {

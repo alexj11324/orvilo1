@@ -1,7 +1,7 @@
 'use client';
 
 import { type MenuProps } from '@lobehub/ui';
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
+import { Block, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
@@ -24,6 +24,8 @@ import { DOCUMENTS_REFER_URL, GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
+import UserAvatar from '@/features/User/UserAvatar';
+import UserPanel from '@/features/User/UserPanel';
 import ThemeButton from '@/features/User/UserPanel/ThemeButton';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useNavLayout } from '@/hooks/useNavLayout';
@@ -246,6 +248,17 @@ const Footer = memo(() => {
                 <ActionIcon icon={GithubIcon} size={16} title={'GitHub'} />
               </a>
             )}
+            <UserPanel>
+              <Block
+                clickable
+                align={'center'}
+                justify={'center'}
+                padding={4}
+                variant={'borderless'}
+              >
+                <UserAvatar size={20} />
+              </Block>
+            </UserPanel>
           </Flexbox>
           <ThemeButton placement={'topCenter'} size={16} />
         </Flexbox>
@@ -258,6 +271,11 @@ const Footer = memo(() => {
           >
             <ActionIcon aria-label={t('userPanel.help')} icon={CircleHelp} size={16} />
           </DropdownMenu>
+          <UserPanel>
+            <Block clickable align={'center'} justify={'center'} padding={4} variant={'borderless'}>
+              <UserAvatar size={20} />
+            </Block>
+          </UserPanel>
           {isDevMode && (
             <WorkspaceLink to="/settings">
               <ActionIcon

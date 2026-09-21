@@ -350,6 +350,7 @@ export class NotificationModel {
       filter?: NotificationPresentationFilter;
       kind?: NotificationFeedBucket;
       limit?: number;
+      lookahead?: boolean;
     } = {},
   ) {
     const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
@@ -383,16 +384,35 @@ export class NotificationModel {
       }
     }
 
-    return this.db
+    return (
+      this.db
+        .select()
+        .from(notifications)
+        .where(and(...conditions))
+        .orderBy(
+          desc(notifications.lastActivityAt),
+          desc(notifications.createdAt),
+          desc(notifications.id),
+        )
+        // `lookahead` is the internal over-fetch — one row past the capped page
+        // size so a caller can detect a next page without lifting the cap.
+        .limit(opts.lookahead ? limit + 1 : limit)
+    );
+  }
+
+  /**
+   * Single feed row by id under the same read scope as `listFeed`, minus the
+   * kind/filter/cursor clauses — a deep-linked selection must resolve even
+   * when it is not on the loaded pages. `null` covers absent AND unreadable
+   * so probing an id cannot distinguish a foreign row from a missing one.
+   */
+  async findFeedRowById(id: string) {
+    const rows = await this.db
       .select()
       .from(notifications)
-      .where(and(...conditions))
-      .orderBy(
-        desc(notifications.lastActivityAt),
-        desc(notifications.createdAt),
-        desc(notifications.id),
-      )
-      .limit(limit);
+      .where(and(eq(notifications.id, id), ...this.scope(), this.resourceReadable()))
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async markAsRead(ids: string[]) {

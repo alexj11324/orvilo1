@@ -622,13 +622,20 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
+        // Linear shape: a project opens on its Overview tab (verified against the
+        // real app — the issues collection lives on the Tasks tab).
+        element: redirectElement('overview'),
+        handle: { meta: projectsRouteMeta },
+        index: true,
+      },
+      {
         element: dynamicElement(
           () => import('@/routes/(main)/project/[projectId]'),
           'Desktop > Project Overview',
           { preloadId: 'project' },
         ),
         handle: { meta: projectsRouteMeta },
-        index: true,
+        path: 'overview',
       },
       {
         element: dynamicElement(
@@ -664,6 +671,18 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ),
         handle: { meta: projectLibraryRouteMeta },
         path: 'library/:id',
+      },
+      // The overview composer starts a project conversation at
+      // /project/:id/conversation?message=… — this registration is what makes
+      // that URL resolve; without it the send lands on the index redirect and
+      // drops the message.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/conversation'),
+          'Desktop > Project Conversation',
+        ),
+        handle: { meta: projectsRouteMeta },
+        path: 'conversation/:topicId?',
       },
     ],
     element: dynamicLayout(

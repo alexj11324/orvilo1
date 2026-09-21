@@ -48,6 +48,10 @@ class NotificationService {
     return lambdaClient.notification.feed.query(params);
   };
 
+  feedCard = (id: string) => {
+    return lambdaClient.notification.feedCard.query({ id });
+  };
+
   feedSummary = () => {
     return lambdaClient.notification.feedSummary.query();
   };

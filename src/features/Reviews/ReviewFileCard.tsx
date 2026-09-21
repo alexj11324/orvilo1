@@ -6,7 +6,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CommentComposer from './CommentComposer';
-import type { ReviewFile } from './types';
+import type { ReviewFile, WriteOutcome } from './types';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -53,7 +53,7 @@ const ReviewFileCard = memo<{
     line: number;
     path: string;
     side: 'LEFT' | 'RIGHT';
-  }) => Promise<boolean>;
+  }) => Promise<WriteOutcome>;
 }>(({ file, onComment, viewMode, writeDisabled }) => {
   const { t } = useTranslation('common');
   const [collapsed, setCollapsed] = useState(false);
@@ -114,15 +114,16 @@ const ReviewFileCard = memo<{
                 disabled={writeDisabled}
                 placeholder={t('reviews.commentPlaceholder')}
                 submitLabel={t('reviews.addComment')}
+                unknownHint={t('reviews.outcomeUnknown')}
                 onSubmit={async (body) => {
-                  const ok = await onComment({
+                  const outcome = await onComment({
                     body,
                     line: commentAt.line,
                     path: file.filename,
                     side: commentAt.side,
                   });
-                  if (ok) setCommentAt(null);
-                  return ok;
+                  if (outcome === 'applied') setCommentAt(null);
+                  return outcome;
                 }}
               />
             </Flexbox>

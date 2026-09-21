@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { PullRequestReviewReceiptModel } from '@/database/models/pullRequestReviewReceipt';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import {
@@ -15,7 +16,9 @@ const reviewProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
   const { ctx } = opts;
   return opts.next({
     ctx: {
-      pullRequestReviews: new PullRequestReviewService(ctx.userId, ctx.workspaceId ?? undefined),
+      pullRequestReviews: new PullRequestReviewService(ctx.userId, ctx.workspaceId ?? undefined, {
+        receipts: new PullRequestReviewReceiptModel(ctx.serverDB),
+      }),
     },
   });
 });
@@ -39,7 +42,12 @@ const reviewWriteProcedure = reviewProcedure.use(async (opts) => {
   return opts.next();
 });
 
-const operationIdSchema = z.string().min(8).max(128).optional();
+/**
+ * Write-path idempotency key — required so every write lands inside a claimed
+ * operation identity. The review client derives it from the intent payload, so
+ * a retried click replays the same operation instead of minting a new write.
+ */
+const operationIdSchema = z.string().min(8).max(128);
 const observedHeadShaSchema = z
   .string()
   .regex(/^[0-9a-f]{7,64}$/i, 'observedHeadSha must be a git sha');
@@ -63,7 +71,8 @@ const mapError = (procedure: string, error: unknown): never => {
       error.code === 'HEAD_DRIFTED' ||
       error.code === 'STALE_SNAPSHOT' ||
       error.code === 'PENDING_REVIEW_CONFLICT' ||
-      error.code === 'OPERATION_CONFLICT'
+      error.code === 'OPERATION_CONFLICT' ||
+      error.code === 'OUTCOME_UNKNOWN'
     ) {
       throw new TRPCError({ code: 'CONFLICT', message: `${error.code}: ${error.message}` });
     }

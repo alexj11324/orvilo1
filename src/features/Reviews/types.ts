@@ -4,6 +4,13 @@
  * client-only fields.
  */
 
+/**
+ * What a review write attempt resolved to. `unknown` means the request's
+ * outcome could not be confirmed (the response was lost mid-flight) — the
+ * draft must be kept and the same operation retried, never silently re-minted.
+ */
+export type WriteOutcome = 'applied' | 'failed' | 'unknown';
+
 export interface PullRequestCollection<T> {
   completeness: 'complete' | 'partial' | 'unknown';
   endCursor: string | null;

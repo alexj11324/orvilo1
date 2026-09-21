@@ -208,6 +208,9 @@ jobs:
       - name: Check slimming boundary
         run: node scripts/slimming/census.mjs --check
 
+      - name: Slimming boundary self-test (falsifiability)
+        run: node --test scripts/slimming/census.test.mjs
+
       - name: Fail fast — cancel sibling jobs
         if: failure()
         env:

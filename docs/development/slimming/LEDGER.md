@@ -32,6 +32,27 @@
 | Knowledge base / RAG                                 | knowledge/knowledgeBase lambda、chunk/KB-access 服务、KB server runtime（ORV-114 裁决：边界内）    | `knowledge-context`               |
 | File ingestion                                       | `packages/file-loaders` —— Document/local-file-shell/OpenAPI file service 的解析管道（ORV-114）    | `file-ingestion`                  |
 
+ORV-116 补全 KEEP 面，实现全仓 100% 覆盖（UNCOVERED=0）。新增的域能力：
+
+| 能力域                 | 范围                                                                                                                                                     | census id              |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Agent management       | Agent builder/settings/sidebar、group、quota/usage、hetero-agent UI、work registry、agent 域 lambda（agentGroup/Label/Notify/Share/expertise）           | `agent-management`     |
+| App shell & navigation | `src/routes`、`src/layout`、`src/spa`、入口 /instrumentation、Home/Nav/CommandMenu/Onboarding 等导航面                                                   | `app-shell-navigation` |
+| Settings & billing     | Settings/ProfileEditor/User/SelfLearning 面、quota/usage、`user`/`serverConfig` store 与对应 services/routers                                            | `settings-and-billing` |
+| CLI control plane      | `apps/cli` 全量（命令、device 控制、e2e harness）                                                                                                        | `cli-control-plane`    |
+| Server core routing    | lambda router 基建（`_helpers`/`_schema`/`config`/index/\_template + 跨域测试）、async/mobile/router-hono 壳、platform config、vite 配置、`business*` 包 | `server-core-routing`  |
+| Memory                 | 用户记忆管线：extraction/persona、`userMemory` store/services/routers、memory webhook                                                                    | `memory`               |
+| Files & resources      | FileViewer/ExplorerTree/Resource\*/LibraryModal、file/library store、client file services                                                                | `files-and-resources`  |
+| Sharing & publishing   | Share/ShareModal/shareChat/share lambda 面                                                                                                               | `sharing-publishing`   |
+| Dev tooling            | `scripts`、`tests`、`e2e`、`plugins`、DevPanel/DevDock/DevFlag/AgentMockDevtools                                                                         | `dev-tooling`          |
+| Shared UI              | `src/components`、`src/styles`                                                                                                                           | `shared-ui`            |
+| Client foundation      | `src/hooks`/`src/utils`/`src/types`/`src/const`/`src/helpers`、`src/business`、基础 libs、域名未认领的 `src/services`                                    | `client-foundation`    |
+| Observability & admin  | analytics/bootMetrics/traces/observability libs、llmGenerationTracing 服务 /router/module                                                                | `observability-admin`  |
+| Notifications          | email/push/webhookUser/resourceEvents 服务                                                                                                               | `notifications`        |
+| Search                 | search/ftsSearch/ftsSearchSync 服务与 search router                                                                                                      | `search`               |
+
+**基础层重叠豁免**：`client-foundation` 的宽 globs（`src/hooks/**`、`src/services/**`、`src/helpers/**`）与 `conversation-surface` 对具体 hook/service 文件的 REWRITE 认领在 `overlapAllowances` 中显式豁免 —— 域能力认领优先，基础层兜底。其他跨 disposition 重叠一律是 `conflictingDispositionFiles` 违规，CI fail。
+
 ## 2. DELETE 决策（附依赖闭包状态）
 
 每项 DELETE 的闭包工作清单由 census 的 `inbound.unexplained` 输出给出 —— 列表清零即闭包完成。

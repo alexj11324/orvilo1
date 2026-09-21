@@ -27,7 +27,7 @@ beforeEach(() => {
     chatModel({ id: 'm-2' }),
     chatModel({ id: 'm-hidden', visible: false }),
     chatModel({ abilities: { search: true }, id: 'm-search' }),
-    chatModel({ id: 'm-img', type: 'image' }),
+    chatModel({ id: 'm-img', type: 'tts' }),
     chatModel({ enabled: false, id: 'm-off' }),
   ]);
 });
@@ -50,7 +50,7 @@ describe('AiInfraRepos', () => {
       const repo = new AiInfraRepos({});
 
       expect(
-        (await repo.getAiProviderModelList('openai', { type: 'image' })).map((m) => m.id),
+        (await repo.getAiProviderModelList('openai', { type: 'tts' })).map((m) => m.id),
       ).toEqual(['m-img']);
       expect(
         (await repo.getAiProviderModelList('openai', { enabled: false })).map((m) => m.id),

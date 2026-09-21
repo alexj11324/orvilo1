@@ -24,8 +24,8 @@ beforeEach(() => {
   loadModels.mockResolvedValue([
     model(),
     model({ id: 'm-off', enabled: false }),
-    model({ id: 'm-img', type: 'image' }),
-    model({ id: 'm-vid', type: 'video' }),
+    model({ id: 'm-img', type: 'tts' }),
+    model({ id: 'm-vid', type: 'realtime' }),
     model({ id: 'claude', providerId: 'anthropic' }),
   ]);
 });

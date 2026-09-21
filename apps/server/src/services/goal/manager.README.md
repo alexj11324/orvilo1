@@ -26,6 +26,14 @@ commands. It submits a JSON file through `lh goal plan <goal-id> --token <turn> 
   failedOperationId. Only the existing confirmed transport-failure policy permits
   retry, with Task attempt limits and Goal budget checks.
 - `escalate`: concrete reason; pauses the Goal for a person.
+- `patch` (strategy `caid`): `expectedPlanRevision` plus 1–20 ops —
+  `append` (task + optional `key` + `dependsOn` of node ids or batch keys),
+  `replace` (title/description on an un-materialized planned node) and `retire`
+  (planned node with no dependents). Unlike `tasks`/`verify`, `patch` may land
+  while sibling work is still in flight — that is the point of an incremental
+  plan — but it cannot rewrite a node already bound to a run contract, cannot
+  retire a node that has dependents, cannot form dependency cycles, and a stale
+  `expectedPlanRevision` (CAS on `config.caidPlan.revision`) is refused.
 
 A row-locked server receipt binds each turn to its Goal, configured Agent,
 Topic, source-message identity and graph snapshot. First submission wins; a

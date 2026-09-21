@@ -2,7 +2,7 @@ import type {
   QueryMessagesInput,
   QueryMessagesOptions,
   UpdateToolMessageInput,
-} from '@orvilo/agent-runtime';
+} from '@orvilo/agent-execution';
 import { parse } from '@orvilo/conversation-flow';
 import type { CreateMessageParams, UIChatMessage, UpdateMessageParams } from '@orvilo/types';
 import { merge, nanoid } from '@orvilo/utils';

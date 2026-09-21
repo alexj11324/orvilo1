@@ -14,8 +14,6 @@ export interface HeteroResumeDecision {
   cwdChanged: boolean;
   /** Why a saved session could not be resumed safely. */
   reason?: HeteroResumeBlockedReason;
-  /** Binding key saved with the candidate session. Desktop main validates provider bindings. */
-  resumeBindingKey?: string;
   /** Session id to resume with, or undefined when resume must be skipped. */
   resumeSessionId: string | undefined;
 }
@@ -50,10 +48,8 @@ export const resolveHeteroResume = (
   metadata: ChatTopicMetadata | undefined,
   currentWorkingDirectory: string | undefined,
   options?: {
-    /** Known binding identity for native subscription auth. */
+    /** Binding identity of the current native subscription auth. */
     currentBindingKey?: string;
-    /** Provider bindings are resolved authoritatively by Desktop main. */
-    providerBinding?: boolean;
   },
 ): HeteroResumeDecision => {
   const savedSessionId = metadata?.heteroSessionId;
@@ -66,17 +62,8 @@ export const resolveHeteroResume = (
     sessionId: string,
     savedBindingKey: string | undefined,
   ): HeteroResumeDecision => {
-    if (options?.providerBinding) {
-      return {
-        cwdChanged: false,
-        resumeBindingKey: savedBindingKey,
-        resumeSessionId: sessionId,
-      };
-    }
-
-    // A missing key predates binding identity tracking. Native runs grandfather
-    // that session regardless of the Labs flag; provider-bound runs take the
-    // branch above and let Desktop main reject a missing or changed key.
+    // A missing key predates binding identity tracking; the session is
+    // grandfathered since native subscription auth is the only binding left.
     if (!savedBindingKey) {
       return {
         cwdChanged: false,
@@ -84,7 +71,7 @@ export const resolveHeteroResume = (
       };
     }
 
-    // A saved provider key still cannot resume under native subscription auth.
+    // A saved key from a retired provider binding cannot resume natively.
     if (!options?.currentBindingKey || savedBindingKey !== options.currentBindingKey) {
       return {
         cwdChanged: false,
@@ -95,7 +82,6 @@ export const resolveHeteroResume = (
 
     return {
       cwdChanged: false,
-      resumeBindingKey: savedBindingKey,
       resumeSessionId: sessionId,
     };
   };

@@ -88,6 +88,24 @@ export interface GitWorktreeListItem {
   status?: GitWorkingTreeStatus;
 }
 
+/**
+ * Occupancy classification for a candidate worktree path. `orphan-safe` means
+ * the unregistered directory is provably a crashed `worktree add` remnant
+ * (empty, or only the `.git` gitfile); `unknown` means the listing failed —
+ * never treat a failed list as an empty one.
+ */
+export interface GitWorktreePathInspection {
+  /** Canonical spelling of `worktreePath` — aliases collapse onto it. */
+  canonicalWorktreePath?: string;
+  error?: string;
+  kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
+  listed?: GitWorktreeListItem;
+  /** Canonical git common-dir of the repo the path was inspected against. */
+  repoCommonDir?: string;
+  /** Canonical main-checkout root of the repo. */
+  repoRoot?: string;
+}
+
 export interface GitWorkingTreeFiles {
   /** Repo-relative paths for untracked + staged-as-added files */
   added: string[];
@@ -253,9 +271,26 @@ export interface GitPullResult {
 
 export interface GitPushResult {
   error?: string;
+  /**
+   * Capability negotiation flag — true when a `fence` argument was supplied
+   * and this client persisted/enforced it. Absent on pre-fence clients.
+   */
+  fenceEnforced?: boolean;
   /** True when `git push` reported everything is already up-to-date */
   noop?: boolean;
+  /** Proves this client pushed the requested immutable source ref. */
+  pushedSourceRef?: string;
+  /** Remote ref value observed while enforcing `expectedRemoteSha`. */
+  remoteSha?: string;
   success: boolean;
+}
+
+/** Result of the `probeGitRemoteRef` remote observation (fenced-publish reconcile). */
+export interface GitRemoteRefProbe {
+  ref?: string;
+  /** Live sha the remote advertises for the ref. */
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
 }
 
 export interface GitMergeResult {

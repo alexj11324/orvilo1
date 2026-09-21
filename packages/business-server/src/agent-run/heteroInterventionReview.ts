@@ -67,8 +67,22 @@ export type ResolveHeteroInterventionResult =
       /** Echoes the winning client retry key for conditional rollback. */
       resolutionRequestId: string;
       response: AgentInterventionResponseData;
+      /**
+       * The approval-receipt scope the claim captured atomically at mint
+       * time (SC03). When present, the decision submit must CAS-match this
+       * exact scope — a re-scoped/renewed receipt refuses the claim's write.
+       */
+      scopeHash?: string;
       state: 'claimed';
       stepIndex?: number;
+      /**
+       * The approval-receipt window the claim captured atomically at mint
+       * time. When present, the decision submit binds this exact window — a
+       * renew between claim and decision makes the submit `stale_window`
+       * instead of letting the old claim decide the rotated window.
+       */
+      windowId?: string;
+      windowVersion?: number;
       /** Durable row scope resolved from the opaque token/direct target. */
       workspaceId?: string;
     };

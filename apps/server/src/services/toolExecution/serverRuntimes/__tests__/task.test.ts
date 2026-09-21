@@ -874,6 +874,7 @@ describe('createTaskRuntime', () => {
       expect(taskCaller.run).toHaveBeenCalledWith({
         continueTopicId: 'tpc_existing',
         id: 'T-1',
+        intent: 'continue',
         prompt: 'extra',
       });
       expect(result.content).toContain('Task T-1 started');

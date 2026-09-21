@@ -114,8 +114,8 @@ describe('Batch Execution (execAgents)', () => {
     const result = await caller.execAgents({
       parallel: true,
       tasks: [
-        { agentId: testAgentId, autoStart: false, prompt: 'Task 1: Hello' },
-        { agentId: testAgent2Id, autoStart: false, prompt: 'Task 2: World' },
+        { agentId: testAgentId, prompt: 'Task 1: Hello' },
+        { agentId: testAgent2Id, prompt: 'Task 2: World' },
       ],
     });
 
@@ -151,8 +151,8 @@ describe('Batch Execution (execAgents)', () => {
     const result = await caller.execAgents({
       parallel: false,
       tasks: [
-        { agentId: testAgentId, autoStart: false, prompt: 'Sequential Task 1' },
-        { agentId: testAgent2Id, autoStart: false, prompt: 'Sequential Task 2' },
+        { agentId: testAgentId, prompt: 'Sequential Task 1' },
+        { agentId: testAgent2Id, prompt: 'Sequential Task 2' },
       ],
     });
 
@@ -166,9 +166,9 @@ describe('Batch Execution (execAgents)', () => {
 
     const result = await caller.execAgents({
       tasks: [
-        { agentId: testAgentId, autoStart: false, prompt: 'Valid task' },
-        { agentId: 'non-existent-agent', autoStart: false, prompt: 'Invalid task' },
-        { agentId: testAgent2Id, autoStart: false, prompt: 'Another valid task' },
+        { agentId: testAgentId, prompt: 'Valid task' },
+        { agentId: 'non-existent-agent', prompt: 'Invalid task' },
+        { agentId: testAgent2Id, prompt: 'Another valid task' },
       ],
     });
 
@@ -197,8 +197,8 @@ describe('Batch Execution (execAgents)', () => {
 
     await caller.execAgents({
       tasks: [
-        { agentId: testAgentId, autoStart: false, prompt: 'Topic 1 prompt' },
-        { agentId: testAgentId, autoStart: false, prompt: 'Topic 2 prompt' },
+        { agentId: testAgentId, prompt: 'Topic 1 prompt' },
+        { agentId: testAgentId, prompt: 'Topic 2 prompt' },
       ],
     });
 
@@ -218,13 +218,11 @@ describe('Batch Execution (execAgents)', () => {
       tasks: [
         {
           agentId: testAgentId,
-          autoStart: false,
           deviceId: 'device-batch-1',
           prompt: 'Device-bound task 1',
         },
         {
           agentId: testAgentId,
-          autoStart: false,
           deviceId: 'device-batch-2',
           prompt: 'Device-bound task 2',
         },
@@ -243,9 +241,10 @@ describe('Batch Execution (execAgents)', () => {
     ]);
   });
 
-  // ACP dispatch is the run start itself — autoStart=false no longer defers;
-  // every task dispatches.
-  it('should dispatch every batch task regardless of autoStart', async () => {
+  // ACP dispatch is the run start itself — autoStart=false has no deferred
+  // start to defer to, so the retired flag is rejected per-task (batch
+  // semantics report it in `results` rather than throwing).
+  it('should reject autoStart:false tasks while dispatching the rest', async () => {
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     const result = await caller.execAgents({
@@ -255,9 +254,13 @@ describe('Batch Execution (execAgents)', () => {
       ],
     });
 
-    expect(result.success).toBe(true);
-
-    expect(result.results[0].autoStarted).toBe(true);
-    expect(result.results[1].autoStarted).toBe(true);
+    expect(result.success).toBe(false);
+    expect(result.results[0]).toMatchObject({ autoStarted: true, success: true });
+    expect(result.results[1]).toMatchObject({
+      error: expect.stringContaining('autoStart:false is not supported'),
+      success: false,
+    });
+    expect(result.summary).toEqual({ failed: 1, succeeded: 1, total: 2 });
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
   });
 });

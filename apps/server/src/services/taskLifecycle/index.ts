@@ -42,7 +42,8 @@ import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { AiGenerationService } from '@/server/services/aiGeneration';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { SystemAgentService } from '@/server/services/systemAgent';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
@@ -1078,19 +1079,24 @@ export class TaskLifecycleService {
         taskName: currentTask?.name || taskIdentifier,
       });
 
-      const modelRuntime = await initModelRuntimeFromDB(
+      const result = await new AiGenerationService(
         this.db,
         this.userId,
-        provider,
         this.workspaceId,
-      );
-      const result = await modelRuntime.generateObject(
+      ).generateObject(
         {
           messages: payload.messages as any[],
           model,
+          provider,
           schema: { name: TASK_TOPIC_HANDOFF_SCHEMA_NAME, schema: TASK_TOPIC_HANDOFF_SCHEMA },
         },
         {
+          judgment: {
+            binding: { agentId: currentTask?.assigneeAgentId },
+            purpose: 'task.handoff',
+            taskId,
+          },
+          kind: 'judgment',
           metadata: { trigger: 'task_handoff' },
           tracing: {
             promptVersion: TASK_TOPIC_HANDOFF_PROMPT_VERSION,
@@ -1119,6 +1125,12 @@ export class TaskLifecycleService {
 
       log('handoff generated for topic %s: title=%s', topicId, handoff.title);
     } catch (e) {
+      // A missing authorized judgment binding is an explicit block — log it
+      // distinctly so the operator sees the gap instead of a generic warn.
+      if (isAcpJudgmentBindingError(e)) {
+        console.error('[TaskLifecycle] handoff judgment blocked (no ACP binding):', e);
+        return;
+      }
       console.warn('[TaskLifecycle] handoff generation failed:', e);
     }
   }
@@ -1192,19 +1204,24 @@ export class TaskLifecycleService {
           taskName: currentTask.name || taskIdentifier,
         });
 
-        const modelRuntime = await initModelRuntimeFromDB(
+        const judgeResult = (await new AiGenerationService(
           this.db,
           this.userId,
-          provider,
           this.workspaceId,
-        );
-        const judgeResult = (await modelRuntime.generateObject(
+        ).generateObject(
           {
             messages: judgePayload.messages as any[],
             model,
+            provider,
             schema: { name: JUDGE_BRIEF_EMIT_SCHEMA_NAME, schema: JUDGE_BRIEF_EMIT_SCHEMA },
           },
           {
+            judgment: {
+              binding: { agentId: currentTask.assigneeAgentId },
+              purpose: 'task.briefJudge',
+              taskId,
+            },
+            kind: 'judgment',
             metadata: { trigger: 'task_brief_judge' },
             tracing: {
               promptVersion: JUDGE_BRIEF_EMIT_PROMPT_VERSION,
@@ -1257,19 +1274,24 @@ export class TaskLifecycleService {
         taskName: currentTask.name || taskIdentifier,
       });
 
-      const modelRuntime = await initModelRuntimeFromDB(
+      const result = await new AiGenerationService(
         this.db,
         this.userId,
-        provider,
         this.workspaceId,
-      );
-      const result = await modelRuntime.generateObject(
+      ).generateObject(
         {
           messages: payload.messages as any[],
           model,
+          provider,
           schema: { name: GENERATE_BRIEF_SCHEMA_NAME, schema: GENERATE_BRIEF_SCHEMA },
         },
         {
+          judgment: {
+            binding: { agentId: currentTask.assigneeAgentId },
+            purpose: 'task.brief',
+            taskId,
+          },
+          kind: 'judgment',
           metadata: { trigger: 'task_brief' },
           tracing: {
             promptVersion: GENERATE_BRIEF_PROMPT_VERSION,
@@ -1308,6 +1330,22 @@ export class TaskLifecycleService {
 
       log('synthesize: brief created task=%s topic=%s type=%s', taskIdentifier, topicId, briefType);
     } catch (e) {
+      if (isAcpJudgmentBindingError(e)) {
+        // Missing authorized judgment binding → explicit audit marker on the
+        // decision row (emit=false, reason names the block), not a silent skip.
+        console.error('[TaskLifecycle] brief judgment blocked (no ACP binding):', e);
+        await this.taskTopicModel
+          .updateBriefDecision(taskId, topicId, {
+            decidedAt: new Date().toISOString(),
+            emit: false,
+            reason: 'acp_judgment_no_binding',
+            source: 'llm-judge',
+          })
+          .catch((persistError) =>
+            console.warn('[TaskLifecycle] brief decision persist failed:', persistError),
+          );
+        return;
+      }
       console.warn('[TaskLifecycle] brief synthesis failed:', e);
     }
   }

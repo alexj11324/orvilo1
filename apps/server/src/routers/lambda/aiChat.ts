@@ -24,7 +24,7 @@ import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
 import { resolveContext } from '@/server/routers/lambda/_helpers/resolveContext';
 import { AiChatService } from '@/server/services/aiChat';
-import { AiGenerationService } from '@/server/services/aiGeneration';
+import { AiGenerationService, isAcpJudgmentBindingError } from '@/server/services/aiGeneration';
 import { FileService } from '@/server/services/file';
 import { archiveToolResultIfNeeded } from '@/server/services/toolExecution/archiveToolResult';
 
@@ -161,6 +161,22 @@ export const aiChatRouter = router({
     // routing) and the tracing registry have a fallback when the caller
     // forgets to set one. `tracing` carries the structured tracing config
     // (scenario / promptVersion / schemaName / inputHint / ...).
+    //
+    // outputJSON is a retained judgment surface (builder suggestions, input
+    // completion, group supervisor) — every call must run as an explicitly
+    // authorized ACP operation. The binding resolves from the traced agent,
+    // then the traced topic's owning agent, then the env judgment fallback; a
+    // missing binding blocks with `ACP_JUDGMENT_NO_BINDING` instead of
+    // silently hitting deployment config.
+    const tracedAgentId =
+      typeof input.tracing?.agentId === 'string' ? input.tracing.agentId : undefined;
+    const tracedTopicId =
+      typeof input.tracing?.topicId === 'string' ? input.tracing.topicId : undefined;
+    const bindingAgentId =
+      tracedAgentId ??
+      (tracedTopicId
+        ? ((await ctx.topicModel.findById(tracedTopicId))?.agentId ?? undefined)
+        : undefined);
     let data: unknown;
     try {
       data = await ctx.aiGenerationService.generateObject(
@@ -172,11 +188,27 @@ export const aiChatRouter = router({
           tools: input.tools,
         },
         {
+          judgment: {
+            binding: { agentId: bindingAgentId },
+            purpose: `outputJSON.${input.tracing?.scenario ?? 'generic'}`,
+          },
+          kind: 'judgment',
           metadata: { trigger: RequestTrigger.Chat, ...input.metadata },
           tracing: { ...input.tracing, tracingId },
         },
       );
     } catch (error) {
+      // A missing authorized binding is an explicit block — surface it as a
+      // precondition failure instead of an opaque internal error.
+      if (isAcpJudgmentBindingError(error)) {
+        markSilentTRPCErrorLog(error);
+        throw new TRPCError({
+          cause: error,
+          code: 'PRECONDITION_FAILED',
+          message: 'ACP_JUDGMENT_NO_BINDING',
+        });
+      }
+
       const runtimeTRPCError = createRuntimeTRPCError(error, {
         silentHandlerLog: input.tracing?.scenario === TRACING_SCENARIOS.InputCompletion,
       });

@@ -5,12 +5,11 @@ import { getAllScopePermissions } from '@/utils/rbac';
 import { zValidator } from '../common/validator';
 import { MessageController } from '../controllers';
 import { requireAuth } from '../middleware';
-import { requireAnyPermission, requireApiKeyScope } from '../middleware/permission-check';
+import { requireAnyPermission } from '../middleware/permission-check';
 import {
   MessageIdParamSchema,
   MessagesCountQuerySchema,
   MessagesCreateRequestSchema,
-  MessagesCreateWithReplyRequestSchema,
   MessagesDeleteBatchRequestSchema,
   MessagesListQuerySchema,
 } from '../types/message.type';
@@ -76,23 +75,6 @@ MessageRoutes.post(
     const controller = new MessageController();
 
     return controller.handleCreateMessage(c);
-  },
-);
-
-// POST /api/v1/messages/replies - Create a user message and generate an AI reply (requires message write permission)
-// Generating the reply invokes a model, so restricted API keys also need `model:invoke`
-MessageRoutes.post(
-  '/replies',
-  requireAuth,
-  requireAnyPermission(
-    getAllScopePermissions('MESSAGE_CREATE'),
-    'You do not have permission to create messages',
-  ),
-  requireApiKeyScope('model:invoke'),
-  zValidator('json', MessagesCreateWithReplyRequestSchema),
-  (c) => {
-    const controller = new MessageController();
-    return controller.handleCreateMessageWithAIReply(c);
   },
 );
 

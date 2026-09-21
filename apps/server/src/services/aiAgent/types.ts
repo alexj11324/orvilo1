@@ -13,7 +13,7 @@ import type {
 import type { EvalContext } from '@/server/modules/Mecha/ContextEngineering/types';
 import type { AgentConfigWithId } from '@/server/services/agent';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
-import type { EvalRuntimeContext } from '@/server/services/agentRuntime/types';
+import type { EvalRuntimeContext } from '@/server/services/agentExecution/types';
 
 import type { DeviceAccessReason } from './deviceAccessPolicy';
 
@@ -158,6 +158,13 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   parentMessageId?: string;
   queueRetries?: number;
   queueRetryDelay?: string;
+  /**
+   * Tool identifiers this run cannot start without — task-tool requirements
+   * and evidence-submission capabilities land here. Every id must resolve to a
+   * mounted outcome before dispatch; a partial mount is an admission error, not
+   * a degraded run. Mutually incompatible with `disableTools`.
+   */
+  requiredToolIds?: string[];
   /** Whether to continue execution from an existing persisted message */
   resume?: boolean;
   /**

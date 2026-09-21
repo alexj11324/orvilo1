@@ -451,37 +451,6 @@ export default {
 
   // Heterogeneous agent CLI status (shown on agent profile page in integration mode)
   'heterogeneousStatus.account.label': 'Account',
-  'heterogeneousStatus.apiMode.configureProvider': 'Go to provider settings',
-  'heterogeneousStatus.apiMode.localOnly': 'Available only for Desktop local execution',
-  'heterogeneousStatus.apiMode.defaultProvider': 'Orvilo',
-  'heterogeneousStatus.apiMode.model': 'Model',
-  'heterogeneousStatus.apiMode.modelPlaceholder': 'Select a model',
-  'heterogeneousStatus.apiMode.noProviders':
-    'No enabled provider with an Anthropic-compatible endpoint is configured.',
-  'heterogeneousStatus.apiMode.noResponsesProviders':
-    'No enabled provider with an explicitly supported Responses API endpoint is configured.',
-  'heterogeneousStatus.apiMode.smallFastModel': 'Background model',
-  'heterogeneousStatus.apiMode.smallFastModelDesc':
-    'Used for session titles, summaries, and other background work. Does not change the main conversation.',
-  'heterogeneousStatus.apiMode.smallFastModelPlaceholder': 'Same as primary model',
-  'heterogeneousStatus.apiMode.provider': 'Provider',
-  'heterogeneousStatus.apiMode.providerPlaceholder': 'Select a provider',
-  'heterogeneousStatus.apiMode.workspaceUnsupported': 'Not available for workspace agents',
-  'heterogeneousStatus.apiMode.serverDefault.checking': 'Checking deployment provider...',
-  'heterogeneousStatus.apiMode.serverDefault.disabled':
-    'The deployment administrator has disabled the default API provider for heterogeneous agents.',
-  'heterogeneousStatus.apiMode.serverDefault.invalidConfiguration':
-    'The deployment provider or its compatible models are not configured.',
-  'heterogeneousStatus.apiMode.serverDefault.loadFailed':
-    'Could not check the deployment provider.',
-  'heterogeneousStatus.apiMode.serverDefault.noModels':
-    'No compatible models are available from the deployment provider.',
-  'heterogeneousStatus.apiMode.serverDefault.retry': 'Retry',
-  'heterogeneousStatus.apiMode.serverDefault.unsupported':
-    'The deployment provider does not expose a compatible model for this CLI.',
-  'heterogeneousStatus.auth.api': 'API',
-  'heterogeneousStatus.auth.label': 'Auth Method',
-  'heterogeneousStatus.auth.subscription': 'Subscription',
   'heterogeneousStatus.command.edit': 'Edit command',
   'heterogeneousStatus.command.label': 'Launch Command',
   'heterogeneousStatus.command.placeholder': 'Command name or absolute path',
@@ -1499,38 +1468,9 @@ export default {
   'skillGroup.communityTools': 'Community Tools',
   'skillGroup.customConnectors': 'Custom Connectors',
   'skillGroup.customSkills': 'Custom Skills',
-  'skillStore.button': 'Skill Store',
-  'skillStore.empty': 'Browse the Skill Store. Install one to get started, add more later.',
-  'skillStore.emptySearch': 'No matching Skills',
-  'skillStore.networkError': 'Network error, please try again',
-  'skillStore.rateLimited': 'Too many requests just now. Please wait a moment and try again.',
-  'skillStore.search': 'Search skills by name or keyword, press Enter to search…',
   'skillStore.tabs.community': 'Community',
   'skillStore.tabs.custom': 'Custom',
   'skillStore.tabs.orvilo': 'Orvilo',
-  'skillStore.tabs.mcp': 'MCP',
-  'skillStore.tabs.skills': 'Skills',
-  'skillStore.title': 'Skill Store',
-  'skillStore.wantMore.action': 'Submit a request →',
-  'skillStore.wantMore.feedback.message': `## Skill Name
-[Please fill in]
-
-## Use Case
-When I am ___, I need ___
-
-## Expected Features
-1.
-2.
-3.
-
-## Reference Examples
-(Optional) Are there any similar tools or features for reference?
-
----
-💡 Tip: The more specific your description, the better we can meet your needs`,
-  'skillStore.wantMore.feedback.title':
-    '[Skill Request] Summarize the skill you need in one sentence',
-  'skillStore.wantMore.reachedEnd': "You've reached the end. Can't find what you need?",
   'skillView.connectors': 'Connectors',
   'skillView.skills': 'Skills',
   'startConversation': 'Start Conversation',
@@ -3886,9 +3826,6 @@ When I am ___, I need ___
   'tools.builtins.orvilo-remote-device.readme':
     'Manage connections to your desktop devices. List online devices, activate a device for remote operations, and check connection status.',
   'tools.builtins.orvilo-remote-device.title': 'Remote Device',
-  'tools.builtins.orvilo-skill-store.description':
-    'Browse and install agent skills from the Orvilo marketplace. Use this when you need extended capabilities or want to install a specific skill.',
-  'tools.builtins.orvilo-skill-store.title': 'Skill Store',
   'tools.builtins.orvilo-skills.description': 'Activate and use reusable skill packages',
   'tools.builtins.orvilo-skills.title': 'Skills',
   'tools.builtins.orvilo-task.description':

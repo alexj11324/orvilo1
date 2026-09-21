@@ -11,7 +11,7 @@ import { messageMapKey } from '../../../../utils/messageMapKey';
 import { createMockMessage, TEST_IDS } from './fixtures';
 import { resetTestEnvironment } from './helpers';
 
-// Mock the tRPC client & agentRuntimeService so the import chain doesn't pull
+// Mock the tRPC client so the import chain doesn't pull
 // server-only code (cloud business packages, redis envs) into the test env.
 vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
@@ -26,12 +26,6 @@ vi.mock('@/libs/trpc/client', () => ({
       },
       submitHeteroIntervention: { mutate: vi.fn().mockResolvedValue({ success: true }) },
     },
-  },
-}));
-
-vi.mock('@/services/agentRuntime', () => ({
-  agentRuntimeService: {
-    handleHumanIntervention: vi.fn().mockResolvedValue({ success: true }),
   },
 }));
 
@@ -3282,7 +3276,19 @@ describe('ConversationControl actions', () => {
         result: payload,
         toolCallId: 'cc_call_1',
       });
-      expect(lambdaClient.aiAgent.submitHeteroIntervention.mutate).not.toHaveBeenCalled();
+      // SA02-C: the receipt decision lands BEFORE the IPC bridge resolve —
+      // a failed mirror write must leave the card pending rather than let the
+      // producer's retry read a receipt that was never decided.
+      const mirrorSubmit = vi.mocked(lambdaClient.aiAgent.submitHeteroIntervention.mutate);
+      expect(mirrorSubmit).toHaveBeenCalledTimes(1);
+      expect(mirrorSubmit).toHaveBeenCalledWith({
+        operationId: executionOpId,
+        result: payload,
+        toolCallId: 'cc_call_1',
+      });
+      expect(mirrorSubmit.mock.invocationCallOrder[0]).toBeLessThan(
+        submitInterventionSpy.mock.invocationCallOrder[0],
+      );
     });
 
     it("falls back to global-state optimistic context and routes a GC'd op to the remote tRPC transport", async () => {

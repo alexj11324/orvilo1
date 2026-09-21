@@ -85,6 +85,12 @@ function buildNotifyProtocol(lhPath: string, topicId: string): string {
 interface PlatformTaskEntry {
   agentId?: string;
   agentType: string;
+  /**
+   * Process working directory of the run — the provisioned worktree path for
+   * workspace-bound runs. Lets `inspectGitWorktreePath` answer "is a live run
+   * writing here" so the server never double-writes an occupied checkout.
+   */
+  cwd?: string;
   operationId: string;
   parentOperationId?: string;
   pid: number;
@@ -366,6 +372,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
           if (pid === undefined) return;
           this.platformTasks.set(taskId, {
             agentType: request.agentType,
+            cwd: request.cwd,
             operationId: request.operationId,
             pid,
             runGeneration: request.runGeneration,
@@ -446,6 +453,18 @@ export default class GatewayConnectionCtr extends ControllerModule {
       readExternalAssetForPublish: (params) =>
         this.localFileCtr.readExternalAssetForPublish(params),
       copyAssetForPublish: (params) => this.localFileCtr.copyAssetForPublish(params),
+      getActiveWorktreeWriter: async (worktreePath: string) => {
+        // Compare canonical identities, not spellings — a run registered under
+        // a symlinked or aliased cwd still owns the same physical directory.
+        const { canonicalizePath } = await import('@orvilo/local-file-shell/git');
+        const target = await canonicalizePath(worktreePath);
+        for (const entry of this.platformTasks.values()) {
+          if (entry.cwd && (await canonicalizePath(entry.cwd)) === target) {
+            return { operationId: entry.operationId, pid: entry.pid, topicId: entry.topicId };
+          }
+        }
+        return null;
+      },
       getProjectFileIndex: (params) => this.localFileCtr.getProjectFileIndex(params),
       listHeterogeneousAgentModels: (params) => this.heterogeneousAgentCtr.listModels(params),
       searchProjectFiles: (params) => this.localFileCtr.searchProjectFiles(params),
@@ -901,6 +920,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       this.platformTasks.set(taskId, {
         agentId,
         agentType,
+        cwd: workDir,
         operationId,
         parentOperationId,
         pid,
@@ -1001,6 +1021,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       this.platformTasks.set(taskId, {
         agentId,
         agentType,
+        cwd: workDir,
         operationId,
         parentOperationId,
         pid,

@@ -99,6 +99,7 @@ export interface GetAgentInterventionReviewBySourceParams {
 export interface ExecAgentTaskParams {
   agentId?: string;
   appContext?: ExecAgentAppContext;
+  /** `false` is rejected by the server (no deferred start exists); omit or pass `true`. */
   autoStart?: boolean;
   /**
    * Client-minted ids for the rows this run creates, honoured verbatim by the
@@ -240,10 +241,6 @@ export interface UpdateClientTaskThreadStatusParams {
 }
 
 class AiAgentService {
-  async getServerDefaultHeterogeneousCapability() {
-    return await lambdaClient.aiAgent.getServerDefaultHeterogeneousCapability.query();
-  }
-
   /**
    * Execute a single Agent task.
    * Returns the operationId needed to connect to the Agent Gateway.

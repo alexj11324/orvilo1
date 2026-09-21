@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, taskDispatches, tasks, users, workspaces } from '../../schemas';
+import { agents, goalNodes, goals, taskDispatches, tasks, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import {
   TaskDispatchIdempotencyConflictError,
@@ -18,6 +18,9 @@ const otherUserId = 'task-dispatch-other-user';
 const otherWorkspaceId = 'task-dispatch-other-workspace';
 
 const cleanup = async () => {
+  await db.delete(goalNodes);
+  await db.delete(goals).where(eq(goals.workspaceId, workspaceId));
+  await db.delete(goals).where(eq(goals.workspaceId, otherWorkspaceId));
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
   await db.delete(tasks).where(eq(tasks.workspaceId, otherWorkspaceId));
@@ -78,6 +81,27 @@ const createPersonalTask = async (id: string, identifier: string, seq: number) =
     })
     .returning();
   return task;
+};
+
+const attachTaskToGoal = async (taskId: string, status: 'paused' | 'running', seq: number) => {
+  const [goal] = await db
+    .insert(goals)
+    .values({
+      id: `goal-${seq}`,
+      status,
+      title: `Goal ${seq}`,
+      userId,
+      workspaceId,
+    })
+    .returning();
+  await db.insert(goalNodes).values({
+    createdByUserId: userId,
+    goalId: goal.id,
+    kind: 'task',
+    taskId,
+    title: 'Owned node',
+  });
+  return goal;
 };
 
 describe('TaskDispatchModel', () => {
@@ -780,5 +804,327 @@ describe('TaskDispatchModel', () => {
     await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
       { status: 'paused' },
     ]);
+  });
+});
+
+describe('goal dispatch fence', () => {
+  it('parks a new automated dispatch while the owning goal is paused', async () => {
+    const task = await createTask('RUN-G1', 40);
+    const goal = await attachTaskToGoal(task.id, 'paused', 1);
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    const requested = await model.request({
+      idempotencyKey: 'goal:RUN-G1:request-1',
+      requestedBy: goal.id,
+      taskId: task.id,
+      trigger: 'goal',
+    });
+
+    expect(requested.state).toBe('created');
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch.phase).toBe('waiting');
+    expect(requested.dispatch.waitingReason).toBe('goal_paused');
+  });
+
+  it('lets a manual request through while the owning goal is paused', async () => {
+    const task = await createTask('RUN-G2', 41);
+    await attachTaskToGoal(task.id, 'paused', 2);
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    const requested = await model.request({
+      idempotencyKey: 'manual:RUN-G2:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch.phase).toBe('requested');
+    expect(requested.dispatch.waitingReason).toBeNull();
+  });
+
+  it('resumes the same waiting dispatch once the goal runs again', async () => {
+    const task = await createTask('RUN-G3', 42);
+    const goal = await attachTaskToGoal(task.id, 'paused', 3);
+    await db.insert(agents).values({ id: 'goal-agent-3', userId, workspaceId });
+    await db.update(tasks).set({ assigneeAgentId: 'goal-agent-3' }).where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    const parked = await model.request({
+      idempotencyKey: 'goal:RUN-G3:request-1',
+      requestedBy: goal.id,
+      taskId: task.id,
+      trigger: 'goal',
+    });
+    if (parked.state === 'busy') throw new Error('unexpected busy');
+    expect(parked.dispatch.phase).toBe('waiting');
+
+    await db.update(goals).set({ status: 'running' }).where(eq(goals.id, goal.id));
+
+    const resumed = await model.request({
+      idempotencyKey: 'goal:RUN-G3:request-1',
+      requestedBy: goal.id,
+      taskId: task.id,
+      trigger: 'goal',
+    });
+    expect(resumed.state).toBe('existing');
+    if (resumed.state === 'busy') throw new Error('unexpected busy');
+    expect(resumed.dispatch.id).toBe(parked.dispatch.id);
+    expect(resumed.dispatch.phase).toBe('requested');
+    expect(resumed.dispatch.waitingReason).toBeNull();
+  });
+
+  it('re-parks a waiting dispatch when a stray trigger arrives while the goal stays paused', async () => {
+    const task = await createTask('RUN-G4', 43);
+    await attachTaskToGoal(task.id, 'paused', 4);
+    await db.insert(agents).values({ id: 'goal-agent-4', userId, workspaceId });
+    await db.update(tasks).set({ assigneeAgentId: 'goal-agent-4' }).where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    await model.request({
+      idempotencyKey: 'goal:RUN-G4:request-1',
+      requestedBy: 'goal-4',
+      taskId: task.id,
+      trigger: 'goal',
+    });
+
+    const stray = await model.request({
+      idempotencyKey: 'goal:RUN-G4:request-1',
+      requestedBy: 'goal-4',
+      taskId: task.id,
+      trigger: 'heartbeat',
+    });
+    if (stray.state === 'busy') throw new Error('unexpected busy');
+    expect(stray.dispatch.phase).toBe('waiting');
+    expect(stray.dispatch.waitingReason).toBe('goal_paused');
+  });
+
+  it('parks the dispatch at provisioning claim when the goal pauses in between', async () => {
+    const task = await createTask('RUN-G5', 44);
+    const goal = await attachTaskToGoal(task.id, 'running', 5);
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    const requested = await model.request({
+      idempotencyKey: 'goal:RUN-G5:request-1',
+      requestedBy: goal.id,
+      taskId: task.id,
+      trigger: 'goal',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+
+    await db.update(goals).set({ status: 'paused' }).where(eq(goals.id, goal.id));
+
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    expect(claim).toBeNull();
+    await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'goal_paused',
+    });
+  });
+
+  it('parks the dispatch at a transition when the goal pauses mid-flight', async () => {
+    const task = await createTask('RUN-G6', 45);
+    const goal = await attachTaskToGoal(task.id, 'running', 6);
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    const requested = await model.request({
+      idempotencyKey: 'goal:RUN-G6:request-1',
+      requestedBy: goal.id,
+      taskId: task.id,
+      trigger: 'goal',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+
+    await db.update(goals).set({ status: 'paused' }).where(eq(goals.id, goal.id));
+
+    const transitioned = await model.transition({
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: claim.fence,
+      owner: 'worker-a',
+      phase: 'provisioning',
+    });
+    expect(transitioned).toBeNull();
+    await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'goal_paused',
+    });
+  });
+});
+
+describe('persisted dispatch origin + final admission re-check (SA05-B)', () => {
+  const seedAssigned = async (identifier: string, seq: number) => {
+    await db.insert(agents).values({ id: `agent-${identifier}`, userId, workspaceId });
+    const task = await createTask(identifier, seq);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: `agent-${identifier}` })
+      .where(eq(tasks.id, task.id));
+    return task;
+  };
+
+  it('persists origin, initiator and settlement evidence on the dispatch row', async () => {
+    const task = await seedAssigned('ORG-1', 50);
+    const model = new TaskDispatchModel(db, workspaceId);
+
+    // An `internal` claim only persists with a bound grant: the source
+    // dispatch must exist on this task's current delivery chain (SB09).
+    await db.update(tasks).set({ executionGeneration: 1 }).where(eq(tasks.id, task.id));
+    await db.insert(taskDispatches).values({
+      generation: 1,
+      id: 'dsp-src',
+      idempotencyKey: 'manual:org-1-src',
+      phase: 'succeeded',
+      policyRevision: 0,
+      requestedBy: `manual:${userId}`,
+      requirementRevision: 0,
+      taskId: task.id,
+      taskRevision: 0,
+      workspaceId,
+    });
+    task.executionGeneration = 1;
+
+    const settlementGrant = {
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      kind: 'integration_seed' as const,
+      sourceDispatchId: 'dsp-src',
+      sourceGeneration: 1,
+      sourceTopicId: 'tpc_src',
+      workspaceId,
+    };
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:ORG-1:settle-1',
+      initiator: 'user-actor-9',
+      origin: 'internal',
+      requestedBy: 'planner',
+      settlementGrant,
+      sourceDispatchId: 'dsp-src',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+
+    expect(requested.dispatch).toMatchObject({
+      initiator: 'user-actor-9',
+      origin: 'internal',
+      requestedBy: 'orchestrator:planner',
+      settlementGrant,
+      sourceDispatchId: 'dsp-src',
+    });
+
+    // First write wins: an idempotent replay carrying different labels cannot
+    // relabel the persisted origin.
+    const replay = await model.request({
+      idempotencyKey: 'orchestrator:ORG-1:settle-1',
+      initiator: 'other',
+      origin: 'external',
+      requestedBy: 'planner',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (replay.state === 'busy') throw new Error('unexpected busy');
+    expect(replay.dispatch.origin).toBe('internal');
+    expect(replay.dispatch.initiator).toBe('user-actor-9');
+  });
+
+  it('parks a caid dispatch at the dispatched boundary when admission flipped off', async () => {
+    const task = await seedAssigned('ORG-2', 51);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:ORG-2:plan-1',
+      origin: 'caid',
+      requestedBy: 'planner',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+
+    const parked = await model.transition({
+      admissionRecheck: async () => false,
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: claim.fence,
+      owner: 'worker-a',
+      phase: 'dispatched',
+    });
+
+    expect(parked).toMatchObject({
+      leaseOwner: null,
+      phase: 'waiting',
+      waitingReason: 'caid_dispatch_disabled',
+    });
+  });
+
+  it('lets a caid dispatch through when admission still holds, and never gates external rows', async () => {
+    const caidTask = await seedAssigned('ORG-3', 52);
+    const manualTask = await seedAssigned('ORG-4', 53);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const recheck = async () => false;
+
+    const caid = await model.request({
+      idempotencyKey: 'orchestrator:ORG-3:plan-1',
+      origin: 'caid',
+      requestedBy: 'planner',
+      taskId: caidTask.id,
+      trigger: 'orchestrator',
+    });
+    const manual = await model.request({
+      idempotencyKey: 'manual:ORG-4:request-1',
+      origin: 'external',
+      requestedBy: userId,
+      taskId: manualTask.id,
+      trigger: 'manual',
+    });
+    if (caid.state === 'busy' || manual.state === 'busy') throw new Error('unexpected busy');
+
+    for (const [dispatch, allowed] of [
+      [caid.dispatch, true],
+      [manual.dispatch, false],
+    ] as const) {
+      const claim = await model.claimForProvisioning(dispatch.id, 'worker-a', 60_000);
+      if (!claim) throw new Error('dispatch was not claimed');
+      await expect(
+        model.transition({
+          admissionRecheck: allowed ? async () => true : recheck,
+          dispatchId: dispatch.id,
+          expected: ['claimed'],
+          fence: claim.fence,
+          owner: 'worker-a',
+          phase: 'dispatched',
+        }),
+      ).resolves.toMatchObject({ phase: 'dispatched' });
+    }
+  });
+
+  it("derives a legacy row's origin from the requestedBy trigger prefix", async () => {
+    const task = await seedAssigned('ORG-5', 54);
+    const model = new TaskDispatchModel(db, workspaceId);
+    // Pre-origin schema row: no origin column value — the trigger prefix of
+    // `requestedBy` ('orchestrator:…') still classifies it as caid.
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:ORG-5:plan-1',
+      requestedBy: 'planner',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch.origin).toBeNull();
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+
+    const parked = await model.transition({
+      admissionRecheck: async () => false,
+      dispatchId: requested.dispatch.id,
+      expected: ['claimed'],
+      fence: claim.fence,
+      owner: 'worker-a',
+      phase: 'dispatched',
+    });
+
+    expect(parked?.waitingReason).toBe('caid_dispatch_disabled');
   });
 });

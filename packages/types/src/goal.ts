@@ -1,4 +1,5 @@
 import type { InitialGoalOverviewContext } from './stepContext';
+import type { TaskTopicIntegration } from './task';
 import type { AcceptanceStatus } from './verify';
 import type { WorkType } from './work';
 
@@ -238,7 +239,7 @@ export interface GoalManagerState {
   snapshot: string;
   startedAt: string;
   submitted?: {
-    action: 'tasks' | 'verify' | 'retry' | 'escalate';
+    action: 'tasks' | 'verify' | 'retry' | 'escalate' | 'patch';
     reason: string;
     taskId?: string;
   };
@@ -250,6 +251,12 @@ export interface GoalManagerState {
 export interface GoalConfig {
   acceptance?: GoalAcceptancePolicy;
 
+  /**
+   * CAID incremental-plan bookkeeping. `revision` is the compare-and-swap
+   * counter `patch` submissions must name via `expectedPlanRevision`; it only
+   * ever moves forward inside the plan-commit transaction.
+   */
+  caidPlan?: { revision: number };
   exploration?: GoalExplorationConfig;
   manager?: GoalManagerPolicy;
   managerState?: GoalManagerState;
@@ -472,6 +479,16 @@ export interface GoalNodeAcceptance {
   status: AcceptanceStatus;
 }
 
+/**
+ * A task node's newest-run integration record, lifted onto the graph so a
+ * reader sees "the run finished but the branch is still merging / died on a
+ * conflict" without opening the task. `topicId` addresses the run row it
+ * belongs to — retry and PR links point at it, not at the node.
+ */
+export interface GoalNodeIntegration extends TaskTopicIntegration {
+  topicId: string;
+}
+
 export interface GoalGraphSnapshot {
   /**
    * Verification state per task node, keyed by node id. Every dispatched task
@@ -491,6 +508,12 @@ export interface GoalGraphSnapshot {
   edges: GoalGraphEdge[];
   events: GoalGraphEvent[];
   goal: GoalItem;
+  /**
+   * Where each task node's newest run stands on its way back onto the base
+   * branch, keyed by node id. A child completing is not the same as its work
+   * landing — this is the only place the graph can read the difference.
+   */
+  integrations?: Record<string, GoalNodeIntegration>;
   nodes: GoalGraphNode[];
   /**
    * Live heartbeat per active task node id: the `agent_operations.updatedAt`

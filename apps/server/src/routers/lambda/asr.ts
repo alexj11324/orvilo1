@@ -10,7 +10,7 @@ import { FileModel } from '@/database/models/file';
 import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { FileService } from '@/server/services/file';
 
 // Transcription spends provider quota — workspace viewers (read-only, no model
@@ -103,8 +103,7 @@ export const asrRouter = router({
 
       // Resolve the user's provider config (key + baseURL) from the database,
       // falling back to server env keys, exactly like chat/embeddings do.
-      const runtime = await initModelRuntimeFromDB(
-        ctx.serverDB,
+      const runtime = await initModelRuntimeFromDeploymentConfig(
         ctx.userId,
         input.provider,
         workspaceId,

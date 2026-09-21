@@ -7,7 +7,7 @@
     "./api": "./src/api.ts",
     "./trpc": "./src/trpc/index.ts",
     "./gen-ai": "./src/gen-ai/index.ts",
-    "./modules/agent-runtime": "./src/modules/agent-runtime/index.ts",
+    "./modules/agent-execution": "./src/modules/agent-execution/index.ts",
     "./modules/agent-signal": "./src/modules/agent-signal/index.ts",
     "./modules/memory-user-memory": "./src/modules/memory-user-memory/index.ts",
     "./modules/onboarding-understanding": "./src/modules/onboarding-understanding/index.ts",

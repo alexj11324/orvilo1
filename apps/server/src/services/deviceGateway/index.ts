@@ -30,6 +30,7 @@ import type {
   DeviceGitLinkedPullRequestResult,
   DeviceGitMergeResult,
   DeviceGitRemoteBranchListItem,
+  DeviceGitRemoteRefProbe,
   DeviceGitRemoveWorktreeResult,
   DeviceGitRenameBranchResult,
   DeviceGitSyncResult,
@@ -37,6 +38,7 @@ import type {
   DeviceGitWorkingTreePatches,
   DeviceGitWorkingTreeStatus,
   DeviceGitWorktreeListItem,
+  DeviceGitWorktreePathInspection,
   DeviceListProjectSkillsResult,
   DeviceLocalFilePreviewResult,
   DeviceMoveProjectFileItem,
@@ -512,6 +514,28 @@ export class DeviceGateway {
     });
   }
 
+  /**
+   * Occupancy classification of a candidate worktree path on a remote device,
+   * via the `inspectGitWorktreePath` device RPC. `undefined` covers both RPC
+   * failure and older device clients that don't know this method — callers must
+   * treat it as an unsupported-capability signal, never as a free path. The
+   * result's `activeWriter` field reports writer presence when the host has a
+   * run registry; its absence is likewise "cannot prove safe", not "no writer".
+   */
+  inspectGitWorktreePath(params: {
+    deviceId: string;
+    path: string;
+    userId: string;
+    worktreePath: string;
+    workspaceId?: string;
+  }) {
+    return this.invokeDeviceRead<DeviceGitWorktreePathInspection>(
+      'inspectGitWorktreePath',
+      params,
+      { path: params.path, worktreePath: params.worktreePath },
+    );
+  }
+
   /** Query a heterogeneous CLI's model catalog on the device that will execute it. */
   async listHeterogeneousAgentModels(params: {
     args?: string[];
@@ -721,9 +745,14 @@ export class DeviceGateway {
 
   /**
    * Remove a worktree in a directory's repository on a remote device via
-   * the `removeGitWorktree` device RPC.
+   * the `removeGitWorktree` device RPC. Callers cleaning up a claimed
+   * provision pass `claimToken` — the device must then verify no live writer
+   * owns the path before removing and echo `claimTokenVerified`; a host that
+   * cannot answer refuses, and a host too old to know the field leaves it
+   * absent, which callers must read as "unverified", not "no writer".
    */
   async removeGitWorktree(params: {
+    claimToken?: string;
     deviceId: string;
     force?: boolean;
     path: string;
@@ -732,14 +761,23 @@ export class DeviceGateway {
     workspaceId?: string;
     worktreePath: string;
   }): Promise<DeviceGitRemoveWorktreeResult> {
-    const { userId, deviceId, force, path, worktreePath, workspaceId, timeout = 30_000 } = params;
+    const {
+      userId,
+      deviceId,
+      claimToken,
+      force,
+      path,
+      worktreePath,
+      workspaceId,
+      timeout = 30_000,
+    } = params;
     const client = this.getClient();
     if (!client) return { error: 'Device gateway not configured', success: false };
 
     try {
       const result = await client.invokeRpc<DeviceGitRemoveWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'removeGitWorktree', params: { force, path, worktreePath } },
+        { method: 'removeGitWorktree', params: { claimToken, force, path, worktreePath } },
       );
 
       if (!result.success || !result.data) {
@@ -756,10 +794,16 @@ export class DeviceGateway {
 
   /**
    * Add a linked worktree on a fresh branch in a directory's repository on a
-   * remote device via the `addGitWorktree` device RPC.
+   * remote device via the `addGitWorktree` device RPC. Callers that minted a
+   * durable claim pass `claimToken` so the host registers it against the
+   * physical checkout — the response's `claimRegistered` flag is then the
+   * capability signal distinguishing "host can verify claims" from "host
+   * dropped the token".
    */
   async addGitWorktree(params: {
     branch: string;
+    /** Server-issued claim token to register on the host for verified delete. */
+    claimToken?: string;
     detach?: boolean;
     deviceId: string;
     path: string;
@@ -768,11 +812,12 @@ export class DeviceGateway {
     userId: string;
     workspaceId?: string;
     worktreePath: string;
-  }): Promise<DeviceGitAddWorktreeResult> {
+  }): Promise<DeviceGitAddWorktreeResult & { claimRegistered?: boolean }> {
     const {
       userId,
       deviceId,
       branch,
+      claimToken,
       path,
       worktreePath,
       workspaceId,
@@ -786,7 +831,10 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitAddWorktreeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'addGitWorktree', params: { branch, detach, path, ref, worktreePath } },
+        {
+          method: 'addGitWorktree',
+          params: { branch, claimToken, detach, path, ref, worktreePath },
+        },
       );
 
       if (!result.success || !result.data) {
@@ -847,12 +895,22 @@ export class DeviceGateway {
     baseRef?: string;
     branch: string;
     deviceId: string;
+    fetchBase?: boolean;
     path: string;
     timeout?: number;
     userId: string;
     workspaceId?: string;
   }): Promise<DeviceGitMergeResult> {
-    const { userId, deviceId, branch, path, baseRef, timeout = 150_000, workspaceId } = params;
+    const {
+      userId,
+      deviceId,
+      branch,
+      path,
+      baseRef,
+      fetchBase,
+      timeout = 150_000,
+      workspaceId,
+    } = params;
     const client = this.getClient();
     if (!client)
       return { error: 'Device gateway not configured', state: 'conflict', success: false };
@@ -860,7 +918,7 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitMergeResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'mergeGitBranch', params: { baseRef, branch, path } },
+        { method: 'mergeGitBranch', params: { baseRef, branch, fetchBase, path } },
       );
 
       if (!result.success || !result.data) {
@@ -930,7 +988,11 @@ export class DeviceGateway {
    */
   async pushGitBranch(params: {
     deviceId: string;
+    /** Atomic expected-old value for the remote ref (fenced publish). */
+    expectedRemoteSha?: string;
     expectedSha?: string;
+    /** Lease fence (seq + operation identity) the device must persist first. */
+    fence?: { operationId: string; ref: string; seq: number };
     path: string;
     remoteBranch?: string;
     sourceRef?: string;
@@ -941,7 +1003,9 @@ export class DeviceGateway {
     const {
       userId,
       deviceId,
+      expectedRemoteSha,
       expectedSha,
+      fence,
       path,
       remoteBranch,
       sourceRef,
@@ -954,7 +1018,10 @@ export class DeviceGateway {
     try {
       const result = await client.invokeRpc<DeviceGitSyncResult>(
         { deviceId, timeout, userId, workspaceId },
-        { method: 'pushGitBranch', params: { expectedSha, path, remoteBranch, sourceRef } },
+        {
+          method: 'pushGitBranch',
+          params: { expectedRemoteSha, expectedSha, fence, path, remoteBranch, sourceRef },
+        },
       );
 
       if (!result.success || !result.data) {
@@ -1403,6 +1470,44 @@ export class DeviceGateway {
       return result.data;
     } catch (error) {
       log('listGitRemoteBranches: error for deviceId=%s — %O', deviceId, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Probe a remote ref on a device checkout via the `probeGitRemoteRef` RPC
+   * (`git ls-remote`) — the reconcile read for fenced publishes. Returns
+   * `undefined` when the device is unreachable or predates the method, which
+   * the lease reconciler treats as "cannot prove remote state" and holds
+   * further mutation.
+   */
+  async probeGitRemoteRef(params: {
+    deviceId: string;
+    path: string;
+    ref: string;
+    remote?: string;
+    timeout?: number;
+    userId: string;
+    workspaceId?: string;
+  }): Promise<DeviceGitRemoteRefProbe | undefined> {
+    const { userId, deviceId, path, ref, remote, timeout = 30_000, workspaceId } = params;
+    const client = this.getClient();
+    if (!client) return undefined;
+
+    try {
+      const result = await client.invokeRpc<DeviceGitRemoteRefProbe>(
+        { deviceId, timeout, userId, workspaceId },
+        { method: 'probeGitRemoteRef', params: { path, ref, remote } },
+      );
+
+      if (!result.success || !result.data) {
+        log('probeGitRemoteRef: failed for deviceId=%s — %s', deviceId, result.error);
+        return undefined;
+      }
+
+      return result.data;
+    } catch (error) {
+      log('probeGitRemoteRef: error for deviceId=%s — %O', deviceId, error);
       return undefined;
     }
   }

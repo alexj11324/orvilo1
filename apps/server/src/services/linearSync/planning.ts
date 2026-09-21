@@ -18,6 +18,7 @@ import {
   teams,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import {
   createGoalTaskOwnershipAdapter,
   projectPlannerOwnershipError,
@@ -822,19 +823,29 @@ export class LinearPlanningWorker {
         console.error('[linear-planning] failed to wake task cancellation %s:', dispatchId, error);
       }
     }
-    for (const intent of transactionResult.runIntents) {
-      try {
-        await new TaskRunnerService(this.db, userId, this.workspaceId).runTask({
-          extraPrompt: intent.instruction,
-          idempotencyKey: intent.idempotencyKey,
-          planRevision: intent.planRevision,
-          requestedBy: `planning:${revisionId}`,
-          taskId: intent.taskId,
-          trigger: 'orchestrator',
-        });
-      } catch (error) {
-        console.error('[linear-planning] failed to wake task dispatch %s:', intent.taskId, error);
+    // CAID rollout gate: admitted deployments wake intents immediately;
+    // otherwise the 'requested' dispatch rows stay durable for the
+    // taskDispatchStart sweep, which re-checks admission on every pass.
+    if (await isCaidDispatchAllowed({ userId, workspaceId: this.workspaceId })) {
+      for (const intent of transactionResult.runIntents) {
+        try {
+          await new TaskRunnerService(this.db, userId, this.workspaceId).runTask({
+            extraPrompt: intent.instruction,
+            idempotencyKey: intent.idempotencyKey,
+            planRevision: intent.planRevision,
+            requestedBy: `planning:${revisionId}`,
+            taskId: intent.taskId,
+            trigger: 'orchestrator',
+          });
+        } catch (error) {
+          console.error('[linear-planning] failed to wake task dispatch %s:', intent.taskId, error);
+        }
       }
+    } else {
+      console.info(
+        '[linear-planning] CAID dispatch admission disabled — %d intent(s) left requested for the watchdog sweep',
+        transactionResult.runIntents.length,
+      );
     }
     return transactionResult.result;
   }

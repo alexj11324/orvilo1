@@ -1,11 +1,12 @@
 import type { EvaluateResult, RubricResult } from '@orvilo/eval-rubric';
 import { evaluate } from '@orvilo/eval-rubric';
+import type { GenerateObjectSchema } from '@orvilo/model-runtime';
 import type { EvalBenchmarkRubric, UserSystemAgentConfig } from '@orvilo/types';
 import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { resolveSystemAgentModelConfig } from '../systemAgent/modelConfig';
 
@@ -48,6 +49,8 @@ export class TaskReviewService {
     content: string;
     iteration?: number;
     judge: ReviewJudge;
+    /** The reviewed task's assignee — the authorized ACP judgment binding. */
+    judgeAgentId?: string | null;
     rubrics: EvalBenchmarkRubric[];
     taskName: string;
   }): Promise<ReviewResult> {
@@ -65,15 +68,11 @@ export class TaskReviewService {
       rubrics.length,
     );
 
-    // 2. Initialize ModelRuntime for LLM-based rubrics
-    const modelRuntime = await initModelRuntimeFromDB(
-      this.db,
-      this.userId,
-      provider,
-      this.workspaceId,
-    );
+    // Rubric judgments run as explicitly-authorized ACP operations bound to the
+    // task's assignee agent — never on deployment credentials.
+    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
-    // 3. Run evaluate() from @orvilo/eval-rubric
+    // 2. Run evaluate() from @orvilo/eval-rubric
     const result: EvaluateResult = await evaluate(
       {
         actual: content,
@@ -83,13 +82,24 @@ export class TaskReviewService {
       {
         matchContext: {
           generateObject: async (payload) => {
-            return (modelRuntime as any).generateObject(
+            return ai.generateObject(
               {
                 messages: payload.messages as any[],
                 model: payload.model || model,
-                schema: { name: 'judge_score', schema: payload.schema },
+                provider,
+                schema: {
+                  name: 'judge_score',
+                  schema: payload.schema as GenerateObjectSchema['schema'],
+                },
               },
-              { metadata: { trigger: 'task-review' } },
+              {
+                judgment: {
+                  binding: { agentId: params.judgeAgentId },
+                  purpose: 'task.review',
+                },
+                kind: 'judgment',
+                metadata: { trigger: 'task-review' },
+              },
             );
           },
           judgeModel: model,

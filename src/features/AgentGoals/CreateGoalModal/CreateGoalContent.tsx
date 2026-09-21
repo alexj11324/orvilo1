@@ -3,7 +3,7 @@
 import { useEditor } from '@lobehub/editor/react';
 import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
-import { resolveGoalAttemptBudget } from '@orvilo/builtin-tool-goal';
+import { resolveGoalAttemptBudget, resolveGoalConcurrency } from '@orvilo/builtin-tool-goal';
 import type { CreateGoalParams, GoalCriterionDraft } from '@orvilo/builtin-tool-task';
 import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/verify';
 import { InputNumber } from 'antd';
@@ -361,9 +361,11 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
 
     setIsCreating(true);
     try {
+      const maxConcurrentTasks = resolveGoalConcurrency(plan.maxConcurrentTasks);
       const graph = await goalService.create({
         agentId,
         config: {
+          ...(maxConcurrentTasks !== undefined ? { maxConcurrentTasks } : {}),
           recovery: { maxAttemptsPerTask: resolveGoalAttemptBudget(plan.maxIterations) },
         },
         // `maxIterations` is the per-Task attempt budget above; it is not the
@@ -634,6 +636,33 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 />
                 <Text className={styles.sectionHint} fontSize={12}>
                   {t('createGoal.costBudgetHint')}
+                </Text>
+              </div>
+
+              <div className={styles.budgetField}>
+                <Text fontSize={12} type={'secondary'}>
+                  {t('createGoal.parallelismLabel')}
+                </Text>
+                <InputNumber
+                  disabled={!canCreate}
+                  max={10}
+                  min={1}
+                  placeholder={t('createGoal.parallelismPlaceholder')}
+                  size={'small'}
+                  style={{ width: '100%' }}
+                  value={plan.maxConcurrentTasks ?? undefined}
+                  variant={'filled'}
+                  suffix={
+                    <Text fontSize={12} type={'secondary'}>
+                      {t('createGoal.parallelismUnit')}
+                    </Text>
+                  }
+                  onChange={(value) =>
+                    setPlan((current) => ({ ...current, maxConcurrentTasks: value }))
+                  }
+                />
+                <Text className={styles.sectionHint} fontSize={12}>
+                  {t('createGoal.parallelismHint')}
                 </Text>
               </div>
             </Flexbox>

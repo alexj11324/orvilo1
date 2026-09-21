@@ -1,6 +1,9 @@
 import type * as ChildProcessModule from 'node:child_process';
 import type * as CryptoModule from 'node:crypto';
 import { EventEmitter } from 'node:events';
+import { mkdtemp, rm, symlink } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 import { deriveDeviceId, deriveScopedFallbackId } from '@orvilo/device-identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -228,6 +231,7 @@ vi.mock('fflate', () => ({ unzipSync: vi.fn() }));
 // ─── Mock Controllers ───
 
 const mockLocalFileCtr = {
+  getSkillDirectoryDeps: vi.fn().mockReturnValue({}),
   handleEditFile: vi.fn().mockResolvedValue({ success: true }),
   handleGlobFiles: vi.fn().mockResolvedValue({ files: [] }),
   handleGrepContent: vi.fn().mockResolvedValue({ matches: [] }),
@@ -2145,6 +2149,40 @@ describe('GatewayConnectionCtr', () => {
         hostname: 'mock-hostname',
         platform: process.platform,
       });
+    });
+  });
+
+  describe('getActiveWorktreeWriter', () => {
+    it('SA01-A: matches a writer registered under a symlink alias of the path', async () => {
+      // A run's cwd may be spelled through a symlink — the writer check must
+      // compare canonical identities, not raw strings, or a cleanup asks
+      // "is anyone writing /real/dir" and misses the run at /link/dir.
+      const real = await mkdtemp(path.join(os.tmpdir(), 'gw-writer-real-'));
+      const link = `${real}-link`;
+      await symlink(real, link);
+      try {
+        (ctr as any).platformTasks.set('task-1', {
+          agentType: 'local-cli',
+          cwd: link,
+          operationId: 'op-1',
+          pid: 4321,
+          topicId: 'tp-1',
+        });
+
+        const writer = await (ctr as any).deviceControlDeps.getActiveWorktreeWriter(real);
+        expect(writer).toMatchObject({ operationId: 'op-1', pid: 4321, topicId: 'tp-1' });
+
+        // A genuinely different path still reports no writer.
+        const other = await mkdtemp(path.join(os.tmpdir(), 'gw-writer-other-'));
+        try {
+          expect(await (ctr as any).deviceControlDeps.getActiveWorktreeWriter(other)).toBeNull();
+        } finally {
+          await rm(other, { force: true, recursive: true });
+        }
+      } finally {
+        await rm(link, { force: true });
+        await rm(real, { force: true, recursive: true });
+      }
     });
   });
 });

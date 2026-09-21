@@ -1,0 +1,60 @@
+P05 server-default/providerBinding relay retirement — cut list
+===============================================================
+SERVER (apps/server)
+[ ] aiAgent.ts: remove getServerDefaultHeterogeneousCapability, begin/finish/cancelServerDefaultHeterogeneousOperation + helpers (resolveServerDefaultControlOperation, settleServerDefaultControlOperation, assertServerDefaultControlAuth, resolveHeteroTopicWorkspace?, resolveServerDefaultHeterogeneousModel/Capability imports)
+[ ] services/heterogeneousAgent: remove serverDefault capability/model resolvers + SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES usage; operationPrincipal keep (other caps live)
+[ ] ModelRuntime/index.ts: remove initModelRuntimeFromServerConfig (if no other consumer) + tests
+[ ] services/aiAgent/heteroDispatch.ts + runAdmission.ts: strip serverDefault relay references
+[ ] routers/lambda/__tests__/: aiAgent.serverDefaultOperation.test.ts, aiAgent.serverDefaultCapability.test.ts (delete or strip serverDefault describes)
+[ ] globalConfig: check serverDefault-related config keys
+
+OPENAPI (packages/openapi)
+[ ] delete routes/openai.route.ts + anthropic.route.ts + routes/heterogeneous-relay.route.test.ts
+[ ] delete services/heterogeneous-direct.service.ts + .test.ts
+[ ] delete middleware/hetero-operation-auth.ts + .test.ts (confirm no other consumer)
+[ ] routes/index.ts: unmount
+[ ] regen openapi.yml
+
+TYPES (packages/types)
+[ ] agencyConfig.ts: drop apiConfig+authMode fields; remove HeterogeneousAuthMode, HeterogeneousApiConfig, HeterogeneousProviderApiConfig, HeterogeneousServerDefaultApiConfig, ServerDefaultHeterogeneousRelayInvocation + guard, SERVER_DEFAULT_* consts, format/isServerDefaultHeterogeneousModel, unwrapServerDefaultHeterogeneousModel; collapse authMode==='api' branches
+[ ] heteroSelectorCapabilities.ts: CODEX_SERVER_DEFAULT_CUSTOM_MODELS + isCodexServerDefaultCustomModel (codex.ts driver uses?) — remove if only server-default
+
+DATABASE (packages/database)
+[ ] utils/sanitizeAgentApiConfig.ts: delete file + usages
+[ ] models/agent.ts: apiConfig patch special-casing
+[ ] models/agentOperation.ts: serverDefault relay attestation + tests
+
+DESKTOP (apps/desktop)
+[ ] modules/heterogeneousAgent/providerBindingHost.ts + .test + providerBindingPort.ts: delete
+[ ] controllers/HeterogeneousAgentImpl.ts: remove providerBinding/hostedProviderBinding/serverDefaultApiConfig flow + IPC
+[ ] drivers/*: remove binding env injection (claudeCode.ts, codex.ts, grokBuild.ts, trae.ts, pi.ts, kimiCode.ts, codeBuddy.ts, amp.ts, opencode.ts, qoder.ts — check each)
+[ ] modules/heterogeneousAgent/types.ts: drop session fields hostedProviderBinding/serverDefaultApiConfig
+[ ] controllers/__tests__/HeterogeneousAgentCtr.test.ts
+
+HETEROGENEOUS-AGENTS package
+[ ] providerBinding/{index,serverDefault,types}.ts + test: delete; index.ts unexport
+[ ] claudeCodeDirectEnv.ts: server-default env injection
+
+RENDERER (src)
+[ ] store/chat/.../heterogeneousAgentExecutor.ts: remove serverDefault branches → native auth only (stale apiConfig ignored)
+[ ] transports/hetero/heteroResume.ts: resumeBindingKey plumbing
+[ ] dispatch/agentDispatcher.ts, entries/conversationLifecycle.ts
+[ ] services/electron/heterogeneousAgent.ts: HeterogeneousProviderBindingReference param
+[ ] services/aiAgent.ts (client service): serverDefault calls
+[ ] store/agent/slices/agent/action.ts + selectors
+[ ] store/aiInfra/slices/aiProvider/{action,initialState} + selectors.test
+[ ] store/chat/utils/snapshotAgentModel.test.ts
+[ ] features/Conversation/store/slices/generation/action.ts
+[ ] features/Conversation/Messages/components/Extras/Usage/index.tsx
+[ ] features/HeterogeneousAgent/modelPicker.tsx (+test), engine.ts(+test) if serverDefault
+[ ] routes/agent/profile HeterogeneousAgentStatusCard.tsx(+test) + ProfileEditor/index.tsx wiring
+[ ] routes/agent HeterogeneousChatInput/index.tsx gate
+[ ] features/ChatInput/ControlBar/HeteroControlBar (QuotaMenu authMode?)
+[ ] locales: hetero apiMode keys (leave keys? remove en-US/zh-CN keys added for api mode)
+[ ] libs/swr/keys.ts serverDefault key
+
+VERIFY
+[ ] rg zero hits for serverDefault/providerBinding (except history docs/compat notes)
+[ ] bun run check touched files; apps/server typecheck == 309 baseline
+[ ] docs/provider-retirement.md + inventory §G/N update
+[ ] commit + PR

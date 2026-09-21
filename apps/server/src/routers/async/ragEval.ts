@@ -17,7 +17,7 @@ import {
 } from '@/database/models/ragEval';
 import { evaluationRecords } from '@/database/schemas';
 import { asyncAuthedProcedure, asyncRouter as router } from '@/libs/trpc/async';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { ChunkService } from '@/server/services/chunk';
 import { AsyncTaskError } from '@/types/asyncTask';
 
@@ -69,8 +69,7 @@ export const ragEvalRouter = router({
       const now = Date.now();
       try {
         // Read user's provider config from database
-        const modelRuntime = await initModelRuntimeFromDB(
-          ctx.serverDB,
+        const modelRuntime = await initModelRuntimeFromDeploymentConfig(
           ctx.userId,
           ModelProvider.OpenAI,
           wsId,

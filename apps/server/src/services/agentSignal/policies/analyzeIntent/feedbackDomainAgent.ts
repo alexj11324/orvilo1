@@ -10,7 +10,7 @@ import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import type {
   AgentSignalFeedbackEvidence,
@@ -46,6 +46,8 @@ export interface FeedbackDomainJudgeAgentModelConfig {
 }
 
 export interface JudgeFeedbackDomainsParams {
+  /** The agent whose turn the feedback targets — the ACP judgment binding. */
+  agentId?: string;
   evidence: AgentSignalFeedbackEvidence[];
   message: string;
   reason: string;
@@ -56,6 +58,8 @@ export interface JudgeFeedbackDomainsParams {
    * @default undefined
    */
   serializedContext?: string;
+  /** The topic the feedback turn belongs to. */
+  topicId?: string;
 }
 
 /**
@@ -108,27 +112,35 @@ export class FeedbackDomainJudgeAgentService {
    */
   async judgeDomains(params: JudgeFeedbackDomainsParams): Promise<FeedbackDomainJudgeAgentResult> {
     const payload = chainAgentSignalAnalyzeIntentRoute(params);
-    const modelRuntime = await initModelRuntimeFromDB(
-      this.db,
-      this.userId,
-      this.modelConfig.provider,
-      this.workspaceId,
-    );
 
     log('judgeDomains model=%s provider=%s', this.modelConfig.model, this.modelConfig.provider);
 
-    const result = await modelRuntime.generateObject(
+    // Domain routing is a retained machine judgment — run it as an explicitly
+    // authorized ACP operation bound to the feedback target's agent.
+    const result = await new AiGenerationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).generateObject(
       {
         messages: payload.messages,
         model: this.modelConfig.model,
+        provider: this.modelConfig.provider,
         schema: AGENT_SIGNAL_FEEDBACK_DOMAIN_JSON_SCHEMA,
       },
       {
+        judgment: {
+          binding: { agentId: params.agentId },
+          purpose: 'agentSignal.feedbackDomain',
+        },
+        kind: 'judgment',
         metadata: { trigger: RequestTrigger.AgentSignal },
         tracing: {
+          agentId: params.agentId,
           promptVersion: AGENT_SIGNAL_FEEDBACK_DOMAIN_PROMPT_VERSION,
           scenario: TRACING_SCENARIOS.SignalFeedbackDomain,
           schemaName: AGENT_SIGNAL_FEEDBACK_DOMAIN_JSON_SCHEMA.name,
+          topicId: params.topicId,
         } satisfies TracingOptions,
       },
     );

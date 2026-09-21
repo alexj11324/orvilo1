@@ -14,12 +14,14 @@ import type {
   GitPullResult,
   GitPushResult,
   GitRemoteBranchListItem,
+  GitRemoteRefProbe,
   GitRemoveWorktreeResult,
   GitRenameBranchResult,
   GitWorkingTreeFiles,
   GitWorkingTreePatches,
   GitWorkingTreeStatus,
   GitWorktreeListItem,
+  GitWorktreePathInspection,
 } from '@orvilo/electron-client-ipc';
 import type { DeviceGitInfo } from '@orvilo/local-file-shell/git';
 
@@ -149,6 +151,15 @@ export default class GitController extends ControllerModule {
   }
 
   @IpcMethod()
+  async inspectGitWorktreePath(payload: {
+    path: string;
+    worktreePath: string;
+  }): Promise<GitWorktreePathInspection> {
+    const { inspectGitWorktreePath: runInspectGitWorktreePath } = await loadGit();
+    return runInspectGitWorktreePath(payload);
+  }
+
+  @IpcMethod()
   async addGitWorktree(payload: {
     branch: string;
     detach?: boolean;
@@ -164,6 +175,7 @@ export default class GitController extends ControllerModule {
   async mergeGitBranch(payload: {
     baseRef?: string;
     branch: string;
+    fetchBase?: boolean;
     path: string;
   }): Promise<GitMergeResult> {
     const { mergeGitBranch: runMergeGitBranch } = await loadGit();
@@ -187,13 +199,25 @@ export default class GitController extends ControllerModule {
 
   @IpcMethod()
   async pushGitBranch(payload: {
+    expectedRemoteSha?: string;
     expectedSha?: string;
+    fence?: { operationId: string; ref: string; seq: number };
     path: string;
     remoteBranch?: string;
     sourceRef?: string;
   }): Promise<GitPushResult> {
     const { pushGitBranch: runPushGitBranch } = await loadGit();
     return runPushGitBranch(payload);
+  }
+
+  @IpcMethod()
+  async probeGitRemoteRef(payload: {
+    path: string;
+    ref: string;
+    remote?: string;
+  }): Promise<GitRemoteRefProbe> {
+    const { probeGitRemoteRef: runProbeGitRemoteRef } = await loadGit();
+    return runProbeGitRemoteRef(payload);
   }
 
   @IpcMethod()

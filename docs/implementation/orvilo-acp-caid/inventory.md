@@ -74,12 +74,14 @@
 | `ingestSnapshot`/`recordUsage`/`getWindows`/`getLatestReadings`/`listSnapshots`/`listUsageTurns` | router + `device-control/claudeCodeQuota` + `heterogeneous-agents/quota/snapshot` | **KEEP\_SHARED**：绑定执行设备 + 原生 identity，unknown≠0                 |
 | `agentQuota` schema/models/types                                                                 | `packages/database`                                                               | **DEFER→P09**：先去 credential/control 语义，字段收敛在审计 FK 后另行授权 |
 
+- **状态**：✅ 完成（见 `docs/development/quota-control-plane-retirement.md`）。`listAccounts` 保留为只读观测模型；存量 binding 行无读者，字段收敛待 P09 审计。
+
 ## G. Desktop 宿主 Provider/serverDefault 残留（P05/P06）
 
 `apps/desktop/src/main/controllers/HeterogeneousAgentImpl.ts` 及 `modules/heterogeneousAgent/{types,providerBindingHost,providerBindingPort}.ts`：`prepareHostedServerDefaultBinding`/`beginServerDefaultOperation`/`settleServerDefaultOperation`/`getServerDefaultEndpoint`/`providerBinding`/`serverDefaultApiConfig`/`resumeBindingKey`。
 
-- **处置**：若承担 Orvilo-owned LLM 接入（托管 provider relay）→ **RETIRE**（P05/P06）；纯历史 decoder → 精确例外。
-- **状态**：`NEEDS_TRACE` —— 须追 `providerBinding` 的真实生产调用方（谁还会传入 `kind:'server-default'`）与 server 端 relay 端点存活度后再删。
+- **处置**：**RETIRE**（P05 已执行）。`providerBinding` 全部生产调用方确认仅为 BYOK/server-default 绑定路径，无其他消费者；relay 端点与 TRPC 过程一并删除。
+- **状态**：✅ 完成（见 `docs/development/provider-retirement.md`）。存量 `provider-binding:v1:*` session key 恒判 `binding_changed`，语义见该文档。
 
 ## H. OpenAPI/Responses（消费者收口，方案 §9.1）
 

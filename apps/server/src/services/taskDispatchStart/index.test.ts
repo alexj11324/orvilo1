@@ -9,6 +9,7 @@ import { processPlanningTaskDispatchStart, sweepPlanningTaskDispatchStarts } fro
 
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
+  isCaidDispatchAllowed: vi.fn(),
   findPlanningRevisionByInputRevision: vi.fn(),
   findPlanningStartCandidates: vi.fn(),
   markWaiting: vi.fn(),
@@ -27,6 +28,9 @@ vi.mock('@/database/models/taskDispatch', () => ({
     }),
     { findPlanningStartCandidates: mocks.findPlanningStartCandidates },
   ),
+}));
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: mocks.isCaidDispatchAllowed,
 }));
 vi.mock('@/server/services/taskRunner', () => ({
   TaskRunnerService: vi.fn(function () {
@@ -63,6 +67,7 @@ describe('planned task dispatch start recovery', () => {
       status: 'applied',
     });
     mocks.runTask.mockResolvedValue({ success: true });
+    mocks.isCaidDispatchAllowed.mockResolvedValue(true);
   });
 
   it('replays the exact planner command through the ordinary runner', async () => {
@@ -98,6 +103,27 @@ describe('planned task dispatch start recovery', () => {
       'planning_resume_instruction_missing',
     );
     expect(mocks.runTask).not.toHaveBeenCalled();
+  });
+
+  it('defers a new orchestrated dispatch while CAID admission is off (R10)', async () => {
+    mocks.isCaidDispatchAllowed.mockResolvedValue(false);
+
+    await expect(processPlanningTaskDispatchStart({ candidate, db: {} as never })).resolves.toEqual(
+      {
+        dispatchId: 'dispatch-1',
+        outcome: 'waiting',
+        reason: 'caid_dispatch_disabled',
+      },
+    );
+
+    // The row stays 'requested' — no markWaiting — so the same sweep re-drives
+    // it the moment the rollout flag flips back on.
+    expect(mocks.markWaiting).not.toHaveBeenCalled();
+    expect(mocks.runTask).not.toHaveBeenCalled();
+    expect(mocks.isCaidDispatchAllowed).toHaveBeenCalledWith({
+      userId: 'user-1',
+      workspaceId: 'workspace-1',
+    });
   });
 
   it('leaves a transient pre-claim failure requested for the next sweep', async () => {

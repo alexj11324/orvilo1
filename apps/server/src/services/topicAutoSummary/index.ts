@@ -54,7 +54,11 @@ export class TopicAutoSummaryService {
       ? eq(topics.workspaceId, this.workspaceId)
       : eq(topics.userId, this.userId);
     const [topic] = await this.db
-      .select({ historySummary: topics.historySummary, senderId: topics.senderId })
+      .select({
+        agentId: topics.agentId,
+        historySummary: topics.historySummary,
+        senderId: topics.senderId,
+      })
       .from(topics)
       .where(and(eq(topics.id, topicId), topicOwnership))
       .limit(1);
@@ -109,6 +113,12 @@ export class TopicAutoSummaryService {
         schema: TOPIC_AUTO_SUMMARY_JSON_SCHEMA,
       },
       {
+        judgment: {
+          // The summary judgment binds to the topic's owning agent.
+          binding: { agentId: topic?.agentId },
+          purpose: 'topic.autoSummary',
+        },
+        kind: 'judgment',
         tracing: {
           promptVersion: TOPIC_AUTO_SUMMARY_PROMPT_VERSION,
           scenario: TRACING_SCENARIOS.TopicAutoSummary,

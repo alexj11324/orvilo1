@@ -9,7 +9,12 @@
         "src/features/{Workspace*,Projects*,Members*,Permission*,ResourcePermission*,Team*}/**",
         "src/routes/(main)/[workspaceSlug]/{members,teams,projects,views,settings}/**",
         "apps/server/src/services/workspace*/**",
-        "apps/server/src/routers/lambda/{project,resourcePermission,resourceTransferRequest,workspace*}.ts"
+        "apps/server/src/routers/lambda/{project,resourcePermission,resourceTransferRequest,workspace*}.ts",
+        "src/features/ResourceTransferRequest/**",
+        "src/services/{project,resourcePermission,resourceTransferRequest,projectFile}*",
+        "src/store/project/**",
+        "apps/server/src/services/{resourcePermission,resourceTransferRequest}/**",
+        "apps/server/src/routers/lambda/team.ts"
       ],
       "issue": "ORV-100"
     },
@@ -27,7 +32,13 @@
         "apps/server/src/router-hono/workflows/**",
         "src/features/{AgentTasks,AgentTaskManager,AgentGoals,Automations,TaskBoard*,TaskDetail*}/**",
         "src/features/Acceptance/**",
-        "packages/eval-rubric/**"
+        "packages/eval-rubric/**",
+        "src/store/{task,goal}/**",
+        "src/features/{TaskDock,RecommendTaskTemplates}/**",
+        "src/services/{task,taskTemplate,verify}*",
+        "apps/server/src/services/taskWatchdog.ts",
+        "apps/server/src/routers/lambda/verify.ts",
+        "apps/server/src/modules/GoalTracing/**"
       ],
       "note": "Canonical task acceptance (Acceptance UI, verify acceptance services, acceptance routers, acceptance-evidence builtin tool) is the in-boundary Task Review surface — kept. Only the standalone storefront routes/store were retired (see acceptance-surface DELETE cap).",
       "issue": "ORV-100"
@@ -40,7 +51,11 @@
         "packages/{agent-execution,agent-gateway-client,agent-manager-runtime,agent-mock,agent-signal,agent-templates,agent-tracing,heterogeneous-agents,device-control,device-gateway-client,device-identity,device-sandbox,desktop-bridge,electron-client-ipc,electron-mac-notifications,electron-server-ipc,tool-runtime,mecha}/**",
         "apps/server/src/services/{agentExecution,aiAgent,agentRuntime}/**",
         "apps/server/src/modules/AgentExecution/**",
-        "apps/server/src/routers/lambda/{agent,aiAgent,agentSignal,agentTrace,device,deviceWorkingDirs,deviceWorkspaceGuard}.ts"
+        "apps/server/src/routers/lambda/{agent,aiAgent,agentSignal,agentTrace,device,deviceWorkingDirs,deviceWorkspaceGuard}.ts",
+        "src/services/{agentExecution,heterogeneousAgent,cloudSandbox}*",
+        "apps/server/src/services/{heterogeneousAgent,sandbox,deviceGateway}/**",
+        "apps/server/src/modules/AgentTracing/**",
+        "apps/server/src/router-hono/agent/**"
       ],
       "issue": "ORV-100"
     },
@@ -52,7 +67,8 @@
         "apps/collaboration-gateway/**",
         "src/features/Collaboration/**",
         "apps/server/src/routers/lambda/collaboration.ts",
-        "apps/server/src/services/collaboration*/**"
+        "apps/server/src/services/collaboration*/**",
+        "src/store/collaboration/**"
       ],
       "issue": "ORV-100"
     },
@@ -64,7 +80,10 @@
         "apps/server/src/routers/lambda/{connector,linearSync,repository}.ts",
         "apps/server/src/services/{connector*,linear*,github*,repository*}/**",
         "src/features/{Connectors,GitHub*,Linear*}/**",
-        "packages/connector-data/**"
+        "packages/connector-data/**",
+        "apps/server/src/modules/GitHub/**",
+        "src/services/{git,github}*",
+        "apps/server/src/router-hono/webhooks/handlers/{linear,linear.test}.ts"
       ],
       "issue": "ORV-100"
     },
@@ -86,7 +105,13 @@
         "packages/conversation-flow/**",
         "apps/server/src/routers/lambda/{message,aiChat,followUpAction}.ts",
         "apps/server/src/services/{message*,conversation*}/**",
-        "apps/server/src/routers/lambda/asr.ts"
+        "apps/server/src/routers/lambda/asr.ts",
+        "apps/server/src/routers/lambda/{session,sessionGroup,thread,topic,topicComment,home}.ts",
+        "apps/server/src/services/{home,followUpAction,topicAutoSummary,brief,aiChat}/**",
+        "src/services/{aiChat,brief,followUpAction,chatGroup,thread,topic,topicComment,session,recent}*",
+        "src/store/{topicComment,followUpAction,brief,mention}/**",
+        "src/features/{TopicComment,TopicCreatorAvatar,TopicDoctorModal,TopicPopupGuard,MoveTopicsModal,DeleteTopicConfirm,SuggestQuestions,FloatingChatPanel}/**",
+        "src/features/TopicEmpty.tsx"
       ],
       "issue": "ORV-107"
     },
@@ -99,7 +124,15 @@
         "src/features/{Auth,AuthCard,AuthShell}/**",
         "packages/{env,app-config,edge-config}/**",
         "apps/server/src/services/{auth*,apiKey*}/**",
-        "apps/server/src/routers/lambda/apiKey.ts"
+        "apps/server/src/routers/lambda/apiKey.ts",
+        "src/libs/{better-auth,oidc-provider}/**",
+        "src/layout/AuthProvider/**",
+        "src/routes/auth/**",
+        "src/app/(backend)/{oauth,oidc}/**",
+        "src/auth.{ts,tsx}",
+        "src/auth.test.ts",
+        "apps/server/src/services/oidc/**",
+        "apps/server/src/modules/KeyVaultsEncrypt/**"
       ],
       "issue": "ORV-100"
     },
@@ -110,7 +143,12 @@
       "globs": [
         "packages/{database,trpc,types,utils,const,locales,observability-otel,fetch-sse,ssrf-safe-fetch,local-file-shell,napi-loader,markdown-patch,shared-tool-ui,fetch-*}/**",
         "apps/server/src/services/{file*,storage*,s3*,upload*}/**",
-        "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts"
+        "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts",
+        "src/services/{upload,metric,notification,global,config}*",
+        "apps/server/src/services/{queue,hatchet,fileUpload,vent}/**",
+        "apps/server/src/modules/S3/**",
+        "apps/server/src/routers/lambda/upload.ts",
+        "apps/server/src/services/fileUpload*"
       ],
       "issue": "ORV-100"
     },
@@ -128,7 +166,15 @@
         "apps/server/src/routers/lambda/{agentSkills,composio,plugin}.ts",
         "src/features/{AgentSkillStore,AgentSkillDetail}/**",
         "src/routes/(main)/agent/profile/features/store/**",
-        "src/services/plugin/**"
+        "src/services/plugin/**",
+        "src/features/{MCP,MCPPluginDetail,PluginDevModal,PluginDetailModal,PluginSettings,PluginAvatar,PluginTag,SkillsList,ToolTag}/**",
+        "src/libs/{mcp,composio}/**",
+        "src/services/{mcp,python,skill,toolResultArchive,webBrowsing}*",
+        "apps/server/src/services/{mcp,composio,skillMaintainer,skillManagement,skill,webBrowsing,workRegistration}/**",
+        "apps/server/src/modules/PluginStore/**",
+        "apps/server/src/routers/lambda/work.ts",
+        "apps/server/src/router-hono/composio/**",
+        "apps/server/src/routers/lambda/webBrowsing.ts"
       ],
       "issue": "ORV-104"
     },
@@ -138,7 +184,14 @@
       "reason": "Agent documents / page editor / resource manager — workspace product surfaces.",
       "globs": [
         "src/features/{AgentDocument*,PageEditor,Portal,ResourceManager,AgentDocumentsExplorer}/**",
-        "apps/server/src/services/{document*,page*}/**"
+        "apps/server/src/services/{document*,page*}/**",
+        "src/features/{DocumentModal,PageExplorer,EditLock,EditorCanvas,EditorModal,EditingPopover}/**",
+        "src/libs/editor/**",
+        "src/services/{notebook,document,documentComment,documentHistoryQueue,documentLike,agentDocument}*",
+        "src/store/{page,document,notebook}/**",
+        "apps/server/src/services/{notebook,editLock,agentDocuments,agentDocumentVfs}/**",
+        "apps/server/src/routers/lambda/{notebook,agentDocument}.ts",
+        "apps/server/src/routers/async/document.ts"
       ],
       "issue": "ORV-100"
     },
@@ -146,7 +199,14 @@
       "id": "desktop-mobile-shell",
       "disposition": "KEEP",
       "reason": "Desktop/Web parity is in the boundary; workbench (mobile doc reader) and share hosts stay per P00 §N.",
-      "globs": ["apps/{desktop,workbench,share}/**", "src/features/Electron/**"],
+      "globs": [
+        "apps/{desktop,workbench,share}/**",
+        "src/features/Electron/**",
+        "src/store/{device,electron}/**",
+        "src/services/{electron,device}*",
+        "src/features/{DeviceManager,DesktopOnboarding,DesktopLayoutContainer,DesktopNavigationBridge,DesktopFileMenuBridge,ProtocolUrlHandler,OpenInAppButton}/**",
+        "apps/server/src/services/desktopRelease/**"
+      ],
       "issue": "ORV-100"
     },
     {
@@ -156,7 +216,8 @@
       "globs": [
         "src/features/DataImporter/**",
         "apps/server/src/routers/lambda/{importer,exporter}.ts",
-        "apps/server/src/services/{import*,export*}/**"
+        "apps/server/src/services/{import*,export*}/**",
+        "src/services/{import,export}/**"
       ],
       "issue": "ORV-100"
     },
@@ -164,7 +225,11 @@
       "id": "openapi-api",
       "disposition": "REWRITE_FOR_ACP",
       "reason": "External REST/Responses API stays as a supported surface but its Responses semantics must be re-founded on ACP operation lifecycle (P00 §H).",
-      "globs": ["packages/{openapi,sdk}/**", "src/app/(backend)/api/v1/**"],
+      "globs": [
+        "packages/{openapi,sdk}/**",
+        "src/app/(backend)/api/v1/**",
+        "src/app/(backend)/api/**"
+      ],
       "issue": "ORV-107"
     },
     {
@@ -309,7 +374,8 @@
         "apps/server/src/services/agentEvalRun/**",
         "packages/eval-dataset-parser/**",
         "src/features/{Eval*,*Eval}/**",
-        "src/routes/**/eval*/**"
+        "src/routes/**/eval*/**",
+        "src/services/ragEval*"
       ],
       "issue": "ORV-108"
     },
@@ -317,7 +383,10 @@
       "id": "model-runtime-adjacent-packages",
       "disposition": "KEEP",
       "reason": "context-engine / prompts / model-bank are live shared primitives (model catalog, prompt registry, context assembly) consumed by ACP/task/collaboration — resolved by ORV-110 census.",
-      "globs": ["packages/{context-engine,prompts,model-bank}/**"],
+      "globs": [
+        "packages/{context-engine,prompts,model-bank}/**",
+        "packages/business/{model-bank,model-runtime}/**"
+      ],
       "issue": "ORV-102"
     },
     {
@@ -334,7 +403,9 @@
       "globs": [
         "apps/server/src/routers/lambda/{knowledge,knowledgeBase}.ts",
         "apps/server/src/routers/lambda/{__tests__/knowledgeBase.test.ts,_helpers/knowledgeBaseAccess.ts}",
-        "apps/server/src/services/{knowledgeBase,knowledgeBaseAccess,chunk}/**"
+        "apps/server/src/services/{knowledgeBase,knowledgeBaseAccess,chunk}/**",
+        "apps/server/src/modules/ContentChunk/**",
+        "src/services/{knowledgeBase,rag}*"
       ],
       "issue": "ORV-114"
     },
@@ -342,8 +413,199 @@
       "id": "file-ingestion",
       "disposition": "KEEP",
       "reason": "packages/file-loaders is the shared document/file parsing pipeline consumed by Document service, documentAccess, local-file-shell and OpenAPI file service — all retained surfaces. Resolved by ORV-114.",
-      "globs": ["packages/file-loaders/**"],
+      "globs": ["packages/file-loaders/**", "src/libs/document-loaders/**"],
       "issue": "ORV-114"
+    },
+    {
+      "id": "agent-management",
+      "disposition": "KEEP",
+      "reason": "Agent profile/lifecycle management surface: builder, settings, sidebar, groups, quota/usage views, hetero-agent UI, work registry, agent-scoped lambda routers and their client services.",
+      "globs": [
+        "src/features/Agent*/**",
+        "src/features/{ConnectAgent,GroupAvatar,GroupNotFound,GroupPermission,HeteroSessionImport,HeterogeneousAgent,HeterogeneousTag,WorkingDirectory,ExecutionTargetPicker,Work,WorkGallery,GlobalApprovalNotification,ChatGroupWizard}/**",
+        "src/store/{agent,agentGroup,groupProfile,discover}/**",
+        "src/services/{agent,agentLabel,agentMarketplace,agentQuota,agentShare,agentSignal,aiAgent,chatGroup,discover,installMarketplaceAgents,expertise,projectSkill,work}*",
+        "apps/server/src/services/{agent,agentDelegation,expertise,systemAgent,understanding,discover,workRegistration,aiGeneration}/**",
+        "apps/server/src/routers/lambda/{agentGroup,agentLabel,agentNotify,agentShare,expertise}.ts",
+        "apps/server/src/services/agentGroup/**",
+        "src/features/Agent*.tsx"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "app-shell-navigation",
+      "disposition": "KEEP",
+      "reason": "Product shell: SPA route segments, layout, boot/entry files, navigation surfaces (sidebars, nav panel, command menu), onboarding, home screens.",
+      "globs": [
+        "src/routes/**",
+        "src/layout/**",
+        "src/spa/**",
+        "src/{initialize,instrumentation,instrumentation.node,proxy}.{ts,tsx}",
+        "src/{initialize,proxy}.test.ts",
+        "src/skeleton-gallery.tsx",
+        "src/vite.d.ts",
+        "src/lib/**",
+        "src/scripts/**",
+        "src/app/{layout,manifest,not-found,robots}.{tsx,ts}",
+        "src/app/{spa-auth,spa,spa-share,spa-workbench,[variants]}/**",
+        "src/features/{Home,HomeSidebar,MobileHome,NavHeader,NavPanel,CommandMenu,Onboarding,DesktopOnboarding,RouteMeta,GlobalOverlays,RightPanel,WideScreenContainer,AlertBanner,AudioPlayer,AttachmentInput,HotkeyHelperPanel}/**",
+        "src/store/{home,session,global,tree}/**",
+        "apps/server/src/services/{onboarding,onboardingProgress,changelog}/**",
+        "apps/server/src/routers/lambda/changelog.ts",
+        "src/features/PlanIcon/**"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "settings-and-billing",
+      "disposition": "KEEP",
+      "reason": "User settings, profile, self-learning prefs, server config, quota and usage surfaces.",
+      "globs": [
+        "src/features/{Setting,Settings,SettingsSearch,ProfileEditor,User,SelfLearning,AgentQuotaCalendar,AgentUsage}/**",
+        "src/store/{user,serverConfig}/**",
+        "src/services/{user,usage,agentQuota,workspaceUserSettings}*",
+        "apps/server/src/services/{usage,agentQuota,user}/**",
+        "apps/server/src/routers/lambda/{user,usage,agentQuota,workspaceUserSettings}.ts"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "cli-control-plane",
+      "disposition": "KEEP",
+      "reason": "The lh CLI application: commands, device control, e2e harness, scripts.",
+      "globs": ["apps/cli/**"],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "server-core-routing",
+      "disposition": "KEEP",
+      "reason": "Server platform plumbing: lambda router infra (index/_helpers/_schema/config/_template + cross-domain tests), async/mobile/webapi router shells, router-hono core, globalConfig/runtimeConfig/featureFlags/utils, modules not owned by a domain cap, backend route shells.",
+      "globs": [
+        "apps/server/src/routers/lambda/{index.ts,_template.ts}",
+        "apps/server/src/routers/lambda/{_helpers,_schema,config}/**",
+        "apps/server/src/routers/lambda/__tests__/**",
+        "apps/server/src/routers/{async,mobile}/**",
+        "apps/server/src/router-hono/{index.ts,standalone.ts,dev.ts}",
+        "apps/server/src/router-hono/{devtools,webhooks}/**",
+        "apps/server/src/{utils,globalConfig,runtimeConfig,hatchet,featureFlags}/**",
+        "apps/server/src/*.{ts,mts}",
+        "apps/server/src/modules/{AssistantStore,PluginStore,LLMGenerationTracing}/**",
+        "apps/server/src/services/agentSignal/**",
+        "src/app/(backend)/{trpc,webapi,f,middleware,_deprecated}/**",
+        "packages/business-server/**",
+        "packages/business/config/**",
+        "apps/server/src/routers/lambda/*.test.ts",
+        "apps/server/vite*.config.ts",
+        "packages/config/**",
+        "packages/business/const/**"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "memory",
+      "disposition": "KEEP",
+      "reason": "User memory: extraction pipeline, persona, CRUD surfaces, memory webhooks.",
+      "globs": [
+        "src/features/Memory/**",
+        "src/store/userMemory/**",
+        "src/services/userMemory/**",
+        "apps/server/src/services/memory/**",
+        "apps/server/src/routers/lambda/{userMemory,userMemories}.ts"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "files-and-resources",
+      "disposition": "KEEP",
+      "reason": "File/resource surfaces: viewers, explorer tree, resource library/home, file store, client file services.",
+      "globs": [
+        "src/features/{FileViewer,FileTree,FileNotFound,LocalFile,ExplorerTree,ResourceHome,ResourceLibrary,LibraryModal}/**",
+        "src/store/{file,library}/**",
+        "src/services/{file,hashFile,resource}*"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "sharing-publishing",
+      "disposition": "KEEP",
+      "reason": "Share/publish surfaces: share modals, popovers, shareChat/share lambda routers, share helpers.",
+      "globs": [
+        "src/features/{Share,ShareModal,SharePopover,VisibilityConfirmContent}/**",
+        "src/services/{share,shareChat,agentShare}*",
+        "apps/server/src/routers/lambda/{share,shareChat}.ts"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "dev-tooling",
+      "disposition": "KEEP",
+      "reason": "Repository tooling and test infrastructure: scripts/, tests/, e2e/, vite plugins, dev panels.",
+      "globs": [
+        "scripts/**",
+        "tests/**",
+        "e2e/**",
+        "plugins/**",
+        "src/features/{DevPanel,DevDock,DevFeatureFlagPanel,AgentMockDevtools}/**",
+        "src/retirementParity.test.ts"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "shared-ui",
+      "disposition": "KEEP",
+      "reason": "Shared UI component library and styles.",
+      "globs": ["src/components/**", "src/styles/**"],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "client-foundation",
+      "disposition": "KEEP",
+      "reason": "Client-side shared foundation: hooks, misc libs, utils, types, consts, business/client contract layer, client API services not owned by a domain cap.",
+      "globs": [
+        "src/hooks/**",
+        "src/utils/**",
+        "src/types/**",
+        "src/const/**",
+        "src/business/**",
+        "src/store/{middleware,utils,types.ts}/**",
+        "src/store/types.ts",
+        "src/libs/{swr,localDatabase,queryProjectionStorage,contextMenu,router,metadata,spaHtml,pdfjs,email,hatchet,i18n,next,redis,trusted-client}/**",
+        "src/libs/*.{ts,tsx}",
+        "src/services/**",
+        "src/helpers/**"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "observability-admin",
+      "disposition": "KEEP",
+      "reason": "Metrics/tracing/analytics plumbing: boot metrics, traces, generation tracing, onboarding metrics.",
+      "globs": [
+        "src/libs/{analytics,bootMetrics,bootTiming,traces,observability}/**",
+        "src/libs/debug-file-logger.ts",
+        "src/services/onboardingMetrics/**",
+        "apps/server/src/services/llmGenerationTracing/**",
+        "apps/server/src/modules/LLMGenerationTracing/**",
+        "apps/server/src/routers/lambda/llmGenerationTracing.ts"
+      ],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "notifications",
+      "disposition": "KEEP",
+      "reason": "Outbound notification plumbing: email, push, webhook user events, resource events.",
+      "globs": ["apps/server/src/services/{email,push,webhookUser,resourceEvents}/**"],
+      "issue": "ORV-116"
+    },
+    {
+      "id": "search",
+      "disposition": "KEEP",
+      "reason": "Full-text/search services: search, ftsSearch, ftsSearchSync, search router.",
+      "globs": [
+        "apps/server/src/services/{search,ftsSearch,ftsSearchSync}/**",
+        "apps/server/src/routers/lambda/search.ts"
+      ],
+      "issue": "ORV-116"
     }
   ],
   "fixedBoundary": [
@@ -356,6 +618,260 @@
     "GitHub / Linear integration",
     "Conversation/activity UI as control and presentation surface",
     "Auth / DB / storage / observability / required infra"
+  ],
+  "importExceptions": [
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./a",
+      "reason": "fixture import graph encoded as test strings — files generated at test runtime",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./b",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./barrel",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./forward",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./legacy.cjs",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./mac-only",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./platform",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./shared",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "./types",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/__tests__/mainHash.test.mjs",
+      "specifier": "../common/index",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "apps/desktop/scripts/i18nWorkflow/utils.ts",
+      "specifier": "./${locale}",
+      "reason": "dynamic template specifier — locale substituted at runtime",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "packages/artifact-template/src/index.ts",
+      "specifier": "./App",
+      "reason": "inside template literal — artifact scaffold source code shipped as a string",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "packages/builtin-skills/src/artifacts/content.ts",
+      "specifier": "@/components/ui/...",
+      "reason": "skill teaching text — example import path in artifact content",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "packages/builtin-skills/src/artifacts/content.ts",
+      "specifier": "@/components/ui/card",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "packages/heterogeneous-agents/src/retirementGuard.test.ts",
+      "specifier": "./providerBinding",
+      "reason": "retirement-guard rule test data — intentionally references deleted module",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "packages/html-artifact/src/collectHtmlLocalResources.test.ts",
+      "specifier": "./theme.css",
+      "reason": "@import inside fixture HTML string",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "packages/sdk/scripts/generate-sdk.ts",
+      "specifier": "./types.gen",
+      "reason": "generated file — produced by the script itself, not committed",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "plugins/vite/orviloUiImports.test.ts",
+      "specifier": "../Foo/X.mjs",
+      "reason": "vite-plugin test fixture path",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "plugins/vite/orviloUiImports.test.ts",
+      "specifier": "./Flex/FlexBasic.mjs",
+      "reason": "vite-plugin test fixture path",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "plugins/vite/orviloUiImports.test.ts",
+      "specifier": "./Foo/index.mjs",
+      "reason": "vite-plugin test fixture path",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "plugins/vite/osPlatformResolve.test.ts",
+      "specifier": "./widget",
+      "reason": "vite-plugin test fixture path",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "plugins/vite/staticStylesPrecompile.test.ts",
+      "specifier": "./local",
+      "reason": "vite-plugin test fixture path",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "scripts/generateSpaTemplates.mts",
+      "specifier": "./mobileHtmlTemplate.source",
+      "reason": "template source path resolved at script runtime, not a module import",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "scripts/i18nWorkflow/utils.ts",
+      "specifier": "./${locale}",
+      "reason": "dynamic template specifier — locale substituted at runtime",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "scripts/migrate-spa-navigation.ts",
+      "specifier": "@/app/[variants]/(main)/hooks/usePathname",
+      "reason": "codemod string patterns — rewrite targets, not real imports",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "scripts/migrate-spa-navigation.ts",
+      "specifier": "@/app/[variants]/(main)/hooks/useRouter",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "scripts/migrate-spa-navigation.ts",
+      "specifier": "@/app/[variants]/(main)/hooks/useSearchParams",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/features/DevPanel/RenderGallery/fixtures/codex.ts",
+      "specifier": "./package.json",
+      "reason": "transcript fixture — import inside recorded agent output",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/features/DevPanel/RenderGallery/fixtures/codex.ts",
+      "specifier": "@/features/DevPanel",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/features/DevPanel/RenderGallery/fixtures/kimi-code.ts",
+      "specifier": "../types",
+      "reason": "transcript fixture — import inside recorded agent output",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/spa/router/desktopRouter.sync.test.tsx",
+      "specifier": "@/routes/(main)/settings/provider",
+      "reason": "route-path assertion strings (toContain), not module imports",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/spa/router/desktopRouter.sync.test.tsx",
+      "specifier": "@/routes/(main)/task-workspace/_layout",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/spa/router/desktopRouter.sync.test.tsx",
+      "specifier": "@/routes/(main)/task/_layout",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/spa/router/desktopRouter.sync.test.tsx",
+      "specifier": "@/routes/(main)/tasks/_layout",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    },
+    {
+      "importer": "src/spa/router/mobileRouter.test.tsx",
+      "specifier": "@/routes/(main)/tasks/_layout",
+      "reason": "same",
+      "owner": "alexj11324",
+      "expiry": "persistent"
+    }
+  ],
+  "overlapAllowances": [
+    {
+      "broad": "client-foundation",
+      "narrow": "conversation-surface",
+      "reason": "client-foundation claims src/hooks/** and src/services/** as base layer; conversation-surface's REWRITE claim on specific chat/brief/model hooks+services wins on overlap."
+    }
   ],
   "version": 1,
   "vocabulary": {

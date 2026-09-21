@@ -3,8 +3,16 @@
  * Slimming census — regenerable capability + dependency-closure inventory.
  *
  *   node scripts/slimming/census.mjs          # writes docs/development/slimming/{census.json,CENSUS.md}
- *   node scripts/slimming/census.mjs --check  # same, but exits 1 when a DELETE capability has
- *                                             # unexplained inbound dependencies (CI gate)
+ *   node scripts/slimming/census.mjs --check  # same, but exits 1 on any boundary violation
+ *                                             # (CI gate — see evaluateCheck)
+ *
+ * Strict gate (`--check`, ORV-116) fails on:
+ *   - uncovered source files > 0            (every file must belong to a capability)
+ *   - conflicting dispositions > 0          (one file claimed by caps with different dispositions)
+ *   - INVESTIGATE capabilities > 0          (no permanent limbo)
+ *   - DELETE capabilities with files > 0    (deleted means deleted)
+ *   - unexplained inbound deps on DELETE    (existing closure rule)
+ *   - unresolved internal imports > 0       (minus boundary.importExceptions entries)
  *
  * Inputs:
  *   - scripts/slimming/boundary.json  (authored dispositions — the KEEP/DELETE ledger source of truth)
@@ -111,7 +119,13 @@ function loadWorkspacePackages() {
       if (exists(manifestPath)) {
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-          if (manifest.name) pkgs.set(manifest.name, { dir: rel(dir), manifest });
+          // duplicate names exist on purpose (e.g. apps/desktop/stubs/* shadow
+          // real packages for bundling) — keep every candidate and try each
+          // at resolution time.
+          if (manifest.name) {
+            if (!pkgs.has(manifest.name)) pkgs.set(manifest.name, []);
+            pkgs.get(manifest.name).push({ dir: rel(dir), manifest });
+          }
         } catch {
           /* ignore malformed manifests */
         }
@@ -125,7 +139,10 @@ function loadWorkspacePackages() {
   // workspace root
   try {
     const rootManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-    if (rootManifest.name) pkgs.set(rootManifest.name, { dir: '.', manifest: rootManifest });
+    if (rootManifest.name) {
+      if (!pkgs.has(rootManifest.name)) pkgs.set(rootManifest.name, []);
+      pkgs.get(rootManifest.name).push({ dir: '.', manifest: rootManifest });
+    }
   } catch {
     /* root manifest optional */
   }
@@ -144,6 +161,66 @@ function extractSpecifiers(file) {
     return [];
   }
   const specs = [];
+  // strip line/block comments so commented-out imports don't register —
+  // they are documentation, not dependencies. Runs char-wise to preserve
+  // string literals that merely contain '//' or '/*'.
+  {
+    let out = '';
+    let i = 0;
+    const n = src.length;
+    let inStr = 0; // 0 none, 1 ', 2 ", 3 `
+    while (i < n) {
+      const ch = src[i];
+      const next = src[i + 1];
+      if (inStr) {
+        out += ch;
+        if (ch === '\\') {
+          out += next || '';
+          i += 2;
+          continue;
+        }
+        if (
+          (inStr === 1 && ch === "'") ||
+          (inStr === 2 && ch === '"') ||
+          (inStr === 3 && ch === '`')
+        )
+          inStr = 0;
+        i += 1;
+        continue;
+      }
+      if (ch === "'") {
+        inStr = 1;
+        out += ch;
+        i += 1;
+        continue;
+      }
+      if (ch === '"') {
+        inStr = 2;
+        out += ch;
+        i += 1;
+        continue;
+      }
+      if (ch === '`') {
+        inStr = 3;
+        out += ch;
+        i += 1;
+        continue;
+      }
+      if (ch === '/' && next === '/') {
+        while (i < n && src[i] !== '\n') i += 1;
+        continue;
+      }
+      if (ch === '/' && next === '*') {
+        i += 2;
+        while (i < n && !(src[i] === '*' && src[i + 1] === '/')) i += 1;
+        i += 2;
+        continue;
+      }
+      out += ch;
+      i += 1;
+    }
+    src = out;
+  }
   let m;
   IMPORT_RE.lastIndex = 0;
   while ((m = IMPORT_RE.exec(src)) !== null) {
@@ -154,6 +231,19 @@ function extractSpecifiers(file) {
 }
 
 // ---------- resolver ----------
+// Per-area alias scopes: a file under DIR_PREFIX resolves ALIAS_PREFIX against
+// the listed targets (in order). Covers apps/desktop's own tsconfig paths
+// (`@/* -> src/main/*`, `~common/* -> src/common/*`) layered over the root ones.
+const AREA_ALIAS_SCOPES = [
+  {
+    dirPrefix: 'apps/desktop/src/main/',
+    aliases: [
+      ['@/', ['apps/desktop/src/main/']],
+      ['~common/', ['apps/desktop/src/common/']],
+    ],
+  },
+];
+
 const ROOT_ALIASES = [
   ['@/database/', ['packages/database/src/']],
   ['@/const/', ['packages/const/src/', 'src/const/']],
@@ -172,12 +262,35 @@ const ROOT_ALIASES = [
 ];
 
 function resolveAsFile(candidate) {
+  // strip bundler query suffixes (?raw, ?v=...) before probing
+  candidate = candidate.replace(/[?#].*$/, '');
   const abs = path.join(ROOT, candidate);
   for (const ext of SOURCE_EXT) {
     if (exists(abs + ext)) return candidate + ext;
     if (exists(path.join(abs, 'index' + ext))) return candidate + '/index' + ext;
   }
-  if (exists(abs) && !fs.statSync(abs).isDirectory()) return candidate;
+  // declaration-only modules (*.d.ts)
+  if (exists(abs + '.d.ts')) return candidate + '.d.ts';
+  if (exists(abs)) {
+    if (!fs.statSync(abs).isDirectory()) return candidate;
+    // bare directory import — follow its package.json entry (packages/types)
+    const pj = path.join(abs, 'package.json');
+    if (exists(pj)) {
+      try {
+        const m = JSON.parse(fs.readFileSync(pj, 'utf8'));
+        const e = m.exports?.['.'];
+        const entry = typeof e === 'string' ? e : e?.import || e?.default || m.main;
+        if (entry) {
+          const hit = resolveAsFile(`${candidate}/${entry.replace(/^\.\//, '')}`);
+          if (hit) return hit;
+        }
+      } catch {
+        /* malformed manifest */
+      }
+      const hit = resolveAsFile(candidate + '/src/index');
+      if (hit) return hit;
+    }
+  }
   return null;
 }
 
@@ -189,7 +302,9 @@ function resolveSpecifier(spec, fromFile, pkgByName) {
     const hit = resolveAsFile(candidate);
     return hit ? { kind: 'internal', file: hit } : { kind: 'unresolved', spec };
   }
-  for (const [prefix, targets] of ROOT_ALIASES) {
+  const areaScope = AREA_ALIAS_SCOPES.find((s) => fromFile.startsWith(s.dirPrefix));
+  const aliasTable = areaScope ? [...areaScope.aliases, ...ROOT_ALIASES] : ROOT_ALIASES;
+  for (const [prefix, targets] of aliasTable) {
     if (spec === prefix.slice(0, -1) || spec.startsWith(prefix)) {
       const rest = spec === prefix.slice(0, -1) ? '' : spec.slice(prefix.length);
       for (const target of targets) {
@@ -203,18 +318,33 @@ function resolveSpecifier(spec, fromFile, pkgByName) {
   const parts = spec.split('/');
   const names = spec.startsWith('@') ? [parts.slice(0, 2).join('/')] : [parts[0]];
   for (const name of names) {
-    const pkg = pkgByName.get(name);
-    if (pkg) {
+    const candidates = pkgByName.get(name);
+    if (candidates) {
       const sub = spec.slice(name.length).replace(/^\//, '');
-      const baseDir = pkg.dir === '.' ? '' : pkg.dir + '/';
-      const entry =
-        sub || pkg.manifest.exports?.['.']?.import || pkg.manifest.main || 'src/index.ts';
-      const hit = resolveAsFile(baseDir + entry.replace(/^\.\//, ''));
-      if (hit) return { kind: 'internal', file: hit, package: name };
-      // try src/<sub>
-      if (sub) {
-        const hit2 = resolveAsFile(baseDir + 'src/' + sub);
-        if (hit2) return { kind: 'internal', file: hit2, package: name };
+      for (const pkg of candidates) {
+        const baseDir = pkg.dir === '.' ? '' : pkg.dir + '/';
+        const exportsMap = pkg.manifest.exports || {};
+        // honor the package.json exports map for subpath imports
+        // (@orvilo/foo/sub -> exports['./sub']), handling string and
+        // conditional ({import,types,default}) entry forms.
+        const exportEntry = (key) => {
+          const e = exportsMap[key];
+          if (!e) return null;
+          if (typeof e === 'string') return e;
+          return e.import || e.default || e.types || Object.values(e)[0];
+        };
+        const entry = sub
+          ? exportEntry(`./${sub}`)
+          : exportEntry('.') || pkg.manifest.main || 'src/index.ts';
+        if (entry) {
+          const hit = resolveAsFile(baseDir + entry.replace(/^\.\//, ''));
+          if (hit) return { kind: 'internal', file: hit, package: name };
+        }
+        // try src/<sub>
+        if (sub) {
+          const hit2 = resolveAsFile(baseDir + 'src/' + sub);
+          if (hit2) return { kind: 'internal', file: hit2, package: name };
+        }
       }
       return { kind: 'workspace-unresolved', spec, package: name };
     }
@@ -356,11 +486,21 @@ function main() {
       } else if (r.kind === 'workspace-unresolved') {
         if (!externalDeps.has(r.package)) externalDeps.set(r.package, new Set());
         externalDeps.get(r.package).add(f);
+        unresolved.push({
+          importer: f,
+          specifier: spec,
+          via: 'workspace-subpath',
+          package: r.package,
+        });
       } else if (r.kind === 'external') {
         if (!externalDeps.has(r.package)) externalDeps.set(r.package, new Set());
         externalDeps.get(r.package).add(f);
       } else if (r.kind === 'unresolved') {
-        unresolved.push({ file: f, spec });
+        unresolved.push({
+          importer: f,
+          specifier: spec,
+          via: spec.startsWith('@/') || spec.startsWith('~') ? 'alias' : 'relative',
+        });
       }
     }
   }
@@ -448,6 +588,16 @@ function main() {
   );
   const storeDirs = files.filter((f) => f.startsWith('src/store/') || /\/store\//.test(f));
 
+  // exact-match exceptions for imports that legitimately cannot resolve
+  // statically (dynamic specifiers, generated modules). boundary.json entries:
+  // {importer, specifier, reason, owner, expiry} — no wildcards.
+  const exceptionSet = new Set(
+    (boundary.importExceptions || []).map((e) => `${e.importer} ${e.specifier}`),
+  );
+  const unresolvedInternal = unresolved.filter(
+    (u) => !exceptionSet.has(`${u.importer} ${u.specifier}`),
+  );
+
   const census = {
     generatedAt: new Date().toISOString(),
     baseBranch,
@@ -467,6 +617,7 @@ function main() {
       testFiles: testFiles.length,
       storeFiles: storeDirs.length,
       unresolvedImports: unresolved.length,
+      unresolvedInternalImports: unresolvedInternal.length,
     },
     enumerations: {
       nextRoutes,
@@ -490,18 +641,37 @@ function main() {
       files: c.files,
       inbound: c.inbound,
     })),
-    uncoveredFiles: files.filter((f) => fileDisposition(f) === 'UNCOVERED').length,
+    uncoveredFiles: files.filter((f) => fileDisposition(f) === 'UNCOVERED').sort(),
     uncoveredByArea: {},
+    unresolvedImports: unresolved
+      .slice()
+      .sort(
+        (a, b) => a.importer.localeCompare(b.importer) || a.specifier.localeCompare(b.specifier),
+      )
+      .map((u) => ({
+        ...u,
+        exempted: exceptionSet.has(`${u.importer} ${u.specifier}`),
+      })),
+    investigateCapabilities: capabilities
+      .filter((c) => c.disposition === 'INVESTIGATE')
+      .map((c) => ({ id: c.id, fileCount: c.fileCount, issue: c.issue, owner: c.owner })),
+    deleteCapabilitiesWithFiles: capabilities
+      .filter((c) => c.disposition === 'DELETE' && c.fileCount > 0)
+      .map((c) => ({ id: c.id, fileCount: c.fileCount, issue: c.issue })),
     // Files matched by capabilities whose dispositions disagree — silent
     // precedence (DELETE > INVESTIGATE > REWRITE > KEEP) would hide the
     // conflict, so surface it explicitly and fail `--check` on it.
+    // A file is exempt when an overlapAllowance {broad, narrow} in the ledger
+    // covers its entire capability set (broad base-layer glob + narrow domain
+    // claim); any other cross-disposition overlap is a violation.
     conflictingDispositionFiles: files
-      .filter((f) => {
-        const disps = new Set(
-          (capOfFile.get(f) || []).map((id) => capabilities.find((c) => c.id === id).disposition),
-        );
-        return disps.size > 1;
-      })
+      .filter((f) =>
+        isDispositionConflict(
+          capOfFile.get(f) || [],
+          capabilities,
+          boundary.overlapAllowances || [],
+        ),
+      )
       .sort()
       .map((f) => ({
         file: f,
@@ -516,8 +686,7 @@ function main() {
 
   // uncovered distribution by top dir (helps spot ungoverned areas)
   const byArea = {};
-  for (const f of files) {
-    if (fileDisposition(f) !== 'UNCOVERED') continue;
+  for (const f of census.uncoveredFiles) {
     const area = f.split('/').slice(0, 3).join('/');
     byArea[area] = (byArea[area] || 0) + 1;
   }
@@ -530,29 +699,87 @@ function main() {
   const md = renderMarkdown(census, boundary);
   fs.writeFileSync(path.join(OUT_DIR, 'CENSUS.md'), md);
 
-  // 8. check mode
-  const badCaps = census.capabilities.filter(
-    (c) => c.disposition === 'DELETE' && c.inbound.unexplained.length > 0,
-  );
-  const conflicts = census.conflictingDispositionFiles;
-  if (CHECK && (badCaps.length || conflicts.length)) {
-    if (badCaps.length) {
-      console.error('DELETE capabilities with unexplained inbound dependencies:');
-      for (const c of badCaps) {
-        console.error(`  ${c.id}: ${c.inbound.unexplained.length} unexplained importers`);
-      }
-    }
-    if (conflicts.length) {
-      console.error('Files with conflicting capability dispositions:');
-      for (const c of conflicts) {
-        console.error(`  ${c.file}: ${c.capabilities.join(' + ')} (${c.dispositions.join(' + ')})`);
-      }
+  // 8. check mode — strict, fail-closed on every boundary violation (ORV-116)
+  const violations = evaluateCheck(census);
+  if (CHECK && violations.length) {
+    console.error('slimming boundary violations:');
+    for (const v of violations) {
+      console.error(`  ${v.rule}: ${v.count}`);
+      for (const d of (v.details || []).slice(0, 50)) console.error(`    ${d}`);
+      if ((v.details || []).length > 50)
+        console.error(`    … +${v.details.length - 50} more (see census.json)`);
     }
     process.exit(1);
   }
   console.log(
-    `census: ${files.length} source files, ${pkgByName.size} workspace packages, ${badCaps.length} DELETE caps with open inbound deps, ${conflicts.length} conflicting dispositions`,
+    `census: ${files.length} source files, ${pkgByName.size} workspace packages, ${violations.length} boundary violations`,
   );
+}
+
+/**
+ * Strict boundary evaluation. Pure function over a census-shaped object so the
+ * falsifiability tests can inject violations without touching the real tree.
+ * Returns a list of {rule, count, details} violations; empty = green.
+ */
+export function isDispositionConflict(capIds, capabilities, allowances = []) {
+  const disps = new Set(capIds.map((id) => capabilities.find((c) => c.id === id).disposition));
+  if (disps.size <= 1) return false;
+  return !allowances.some(
+    (o) => capIds.length > 0 && capIds.every((id) => id === o.broad || id === o.narrow),
+  );
+}
+
+export function evaluateCheck(census) {
+  const v = [];
+  if (census.uncoveredFiles.length > 0) {
+    v.push({
+      rule: 'uncovered source files',
+      count: census.uncoveredFiles.length,
+      details: census.uncoveredFiles,
+    });
+  }
+  if (census.conflictingDispositionFiles.length > 0) {
+    v.push({
+      rule: 'conflicting dispositions',
+      count: census.conflictingDispositionFiles.length,
+      details: census.conflictingDispositionFiles.map(
+        (c) => `${c.file}: ${c.capabilities.join(' + ')}`,
+      ),
+    });
+  }
+  if (census.investigateCapabilities.length > 0) {
+    v.push({
+      rule: 'INVESTIGATE capabilities remaining',
+      count: census.investigateCapabilities.length,
+      details: census.investigateCapabilities.map((c) => `${c.id} (${c.fileCount} files)`),
+    });
+  }
+  if (census.deleteCapabilitiesWithFiles.length > 0) {
+    v.push({
+      rule: 'DELETE capabilities still matching files',
+      count: census.deleteCapabilitiesWithFiles.length,
+      details: census.deleteCapabilitiesWithFiles.map((c) => `${c.id} (${c.fileCount} files)`),
+    });
+  }
+  const badCaps = census.capabilities.filter(
+    (c) => c.disposition === 'DELETE' && c.inbound.unexplained.length > 0,
+  );
+  if (badCaps.length) {
+    v.push({
+      rule: 'DELETE capabilities with unexplained inbound dependencies',
+      count: badCaps.length,
+      details: badCaps.map((c) => `${c.id}: ${c.inbound.unexplained.length} unexplained importers`),
+    });
+  }
+  const unresolved = (census.unresolvedImports || []).filter((u) => !u.exempted);
+  if (unresolved.length > 0) {
+    v.push({
+      rule: 'unresolved internal imports',
+      count: unresolved.length,
+      details: unresolved.map((u) => `${u.importer} -> ${u.specifier} (${u.via})`),
+    });
+  }
+  return v;
 }
 
 function renderMarkdown(census, boundary) {
@@ -568,7 +795,7 @@ function renderMarkdown(census, boundary) {
     '| --- | --- |',
   ];
   for (const [k, v] of Object.entries(census.counts)) lines.push(`| ${k} | ${v} |`);
-  lines.push(`| uncoveredSourceFiles | ${census.uncoveredFiles} |`);
+  lines.push(`| uncoveredSourceFiles | ${census.uncoveredFiles.length} |`);
   lines.push('');
   lines.push('## Capability ledger (machine section)');
   lines.push('');
@@ -613,6 +840,22 @@ function renderMarkdown(census, boundary) {
     }
   }
   lines.push('');
+  lines.push('## Unresolved internal imports');
+  lines.push('');
+  const unresolved = census.unresolvedImports || [];
+  if (unresolved.length === 0) {
+    lines.push('None — every specifier resolves.');
+  } else {
+    lines.push('| Importer | Specifier | Via | Exempted |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const u of unresolved.slice(0, 300)) {
+      lines.push(
+        `| \`${u.importer}\` | \`${u.specifier}\` | ${u.via} | ${u.exempted ? 'yes' : ''} |`,
+      );
+    }
+    if (unresolved.length > 300) lines.push(`| … | | | +${unresolved.length - 300} more |`);
+  }
+  lines.push('');
   lines.push('## UNCOVERED source files by area (top 40)');
   lines.push('');
   lines.push('| Area | Files |');
@@ -632,4 +875,11 @@ function renderMarkdown(census, boundary) {
   return lines.join('\n');
 }
 
-main();
+// Run as CLI unless imported as a module (the falsifiability tests import
+// evaluateCheck without scanning the tree).
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)
+) {
+  main();
+}

@@ -812,6 +812,7 @@ export default {
   'search.searchxng.unconfiguredDesc': 'Contact admin to configure SearchXNG',
   'search.searchxng.unconfiguredTitle': 'SearchXNG not configured',
   'search.title': 'Web Search',
+  'setting': 'Settings',
   'settings.configuration.title': 'Configuration',
   'settings.connection.args': 'Arguments',
   'settings.connection.command': 'Command',
@@ -830,4 +831,5 @@ export default {
   'settings.rules.urlRequired': 'Enter server URL',
   'store.communityPlugin': 'Community',
   'store.customPlugin': 'Custom',
+  'unknownError': 'Unknown error',
 };

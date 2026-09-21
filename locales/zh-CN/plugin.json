@@ -791,6 +791,7 @@
   "search.searchxng.unconfiguredDesc": "请联系管理员完成 SearchXNG 搜索引擎配置，即可开始联网搜索",
   "search.searchxng.unconfiguredTitle": "暂未配置 SearchXNG 搜索引擎",
   "search.title": "联网搜索",
+  "setting": "技能设置",
   "settings.configuration.title": "技能配置",
   "settings.connection.args": "启动参数",
   "settings.connection.command": "启动命令",
@@ -808,5 +809,6 @@
   "settings.rules.commandRequired": "请输入启动命令",
   "settings.rules.urlRequired": "请输入服务地址",
   "store.communityPlugin": "三方社区",
-  "store.customPlugin": "自定义"
+  "store.customPlugin": "自定义",
+  "unknownError": "未知错误"
 }

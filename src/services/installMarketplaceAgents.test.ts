@@ -62,24 +62,29 @@ describe('installMarketplaceAgents', () => {
         }) as any,
     );
 
-    const forkSpy = mocks.forkAgent.mockImplementation(async ({ items }) =>
-      items.map((item) => ({
-        data: {
-          agent: {
-            createdAt: '2026-01-01',
-            forkedFromAgentId: 1,
-            id: 1,
-            identifier: item.identifier,
-            name: item.name ?? '',
-            ownerId: 1,
-            updatedAt: '2026-01-01',
+    const forkSpy = mocks.forkAgent.mockImplementation(
+      async ({
+        items,
+      }: {
+        items: Array<{ identifier: string; name?: string; sourceIdentifier: string }>;
+      }) =>
+        items.map((item) => ({
+          data: {
+            agent: {
+              createdAt: '2026-01-01',
+              forkedFromAgentId: 1,
+              id: 1,
+              identifier: item.identifier,
+              name: item.name ?? '',
+              ownerId: 1,
+              updatedAt: '2026-01-01',
+            },
+            source: { agentId: 1, identifier: item.sourceIdentifier, versionNumber: 1 },
+            version: { agentId: 1, createdAt: '2026-01-01', id: 1, versionNumber: 1 },
           },
-          source: { agentId: 1, identifier: item.sourceIdentifier, versionNumber: 1 },
-          version: { agentId: 1, createdAt: '2026-01-01', id: 1, versionNumber: 1 },
-        },
-        sourceIdentifier: item.sourceIdentifier,
-        success: true as const,
-      })),
+          sourceIdentifier: item.sourceIdentifier,
+          success: true as const,
+        })),
     );
 
     createAgent.mockImplementation(async ({ config }: any) => ({
@@ -91,7 +96,7 @@ describe('installMarketplaceAgents', () => {
     expect(forkSpy).toHaveBeenCalledTimes(1);
     const [{ items }] = forkSpy.mock.calls[0];
     expect(items).toHaveLength(3);
-    expect(items.map((i) => i.sourceIdentifier)).toEqual(sourceIds);
+    expect(items.map((i: { sourceIdentifier: string }) => i.sourceIdentifier)).toEqual(sourceIds);
 
     expect(createAgent).toHaveBeenCalledTimes(3);
     expect(result.installedAgentIds).toHaveLength(3);
@@ -120,24 +125,29 @@ describe('installMarketplaceAgents', () => {
           title: 'T',
         }) as any,
     );
-    const forkSpy = mocks.forkAgent.mockImplementation(async ({ items }) =>
-      items.map((item) => ({
-        data: {
-          agent: {
-            createdAt: '',
-            forkedFromAgentId: 1,
-            id: 1,
-            identifier: item.identifier,
-            name: item.name ?? '',
-            ownerId: 1,
-            updatedAt: '',
+    const forkSpy = mocks.forkAgent.mockImplementation(
+      async ({
+        items,
+      }: {
+        items: Array<{ identifier: string; name?: string; sourceIdentifier: string }>;
+      }) =>
+        items.map((item) => ({
+          data: {
+            agent: {
+              createdAt: '',
+              forkedFromAgentId: 1,
+              id: 1,
+              identifier: item.identifier,
+              name: item.name ?? '',
+              ownerId: 1,
+              updatedAt: '',
+            },
+            source: { agentId: 1, identifier: item.sourceIdentifier, versionNumber: 1 },
+            version: { agentId: 1, createdAt: '', id: 1, versionNumber: 1 },
           },
-          source: { agentId: 1, identifier: item.sourceIdentifier, versionNumber: 1 },
-          version: { agentId: 1, createdAt: '', id: 1, versionNumber: 1 },
-        },
-        sourceIdentifier: item.sourceIdentifier,
-        success: true as const,
-      })),
+          sourceIdentifier: item.sourceIdentifier,
+          success: true as const,
+        })),
     );
     createAgent.mockImplementation(async ({ config }: any) => ({
       agentId: `agent-${config.params.forkedFromIdentifier}`,
@@ -147,7 +157,7 @@ describe('installMarketplaceAgents', () => {
 
     expect(forkSpy).toHaveBeenCalledTimes(1);
     const [{ items }] = forkSpy.mock.calls[0];
-    expect(items.map((i) => i.sourceIdentifier)).toEqual(['src-a']);
+    expect(items.map((i: { sourceIdentifier: string }) => i.sourceIdentifier)).toEqual(['src-a']);
     expect(result.skippedAgentIds).toEqual(['src-b', 'src-c']);
     expect(result.installedAgentIds).toEqual(['agent-src-a']);
   });

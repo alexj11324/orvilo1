@@ -7,7 +7,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { withRepoFileMutex } from '../registryFile';
+import { RegistryLockRecoveryRequiredError, withRepoFileMutex } from '../registryFile';
 
 /**
  * SC02 R6 — reclaim must never unlink a lock a NEW owner already took.
@@ -141,5 +141,126 @@ describe('withRepoFileMutex reclaim race (SC02 R6)', () => {
       expect(events[i]).toMatch(/:enter$/);
       expect(events[i + 1]).toBe(events[i]!.replace(':enter', ':exit'));
     }
+  });
+});
+
+/**
+ * SC02 R7 — a leftover `.reclaim` ticket is fail-closed, never recycled
+ * inside the racing acquire path. The R6 cleanup's check-then-unlink window
+ * let a second reclaimer delete a FRESH ticket, so a rename landed a lock
+ * record whose owner never acquired it (0 acquisitions, lock attributed to
+ * a live pid). The contract now: ticket residue blocks with a
+ * recovery-required error until controlled recovery removes it.
+ */
+describe('withRepoFileMutex reclaim-ticket residue (SC02 R7)', () => {
+  const recordFor = (pid: number, token: string) =>
+    `${JSON.stringify({
+      acquiredAt: new Date().toISOString(),
+      hostname: hostname(),
+      pid,
+      token,
+    })}\n`;
+
+  const deadPid = () => spawnSync(process.execPath, ['-e', 'process.exit(0)']).pid;
+
+  it('dead lock + dead ticket: both contenders fail closed, nothing is mutated', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'lfs-ticket-residue-'));
+    cleanup.push(dir);
+    const target = path.join(dir, 'registry.json');
+    const lock = `${target}.lock`;
+    const ticket = `${lock}.reclaim`;
+
+    // On-disk residue of a reclaimer that crashed after writing its ticket
+    // (pre-rename SIGKILL point) on top of a lock whose owner also died.
+    const deadRecord = recordFor(deadPid(), 'dead-owner');
+    const deadTicket = recordFor(deadPid(), 'dead-reclaimer');
+    await writeFile(lock, deadRecord);
+    await writeFile(ticket, deadTicket);
+
+    const fn = vi.fn(async () => 'entered');
+    const results = await Promise.allSettled([
+      withRepoFileMutex(target, fn),
+      withRepoFileMutex(target, fn),
+    ]);
+
+    for (const result of results) {
+      expect(result.status).toBe('rejected');
+      if (result.status === 'rejected') {
+        expect(result.reason).toBeInstanceOf(RegistryLockRecoveryRequiredError);
+        expect((result.reason as RegistryLockRecoveryRequiredError).code).toBe(
+          'REGISTRY_LOCK_RECOVERY_REQUIRED',
+        );
+      }
+    }
+    expect(fn).not.toHaveBeenCalled();
+    // Explicit blocking means NO mutation: the lock is not re-attributed to
+    // any requester and the ticket is not deleted or moved.
+    expect(await readFile(lock, 'utf8')).toBe(deadRecord);
+    expect(await readFile(ticket, 'utf8')).toBe(deadTicket);
+  });
+
+  it('an unattributable ticket record fails closed the same way', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'lfs-ticket-garbage-'));
+    cleanup.push(dir);
+    const target = path.join(dir, 'registry.json');
+    const lock = `${target}.lock`;
+    const ticket = `${lock}.reclaim`;
+
+    await writeFile(lock, recordFor(deadPid(), 'dead-owner'));
+    // Corrupt/torn ticket: no pid to attribute — must block, never be
+    // treated as a free slot or silently emptied.
+    await writeFile(ticket, '{"pid":');
+
+    await expect(withRepoFileMutex(target, async () => 'entered')).rejects.toBeInstanceOf(
+      RegistryLockRecoveryRequiredError,
+    );
+    expect(await readFile(ticket, 'utf8')).toBe('{"pid":');
+  });
+
+  it('a live ticket holder is never preempted — contenders wait out the timeout', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'lfs-ticket-live-'));
+    cleanup.push(dir);
+    const target = path.join(dir, 'registry.json');
+    const lock = `${target}.lock`;
+    const ticket = `${lock}.reclaim`;
+
+    await writeFile(lock, recordFor(deadPid(), 'dead-owner'));
+    const liveTicket = recordFor(process.pid, 'live-reclaimer');
+    await writeFile(ticket, liveTicket);
+
+    await expect(
+      withRepoFileMutex(target, async () => 'entered', { timeoutMs: 300 }),
+    ).rejects.toThrow(/Timed out acquiring registry lock/);
+    expect(await readFile(lock, 'utf8')).toContain('dead-owner');
+    expect(await readFile(ticket, 'utf8')).toBe(liveTicket);
+  });
+
+  it('controlled recovery removes the residue and the next contender takes over cleanly', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'lfs-ticket-recovery-'));
+    cleanup.push(dir);
+    const target = path.join(dir, 'registry.json');
+    const lock = `${target}.lock`;
+    const ticket = `${lock}.reclaim`;
+
+    const deadRecord = recordFor(deadPid(), 'dead-owner');
+    await writeFile(lock, deadRecord);
+    await writeFile(ticket, recordFor(deadPid(), 'dead-reclaimer'));
+
+    await expect(withRepoFileMutex(target, async () => 'entered')).rejects.toBeInstanceOf(
+      RegistryLockRecoveryRequiredError,
+    );
+
+    // Controlled recovery: all writers quiesced, residue verified and removed.
+    await rm(ticket);
+
+    // Observe inside the section: the takeover renamed the winner's ticket
+    // onto the lock — it names this live process, not the dead record.
+    let landed: string | undefined;
+    await withRepoFileMutex(target, async () => {
+      landed = await readFile(lock, 'utf8');
+    });
+    expect(landed).not.toBe(deadRecord);
+    expect(landed).toContain(`"pid":${process.pid}`);
+    expect(existsSync(ticket)).toBe(false);
   });
 });

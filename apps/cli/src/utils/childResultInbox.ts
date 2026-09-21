@@ -119,12 +119,42 @@ const isProcessAlive = (pid: number): boolean => {
 };
 
 /**
+ * A `<lock>.reclaim` ticket left behind by a crashed or unattributable
+ * reclaimer blocks acquisition with this error — never an automatic unlink.
+ * Cleaning the residue is a controlled-recovery step: pause every
+ * acquirer/writer of the inbox file, confirm the ticket's holder is gone,
+ * verify the lock and ticket records, then remove them. The acquire path
+ * deliberately does not recycle the ticket, because any check-then-unlink
+ * window lets a racing reclaimer delete a fresh ticket and land a lock
+ * record nobody actually acquired.
+ */
+export class InboxLockRecoveryRequiredError extends Error {
+  readonly code = 'INBOX_LOCK_RECOVERY_REQUIRED';
+
+  constructor(
+    readonly lockPath: string,
+    readonly ticketPath: string,
+    detail: string,
+  ) {
+    super(
+      `Inbox file lock ${lockPath} blocked: reclaim ticket requires controlled recovery (${detail})`,
+    );
+    this.name = 'InboxLockRecoveryRequiredError';
+  }
+}
+
+/**
  * Take over a lock whose holder is provably dead. A single-writer ticket
  * (`<lock>.reclaim`, O_EXCL) arbitrates between reclaimers so the
  * verify-then-replace section is held by at most one; the winner re-checks
  * the lock still carries the dead record, then `rename`s its own token onto
  * the lock path — the path never goes absent, so no new owner can land in a
- * check-to-unlink gap. Returns true when this caller became the owner.
+ * check-to-unlink gap. A leftover ticket is fail-closed: a live holder's
+ * ticket makes contenders back off, and a dead or unattributable ticket
+ * raises {@link InboxLockRecoveryRequiredError} instead of being unlinked
+ * online — online unlink is the check-then-delete window a racing reclaimer
+ * uses to delete a fresh ticket and strand a lock record nobody acquired.
+ * Returns true when this caller became the owner.
  */
 const takeOverDeadFileLock = async (
   lockPath: string,
@@ -136,16 +166,27 @@ const takeOverDeadFileLock = async (
     await writeFile(ticketPath, token, { flag: 'wx' });
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error;
-    // Another reclaimer holds the ticket. A dead ticket holder's stale ticket
-    // is cleared by the same verified-unlink rule — losing a ticket only
-    // costs the holder a retry, its pre-rename token check catches it.
-    const holder = await readFile(ticketPath, 'utf8').catch(() => undefined);
-    const holderPid = holder === undefined ? Number.NaN : Number.parseInt(holder, 10);
-    if (Number.isInteger(holderPid) && holderPid > 0 && !isProcessAlive(holderPid)) {
-      const current = await readFile(ticketPath, 'utf8').catch(() => undefined);
-      if (current === holder) await rm(ticketPath, { force: true });
+    // Another reclaimer holds the ticket — decide by its holder, never by
+    // unlinking it here.
+    let holder: string;
+    try {
+      holder = await readFile(ticketPath, 'utf8');
+    } catch (readError) {
+      // Vanished between the create attempt and this read — plain retry.
+      if ((readError as NodeJS.ErrnoException)?.code === 'ENOENT') return false;
+      throw new InboxLockRecoveryRequiredError(
+        lockPath,
+        ticketPath,
+        `ticket unreadable: ${(readError as Error)?.message ?? readError}`,
+      );
     }
-    return false;
+    const holderPid = Number.parseInt(holder, 10);
+    if (Number.isInteger(holderPid) && holderPid > 0 && isProcessAlive(holderPid)) return false;
+    throw new InboxLockRecoveryRequiredError(
+      lockPath,
+      ticketPath,
+      'ticket holder is dead or unattributable',
+    );
   }
   try {
     const now = await readFile(lockPath, 'utf8').catch(() => undefined);

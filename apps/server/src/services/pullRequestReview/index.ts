@@ -101,7 +101,6 @@ const threadCommentSchema = z.object({
   line: z.number().nullable().optional(),
   outdated: z.boolean().optional(),
   path: z.string().nullable().optional(),
-  side: z.string().nullable().optional(),
 });
 
 const detailResponseSchema = z.object({
@@ -156,10 +155,12 @@ const detailResponseSchema = z.object({
                     .object({ nodes: z.array(threadCommentSchema) })
                     .nullable()
                     .optional(),
+                  diffSide: z.string().nullable().optional(),
                   id: z.string(),
                   isResolved: z.boolean().optional(),
                   line: z.number().nullable().optional(),
                   path: z.string().nullable().optional(),
+                  startDiffSide: z.string().nullable().optional(),
                 }),
               ),
             })
@@ -295,6 +296,8 @@ query PullRequestDetail($owner: String!, $repo: String!, $number: Int!) {
           isResolved
           path
           line
+          diffSide
+          startDiffSide
           comments(first: 20) {
             nodes {
               databaseId
@@ -302,7 +305,6 @@ query PullRequestDetail($owner: String!, $repo: String!, $number: Int!) {
               createdAt
               path
               line
-              side
               outdated
               author { login avatarUrl }
             }
@@ -490,7 +492,7 @@ export class PullRequestReviewService {
           line: comment.line ?? null,
           outdated: comment.outdated ?? false,
           path: comment.path ?? thread.path ?? null,
-          side: comment.side ?? null,
+          side: thread.diffSide ?? null,
         })),
         id: thread.id,
         isResolved: thread.isResolved ?? false,

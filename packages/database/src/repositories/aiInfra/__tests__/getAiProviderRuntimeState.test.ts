@@ -6,12 +6,12 @@ import { AiInfraRepos } from '../index';
 // vitest.config.server.mts runs with isolate:false, so one file's module mock
 // serves every file; delegate through a per-test-installed global instead.
 type GlobalWithMock = typeof globalThis & {
-  __orviloTestLoadModels?: ReturnType<typeof vi.fn>;
+  __orviloTestLoadModels?: () => Promise<unknown[]>;
 };
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
-  loadModels: (...args: unknown[]) =>
-    ((globalThis as GlobalWithMock).__orviloTestLoadModels ?? (() => Promise.resolve([])))(...args),
+  loadModels: () =>
+    (globalThis as GlobalWithMock).__orviloTestLoadModels?.() ?? Promise.resolve([]),
 }));
 
 const model = (over: Partial<EnabledAiModel> = {}): EnabledAiModel =>

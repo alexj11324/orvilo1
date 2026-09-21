@@ -1,8 +1,11 @@
+import { isDesktop } from '@orvilo/const';
 import { type HeterogeneousAgentClientConfig } from '@orvilo/heterogeneous-agents/client';
 import { useCallback } from 'react';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { useAgentStore } from '@/store/agent';
+import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
 
 export interface CreateHeteroAgentOptions {
@@ -23,13 +26,23 @@ export interface CreateHeteroAgentOptions {
 export const useCreateHeteroAgent = () => {
   const storeCreateAgent = useAgentStore((s) => s.createAgent);
   const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
+  const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const navigate = useWorkspaceAwareNavigate();
 
   return useCallback(
     async (definition: HeterogeneousAgentClientConfig, options?: CreateHeteroAgentOptions) => {
+      // A detected CLI agent is a desktop-local runtime: pin the local target at
+      // creation so the first send routes to Electron main instead of the
+      // device gateway (`resolveExecutionTarget` reads `executionTarget`; an
+      // unset value resolves to `none` and falls through to the gateway path).
+      const boundDeviceId = isDesktop
+        ? (currentDeviceId ?? (await gatewayConnectionService.getDeviceInfo())?.deviceId)
+        : undefined;
       const result = await storeCreateAgent({
         config: {
           agencyConfig: {
+            ...(boundDeviceId ? { boundDeviceId } : undefined),
+            executionTarget: 'local' as const,
             heterogeneousProvider: {
               command: definition.defaultCommand,
               type: definition.type,
@@ -52,6 +65,6 @@ export const useCreateHeteroAgent = () => {
       navigate(`/agent/${result.agentId}`);
       options?.onSuccess?.();
     },
-    [storeCreateAgent, refreshAgentList, navigate],
+    [storeCreateAgent, refreshAgentList, currentDeviceId, navigate],
   );
 };

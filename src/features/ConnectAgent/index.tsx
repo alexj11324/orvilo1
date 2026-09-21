@@ -519,13 +519,13 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             target:
               target?.kind === 'device'
                 ? { deviceId: target.device.deviceId, kind: 'device' }
-                : { kind: 'local' },
+                : { deviceId: currentDeviceId, kind: 'local' },
           }),
           groupId,
           visibility,
         };
       },
-      [groupId, profiles, target, visibility],
+      [currentDeviceId, groupId, profiles, target, visibility],
     );
 
     const handleCreate = useCallback(

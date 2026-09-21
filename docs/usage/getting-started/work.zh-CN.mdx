@@ -1,0 +1,174 @@
+---
+title: Inbox 与 My issues
+description: >-
+  找到需要你拍板的事项、指派给你的工作、已保存的视图，以及团队分诊。侧栏一级是 Inbox、My issues（我的事项）、Reviews 和 Agent，Workspace 与 Teams 是分区。
+tags:
+  - Inbox
+  - My issues
+  - 已保存视图
+  - Teams
+  - Task
+  - 导航
+---
+
+# Inbox 与 My issues
+
+左侧栏是固定的个人工作面：**Inbox**、**My issues（我的事项）**、**Reviews（待审核）** 和 **Agent**，然后是 **Workspace**、**Teams** 和 **Favorites**。它们不是第二套通知产品。
+
+出现在这里的仍是同一批任务和审批。打开 Inbox 不会另开一条队列；My issues 也不会取代你用来创建和调度任务的 Tasks 列表。
+
+## 去哪里找
+
+| 表面            | 用来做什么                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| **Inbox**     | 处理审批、转移和 Agent 追问；浏览后续动态。                                                                 |
+| **My issues** | 指派给你、由你创建、你订阅、或活动并集里的工作（`/my-issues`）。                                                    |
+| **Reviews**   | 独立页面（`/reviews`）：等你审核的，以及你发起的审核。                                                          |
+| **Agent**     | 打开 `/agents`。一级行，不是手风琴。                                                                   |
+| **Workspace** | Projects、Views、Members（`/members` 人员 / Agent / 邀请目录），以及 More（Automations、Resource、工作区设置）。 |
+| **Teams**     | 你已加入的工作区团队，以及该团队的工作。个人模式（无工作区）下会隐藏。                                                       |
+| **Tasks**     | 创建、指派和调度任务。从 `/tasks`、My issues / Views 进入，不是一级侧栏。搜索行也有新建任务。                              |
+
+点侧栏的 **Inbox** 或铃铛都会打开 `/inbox`。桌面端系统通知的点击也进入同一个 Inbox。聊天首页仍是对话摘要，不是这个工作收件箱。
+
+## Inbox
+
+Inbox 有两个标签：
+
+- **Needs you（需要你）** —— 仍需拍板的卡片（批准、拒绝、撤回或回复）。
+- **Activity（动态）** —— 可以已读、归档或稍后处理的更新。
+
+筛选：**All**、**Unread**、**Mentions**、**Snoozed**、**Archived**。
+
+打开一张卡片即可预览。按来源不同，你可能看到：
+
+- **Approve / Decline** —— 在原始请求上做决定。Inbox 不会另造一套审批。
+- **Withdraw** —— 撤回你发出的请求。
+- **Send reply** —— 把 Agent 要的补充信息发回去。
+- **Open** —— 跳到任务，或打开白名单内的 GitHub / Linear 链接。
+
+**Archive**、**Snooze**、**Mark unread** 在卡片的 **More actions** 菜单里。延后可选 **1 hour**、**Later today**（当天 18:00）、**Tomorrow**（次日 09:00）、**Next week**（下周一 09:00）。同一条有更新会重新出现，且不会延长来源的截止时间。
+
+**Mark all as read** 和 **Archive all** 作用于当前标签和筛选。Archive all 可以清掉普通动态，但不会让尚未决定的 Needs-you 请求消失，也不会改任务状态。
+
+如果有的来源加载失败，页面上会留下警告。其余卡片仍然有效 —— 这条警告不是空收件箱。
+
+你发出的请求（outgoing 转移）可以留在未读角标上方便你跟踪，但不会出现在 **Needs you** 里，假装还要你自己批准。
+
+### 键盘
+
+在 Inbox 列表上、焦点不在输入框时：
+
+| 操作      | 按键                    |
+| ------- | --------------------- |
+| 移动选中项   | `J` / `K` 或 `↓` / `↑` |
+| 打开选中卡片  | `Enter`               |
+| 窄屏从详情返回 | `Esc`                 |
+
+这些是页面内快捷键。在编辑器、评论框或命令菜单里输入时不会触发，也不会出现在可自定义的 Shortcuts 设置里。
+
+## My issues
+
+侧栏打开 **My issues（我的事项）**（`/my-issues`）。旧的 `/my-work` 会重定向过来。标签：
+
+| 标签             | 你会看到什么                        |
+| -------------- | ----------------------------- |
+| **Assigned**   | 指派给你的任务。和有没有通知无关。             |
+| **Created**    | 你创建的任务。没有创建人的导入记录不会冒充是你提的。    |
+| **Subscribed** | 你选择跟进的任务。退订不会解除你作为负责人或审核人的责任。 |
+| **Activity**   | 指派、创建、审核、委派和订阅的并集，一条活动列表。     |
+
+**Delegated to agents（委派给 Agent）** 是筛选芯片（`?delegated=1`），不是标签。它只留下你明确交出的工作（由你发起的执行授权）。只拥有那个 Agent 不够。审核工作在 **Reviews**，不在这个页面。
+
+**No project** 只留下未归入项目的工作，不会自动塞进某个默认项目。
+
+标签可以在工具栏的 **List** / **Board** 之间切换。这块看板和 Tasks 是同一套 Kanban，只是收成当前切片。隐藏列就地折叠。完成带未完成子任务的父任务时仍会问要不要级联。Saved views 和团队看板也用同一套 Kanban，数据来自该视图或团队的查询。拖动跟团队工作流，一列有多个状态时要选出精确的那个。被阻塞的工作在阻塞项完成前不能拖到 Done。
+
+**Save as view**（Assigned 和 Created）会把当前列表存成一份私人视图并打开 Views。Subscribed 和 Activity 不能这样保存 —— 那些列表不是一条自洽查询。
+
+在可读任务上，**Subscribe / Unsubscribe** 是跟进行。它不是聊天免打扰，也不是模型 API key。
+
+以前指向 `/tasks?collection=mine&scope=assigned` 或 `scope=created` 的书签会打开对应的 My issues 标签。`/my-work?tab=review` 会打开 `/reviews`。其他任务地址（包括周期任务路径）仍留在 Tasks。
+
+## Reviews
+
+侧栏打开 **Reviews（待审核）**（`/reviews`）。标签：
+
+| 标签          | 你会看到什么                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| **For me**  | 等你作为审核人处理的任务，以及可读、但本身不是任务的 Pull Request 审批。打开 PR 只用允许名单上的 GitHub / Linear 地址；不会为此建 Task，也不会用应用 token 代你批准。 |
+| **Created** | 你发起的审核，包括已经指定审核人、由你创建的任务。                                                                                  |
+
+## Views
+
+**Views**（`/views`）先列出内置视图，再列出你拥有或别人分享给你的视图。工具栏可以搜索这份列表。
+
+内置视图（不能覆盖或删除）：
+
+- **All tasks**
+- **Blocked**
+- **In progress**
+- **Review**
+- **All projects**
+
+打开任务视图时，列表 / 看板和 My issues 同一套样式。打开项目视图（包括 **All projects**）会列出匹配项目，行上是状态、标识符和最近更新时间，和 **Projects** 列表同一套语言。项目视图也可以切到看板。
+
+**New view** 会打开对话框：选任务或项目、从字段列表加筛选（状态、负责人、团队、项目等注册字段）、选列表或看板分组、起名、再分享。构建器表达不了的条件会原样留在已存查询里，保存时不会丢掉。你拥有的视图，同一套编辑器在 **Edit view**。**Sharing** 可以是 **Only me**、**This workspace** 或 **This team**（团队分享需要先选团队）。访问者会按自己的 `currentUser` 求值 —— 一份共享的「指派给我」列表显示的是访问者的指派，不是作者的。分享出去的定义不会带上访问者读不到的标识符。
+
+从 My issues 的 Assigned / Created 点 **Save as view** 会生成一份私人副本。Subscribed 和 Activity 不能这样保存。
+
+需要修复的视图会明确说修完才能出结果，不会默默丢掉坏条件后把整个工作区倒出来。
+
+在视图页用收藏控件钉选。对已有视图用 **Save as** 是复制，而不是改原件。
+
+## Teams
+
+**Teams** 是工作区表面。个人模式下侧栏会藏起它，命令菜单的最近访问和工作搜索也不含团队，Teams 页会提示你切换到工作区。
+
+在工作区里，侧栏 **Your teams** 只列出你已加入的团队。还没加入的公开团队仍在 `/teams` 目录里。可以在目录里搜索并打开某个团队。团队页包含：
+
+- **Home** —— 说明、成员（链到 `/members`）、当前 cycle、靠前的项目和视图，以及跳到 Issues / Triage / Projects / Views。这里不堆任务列表。
+- **Issues** —— 该团队当前任务，列表或看板（和 Tasks 同一套 Kanban）。范围 **All**、**Active**、**Backlog** 写在 URL 里（`?scope=`）。**No project** 和 **Cycle** 筛选在这里。List/Board 只出现在这个标签。
+- **Triage** —— 等人处理的进线。只有团队允许分诊时才显示。行上保留 **Accept** / **Decline**。**Mark duplicate**、**Reassign** 和 **Move to team** 放在 **更多分诊操作** 里。标重复会搜可读任务，不只是当前页已加载的行。接受分诊只是把任务留在团队里，不会因此启动一次 Agent 运行。
+- **Projects** / **Views** —— 这个团队参与的项目，以及分享给团队的视图。
+
+如果团队已经有 cycle，Issues 和 Triage 可以用 **Cycle** 筛选。这一版没有单独的 Cycles 管理页。
+
+关联了 Linear 的 issue 要在 Linear 里跨团队移动。Orvilo 会这样提示，而不是改写外部 issue。
+
+你不是成员的私密团队不会出现在侧栏、目录、搜索或命令菜单里。猜私密团队的 URL 也不会暴露它是否存在。
+
+## Recents 与 Favorites
+
+侧栏和命令菜单里的 **Recents** 是你访问过的页面（任务、项目、视图，以及工作区里的团队）。它不是「最近更新」信息流。
+
+最近访问一行的 **⋯** 可以把任务、项目、视图或团队 **Pin** 进收藏。重命名和删除仍只针对文稿、任务和话题。某一类型没有可做的事时，菜单会直接隐藏，而不是打开一个空的 ⋯。
+
+**Favorites** 保存这些带类型的钉选。侧栏按页显示（默认 5 条；分区菜单可选 10 / 15 / 20）。**More** 打开完整列表并支持搜索。上 / 下箭头按完整列表重排，所以最后一条可见项可以和下一项（溢出里的）对调。
+
+## 命令菜单
+
+`⌘ + K` / `Ctrl + K` 仍然搜索助理、话题、设置和操作，也能找到你有权限读的工作：
+
+| 类型          | 跳转到        |
+| ----------- | ---------- |
+| **Task**    | 任务详情       |
+| **Project** | 项目         |
+| **Team**    | 团队（仅工作区模式） |
+| **View**    | 已保存或内置视图   |
+
+查询前加 `type:task`、`type:project`、`type:team` 或 `type:savedView`（也可用 `is:`）可以限定类型。打开菜单时还会看到这些类型的最近访问。
+
+## 什么没有变
+
+- 创建任务、指派 Agent、验收结果、设置周期，仍然发生在 [任务](/zh/docs/usage/getting-started/task) 本身。从命令菜单或深链打开 `/tasks`；搜索行也可以新建任务。
+- 聊天通知和首页对话摘要与 Inbox 分开。
+- 这一版没有 Pulse、Initiatives 或 Customers 侧栏。
+
+<Cards>
+  <Card href={'/zh/docs/usage/getting-started/task'} title={'任务'} />
+
+  <Card href={'/zh/docs/usage/user-interface/command-menu'} title={'命令菜单'} />
+
+  <Card href={'/zh/docs/usage/user-interface/shortcuts'} title={'快捷键'} />
+</Cards>

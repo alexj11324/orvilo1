@@ -146,17 +146,12 @@
     "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts"
   },
   "lint-staged": {
-    "*.md": [
-      "remark --silent --output --",
-      "prettier --write --no-error-on-unmatched-pattern"
-    ],
+    "*.md": "node scripts/lint-staged-skip-packet.mjs md",
     "*.mdx": [
       "remark -r ./.remarkrc.mdx.mjs --silent --output --",
       "eslint --quiet --fix"
     ],
-    "*.json": [
-      "prettier --write --no-error-on-unmatched-pattern"
-    ],
+    "*.json": "node scripts/lint-staged-skip-packet.mjs json",
     "*.{mjs,cjs}": [
       "eslint --fix",
       "prettier --write"

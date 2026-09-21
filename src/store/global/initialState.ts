@@ -168,13 +168,12 @@ export interface SystemStatus {
    */
   agentListViewMode?: 'card' | 'list';
   /**
-   * Display options of the agent view-all page (grouping / ordering / hidden-agent visibility)
+   * Display options of the agent view-all page (grouping / ordering)
    */
   agentListViewOptions?: {
     groupBy: 'author' | 'label' | 'none';
     orderBy: 'author' | 'title' | 'updatedAt';
     orderDirection: 'asc' | 'desc';
-    showSidebarHidden: boolean;
   };
   /**
    * number of agents (defaultList) to display
@@ -518,7 +517,6 @@ export const INITIAL_STATUS = {
     groupBy: 'none' as const,
     orderBy: 'updatedAt' as const,
     orderDirection: 'desc' as const,
-    showSidebarHidden: true,
   },
   agentPageSize: 5,
   privateAgentPageSize: 5,

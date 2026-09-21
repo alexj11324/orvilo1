@@ -29,6 +29,7 @@ import {
   getProjectOverviewPath,
   getProjectResourcesPath,
   getProjectTasksPath,
+  projectPathSection,
 } from './navigation';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -87,15 +88,23 @@ const ProjectTabsBar = memo(() => {
 
   const tabs = useMemo(
     () => [
-      { label: t('sections.overview'), path: getProjectOverviewPath(projectReference) },
-      { label: t('sections.tasks'), path: getProjectTasksPath(projectReference) },
-      { label: t('sections.goals'), path: getProjectGoalsPath(projectReference) },
-      { label: t('resources.title'), path: getProjectResourcesPath(projectReference) },
+      {
+        label: t('sections.overview'),
+        path: getProjectOverviewPath(projectReference),
+        section: 'overview',
+      },
+      { label: t('sections.tasks'), path: getProjectTasksPath(projectReference), section: 'tasks' },
+      { label: t('sections.goals'), path: getProjectGoalsPath(projectReference), section: 'goals' },
+      {
+        label: t('resources.title'),
+        path: getProjectResourcesPath(projectReference),
+        section: 'resources',
+      },
     ],
     [projectReference, t],
   );
 
-  const activeTab = tabs.find((tab) => pathname === tab.path)?.path ?? '';
+  const activeTab = tabs.find((tab) => projectPathSection(pathname) === tab.section)?.path ?? '';
 
   return (
     <>

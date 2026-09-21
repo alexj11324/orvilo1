@@ -42,6 +42,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import NewViewModal from './NewViewModal';
 import { savedViewTitle } from './savedViewTitle';
+import { savedViewVisibilityKey } from './savedViewVisibility';
 
 const styles = createStaticStyles(({ css }) => ({
   groupLabel: css`
@@ -205,13 +206,7 @@ const SavedViewsPage = memo(() => {
           builtinSavedViewKey(view.id) ? (
             <Text type={'secondary'}>—</Text>
           ) : (
-            <Tag>
-              {t(
-                view.visibility === 'team'
-                  ? 'savedViews.visibilityTeam'
-                  : 'savedViews.visibilityWorkspace',
-              )}
-            </Tag>
+            <Tag>{t(savedViewVisibilityKey(view.visibility))}</Tag>
           ),
         title: t('savedViews.visibility'),
         width: 130,

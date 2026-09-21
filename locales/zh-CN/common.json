@@ -683,6 +683,7 @@
   "savedViews.visibility": "分享范围",
   "savedViews.visibilityPrivate": "仅自己",
   "savedViews.visibilityTeam": "此团队",
+  "savedViews.visibilityUnknown": "未知",
   "savedViews.visibilityWorkspace": "此工作区",
   "send": "发送",
   "serverVersionOutdated.desc": "当前客户端版本（v{{version}}）需要更新的服务端版本。",

@@ -16,3 +16,27 @@ export const getProjectTasksPath = (projectId: string) => `/project/${projectId}
 export const getProjectGoalsPath = (projectId: string) => `/project/${projectId}/goals`;
 
 export const getProjectResourcesPath = (projectId: string) => `/project/${projectId}/resources`;
+
+export type ProjectSection =
+  'overview' | 'tasks' | 'goals' | 'resources' | 'conversation' | 'library';
+
+// Project tabs are keyed by section, not the rendered href: workspace-prefixed
+// paths (/ws/project/x/tasks) and id-vs-slug deep links make literal pathname
+// equality unreliable.
+export const projectPathSection = (pathname: string): ProjectSection | undefined => {
+  const match = /^.*\/project\/[^/]+\/([^/?#]+)/.exec(pathname);
+  const segment = match?.[1];
+  switch (segment) {
+    case 'overview':
+    case 'tasks':
+    case 'goals':
+    case 'resources':
+    case 'conversation':
+    case 'library': {
+      return segment;
+    }
+    default: {
+      return undefined;
+    }
+  }
+};

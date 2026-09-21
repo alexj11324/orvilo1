@@ -31,6 +31,7 @@ import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
+import { savedViewVisibilityKey } from '@/features/SavedViews/savedViewVisibility';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
@@ -646,9 +647,7 @@ const TeamPage = memo(() => {
                               </Text>
                             </Flexbox>
                             <Text fontSize={12} type={'secondary'}>
-                              {view.visibility === 'workspace'
-                                ? t('savedViews.visibilityWorkspace')
-                                : t('savedViews.visibilityTeam')}
+                              {t(savedViewVisibilityKey(view.visibility))}
                             </Text>
                             <Text fontSize={12} type={'secondary'}>
                               {view.layout}

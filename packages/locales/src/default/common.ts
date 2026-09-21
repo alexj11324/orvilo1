@@ -850,6 +850,7 @@ export default {
   'savedViews.visibilityPrivate': 'Only me',
   'savedViews.visibilityTeam': 'This team',
   'savedViews.visibilityWorkspace': 'This workspace',
+  'savedViews.visibilityUnknown': 'Unknown',
   'teams.accept': 'Accept',
   'teams.cycle': 'Cycle',
   'teams.cycleAll': 'All cycles',

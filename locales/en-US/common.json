@@ -683,6 +683,7 @@
   "savedViews.visibility": "Sharing",
   "savedViews.visibilityPrivate": "Only me",
   "savedViews.visibilityTeam": "This team",
+  "savedViews.visibilityUnknown": "Unknown",
   "savedViews.visibilityWorkspace": "This workspace",
   "send": "Send",
   "serverVersionOutdated.desc": "Your client version (v{{version}}) requires a newer server version.",

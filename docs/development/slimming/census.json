@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "087b865174ac8899f36b40bffa81bdb635db1641",
+  "baseSha": "1d649ba4918fb0c4d9d396f05d8e53fe38a8f469",
   "capabilities": [
     {
       "id": "workspace",
@@ -6040,27 +6040,15 @@
         "src/helpers/{getSearchConfig,isCanUseFC}.ts",
         "apps/server/src/routers/lambda/brief.ts",
         "packages/conversation-flow/**",
-        "apps/server/src/routers/lambda/{message,aiChat,generation,generationBatch,generationTopic,followUpAction}.ts",
-        "apps/server/src/services/{message*,conversation*,generation*}/**"
+        "apps/server/src/routers/lambda/{message,aiChat,followUpAction}.ts",
+        "apps/server/src/services/{message*,conversation*}/**"
       ],
-      "fileCount": 1220,
+      "fileCount": 1208,
       "files": [
         "apps/server/src/routers/lambda/aiChat.ts",
         "apps/server/src/routers/lambda/brief.ts",
         "apps/server/src/routers/lambda/followUpAction.ts",
-        "apps/server/src/routers/lambda/generation.ts",
-        "apps/server/src/routers/lambda/generationBatch.ts",
-        "apps/server/src/routers/lambda/generationTopic.ts",
         "apps/server/src/routers/lambda/message.ts",
-        "apps/server/src/services/generation/index.test.ts",
-        "apps/server/src/services/generation/index.ts",
-        "apps/server/src/services/generation/latency.test.ts",
-        "apps/server/src/services/generation/latency.ts",
-        "apps/server/src/services/generation/video.ts",
-        "apps/server/src/services/generation/videoBackgroundPolling.test.ts",
-        "apps/server/src/services/generation/videoBackgroundPolling.ts",
-        "apps/server/src/services/generation/videoFile.test.ts",
-        "apps/server/src/services/generation/videoFile.ts",
         "apps/server/src/services/message/__tests__/index.integration.test.ts",
         "apps/server/src/services/message/__tests__/index.test.ts",
         "apps/server/src/services/message/index.ts",
@@ -7267,8 +7255,8 @@
         "src/store/chat/utils/unescapeMarkdown.ts"
       ],
       "inbound": {
-        "total": 408,
-        "explained": 61,
+        "total": 397,
+        "explained": 56,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -7277,9 +7265,6 @@
               "apps/server/src/routers/lambda/aiChat.ts",
               "apps/server/src/routers/lambda/brief.ts",
               "apps/server/src/routers/lambda/followUpAction.ts",
-              "apps/server/src/routers/lambda/generation.ts",
-              "apps/server/src/routers/lambda/generationBatch.ts",
-              "apps/server/src/routers/lambda/generationTopic.ts",
               "apps/server/src/routers/lambda/message.ts"
             ]
           },
@@ -7291,42 +7276,6 @@
               "apps/server/src/routers/lambda/brief.ts",
               "apps/server/src/routers/lambda/message.ts"
             ]
-          },
-          {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts",
-            "disposition": "KEEP",
-            "targets": [
-              "apps/server/src/routers/lambda/generation.ts",
-              "apps/server/src/routers/lambda/generationTopic.ts"
-            ]
-          },
-          {
-            "importer": "src/services/generationTopic.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/routers/lambda/generationTopic.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/image.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/services/generation/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/router-hono/webhooks/handlers/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/services/generation/video.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "apps/server/src/services/generation/video.ts",
-              "apps/server/src/services/generation/videoFile.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/video/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/services/generation/videoBackgroundPolling.ts"]
           },
           {
             "importer": "apps/cli/src/runtime/LocalMessageStore.ts",
@@ -9541,7 +9490,7 @@
       ],
       "inbound": {
         "total": 222,
-        "explained": 62,
+        "explained": 66,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -9814,11 +9763,6 @@
             "importer": "apps/server/src/routers/async/caller.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/env/src/app.ts", "packages/env/src/auth.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/video/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/env/src/app.ts"]
           },
           {
             "importer": "apps/server/src/services/agentDocuments/documentWork.ts",
@@ -10220,16 +10164,6 @@
             "targets": ["packages/env/src/llm.ts"]
           },
           {
-            "importer": "apps/server/src/modules/ModelRuntime/apiKeyManager.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/env/src/llm.ts"]
-          },
-          {
-            "importer": "apps/server/src/modules/ModelRuntime/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/env/src/llm.ts"]
-          },
-          {
             "importer": "src/app/(backend)/_deprecated/createBizOpenAI/createAzureOpenai.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/env/src/llm.ts"]
@@ -10262,11 +10196,6 @@
           {
             "importer": "apps/server/src/services/agent/index.ts",
             "disposition": "UNCOVERED",
-            "targets": ["packages/env/src/redis.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/generation/latency.ts",
-            "disposition": "REWRITE_FOR_ACP",
             "targets": ["packages/env/src/redis.ts"]
           },
           {
@@ -11690,7 +11619,7 @@
       ],
       "inbound": {
         "total": 3761,
-        "explained": 1040,
+        "explained": 1057,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -11824,7 +11753,7 @@
           },
           {
             "importer": "apps/server/src/routers/lambda/generation.ts",
-            "disposition": "REWRITE_FOR_ACP",
+            "disposition": "UNCOVERED",
             "targets": [
               "apps/server/src/services/file/index.ts",
               "packages/database/src/models/asyncTask.ts",
@@ -11833,27 +11762,6 @@
               "packages/trpc/src/lambda/middleware/index.ts",
               "packages/types/src/asyncTask.ts",
               "packages/types/src/generation/index.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/generationBatch.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": [
-              "apps/server/src/services/file/index.ts",
-              "packages/database/src/models/generationBatch.ts",
-              "packages/trpc/src/lambda/index.ts",
-              "packages/trpc/src/lambda/middleware/index.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/generationTopic.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": [
-              "apps/server/src/services/file/index.ts",
-              "packages/database/src/models/generationTopic.ts",
-              "packages/database/src/schemas/generation.ts",
-              "packages/trpc/src/lambda/index.ts",
-              "packages/trpc/src/lambda/middleware/index.ts"
             ]
           },
           {
@@ -11970,22 +11878,6 @@
             ]
           },
           {
-            "importer": "apps/server/src/routers/lambda/video/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "apps/server/src/services/file/index.ts",
-              "packages/database/src/models/asyncTask.ts",
-              "packages/database/src/models/generationTopic.ts",
-              "packages/database/src/models/user.ts",
-              "packages/database/src/schemas/index.ts",
-              "packages/database/src/server/index.ts",
-              "packages/trpc/src/lambda/index.ts",
-              "packages/trpc/src/lambda/middleware/index.ts",
-              "packages/types/src/asyncTask.ts",
-              "packages/types/src/index.ts"
-            ]
-          },
-          {
             "importer": "apps/server/src/routers/tools/mcp.ts",
             "disposition": "KEEP",
             "targets": [
@@ -12056,28 +11948,6 @@
               "packages/database/src/schemas/index.ts",
               "packages/database/src/utils/workspace.ts",
               "packages/types/src/document/index.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/services/generation/index.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": [
-              "apps/server/src/services/file/index.ts",
-              "packages/database/src/index.ts",
-              "packages/ssrf-safe-fetch/index.ts",
-              "packages/utils/src/number.ts",
-              "packages/utils/src/time.ts",
-              "packages/utils/src/url.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/services/generation/video.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": [
-              "apps/server/src/services/file/index.ts",
-              "packages/database/src/index.ts",
-              "packages/utils/src/number.ts",
-              "packages/utils/src/time.ts"
             ]
           },
           {
@@ -12705,11 +12575,6 @@
             "importer": "apps/server/src/globalConfig/parseMemoryExtractionConfig.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/const/src/index.ts", "packages/types/src/serverConfig.ts"]
-          },
-          {
-            "importer": "apps/server/src/modules/ModelRuntime/trace.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/const/src/index.ts", "packages/types/src/index.ts"]
           },
           {
             "importer": "apps/server/src/router-hono/devtools/handlers/memoryUserMemoryBenchmarkLocomo.ts",
@@ -17879,17 +17744,6 @@
             ]
           },
           {
-            "importer": "apps/server/src/router-hono/webhooks/handlers/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "packages/database/src/models/asyncTask.ts",
-              "packages/database/src/models/generation.ts",
-              "packages/database/src/schemas/index.ts",
-              "packages/database/src/server/index.ts",
-              "packages/types/src/index.ts"
-            ]
-          },
-          {
             "importer": "apps/server/src/router-hono/workflows/memory-user-memory/workflows/processTopic.ts",
             "disposition": "KEEP",
             "targets": [
@@ -17941,29 +17795,6 @@
             ]
           },
           {
-            "importer": "apps/server/src/routers/async/image.ts",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "packages/database/src/models/asyncTask.ts",
-              "packages/database/src/models/file.ts",
-              "packages/database/src/models/generation.ts",
-              "packages/database/src/models/generationBatch.ts",
-              "packages/trpc/src/async/index.ts",
-              "packages/types/src/index.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/routers/async/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "packages/database/src/models/asyncTask.ts",
-              "packages/database/src/models/generation.ts",
-              "packages/trpc/src/async/index.ts",
-              "packages/types/src/files/index.ts",
-              "packages/types/src/index.ts"
-            ]
-          },
-          {
             "importer": "apps/server/src/routers/lambda/userMemory.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -17972,19 +17803,6 @@
               "packages/database/src/models/userMemory/persona.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts",
-              "packages/types/src/index.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/services/generation/videoBackgroundPolling.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": [
-              "packages/database/src/models/asyncTask.ts",
-              "packages/database/src/models/generation.ts",
-              "packages/database/src/type.ts",
-              "packages/types/src/asyncTask.ts",
-              "packages/types/src/files/index.ts",
-              "packages/types/src/generation/index.ts",
               "packages/types/src/index.ts"
             ]
           },
@@ -19196,15 +19014,6 @@
             "importer": "apps/server/src/services/document/taskReferences.ts",
             "disposition": "KEEP",
             "targets": ["packages/database/src/schemas/index.ts", "packages/database/src/type.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/generation/latency.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": [
-              "packages/database/src/schemas/index.ts",
-              "packages/database/src/server/index.ts",
-              "packages/types/src/index.ts"
-            ]
           },
           {
             "importer": "apps/server/src/services/hatchet/workflows.ts",
@@ -20639,16 +20448,6 @@
             ]
           },
           {
-            "importer": "src/services/aiModel/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/trpc/src/client/index.ts"]
-          },
-          {
-            "importer": "src/services/aiProvider/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/aiProvider.ts"]
-          },
-          {
             "importer": "src/services/brief.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/trpc/src/client/index.ts"]
@@ -20716,11 +20515,6 @@
             "importer": "src/services/heterogeneousAgent.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/index.ts"]
-          },
-          {
-            "importer": "src/services/image.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/trpc/src/client/index.ts"]
           },
           {
             "importer": "src/services/import/index.ts",
@@ -21189,11 +20983,6 @@
             "importer": "src/store/chat/slices/portal/initialState.ts",
             "disposition": "REWRITE_FOR_ACP",
             "targets": ["packages/types/src/artifact.ts", "packages/types/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/video/error.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/types/src/asyncTask.ts"]
           },
           {
             "importer": "src/components/FileParsingStatus/EmbeddingStatus.tsx",
@@ -21783,11 +21572,6 @@
             "targets": ["packages/types/src/index.ts"]
           },
           {
-            "importer": "apps/server/src/modules/ModelRuntime/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/types/src/index.ts", "packages/utils/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/router-hono/workflows/memory-user-memory/workflows/hourly.ts",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
@@ -22089,11 +21873,6 @@
           },
           {
             "importer": "apps/server/src/services/toolExecution/serverRuntimes/groupManagement.ts",
-            "disposition": "KEEP",
-            "targets": ["packages/types/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
           },
@@ -32190,7 +31969,7 @@
       ],
       "inbound": {
         "total": 143,
-        "explained": 31,
+        "explained": 34,
         "unexplained": [
           {
             "importer": "src/utils/electron/ipc.ts",
@@ -32218,27 +31997,12 @@
             "targets": ["apps/desktop/stubs/business-const/src/index.ts"]
           },
           {
-            "importer": "apps/server/src/routers/async/image.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/desktop/stubs/business-const/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/desktop/stubs/business-const/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/routers/lambda/_helpers/agentShareFeatureGate.ts",
             "disposition": "UNCOVERED",
             "targets": ["apps/desktop/stubs/business-const/src/index.ts"]
           },
           {
             "importer": "apps/server/src/routers/lambda/userMemories.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/desktop/stubs/business-const/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/video/index.ts",
             "disposition": "UNCOVERED",
             "targets": ["apps/desktop/stubs/business-const/src/index.ts"]
           },
@@ -33019,17 +32783,28 @@
       "issue": "ORV-101",
       "globs": [
         "apps/server/src/routers/lambda/{aiProvider,aiModel}.ts",
+        "apps/server/src/routers/lambda/__tests__/{aiProvider,aiModel}.test.ts",
         "apps/server/src/services/{aiProvider,aiModel,modelProvider*,provider*}/**",
+        "src/services/{aiModel,aiProvider}/**",
+        "src/utils/aiProvider*",
+        "src/types/aiProvider*",
+        "packages/business-server/src/{aiProvider,getProviderContentPolicyErrorMessage,recordModelCompletionFailure,trackProviderContentPolicyViolation}.ts",
         "src/store/aiInfra/slices/aiProvider/**",
         "src/features/{Provider*,ModelProvider*,AiProvider*,AiModel*}/**",
         "src/routes/**/settings/{provider,llm,model}/**",
         "apps/desktop/src/main/modules/heterogeneousAgent/{providerBindingHost,providerBindingPort}.ts",
         "src/features/{ModelSwitchPanel,ModelSelect}/**"
       ],
-      "fileCount": 89,
+      "fileCount": 100,
       "files": [
+        "apps/server/src/routers/lambda/__tests__/aiModel.test.ts",
+        "apps/server/src/routers/lambda/__tests__/aiProvider.test.ts",
         "apps/server/src/routers/lambda/aiModel.ts",
         "apps/server/src/routers/lambda/aiProvider.ts",
+        "packages/business-server/src/aiProvider.ts",
+        "packages/business-server/src/getProviderContentPolicyErrorMessage.ts",
+        "packages/business-server/src/recordModelCompletionFailure.ts",
+        "packages/business-server/src/trackProviderContentPolicyViolation.ts",
         "src/features/ModelSelect/ReasoningEffortSelect.tsx",
         "src/features/ModelSelect/index.tsx",
         "src/features/ModelSelect/resolveStaleModelState.test.ts",
@@ -33110,17 +32885,22 @@
         "src/features/ModelSwitchPanel/styles.ts",
         "src/features/ModelSwitchPanel/types.ts",
         "src/features/ModelSwitchPanel/utils.ts",
+        "src/services/aiModel/index.test.ts",
+        "src/services/aiModel/index.ts",
+        "src/services/aiProvider/index.test.ts",
+        "src/services/aiProvider/index.ts",
         "src/store/aiInfra/slices/aiProvider/__tests__/action.test.ts",
         "src/store/aiInfra/slices/aiProvider/__tests__/selectors.test.ts",
         "src/store/aiInfra/slices/aiProvider/action.test.ts",
         "src/store/aiInfra/slices/aiProvider/action.ts",
         "src/store/aiInfra/slices/aiProvider/index.ts",
         "src/store/aiInfra/slices/aiProvider/initialState.ts",
-        "src/store/aiInfra/slices/aiProvider/selectors.ts"
+        "src/store/aiInfra/slices/aiProvider/selectors.ts",
+        "src/utils/aiProvider.ts"
       ],
       "inbound": {
-        "total": 21,
-        "explained": 2,
+        "total": 28,
+        "explained": 8,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -33139,12 +32919,9 @@
             ]
           },
           {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts",
+            "importer": "apps/server/src/services/toolExecution/serverRuntimes/agentBuilder.ts",
             "disposition": "KEEP",
-            "targets": [
-              "apps/server/src/routers/lambda/aiModel.ts",
-              "apps/server/src/routers/lambda/aiProvider.ts"
-            ]
+            "targets": ["packages/business-server/src/aiProvider.ts", "src/utils/aiProvider.ts"]
           },
           {
             "importer": "src/routes/(main)/agent/profile/features/ProfileEditor/index.tsx",
@@ -33221,6 +32998,11 @@
             "targets": ["src/features/ModelSwitchPanel/index.tsx"]
           },
           {
+            "importer": "src/store/aiInfra/slices/aiModel/action.ts",
+            "disposition": "REWRITE_FOR_ACP",
+            "targets": ["src/services/aiModel/index.ts"]
+          },
+          {
             "importer": "src/store/aiInfra/initialState.ts",
             "disposition": "REWRITE_FOR_ACP",
             "targets": ["src/store/aiInfra/slices/aiProvider/index.ts"]
@@ -33246,11 +33028,22 @@
       "globs": [
         "packages/model-runtime/**",
         "packages/agent-runtime/**",
+        "apps/server/src/modules/ModelRuntime/**",
+        "apps/server/src/services/aiProviderAccess*",
+        "packages/business-server/src/{model-runtime,image-generation,video-generation}*",
         "src/services/chat/{ModelRuntime,modelRuntime*,providers}/**",
         "src/app/(backend)/webapi/chat/**"
       ],
-      "fileCount": 441,
+      "fileCount": 449,
       "files": [
+        "apps/server/src/modules/ModelRuntime/apiKeyManager.test.ts",
+        "apps/server/src/modules/ModelRuntime/apiKeyManager.ts",
+        "apps/server/src/modules/ModelRuntime/index.test.ts",
+        "apps/server/src/modules/ModelRuntime/index.ts",
+        "apps/server/src/modules/ModelRuntime/trace.ts",
+        "apps/server/src/services/aiProviderAccess.test.ts",
+        "apps/server/src/services/aiProviderAccess.ts",
+        "packages/business-server/src/model-runtime.ts",
         "packages/model-runtime/src/const/type.test.ts",
         "packages/model-runtime/src/core/BaseAI.ts",
         "packages/model-runtime/src/core/ModelRuntime.test.ts",
@@ -33694,9 +33487,63 @@
         "src/app/(backend)/webapi/chat/[provider]/route.ts"
       ],
       "inbound": {
-        "total": 66,
-        "explained": 21,
+        "total": 80,
+        "explained": 36,
         "unexplained": [
+          {
+            "importer": "apps/server/src/routers/async/file.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/chunk.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/userMemories.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/aiGeneration/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/modules/ModelRuntime/index.ts",
+              "packages/model-runtime/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/memory/userMemory/extract.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/modules/ModelRuntime/index.ts",
+              "apps/server/src/services/aiProviderAccess.ts",
+              "packages/business-server/src/model-runtime.ts",
+              "packages/model-runtime/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/toolExecution/serverRuntimes/memory.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/toolExecution/serverRuntimes/orviloAgent.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "apps/server/src/modules/ModelRuntime/index.ts",
+              "packages/model-runtime/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/memory/userMemory/persona/service.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/services/aiProviderAccess.ts",
+              "packages/business-server/src/model-runtime.ts"
+            ]
+          },
           {
             "importer": "packages/fetch-sse/src/parseError.ts",
             "disposition": "KEEP",
@@ -33721,27 +33568,7 @@
             "targets": ["packages/model-runtime/src/index.ts"]
           },
           {
-            "importer": "apps/server/src/modules/ModelRuntime/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/modules/ModelRuntime/trace.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/router-hono/devtools/handlers/memoryUserMemoryBenchmarkLocomo.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/router-hono/webhooks/handlers/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/image.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/model-runtime/src/index.ts"]
           },
@@ -33766,18 +33593,8 @@
             "targets": ["packages/model-runtime/src/index.ts"]
           },
           {
-            "importer": "apps/server/src/services/aiGeneration/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/services/aiGeneration/judgment.ts",
             "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/generation/index.ts",
-            "disposition": "REWRITE_FOR_ACP",
             "targets": ["packages/model-runtime/src/index.ts"]
           },
           {
@@ -33796,17 +33613,7 @@
             "targets": ["packages/model-runtime/src/index.ts"]
           },
           {
-            "importer": "apps/server/src/services/memory/userMemory/extract.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/services/taskReview/index.ts",
-            "disposition": "KEEP",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/orviloAgent.ts",
             "disposition": "KEEP",
             "targets": ["packages/model-runtime/src/index.ts"]
           },
@@ -33817,11 +33624,6 @@
           },
           {
             "importer": "packages/business-server/src/image-generation/chargeAfterGenerate.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-runtime/src/index.ts"]
-          },
-          {
-            "importer": "packages/business-server/src/model-runtime.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/model-runtime/src/index.ts"]
           },
@@ -35142,23 +34944,45 @@
       "globs": [
         "apps/server/src/routers/lambda/comfyui.ts",
         "apps/server/src/routers/lambda/image/**",
+        "apps/server/src/routers/lambda/video/**",
+        "apps/server/src/routers/lambda/{generationBatch,generationTopic}.ts",
+        "apps/server/src/routers/lambda/__tests__/{generationBatch,generationTopic,video,image}.test.ts",
+        "apps/server/src/routers/async/{image,video}.ts",
+        "apps/server/src/routers/async/__tests__/{image,video}.test.ts",
+        "apps/server/src/router-hono/webhooks/handlers/video.ts",
+        "apps/server/src/services/generation/**",
         "apps/server/src/services/{comfyui,image*,imageGeneration*}/**",
+        "apps/server/src/services/toolExecution/serverRuntimes/{imageGeneration,artwork*}*",
         "src/features/{ArtworkStudio,AgentArtworkStudio,AgentProfileArtwork}/**",
         "src/features/ChiefAgent/artwork.ts",
         "src/services/{artwork*,imageGeneration}/**",
+        "src/services/image*",
+        "src/store/agent/slices/artwork/**",
         "packages/builtin-tool-image-generation/**",
         "packages/model-bank/src/{modelProviders,aiModels}/comfyui.ts",
         "packages/model-runtime/src/utils/comfyuiErrorParser*",
         "docs/usage/providers/comfyui*",
         "docs/development/basic/comfyui*"
       ],
-      "fileCount": 114,
+      "fileCount": 142,
       "files": [
+        "apps/server/src/router-hono/webhooks/handlers/video.ts",
+        "apps/server/src/routers/async/__tests__/image.test.ts",
+        "apps/server/src/routers/async/image.ts",
+        "apps/server/src/routers/async/video.ts",
+        "apps/server/src/routers/lambda/__tests__/generationBatch.test.ts",
+        "apps/server/src/routers/lambda/__tests__/generationTopic.test.ts",
+        "apps/server/src/routers/lambda/__tests__/video.test.ts",
         "apps/server/src/routers/lambda/comfyui.ts",
+        "apps/server/src/routers/lambda/generationBatch.ts",
+        "apps/server/src/routers/lambda/generationTopic.ts",
         "apps/server/src/routers/lambda/image/index.test.ts",
         "apps/server/src/routers/lambda/image/index.ts",
         "apps/server/src/routers/lambda/image/utils.test.ts",
         "apps/server/src/routers/lambda/image/utils.ts",
+        "apps/server/src/routers/lambda/video/error.test.ts",
+        "apps/server/src/routers/lambda/video/error.ts",
+        "apps/server/src/routers/lambda/video/index.ts",
         "apps/server/src/services/comfyui/__tests__/config/constants.test.ts",
         "apps/server/src/services/comfyui/__tests__/config/modelRegistry.test.ts",
         "apps/server/src/services/comfyui/__tests__/config/promptToolConst.test.ts",
@@ -35226,6 +35050,16 @@
         "apps/server/src/services/comfyui/workflows/flux-schnell.ts",
         "apps/server/src/services/comfyui/workflows/sd35.ts",
         "apps/server/src/services/comfyui/workflows/simple-sd.ts",
+        "apps/server/src/services/generation/index.test.ts",
+        "apps/server/src/services/generation/index.ts",
+        "apps/server/src/services/generation/latency.test.ts",
+        "apps/server/src/services/generation/latency.ts",
+        "apps/server/src/services/generation/video.ts",
+        "apps/server/src/services/generation/videoBackgroundPolling.test.ts",
+        "apps/server/src/services/generation/videoBackgroundPolling.ts",
+        "apps/server/src/services/generation/videoFile.test.ts",
+        "apps/server/src/services/generation/videoFile.ts",
+        "apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts",
         "packages/builtin-tool-image-generation/src/ExecutionRuntime/index.test.ts",
         "packages/builtin-tool-image-generation/src/ExecutionRuntime/index.ts",
         "packages/builtin-tool-image-generation/src/client/Inspector/index.tsx",
@@ -35267,27 +35101,46 @@
         "src/services/artworkGeneration/selectModel.test.ts",
         "src/services/artworkGeneration/selectModel.ts",
         "src/services/artworkGeneration/transparentFullBody.ts",
-        "src/services/artworkGeneration/workspaceAvatar.ts"
+        "src/services/artworkGeneration/workspaceAvatar.ts",
+        "src/services/image.ts",
+        "src/store/agent/slices/artwork/action.test.ts",
+        "src/store/agent/slices/artwork/action.ts",
+        "src/store/agent/slices/artwork/index.ts",
+        "src/store/agent/slices/artwork/initialState.ts",
+        "src/store/agent/slices/artwork/selectors.ts"
       ],
       "inbound": {
-        "total": 16,
-        "explained": 4,
+        "total": 29,
+        "explained": 12,
         "unexplained": [
+          {
+            "importer": "apps/server/src/router-hono/webhooks/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/router-hono/webhooks/handlers/video.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/async/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/routers/async/image.ts",
+              "apps/server/src/routers/async/video.ts"
+            ]
+          },
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
             "disposition": "UNCOVERED",
             "targets": [
               "apps/server/src/routers/lambda/comfyui.ts",
-              "apps/server/src/routers/lambda/image/index.ts"
+              "apps/server/src/routers/lambda/generationBatch.ts",
+              "apps/server/src/routers/lambda/generationTopic.ts",
+              "apps/server/src/routers/lambda/image/index.ts",
+              "apps/server/src/routers/lambda/video/index.ts"
             ]
           },
           {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts",
-            "disposition": "KEEP",
-            "targets": [
-              "apps/server/src/routers/lambda/image/index.ts",
-              "packages/builtin-tool-image-generation/src/index.ts"
-            ]
+            "importer": "src/services/generationTopic.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/routers/lambda/generationTopic.ts"]
           },
           {
             "importer": "packages/business-server/src/image-generation/chargeBeforeGenerate.ts",
@@ -35295,9 +35148,14 @@
             "targets": ["apps/server/src/routers/lambda/image/index.ts"]
           },
           {
-            "importer": "src/services/image.ts",
+            "importer": "packages/business-server/src/video-generation/chargeBeforeGenerate.ts",
             "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/routers/lambda/image/index.ts"]
+            "targets": ["apps/server/src/routers/lambda/video/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/toolExecution/serverRuntimes/index.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts"]
           },
           {
             "importer": "packages/builtin-tools/src/register.ts",
@@ -35335,9 +35193,19 @@
             "targets": ["src/features/AgentProfileArtwork/index.tsx"]
           },
           {
-            "importer": "src/store/agent/slices/artwork/action.ts",
+            "importer": "src/store/agent/initialState.ts",
             "disposition": "UNCOVERED",
-            "targets": ["src/services/artworkGeneration/index.ts"]
+            "targets": ["src/store/agent/slices/artwork/index.ts"]
+          },
+          {
+            "importer": "src/store/agent/store.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["src/store/agent/slices/artwork/index.ts"]
+          },
+          {
+            "importer": "src/store/agent/selectors/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["src/store/agent/slices/artwork/selectors.ts"]
           }
         ]
       }
@@ -36072,7 +35940,7 @@
       ],
       "inbound": {
         "total": 451,
-        "explained": 289,
+        "explained": 300,
         "unexplained": [
           {
             "importer": "apps/server/src/modules/Mecha/AgentToolsEngine/index.ts",
@@ -36283,32 +36151,12 @@
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
-            "importer": "apps/server/src/modules/ModelRuntime/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/router-hono/webhooks/handlers/video.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/image.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/services/aiAgent/searchDecision.ts",
             "disposition": "KEEP",
             "targets": [
               "packages/model-bank/src/index.ts",
               "packages/model-bank/src/modelProviders/index.ts"
             ]
-          },
-          {
-            "importer": "apps/server/src/services/aiProviderAccess.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-bank/src/index.ts"]
           },
           {
             "importer": "apps/server/src/services/discover/index.ts",
@@ -36319,18 +36167,8 @@
             ]
           },
           {
-            "importer": "apps/server/src/services/generation/index.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
             "importer": "apps/server/src/services/memory/userMemory/extract.ts",
             "disposition": "UNCOVERED",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/imageGeneration.ts",
-            "disposition": "KEEP",
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
@@ -36341,11 +36179,6 @@
           {
             "importer": "packages/agent-tracing/src/cli/ctx-map.ts",
             "disposition": "KEEP",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
-            "importer": "packages/business-server/src/aiProvider.ts",
-            "disposition": "UNCOVERED",
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
@@ -36475,11 +36308,6 @@
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
-            "importer": "src/services/aiModel/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
             "importer": "src/services/chat/helper.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/model-bank/src/index.ts"]
@@ -36507,11 +36335,6 @@
           {
             "importer": "src/store/chat/slices/topic/selectors.ts",
             "disposition": "REWRITE_FOR_ACP",
-            "targets": ["packages/model-bank/src/index.ts"]
-          },
-          {
-            "importer": "src/utils/aiProvider.ts",
-            "disposition": "UNCOVERED",
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
@@ -36859,16 +36682,6 @@
           },
           {
             "importer": "src/services/chat/mecha/skillPreload.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/prompts/src/index.ts"]
-          },
-          {
-            "importer": "src/store/agent/slices/artwork/action.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["packages/prompts/src/index.ts"]
-          },
-          {
-            "importer": "src/store/agent/slices/artwork/initialState.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/prompts/src/index.ts"]
           },
@@ -39558,7 +39371,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-09-21T12:49:34.394Z",
+  "generatedAt": "2026-09-21T13:01:32.462Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",
@@ -45262,13 +45075,13 @@
     "orvilo": []
   },
   "uncoveredByArea": {
-    "apps/server/src": 826,
+    "apps/server/src": 808,
     "src/routes/(main)": 292,
     "apps/cli/src": 200,
     "src/features/Settings": 170,
     "src/business/client": 120,
     "src/features/HomeSidebar": 85,
-    "packages/business-server/src": 73,
+    "packages/business-server/src": 68,
     "src/features/AgentSidebar": 63,
     "src/app/(backend)": 58,
     "src/libs/better-auth": 47,
@@ -45278,11 +45091,11 @@
     "src/store/userMemory": 38,
     "src/features/DevDock": 37,
     "src/routes/(mobile)": 36,
-    "src/store/agent": 34,
     "src/features/AgentSetting": 32,
     "src/features/EditorCanvas": 31,
     "src/features/NavPanel": 29,
     "src/services/electron": 29,
+    "src/store/agent": 29,
     "src/features/ShareModal": 28,
     "src/store/task": 28,
     "src/features/CommandMenu": 27,
@@ -45491,8 +45304,6 @@
     "src/libs/i18n": 2,
     "src/libs/observability": 2,
     "src/libs/spaHtml": 2,
-    "src/services/aiModel": 2,
-    "src/services/aiProvider": 2,
     "src/services/file": 2,
     "src/services/import": 2,
     "src/services/onboardingMetrics": 2,
@@ -45942,7 +45753,6 @@
     "src/services/heteroAgentQuota.ts": 1,
     "src/services/heterogeneousAgent.test.ts": 1,
     "src/services/heterogeneousAgent.ts": 1,
-    "src/services/image.ts": 1,
     "src/services/installMarketplaceAgents.test.ts": 1,
     "src/services/installMarketplaceAgents.ts": 1,
     "src/services/knowledgeBase.ts": 1,
@@ -46017,7 +45827,6 @@
     "src/utils/NavigatorRegistrar.desktop.tsx": 1,
     "src/utils/NavigatorRegistrar.tsx": 1,
     "src/utils/agentDocumentContextMapping.ts": 1,
-    "src/utils/aiProvider.ts": 1,
     "src/utils/authReturnUrl.ts": 1,
     "src/utils/chunkError.ts": 1,
     "src/utils/clientWorkIntentStash.ts": 1,
@@ -46095,5 +45904,5 @@
     "tests/setup.ts": 1,
     "tests/utils.tsx": 1
   },
-  "uncoveredFiles": 4532
+  "uncoveredFiles": 4498
 }

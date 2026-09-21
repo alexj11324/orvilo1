@@ -80,8 +80,8 @@
         "src/helpers/{getSearchConfig,isCanUseFC}.ts",
         "apps/server/src/routers/lambda/brief.ts",
         "packages/conversation-flow/**",
-        "apps/server/src/routers/lambda/{message,aiChat,generation,generationBatch,generationTopic,followUpAction}.ts",
-        "apps/server/src/services/{message*,conversation*,generation*}/**"
+        "apps/server/src/routers/lambda/{message,aiChat,followUpAction}.ts",
+        "apps/server/src/services/{message*,conversation*}/**"
       ],
       "issue": "ORV-107"
     },
@@ -164,7 +164,12 @@
       "reason": "User-managed LLM provider/BYOK/baseURL/model-selection product surface was retired in P05/P06; residual route/store/API/service/locale/docs are swept per ORV-101. Generic credential infra for connectors stays.",
       "globs": [
         "apps/server/src/routers/lambda/{aiProvider,aiModel}.ts",
+        "apps/server/src/routers/lambda/__tests__/{aiProvider,aiModel}.test.ts",
         "apps/server/src/services/{aiProvider,aiModel,modelProvider*,provider*}/**",
+        "src/services/{aiModel,aiProvider}/**",
+        "src/utils/aiProvider*",
+        "src/types/aiProvider*",
+        "packages/business-server/src/{aiProvider,getProviderContentPolicyErrorMessage,recordModelCompletionFailure,trackProviderContentPolicyViolation}.ts",
         "src/store/aiInfra/slices/aiProvider/**",
         "src/features/{Provider*,ModelProvider*,AiProvider*,AiModel*}/**",
         "src/routes/**/settings/{provider,llm,model}/**",
@@ -180,6 +185,9 @@
       "globs": [
         "packages/model-runtime/**",
         "packages/agent-runtime/**",
+        "apps/server/src/modules/ModelRuntime/**",
+        "apps/server/src/services/aiProviderAccess*",
+        "packages/business-server/src/{model-runtime,image-generation,video-generation}*",
         "src/services/chat/{ModelRuntime,modelRuntime*,providers}/**",
         "src/app/(backend)/webapi/chat/**"
       ],
@@ -257,10 +265,20 @@
       "globs": [
         "apps/server/src/routers/lambda/comfyui.ts",
         "apps/server/src/routers/lambda/image/**",
+        "apps/server/src/routers/lambda/video/**",
+        "apps/server/src/routers/lambda/{generationBatch,generationTopic}.ts",
+        "apps/server/src/routers/lambda/__tests__/{generationBatch,generationTopic,video,image}.test.ts",
+        "apps/server/src/routers/async/{image,video}.ts",
+        "apps/server/src/routers/async/__tests__/{image,video}.test.ts",
+        "apps/server/src/router-hono/webhooks/handlers/video.ts",
+        "apps/server/src/services/generation/**",
         "apps/server/src/services/{comfyui,image*,imageGeneration*}/**",
+        "apps/server/src/services/toolExecution/serverRuntimes/{imageGeneration,artwork*}*",
         "src/features/{ArtworkStudio,AgentArtworkStudio,AgentProfileArtwork}/**",
         "src/features/ChiefAgent/artwork.ts",
         "src/services/{artwork*,imageGeneration}/**",
+        "src/services/image*",
+        "src/store/agent/slices/artwork/**",
         "packages/builtin-tool-image-generation/**",
         "packages/model-bank/src/{modelProviders,aiModels}/comfyui.ts",
         "packages/model-runtime/src/utils/comfyuiErrorParser*",

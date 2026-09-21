@@ -31,13 +31,138 @@ jobs:
         with:
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          # Push runs are the canonical owner: when a PR run and a push run
+          # for the same head SHA start within seconds of each other,
+          # `same_content_newer` on the push run sees the PR run as the newer
+          # sibling and cancels itself — while the PR run also skips its
+          # leafs and only mirrors a verdict. Both runs then die untested and
+          # the PR gate mirrors the cancelled owner's failure. Pinning push to
+          # do_not_skip gives the pair a deterministic owner: the push run
+          # always executes, the PR run always mirrors it.
+          do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+
+  # Path triage — one cheap job diffs the PR and reports which test areas
+  # actually need to run. Leaf jobs skip when their area is untouched, and the
+  # quality gate accepts a *filter* skip while still failing on any other.
+  changes:
+    name: Detect changed areas
+    needs: check-duplicate-run
+    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      code: ${{ steps.filter.outputs.code }}
+      database: ${{ steps.filter.outputs.database }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      packages: ${{ steps.filter.outputs.packages }}
+      server: ${{ steps.filter.outputs.server }}
+      windows_shell: ${{ steps.filter.outputs.windows_shell }}
+    steps:
+      # paths-filter runs `git` to resolve the current ref and, on push runs,
+      # diffs the before..after SHAs locally — a checkout with full history is
+      # required. A tag/first push with no resolvable base reports every area
+      # changed (full coverage).
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - '**/*.ts'
+              - '**/*.tsx'
+              - '**/*.mts'
+              - '**/*.cts'
+              - '**/*.sql'
+            packages:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+            app:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'src/**'
+              - 'apps/server/**'
+              - 'public/**'
+              - 'locales/**'
+            server:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'apps/server/**'
+            desktop:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'apps/desktop/**'
+            windows_shell:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/local-file-shell/**'
+            database:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/database/**'
 
   # Full-repo type-check - CI-only; scripts/type-check.mjs fails fast locally
   # because root `tsgo --noEmit` OOMs developer machines.
   typecheck:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
@@ -61,9 +186,19 @@ jobs:
         run: pnpm type-check
 
   # Package tests - all packages in single job to save runner resources
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-packages:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     name: Test Packages
     env:
@@ -153,9 +288,19 @@ jobs:
           done
 
   # App tests - run sharded tests
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-app:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.app == 'true'
     strategy:
       matrix:
         shard: [1, 2]
@@ -191,6 +336,16 @@ jobs:
           retention-days: 1
 
   # Merge sharded test reports and upload coverage
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-app-coverage:
     needs: test-app
     if: ${{ !cancelled() && needs.test-app.result == 'success' }}
@@ -238,8 +393,8 @@ jobs:
   # detection cascade against real install paths. The driver script only needs
   # node builtins, so this job skips the monorepo install entirely.
   test-windows-shell:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.windows_shell == 'true'
     name: Test Windows Shell
 
     runs-on: windows-latest
@@ -256,9 +411,19 @@ jobs:
       - name: Verify Windows shell strategy
         run: bun run packages/local-file-shell/scripts/verify-windows-shell.ts
 
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   test-desktop:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.desktop == 'true'
     name: Test Desktop App
 
     runs-on: ubuntu-latest
@@ -307,9 +472,19 @@ jobs:
           files: ./apps/desktop/coverage/lcov.info
           flags: desktop
 
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   test-server:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.server == 'true'
     strategy:
       matrix:
         shard: [1, 2]
@@ -347,6 +522,16 @@ jobs:
           retention-days: 1
 
   # Merge sharded test reports and upload coverage
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-server-coverage:
     needs: test-server
     if: ${{ !cancelled() && needs.test-server.result == 'success' }}
@@ -388,8 +573,8 @@ jobs:
           flags: server
 
   test-database:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.database == 'true'
     name: Test Database
 
     runs-on: ubuntu-latest
@@ -470,10 +655,21 @@ jobs:
   # MAINTENANCE: adding a CI job above requires updating both `needs` here
   # and the `required` list in the step below — a job absent from both is
   # silently excluded from the gate.
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   required-quality-gate:
     name: Required Quality Gate
     needs:
       - check-duplicate-run
+      - changes
       - typecheck
       - test-packages
       - test-app
@@ -563,11 +759,25 @@ jobs:
             merge-app-coverage
             merge-server-coverage
           )
+          # A job skipped because its area filter did not match is a pass —
+          # any other non-success keeps the gate red.
+          declare -A area_of=(
+            [typecheck]=code [test-packages]=packages [test-app]=app
+            [merge-app-coverage]=app [test-windows-shell]=windows_shell
+            [test-desktop]=desktop [test-server]=server
+            [merge-server-coverage]=server [test-database]=database
+          )
           failed=0
           for job in "${required[@]}"; do
             result=$(echo "$NEEDS" | jq -r ".[\"$job\"].result")
-            echo "$job: $result"
-            [ "$result" = "success" ] || failed=1
+            area=${area_of[$job]}
+            filter=$(echo "$NEEDS" | jq -r ".changes.outputs.${area} // \"\"")
+            if [ "$result" != "success" ] && ! { [ "$result" = "skipped" ] && [ "$filter" = "false" ]; }; then
+              echo "::error::$job: $result (filter ${area}=${filter})"
+              failed=1
+            else
+              echo "$job: $result (filter ${area}=${filter})"
+            fi
           done
           if [ "$failed" -ne 0 ]; then
             echo "::error::Required jobs failed or were skipped — quality gate stays red."

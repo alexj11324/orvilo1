@@ -62,6 +62,7 @@ Open this URL to develop locally against the production backend (orvilo.aspectly
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
 - Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+- **GitHub API credentials (Devin sessions)**: `gh` is authenticated via `GH_TOKEN` read from `~/.devin/.devin-integration-gh-credentials` — this file is Devin's own token location, written by the platform for the Devin agent. Use `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
 
 ### Cutting a Release
 

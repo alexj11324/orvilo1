@@ -42,6 +42,12 @@ export const actionApprovals = pgTable(
     expiresAt: timestamptz('expires_at'),
     decidedAt: timestamptz('decided_at'),
     consumedAt: timestamptz('consumed_at'),
+    /**
+     * The stable dispatch/intent the grant was spent on. A retry of the same
+     * dispatch re-adopts this consumed row instead of re-consuming — the grant
+     * is spent once per logical run, not once per attempt.
+     */
+    consumedByDispatchId: text('consumed_by_dispatch_id'),
     createdAt: createdAt(),
   },
   (t) => [

@@ -30,7 +30,13 @@ export const insertOutboxEvent = (executor: Transaction | OrviloDatabase, params
 export interface ToolApprovalDecisionOutcome {
   /** The stored winner — only present on `already_decided`. */
   decision?: Record<string, unknown>;
-  status: 'already_decided' | 'closed' | 'decided' | 'not_tool_approval' | 'stale_window';
+  status:
+    | 'already_decided'
+    | 'closed'
+    | 'decided'
+    | 'not_tool_approval'
+    | 'scope_mismatch'
+    | 'stale_window';
   /** Live window coordinates on `stale_window` / `closed` / `already_decided`. */
   windowId?: string;
   windowVersion?: number;
@@ -294,6 +300,12 @@ export class EventOutboxModel {
   recordToolApprovalDecision = async (params: {
     decision: Record<string, unknown>;
     eventId: string;
+    /**
+     * When set, the decision only lands while the receipt still carries this
+     * exact scope digest — a renew that re-bound the receipt to a different
+     * scope makes the submit refuse as `scope_mismatch` (SC03).
+     */
+    expectedScopeHash?: string;
     expectedWindowId?: string | null;
   }): Promise<ToolApprovalDecisionOutcome> => {
     const updated = await this.db
@@ -326,6 +338,13 @@ export class EventOutboxModel {
               : [
                   sql`(COALESCE(${eventOutbox.payload}->>'windowId', '') = '' OR ${eventOutbox.payload}->>'windowId' = ${params.expectedWindowId})`,
                 ]),
+          // Scope contract (SC03): when the caller pins the receipt's scope
+          // digest, a re-scoped (renewed) row can never accept the decision.
+          ...(params.expectedScopeHash === undefined
+            ? []
+            : [
+                sql`COALESCE(${eventOutbox.payload}->>'scopeHash', '') = ${params.expectedScopeHash}`,
+              ]),
         ),
       )
       .returning({ id: eventOutbox.id });
@@ -356,10 +375,14 @@ export class EventOutboxModel {
     if (consumed || row.status !== 'pending') {
       return { status: 'closed', windowId, windowVersion };
     }
-    // Still pending and undecided but the CAS refused → the row's live window
-    // differs from the one the card displayed (a windowless submit on a
-    // windowed row is stale too — `expectedWindowId === undefined` mismatches
-    // a live window). `null` (bind-any) can never be stale.
+    // Still pending and undecided but the CAS refused → either the row's
+    // scope moved from what the claim pinned (`scope_mismatch`), or the live
+    // window differs from the one the card displayed (a windowless submit on
+    // a windowed row is stale too — `expectedWindowId === undefined`
+    // mismatches a live window). `null` (bind-any) can never be stale.
+    if (params.expectedScopeHash !== undefined && payload.scopeHash !== params.expectedScopeHash) {
+      return { status: 'scope_mismatch', windowId, windowVersion };
+    }
     if (
       windowId !== undefined &&
       params.expectedWindowId !== null &&

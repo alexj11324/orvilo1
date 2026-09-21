@@ -244,7 +244,13 @@ class TaskService {
   ) =>
     lambdaClient.task.run.mutate({
       id,
-      idempotencyKey: params?.idempotencyKey ?? crypto.randomUUID(),
+      // A replan retry must land on the same dispatch — the consumed approval
+      // is bound to that dispatch, so a fresh key would demand a new grant.
+      idempotencyKey:
+        params?.idempotencyKey ??
+        (params?.intent === 'authorized_replan' && params.replanApprovalId
+          ? `replan:${id}:${params.replanApprovalId}`
+          : crypto.randomUUID()),
       ...params,
     });
 

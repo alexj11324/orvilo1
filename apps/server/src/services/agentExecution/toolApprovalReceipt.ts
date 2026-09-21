@@ -336,7 +336,13 @@ export interface ToolApprovalSubmitOutcome {
    * `stale_window` / `closed`.
    */
   action?: ToolApprovalAction;
-  kind: 'already_decided' | 'closed' | 'decided' | 'not_tool_approval' | 'stale_window';
+  kind:
+    | 'already_decided'
+    | 'closed'
+    | 'decided'
+    | 'not_tool_approval'
+    | 'scope_mismatch'
+    | 'stale_window';
   /** The stored winner's resolution request id, when present. */
   resolutionRequestId?: string;
   /** Live window coordinates on `stale_window` (the retryable conflict). */
@@ -363,10 +369,16 @@ export const submitToolApprovalDecision = async (
     cancelled?: boolean;
     decidedByUserId: string;
     /**
-     * The window the card showed. `undefined` only decides legacy windowless
-     * receipts; `null` binds whichever window is live — reserved for paths
-     * whose own durable claim is already the first-winner authority (the
-     * Mobile token resolution).
+     * The receipt scope digest the caller pinned (SC03) — a claim-minted or
+     * post-claim read of the live row's scopeHash. When set, the decision
+     * CAS refuses a re-scoped receipt as `scope_mismatch`.
+     */
+    expectedScopeHash?: string;
+    /**
+     * The window the card showed — or the exact window a business claim was
+     * minted under / read after claiming (SC03). `undefined` only decides
+     * legacy windowless receipts; `null` binds whichever window is live and
+     * is the wildcard the token path must no longer pass.
      */
     expectedWindowId?: string | null;
     operationId: string;
@@ -384,6 +396,7 @@ export const submitToolApprovalDecision = async (
       resolutionRequestId: params.resolutionRequestId,
     },
     eventId: toolApprovalEventId(params.operationId, params.toolCallId),
+    expectedScopeHash: params.expectedScopeHash,
     expectedWindowId: params.expectedWindowId,
   });
   if (outcome.status === 'already_decided') {

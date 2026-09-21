@@ -48,6 +48,7 @@ import {
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
@@ -80,6 +81,7 @@ import {
 } from '@/server/routers/lambda/_schema/agentIntervention';
 import {
   submitToolApprovalDecision,
+  toolApprovalEventId,
   type ToolApprovalSubmitOutcome,
 } from '@/server/services/agentExecution/toolApprovalReceipt';
 import { AgentStartError } from '@/server/services/agentExecution/types';
@@ -1669,6 +1671,12 @@ const throwOnRefusedApprovalOutcome = (outcome: ToolApprovalSubmitOutcome | unde
       message: `This approval card targets a rotated window — re-render it on the live window${
         outcome.windowId ? ` '${outcome.windowId}'` : ''
       } and resubmit.`,
+    });
+  }
+  if (outcome?.kind === 'scope_mismatch') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This approval was re-scoped since the claim — resubmit against the live scope.',
     });
   }
   if (outcome?.kind === 'closed') {
@@ -3530,20 +3538,71 @@ export const aiAgentRouter = router({
       }
 
       // Decision BEFORE notify — the durable approval receipt is the
-      // first-winner authority every entry shares. The business claim just
-      // made THIS submitter the winner and the token path carries no window
-      // echo, so bind whichever window is live (`null`) rather than letting a
-      // stale card name one.
-      const approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {
-        cancelled: resolution.response.cancelled,
-        decidedByUserId: ctx.userId,
-        expectedWindowId: null,
-        operationId: resolution.operationId,
-        resolutionRequestId: resolution.resolutionRequestId,
-        result: resolution.response.result,
-        toolCallId: resolution.response.toolCallId,
-      });
-      if (approvalOutcome.kind === 'stale_window' || approvalOutcome.kind === 'closed') {
+      // first-winner authority every entry shares. SC03: the token path must
+      // bind the receipt atomically too — the claim result echoes the exact
+      // window/scope it captured at mint time; when the claim impl doesn't
+      // return them, fall back to the live receipt coordinates read right
+      // after claiming. `expectedWindowId: null` (bind-any) is retired — a
+      // claim minted under one window/scope can never decide a rotated or
+      // re-scoped receipt.
+      const receiptPayload = await new EventOutboxModel(ctx.serverDB)
+        .getDeliveryReceiptPayload(
+          toolApprovalEventId(resolution.operationId, resolution.response.toolCallId),
+        )
+        .catch((error: unknown) => {
+          log(
+            'resolveHeteroIntervention receipt read failed claim=%s: %O',
+            resolution.claimId,
+            error,
+          );
+          return undefined;
+        });
+      const pinnedWindowId =
+        resolution.windowId ??
+        (receiptPayload && typeof receiptPayload.windowId === 'string' && receiptPayload.windowId
+          ? receiptPayload.windowId
+          : undefined);
+      const pinnedScopeHash =
+        resolution.scopeHash ??
+        (receiptPayload && typeof receiptPayload.scopeHash === 'string' && receiptPayload.scopeHash
+          ? receiptPayload.scopeHash
+          : undefined);
+      let approvalOutcome: ToolApprovalSubmitOutcome;
+      try {
+        approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {
+          cancelled: resolution.response.cancelled,
+          decidedByUserId: ctx.userId,
+          expectedScopeHash: pinnedScopeHash,
+          expectedWindowId: pinnedWindowId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          result: resolution.response.result,
+          toolCallId: resolution.response.toolCallId,
+        });
+      } catch (error) {
+        // A decision write that throws owns claim recovery too — the claim
+        // must not stay held when its receipt decision never landed.
+        await rollbackHeteroInterventionResolution({
+          claimId: resolution.claimId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          toolCallId: resolution.response.toolCallId,
+          userId: ctx.userId,
+          workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+        }).catch((rollbackError) => {
+          log(
+            'failed-decision claim rollback failed claim=%s: %O',
+            resolution.claimId,
+            rollbackError,
+          );
+        });
+        throw error;
+      }
+      if (
+        approvalOutcome.kind === 'stale_window' ||
+        approvalOutcome.kind === 'scope_mismatch' ||
+        approvalOutcome.kind === 'closed'
+      ) {
         // The receipt cannot accept the decision — roll the claim back so
         // the intervention stays live for the real window instead of
         // reporting a phantom resolution.

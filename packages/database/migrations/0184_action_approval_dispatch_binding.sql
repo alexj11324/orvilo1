@@ -1,0 +1,1 @@
+ALTER TABLE "action_approvals" ADD COLUMN "consumed_by_dispatch_id" text;

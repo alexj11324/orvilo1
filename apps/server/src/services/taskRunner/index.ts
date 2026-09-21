@@ -484,6 +484,10 @@ export class TaskRunnerService {
       // authorized_replan consumes a task-scoped action approval — the
       // approver identity, target binding and base revision are all read off
       // the consumed row. A caller-supplied approver string is never evidence.
+      // SC05: scope + revision are validated INSIDE the consume transaction —
+      // a wrong-target or stale-revision request never marks the grant — and
+      // the spend is bound to this dispatch so a retry after a transient
+      // failure re-adopts it instead of demanding a fresh approval.
       let replanEvidence: TaskExecutionContract['replan'] | undefined;
       if (runIntent === 'authorized_replan') {
         if (!replanApprovalId) {
@@ -492,46 +496,59 @@ export class TaskRunnerService {
             message: 'authorized_replan requires replanApprovalId.',
           });
         }
-        const approval = await new ActionApprovalService(
+        const outcome = await new ActionApprovalService(
           this.db,
           this.userId,
           this.workspaceId,
-        ).consume(replanApprovalId);
-        if (!approval) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Replan approval is missing, undecided, or already consumed.',
-          });
+        ).consumeForDispatch({
+          approvalId: replanApprovalId,
+          dispatchId: preparedDispatch!.dispatch.id,
+          expected: {
+            actionType: 'task.replan',
+            baseVersion: task.requirementRevision,
+            targetId: task.id,
+            targetType: 'task',
+            workspaceId: task.workspaceId ?? null,
+          },
+        });
+        switch (outcome.kind) {
+          case 'missing':
+          case 'unavailable': {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Replan approval is missing, undecided, or already consumed.',
+            });
+          }
+          case 'scope_mismatch': {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Replan approval does not target this task.',
+            });
+          }
+          case 'expired': {
+            throw new TRPCError({ code: 'CONFLICT', message: 'Replan approval expired.' });
+          }
+          case 'revision_mismatch': {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Replan approval was granted against an older constraint revision.',
+            });
+          }
+          case 'no_approver': {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Replan approval has no recorded approver.',
+            });
+          }
+          case 'adopted':
+          case 'consumed': {
+            replanEvidence = {
+              approvalId: outcome.approval.id,
+              approvedBy: outcome.approval.approverUserId!,
+            };
+            break;
+          }
         }
-        if (
-          approval.actionType !== 'task.replan' ||
-          approval.targetType !== 'task' ||
-          approval.targetId !== task.id ||
-          approval.workspaceId !== (task.workspaceId ?? null)
-        ) {
-          // The grant is consumed regardless — an approval minted for another
-          // target must never be replayable here.
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Replan approval does not target this task.',
-          });
-        }
-        if (approval.expiresAt && new Date(approval.expiresAt).getTime() <= Date.now()) {
-          throw new TRPCError({ code: 'CONFLICT', message: 'Replan approval expired.' });
-        }
-        if (approval.baseVersion != null && approval.baseVersion !== task.requirementRevision) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Replan approval was granted against an older constraint revision.',
-          });
-        }
-        if (!approval.approverUserId) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Replan approval has no recorded approver.',
-          });
-        }
-        replanEvidence = { approvalId: approval.id, approvedBy: approval.approverUserId };
       }
 
       // A settlement grant is also bounded on intent: the repair kinds it

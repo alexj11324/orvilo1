@@ -1,10 +1,10 @@
 export type SavedViewVisibilityValue = 'private' | 'team' | 'workspace';
 
-const VISIBILITY_KEYS: Record<SavedViewVisibilityValue, string> = {
+const VISIBILITY_KEYS = {
   private: 'savedViews.visibilityPrivate',
   team: 'savedViews.visibilityTeam',
   workspace: 'savedViews.visibilityWorkspace',
-};
+} as const satisfies Record<SavedViewVisibilityValue, string>;
 
 // Shared label resolver for every surface that displays a saved view's
 // sharing scope (directory table, team views list, share dialog). Unknown
@@ -12,4 +12,4 @@ const VISIBILITY_KEYS: Record<SavedViewVisibilityValue, string> = {
 export const savedViewVisibilityKey = (visibility?: string | null) =>
   visibility && visibility in VISIBILITY_KEYS
     ? VISIBILITY_KEYS[visibility as SavedViewVisibilityValue]
-    : 'savedViews.visibilityUnknown';
+    : ('savedViews.visibilityUnknown' as const);

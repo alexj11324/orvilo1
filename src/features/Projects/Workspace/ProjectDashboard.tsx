@@ -1,11 +1,10 @@
 'use client';
 
 import { Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
-import type { TaskStatus, WorkSummaryItem } from '@orvilo/types';
+import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import type { WorkSummaryItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
-  BadgeCheckIcon,
   CheckCircle2Icon,
   CircleDotIcon,
   Clock3Icon,
@@ -16,18 +15,12 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { getProjectGoalsPath, getProjectTasksPath } from '@/features/Projects/Layout/navigation';
 import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
-import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
-import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
-import { canInviteToProject } from '@/features/Teammates/api/roleCapabilities';
-import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
-import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 import { useOpenWork } from '@/features/WorkGallery/useOpenWork';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -36,32 +29,11 @@ import { workKeys } from '@/libs/swr/keys';
 import { workService } from '@/services/work';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 import type { ProjectDetail } from '@/store/project';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 const styles = createStaticStyles(({ css }) => ({
-  attention: css`
-    padding-block: 10px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: 0;
-    }
-  `,
-  columns: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 32px;
-    align-items: start;
-
-    margin-block-start: 40px;
-
-    @media (width <= 960px) {
-      grid-template-columns: 1fr;
-    }
-  `,
   main: css`
     min-width: 0;
+    margin-block-start: 40px;
   `,
   milestone: css`
     padding-block: 6px;
@@ -70,17 +42,6 @@ const styles = createStaticStyles(({ css }) => ({
     &:last-child {
       border-block-end: 0;
     }
-  `,
-  rail: css`
-    position: sticky;
-    inset-block-start: 24px;
-    min-width: 0;
-  `,
-  railCard: css`
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-    background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
   `,
   section: css`
     padding-block: 18px;
@@ -97,8 +58,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const TERMINAL_STATUSES = new Set<TaskStatus | string>(['canceled', 'completed']);
-const ATTENTION_STATUSES = new Set<TaskStatus | string>(['failed', 'paused']);
+const TERMINAL_STATUSES = new Set<string>(['canceled', 'completed']);
 interface ProjectDashboardProps {
   detail: ProjectDetail;
   projectId: string;
@@ -130,13 +90,6 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
   const navigate = useWorkspaceAwareNavigate();
   const openWork = useOpenWork();
   const workspaceId = useActiveWorkspaceId();
-  const teammatesEnabled = useTeammatesEnabled();
-  const capabilities = useWorkspaceCapabilities();
-  const currentUserId = useUserStore(userProfileSelectors.userId);
-  // `projectMember.list` is a workspace-member procedure — in personal scope
-  // (no workspace) it would fail outright, so the query and its card stay off.
-  const membersEnabled = teammatesEnabled && !!workspaceId;
-  const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
   const goalScope = `project:${projectId}`;
   const goals = useGoalStore(goalSelectors.goalList(goalScope));
   const goalSWR = useGoalStore((s) => s.useFetchGoals)(undefined, projectId);
@@ -153,204 +106,119 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
 
   const tasks = detail.tasks ?? [];
   const activeTasks = tasks.filter((task) => !TERMINAL_STATUSES.has(task.status)).slice(0, 5);
-  const attentionTasks = tasks.filter((task) => ATTENTION_STATUSES.has(task.status)).slice(0, 3);
   const completedGoals = goals.filter(({ goal }) => goal.status === 'achieved').length;
-  const progress = goals.length ? Math.round((completedGoals / goals.length) * 100) : 0;
   const works = workSWR.data?.items ?? [];
   const goalPreview = useMemo(() => goals.slice(0, 3), [goals]);
 
   return (
-    <div className={styles.columns}>
-      <Flexbox className={styles.main} gap={24}>
-        <Flexbox gap={10}>
-          <SectionTitle
-            action={t('overview.viewAllGoals', { defaultValue: 'View all' })}
-            count={goals.length}
-            title={t('overview.milestones', { defaultValue: 'Milestones' })}
-            onAction={() => navigate(getProjectGoalsPath(projectReference))}
+    <Flexbox className={styles.main} gap={24}>
+      <Flexbox gap={10}>
+        <SectionTitle
+          action={t('overview.viewAllGoals', { defaultValue: 'View all' })}
+          count={goals.length}
+          title={t('overview.milestones', { defaultValue: 'Milestones' })}
+          onAction={() => navigate(getProjectGoalsPath(projectReference))}
+        />
+        {goalSWR.error ? (
+          <AsyncError
+            error={goalSWR.error}
+            variant={'inline'}
+            onRetry={() => void goalSWR.mutate()}
           />
-          {goalSWR.error ? (
-            <AsyncError
-              error={goalSWR.error}
-              variant={'inline'}
-              onRetry={() => void goalSWR.mutate()}
-            />
-          ) : goalSWR.isLoading && goals.length === 0 ? (
-            <ArticleSkeleton rows={4} />
-          ) : goals.length === 0 ? (
-            <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
-              {t('overview.goalsEmpty')}
-            </Text>
-          ) : (
-            <Flexbox gap={0}>
-              {goalPreview.map(({ goal }) => (
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={styles.milestone}
-                  gap={10}
-                  key={goal.id}
-                >
-                  <Icon
-                    color={goal.status === 'achieved' ? cssVar.colorSuccess : undefined}
-                    icon={goal.status === 'achieved' ? CheckCircle2Icon : TargetIcon}
-                    size={15}
-                  />
-                  <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
-                    {goal.title}
-                  </Text>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t(`goals.status.${goal.status}`, { defaultValue: goal.status })}
-                  </Text>
-                </Flexbox>
-              ))}
-              {goals.length > goalPreview.length && (
-                <Text fontSize={12} style={{ paddingBlock: 4 }} type={'secondary'}>
-                  {t('overview.goalCount', { completed: completedGoals, total: goals.length })}
+        ) : goalSWR.isLoading && goals.length === 0 ? (
+          <ArticleSkeleton rows={4} />
+        ) : goals.length === 0 ? (
+          <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
+            {t('overview.goalsEmpty')}
+          </Text>
+        ) : (
+          <Flexbox gap={0}>
+            {goalPreview.map(({ goal }) => (
+              <Flexbox
+                horizontal
+                align={'center'}
+                className={styles.milestone}
+                gap={10}
+                key={goal.id}
+              >
+                <Icon
+                  color={goal.status === 'achieved' ? cssVar.colorSuccess : undefined}
+                  icon={goal.status === 'achieved' ? CheckCircle2Icon : TargetIcon}
+                  size={15}
+                />
+                <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
+                  {goal.title}
                 </Text>
-              )}
-            </Flexbox>
-          )}
-        </Flexbox>
-
-        <Flexbox className={styles.section} gap={8}>
-          <SectionTitle
-            action={t('overview.viewAllTasks')}
-            count={activeTasks.length}
-            title={t('overview.activeTasks')}
-            onAction={() => navigate(getProjectTasksPath(projectReference))}
-          />
-          {activeTasks.length === 0 ? (
-            <Text style={{ paddingBlock: 16 }} type={'secondary'}>
-              {t('overview.noActiveTasks')}
-            </Text>
-          ) : (
-            activeTasks.map((task) => (
-              <NavItem
-                description={task.description || task.instruction}
-                icon={task.status === 'paused' ? Clock3Icon : CircleDotIcon}
-                key={task.id}
-                title={task.name || task.instruction}
-                extra={
-                  <Tag size={'small'}>
-                    {t(`goals.status.${task.status}`, { defaultValue: task.status })}
-                  </Tag>
-                }
-                onClick={() => navigate(taskDetailPath(task.id, undefined, task.name))}
-              />
-            ))
-          )}
-        </Flexbox>
-
-        <Flexbox className={styles.section} gap={12}>
-          <SectionTitle count={works.length} title={t('overview.latestWorks')} />
-          {workSWR.error ? (
-            <AsyncError
-              error={workSWR.error}
-              variant={'inline'}
-              onRetry={() => void workSWR.mutate()}
-            />
-          ) : workSWR.isLoading ? (
-            <ArticleSkeleton rows={4} />
-          ) : works.length === 0 ? (
-            <Empty
-              description={t('overview.worksEmptyDescription')}
-              icon={PackageOpenIcon}
-              title={t('overview.worksEmptyTitle')}
-            />
-          ) : (
-            <div className={styles.works}>
-              {works.map((work: WorkSummaryItem) => (
-                <WorkSummaryCard item={work} key={work.id} onOpen={openWork} />
-              ))}
-            </div>
-          )}
-        </Flexbox>
-
-        <OrchestrationPolicyCard detail={detail} projectId={projectId} />
-      </Flexbox>
-
-      <Flexbox className={styles.rail} gap={16}>
-        <Flexbox className={styles.railCard} gap={12}>
-          <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={projectId} />
-        </Flexbox>
-        <Flexbox className={styles.railCard} gap={12}>
-          <SectionTitle count={attentionTasks.length} title={t('overview.needsAttention')} />
-          {attentionTasks.length === 0 ? (
-            <Flexbox align={'center'} gap={8} paddingBlock={12}>
-              <Icon color={cssVar.colorSuccess} icon={BadgeCheckIcon} size={22} />
-              <Text fontSize={13} type={'secondary'}>
-                {t('overview.nothingNeedsAttention')}
+                <Text fontSize={12} type={'secondary'}>
+                  {t(`goals.status.${goal.status}`, { defaultValue: goal.status })}
+                </Text>
+              </Flexbox>
+            ))}
+            {goals.length > goalPreview.length && (
+              <Text fontSize={12} style={{ paddingBlock: 4 }} type={'secondary'}>
+                {t('overview.goalCount', { completed: completedGoals, total: goals.length })}
               </Text>
-            </Flexbox>
-          ) : (
-            attentionTasks.map((task) => (
-              <Flexbox className={styles.attention} gap={4} key={task.id}>
-                <Text weight={500}>{task.name || task.instruction}</Text>
-                <Text fontSize={12} type={task.status === 'failed' ? 'danger' : 'secondary'}>
-                  {task.status === 'failed' ? t('overview.taskFailed') : t('overview.taskWaiting')}
-                </Text>
-              </Flexbox>
-            ))
-          )}
-        </Flexbox>
-
-        <Flexbox className={styles.railCard} gap={12}>
-          <SectionTitle title={t('overview.projectSummary')} />
-          <Flexbox horizontal justify={'space-between'}>
-            <Text type={'secondary'}>{t('sections.goals')}</Text>
-            <Text>{goals.length}</Text>
-          </Flexbox>
-          <Flexbox horizontal justify={'space-between'}>
-            <Text type={'secondary'}>{t('sections.tasks')}</Text>
-            <Text>{tasks.length}</Text>
-          </Flexbox>
-          <Flexbox horizontal justify={'space-between'}>
-            <Text type={'secondary'}>{t('sections.agents')}</Text>
-            <Text>{detail.agents?.length ?? 0}</Text>
-          </Flexbox>
-          <Flexbox horizontal justify={'space-between'}>
-            <Text type={'secondary'}>{t('sections.knowledgeBases')}</Text>
-            <Text>{detail.knowledgeBases?.length ?? 0}</Text>
-          </Flexbox>
-        </Flexbox>
-
-        {membersEnabled && (
-          <Flexbox className={styles.railCard} gap={12}>
-            <SectionTitle
-              count={membersSWR.data?.length}
-              title={t('sections.teammates', { defaultValue: 'Teammates' })}
-            />
-            {membersSWR.error ? (
-              <AsyncError
-                error={membersSWR.error}
-                variant={'inline'}
-                onRetry={() => void membersSWR.mutate()}
-              />
-            ) : membersSWR.isLoading ? (
-              <SkeletonText style={{ marginBottom: 0, width: '60%' }} />
-            ) : (
-              <Flexbox horizontal align={'center'} justify={'space-between'}>
-                <Text fontSize={13} type={'secondary'}>
-                  {t('sections.teammatesHint', {
-                    defaultValue: 'People collaborating in this project',
-                  })}
-                </Text>
-                {canInviteToProject(capabilities.canInvite, detail.project, currentUserId) && (
-                  <Button
-                    size={'small'}
-                    type={'text'}
-                    onClick={() => openInviteTeammateModal({ defaultProjectIds: [projectId] })}
-                  >
-                    {t('sections.invite', { defaultValue: 'Invite' })}
-                  </Button>
-                )}
-              </Flexbox>
             )}
           </Flexbox>
         )}
       </Flexbox>
-    </div>
+
+      <Flexbox className={styles.section} gap={8}>
+        <SectionTitle
+          action={t('overview.viewAllTasks')}
+          count={activeTasks.length}
+          title={t('overview.activeTasks')}
+          onAction={() => navigate(getProjectTasksPath(projectReference))}
+        />
+        {activeTasks.length === 0 ? (
+          <Text style={{ paddingBlock: 16 }} type={'secondary'}>
+            {t('overview.noActiveTasks')}
+          </Text>
+        ) : (
+          activeTasks.map((task) => (
+            <NavItem
+              description={task.description || task.instruction}
+              icon={task.status === 'paused' ? Clock3Icon : CircleDotIcon}
+              key={task.id}
+              title={task.name || task.instruction}
+              extra={
+                <Tag size={'small'}>
+                  {t(`goals.status.${task.status}`, { defaultValue: task.status })}
+                </Tag>
+              }
+              onClick={() => navigate(taskDetailPath(task.id, undefined, task.name))}
+            />
+          ))
+        )}
+      </Flexbox>
+
+      <Flexbox className={styles.section} gap={12}>
+        <SectionTitle count={works.length} title={t('overview.latestWorks')} />
+        {workSWR.error ? (
+          <AsyncError
+            error={workSWR.error}
+            variant={'inline'}
+            onRetry={() => void workSWR.mutate()}
+          />
+        ) : workSWR.isLoading ? (
+          <ArticleSkeleton rows={4} />
+        ) : works.length === 0 ? (
+          <Empty
+            description={t('overview.worksEmptyDescription')}
+            icon={PackageOpenIcon}
+            title={t('overview.worksEmptyTitle')}
+          />
+        ) : (
+          <div className={styles.works}>
+            {works.map((work: WorkSummaryItem) => (
+              <WorkSummaryCard item={work} key={work.id} onOpen={openWork} />
+            ))}
+          </div>
+        )}
+      </Flexbox>
+
+      <OrchestrationPolicyCard detail={detail} projectId={projectId} />
+    </Flexbox>
   );
 });
 

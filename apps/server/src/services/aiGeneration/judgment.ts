@@ -794,7 +794,7 @@ export const runAcpJudgment = async <T = unknown>(
       }
 
       if (live.status === 'failed') {
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" launch already failed`,
           { intentKey, operationId: live.operationId ?? landed?.id },
           landed,
@@ -806,7 +806,7 @@ export const runAcpJudgment = async <T = unknown>(
           live.cancelReason ?? 'cancel requested',
           landed?.id ?? live.operationId ?? undefined,
         );
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" was canceled`,
           {
             cancelResult,
@@ -827,7 +827,7 @@ export const runAcpJudgment = async <T = unknown>(
           'caller aborted',
           landed?.id ?? live.operationId ?? undefined,
         );
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" aborted by caller`,
           {
             cancelResult,
@@ -847,7 +847,7 @@ export const runAcpJudgment = async <T = unknown>(
           'launch deadline exceeded',
           landed?.id ?? live.operationId ?? undefined,
         );
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" launch missed its deadline`,
           {
             cancelResult,
@@ -867,7 +867,7 @@ export const runAcpJudgment = async <T = unknown>(
           'caller aborted',
           landed?.id ?? live.operationId ?? undefined,
         );
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" aborted by caller`,
           {
             cancelResult,
@@ -974,14 +974,14 @@ export const runAcpJudgment = async <T = unknown>(
       };
       if (raced.kind === 'err' && !judgment.signal?.aborted && Date.now() <= deadline) {
         const message = raced.error instanceof Error ? raced.error.message : String(raced.error);
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" dispatch failed: ${message}`,
           detail,
           latest,
           'error',
         );
       }
-      await failAndTrace(
+      return await failAndTrace(
         judgment.signal?.aborted || raced.kind === 'caller'
           ? `Judgment "${judgment.purpose}" aborted by caller`
           : `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget during dispatch`,
@@ -1001,7 +1001,7 @@ export const runAcpJudgment = async <T = unknown>(
         'dispatch raced a cancel intent',
         operationId,
       );
-      await failAndTrace(
+      return await failAndTrace(
         `Judgment "${judgment.purpose}" was canceled`,
         {
           cancelResult,
@@ -1021,7 +1021,7 @@ export const runAcpJudgment = async <T = unknown>(
         // a 'done' observed past the deadline is reported honestly but never
         // accepted as a successful judgment.
         const { cancelResult, latest } = await convergeLaunch('wait budget exceeded', operationId);
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
           {
             cancelResult,
@@ -1036,7 +1036,7 @@ export const runAcpJudgment = async <T = unknown>(
       if (operation && isTerminalAgentOperationStatus(operation.status)) break;
       if (judgment.signal?.aborted) {
         const { cancelResult, latest } = await convergeLaunch('caller aborted', operationId);
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" aborted by caller`,
           {
             cancelResult,
@@ -1053,7 +1053,7 @@ export const runAcpJudgment = async <T = unknown>(
         'aborted'
       ) {
         const { cancelResult, latest } = await convergeLaunch('caller aborted', operationId);
-        await failAndTrace(
+        return await failAndTrace(
           `Judgment "${judgment.purpose}" aborted by caller`,
           {
             cancelResult,

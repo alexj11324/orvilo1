@@ -5,7 +5,7 @@ import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { ChevronLeft, Circle, CircleDashed, Plus } from 'lucide-react';
+import { ChevronLeft, Circle, CircleAlert, CircleDashed, OctagonAlert, Plus } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -241,6 +241,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 export const COLUMN_I18N_KEYS: Record<string, string> = {
   'backlog': 'taskList.kanban.backlog',
+  'blocking': 'taskList.attention.blocking',
   'canceled': 'taskList.kanban.canceled',
   'completed': 'taskList.kanban.done',
   'done': 'taskList.kanban.done',
@@ -260,6 +261,7 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
   'st:scheduled': 'taskList.kanban.scheduled',
   'todo': 'taskList.kanban.todo',
   'triage': 'taskList.kanban.triage',
+  'urgent': 'taskList.attention.urgent',
   'wf:backlog': 'taskList.kanban.backlog',
   'wf:canceled': 'taskList.kanban.canceled',
   'wf:done': 'taskList.kanban.done',
@@ -277,6 +279,10 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
  * reads "not yet categorized".
  */
 export const COLUMN_STATUS_VISUAL: Record<string, ExecutionStatusVisual> = {
+  // Attention buckets (Linear My issues) are not execution statuses — urgent
+  // keeps the app's urgent glyph, blocking the stop-marked one.
+  'blocking': { color: cssVar.colorError, icon: OctagonAlert },
+  'urgent': { color: cssVar.orange, icon: CircleAlert },
   'backlog': TASK_STATUS_VISUALS.backlog,
   'canceled': TASK_STATUS_VISUALS.canceled,
   'completed': TASK_STATUS_VISUALS.completed,

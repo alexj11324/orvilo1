@@ -2245,6 +2245,8 @@ export default {
   'taskList.contextMenu.transferWarning':
     'Cross-workspace references like assigned agent and active topic will be cleared.',
   'taskList.kanban.addTask': 'Create task',
+  'taskList.attention.blocking': 'Blocking issues',
+  'taskList.attention.urgent': 'Urgent issues',
   'taskList.kanban.backlog': 'Backlog',
   'taskList.kanban.canceled': 'Canceled',
   'taskList.kanban.done': 'Done',

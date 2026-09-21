@@ -25,9 +25,8 @@ import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from '@/store/project';
 
 import {
-  getProjectGoalsPath,
+  getProjectActivityPath,
   getProjectOverviewPath,
-  getProjectResourcesPath,
   getProjectTasksPath,
   projectPathSection,
 } from './navigation';
@@ -86,6 +85,8 @@ const ProjectTabsBar = memo(() => {
     [navigate],
   );
 
+  // Linear's project header is exactly Overview | Activity | Issues — goals
+  // and resources live as sections on the Overview body instead of tabs.
   const tabs = useMemo(
     () => [
       {
@@ -93,12 +94,15 @@ const ProjectTabsBar = memo(() => {
         path: getProjectOverviewPath(projectReference),
         section: 'overview',
       },
-      { label: t('sections.tasks'), path: getProjectTasksPath(projectReference), section: 'tasks' },
-      { label: t('sections.goals'), path: getProjectGoalsPath(projectReference), section: 'goals' },
       {
-        label: t('resources.title'),
-        path: getProjectResourcesPath(projectReference),
-        section: 'resources',
+        label: t('sections.activity'),
+        path: getProjectActivityPath(projectReference),
+        section: 'activity',
+      },
+      {
+        label: t('sections.issues'),
+        path: getProjectTasksPath(projectReference),
+        section: 'tasks',
       },
     ],
     [projectReference, t],

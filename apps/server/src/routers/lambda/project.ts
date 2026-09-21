@@ -8,7 +8,10 @@ import {
   type WorkspaceRole,
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { AgentModel } from '@/database/models/agent';
 import { ProjectModel } from '@/database/models/project';
+import { TaskModel } from '@/database/models/task';
+import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
@@ -74,6 +77,86 @@ function mapProjectError(error: unknown, operation: string): never {
 }
 
 export const projectRouter = router({
+  /**
+   * Linear parity — the project Activity tab: newest-first task field-change
+   * feed for the project's issues (assignee/status/priority moves), with the
+   * actor resolved so the row renders without a second fetch.
+   */
+  activityFeed: projectProcedure
+    .input(idInput.extend({ limit: z.number().int().min(1).max(100).default(50) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        const taskModel = new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
+        const rows = await taskModel.getProjectActivities(project.id, input.limit);
+
+        const agentIds = new Set<string>();
+        const userIds = new Set<string>();
+        for (const row of rows) {
+          if (row.activity.actorAgentId) agentIds.add(row.activity.actorAgentId);
+          if (row.activity.actorUserId) userIds.add(row.activity.actorUserId);
+          // Assignment events carry participant ids on both sides of the
+          // change; resolve them so the row can name the new assignee.
+          const type = row.activity.type;
+          if (type === 'assignee_agent' || type === 'assignee_user' || type === 'reviewer') {
+            const target = type === 'assignee_agent' ? agentIds : userIds;
+            for (const id of [row.activity.payload?.fromId, row.activity.payload?.toId]) {
+              if (id) target.add(id);
+            }
+          }
+        }
+        const [agentRows, userRows] = await Promise.all([
+          agentIds.size
+            ? new AgentModel(
+                ctx.serverDB,
+                ctx.userId,
+                ctx.workspaceId ?? undefined,
+              ).getAgentAvatarsByIds([...agentIds])
+            : [],
+          userIds.size ? UserModel.findByIds(ctx.serverDB, [...userIds]) : [],
+        ]);
+        const actors = new Map<
+          string,
+          { avatar?: string | null; id: string; name?: string | null; type: 'agent' | 'user' }
+        >();
+        for (const a of agentRows) {
+          actors.set(a.id, { avatar: a.avatar, id: a.id, name: a.title || a.name, type: 'agent' });
+        }
+        for (const u of userRows) {
+          actors.set(u.id, {
+            avatar: u.avatar,
+            id: u.id,
+            name: u.fullName || u.username,
+            type: 'user',
+          });
+        }
+
+        return {
+          data: rows.map((row) => ({
+            actor:
+              (row.activity.actorAgentId && actors.get(row.activity.actorAgentId)) ||
+              (row.activity.actorUserId && actors.get(row.activity.actorUserId)) ||
+              undefined,
+            createdAt: row.activity.createdAt.toISOString(),
+            fromTarget:
+              (row.activity.payload?.fromId && actors.get(row.activity.payload.fromId)) ||
+              undefined,
+            id: row.activity.id,
+            payload: row.activity.payload,
+            target:
+              (row.activity.payload?.toId && actors.get(row.activity.payload.toId)) || undefined,
+            taskId: row.taskId,
+            taskIdentifier: row.taskIdentifier,
+            taskTitle: row.taskTitle,
+            type: row.activity.type,
+          })),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'activityFeed');
+      }
+    }),
+
   acceptCompletion: projectWriteProcedure
     .input(idInput.extend({ comment: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {

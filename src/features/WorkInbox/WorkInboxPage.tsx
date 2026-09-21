@@ -7,7 +7,6 @@ import {
   Button,
   type DropdownItem,
   DropdownMenu,
-  Segmented,
   TabsIndicator,
   TabsList,
   TabsRoot,
@@ -24,12 +23,14 @@ import {
   AtSignIcon,
   BellIcon,
   CheckCheckIcon,
+  CheckIcon,
   ChevronLeftIcon,
   CircleUserRoundIcon,
   ExternalLinkIcon,
   GitPullRequestIcon,
   InboxIcon,
   KeyRoundIcon,
+  ListFilterIcon,
   type LucideIcon,
   MailOpenIcon,
   MoreHorizontalIcon,
@@ -613,6 +614,19 @@ const WorkInboxPage = memo(() => {
             </TabsList>
           </TabsRoot>
           <Flexbox horizontal align={'center'} flex={'none'}>
+            <DropdownMenu
+              placement={'bottomRight'}
+              items={INBOX_FILTER_CHIPS.map((chip) => ({
+                icon: chip === filterChip ? <Icon icon={CheckIcon} size={14} /> : undefined,
+                key: chip,
+                label: filterLabel(chip),
+                onClick: () => writeInboxParams({ filter: chip }),
+              }))}
+            >
+              <Tooltip title={t('inbox.filterBy', { filter: filterLabel(filterChip) })}>
+                <ActionIcon icon={ListFilterIcon} size={'small'} />
+              </Tooltip>
+            </DropdownMenu>
             <Tooltip title={t('inbox.markAllRead')}>
               <ActionIcon icon={CheckCheckIcon} size={'small'} onClick={() => void markAllRead()} />
             </Tooltip>
@@ -621,16 +635,6 @@ const WorkInboxPage = memo(() => {
             </Tooltip>
           </Flexbox>
         </Flexbox>
-        <Segmented
-          block
-          size={'small'}
-          value={filterChip}
-          options={INBOX_FILTER_CHIPS.map((chip) => ({
-            label: filterLabel(chip),
-            value: chip,
-          }))}
-          onChange={(value) => writeInboxParams({ filter: value })}
-        />
       </Flexbox>
       {partial ? (
         <Alert

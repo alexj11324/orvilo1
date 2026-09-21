@@ -88,9 +88,11 @@ export const workQueryTaskColumnKey = (
  * never re-buckets under status. Missing `groupBy` follows the status
  * dimension for backwards compatibility with pre-groupBy saved views.
  */
+export type WorkQueryListGroupBy = 'attention' | 'none' | 'status' | 'workflowCategory';
+
 export const workQueryListGroupBy = (
-  groupBy: 'none' | 'status' | 'workflowCategory' | undefined,
-): 'none' | 'status' | 'workflowCategory' => groupBy ?? 'status';
+  groupBy: 'attention' | 'none' | 'status' | 'workflowCategory' | undefined,
+): WorkQueryListGroupBy => groupBy ?? 'status';
 
 const groupKeyOrder = (groupBy: WorkQueryBoardGroupBy): readonly string[] =>
   groupBy === 'workflowCategory' ? WORK_QUERY_WORKFLOW_COLUMNS : WORK_QUERY_STATUS_COLUMNS;
@@ -127,7 +129,7 @@ export const workQueryListGroups = (
 export const workQueryListSections = (
   groups: readonly WorkQueryGroupPage<WorkQueryResultTask>[] | undefined,
   tasks: readonly WorkQueryResultTask[],
-  groupBy: WorkQueryBoardGroupBy,
+  groupBy: 'attention' | WorkQueryBoardGroupBy,
 ): {
   hasMore?: boolean;
   key: string;
@@ -144,7 +146,9 @@ export const workQueryListSections = (
         total: group.total,
       }));
   }
-  return workQueryListGroups(tasks, groupBy);
+  // 'attention' can't be derived client-side (it reads the dependency graph),
+  // so a groups-less response degrades to the status bucketing.
+  return workQueryListGroups(tasks, groupBy === 'attention' ? 'status' : groupBy);
 };
 
 export const cascadeStatusForBoardKey = (

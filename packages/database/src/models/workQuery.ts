@@ -42,7 +42,7 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { actionApprovals } from '../schemas/actionApproval';
 import { executionGrants } from '../schemas/executionGrant';
@@ -483,7 +483,8 @@ export const applyWorkQueryLayout = (
     }
     return {
       ...query,
-      groupBy: nextGroupBy === 'workflowCategory' ? 'workflowCategory' : 'status',
+      groupBy:
+        nextGroupBy === 'workflowCategory' || nextGroupBy === 'attention' ? nextGroupBy : 'status',
       layout: 'list',
     };
   }
@@ -496,21 +497,65 @@ export const applyWorkQueryLayout = (
 
 export const workQueryBoardGroupBy = (
   query: WorkQuery,
-): 'status' | 'workflowCategory' | undefined => {
+): 'attention' | 'status' | 'workflowCategory' | undefined => {
   if (query.layout === 'board') {
     return query.groupBy === 'status' ? 'status' : 'workflowCategory';
   }
-  if (query.groupBy === 'status' || query.groupBy === 'workflowCategory') {
+  if (
+    query.groupBy === 'status' ||
+    query.groupBy === 'workflowCategory' ||
+    query.groupBy === 'attention'
+  ) {
     return query.groupBy;
   }
   return undefined;
 };
 
-const boardColumnFor = (groupBy: 'status' | 'workflowCategory') =>
-  groupBy === 'status' ? tasks.status : tasks.workflowCategory;
+/** A canceled/completed blocked row no longer needs the blocker. */
+const OPEN_BLOCKED_STATUS_SQL = sql.join(
+  WORK_QUERY_STATUS_COLUMNS.filter((status) => status !== 'completed' && status !== 'canceled').map(
+    (status) => sql`${status}`,
+  ),
+  sql`, `,
+);
 
-const stableBoardKeys = (groupBy: 'status' | 'workflowCategory'): readonly string[] =>
-  groupBy === 'status' ? WORK_QUERY_STATUS_COLUMNS : WORK_QUERY_WORKFLOW_COLUMNS;
+/**
+ * Linear's My issues grouping: urgent issues first, then issues that block
+ * others, then the rest by status. Not a stored column — a CASE over
+ * `priority` and a live `blocks` edge, so the bucket always reflects the
+ * current graph. Raw table names in the subquery: drizzle's `alias()` columns
+ * only render qualified once the alias is declared in the query, and this
+ * EXISTS owns its own join.
+ */
+const attentionGroupExpr = sql<string>`CASE
+  WHEN ${tasks.priority} = 1 THEN 'urgent'
+  WHEN EXISTS (
+    SELECT 1
+    FROM task_dependencies attention_dep
+    INNER JOIN tasks attention_blocked
+      ON attention_dep.task_id = attention_blocked.id
+    WHERE attention_dep.depends_on_id = tasks.id
+      AND attention_dep.type = 'blocks'
+      AND attention_blocked.status IN (${OPEN_BLOCKED_STATUS_SQL})
+  ) THEN 'blocking'
+  ELSE ${tasks.status}
+END`;
+
+const groupExprFor = (groupBy: 'attention' | 'status' | 'workflowCategory'): SQL | AnyPgColumn =>
+  groupBy === 'attention'
+    ? attentionGroupExpr
+    : groupBy === 'status'
+      ? tasks.status
+      : tasks.workflowCategory;
+
+const stableBoardKeys = (
+  groupBy: 'attention' | 'status' | 'workflowCategory',
+): readonly string[] =>
+  groupBy === 'attention'
+    ? ['urgent', 'blocking', ...WORK_QUERY_STATUS_COLUMNS]
+    : groupBy === 'status'
+      ? WORK_QUERY_STATUS_COLUMNS
+      : WORK_QUERY_WORKFLOW_COLUMNS;
 
 /** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
  * the same total order TASK_BOARD_ORDER applies on the task-store board. */
@@ -879,7 +924,7 @@ export class WorkQueryModel {
   private queryTaskBoard = async (params: {
     afterId?: string;
     conditions: SQL[];
-    groupBy: 'status' | 'workflowCategory';
+    groupBy: 'attention' | 'status' | 'workflowCategory';
     groupKey?: string;
     layout: WorkQueryLayout;
     limit: number;
@@ -896,14 +941,25 @@ export class WorkQueryModel {
     }
 
     // Raw dimension keys everywhere — no folding into Cordy columns, so an
-    // in-review issue never lands in a needs-input run-state bucket.
-    const column = boardColumnFor(params.groupBy);
-    const matchesKey = (key: string): SQL => eq(column, key as never);
+    // in-review issue never lands in a needs-input run-state bucket. The
+    // grouping dimension is an expression, not always a stored column —
+    // 'attention' derives urgent/blocking from priority + live blocks edges.
+    const dimension = groupExprFor(params.groupBy);
+    const matchesKey = (key: string): SQL => sql`${dimension} = ${key}`;
+    // Group over a derived `key` column: the dimension may carry params
+    // (attention's NOT-IN list), and Postgres won't match a SELECT CASE whose
+    // placeholders differ from the GROUP BY one's.
+    const keyed = this.db.$with('keyed_tasks').as(
+      this.db
+        .select({ id: tasks.id, key: sql<string>`${dimension}`.as('key') })
+        .from(tasks)
+        .where(and(...params.conditions)),
+    );
     const countRows = await this.db
-      .select({ count: sql<number>`count(*)`, key: column })
-      .from(tasks)
-      .where(and(...params.conditions))
-      .groupBy(column);
+      .with(keyed)
+      .select({ count: sql<number>`count(*)`, key: keyed.key })
+      .from(keyed)
+      .groupBy(keyed.key);
 
     const countByKey = new Map<string, number>();
     for (const row of countRows) {

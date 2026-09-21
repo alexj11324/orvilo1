@@ -535,10 +535,10 @@ export const INITIAL_STATUS = {
     showSubTasks: false,
     subGroupBy: 'none',
   },
-  // The board, not the list, is what a user without a stored preference lands on.
-  // An existing `'list'` value is left alone on purpose: it is indistinguishable
-  // from a deliberate choice, and the plan is explicit that we do not guess.
-  taskListViewMode: 'kanban' as const,
+  // Linear parity: an issues collection opens on the grouped list; the board
+  // stays a click away. A stored `'kanban'` value is a deliberate choice and is
+  // left alone.
+  taskListViewMode: 'list' as const,
   taskKanbanHiddenColumns: ['canceled'],
   taskKanbanHiddenPanelCollapsed: false,
   disabledModelProvidersSortType: 'default',

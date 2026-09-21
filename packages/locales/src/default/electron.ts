@@ -32,6 +32,7 @@ export default {
   'navigation.pin': 'Pin',
   'navigation.pinned': 'Pinned',
   'navigation.profile': 'Agent Profile',
+  'navigation.projectActivity': 'Project activity',
   'navigation.projectResources': 'Resources',
   'navigation.projects': 'Projects',
   'navigation.provider': 'Provider',

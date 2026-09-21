@@ -188,7 +188,7 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
     });
 
-    it('should default status without a task view mode to the board', () => {
+    it('should default status without a task view mode to the list', () => {
       const s: GlobalState = {
         ...initialState,
         status: {
@@ -197,7 +197,7 @@ describe('systemStatusSelectors', () => {
         },
       };
 
-      expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
+      expect(systemStatusSelectors.taskListViewMode(s)).toBe('list');
     });
 
     it('keeps an explicitly stored list preference', () => {
@@ -211,11 +211,11 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('list');
     });
 
-    it('seeds the board — and only canceled folded away — for a brand-new user', () => {
+    it('seeds the grouped list — and only canceled folded away — for a brand-new user', () => {
       // The store seed, not the selector fallback, is what a new user actually
       // gets. Defaults for this live in both layers, so changing one without the
       // other would leave the default silently split between them.
-      expect(INITIAL_STATUS.taskListViewMode).toBe('kanban');
+      expect(INITIAL_STATUS.taskListViewMode).toBe('list');
       expect(INITIAL_STATUS.taskKanbanHiddenColumns).toEqual(['canceled']);
     });
   });

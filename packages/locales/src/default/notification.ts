@@ -83,6 +83,7 @@ export default {
   'inbox.emptyRead': 'No read notifications',
   'inbox.emptyUnread': 'No unread notifications',
   'inbox.filterArchived': 'Archived',
+  'inbox.filterBy': 'Filter: {{filter}}',
   'inbox.filterMentions': 'Mentions',
   'inbox.filterSnoozed': 'Snoozed',
   'inbox.filterUnread': 'Show unread only',

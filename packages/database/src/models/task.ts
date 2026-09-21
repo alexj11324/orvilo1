@@ -3764,6 +3764,32 @@ export class TaskModel {
     return newest.reverse();
   }
 
+  /**
+   * Newest-first project-scoped feed: every activity row whose parent task
+   * belongs to the project, under the same visibility contract as the
+   * per-task feed — the activity row mirrors the task's visibility, so the
+   * `activitiesOwnership` predicate alone keeps private tasks out.
+   */
+  async getProjectActivities(
+    projectId: string,
+    limit = 50,
+  ): Promise<
+    { activity: TaskActivityItem; taskId: string; taskIdentifier: string; taskTitle: string }[]
+  > {
+    return this.db
+      .select({
+        activity: taskActivities,
+        taskId: tasks.id,
+        taskIdentifier: tasks.identifier,
+        taskTitle: sql<string>`coalesce(${tasks.name}, ${tasks.instruction})`.as('task_title'),
+      })
+      .from(taskActivities)
+      .innerJoin(tasks, eq(taskActivities.taskId, tasks.id))
+      .where(and(eq(tasks.projectId, projectId), this.activitiesOwnership()))
+      .orderBy(desc(taskActivities.createdAt), desc(taskActivities.id))
+      .limit(limit);
+  }
+
   // ========== Transfer / Copy ==========
 
   /**

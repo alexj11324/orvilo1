@@ -440,7 +440,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             {listSections.map((group) => (
               <WorkQueryStatusGroup
                 columnKey={group.key}
-                groupBy={listGroupBy}
+                // Attention buckets aren't a writable status dimension — a
+                // status change inside them still writes `status`.
+                groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
                 hasMore={pageGroupPaging ? group.hasMore : false}
                 isFollowed={isFollowed}
                 key={group.key}

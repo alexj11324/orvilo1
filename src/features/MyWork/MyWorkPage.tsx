@@ -89,7 +89,16 @@ const MyWorkPage = memo(() => {
   // come from the same work query, so the two never disagree.
   const { data, error, isLoading } = useClientDataSWR(
     workAttentionKeys.myWork(workspaceId, mode, layout, noProject, delegated),
-    () => workAttentionService.myWork({ delegated, layout, mode, noProject }),
+    // Linear My issues groups the list by attention — urgent first, then
+    // issues blocking others, then status. The board keeps status columns.
+    () =>
+      workAttentionService.myWork({
+        delegated,
+        groupBy: layout === 'list' ? 'attention' : undefined,
+        layout,
+        mode,
+        noProject,
+      }),
   );
   const firstTasks = data?.data.tasks ?? [];
   const firstGroups = data?.data.groups ?? [];
@@ -118,6 +127,7 @@ const MyWorkPage = memo(() => {
       const next = await workAttentionService.myWork({
         afterId: last.id,
         delegated,
+        groupBy: layout === 'list' ? 'attention' : undefined,
         groupKey,
         layout,
         mode,

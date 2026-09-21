@@ -248,7 +248,7 @@ export interface WorkQuerySort {
 
 export type WorkQueryLayout = 'board' | 'list';
 
-export type WorkQueryGroupBy = 'none' | 'status' | 'workflowCategory';
+export type WorkQueryGroupBy = 'attention' | 'none' | 'status' | 'workflowCategory';
 
 /**
  * Board ordering mode. `manual` orders a board column by the persisted

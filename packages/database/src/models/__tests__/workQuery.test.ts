@@ -24,7 +24,7 @@ import {
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { notifications } from '../../schemas/notification';
-import { tasks as tasksTable } from '../../schemas/task';
+import { taskDependencies, tasks as tasksTable } from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskSubscriptionModel } from '../taskSubscription';
@@ -625,6 +625,96 @@ describe('WorkQueryModel', () => {
     expect(runningPage?.total).toBe(3);
     expect(runningPage?.tasks).toHaveLength(1);
     expect(runningPage?.tasks[0]!.id).not.toBe(byKey.get('running')!.tasks[0]!.id);
+  });
+
+  it('groups an assigned list by attention — urgent, then blocking, then status', async () => {
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    // An urgent blocker lands in 'urgent' only — Linear's first bucket wins.
+    const urgentBlocker = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Urgent blocker',
+      priority: 1,
+      status: 'running',
+    });
+    const blocker = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Plain blocker',
+      status: 'running',
+    });
+    const blocked = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Blocked backlog',
+      status: 'backlog',
+    });
+    const doneBlocked = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Freed task',
+      status: 'completed',
+    });
+    const normal = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Ordinary paused',
+      status: 'paused',
+    });
+    // The urgent blocker also blocks an open task — it must stay in 'urgent'.
+    // `blocker` blocks `blocked`; `urgentBlocker`'s finished dependent is done
+    // but its second edge targets an open row... kept simple: urgentBlocker
+    // blocks `blocked` too; `blocker` also blocks the completed row, which
+    // must NOT count.
+    await serverDB.insert(taskDependencies).values([
+      {
+        dependsOnId: urgentBlocker.id,
+        taskId: blocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: blocker.id,
+        taskId: blocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: urgentBlocker.id,
+        taskId: doneBlocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: normal.id,
+        taskId: doneBlocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+
+    const query = applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list', 'attention');
+    const result = await model.queryTasks({ limit: 10, query });
+
+    expect(result.groupBy).toBe('attention');
+    const populated = result.groups!.filter((group) => group.total > 0);
+    expect(populated.map((group) => group.key)).toEqual([
+      'urgent',
+      'blocking',
+      'backlog',
+      'paused',
+      'completed',
+    ]);
+    const byKey = new Map(result.groups!.map((group) => [group.key, group]));
+    expect(byKey.get('urgent')?.tasks.map((task) => task.id)).toEqual([urgentBlocker.id]);
+    expect(byKey.get('blocking')?.tasks.map((task) => task.id)).toEqual([blocker.id]);
+    expect(byKey.get('backlog')?.tasks.map((task) => task.id)).toEqual([blocked.id]);
+    // `normal` blocks only a completed task — not a Linear "blocking issue".
+    expect(byKey.get('paused')?.tasks.map((task) => task.id)).toEqual([normal.id]);
+    expect(byKey.get('completed')?.tasks.map((task) => task.id)).toEqual([doneBlocked.id]);
   });
 
   it('lists a readable PR review without creating a Task', async () => {

@@ -30,7 +30,7 @@ class WorkAttentionService {
   myWork = (input: {
     afterId?: string;
     delegated?: boolean;
-    groupBy?: 'none' | 'status' | 'workflowCategory';
+    groupBy?: 'attention' | 'none' | 'status' | 'workflowCategory';
     groupKey?: string;
     layout?: 'board' | 'list';
     limit?: number;

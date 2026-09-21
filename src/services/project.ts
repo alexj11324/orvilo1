@@ -5,6 +5,9 @@ import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 const PROJECT_PAGE_SIZE = 100;
 
 class ProjectService {
+  activityFeed = async (id: string, limit = 50) =>
+    lambdaClient.project.activityFeed.query({ id, limit });
+
   acceptCompletion = async (id: string, comment?: string) =>
     lambdaClient.project.acceptCompletion.mutate({ comment, id });
 

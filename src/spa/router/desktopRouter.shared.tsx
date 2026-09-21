@@ -49,6 +49,7 @@ import {
 import { membersRouteMeta } from '@/features/Members/routeMeta';
 import { myWorkRouteMeta } from '@/features/MyWork/routeMeta';
 import {
+  projectActivityRouteMeta,
   projectLibraryRouteMeta,
   projectResourcesRouteMeta,
   projectsRouteMeta,
@@ -636,6 +637,14 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ),
         handle: { meta: projectsRouteMeta },
         path: 'overview',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/activity'),
+          'Desktop > Project Activity',
+        ),
+        handle: { meta: projectActivityRouteMeta },
+        path: 'activity',
       },
       {
         element: dynamicElement(

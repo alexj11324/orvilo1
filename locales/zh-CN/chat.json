@@ -1843,6 +1843,8 @@
   "taskList.assigneeSearch.placeholder": "搜索负责人或助理...",
   "taskList.assigneeSelector.agentGroup": "助理",
   "taskList.assigneeSelector.workspaceMemberGroup": "工作区成员",
+  "taskList.attention.blocking": "阻塞他人的问题",
+  "taskList.attention.urgent": "紧急问题",
   "taskList.breadcrumb.task": "任务",
   "taskList.contextMenu.copyConfirm": "复制",
   "taskList.contextMenu.copyDescription": "将此任务（及其所有子任务）克隆到另一个工作区。状态将重置为待办。",

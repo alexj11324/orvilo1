@@ -672,6 +672,18 @@ export const sharedMainAreaChildren: RouteObject[] = [
         handle: { meta: projectLibraryRouteMeta },
         path: 'library/:id',
       },
+      // The overview composer starts a project conversation at
+      // /project/:id/conversation?message=… — this registration is what makes
+      // that URL resolve; without it the send lands on the index redirect and
+      // drops the message.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/conversation'),
+          'Desktop > Project Conversation',
+        ),
+        handle: { meta: projectsRouteMeta },
+        path: 'conversation/:topicId?',
+      },
     ],
     element: dynamicLayout(
       () => import('@/routes/(main)/project/_layout'),

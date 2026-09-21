@@ -334,13 +334,11 @@
       "followUp": "Decide if knowledge-base is inside the ACP product boundary; if not, close via ORV-108."
     },
     {
-      "id": "misc-adjacent-packages",
-      "disposition": "INVESTIGATE",
-      "reason": "achaos chaos-engineering fixtures are not a workspace package and have zero inbound imports; consumers named in its README are aspirational (Goal/Agent Evals/self-improvement). Needs an explicit keep-or-delete call, not 'might be useful'.",
+      "id": "achaos-chaos-toolkit",
+      "disposition": "DELETE",
+      "reason": "Orphan chaos-engineering toolkit: 7 private workspace packages under packages/achaos/**, zero external inbound imports, README consumers aspirational. Deleted by ORV-115; guard keeps it dead.",
       "globs": ["packages/achaos/**"],
-      "issue": "ORV-99",
-      "owner": "alexj11324",
-      "followUp": "Decide: keep chaos fixtures as dev tooling (document a live consumer) or delete with ORV-108 closure."
+      "issue": "ORV-115"
     }
   ],
   "fixedBoundary": [

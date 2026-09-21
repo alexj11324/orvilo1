@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "ef2e59f2f1001cf0e29f3178eec96e5d36c2234f",
+  "baseSha": "2c3e0a3f83c054b81bad4b05778c3f5bcfbf7eef",
   "capabilities": [
     {
       "id": "workspace",
@@ -3308,8 +3308,8 @@
         "packages/tool-runtime/vitest.config.mts"
       ],
       "inbound": {
-        "total": 580,
-        "explained": 135,
+        "total": 577,
+        "explained": 132,
         "unexplained": [
           {
             "importer": "apps/server/src/services/resourceEvents/index.ts",
@@ -36794,48 +36794,13 @@
       }
     },
     {
-      "id": "misc-adjacent-packages",
-      "disposition": "INVESTIGATE",
-      "reason": "achaos chaos-engineering fixtures are not a workspace package and have zero inbound imports; consumers named in its README are aspirational (Goal/Agent Evals/self-improvement). Needs an explicit keep-or-delete call, not 'might be useful'.",
-      "issue": "ORV-99",
-      "owner": "alexj11324",
-      "followUp": "Decide: keep chaos fixtures as dev tooling (document a live consumer) or delete with ORV-108 closure.",
+      "id": "achaos-chaos-toolkit",
+      "disposition": "DELETE",
+      "reason": "Orphan chaos-engineering toolkit: 7 private workspace packages under packages/achaos/**, zero external inbound imports, README consumers aspirational. Deleted by ORV-115; guard keeps it dead.",
+      "issue": "ORV-115",
       "globs": ["packages/achaos/**"],
-      "fileCount": 32,
-      "files": [
-        "packages/achaos/core/src/index.ts",
-        "packages/achaos/core/src/random.ts",
-        "packages/achaos/core/src/schema.test.ts",
-        "packages/achaos/core/src/schema.ts",
-        "packages/achaos/core/src/types.ts",
-        "packages/achaos/database/src/index.test.ts",
-        "packages/achaos/database/src/index.ts",
-        "packages/achaos/process/src/index.test.ts",
-        "packages/achaos/process/src/index.ts",
-        "packages/achaos/runner/src/index.ts",
-        "packages/achaos/runner/src/load.test.ts",
-        "packages/achaos/runner/src/load.ts",
-        "packages/achaos/runner/src/registry.ts",
-        "packages/achaos/runner/src/reporter.test.ts",
-        "packages/achaos/runner/src/reporter.ts",
-        "packages/achaos/runner/src/run.test.ts",
-        "packages/achaos/runner/src/run.ts",
-        "packages/achaos/runtime/src/adapter.ts",
-        "packages/achaos/runtime/src/assets.d.ts",
-        "packages/achaos/runtime/src/completion.ts",
-        "packages/achaos/runtime/src/controller.ts",
-        "packages/achaos/runtime/src/effects.ts",
-        "packages/achaos/runtime/src/index.ts",
-        "packages/achaos/runtime/src/runtime.test.ts",
-        "packages/achaos/runtime/src/toolAttempt.ts",
-        "packages/achaos/runtime/src/toolHook.ts",
-        "packages/achaos/testing/src/index.ts",
-        "packages/achaos/testing/src/scenarios.test.ts",
-        "packages/achaos/testing/src/state.ts",
-        "packages/achaos/tracing/src/index.test.ts",
-        "packages/achaos/tracing/src/index.ts",
-        "packages/achaos/vitest.config.mts"
-      ],
+      "fileCount": 0,
+      "files": [],
       "inbound": {
         "total": 0,
         "explained": 0,
@@ -36844,8 +36809,8 @@
     }
   ],
   "counts": {
-    "sourceFiles": 11951,
-    "workspacePackages": 108,
+    "sourceFiles": 11919,
+    "workspacePackages": 101,
     "nextRoutes": 36,
     "spaRouteEntries": 178,
     "lambdaRouters": 81,
@@ -36855,7 +36820,7 @@
     "localeFiles": 880,
     "defaultNamespaceFiles": 48,
     "docFiles": 449,
-    "testFiles": 3153,
+    "testFiles": 3144,
     "storeFiles": 824,
     "unresolvedImports": 400
   },
@@ -39046,7 +39011,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-09-21T21:12:48.088Z",
+  "generatedAt": "2026-09-21T22:01:58.832Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",
@@ -44306,9 +44271,6 @@
       "apps/server/src/services/aiAgent/pipeline/approvalResume.ts",
       "apps/server/src/services/queue/types.ts",
       "apps/server/src/services/toolExecution/__tests__/index.test.ts",
-      "packages/achaos/runtime/src/runtime.test.ts",
-      "packages/achaos/runtime/src/toolAttempt.ts",
-      "packages/achaos/runtime/src/toolHook.ts",
       "packages/openapi/src/services/responses.service.ts",
       "src/features/Conversation/Messages/AssistantGroup/Tool/Detail/Intervention/SecurityBlacklistWarning.tsx",
       "src/store/chat/agents/transports/ClientSubAgentTransport.ts",
@@ -44317,31 +44279,6 @@
       "src/store/chat/utils/activeTopicDocumentContext.ts",
       "src/store/tool/slices/builtin/executors/orvilo-web-onboarding.test.ts",
       "src/utils/workCumulativeUsage.ts"
-    ],
-    "@achaos/tracing": [],
-    "@achaos/testing": [],
-    "@achaos/runtime": [],
-    "@achaos/runner": ["packages/achaos/testing/src/scenarios.test.ts"],
-    "@achaos/process": [],
-    "@achaos/database": [],
-    "@achaos/core": [
-      "packages/achaos/database/src/index.test.ts",
-      "packages/achaos/database/src/index.ts",
-      "packages/achaos/process/src/index.test.ts",
-      "packages/achaos/process/src/index.ts",
-      "packages/achaos/runner/src/load.ts",
-      "packages/achaos/runner/src/registry.ts",
-      "packages/achaos/runner/src/reporter.test.ts",
-      "packages/achaos/runner/src/reporter.ts",
-      "packages/achaos/runner/src/run.test.ts",
-      "packages/achaos/runner/src/run.ts",
-      "packages/achaos/runtime/src/adapter.ts",
-      "packages/achaos/runtime/src/controller.ts",
-      "packages/achaos/runtime/src/runtime.test.ts",
-      "packages/achaos/testing/src/scenarios.test.ts",
-      "packages/achaos/testing/src/state.ts",
-      "packages/achaos/tracing/src/index.test.ts",
-      "packages/achaos/tracing/src/index.ts"
     ],
     "@orvilo/workbench": [],
     "@orvilo/share": [],

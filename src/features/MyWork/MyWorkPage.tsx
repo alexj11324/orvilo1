@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   Button,
   Segmented,
@@ -26,9 +25,9 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
@@ -38,6 +37,16 @@ import { isTaskFollowed } from './myWorkSubscribe';
 import { isMyWorkBoardMode } from './workQueryBoard';
 import { mergeWorkQueryGroups } from './workQueryPaging';
 import WorkQueryResults from './WorkQueryResults';
+
+// Board mode bounds the collection body to the scrollport so the kanban's own
+// column scrollers engage; list mode lets the body grow and the scroll host
+// stays the single scroll owner.
+const boardBodyStyle = {
+  boxSizing: 'border-box',
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+} as const;
 
 /**
  * My issues tabs (v5 contract): Assigned / Created / Subscribed / Activity.
@@ -196,7 +205,7 @@ const MyWorkPage = memo(() => {
   }
 
   return (
-    <Flexbox flex={1} height="100%">
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
@@ -204,65 +213,61 @@ const MyWorkPage = memo(() => {
           </Text>
         }
       />
-      {/* Board mode breaks out of the centered container — a kanban needs
-          full-width horizontal scroll, not a letterboxed column. fullWidth keeps
-          the 16px gutters so the toolbar stays aligned while columns span the
-          canvas (same WorkSurface frame as Team issues and saved views). */}
-      <WideScreenContainer
-        fullWidth={boardActive}
-        gap={12}
-        paddingBlock={16}
-        paddingInline={boardActive ? 16 : undefined}
-        wrapperStyle={boardActive ? undefined : { flex: 1, overflowY: 'auto' }}
+      <WorkSurfaceCollection
+        style={boardActive ? boardBodyStyle : undefined}
+        toolbar={
+          <WorkSurfaceToolbar
+            asideLabel={t('members.filter')}
+            aside={
+              <>
+                <Button
+                  icon={FolderXIcon}
+                  size={'small'}
+                  type={noProject ? 'primary' : 'default'}
+                  onClick={() => writeParams({ noProject: !noProject })}
+                >
+                  {t('myWork.noProject')}
+                </Button>
+                <Button
+                  icon={BotIcon}
+                  size={'small'}
+                  type={delegated ? 'primary' : 'default'}
+                  onClick={() => writeParams({ delegated: !delegated })}
+                >
+                  {t('myWork.delegated')}
+                </Button>
+                {canBoard ? (
+                  <Segmented
+                    size={'small'}
+                    value={layout}
+                    options={[
+                      { label: t('myWork.layoutList'), value: 'list' },
+                      { label: t('myWork.layoutBoard'), value: 'board' },
+                    ]}
+                    onChange={(value) => writeParams({ layout: value as WorkQueryLayout })}
+                  />
+                ) : null}
+                {canSaveAs ? (
+                  <Button icon={BookmarkPlusIcon} size={'small'} onClick={() => void saveCopy()}>
+                    {t('myWork.saveAs')}
+                  </Button>
+                ) : null}
+              </>
+            }
+          >
+            <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>
+              <TabsList>
+                <TabsIndicator />
+                {tabs.map((item) => (
+                  <TabsTab key={item.key} value={item.key}>
+                    {item.label}
+                  </TabsTab>
+                ))}
+              </TabsList>
+            </TabsRoot>
+          </WorkSurfaceToolbar>
+        }
       >
-        <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>
-          <TabsList>
-            <TabsIndicator />
-            {tabs.map((item) => (
-              <TabsTab key={item.key} value={item.key}>
-                {item.label}
-              </TabsTab>
-            ))}
-          </TabsList>
-        </TabsRoot>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Button
-              icon={FolderXIcon}
-              size={'small'}
-              type={noProject ? 'primary' : 'default'}
-              onClick={() => writeParams({ noProject: !noProject })}
-            >
-              {t('myWork.noProject')}
-            </Button>
-            <Button
-              icon={BotIcon}
-              size={'small'}
-              type={delegated ? 'primary' : 'default'}
-              onClick={() => writeParams({ delegated: !delegated })}
-            >
-              {t('myWork.delegated')}
-            </Button>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8}>
-            {canBoard ? (
-              <Segmented
-                size={'small'}
-                value={layout}
-                options={[
-                  { label: t('myWork.layoutList'), value: 'list' },
-                  { label: t('myWork.layoutBoard'), value: 'board' },
-                ]}
-                onChange={(value) => writeParams({ layout: value as WorkQueryLayout })}
-              />
-            ) : null}
-            {canSaveAs ? (
-              <Button icon={BookmarkPlusIcon} size={'small'} onClick={() => void saveCopy()}>
-                {t('myWork.saveAs')}
-              </Button>
-            ) : null}
-          </Flexbox>
-        </Flexbox>
         {/* A failed fetch must never render as a confident empty list —
             loaded data stays visible with an inline failure marker. */}
         {error && tasks.length === 0 ? (
@@ -289,8 +294,8 @@ const MyWorkPage = memo(() => {
             />
           </>
         )}
-      </WideScreenContainer>
-    </Flexbox>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

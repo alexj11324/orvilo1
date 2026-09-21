@@ -212,11 +212,20 @@ describe('desktop router shared definition', () => {
       // under a task, and the project-level collection was a second, parentless
       // way to browse them. The assertion follows the behavior change rather
       // than being relaxed — the list is still compared exactly.
-      expect(projectPaths).toEqual(['tasks', 'goals', 'resources', 'library/:id']);
+      expect(projectPaths).toEqual([
+        'overview',
+        'tasks',
+        'goals',
+        'resources',
+        'library/:id',
+        'conversation/:topicId?',
+      ]);
+      // Linear shape: the project index redirects to its Overview tab (the real
+      // app's landing), so the index element must be a Navigate to 'overview'.
       expect(projectIndexRoute?.element).toBeTruthy();
       expect(
         (projectIndexRoute?.element as ReactElement<{ to?: string }> | undefined)?.props.to,
-      ).toBeUndefined();
+      ).toBe('overview');
     },
   );
 

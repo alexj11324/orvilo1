@@ -1,7 +1,15 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
-import { ActionIcon, Button, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import {
+  ActionIcon,
+  Button,
+  confirmModal,
+  DropdownMenu,
+  Tag,
+  Text,
+  toast,
+} from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import { builtinSavedViewKey } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -11,6 +19,7 @@ import {
   FolderClosedIcon,
   ListIcon,
   ListTodoIcon,
+  MoreHorizontal,
   PlusIcon,
   SearchXIcon,
   Trash2Icon,
@@ -20,10 +29,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import LiteTable, { type LiteTableColumn } from '@/components/LiteTable';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
@@ -32,150 +42,58 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import NewViewModal from './NewViewModal';
 import { savedViewTitle } from './savedViewTitle';
+import { savedViewVisibilityKey } from './savedViewVisibility';
 
 const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    flex: none;
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationFast};
+  groupLabel: css`
+    padding-block: 12px 4px;
 
-    @media (hover: none) {
-      opacity: 1;
-    }
+    font-size: 12px;
+    font-weight: 600;
+    color: ${cssVar.colorTextTertiary};
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   `,
-  link: css`
+  nameCell: css`
     display: flex;
-    flex: 1;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
-
     min-width: 0;
-
-    color: inherit;
   `,
-  meta: css`
-    flex: none;
-    color: ${cssVar.colorTextQuaternary};
-    text-align: end;
+  name: css`
+    overflow: hidden;
+
+    font-size: 14px;
+    font-weight: 500;
+    text-overflow: ellipsis;
     white-space: nowrap;
   `,
-  row: css`
-    padding-block: 8px;
-    padding-inline: 8px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
+  nameLink: css`
+    overflow: hidden;
+    min-width: 0;
     color: inherit;
-
-    transition: background ${cssVar.motionDurationFast};
+    text-decoration: none;
 
     &:hover {
-      background: ${cssVar.colorFillTertiary};
+      text-decoration: underline;
     }
-
-    &:hover .saved-view-row-actions,
-    &:focus-within .saved-view-row-actions {
-      opacity: 1;
-    }
-  `,
-  sectionLabel: css`
-    padding-block: 8px 4px;
-    padding-inline: 8px;
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextQuaternary};
   `,
 }));
 
 const viewIcon = (view: SavedViewItem) =>
   view.entityType === 'project' ? FolderClosedIcon : ListTodoIcon;
 
-const ViewRow = memo<{
-  deletable: boolean;
-  onDelete: (view: SavedViewItem) => void;
-  view: SavedViewItem;
-}>(({ deletable, onDelete, view }) => {
-  const { t } = useTranslation('common');
-
-  return (
-    <Flexbox horizontal align={'center'} className={styles.row}>
-      <WorkspaceLink className={styles.link} to={`/views/${view.id}`}>
-        <Icon color={cssVar.colorTextSecondary} icon={viewIcon(view)} size={16} />
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
-          <Text ellipsis weight={500}>
-            {savedViewTitle(view.id, view.name, t)}
-          </Text>
-        </Flexbox>
-        <Icon
-          color={cssVar.colorTextQuaternary}
-          icon={view.layout === 'board' ? Columns3Icon : ListIcon}
-          size={14}
-          title={t(view.layout === 'board' ? 'savedViews.layoutBoard' : 'savedViews.layoutList')}
-        />
-        {!builtinSavedViewKey(view.id) && view.visibility === 'team' ? (
-          <Tag>{t('savedViews.visibilityTeam')}</Tag>
-        ) : null}
-        {!builtinSavedViewKey(view.id) && view.visibility === 'workspace' ? (
-          <Tag>{t('savedViews.visibilityWorkspace')}</Tag>
-        ) : null}
-        {view.updatedAt ? (
-          <Text
-            className={styles.meta}
-            fontSize={12}
-            title={dayjs(view.updatedAt).format('YYYY-MM-DD HH:mm')}
-          >
-            {dayjs(view.updatedAt).fromNow()}
-          </Text>
-        ) : null}
-      </WorkspaceLink>
-      {deletable ? (
-        <span className={`${styles.actions} saved-view-row-actions`}>
-          <ActionIcon
-            icon={Trash2Icon}
-            size={'small'}
-            title={t('savedViews.delete')}
-            onClick={() => onDelete(view)}
-          />
-        </span>
-      ) : null}
-    </Flexbox>
-  );
-});
-
-ViewRow.displayName = 'ViewRow';
-
 /**
- * Views are retrieval objects — the page answers "where is the thing I saved?"
- * Grouping by provenance (built-in / mine / shared) matches how a user recalls
- * a view ("I made it" vs "it's a workspace view") better than one flat list.
+ * `/views` — the saved-views directory. A read surface listing every view the
+ * workspace exposes behind one searchable table; the same columns hold for
+ * built-in, own, and shared rows. Grouping by provenance (built-in / mine /
+ * shared) matches how a user recalls a view ("I made it" vs "it's a workspace
+ * view") better than one flat list.
  */
-const ViewSection = memo<{
-  label: string;
-  onDelete: (view: SavedViewItem) => void;
-  ownerUserId?: string;
-  views: SavedViewItem[];
-}>(({ label, onDelete, ownerUserId, views }) => {
-  if (views.length === 0) return null;
-  return (
-    <Flexbox>
-      <Text className={styles.sectionLabel}>{label}</Text>
-      <Flexbox gap={2}>
-        {views.map((view) => (
-          <ViewRow
-            deletable={!builtinSavedViewKey(view.id) && view.ownerUserId === ownerUserId}
-            key={view.id}
-            view={view}
-            onDelete={onDelete}
-          />
-        ))}
-      </Flexbox>
-    </Flexbox>
-  );
-});
-
-ViewSection.displayName = 'ViewSection';
-
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
+  const navigate = useWorkspaceAwareNavigate();
   const ownerUserId = useUserStore(userProfileSelectors.userId);
   const [keyword, setKeyword] = useState('');
   const [creating, setCreating] = useState(false);
@@ -198,17 +116,29 @@ const SavedViewsPage = memo(() => {
       : views;
   }, [keyword, t, views]);
 
-  const [builtinViews, mine, shared] = useMemo(() => {
-    const builtinList: SavedViewItem[] = [];
-    const mineList: SavedViewItem[] = [];
-    const sharedList: SavedViewItem[] = [];
-    for (const view of filteredViews) {
-      if (builtinSavedViewKey(view.id)) builtinList.push(view);
-      else if (view.ownerUserId === ownerUserId) mineList.push(view);
-      else sharedList.push(view);
-    }
-    return [builtinList, mineList, sharedList];
-  }, [filteredViews, ownerUserId]);
+  const groups = useMemo(
+    () =>
+      (
+        [
+          ['builtin', t('savedViews.sectionBuiltin')],
+          ['mine', t('savedViews.sectionMine')],
+          ['shared', t('savedViews.sectionShared')],
+        ] as const
+      )
+        .map(([kind, label]) => ({
+          kind,
+          label,
+          views: filteredViews.filter((view) =>
+            kind === 'builtin'
+              ? builtinSavedViewKey(view.id)
+              : kind === 'mine'
+                ? view.ownerUserId === ownerUserId
+                : !builtinSavedViewKey(view.id) && view.ownerUserId !== ownerUserId,
+          ),
+        }))
+        .filter((group) => group.views.length > 0),
+    [filteredViews, ownerUserId, t],
+  );
 
   const deleteView = useCallback(
     (view: SavedViewItem) => {
@@ -231,32 +161,142 @@ const SavedViewsPage = memo(() => {
     [t, workspaceId],
   );
 
+  const columns = useMemo<LiteTableColumn<SavedViewItem>[]>(
+    () => [
+      {
+        key: 'name',
+        listSlot: 'title',
+        render: (view) => (
+          <div className={styles.nameCell}>
+            <Icon color={cssVar.colorTextSecondary} icon={viewIcon(view)} size={16} />
+            {/* A real anchor keeps open-in-new-tab and middle-click working;
+                stopPropagation keeps the row's own onRowClick from
+                double-navigating. */}
+            <WorkspaceLink
+              className={styles.nameLink}
+              to={`/views/${view.id}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <span className={styles.name}>{savedViewTitle(view.id, view.name, t)}</span>
+            </WorkspaceLink>
+          </div>
+        ),
+        title: t('savedViews.column.name'),
+      },
+      {
+        key: 'layout',
+        render: (view) => (
+          <Flexbox horizontal align={'center'} gap={6}>
+            <Icon
+              color={cssVar.colorTextQuaternary}
+              icon={view.layout === 'board' ? Columns3Icon : ListIcon}
+              size={14}
+            />
+            <Text fontSize={13} type={'secondary'}>
+              {t(view.layout === 'board' ? 'savedViews.layoutBoard' : 'savedViews.layoutList')}
+            </Text>
+          </Flexbox>
+        ),
+        title: t('savedViews.column.layout'),
+        width: 110,
+      },
+      {
+        key: 'sharing',
+        render: (view) =>
+          builtinSavedViewKey(view.id) ? (
+            <Text type={'secondary'}>—</Text>
+          ) : (
+            <Tag>{t(savedViewVisibilityKey(view.visibility))}</Tag>
+          ),
+        title: t('savedViews.visibility'),
+        width: 130,
+      },
+      {
+        key: 'updated',
+        render: (view) =>
+          view.updatedAt ? (
+            <Text
+              fontSize={13}
+              title={dayjs(view.updatedAt).format('YYYY-MM-DD HH:mm')}
+              type={'secondary'}
+            >
+              {dayjs(view.updatedAt).fromNow()}
+            </Text>
+          ) : (
+            <Text type={'secondary'}>—</Text>
+          ),
+        title: t('savedViews.column.updated'),
+        width: 120,
+      },
+      {
+        key: 'menu',
+        listSlot: 'actions',
+        render: (view) =>
+          !builtinSavedViewKey(view.id) && view.ownerUserId === ownerUserId ? (
+            // Keep the menu out of the row's click-to-open path.
+            <span onClick={(event) => event.stopPropagation()}>
+              <DropdownMenu
+                items={[
+                  {
+                    danger: true,
+                    icon: <Icon icon={Trash2Icon} size={14} />,
+                    key: 'delete',
+                    label: t('savedViews.delete'),
+                    onClick: () => deleteView(view),
+                  },
+                ]}
+              >
+                <ActionIcon
+                  aria-label={t('savedViews.delete')}
+                  icon={MoreHorizontal}
+                  size={'small'}
+                />
+              </DropdownMenu>
+            </span>
+          ) : null,
+        title: '',
+        width: 48,
+      },
+    ],
+    [deleteView, ownerUserId, t],
+  );
+
   return (
-    <Flexbox flex={1} height="100%">
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {t('tab.views')}
           </Text>
         }
-      />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <SearchBar
-            allowClear
-            placeholder={t('savedViews.searchPlaceholder')}
-            style={{ maxWidth: 280 }}
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
-          <Button icon={PlusIcon} type="primary" onClick={() => setCreating(true)}>
+        right={
+          <Button
+            icon={<Icon icon={PlusIcon} size={16} />}
+            size={'small'}
+            type="primary"
+            onClick={() => setCreating(true)}
+          >
             {t('savedViews.newView')}
           </Button>
-        </Flexbox>
+        }
+      />
+      <WorkSurfaceCollection
+        toolbar={
+          <WorkSurfaceToolbar>
+            <SearchBar
+              allowClear
+              placeholder={t('savedViews.searchPlaceholder')}
+              style={{ maxWidth: 280 }}
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+            />
+          </WorkSurfaceToolbar>
+        }
+      >
         {error ? (
           <AsyncError error={error} onRetry={() => revalidate()} />
         ) : isLoading && views.length === 0 ? (
-          <SkeletonList rows={8} />
+          <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : filteredViews.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty
@@ -265,29 +305,23 @@ const SavedViewsPage = memo(() => {
             />
           </Center>
         ) : (
-          <Flexbox gap={16}>
-            <ViewSection
-              label={t('savedViews.sectionBuiltin')}
-              views={builtinViews}
-              onDelete={deleteView}
-            />
-            <ViewSection
-              label={t('savedViews.sectionMine')}
-              ownerUserId={ownerUserId}
-              views={mine}
-              onDelete={deleteView}
-            />
-            <ViewSection
-              label={t('savedViews.sectionShared')}
-              ownerUserId={ownerUserId}
-              views={shared}
-              onDelete={deleteView}
-            />
-          </Flexbox>
+          groups.map((group) => (
+            <section key={group.kind}>
+              <div className={styles.groupLabel}>
+                {group.label} · {group.views.length}
+              </div>
+              <LiteTable
+                columns={columns}
+                dataSource={group.views}
+                rowKey={(view) => view.id}
+                onRowClick={(view) => navigate(`/views/${view.id}`)}
+              />
+            </section>
+          ))
         )}
-      </WideScreenContainer>
+      </WorkSurfaceCollection>
       <NewViewModal open={creating} onClose={() => setCreating(false)} />
-    </Flexbox>
+    </WorkSurface>
   );
 });
 

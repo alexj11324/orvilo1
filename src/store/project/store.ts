@@ -134,7 +134,7 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
           projectLists: Object.fromEntries(
             Object.entries(state.projectLists).map(([scope, projects]) => [
               scope,
-              projects.map((item) => (item.id === id ? project : item)),
+              projects.map((item) => (item.id === id ? { ...item, ...project } : item)),
             ]),
           ),
         }),

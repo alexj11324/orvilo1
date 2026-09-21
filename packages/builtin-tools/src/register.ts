@@ -88,13 +88,6 @@ import {
   MemoryStreamings,
 } from '@orvilo/builtin-tool-memory/client';
 import {
-  MessageInspectors,
-  MessageInterventions,
-  MessageManifest,
-  MessageRenders,
-  MessageStreamings,
-} from '@orvilo/builtin-tool-message/client';
-import {
   OrviloAgentInspectors,
   OrviloAgentInterventions,
   OrviloAgentManifest,
@@ -278,7 +271,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     [OrviloAgentManifest.identifier]: OrviloAgentRenders as Record<string, BuiltinRender>,
     [LocalSystemManifest.identifier]: LocalSystemRenders as Record<string, BuiltinRender>,
     [MemoryManifest.identifier]: MemoryRenders as Record<string, BuiltinRender>,
-    [MessageManifest.identifier]: MessageRenders as Record<string, BuiltinRender>,
     [NotebookIdentifier]: NotebookRenders,
     [PageAgentManifest.identifier]: PageAgentRenders as Record<string, BuiltinRender>,
     [RemoteDeviceManifest.identifier]: RemoteDeviceRenders as Record<string, BuiltinRender>,
@@ -345,7 +337,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     [OrviloAgentManifest.identifier]: OrviloAgentInspectors as Record<string, BuiltinInspector>,
     [LocalSystemManifest.identifier]: LocalSystemInspectors as Record<string, BuiltinInspector>,
     [MemoryManifest.identifier]: MemoryInspectors as Record<string, BuiltinInspector>,
-    [MessageManifest.identifier]: MessageInspectors as Record<string, BuiltinInspector>,
     [PageAgentManifest.identifier]: PageAgentInspectors as Record<string, BuiltinInspector>,
     [RemoteDeviceManifest.identifier]: RemoteDeviceInspectors as Record<string, BuiltinInspector>,
     [OrviloActivatorManifest.identifier]: OrviloActivatorInspectors as Record<
@@ -397,7 +388,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     [OrviloAgentManifest.identifier]: OrviloAgentStreamings as Record<string, BuiltinStreaming>,
     [LocalSystemManifest.identifier]: LocalSystemStreamings as Record<string, BuiltinStreaming>,
     [MemoryManifest.identifier]: MemoryStreamings as Record<string, BuiltinStreaming>,
-    [MessageManifest.identifier]: MessageStreamings as Record<string, BuiltinStreaming>,
     [OPENCODE_IDENTIFIER]: heterogeneousCliStreamings,
     [PageAgentManifest.identifier]: PageAgentStreamings as Record<string, BuiltinStreaming>,
     [PI_IDENTIFIER]: heterogeneousCliStreamings,
@@ -436,7 +426,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [LocalSystemIdentifier]: LocalSystemInterventions as Record<string, BuiltinIntervention>,
     [MemoryManifest.identifier]: MemoryInterventions as Record<string, BuiltinIntervention>,
-    [MessageManifest.identifier]: MessageInterventions as Record<string, BuiltinIntervention>,
     [TaskManifest.identifier]: TaskInterventions as Record<string, BuiltinIntervention>,
     [UserInteractionIdentifier]: UserInteractionInterventions as Record<
       string,

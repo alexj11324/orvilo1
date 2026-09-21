@@ -90,10 +90,7 @@ export interface ServerCreateAgentToolsEngineParams {
   };
   /**
    * Whether device tools (local-system / remote-device) are allowed this turn.
-   * Computed by `resolveDeviceAccessPolicy` from the caller identity:
-   * first-party UI and bot-owner senders pass; external bot senders and
-   * unconfigured bot owners do not. The engine treats this as the FINAL
-   * answer — never re-derive from `isBotConversation` or `botContext`.
+   * Callers pass the resolved policy decision; the engine treats it as FINAL.
    * Defaults to `false` (fail-closed) when the caller forgets to plumb it.
    */
   canUseDevice?: boolean;
@@ -120,8 +117,6 @@ export interface ServerCreateAgentToolsEngineParams {
   globalMemoryEnabled?: boolean;
   /** Whether agent has enabled knowledge bases */
   hasEnabledKnowledgeBases?: boolean;
-  /** Whether the request originates from a bot conversation (auto-enables message tool) */
-  isBotConversation?: boolean;
   /**
    * Whether this run is the group's supervisor (orchestrationRole === 'supervisor').
    * The group-orchestration tools ship only with the builtin group-supervisor

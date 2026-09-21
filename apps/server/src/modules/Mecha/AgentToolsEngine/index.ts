@@ -15,7 +15,6 @@ import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
-import { MessageManifest } from '@orvilo/builtin-tool-message';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
 import {
@@ -206,7 +205,6 @@ export const createServerAgentToolsEngine = (
     executionPlan,
     globalMemoryEnabled = false,
     hasEnabledKnowledgeBases = false,
-    isBotConversation = false,
     isGroupSupervisor = false,
     manifestContext,
     model,
@@ -326,8 +324,6 @@ export const createServerAgentToolsEngine = (
       !!deviceContext?.deviceOnline &&
       !!deviceContext?.autoActivated,
     [MemoryManifest.identifier]: globalMemoryEnabled,
-    // Only auto-enable in bot conversations; otherwise let user's plugin selection take effect
-    ...(isBotConversation && { [MessageManifest.identifier]: true }),
     // Group supervisor: enable the orchestration toolset (see
     // `groupSupervisorToolIds`). The same list also feeds the candidate set
     // below, so the bundle has a single source of truth.

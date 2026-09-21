@@ -86,7 +86,7 @@ export const notificationDeliveries = pgTable(
       .references(() => notifications.id, { onDelete: 'cascade' })
       .notNull(),
 
-    /** Delivery channel: `inbox` | `email` | `push` | `im` (messenger DM) */
+    /** Delivery channel: `inbox` | `email` | `push` */
     channel: text('channel').$type<'email' | 'im' | 'inbox' | 'push'>().notNull(),
     /** Lifecycle status: `pending` | `sent` | `delivered` | `failed` */
     status: text('status').$type<'delivered' | 'failed' | 'pending' | 'sent'>().notNull(),

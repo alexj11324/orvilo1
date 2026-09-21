@@ -12,7 +12,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<any>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 
@@ -223,7 +223,6 @@ describe('resourceTransferRequestRouter', () => {
 
   describe('getTransferManifest', () => {
     const manifest = {
-      botPlatforms: ['discord'],
       cronJobs: 1,
       deviceBindingAffected: false,
       hiddenReferencedMember: false,

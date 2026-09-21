@@ -107,8 +107,6 @@ describe('desktop router shared definition', () => {
     (_, createMainAreaChildren) => {
       for (const pathname of [
         '/agent/agent-1/profile',
-        '/agent/agent-1/channel',
-        '/agent/agent-1/channel/slack',
         '/agent/agent-1/statistics',
         '/agent/agent-1/share',
         '/group/group-1/profile',
@@ -323,9 +321,10 @@ describe('desktop router shared definition', () => {
     );
     // The threshold guards against a refactor that pulls route modules back
     // into eager imports; it is not a route count. Retiring the standalone
-    // acceptance pages removed their lazy boundaries, so the floor follows the
-    // smaller tree instead of being pinned to the pre-retirement number.
-    expect(lazyRouteImports.length).toBeGreaterThan(90);
+    // acceptance and messenger pages removed their lazy boundaries, so the
+    // floor follows the smaller tree instead of being pinned to the
+    // pre-retirement number.
+    expect(lazyRouteImports.length).toBeGreaterThan(80);
   });
 
   it('owns prioritized preload registration only in the shared route definition', async () => {
@@ -356,7 +355,6 @@ describe('desktop router shared definition', () => {
       { element: null, index: true },
       { element: null, path: '*' },
     ]);
-    expect(webPaths).toContain('/verify-im');
     // `/share/*` moved to the standalone Share app (apps/share).
     expect(webPaths).not.toContain('/share/t');
     expect(webPaths).not.toContain('/share/page');
@@ -372,7 +370,6 @@ describe('desktop router shared definition', () => {
     expect(webPaths).not.toContain('/acceptance');
     expect(webPaths).toContain('/onboarding');
     expect(webPaths).not.toContain('/desktop-onboarding');
-    expect(electronPaths).not.toContain('/verify-im');
     expect(electronPaths).not.toContain('/share/t');
     expect(electronPaths).not.toContain('/share/page');
     expect(electronPaths).not.toContain('/verify');

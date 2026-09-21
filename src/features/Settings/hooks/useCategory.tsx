@@ -16,7 +16,6 @@ import {
   KeyIcon,
   KeyRound,
   Map,
-  MessageCircleIcon,
   MonitorSmartphoneIcon,
   PaletteIcon,
   TagIcon,
@@ -118,16 +117,8 @@ export const useCategory = () => {
         title: t('group.profile'),
       },
 
-      // 通知与渠道 — the user's own channels. Messenger bindings and notifications
-      // share a group for navigability only; each keeps its own token owner, scope
-      // and server-side permission, which S70 asks not to merge.
       {
         items: [
-          {
-            icon: MessageCircleIcon,
-            key: SettingsTabs.Messenger,
-            label: t('tab.messenger'),
-          },
           offered(SettingsTabs.Notification) && {
             icon: BellIcon,
             key: SettingsTabs.Notification,

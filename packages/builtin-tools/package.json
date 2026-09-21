@@ -40,7 +40,6 @@
     "@orvilo/builtin-tool-knowledge-base": "workspace:*",
     "@orvilo/builtin-tool-local-system": "workspace:*",
     "@orvilo/builtin-tool-memory": "workspace:*",
-    "@orvilo/builtin-tool-message": "workspace:*",
     "@orvilo/builtin-tool-notebook": "workspace:*",
     "@orvilo/builtin-tool-orvilo-agent": "workspace:*",
     "@orvilo/builtin-tool-page-agent": "workspace:*",

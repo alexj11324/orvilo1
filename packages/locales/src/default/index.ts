@@ -23,7 +23,6 @@ import knowledgeBase from './knowledgeBase';
 import labs from './labs';
 import marketAuth from './marketAuth';
 import memory from './memory';
-import messenger from './messenger';
 import metadata from './metadata';
 import migration from './migration';
 import modelRuntime from './modelRuntime';
@@ -76,7 +75,6 @@ const resources = {
   labs,
   marketAuth,
   memory,
-  messenger,
   metadata,
   migration,
   modelRuntime,

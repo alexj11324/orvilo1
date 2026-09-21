@@ -608,7 +608,7 @@ export const serverConfigKeys = {
 
 // ---- discover (marketplace) ---------------------------------------------
 // NOTE: discover/ragEval/knowledgeBase/device/userMemory/agentKnowledge/
-// agentBot/file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
+// file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
 // (see localStorageProvider.ts) so this key-convergence introduces no new
 // persistence — they stay memory-only exactly as before.
 export const discoverKeys = {
@@ -800,10 +800,6 @@ export const agentKnowledgeKeys = {
 };
 
 // ---- agent bot ----------------------------------------------------------
-export const agentBotKeys = {
-  platformDefinitions: def('agentBot:platformDefinitions', () => ['agentBot:platformDefinitions']),
-  providers: def('agentBot:providers', (agentId: string) => ['agentBot:providers', agentId]),
-};
 
 // ---- file ---------------------------------------------------------------
 export const fileKeys = {
@@ -853,31 +849,6 @@ export const statsKeys = {
   usageLogs: def('stats:usageLogs', () => ['stats:usageLogs']),
   usageStat: def('stats:usageStat', () => ['stats:usageStat']),
   welcome: def('stats:welcome', () => ['stats:welcome']),
-};
-
-// ---- messenger / platform integration -----------------------------------
-export const messengerKeys = {
-  agentsForBinding: def('messenger:agentsForBinding', (workspaceId: string | null | undefined) => [
-    'messenger:agentsForBinding',
-    workspaceId ?? null,
-  ]),
-  availablePlatforms: def('messenger:availablePlatforms', () => ['messenger:availablePlatforms']),
-  bindingScopes: def('messenger:bindingScopes', () => ['messenger:bindingScopes']),
-  listMyInstallations: def('messenger:listMyInstallations', () => [
-    'messenger:listMyInstallations',
-  ]),
-  listMyLinks: def('messenger:listMyLinks', () => ['messenger:listMyLinks']),
-  myLink: def('messenger:myLink', (platform: string, tokenScopeKey: string | undefined) => [
-    'messenger:myLink',
-    platform,
-    tokenScopeKey,
-  ]),
-  peek: def('messenger:peek', (randomId: string) => ['messenger:peek', randomId]),
-  pushWindow: def('messenger:pushWindow', (platform: string, tenantId?: string) => [
-    'messenger:pushWindow',
-    platform,
-    tenantId ?? null,
-  ]),
 };
 
 // ---- verify (deliverable judging) ---------------------------------------
@@ -1170,9 +1141,6 @@ export const builtinAgentKeys = {
     scope,
   ]),
 };
-export const imessageKeys = {
-  bridgeStatus: def('imessage:bridgeStatus', () => ['imessage:bridgeStatus']),
-};
 // Desktop/electron IPC fetches — roots keep their existing `electron:getXxx` value.
 export const electronKeys = {
   appTrayVisible: def('electron:getAppTrayVisible', () => ['electron:getAppTrayVisible']),
@@ -1199,7 +1167,6 @@ export const matchDomain =
  */
 export const swrKeys = {
   agent: { ...agentKeys, ...agentConfigKeys },
-  agentBot: agentBotKeys,
   agentBuilder: agentBuilderKeys,
   agentDocument: agentDocumentSWRKeys,
   agentHome: agentHomeKeys,
@@ -1227,12 +1194,10 @@ export const swrKeys = {
   group: groupKeys,
   home: homeKeys,
   image: imageKeys,
-  imessage: imessageKeys,
   inbox: inboxKeys,
   knowledgeBase: knowledgeBaseKeys,
   localFile: localFileKeys,
   message: messageKeys,
-  messenger: messengerKeys,
   notebook: notebookSWRKeys,
   onboarding: onboardingKeys,
   openInApp: openInAppKeys,

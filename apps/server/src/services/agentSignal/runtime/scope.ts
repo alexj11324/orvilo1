@@ -14,11 +14,9 @@ export const resolveRuntimeScopeKey = (scope: AgentSignalScope) => {
  *
  * Before:
  * - `{ topicId: 'topic-1' }`
- * - `{ platform: 'wechat', applicationId: 'app', platformThreadId: 'thread-1' }`
  *
  * After:
  * - `topic:topic-1`
- * - `bot:wechat:app:thread-1`
  */
 export const resolveProducerScopeKey = (input: AgentSignalProducerScopeInput) => {
   return AgentSignalScopeKey.fromProducerInput(input);

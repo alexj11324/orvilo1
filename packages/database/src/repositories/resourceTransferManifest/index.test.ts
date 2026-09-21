@@ -6,7 +6,6 @@ import { getTestDB } from '../../core/getTestDB';
 import { AgentModel } from '../../models/agent';
 import { ChatGroupModel } from '../../models/chatGroup';
 import {
-  agentBotProviders,
   agentCronJobs,
   agents,
   agentsFiles,
@@ -47,28 +46,12 @@ afterEach(async () => {
 });
 
 describe('buildMemberTransferManifest', () => {
-  it('reports the owner’s bots/cron, device binding, and detachable tasks for a private agent', async () => {
+  it('reports the owner’s cron, device binding, and detachable tasks for a private agent', async () => {
     const agent = await ownerModel.create({ title: 'Agent', visibility: 'private' });
     await serverDB
       .update(agents)
       .set({ agencyConfig: { boundDeviceId: 'dev-1' } })
       .where(eq(agents.id, agent.id));
-    await serverDB.insert(agentBotProviders).values([
-      {
-        agentId: agent.id,
-        applicationId: 'app-1',
-        platform: 'discord',
-        userId: ownerId,
-        workspaceId: wsId,
-      },
-      {
-        agentId: agent.id,
-        applicationId: 'app-2',
-        platform: 'slack',
-        userId: teammateId,
-        workspaceId: wsId,
-      },
-    ]);
     await serverDB.insert(agentCronJobs).values([
       {
         agentId: agent.id,
@@ -105,9 +88,6 @@ describe('buildMemberTransferManifest', () => {
     });
 
     expect(manifest).toEqual({
-      // Only the OWNER's bot rides along; the teammate's slack binding stays.
-      botBindings: 1,
-      botPlatforms: ['discord'],
       cronJobs: 1,
       // dev-1 is not enrolled anywhere the recipient can reach → sanitation
       // would strip it, so the reset warning is real.
@@ -323,7 +303,6 @@ describe('buildMemberTransferManifest', () => {
 
     expect(manifest?.hiddenReferencedMember).toBe(true);
     // Referenced members are not owned: nothing of theirs rides along.
-    expect(manifest?.botPlatforms).toEqual([]);
   });
 
   it('returns null for a resource outside the workspace', async () => {

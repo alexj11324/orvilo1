@@ -837,15 +837,6 @@ export default {
   'notification.channel.status.notLinked': 'Not linked',
   'notification.channel.types.title': 'Notification types',
   'notification.email.desc': 'Receive email notifications when important events occur',
-  'notification.im.banner.platformUnlinked': '{{platform}} is not linked yet',
-  'notification.im.desc':
-    'Deliver notifications to your linked messenger (Telegram, Discord, Slack, or WeChat) via the Orvilo bot',
-  'notification.im.linkAccount': 'Link account',
-  'notification.im.title': 'Messenger Notifications',
-  'notification.im.platform.desc':
-    'Deliver notifications to your {{platform}} DM via the Orvilo bot',
-  'notification.im.platform.enable': 'Enable {{platform}} notifications',
-  'notification.im.platform.viewSetup': 'View setup',
   'notification.email.title': 'Email Notifications',
   'notification.inbox.desc': 'Show notifications in the in-app inbox',
   'notification.inbox.title': 'Inbox Notifications',
@@ -1329,8 +1320,6 @@ export default {
   'settingsSearch.tabKeywords.labels': 'labels, tags, grouping',
   'settingsSearch.tabKeywords.labs': 'labs, experiment, beta, preview, developer',
   'settingsSearch.tabKeywords.memory': 'memory, memories, personalization',
-  'settingsSearch.tabKeywords.messenger':
-    'messenger, chat platform, bot, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.notification':
     'notification, email, push, alerts, inbox, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.oauthApps': 'oauth, oauth apps, developer apps',
@@ -1669,7 +1658,6 @@ export default {
   'tab.manualFill': 'Manually Fill In',
   'tab.manualFill.desc': 'Configure a custom MCP skill manually',
   'tab.memory': 'Memory',
-  'tab.messenger': 'Messenger',
   'tab.notification': 'Notifications',
   'tab.profile': 'My Account',
   'tab.provider': 'Provider',
@@ -3795,11 +3783,6 @@ export default {
   'tools.builtins.orvilo-knowledge-base.description':
     'Find, browse, and read your uploaded files, and search organized knowledge bases via semantic vector search',
   'tools.builtins.orvilo-knowledge-base.title': 'Knowledge Base',
-  'tools.builtins.orvilo-message.description':
-    'Send, read, edit, and manage messages across multiple messaging platforms with a unified interface',
-  'tools.builtins.orvilo-message.readme':
-    'Cross-platform messaging tool supporting Discord, Telegram, Slack, Google Chat, and IRC. Provides unified APIs for message operations, reactions, pins, threads, channel management, and platform-specific features like polls.',
-  'tools.builtins.orvilo-message.title': 'Message',
   'tools.builtins.orvilo-page-agent.description':
     'Create, read, update, and delete nodes in XML-structured documents',
   'tools.builtins.orvilo-page-agent.readme':

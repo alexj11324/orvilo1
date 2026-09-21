@@ -83,11 +83,7 @@ export class HatchetQueueServiceImpl implements QueueServiceImpl {
     );
 
     const pathname = new URL(endpoint).pathname;
-    const taskName = pathname.endsWith('/api/agent/run')
-      ? HATCHET_TASK_NAMES.agentStep
-      : pathname.endsWith('/api/agent/webhooks/bot-replay')
-        ? HATCHET_TASK_NAMES.botReplay
-        : undefined;
+    const taskName = pathname.endsWith('/api/agent/run') ? HATCHET_TASK_NAMES.agentStep : undefined;
     if (!taskName) throw new Error(`Unsupported Hatchet queue endpoint: ${pathname}`);
 
     const taskId = await enqueueHatchetTask(taskName, input, {

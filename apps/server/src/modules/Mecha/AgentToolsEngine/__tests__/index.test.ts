@@ -1252,12 +1252,7 @@ describe('createServerAgentToolsEngine', () => {
       expect(result.enabledToolIds).not.toContain(RemoteDeviceManifest.identifier);
     });
 
-    it('should enable RemoteDevice in bot conversations when caller is trusted (canUseDevice=true)', () => {
-      // The `!isBotConversation` clause was dropped in — the
-      // confused-deputy concern that motivated it is now handled at a
-      // stricter layer (`canUseDevice` from `resolveDeviceAccessPolicy`).
-      // For owner / first-party turns the proxy is legitimately useful in
-      // bot threads, so it should surface.
+    it('should enable RemoteDevice when the caller may use devices (canUseDevice=true)', () => {
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
         agentConfig: {
@@ -1266,7 +1261,6 @@ describe('createServerAgentToolsEngine', () => {
         },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true },
-        isBotConversation: true,
         model: 'gpt-4',
         provider: 'openai',
       });
@@ -1280,10 +1274,10 @@ describe('createServerAgentToolsEngine', () => {
       expect(result.enabledToolIds).toContain(RemoteDeviceManifest.identifier);
     });
 
-    it('should still disable RemoteDevice in bot conversations when a device is auto-activated', () => {
-      // When a device is bound / auto-activated for the bot topic, LocalSystem
-      // takes over the remote proxy anyway — so RemoteDevice stays disabled
-      // by the `!autoActivated` clause, regardless of isBotConversation.
+    it('should still disable RemoteDevice when a device is auto-activated', () => {
+      // When a device is bound / auto-activated, LocalSystem takes over the
+      // remote proxy anyway — so RemoteDevice stays disabled by the
+      // `!autoActivated` clause.
       const context = createMockContext();
       const engine = createServerAgentToolsEngine(context, {
         agentConfig: {
@@ -1292,7 +1286,6 @@ describe('createServerAgentToolsEngine', () => {
         },
         canUseDevice: true,
         deviceContext: { gatewayConfigured: true, deviceOnline: true, autoActivated: true },
-        isBotConversation: true,
         model: 'gpt-4',
         provider: 'openai',
       });

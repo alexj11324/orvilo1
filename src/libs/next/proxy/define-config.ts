@@ -266,10 +266,6 @@ export function defineConfig() {
     '/market/(.*)',
     // public share pages
     '/share(.*)',
-    // messenger verify-im — page itself handles unauth (in-page sign-in CTA)
-    // and the random_id token is the actual capability check; no need for
-    // session-protected access at the middleware layer.
-    '/verify-im',
   ]);
 
   const betterAuthMiddleware = async (req: NextRequest) => {

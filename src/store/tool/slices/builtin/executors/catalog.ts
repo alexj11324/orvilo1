@@ -32,7 +32,6 @@ import {
 import { localSystemExecutorWithGitEffects } from './localSystem';
 import { activatorExecutor } from './orvilo-activator';
 import { agentDocumentsExecutor } from './orvilo-agent-documents';
-import { messageExecutor } from './orvilo-message';
 import { notebookExecutor } from './orvilo-notebook';
 import { pageAgentExecutor } from './orvilo-page-agent';
 import { skillsExecutor } from './orvilo-skills';
@@ -71,7 +70,6 @@ export const builtinToolExecutors = [
   knowledgeBaseExecutor,
   localSystemExecutorWithGitEffects,
   memoryExecutor,
-  messageExecutor,
   notebookExecutor,
   pageAgentExecutor,
   skillsExecutor,

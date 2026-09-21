@@ -11,7 +11,7 @@ import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePrefetchAgent } from '@/hooks/usePrefetchAgent';
 import { usePrefetchPage } from '@/hooks/usePrefetchPage';
-import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
+import { getPlatformIcon } from '@/libs/platformIcon';
 
 import { useRecentItemDropdownMenu } from './useDropdownMenu';
 

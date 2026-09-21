@@ -30,7 +30,6 @@ const LEGACY_KEY_PATHS: Record<string, readonly string[]> = {
   // --- principal ---
   activeDeviceScope: ['principal', 'actor', 'deviceScope'],
   agentShareVisitor: ['principal', 'actor', 'shareVisitor'],
-  botContext: ['principal', 'actor', 'bot'],
   clientIp: ['principal', 'audit', 'clientIp'],
   deviceAccessPolicy: ['principal', 'policy', 'deviceAccess'],
   userAgent: ['principal', 'audit', 'userAgent'],
@@ -48,9 +47,7 @@ const LEGACY_KEY_PATHS: Record<string, readonly string[]> = {
   // --- world ---
   agentConfig: ['world', 'agent'],
   agentGroup: ['world', 'group'],
-  botPlatformContext: ['world', 'channel', 'botPlatform'],
   connectorOwnershipNote: ['world', 'connectorOwnershipNote'],
-  discordContext: ['world', 'channel', 'discord'],
   evalContext: ['world', 'eval'],
   projectInstructions: ['world', 'projectInstructions'],
   searchDecision: ['world', 'searchDecision'],

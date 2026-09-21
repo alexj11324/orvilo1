@@ -175,8 +175,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // the discussion on an acceptance follows the acceptance itself
   acceptanceComment: 'blocked',
   agent: rw('agent:read', 'agent:write'),
-  // bot channel wiring carries channel credentials
-  agentBotProvider: 'blocked',
   agentDocument: rw('knowledge:read', 'knowledge:write'),
   agentEval: 'blocked',
   agentEvalExternal: 'blocked',
@@ -204,8 +202,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   apiKey: 'blocked',
   asr: { any: 'model:invoke' },
   artifactShare: rw('chat:read', null),
-  // decrypts stored bot/messenger credentials and calls external channel APIs
-  botMessage: 'blocked',
   brief: rw('chat:read', 'chat:write'),
   changelog: 'open',
   chunk: rw('knowledge:read', 'knowledge:write'),
@@ -248,8 +244,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // tool execution inside a chat run
   mcp: { any: 'model:invoke' },
   message: rw('chat:read', 'chat:write'),
-  // IM channel management carries channel credentials
-  messenger: 'blocked',
   // numeric telemetry attached to a goal / agent / task / project — same
   // domain as the subjects that own it
   metric: rw('agent:read', 'agent:write'),

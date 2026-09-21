@@ -24,7 +24,6 @@ import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest, resolveLocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
-import { MessageManifest, resolveMessageManifest } from '@orvilo/builtin-tool-message';
 import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
@@ -195,7 +194,7 @@ export const runtimeManagedToolIds = [
  * Every entry was verified against its actual server runtime
  * (`apps/server/src/services/toolExecution/serverRuntimes/*`), not just its
  * manifest. For the rationale behind every DENIED identifier
- * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`, `orvilo-message`,
+ * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`,
  * `orvilo-agent-builder`, `orvilo-skills`,
  * `orvilo-group-agent-builder`, `orvilo-group-management`, `agent-signal-review`,
  * `orvilo-user-interaction`, `orvilo-activator`,
@@ -424,14 +423,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     identifier: CalculatorManifest.identifier,
     manifest: CalculatorManifest,
-    type: 'builtin',
-  },
-  {
-    identifier: MessageManifest.identifier,
-    manifest: MessageManifest,
-    // Context-aware: drops APIs the current IM platform can't fulfil (e.g.
-    // WeChat has no `readMessages`), trimming both the tool list and systemRole.
-    resolveManifest: resolveMessageManifest,
     type: 'builtin',
   },
   {

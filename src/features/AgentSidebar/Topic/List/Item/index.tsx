@@ -29,7 +29,7 @@ import NavItem from '@/features/NavPanel/components/NavItem';
 import TopicCreatorAvatar, { useTopicCreator } from '@/features/TopicCreatorAvatar';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { getWorkingDirectoryName } from '@/helpers/workingDirectoryPath';
-import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
+import { getPlatformIcon } from '@/libs/platformIcon';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';

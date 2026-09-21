@@ -356,7 +356,7 @@ export const isDeviceLockedPlan = (plan: ExecutionPlan): boolean =>
 export interface ResolveExecutionPlanParams {
   agencyConfig: OrviloAgentAgencyConfig | undefined;
   /**
-   * Verdict of `resolveDeviceAccessPolicy` — `false` (e.g. an external bot
+   * `false` (e.g. an external caller
    * sender) kills device routing entirely but does NOT block the sandbox.
    * Defaults to `true` (first-party callers).
    */

@@ -26,7 +26,6 @@ import { publicProcedure, router } from '@/libs/trpc/lambda';
 import { acceptanceRouter } from './acceptance';
 import { acceptanceCommentRouter } from './acceptanceComment';
 import { agentRouter } from './agent';
-import { agentBotProviderRouter } from './agentBotProvider';
 import { agentDocumentRouter } from './agentDocument';
 import { agentEvalRouter } from './agentEval';
 import { agentEvalExternalRouter } from './agentEvalExternal';
@@ -42,7 +41,6 @@ import { aiAgentRouter } from './aiAgent';
 import { aiChatRouter } from './aiChat';
 import { apiKeyRouter } from './apiKey';
 import { asrRouter } from './asr';
-import { botMessageRouter } from './botMessage';
 import { briefRouter } from './brief';
 import { changelogRouter } from './changelog';
 import { chunkRouter } from './chunk';
@@ -72,7 +70,6 @@ import { linearSyncRouter } from './linearSync';
 import { llmGenerationTracingRouter } from './llmGenerationTracing';
 import { marketRouter } from './market';
 import { messageRouter } from './message';
-import { messengerRouter } from './messenger';
 import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
@@ -109,9 +106,7 @@ export const lambdaRouter = router({
   acceptance: acceptanceRouter,
   acceptanceComment: acceptanceCommentRouter,
   agent: agentRouter,
-  agentBotProvider: agentBotProviderRouter,
   agentNotify: agentNotifyRouter,
-  botMessage: botMessageRouter,
   agentDocument: agentDocumentRouter,
   agentEval: agentEvalRouter,
   agentEvalExternal: agentEvalExternalRouter,
@@ -158,7 +153,6 @@ export const lambdaRouter = router({
   llmGenerationTracing: llmGenerationTracingRouter,
   market: marketRouter,
   message: messageRouter,
-  messenger: messengerRouter,
   metric: metricRouter,
   notebook: notebookRouter,
   notification: notificationRouter,

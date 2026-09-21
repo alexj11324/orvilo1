@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   agentAccountBindings,
-  agentBotProviders,
   agentCronJobs,
   agentDocuments,
   agentHistoryJobs,
@@ -917,22 +916,6 @@ describe('AgentModel.transferAgentOwnership', () => {
         workspaceId: wsId,
       },
     ]);
-    await serverDB.insert(agentBotProviders).values([
-      {
-        agentId: agent.id,
-        applicationId: 'app-owner',
-        platform: 'discord',
-        userId: ownerId,
-        workspaceId: wsId,
-      },
-      {
-        agentId: agent.id,
-        applicationId: 'app-teammate',
-        platform: 'slack',
-        userId: teammateId,
-        workspaceId: wsId,
-      },
-    ]);
 
     await handover({ agentId: agent.id, fromUserId: ownerId, toUserId: recipientId });
 
@@ -943,12 +926,6 @@ describe('AgentModel.transferAgentOwnership', () => {
     expect(cronRows.find((j) => j.id === 'owner-cron')?.enabled).toBe(false);
     expect(cronRows.find((j) => j.id === 'teammate-cron')?.userId).toBe(teammateId);
     expect(cronRows.find((j) => j.id === 'teammate-cron')?.enabled).toBe(true);
-
-    const botRows = await serverDB.select().from(agentBotProviders);
-    expect(botRows.find((b) => b.applicationId === 'app-owner')?.userId).toBe(recipientId);
-    expect(botRows.find((b) => b.applicationId === 'app-owner')?.enabled).toBe(false);
-    expect(botRows.find((b) => b.applicationId === 'app-teammate')?.userId).toBe(teammateId);
-    expect(botRows.find((b) => b.applicationId === 'app-teammate')?.enabled).toBe(true);
   });
 
   it('strips device bindings the recipient cannot reach', async () => {

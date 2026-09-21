@@ -141,6 +141,9 @@ const cleanStatus = { added: 0, clean: true, deleted: 0, modified: 0, total: 0 }
 const inspectionOf = (
   result: DeviceGitWorktreePathInspection,
 ): DeviceGitWorktreePathInspection => ({
+  // A current host advertises verified-claim support; an old host omits the
+  // field entirely (pass `capabilities: undefined` in the override).
+  capabilities: { worktreeClaims: true },
   canonicalWorktreePath: CANONICAL_WORKTREE,
   repoCommonDir: REPO_COMMON_DIR,
   repoRoot: REPO_ROOT,
@@ -541,31 +544,47 @@ describe('TaskWorkspaceService', () => {
       ).rejects.toThrow('could not verify the new checkout');
     });
 
-    it('refuses provisioning on a host that cannot register claims, rolling back the add', async () => {
-      // SB01: an old host drops the claim token silently — the response then
-      // lacks `claimRegistered`, and proceeding would pair the minted claim
-      // with cleanup that can never be verified. Roll the worktree back with
-      // a plain remove and keep the minted claim row for a retry post-upgrade.
+    it('refuses provisioning on a host without the claim capability — never creates the worktree', async () => {
+      // SC01: capability is negotiated before the add. A host that cannot
+      // bind the claim to the physical checkout gets an explicit refusal —
+      // nothing is minted, added, or removed.
+      vi.mocked(deviceGateway.inspectGitWorktreePath).mockResolvedValue(
+        inspectionOf({ capabilities: undefined, kind: 'absent' }),
+      );
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+
+      await expect(
+        service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
+      ).rejects.toThrow('does not support verified worktree claims');
+
+      expect(mockClaimModel.mint).not.toHaveBeenCalled();
+      expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(claimRows.get(CLAIM_KEY)).toBeUndefined();
+    });
+
+    it('keeps the directory and registers recovery when a capable host drops claim registration', async () => {
+      // SC01: the host advertised the capability but the add response lacks
+      // `claimRegistered` (lost ACK, mid-upgrade crash). The directory now
+      // exists unverified — preserve it and register recovery, never a
+      // credential-less remove.
       vi.mocked(deviceGateway.addGitWorktree).mockImplementation(async ({ branch, ref }) => {
         worktreeAdded = true;
         worktreeBranch = branch;
         worktreeHead = ref;
-        // Old-host shape: accepted the params, dropped the capability flag.
         return { success: true };
       });
       const task = baseTask({ config: { workspace: workspaceConfig } });
 
       await expect(
         service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
-      ).rejects.toThrow('cannot register worktree claims');
+      ).rejects.toThrow('did not confirm claim registration');
 
-      // Rollback used the plain remove path — no token on an incapable host.
-      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({ worktreePath: '/repos/orvilo-task-T-1@task_1' }),
+      // No compensation remove at all — the unverified directory is preserved.
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+      expect(mockClaimModel.requestRecovery).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'orphan_directory' }),
       );
-      expect(
-        vi.mocked(deviceGateway.removeGitWorktree).mock.calls[0]?.[0]?.claimToken,
-      ).toBeUndefined();
       // The minted claim stays live — nothing unverifiable was destroyed.
       expect(claimRows.get(CLAIM_KEY)?.releasedAt).toBeNull();
     });

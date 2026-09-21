@@ -522,6 +522,13 @@ export interface DeviceGitWorktreePathInspection {
    * succeeded; absent means the host predates identity reporting.
    */
   canonicalWorktreePath?: string;
+  /**
+   * Host capabilities negotiated before writer admission. `worktreeClaims`
+   * true means the host binds a claim token to a created checkout inside the
+   * claims mutex (`addGitWorktree` carrying a `claimToken`). Absent = the host
+   * predates verified claims — refuse before creating, never delete blind.
+   */
+  capabilities?: { worktreeClaims?: boolean };
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: DeviceGitWorktreeListItem;

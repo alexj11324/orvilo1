@@ -423,6 +423,16 @@ export class TaskWorkspaceService {
       }
       case 'absent': {
         if (liveClaim && !ownClaim) return conflicted(liveClaim);
+        if (inspection.capabilities?.worktreeClaims !== true) {
+          // Capability is negotiated BEFORE the add: a host that cannot bind
+          // the minted claim token to the physical checkout could never run
+          // verified cleanup — refuse explicitly instead of creating a
+          // directory nobody can safely delete.
+          throw new Error(
+            `Failed to provision task workspace: the device host does not support ` +
+              `verified worktree claims — upgrade the client before provisioning ${worktreePath}`,
+          );
+        }
         if (!ownClaim) {
           // A fresh attempt — the ONLY place a new base resolves. `origin/<base>`
           // is a mutable ref, so the pinned SHA is what the add must land on
@@ -497,24 +507,23 @@ export class TaskWorkspaceService {
           throw new Error(`Failed to provision task workspace: ${lastError}`);
         }
         if (added.claimRegistered !== true) {
-          // Old host: the RPC accepted the token silently but registered no
-          // claim — a later verified delete would be unverifiable. Remove what
-          // was just created (plain remove works on every host) and stop with
-          // an explicit unsupported signal rather than ever deleting blind.
-          await deviceGateway
-            .removeGitWorktree({
-              deviceId,
-              path: repoPath,
-              userId: this.userId,
-              workspaceId: this.workspaceId,
-              worktreePath,
-            })
-            .catch((error) =>
-              log('provision rollback remove failed for %s — %O', worktreePath, error),
-            );
+          // The host advertised the claim capability but the add returned no
+          // registration proof (lost ACK, mid-upgrade crash). The directory
+          // now exists without a bound claim — never destroy it with a
+          // credential-less remove: preserve it, register recovery for a
+          // human, and keep the minted claim row live.
+          await this.requestRecovery({
+            detail: { reason: 'claim_registration_unconfirmed' },
+            deviceId,
+            kind: 'orphan_directory',
+            repoPath,
+            taskId: task.id,
+            worktreePath,
+          });
           throw new Error(
-            `Failed to provision task workspace: the device host cannot register worktree ` +
-              `claims — verified cleanup is unsupported until the client is upgraded`,
+            `Failed to provision task workspace: the device host did not confirm claim ` +
+              `registration for ${worktreePath} — the directory was preserved and ` +
+              'queued for manual recovery',
           );
         }
         break;

@@ -272,6 +272,13 @@ export interface GitWorktreePathInspection {
    * repo listing succeeded; absent on `unknown`.
    */
   canonicalWorktreePath?: string;
+  /**
+   * Host capabilities negotiated before writer admission. `worktreeClaims`
+   * true means this host can bind a claim token to a created checkout inside
+   * the claims mutex (`addGitWorktree` carrying a `claimToken`). Absent =
+   * the host predates verified claims — callers must refuse before creating.
+   */
+  capabilities?: { worktreeClaims?: boolean };
   error?: string;
   kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
   listed?: GitWorktreeListItem;

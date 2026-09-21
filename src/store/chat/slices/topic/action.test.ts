@@ -1,5 +1,6 @@
 import { toast } from '@lobehub/ui/base-ui';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from '@orvilo/business-const';
+import { INBOX_SESSION_ID } from '@orvilo/const';
 import { TOPIC_TITLE_JSON_SCHEMA } from '@orvilo/prompts';
 import type { OrviloUser, UIChatMessage } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -207,11 +208,60 @@ describe('topic action', () => {
 
       expect(createTopicSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          sessionId: 'session-id',
+          agentId: 'session-id',
           messages: messages.map((m) => m.id),
         }),
       );
       expect(topicId).toEqual('new-topic-id');
+    });
+
+    it('should scope the new topic by agentId and never stuff it into sessionId', async () => {
+      // Regression for the topics_session_id FK failure: agent-first agents have
+      // no `sessions` row, so writing `sessionId=<agt_*>` violates the FK. The
+      // server resolves the legacy session from agentId itself.
+      const { result } = renderHook(() => useChatStore());
+      const messages = [{ id: 'message1' }] as UIChatMessage[];
+      act(() => {
+        useChatStore.setState({
+          messagesMap: {
+            [messageMapKey({ agentId: 'agt_abc' })]: messages,
+          },
+          activeAgentId: 'agt_abc',
+        });
+      });
+
+      const createTopicSpy = vi
+        .spyOn(topicService, 'createTopic')
+        .mockResolvedValue('new-topic-id');
+
+      await result.current.saveToTopic();
+
+      const payload = createTopicSpy.mock.calls[0][0];
+      expect(payload.agentId).toBe('agt_abc');
+      expect(payload.sessionId).toBeUndefined();
+    });
+
+    it('should leave the inbox pseudo-agent unscoped instead of agent_id=inbox', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const messages = [{ id: 'message1' }] as UIChatMessage[];
+      act(() => {
+        useChatStore.setState({
+          messagesMap: {
+            [messageMapKey({ agentId: INBOX_SESSION_ID })]: messages,
+          },
+          activeAgentId: INBOX_SESSION_ID,
+        });
+      });
+
+      const createTopicSpy = vi
+        .spyOn(topicService, 'createTopic')
+        .mockResolvedValue('new-topic-id');
+
+      await result.current.saveToTopic();
+
+      const payload = createTopicSpy.mock.calls[0][0];
+      expect(payload.agentId).toBeNull();
+      expect(payload.sessionId).toBeUndefined();
     });
 
     it('should fire the title summary without blocking saveToTopic', async () => {
@@ -3381,9 +3431,9 @@ describe('topic action', () => {
       expect(createTopicSpy).toHaveBeenCalledWith({
         // The test never seeds agentMap, so snapshotAgentModel falls back to the
         // defaults — assert the constants so default-model bumps can't break this.
+        agentId: activeAgentId,
         model: DEFAULT_MODEL,
         provider: DEFAULT_PROVIDER,
-        sessionId: activeAgentId,
         messages: messages.map((m) => m.id),
         title: 'defaultTitle',
       });

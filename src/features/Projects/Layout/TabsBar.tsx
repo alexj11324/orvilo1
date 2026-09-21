@@ -1,12 +1,14 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { TabsIndicator, TabsList, TabsRoot, TabsTab } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon } from '@lobehub/ui';
+import { TabsIndicator, TabsList, TabsRoot, TabsTab, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import {
@@ -15,6 +17,9 @@ import {
 } from '@/features/NavPanel/SidebarHeaderSelect';
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
+import { PROJECT_STATUS_META } from '@/features/Projects/Workspace/ProjectPropertiesCard';
+import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
+import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from '@/store/project';
@@ -27,6 +32,20 @@ import {
 } from './navigation';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
+  headerMembers: css`
+    display: flex;
+    align-items: center;
+
+    > * {
+      margin-inline-start: -6px;
+      border: 2px solid ${cssVar.colorBgContainer};
+      border-radius: 50%;
+
+      &:first-child {
+        margin-inline-start: 0;
+      }
+    }
+  `,
   tabsRow: css`
     flex: none;
     padding-inline: 20px;
@@ -44,6 +63,9 @@ const ProjectTabsBar = memo(() => {
   const detail = useCurrentProjectDetail(projectId);
   const projects = useCurrentProjectList();
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(true);
+  const workspaceId = useActiveWorkspaceId();
+  const membersEnabled = useTeammatesEnabled() && !!workspaceId;
+  const membersSWR = useProjectMembersQuery(detail?.project.id, membersEnabled);
 
   const projectReference = detail?.project.slug ?? projectId ?? '';
 
@@ -102,7 +124,42 @@ const ProjectTabsBar = memo(() => {
         }
         right={
           detail?.project.id ? (
-            <WorkFavoriteButton targetId={detail.project.id} targetType="project" variant="icon" />
+            <Flexbox horizontal align={'center'} gap={10}>
+              <Tag
+                color={PROJECT_STATUS_META[detail.project.status]?.color}
+                size={'small'}
+                icon={
+                  <Icon
+                    size={12}
+                    icon={
+                      (PROJECT_STATUS_META[detail.project.status] ?? PROJECT_STATUS_META.backlog)
+                        .icon
+                    }
+                  />
+                }
+              >
+                {t(`acceptance.status.${detail.project.status}`, {
+                  defaultValue: detail.project.status,
+                })}
+              </Tag>
+              {membersEnabled && (membersSWR.data?.length ?? 0) > 0 && (
+                <div className={styles.headerMembers}>
+                  {membersSWR.data!.slice(0, 4).map((member) => (
+                    <Avatar
+                      avatar={member.user?.avatar ?? undefined}
+                      key={member.userId}
+                      size={20}
+                      title={member.user?.fullName || member.user?.username}
+                    />
+                  ))}
+                </div>
+              )}
+              <WorkFavoriteButton
+                targetId={detail.project.id}
+                targetType="project"
+                variant="icon"
+              />
+            </Flexbox>
           ) : undefined
         }
       />

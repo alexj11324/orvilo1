@@ -60,7 +60,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const STATUS_META: Record<
+export const PROJECT_STATUS_META: Record<
   ProjectStatus,
   { color?: string; icon: typeof CircleDotIcon; writable: boolean }
 > = {
@@ -75,8 +75,8 @@ const STATUS_META: Record<
 
 type WritableProjectStatus = 'active' | 'archived' | 'backlog' | 'paused';
 
-const WRITABLE_STATUSES = (Object.keys(STATUS_META) as ProjectStatus[]).filter(
-  (status): status is WritableProjectStatus => STATUS_META[status].writable,
+const WRITABLE_STATUSES = (Object.keys(PROJECT_STATUS_META) as ProjectStatus[]).filter(
+  (status): status is WritableProjectStatus => PROJECT_STATUS_META[status].writable,
 );
 
 interface ProjectPropertiesCardProps {
@@ -100,7 +100,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(
     const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
 
     const project = detail.project;
-    const statusMeta = STATUS_META[project.status] ?? STATUS_META.backlog;
+    const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
     const members = membersSWR.data ?? [];
 
     const changeStatus = useCallback(
@@ -120,7 +120,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(
     const statusItems = useMemo(
       () =>
         WRITABLE_STATUSES.map((status) => ({
-          icon: <Icon icon={STATUS_META[status].icon} size={14} />,
+          icon: <Icon icon={PROJECT_STATUS_META[status].icon} size={14} />,
           key: status,
           label: t(`acceptance.status.${status}`),
           onClick: () => void changeStatus(status),

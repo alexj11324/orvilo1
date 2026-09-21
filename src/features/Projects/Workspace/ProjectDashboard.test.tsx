@@ -34,6 +34,7 @@ vi.mock('@lobehub/ui/base-ui', () => ({
   Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
+  DropdownMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
   Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
 }));

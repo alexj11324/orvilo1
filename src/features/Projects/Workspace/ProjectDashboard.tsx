@@ -24,6 +24,7 @@ import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { getProjectGoalsPath, getProjectTasksPath } from '@/features/Projects/Layout/navigation';
 import OrchestrationPolicyCard from '@/features/Projects/Workspace/OrchestrationPolicyCard';
+import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { canInviteToProject } from '@/features/Teammates/api/roleCapabilities';
 import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModal';
@@ -290,6 +291,9 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
       </Flexbox>
 
       <Flexbox className={styles.rail} gap={16}>
+        <Flexbox className={styles.railCard} gap={12}>
+          <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={projectId} />
+        </Flexbox>
         <Flexbox className={styles.railCard} gap={12}>
           <SectionTitle count={attentionTasks.length} title={t('overview.needsAttention')} />
           {attentionTasks.length === 0 ? (

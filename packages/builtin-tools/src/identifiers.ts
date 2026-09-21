@@ -16,7 +16,6 @@ import { CredsManifest } from '@orvilo/builtin-tool-creds';
 import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
-import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
@@ -44,7 +43,6 @@ export const builtinToolIdentifiers: string[] = [
   GroupManagementManifest.identifier,
   GoalManifest.identifier,
   GoalSupervisorManifest.identifier,
-  ImageGenerationManifest.identifier,
   KnowledgeBaseManifest.identifier,
   LocalSystemManifest.identifier,
   MemoryManifest.identifier,

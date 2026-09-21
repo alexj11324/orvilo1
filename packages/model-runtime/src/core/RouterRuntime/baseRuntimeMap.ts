@@ -4,7 +4,6 @@ import { OrviloAzureOpenAI } from '../../providers/azureOpenai';
 import { OrviloBedrockAI } from '../../providers/bedrock';
 import { OrviloCloudflareAI } from '../../providers/cloudflare';
 import { OrviloDeepSeekAI } from '../../providers/deepseek';
-import { OrviloFalAI } from '../../providers/fal';
 import { OrviloGoogleAI } from '../../providers/google';
 import { OrviloMetaAI } from '../../providers/meta';
 import { OrviloMinimaxAI } from '../../providers/minimax';
@@ -25,7 +24,6 @@ export const baseRuntimeMap = {
   bedrock: OrviloBedrockAI,
   cloudflare: OrviloCloudflareAI,
   deepseek: OrviloDeepSeekAI,
-  fal: OrviloFalAI,
   google: OrviloGoogleAI,
   meta: OrviloMetaAI,
   minimax: OrviloMinimaxAI,

@@ -11,7 +11,6 @@ import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePrefetchAgent } from '@/hooks/usePrefetchAgent';
 import { usePrefetchPage } from '@/hooks/usePrefetchPage';
-import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
 
 import { useRecentItemDropdownMenu } from './useDropdownMenu';
 
@@ -21,7 +20,7 @@ const TYPE_ICON_MAP: Partial<Record<'document' | 'task' | 'topic', typeof FileTe
 };
 
 const RecentListItem = memo<RecentItem>((item) => {
-  const { title, type, agentId, id, metadata, status } = item;
+  const { title, type, agentId, id, status } = item;
   const IconComponent = TYPE_ICON_MAP[type] || FileTextIcon;
   const [editing, setEditing] = useState(false);
   const prefetchAgent = usePrefetchAgent();
@@ -66,12 +65,6 @@ const RecentListItem = memo<RecentItem>((item) => {
             return <TaskStatusIcon size={16} status={status ?? 'backlog'} />;
           }
 
-          if (type === 'topic' && metadata?.bot?.platform) {
-            const ProviderIcon = getPlatformIcon(metadata.bot.platform);
-            if (ProviderIcon) {
-              return <ProviderIcon color={cssVar.colorTextDescription} size={16} />;
-            }
-          }
           return (
             <Icon
               icon={IconComponent}

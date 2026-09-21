@@ -12,15 +12,10 @@ const deletionMocks = vi.hoisted(() => ({
 }));
 
 const memberMocks = vi.hoisted(() => ({
-  findLinksByUserIds: vi.fn(),
   getDisplayInfoByIds: vi.fn(),
   getEmailsByIds: vi.fn(),
   notifyTaskAssigned: vi.fn(),
   searchAssignableMembers: vi.fn(),
-}));
-
-vi.mock('@/database/models/messengerAccountLink', () => ({
-  MessengerAccountLinkModel: { findByUserIds: memberMocks.findLinksByUserIds },
 }));
 
 vi.mock('@/business/server/task/notifyTaskAssigned', () => ({
@@ -954,7 +949,6 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
     vi.clearAllMocks();
     memberMocks.getDisplayInfoByIds.mockResolvedValue([alice]);
     memberMocks.getEmailsByIds.mockResolvedValue([]);
-    memberMocks.findLinksByUserIds.mockResolvedValue([]);
   });
 
   describe('createTask', () => {
@@ -1170,16 +1164,12 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
         query: undefined,
       });
       expect(memberMocks.getDisplayInfoByIds).toHaveBeenCalledWith(db, ['usr_1', 'usr_2']);
-      // IM identities are read under this workspace's scope only.
-      expect(memberMocks.findLinksByUserIds).toHaveBeenCalledWith(db, ['usr_1', 'usr_2'], {
-        workspaceId: 'ws_1',
-      });
       expect(result.state).toEqual({ count: 2, success: true, total: 2 });
       expect(result.content).toContain('- Me  @me  role=owner  (you)  id=usr_1');
       expect(result.content).toContain('- Alice  @alice  role=member  id=usr_2');
     });
 
-    it('surfaces email and linked IM identities so platform handles resolve exactly', async () => {
+    it('surfaces email so handles resolve exactly', async () => {
       memberMocks.searchAssignableMembers.mockResolvedValue({
         rows: [{ role: 'member', userId: 'usr_2' }],
         total: 1,
@@ -1188,21 +1178,12 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       memberMocks.getEmailsByIds.mockResolvedValue([
         { email: 'alice@orvilo.aspectlylabs.com', id: 'usr_2' },
       ]);
-      memberMocks.findLinksByUserIds.mockResolvedValue([
-        {
-          platform: 'discord',
-          platformUserId: '4521',
-          platformUsername: 'Neko',
-          userId: 'usr_2',
-        },
-        { platform: 'slack', platformUserId: 'U123', platformUsername: null, userId: 'usr_2' },
-      ]);
       const runtime = createTaskRuntime({ ...baseDeps, db, userId: 'usr_1', workspaceId: 'ws_1' });
 
       const result = await runtime.listWorkspaceMembers();
 
       expect(result.content).toContain(
-        '- Alice  @alice  alice@orvilo.aspectlylabs.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
+        '- Alice  @alice  alice@orvilo.aspectlylabs.com  role=member  id=usr_2',
       );
     });
 
@@ -1210,25 +1191,19 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       memberMocks.getEmailsByIds.mockResolvedValue([
         { email: 'alice@orvilo.aspectlylabs.com', id: 'usr_2' },
       ]);
-      memberMocks.findLinksByUserIds.mockResolvedValue([
-        { platform: 'discord', platformUserId: '4521', platformUsername: 'Neko', userId: 'usr_2' },
-      ]);
       const runtime = createTaskRuntime({ ...baseDeps, db, userId: 'usr_1', workspaceId: 'ws_1' });
 
-      // A native Discord mention is folded to the bare platform id before it
-      // reaches SQL; the page it returns is decorated and echoed with the needle.
       memberMocks.searchAssignableMembers.mockResolvedValueOnce({
         rows: [{ role: 'member', userId: 'usr_2' }],
         total: 1,
       });
-      const byMention = await runtime.listWorkspaceMembers({ query: '<@!4521>' });
+      const byMention = await runtime.listWorkspaceMembers({ query: '4521' });
       expect(memberMocks.searchAssignableMembers).toHaveBeenLastCalledWith('ws_1', {
         limit: 50,
         query: '4521',
       });
       expect(byMention.state).toEqual({ count: 1, query: '4521', success: true, total: 1 });
       expect(byMention.content).toContain('matching "4521" (1)');
-      expect(byMention.content).toContain('im=discord:@Neko(4521)  id=usr_2');
 
       // The cap is announced so the model refines instead of assuming it saw everyone.
       memberMocks.searchAssignableMembers.mockResolvedValueOnce({
@@ -1258,9 +1233,6 @@ describe('createTaskRuntime — human assignee (assigneeUserId)', () => {
       const result = await runtime.listWorkspaceMembers();
 
       expect(memberMocks.searchAssignableMembers).not.toHaveBeenCalled();
-      expect(memberMocks.findLinksByUserIds).toHaveBeenCalledWith(db, ['usr_1'], {
-        workspaceId: null,
-      });
       expect(result.content).toContain('Not in a workspace');
       expect(result.content).toContain('(you)  id=usr_1');
     });

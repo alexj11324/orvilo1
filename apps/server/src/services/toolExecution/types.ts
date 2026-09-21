@@ -3,22 +3,12 @@ import { type OrviloDatabase } from '@orvilo/database';
 import {
   type AgentShareVisitorContext,
   type ChatToolPayload,
-  type ClientSecretPayload,
   type DeviceUnavailableErrorData,
   type ExecSubAgentParams,
   type StepActivatedSkill,
   type StepContextTodoItem,
   type WorkRegistrationIntent,
 } from '@orvilo/types';
-
-export interface ToolExecutionMemoryEmbeddingRuntime {
-  /** Embedding model id used by the memory search runtime. */
-  model: string;
-  /** Provider credentials/config supplied by the trusted server caller. */
-  payload: ClientSecretPayload;
-  /** Model provider used to initialize the embedding runtime. */
-  provider: string;
-}
 
 export interface ServerSubAgentRunParams {
   /** Target agent id; defaults to the parent agent when omitted. */
@@ -259,12 +249,6 @@ export interface ToolExecutionContext {
    * {@link localSandbox}.
    */
   localSandboxNetwork?: boolean;
-  /**
-   * Optional server-owned embedding runtime for memory search.
-   *
-   * Use when the acting user is synthetic and should not read user key vaults.
-   */
-  memoryEmbeddingRuntime?: ToolExecutionMemoryEmbeddingRuntime;
   /** Memory tool permission from agent chat config */
   memoryToolPermission?: 'read-only' | 'read-write';
   /** Source user message ID used by Agent Signal procedure suppression. */

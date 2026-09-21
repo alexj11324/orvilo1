@@ -13,15 +13,12 @@ import { default as azureai } from './azureai';
 import { default as baichuan } from './baichuan';
 import { default as bailiancodingplan } from './bailianCodingPlan';
 import { default as bedrock } from './bedrock';
-import { default as bfl } from './bfl';
 import { default as cerebras } from './cerebras';
 import { default as chatgpt } from './chatGPT';
 import { default as cloudflare } from './cloudflare';
 import { default as cohere } from './cohere';
 import { default as cometapi } from './cometapi';
-import { default as comfyui } from './comfyui';
 import { default as deepseek } from './deepseek';
-import { default as fal } from './fal';
 import { default as fireworksai } from './fireworksai';
 import { default as giteeai } from './giteeai';
 import { default as github } from './github';
@@ -58,7 +55,6 @@ import { default as perplexity } from './perplexity';
 import { default as ppio } from './ppio';
 import { default as qiniu } from './qiniu';
 import { default as qwen } from './qwen';
-import { default as replicate } from './replicate';
 import { default as sambanova } from './sambanova';
 import { default as search1api } from './search1api';
 import { default as sensenova } from './sensenova';
@@ -125,15 +121,12 @@ const staticModelMap: ModelsMap = {
   baichuan,
   bailiancodingplan,
   bedrock,
-  bfl,
   cerebras,
   chatgpt,
   cloudflare,
   cohere,
   cometapi,
-  comfyui,
   deepseek,
-  fal,
   fireworksai,
   giteeai,
   github,
@@ -170,7 +163,6 @@ const staticModelMap: ModelsMap = {
   ppio,
   qiniu,
   qwen,
-  replicate,
   sambanova,
   search1api,
   sensenova,
@@ -230,7 +222,6 @@ export const loadModels = async (
   return buildDefaultModelList(modelMap);
 };
 
-export { gptImage1Schema, gptImage2Schema } from '../const/imageParameters';
 export { default as ai21 } from './ai21';
 export { default as ai302 } from './ai302';
 export { default as ai360 } from './ai360';
@@ -243,15 +234,12 @@ export { default as azureai } from './azureai';
 export { default as baichuan } from './baichuan';
 export { default as bailiancodingplan } from './bailianCodingPlan';
 export { default as bedrock } from './bedrock';
-export { default as bfl } from './bfl';
 export { default as cerebras } from './cerebras';
 export { default as chatgpt } from './chatGPT';
 export { default as cloudflare } from './cloudflare';
 export { default as cohere } from './cohere';
 export { default as cometapi } from './cometapi';
-export { default as comfyui } from './comfyui';
 export { default as deepseek } from './deepseek';
-export { default as fal, fluxSchnellParamsSchema } from './fal';
 export { default as fireworksai } from './fireworksai';
 export { default as giteeai } from './giteeai';
 export { default as github } from './github';
@@ -288,7 +276,6 @@ export { default as perplexity } from './perplexity';
 export { default as ppio } from './ppio';
 export { default as qiniu } from './qiniu';
 export { default as qwen } from './qwen';
-export { default as replicate } from './replicate';
 export { default as sambanova } from './sambanova';
 export { default as search1api } from './search1api';
 export { default as sensenova } from './sensenova';

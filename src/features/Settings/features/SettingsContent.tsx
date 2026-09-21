@@ -27,7 +27,6 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Labels,
   SettingsTabs.Labs,
   SettingsTabs.Memory,
-  SettingsTabs.Messenger,
   SettingsTabs.Notification,
   SettingsTabs.Plans,
   SettingsTabs.Profile,
@@ -65,7 +64,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     // Labs has no `setting:tab.*` entry — the nav label comes from the labs namespace.
     [SettingsTabs.Labs]: t('labs:title'),
     [SettingsTabs.Memory]: t('setting:tab.memory'),
-    [SettingsTabs.Messenger]: t('setting:tab.messenger'),
     [SettingsTabs.Notification]: t('setting:tab.notification'),
     [SettingsTabs.Plans]: t('subscription:tab.plans'),
     [SettingsTabs.Profile]: t('auth:profile.title'),

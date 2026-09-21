@@ -139,14 +139,6 @@ describe('getModelPropertyWithFallback', () => {
         vision: true,
       });
     });
-
-    it('should return parameters property correctly', async () => {
-      const result = await getModelPropertyWithFallback('dall-e-3', 'parameters', 'openai');
-      expect(result).toEqual({
-        size: '1024x1024',
-        quality: 'standard',
-      });
-    });
   });
 
   describe('when providerId is not specified', () => {

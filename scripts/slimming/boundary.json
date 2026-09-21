@@ -21,11 +21,15 @@
         "apps/server/src/services/{goal,taskRunner,taskDispatch,taskIntegration,taskWorkspace,taskLifecycle,taskDispatchRecovery,verify,automations}/**",
         "apps/server/src/services/task*/**",
         "apps/server/src/routers/lambda/{goal,task*,automation*}.ts",
+        "apps/server/src/routers/lambda/{acceptance,acceptanceComment}.ts",
+        "apps/server/src/routers/lambda/_helpers/acceptance*.ts",
         "apps/server/src/workflows/**",
         "apps/server/src/router-hono/workflows/**",
         "src/features/{AgentTasks,AgentTaskManager,AgentGoals,Automations,TaskBoard*,TaskDetail*}/**",
+        "src/features/Acceptance/**",
         "packages/eval-rubric/**"
       ],
+      "note": "Canonical task acceptance (Acceptance UI, verify acceptance services, acceptance routers, acceptance-evidence builtin tool) is the in-boundary Task Review surface — kept. Only the standalone storefront routes/store were retired (see acceptance-surface DELETE cap).",
       "issue": "ORV-100"
     },
     {
@@ -119,7 +123,11 @@
         "src/helpers/toolEngineering/**",
         "apps/server/src/services/toolExecution/**",
         "apps/server/src/modules/Mecha/**",
-        "apps/server/src/routers/tools/**"
+        "apps/server/src/routers/tools/**",
+        "apps/server/src/routers/lambda/{agentSkills,composio,plugin}.ts",
+        "src/features/{AgentSkillStore,AgentSkillDetail}/**",
+        "src/routes/(main)/agent/profile/features/store/**",
+        "src/services/plugin/**"
       ],
       "issue": "ORV-104"
     },
@@ -169,8 +177,7 @@
         "src/services/{aiModel,aiProvider}/**",
         "src/utils/aiProvider*",
         "src/types/aiProvider*",
-        "packages/business-server/src/{aiProvider,getProviderContentPolicyErrorMessage,recordModelCompletionFailure,trackProviderContentPolicyViolation}.ts",
-        "src/store/aiInfra/slices/aiProvider/**",
+        "packages/business-server/src/aiProvider*.ts",
         "src/features/{Provider*,ModelProvider*,AiProvider*,AiModel*}/**",
         "src/routes/**/settings/{provider,llm,model}/**",
         "apps/desktop/src/main/modules/heterogeneousAgent/{providerBindingHost,providerBindingPort}.ts",
@@ -181,61 +188,61 @@
     {
       "id": "legacy-model-runtime",
       "disposition": "DELETE",
-      "reason": "Lobe-owned model execution loop. ACP is the only execution path; shared primitives still consumed by ACP/task/collaboration must be migrated out first (ORV-102).",
+      "reason": "BYOK-era runtime tails deleted by ORV-102 (key-vault payload builders, per-user provider access shell, Lobe chat route). The model runtime itself is the ACP execution path and stays under model-runtime (KEEP) — reconciled in ORV-110.",
       "globs": [
-        "packages/model-runtime/**",
-        "packages/agent-runtime/**",
-        "apps/server/src/modules/ModelRuntime/**",
         "apps/server/src/services/aiProviderAccess*",
-        "packages/business-server/src/{model-runtime,image-generation,video-generation}*",
+        "packages/business-server/src/{image-generation,video-generation}*",
         "src/services/chat/{ModelRuntime,modelRuntime*,providers}/**",
         "src/app/(backend)/webapi/chat/**"
       ],
       "issue": "ORV-102"
     },
     {
+      "id": "model-runtime",
+      "disposition": "KEEP",
+      "reason": "Model execution runtime serving the deployment-owned model catalog — the ACP execution path calls through packages/model-runtime and modules/ModelRuntime. Kept; ORV-102 removed only the BYOK-era tails (see legacy-model-runtime). Deployment-scoped provider content-policy helpers in business-server stay with it.",
+      "globs": [
+        "packages/model-runtime/**",
+        "packages/agent-runtime/**",
+        "apps/server/src/modules/ModelRuntime/**",
+        "packages/business-server/src/model-runtime*",
+        "packages/business-server/src/{getProviderContentPolicyErrorMessage,recordModelCompletionFailure,trackProviderContentPolicyViolation}.ts"
+      ],
+      "issue": "ORV-110"
+    },
+    {
       "id": "acceptance-surface",
       "disposition": "DELETE",
-      "reason": "Standalone Acceptance product surface = second state machine + phantom pages. Seam note: Task/Portal/Goal surfaces consume Acceptance components (CriterionList, AcceptanceScope, visibility) — those consumers must be repointed to canonical Task Review pieces before the surface deletes (ORV-103). .agents/acceptance tooling is agent infrastructure, not product surface.",
-      "globs": [
-        "src/features/Acceptance/**",
-        "src/routes/**/acceptance*/**",
-        "apps/server/src/routers/lambda/{acceptance,acceptanceComment}.ts",
-        "apps/server/src/routers/lambda/_helpers/acceptance*.ts",
-        "apps/server/src/services/verify/{acceptance*,taskAcceptance}*.ts",
-        "src/store/acceptance/**",
-        "packages/builtin-tool-acceptance-evidence/**"
-      ],
+      "reason": "Standalone Acceptance storefront (dedicated routes + store) — retired; ORV-103 removed the orphaned residuals. The canonical task-acceptance surface (features/Acceptance, verify acceptance services, acceptance routers, acceptance-evidence builtin) is the in-boundary Task Review flow, kept under tasks-caid — reconciled in ORV-110.",
+      "globs": ["src/routes/**/acceptance*/**", "src/store/acceptance/**"],
       "issue": "ORV-103"
     },
     {
       "id": "skill-store",
       "disposition": "DELETE",
-      "reason": "Orvilo-owned skill marketplace/distribution retired (server bundle distribution already gone on canary). Harness-native skill/capability discovery and internal tools stay — no bulk deletion by package name (ORV-104).",
+      "reason": "Orvilo-owned skill marketplace/distribution storefront — retired by ORV-104 (submission flow, backend market shells, discover browse slices, klavis). Per-agent skill management (AgentSkillStore/Detail UI, profile features store, agentSkills/composio/plugin routers, skill-maintainer builtin) and the external market proxy (market-service) stay — reconciled in ORV-110.",
       "globs": [
-        "src/features/{AgentSkillStore,AgentSkillDetail,AgentMarketSubmission,SkillStore*}/**",
-        "src/routes/**/{skill*,store,discovery,market}/**",
-        "src/routes/(main)/agent/profile/features/store/**",
+        "src/features/{AgentMarketSubmission,SkillStore*}/**",
+        "src/routes/**/{discovery,skill-store}*/**",
         "src/app/(backend)/market/**",
-        "apps/server/src/routers/lambda/{market/**,plugin,klavis,composio,agentSkills}.ts",
-        "apps/server/src/routers/tools/market.ts",
+        "apps/server/src/routers/lambda/klavis.ts",
         "apps/server/src/services/{plugin*,skillStore*,skill-store*}/**",
-        "packages/builtin-tool-skill-maintainer/**",
-        "src/store/agent/slices/{skill*,market*}/**"
+        "src/store/agent/slices/{skill*,market*}/**",
+        "src/store/discover/slices/{assistant,groupAgent,model,provider,user}/**"
       ],
       "issue": "ORV-104"
     },
     {
       "id": "market-service",
-      "disposition": "INVESTIGATE",
-      "reason": "apps/server/src/services/market is still imported by live paths (aiAgent heteroDispatch, toolExecution serverRuntimes, githubRepo, connectorData, taskTemplate, trpc marketSDK middleware) — it currently doubles as the tool/skill install plumbing, not just the retired marketplace storefront. Shrinking it to an internal catalog vs. deleting outright needs a verdict first.",
+      "disposition": "KEEP",
+      "reason": "External marketplace product survives as a proxy: market lambda router (agent/creds/oidc/user) + tools/market + services/market install plumbing feed retained tool/connector paths. Resolved by ORV-110 census — all importers are in-boundary.",
       "globs": [
         "apps/server/src/services/market/**",
+        "apps/server/src/routers/lambda/market/**",
+        "apps/server/src/routers/tools/market.ts",
         "packages/trpc/src/lambda/middleware/marketSDK.ts"
       ],
-      "issue": "ORV-104",
-      "owner": "alexj11324",
-      "followUp": "Split market service: which exports feed retained tool-install/connector paths vs. the retired skill marketplace; keep the former, delete the latter."
+      "issue": "ORV-104"
     },
     {
       "id": "messenger-im-adapters",
@@ -289,8 +296,8 @@
     },
     {
       "id": "eval-surface",
-      "disposition": "DELETE",
-      "reason": "Standalone ragEval/agentEval product+workflow surface is not in the fixed boundary; evaluation regresses to CI-side tooling (ORV-108 closure).",
+      "disposition": "KEEP",
+      "reason": "Agent/RAG eval runs execute through the ACP agent runtime and serve the public OpenAPI eval endpoints; the standalone eval UI routes were already removed before the stack. Backend eval infra is in-boundary — reconciled in ORV-110 (was provisionally DELETE under ORV-108 before evidence showed live OpenAPI consumers).",
       "globs": [
         "apps/server/src/routers/lambda/{agentEval,agentEvalExternal,ragEval,evalRunConfig.schema}.ts",
         "apps/server/src/routers/lambda/__tests__/{agentEval*,ragEval*,evalRunConfig*}.ts",
@@ -307,12 +314,10 @@
     },
     {
       "id": "model-runtime-adjacent-packages",
-      "disposition": "INVESTIGATE",
-      "reason": "context-engine / prompts / model-bank still have wide inbound graphs (62 / 133 / 7 importer files). Census must prove which exports are live for ACP/task/collaboration before any deletion; closure lands under ORV-102/ORV-108.",
+      "disposition": "KEEP",
+      "reason": "context-engine / prompts / model-bank are live shared primitives (model catalog, prompt registry, context assembly) consumed by ACP/task/collaboration — resolved by ORV-110 census.",
       "globs": ["packages/{context-engine,prompts,model-bank}/**"],
-      "issue": "ORV-102",
-      "owner": "alexj11324",
-      "followUp": "Census output lists per-export inbound consumers; split KEEP_SHARED primitives from engine-owned types before deleting packages."
+      "issue": "ORV-102"
     },
     {
       "id": "knowledge-rag",

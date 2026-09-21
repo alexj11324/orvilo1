@@ -1,11 +1,9 @@
 import { getModelPropertyWithFallback } from '@orvilo/model-runtime/getModelPropertyWithFallback';
-import { resolveImageSinglePrice } from '@orvilo/model-runtime/resolveImageSinglePrice';
 import { uniqBy } from 'es-toolkit/compat';
 import type {
   AiFullModelCard,
   EnabledAiModel,
   ModelAbilities,
-  ModelParamsSchema,
   OrviloDefaultAiModelListItem,
   Pricing,
 } from 'model-bank';
@@ -24,14 +22,11 @@ import {
 
 export type ProviderModelListItem = {
   abilities: ModelAbilities;
-  approximatePricePerImage?: number;
   contextWindowTokens?: number;
   description?: string;
   displayName: string;
   id: string;
   knowledgeCutoff?: string;
-  parameters?: ModelParamsSchema;
-  pricePerImage?: number;
   pricing?: Pricing;
   releasedAt?: string;
 };
@@ -46,24 +41,6 @@ const getModelProperty = async <T>(
   if (inlineValue !== undefined) return inlineValue as T;
 
   return getModelPropertyWithFallback<T | undefined>(model.id, propertyName, model.providerId);
-};
-
-const hasParameters = (parameters?: ModelParamsSchema): parameters is ModelParamsSchema =>
-  !!parameters && Object.keys(parameters).length > 0;
-
-const resolveModelParameters = async (
-  model: EnabledAiModel,
-): Promise<ModelParamsSchema | undefined> => {
-  // The `parameters` column defaults to `{}`. An empty object is truthy, so a
-  // naive truthy check would skip the fallback and leave required fields
-  // missing. Treat an empty object as "no inline parameters".
-  if (hasParameters(model.parameters)) return model.parameters;
-
-  return getModelPropertyWithFallback<ModelParamsSchema | undefined>(
-    model.id,
-    'parameters',
-    model.providerId,
-  );
 };
 
 const dedupeById = (models: ProviderModelListItem[]) => uniqBy(models, 'id');
@@ -103,34 +80,9 @@ const normalizeChatModel = async (model: EnabledAiModel): Promise<ProviderModelL
   };
 };
 
-const normalizeImageModel = async (model: EnabledAiModel): Promise<ProviderModelListItem> => {
-  const [parameters, pricing, description] = await Promise.all([
-    resolveModelParameters(model),
-    getModelProperty<Pricing>(model, 'pricing'),
-    getModelProperty<string>(model, 'description'),
-  ]);
-
-  const { price, approximatePrice } = resolveImageSinglePrice(pricing);
-
-  return {
-    abilities: (model.abilities || {}) as ModelAbilities,
-    contextWindowTokens: model.contextWindowTokens,
-    displayName: model.displayName ?? '',
-    id: model.id,
-    releasedAt: model.releasedAt,
-    ...(parameters && { parameters }),
-    ...(description && { description }),
-    ...(pricing && { pricing }),
-    ...(typeof approximatePrice === 'number' && { approximatePricePerImage: approximatePrice }),
-    ...(typeof price === 'number' && { pricePerImage: price }),
-  };
-};
-
 const getChatModelList = createProviderModelCollector('chat', async (model) =>
   normalizeChatModel(model),
 );
-
-const getImageModelList = createProviderModelCollector('image', normalizeImageModel);
 
 const buildProviderModelLists = async (
   providers: EnabledProvider[],
@@ -154,17 +106,11 @@ const buildChatProviderModelLists = async (
   enabledAiModels: EnabledAiModel[],
 ) => buildProviderModelLists(providers, enabledAiModels, getChatModelList);
 
-const buildImageProviderModelLists = async (
-  providers: EnabledProvider[],
-  enabledAiModels: EnabledAiModel[],
-) => buildProviderModelLists(providers, enabledAiModels, getImageModelList);
-
 interface ModelCatalogState {
   aiProviderRuntimeConfig: Record<string, AiProviderRuntimeConfig>;
   builtinAiModelList: OrviloDefaultAiModelListItem[];
   enabledAiModels: EnabledAiModel[];
   enabledChatModelList: EnabledProviderWithModels[];
-  enabledImageModelList: EnabledProviderWithModels[];
 }
 
 const MODEL_CATALOG_SWR_KEY = 'aiInfra/modelCatalog';
@@ -223,17 +169,16 @@ export class AiInfraActionImpl {
           ]),
         );
 
-        const [enabledChatModelList, enabledImageModelList] = await Promise.all([
-          buildChatProviderModelLists(providersWithType('chat'), enabledAiModels),
-          buildImageProviderModelLists(providersWithType('image'), enabledAiModels),
-        ]);
+        const enabledChatModelList = await buildChatProviderModelLists(
+          providersWithType('chat'),
+          enabledAiModels,
+        );
 
         return {
           aiProviderRuntimeConfig,
           builtinAiModelList,
           enabledAiModels,
           enabledChatModelList,
-          enabledImageModelList,
         };
       },
       {

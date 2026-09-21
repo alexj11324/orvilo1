@@ -2,14 +2,12 @@ import debug from 'debug';
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
-import type { BotCallbackBody } from '@/server/services/bot/BotCallbackService';
-import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
 
 const log = debug('orvilo-server:workflows:task:on-creator-complete');
 
-interface OnCreatorCompletePayload extends Partial<BotCallbackBody> {
+interface OnCreatorCompletePayload {
   agentId: string;
   operationId: string;
   originTopicId: string;
@@ -39,23 +37,6 @@ export async function onCreatorComplete(c: Context) {
     );
     if (await callbackStore.areDelivered(body.receiptIds)) {
       return c.json({ deduped: true, success: true });
-    }
-    const deliveredChunkCount = await callbackStore.getDeliveredChunkCount(body.operationId);
-    // Messenger delivery and receipt settlement intentionally share this
-    // retryable Hatchet handler. A platform failure returns 500, so the receipt
-    // stays processing and Hatchet retries instead of reporting a false success.
-    if (body.platformThreadId && body.applicationId) {
-      await new BotCallbackService(db).handleCallback(
-        {
-          ...body,
-          type: 'completion',
-        } as BotCallbackBody,
-        {
-          deliveredChunkCount,
-          onChunkDelivered: (count) => callbackStore.markDeliveryChunk(body.operationId, count),
-          strictDelivery: true,
-        },
-      );
     }
     await new TaskResultBridgeService(db, body.userId, body.workspaceId).completeCreatorWakeup({
       agentId: body.agentId,

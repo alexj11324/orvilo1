@@ -29,7 +29,6 @@ export const OnboardingStep = {
   LearnYourWorld: 3,
   Profile: 4,
   ChiefAgent: 5,
-  Messenger: 6,
   StarterTasks: 7,
 } as const;
 
@@ -38,7 +37,6 @@ export type OnboardingStep = (typeof OnboardingStep)[keyof typeof OnboardingStep
 export interface OnboardingCapabilities {
   analysis: boolean;
   composio: boolean;
-  messenger: boolean;
   starterTasks: boolean;
 }
 

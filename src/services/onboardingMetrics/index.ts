@@ -58,7 +58,6 @@ export type OnboardingStep =
   | 'fullname'
   | 'interests'
   | 'learn_your_world'
-  | 'messenger'
   | 'profile'
   | 'role'
   | 'source'

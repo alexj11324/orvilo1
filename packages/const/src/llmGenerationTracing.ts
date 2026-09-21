@@ -7,9 +7,11 @@
  * are dashboard / partition keys.
  */
 export const TRACING_SCENARIOS = {
+  AgentMeta: 'agent_meta',
   AgentSignal: 'agent_signal',
   AgentWelcome: 'agent_welcome',
   BuilderSuggestion: 'builder_suggestion',
+  ContextCompress: 'context_compress',
   DocumentToSkillMeta: 'document_to_skill_meta',
   ExpertiseDomainDraft: 'expertise_domain_draft',
   ExpertiseTopicIngestion: 'expertise_topic_ingestion',
@@ -17,9 +19,13 @@ export const TRACING_SCENARIOS = {
   GoalCriteriaGen: 'goal_criteria_gen',
   GoalDecompose: 'goal_decompose',
   GoalExplore: 'goal_explore',
+  HistorySummary: 'history_summary',
   HomeBrief: 'home_brief',
   InputCompletion: 'input_completion',
+  LangDetect: 'lang_detect',
+  MediaAnalysis: 'media_analysis',
   MemoryExtract: 'memory_extract',
+  MessageTranslate: 'message_translate',
   OnboardingTaskRecommendation: 'onboarding_task_recommendation',
   SignalFeedbackDomain: 'signal_feedback_domain',
   SignalFeedbackSatisfaction: 'signal_feedback_satisfaction',

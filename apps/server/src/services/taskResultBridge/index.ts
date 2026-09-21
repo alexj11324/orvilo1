@@ -1,4 +1,4 @@
-import type { ChatTopicBotContext, TaskContext, TaskTopicHandoff } from '@orvilo/types';
+import type { TaskContext, TaskTopicHandoff } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 import { sql } from 'drizzle-orm';
@@ -9,8 +9,6 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import type { OrviloDatabase } from '@/database/type';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
-import type { BotCallbackBody } from '@/server/services/bot/BotCallbackService';
-import { BotCallbackService } from '@/server/services/bot/BotCallbackService';
 
 import { AiAgentService } from '../aiAgent';
 import { acquireTopicStartReservation } from '../aiAgent/topicStartReservation';
@@ -207,10 +205,8 @@ export class TaskResultBridgeService {
 
     const receiptIds = receipts.map((item) => item.id);
     const topicModel = new TopicModel(this.db, this.userId, this.workspaceId);
-    const topic = await topicModel.findById(originTopicId);
-    const botContext = topic?.metadata?.bot as ChatTopicBotContext | undefined;
     const hooks: AgentHook[] = [
-      this.createCreatorCompletionHook(receiptIds, agentId, originTopicId, botContext),
+      this.createCreatorCompletionHook(receiptIds, agentId, originTopicId),
     ];
     const reservationId = `task-result-wakeup-${receiptIds[0]}`;
 
@@ -240,7 +236,6 @@ export class TaskResultBridgeService {
         agentId,
         appContext: { topicId: originTopicId },
         autoStart: true,
-        botContext,
         hooks,
         parentMessageId,
         prompt: `Process ${receipts.length} completed task result${receipts.length === 1 ? '' : 's'}`,
@@ -273,35 +268,9 @@ export class TaskResultBridgeService {
     receiptIds: string[],
     agentId: string,
     originTopicId: string,
-    botContext?: ChatTopicBotContext,
   ): AgentHook {
     return {
-      handler: async (event) => {
-        if (botContext?.platformThreadId) {
-          const callbackStore = new TaskResultCallbackRedisStore(
-            this.userId,
-            originTopicId,
-            this.workspaceId,
-          );
-          const deliveredChunkCount = await callbackStore.getDeliveredChunkCount(event.operationId);
-          await new BotCallbackService(this.db).handleCallback(
-            {
-              ...event,
-              applicationId: botContext.applicationId,
-              messengerInstallationKey: botContext.messengerInstallationKey,
-              platformThreadId: botContext.platformThreadId,
-              type: 'completion',
-              userId: this.userId,
-              workspaceId: this.workspaceId,
-            } as BotCallbackBody,
-            {
-              deliveredChunkCount,
-              onChunkDelivered: (count) =>
-                callbackStore.markDeliveryChunk(event.operationId, count),
-              strictDelivery: true,
-            },
-          );
-        }
+      handler: async () => {
         await this.completeCreatorWakeup({
           agentId,
           originTopicId,
@@ -313,9 +282,6 @@ export class TaskResultBridgeService {
       webhook: {
         body: {
           agentId,
-          applicationId: botContext?.applicationId,
-          messengerInstallationKey: botContext?.messengerInstallationKey,
-          platformThreadId: botContext?.platformThreadId,
           receiptIds,
           originTopicId,
           type: 'completion',

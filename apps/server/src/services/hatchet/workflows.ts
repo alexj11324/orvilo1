@@ -8,7 +8,6 @@ import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 
 export const HATCHET_WORKFLOW_PATHS = [
-  '/api/agent/webhooks/bot-callback',
   '/api/agent/webhooks/group-member-callback',
   '/api/agent/webhooks/subagent-callback',
   '/api/agent/webhooks/thread-run-callback',

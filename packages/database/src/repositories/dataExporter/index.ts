@@ -26,9 +26,9 @@ import { buildWorkspaceWhere } from '../../utils/workspace';
  *   `messages`.
  *
  * Tables without any of these (userSettings, userInstalledPlugins, agents,
- * aiModels, aiProviders, sessionGroups, sessions, and the `agentsToSessions`
- * relation) hold creator-authored configuration only — a visitor never creates
- * rows there — so they stay unfiltered and the export shape is unchanged.
+ * sessionGroups, sessions, and the `agentsToSessions` relation) hold
+ * creator-authored configuration only — a visitor never creates rows there —
+ * so they stay unfiltered and the export shape is unchanged.
  */
 type ShareVisitorRef =
   { column?: undefined; via: 'topicSender' } | { column: string; via: 'messageRef' | 'topicRef' };
@@ -60,8 +60,6 @@ export const DATA_EXPORT_CONFIG = {
     // { table: 'agentsFiles' },
     // { table: 'agentsKnowledgeBases' },
     // { table: 'agentsToSessions' },
-    { table: 'aiModels' },
-    { table: 'aiProviders' },
     // async tasks should not be included
     // { table: 'asyncTasks' },
     // { table: 'chunks' },

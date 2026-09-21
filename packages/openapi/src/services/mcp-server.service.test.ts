@@ -26,8 +26,6 @@ vi.mock('@/database/schemas', () => ({
   ConnectorSourceType: { custom: 'custom' },
   ConnectorStatus: { connected: 'connected', disconnected: 'disconnected' },
   agents: {},
-  aiModels: {},
-  aiProviders: {},
   files: {},
   knowledgeBases: {},
   messages: {},

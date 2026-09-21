@@ -100,9 +100,6 @@ describe('requiredApiKeyScopeForTrpc', () => {
     expect(requiredApiKeyScopeForTrpc('aiChat.outputJSON', 'mutation')).toEqual({
       scopes: ['model:invoke'],
     });
-    expect(requiredApiKeyScopeForTrpc('image.createImage', 'mutation')).toEqual({
-      scopes: ['model:invoke'],
-    });
   });
 
   it('stacks procedure-level extra scopes on the namespace rule', () => {
@@ -171,7 +168,7 @@ describe('requiredApiKeyScopeForTrpc', () => {
       blocked: true,
     });
     // the rest of the market surface keeps its agent scopes
-    expect(requiredApiKeyScopeForTrpc('market.getAgentsByPlugin', 'query')).toEqual({
+    expect(requiredApiKeyScopeForTrpc('market.getMcpDetail', 'query')).toEqual({
       scopes: ['agent:read'],
     });
   });

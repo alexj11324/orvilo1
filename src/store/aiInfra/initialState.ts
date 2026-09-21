@@ -8,7 +8,6 @@ export interface AIProviderStoreState {
   enabledAiModels?: EnabledAiModel[];
   // used for select
   enabledChatModelList?: EnabledProviderWithModels[];
-  enabledImageModelList?: EnabledProviderWithModels[];
   isInitAiProviderRuntimeState: boolean;
 }
 

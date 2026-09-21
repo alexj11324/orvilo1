@@ -1,7 +1,3 @@
-import {
-  ImageGenerationApiName,
-  ImageGenerationIdentifier,
-} from '@orvilo/builtin-tool-image-generation';
 import { WebOnboardingApiName, WebOnboardingIdentifier } from '@orvilo/builtin-tool-web-onboarding';
 import type { ChatToolPayloadWithResult } from '@orvilo/types';
 
@@ -31,10 +27,9 @@ export const isImageBearingTool = (tool: ChatToolPayloadWithResult): boolean => 
   const state = tool.result?.state;
   if (!state) return false;
 
-  if (
-    tool.identifier === ImageGenerationIdentifier &&
-    tool.apiName === ImageGenerationApiName.generateImage
-  )
+  // Retired image-generation tool: persisted messages can still carry its
+  // results, so the identifier/api are matched by literal.
+  if (tool.identifier === 'orvilo-image-generation' && tool.apiName === 'generateImage')
     return hasGeneratedImage(state);
 
   return hasUploadedImages(state);

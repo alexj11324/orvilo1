@@ -18,16 +18,12 @@ import eval_ from './eval';
 import file from './file';
 import home from './home';
 import hotkey from './hotkey';
-import image from './image';
 import knowledgeBase from './knowledgeBase';
 import labs from './labs';
 import marketAuth from './marketAuth';
 import memory from './memory';
-import messenger from './messenger';
 import metadata from './metadata';
-import migration from './migration';
 import modelRuntime from './modelRuntime';
-import models from './models';
 import notification from './notification';
 import oauth from './oauth';
 import onboarding from './onboarding';
@@ -71,16 +67,12 @@ const resources = {
   file,
   home,
   hotkey,
-  image,
   knowledgeBase,
   labs,
   marketAuth,
   memory,
-  messenger,
   metadata,
-  migration,
   modelRuntime,
-  models,
   notification,
   oauth,
   onboarding,

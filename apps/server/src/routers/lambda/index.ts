@@ -26,7 +26,6 @@ import { publicProcedure, router } from '@/libs/trpc/lambda';
 import { acceptanceRouter } from './acceptance';
 import { acceptanceCommentRouter } from './acceptanceComment';
 import { agentRouter } from './agent';
-import { agentBotProviderRouter } from './agentBotProvider';
 import { agentDocumentRouter } from './agentDocument';
 import { agentEvalRouter } from './agentEval';
 import { agentEvalExternalRouter } from './agentEvalExternal';
@@ -42,12 +41,10 @@ import { aiAgentRouter } from './aiAgent';
 import { aiChatRouter } from './aiChat';
 import { apiKeyRouter } from './apiKey';
 import { asrRouter } from './asr';
-import { botMessageRouter } from './botMessage';
 import { briefRouter } from './brief';
 import { changelogRouter } from './changelog';
 import { chunkRouter } from './chunk';
 import { collaborationRouter } from './collaboration';
-import { comfyuiRouter } from './comfyui';
 import { composioRouter } from './composio';
 import { configRouter } from './config';
 import { connectorRouter } from './connector';
@@ -59,21 +56,15 @@ import { expertiseRouter } from './expertise';
 import { exporterRouter } from './exporter';
 import { fileRouter } from './file';
 import { followUpActionRouter } from './followUpAction';
-import { generationRouter } from './generation';
-import { generationBatchRouter } from './generationBatch';
-import { generationTopicRouter } from './generationTopic';
 import { goalRouter } from './goal';
 import { homeRouter } from './home';
-import { imageRouter } from './image';
 import { importerRouter } from './importer';
-import { klavisRouter } from './klavis';
 import { knowledgeRouter } from './knowledge';
 import { knowledgeBaseRouter } from './knowledgeBase';
 import { linearSyncRouter } from './linearSync';
 import { llmGenerationTracingRouter } from './llmGenerationTracing';
 import { marketRouter } from './market';
 import { messageRouter } from './message';
-import { messengerRouter } from './messenger';
 import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
@@ -101,7 +92,6 @@ import { userRouter } from './user';
 import { userMemoriesRouter } from './userMemories';
 import { userMemoryRouter } from './userMemory';
 import { verifyRouter } from './verify';
-import { videoRouter } from './video';
 import { webBrowsingRouter } from './webBrowsing';
 import { workRouter } from './work';
 import { workspaceUserSettingsRouter } from './workspaceUserSettings';
@@ -110,9 +100,7 @@ export const lambdaRouter = router({
   acceptance: acceptanceRouter,
   acceptanceComment: acceptanceCommentRouter,
   agent: agentRouter,
-  agentBotProvider: agentBotProviderRouter,
   agentNotify: agentNotifyRouter,
-  botMessage: botMessageRouter,
   agentDocument: agentDocumentRouter,
   agentEval: agentEvalRouter,
   agentEvalExternal: agentEvalExternalRouter,
@@ -131,7 +119,6 @@ export const lambdaRouter = router({
   asr: asrRouter,
   chunk: chunkRouter,
   collaboration: collaborationRouter,
-  comfyui: comfyuiRouter,
   config: configRouter,
   connector: connectorRouter,
   device: deviceRouter,
@@ -141,26 +128,20 @@ export const lambdaRouter = router({
   exporter: exporterRouter,
   file: fileRouter,
   followUpAction: followUpActionRouter,
-  generation: generationRouter,
-  generationBatch: generationBatchRouter,
-  generationTopic: generationTopicRouter,
   goal: goalRouter,
   group: agentGroupRouter,
   healthcheck: publicProcedure.query(() => "i'm live!"),
   home: homeRouter,
-  image: imageRouter,
   importer: importerRouter,
   invitation: invitationRouter,
   composio: composioRouter,
 
-  klavis: klavisRouter,
   knowledge: knowledgeRouter,
   knowledgeBase: knowledgeBaseRouter,
   linearSync: linearSyncRouter,
   llmGenerationTracing: llmGenerationTracingRouter,
   market: marketRouter,
   message: messageRouter,
-  messenger: messengerRouter,
   metric: metricRouter,
   notebook: notebookRouter,
   notification: notificationRouter,
@@ -189,7 +170,6 @@ export const lambdaRouter = router({
   userMemories: userMemoriesRouter,
   userMemory: userMemoryRouter,
   verify: verifyRouter,
-  video: videoRouter,
   webBrowsing: webBrowsingRouter,
   work: workRouter,
   workspace: workspaceRouter,

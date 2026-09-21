@@ -45,10 +45,7 @@ import {
 } from '@/database/models/userMemory';
 import { userSettings } from '@/database/schemas';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
-import {
-  initModelRuntimeFromDeploymentConfig,
-  initModelRuntimeWithUserPayload,
-} from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import {
   emitToolOutcomeSafely,
   resolveToolOutcomeScope,
@@ -60,7 +57,6 @@ import type { UserMemoryEmbeddingRuntime } from '@/server/services/memory/userMe
 import { embedUserMemoryTexts } from '@/server/services/memory/userMemory/embedding';
 import { normalizeSearchMemoryParams } from '@/server/services/memory/userMemory/searchParams';
 
-import type { ToolExecutionMemoryEmbeddingRuntime } from '../types';
 import type { ServerRuntimeRegistration } from './types';
 
 type MemoryEffort = 'high' | 'low' | 'medium';
@@ -142,7 +138,6 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   private toolCallId?: string;
   private topicId?: string;
   private memoryEffort: MemoryEffort;
-  private memoryEmbeddingRuntime?: ToolExecutionMemoryEmbeddingRuntime;
   /**
    * Origin attribution stamped on every embedding this runtime bills. Set only
    * for a shared-agent visitor run, whose embeddings are otherwise billed to
@@ -157,7 +152,6 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
     emitOutcome?: typeof emitToolOutcomeSafely;
     messageId?: string;
     memoryEffort: MemoryEffort;
-    memoryEmbeddingRuntime?: ToolExecutionMemoryEmbeddingRuntime;
     memoryModel: UserMemoryModel;
     operationId?: string;
     serverDB: OrviloDatabase;
@@ -178,7 +172,6 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
     this.toolCallId = options.toolCallId;
     this.topicId = options.topicId;
     this.memoryEffort = options.memoryEffort;
-    this.memoryEmbeddingRuntime = options.memoryEmbeddingRuntime;
     this.spendOrigin = options.spendOrigin;
     this.userId = options.userId;
     this.workspaceId = options.workspaceId;
@@ -227,18 +220,12 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
     const normalizedParams = normalizeSearchMemoryParams(params);
     const defaultEmbeddingConfig =
       getServerDefaultFilesConfig().embeddingModel || DEFAULT_USER_MEMORY_EMBEDDING_MODEL_ITEM;
-    const embeddingModel = this.memoryEmbeddingRuntime?.model ?? defaultEmbeddingConfig.model;
-    const modelRuntime = this.memoryEmbeddingRuntime
-      ? initModelRuntimeWithUserPayload(
-          this.memoryEmbeddingRuntime.provider,
-          this.memoryEmbeddingRuntime.payload,
-          { userId: this.userId },
-        )
-      : await initModelRuntimeFromDeploymentConfig(
-          this.userId,
-          defaultEmbeddingConfig.provider,
-          this.workspaceId,
-        );
+    const embeddingModel = defaultEmbeddingConfig.model;
+    const modelRuntime = await initModelRuntimeFromDeploymentConfig(
+      this.userId,
+      defaultEmbeddingConfig.provider,
+      this.workspaceId,
+    );
     const normalizedQueries = normalizeUserMemorySearchQueries(normalizedParams.queries);
 
     const queryEmbeddings =
@@ -907,7 +894,6 @@ export const memoryRuntime: ServerRuntimeRegistration = {
       emitOutcome: emitToolOutcomeSafely,
       messageId: context.messageId,
       memoryEffort,
-      memoryEmbeddingRuntime: context.memoryEmbeddingRuntime,
       memoryModel,
       operationId: context.operationId,
       serverDB: context.serverDB,

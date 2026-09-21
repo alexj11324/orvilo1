@@ -1,17 +1,23 @@
-import { type MessageTextChunk } from '@orvilo/fetch-sse';
+import { TRACING_SCENARIOS } from '@orvilo/const';
 import {
   chainPickEmoji,
   chainSummaryAgentName,
   chainSummaryDescription,
   chainSummaryTags,
+  PICK_EMOJI_JSON_SCHEMA,
+  PICK_EMOJI_PROMPT_VERSION,
+  SUMMARY_AGENT_NAME_JSON_SCHEMA,
+  SUMMARY_AGENT_NAME_PROMPT_VERSION,
+  SUMMARY_DESCRIPTION_JSON_SCHEMA,
+  SUMMARY_DESCRIPTION_PROMPT_VERSION,
+  SUMMARY_TAGS_JSON_SCHEMA,
+  SUMMARY_TAGS_PROMPT_VERSION,
 } from '@orvilo/prompts';
-import { type TracePayload } from '@orvilo/types';
-import { TraceNameMap, TraceTopicType } from '@orvilo/types';
 import { type PartialDeep } from 'type-fest';
 import { type StateCreator } from 'zustand/vanilla';
 
 import { analyticsClient } from '@/libs/analytics/client';
-import { chatService } from '@/services/chat';
+import { aiChatService } from '@/services/aiChat';
 import { globalHelpers } from '@/store/global/helpers';
 import { useUserStore } from '@/store/user';
 import { systemAgentSelectors } from '@/store/user/slices/settings/selectors';
@@ -57,7 +63,6 @@ export interface PublicAction {
 export interface Action extends PublicAction {
   dispatchConfig: (payload: ConfigDispatch) => Promise<void>;
   dispatchMeta: (payload: MetaDataDispatch) => Promise<void>;
-  getCurrentTracePayload: (data: Partial<TracePayload>) => TracePayload;
 
   internal_getSystemAgentForMeta: () => SystemAgentItem;
   resetAgentConfig: () => Promise<void>;
@@ -67,8 +72,6 @@ export interface Action extends PublicAction {
   setAgentMeta: (meta: Partial<MetaData>) => Promise<void>;
 
   setChatConfig: (config: Partial<OrviloAgentChatConfig>) => Promise<void>;
-  streamUpdateMetaArray: (key: keyof MetaData) => any;
-  streamUpdateMetaString: (key: keyof MetaData) => any;
   toggleAgentPlugin: (pluginId: string, state?: boolean) => void;
 
   /**
@@ -95,22 +98,36 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
 
     const systemRole = config.systemRole;
 
-    chatService.fetchPresetTaskResult({
-      onFinish: async (emoji) => {
-        dispatchMeta({ type: 'update', value: { avatar: emoji } });
-      },
-      onLoadingChange: (loading) => {
-        get().updateLoadingState('avatar', loading);
-      },
-      params: merge(
-        get().internal_getSystemAgentForMeta(),
-        chainPickEmoji([meta.title, meta.description, systemRole].filter(Boolean).join(',')),
-      ),
-      trace: get().getCurrentTracePayload({ traceName: TraceNameMap.EmojiPicker }),
-    });
+    const { model, provider } = get().internal_getSystemAgentForMeta();
+
+    get().updateLoadingState('avatar', true);
+    try {
+      const { data } = await aiChatService.generateJSON(
+        {
+          ...chainPickEmoji([meta.title, meta.description, systemRole].filter(Boolean).join(',')),
+          model,
+          provider,
+          schema: PICK_EMOJI_JSON_SCHEMA,
+          tracing: {
+            agentId: get().id,
+            promptVersion: PICK_EMOJI_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.AgentMeta,
+            schemaName: PICK_EMOJI_JSON_SCHEMA.name,
+          },
+        },
+        new AbortController(),
+      );
+
+      const emoji = (data as { emoji?: string } | undefined)?.emoji;
+      if (emoji) dispatchMeta({ type: 'update', value: { avatar: emoji } });
+    } catch (error) {
+      console.error('[AgentSettings] autoPickEmoji failed:', error);
+    } finally {
+      get().updateLoadingState('avatar', false);
+    }
   },
   autocompleteAgentDescription: async () => {
-    const { dispatchMeta, config, meta, updateLoadingState, streamUpdateMetaString } = get();
+    const { dispatchMeta, config, meta, updateLoadingState } = get();
 
     const systemRole = config.systemRole;
 
@@ -121,23 +138,36 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
     // Replace with ...
     dispatchMeta({ type: 'update', value: { description: '...' } });
 
-    chatService.fetchPresetTaskResult({
-      onError: () => {
-        dispatchMeta({ type: 'update', value: { description: preValue } });
-      },
-      onLoadingChange: (loading) => {
-        updateLoadingState('description', loading);
-      },
-      onMessageHandle: streamUpdateMetaString('description'),
-      params: merge(
-        get().internal_getSystemAgentForMeta(),
-        chainSummaryDescription(systemRole, globalHelpers.getCurrentLanguage()),
-      ),
-      trace: get().getCurrentTracePayload({ traceName: TraceNameMap.SummaryAgentDescription }),
-    });
+    const { model, provider } = get().internal_getSystemAgentForMeta();
+
+    updateLoadingState('description', true);
+    try {
+      const { data } = await aiChatService.generateJSON(
+        {
+          ...chainSummaryDescription(systemRole, globalHelpers.getCurrentLanguage()),
+          model,
+          provider,
+          schema: SUMMARY_DESCRIPTION_JSON_SCHEMA,
+          tracing: {
+            agentId: get().id,
+            promptVersion: SUMMARY_DESCRIPTION_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.AgentMeta,
+            schemaName: SUMMARY_DESCRIPTION_JSON_SCHEMA.name,
+          },
+        },
+        new AbortController(),
+      );
+
+      const description = (data as { description?: string } | undefined)?.description ?? preValue;
+      dispatchMeta({ type: 'update', value: { description } });
+    } catch {
+      dispatchMeta({ type: 'update', value: { description: preValue } });
+    } finally {
+      updateLoadingState('description', false);
+    }
   },
   autocompleteAgentTags: async () => {
-    const { dispatchMeta, config, meta, updateLoadingState, streamUpdateMetaArray } = get();
+    const { dispatchMeta, config, meta, updateLoadingState } = get();
 
     const systemRole = config.systemRole;
 
@@ -148,27 +178,39 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
     // Replace with ...
     dispatchMeta({ type: 'update', value: { tags: ['...'] } });
 
-    // Get current agent for agentMeta
-    chatService.fetchPresetTaskResult({
-      onError: () => {
-        dispatchMeta({ type: 'update', value: { tags: preValue } });
-      },
-      onLoadingChange: (loading) => {
-        updateLoadingState('tags', loading);
-      },
-      onMessageHandle: streamUpdateMetaArray('tags'),
-      params: merge(
-        get().internal_getSystemAgentForMeta(),
-        chainSummaryTags(
-          [meta.title, meta.description, systemRole].filter(Boolean).join(','),
-          globalHelpers.getCurrentLanguage(),
-        ),
-      ),
-      trace: get().getCurrentTracePayload({ traceName: TraceNameMap.SummaryAgentTags }),
-    });
+    const { model, provider } = get().internal_getSystemAgentForMeta();
+
+    updateLoadingState('tags', true);
+    try {
+      const { data } = await aiChatService.generateJSON(
+        {
+          ...chainSummaryTags(
+            [meta.title, meta.description, systemRole].filter(Boolean).join(','),
+            globalHelpers.getCurrentLanguage(),
+          ),
+          model,
+          provider,
+          schema: SUMMARY_TAGS_JSON_SCHEMA,
+          tracing: {
+            agentId: get().id,
+            promptVersion: SUMMARY_TAGS_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.AgentMeta,
+            schemaName: SUMMARY_TAGS_JSON_SCHEMA.name,
+          },
+        },
+        new AbortController(),
+      );
+
+      const tags = (data as { tags?: string[] } | undefined)?.tags ?? preValue;
+      dispatchMeta({ type: 'update', value: { tags } });
+    } catch {
+      dispatchMeta({ type: 'update', value: { tags: preValue } });
+    } finally {
+      updateLoadingState('tags', false);
+    }
   },
   autocompleteAgentTitle: async () => {
-    const { dispatchMeta, config, meta, updateLoadingState, streamUpdateMetaString } = get();
+    const { dispatchMeta, config, meta, updateLoadingState } = get();
 
     const systemRole = config.systemRole;
 
@@ -179,23 +221,36 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
     // Replace with ...
     dispatchMeta({ type: 'update', value: { title: '...' } });
 
-    chatService.fetchPresetTaskResult({
-      onError: () => {
-        dispatchMeta({ type: 'update', value: { title: previousTitle } });
-      },
-      onLoadingChange: (loading) => {
-        updateLoadingState('title', loading);
-      },
-      onMessageHandle: streamUpdateMetaString('title'),
-      params: merge(
-        get().internal_getSystemAgentForMeta(),
-        chainSummaryAgentName(
-          [meta.description, systemRole].filter(Boolean).join(','),
-          globalHelpers.getCurrentLanguage(),
-        ),
-      ),
-      trace: get().getCurrentTracePayload({ traceName: TraceNameMap.SummaryAgentTitle }),
-    });
+    const { model, provider } = get().internal_getSystemAgentForMeta();
+
+    updateLoadingState('title', true);
+    try {
+      const { data } = await aiChatService.generateJSON(
+        {
+          ...chainSummaryAgentName(
+            [meta.description, systemRole].filter(Boolean).join(','),
+            globalHelpers.getCurrentLanguage(),
+          ),
+          model,
+          provider,
+          schema: SUMMARY_AGENT_NAME_JSON_SCHEMA,
+          tracing: {
+            agentId: get().id,
+            promptVersion: SUMMARY_AGENT_NAME_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.AgentMeta,
+            schemaName: SUMMARY_AGENT_NAME_JSON_SCHEMA.name,
+          },
+        },
+        new AbortController(),
+      );
+
+      const title = (data as { name?: string } | undefined)?.name ?? previousTitle;
+      dispatchMeta({ type: 'update', value: { title } });
+    } catch {
+      dispatchMeta({ type: 'update', value: { title: previousTitle } });
+    } finally {
+      updateLoadingState('title', false);
+    }
   },
   autocompleteAllMeta: (replace) => {
     const { meta } = get();
@@ -286,12 +341,6 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
       }
     }
   },
-  getCurrentTracePayload: (data) => ({
-    sessionId: get().id,
-    topicId: TraceTopicType.AgentSettings,
-    ...data,
-  }),
-
   internal_getSystemAgentForMeta: () => {
     return systemAgentSelectors.agentMeta(useUserStore.getState());
   },
@@ -333,30 +382,6 @@ export const store: StateCreator<Store, [['zustand/devtools', never]]> = (set, g
 
   setChatConfig: async (config) => {
     await get().setAgentConfig({ chatConfig: config });
-  },
-
-  streamUpdateMetaArray: (key: keyof MetaData) => {
-    let value = '';
-    return (chunk: MessageTextChunk) => {
-      switch (chunk.type) {
-        case 'text': {
-          value += chunk.text;
-          get().dispatchMeta({ type: 'update', value: { [key]: value.split(',') } });
-        }
-      }
-    };
-  },
-
-  streamUpdateMetaString: (key: keyof MetaData) => {
-    let value = '';
-    return (chunk: MessageTextChunk) => {
-      switch (chunk.type) {
-        case 'text': {
-          value += chunk.text;
-          get().dispatchMeta({ type: 'update', value: { [key]: value } });
-        }
-      }
-    };
   },
 
   toggleAgentPlugin: (id, state) => {

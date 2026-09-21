@@ -57,7 +57,7 @@ export interface OIDCConfig {
 
 /**
  * Decrypted shape of the `credentials` column.
- * Encrypted at rest via KeyVaultsGateKeeper (same as messengerInstallations).
+ * Encrypted at rest via KeyVaultsGateKeeper.
  */
 export type ConnectorCredentials =
   | {

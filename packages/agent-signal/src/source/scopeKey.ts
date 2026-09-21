@@ -1,32 +1,14 @@
 import type { AgentSignalScope } from '../base/types';
 
 /**
- * Bot-thread identity used to route source events that originate outside a Orvilo topic.
- */
-export interface AgentSignalBotScopeKeyInput {
-  /** Application identifier from the external bot platform. */
-  applicationId: string;
-  /** Platform identifier, such as `discord` or `slack`. */
-  platform: string;
-  /** Thread or channel conversation identifier from the external platform. */
-  platformThreadId: string;
-}
-
-/**
  * Producer metadata used to derive a stable source-event scope key.
  */
 export interface AgentSignalProducerScopeInput {
   /** Optional assistant or agent identifier for broad agent-user scoped events. */
   agentId?: string;
-  /** Optional external application identifier for bot-originated events. */
-  applicationId?: string;
-  /** Optional external platform identifier for bot-originated events. */
-  platform?: string;
-  /** Optional external thread identifier for bot-originated events. */
-  platformThreadId?: string;
   /** Optional task identifier. Used when no topic is available. */
   taskId?: string;
-  /** Optional Orvilo topic identifier. Takes precedence over task and bot-thread metadata. */
+  /** Optional Orvilo topic identifier. Takes precedence over task metadata. */
   topicId?: string;
   /** Optional user identifier for broad authenticated scopes. */
   userId?: string;
@@ -79,7 +61,7 @@ const pickString = (input: Record<string, unknown>, key: string) => {
  *
  * Use when:
  * - Normalizing source events before dedupe or workflow handoff
- * - Routing runtime chains into topic, bot-thread, task, or user lanes
+ * - Routing runtime chains into topic, task, or user lanes
  *
  * Expects:
  * - Input identifiers are already trusted by the caller
@@ -90,22 +72,12 @@ const pickString = (input: Record<string, unknown>, key: string) => {
 export const AgentSignalScopeKey = {
   forAgentUser: (input: AgentSignalUserAgentScopeKeyInput) =>
     joinScopeKey('agent', input.agentId, 'user', input.userId),
-  forBotThread: (input: AgentSignalBotScopeKeyInput) =>
-    joinScopeKey('bot', input.platform, input.applicationId, input.platformThreadId),
   forTask: (input: AgentSignalTaskScopeKeyInput) => joinScopeKey('task', input.taskId),
   forTopic: (input: AgentSignalTopicScopeKeyInput) => joinScopeKey('topic', input.topicId),
   forUser: (input: AgentSignalUserScopeKeyInput) => joinScopeKey('user', input.userId),
   fromProducerInput: (input: AgentSignalProducerScopeInput) => {
     if (input.topicId) return AgentSignalScopeKey.forTopic({ topicId: input.topicId });
     if (input.taskId) return AgentSignalScopeKey.forTask({ taskId: input.taskId });
-
-    if (input.platform && input.applicationId && input.platformThreadId) {
-      return AgentSignalScopeKey.forBotThread({
-        applicationId: input.applicationId,
-        platform: input.platform,
-        platformThreadId: input.platformThreadId,
-      });
-    }
 
     if (input.agentId && input.userId) {
       return AgentSignalScopeKey.forAgentUser({ agentId: input.agentId, userId: input.userId });
@@ -117,7 +89,6 @@ export const AgentSignalScopeKey = {
   },
   fromRuntimeScope: (scope: AgentSignalScope) => {
     if (scope.topicId) return AgentSignalScopeKey.forTopic({ topicId: scope.topicId });
-    if (scope.botScopeKey) return scope.botScopeKey;
     if (scope.taskId) return AgentSignalScopeKey.forTask({ taskId: scope.taskId });
     if (scope.agentId) {
       return AgentSignalScopeKey.forAgentUser({ agentId: scope.agentId, userId: scope.userId });
@@ -131,7 +102,7 @@ export const AgentSignalScopeKey = {
  * Resolves the default scope key for a source-event payload.
  *
  * Before:
- * - `{ topicId: "topic-1", platform: "discord" }`
+ * - `{ topicId: "topic-1" }`
  *
  * After:
  * - `"topic:topic-1"`
@@ -139,9 +110,6 @@ export const AgentSignalScopeKey = {
 export const getSourceEventScopeKey = (input: Record<string, unknown>) => {
   return AgentSignalScopeKey.fromProducerInput({
     agentId: pickString(input, 'agentId'),
-    applicationId: pickString(input, 'applicationId'),
-    platform: pickString(input, 'platform'),
-    platformThreadId: pickString(input, 'platformThreadId'),
     taskId: pickString(input, 'taskId'),
     topicId: pickString(input, 'topicId'),
     userId: pickString(input, 'userId'),

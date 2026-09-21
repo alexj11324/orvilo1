@@ -99,7 +99,6 @@ export const RELEASES_URL = urlJoin(GITHUB, 'releases');
 export const mailTo = (email: string) => `mailto:${email}`;
 
 export const AES_GCM_URL = 'https://datatracker.ietf.org/doc/html/draft-ietf-avt-srtp-aes-gcm-01';
-export const BASE_PROVIDER_DOC_URL = urlJoin(DOCUMENTS, 'usage/providers');
 export const CHANGELOG_URL = urlJoin(OFFICIAL_SITE, 'changelog');
 
 export const DOWNLOAD_URL = {
@@ -108,8 +107,6 @@ export const DOWNLOAD_URL = {
   mobile: urlJoin(OFFICIAL_SITE, '/mobile'),
   ios: 'https://testflight.apple.com/join/2ZbjX4Qp',
 } as const;
-
-export const channelDocUrl = (platform: string) => urlJoin(USAGE_DOCUMENTS, 'channels', platform);
 
 export const discoverUrl = (type: string, identifier: string) =>
   urlJoin(OFFICIAL_SITE, 'discover', type, identifier);

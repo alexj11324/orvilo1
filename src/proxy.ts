@@ -95,7 +95,6 @@ export const config = {
     '/signup(.*)',
     '/signin(.*)',
     '/verify-email(.*)',
-    '/verify-im(.*)',
     '/reset-password(.*)',
     '/auth-error(.*)',
     '/oauth(.*)',

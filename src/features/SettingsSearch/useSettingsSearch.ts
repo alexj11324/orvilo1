@@ -3,7 +3,6 @@ import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SUPPORTED_MESSENGER_PLATFORMS } from '@/features/Messenger/constants';
 import { useCategory } from '@/features/Settings/hooks/useCategory';
 import { SettingsTabs } from '@/store/global/initialState';
 import {
@@ -174,25 +173,6 @@ export const useSettingsSearch = (
         url: `${tabInfo.url}#${def.anchor}`,
       });
     }
-
-    // IM notification channels (Telegram / Slack / …) live on the notification
-    // page with per-platform anchors. Index them from the same catalog the page
-    // renders so a search for the platform name deep-links to that row.
-    const notificationTab = visibleTabs.get(SettingsTabs.Notification);
-    if (notificationTab)
-      for (const platform of SUPPORTED_MESSENGER_PLATFORMS) {
-        entries.push({
-          anchor: `notification-${platform.id}`,
-          breadcrumb: `${notificationTab.groupTitle} › ${notificationTab.label}`,
-          haystack: [platform.name.toLowerCase(), platform.id.toLowerCase(), 'messenger', 'im'],
-          icon: notificationTab.icon,
-          key: `item-notification-${platform.id}`,
-          label: platform.name,
-          pinyinBase: [platform.name.toLowerCase()],
-          tab: SettingsTabs.Notification,
-          url: `${notificationTab.url}#notification-${platform.id}`,
-        });
-      }
 
     // Builtin OAuth connectors (Notion, GitHub, …): searching a connector name
     // should land on the connector page. The page has no per-connector deep

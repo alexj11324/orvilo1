@@ -83,16 +83,6 @@ export interface ToolCallResponseMessage {
   type: 'tool_call_response';
 }
 
-export interface MessageApiResponseMessage {
-  requestId: string;
-  result: {
-    content: string;
-    error?: string;
-    success: boolean;
-  };
-  type: 'message_api_response';
-}
-
 // Server → Client
 export interface HeartbeatAckMessage {
   type: 'heartbeat_ack';
@@ -172,16 +162,6 @@ export interface ToolCallRequestMessage {
     type?: GatewayToolCallType;
   };
   type: 'tool_call_request';
-}
-
-export interface MessageApiRequestMessage {
-  api: {
-    apiName: string;
-    payload: Record<string, unknown>;
-    platform: string;
-  };
-  requestId: string;
-  type: 'message_api_request';
 }
 
 // Server → Client
@@ -327,7 +307,6 @@ export type ClientMessage =
   | AgentRunAckMessage
   | AuthMessage
   | HeartbeatMessage
-  | MessageApiResponseMessage
   | RpcResponseMessage
   | SystemInfoResponseMessage
   | ToolCallResponseMessage;
@@ -337,7 +316,6 @@ export type ServerMessage =
   | AuthFailedMessage
   | AuthSuccessMessage
   | HeartbeatAckMessage
-  | MessageApiRequestMessage
   | RpcRequestMessage
   | SystemInfoRequestMessage
   | ToolCallRequestMessage;
@@ -355,7 +333,6 @@ export interface GatewayClientEvents {
   disconnected: () => void;
   error: (error: Error) => void;
   heartbeat_ack: () => void;
-  message_api_request: (request: MessageApiRequestMessage) => void;
   reconnecting: (delay: number) => void;
   rpc_request: (request: RpcRequestMessage) => void;
   status_changed: (status: ConnectionStatus) => void;

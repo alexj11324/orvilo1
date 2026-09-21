@@ -55,7 +55,7 @@ export interface AgentHookEvent {
    * Outbound attachments extracted from the final assistant message's
    * multimodal `content` parts (or tool messages that produced image/file
    * outputs). Set on `onComplete` events; downstream consumers (bot reply
-   * callbacks) forward these to platform messengers.
+   * callbacks) forward these to the caller.
    */
   attachments?: HookEventAttachment[];
   /** LLM text output (afterStep only) */

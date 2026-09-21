@@ -13,15 +13,12 @@ import AzureAIProvider from './azureai';
 import BaichuanProvider from './baichuan';
 import BailianCodingPlanProvider from './bailianCodingPlan';
 import BedrockProvider from './bedrock';
-import BflProvider from './bfl';
 import CerebrasProvider from './cerebras';
 import ChatGPTProvider from './chatGPT';
 import CloudflareProvider from './cloudflare';
 import CohereProvider from './cohere';
 import CometAPIProvider from './cometapi';
-import ComfyUIProvider from './comfyui';
 import DeepSeekProvider from './deepseek';
-import FalProvider from './fal';
 import FireworksAIProvider from './fireworksai';
 import GiteeAIProvider from './giteeai';
 import GithubProvider from './github';
@@ -59,7 +56,6 @@ import PerplexityProvider from './perplexity';
 import PPIOProvider from './ppio';
 import QiniuProvider from './qiniu';
 import QwenProvider from './qwen';
-import ReplicateProvider from './replicate';
 import SambaNovaProvider from './sambanova';
 import Search1APIProvider from './search1api';
 import SenseNovaProvider from './sensenova';
@@ -169,18 +165,15 @@ export const DEFAULT_MODEL_PROVIDER_LIST = [
   XiaomiMiMoProvider,
   AiHubMixProvider,
   OpenRouterProvider,
-  FalProvider,
   OllamaProvider,
   OllamaCloudProvider,
   VLLMProvider,
   UnslothProvider,
-  ComfyUIProvider,
   HuggingFaceProvider,
   CloudflareProvider,
   GithubProvider,
   GithubCopilotProvider,
   NewAPIProvider,
-  BflProvider,
   NovitaProvider,
   PPIOProvider,
   Ai302Provider,
@@ -219,7 +212,6 @@ export const DEFAULT_MODEL_PROVIDER_LIST = [
   InfiniAIProvider,
   AkashChatProvider,
   QiniuProvider,
-  ReplicateProvider,
   NebiusProvider,
   CometAPIProvider,
   VercelAIGatewayProvider,
@@ -269,15 +261,12 @@ export { default as AzureAIProviderCard } from './azureai';
 export { default as BaichuanProviderCard } from './baichuan';
 export { default as BailianCodingPlanProviderCard } from './bailianCodingPlan';
 export { default as BedrockProviderCard } from './bedrock';
-export { default as BflProviderCard } from './bfl';
 export { default as CerebrasProviderCard } from './cerebras';
 export { default as ChatGPTProviderCard } from './chatGPT';
 export { default as CloudflareProviderCard } from './cloudflare';
 export { default as CohereProviderCard } from './cohere';
 export { default as CometAPIProviderCard } from './cometapi';
-export { default as ComfyUIProviderCard } from './comfyui';
 export { default as DeepSeekProviderCard } from './deepseek';
-export { default as FalProviderCard } from './fal';
 export { default as FireworksAIProviderCard } from './fireworksai';
 export { default as GiteeAIProviderCard } from './giteeai';
 export { default as GithubProviderCard } from './github';
@@ -315,7 +304,6 @@ export { default as PerplexityProviderCard } from './perplexity';
 export { default as PPIOProviderCard } from './ppio';
 export { default as QiniuProviderCard } from './qiniu';
 export { default as QwenProviderCard } from './qwen';
-export { default as ReplicateProviderCard } from './replicate';
 export { default as SambaNovaProviderCard } from './sambanova';
 export { default as Search1APIProviderCard } from './search1api';
 export { default as SenseNovaProviderCard } from './sensenova';

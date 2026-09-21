@@ -14,7 +14,7 @@ const mockTriggerHatchetWorkflow = vi.hoisted(() => vi.fn());
 
 vi.mock('@/server/services/hatchet/workflows', () => ({
   triggerHatchetWorkflow: mockTriggerHatchetWorkflow,
-  isHatchetWorkflowPath: (path: string) => path === '/api/agent/webhooks/bot-callback',
+  isHatchetWorkflowPath: (path: string) => path === '/api/agent/webhooks/group-member-callback',
 }));
 
 const { isQueueAgentRuntimeEnabled } = await import('@/server/services/queue/impls');
@@ -280,12 +280,12 @@ describe('HookDispatcher', () => {
 
     it('invokes an allowlisted internal callback without an HTTP hop', async () => {
       await deliverWebhook(
-        { delivery: 'hatchet', url: '/api/agent/webhooks/bot-callback' },
+        { delivery: 'hatchet', url: '/api/agent/webhooks/group-member-callback' },
         { a: 1 },
       );
 
       expect(mockTriggerHatchetWorkflow).toHaveBeenCalledWith(
-        '/api/agent/webhooks/bot-callback',
+        '/api/agent/webhooks/group-member-callback',
         { a: 1 },
         { concurrencyKey: 'hook.global' },
       );
@@ -295,13 +295,13 @@ describe('HookDispatcher', () => {
     it('hands persisted pre-cutover QStash callbacks to Hatchet', async () => {
       const persistedWebhook = {
         delivery: 'qstash',
-        url: '/api/agent/webhooks/bot-callback',
+        url: '/api/agent/webhooks/group-member-callback',
       } as unknown as AgentHookWebhook;
 
       await deliverWebhook(persistedWebhook, { operationId: 'op-before-cutover' });
 
       expect(mockTriggerHatchetWorkflow).toHaveBeenCalledWith(
-        '/api/agent/webhooks/bot-callback',
+        '/api/agent/webhooks/group-member-callback',
         { operationId: 'op-before-cutover' },
         { concurrencyKey: 'hook.op-before-cutover' },
       );
@@ -320,7 +320,10 @@ describe('HookDispatcher', () => {
       mockTriggerHatchetWorkflow.mockRejectedValue(new Error('callback failed'));
 
       await expect(
-        deliverWebhook({ delivery: 'hatchet', url: '/api/agent/webhooks/bot-callback' }, { a: 1 }),
+        deliverWebhook(
+          { delivery: 'hatchet', url: '/api/agent/webhooks/group-member-callback' },
+          { a: 1 },
+        ),
       ).rejects.toThrow('callback failed');
 
       expect(global.fetch).not.toHaveBeenCalled();
@@ -339,7 +342,7 @@ describe('HookDispatcher', () => {
           webhook: {
             delivery: 'hatchet',
             fallback: 'none',
-            url: '/api/agent/webhooks/bot-callback',
+            url: '/api/agent/webhooks/group-member-callback',
           },
         },
         {

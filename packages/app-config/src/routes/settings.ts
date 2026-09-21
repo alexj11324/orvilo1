@@ -117,7 +117,6 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Hotkeys are a desktop concept; the mobile shell has nothing to bind.
   [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, status: 'enabled' },
 
-  [SettingsTabs.Messenger]: { status: 'enabled' },
   // Desktop notifications are a local capability, so the row is offered on
   // Electron regardless of whether the deployment ships the business pages
   // that host the rest of the notification settings.

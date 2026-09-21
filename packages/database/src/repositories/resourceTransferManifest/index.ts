@@ -2,7 +2,6 @@ import type { TransferResourceType } from '@orvilo/types';
 import { and, count, eq, inArray, ne } from 'drizzle-orm';
 
 import {
-  agentBotProviders,
   agentCronJobs,
   agents,
   chatGroups,
@@ -30,10 +29,6 @@ import { resolveGroupMembershipType } from '../../utils/groupMembership';
  * configuration rides along, arrives disabled, or gets detached.
  */
 export interface MemberTransferManifest {
-  /** Number of the owner's bot bindings that transfer DISABLED (a platform can have several). */
-  botBindings: number;
-  /** Distinct platforms of those bindings, for display. */
-  botPlatforms: string[];
   /** Connectors disconnected (agent-owned, reauthorize with the recipient's account) or unmounted (other members' linked rows). */
   connectorsAffected: number;
   /** Owner's scheduled jobs that transfer DISABLED. */
@@ -146,7 +141,6 @@ export const buildMemberTransferManifest = async (
   }
 
   const [
-    botRows,
     [cronRow],
     [taskRow],
     knowledgeMountsToDetach,
@@ -154,17 +148,6 @@ export const buildMemberTransferManifest = async (
     expertiseAffected,
     associatedDocsToDetach,
   ] = await Promise.all([
-    agentIds.length > 0
-      ? db
-          .select({ platform: agentBotProviders.platform })
-          .from(agentBotProviders)
-          .where(
-            and(
-              inArray(agentBotProviders.agentId, agentIds),
-              eq(agentBotProviders.userId, ownerId),
-            ),
-          )
-      : Promise.resolve([]),
     agentIds.length > 0
       ? db
           .select({ value: count() })
@@ -226,11 +209,9 @@ export const buildMemberTransferManifest = async (
   }
 
   return {
-    botBindings: botRows.length,
     connectorsAffected,
     expertiseAffected,
     groupsToLeave,
-    botPlatforms: [...new Set(botRows.map((row) => row.platform))],
     cronJobs: cronRow.value,
     deviceBindingAffected,
     hiddenReferencedMember,

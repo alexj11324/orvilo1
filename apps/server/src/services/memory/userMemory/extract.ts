@@ -80,7 +80,6 @@ import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryEx
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { initModelRuntimeWithUserPayload } from '@/server/modules/ModelRuntime';
 import { S3 } from '@/server/modules/S3';
-import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProviderAccess';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { recordUserMemoryLexicalSearchDecision } from '@/server/services/ftsSearch/observability';
 import { triggerHatchetWorkflow } from '@/server/services/hatchet/workflows';
@@ -1591,7 +1590,7 @@ export class MemoryExtractionExecutor {
           const userModel = new UserModel(db, job.userId);
           const [userState, aiProviderRuntimeState] = await Promise.all([
             userModel.getUserState(KeyVaultsGateKeeper.getUserKeyVaults),
-            this.getAiProviderRuntimeState(job.userId, job.workspaceId),
+            this.getAiProviderRuntimeState(),
           ]);
           const memoryServiceConfig = this.resolveUserMemoryServiceConfig(
             userState.settings?.systemAgent as Partial<UserServiceModelConfig> | undefined,
@@ -2382,20 +2381,10 @@ export class MemoryExtractionExecutor {
     };
   }
 
-  private async getAiProviderRuntimeState(
-    userId: string,
-    workspaceId?: string,
-  ): Promise<AiProviderRuntimeState> {
-    const db = await this.db;
-    const aiInfraRepos = new AiInfraRepos(db, userId, this.aiProviderConfig, workspaceId);
-
+  private async getAiProviderRuntimeState(): Promise<AiProviderRuntimeState> {
     // Provider matching only needs the deployment catalog (enabled providers/models); it must
     // not decrypt user key vaults — credentials are deployment-managed since BYOK retirement.
-    return getUserScopedAiProviderRuntimeState(
-      userId,
-      () => aiInfraRepos.getAiProviderRuntimeState(),
-      { throwOnUnresolvedAccess: true },
-    );
+    return new AiInfraRepos(this.aiProviderConfig).getAiProviderRuntimeState();
   }
 
   private async resolveRuntimeProviders(
@@ -2574,7 +2563,7 @@ export class MemoryExtractionExecutor {
           const userModel = new UserModel(db, params.userId);
           const [userState, aiProviderRuntimeState] = await Promise.all([
             userModel.getUserState(KeyVaultsGateKeeper.getUserKeyVaults),
-            this.getAiProviderRuntimeState(params.userId),
+            this.getAiProviderRuntimeState(),
           ]);
           const memoryServiceConfig = this.resolveUserMemoryServiceConfig(
             userState.settings?.systemAgent as Partial<UserServiceModelConfig> | undefined,

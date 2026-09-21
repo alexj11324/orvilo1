@@ -9,15 +9,13 @@ import {
 } from '@orvilo/builtin-tool-agent-builder';
 import { builtinTools } from '@orvilo/builtin-tools';
 import { BRANDING_PROVIDER } from '@orvilo/business-const';
+import { loadModels } from '@orvilo/business-model-bank/model-config';
 import { modelsResultsPrompt } from '@orvilo/prompts';
 import { getPluginMode, upsertPluginMode } from '@orvilo/types';
 
-import { getHiddenBuiltinModelsForUser } from '@/business/server/aiProvider';
 import { AgentModel } from '@/database/models/agent';
 import { PluginModel } from '@/database/models/plugin';
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
 import { DiscoverService } from '@/server/services/discover';
-import { filterHiddenProviderModels } from '@/utils/aiProvider';
 
 import { type ToolExecutionContext, type ToolExecutionResult } from '../types';
 import { type ServerRuntimeRegistration } from './types';
@@ -38,7 +36,6 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
 
     const agentModel = new AgentModel(context.serverDB, userId, context.workspaceId);
     const pluginModel = new PluginModel(context.serverDB, userId, context.workspaceId);
-    const aiInfraRepos = new AiInfraRepos(context.serverDB, userId, {}, context.workspaceId);
     /**
      * Market list endpoints require an authenticated caller, and `DiscoverService`
      * only signs a trusted-client token when it is given an identity — built
@@ -56,22 +53,22 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
         params: GetAvailableModelsParams,
       ): Promise<ToolExecutionResult> => {
         try {
-          const [allProviders, hiddenBuiltinModels] = await Promise.all([
-            aiInfraRepos.getAiProviderList(),
-            getHiddenBuiltinModelsForUser(userId),
-          ]);
-          /**
-           * An unresolved access policy must not be interpreted as an empty blocklist.
-           * Keep the model tool empty until the user-scoped policy can be loaded.
-           */
-          const enabledProviders =
-            hiddenBuiltinModels === undefined ? [] : allProviders.filter((p) => p.enabled);
+          // Static builtin catalog — the user-managed provider runtime is retired.
+          const { DEFAULT_MODEL_PROVIDER_LIST } = await import('model-bank/modelProviders');
+          const builtinModels = await loadModels();
+          const chatModels = builtinModels.filter(
+            (model) => model.type === 'chat' && model.enabled,
+          );
 
-          // Orvilo provider first, then by sort order
+          const enabledProviders = DEFAULT_MODEL_PROVIDER_LIST.filter(
+            (p) => p.enabled && chatModels.some((m) => m.providerId === p.id),
+          ).map((p) => ({ id: p.id, name: p.name }));
+
+          // Orvilo provider first, then catalog order
           enabledProviders.sort((a, b) => {
             if (a.id === BRANDING_PROVIDER) return -1;
             if (b.id === BRANDING_PROVIDER) return 1;
-            return (a.sort ?? 999) - (b.sort ?? 999);
+            return 0;
           });
 
           // Apply optional provider filter
@@ -100,18 +97,10 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
           for (const provider of filteredProviders) {
             if (totalModels >= MAX_MODELS) break;
 
-            const enabledChatModels = await aiInfraRepos.getAiProviderModelList(provider.id, {
-              enabled: true,
-              type: 'chat',
-            });
-            const visibleChatModels = filterHiddenProviderModels(
-              enabledChatModels,
-              provider.id,
-              hiddenBuiltinModels,
-            );
+            const providerChatModels = chatModels.filter((m) => m.providerId === provider.id);
 
             const remaining = MAX_MODELS - totalModels;
-            const sliced = visibleChatModels.slice(0, remaining);
+            const sliced = providerChatModels.slice(0, remaining);
 
             if (sliced.length === 0) continue;
 

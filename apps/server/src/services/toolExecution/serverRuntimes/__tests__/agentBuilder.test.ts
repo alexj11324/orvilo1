@@ -8,25 +8,14 @@ const {
   mockCreatePlugin,
   mockFindById,
   mockGetAgentConfigById,
-  mockGetAiProviderList,
-  mockGetAiProviderModelList,
-  mockGetHiddenBuiltinModelsForUser,
   mockUpdateAgent,
   mockUpdateConfig,
 } = vi.hoisted(() => ({
   mockCreatePlugin: vi.fn(),
   mockFindById: vi.fn(),
   mockGetAgentConfigById: vi.fn(),
-  mockGetAiProviderList: vi.fn(),
-  mockGetAiProviderModelList: vi.fn(),
-  mockGetHiddenBuiltinModelsForUser: vi.fn(),
   mockUpdateAgent: vi.fn(),
   mockUpdateConfig: vi.fn(),
-}));
-
-vi.mock('@/business/server/aiProvider', () => ({
-  getHiddenBuiltinModelsForUser: mockGetHiddenBuiltinModelsForUser,
-  getModelRedirects: vi.fn(async () => ({})),
 }));
 
 vi.mock('@/database/models/agent', () => ({
@@ -44,15 +33,6 @@ vi.mock('@/database/models/plugin', () => ({
     return {
       create: mockCreatePlugin,
       findById: mockFindById,
-    };
-  }),
-}));
-
-vi.mock('@/database/repositories/aiInfra', () => ({
-  AiInfraRepos: vi.fn(function () {
-    return {
-      getAiProviderList: mockGetAiProviderList,
-      getAiProviderModelList: mockGetAiProviderModelList,
     };
   }),
 }));
@@ -83,45 +63,37 @@ const createWorkspaceRuntime = () =>
 describe('agentBuilderRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetHiddenBuiltinModelsForUser.mockResolvedValue(undefined);
   });
 
   describe('getAvailableModels', () => {
-    it('does not query or expose models when access cannot be resolved', async () => {
-      mockGetAiProviderList.mockResolvedValue([{ enabled: true, id: 'orvilo', name: 'Orvilo' }]);
-
+    // The user-managed provider runtime is retired: getAvailableModels serves
+    // the static model-bank catalog, identical for every user.
+    it('serves the builtin chat-model catalog grouped by provider', async () => {
       const result = await createRuntime().getAvailableModels({});
 
-      expect(result).toMatchObject({
-        state: { providers: [] },
-        success: true,
-      });
-      expect(mockGetAiProviderModelList).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      const { providers } = result.state as {
+        providers: Array<{ id: string; models: Array<{ id: string }>; name: string }>;
+      };
+      expect(providers.length).toBeGreaterThan(0);
+      for (const provider of providers) {
+        expect(provider.models.length).toBeGreaterThan(0);
+        for (const model of provider.models) {
+          expect(model.id).toBeTruthy();
+        }
+      }
+      expect(result.content).toContain('enabled provider');
     });
 
-    it('does not expose models hidden for the current user', async () => {
-      mockGetAiProviderList.mockResolvedValue([{ enabled: true, id: 'orvilo', name: 'Orvilo' }]);
-      mockGetAiProviderModelList.mockResolvedValue([
-        { displayName: 'Hidden Chat', id: 'hidden-chat' },
-        { displayName: 'Visible Chat', id: 'visible-chat' },
-      ]);
-      mockGetHiddenBuiltinModelsForUser.mockResolvedValue([
-        { id: 'hidden-chat', providerId: 'orvilo' },
-      ]);
+    it('filters the catalog by providerId', async () => {
+      const result = await createRuntime().getAvailableModels({ providerId: 'openai' });
 
-      const result = await createRuntime().getAvailableModels({});
-
-      expect(result).toMatchObject({
-        state: {
-          providers: [
-            {
-              id: 'orvilo',
-              models: [{ id: 'visible-chat', name: 'Visible Chat' }],
-            },
-          ],
-        },
-        success: true,
-      });
+      expect(result.success).toBe(true);
+      const { providers } = result.state as {
+        providers: Array<{ id: string; models: unknown[] }>;
+      };
+      expect(providers).toHaveLength(1);
+      expect(providers[0].id).toBe('openai');
     });
   });
 

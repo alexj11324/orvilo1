@@ -97,23 +97,6 @@ describe('TaskConfigSliceAction', () => {
     });
   });
 
-  describe('updateTaskModelConfig', () => {
-    it('should call updateConfig with model/provider and refresh detail', async () => {
-      const { mutate } = await import('@/libs/swr');
-      vi.mocked(taskService.updateConfig).mockResolvedValue({ success: true } as any);
-
-      await useTaskStore
-        .getState()
-        .updateTaskModelConfig('T-1', { model: 'claude-sonnet-4-6', provider: 'anthropic' });
-
-      expect(taskService.updateConfig).toHaveBeenCalledWith('T-1', {
-        model: 'claude-sonnet-4-6',
-        provider: 'anthropic',
-      });
-      expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
-    });
-  });
-
   describe('updatePeriodicInterval', () => {
     it('should call update with heartbeatInterval and refresh detail', async () => {
       const { mutate } = await import('@/libs/swr');

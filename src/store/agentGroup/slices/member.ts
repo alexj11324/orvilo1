@@ -1,8 +1,4 @@
-import { type OrviloAgentConfig } from '@orvilo/types';
-import { type PartialDeep } from 'type-fest';
-
 import { chatGroupService, type GroupMemberConfig } from '@/services/chatGroup';
-import { getAgentStoreState } from '@/store/agent';
 import { type ChatGroupStore } from '@/store/agentGroup/store';
 
 type ChatGroupStoreWithRefresh = ChatGroupStore & {
@@ -50,23 +46,6 @@ export class ChatGroupMemberAction {
       ),
     );
 
-    await this.#get().refreshGroupDetail(groupId);
-  };
-
-  /**
-   * Update member agent config in group
-   * Persists to database via agentStore and refreshes group detail to sync UI
-   */
-  updateMemberAgentConfig = async (
-    groupId: string,
-    agentId: string,
-    config: PartialDeep<OrviloAgentConfig>,
-  ) => {
-    // 1. Persist to database via agentStore
-    const agentStore = getAgentStoreState();
-    await agentStore.updateAgentConfigById(agentId, config);
-
-    // 2. Refresh group detail to sync the updated agent data to groupMap
     await this.#get().refreshGroupDetail(groupId);
   };
 }

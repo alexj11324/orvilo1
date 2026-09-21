@@ -12,8 +12,6 @@ import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import ModelSelect from '@/features/ModelSelect';
-import ReasoningEffortSelect from '@/features/ModelSelect/ReasoningEffortSelect';
 import RunPriorityHint from '@/features/ProfileEditor/AgentUserTools/RunPriorityHint';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
@@ -27,7 +25,6 @@ import EngineConfigCard from './EngineConfigCard';
 import HeterogeneousAgentStatusCard from './HeterogeneousAgentStatusCard';
 import RemoteAgentConfigCard from './RemoteAgentConfigCard';
 import WorkspaceAgentDevicePolicy from './WorkspaceAgentDevicePolicy';
-import { WorkspaceAgentModelPolicy } from './WorkspaceAgentModelPolicy';
 import { WorkspaceAgentPolicyCard } from './WorkspaceAgentPolicyCard';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -169,7 +166,6 @@ const ProfileEditor = memo(() => {
           ) : isWorkspaceAgent ? (
             <>
               <Flexbox horizontal gap={8} wrap={'wrap'}>
-                <WorkspaceAgentModelPolicy agentId={agentId} />
                 <WorkspaceAgentDevicePolicy agentId={agentId} />
               </Flexbox>
               <WorkspaceAgentPolicyCard
@@ -187,29 +183,6 @@ const ProfileEditor = memo(() => {
                 <div className={styles.configLabel}>{t('settingAgent.runtimeConfig.title')}</div>
                 <RunPriorityHint agentId={agentId} />
               </Flexbox>
-              <Flexbox horizontal align={'center'} gap={12} justify={'flex-start'} wrap={'wrap'}>
-                <ModelSelect
-                  initialWidth
-                  disabled={!canEdit}
-                  popupWidth={400}
-                  value={{
-                    model: config?.model,
-                    provider: config?.provider,
-                  }}
-                  onChange={(value) => {
-                    if (!canEdit) return;
-
-                    void updateAgentConfigById(agentId, value);
-                  }}
-                />
-                {config?.model && config.provider && (
-                  <ReasoningEffortSelect
-                    disabled={!canEdit}
-                    model={config.model}
-                    provider={config.provider}
-                  />
-                )}
-              </Flexbox>
               <AgentTool />
             </Flexbox>
           )}
@@ -221,8 +194,7 @@ const ProfileEditor = memo(() => {
       {/* Main Content: Prompt Editor — built-in model runtime only. Hetero agents
           (Claude Code / Codex + remote platforms) run an external CLI with its own
           system prompt, so the agent's systemRole never reaches them. Hide the
-          editor here to avoid a control that looks effective but isn't (mirrors the
-          ModelSelect hiding above). */}
+          editor here to avoid a control that looks effective but isn't. */}
       {!isHeterogeneous && <EditorCanvas />}
     </>
   );

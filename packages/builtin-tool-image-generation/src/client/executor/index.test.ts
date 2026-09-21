@@ -7,26 +7,13 @@ const mocks = vi.hoisted(() => ({
   createTopic: vi.fn(),
   enabledImageModelList: vi.fn(),
   getAgentStoreState: vi.fn(),
-  getAiProviderModelList: vi.fn(),
-  getAiProviderRuntimeState: vi.fn(),
-  loadDefaultHiddenBuiltinModels: vi.fn(),
+  getGenerationStatus: vi.fn(),
 }));
 
-vi.mock('@/business/client/model-bank/loadModels', () => ({
-  loadDefaultHiddenBuiltinModels: mocks.loadDefaultHiddenBuiltinModels,
-}));
-vi.mock('@/services/aiModel', () => ({
-  aiModelService: {
-    getAiProviderModelList: mocks.getAiProviderModelList,
-  },
-}));
-vi.mock('@/services/aiProvider', () => ({
-  aiProviderService: {
-    getAiProviderRuntimeState: mocks.getAiProviderRuntimeState,
-  },
-}));
 vi.mock('@/services/generation', () => ({
-  generationService: {},
+  generationService: {
+    getGenerationStatus: mocks.getGenerationStatus,
+  },
 }));
 vi.mock('@/services/generationTopic', () => ({
   generationTopicService: {
@@ -68,12 +55,14 @@ describe('ImageGenerationExecutor', () => {
     });
     mocks.enabledImageModelList.mockReturnValue([
       {
-        children: [{ id: 'image-model-1' }],
+        children: [
+          { id: 'image-model-1', providerId: 'provider-1' },
+          { id: 'image-model-2', providerId: 'provider-1' },
+        ],
         id: 'provider-1',
         name: 'Provider 1',
       },
     ]);
-    mocks.loadDefaultHiddenBuiltinModels.mockResolvedValue([]);
     mocks.createTopic.mockResolvedValue('topic-1');
     mocks.createImage.mockResolvedValue({
       data: {
@@ -106,82 +95,32 @@ describe('ImageGenerationExecutor', () => {
     );
   });
 
-  it('does not expose hidden models while the store model list is hydrating', async () => {
-    mocks.enabledImageModelList.mockReturnValue([]);
-    mocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
-      hiddenBuiltinModels: [{ id: 'hidden-image', providerId: 'orvilo' }],
-    });
-    mocks.getAiProviderModelList.mockImplementation(
-      async (_providerId: string, options: { limit?: number }) => {
-        const models = [{ id: 'hidden-image' }, { id: 'visible-image' }];
-
-        return typeof options.limit === 'number' ? models.slice(0, options.limit) : models;
-      },
-    );
-
+  it('lists the static catalog image models with provider filter and limit', async () => {
     const result = await imageGenerationExecutor.listImageModels({
       limit: 1,
-      provider: 'orvilo',
+      provider: 'provider-1',
     });
 
     expect(result).toMatchObject({
       state: {
-        providers: [
-          {
-            id: 'orvilo',
-            models: [{ id: 'visible-image' }],
-          },
-        ],
+        providers: [{ id: 'provider-1', models: [{ id: 'image-model-1' }] }],
         totalModels: 1,
       },
       success: true,
     });
   });
 
-  it('uses the client default blocklist with an older runtime-state response', async () => {
+  it('returns an empty catalog when the store has no image models', async () => {
     mocks.enabledImageModelList.mockReturnValue([]);
-    mocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
-    });
-    mocks.loadDefaultHiddenBuiltinModels.mockResolvedValue([
-      { id: 'hidden-image', providerId: 'orvilo' },
-    ]);
-    mocks.getAiProviderModelList.mockResolvedValue([
-      { id: 'hidden-image' },
-      { id: 'visible-image' },
-    ]);
 
     const result = await imageGenerationExecutor.listImageModels({
       limit: 1,
-      provider: 'orvilo',
-    });
-
-    expect(result).toMatchObject({
-      state: {
-        providers: [{ id: 'orvilo', models: [{ id: 'visible-image' }] }],
-        totalModels: 1,
-      },
-      success: true,
-    });
-  });
-
-  it('fails closed when the runtime-state policy is unresolved', async () => {
-    mocks.enabledImageModelList.mockReturnValue([]);
-    mocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledImageAiProviders: [{ id: 'orvilo', name: 'Orvilo' }],
-      hiddenBuiltinModelsResolved: false,
-    });
-
-    const result = await imageGenerationExecutor.listImageModels({
-      limit: 1,
-      provider: 'orvilo',
+      provider: 'provider-1',
     });
 
     expect(result).toMatchObject({
       state: { providers: [], totalModels: 0 },
       success: true,
     });
-    expect(mocks.getAiProviderModelList).not.toHaveBeenCalled();
   });
 });

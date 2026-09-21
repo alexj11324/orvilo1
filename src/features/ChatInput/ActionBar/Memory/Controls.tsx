@@ -8,7 +8,7 @@ import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import LevelSlider from '@/features/ModelSwitchPanel/components/ControlsForm/LevelSlider';
+import LevelSlider from '@/components/LevelSlider';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';

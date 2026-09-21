@@ -50,12 +50,6 @@ vi.mock('@/locales/default/models', () => ({
   },
 }));
 
-vi.mock('@/locales/default/providers', () => ({
-  default: {
-    'openai.description': 'OpenAI provider description',
-  },
-}));
-
 describe('getLocale', () => {
   const mockCookieStore = {
     get: vi.fn(),
@@ -154,14 +148,14 @@ describe('translation', () => {
     expect(t('gpt-4.description')).toBe('GPT-4 description');
   });
 
-  it('should fallback to default module when locale JSON is missing (providers)', async () => {
+  it('should fallback to default module when locale JSON is missing (chat)', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // Vitest 5 races the concurrent first imports inside `translation` against mock
     // registration (vitest#7040), so warm the default module through the loader first.
-    await translation('providers', 'en-US');
+    await translation('chat', 'en-US');
 
-    const { t } = await translation('providers', 'zz-ZZ');
-    expect(t('openai.description')).toBe('OpenAI provider description');
+    const { t } = await translation('chat', 'zz-ZZ');
+    expect(t('welcome')).toBe('Welcome to the chat');
   });
 });

@@ -44,12 +44,6 @@ vi.mock('@/locales/default/chat', () => ({
   welcome: 'Welcome to the chat',
 }));
 
-vi.mock('@/locales/default/models', () => ({
-  default: {
-    'gpt-4.description': 'GPT-4 description',
-  },
-}));
-
 describe('getLocale', () => {
   const mockCookieStore = {
     get: vi.fn(),
@@ -135,17 +129,6 @@ describe('translation', () => {
     // When a key doesn't exist, it should return the key itself
     const result = t('totally.missing.key');
     expect(result).toBe('totally.missing.key');
-  });
-
-  it('should fallback to default module when locale JSON is missing (models)', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    // Vitest 5 races the concurrent first imports inside `translation` against mock
-    // registration (vitest#7040), so warm the default module through the loader first.
-    await translation('models', 'en-US');
-
-    const { t } = await translation('models', 'zz-ZZ');
-    expect(t('gpt-4.description')).toBe('GPT-4 description');
   });
 
   it('should fallback to default module when locale JSON is missing (chat)', async () => {

@@ -2,24 +2,10 @@
 
 This replaces the former `add-provider-doc` workflow. Use it for a new integration or a documentation-only update. Derive instructions from implemented behavior and verified public sources, not from a generic API-key template.
 
-## Usage Guide
-
-Create or update the corresponding pair:
-
-- `docs/usage/providers/<provider>.mdx`
-- `docs/usage/providers/<provider>.zh-CN.mdx`
-
-Use a nearby provider with the same authentication method as the structural example. `docs/usage/providers/fal.mdx` demonstrates the MDX frontmatter, `Image`, and `Steps` components; its image-generation workflow is not a chat-provider template.
-
-Explain:
-
-- Where the user obtains access and which account, API key, subscription, or OAuth login is required, with real public registration/dashboard links.
-- How to find the provider in Orvilo, authenticate or enter configuration, choose a supported model, and verify the connection.
-- The implemented endpoint and API-mode restrictions that affect setup. Clearly distinguish an official API from a compatible third-party service.
-- Relevant availability, billing model, and a link to current authoritative pricing. Do not present subscription access as per-token API billing or copy volatile prices without a source/date.
-- Actionable setup errors and limitations that were actually verified.
-
-Use concise positioning and instructions. Do not include internal deployment, private routing, credentials, or implementation details unrelated to user decisions.
+The per-provider BYOK usage guides under `docs/usage/providers/` were retired
+with the Provider/BYOK surface (ORV-101/109): users no longer enter keys in the
+product, so provider documentation covers deployment environment variables
+only.
 
 ## Environment and Deployment
 

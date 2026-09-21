@@ -68,11 +68,11 @@ You can find all current model names in [modelProviders](https://github.com/alex
 
 ## Meta
 
-Use the official [Meta Model API](https://dev.meta.ai/). See [Using Meta in Orvilo](/docs/usage/providers/meta) for setup instructions.
+Use the official [Meta Model API](https://dev.meta.ai/).
 
 ### `META_API_KEY`
 
-- Type: Optional for the deployment; required when providing a shared server key. Users can instead enter their own key in Meta provider settings.
+- Type: Optional for the deployment; required when providing a shared server key.
 - Description: A key created in the [Model API dashboard](https://dev.meta.ai/). Setting a non-empty key automatically enables Meta in the server configuration. `ENABLED_META` is derived from this key, not a separate environment switch. Orvilo uses `META_API_KEY`, rather than the `MODEL_API_KEY` name in Meta's SDK examples.
 - Default: Unset; no shared server key.
 - Example: `your-meta-model-api-key`
@@ -153,7 +153,7 @@ If you need to use Azure OpenAI to provide model services, you can refer to the 
 ### `VERTEXAI_CREDENTIALS`
 
 - Type: Required
-- Description: A JSON string of your Google Cloud service account key, you can get the key from [here](/docs/usage/providers/vertexai).
+- Description: A JSON string of your Google Cloud service account key; see the [Vertex AI documentation](https://cloud.google.com/vertex-ai/docs/start/authentication) for how to obtain it.
 - Default: -
 - Example: `{"type": "service_account", "project_id": "your-gcp-project-id", ...}`
 
@@ -781,7 +781,7 @@ NewAPI is a multi-provider model aggregation service that supports automatic mod
 
 ## Unsloth
 
-Connect to your own Unsloth Studio instance. See [Using Unsloth in Orvilo](/docs/usage/providers/unsloth) for browser authentication and desktop CORS limitations.
+Connect to your own Unsloth Studio instance.
 
 ### `UNSLOTH_API_KEY`
 

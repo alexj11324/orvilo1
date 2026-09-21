@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "b2df93f8f8cb613251a3fbb3c12b126401a59a52",
+  "baseSha": "086e5f6cfced20ab6bf572f8ed2fe76c58a45667",
   "capabilities": [
     {
       "id": "workspace",
@@ -65486,7 +65486,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-09-21T22:28:27.588Z",
+  "generatedAt": "2026-09-21T22:28:52.834Z",
   "investigateCapabilities": [],
   "packageConsumers": {
     "@orvilo/web-crawler": [

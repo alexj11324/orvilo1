@@ -21,7 +21,9 @@ BEGIN
      AND column_name = 'fence_seq';
   IF NOT FOUND THEN
     ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" bigint DEFAULT 0 NOT NULL;
-  ELSIF col.data_type <> 'bigint' OR col.is_nullable <> 'NO' OR col.column_default <> '0' THEN
+  ELSIF col.data_type <> 'bigint'
+     OR col.is_nullable <> 'NO'
+     OR col.column_default IS DISTINCT FROM '0' THEN
     RAISE EXCEPTION
       'integration_leases.fence_seq diverges from the schema definition (type=%, nullable=%, default=%) — repair it deliberately before migrating further',
       col.data_type, col.is_nullable, col.column_default;

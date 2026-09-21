@@ -11,7 +11,6 @@ const {
   mockGetAgentConfig,
   mockGetBuiltinAgent,
   mockGetInfoForAIGeneration,
-  mockGetModelMetadata,
   mockMessageCreate,
   mockMessageQuery,
   mockResolveTask,
@@ -20,7 +19,6 @@ const {
   mockGetAgentConfig: vi.fn(),
   mockGetBuiltinAgent: vi.fn(),
   mockGetInfoForAIGeneration: vi.fn(),
-  mockGetModelMetadata: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockMessageQuery: vi.fn(),
   mockResolveTask: vi.fn(),
@@ -48,14 +46,6 @@ vi.mock('@/database/models/message', () => ({
       getLatestSpineMessageId: vi.fn().mockResolvedValue(undefined),
       query: mockMessageQuery,
       update: vi.fn().mockResolvedValue({}),
-    };
-  }),
-}));
-
-vi.mock('@/database/models/aiModel', () => ({
-  AiModelModel: vi.fn().mockImplementation(function () {
-    return {
-      findByIdAndProvider: mockGetModelMetadata,
     };
   }),
 }));
@@ -239,7 +229,6 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       responseLanguage: 'en-US',
       userName: 'Test User',
     });
-    mockGetModelMetadata.mockResolvedValue(undefined);
     mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
       operationId: 'op-123',

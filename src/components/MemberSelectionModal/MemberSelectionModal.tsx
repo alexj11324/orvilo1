@@ -14,8 +14,6 @@ import { useTranslation } from 'react-i18next';
 import ImperativeModal from '@/components/ImperativeModal';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
-import ModelSelect from '@/features/ModelSelect';
-import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useSessionStore } from '@/store/session';
 import { type OrviloAgentSession } from '@/types/session';
 import { OrviloSessionType } from '@/types/session';
@@ -116,9 +114,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorFillTertiary};
     }
   `,
-  modelSelectDisabled: css`
-    pointer-events: none;
-  `,
   rightColumn: css`
     overflow-y: auto;
     flex: 1;
@@ -175,7 +170,6 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
     preSelectedAgents = [],
   }) => {
     const { t } = useTranslation(['chat', 'common']);
-    const enabledModels = useEnabledChatModels();
     const [selectedAgents, setSelectedAgents] = useState<string[]>(preSelectedAgents);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -186,27 +180,6 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
     // - In create mode: default to enabled (isHostRemoved = false)
     // - In add mode with host disabled: default to disabled (isHostRemoved = true)
     const [isHostRemoved, setIsHostRemoved] = useState(mode === 'add' ? true : false);
-    const [hostModelConfig, setHostModelConfig] = useState<{ model?: string; provider?: string }>(
-      () => {
-        if (mode === 'add' && currentHostConfig) {
-          return {
-            model: currentHostConfig.orchestratorModel,
-            provider: currentHostConfig.orchestratorProvider,
-          };
-        }
-        // Set default for create mode
-        if (enabledModels.length > 0 && enabledModels[0].children.length > 0) {
-          const firstProvider = enabledModels[0];
-          const firstModel = firstProvider.children[0];
-
-          return {
-            model: firstModel.id,
-            provider: firstProvider.id,
-          };
-        }
-        return {};
-      },
-    );
 
     const agentSessions = useSessionStore((s) => {
       const allSessions = s.sessions || [];
@@ -234,10 +207,6 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
 
     const handleHostToggle = useCallback((enabled: boolean) => {
       setIsHostRemoved(!enabled);
-    }, []);
-
-    const handleHostModelChange = useCallback((config: { model?: string; provider?: string }) => {
-      setHostModelConfig(config);
     }, []);
 
     // Filter logic based on mode
@@ -306,24 +275,9 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
       setSelectedAgents(preSelectedAgents);
       setSearchTerm('');
       setIsHostRemoved(mode === 'add' ? true : false);
-      if (mode === 'add' && currentHostConfig) {
-        setHostModelConfig({
-          model: currentHostConfig.orchestratorModel,
-          provider: currentHostConfig.orchestratorProvider,
-        });
-      }
     };
 
     const [isAdding, setIsAdding] = useState(false);
-
-    const normalizedHostModelConfig = useMemo(() => {
-      const model = hostModelConfig.model;
-      const provider = hostModelConfig.provider;
-
-      if (!model || !provider) return undefined;
-
-      return { model, provider };
-    }, [hostModelConfig]);
 
     const handleConfirm = async () => {
       try {
@@ -443,16 +397,6 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
                     </Text>
                   </Flexbox>
                   <Flexbox horizontal align="center" gap={12}>
-                    <div
-                      className={cx(isHostRemoved && styles.modelSelectDisabled)}
-                      style={{ opacity: isHostRemoved ? 0.6 : 1 }}
-                    >
-                      <ModelSelect
-                        requiredAbilities={['functionCall']}
-                        value={normalizedHostModelConfig}
-                        onChange={handleHostModelChange}
-                      />
-                    </div>
                     <Tooltip title={t('groupWizard.host.tooltip')}>
                       <Switch
                         checked={!isHostRemoved}

@@ -42,10 +42,7 @@ interface ManifestRowSpec {
  * The manifest fields that render as their own row: everything except the
  * display-only extras and the blocking flag, which leads the list separately.
  */
-type ManifestRowField = Exclude<
-  keyof TransferManifest,
-  'botPlatforms' | 'hiddenReferencedMember' | 'ownerId'
->;
+type ManifestRowField = Exclude<keyof TransferManifest, 'hiddenReferencedMember' | 'ownerId'>;
 
 /**
  * Keyed by manifest field and checked against it, so a field added to the
@@ -58,13 +55,6 @@ type ManifestRowField = Exclude<
  * land last, where the eye stops.
  */
 const MANIFEST_ROWS: Record<ManifestRowField, ManifestRowSpec> = {
-  botBindings: {
-    applies: (m) =>
-      m.botBindings > 0 ? { count: m.botBindings, platforms: m.botPlatforms.join(', ') } : null,
-    impact: 'carried',
-    initiatorKey: 'transferRequest.manifestInitiator.bots',
-    recipientKey: 'transferRequest.manifest.bots',
-  },
   cronJobs: {
     applies: (m) => (m.cronJobs > 0 ? { count: m.cronJobs } : null),
     impact: 'carried',

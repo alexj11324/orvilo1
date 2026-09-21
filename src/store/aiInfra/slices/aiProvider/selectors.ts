@@ -1,12 +1,6 @@
 import { type AIProviderStoreState } from '@/store/aiInfra/initialState';
 import { type AiProviderRuntimeConfig } from '@/types/aiProvider';
 
-const enabledEmbeddingModelList = (s: AIProviderStoreState) => s.enabledEmbeddingModelList || [];
-
-const enabledImageModelList = (s: AIProviderStoreState) => s.enabledImageModelList || [];
-
-const enabledVideoModelList = (s: AIProviderStoreState) => s.enabledVideoModelList || [];
-
 const providerConfigById =
   (id: string) =>
   (s: AIProviderStoreState): AiProviderRuntimeConfig | undefined => {
@@ -40,9 +34,6 @@ const isProviderEnableResponseApi = (id: string) => (s: AIProviderStoreState) =>
 const isInitAiProviderRuntimeState = (s: AIProviderStoreState) => !!s.isInitAiProviderRuntimeState;
 
 export const aiProviderSelectors = {
-  enabledEmbeddingModelList,
-  enabledImageModelList,
-  enabledVideoModelList,
   isInitAiProviderRuntimeState,
   isProviderEnableResponseApi,
   isProviderHasBuiltinSearch,

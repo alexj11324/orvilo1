@@ -369,13 +369,6 @@ export interface TaskAssignableMember {
   email?: string | null;
   /** User id — the value to pass as `assigneeUserId`. */
   id: string;
-  /**
-   * Linked IM identities, formatted `platform:@username(platformUserId)` (or
-   * `platform:platformUserId` without a username). Lets a person named by a
-   * Discord/Slack/Telegram handle or a raw `<@platformUserId>` mention be
-   * resolved deterministically instead of by name similarity.
-   */
-  imAccounts?: string[];
   /** The signed-in user who invoked the tool. */
   isSelf?: boolean;
   name?: string | null;
@@ -419,7 +412,6 @@ export const formatWorkspaceMembers = (
     if (m.username && m.username !== name) parts.push(`@${m.username}`);
     if (m.email) parts.push(m.email);
     if (m.role) parts.push(`role=${m.role}`);
-    if (m.imAccounts && m.imAccounts.length > 0) parts.push(`im=${m.imAccounts.join(',')}`);
     if (m.isSelf) parts.push('(you)');
     parts.push(`id=${m.id}`);
     return parts.join('  ');

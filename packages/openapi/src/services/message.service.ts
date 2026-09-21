@@ -60,7 +60,7 @@ export class MessageService extends BaseService {
     return await Promise.all(
       messages.map(async (message) => {
         return {
-          ...projectPublicMessage(message as MessageItem),
+          ...projectPublicMessage(message as unknown as MessageItem),
           files: await Promise.all(
             message.filesToMessages?.map(async ({ file }) => {
               const publicFile = projectPublicFile(file as FileItem);

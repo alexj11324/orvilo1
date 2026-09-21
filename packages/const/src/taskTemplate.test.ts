@@ -26,11 +26,4 @@ describe('taskTemplate constants', () => {
       type: RecommendedSkillType.Orvilo,
     });
   });
-
-  it('keeps image generation default-installed as a recommended builtin', () => {
-    expect(RECOMMENDED_SKILLS).toContainEqual({
-      id: 'orvilo-image-generation',
-      type: RecommendedSkillType.Builtin,
-    });
-  });
 });

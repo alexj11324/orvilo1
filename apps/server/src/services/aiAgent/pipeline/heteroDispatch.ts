@@ -503,7 +503,6 @@ export const dispatchHeteroAgent = async (
     appContext,
     assistantMessageId,
     canUseDevice,
-    deviceAccessReason,
     parentMessageId,
     persistAgentId,
     prompt,
@@ -995,14 +994,10 @@ export const dispatchHeteroAgent = async (
   // so open the stream before the first notify arrives.
 
   if (isRemoteHetero) {
-    // Platform task agents require either this desktop or a connected device — there is no sandbox to
-    // degrade to, so a denied sender (external bot user) is refused
-    // outright instead of reaching the owner's machine.
+    // Platform task agents require either this desktop or a connected device —
+    // there is no sandbox to degrade to when device access is denied.
     if (!canUseDevice) {
-      log(
-        'execAgent: device access denied for remote hetero dispatch (reason=%s)',
-        deviceAccessReason,
-      );
+      log('execAgent: device access denied for remote hetero dispatch (reason=%s)');
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
@@ -1210,9 +1205,7 @@ export const dispatchHeteroAgent = async (
     // `onlineDeviceIds` is intentionally omitted: hetero dispatch trusts
     // the binding and fails loudly at the gateway if the device is offline.
     // `canUseDevice` degrades device-capable targets to the sandbox when
-    // available, or leaves device-only providers unrouted, for denied
-    // senders (e.g. external bot users). Without this a synced local/device
-    // binding would let them run on the owner's machine.
+    // available, or leaves device-only providers unrouted.
 
     // Register the op with the agent-gateway DO before dispatch, mirroring
     // the remote-hetero branch above. Local CLI hetero (claude-code / codex)

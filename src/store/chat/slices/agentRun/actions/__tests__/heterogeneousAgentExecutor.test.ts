@@ -631,7 +631,6 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
     useAiInfraStore.setState({
       aiProviderRuntimeConfig: {},
       enabledAiModels: [],
-      enabledAiProviders: [],
     });
     delete (globalThis as any).window;
   });

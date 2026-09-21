@@ -27,10 +27,7 @@ import { useGroupProfileStore } from '@/store/groupProfile';
 
 import { openGroupAgentSettingsModal } from '../AgentSettings';
 import AutoSaveHint from '../Header/AutoSaveHint';
-import GroupForkTag from './GroupForkTag';
 import GroupHeader from './GroupHeader';
-import GroupStatusTag from './GroupStatusTag';
-import GroupVersionReviewTag from './GroupVersionReviewTag';
 
 // Stable lock RPC binding for the chatGroup resource.
 const groupLockClient: EditLockClient = {
@@ -190,9 +187,6 @@ const GroupProfile = memo(() => {
         <Flexbox height={66} width={'100%'}>
           <Flexbox horizontal align={'center'} gap={8} paddingBlock={12}>
             <AutoSaveHint />
-            <GroupStatusTag />
-            <GroupVersionReviewTag />
-            <GroupForkTag />
             <AccessLevelTag
               resourceType={'agentGroup'}
               resourceId={

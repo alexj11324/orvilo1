@@ -6,16 +6,7 @@ import { PaginationQuerySchema } from './common.type';
 
 // ==================== Model List Query Types ====================
 
-const MODEL_TYPES = [
-  'chat',
-  'embedding',
-  'tts',
-  'asr',
-  'image',
-  'text2video',
-  'text2music',
-  'realtime',
-] as const;
+const MODEL_TYPES = ['chat', 'embedding', 'tts', 'asr', 'text2music', 'realtime'] as const;
 
 // `stt` was renamed to the standard `asr`. It is still accepted on input as a
 // deprecated alias (so existing API clients don't break) and normalized to

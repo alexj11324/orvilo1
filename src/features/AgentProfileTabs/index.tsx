@@ -8,15 +8,12 @@ import { useAgentShareSupported } from '@/business/client/useAgentShareSupported
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { useAgentStore } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 import {
   type AgentProfileTab,
   buildAgentProfileTabOptions,
   buildAgentProfileTabPath,
-  supportsMessageChannels,
 } from './tabOptions';
 
 export type { AgentProfileTab } from './tabOptions';
@@ -58,15 +55,11 @@ const AgentProfileTabs = memo<AgentProfileTabsProps>(({ active, agentId }) => {
   const { t } = useTranslation(['chat', 'common', 'spend']);
   const navigate = useWorkspaceAwareNavigate();
 
-  const heterogeneousProviderType = useAgentStore(
-    agentSelectors.currentAgentHeterogeneousProviderType,
-  );
   const { allowed: canEditContent } = usePermission('edit_own_content');
   const { canEditResource, isAccessResolved } = useResourceAccess('agent', agentId);
   const { isAgentEditable } = useServerConfigStore(featureFlagsSelectors);
 
   const canConfigure = !!isAgentEditable && isAccessResolved && canEditContent && canEditResource;
-  const channelsSupported = supportsMessageChannels(heterogeneousProviderType);
   const { visible: shareVisible } = useAgentShareSupported(agentId);
 
   const options = useMemo(
@@ -74,9 +67,7 @@ const AgentProfileTabs = memo<AgentProfileTabsProps>(({ active, agentId }) => {
       buildAgentProfileTabOptions({
         active,
         canConfigure,
-        channelsSupported,
         labels: {
-          channel: t('tab.integration'),
           // Inside the profile group the whole surface *is* the agent profile,
           // so the first segment is the "basic" tab, not "Agent Profile" again —
           // that broader name stays on the sidebar entry that opens the group.
@@ -86,7 +77,7 @@ const AgentProfileTabs = memo<AgentProfileTabsProps>(({ active, agentId }) => {
         },
         shareSupported: shareVisible === true,
       }),
-    [active, canConfigure, channelsSupported, shareVisible, t],
+    [active, canConfigure, shareVisible, t],
   );
 
   // A lone segment is a label, not a switcher.
@@ -98,8 +89,6 @@ const AgentProfileTabs = memo<AgentProfileTabsProps>(({ active, agentId }) => {
       size={'small'}
       value={active}
       // `Segmented` only fires on a *change*, so the active segment is inert —
-      // notably on `/channel/:platform`, where Channels stays selected. Going
-      // back to the platform list is the breadcrumb's job, not this switcher's.
       onChange={(value) => navigate(buildAgentProfileTabPath(agentId, value as AgentProfileTab))}
     />
   );

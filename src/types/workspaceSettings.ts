@@ -23,7 +23,6 @@ export enum WorkspaceSettingsTabs {
   Labs = 'labs',
   Linear = 'linear',
   Members = 'members',
-  Messenger = 'messenger',
   Notification = 'notification',
   OAuthApps = 'oauth-apps',
   Plans = 'plans',

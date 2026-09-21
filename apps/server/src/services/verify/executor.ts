@@ -19,7 +19,6 @@ import type {
 } from '@orvilo/types';
 import debug from 'debug';
 
-import { AiModelModel } from '@/database/models/aiModel';
 import { DocumentModel } from '@/database/models/document';
 import { FileModel } from '@/database/models/file';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
@@ -103,7 +102,6 @@ export class VerifyExecutorService {
   private readonly evidenceModel: VerifyEvidenceModel;
   private readonly fileModel: FileModel;
   private readonly fileService: FileService;
-  private readonly aiModelModel: AiModelModel;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
@@ -115,7 +113,6 @@ export class VerifyExecutorService {
     this.evidenceModel = new VerifyEvidenceModel(db, userId, workspaceId);
     this.fileModel = new FileModel(db, userId, workspaceId);
     this.fileService = new FileService(db, userId, workspaceId);
-    this.aiModelModel = new AiModelModel(db, userId, workspaceId);
   }
 
   /**
@@ -249,9 +246,6 @@ export class VerifyExecutorService {
   }
 
   private async modelSupportsVision(model: string, provider: string): Promise<boolean> {
-    const custom = await this.aiModelModel.findByIdAndProvider(model, provider);
-    const customAbilities = custom?.abilities as { vision?: boolean } | undefined;
-    if (typeof customAbilities?.vision === 'boolean') return customAbilities.vision;
     const abilities = await getModelPropertyWithFallback<{ vision?: boolean }>(
       model,
       'abilities',

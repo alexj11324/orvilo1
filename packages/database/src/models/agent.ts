@@ -28,7 +28,6 @@ import { merge } from '@/utils/merge';
 
 import type { AgentItem } from '../schemas';
 import {
-  agentBotProviders,
   agentCronJobs,
   agentLabelAssignments,
   agents,
@@ -692,79 +691,6 @@ export class AgentModel {
       .where(and(this.ownership(), inArray(agents.id, ids)));
 
     return rows.map(({ slug, ...row }) => normalizeInboxAgentMeta(row, { slug }));
-  };
-
-  /**
-   * List agents bindable by the System Bot messenger picker: real agents plus
-   * the inbox (other virtual agents excluded), ordered by `updatedAt DESC` with
-   * the inbox pinned to the top.
-   *
-   * Returns `name` and `title` separately — resolving them into one label is the
-   * caller's job (see `agentDisplayName`), since only the caller knows whether it
-   * can render an i18n fallback. `title` is still normalized here for the inbox
-   * (OrviloAI default) and falls back to `options.fallbackTitle` when blank
-   * (default `null`, so a client caller can supply its own i18n default).
-   */
-  listMessengerBindableAgents = async (options?: {
-    fallbackTitle?: string | null;
-  }): Promise<
-    Array<{
-      avatar: string | null;
-      backgroundColor: string | null;
-      id: string;
-      isInbox: boolean;
-      isPrivate: boolean;
-      name: string | null;
-      title: string | null;
-    }>
-  > => {
-    const fallbackTitle = options?.fallbackTitle ?? null;
-
-    const rows = await this.db
-      .select({
-        avatar: agents.avatar,
-        backgroundColor: agents.backgroundColor,
-        id: agents.id,
-        name: agents.name,
-        slug: agents.slug,
-        title: agents.title,
-        visibility: agents.visibility,
-      })
-      .from(agents)
-      .where(and(this.ownership(), or(ne(agents.virtual, true), eq(agents.slug, INBOX_SESSION_ID))))
-      .orderBy(desc(agents.updatedAt));
-
-    const normalized = rows
-      .filter((row) => row.id)
-      .map(({ slug, visibility, ...row }) => {
-        const meta = normalizeInboxAgentMeta(row, { slug });
-        return {
-          avatar: meta.avatar,
-          backgroundColor: meta.backgroundColor,
-          id: meta.id,
-          isInbox: slug === INBOX_SESSION_ID,
-          // Only meaningful in workspace mode: the ownership predicate already
-          // scopes visible private rows to the caller, so `isPrivate` means
-          // "the caller's own private agent in this workspace". Personal-mode
-          // rows are all implicitly private, so the flag stays false there to
-          // signal "no grouping needed".
-          isPrivate: Boolean(this.workspaceId) && visibility === 'private',
-          name: meta.name ?? null,
-          // The inbox title is already resolved by normalizeInboxAgentMeta; any
-          // other blank title falls back to the caller-provided default.
-          title: meta.title?.trim() || fallbackTitle,
-        };
-      });
-
-    // Pin the inbox agent to the top regardless of updatedAt — it's the
-    // implicit "default" agent and should always be the first option.
-    const inboxIdx = normalized.findIndex((row) => row.isInbox);
-    if (inboxIdx > 0) {
-      const [inbox] = normalized.splice(inboxIdx, 1);
-      normalized.unshift(inbox);
-    }
-
-    return normalized;
   };
 
   /**
@@ -2513,12 +2439,6 @@ export class AgentModel {
         }
       }
 
-      // 14. Update agent bot providers (transfer, not delete)
-      await trx
-        .update(agentBotProviders)
-        .set({ ...ownershipUpdate, updatedAt: agentBotProviders.updatedAt })
-        .where(inArray(agentBotProviders.agentId, agentIds));
-
       // 14a. Agent-scoped connectors (custom plugins) ride along, or every
       // custom tool the agent carries stops resolving in the target scope.
       // Same-owner rows keep their credentials; a target owner change strips
@@ -2731,21 +2651,17 @@ export class AgentModel {
       })
       .where(eq(agents.id, agentId));
 
-    // Owner-attributed runtime rows travel with the agent: cron jobs and bot
-    // providers execute AS their `userId`, so rows the previous owner set up
-    // must re-home or the transferred bot keeps running as the former member
-    // (and dies with their account). They arrive DISABLED — nothing may run
-    // silently under the recipient's identity and budget; re-enabling in the
-    // agent's settings is their explicit consent. Only the previous owner's
-    // rows move — teammates' schedules stay theirs, untouched.
+    // Owner-attributed cron jobs execute AS their `userId`, so rows the
+    // previous owner set up must re-home or the transferred schedule keeps
+    // running as the former member (and dies with their account). They arrive
+    // DISABLED — nothing may run silently under the recipient's identity and
+    // budget; re-enabling in the agent's settings is their explicit consent.
+    // Only the previous owner's rows move — teammates' schedules stay theirs,
+    // untouched.
     await trx
       .update(agentCronJobs)
       .set({ enabled: false, updatedAt: agentCronJobs.updatedAt, userId: toUserId })
       .where(and(eq(agentCronJobs.agentId, agentId), eq(agentCronJobs.userId, fromUserId)));
-    await trx
-      .update(agentBotProviders)
-      .set({ enabled: false, updatedAt: agentBotProviders.updatedAt, userId: toUserId })
-      .where(and(eq(agentBotProviders.agentId, agentId), eq(agentBotProviders.userId, fromUserId)));
     // Quota account bindings (and exclusively-consumed provider accounts)
     // re-home: both cascade on user deletion. See the util.
     await rehomeAgentQuotaBindingsForRecipient(trx, {

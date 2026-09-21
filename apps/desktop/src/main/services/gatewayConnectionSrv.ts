@@ -11,7 +11,6 @@ import type {
   AgentRunRequestMessage,
   GatewayClient,
   GatewayMcpParams,
-  MessageApiRequestMessage,
   RpcRequestMessage,
   SystemInfoRequestMessage,
   ToolCallRequestMessage,
@@ -43,10 +42,6 @@ interface ToolCallResult {
   error?: unknown;
   state?: unknown;
   success: boolean;
-}
-
-interface MessageApiHandler {
-  (platform: string, apiName: string, payload: Record<string, unknown>): Promise<unknown>;
 }
 
 interface ToolCallHandler {
@@ -148,7 +143,6 @@ export default class GatewayConnectionService extends ServiceModule {
   private tokenRefresher: (() => Promise<{ error?: string; success: boolean }>) | null = null;
   private toolCallHandler: ToolCallHandler | null = null;
   private mcpCallHandler: McpCallHandler | null = null;
-  private messageApiHandler: MessageApiHandler | null = null;
   private agentRunHandler: AgentRunHandler | null = null;
   private rpcHandler: RpcHandler | null = null;
   private deviceRegistrar: DeviceRegistrar | null = null;
@@ -189,10 +183,6 @@ export default class GatewayConnectionService extends ServiceModule {
    */
   setMcpCallHandler(handler: McpCallHandler) {
     this.mcpCallHandler = handler;
-  }
-
-  setMessageApiHandler(handler: MessageApiHandler) {
-    this.messageApiHandler = handler;
   }
 
   /**
@@ -437,10 +427,6 @@ export default class GatewayConnectionService extends ServiceModule {
 
     client.on('tool_call_request', (request) => {
       this.handleToolCallRequest(request, client);
-    });
-
-    client.on('message_api_request', (request) => {
-      this.handleMessageApiRequest(request, client);
     });
 
     client.on('system_info_request', (request) => {
@@ -850,50 +836,6 @@ export default class GatewayConnectionService extends ServiceModule {
           // A failure is timed too: a tool that took 30s to fail is as
           // interesting as one that took 30s to succeed.
           executionTimeMs: Math.round(performance.now() - startedAt),
-          success: false,
-        },
-      });
-    }
-  };
-
-  // ─── Message API Routing ───
-
-  private handleMessageApiRequest = async (
-    request: MessageApiRequestMessage,
-    client: GatewayClient,
-  ) => {
-    const { requestId, api } = request;
-    const { apiName, payload, platform } = api;
-
-    logger.info(
-      `Received message API request: platform=${platform}, apiName=${apiName}, requestId=${requestId}`,
-    );
-
-    try {
-      if (!this.messageApiHandler) {
-        throw new Error('No message API handler configured');
-      }
-
-      const result = await this.messageApiHandler(platform, apiName, payload);
-
-      client.sendMessageApiResponse({
-        requestId,
-        result: {
-          content: typeof result === 'string' ? result : JSON.stringify(result),
-          success: true,
-        },
-      });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error(
-        `Message API request failed: platform=${platform}, apiName=${apiName}, error=${errorMsg}`,
-      );
-
-      client.sendMessageApiResponse({
-        requestId,
-        result: {
-          content: errorMsg,
-          error: errorMsg,
           success: false,
         },
       });

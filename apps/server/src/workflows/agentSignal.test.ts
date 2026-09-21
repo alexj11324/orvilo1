@@ -29,6 +29,7 @@ describe('AgentSignalWorkflow', () => {
       sourceEvent: {
         payload: {
           message: 'Remember this',
+          messageId: 'msg-1',
           topicId: 'topic-1',
         },
         scopeKey: 'topic:topic-1',
@@ -46,6 +47,7 @@ describe('AgentSignalWorkflow', () => {
         sourceEvent: {
           payload: {
             message: 'Remember this',
+            messageId: 'msg-1',
             topicId: 'topic-1',
           },
           scopeKey: 'topic:topic-1',

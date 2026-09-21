@@ -496,8 +496,8 @@ export class HeterogeneousAgentService {
     // agent-traces/unknown/... and left terminal hooks without an agentId.
     const agentId = parseOperationId(operationId)?.agentId;
 
-    // Still read the assistant message for its content so the bot-callback
-    // handler has lastAssistantContent to render.
+    // Still read the assistant message for its content so terminal hooks have
+    // lastAssistantContent to render.
     let lastAssistantContent: string | undefined;
     if (assistantMessageId) {
       try {

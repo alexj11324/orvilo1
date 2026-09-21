@@ -13,7 +13,6 @@ import { z } from 'zod';
 import { hatchetDispatches, hatchetWorkflowSteps } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
-import { botCallback } from '@/server/router-hono/agent/handlers/botCallback';
 import { groupMemberCallback } from '@/server/router-hono/agent/handlers/groupMemberCallback';
 import { subAgentCallback } from '@/server/router-hono/agent/handlers/subAgentCallback';
 import { threadRunCallback } from '@/server/router-hono/agent/handlers/threadRunCallback';
@@ -426,7 +425,6 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     invoke(runBenchmarkHandler, input, stepStore),
   '/api/workflows/agent-eval-run/run-thread-trajectory': (input, stepStore) =>
     invoke(runThreadTrajectoryHandler, input, stepStore),
-  '/api/agent/webhooks/bot-callback': (input) => invokeHonoHandler(botCallback, input),
   '/api/agent/webhooks/group-member-callback': (input) =>
     invokeHonoHandler(groupMemberCallback, input),
   '/api/agent/webhooks/subagent-callback': (input) => invokeHonoHandler(subAgentCallback, input),

@@ -7,12 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { agentService } from '@/services/agent';
 import { aiAgentService } from '@/services/aiAgent';
 import { aiChatService } from '@/services/aiChat';
-import { chatService } from '@/services/chat';
 import * as skillPreload from '@/services/chat/mecha/skillPreload';
 import { messageService } from '@/services/message';
 import * as agentGroupStore from '@/store/agentGroup';
-import { useAiInfraStore } from '@/store/aiInfra';
-import { aiModelSelectors } from '@/store/aiInfra/slices/aiModel/selectors';
 import { setPendingTopicRepos } from '@/store/chat/pendingTopicRepos';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import type {
@@ -356,7 +353,10 @@ describe('ConversationLifecycle actions', () => {
             ],
             messagesToSummarize: existingMessages,
           });
-        vi.spyOn(chatService, 'fetchPresetTaskResult').mockResolvedValue(undefined);
+        vi.spyOn(aiChatService, 'generateJSON').mockResolvedValue({
+          data: { summary: 'summary' },
+          tracingId: 'tracing-1',
+        } as any);
         vi.spyOn(messageService, 'finalizeCompression').mockResolvedValue({
           messages: [
             {
@@ -1667,23 +1667,11 @@ describe('ConversationLifecycle actions', () => {
       it('should snapshot the agent model onto the newTopic (top-level) when the send creates the topic', async () => {
         const { result } = renderHook(() => useChatStore());
         const agentId = TEST_IDS.SESSION_ID;
-        vi.spyOn(aiModelSelectors, 'isModelHasReasoningExtendParams').mockReturnValue(() => true);
-        let loaded = false;
-        vi.spyOn(aiModelSelectors, 'isModelReasoningConfigLoaded').mockReturnValue(() => loaded);
-        vi.spyOn(useAiInfraStore.getState(), 'ensureModelReasoningConfig').mockImplementation(
-          async () => {
-            await Promise.resolve();
-            loaded = true;
-          },
-        );
-        vi.spyOn(aiModelSelectors, 'modelReasoningConfig').mockReturnValue(() => ({
-          reasoningEffort: 'high',
-        }));
         const newTopicId = TEST_IDS.NEW_TOPIC_ID;
 
-        // The gateway path carries the model/reasoning snapshot on the
-        // `optimisticTopic` it hands to executeGatewayAgent — there is no
-        // sendMessageInServer `newTopic` payload on this path anymore.
+        // The gateway path carries the model snapshot on the `optimisticTopic`
+        // it hands to executeGatewayAgent — there is no sendMessageInServer
+        // `newTopic` payload on this path anymore.
         const executeGatewayAgentSpy = vi.fn(async (params: any) => {
           useChatStore.getState().internal_replaceTopicId({
             nextId: newTopicId,
@@ -1718,9 +1706,6 @@ describe('ConversationLifecycle actions', () => {
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             optimisticTopic: expect.objectContaining({
-              metadata: expect.objectContaining({
-                reasoningConfig: { reasoningEffort: 'high' },
-              }),
               model: expect.any(String),
               provider: expect.any(String),
             }),

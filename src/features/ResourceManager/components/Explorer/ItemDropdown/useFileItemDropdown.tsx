@@ -20,7 +20,6 @@ import { shallow } from 'zustand/shallow';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import RepoIcon from '@/components/LibIcon';
-import { useSendToMessengerMenuItem } from '@/features/Messenger/PushResourceModal/useSendToMessengerMenuItem';
 import { useKnowledgeBaseListContext } from '@/features/ResourceManager/components/KnowledgeBaseListProvider';
 import { PAGE_FILE_TYPE } from '@/features/ResourceManager/constants';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
@@ -42,7 +41,7 @@ interface UseFileItemDropdownParams {
    * The underlying `files.id` when the row is a file. The unified resource
    * list addresses a file that backs a derived page by the PAGE id
    * (`COALESCE(d.id, f.id)` in KnowledgeRepo), so `id` alone cannot be used
-   * for file-table lookups such as the messenger push.
+   * for file-table lookups.
    */
   fileId?: string | null;
   filename: string;
@@ -141,15 +140,6 @@ export const useFileItemDropdown = ({
     !isPDF &&
     !isOfficeFile &&
     (sourceType === DERIVED_DOCUMENT_SOURCE_TYPE || fileType === PAGE_FILE_TYPE);
-
-  // Pages/documents have no storage URL to attach, so only real files get the
-  // "Send to chat platform" entry. The server resolves the attachment by
-  // `files.id`, but a file that backs a derived page is listed under the PAGE
-  // id — always prefer the row's underlying `fileId` when it carries one.
-  const sendToMessengerItem = useSendToMessengerMenuItem({
-    enabled: !isFolder && !isPage && !!url,
-    file: { fileType, id: fileId ?? id, name: filename, size },
-  });
 
   const menuItems = useCallback(() => {
     // Filter out current knowledge base and constrain by visibility scope:
@@ -409,7 +399,6 @@ export const useFileItemDropdown = ({
             downloadingToast.close();
           },
         },
-        sendToMessengerItem,
         (hasKnowledgeBaseActions || (canEditResources && (isInLibrary || isFolder))) && {
           type: 'divider',
         },
@@ -511,7 +500,6 @@ export const useFileItemDropdown = ({
     setFileVisibility,
     refreshFileList,
     removeFilesFromKnowledgeBase,
-    sendToMessengerItem,
     sourceType,
     t,
     url,

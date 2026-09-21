@@ -1,198 +1,59 @@
-import type { AiProviderRuntimeConfig, EnabledProvider } from '@orvilo/types';
 import type { EnabledAiModel } from 'model-bank';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTestDB } from '../../../core/getTestDB';
-import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
 
-const userId = 'test-user-id';
-const mockProviderConfigs = {
-  openai: { enabled: true },
-  anthropic: { enabled: false },
-};
+const loadModels = vi.hoisted(() => vi.fn());
 
-let serverDB: OrviloDatabase;
-let repo: AiInfraRepos;
+vi.mock('@orvilo/business-model-bank/model-config', () => ({
+  loadModels,
+}));
 
-beforeAll(async () => {
-  serverDB = await getTestDB();
-}, 30000);
+const model = (over: Partial<EnabledAiModel> = {}): EnabledAiModel =>
+  ({
+    abilities: {},
+    enabled: true,
+    id: 'm-1',
+    providerId: 'openai',
+    type: 'chat',
+    ...over,
+  }) as EnabledAiModel;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  repo = new AiInfraRepos(serverDB, userId, mockProviderConfigs);
+  loadModels.mockResolvedValue([
+    model(),
+    model({ id: 'm-off', enabled: false }),
+    model({ id: 'm-img', type: 'tts' }),
+    model({ id: 'm-vid', type: 'realtime' }),
+    model({ id: 'claude', providerId: 'anthropic' }),
+  ]);
 });
 
 describe('AiInfraRepos', () => {
   describe('getAiProviderRuntimeState', () => {
-    it('should return complete runtime state', async () => {
-      const mockRuntimeConfig = {
-        openai: { apiKey: 'test-key' },
-      } as unknown as Record<string, AiProviderRuntimeConfig>;
-      const mockEnabledProviders = [{ id: 'openai', name: 'OpenAI' }] as EnabledProvider[];
-      const mockEnabledModels = [
-        { id: 'gpt-4', providerId: 'openai', enabled: true },
-      ] as EnabledAiModel[];
+    it('returns deployment-owned runtime state', async () => {
+      const providerConfigs = {
+        anthropic: { enabled: false },
+        openai: { apiKey: 'deploy-key', enabled: true },
+      };
+      const repo = new AiInfraRepos(providerConfigs as never);
+      const state = await repo.getAiProviderRuntimeState();
 
-      vi.spyOn(repo.aiProviderModel, 'getAiProviderRuntimeConfig').mockResolvedValue(
-        mockRuntimeConfig,
-      );
-      vi.spyOn(repo, 'getUserEnabledProviderList').mockResolvedValue(mockEnabledProviders);
-      vi.spyOn(repo, 'getEnabledModels').mockResolvedValue(mockEnabledModels);
-
-      const result = await repo.getAiProviderRuntimeState();
-
-      expect(result).toMatchObject({
-        enabledAiProviders: mockEnabledProviders,
-        enabledAiModels: mockEnabledModels,
-        runtimeConfig: expect.any(Object),
-      });
+      expect(Object.keys(state.runtimeConfig)).toEqual(['openai']);
+      expect(state.runtimeConfig.openai).toMatchObject({ config: {}, keyVaults: {} });
+      expect(state.enabledAiProviders.map((p) => p.id)).toEqual(['openai']);
+      expect(state.enabledAiModels.map((m) => m.id).sort()).toEqual(['m-1', 'm-img', 'm-vid']);
+      expect(state.enabledChatAiProviders.map((p) => p.id)).toEqual(['openai']);
     });
 
-    it('should return provider runtime state', async () => {
-      const mockRuntimeConfig = {
-        openai: {
-          apiKey: 'test-key',
-        },
-      } as unknown as Record<string, AiProviderRuntimeConfig>;
+    it('returns an empty state when nothing is deployment-enabled', async () => {
+      const repo = new AiInfraRepos({});
+      const state = await repo.getAiProviderRuntimeState();
 
-      vi.spyOn(repo.aiProviderModel, 'getAiProviderRuntimeConfig').mockResolvedValue(
-        mockRuntimeConfig,
-      );
-
-      vi.spyOn(repo, 'getUserEnabledProviderList').mockResolvedValue([
-        { id: 'openai', logo: 'logo1', name: 'OpenAI', source: 'builtin' },
-      ]);
-
-      vi.spyOn(repo, 'getEnabledModels').mockResolvedValue([
-        {
-          abilities: {},
-          enabled: true,
-          id: 'gpt-4',
-          providerId: 'openai',
-          type: 'chat',
-        },
-      ]);
-
-      const result = await repo.getAiProviderRuntimeState();
-
-      expect(result).toEqual({
-        enabledAiModels: [
-          expect.objectContaining({
-            enabled: true,
-            id: 'gpt-4',
-            providerId: 'openai',
-          }),
-        ],
-        enabledAiProviders: [{ id: 'openai', logo: 'logo1', name: 'OpenAI', source: 'builtin' }],
-        enabledChatAiProviders: [
-          { id: 'openai', logo: 'logo1', name: 'OpenAI', source: 'builtin' },
-        ],
-        enabledImageAiProviders: [],
-        enabledVideoAiProviders: [],
-        runtimeConfig: {
-          openai: {
-            apiKey: 'test-key',
-            enabled: true,
-          },
-        },
-      });
-    });
-
-    it('should return provider runtime state with enabledImageAiProviders', async () => {
-      const mockRuntimeConfig = {
-        fal: {
-          apiKey: 'test-fal-key',
-        },
-        openai: {
-          apiKey: 'test-openai-key',
-        },
-      } as unknown as Record<string, AiProviderRuntimeConfig>;
-
-      vi.spyOn(repo.aiProviderModel, 'getAiProviderRuntimeConfig').mockResolvedValue(
-        mockRuntimeConfig,
-      );
-
-      // Mock providers including fal for image generation
-      vi.spyOn(repo, 'getUserEnabledProviderList').mockResolvedValue([
-        { id: 'openai', logo: 'openai-logo', name: 'OpenAI', source: 'builtin' },
-        { id: 'fal', logo: 'fal-logo', name: 'Fal', source: 'builtin' },
-      ]);
-
-      // Mock models including image models from fal
-      vi.spyOn(repo, 'getEnabledModels').mockResolvedValue([
-        {
-          abilities: {},
-          enabled: true,
-          id: 'gpt-4',
-          providerId: 'openai',
-          type: 'chat',
-        },
-        {
-          abilities: {},
-          enabled: true,
-          id: 'flux/schnell',
-          providerId: 'fal',
-          type: 'image',
-        },
-        {
-          abilities: {},
-          enabled: true,
-          id: 'flux-kontext/dev',
-          providerId: 'fal',
-          type: 'image',
-        },
-      ]);
-
-      const result = await repo.getAiProviderRuntimeState();
-
-      expect(result).toEqual({
-        enabledAiModels: [
-          expect.objectContaining({
-            enabled: true,
-            id: 'gpt-4',
-            providerId: 'openai',
-            type: 'chat',
-          }),
-          expect.objectContaining({
-            enabled: true,
-            id: 'flux/schnell',
-            providerId: 'fal',
-            type: 'image',
-          }),
-          expect.objectContaining({
-            enabled: true,
-            id: 'flux-kontext/dev',
-            providerId: 'fal',
-            type: 'image',
-          }),
-        ],
-        enabledAiProviders: [
-          { id: 'openai', logo: 'openai-logo', name: 'OpenAI', source: 'builtin' },
-          { id: 'fal', logo: 'fal-logo', name: 'Fal', source: 'builtin' },
-        ],
-        enabledChatAiProviders: [
-          { id: 'openai', logo: 'openai-logo', name: 'OpenAI', source: 'builtin' },
-        ],
-        enabledImageAiProviders: [
-          expect.objectContaining({
-            id: 'fal',
-            name: 'Fal',
-          }),
-        ],
-        enabledVideoAiProviders: [],
-        runtimeConfig: {
-          fal: {
-            apiKey: 'test-fal-key',
-            enabled: undefined,
-          },
-          openai: {
-            apiKey: 'test-openai-key',
-            enabled: true,
-          },
-        },
-      });
+      expect(state.enabledAiModels).toEqual([]);
+      expect(state.enabledAiProviders).toEqual([]);
+      expect(state.runtimeConfig).toEqual({});
     });
   });
 });

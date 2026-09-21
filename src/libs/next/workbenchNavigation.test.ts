@@ -14,7 +14,7 @@ describe('shouldHardNavigateToWorkbench', () => {
     },
   );
 
-  it.each(['/acceptance', '/acceptance/a-1?r=2', '/verify-im', '/settings/profile'])(
+  it.each(['/acceptance', '/acceptance/a-1?r=2', '/settings/profile'])(
     'keeps other main-SPA destinations in-router: %s',
     (pathname) => {
       expect(shouldHardNavigateToWorkbench(pathname)).toBe(false);

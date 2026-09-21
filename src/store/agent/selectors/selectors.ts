@@ -108,11 +108,6 @@ const getAgentMetaById =
   };
 
 /**
- * Full-body artwork of the agent's character, or `undefined` when it has none.
- * Kept out of {@link getAgentMetaById} because `MetaData` is shared with
- * sessions and groups, which have no character sheet.
- */
-/**
  * The avatar actually stored on the agent — unlike {@link getAgentMetaById},
  * which substitutes a default so every surface has something to render. Use
  * this to decide whether there is anything to remove.

@@ -18,12 +18,10 @@ import { goalRuntime } from '../goal';
 import { goalSupervisorRuntime } from '../goalSupervisor';
 import { groupAgentBuilderRuntime } from '../groupAgentBuilder';
 import { groupManagementRuntime } from '../groupManagement';
-import { imageGenerationRuntime } from '../imageGeneration';
 import { getServerRuntimeIdentifiers, hasServerRuntime } from '../index';
 import { knowledgeBaseRuntime } from '../knowledgeBase';
 import { localSystemRuntime } from '../localSystem';
 import { memoryRuntime } from '../memory';
-import { messageRuntime } from '../message';
 import { notebookRuntime } from '../notebook';
 import { orviloAgentRuntime } from '../orviloAgent';
 import { pageAgentRuntime } from '../pageAgent';
@@ -60,11 +58,9 @@ const ALL_REGISTRATIONS = [
   goalSupervisorRuntime,
   groupAgentBuilderRuntime,
   groupManagementRuntime,
-  imageGenerationRuntime,
   knowledgeBaseRuntime,
   localSystemRuntime,
   memoryRuntime,
-  messageRuntime,
   notebookRuntime,
   orviloAgentRuntime,
   pageAgentRuntime,

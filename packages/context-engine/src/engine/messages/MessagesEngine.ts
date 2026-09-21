@@ -36,10 +36,8 @@ import {
   AgentDocumentSystemReplaceInjector,
   AgentIdentityInjector,
   AgentManagementContextInjector,
-  BotPlatformContextInjector,
   ConnectorOwnershipInjector,
   ContextSelectionsInjector,
-  DiscordContextProvider,
   EvalContextSystemInjector,
   ExpertiseContextInjector,
   ForceFinishSummaryInjector,
@@ -173,9 +171,7 @@ export class MessagesEngine {
       fileContext,
       messages,
       agentBuilderContext,
-      botPlatformContext,
       workspaceContext,
-      discordContext,
       connectorOwnershipNote,
       evalContext,
       projectInstructions,
@@ -305,11 +301,6 @@ export class MessagesEngine {
       }),
       // Eval context (appends envPrompt)
       new EvalContextSystemInjector({ enabled: !!evalContext?.envPrompt, evalContext }),
-      // Bot platform context (formatting instructions for non-Markdown platforms)
-      new BotPlatformContextInjector({
-        context: botPlatformContext,
-        enabled: !!botPlatformContext,
-      }),
       // System date
       new SystemDateProvider({ enabled: isSystemDateEnabled, timezone }),
       // Model info (name / id / knowledge cutoff)
@@ -376,8 +367,6 @@ export class MessagesEngine {
         members: agentGroup?.members,
         systemPrompt: agentGroup?.systemPrompt,
       }),
-      // Discord context (channel/guild info)
-      new DiscordContextProvider({ context: discordContext, enabled: !!discordContext }),
       // Plan (high-level plan document)
       new PlanInjector({ enabled: !!isPlanEnabled, plan: planTodo?.plan }),
       // Knowledge (agent files + knowledge bases)

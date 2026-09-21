@@ -1,12 +1,9 @@
-import { gptImage1Schema, gptImage2Schema } from '../const/imageParameters';
 import type {
   AIASRModelCard,
   AIChatModelCard,
   AIEmbeddingModelCard,
-  AIImageModelCard,
   AIRealtimeModelCard,
   AITTSModelCard,
-  AIVideoModelCard,
 } from '../types/aiModel';
 
 export const openaiChatModels: AIChatModelCard[] = [
@@ -1510,88 +1507,6 @@ export const openaiASRModels: AIASRModelCard[] = [
   },
 ];
 
-// Image generation models
-export const openaiImageModels: AIImageModelCard[] = [
-  {
-    description:
-      "OpenAI's next-generation multimodal image model with native reasoning, up to 4K resolution, near-perfect text rendering, and high-fidelity multilingual support.",
-    displayName: 'GPT Image 2',
-    enabled: true,
-    id: 'gpt-image-2',
-    parameters: gptImage2Schema,
-    pricing: {
-      // Medium quality at 1024x1024: ~1767 output tokens * $30/M = $0.053 per image.
-      // Source: https://developers.openai.com/api/docs/guides/image-generation#calculating-costs
-      approximatePricePerImage: 0.053,
-      units: [
-        { name: 'textInput', rate: 5, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'textInput_cacheRead', rate: 1.25, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput', rate: 8, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput_cacheRead', rate: 2, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageOutput', rate: 30, strategy: 'fixed', unit: 'millionTokens' },
-      ],
-    },
-    releasedAt: '2026-04-21',
-    type: 'image',
-  },
-  {
-    description:
-      'An enhanced GPT Image 1 model with 4× faster generation, more precise editing, and improved text rendering.',
-    displayName: 'GPT Image 1.5',
-    id: 'gpt-image-1.5',
-    parameters: gptImage1Schema,
-    pricing: {
-      approximatePricePerImage: 0.034,
-      units: [
-        { name: 'textInput', rate: 5, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'textInput_cacheRead', rate: 1.25, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput', rate: 8, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput_cacheRead', rate: 2, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageOutput', rate: 32, strategy: 'fixed', unit: 'millionTokens' },
-      ],
-    },
-    releasedAt: '2025-12-16',
-    type: 'image',
-  },
-  // https://platform.openai.com/docs/models/gpt-image-1
-  {
-    description: 'ChatGPT native multimodal image generation model.',
-    displayName: 'GPT Image 1',
-    id: 'gpt-image-1',
-    parameters: gptImage1Schema,
-    pricing: {
-      approximatePricePerImage: 0.042,
-      units: [
-        { name: 'textInput', rate: 5, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'textInput_cacheRead', rate: 1.25, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput', rate: 10, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput_cacheRead', rate: 2.5, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageOutput', rate: 40, strategy: 'fixed', unit: 'millionTokens' },
-      ],
-    },
-    type: 'image',
-  },
-  {
-    description:
-      'A lower-cost GPT Image 1 variant with native text and image input and image output.',
-    displayName: 'GPT Image 1 Mini',
-    id: 'gpt-image-1-mini',
-    parameters: gptImage1Schema,
-    pricing: {
-      approximatePricePerImage: 0.011,
-      units: [
-        { name: 'textInput', rate: 2, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'textInput_cacheRead', rate: 0.2, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput', rate: 2.5, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageInput_cacheRead', rate: 0.25, strategy: 'fixed', unit: 'millionTokens' },
-        { name: 'imageOutput', rate: 8, strategy: 'fixed', unit: 'millionTokens' },
-      ],
-    },
-    releasedAt: '2025-10-06',
-    type: 'image',
-  },
-];
-
 // GPT-4o and GPT-4o-mini realtime models
 export const openaiRealtimeModels: AIRealtimeModelCard[] = [
   {
@@ -1700,63 +1615,12 @@ export const openaiRealtimeModels: AIRealtimeModelCard[] = [
   },
 ];
 
-export const openaiVideoModels: AIVideoModelCard[] = [
-  {
-    description:
-      'Sora 2 is our new powerful media generation model, generating videos with synced audio. It can create richly detailed, dynamic clips from natural language or images.',
-    displayName: 'Sora 2',
-    enabled: true,
-    id: 'sora-2',
-    parameters: {
-      duration: { default: 4, enum: [4, 8, 12] },
-      imageUrl: {
-        default: null,
-      },
-      prompt: { default: '' },
-      size: {
-        default: '720x1280',
-        enum: ['720x1280', '1280x720', '1024x1792', '1792x1024'],
-      },
-    },
-    pricing: {
-      units: [{ name: 'videoGeneration', rate: 0.1, strategy: 'fixed', unit: 'second' }],
-    },
-    releasedAt: '2025-12-08',
-    type: 'video',
-  },
-  {
-    description:
-      'Sora 2 Pro is our state-of-the-art, most advanced media generation model, generating videos with synced audio. It can create richly detailed, dynamic clips from natural language or images.',
-    displayName: 'Sora 2 Pro',
-    enabled: true,
-    id: 'sora-2-pro',
-    parameters: {
-      duration: { default: 4, enum: [4, 8, 12] },
-      imageUrl: {
-        default: null,
-      },
-      prompt: { default: '' },
-      size: {
-        default: '720x1280',
-        enum: ['720x1280', '1280x720', '1024x1792', '1792x1024'],
-      },
-    },
-    pricing: {
-      units: [{ name: 'videoGeneration', rate: 0.5, strategy: 'fixed', unit: 'second' }],
-    },
-    releasedAt: '2025-10-06',
-    type: 'video',
-  },
-];
-
 export const allModels = [
   ...openaiChatModels,
   ...openaiEmbeddingModels,
   ...openaiTTSModels,
   ...openaiASRModels,
-  ...openaiImageModels,
   ...openaiRealtimeModels,
-  ...openaiVideoModels,
 ];
 
 export default allModels;

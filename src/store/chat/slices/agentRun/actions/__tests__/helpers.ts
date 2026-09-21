@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 
-import { chatService } from '@/services/chat';
 import { messageService } from '@/services/message';
 import {
   agentByIdSelectors,
@@ -106,19 +105,6 @@ export const spyOnMessageService = () => {
     updateMessageErrorSpy,
     updateMessageMetadataSpy,
     updateMessageSpy,
-  };
-};
-
-/**
- * Setup spies for chat service methods
- */
-export const spyOnChatService = () => {
-  const createAssistantMessageSpy = vi
-    .spyOn(chatService, 'createAssistantMessage')
-    .mockResolvedValue(new Response(TEST_IDS.ASSISTANT_MESSAGE_ID));
-
-  return {
-    createAssistantMessageSpy,
   };
 };
 

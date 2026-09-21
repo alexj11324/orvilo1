@@ -532,7 +532,7 @@ export const INITIAL_STATUS = {
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
-    showSubTasks: false,
+    showSubTasks: true,
     subGroupBy: 'none',
   },
   // Left unset on purpose: `undefined` means the user never chose a mode, so

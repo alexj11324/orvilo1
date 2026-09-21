@@ -244,10 +244,10 @@ describe('AgentTasksPage', () => {
       });
     });
 
-    it('keeps the breadcrumb for a project scope and drops it for the global list', () => {
+    it('uses the project header and properties panel without duplicate task chrome', () => {
       expect(getTaskPageHeaderVisibility({ isMobile: false, projectId: 'p-1' })).toEqual({
-        showBreadcrumb: true,
-        showTaskAgentPanelToggle: true,
+        showBreadcrumb: false,
+        showTaskAgentPanelToggle: false,
         showViewOptions: true,
       });
       expect(getTaskPageHeaderVisibility({ isMobile: false })).toEqual({

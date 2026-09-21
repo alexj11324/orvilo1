@@ -25,11 +25,7 @@ const listKey = (scope: string) => [LIST_KEY, scope] as const;
 const detailKey = (scope: string, id: string) => ['project/detail', scope, id] as const;
 
 interface ProjectStore {
-  createProject: (input: {
-    identifier: string;
-    name: string;
-    slug?: string;
-  }) => Promise<ProjectListItem>;
+  createProject: (input: Parameters<typeof projectService.create>[0]) => Promise<ProjectListItem>;
   deleteProject: (id: string) => Promise<void>;
   projectDetails: Record<string, Record<string, ProjectDetail>>;
   projectLists: Record<string, ProjectListItem[]>;
@@ -47,12 +43,17 @@ interface ProjectStore {
     id?: string,
     enabled?: boolean,
   ) => SWRResponse<ProjectOrchestrationPolicyResponse>;
+  useFetchProjectTeams: () => SWRResponse<Awaited<ReturnType<typeof projectService.teams>>>;
 }
 
 const devtools = createDevtools('project');
 
 export const useProjectStore = createWithEqualityFn<ProjectStore>()(
   devtools((set, get) => ({
+    useFetchProjectTeams: () =>
+      useClientDataSWR(getActiveWorkspaceId() ? ['project/teams'] : null, () =>
+        projectService.teams(),
+      ),
     createProject: async (input) => {
       const response = await projectService.create(input, getActiveWorkspaceId());
       await get().refreshProjectList();

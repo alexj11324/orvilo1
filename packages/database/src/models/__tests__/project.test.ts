@@ -8,6 +8,7 @@ import {
   projectCompletionReviews,
   projectMembers,
   projects,
+  projectTeams,
   projectWorks,
   tasks,
   teamMembers,
@@ -73,6 +74,44 @@ describe('ProjectModel', () => {
     expect(
       await serverDB.select().from(agents).where(eq(agents.id, project.coordinatorAgentId!)),
     ).toHaveLength(0);
+  });
+
+  it('persists project planning fields and rejects leads outside the project scope', async () => {
+    const draft = {
+      name: 'Launch plan',
+      summary: 'A focused launch',
+      avatar: '🚀',
+      description: 'Release checklist',
+      leadUserId: userId,
+      startDate: '2026-09-21',
+      targetDate: '2026-10-01',
+    };
+    const project = await createProject(model, draft);
+    expect(await model.findById(project.id)).toMatchObject(draft);
+    await expect(createProject(model, { ...draft, leadUserId: otherUserId })).rejects.toThrow();
+  });
+
+  it('links the selected team atomically and rejects a team from another workspace', async () => {
+    const workspaceId = 'project-planning-workspace';
+    const otherWorkspaceId = 'project-planning-other';
+    await serverDB.insert(workspaces).values([
+      { id: workspaceId, name: 'Planning', slug: workspaceId, primaryOwnerId: userId },
+      { id: otherWorkspaceId, name: 'Other', slug: otherWorkspaceId, primaryOwnerId: otherUserId },
+    ]);
+    await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await serverDB.insert(teams).values([
+      { id: 'planning-team', workspaceId, name: 'Design', key: 'DSN' },
+      { id: 'other-planning-team', workspaceId: otherWorkspaceId, name: 'Other', key: 'OTH' },
+    ]);
+    const scoped = new ProjectModel(serverDB, userId, workspaceId);
+    const project = await createProject(scoped, { name: 'Team launch', teamId: 'planning-team' });
+    expect(
+      await serverDB.select().from(projectTeams).where(eq(projectTeams.projectId, project.id)),
+    ).toEqual([expect.objectContaining({ teamId: 'planning-team', workspaceId })]);
+    await expect(
+      createProject(scoped, { name: 'Invalid team', teamId: 'other-planning-team' }),
+    ).rejects.toThrow();
+    expect((await scoped.list()).map(({ name }) => name)).toEqual(['Team launch']);
   });
 
   it('resolves a project by slug without escaping the current scope', async () => {

@@ -45,9 +45,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   page: css`
     box-sizing: border-box;
-    width: min(960px, calc(100% - 64px));
+    width: min(800px, calc(100% - 48px));
     margin-inline: auto;
-    padding-block: 24px 72px;
+    padding-block: 24px 32px;
 
     @media (width <= 720px) {
       width: calc(100% - 40px);
@@ -121,16 +121,16 @@ const ProjectWorkspace = memo(() => {
                 <Text fontSize={22} weight={650}>
                   {project.name}
                 </Text>
-                {project.description ? (
+                {project.summary || project.description ? (
                   <Text fontSize={14} type={'secondary'}>
-                    {project.description}
+                    {project.summary || project.description}
                   </Text>
                 ) : null}
               </Flexbox>
             </Flexbox>
 
-            <Flexbox gap={6}>
-              <Text fontSize={13} weight={600}>
+            <Flexbox horizontal align={'center'} gap={16}>
+              <Text fontSize={12} style={{ minWidth: 72 }} type={'secondary'}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
               <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
@@ -178,8 +178,8 @@ const ProjectWorkspace = memo(() => {
               </Flexbox>
             </Flexbox>
 
-            <Flexbox gap={6}>
-              <Text fontSize={13} weight={600}>
+            <Flexbox horizontal align={'center'} gap={16}>
+              <Text fontSize={12} style={{ minWidth: 72 }} type={'secondary'}>
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
               </Text>
               <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
@@ -205,6 +205,9 @@ const ProjectWorkspace = memo(() => {
               </Flexbox>
             </Flexbox>
 
+            {project.summary && project.description && (
+              <Text style={{ whiteSpace: 'pre-wrap' }}>{project.description}</Text>
+            )}
             <Flexbox className={styles.composer}>
               <TextArea
                 autoSize={{ maxRows: 6, minRows: 2 }}

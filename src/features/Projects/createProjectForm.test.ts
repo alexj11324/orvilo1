@@ -8,6 +8,41 @@ import {
 } from './createProjectForm';
 
 describe('createProjectForm', () => {
+  it.each(['2026 Roadmap', '2026'])('suggests a submittable identifier for %s', (name) => {
+    const suggestions = getProjectFieldSuggestions(name);
+    expect(isProjectIdentifierValid(suggestions.identifier)).toBe(true);
+    expect(getCreateProjectInput({ name, ...suggestions })).not.toBeNull();
+  });
+  it('submits project details and planning properties instead of discarding them', () => {
+    const draft = {
+      identifier: 'NEW',
+      name: 'Launch',
+      slug: 'launch',
+      avatar: '🚀',
+      summary: ' Short summary ',
+      description: ' Project brief ',
+      leadUserId: 'member',
+      teamId: 'design',
+      startDate: '2026-09-21',
+      targetDate: '2026-10-01',
+    };
+    expect(getCreateProjectInput(draft)).toEqual({
+      ...draft,
+      summary: 'Short summary',
+      description: 'Project brief',
+    });
+  });
+
+  it('does not allow a target date before the start date', () => {
+    const draft = {
+      identifier: 'NEW',
+      name: 'Launch',
+      slug: '',
+      startDate: '2026-10-01',
+      targetDate: '2026-09-21',
+    };
+    expect(getCreateProjectInput(draft)).toBeNull();
+  });
   it('derives a valid identifier and slug from the project name', () => {
     expect(getProjectFieldSuggestions('Orvilo')).toEqual({
       identifier: 'ORVI',

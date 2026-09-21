@@ -62,7 +62,7 @@ interface TaskListProps {
 const HIDDEN_COMPLETED_STATUS_SET = new Set<string>(HIDDEN_WHEN_COMPLETED_STATUSES);
 
 /** Row height the window sizes itself by before it has measured real rows. */
-const DEFAULT_ROW_HEIGHT = 52;
+const DEFAULT_ROW_HEIGHT = 40;
 
 const TASK_GROUP_BY_VALUES = new Set<TaskGroupBy>([
   'assignee',
@@ -103,16 +103,25 @@ const TaskGroupHeader = memo<{
 }>(({ item, onToggle }) => {
   const sub = item.kind === 'subGroup';
   return (
-    <div style={{ paddingTop: item.first ? 0 : sub ? 6 : 16 }}>
+    <div style={{ paddingTop: item.first ? 0 : 8 }}>
       <AccordionRoot
-        indicatorPlacement={'end'}
+        indicatorPlacement={'start'}
         value={item.collapsed ? [] : [item.key]}
-        variant={sub ? 'borderless' : 'outlined'}
+        variant={'borderless'}
         onValueChange={() => onToggle(item.key)}
       >
         <AccordionItem value={item.key}>
-          <AccordionHeader style={{ paddingBlock: sub ? 6 : 8, paddingInline: 14 }}>
-            <AccordionTrigger>{renderGroupTitle(item.meta, item.count, sub)}</AccordionTrigger>
+          <AccordionHeader
+            style={{
+              paddingBlock: 4,
+              paddingInline: 12,
+              background: cssVar.colorFillQuaternary,
+              borderRadius: 6,
+            }}
+          >
+            <AccordionTrigger style={{ padding: 0, minHeight: 28 }}>
+              {renderGroupTitle(item.meta, item.count, sub)}
+            </AccordionTrigger>
           </AccordionHeader>
         </AccordionItem>
       </AccordionRoot>
@@ -236,7 +245,6 @@ const TaskList = memo<TaskListProps>((props) => {
           <TaskRowIndent depth={item.row.depth} muted={item.row.isParentContext}>
             <AgentTaskItem routeScope={routeScope} task={item.row.task} />
           </TaskRowIndent>
-          {item.showDivider && <Divider dashed style={{ margin: 0 }} />}
         </div>
       );
     },

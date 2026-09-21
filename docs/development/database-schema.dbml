@@ -3291,7 +3291,11 @@ table projects {
   identifier varchar(6) [not null]
   name varchar(255) [not null]
   description text
+  summary text
   avatar text
+  lead_user_id text
+  start_date date
+  target_date date
   coordinator_agent_id text
   status text [not null, default: 'backlog']
   user_id text

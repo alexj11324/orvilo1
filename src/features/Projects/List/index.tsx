@@ -51,7 +51,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   cell: css`
     flex: none;
 
-    width: 96px;
+    min-width: 0;
 
     font-size: 12px;
     color: ${cssVar.colorTextTertiary};
@@ -59,20 +59,22 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   headerRow: css`
     padding-block: 4px;
-    padding-inline: 28px 12px;
+    padding-inline: 12px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
 
     font-size: 12px;
     color: ${cssVar.colorTextTertiary};
   `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 10px;
+  columns: css`
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 80px 80px 56px 88px 80px 24px;
+    gap: 12px;
     align-items: center;
 
-    min-width: 0;
-
+    min-width: 700px;
+  `,
+  link: css`
+    display: contents;
     color: inherit;
   `,
   nameCell: css`
@@ -81,12 +83,14 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   owner: css`
     flex: none;
-    width: 96px;
+    min-width: 0;
   `,
   row: css`
+    min-height: 44px;
     padding-block: 7px;
-    padding-inline: 4px 12px;
+    padding-inline: 12px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
     color: inherit;
 
     &:hover {
@@ -101,7 +105,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   updatedAt: css`
     flex: none;
 
-    width: 96px;
+    min-width: 0;
 
     font-size: 12px;
     color: ${cssVar.colorTextQuaternary};
@@ -166,7 +170,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
   ];
 
   const row = (
-    <Flexbox horizontal align={'center'} className={styles.row} gap={0}>
+    <Flexbox horizontal align={'center'} className={`${styles.row} ${styles.columns}`} gap={0}>
       <WorkspaceLink className={styles.link} to={`/project/${project.slug ?? project.id}`}>
         <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
           <Tooltip title={t(`acceptance.status.${status}`)}>
@@ -175,10 +179,10 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
           <Text ellipsis weight={500}>
             {project.name}
           </Text>
-          <Text className={styles.cell} fontSize={12}>
-            {project.identifier}
-          </Text>
         </Flexbox>
+        <Text className={styles.cell} fontSize={12}>
+          {project.identifier}
+        </Text>
         <span className={styles.owner}>
           {project.userId ? <ProjectOwnerAvatar userId={project.userId} /> : null}
         </span>
@@ -238,11 +242,7 @@ const ProjectListPage = memo(() => {
   return (
     <WorkSurface>
       <NavHeader
-        left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {t('list.title')}
-          </Text>
-        }
+        left={<Text weight={500}>{t('list.title')}</Text>}
         right={
           <Button
             icon={PlusIcon}
@@ -280,16 +280,20 @@ const ProjectListPage = memo(() => {
           </Center>
         ) : (
           <Flexbox gap={0}>
-            <Flexbox horizontal align={'center'} className={styles.headerRow} gap={0}>
+            <Flexbox
+              horizontal
+              align={'center'}
+              className={`${styles.headerRow} ${styles.columns}`}
+              gap={0}
+            >
               <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
-                <span style={{ width: 16 }} />
                 <Text fontSize={12} type={'secondary'}>
                   {t('list.columnName', { defaultValue: 'Name' })}
                 </Text>
-                <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                  {t('list.columnKey', { defaultValue: 'Key' })}
-                </Text>
               </Flexbox>
+              <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                {t('list.columnKey', { defaultValue: 'Key' })}
+              </Text>
               <span className={styles.owner}>
                 <Text fontSize={12} type={'secondary'}>
                   {t('list.columnOwner', { defaultValue: 'Owner' })}

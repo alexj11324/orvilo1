@@ -11,7 +11,7 @@ import {
   PackageOpenIcon,
   TargetIcon,
 } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -33,7 +33,7 @@ import type { ProjectDetail } from '@/store/project';
 const styles = createStaticStyles(({ css }) => ({
   main: css`
     min-width: 0;
-    margin-block-start: 40px;
+    margin-block-start: 24px;
   `,
   milestone: css`
     padding-block: 6px;
@@ -44,7 +44,7 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   section: css`
-    padding-block: 18px;
+    padding-block: 16px;
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
   works: css`
@@ -87,6 +87,7 @@ const SectionTitle = memo<{
 
 const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => {
   const { t } = useTranslation('project');
+  const [policyOpen, setPolicyOpen] = useState(false);
   const navigate = useWorkspaceAwareNavigate();
   const openWork = useOpenWork();
   const workspaceId = useActiveWorkspaceId();
@@ -177,10 +178,14 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
         ) : (
           activeTasks.map((task) => (
             <NavItem
-              description={task.description || task.instruction}
               icon={task.status === 'paused' ? Clock3Icon : CircleDotIcon}
               key={task.id}
               title={task.name || task.instruction}
+              description={
+                (task.description || task.instruction) !== (task.name || task.instruction)
+                  ? task.description || task.instruction
+                  : undefined
+              }
               extra={
                 <Tag size={'small'}>
                   {t(`goals.status.${task.status}`, { defaultValue: task.status })}
@@ -217,7 +222,13 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
         )}
       </Flexbox>
 
-      <OrchestrationPolicyCard detail={detail} projectId={projectId} />
+      <details
+        className={styles.section}
+        onToggle={(event) => setPolicyOpen(event.currentTarget.open)}
+      >
+        <summary style={{ cursor: 'pointer', fontSize: 13 }}>{t('orchestration.title')}</summary>
+        {policyOpen && <OrchestrationPolicyCard detail={detail} projectId={projectId} />}
+      </details>
     </Flexbox>
   );
 });

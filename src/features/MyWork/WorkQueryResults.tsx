@@ -92,14 +92,15 @@ const styles = createStaticStyles(({ css }) => ({
     gap: 8px;
     align-items: center;
 
-    padding-block: 6px;
-    padding-inline: 4px;
+    min-height: 32px;
+    padding-block: 4px;
+    padding-inline: 12px;
     border: none;
-    border-radius: ${cssVar.borderRadiusLG};
+    border-radius: ${cssVar.borderRadiusSM};
 
     color: ${cssVar.colorTextSecondary};
 
-    background: transparent;
+    background: ${cssVar.colorFillQuaternary};
 
     &:hover {
       background: ${cssVar.colorFillQuaternary};

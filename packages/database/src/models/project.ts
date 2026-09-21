@@ -35,6 +35,8 @@ import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
+import { TeamModel } from './team';
+import { hasActiveWorkspaceMembership } from './workspace';
 
 export interface CreateProjectInput {
   avatar?: string;
@@ -46,8 +48,13 @@ export interface CreateProjectInput {
   };
   description?: string;
   identifier: string;
+  leadUserId?: string;
   name: string;
   slug?: string;
+  startDate?: string;
+  summary?: string;
+  targetDate?: string;
+  teamId?: string;
   visibility?: ProjectVisibility;
 }
 
@@ -246,9 +253,31 @@ export class ProjectModel {
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
     }
-    const { creationSubject, ...projectInput } = input;
+    const { creationSubject, teamId, ...projectInput } = input;
 
     return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      if (input.startDate && input.targetDate && input.targetDate < input.startDate) {
+        throw new Error('Target date must not precede start date');
+      }
+      if (input.leadUserId) {
+        const validLead = this.workspaceId
+          ? await hasActiveWorkspaceMembership(db, {
+              userId: input.leadUserId,
+              workspaceId: this.workspaceId,
+            })
+          : input.leadUserId === this.userId;
+        if (!validLead) throw new Error('Project lead must be an active workspace member');
+      }
+      const teamModel = this.workspaceId ? new TeamModel(db, this.userId, this.workspaceId) : null;
+      if (
+        teamId &&
+        !(await teamModel?.listReadable())?.some(
+          (team) => team.id === teamId && team.status === 'active',
+        )
+      ) {
+        throw new Error('Project team is not available in this workspace');
+      }
       const coordinatorConfig = createProjectCoordinatorAgentConfig({
         avatar: input.avatar,
         description: input.description,
@@ -291,6 +320,8 @@ export class ProjectModel {
         role: 'coordinator',
         workspaceId: this.workspaceId ?? null,
       });
+
+      if (teamId && teamModel) await teamModel.linkProject(project.id, teamId);
 
       return project;
     });

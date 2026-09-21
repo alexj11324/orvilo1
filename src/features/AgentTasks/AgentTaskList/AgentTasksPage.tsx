@@ -1,8 +1,18 @@
 import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, TabsIndicator, TabsList, TabsRoot, TabsTab, Text } from '@lobehub/ui/base-ui';
+import {
+  ActionIcon,
+  Button,
+  DropdownMenu,
+  TabsIndicator,
+  TabsList,
+  TabsRoot,
+  TabsTab,
+  Text,
+} from '@lobehub/ui/base-ui';
 import { Pagination } from 'antd';
-import { Plus } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronDownIcon, Plus } from 'lucide-react';
+import { memo, use, useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -25,6 +35,7 @@ import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPag
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
 import NavHeader from '@/features/NavHeader';
+import { ProjectToolbarContext } from '@/features/Projects/Layout/ProjectToolbarContext';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -83,13 +94,12 @@ export const getTaskPageHeaderVisibility = ({
   isMobile,
   projectId,
 }: TaskPageHeaderVisibilityParams) => {
-  // The global page's own crumb is the `tasks` tab, so the breadcrumb only
-  // earns its place once the list is scoped to an agent or a project.
-  const isScoped = !!(agentId || projectId);
+  // Projects already own their breadcrumb and details panel in the shared layout.
+  const isScoped = !!agentId && !projectId;
 
   return {
     showBreadcrumb: isScoped,
-    showTaskAgentPanelToggle: shouldRenderTaskAgentPanelToggle(isMobile),
+    showTaskAgentPanelToggle: !projectId && shouldRenderTaskAgentPanelToggle(isMobile),
     showViewOptions: true,
   };
 };
@@ -198,6 +208,7 @@ export const resolveOrdinaryCollectionSurface = (viewMode: TaskViewMode): 'board
 
 const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const { t } = useTranslation('chat');
+  const projectToolbar = use(ProjectToolbarContext);
   const navigate = useWorkspaceAwareNavigate();
   const isMobile = useIsMobile();
   const { allowed: canCreateTask, reason } = usePermission('create_content');
@@ -468,6 +479,67 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
     </Flexbox>
   );
 
+  const pageHeader = (
+    <NavHeader
+      left={projectId ? undefined : headerLeft}
+      right={
+        <Flexbox horizontal align={'center'} gap={4}>
+          {projectId && (
+            <DropdownMenu
+              items={[
+                {
+                  key: 'tasks',
+                  label: t('taskList.title'),
+                  onClick: () => handleCollectionChange('tasks'),
+                },
+                {
+                  key: 'scheduled',
+                  label: t('taskList.scheduled.title'),
+                  onClick: () => handleCollectionChange('scheduled'),
+                },
+              ]}
+            >
+              <Button icon={ChevronDownIcon} size={'small'} type={'text'}>
+                {t(isScheduledCollection ? 'taskList.scheduled.title' : 'taskList.title')}
+              </Button>
+            </DropdownMenu>
+          )}
+          {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
+          {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
+            <ActionIcon
+              disabled={createActionBehavior.disabled}
+              icon={Plus}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              title={createActionBehavior.disabled ? reason : undefined}
+              onClick={handleCreateTask}
+            />
+          )}
+          {!isScheduledCollection && headerVisibility.showViewOptions && (
+            <TasksGroupConfig
+              options={viewOptions}
+              pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+              setOptions={setViewOptions}
+              viewMode={viewMode}
+            />
+          )}
+          {headerVisibility.showTaskAgentPanelToggle && (
+            <ToggleRightPanelButton
+              hideWhenExpanded
+              expand={showTaskAgentPanel}
+              onToggle={() => toggleTaskAgentPanel()}
+            />
+          )}
+        </Flexbox>
+      }
+      styles={{
+        left: {
+          paddingLeft: 4,
+          gap: 8,
+        },
+      }}
+    />
+  );
+
   // Collaboration scope: a project board joins `project:{id}`; the global
   // workspace task page joins `workspace:{id}`; personal mode joins nothing —
   // there is no tenant to share presence with. Project rooms only exist under
@@ -488,46 +560,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
         }
       >
         <Flexbox flex={1} height={'100%'}>
-          <NavHeader
-            left={headerLeft}
-            right={
-              <Flexbox horizontal align={'center'} gap={4}>
-                {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
-                {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
-                  <ActionIcon
-                    disabled={createActionBehavior.disabled}
-                    icon={Plus}
-                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                    title={createActionBehavior.disabled ? reason : undefined}
-                    onClick={handleCreateTask}
-                  />
-                )}
-                {!isScheduledCollection && headerVisibility.showViewOptions && (
-                  <TasksGroupConfig
-                    options={viewOptions}
-                    setOptions={setViewOptions}
-                    viewMode={viewMode}
-                    pinnedOptions={
-                      isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined
-                    }
-                  />
-                )}
-                {headerVisibility.showTaskAgentPanelToggle && (
-                  <ToggleRightPanelButton
-                    hideWhenExpanded
-                    expand={showTaskAgentPanel}
-                    onToggle={() => toggleTaskAgentPanel()}
-                  />
-                )}
-              </Flexbox>
-            }
-            styles={{
-              left: {
-                paddingLeft: 4,
-                gap: 8,
-              },
-            }}
-          />
+          {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
             <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
               <KanbanBoard

@@ -56,14 +56,12 @@ export const DEFAULT_TASK_LIST_VIEW_OPTIONS: TaskListViewOptions = {
   groupBy: 'status',
   // Completed work shows by default; only `canceled` starts folded away.
   hideCompleted: false,
-  // Nesting is the default *shape* for sub-tasks, but sub-tasks stay hidden
-  // until asked for: a parent already carries its progress (`3/8`), so listing
-  // its children as peers only pads the list with rows the parent stands for.
+  // Show the issue hierarchy without requiring a display-options detour.
   nestedSubTasks: true,
   orderBy: 'updatedAt',
   orderCompletedByRecency: true,
   orderDirection: 'asc',
-  showSubTasks: false,
+  showSubTasks: true,
   subGroupBy: 'none',
 };
 

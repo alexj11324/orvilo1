@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
+import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { projectService } from '@/services/project';
@@ -150,6 +151,29 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(
               )}
             </span>
           </DropdownMenu>
+        </div>
+
+        <div className={styles.row}>
+          <Text className={styles.label} fontSize={12} type={'secondary'}>
+            {t('properties.lead')}
+          </Text>
+          {project.leadUserId ? (
+            <AssigneeUserAvatar userId={project.leadUserId} />
+          ) : (
+            <Text fontSize={12} type={'secondary'}>
+              {t('properties.noLead')}
+            </Text>
+          )}
+        </div>
+        <div className={styles.row}>
+          <Text className={styles.label} fontSize={12} type={'secondary'}>
+            {t('properties.dates')}
+          </Text>
+          <Text fontSize={12}>
+            {project.startDate ? dayjs(project.startDate).format('MMM D') : '—'}
+            {' → '}
+            {project.targetDate ? dayjs(project.targetDate).format('MMM D') : '—'}
+          </Text>
         </div>
 
         {membersEnabled && (

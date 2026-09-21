@@ -275,7 +275,8 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
         gap={4}
-        padding={12}
+        paddingBlock={8}
+        paddingInline={12}
         variant={'borderless'}
         onClick={handleClick}
       >

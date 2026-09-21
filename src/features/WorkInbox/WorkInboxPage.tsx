@@ -115,7 +115,7 @@ const styles = createStaticStyles(({ css }) => ({
   row: css`
     cursor: pointer;
 
-    padding-block: 10px;
+    padding-block: 8px;
     padding-inline: 12px;
     border-block-end: 1px solid ${cssVar.colorFillQuaternary};
 
@@ -156,13 +156,13 @@ const styles = createStaticStyles(({ css }) => ({
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
 
     color: ${cssVar.colorTextSecondary};
   `,
   time: css`
     flex: none;
-    color: ${cssVar.colorTextQuaternary};
+    color: ${cssVar.colorTextTertiary};
     white-space: nowrap;
   `,
   detail: css`
@@ -172,7 +172,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding: 24px;
   `,
   paneMeta: css`
-    color: ${cssVar.colorTextQuaternary};
+    color: ${cssVar.colorTextTertiary};
   `,
   divider: css`
     height: 1px;
@@ -683,28 +683,29 @@ const WorkInboxPage = memo(() => {
                     avatar={card.actor?.avatar ?? card.agent?.avatar}
                     background={card.agent?.backgroundColor}
                     name={card.actor?.name ?? card.agent?.name}
-                    size={20}
+                    size={28}
                   />
                 ) : (
                   <span className={styles.typeGlyph}>
                     <Icon icon={inboxCardIcon(card)} size={14} />
                   </span>
                 )}
-                {card.read ? null : <span className={styles.unreadDot} />}
-                <Flexbox flex={1} style={{ minWidth: 0 }}>
-                  <Text ellipsis weight={card.read ? 400 : 600}>
-                    {titleFor(card)}
-                  </Text>
+                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+                  <Flexbox horizontal align={'center'} gap={6}>
+                    {card.read ? null : <span className={styles.unreadDot} />}
+                    <Text ellipsis weight={card.read ? 400 : 600}>
+                      {titleFor(card)}
+                    </Text>
+                  </Flexbox>
+                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+                    <Text className={styles.snippet} fontSize={12}>
+                      {card.content}
+                    </Text>
+                    <Text className={styles.time} fontSize={12}>
+                      {dayjs(card.lastActivityAt).fromNow()}
+                    </Text>
+                  </Flexbox>
                 </Flexbox>
-                <Text className={styles.time} fontSize={12}>
-                  {dayjs(card.lastActivityAt).fromNow()}
-                </Text>
-              </Flexbox>
-              <Flexbox horizontal gap={8}>
-                <span style={{ width: 38, flex: 'none' }} />
-                <Text className={styles.snippet} fontSize={12}>
-                  {card.content}
-                </Text>
               </Flexbox>
             </div>
           ))}

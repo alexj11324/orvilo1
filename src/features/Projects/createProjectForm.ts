@@ -6,9 +6,16 @@ const PROJECT_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PROJECT_IDENTIFIER_LENGTH = 4;
 
 export interface CreateProjectDraft {
+  avatar?: string;
+  description?: string;
   identifier: string;
+  leadUserId?: string;
   name: string;
   slug: string;
+  startDate?: string;
+  summary?: string;
+  targetDate?: string;
+  teamId?: string;
 }
 
 export interface ProjectFieldSuggestions {
@@ -30,7 +37,7 @@ export const getProjectFieldSuggestions = (name: string): ProjectFieldSuggestion
   const initials = parts.map((part) => part[0]).join('');
   const compactName = parts.join('');
   const identifierSource = initials.length >= 3 ? initials : compactName;
-  const identifier = identifierSource
+  const identifier = (identifierSource.replace(/^[^a-z]+/, '') || 'prj')
     .slice(0, PROJECT_IDENTIFIER_LENGTH)
     .padEnd(3, 'x')
     .toUpperCase();
@@ -55,5 +62,18 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
     return null;
   }
 
-  return { identifier, name, ...(slug ? { slug } : {}) };
+  if (draft.startDate && draft.targetDate && draft.targetDate < draft.startDate) return null;
+
+  return {
+    identifier,
+    name,
+    ...(slug ? { slug } : {}),
+    ...(draft.avatar ? { avatar: draft.avatar } : {}),
+    ...(draft.summary?.trim() ? { summary: draft.summary.trim() } : {}),
+    ...(draft.description?.trim() ? { description: draft.description.trim() } : {}),
+    ...(draft.leadUserId ? { leadUserId: draft.leadUserId } : {}),
+    ...(draft.teamId ? { teamId: draft.teamId } : {}),
+    ...(draft.startDate ? { startDate: draft.startDate } : {}),
+    ...(draft.targetDate ? { targetDate: draft.targetDate } : {}),
+  };
 };

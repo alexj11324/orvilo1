@@ -12,6 +12,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -48,7 +49,12 @@ export const projects = pgTable(
     identifier: varchar('identifier', { length: 6 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    summary: text('summary'),
     avatar: text('avatar'),
+    leadUserId: text('lead_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** Planned dates, independent of execution lifecycle startedAt/completedAt. */
+    startDate: date('start_date'),
+    targetDate: date('target_date'),
 
     /**
      * Dedicated agent that coordinates all conversations and work inside this

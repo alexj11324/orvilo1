@@ -31,11 +31,25 @@ const byIdentifier = (a: TaskListItem, b: TaskListItem) => a.identifier.localeCo
 const indexById = (items: TaskListItem[]) => new Map(items.map((item) => [item.id, item]));
 
 describe('normalizeTaskListViewOptions', () => {
-  it('keeps sub-tasks out of the list but nested by default', () => {
+  it('shows parent and child issues nested in the default grouped list', () => {
     const options = normalizeTaskListViewOptions();
 
-    expect(options.showSubTasks).toBe(false);
+    expect(options.showSubTasks).toBe(true);
     expect(options.nestedSubTasks).toBe(true);
+    const parent = task('parent');
+    const child = task('child', { parentTaskId: parent.id });
+    const items = [parent, child];
+    const visible = options.showSubTasks ? items : collapseSubTasks(items);
+    expect(
+      buildTaskRows(visible, {
+        compare: byIdentifier,
+        nested: options.nestedSubTasks,
+        taskById: indexById(items),
+      }).map(({ task, depth }) => [task.id, depth]),
+    ).toEqual([
+      ['parent', 0],
+      ['child', 1],
+    ]);
   });
 
   it('restores the sub-task defaults for options persisted before the toggles existed', () => {

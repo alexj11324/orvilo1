@@ -1,15 +1,15 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Center, Empty, Icon } from '@lobehub/ui';
+import { Button } from '@lobehub/ui/base-ui';
 import type { TaskActivityLogType } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import type { TFunction } from 'i18next';
 import { ArrowRightLeft, CircleDot, HistoryIcon, Timer, UserRoundCog } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
-import Avatar from '@/components/Avatar';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -20,14 +20,16 @@ import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { useProjectStore } from '@/store/project';
 
+import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
+
 const styles = createStaticStyles(({ css, cssVar }) => ({
   body: css`
     overflow-y: auto;
     flex: 1;
 
     min-height: 0;
-    padding-block: 16px 32px;
-    padding-inline: 24px;
+    padding-block: 24px 32px;
+    padding-inline: max(24px, calc((100% - 800px) / 2));
   `,
   mark: css`
     display: flex;
@@ -45,14 +47,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   row: css`
     display: flex;
-    gap: 12px;
-    align-items: flex-start;
-
-    padding-block: 10px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+    gap: 8px;
+    align-items: center;
+    padding-block: 8px;
   `,
   sentence: css`
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
     color: ${cssVar.colorTextSecondary};
 
@@ -64,7 +64,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   taskRef: css`
     font-size: 12px;
     color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 
     &:hover {
       color: ${cssVar.colorText};
@@ -89,9 +89,9 @@ const STATUS_KEY = {
   scheduled: 'taskDetail.status.scheduled',
 } as const;
 
-const statusLabel = (t: (key: never) => string, status: unknown) => {
+const statusLabel = (t: TFunction<'chat'>, status: unknown) => {
   const key = STATUS_KEY[status as keyof typeof STATUS_KEY];
-  return key ? t(key as never) : String(status ?? '—');
+  return key ? t(key) : String(status ?? '—');
 };
 
 const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent'> = {
@@ -157,8 +157,8 @@ const RowSentence = ({ row }: { row: FeedRow }) => {
           ns={'chat'}
           components={{
             actor,
-            from: value(from ? statusLabel(t as never, from) : '—'),
-            to: value(to ? statusLabel(t as never, to) : '—'),
+            from: value(from ? statusLabel(t, from) : '—'),
+            to: value(to ? statusLabel(t, to) : '—'),
           }}
         />
       );
@@ -175,7 +175,7 @@ const RowSentence = ({ row }: { row: FeedRow }) => {
             urgent: 'taskDetail.priority.urgent',
           } as const
         )[name];
-        return value(t(key as never));
+        return value(t(key));
       };
       return (
         <Trans
@@ -264,7 +264,7 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
   // Older pages append below the first SWR page; keyset cursor keeps the
   // feed stable while new rows land at the top.
   const [tail, setTail] = useState<FeedRow[]>([]);
-  const [tailCursor, setTailCursor] = useState<string | undefined>();
+  const [tailCursor, setTailCursor] = useState<string | null | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<Error | undefined>();
   useEffect(() => {
@@ -273,7 +273,7 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
     setMoreError(undefined);
   }, [projectId]);
 
-  const nextCursor = tailCursor ?? data?.data.nextCursor ?? undefined;
+  const nextCursor = activityFeedCursor(data?.data.nextCursor, tailCursor);
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
@@ -285,7 +285,7 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
         const seen = new Set(current.map((row) => row.id));
         return [...current, ...items.filter((row) => !seen.has(row.id))];
       });
-      setTailCursor(next.data?.nextCursor ?? undefined);
+      setTailCursor(next.data?.nextCursor ?? null);
     } catch (loadError) {
       setMoreError(loadError as Error);
     } finally {
@@ -293,7 +293,7 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
     }
   }, [loadingMore, nextCursor, projectId]);
 
-  const rows = [...((data?.data.items ?? []) as FeedRow[]), ...tail];
+  const rows = activityFeedRows((data?.data.items ?? []) as FeedRow[], tail);
 
   if (isLoading && !data) return <SkeletonList padding={12} rows={8} />;
   if (error && rows.length === 0)
@@ -319,18 +319,17 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
             <span className={styles.mark}>
               <Icon icon={RowIcon} size={13} />
             </span>
-            <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-              <div className={styles.sentence}>
-                <RowSentence row={row} />
-              </div>
-              <WorkspaceLink to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}>
-                <Text ellipsis className={styles.taskRef}>
-                  {row.taskIdentifier} · {row.taskTitle}
-                </Text>
+            <div className={styles.sentence}>
+              <RowSentence row={row} />{' '}
+              <WorkspaceLink
+                className={styles.taskRef}
+                to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}
+              >
+                {row.taskIdentifier} · {row.taskTitle}
               </WorkspaceLink>
-            </Flexbox>
-            {row.actor ? <Avatar avatar={row.actor.avatar ?? undefined} size={20} /> : null}
-            <RelTime time={row.createdAt} />
+              {' · '}
+              <RelTime time={row.createdAt} />
+            </div>
           </div>
         );
       })}
@@ -359,7 +358,7 @@ const ProjectActivityPage = () => {
     return <AsyncError error={error} variant={'page'} onRetry={() => void mutate()} />;
   if (!data) return null;
 
-  return <ProjectActivityFeed projectId={data.data.project.id} />;
+  return <ProjectActivityFeed key={data.data.project.id} projectId={data.data.project.id} />;
 };
 
 export default ProjectActivityPage;

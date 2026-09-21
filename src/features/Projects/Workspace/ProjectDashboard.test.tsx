@@ -52,7 +52,12 @@ vi.mock('@/features/AgentTasks/shared/taskDetailPath', () => ({
   taskDetailPath: (id: string) => `/tasks/${id}`,
 }));
 vi.mock('@/features/NavPanel/components/NavItem', () => ({
-  default: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
+  default: ({ title, description }: { title?: ReactNode; description?: ReactNode }) => (
+    <div>
+      {title}
+      {description && <span>{description}</span>}
+    </div>
+  ),
 }));
 
 vi.mock('@/features/Projects/Layout/navigation', () => ({
@@ -195,5 +200,27 @@ describe('project dashboard milestones', () => {
     renderCharts();
 
     expect(screen.getByText('orchestration.title')).toBeInTheDocument();
+  });
+});
+
+describe('project dashboard task previews', () => {
+  it('does not repeat a task title as its description', () => {
+    render(
+      <ProjectDashboard
+        projectId={'prj_1'}
+        detail={{
+          ...detail,
+          tasks: [
+            {
+              id: 'task_1',
+              name: 'Ship navigation',
+              instruction: 'Ship navigation',
+              status: 'backlog',
+            },
+          ] as ProjectDetail['tasks'],
+        }}
+      />,
+    );
+    expect(screen.getAllByText('Ship navigation')).toHaveLength(1);
   });
 });

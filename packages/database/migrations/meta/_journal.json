@@ -1315,6 +1315,13 @@
       "when": 1790004832709,
       "tag": "0187_action_approval_dispatch_binding",
       "breakpoints": true
+    },
+    {
+      "idx": 188,
+      "version": "7",
+      "when": 1790030419400,
+      "tag": "0188_project_planning_fields",
+      "breakpoints": true
     }
   ]
 }

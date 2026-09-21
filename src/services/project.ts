@@ -5,6 +5,7 @@ import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 const PROJECT_PAGE_SIZE = 100;
 
 class ProjectService {
+  teams = async () => lambdaClient.team.teams.query();
   activityFeed = async (id: string, limit = 50, cursor?: string | null) =>
     lambdaClient.project.activityFeed.query({ cursor, id, limit });
 
@@ -51,6 +52,11 @@ class ProjectService {
       description?: string;
       identifier: string;
       name: string;
+      summary?: string;
+      leadUserId?: string;
+      startDate?: string;
+      targetDate?: string;
+      teamId?: string;
       slug?: string;
       visibility?: ProjectVisibility;
     },

@@ -3,7 +3,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { TabsIndicator, TabsList, TabsRoot, TabsTab, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, type Ref, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
@@ -55,7 +55,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 // Linear shape: project navigation is a tab strip in the content header, not a
 // second left rail — the workspace nav panel is the only rail on /project/*.
-const ProjectTabsBar = memo(() => {
+const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> }) => {
   const { t } = useTranslation(['project', 'common']);
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const navigate = useWorkspaceAwareNavigate();
@@ -176,7 +176,7 @@ const ProjectTabsBar = memo(() => {
           ) : undefined
         }
       />
-      <Flexbox className={styles.tabsRow}>
+      <Flexbox horizontal align={'center'} className={styles.tabsRow} justify={'space-between'}>
         <TabsRoot value={activeTab} onValueChange={(path) => navigate(path)}>
           <TabsList>
             <TabsIndicator />
@@ -187,6 +187,7 @@ const ProjectTabsBar = memo(() => {
             ))}
           </TabsList>
         </TabsRoot>
+        <div ref={toolbarRef} />
       </Flexbox>
     </>
   );

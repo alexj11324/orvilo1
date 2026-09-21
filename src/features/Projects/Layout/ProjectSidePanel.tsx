@@ -36,13 +36,13 @@ const styles = createStaticStyles(({ css }) => ({
 
     width: 300px;
     height: 100%;
-    padding: 16px;
+    padding: 12px;
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
   railCard: css`
-    padding: 16px;
+    padding: 12px;
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
+    border-radius: ${cssVar.borderRadius};
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
   `,
 }));
@@ -51,7 +51,7 @@ const ATTENTION_STATUSES = new Set<TaskStatus | string>(['failed', 'paused']);
 
 const SectionTitle = memo<{ count?: number; title: string }>(({ count, title }) => (
   <Flexbox horizontal align={'center'} gap={7}>
-    <Text fontSize={16} weight={600}>
+    <Text fontSize={14} weight={500}>
       {title}
     </Text>
     {count !== undefined && <Tag>{count}</Tag>}
@@ -88,8 +88,9 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
   const progress = goals.length ? Math.round((completedGoals / goals.length) * 100) : null;
 
   return (
-    <Flexbox className={styles.panel} gap={16}>
+    <Flexbox className={styles.panel} gap={12}>
       <Flexbox className={styles.railCard} gap={12}>
+        <SectionTitle title={t('overview.propertiesLabel')} />
         <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={databaseId} />
       </Flexbox>
       <Flexbox className={styles.railCard} gap={12}>

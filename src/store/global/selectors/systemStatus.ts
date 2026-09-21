@@ -114,7 +114,7 @@ const taskListViewOptions = (s: GlobalState) =>
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
-    showSubTasks: false,
+    showSubTasks: true,
     subGroupBy: 'none',
   };
 

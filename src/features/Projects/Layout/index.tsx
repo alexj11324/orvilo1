@@ -11,6 +11,7 @@ import { labPreferSelectors } from '@/store/user/selectors';
 
 import { projectPathSection } from './navigation';
 import ProjectSidePanel from './ProjectSidePanel';
+import { ProjectToolbarContext } from './ProjectToolbarContext';
 import ProjectTabsBar from './TabsBar';
 
 // The right-hand properties panel is a project-level surface in Linear — it
@@ -41,20 +42,23 @@ const ProjectLayout = memo(() => {
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const { pathname } = useLocation();
   const panelViewport = usePanelViewport();
+  const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   const showPanel = panelViewport && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
 
   if (!enabled) return <ProjectDisabled />;
 
   return (
-    <Flexbox height="100%" style={{ minWidth: 0 }}>
-      <ProjectTabsBar />
-      <Flexbox horizontal flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
-        <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
-          <Outlet />
+    <ProjectToolbarContext value={toolbar}>
+      <Flexbox height="100%" style={{ minWidth: 0 }}>
+        <ProjectTabsBar toolbarRef={setToolbar} />
+        <Flexbox horizontal flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
+          <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
+            <Outlet />
+          </Flexbox>
+          {showPanel && projectId && <ProjectSidePanel projectId={projectId} />}
         </Flexbox>
-        {showPanel && projectId && <ProjectSidePanel projectId={projectId} />}
       </Flexbox>
-    </Flexbox>
+    </ProjectToolbarContext>
   );
 });
 

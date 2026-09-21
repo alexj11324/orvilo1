@@ -1,0 +1,359 @@
+{
+  "canonicalBaseBranch": "release/caid-remediation-integration",
+  "capabilities": [
+    {
+      "id": "workspace",
+      "disposition": "KEEP",
+      "reason": "Fixed boundary: workspace/teams/projects/members/permissions.",
+      "globs": [
+        "src/features/{Workspace*,Projects*,Members*,Permission*,ResourcePermission*,Team*}/**",
+        "src/routes/(main)/[workspaceSlug]/{members,teams,projects,views,settings}/**",
+        "apps/server/src/services/workspace*/**",
+        "apps/server/src/routers/lambda/{project,resourcePermission,resourceTransferRequest,workspace*}.ts"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "tasks-caid",
+      "disposition": "KEEP",
+      "reason": "Fixed boundary: tasks/graph/dispatch/review/automations. CAID anchors per P00 inventory §Q.",
+      "globs": [
+        "apps/server/src/services/{goal,taskRunner,taskDispatch,taskIntegration,taskWorkspace,taskLifecycle,taskDispatchRecovery,verify,automations}/**",
+        "apps/server/src/services/task*/**",
+        "apps/server/src/routers/lambda/{goal,task*,automation*}.ts",
+        "apps/server/src/workflows/**",
+        "apps/server/src/router-hono/workflows/**",
+        "src/features/{AgentTasks,AgentTaskManager,AgentGoals,Automations,TaskBoard*,TaskDetail*}/**",
+        "packages/eval-rubric/**"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "acp-execution",
+      "disposition": "KEEP",
+      "reason": "ACP is the only production execution path (P70/P21). Harness binding, gateway, device control stay.",
+      "globs": [
+        "packages/{agent-execution,agent-gateway-client,agent-manager-runtime,agent-mock,agent-signal,agent-templates,agent-tracing,heterogeneous-agents,device-control,device-gateway-client,device-identity,device-sandbox,desktop-bridge,electron-client-ipc,electron-mac-notifications,electron-server-ipc,tool-runtime,mecha}/**",
+        "apps/server/src/services/{agentExecution,aiAgent,agentRuntime}/**",
+        "apps/server/src/modules/AgentExecution/**",
+        "apps/server/src/routers/lambda/{agent,aiAgent,agentSignal,agentTrace,device,deviceWorkingDirs,deviceWorkspaceGuard}.ts"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "collaboration",
+      "disposition": "KEEP",
+      "reason": "Fixed boundary: collaboration/presence/shared conversations.",
+      "globs": [
+        "apps/collaboration-gateway/**",
+        "src/features/Collaboration/**",
+        "apps/server/src/routers/lambda/collaboration.ts",
+        "apps/server/src/services/collaboration*/**"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "github-linear-integration",
+      "disposition": "KEEP",
+      "reason": "Fixed boundary: GitHub/Linear integration. Generic connector infrastructure (OAuth, credential vault, webhook ingress) stays — ORV-105 must not delete it with the chat adapters.",
+      "globs": [
+        "apps/server/src/routers/lambda/{connector,linearSync,repository}.ts",
+        "apps/server/src/services/{connector*,linear*,github*,repository*}/**",
+        "src/features/{Connectors,GitHub*,Linear*}/**",
+        "packages/connector-data/**"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "conversation-surface",
+      "disposition": "REWRITE_FOR_ACP",
+      "reason": "Conversation/ChatInput/shared activity/intervention stay as the multiplayer agent control surface, but must not own prompt/model/provider/tool-loop execution (ORV-107).",
+      "globs": [
+        "src/features/{Conversation,ChatInput,ChatMiniMap,ChatTerminal,DailyBrief,HomeInbox,Recommendations,Billboard}/**",
+        "src/store/chat/**",
+        "src/store/aiInfra/**",
+        "src/services/home/**",
+        "src/hooks/useHomeDailyBrief.ts",
+        "src/hooks/useModel*.ts",
+        "src/hooks/useEnabledChatModels.ts",
+        "src/hooks/useMediaUploadAbility.ts",
+        "src/helpers/{getSearchConfig,isCanUseFC}.ts",
+        "apps/server/src/routers/lambda/brief.ts",
+        "packages/conversation-flow/**",
+        "apps/server/src/routers/lambda/{message,aiChat,followUpAction}.ts",
+        "apps/server/src/services/{message*,conversation*}/**"
+      ],
+      "issue": "ORV-107"
+    },
+    {
+      "id": "auth-infra",
+      "disposition": "KEEP",
+      "reason": "better-auth/OIDC, gateway tokens, MCP auth, credential vault, TRPC API-key rules — P00 §R whitelist.",
+      "globs": [
+        "apps/auth/**",
+        "src/features/{Auth,AuthCard,AuthShell}/**",
+        "packages/{env,app-config,edge-config}/**",
+        "apps/server/src/services/{auth*,apiKey*}/**",
+        "apps/server/src/routers/lambda/apiKey.ts"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "data-infra",
+      "disposition": "KEEP",
+      "reason": "Database/storage/observability/TRPC/types/utils — required infra.",
+      "globs": [
+        "packages/{database,trpc,types,utils,const,locales,observability-otel,fetch-sse,ssrf-safe-fetch,local-file-shell,napi-loader,markdown-patch,shared-tool-ui,fetch-*}/**",
+        "apps/server/src/services/{file*,storage*,s3*,upload*}/**",
+        "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "agent-tools",
+      "disposition": "KEEP",
+      "reason": "Harness-native builtin tools/skills/agents mounted on ACP sessions stay (ORV-104 preserves these; only skill-store-distribution pieces go).",
+      "globs": [
+        "packages/{builtin-tool-*,builtin-tools,builtin-skills,builtin-agents,editor-runtime,python-interpreter,web-crawler,html-artifact,artifact-template,memory-user-memory,llm-generation-tracing}/**",
+        "src/store/tool/**",
+        "src/helpers/toolEngineering/**",
+        "apps/server/src/services/toolExecution/**",
+        "apps/server/src/modules/Mecha/**",
+        "apps/server/src/routers/tools/**"
+      ],
+      "issue": "ORV-104"
+    },
+    {
+      "id": "documents-pages",
+      "disposition": "KEEP",
+      "reason": "Agent documents / page editor / resource manager — workspace product surfaces.",
+      "globs": [
+        "src/features/{AgentDocument*,PageEditor,Portal,ResourceManager,AgentDocumentsExplorer}/**",
+        "apps/server/src/services/{document*,page*}/**"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "desktop-mobile-shell",
+      "disposition": "KEEP",
+      "reason": "Desktop/Web parity is in the boundary; workbench (mobile doc reader) and share hosts stay per P00 §N.",
+      "globs": ["apps/{desktop,workbench,share}/**", "src/features/Electron/**"],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "data-portability",
+      "disposition": "KEEP",
+      "reason": "User data import/export is a supported onboarding surface (referenced by User panel + Settings > Storage).",
+      "globs": [
+        "src/features/DataImporter/**",
+        "apps/server/src/routers/lambda/{importer,exporter}.ts",
+        "apps/server/src/services/{import*,export*}/**"
+      ],
+      "issue": "ORV-100"
+    },
+    {
+      "id": "openapi-api",
+      "disposition": "REWRITE_FOR_ACP",
+      "reason": "External REST/Responses API stays as a supported surface but its Responses semantics must be re-founded on ACP operation lifecycle (P00 §H).",
+      "globs": ["packages/{openapi,sdk}/**", "src/app/(backend)/api/v1/**"],
+      "issue": "ORV-107"
+    },
+    {
+      "id": "provider-byok",
+      "disposition": "DELETE",
+      "reason": "User-managed LLM provider/BYOK/baseURL/model-selection product surface was retired in P05/P06; residual route/store/API/service/locale/docs are swept per ORV-101. Generic credential infra for connectors stays.",
+      "globs": [
+        "apps/server/src/routers/lambda/{aiProvider,aiModel}.ts",
+        "apps/server/src/routers/lambda/__tests__/{aiProvider,aiModel}.test.ts",
+        "apps/server/src/services/{aiProvider,aiModel,modelProvider*,provider*}/**",
+        "src/services/{aiModel,aiProvider}/**",
+        "src/utils/aiProvider*",
+        "src/types/aiProvider*",
+        "packages/business-server/src/{aiProvider,getProviderContentPolicyErrorMessage,recordModelCompletionFailure,trackProviderContentPolicyViolation}.ts",
+        "src/store/aiInfra/slices/aiProvider/**",
+        "src/features/{Provider*,ModelProvider*,AiProvider*,AiModel*}/**",
+        "src/routes/**/settings/{provider,llm,model}/**",
+        "apps/desktop/src/main/modules/heterogeneousAgent/{providerBindingHost,providerBindingPort}.ts",
+        "src/features/{ModelSwitchPanel,ModelSelect}/**"
+      ],
+      "issue": "ORV-101"
+    },
+    {
+      "id": "legacy-model-runtime",
+      "disposition": "DELETE",
+      "reason": "Lobe-owned model execution loop. ACP is the only execution path; shared primitives still consumed by ACP/task/collaboration must be migrated out first (ORV-102).",
+      "globs": [
+        "packages/model-runtime/**",
+        "packages/agent-runtime/**",
+        "apps/server/src/modules/ModelRuntime/**",
+        "apps/server/src/services/aiProviderAccess*",
+        "packages/business-server/src/{model-runtime,image-generation,video-generation}*",
+        "src/services/chat/{ModelRuntime,modelRuntime*,providers}/**",
+        "src/app/(backend)/webapi/chat/**"
+      ],
+      "issue": "ORV-102"
+    },
+    {
+      "id": "acceptance-surface",
+      "disposition": "DELETE",
+      "reason": "Standalone Acceptance product surface = second state machine + phantom pages. Seam note: Task/Portal/Goal surfaces consume Acceptance components (CriterionList, AcceptanceScope, visibility) — those consumers must be repointed to canonical Task Review pieces before the surface deletes (ORV-103). .agents/acceptance tooling is agent infrastructure, not product surface.",
+      "globs": [
+        "src/features/Acceptance/**",
+        "src/routes/**/acceptance*/**",
+        "apps/server/src/routers/lambda/{acceptance,acceptanceComment}.ts",
+        "apps/server/src/routers/lambda/_helpers/acceptance*.ts",
+        "apps/server/src/services/verify/{acceptance*,taskAcceptance}*.ts",
+        "src/store/acceptance/**",
+        "packages/builtin-tool-acceptance-evidence/**"
+      ],
+      "issue": "ORV-103"
+    },
+    {
+      "id": "skill-store",
+      "disposition": "DELETE",
+      "reason": "Orvilo-owned skill marketplace/distribution retired (server bundle distribution already gone on canary). Harness-native skill/capability discovery and internal tools stay — no bulk deletion by package name (ORV-104).",
+      "globs": [
+        "src/features/{AgentSkillStore,AgentSkillDetail,AgentMarketSubmission,SkillStore*}/**",
+        "src/routes/**/{skill*,store,discovery,market}/**",
+        "src/routes/(main)/agent/profile/features/store/**",
+        "src/app/(backend)/market/**",
+        "apps/server/src/routers/lambda/{market/**,plugin,klavis,composio,agentSkills}.ts",
+        "apps/server/src/routers/tools/market.ts",
+        "apps/server/src/services/{plugin*,skillStore*,skill-store*}/**",
+        "packages/builtin-tool-skill-maintainer/**",
+        "src/store/agent/slices/{skill*,market*}/**"
+      ],
+      "issue": "ORV-104"
+    },
+    {
+      "id": "market-service",
+      "disposition": "INVESTIGATE",
+      "reason": "apps/server/src/services/market is still imported by live paths (aiAgent heteroDispatch, toolExecution serverRuntimes, githubRepo, connectorData, taskTemplate, trpc marketSDK middleware) — it currently doubles as the tool/skill install plumbing, not just the retired marketplace storefront. Shrinking it to an internal catalog vs. deleting outright needs a verdict first.",
+      "globs": [
+        "apps/server/src/services/market/**",
+        "packages/trpc/src/lambda/middleware/marketSDK.ts"
+      ],
+      "issue": "ORV-104",
+      "owner": "alexj11324",
+      "followUp": "Split market service: which exports feed retained tool-install/connector paths vs. the retired skill marketplace; keep the former, delete the latter."
+    },
+    {
+      "id": "messenger-im-adapters",
+      "disposition": "DELETE",
+      "reason": "Non-core IM adapters (feishu/wechat/qq/line/imessage/telegram/discord bot channel) have no current product requirement or owner (ORV-105). GitHub/Linear connector infrastructure is out of scope.",
+      "globs": [
+        "packages/chat-adapter-*/**",
+        "apps/server/src/services/{messenger,bot}/**",
+        "apps/server/src/routers/lambda/{messenger,botMessage,agentBotProvider}.ts",
+        "apps/server/src/router-hono/agent/handlers/{messenger*,bot*}.ts",
+        "apps/server/src/router-hono/agent/handlers/botCallback.ts",
+        "src/features/Settings/messenger/**",
+        "src/routes/**/settings/messenger/**",
+        "src/store/agent/slices/bot/**",
+        "src/business/server/bot/**",
+        "src/features/Messenger/**",
+        "src/features/AgentSelect.tsx",
+        "docs/usage/messenger/**",
+        "docs/usage/channels/**"
+      ],
+      "issue": "ORV-105"
+    },
+    {
+      "id": "comfyui-image-generation",
+      "disposition": "DELETE",
+      "reason": "ComfyUI backend + artwork studios + Orvilo-owned image generation are outside the boundary; if image generation is needed it comes back as an ACP/harness capability, not an Orvilo backend (ORV-106).",
+      "globs": [
+        "apps/server/src/routers/lambda/comfyui.ts",
+        "apps/server/src/routers/lambda/image/**",
+        "apps/server/src/routers/lambda/video/**",
+        "apps/server/src/routers/lambda/{generationBatch,generationTopic}.ts",
+        "apps/server/src/routers/lambda/__tests__/{generationBatch,generationTopic,video,image}.test.ts",
+        "apps/server/src/routers/async/{image,video}.ts",
+        "apps/server/src/routers/async/__tests__/{image,video}.test.ts",
+        "apps/server/src/router-hono/webhooks/handlers/video.ts",
+        "apps/server/src/services/generation/**",
+        "apps/server/src/services/{comfyui,image*,imageGeneration*}/**",
+        "apps/server/src/services/toolExecution/serverRuntimes/{imageGeneration,artwork*}*",
+        "src/features/{ArtworkStudio,AgentArtworkStudio,AgentProfileArtwork}/**",
+        "src/features/ChiefAgent/artwork.ts",
+        "src/services/{artwork*,imageGeneration}/**",
+        "src/services/image*",
+        "src/store/agent/slices/artwork/**",
+        "packages/builtin-tool-image-generation/**",
+        "packages/model-bank/src/{modelProviders,aiModels}/comfyui.ts",
+        "packages/model-runtime/src/utils/comfyuiErrorParser*",
+        "docs/usage/providers/comfyui*",
+        "docs/development/basic/comfyui*"
+      ],
+      "issue": "ORV-106"
+    },
+    {
+      "id": "eval-surface",
+      "disposition": "DELETE",
+      "reason": "Standalone ragEval/agentEval product+workflow surface is not in the fixed boundary; evaluation regresses to CI-side tooling (ORV-108 closure).",
+      "globs": [
+        "apps/server/src/routers/lambda/{agentEval,agentEvalExternal,ragEval,evalRunConfig.schema}.ts",
+        "apps/server/src/routers/lambda/__tests__/{agentEval*,ragEval*,evalRunConfig*}.ts",
+        "apps/server/src/routers/async/ragEval.ts",
+        "apps/server/src/routers/async/__tests__/ragEval.test.ts",
+        "apps/server/src/workflows/agentEvalRun/**",
+        "apps/server/src/router-hono/workflows/agent-eval-run/**",
+        "apps/server/src/services/agentEvalRun/**",
+        "packages/eval-dataset-parser/**",
+        "src/features/{Eval*,*Eval}/**",
+        "src/routes/**/eval*/**"
+      ],
+      "issue": "ORV-108"
+    },
+    {
+      "id": "model-runtime-adjacent-packages",
+      "disposition": "INVESTIGATE",
+      "reason": "context-engine / prompts / model-bank still have wide inbound graphs (62 / 133 / 7 importer files). Census must prove which exports are live for ACP/task/collaboration before any deletion; closure lands under ORV-102/ORV-108.",
+      "globs": ["packages/{context-engine,prompts,model-bank}/**"],
+      "issue": "ORV-102",
+      "owner": "alexj11324",
+      "followUp": "Census output lists per-export inbound consumers; split KEEP_SHARED primitives from engine-owned types before deleting packages."
+    },
+    {
+      "id": "knowledge-rag",
+      "disposition": "INVESTIGATE",
+      "reason": "Knowledge base / file loaders / chunk pipeline are wired into agent context but absent from the named product boundary; needs a product call on whether Knowledge stays as a workspace capability.",
+      "globs": [
+        "apps/server/src/routers/lambda/{knowledge,knowledgeBase,asr}.ts",
+        "apps/server/src/services/{knowledge*,rag*,chunk*,embedding*}/**",
+        "packages/file-loaders/**",
+        "src/features/{Knowledge*,DataImporter}/**"
+      ],
+      "issue": "ORV-100",
+      "owner": "alexj11324",
+      "followUp": "Decide if knowledge-base is inside the ACP product boundary; if not, close via ORV-108."
+    },
+    {
+      "id": "misc-adjacent-packages",
+      "disposition": "INVESTIGATE",
+      "reason": "achaos chaos-engineering fixtures are not a workspace package and have zero inbound imports; consumers named in its README are aspirational (Goal/Agent Evals/self-improvement). Needs an explicit keep-or-delete call, not 'might be useful'.",
+      "globs": ["packages/achaos/**"],
+      "issue": "ORV-99",
+      "owner": "alexj11324",
+      "followUp": "Decide: keep chaos fixtures as dev tooling (document a live consumer) or delete with ORV-108 closure."
+    }
+  ],
+  "fixedBoundary": [
+    "Workspace / Teams / Projects / Members / Permissions",
+    "Tasks / graph / dispatch / review / automations",
+    "Agent identity + ACP harness binding",
+    "Agent Gateway / Device Gateway / local + remote execution control",
+    "Desktop/Web parity",
+    "Collaboration / presence / shared conversations",
+    "GitHub / Linear integration",
+    "Conversation/activity UI as control and presentation surface",
+    "Auth / DB / storage / observability / required infra"
+  ],
+  "version": 1,
+  "vocabulary": {
+    "KEEP": "Inside the fixed product boundary; stays.",
+    "REWRITE_FOR_ACP": "Capability stays but must be re-founded on ACP/harness contracts; legacy execution assumptions are removed.",
+    "DELETE": "Outside the boundary; remove the full dependency closure (route/UI -> store -> API -> service -> package -> schema -> locale -> test -> docs).",
+    "INVESTIGATE": "Disposition not yet provable from static evidence alone; requires an explicit owner, evidence, and follow-up before any deletion."
+  }
+}

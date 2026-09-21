@@ -48,7 +48,6 @@ import {
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
@@ -80,8 +79,8 @@ import {
   ResolveAgentInterventionSchema,
 } from '@/server/routers/lambda/_schema/agentIntervention';
 import {
-  decodeToolApprovalAction,
-  toolApprovalEventId,
+  submitToolApprovalDecision,
+  type ToolApprovalSubmitOutcome,
 } from '@/server/services/agentExecution/toolApprovalReceipt';
 import { AgentStartError } from '@/server/services/agentExecution/types';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -1653,6 +1652,56 @@ const publishClaimedHeteroIntervention = async (params: {
     success: true as const,
   };
 };
+
+/**
+ * SC-SB03: every approval entry (Web/Desktop submits, Mobile token-only
+ * resolutions, business resolutions) funnels through the same durable
+ * decision → winner-confirmation → notify shape. A `stale_window` or
+ * `closed` outcome is a REFUSAL — the intervention is neither resolved nor
+ * notified — surfaced as CONFLICT so the caller's card reverts and the live
+ * window (reported in the message) can be retried. `already_decided`
+ * projects the stored WINNER's answer — never the loser's submitted input.
+ */
+const throwOnRefusedApprovalOutcome = (outcome: ToolApprovalSubmitOutcome | undefined): void => {
+  if (outcome?.kind === 'stale_window') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: `This approval card targets a rotated window — re-render it on the live window${
+        outcome.windowId ? ` '${outcome.windowId}'` : ''
+      } and resubmit.`,
+    });
+  }
+  if (outcome?.kind === 'closed') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This approval was already consumed or closed — it cannot be decided now.',
+    });
+  }
+};
+
+/**
+ * Project a stored winner's verdict onto what a claim/submit publishes:
+ * the durable answer is what propagates, so a losing submit's opposite
+ * payload can never be broadcast as the resolution.
+ */
+const approvalWinnerProjection = (action: 'approved' | 'denied') =>
+  action === 'approved'
+    ? { cancelReason: undefined, cancelled: undefined, result: { approved: true } }
+    : {
+        cancelReason: 'user_cancelled' as const,
+        cancelled: true as const,
+        result: undefined,
+      };
+
+/**
+ * What the response carries so old clients can't mistake every 2xx for
+ * 'approved' — `state` is the discriminated receipt outcome, `action` the
+ * canonical verdict when one exists.
+ */
+const approvalOutcomeSummary = (outcome: ToolApprovalSubmitOutcome) => ({
+  action: outcome.action,
+  state: outcome.kind,
+});
 
 const aiAgentBaseProcedure = wsCompatProcedure.use(serverDatabase);
 
@@ -3452,7 +3501,14 @@ export const aiAgentRouter = router({
       }),
     ),
 
-  /** Token-only atomic resolution path used by Mobile review/deep links. */
+  /**
+   * Token-only atomic resolution path used by Mobile review/deep links.
+   * SC-SB03: after the business claim wins, the SAME durable decision commit
+   * every other entry uses runs BEFORE any notification — a refused write
+   * (closed receipt) rolls the claim back and reports a conflict instead of
+   * publishing, and an already-decided receipt projects the stored winner
+   * into the published response.
+   */
   resolveHeteroIntervention: aiAgentWriteProcedure
     .input(ResolveHeteroInterventionReviewSchema)
     .mutation(async ({ input, ctx }) => {
@@ -3473,11 +3529,59 @@ export const aiAgentRouter = router({
         return { status: resolution.status, success: true as const };
       }
 
-      return publishClaimedHeteroIntervention({
-        claim: resolution,
+      // Decision BEFORE notify — the durable approval receipt is the
+      // first-winner authority every entry shares. The business claim just
+      // made THIS submitter the winner and the token path carries no window
+      // echo, so bind whichever window is live (`null`) rather than letting a
+      // stale card name one.
+      const approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {
+        cancelled: resolution.response.cancelled,
+        decidedByUserId: ctx.userId,
+        expectedWindowId: null,
+        operationId: resolution.operationId,
+        resolutionRequestId: resolution.resolutionRequestId,
+        result: resolution.response.result,
+        toolCallId: resolution.response.toolCallId,
+      });
+      if (approvalOutcome.kind === 'stale_window' || approvalOutcome.kind === 'closed') {
+        // The receipt cannot accept the decision — roll the claim back so
+        // the intervention stays live for the real window instead of
+        // reporting a phantom resolution.
+        await rollbackHeteroInterventionResolution({
+          claimId: resolution.claimId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          toolCallId: resolution.response.toolCallId,
+          userId: ctx.userId,
+          workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+        }).catch((rollbackError) => {
+          log(
+            'refused-approval claim rollback failed claim=%s: %O',
+            resolution.claimId,
+            rollbackError,
+          );
+        });
+        throwOnRefusedApprovalOutcome(approvalOutcome);
+      }
+      const claim =
+        approvalOutcome.kind === 'already_decided' && approvalOutcome.action
+          ? {
+              ...resolution,
+              resolutionRequestId:
+                approvalOutcome.resolutionRequestId ?? resolution.resolutionRequestId,
+              response: {
+                ...resolution.response,
+                ...approvalWinnerProjection(approvalOutcome.action),
+              },
+            }
+          : resolution;
+
+      const published = await publishClaimedHeteroIntervention({
+        claim,
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
       });
+      return { ...published, approval: approvalOutcomeSummary(approvalOutcome) };
     }),
 
   /**
@@ -3514,56 +3618,67 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
-      // SA02/F04 + SA02-C: when this submit answers a `needs_approval` tool
+      // SA02/F04 + SC-SB03: when this submit answers a `needs_approval` tool
       // card, the exec-time gate's durable receipt records the decision
       // BEFORE any claim resolution or publish — first-winner CAS bound to
-      // the card's `windowId`, so every approval entry lands the same atomic
-      // decision and a write that cannot land never surfaces as success.
-      // No receipt exists for ordinary askUser submits — the write is a no-op.
-      const receiptDecision = await new EventOutboxModel(ctx.serverDB).recordToolApprovalDecision({
-        decision: {
-          action: decodeToolApprovalAction({ cancelled, result }),
-          decidedAt: Date.now(),
-          decidedByUserId: ctx.userId,
-          resolutionRequestId,
-        },
-        eventId: toolApprovalEventId(operationId, toolCallId),
+      // the card's `windowId`. A refused submit (`stale_window`/`closed`) is
+      // now an error, never a silent success: the card is NOT resolved and
+      // nothing is published, so the live window keeps its pending state and
+      // the caller can retry on it. `already_decided` projects the stored
+      // winner's answer rather than this submit's input. Ordinary askUser
+      // submits (no receipt → `not_tool_approval`) proceed untouched.
+      const approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {
+        cancelled,
+        decidedByUserId: ctx.userId,
         expectedWindowId: input.windowId,
+        operationId,
+        resolutionRequestId,
+        result,
+        toolCallId,
       });
-      if (receiptDecision === 'stale_window') {
-        // The card targeted a window a renew already rotated — the decision
-        // is intentionally NOT applied. The card still resolves below; the
-        // exec retry re-pends under the live window.
-        log(
-          'submitHeteroIntervention: stale-window decision dropped op=%s toolCallId=%s windowId=%s',
-          operationId,
-          toolCallId,
-          input.windowId,
-        );
-      }
+      throwOnRefusedApprovalOutcome(approvalOutcome);
+      const approval = approvalOutcomeSummary(approvalOutcome);
+
+      // What the durable winner says — the submitter's own answer on a fresh
+      // `decided`, the stored winner's on `already_decided`.
+      const winnerAction =
+        approvalOutcome.kind === 'already_decided' ? approvalOutcome.action : undefined;
+      const effectiveCancelled =
+        winnerAction === undefined ? cancelled : winnerAction !== 'approved';
+      const effectiveResult =
+        winnerAction === undefined
+          ? cancelled
+            ? undefined
+            : result
+          : approvalWinnerProjection(winnerAction).result;
+      const effectiveRequestId =
+        winnerAction === undefined
+          ? resolutionRequestId
+          : (approvalOutcome.resolutionRequestId ?? resolutionRequestId);
 
       // Cloud overrides this as an atomic first-winner claim shared by Web and
       // Mobile. OSS returns `handled:false` and preserves the legacy stream
       // publish below. A claimed response is authoritative: client-supplied
       // operation/tool fields cannot override what Cloud resolved durably.
       const businessResolution = await resolveHeteroIntervention({
-        action: cancelled ? 'skip' : 'submit',
-        cancelReason: cancelled ? 'user_cancelled' : undefined,
-        result: cancelled ? undefined : result,
-        resolutionRequestId,
+        action: effectiveCancelled ? 'skip' : 'submit',
+        cancelReason: effectiveCancelled ? 'user_cancelled' : undefined,
+        result: effectiveResult,
+        resolutionRequestId: effectiveRequestId,
         target: { operationId, toolCallId },
         userId: ctx.userId,
         workspaceId: ctx.workspaceId ?? undefined,
       });
       if (businessResolution.handled) {
         if (businessResolution.state === 'already_resolved') {
-          return { status: businessResolution.status, success: true as const };
+          return { approval, status: businessResolution.status, success: true as const };
         }
-        return publishClaimedHeteroIntervention({
+        const published = await publishClaimedHeteroIntervention({
           claim: businessResolution,
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
         });
+        return { ...published, approval };
       }
 
       const streamEventManager = createStreamEventManager();
@@ -3571,18 +3686,18 @@ export const aiAgentRouter = router({
         data: {
           // Client-driven cancellation cannot impersonate producer timeout or
           // session teardown; those terminal reasons originate from bridge ACKs.
-          cancelReason: cancelled ? 'user_cancelled' : undefined,
-          cancelled,
+          cancelReason: effectiveCancelled ? 'user_cancelled' : undefined,
+          cancelled: effectiveCancelled,
           producerAck: false,
-          result: cancelled ? undefined : result,
-          resolutionRequestId,
+          result: effectiveResult,
+          resolutionRequestId: effectiveRequestId,
           toolCallId,
         },
         stepIndex,
         type: 'agent_intervention_response',
       });
 
-      return { status: 'resolving' as const, success: true as const };
+      return { approval, status: 'resolving' as const, success: true as const };
     }),
 
   processHumanIntervention: aiAgentWriteProcedure

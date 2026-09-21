@@ -927,6 +927,11 @@ export const awaitAcpBuiltinToolChildren = async (
   // keyed `await-anchor` outbox receipt, CAS-written below by whichever poll
   // first observes a pending state. `undefined` until resolved this request.
   let awaitDeadlineAt: number | undefined;
+  let anchorEventId: string | undefined;
+  // Set when an earlier pass recorded that the placeholder projection owed
+  // to this wait failed durably on the anchor — drained (retried) on later
+  // passes so a transient IO error never lengthens the deadline itself.
+  let anchorProjectionPending = false;
 
   // Long-poll: bounded server-side wait so one MCP call doesn't spin a request
   // per second. The CLI loops until `settled`/`timeout`.
@@ -1074,10 +1079,11 @@ export const awaitAcpBuiltinToolChildren = async (
     // values are written by this contract.
     if (input.toolCallId && awaitDeadlineAt === undefined) {
       const outbox = new EventOutboxModel(db);
-      const anchorEventId = `await-anchor:${input.operationId}:${input.toolCallId}`;
+      anchorEventId = `await-anchor:${input.operationId}:${input.toolCallId}`;
       const existing = await outbox.getDeliveryReceiptPayload(anchorEventId);
       if (typeof existing?.awaitDeadlineAt === 'number') {
         awaitDeadlineAt = existing.awaitDeadlineAt;
+        anchorProjectionPending = existing.projectionPending === true;
       } else {
         const proposed = Date.now() + (input.waitDeadlineMs ?? AWAIT_DEFAULT_DEADLINE_MS);
         const outcome = await outbox.upsertDeliveryReceipt({
@@ -1099,6 +1105,7 @@ export const awaitAcpBuiltinToolChildren = async (
             );
           }
           awaitDeadlineAt = winner.awaitDeadlineAt;
+          anchorProjectionPending = winner.projectionPending === true;
         } else {
           awaitDeadlineAt = proposed;
         }
@@ -1106,17 +1113,25 @@ export const awaitAcpBuiltinToolChildren = async (
     }
 
     if (Date.now() >= deadline) {
-      // Server-side cumulative wait bound (F06 + SA04-B): `awaitDeadlineAt` is
-      // the authoritative ABSOLUTE instant from the anchor receipt — later
-      // polls only compare against it and the placeholder's copy is a pure
-      // projection (re-stamped whenever it drifts), so a late-appearing anchor
-      // or a re-sent `remaining` budget can never double-charge the wait.
-      if (input.toolCallId && awaitDeadlineAt !== undefined) {
-        try {
-          const owned = await ownedPlaceholderRows();
-          const now = Date.now();
-          const messageModel = new MessageModel(db, userId, workspaceId);
-          if (now >= awaitDeadlineAt) {
+      // Server-side cumulative wait bound (F06 + SA04-B, hardened SC-SB07):
+      // `awaitDeadlineAt` from the anchor receipt is the ONLY authority for
+      // the timeout verdict — it is compared BEFORE any projection IO runs,
+      // so a placeholder read/write failure can never turn an expired wait
+      // back into `pending` (nor lengthen it). The placeholder mirror is a
+      // pure best-effort projection: its failure is queued durably on the
+      // anchor (`projectionPending`) and retried on the next pass.
+      //
+      // Race policy: the all-terminal settle check above runs BEFORE this
+      // deadline check on every pass — a terminal-children observation wins
+      // over expiry (settled truth beats a wall-clock guess); the deadline
+      // only bounds waits that are still pending.
+      if (input.toolCallId && awaitDeadlineAt !== undefined && anchorEventId) {
+        const outbox = new EventOutboxModel(db);
+        const now = Date.now();
+        if (now >= awaitDeadlineAt) {
+          try {
+            const owned = await ownedPlaceholderRows();
+            const messageModel = new MessageModel(db, userId, workspaceId);
             for (const row of owned) {
               const status = (row.state as { status?: string } | null)?.status ?? 'pending';
               if (status !== 'pending') continue;
@@ -1125,11 +1140,38 @@ export const awaitAcpBuiltinToolChildren = async (
                 pluginState: { status: 'error', waitDeadlineExceeded: true },
               });
             }
-            return { contractVersion, pendingOperationIds: pendingIds, status: 'timeout' };
+            if (anchorProjectionPending) {
+              await outbox.mergeDeliveryReceiptPayload({
+                eventId: anchorEventId,
+                patch: { projectedAt: now, projectionPending: false },
+              });
+              anchorProjectionPending = false;
+            }
+          } catch (err) {
+            // The verdict above already committed — this only records the
+            // durable compensation debt on the anchor for a later pass.
+            log(
+              'awaitAcpBuiltinToolChildren: timeout projection failed, compensation queued: %O',
+              err,
+            );
+            await outbox
+              .mergeDeliveryReceiptPayload({
+                eventId: anchorEventId,
+                patch: { projectionPending: true },
+              })
+              .catch((markerErr) =>
+                log('awaitAcpBuiltinToolChildren: could not record projection debt: %O', markerErr),
+              );
           }
-          // Projection upkeep: stamp the authoritative deadline + owner onto
-          // placeholders that don't yet mirror it (first accept, a later-
-          // appearing anchor, or a legacy row that only had awaitStartedAt).
+          return { contractVersion, pendingOperationIds: pendingIds, status: 'timeout' };
+        }
+        // Projection upkeep: stamp the authoritative deadline + owner onto
+        // placeholders that don't yet mirror it (first accept, a later-
+        // appearing anchor, or a legacy row that only had awaitStartedAt),
+        // and drain a pending compensation pass for free while we're here.
+        try {
+          const owned = await ownedPlaceholderRows();
+          const messageModel = new MessageModel(db, userId, workspaceId);
           for (const row of owned) {
             const rowState = row.state as
               | {
@@ -1153,8 +1195,23 @@ export const awaitAcpBuiltinToolChildren = async (
               },
             });
           }
+          if (anchorProjectionPending) {
+            await outbox.mergeDeliveryReceiptPayload({
+              eventId: anchorEventId,
+              patch: { projectedAt: now, projectionPending: false },
+            });
+            anchorProjectionPending = false;
+          }
         } catch (err) {
           log('awaitAcpBuiltinToolChildren: deadline bookkeeping failed: %O', err);
+          await outbox
+            .mergeDeliveryReceiptPayload({
+              eventId: anchorEventId,
+              patch: { projectionPending: true },
+            })
+            .catch((markerErr) =>
+              log('awaitAcpBuiltinToolChildren: could not record projection debt: %O', markerErr),
+            );
         }
       }
       return {

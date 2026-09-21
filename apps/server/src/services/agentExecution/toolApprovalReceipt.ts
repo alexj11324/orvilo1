@@ -320,3 +320,91 @@ export const authorizeToolApprovalReceipt = async (
   // CAS — treat it as spent (someone else's invocation owns the grant).
   return { status: 'consumed' };
 };
+
+/**
+ * The outcome of a decision submit — the "save → confirm the winner" half of
+ * every approval entry point (SC-SB03). `kind` is the discriminant the caller
+ * switches on; `action`/`resolutionRequestId` are the WINNER's values (the
+ * submitted decision on `decided`, the stored one on `already_decided`), so a
+ * publish following an `already_decided` always projects the durable truth,
+ * never the loser's possibly-opposite input.
+ */
+export interface ToolApprovalSubmitOutcome {
+  /**
+   * Canonical receipt action — the decoded submit on `decided`, the stored
+   * winner's on `already_decided`. Absent for `not_tool_approval` /
+   * `stale_window` / `closed`.
+   */
+  action?: ToolApprovalAction;
+  kind: 'already_decided' | 'closed' | 'decided' | 'not_tool_approval' | 'stale_window';
+  /** The stored winner's resolution request id, when present. */
+  resolutionRequestId?: string;
+  /** Live window coordinates on `stale_window` (the retryable conflict). */
+  windowId?: string;
+  windowVersion?: number;
+}
+
+/**
+ * The ONE decision-commit step shared by every approval entry — Web/Desktop
+ * `submitHeteroIntervention`, the Mobile token-only `resolveHeteroIntervention`,
+ * and business resolutions all route through here so a decision can never be
+ * partially applied: it either durably lands via the first-winner CAS, lands as
+ * `already_decided` with the stored winner projected back, or reports a
+ * refusal (`stale_window` = a retriable conflict against the LIVE window;
+ * `closed` = consumed/swept-terminal; `not_tool_approval` = no receipt — an
+ * ordinary askUser whose caller proceeds untouched).
+ *
+ * A write failure THROWS — a decision that cannot durably commit must never
+ * be followed by a success notification.
+ */
+export const submitToolApprovalDecision = async (
+  db: OrviloDatabase,
+  params: {
+    cancelled?: boolean;
+    decidedByUserId: string;
+    /**
+     * The window the card showed. `undefined` only decides legacy windowless
+     * receipts; `null` binds whichever window is live — reserved for paths
+     * whose own durable claim is already the first-winner authority (the
+     * Mobile token resolution).
+     */
+    expectedWindowId?: string | null;
+    operationId: string;
+    resolutionRequestId?: string;
+    result?: unknown;
+    toolCallId: string;
+  },
+): Promise<ToolApprovalSubmitOutcome> => {
+  const action = decodeToolApprovalAction({ cancelled: params.cancelled, result: params.result });
+  const outcome = await new EventOutboxModel(db).recordToolApprovalDecision({
+    decision: {
+      action,
+      decidedAt: Date.now(),
+      decidedByUserId: params.decidedByUserId,
+      resolutionRequestId: params.resolutionRequestId,
+    },
+    eventId: toolApprovalEventId(params.operationId, params.toolCallId),
+    expectedWindowId: params.expectedWindowId,
+  });
+  if (outcome.status === 'already_decided') {
+    const winner = isPlainRecord(outcome.decision) ? outcome.decision : {};
+    return {
+      // Fail-closed on an unreadable winner action: the receipt exists and
+      // decided, so 'denied' is the only safe projection of an unknown one.
+      action: winner.action === 'approved' ? 'approved' : 'denied',
+      kind: 'already_decided',
+      resolutionRequestId:
+        typeof winner.resolutionRequestId === 'string' ? winner.resolutionRequestId : undefined,
+      windowId: outcome.windowId,
+      windowVersion: outcome.windowVersion,
+    };
+  }
+  if (outcome.status === 'decided') {
+    return { action, kind: 'decided' };
+  }
+  return {
+    kind: outcome.status,
+    windowId: outcome.windowId,
+    windowVersion: outcome.windowVersion,
+  };
+};

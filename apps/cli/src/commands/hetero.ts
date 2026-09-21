@@ -38,7 +38,10 @@ import type { Command } from 'commander';
 
 import { createLambdaClient, getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
-import { persistChildResultInboxRecord } from '../utils/childResultInbox';
+import {
+  persistChildResultInboxRecord,
+  resolvePersistentToolCallId,
+} from '../utils/childResultInbox';
 import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { HeteroTraceRecorder } from '../utils/HeteroTraceRecorder';
 import { log } from '../utils/logger';
@@ -599,6 +602,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
         // a crash between receive and ack stays recoverable and the retried
         // call reuses the same stable invocation id.
         persistChildResultInbox: (input) => persistChildResultInboxRecord(input),
+        // SC-SB06/P1-A: durable request→invocation map — a resend reuses the
+        // first minted toolCallId, a new occurrence (even same-args) gets a
+        // fresh one. ~/.orvilo/inbox/<op>.calls.jsonl persists it across
+        // restarts so a crash doesn't fork the invocation identity.
+        resolveToolCallId: (input) => resolvePersistentToolCallId(input),
         // F04: `needs_approval` external tools park as `acp_tool_approval_pending`;
         // surface the permission card on the run's AskUser bridge. No bridge
         // (headless producer) cancels immediately — the server receipt stays

@@ -744,8 +744,9 @@ export interface CreateTopicParams {
   /**
    * Owning agent for agent-first topics. Preferred over `sessionId`: the
    * server resolves the legacy session row (if any) from this id.
+   * Wire schema is `z.string().optional()` — pass `undefined`, never `null`.
    */
-  agentId?: string | null;
+  agentId?: string;
   favorite?: boolean;
   groupId?: string | null;
   messages?: string[];

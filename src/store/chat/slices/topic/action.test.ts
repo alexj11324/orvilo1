@@ -260,7 +260,7 @@ describe('topic action', () => {
       await result.current.saveToTopic();
 
       const payload = createTopicSpy.mock.calls[0][0];
-      expect(payload.agentId).toBeNull();
+      expect(payload.agentId).toBeUndefined();
       expect(payload.sessionId).toBeUndefined();
     });
 

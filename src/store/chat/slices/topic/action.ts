@@ -223,7 +223,7 @@ export class ChatTopicActionImpl {
       ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),
       // The inbox pseudo-id is a session slug, not an agent row — the topic must
       // land fully unscoped (legacy inbox), never agent_id='inbox'.
-      agentId: targetAgentId === INBOX_SESSION_ID ? null : targetAgentId,
+      agentId: targetAgentId === INBOX_SESSION_ID ? undefined : targetAgentId,
       title: t('defaultTitle', { ns: 'topic' }),
       messages: messages.map((m) => m.id),
     });
@@ -246,7 +246,7 @@ export class ChatTopicActionImpl {
     const topicId = await internal_createTopic({
       ...modelSnapshot,
       ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),
-      agentId: targetAgentId === INBOX_SESSION_ID ? null : targetAgentId,
+      agentId: targetAgentId === INBOX_SESSION_ID ? undefined : targetAgentId,
       title: t('defaultTitle', { ns: 'topic' }),
       messages: messages.map((m) => m.id),
     });

@@ -494,7 +494,10 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       operationId,
       resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000aa',
       response: { result: { approved: true }, toolCallId: 'tc_m' },
+      scopeHash: 'scope_a',
       state: 'claimed',
+      windowId: 'w1',
+      windowVersion: 1,
     });
 
     const res = await userCaller().resolveHeteroIntervention({
@@ -506,9 +509,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
 
     expect(res).toMatchObject({ status: 'resolving', success: true });
     // The receipt carries the decision BEFORE the publish — same function
-    // every other entry funnels through. SC03: the token path binds the
-    // claim-echoed window (or the live receipt's window as fallback), never
-    // the bind-any wildcard.
+    // every other entry funnels through. SC03: the token path binds ONLY the
+    // claim-echoed window/scope, never the bind-any wildcard and never
+    // coordinates re-read off the live receipt.
     const payload = await readApprovalReceipt(operationId, 'tc_m');
     expect(payload?.decision).toMatchObject({ action: 'approved', windowId: 'w1' });
     expect(
@@ -542,7 +545,10 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       operationId,
       resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000bb',
       response: { result: { anything: true }, toolCallId: 'tc_m' },
+      scopeHash: 'scope_a',
       state: 'claimed',
+      windowId: 'w1',
+      windowVersion: 1,
     });
 
     const res = await userCaller().resolveHeteroIntervention({
@@ -590,7 +596,10 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       operationId,
       resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000cc',
       response: { result: { approved: true }, toolCallId: 'tc_m' },
+      scopeHash: 'scope_a',
       state: 'claimed',
+      windowId: 'w1',
+      windowVersion: 1,
     });
 
     await expect(
@@ -709,7 +718,10 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       operationId,
       resolutionRequestId: '018fbd8e-7baf-7c6d-8000-0000000000ff',
       response: { result: { approved: true }, toolCallId: 'tc_m' },
+      scopeHash: 'scope_a',
       state: 'claimed',
+      windowId: 'w1',
+      windowVersion: 1,
     });
     receiptWrite.failNextSubmit = true;
 
@@ -733,6 +745,168 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
         (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
       ),
     ).toBe(false);
+  });
+
+  it('SC03/R6: a coordless legacy claim can never decide the rotated window', async () => {
+    // Pre-SC03 claim impls return no windowId/scopeHash. The review token was
+    // minted while the window was w1 but the live receipt has already rotated
+    // to w2 — backfilling the live coordinates would let that w1 approval
+    // decide w2: an exact-match CAS only proves the row didn't drift AFTER
+    // the read, never that the user approved w2. The submit must refuse and
+    // roll the claim back so the live window stays reachable.
+    const operationId = 'op-mobile-unpinned-claim';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({
+      operationId,
+      payload: { scopeHash: 'scope_b', windowId: 'w2', windowVersion: 2 },
+      toolCallId: 'tc_m',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_nopin',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000110',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+      // No windowId/scopeHash/windowVersion — the pre-SC03 claim contract.
+    });
+
+    await expect(
+      userCaller().resolveHeteroIntervention({
+        action: 'submit',
+        resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000110',
+        result: { approved: true },
+        reviewToken: 'a'.repeat(43),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    // Nothing decided w2, nothing published as a success, claim released.
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toBeUndefined();
+    expect(payload?.windowId).toBe('w2');
+    expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
+      expect.objectContaining({ claimId: 'cl_nopin', operationId }),
+    );
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(false);
+  });
+
+  it('SC03/R6: a claim that omits the scope pin can never decide a windowed receipt', async () => {
+    // A partially-upgraded claim echoes the live window but no scopeHash —
+    // the window match alone cannot prove the approval covered the live
+    // scope, so the receipt's scope must not be adopted for the CAS either.
+    const operationId = 'op-mobile-no-scope-pin';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({
+      operationId,
+      payload: { windowId: 'w2', windowVersion: 2 },
+      toolCallId: 'tc_m',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_noscope',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000111',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+      windowId: 'w2',
+      windowVersion: 2,
+    });
+
+    await expect(
+      userCaller().resolveHeteroIntervention({
+        action: 'submit',
+        resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000111',
+        result: { approved: true },
+        reviewToken: 'a'.repeat(43),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toBeUndefined();
+    expect(business.rollbackHeteroInterventionResolution).toHaveBeenCalledWith(
+      expect.objectContaining({ claimId: 'cl_noscope', operationId }),
+    );
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(false);
+  });
+
+  it('SC03/R6: a coordless claim still decides a legacy windowless receipt', async () => {
+    // Legacy windowless receipts keep their compat semantics — a claim
+    // without coordinates may only write `windowId`-less rows, which is
+    // exactly what `expectedWindowId: undefined` enforces inside the CAS.
+    const operationId = 'op-mobile-windowless';
+    await insertOperation(operationId, userId);
+    await insertApprovalReceipt({
+      operationId,
+      payload: { scopeHash: undefined, windowId: undefined, windowVersion: undefined },
+      toolCallId: 'tc_m',
+    });
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_windowless',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000112',
+      response: { result: { approved: true }, toolCallId: 'tc_m' },
+      state: 'claimed',
+    });
+
+    const res = await userCaller().resolveHeteroIntervention({
+      action: 'submit',
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000112',
+      result: { approved: true },
+      reviewToken: 'a'.repeat(43),
+    });
+
+    expect(res).toMatchObject({ status: 'resolving', success: true });
+    const payload = await readApprovalReceipt(operationId, 'tc_m');
+    expect(payload?.decision).toMatchObject({ action: 'approved' });
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_m',
+      ),
+    ).toBe(true);
+  });
+
+  it('SC03/R6: a token claim for an ordinary askUser (no receipt) still publishes', async () => {
+    // No tool-approval receipt exists for this toolCall — the submit is an
+    // ordinary askUser answer and flows through `not_tool_approval`,
+    // untouched by the windowed-claim strictness.
+    const operationId = 'op-mobile-askuser';
+    await insertOperation(operationId, userId);
+    business.resolveHeteroIntervention.mockResolvedValueOnce({
+      claimId: 'cl_askuser',
+      handled: true,
+      operationId,
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000113',
+      response: { result: { answer: 'prod' }, toolCallId: 'tc_plain' },
+      state: 'claimed',
+    });
+
+    const res = await userCaller().resolveHeteroIntervention({
+      action: 'submit',
+      resolutionRequestId: '018fbd8e-7baf-7c6d-8000-000000000113',
+      result: { answer: 'prod' },
+      reviewToken: 'a'.repeat(43),
+    });
+
+    expect(res).toMatchObject({
+      approval: { state: 'not_tool_approval' },
+      status: 'resolving',
+      success: true,
+    });
+    expect(
+      store.events.some(
+        (e) => e.type === 'agent_intervention_response' && e.data.toolCallId === 'tc_plain',
+      ),
+    ).toBe(true);
+    expect(business.rollbackHeteroInterventionResolution).not.toHaveBeenCalled();
   });
 
   it('looks up cold-start review by a strict 32-byte base64url token', async () => {

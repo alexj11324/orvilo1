@@ -24,7 +24,11 @@ import {
   QuotaBindingRole,
   QuotaCredentialMode,
 } from '../types/agentQuota';
-import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import {
+  buildStrictWorkspaceWhere,
+  buildWorkspacePayload,
+  buildWorkspaceWhere,
+} from '../utils/workspace';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Accounts — identity + credential vault
@@ -63,8 +67,12 @@ export class AgentProviderAccountModel {
     return this.gateKeeperPromise;
   }
 
+  // Provider accounts stay strict-scope even in workspace mode: they are
+  // per-scope capacity pools whose dedupe key is the external account id, so
+  // surfacing the owner's unfiled row would let the load balancer count the
+  // same real account twice.
   private mine = () =>
-    buildWorkspaceWhere(
+    buildStrictWorkspaceWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       agentProviderAccounts,
     );

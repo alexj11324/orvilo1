@@ -2,7 +2,12 @@ import type { RecentItem } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
-export const RECENT_SIDEBAR_TYPES = ['task'] as const satisfies readonly RecentItem['type'][];
+export {
+  isWorkspaceTeamVisible,
+  omitPersonalTeamItems,
+  RECENT_SIDEBAR_TYPES,
+  recentTypesForWorkspace,
+} from './recentTypes';
 
 class RecentService {
   getAll = (

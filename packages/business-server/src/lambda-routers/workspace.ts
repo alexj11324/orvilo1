@@ -1,6 +1,8 @@
 import { isWorkspaceSlugFormatValid, WORKSPACE_SLUG_MAX, WORKSPACE_SLUG_MIN } from '@orvilo/const';
 import type { WorkspaceItem } from '@orvilo/database/schemas';
+import { users } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -126,6 +128,60 @@ export const workspaceRouter = router({
       throw new TRPCError({
         code: 'NOT_IMPLEMENTED',
         message: 'Workspace market organization is a cloud-only feature.',
+      });
+    }),
+
+  /**
+   * Linear-model provisioning: every account lives inside a workspace — there
+   * is no personal scope. Returns the caller's first workspace (most recently
+   * updated), or creates a default one named after the account on first use.
+   * Safe to call repeatedly: a concurrent double-provision folds back into the
+   * re-read list via the slug unique-violation retry loop.
+   */
+  ensureDefault: authedProcedure
+    .use(serverDatabase)
+    .mutation(async ({ ctx }): Promise<WorkspaceMembershipSummary> => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
+      const existing = await model.listUserWorkspaces();
+      if (existing.length > 0) return existing[0];
+
+      const user = await ctx.serverDB.query.users.findFirst({
+        where: eq(users.id, ctx.userId),
+      });
+      const baseName = user?.fullName || user?.username || user?.email?.split('@')[0] || 'Personal';
+      const name = `${baseName}'s workspace`;
+      // Deterministic base keeps the common path idempotent; attempts add a
+      // short suffix only if that base slug was somehow taken.
+      const sanitizedUserId = ctx.userId.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
+      const slugBase = sanitizedUserId ? `ws-${sanitizedUserId.slice(0, 12)}` : 'my-workspace';
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const slug =
+          attempt === 0 ? slugBase : `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
+        if (!(await model.findBySlug(slug))) {
+          try {
+            const created = await model.create({ name, slug });
+            return { ...created, role: 'owner' };
+          } catch (error) {
+            if (!isUniqueViolation(error)) {
+              console.error('[workspace:ensureDefault]', error);
+              throw new TRPCError({
+                cause: error,
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Failed to provision the default workspace',
+              });
+            }
+            // Lost a slug race — try the next candidate.
+          }
+        }
+      }
+
+      // A concurrent ensure already created this user's workspace.
+      const provisioned = await model.listUserWorkspaces();
+      if (provisioned.length > 0) return provisioned[0];
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to provision the default workspace',
       });
     }),
 

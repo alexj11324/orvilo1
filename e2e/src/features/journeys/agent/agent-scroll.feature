@@ -19,6 +19,12 @@ Feature: 发送消息与流式输出期间的视口滚动行为
   Scenario: 关闭流式自动滚动后，用户消息固定在顶部且视口不跟随
     Given 用户在设置中关闭 "AI 回复时自动滚动"
     And 用户进入 Orvilo AI 对话页面
+    # Pad the list first: when the content below the pinned message fits one
+    # viewport, the pinned position coincides with the bottom and the
+    # off-bottom assertion becomes a coin flip on rendered height. Two rounds
+    # of long exchanges keep the pinned viewport well clear of the bottom.
+    And 用户完成一轮用于垫高列表的长回复对话
+    And 用户完成一轮用于垫高列表的长回复对话
     When 用户发送长文消息并等待回复完成
     Then 用户消息应固定在聊天列表顶部
     And 视口不应贴近聊天列表底部

@@ -1,5 +1,5 @@
 import type { ChatTopicStatus, TaskStatus } from '@orvilo/types';
-import { and, desc, eq, inArray, isNotNull, isNull, ne, not, or, sql } from 'drizzle-orm';
+import { and, desc, eq, exists, inArray, isNotNull, isNull, ne, not, or, sql } from 'drizzle-orm';
 import { type AnyPgColumn, unionAll } from 'drizzle-orm/pg-core';
 import removeMarkdown from 'remove-markdown';
 
@@ -9,11 +9,17 @@ import {
   DOCUMENT_FOLDER_TYPE,
   documents,
   messages,
+  projects,
+  savedViews,
   tasks,
+  teamMembers,
+  teams,
   topics,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
+import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 export interface RecentDbItem {
@@ -30,10 +36,10 @@ export interface RecentDbItem {
    * access logs and anything pasted from the clipboard.
    */
   slugTitle?: string | null;
-  /** Task lifecycle status when `type === 'task'`; null for topic/document. */
+  /** Task lifecycle status when `type === 'task'`; null for the other types. */
   status: TaskStatus | null;
   title: string;
-  type: 'topic' | 'document' | 'task';
+  type: 'topic' | 'document' | 'task' | 'project' | 'savedView' | 'team';
   updatedAt: Date;
   /** The member who owns (created) this item — for author attribution in team views. */
   userId: string;
@@ -99,11 +105,16 @@ export class RecentModel {
     const scope = { userId: this.userId, workspaceId: this.workspaceId };
     const requestedTypes = types ? new Set(types) : undefined;
 
-    // `tasks` uses `createdByUserId` instead of `userId`, so apply the
-    // workspace-aware predicate inline.
+    // Tasks use `createdByUserId` instead of `userId`. Match TaskModel.ownership:
+    // workspace visibility, then private-team membership (TRI05 / SEC06).
+    const taskVisible = buildWorkspaceWhere(scope, {
+      userId: tasks.createdByUserId,
+      visibility: tasks.visibility,
+      workspaceId: tasks.workspaceId,
+    });
     const taskScopeWhere = this.workspaceId
-      ? eq(tasks.workspaceId, this.workspaceId)
-      : and(eq(tasks.createdByUserId, this.userId), isNull(tasks.workspaceId));
+      ? and(taskVisible, buildTaskTeamReadableWhere(this.db, this.userId))
+      : taskVisible;
 
     // Workspace rows are shared across members; `mineOnly` narrows a workspace
     // feed back to the viewer's own items. A no-op in personal mode, where the
@@ -111,6 +122,44 @@ export class RecentModel {
     const mineTopicWhere = mineOnly ? eq(topics.userId, this.userId) : undefined;
     const mineDocumentWhere = mineOnly ? eq(documents.userId, this.userId) : undefined;
     const mineTaskWhere = mineOnly ? eq(tasks.createdByUserId, this.userId) : undefined;
+    const mineProjectWhere = mineOnly ? eq(projects.userId, this.userId) : undefined;
+    const mineSavedViewWhere = mineOnly ? eq(savedViews.ownerUserId, this.userId) : undefined;
+    const mineTeamWhere = mineOnly ? eq(teams.createdByUserId, this.userId) : undefined;
+
+    const teamMembership = (teamId: AnyPgColumn) =>
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(teamMembers)
+          .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, this.userId))),
+      );
+
+    const projectReadable = buildProjectReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+
+    // Mirrors `TeamModel.readable`: public teams plus private teams the viewer
+    // belongs to. Teams are workspace-only — personal mode yields no rows.
+    const teamReadable = this.workspaceId
+      ? and(
+          eq(teams.workspaceId, this.workspaceId),
+          or(eq(teams.visibility, 'public'), teamMembership(teams.id)),
+        )
+      : sql`false`;
+
+    // Mirrors `SavedViewModel.readable`: own views plus workspace-shared and
+    // team-shared views the viewer's membership covers.
+    const savedViewReadable = this.workspaceId
+      ? and(
+          eq(savedViews.workspaceId, this.workspaceId),
+          or(
+            eq(savedViews.ownerUserId, this.userId),
+            eq(savedViews.visibility, 'workspace'),
+            and(eq(savedViews.visibility, 'team'), teamMembership(savedViews.teamId)),
+          ),
+        )
+      : and(eq(savedViews.ownerUserId, this.userId), isNull(savedViews.workspaceId));
 
     const topicArm = this.db
       .select({
@@ -217,8 +266,93 @@ export class RecentModel {
           : and(taskScopeWhere, mineTaskWhere, not(inArray(tasks.status, TASK_FINAL_STATUSES))),
       );
 
-    const rows = await unionAll(topicArm, documentArm, taskArm)
-      .orderBy(desc(sql`updated_at`))
+    const projectArm = this.db
+      .select({
+        description: sql<string | null>`NULL`.as('description'),
+        id: projects.id,
+        metadata: sql<any>`NULL`.as('metadata'),
+        routeGroupId: sql<string | null>`NULL`.as('route_group_id'),
+        routeId: sql<string | null>`NULL`.as('route_id'),
+        slugTitle: sql<string | null>`NULL`.as('slug_title'),
+        status: sql<TaskStatus | null>`NULL`.as('status'),
+        title: sql<string>`${projects.name}`.as('title'),
+        type: sql<RecentDbItem['type']>`'project'`.as('type'),
+        updatedAt: projects.updatedAt,
+        userId: sql<string>`COALESCE(${projects.userId}, '')`.as('user_id'),
+      })
+      .from(projects)
+      .where(
+        requestedTypes && !requestedTypes.has('project')
+          ? sql`false`
+          : and(
+              projectReadable,
+              mineProjectWhere,
+              // sharedOnly keeps only rows the whole workspace can read —
+              // a member grant shares a project with named members, not the
+              // team at large.
+              sharedOnly
+                ? this.workspaceId
+                  ? and(
+                      eq(projects.workspaceId, this.workspaceId),
+                      eq(projects.visibility, 'public'),
+                    )
+                  : sql`false`
+                : undefined,
+            ),
+      );
+
+    const savedViewArm = this.db
+      .select({
+        description: sql<string | null>`NULL`.as('description'),
+        id: savedViews.id,
+        metadata: sql<any>`NULL`.as('metadata'),
+        routeGroupId: sql<string | null>`NULL`.as('route_group_id'),
+        routeId: sql<string | null>`NULL`.as('route_id'),
+        slugTitle: sql<string | null>`NULL`.as('slug_title'),
+        status: sql<TaskStatus | null>`NULL`.as('status'),
+        title: sql<string>`${savedViews.name}`.as('title'),
+        type: sql<RecentDbItem['type']>`'savedView'`.as('type'),
+        updatedAt: savedViews.updatedAt,
+        userId: savedViews.ownerUserId,
+      })
+      .from(savedViews)
+      .where(
+        requestedTypes && !requestedTypes.has('savedView')
+          ? sql`false`
+          : and(
+              savedViewReadable,
+              mineSavedViewWhere,
+              sharedOnly ? inArray(savedViews.visibility, ['team', 'workspace']) : undefined,
+            ),
+      );
+
+    const teamArm = this.db
+      .select({
+        description: sql<string | null>`${teams.description}`.as('description'),
+        id: teams.id,
+        metadata: sql<any>`NULL`.as('metadata'),
+        routeGroupId: sql<string | null>`NULL`.as('route_group_id'),
+        routeId: sql<string | null>`NULL`.as('route_id'),
+        slugTitle: sql<string | null>`NULL`.as('slug_title'),
+        status: sql<TaskStatus | null>`NULL`.as('status'),
+        title: sql<string>`${teams.name}`.as('title'),
+        type: sql<RecentDbItem['type']>`'team'`.as('type'),
+        updatedAt: teams.updatedAt,
+        userId: sql<string>`COALESCE(${teams.createdByUserId}, '')`.as('user_id'),
+      })
+      .from(teams)
+      .where(
+        requestedTypes && !requestedTypes.has('team')
+          ? sql`false`
+          : and(
+              teamReadable,
+              mineTeamWhere,
+              sharedOnly ? eq(teams.visibility, 'public') : undefined,
+            ),
+      );
+
+    const rows = await unionAll(topicArm, documentArm, taskArm, projectArm, savedViewArm, teamArm)
+      .orderBy(desc(sql`updated_at`), desc(sql`id`))
       .limit(limit);
 
     // Previews are fetched in a second batched query scoped to the final page

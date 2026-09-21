@@ -182,6 +182,45 @@ describe('requiredApiKeyScopeForTrpc', () => {
     });
   });
 
+  it('categorizes workAttention as personal attention with agent extras', () => {
+    expect(requiredApiKeyScopeForTrpc('workAttention.feed', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.feedSummary', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.favoriteList', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.subscribe', 'mutation')).toEqual({
+      scopes: ['user:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.myWork', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.query', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.count', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.facet', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.search', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.savedViewCreate', 'mutation')).toEqual({
+      scopes: ['user:write', 'agent:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.triage', 'mutation')).toEqual({
+      scopes: ['user:write', 'agent:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.decide', 'mutation')).toEqual({
+      blocked: true,
+    });
+  });
+
   it('keeps bootstrap namespaces open', () => {
     expect(requiredApiKeyScopeForTrpc('healthcheck', 'query')).toEqual({ open: true });
     expect(requiredApiKeyScopeForTrpc('config.getGlobalConfig', 'query')).toEqual({ open: true });

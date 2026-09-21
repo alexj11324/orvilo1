@@ -9,7 +9,7 @@ import {
   notShareVisitorTopic,
   notShareVisitorTopicRef,
 } from '../../utils/shareVisitor';
-import { buildWorkspaceWhere } from '../../utils/workspace';
+import { buildStrictWorkspaceWhere } from '../../utils/workspace';
 
 /**
  * Agent-share visitor conversations are stored under the CREATOR's `userId`
@@ -222,7 +222,13 @@ export class DataExporterRepos {
       const userField = config.userField || 'userId';
       const ownershipWhere =
         'workspaceId' in tableObj
-          ? buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, tableObj)
+          ? // Export scope = the workspace's own rows. Unfiled rows are exported by
+            // the unscoped export; folding them into a workspace archive would mix
+            // two scopes.
+            buildStrictWorkspaceWhere(
+              { userId: this.userId, workspaceId: this.workspaceId },
+              tableObj,
+            )
           : eq(tableObj[userField], this.userId);
 
       const shareVisitorWhere = config.shareVisitorRef

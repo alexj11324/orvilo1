@@ -37,6 +37,10 @@ env:
   ENABLE_AGENT_GATEWAY: '1'
   AGENT_GATEWAY_URL: http://localhost:3407
   AGENT_GATEWAY_SERVICE_TOKEN: e2e-mock-service-token
+  # Web sends resolve a device execution plan and dispatch through the device
+  # gateway — the same fake process emulates a device bound to the test user.
+  DEVICE_GATEWAY_URL: http://localhost:3407
+  DEVICE_GATEWAY_SERVICE_TOKEN: e2e-mock-service-token
   DEEPSEEK_API_KEY: e2e-mock-key
   DEEPSEEK_PROXY_URL: http://localhost:3406/v1
   # Mini-model calls (topic titles, summaries) resolve to the openai provider —
@@ -103,6 +107,28 @@ jobs:
 
       - name: Install Playwright browsers (with system deps)
         run: bunx playwright install --with-deps chromium
+
+      # The service container runs a stock ParadeDB config; on CI runners its
+      # checkpoints degrade into multi-minute write storms that starve queries
+      # (observed: `checkpoint complete ... write=269s`, with sends and reads
+      # landing mid-checkpoint exceeding 90s polls). This is a disposable test
+      # database, so trade durability for a fast write path — fsync off and
+      # checkpoints spread out. Every setting is SIGHUP-reloadable; GitHub
+      # service `options` can't pass postgres args (they'd be docker args).
+      - name: Tune test Postgres for CI
+        run: |
+          CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
+          # One -c per statement: a multi-statement -c wraps everything in an
+          # implicit transaction and ALTER SYSTEM rejects transaction blocks.
+          docker exec "$CONTAINER" psql -U postgres -d postgres \
+            -c "ALTER SYSTEM SET fsync = 'off'" \
+            -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
+            -c "ALTER SYSTEM SET full_page_writes = 'off'" \
+            -c "ALTER SYSTEM SET checkpoint_timeout = '1800s'" \
+            -c "ALTER SYSTEM SET checkpoint_completion_target = '0.9'" \
+            -c "ALTER SYSTEM SET max_wal_size = '4GB'" \
+            -c "ALTER SYSTEM SET autovacuum = 'off'" \
+            -c "SELECT pg_reload_conf()"
 
       - name: Run database migrations
         run: bun run db:migrate

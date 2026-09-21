@@ -2,6 +2,7 @@ import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@
 import { type Cookie, request } from 'playwright';
 
 import { clearMockLLMWorkerState } from '../mocks/llm/registry';
+import { bindTestUserExecutionDevice } from '../support/bindExecutionDevice';
 import { seedTestUser, TEST_USER } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
@@ -103,7 +104,35 @@ Before(async function (this: CustomWorld, { pickle }) {
   if (sessionCookies.length > 0) {
     await this.browserContext.addCookies(sessionCookies);
     console.log('🍪 Session cookies restored');
+
+    // The in-process runtime is retired: web sends resolve a device/sandbox
+    // execution plan, else the run lands on the "No device bound" stub. Bind
+    // the fake-gateway device to the inbox agent (idempotent — also covers
+    // workspaces a scenario just created).
+    try {
+      await bindTestUserExecutionDevice(this.browserContext.request);
+    } catch (error) {
+      console.warn('[e2e] execution-device binding failed:', error);
+    }
   }
+});
+
+// Scroll scenarios need the product's own send-detection verdicts to debug
+// CI-only failures (pg stalls make sends arrive at odd commit boundaries).
+// Enable the hook's debug namespace before any navigation and forward its
+// console lines into the test log.
+Before({ tags: '@scroll' }, async function (this: CustomWorld) {
+  await this.browserContext.addInitScript(() => {
+    try {
+      localStorage.setItem('debug', 'orvilo:conversation:scroll');
+    } catch {
+      // about:blank has no localStorage; the real origin page will set it.
+    }
+  });
+  this.page.on('console', (msg) => {
+    const text = msg.text();
+    if (text.includes('orvilo:conversation:scroll')) console.log(`   [scroll] ${text}`);
+  });
 });
 
 After(async function (this: CustomWorld, { pickle, result }) {

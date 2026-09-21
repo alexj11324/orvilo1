@@ -14,6 +14,58 @@ import { expect } from '@playwright/test';
 import { llmMockManager } from '../../mocks/llm';
 import type { CustomWorld } from '../../support/world';
 
+// A send fired while another turn's agent_operation is live gets held
+// client-side until that op goes terminal — under a CI Postgres stall the
+// first turn can run for minutes, and the second conversation's topic row is
+// only created by ITS run, so the sidebar never shows a second topic. Poll pg
+// for the first turn to settle before opening the next topic.
+const LIVE_OP_STATUSES = ['idle', 'running', 'waiting_for_async_tool', 'waiting_for_human'];
+
+async function waitForTurnSettled(world: CustomWorld, prompt: string, sentAt: number) {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    await world.page.waitForTimeout(5_000);
+    return;
+  }
+  const { default: pg } = await import('pg');
+  const client = new pg.Client({
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 10_000,
+  });
+  try {
+    await client.connect();
+  } catch {
+    return;
+  }
+  try {
+    await expect
+      .poll(
+        async () => {
+          try {
+            const res = await client.query(
+              `select o.status from agent_operations o
+               where o.topic_id = (select topic_id from messages
+                                   where role = 'user' and content = $1
+                                     and created_at >= to_timestamp($2 / 1000.0) - interval '15 seconds'
+                                   order by created_at desc limit 1)
+               order by o.started_at desc nulls last limit 1`,
+              [prompt, sentAt],
+            );
+            const status: string | undefined = res.rows[0]?.status;
+            return status && !LIVE_OP_STATUSES.includes(status) ? status : null;
+          } catch {
+            return null;
+          }
+        },
+        { message: `first turn operation never settled for prompt: ${prompt}`, timeout: 150_000 },
+      )
+      .toBeTruthy();
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 // ============================================
 // Given Steps
 // ============================================
@@ -51,7 +103,7 @@ Given('用户已有一个对话', async function (this: CustomWorld) {
   console.log('   ✅ 已创建一个对话');
 });
 
-Given('用户有多个对话历史', async function (this: CustomWorld) {
+Given('用户有多个对话历史', { timeout: 300_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 创建多个对话...');
 
   // Keep the search fixture self-contained. Without a deterministic title,
@@ -76,25 +128,81 @@ Given('用户有多个对话历史', async function (this: CustomWorld) {
   await chatInputContainer.click();
   await this.page.waitForTimeout(300);
   await this.page.keyboard.type('测试对话内容', { delay: 30 });
+  const firstSentAt = Date.now();
   await this.page.keyboard.press('Enter');
-  await this.page.waitForTimeout(2000);
+
+  // The second send is held client-side while the first turn's operation is
+  // live, so its topic would never be created inside the poll window — wait
+  // for this turn to finish before opening the new topic.
+  await waitForTurnSettled(this, '测试对话内容', firstSentAt);
 
   // Store first conversation reference
   this.testContext.firstConversation = 'first';
 
   // Create new topic and second conversation
   console.log('   📍 Creating second conversation...');
-  const addTopicButton = this.page.locator('svg.lucide-message-square-plus').locator('..');
-  if ((await addTopicButton.count()) > 0) {
-    await addTopicButton.first().click();
-    await this.page.waitForTimeout(1000);
+  // svg → Center wrapper → NavItem Block row (which carries the disabled
+  // opacity style and owns the click handler).
+  const addTopicButton = this.page
+    .locator('svg.lucide-message-square-plus')
+    .first()
+    .locator('xpath=../..');
+  await expect(addTopicButton, 'new-topic button is not rendered').toBeVisible({
+    timeout: 30_000,
+  });
 
-    // Send message in second conversation - different content
-    await chatInputContainer.click();
-    await this.page.waitForTimeout(300);
-    await this.page.keyboard.type('hello world', { delay: 30 });
-    await this.page.keyboard.press('Enter');
-    await this.page.waitForTimeout(2000);
+  // The new-topic NavItem ignores clicks while a new-topic send is in flight
+  // (isNewTopicSendInFlight) — it only dims (opacity 0.5), never errors, so a
+  // bare sleep raced the flag under load and the "second" message silently
+  // landed on topic 1. Wait for the send to settle before clicking.
+  await expect
+    .poll(async () => (await addTopicButton.getAttribute('style')) ?? '', {
+      message: 'new-topic button stayed disabled — in-flight send never settled',
+      timeout: 60_000,
+    })
+    .not.toContain('opacity: 0.5');
+
+  await addTopicButton.click();
+  await chatInputContainer.click();
+  await this.page.waitForTimeout(300);
+  await this.page.keyboard.type('hello world', { delay: 30 });
+  await this.page.keyboard.press('Enter');
+
+  // Confirm the second topic actually registered in the sidebar before the
+  // scenario proceeds to click it. The sidebar is SWR-driven and only refetches
+  // after the send mutation's getMessagesAndTopics tail resolves — that tail
+  // can sit behind a CI Postgres stall, so a one-shot count reads a slow
+  // refetch as "topic never created".
+  try {
+    await expect
+      .poll(async () => this.page.locator('[data-testid="topic-item"]').count(), {
+        timeout: 120_000,
+      })
+      .toBeGreaterThanOrEqual(2);
+  } catch (error) {
+    // Was the topic created server-side at all? pg evidence separates "send
+    // never dispatched" from "sidebar refetch lagged".
+    const agentId = this.page.url().match(/\/agent\/([^/?#]+)/)?.[1];
+    if (agentId && process.env.DATABASE_URL) {
+      try {
+        const { default: pg } = await import('pg');
+        const client = new pg.Client({
+          connectionString: process.env.DATABASE_URL,
+          connectionTimeoutMillis: 10_000,
+          query_timeout: 10_000,
+        });
+        await client.connect();
+        const res = await client.query(
+          'select count(*)::int as c from topics where agent_id = $1',
+          [agentId],
+        );
+        console.log(`   📍 pg topics for ${agentId}: ${res.rows[0]?.c}`);
+        await client.end();
+      } catch (queryError) {
+        console.log(`   📍 topic count query failed: ${String(queryError)}`);
+      }
+    }
+    throw error;
   }
 
   console.log('   ✅ 已创建多个对话');
@@ -127,7 +235,7 @@ When('用户点击新建对话按钮', async function (this: CustomWorld) {
   await this.page.waitForTimeout(500);
 });
 
-When('用户点击另一个对话', async function (this: CustomWorld) {
+When('用户点击另一个对话', { timeout: 90_000 }, async function (this: CustomWorld) {
   console.log('   📍 Step: 点击另一个对话...');
 
   // Check if we're on the home page (has Recent Topics section)
@@ -163,18 +271,25 @@ When('用户点击另一个对话', async function (this: CustomWorld) {
     }
   }
 
-  // Fallback: try to find topic items in the sidebar
+  // Fallback: try to find topic items in the sidebar. The list is SWR-driven
+  // and lags the send that created the conversation — poll rather than read a
+  // one-shot count so a slow refetch isn't read as "only one topic exists".
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a second topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(2);
 
   // Click the second topic (first one is current/active)
-  if (topicCount >= 2) {
-    await sidebarTopics.nth(1).click();
-    console.log('   ✅ 已点击另一个对话');
-  } else {
-    throw new Error('Not enough topics to switch');
-  }
+  await sidebarTopics.nth(1).click();
+  console.log('   ✅ 已点击另一个对话');
 
   await this.page.waitForTimeout(500);
 });

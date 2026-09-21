@@ -50,6 +50,12 @@ export interface TeamOrchestrationPolicy {
   replanMode?: 'disabled' | 'observe' | 'suggest' | 'apply';
   /** Whether human review is required before work in this team closes. */
   requireHumanReview?: boolean;
+  /**
+   * Whether this team runs a triage intake. Absent defaults to enabled —
+   * legacy teams keep their triage surface; `false` hides the Triage
+   * navigation item, the page section, and rejects triage writes.
+   */
+  triageEnabled?: boolean;
 }
 
 /**
@@ -58,6 +64,8 @@ export interface TeamOrchestrationPolicy {
  * identifiers — never `max(seq)+1` computed across rows.
  */
 export interface TeamItem {
+  /** Team accent color (hex) used for its identity glyph. Null → palette fallback. */
+  color?: string | null;
   coordinatorAgentId?: string | null;
   createdAt: Date;
   createdBySnapshot?: {
@@ -74,6 +82,11 @@ export interface TeamItem {
   id: string;
   /** Exactly one team per workspace carries `isDefault = true`. */
   isDefault: boolean;
+  /**
+   * Viewer annotation: whether the requesting user is a `team_members` row.
+   * Only set by list endpoints that resolve membership; absent elsewhere.
+   */
+  joined?: boolean;
   key: string;
   name: string;
   /** Next value handed out by the transactional identifier allocator. */

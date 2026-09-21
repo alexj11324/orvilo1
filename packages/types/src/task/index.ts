@@ -14,6 +14,9 @@ export type TaskStatus =
 export type TaskWorkflowCategory =
   'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled';
 
+/** Team intake state. NULL means the task is not in triage. */
+export type TaskTriageStatus = 'accepted' | 'declined' | 'duplicate' | 'untriaged';
+
 export type TaskAssignmentMode = 'manual' | 'rules' | 'orchestrated';
 
 export type TaskOrchestrationOwner =
@@ -549,6 +552,11 @@ export interface TaskItem {
   deletedAt?: Date | null;
   description: string | null;
   domainRevision: number;
+  /**
+   * Canonical task this row duplicates. Null unless triage marked it duplicate.
+   * Never a hard-delete or merged execution history.
+   */
+  duplicateOfTaskId: string | null;
   editorData: unknown;
   error: string | null;
   executionGeneration: number;
@@ -603,6 +611,12 @@ export interface TaskItem {
   totalRunCost?: number | null;
   totalRunDuration?: number | null;
   totalTopics: number | null;
+  /**
+   * Team intake state. NULL means the task is not in triage (legacy and
+   * already-accepted work). Existing backlog rows are never backfilled to
+   * `untriaged`.
+   */
+  triageStatus: TaskTriageStatus | null;
   updatedAt: Date;
   // 'private' tasks are only visible to their creator in workspace mode.
   // 'public' (default) tasks are visible to every workspace member.
@@ -659,6 +673,7 @@ export interface NewTask {
   deletedAt?: Date | null;
   description?: string | null;
   domainRevision?: number;
+  duplicateOfTaskId?: string | null;
   editorData?: unknown;
   error?: string | null;
   executionGeneration?: number;
@@ -690,6 +705,7 @@ export interface NewTask {
   status?: string;
   teamId?: string | null;
   totalTopics?: number | null;
+  triageStatus?: TaskTriageStatus | null;
   updatedAt?: Date;
   visibility?: 'private' | 'public';
   workflowCategory?: TaskWorkflowCategory;

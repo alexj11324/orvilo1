@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 describe('AgentDocumentModel workspace scope', () => {
-  it('isolates document reads and deletes between personal and workspace scopes', async () => {
+  it("adopts the owner's unfiled documents into workspace scope while personal scope stays strict", async () => {
     const personalModel = new AgentDocumentModel(serverDB, userId);
     const workspaceModel = new AgentDocumentModel(serverDB, userId, workspaceId);
 
@@ -48,7 +48,11 @@ describe('AgentDocumentModel workspace scope', () => {
     );
 
     await expect(personalModel.findById(workspaceDoc.id)).resolves.toBeUndefined();
-    await expect(workspaceModel.findById(personalDoc.id)).resolves.toBeUndefined();
+    // The owner's unfiled document stays reachable from workspace scope;
+    // workspace rows never leak the other way.
+    await expect(workspaceModel.findById(personalDoc.id)).resolves.toMatchObject({
+      id: personalDoc.id,
+    });
 
     await expect(
       serverDB.query.agentDocuments.findFirst({

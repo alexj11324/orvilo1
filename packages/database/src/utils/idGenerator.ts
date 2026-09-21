@@ -37,6 +37,7 @@ const prefixes = {
   projects: 'prj',
   repositories: 'repo',
   teams: 'team',
+  savedViews: 'view',
   sessionGroups: 'sg',
   sessions: 'ssn',
   threads: 'thd',

@@ -13,6 +13,7 @@ import type {
   TaskOrchestrationOwner,
   TaskRunState,
   TaskTopicIntegration,
+  TaskTriageStatus,
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { isNotNull, isNull, sql } from 'drizzle-orm';
@@ -86,9 +87,20 @@ export const tasks = pgTable(
     // ("pending review"). Stamped when a run finishes and hands off for
     // review; the assignees above stay the executors.
     reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /**
+     * Team intake state. NULL means the task is not in triage (legacy and
+     * already-accepted work). Existing backlog rows are never backfilled to
+     * `untriaged`.
+     */
+    triageStatus: text('triage_status').$type<TaskTriageStatus>(),
 
     // Tree structure (self-referencing, no depth limit)
     parentTaskId: text('parent_task_id'),
+    /**
+     * Canonical task this row duplicates. Mark-duplicate never hard-deletes
+     * or merges execution history; it only records the relationship.
+     */
+    duplicateOfTaskId: text('duplicate_of_task_id'),
 
     // Task definition
     name: text('name'),
@@ -196,6 +208,11 @@ export const tasks = pgTable(
       foreignColumns: [t.id],
       name: 'tasks_parent_task_id_tasks_id_fk',
     }).onDelete('set null'),
+    foreignKey({
+      columns: [t.duplicateOfTaskId],
+      foreignColumns: [t.id],
+      name: 'tasks_duplicate_of_task_id_tasks_id_fk',
+    }).onDelete('set null'),
     uniqueIndex('tasks_identifier_idx')
       .on(t.identifier, t.createdByUserId)
       .where(isNull(t.workspaceId)),
@@ -204,6 +221,7 @@ export const tasks = pgTable(
     index('tasks_assignee_user_id_idx').on(t.assigneeUserId),
     index('tasks_assignee_agent_id_idx').on(t.assigneeAgentId),
     index('tasks_parent_task_id_idx').on(t.parentTaskId),
+    index('tasks_duplicate_of_task_id_idx').on(t.duplicateOfTaskId),
     index('tasks_status_idx').on(t.status),
     index('tasks_workflow_category_idx').on(t.workflowCategory),
     index('tasks_orchestration_owner_idx').on(t.orchestrationOwner),
@@ -213,6 +231,7 @@ export const tasks = pgTable(
     index('tasks_workspace_id_idx').on(t.workspaceId),
     index('tasks_project_id_status_idx').on(t.projectId, t.status),
     index('tasks_team_id_status_idx').on(t.teamId, t.status),
+    index('tasks_team_id_triage_idx').on(t.teamId, t.triageStatus),
     index('tasks_workflow_state_ref_idx').on(t.workflowStateRefId),
     index('tasks_cycle_ref_idx').on(t.cycleRefId),
     index('tasks_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.createdByUserId),
@@ -223,6 +242,10 @@ export const tasks = pgTable(
     check(
       'tasks_managed_creator_requires_workspace',
       sql`${t.createdBySubjectKind} NOT IN ('integration', 'system') OR ${t.workspaceId} IS NOT NULL`,
+    ),
+    check(
+      'tasks_duplicate_of_not_self',
+      sql`${t.duplicateOfTaskId} IS NULL OR ${t.duplicateOfTaskId} <> ${t.id}`,
     ),
   ],
 );

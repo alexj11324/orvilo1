@@ -210,7 +210,7 @@ describe('AiProviderModel', () => {
       });
     });
 
-    it('should not include personal providers in workspace scope', async () => {
+    it("should adopt the owner's unfiled providers into workspace scope", async () => {
       await serverDB.insert(aiProviders).values([
         {
           enabled: true,
@@ -231,7 +231,8 @@ describe('AiProviderModel', () => {
 
       const list = await workspaceAiProviderModel.getAiProviderList();
 
-      expect(list.map((item) => item.id)).toEqual(['anthropic']);
+      // The owner's unfiled provider rows follow them into workspace scope.
+      expect(list.map((item) => item.id).sort()).toEqual(['anthropic', 'openai']);
     });
 
     it('should write workspace provider toggles without updating personal providers', async () => {

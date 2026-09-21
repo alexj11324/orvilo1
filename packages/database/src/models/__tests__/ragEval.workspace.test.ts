@@ -57,7 +57,7 @@ afterEach(async () => {
 });
 
 describe('RAG eval workspace scope', () => {
-  it('isolates datasets and dataset records between personal and workspace scopes', async () => {
+  it("adopts the owner's unfiled datasets and records into workspace scope while personal scope stays strict", async () => {
     const personalDatasetModel = new EvalDatasetModel(serverDB, userId);
     const workspaceDatasetModel = new EvalDatasetModel(serverDB, userId, workspaceId);
 
@@ -98,7 +98,11 @@ describe('RAG eval workspace scope', () => {
     });
 
     await expect(personalRecordModel.findById(workspaceRecord.id)).resolves.toBeUndefined();
-    await expect(workspaceRecordModel.findById(personalRecord.id)).resolves.toBeUndefined();
+    // Owner's unfiled record stays reachable from workspace scope.
+    await expect(workspaceRecordModel.findById(personalRecord.id)).resolves.toMatchObject({
+      id: personalRecord.id,
+      workspaceId: null,
+    });
 
     await personalRecordModel.update(personalRecord.id, { question: 'Updated personal question' });
     await expect(personalRecordModel.findById(personalRecord.id)).resolves.toMatchObject({
@@ -115,7 +119,7 @@ describe('RAG eval workspace scope', () => {
     });
   });
 
-  it('isolates evaluations and evaluation records between personal and workspace scopes', async () => {
+  it("adopts the owner's unfiled evaluations and records into workspace scope while personal scope stays strict", async () => {
     const personalDatasetModel = new EvalDatasetModel(serverDB, userId);
     const workspaceDatasetModel = new EvalDatasetModel(serverDB, userId, workspaceId);
     const personalRecordModel = new EvalDatasetRecordModel(serverDB, userId);
@@ -182,9 +186,13 @@ describe('RAG eval workspace scope', () => {
     await expect(
       personalEvaluationRecordModel.findById(workspaceEvaluationRecord.id),
     ).resolves.toBeUndefined();
+    // Owner's unfiled record stays reachable from workspace scope.
     await expect(
       workspaceEvaluationRecordModel.findById(personalEvaluationRecord.id),
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({
+      id: personalEvaluationRecord.id,
+      workspaceId: null,
+    });
 
     await personalEvaluationRecordModel.delete(personalEvaluationRecord.id);
 

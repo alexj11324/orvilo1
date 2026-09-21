@@ -622,9 +622,9 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
-        // Linear shape: a project opens on its issue collection; the chat-composer
-        // overview keeps its own address instead of owning the index.
-        element: redirectElement('tasks'),
+        // Linear shape: a project opens on its Overview tab (verified against the
+        // real app — the issues collection lives on the Tasks tab).
+        element: redirectElement('overview'),
         handle: { meta: projectsRouteMeta },
         index: true,
       },

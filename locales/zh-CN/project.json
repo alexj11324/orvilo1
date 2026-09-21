@@ -58,6 +58,14 @@
   "goals.status.running": "推进中",
   "goals.status.scheduled": "已计划",
   "goals.title": "目标",
+  "list": {
+    "columnIssues": "事项",
+    "columnKey": "键",
+    "columnLead": "负责人",
+    "columnName": "名称",
+    "columnStatus": "状态",
+    "columnUpdated": "更新"
+  },
   "list.deleteAction": "删除项目",
   "list.deleteConfirmDescription": "确定删除“{{name}}”吗？项目中的任务、目标、对话和资源关联将被永久移除。",
   "list.deleteConfirmTitle": "删除项目？",
@@ -113,6 +121,13 @@
   "orchestration.syncLabel": "同步",
   "orchestration.title": "编排策略",
   "orchestration.unlimited": "不设上限",
+  "overview": {
+    "milestones": "里程碑",
+    "propertiesLabel": "属性",
+    "resourcesAdd": "添加文档或链接…",
+    "resourcesLabel": "资源",
+    "viewAllGoals": "查看全部"
+  },
   "overview.activeTasks": "正在推进",
   "overview.composerPlaceholder": "告诉项目接下来要推进什么…",
   "overview.contextEnabled": "已载入项目上下文",
@@ -146,6 +161,9 @@
   "overview.viewAllTasks": "查看全部任务",
   "overview.worksEmptyDescription": "Project Coordinator 创建的文档、文件、任务和外部结果会显示在这里。",
   "overview.worksEmptyTitle": "还没有产物",
+  "properties": {
+    "membersEmpty": "添加成员"
+  },
   "properties.created": "创建于",
   "properties.members": "成员",
   "properties.progress": "进度",

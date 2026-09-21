@@ -8,6 +8,7 @@ import ProjectDashboard from './ProjectDashboard';
 
 const mocks = vi.hoisted(() => ({
   goalSWR: { data: undefined as unknown, error: undefined, isLoading: false, mutate: vi.fn() },
+  goals: [] as { goal: { id: string; status: string; title: string } }[],
   listByWorkspace: vi.fn(),
   requestedKeys: [] as unknown[],
   workSWR: {
@@ -104,7 +105,7 @@ vi.mock('@/services/work', () => ({
 }));
 
 vi.mock('@/store/goal', () => ({
-  goalSelectors: { goalList: () => () => [] },
+  goalSelectors: { goalList: () => () => mocks.goals },
   useGoalStore: (selector: (state: unknown) => unknown) =>
     selector({ useFetchGoals: () => mocks.goalSWR }),
 }));
@@ -120,6 +121,7 @@ const detail = {
 
 beforeEach(() => {
   mocks.requestedKeys = [];
+  mocks.goals = [];
   mocks.listByWorkspace.mockReset().mockResolvedValue({ items: [], nextCursor: null });
   mocks.workSWR = { data: undefined, error: undefined, isLoading: false, mutate: vi.fn() };
 });
@@ -169,5 +171,29 @@ describe('project dashboard artifacts', () => {
     renderCharts();
 
     expect(screen.getByText('overview.worksEmptyTitle')).toBeInTheDocument();
+  });
+});
+
+describe('project dashboard milestones', () => {
+  // Linear shape: goals render as a milestone-style row list under a
+  // "Milestones" section (icon + title + status), not as the old goal-progress
+  // card grid.
+  it('lists goals as milestone rows under the Milestones section', () => {
+    mocks.goals = [
+      { goal: { id: 'goal_1', status: 'active', title: 'Ship parity' } },
+      { goal: { id: 'goal_2', status: 'achieved', title: 'Draft spec' } },
+    ];
+
+    renderCharts();
+
+    expect(screen.getByText('Milestones')).toBeInTheDocument();
+    expect(screen.getByText('Ship parity')).toBeInTheDocument();
+    expect(screen.getByText('Draft spec')).toBeInTheDocument();
+  });
+
+  it('keeps the orchestration policy reachable inside the overview', () => {
+    renderCharts();
+
+    expect(screen.getByText('orchestration.title')).toBeInTheDocument();
   });
 });

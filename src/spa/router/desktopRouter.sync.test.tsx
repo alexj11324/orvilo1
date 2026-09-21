@@ -220,12 +220,12 @@ describe('desktop router shared definition', () => {
         'library/:id',
         'conversation/:topicId?',
       ]);
-      // Linear shape: the project index redirects to its issue collection, so
-      // the index element must be a Navigate to 'tasks' rather than a page.
+      // Linear shape: the project index redirects to its Overview tab (the real
+      // app's landing), so the index element must be a Navigate to 'overview'.
       expect(projectIndexRoute?.element).toBeTruthy();
       expect(
         (projectIndexRoute?.element as ReactElement<{ to?: string }> | undefined)?.props.to,
-      ).toBe('tasks');
+      ).toBe('overview');
     },
   );
 

@@ -58,6 +58,14 @@
   "goals.status.running": "Pursuing",
   "goals.status.scheduled": "Scheduled",
   "goals.title": "Goals",
+  "list": {
+    "columnIssues": "Issues",
+    "columnKey": "Key",
+    "columnLead": "Lead",
+    "columnName": "Name",
+    "columnStatus": "Status",
+    "columnUpdated": "Updated"
+  },
   "list.deleteAction": "Delete project",
   "list.deleteConfirmDescription": "Delete “{{name}}”? Its project tasks, goals, conversations, and bindings will be permanently removed.",
   "list.deleteConfirmTitle": "Delete project?",
@@ -113,6 +121,13 @@
   "orchestration.syncLabel": "Sync",
   "orchestration.title": "Orchestration policy",
   "orchestration.unlimited": "No limit",
+  "overview": {
+    "milestones": "Milestones",
+    "propertiesLabel": "Properties",
+    "resourcesAdd": "Add document or link…",
+    "resourcesLabel": "Resources",
+    "viewAllGoals": "View all"
+  },
   "overview.activeTasks": "In progress",
   "overview.composerPlaceholder": "Tell the project what to move forward next…",
   "overview.contextEnabled": "Project context loaded",
@@ -146,6 +161,9 @@
   "overview.viewAllTasks": "View all tasks",
   "overview.worksEmptyDescription": "Documents, files, tasks, and external results created by the Project Coordinator will appear here.",
   "overview.worksEmptyTitle": "No outputs yet",
+  "properties": {
+    "membersEmpty": "Add members"
+  },
   "properties.created": "Created",
   "properties.members": "Members",
   "properties.progress": "Progress",

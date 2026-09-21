@@ -1,23 +1,32 @@
 'use client';
 
-import { Center, Flexbox, TextArea } from '@lobehub/ui';
+import { Center, Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { SendHorizontalIcon, SparklesIcon } from 'lucide-react';
+import dayjs from 'dayjs';
+import { CalendarIcon, Link2Icon, SendHorizontalIcon, SparklesIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { getProjectConversationStartPath } from '@/features/Projects/Layout/navigation';
+import {
+  getProjectConversationStartPath,
+  getProjectResourcesPath,
+} from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
+import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
 import ProjectDashboard from './ProjectDashboard';
+import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
   composer: css`
@@ -70,6 +79,9 @@ const ProjectWorkspace = memo(() => {
   const detail = useCurrentProjectDetail(projectId);
   const [message, setMessage] = useState('');
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+  const workspaceId = useActiveWorkspaceId();
+  const membersEnabled = useTeammatesEnabled() && !!workspaceId;
+  const membersSWR = useProjectMembersQuery(projectId ?? '', membersEnabled && !!projectId);
 
   if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
@@ -80,25 +92,119 @@ const ProjectWorkspace = memo(() => {
       </Center>
     );
 
+  const project = detail.project;
+  const projectReference = project.slug ?? projectId!;
+  const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
+  const members = membersSWR.data ?? [];
+  const knowledgeBases = detail.knowledgeBases ?? [];
+
   const startConversation = () => {
     const content = message.trim();
     if (!content || !projectId) return;
-    navigate(getProjectConversationStartPath(detail.project.slug ?? projectId, content));
+    navigate(getProjectConversationStartPath(projectReference, content));
   };
 
   return (
     <Flexbox className={styles.shell} flex={1}>
       <div className={styles.content}>
         <Flexbox className={styles.page} gap={0}>
-          <Flexbox gap={16}>
-            {detail.project.description ? (
-              <Flexbox gap={4}>
-                <Text fontSize={13} weight={600}>
-                  {t('overview.descriptionLabel', { defaultValue: 'Description' })}
+          <Flexbox gap={20}>
+            <Flexbox gap={10}>
+              <Avatar
+                avatar={project.avatar || undefined}
+                name={project.name}
+                shape={'square'}
+                size={44}
+                title={project.name}
+              />
+              <Flexbox gap={2}>
+                <Text fontSize={22} weight={650}>
+                  {project.name}
                 </Text>
-                <Text type={'secondary'}>{detail.project.description}</Text>
+                {project.description ? (
+                  <Text fontSize={14} type={'secondary'}>
+                    {project.description}
+                  </Text>
+                ) : null}
               </Flexbox>
-            ) : null}
+            </Flexbox>
+
+            <Flexbox gap={6}>
+              <Text fontSize={13} weight={600}>
+                {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
+              </Text>
+              <Flexbox horizontal align={'center'} flexWrap={'wrap'} gap={8}>
+                <Tag
+                  color={statusMeta.color}
+                  icon={<Icon icon={statusMeta.icon} size={12} />}
+                  size={'small'}
+                >
+                  {t(`acceptance.status.${project.status}`, {
+                    defaultValue: project.status,
+                  })}
+                </Tag>
+                {membersEnabled &&
+                  (members.length > 0 ? (
+                    <Flexbox horizontal align={'center'} gap={4}>
+                      {members.slice(0, 4).map((member) => (
+                        <Avatar
+                          avatar={member.user?.avatar ?? undefined}
+                          key={member.userId}
+                          size={18}
+                          title={member.user?.fullName || member.user?.username || undefined}
+                        />
+                      ))}
+                      {members.length > 4 && (
+                        <Text fontSize={12} type={'secondary'}>
+                          +{members.length - 4}
+                        </Text>
+                      )}
+                    </Flexbox>
+                  ) : (
+                    <Text fontSize={13} type={'secondary'}>
+                      {t('properties.membersEmpty', { defaultValue: 'Add members' })}
+                    </Text>
+                  ))}
+                {project.createdAt && (
+                  <Tag icon={<Icon icon={CalendarIcon} size={12} />} size={'small'}>
+                    {dayjs(project.createdAt).format('MMM D')}
+                  </Tag>
+                )}
+                <Tag size={'small'}>
+                  {t(`properties.visibilityValue.${project.visibility}`, {
+                    defaultValue: project.visibility,
+                  })}
+                </Tag>
+              </Flexbox>
+            </Flexbox>
+
+            <Flexbox gap={6}>
+              <Text fontSize={13} weight={600}>
+                {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
+              </Text>
+              <Flexbox horizontal align={'center'} flexWrap={'wrap'} gap={8}>
+                {knowledgeBases.map((link) => (
+                  <Tag
+                    icon={<Icon icon={Link2Icon} size={12} />}
+                    key={link.knowledgeBase.id}
+                    size={'small'}
+                  >
+                    {link.knowledgeBase.name}
+                  </Tag>
+                ))}
+                <Button
+                  icon={Link2Icon}
+                  size={'small'}
+                  type={'text'}
+                  onClick={() => navigate(getProjectResourcesPath(projectReference))}
+                >
+                  {t('overview.resourcesAdd', {
+                    defaultValue: 'Add document or link…',
+                  })}
+                </Button>
+              </Flexbox>
+            </Flexbox>
+
             <Flexbox className={styles.composer}>
               <TextArea
                 autoSize={{ maxRows: 6, minRows: 2 }}
@@ -118,7 +224,7 @@ const ProjectWorkspace = memo(() => {
                 justify={'space-between'}
               >
                 <Flexbox horizontal align={'center'} gap={7}>
-                  <Tag icon={<SparklesIcon size={12} />}>{detail.project.name}</Tag>
+                  <Tag icon={<SparklesIcon size={12} />}>{project.name}</Tag>
                   <Text fontSize={12} type={'secondary'}>
                     {t('overview.contextEnabled')}
                   </Text>
@@ -132,7 +238,7 @@ const ProjectWorkspace = memo(() => {
               </Flexbox>
             </Flexbox>
           </Flexbox>
-          <ProjectDashboard detail={detail} projectId={detail.project.id} />
+          <ProjectDashboard detail={detail} projectId={project.id} />
         </Flexbox>
       </div>
     </Flexbox>

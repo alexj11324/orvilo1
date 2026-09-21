@@ -5,7 +5,7 @@ import type {
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
-import { and, asc, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, max, or, sql } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
 import { knowledgeBases } from '../schemas/file';
@@ -315,7 +315,10 @@ export class ProjectModel {
     const { limit = 50, offset = 0, statuses } = options;
     const statusWhere = statuses?.length ? inArray(projects.status, statuses) : undefined;
     return this.db
-      .select()
+      .select({
+        ...getTableColumns(projects),
+        taskCount: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id})`,
+      })
       .from(projects)
       .where(and(this.readable(), statusWhere))
       .orderBy(desc(projects.updatedAt))

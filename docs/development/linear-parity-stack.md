@@ -87,3 +87,30 @@ only merge after the ones below it.
 - `IssueContent` (`AgentTaskDetail/IssueContent.tsx`) carries the issue
   properties/body/activity/comments sections; `TaskDetailPage` delegates to
   it and the Inbox owner mounts it inside `WorkSurfaceSplit` next wave.
+
+## v6 wave 2 — inbox recovery
+
+- `WorkInbox` mounts `WorkSurfaceSplit`: a `splitList` feed + a `splitDetail`
+  pane that renders the notification header/actions above the lazy
+  `IssueContent` — no embedded `TaskDetailPage`, one scroll owner per pane.
+  Ordinary (non-action) notifications render no approval buttons.
+- `InboxFeedPager` (`WorkInbox/inboxFeedPager.ts`) owns the tail of the
+  keyset-paged feed; page 1 stays in SWR. Commit tokens bind each in-flight
+  page fetch to `user + workspace + kind/filter fingerprint + generation`,
+  so a late response that resolves after a scope change is dropped instead
+  of landing in the new list. `removeCard`/`updateCard` patch the tail in
+  place (and blacklist racing resurrections) so organizing one card updates
+  later pages immediately. Reusable by other keyset-paged lists.
+- `notification.feedCard` is the authorized by-id read for deep links:
+  `?item=<id>` resolves the selected card even when it lives on an unloaded
+  page, and `?detail=1` restores the open detail on mobile.
+- Reply drafts persist under
+  `orvilo:inbox-draft:{user}:{workspace}:{requestId}:{generation}` — bound
+  to the request's `executionGeneration`/`sourceRevision`, never the
+  notification `activityVersion`.
+- Decision idempotency persists under
+  `orvilo:inbox-decision:{user}:{workspace}:{requestId}:{decision}`: one
+  intent is `{requestId + sourceRevision + executionGeneration + decision +
+inputDigest}` → one `operationId`. After an unknown result the next attempt
+  reconciles via `feedCard` before resending — identical retries reuse the
+  operation, edited input mints a new one.

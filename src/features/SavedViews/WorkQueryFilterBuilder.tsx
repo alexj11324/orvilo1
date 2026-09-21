@@ -5,7 +5,7 @@ import { ActionIcon, Button, Select, Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryEntityType, WorkQueryValue } from '@orvilo/types';
 import { workQueryFieldSpec, workQueryFieldSpecs } from '@orvilo/types';
 import { PlusIcon, XIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -32,10 +32,23 @@ const userValueToOption = (value: WorkQueryValue | undefined): string | undefine
 const optionToUserValue = (option: string): WorkQueryValue =>
   option === SELF_VALUE ? { ref: 'currentUser' } : option;
 
+const PROJECT_PAGE_SIZE = 25;
+const PROJECT_MAX_PAGES = 10;
+
+const toProjectOption = (item: { id: string; name?: string | null }) => ({
+  label: item.name ?? item.id,
+  value: item.id,
+});
+
 /**
- * Project picker backed by the permission-filtered project query — the Select's
- * built-in search filters the loaded labels client-side (base-ui Select has no
- * server search hook), so values always resolve to real readable projects.
+ * Project picker backed by the authorized `projectOptions` search: the first
+ * page loads lazily when the popup opens, keystrokes re-search server-side,
+ * and later pages stream in behind it while the popup stays open — a Select
+ * option cannot itself act as a "load more" row because picking it closes the
+ * popup. The selected value hydrates by id separately since it may sit beyond
+ * the loaded pages. base-ui Select has no remote-search hook, so the wrapping
+ * div captures `input` events from the popup's search box (React events bubble
+ * through the portal).
  */
 const ProjectValueSelect = memo<{
   onChange: (value: string | undefined) => void;
@@ -43,64 +56,133 @@ const ProjectValueSelect = memo<{
   workspaceId: string | null;
 }>(({ onChange, value, workspaceId }) => {
   const { t } = useTranslation('common');
-  const { data } = useClientDataSWR(`view-builder-projects:${workspaceId ?? 'personal'}`, () =>
-    workAttentionService.query({
-      limit: 100,
-      query: { entityType: 'project', schemaVersion: 1 },
-    }),
+  const [open, setOpen] = useState(false);
+  const [needle, setNeedle] = useState('');
+  const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    const timer = setTimeout(() => {
+      const fetchPage = async (afterId?: string) => {
+        const result = await workAttentionService.projectOptions({
+          afterId,
+          limit: PROJECT_PAGE_SIZE,
+          query: needle || undefined,
+        });
+        if (cancelled) return null;
+        const items = result?.data?.items ?? [];
+        setOptions((current) => {
+          const seen = new Set(current.map((option) => option.value));
+          return [...current, ...items.filter((item) => !seen.has(item.id)).map(toProjectOption)];
+        });
+        return result?.data?.nextCursor ?? null;
+      };
+      void (async () => {
+        try {
+          setOptions([]);
+          let cursor = await fetchPage();
+          for (let page = 1; cursor && page < PROJECT_MAX_PAGES; page += 1) {
+            cursor = await fetchPage(cursor);
+          }
+        } catch {
+          if (!cancelled) setOptions([]);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [needle, open]);
+
+  const { data: selectedData } = useClientDataSWR(
+    value ? `view-builder-project:${workspaceId ?? 'personal'}:${value}` : null,
+    () => workAttentionService.projectOptions({ ids: [value!] }),
   );
 
-  const projects = data?.data && 'projects' in data.data ? (data.data.projects ?? []) : [];
-  const options = projects.map((project: { id: string; name?: string | null }) => ({
-    label: project.name ?? project.id,
-    value: project.id,
-  }));
+  const mergedOptions = useMemo(() => {
+    const selected = (selectedData?.data?.items ?? []).map(toProjectOption);
+    const seen = new Set(options.map((option) => option.value));
+    return [...selected.filter((option) => !seen.has(option.value)), ...options];
+  }, [options, selectedData]);
 
   return (
-    <Select
-      showSearch
-      options={options}
-      placeholder={t('savedViews.filters.projectPlaceholder')}
-      size="small"
-      style={{ minWidth: 160 }}
-      value={value}
-      onChange={(next) => onChange(typeof next === 'string' ? next : undefined)}
-    />
+    // The popup's search input lives in a portal; its `input` events still
+    // bubble to React ancestors, which is the only way to observe the needle.
+    <div
+      onInput={(event) => {
+        const target = event.target;
+        if (target instanceof HTMLInputElement) setNeedle(target.value);
+      }}
+    >
+      <Select
+        showSearch
+        loading={loading}
+        options={mergedOptions}
+        placeholder={t('savedViews.filters.projectPlaceholder')}
+        size="small"
+        style={{ minWidth: 160 }}
+        value={value}
+        onChange={(next) => onChange(typeof next === 'string' ? next : undefined)}
+        onOpenChange={setOpen}
+      />
+    </div>
   );
 });
 
 ProjectValueSelect.displayName = 'ProjectValueSelect';
 
-/** Cycle options resolve per team — loaded once, only when a cycle row exists. */
-const useCycleOptions = (teamIds: string[], needed: boolean, workspaceId: string | null) => {
+/**
+ * Cycle options come from a single `cycleOptions` query scoped to the team
+ * the filter already pins (a `teamId = …` row); without one it lists cycles
+ * across the caller's readable teams in one call — never a per-team fan-out.
+ */
+const useCycleOptions = (
+  teamId: string | undefined,
+  needed: boolean,
+  workspaceId: string | null,
+  selectedId?: string,
+) => {
   const { data } = useClientDataSWR(
-    needed && teamIds.length > 0
-      ? `view-builder-cycles:${workspaceId ?? 'personal'}:${[...teamIds].sort().join(',')}`
-      : null,
+    needed ? `view-builder-cycles:${workspaceId ?? 'personal'}:${teamId ?? 'all'}` : null,
     async () => {
-      const details = await Promise.all(
-        teamIds.map(async (id) => ({
-          detail: await lambdaClient.team.team.query({ teamId: id }),
-          id,
-        })),
-      );
-      return details.flatMap(({ detail, id }) =>
-        (detail.data?.cycles ?? []).map((cycle) => ({
-          label: `${detail.data?.team.name ?? id} · ${cycle.name}`,
-          value: cycle.id,
-        })),
-      );
+      const result = await workAttentionService.cycleOptions({ limit: 100, teamId });
+      return (result?.data ?? []).map((cycle) => ({
+        label: teamId
+          ? (cycle.name ?? cycle.id)
+          : `${cycle.teamName ?? cycle.teamId} · ${cycle.name ?? cycle.id}`,
+        value: cycle.id,
+      }));
     },
   );
-  return data ?? [];
+  const { data: selected } = useClientDataSWR(
+    needed && selectedId ? `view-builder-cycle:${workspaceId ?? 'personal'}:${selectedId}` : null,
+    async () => {
+      const result = await workAttentionService.cycleOptions({ ids: [selectedId!] });
+      return (result?.data ?? []).map((cycle) => ({
+        label: `${cycle.teamName ?? cycle.teamId} · ${cycle.name ?? cycle.id}`,
+        value: cycle.id,
+      }));
+    },
+  );
+  return useMemo(() => {
+    const seen = new Set((data ?? []).map((option) => option.value));
+    return [...(selected ?? []).filter((option) => !seen.has(option.value)), ...(data ?? [])];
+  }, [data, selected]);
 };
 
 const FilterRowEditor = memo<{
+  cycleTeamId?: string;
   entityType: WorkQueryEntityType;
   onChange: (row: FilterRow) => void;
   onRemove: () => void;
   row: FilterRow;
-}>(({ entityType, onChange, onRemove, row }) => {
+}>(({ cycleTeamId, entityType, onChange, onRemove, row }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const spec = workQueryFieldSpec(entityType, row.field);
@@ -133,9 +215,10 @@ const FilterRowEditor = memo<{
   );
 
   const cycleOptions = useCycleOptions(
-    teamOptions.map((option) => option.value),
+    cycleTeamId,
     spec?.valueKind === 'cycle',
     workspaceId,
+    spec?.valueKind === 'cycle' && typeof row.value === 'string' ? row.value : undefined,
   );
 
   const fieldOptions = workQueryFieldSpecs(entityType).map((item) => ({
@@ -313,17 +396,23 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
       [onChange, value],
     );
 
-    const removeRetained = useCallback(
+    const removeSlot = useCallback(
       (index: number) => {
-        onChange({ ...value, retained: value.retained.filter((_, i) => i !== index) });
+        onChange({ ...value, slots: value.slots.filter((_, i) => i !== index) });
       },
       [onChange, value],
     );
+
+    // A pinned `teamId = <team>` row scopes the cycle picker to that team.
+    const cycleTeamId = value.rows.find(
+      (row) => row.field === 'teamId' && row.op === 'eq' && typeof row.value === 'string',
+    )?.value as string | undefined;
 
     return (
       <Flexbox gap={8}>
         {value.rows.map((row) => (
           <FilterRowEditor
+            cycleTeamId={cycleTeamId}
             entityType={entityType}
             key={row.id}
             row={row}
@@ -331,21 +420,34 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
             onRemove={() => removeRow(row.id)}
           />
         ))}
-        {value.retained.map((node, index) => (
-          <Flexbox horizontal align="center" gap={8} key={`retained-${index}`}>
-            <Tag>
-              {t('savedViews.filters.advancedNode', {
-                field: 'field' in node ? node.field : 'any',
-              })}
-            </Tag>
+        {value.slots.map((slot, index) =>
+          slot.type === 'node' ? (
+            <Flexbox horizontal align="center" gap={8} key={`slot-${index}`}>
+              <Tag>
+                {t('savedViews.filters.advancedNode', {
+                  field: 'field' in slot.node ? slot.node.field : 'any',
+                })}
+              </Tag>
+              <ActionIcon
+                icon={XIcon}
+                size="small"
+                title={t('savedViews.filters.remove')}
+                onClick={() => removeSlot(index)}
+              />
+            </Flexbox>
+          ) : null,
+        )}
+        {value.any.length > 0 ? (
+          <Flexbox horizontal align="center" gap={8}>
+            <Tag>{t('savedViews.filters.advancedNode', { field: 'any' })}</Tag>
             <ActionIcon
               icon={XIcon}
               size="small"
               title={t('savedViews.filters.remove')}
-              onClick={() => removeRetained(index)}
+              onClick={() => onChange({ ...value, any: [] })}
             />
           </Flexbox>
-        ))}
+        ) : null}
         <Flexbox horizontal>
           <Button
             icon={PlusIcon}
@@ -356,7 +458,9 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
             {t('savedViews.filters.add')}
           </Button>
         </Flexbox>
-        {value.rows.length === 0 && value.retained.length === 0 ? (
+        {value.rows.length === 0 &&
+        !value.slots.some((slot) => slot.type === 'node') &&
+        value.any.length === 0 ? (
           <Text fontSize={12} type="secondary">
             {t('savedViews.filters.empty')}
           </Text>

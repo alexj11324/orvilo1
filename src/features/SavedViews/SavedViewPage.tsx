@@ -199,6 +199,7 @@ const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
   layout: view.layout ?? 'list',
   name: view.name,
   sort: view.queryAst.sort,
+  sortMode: view.queryAst.sortMode,
   teamId: view.teamId ?? null,
   visibility: view.visibility ?? 'private',
 });
@@ -209,6 +210,8 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   groupBy: state.groupBy === 'none' ? undefined : state.groupBy,
   schemaVersion: 1,
   sort: state.sort,
+  // Board ordering is explicit — the field is meaningless off-board.
+  sortMode: state.layout === 'board' ? state.sortMode : undefined,
 });
 
 const SavedViewPage = memo(() => {
@@ -597,6 +600,7 @@ const SavedViewPage = memo(() => {
             loading={isLoading}
             loadingLabel={t('savedViews.loading')}
             movable={(evaluation?.layout ?? view?.layout) === 'board'}
+            sortMode={view?.queryAst.sortMode}
             tasks={tasks}
             total={evaluation?.total}
             createContext={

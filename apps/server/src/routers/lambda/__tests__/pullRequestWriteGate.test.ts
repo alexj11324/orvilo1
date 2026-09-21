@@ -48,10 +48,10 @@ describe('pullRequestRouter write gate', () => {
     async (procedure) => {
       const input =
         procedure === 'addFileComment'
-          ? { body: 'x', id: REVIEW_ID, line: 1, path: 'a.ts' }
+          ? { body: 'x', id: REVIEW_ID, line: 1, observedHeadSha: 'a1b2c3d', path: 'a.ts' }
           : procedure === 'replyThread'
-            ? { body: 'x', id: REVIEW_ID, threadId: 't-1' }
-            : { event: 'COMMENT', id: REVIEW_ID };
+            ? { body: 'x', id: REVIEW_ID, observedHeadSha: 'a1b2c3d', threadId: 't-1' }
+            : { event: 'COMMENT', id: REVIEW_ID, observedHeadSha: 'a1b2c3d' };
 
       await expect(
         (createCaller()[procedure] as (i: unknown) => Promise<unknown>)(input),
@@ -61,19 +61,27 @@ describe('pullRequestRouter write gate', () => {
 
   it('does not reach the service while gated off', async () => {
     await expect(
-      createCaller().submitReview({ event: 'COMMENT', id: REVIEW_ID }),
+      createCaller().submitReview({ event: 'COMMENT', id: REVIEW_ID, observedHeadSha: 'a1b2c3d' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(mockSubmitReview).not.toHaveBeenCalled();
   });
 
   it('reaches the service when ORVILO_PR_REVIEW_WRITE=1', async () => {
     process.env.ORVILO_PR_REVIEW_WRITE = '1';
-    const result = await createCaller().submitReview({ event: 'COMMENT', id: REVIEW_ID });
+    const result = await createCaller().submitReview({
+      event: 'COMMENT',
+      id: REVIEW_ID,
+      observedHeadSha: 'a1b2c3d',
+    });
     expect(result).toMatchObject({ success: true });
     expect(mockSubmitReview).toHaveBeenCalledWith({
       body: undefined,
       event: 'COMMENT',
-      reviewId: REVIEW_ID,
+      id: REVIEW_ID,
+      observedHeadSha: 'a1b2c3d',
+      operationId: undefined,
+      reviewSessionId: undefined,
+      snapshotId: undefined,
     });
   });
 });

@@ -27,7 +27,7 @@ export const resolveGoalReviewModelConfig = async (
       { ...config, enabled: config?.enabled ?? false },
     ]),
   );
-  const infra = new AiInfraRepos(db, userId, providerConfigs, workspaceId);
+  const infra = new AiInfraRepos(providerConfigs);
   const tried = new Set<string>();
   const usable = async (candidate?: { model?: string | null; provider?: string | null } | null) => {
     if (

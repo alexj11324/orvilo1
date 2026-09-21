@@ -1,28 +1,8 @@
 import type { AiProviderRuntimeState } from '@orvilo/types';
 import type { EnabledAiModel } from 'model-bank';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { getTestDB } from '../../../core/getTestDB';
-import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
-
-const userId = 'test-user-id';
-const mockProviderConfigs = {
-  openai: { enabled: true },
-  anthropic: { enabled: false },
-};
-
-let serverDB: OrviloDatabase;
-let repo: AiInfraRepos;
-
-beforeAll(async () => {
-  serverDB = await getTestDB();
-}, 30000);
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  repo = new AiInfraRepos(serverDB, userId, mockProviderConfigs);
-});
 
 describe('AiInfraRepos', () => {
   describe('AiInfraRepos.tryMatchingProviderFrom', () => {

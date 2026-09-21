@@ -6,166 +6,18 @@ import {
   type ModelRuntimeHooks,
 } from '@orvilo/model-runtime';
 import { OrviloVertexAI } from '@orvilo/model-runtime/vertexai';
-import {
-  type AWSBedrockKeyVault,
-  type AzureOpenAIKeyVault,
-  ChatErrorType,
-  type ClientSecretPayload,
-  type CloudflareKeyVault,
-  type ComfyUIKeyVault,
-  type GithubCopilotKeyVault,
-  type OAuthDeviceFlowKeyVault,
-  type OpenAICompatibleKeyVault,
-  type SuperGrokKeyVault,
-  type VertexAIKeyVault,
-} from '@orvilo/types';
+import { ChatErrorType, type ClientSecretPayload } from '@orvilo/types';
 import { safeParseJSON } from '@orvilo/utils';
-import type { AiFullModelCard } from 'model-bank';
 import { ModelProvider } from 'model-bank';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
 
-import { loadModels } from '@/business/client/model-bank/loadModels';
 import { getBusinessModelRuntimeHooks } from '@/business/server/model-runtime';
 import { getLLMConfig } from '@/envs/llm';
-import { getServerGlobalConfig } from '@/server/globalConfig';
 import { createLLMGenerationTracingHook } from '@/server/services/llmGenerationTracing/hook';
 
 import apiKeyManager from './apiKeyManager';
 
 export * from './trace';
-
-/**
- * Combined KeyVaults type for all providers
- */
-type ProviderKeyVaults = OpenAICompatibleKeyVault &
-  AzureOpenAIKeyVault &
-  AWSBedrockKeyVault &
-  CloudflareKeyVault &
-  ComfyUIKeyVault &
-  GithubCopilotKeyVault &
-  OAuthDeviceFlowKeyVault &
-  SuperGrokKeyVault &
-  VertexAIKeyVault;
-
-/** Payload for the retired BYOK read path — empty; only env fallbacks remain. */
-const EMPTY_KEY_VAULTS = {} as ProviderKeyVaults;
-
-/**
- * Build ClientSecretPayload from keyVaults stored in database
- *
- * This is the server-side equivalent of the frontend's getProviderAuthPayload function.
- * It converts the keyVaults object from database to the ClientSecretPayload format
- * expected by initModelRuntimeWithUserPayload.
- *
- * For custom providers, we use runtimeProvider (sdkType) to determine which fields
- * to include in the payload. This ensures that provider-specific fields like
- * cloudflareBaseURLOrAccountID are correctly forwarded.
- *
- * @param keyVaults - The keyVaults object from database (already decrypted)
- * @param runtimeProvider - The runtime provider (sdkType) to use for building payload
- * @returns ClientSecretPayload for the provider
- */
-export const buildPayloadFromKeyVaults = (
-  keyVaults: ProviderKeyVaults,
-  runtimeProvider: string,
-): ClientSecretPayload => {
-  // Use runtimeProvider to determine which fields to include
-  // This handles both builtin providers and custom providers with sdkType
-  switch (runtimeProvider) {
-    case ModelProvider.Bedrock: {
-      const { accessKeyId, apiKey, region, secretAccessKey, sessionToken } = keyVaults;
-
-      return {
-        apiKey,
-        awsAccessKeyId: accessKeyId,
-        awsRegion: region,
-        awsSecretAccessKey: secretAccessKey,
-        awsSessionToken: sessionToken,
-        runtimeProvider,
-      };
-    }
-
-    case ModelProvider.Azure: {
-      return {
-        apiKey: keyVaults.apiKey,
-        baseURL: keyVaults.baseURL || keyVaults.endpoint,
-        runtimeProvider,
-      };
-    }
-
-    case ModelProvider.Ollama: {
-      return { baseURL: keyVaults.baseURL, runtimeProvider };
-    }
-
-    case ModelProvider.Cloudflare: {
-      return {
-        apiKey: keyVaults.apiKey,
-        cloudflareBaseURLOrAccountID: keyVaults.baseURLOrAccountID,
-        runtimeProvider,
-      };
-    }
-
-    case ModelProvider.ComfyUI: {
-      return {
-        apiKey: keyVaults.apiKey,
-        authType: keyVaults.authType,
-        baseURL: keyVaults.baseURL,
-        customHeaders: keyVaults.customHeaders,
-        password: keyVaults.password,
-        runtimeProvider,
-        username: keyVaults.username,
-      };
-    }
-
-    case ModelProvider.VertexAI: {
-      return {
-        apiKey: keyVaults.apiKey,
-        baseURL: keyVaults.baseURL,
-        runtimeProvider,
-        vertexAIRegion: keyVaults.region,
-      };
-    }
-
-    case ModelProvider.GithubCopilot: {
-      // Support both traditional PAT (apiKey) and OAuth tokens
-      return {
-        apiKey: keyVaults.apiKey,
-        bearerToken: keyVaults.bearerToken,
-        bearerTokenExpiresAt: keyVaults.bearerTokenExpiresAt
-          ? Number(keyVaults.bearerTokenExpiresAt)
-          : undefined,
-        oauthAccessToken: keyVaults.oauthAccessToken,
-        runtimeProvider,
-      };
-    }
-
-    case ModelProvider.SuperGrok: {
-      // OAuth-only provider: the (already refreshed) access token IS the
-      // bearer credential for api.x.ai — expose it as apiKey so the runtime
-      // stays a stateless OpenAI-compatible client.
-      return {
-        apiKey: keyVaults.oauthAccessToken,
-        runtimeProvider,
-      };
-    }
-
-    case ModelProvider.ChatGPT: {
-      return {
-        apiKey: keyVaults.oauthAccessToken,
-        chatgptAccountId: keyVaults.oauthAccountId,
-        runtimeProvider,
-      };
-    }
-
-    default: {
-      return {
-        apiKey: keyVaults.apiKey,
-        baseURL: keyVaults.baseURL,
-        runtimeProvider,
-      };
-    }
-  }
-};
 
 /**
  * Retrieves the options object from environment and apikeymanager
@@ -436,8 +288,8 @@ export const initModelRuntimeWithUserPayload = (
  *
  * Credentials therefore come from deployment-owned configuration only:
  * `{PROVIDER}_API_KEY` / `{PROVIDER}_PROXY_URL` envs inside
- * `buildPayloadFromKeyVaults` / `getParamsFromPayload`, or the
- * `ModelProvider.Orvilo` deployment relay, which needs no payload at all.
+ * `getParamsFromPayload`, or the `ModelProvider.Orvilo` deployment relay,
+ * which needs no payload at all.
  *
  * @param userId - The user ID (billing/tracing attribution)
  * @param provider - Builtin provider id (e.g. 'openai', 'orvilo')
@@ -460,7 +312,7 @@ export const initModelRuntimeFromDeploymentConfig = async (
     });
   }
 
-  const payload = buildPayloadFromKeyVaults(EMPTY_KEY_VAULTS, provider);
+  const payload = { runtimeProvider: provider };
 
   const businessHooks = getBusinessModelRuntimeHooks(userId, provider, workspaceId);
   const tracingHooks = createLLMGenerationTracingHook(userId, provider, workspaceId);
@@ -468,40 +320,3 @@ export const initModelRuntimeFromDeploymentConfig = async (
 
   return initModelRuntimeWithUserPayload(provider, payload, { userId, workspaceId }, hooks);
 };
-
-const getEnabledServerChatModels = async (provider: ModelProvider) => {
-  const providerConfig = (await getServerGlobalConfig()).aiProvider[provider];
-  if (!providerConfig?.enabled) return [];
-
-  const models =
-    providerConfig.serverModelLists ??
-    (await loadModels()).filter((model) => model.providerId === provider);
-
-  return models.filter((model) => model.enabled && model.type === 'chat');
-};
-
-const findEnabledServerChatModel = async (provider: string, model: string) => {
-  if (!Object.values(ModelProvider).includes(provider as ModelProvider)) {
-    throw new Error('Deployment-level custom providers are not supported for server agents');
-  }
-  const modelConfig = (await getEnabledServerChatModels(provider as ModelProvider)).find(
-    (item) => item.id === model,
-  );
-  if (!modelConfig) {
-    throw new Error('The selected server model is not available');
-  }
-
-  return modelConfig;
-};
-
-const toServerModelSelection = (provider: string, modelConfig: AiFullModelCard) => ({
-  ...(modelConfig.config?.deploymentName && {
-    deploymentName: modelConfig.config.deploymentName,
-  }),
-  model: modelConfig.id,
-  provider,
-});
-
-/** Resolve a user selection against the deployment-owned, enabled chat model catalog. */
-export const resolveServerModel = async (provider: string, model: string) =>
-  toServerModelSelection(provider, await findEnabledServerChatModel(provider, model));

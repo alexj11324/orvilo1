@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   createFtsSearchRepo: vi.fn(async () => ({ ftsSearchCandidateEnabled: false })),
   embeddings: vi.fn(),
   initModelRuntimeFromDeploymentConfig: vi.fn(),
-  initModelRuntimeWithUserPayload: vi.fn(),
   normalizeUserMemorySearchQueries: vi.fn(function (queries?: string[]) {
     return queries ?? [];
   }),
@@ -40,7 +39,6 @@ vi.mock('@/server/globalConfig', () => ({
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDeploymentConfig: mocks.initModelRuntimeFromDeploymentConfig,
-  initModelRuntimeWithUserPayload: mocks.initModelRuntimeWithUserPayload,
 }));
 
 vi.mock('@/server/services/agentSignal/procedure', () => ({
@@ -65,14 +63,6 @@ vi.mock('@/server/services/ftsSearch/observability', () => ({
 const { memoryRuntime } = await import('../memory');
 
 const createContext = (): ToolExecutionContext => ({
-  memoryEmbeddingRuntime: {
-    model: 'server-embedding-model',
-    payload: {
-      apiKey: 'server-key',
-      baseURL: 'https://embedding.example.com/v1',
-    },
-    provider: 'server-provider',
-  },
   serverDB: {
     query: {
       userSettings: {
@@ -89,9 +79,9 @@ describe('memoryRuntime', () => {
     vi.clearAllMocks();
   });
 
-  it('uses server-owned embedding runtime for memory search', async () => {
+  it('uses the deployment embedding runtime for memory search', async () => {
     mocks.embeddings.mockResolvedValueOnce([[0.1, 0.2, 0.3]]);
-    mocks.initModelRuntimeWithUserPayload.mockReturnValueOnce({
+    mocks.initModelRuntimeFromDeploymentConfig.mockReturnValueOnce({
       embeddings: mocks.embeddings,
     });
     mocks.searchMemory.mockResolvedValueOnce({
@@ -106,19 +96,15 @@ describe('memoryRuntime', () => {
 
     await runtime.searchUserMemory({ queries: ['renewal timeline'] });
 
-    expect(mocks.initModelRuntimeWithUserPayload).toHaveBeenCalledWith(
-      'server-provider',
-      {
-        apiKey: 'server-key',
-        baseURL: 'https://embedding.example.com/v1',
-      },
-      { userId: 'synthetic-user' },
+    expect(mocks.initModelRuntimeFromDeploymentConfig).toHaveBeenCalledWith(
+      'synthetic-user',
+      'default-provider',
+      undefined,
     );
-    expect(mocks.initModelRuntimeFromDeploymentConfig).not.toHaveBeenCalled();
     expect(mocks.embeddings).toHaveBeenCalledWith(
       expect.objectContaining({
         input: ['renewal timeline'],
-        model: 'server-embedding-model',
+        model: 'default-embedding-model',
       }),
       expect.objectContaining({ user: 'synthetic-user' }),
     );
@@ -132,7 +118,9 @@ describe('memoryRuntime', () => {
     const longQuery = 'context '.repeat(40).trimEnd();
     const embedding = [0.1, 0.2, 0.3];
     mocks.embeddings.mockResolvedValueOnce([embedding]);
-    mocks.initModelRuntimeWithUserPayload.mockReturnValueOnce({ embeddings: mocks.embeddings });
+    mocks.initModelRuntimeFromDeploymentConfig.mockReturnValueOnce({
+      embeddings: mocks.embeddings,
+    });
     mocks.searchMemory.mockResolvedValueOnce({
       activities: [],
       contexts: [],

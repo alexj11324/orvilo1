@@ -35,15 +35,6 @@ vi.mock('@/database/models/message', () => ({
   }),
 }));
 
-vi.mock('@/database/models/aiModel', () => ({
-  AiModelModel: vi.fn().mockImplementation(function () {
-    return {
-      findByIdAndProvider: vi.fn().mockResolvedValue(undefined),
-      getModelReasoningConfig: vi.fn().mockResolvedValue({ reasoningEffort: 'high' }),
-    };
-  }),
-}));
-
 // Mock AgentModel
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {

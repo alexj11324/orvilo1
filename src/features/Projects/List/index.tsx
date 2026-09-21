@@ -292,7 +292,7 @@ const ProjectListPage = memo(() => {
               </Flexbox>
               <span className={styles.owner}>
                 <Text fontSize={12} type={'secondary'}>
-                  {t('list.columnLead', { defaultValue: 'Lead' })}
+                  {t('list.columnOwner', { defaultValue: 'Owner' })}
                 </Text>
               </span>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>

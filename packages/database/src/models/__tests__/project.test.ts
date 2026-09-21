@@ -10,6 +10,8 @@ import {
   projects,
   projectWorks,
   tasks,
+  teamMembers,
+  teams,
   users,
   works,
   workspaceMembers,
@@ -149,6 +151,74 @@ describe('ProjectModel', () => {
     ]);
     expect(await model.list({ statuses: [] })).toHaveLength(2);
     expect(await model.list({ limit: 1, offset: 1 })).toHaveLength(1);
+  });
+
+  it('counts only tasks the caller can actually read', async () => {
+    const workspaceId = 'project-task-count-ws';
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Task Count Workspace',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: otherUserId, workspaceId },
+    ]);
+    await serverDB.insert(teams).values({
+      createdByUserId: userId,
+      id: 'project-count-private-team',
+      key: 'CNT',
+      name: 'Private Team',
+      visibility: 'private',
+      workspaceId,
+    });
+    const owner = new ProjectModel(serverDB, userId, workspaceId);
+    const member = new ProjectModel(serverDB, otherUserId, workspaceId);
+    const project = await createProject(owner, { name: 'Counted' });
+    const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
+
+    const visible = await ownerTasks.create({
+      instruction: 'Visible',
+      projectId: project.id,
+    });
+    // A private-team task is invisible to a member who is not on the team.
+    await ownerTasks.create({
+      instruction: 'Team-scoped',
+      projectId: project.id,
+      teamId: 'project-count-private-team',
+    });
+    const deleted = await ownerTasks.create({
+      instruction: 'Deleted',
+      projectId: project.id,
+    });
+    await serverDB.update(tasks).set({ isDeleted: true }).where(eq(tasks.id, deleted.id));
+    // Another member's private task never surfaces in the count.
+    await new TaskModel(serverDB, otherUserId, workspaceId).create({
+      instruction: 'Member private',
+      projectId: project.id,
+      visibility: 'private',
+    });
+
+    // member sees the public task and their own private task — not the
+    // private-team row, not the soft-deleted row.
+    const memberRows = await member.list();
+    expect(memberRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 2 })]);
+    // The owner (team creator) sees the team task but not the deleted row or
+    // the member's private task.
+    const ownerRows = await owner.list();
+    expect(ownerRows).toEqual([expect.objectContaining({ id: project.id, taskCount: 2 })]);
+    // Once the member joins the private team its task becomes readable.
+    await serverDB.insert(teamMembers).values({
+      role: 'member',
+      teamId: 'project-count-private-team',
+      userId: otherUserId,
+      workspaceId,
+    });
+    expect(await member.list()).toEqual([
+      expect.objectContaining({ id: project.id, taskCount: 3 }),
+    ]);
+    expect(visible.id).toBeTruthy();
   });
 
   it('does not expose or mutate another user project in personal mode', async () => {

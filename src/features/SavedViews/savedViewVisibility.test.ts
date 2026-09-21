@@ -14,4 +14,10 @@ describe('savedViewVisibilityKey', () => {
       expect(savedViewVisibilityKey(value)).toBe('savedViews.visibilityUnknown');
     }
   });
+
+  it('does not mistake inherited prototype keys for stored scopes', () => {
+    for (const value of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      expect(savedViewVisibilityKey(value)).toBe('savedViews.visibilityUnknown');
+    }
+  });
 });

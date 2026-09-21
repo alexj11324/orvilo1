@@ -10,6 +10,6 @@ const VISIBILITY_KEYS = {
 // sharing scope (directory table, team views list, share dialog). Unknown
 // values must not silently render as a public scope.
 export const savedViewVisibilityKey = (visibility?: string | null) =>
-  visibility && visibility in VISIBILITY_KEYS
+  visibility && Object.hasOwn(VISIBILITY_KEYS, visibility)
     ? VISIBILITY_KEYS[visibility as SavedViewVisibilityValue]
     : ('savedViews.visibilityUnknown' as const);

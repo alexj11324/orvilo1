@@ -5,7 +5,19 @@ import type {
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
-import { and, asc, desc, eq, getTableColumns, inArray, isNull, max, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  getTableName,
+  inArray,
+  isNull,
+  max,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
 import { knowledgeBases } from '../schemas/file';
@@ -20,6 +32,7 @@ import { tasks } from '../schemas/task';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
+import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
 
@@ -202,6 +215,26 @@ export class ProjectModel {
     return and(this.readable(), eq(projects.userId, this.userId));
   }
 
+  /**
+   * The same predicate TaskModel uses for list/read — workspace visibility,
+   * private-team ACL, and soft-delete. `taskCount` must match what the
+   * project's Issues list would actually show the caller.
+   */
+  private taskReadable() {
+    return and(
+      buildWorkspaceWhere(
+        { userId: this.userId, workspaceId: this.workspaceId },
+        {
+          userId: tasks.createdByUserId,
+          visibility: tasks.visibility,
+          workspaceId: tasks.workspaceId,
+        },
+      ),
+      this.workspaceId ? buildTaskTeamReadableWhere(this.db, this.userId) : undefined,
+      sql`${tasks.isDeleted} IS NOT TRUE`,
+    );
+  }
+
   private orchestrationPolicyManageable() {
     return this.canManageAll
       ? this.readable()
@@ -317,7 +350,9 @@ export class ProjectModel {
     return this.db
       .select({
         ...getTableColumns(projects),
-        taskCount: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id})`,
+        // Column refs lose their table qualifier inside `sql` templates, so the
+        // outer correlation is spelled out — a bare "id" would bind to tasks.id.
+        taskCount: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${sql.raw(`"${getTableName(projects)}"."id"`)} and ${this.taskReadable()})`,
       })
       .from(projects)
       .where(and(this.readable(), statusWhere))

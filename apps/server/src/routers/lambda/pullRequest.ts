@@ -9,6 +9,8 @@ import {
   PullRequestReviewService,
 } from '@/server/services/pullRequestReview';
 
+import { assertPullRequestReviewWriteEnabled } from './_helpers/pullRequestReviewWriteGate';
+
 const reviewProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
   return opts.next({
@@ -54,6 +56,7 @@ export const pullRequestRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertPullRequestReviewWriteEnabled();
       try {
         const result = await ctx.pullRequestReviews.addFileComment({
           body: input.body,
@@ -103,6 +106,7 @@ export const pullRequestRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertPullRequestReviewWriteEnabled();
       try {
         const result = await ctx.pullRequestReviews.replyToThread({
           body: input.body,
@@ -124,6 +128,7 @@ export const pullRequestRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertPullRequestReviewWriteEnabled();
       try {
         const result = await ctx.pullRequestReviews.submitReview({
           body: input.body,

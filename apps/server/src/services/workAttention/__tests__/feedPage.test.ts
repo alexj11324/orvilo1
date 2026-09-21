@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NotificationItem } from '@/database/schemas/notification';
 
-import { buildInboxFeed } from '../feedPage';
+import { buildInboxFeed, buildInboxFeedCard, type InboxFeedDeps } from '../feedPage';
 
 const row = (overrides: Partial<NotificationItem> = {}): NotificationItem =>
   ({
@@ -55,6 +55,7 @@ describe('buildInboxFeed', () => {
       },
       notificationModel: {
         ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
         listFeed: async () => [],
       },
       projectModel: { findByIds: async () => [] },
@@ -74,6 +75,7 @@ describe('buildInboxFeed', () => {
       },
       notificationModel: {
         ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
         listFeed: async () => [
           row(),
           row({
@@ -102,6 +104,7 @@ describe('buildInboxFeed', () => {
       },
       notificationModel: {
         ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
         listFeed: async () => [row()],
       },
       projectModel: { findByIds: async () => [] },
@@ -116,5 +119,98 @@ describe('buildInboxFeed', () => {
     expect(page.cards).toHaveLength(1);
     expect(page.cards[0]?.title).toBe('Stored name');
     expect(page.partial).toBe(false);
+  });
+
+  it('reports hasMore at the page cap by looking one row past it', async () => {
+    const seen: Array<{ lookahead?: boolean; limit?: number }> = [];
+    const page = await buildInboxFeed({
+      actionSources: {
+        listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+      },
+      input: { limit: 50 },
+      notificationModel: {
+        ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
+        listFeed: async (input) => {
+          seen.push(input ?? {});
+          return Array.from({ length: 51 }, (_, i) => row({ id: `n${i}` }));
+        },
+      },
+      projectModel: { findByIds: async () => [] },
+      taskModel: { findByIds: async () => [] },
+    });
+
+    // The 50-row cap must apply to the page size, not the lookahead fetch —
+    // asking for limit+1 hits the model's own clamp and hasMore stays false.
+    expect(seen).toEqual([{ limit: 50, lookahead: true }]);
+    expect(page.hasMore).toBe(true);
+    expect(page.cards).toHaveLength(50);
+    expect(page.nextCursor).toBe('n49');
+  });
+});
+
+describe('buildInboxFeedCard', () => {
+  const deps = (overrides: Partial<InboxFeedDeps> = {}): InboxFeedDeps => ({
+    actionSources: {
+      listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+    },
+    notificationModel: {
+      ensureActionCards: async () => undefined,
+      findFeedRowById: async () => null as NotificationItem | null,
+      listFeed: async () => [],
+    },
+    projectModel: { findByIds: async () => [] },
+    taskModel: { findByIds: async () => [] },
+    ...overrides,
+  });
+
+  it('returns null when the row is absent — a dead deep link resolves empty', async () => {
+    expect(await buildInboxFeedCard(deps(), 'missing')).toBeNull();
+  });
+
+  it('returns the card with live title overlay, identical to the feed pipeline', async () => {
+    const found = await buildInboxFeedCard(
+      deps({
+        notificationModel: {
+          ensureActionCards: async () => undefined,
+          findFeedRowById: async () => row(),
+          listFeed: async () => [],
+        },
+        taskModel: {
+          findByIds: async () => [{ id: 't1', instruction: 'ignored', name: 'Live task' }],
+        },
+      }),
+      'n1',
+    );
+
+    expect(found?.notificationId).toBe('n1');
+    expect(found?.title).toBe('Live task');
+  });
+
+  it('runs the pending-source projection before the row lookup', async () => {
+    const calls: string[] = [];
+    await buildInboxFeedCard(
+      deps({
+        actionSources: {
+          listPendingForActorSettled: async () => {
+            calls.push('pending');
+            return { pending: [], unavailable: [] };
+          },
+        },
+        notificationModel: {
+          ensureActionCards: async () => {
+            calls.push('ensure');
+          },
+          findFeedRowById: async () => {
+            calls.push('lookup');
+            return row();
+          },
+          listFeed: async () => [],
+        },
+      }),
+      'n1',
+    );
+
+    expect(calls).toEqual(['pending', 'ensure', 'lookup']);
   });
 });

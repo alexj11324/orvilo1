@@ -1122,6 +1122,15 @@ export const inboxKeys = {
     'inbox:feedSummary',
     workspaceId,
   ]),
+  /**
+   * Deep-link card lookup — keyed by workspace so a card readable in one
+   * scope can never be served from another scope's cache entry.
+   */
+  feedCard: def('inbox:feedCard', (workspaceId: string | null, id: string) => [
+    'inbox:feedCard',
+    workspaceId,
+    id,
+  ]),
 };
 
 export const workAttentionKeys = {

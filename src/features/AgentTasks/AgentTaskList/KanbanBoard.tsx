@@ -12,7 +12,7 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskStatus, WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -55,6 +55,7 @@ import {
   getKanbanAssigneeUpdate,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
+  kanbanBoardCapabilities,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -155,6 +156,12 @@ export interface KanbanExternalGroups {
   queryGroupBy?: 'status' | 'workflowCategory';
   /** AsyncBoundary settle flag — defaults to `groups` being defined. */
   settled?: boolean;
+  /**
+   * The view's sort mode. `manual` (default) boards persist same-column
+   * reorders via position anchors; `field`-sorted views must never write
+   * manual position — same-column drops are refused there.
+   */
+  sortMode?: WorkQuerySortMode;
 }
 
 interface KanbanBoardProps {
@@ -198,7 +205,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEditTaskPerm } = usePermission('create_content');
-  const canEditTask = canEditTaskPerm && (external?.movable ?? true);
+  const { canMoveAcrossGroups, canReorderWithinGroup } = kanbanBoardCapabilities({
+    movable: external?.movable,
+    sortMode: external?.sortMode,
+  });
+  const canEditTask =
+    canEditTaskPerm && (!external || canMoveAcrossGroups || canReorderWithinGroup);
   const groupBy = normalizeKanbanGroupBy(options.groupBy);
   const excludeStatuses = options.hideCompleted ? HIDDEN_WHEN_COMPLETED_STATUSES : undefined;
   /** External (work-query) boards render the query's own dimension —
@@ -399,12 +411,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
       if (external) {
         if (memberAlready) {
+          // A field-sorted view never writes manual position — the drop
+          // reverts instead of silently redefining the saved sort.
+          if (!canReorderWithinGroup) return false;
           // Same-column reorder persists through the position anchors —
           // `task.update` resolves them server-side, so a refresh or another
           // client sees the same manual order.
           await taskService.update(task.identifier, anchors);
           return true;
         }
+        if (!canMoveAcrossGroups) return false;
         return commitWorkQueryBoardMove({
           column,
           groupBy: external.queryGroupBy ?? 'workflowCategory',
@@ -481,7 +497,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
       return true;
     },
-    [external, externalGroupBy, groupBy, internalRefreshTaskDetail, t, updateTask],
+    [
+      canMoveAcrossGroups,
+      canReorderWithinGroup,
+      external,
+      externalGroupBy,
+      groupBy,
+      internalRefreshTaskDetail,
+      t,
+      updateTask,
+    ],
   );
 
   // ── Drag handlers ──────────────────────────────────────────────

@@ -113,6 +113,75 @@ const rmIfSameLock = async (lock: string, expect: LockState): Promise<void> => {
   if (now && sameLock(expect, now)) await rm(lock, { force: true });
 };
 
+/** The holder record a fresh owner announces in its lock file. */
+const newLockRecord = () =>
+  `${JSON.stringify({
+    acquiredAt: new Date().toISOString(),
+    hostname: hostname(),
+    pid: process.pid,
+    token: randomUUID(),
+  })}\n`;
+
+/**
+ * Take over a lock whose holder is provably dead. Reclaim is arbitrated by a
+ * single-writer ticket (`<lock>.reclaim`, `O_EXCL`), so only one reclaimer is
+ * ever in the verify-then-replace critical section; losing contenders back
+ * off. The winner re-verifies the lock is still that same dead record, then
+ * `rename`s its own holder record onto the lock path — an atomic takeover
+ * where the path never goes absent, so no fresh owner can slip between the
+ * check and the replacement. The ticket itself is reclaimed by the same
+ * dead-pid + same-record rules (a stolen or stale ticket only costs the
+ * holder a retry, never a wrong unlink). Returns the new holder's lock state
+ * on success, `undefined` when the lock is no longer the observed dead record
+ * or another reclaimer is ahead.
+ */
+const takeOverDeadLock = async (
+  lock: string,
+  expect: LockState,
+): Promise<LockState | undefined> => {
+  const ticket = `${lock}.reclaim`;
+  const raw = newLockRecord();
+  let ticketHandle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    ticketHandle = await open(ticket, 'wx');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error;
+    // Another reclaimer holds the ticket. If that holder is also dead, clear
+    // its stale ticket by the same verified-unlink rule; a ticket unlink can
+    // only cost a holder its retry — the pre-rename inode check catches it.
+    const state = await readLockState(ticket).catch(() => undefined);
+    if (state && holderLiveness(state.holder) === 'dead') {
+      await rmIfSameLock(ticket, state);
+    }
+    return undefined;
+  }
+  let mine: { dev: number; ino: number } | undefined;
+  try {
+    await ticketHandle.writeFile(raw);
+    const s = await stat(ticket);
+    mine = { dev: s.dev, ino: s.ino };
+    // Re-verify inside the ticket-held critical section: the lock must still
+    // be the exact dead record we observed, and the ticket must still be ours.
+    const now = await readLockState(lock).catch(() => undefined);
+    const stillMine = await stat(ticket)
+      .then((t) => t.dev === mine!.dev && t.ino === mine!.ino)
+      .catch(() => false);
+    if (!now || !sameLock(expect, now) || !stillMine) return undefined;
+    await rename(ticket, lock);
+    const landed = await readLockState(lock);
+    if (landed.raw !== raw) return undefined;
+    return landed;
+  } finally {
+    await ticketHandle.close().catch(() => undefined);
+    await rmIfSameLock(ticket, {
+      dev: mine?.dev ?? 0,
+      holder: parseLockHolder(raw),
+      ino: mine?.ino ?? 0,
+      raw,
+    });
+  }
+};
+
 /**
  * Run `fn` holding the exclusive cross-process lock for `target` (the lock
  * file is `<target>.lock`). Acquisition is an atomic `O_EXCL` create — two
@@ -136,12 +205,7 @@ export const withRepoFileMutex = async <T>(
     let created: LockState | undefined;
     try {
       handle = await open(lock, 'wx');
-      const raw = `${JSON.stringify({
-        acquiredAt: new Date().toISOString(),
-        hostname: hostname(),
-        pid: process.pid,
-        token: randomUUID(),
-      })}\n`;
+      const raw = newLockRecord();
       await handle.writeFile(raw);
       const s = await stat(lock);
       created = { dev: s.dev, holder: parseLockHolder(raw), ino: s.ino, raw };
@@ -156,18 +220,20 @@ export const withRepoFileMutex = async <T>(
       try {
         const before = await readLockState(lock);
         if (holderLiveness(before.holder) === 'dead') {
-          // Provably-dead holder — reclaim, but only if the file is still that
-          // exact record: a living process may have re-created it meanwhile.
-          await rmIfSameLock(lock, before);
+          // Provably-dead holder — take it over under the single-writer
+          // reclaim ticket instead of unlinking a record we don't hold.
+          created = await takeOverDeadLock(lock, before);
         }
       } catch {
         /* lock vanished between reads — retry the create */
       }
-      if (Date.now() - started > timeoutMs) {
-        throw new Error(`Timed out acquiring registry lock ${lock}`, { cause: error });
+      if (!created) {
+        if (Date.now() - started > timeoutMs) {
+          throw new Error(`Timed out acquiring registry lock ${lock}`, { cause: error });
+        }
+        await sleep(retryDelay());
+        continue;
       }
-      await sleep(retryDelay());
-      continue;
     }
     const heartbeat = setInterval(() => {
       void utimes(lock, new Date(), new Date()).catch(() => undefined);
@@ -177,7 +243,7 @@ export const withRepoFileMutex = async <T>(
       return await fn();
     } finally {
       clearInterval(heartbeat);
-      await handle.close();
+      await handle?.close();
       // Owner-verified release: unlink only the lock this section created.
       await rmIfSameLock(lock, created!);
     }

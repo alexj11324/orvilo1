@@ -16,6 +16,7 @@ import {
   getKanbanTaskPatch,
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
+  kanbanBoardCapabilities,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -567,5 +568,37 @@ describe('kanbanBoardModel', () => {
       };
       expect(kanbanColumnMoveScope('priority', priorityColumn)).toEqual({ priority: 4 });
     });
+  });
+});
+
+describe('kanbanBoardCapabilities', () => {
+  it('manual boards allow both reorder and cross-group moves', () => {
+    expect(kanbanBoardCapabilities({ movable: true, sortMode: 'manual' })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: true,
+    });
+  });
+
+  it('defaults an unset sortMode to manual', () => {
+    expect(kanbanBoardCapabilities({ movable: true })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: true,
+    });
+  });
+
+  it('field-sorted views refuse same-column position writes but keep moves', () => {
+    expect(kanbanBoardCapabilities({ movable: true, sortMode: 'field' })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: false,
+    });
+  });
+
+  it('movable=false disables both capabilities regardless of sortMode', () => {
+    for (const sortMode of ['field', 'manual', undefined] as const) {
+      expect(kanbanBoardCapabilities({ movable: false, sortMode })).toEqual({
+        canMoveAcrossGroups: false,
+        canReorderWithinGroup: false,
+      });
+    }
   });
 });

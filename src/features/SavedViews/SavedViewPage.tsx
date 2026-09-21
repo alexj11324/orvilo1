@@ -600,6 +600,7 @@ const SavedViewPage = memo(() => {
             loading={isLoading}
             loadingLabel={t('savedViews.loading')}
             movable={(evaluation?.layout ?? view?.layout) === 'board'}
+            sortMode={view?.queryAst.sortMode}
             tasks={tasks}
             total={evaluation?.total}
             createContext={

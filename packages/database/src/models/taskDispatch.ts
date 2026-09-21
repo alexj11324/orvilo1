@@ -437,6 +437,10 @@ export class TaskDispatchModel {
             // layer re-checks the admission flag after request() returns and
             // re-parks the row if rollout is still off.
             existing.waitingReason === 'caid_dispatch_disabled' ||
+            // A retryable prepare-stage failure (provisioning, prompt build,
+            // registration) parks the row here; the same idempotency key
+            // resumes it so the bound approval re-enters via adopt.
+            existing.waitingReason === 'dispatch_prepare_retryable' ||
             resumedWaitingReason === null)
         ) {
           const [resumed] = await tx

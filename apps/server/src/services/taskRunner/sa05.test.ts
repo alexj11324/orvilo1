@@ -371,6 +371,55 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
+  it('SC05 — a transient pre-dispatch failure parks the claim so the same key can retry', async () => {
+    const task = baseTask();
+    const { execAgent } = setupHappyPath(task, [priorTopic()]);
+    vi.mocked(buildTaskPrompt).mockRejectedValueOnce(
+      new Error('worktree materialization timed out'),
+    );
+
+    await expect(newRunner().runTask(runParams)).rejects.toThrow(
+      'worktree materialization timed out',
+    );
+    expect(execAgent).not.toHaveBeenCalled();
+
+    expect(vi.mocked(TaskDispatchService.prototype.transition)).toHaveBeenCalledWith(
+      expect.objectContaining({ dispatch: expect.objectContaining({ id: 'dsp-1' }) }),
+      expect.objectContaining({
+        expected: ['requested', 'claimed', 'provisioning'],
+        phase: 'waiting',
+        waitingReason: 'dispatch_prepare_retryable',
+      }),
+    );
+    expect(vi.mocked(TaskDispatchService.prototype.settle)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'failed',
+    );
+  });
+
+  it('SC05 — a deterministic refusal still settles the dispatch failed', async () => {
+    const task = baseTask();
+    setupHappyPath(task, [priorTopic()]);
+    consumeApprovalMock.mockResolvedValue({ kind: 'missing' });
+
+    await expect(
+      newRunner().runTask({
+        ...runParams,
+        intent: 'authorized_replan',
+        replanApprovalId: 'apv-missing',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    expect(vi.mocked(TaskDispatchService.prototype.settle)).toHaveBeenCalledWith(
+      expect.objectContaining({ dispatch: expect.objectContaining({ id: 'dsp-1' }) }),
+      'failed',
+    );
+    expect(vi.mocked(TaskDispatchService.prototype.transition)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ phase: 'waiting' }),
+    );
+  });
+
   it('C01 — a manual run on a drifted contract conflicts instead of silently re-running it', async () => {
     const task = baseTask({ requirementRevision: 2 });
     const { execAgent } = setupHappyPath(task, [

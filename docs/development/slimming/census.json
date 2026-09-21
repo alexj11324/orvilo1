@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "ef2e59f2f1001cf0e29f3178eec96e5d36c2234f",
+  "baseSha": "45c345bf83c23b7c3a1abb4caed8a61864138b1d",
   "capabilities": [
     {
       "id": "workspace",
@@ -155,7 +155,7 @@
       ],
       "inbound": {
         "total": 235,
-        "explained": 12,
+        "explained": 10,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -208,6 +208,11 @@
             "targets": ["apps/server/src/services/workspacePermission/index.ts"]
           },
           {
+            "importer": "apps/server/src/routers/lambda/knowledgeBase.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/workspacePermission/index.ts"]
+          },
+          {
             "importer": "apps/server/src/routers/lambda/task.ts",
             "disposition": "KEEP",
             "targets": ["apps/server/src/services/workspacePermission/index.ts"]
@@ -215,6 +220,11 @@
           {
             "importer": "apps/server/src/routers/lambda/topicComment.ts",
             "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/workspacePermission/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/knowledgeBaseAccess/index.ts",
+            "disposition": "KEEP",
             "targets": ["apps/server/src/services/workspacePermission/index.ts"]
           },
           {
@@ -3308,8 +3318,8 @@
         "packages/tool-runtime/vitest.config.mts"
       ],
       "inbound": {
-        "total": 580,
-        "explained": 135,
+        "total": 577,
+        "explained": 132,
         "unexplained": [
           {
             "importer": "apps/server/src/services/resourceEvents/index.ts",
@@ -6185,7 +6195,7 @@
     {
       "id": "conversation-surface",
       "disposition": "REWRITE_FOR_ACP",
-      "reason": "Conversation/ChatInput/shared activity/intervention stay as the multiplayer agent control surface, but must not own prompt/model/provider/tool-loop execution (ORV-107).",
+      "reason": "Conversation/ChatInput/shared activity/intervention stay as the multiplayer agent control surface, but must not own prompt/model/provider/tool-loop execution (ORV-107). ASR transcription router kept (ChatInput Dictation is its sole consumer).",
       "issue": "ORV-107",
       "globs": [
         "src/features/{Conversation,ChatInput,ChatMiniMap,ChatTerminal,DailyBrief,HomeInbox,Recommendations,Billboard}/**",
@@ -6200,11 +6210,13 @@
         "apps/server/src/routers/lambda/brief.ts",
         "packages/conversation-flow/**",
         "apps/server/src/routers/lambda/{message,aiChat,followUpAction}.ts",
-        "apps/server/src/services/{message*,conversation*}/**"
+        "apps/server/src/services/{message*,conversation*}/**",
+        "apps/server/src/routers/lambda/asr.ts"
       ],
-      "fileCount": 1192,
+      "fileCount": 1193,
       "files": [
         "apps/server/src/routers/lambda/aiChat.ts",
+        "apps/server/src/routers/lambda/asr.ts",
         "apps/server/src/routers/lambda/brief.ts",
         "apps/server/src/routers/lambda/followUpAction.ts",
         "apps/server/src/routers/lambda/message.ts",
@@ -7398,7 +7410,7 @@
         "src/store/chat/utils/unescapeMarkdown.ts"
       ],
       "inbound": {
-        "total": 368,
+        "total": 369,
         "explained": 34,
         "unexplained": [
           {
@@ -7406,6 +7418,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "apps/server/src/routers/lambda/aiChat.ts",
+              "apps/server/src/routers/lambda/asr.ts",
               "apps/server/src/routers/lambda/brief.ts",
               "apps/server/src/routers/lambda/followUpAction.ts",
               "apps/server/src/routers/lambda/message.ts"
@@ -8637,6 +8650,11 @@
             "targets": ["src/store/chat/index.ts", "src/store/chat/selectors.ts"]
           },
           {
+            "importer": "src/features/DataImporter/index.tsx",
+            "disposition": "KEEP",
+            "targets": ["src/store/chat/index.ts"]
+          },
+          {
             "importer": "src/features/DesktopFileMenuBridge/index.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/store/chat/index.ts"]
@@ -9576,7 +9594,7 @@
       ],
       "inbound": {
         "total": 176,
-        "explained": 22,
+        "explained": 21,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -9613,6 +9631,11 @@
           },
           {
             "importer": "apps/server/src/routers/lambda/file.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/app-config/src/db.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/knowledgeBase.ts",
             "disposition": "KEEP",
             "targets": ["packages/app-config/src/db.ts"]
           },
@@ -11654,7 +11677,7 @@
       ],
       "inbound": {
         "total": 3529,
-        "explained": 656,
+        "explained": 645,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -11828,6 +11851,18 @@
             ]
           },
           {
+            "importer": "apps/server/src/routers/lambda/asr.ts",
+            "disposition": "REWRITE_FOR_ACP",
+            "targets": [
+              "apps/server/src/services/file/index.ts",
+              "packages/const/src/apiKeyScope.ts",
+              "packages/database/src/models/file.ts",
+              "packages/database/src/type.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
             "importer": "apps/server/src/routers/lambda/importer.ts",
             "disposition": "KEEP",
             "targets": [
@@ -11837,6 +11872,37 @@
               "packages/trpc/src/lambda/middleware/index.ts",
               "packages/types/src/export.ts",
               "packages/types/src/importer.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/knowledge.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "apps/server/src/services/file/index.ts",
+              "packages/database/src/models/asyncTask.ts",
+              "packages/database/src/models/chunk.ts",
+              "packages/database/src/models/document.ts",
+              "packages/database/src/models/file.ts",
+              "packages/database/src/repositories/knowledge/index.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts",
+              "packages/types/src/asyncTask.ts",
+              "packages/types/src/files/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/knowledgeBase.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "apps/server/src/services/file/index.ts",
+              "packages/database/src/models/document.ts",
+              "packages/database/src/models/file.ts",
+              "packages/database/src/models/knowledgeBase.ts",
+              "packages/database/src/models/resourcePermission.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts",
+              "packages/types/src/knowledgeBase/index.ts"
             ]
           },
           {
@@ -12384,6 +12450,17 @@
             "importer": "src/services/_header.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/const/src/fetch.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/chunk/index.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/const/src/file.ts",
+              "packages/database/src/index.ts",
+              "packages/database/src/models/asyncTask.ts",
+              "packages/database/src/models/file.ts",
+              "packages/types/src/asyncTask.ts"
+            ]
           },
           {
             "importer": "src/store/file/slices/chat/action.ts",
@@ -13104,6 +13181,21 @@
               "packages/database/src/models/topic.ts",
               "packages/types/src/index.ts",
               "packages/utils/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/knowledgeBase/index.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/const/src/index.ts",
+              "packages/database/src/index.ts",
+              "packages/database/src/models/chunk.ts",
+              "packages/database/src/models/document.ts",
+              "packages/database/src/models/file.ts",
+              "packages/database/src/repositories/ftsSearch/index.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/utils/workspace.ts",
+              "packages/types/src/index.ts"
             ]
           },
           {
@@ -16412,6 +16504,11 @@
             "targets": ["packages/const/src/url.ts"]
           },
           {
+            "importer": "src/features/DataImporter/Error.tsx",
+            "disposition": "KEEP",
+            "targets": ["packages/const/src/url.ts", "packages/types/src/importer.ts"]
+          },
+          {
             "importer": "src/features/DesktopOnboarding/steps/LoginStep.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/const/src/url.ts", "packages/const/src/version.ts"]
@@ -18710,6 +18807,15 @@
               "packages/database/src/models/team.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/knowledgeBaseAccess/index.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/database/src/models/resourcePermission.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/type.ts"
             ]
           },
           {
@@ -21508,6 +21614,21 @@
             "importer": "src/store/page/slices/list/selectors.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/types/src/document/index.ts"]
+          },
+          {
+            "importer": "src/features/DataImporter/ImportDetail.tsx",
+            "disposition": "KEEP",
+            "targets": ["packages/types/src/export.ts"]
+          },
+          {
+            "importer": "src/features/DataImporter/config.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/types/src/export.ts"]
+          },
+          {
+            "importer": "src/features/DataImporter/index.tsx",
+            "disposition": "KEEP",
+            "targets": ["packages/types/src/export.ts", "packages/types/src/index.ts"]
           },
           {
             "importer": "src/services/config.ts",
@@ -28253,6 +28374,11 @@
             "targets": ["packages/utils/src/format.ts"]
           },
           {
+            "importer": "src/features/DataImporter/FileUploading.tsx",
+            "disposition": "KEEP",
+            "targets": ["packages/utils/src/format.ts"]
+          },
+          {
             "importer": "src/features/DevDock/widgets/memoryFormat.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/utils/src/format.ts"]
@@ -32014,7 +32140,7 @@
       ],
       "inbound": {
         "total": 84,
-        "explained": 8,
+        "explained": 7,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/async/file.ts",
@@ -32061,6 +32187,11 @@
           },
           {
             "importer": "apps/server/src/services/file/resolveAttachments.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/document/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/knowledgeBase/index.ts",
             "disposition": "KEEP",
             "targets": ["apps/server/src/services/document/index.ts"]
           },
@@ -34279,7 +34410,7 @@
       ],
       "inbound": {
         "total": 59,
-        "explained": 20,
+        "explained": 18,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/async/file.ts",
@@ -34289,6 +34420,11 @@
           {
             "importer": "apps/server/src/routers/async/ragEval.ts",
             "disposition": "KEEP",
+            "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/asr.ts",
+            "disposition": "REWRITE_FOR_ACP",
             "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
           },
           {
@@ -34308,6 +34444,11 @@
               "apps/server/src/modules/ModelRuntime/index.ts",
               "packages/model-runtime/src/index.ts"
             ]
+          },
+          {
+            "importer": "apps/server/src/services/knowledgeBase/index.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/modules/ModelRuntime/index.ts"]
           },
           {
             "importer": "apps/server/src/services/memory/userMemory/extract.ts",
@@ -36635,21 +36776,33 @@
       }
     },
     {
-      "id": "knowledge-rag",
-      "disposition": "INVESTIGATE",
-      "reason": "Knowledge base / file loaders / chunk pipeline are wired into agent context but absent from the named product boundary; needs a product call on whether Knowledge stays as a workspace capability.",
-      "issue": "ORV-100",
-      "owner": "alexj11324",
-      "followUp": "Decide if knowledge-base is inside the ACP product boundary; if not, close via ORV-108.",
+      "id": "achaos-chaos-toolkit",
+      "disposition": "DELETE",
+      "reason": "Orphan chaos-engineering toolkit: 7 private workspace packages under packages/achaos/**, zero external inbound imports, README consumers aspirational. Deleted by ORV-115; guard keeps it dead.",
+      "issue": "ORV-115",
+      "globs": ["packages/achaos/**"],
+      "fileCount": 0,
+      "files": [],
+      "inbound": {
+        "total": 0,
+        "explained": 0,
+        "unexplained": []
+      }
+    },
+    {
+      "id": "knowledge-context",
+      "disposition": "KEEP",
+      "reason": "Knowledge base + chunk pipeline are live in-boundary infrastructure: consumed by knowledgeBase server runtime (agent-tools), Agent/Project/Document flows, and workspace-permission-gated routers. Resolved by ORV-114.",
+      "issue": "ORV-114",
       "globs": [
-        "apps/server/src/routers/lambda/{knowledge,knowledgeBase,asr}.ts",
-        "apps/server/src/services/{knowledge*,rag*,chunk*,embedding*}/**",
-        "packages/file-loaders/**",
-        "src/features/{Knowledge*,DataImporter}/**"
+        "apps/server/src/routers/lambda/{knowledge,knowledgeBase}.ts",
+        "apps/server/src/routers/lambda/{__tests__/knowledgeBase.test.ts,_helpers/knowledgeBaseAccess.ts}",
+        "apps/server/src/services/{knowledgeBase,knowledgeBaseAccess,chunk}/**"
       ],
-      "fileCount": 54,
+      "fileCount": 10,
       "files": [
-        "apps/server/src/routers/lambda/asr.ts",
+        "apps/server/src/routers/lambda/__tests__/knowledgeBase.test.ts",
+        "apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts",
         "apps/server/src/routers/lambda/knowledge.ts",
         "apps/server/src/routers/lambda/knowledgeBase.ts",
         "apps/server/src/services/chunk/index.test.ts",
@@ -36657,7 +36810,90 @@
         "apps/server/src/services/knowledgeBase/index.test.ts",
         "apps/server/src/services/knowledgeBase/index.ts",
         "apps/server/src/services/knowledgeBaseAccess/index.test.ts",
-        "apps/server/src/services/knowledgeBaseAccess/index.ts",
+        "apps/server/src/services/knowledgeBaseAccess/index.ts"
+      ],
+      "inbound": {
+        "total": 14,
+        "explained": 2,
+        "unexplained": [
+          {
+            "importer": "apps/server/src/routers/lambda/agent.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/chunk.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts",
+              "apps/server/src/services/chunk/index.ts",
+              "apps/server/src/services/knowledgeBase/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/document.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/file.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/search.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/routers/lambda/knowledge.ts",
+              "apps/server/src/routers/lambda/knowledgeBase.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/routers/mobile/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/routers/lambda/knowledgeBase.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/async/file.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/chunk/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/async/ragEval.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/chunk/index.ts"]
+          },
+          {
+            "importer": "packages/openapi/src/services/file.service.ts",
+            "disposition": "REWRITE_FOR_ACP",
+            "targets": ["apps/server/src/services/chunk/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/toolExecution/serverRuntimes/knowledgeBase.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/knowledgeBase/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/documentAccess/index.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/knowledgeBaseAccess/index.ts"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "file-ingestion",
+      "disposition": "KEEP",
+      "reason": "packages/file-loaders is the shared document/file parsing pipeline consumed by Document service, documentAccess, local-file-shell and OpenAPI file service — all retained surfaces. Resolved by ORV-114.",
+      "issue": "ORV-114",
+      "globs": ["packages/file-loaders/**"],
+      "fileCount": 37,
+      "files": [
         "packages/file-loaders/src/blackList.ts",
         "packages/file-loaders/src/index.ts",
         "packages/file-loaders/src/loadFile.test.ts",
@@ -36694,72 +36930,12 @@
         "packages/file-loaders/test/setup.ts",
         "packages/file-loaders/test/verilog-baseline.test.ts",
         "packages/file-loaders/test/verilog-e2e.test.ts",
-        "packages/file-loaders/vitest.config.mts",
-        "src/features/DataImporter/Error.tsx",
-        "src/features/DataImporter/FileUploading.tsx",
-        "src/features/DataImporter/ImportDetail.tsx",
-        "src/features/DataImporter/Loading.tsx",
-        "src/features/DataImporter/SuccessResult.tsx",
-        "src/features/DataImporter/config.test.ts",
-        "src/features/DataImporter/config.ts",
-        "src/features/DataImporter/index.tsx"
+        "packages/file-loaders/vitest.config.mts"
       ],
       "inbound": {
-        "total": 20,
-        "explained": 5,
+        "total": 5,
+        "explained": 1,
         "unexplained": [
-          {
-            "importer": "apps/server/src/routers/lambda/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "apps/server/src/routers/lambda/asr.ts",
-              "apps/server/src/routers/lambda/knowledge.ts",
-              "apps/server/src/routers/lambda/knowledgeBase.ts"
-            ]
-          },
-          {
-            "importer": "apps/server/src/routers/mobile/index.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/routers/lambda/knowledgeBase.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/file.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/services/chunk/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/async/ragEval.ts",
-            "disposition": "KEEP",
-            "targets": ["apps/server/src/services/chunk/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/chunk.ts",
-            "disposition": "KEEP",
-            "targets": [
-              "apps/server/src/services/chunk/index.ts",
-              "apps/server/src/services/knowledgeBase/index.ts"
-            ]
-          },
-          {
-            "importer": "packages/openapi/src/services/file.service.ts",
-            "disposition": "REWRITE_FOR_ACP",
-            "targets": ["apps/server/src/services/chunk/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/toolExecution/serverRuntimes/knowledgeBase.ts",
-            "disposition": "KEEP",
-            "targets": ["apps/server/src/services/knowledgeBase/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/routers/lambda/_helpers/knowledgeBaseAccess.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["apps/server/src/services/knowledgeBaseAccess/index.ts"]
-          },
-          {
-            "importer": "apps/server/src/services/documentAccess/index.ts",
-            "disposition": "KEEP",
-            "targets": ["apps/server/src/services/knowledgeBaseAccess/index.ts"]
-          },
           {
             "importer": "apps/server/src/services/document/index.ts",
             "disposition": "KEEP",
@@ -36779,73 +36955,15 @@
             "importer": "src/libs/document-loaders/loaders/index.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/file-loaders/src/index.ts"]
-          },
-          {
-            "importer": "src/features/Settings/storage/features/Advanced.tsx",
-            "disposition": "UNCOVERED",
-            "targets": ["src/features/DataImporter/index.tsx"]
-          },
-          {
-            "importer": "src/features/User/UserPanel/useMenu.tsx",
-            "disposition": "UNCOVERED",
-            "targets": ["src/features/DataImporter/index.tsx"]
           }
         ]
       }
-    },
-    {
-      "id": "misc-adjacent-packages",
-      "disposition": "INVESTIGATE",
-      "reason": "achaos chaos-engineering fixtures are not a workspace package and have zero inbound imports; consumers named in its README are aspirational (Goal/Agent Evals/self-improvement). Needs an explicit keep-or-delete call, not 'might be useful'.",
-      "issue": "ORV-99",
-      "owner": "alexj11324",
-      "followUp": "Decide: keep chaos fixtures as dev tooling (document a live consumer) or delete with ORV-108 closure.",
-      "globs": ["packages/achaos/**"],
-      "fileCount": 32,
-      "files": [
-        "packages/achaos/core/src/index.ts",
-        "packages/achaos/core/src/random.ts",
-        "packages/achaos/core/src/schema.test.ts",
-        "packages/achaos/core/src/schema.ts",
-        "packages/achaos/core/src/types.ts",
-        "packages/achaos/database/src/index.test.ts",
-        "packages/achaos/database/src/index.ts",
-        "packages/achaos/process/src/index.test.ts",
-        "packages/achaos/process/src/index.ts",
-        "packages/achaos/runner/src/index.ts",
-        "packages/achaos/runner/src/load.test.ts",
-        "packages/achaos/runner/src/load.ts",
-        "packages/achaos/runner/src/registry.ts",
-        "packages/achaos/runner/src/reporter.test.ts",
-        "packages/achaos/runner/src/reporter.ts",
-        "packages/achaos/runner/src/run.test.ts",
-        "packages/achaos/runner/src/run.ts",
-        "packages/achaos/runtime/src/adapter.ts",
-        "packages/achaos/runtime/src/assets.d.ts",
-        "packages/achaos/runtime/src/completion.ts",
-        "packages/achaos/runtime/src/controller.ts",
-        "packages/achaos/runtime/src/effects.ts",
-        "packages/achaos/runtime/src/index.ts",
-        "packages/achaos/runtime/src/runtime.test.ts",
-        "packages/achaos/runtime/src/toolAttempt.ts",
-        "packages/achaos/runtime/src/toolHook.ts",
-        "packages/achaos/testing/src/index.ts",
-        "packages/achaos/testing/src/scenarios.test.ts",
-        "packages/achaos/testing/src/state.ts",
-        "packages/achaos/tracing/src/index.test.ts",
-        "packages/achaos/tracing/src/index.ts",
-        "packages/achaos/vitest.config.mts"
-      ],
-      "inbound": {
-        "total": 0,
-        "explained": 0,
-        "unexplained": []
-      }
     }
   ],
+  "conflictingDispositionFiles": [],
   "counts": {
-    "sourceFiles": 11951,
-    "workspacePackages": 108,
+    "sourceFiles": 11919,
+    "workspacePackages": 101,
     "nextRoutes": 36,
     "spaRouteEntries": 178,
     "lambdaRouters": 81,
@@ -36854,8 +36972,8 @@
     "migrationSqlFiles": 187,
     "localeFiles": 880,
     "defaultNamespaceFiles": 48,
-    "docFiles": 449,
-    "testFiles": 3153,
+    "docFiles": 450,
+    "testFiles": 3144,
     "storeFiles": 824,
     "unresolvedImports": 400
   },
@@ -38785,6 +38903,7 @@
       "docs/development/slimming-orv-109-dead-surface.md",
       "docs/development/slimming-orv-110-workspace-ci.md",
       "docs/development/slimming-orv-111-final-audit.md",
+      "docs/development/slimming-orv-115-achaos-removal.md",
       "docs/development/start-intent-contract.md",
       "docs/development/start.mdx",
       "docs/development/start.zh-CN.mdx",
@@ -39046,7 +39165,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-09-21T21:12:48.088Z",
+  "generatedAt": "2026-09-21T22:06:29.781Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",
@@ -44306,9 +44425,6 @@
       "apps/server/src/services/aiAgent/pipeline/approvalResume.ts",
       "apps/server/src/services/queue/types.ts",
       "apps/server/src/services/toolExecution/__tests__/index.test.ts",
-      "packages/achaos/runtime/src/runtime.test.ts",
-      "packages/achaos/runtime/src/toolAttempt.ts",
-      "packages/achaos/runtime/src/toolHook.ts",
       "packages/openapi/src/services/responses.service.ts",
       "src/features/Conversation/Messages/AssistantGroup/Tool/Detail/Intervention/SecurityBlacklistWarning.tsx",
       "src/store/chat/agents/transports/ClientSubAgentTransport.ts",
@@ -44317,31 +44433,6 @@
       "src/store/chat/utils/activeTopicDocumentContext.ts",
       "src/store/tool/slices/builtin/executors/orvilo-web-onboarding.test.ts",
       "src/utils/workCumulativeUsage.ts"
-    ],
-    "@achaos/tracing": [],
-    "@achaos/testing": [],
-    "@achaos/runtime": [],
-    "@achaos/runner": ["packages/achaos/testing/src/scenarios.test.ts"],
-    "@achaos/process": [],
-    "@achaos/database": [],
-    "@achaos/core": [
-      "packages/achaos/database/src/index.test.ts",
-      "packages/achaos/database/src/index.ts",
-      "packages/achaos/process/src/index.test.ts",
-      "packages/achaos/process/src/index.ts",
-      "packages/achaos/runner/src/load.ts",
-      "packages/achaos/runner/src/registry.ts",
-      "packages/achaos/runner/src/reporter.test.ts",
-      "packages/achaos/runner/src/reporter.ts",
-      "packages/achaos/runner/src/run.test.ts",
-      "packages/achaos/runner/src/run.ts",
-      "packages/achaos/runtime/src/adapter.ts",
-      "packages/achaos/runtime/src/controller.ts",
-      "packages/achaos/runtime/src/runtime.test.ts",
-      "packages/achaos/testing/src/scenarios.test.ts",
-      "packages/achaos/testing/src/state.ts",
-      "packages/achaos/tracing/src/index.test.ts",
-      "packages/achaos/tracing/src/index.ts"
     ],
     "@orvilo/workbench": [],
     "@orvilo/share": [],
@@ -44354,7 +44445,7 @@
     "orvilo": []
   },
   "uncoveredByArea": {
-    "apps/server/src": 774,
+    "apps/server/src": 772,
     "src/routes/(main)": 261,
     "apps/cli/src": 190,
     "src/features/Settings": 170,
@@ -45171,5 +45262,5 @@
     "tests/setup.ts": 1,
     "tests/utils.tsx": 1
   },
-  "uncoveredFiles": 4355
+  "uncoveredFiles": 4353
 }

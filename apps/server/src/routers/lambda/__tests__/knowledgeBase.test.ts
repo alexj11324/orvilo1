@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as workspaceModel from '@/database/models/workspace';
 import { knowledgeBaseRouter } from '@/server/routers/lambda/knowledgeBase';
 import { TransferErrorCode } from '@/types/transferError';
 
@@ -27,7 +28,7 @@ const mockFileModelFindByIds = vi.fn();
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof workspaceModel>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 

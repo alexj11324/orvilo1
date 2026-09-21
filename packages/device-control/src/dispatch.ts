@@ -315,7 +315,14 @@ export const executeDeviceRpc = async (
       // `claimRegistered` flag in the result remains the capability signal
       // callers check before relying on verified deletes.
       if (payload.claimToken !== undefined) {
-        return addGitWorktreeClaimed(payload);
+        return addGitWorktreeClaimed({
+          branch: payload.branch,
+          claimToken: payload.claimToken,
+          detach: payload.detach,
+          path: payload.path,
+          ref: payload.ref,
+          worktreePath: payload.worktreePath,
+        });
       }
       return addGitWorktree(payload);
     }

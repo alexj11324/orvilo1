@@ -387,7 +387,7 @@ describe('buildAcpBuiltinToolExtras', () => {
     // is the only honest answer; the receipts stay `offered` for a capable
     // retry instead of being silently consumed.
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('v2');
+    expect(result.content[0]).toEqual({ text: expect.stringContaining('v2'), type: 'text' });
     expect(ackChildResults).not.toHaveBeenCalled();
   });
 

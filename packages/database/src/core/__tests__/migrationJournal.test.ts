@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { PGlite } from '@electric-sql/pglite';
+import type { SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { drizzle as nodeDrizzle } from 'drizzle-orm/node-postgres';
@@ -364,6 +365,40 @@ describe('staged upgrade replay (PGlite)', () => {
       });
     });
   }, 120_000);
+
+  it.each<{ ddl: SQL; shape: string }>([
+    // `column_default` is NULL for a defaulted-less column — `NULL <> '0'`
+    // evaluates to NULL, so a null-unsafe comparison would silently pass.
+    {
+      ddl: sql`ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" bigint NOT NULL`,
+      shape: 'no default',
+    },
+    {
+      ddl: sql`ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" bigint DEFAULT 0`,
+      shape: 'nullable',
+    },
+    {
+      ddl: sql`ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" bigint DEFAULT 5 NOT NULL`,
+      shape: 'wrong default',
+    },
+    {
+      ddl: sql`ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" integer DEFAULT 0 NOT NULL`,
+      shape: 'wrong type',
+    },
+  ])(
+    '0182 rejects a divergent fence_seq definition ($shape)',
+    async ({ ddl }) => {
+      const repairSql = readFileSync(
+        path.join(migrationsFolder, '0182_fence_seq_forward_repair.sql'),
+        'utf8',
+      );
+      await runScenario(async (db) => {
+        await db.execute(ddl);
+        await expect(db.execute(sql.raw(repairSql))).rejects.toThrow(/diverges/);
+      });
+    },
+    120_000,
+  );
 });
 
 const isServerDB = process.env.TEST_SERVER_DB === '1' && !!process.env.DATABASE_TEST_URL;

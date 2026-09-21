@@ -64,9 +64,8 @@ import {
   type TeamSizeValue,
 } from './data';
 import { ImageUploadField } from './image-upload-field';
-import { OnboardingPageBackground } from './onboarding-background';
 import { OnboardingHeader } from './onboarding-header';
-import { OnboardingStepper, OnboardingStepperCompact } from './onboarding-stepper';
+import { OnboardingStepper } from './onboarding-stepper';
 
 /** A selectable timezone: the IANA id is the stable value, the label is display-only. */
 type TimezoneOption = { label: string; value: string };
@@ -623,7 +622,7 @@ function SuccessStep({
   const displayName = workspaceName.trim() || t('reui.workspace.name');
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
+    <div className="mx-auto flex min-h-0 w-full max-w-sm flex-1 flex-col p-6 sm:min-h-[34rem] sm:p-10 lg:min-h-[36rem] lg:p-12">
       <div className="flex flex-1 flex-col justify-center">
         <div aria-hidden="true" className="mx-auto flex h-28 w-full items-center justify-center">
           <IconStack
@@ -658,50 +657,6 @@ function SuccessStep({
         </Button>
       </div>
     </div>
-  );
-}
-
-function OnboardingSidebar({
-  currentStep,
-  isComplete,
-  canGoBack,
-  onBack,
-  onStepChange,
-  steps,
-}: {
-  currentStep: number;
-  isComplete: boolean;
-  canGoBack: boolean;
-  onBack: () => void;
-  onStepChange: (step: number) => void;
-  steps: ReturnType<typeof createOnboardingData>['steps'];
-}) {
-  return (
-    <aside className="relative z-10 flex w-full shrink-0 border-b px-5 pt-5 pb-4 sm:px-8 sm:pt-6 sm:pb-5 lg:min-h-svh lg:w-[18rem] lg:border-b-0 lg:py-7 lg:pr-5 lg:pl-7">
-      <div className="flex min-h-full w-full flex-col">
-        <OnboardingHeader canGoBack={canGoBack} onBack={onBack} />
-
-        <div className="mt-4 lg:hidden">
-          <OnboardingStepperCompact
-            currentStep={currentStep}
-            isComplete={isComplete}
-            steps={steps}
-            onStepChange={onStepChange}
-          />
-        </div>
-
-        <div className="hidden flex-1 items-center justify-center py-16 lg:flex">
-          <OnboardingStepper
-            currentStep={currentStep}
-            isComplete={isComplete}
-            steps={steps}
-            onStepChange={onStepChange}
-          />
-        </div>
-
-        <div aria-hidden="true" className="hidden h-8 shrink-0 lg:block" />
-      </div>
-    </aside>
   );
 }
 
@@ -793,6 +748,10 @@ export function Onboarding({
     (currentStepMeta.id !== 'goals' || goals.length > 0);
 
   function goToStep(step: number) {
+    if (isSubmitting) {
+      return;
+    }
+
     const nextStep = Math.min(Math.max(step, 1), totalSteps);
 
     setTransitionDirection(nextStep >= currentStep ? 1 : -1);
@@ -903,12 +862,6 @@ export function Onboarding({
     goToStep(currentStep + 1);
   }
 
-  function handleStepNavigation(step: number) {
-    if (isComplete || step <= currentStep) {
-      goToStep(step);
-    }
-  }
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -933,30 +886,33 @@ export function Onboarding({
   }
 
   return (
-    <main className="bg-muted/20 text-foreground relative isolate flex max-h-svh min-h-svh w-full flex-col overflow-y-auto lg:flex-row">
-      <OnboardingPageBackground />
+    <main className="orvilo-entry-surface bg-background text-foreground relative min-h-[var(--onboarding-viewport-height,100svh)] w-full overflow-x-hidden">
+      <div className="absolute inset-x-0 top-0 z-40 h-1 w-full overflow-hidden">
+        <OnboardingStepper currentStep={currentStep} steps={onboardingSteps} />
+      </div>
 
-      <OnboardingSidebar
-        canGoBack={!isComplete && currentStep > 1}
-        currentStep={currentStep}
-        isComplete={isComplete}
-        steps={onboardingSteps}
-        onBack={() => goToStep(currentStep - 1)}
-        onStepChange={handleStepNavigation}
-      />
+      <div className="absolute inset-x-0 top-0 z-30">
+        <OnboardingHeader
+          canGoBack={!isComplete && currentStep > 1}
+          currentStep={currentStep}
+          statusLabel={isComplete ? t('reui.action.setupComplete') : undefined}
+          totalSteps={totalSteps}
+          onBack={() => goToStep(currentStep - 1)}
+        />
+      </div>
 
-      <section className="relative z-10 flex min-w-0 flex-1 p-3 sm:p-6 lg:py-6 lg:pr-5 lg:pl-0">
+      <section className="flex min-h-[inherit] items-center justify-center overflow-y-auto px-2 py-16 sm:px-6 sm:py-20">
         <Frame
-          className="bg-muted/60 dark:bg-muted/10 flex w-full flex-1 gap-0 overflow-hidden [--frame-px:--spacing(1.25)] [--frame-py:--spacing(1.25)] lg:min-h-[calc(100svh-3rem)]"
-          spacing="xs"
+          className="w-full max-w-xl [--frame-px:--spacing(1)] [--frame-py:--spacing(1.5)]"
+          spacing="sm"
           variant="ghost"
         >
-          <FramePanel className="border-border/40 flex min-h-0 flex-1 flex-col px-5 py-8 sm:px-10 sm:py-14 md:py-16 lg:px-14 lg:py-20 xl:py-24">
+          <FramePanel className="min-h-0 p-0">
             <div className="flex flex-1">
               <AnimatePresence initial={false} mode="wait">
                 {isComplete ? (
                   <m.div
-                    className="mx-auto flex w-full max-w-sm flex-col lg:min-h-[36rem]"
+                    className="mx-auto flex w-full max-w-sm flex-col"
                     key="success"
                     animate={{
                       opacity: 1,
@@ -1000,7 +956,7 @@ export function Onboarding({
                   </m.div>
                 ) : (
                   <m.form
-                    className="mx-auto flex w-full max-w-md flex-col lg:min-h-[36rem]"
+                    className="mx-auto flex min-h-0 w-full min-w-0 flex-col p-6 sm:min-h-[34rem] sm:p-10 lg:min-h-[36rem] lg:p-12"
                     key={currentStepMeta.id}
                     animate={{
                       opacity: 1,
@@ -1033,7 +989,7 @@ export function Onboarding({
                     }
                     onSubmit={handleSubmit}
                   >
-                    <div className="flex flex-col gap-8">
+                    <div className="flex flex-col gap-8 sm:gap-10">
                       <StepHeading
                         description={currentStepMeta.description}
                         title={currentStepMeta.title}
@@ -1097,7 +1053,7 @@ export function Onboarding({
                       ) : null}
                     </div>
 
-                    <div className="mt-auto flex flex-col gap-2 pt-8">
+                    <div className="mt-auto flex flex-col gap-2 pt-10">
                       <Button
                         className="w-full"
                         disabled={!canContinue || isSubmitting}

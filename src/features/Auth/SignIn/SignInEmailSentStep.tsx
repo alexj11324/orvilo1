@@ -1,8 +1,10 @@
 import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Text } from '@lobehub/ui/base-ui';
 import { MailCheck, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import AuthCard from '@/features/AuthCard';
 
 export type SentEmailType = 'magicLink' | 'resetPassword';
@@ -33,6 +35,7 @@ export const SignInEmailSentStep = ({
     <AuthCard
       subtitle={description}
       title={t('betterAuth.signin.emailSent.title')}
+      variant="auth16"
       footer={
         <Text align={'center'} fontSize={13} style={{ marginTop: 16 }} type={'secondary'}>
           <a
@@ -58,12 +61,17 @@ export const SignInEmailSentStep = ({
           <Text type={'secondary'}>{t('betterAuth.signin.emailSent.checkSpam')}</Text>
         </Block>
         <Button
-          block
-          icon={<Icon icon={RefreshCw} size={16} />}
-          loading={sending}
-          size="large"
+          className="w-full"
+          disabled={sending}
+          size="lg"
+          variant="outline"
           onClick={onResend}
         >
+          {sending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <RefreshCw aria-hidden="true" data-icon="inline-start" />
+          )}
           {t('betterAuth.signin.emailSent.resend')}
         </Button>
       </Flexbox>

@@ -4,8 +4,8 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { readJsonRegistry, withRepoFileMutex, writeJsonRegistry } from './registryFile';
-import type { GitRemoveWorktreeResult } from './types';
-import { canonicalizePath, removeGitWorktree } from './worktrees';
+import type { GitAddWorktreeResult, GitRemoveWorktreeResult } from './types';
+import { addGitWorktree, canonicalizePath, removeGitWorktree } from './worktrees';
 
 const execFileAsync = promisify(execFile);
 
@@ -85,6 +85,23 @@ export interface WorktreeClaimRemoveResult extends GitRemoveWorktreeResult {
 }
 
 /**
+ * Bind `claimToken` to the canonical `worktreePath` inside the registry.
+ * Caller must already hold the claims mutex — the read-check-write is only
+ * serialized inside `withRepoFileMutex`.
+ */
+const writeClaim = async (
+  file: string,
+  canonicalWorktreePath: string,
+  claimToken: string,
+): Promise<{ error?: string; success: boolean }> => {
+  const { registry, error } = await readClaimsRegistry(file);
+  if (!registry) return { error, success: false };
+  registry[canonicalWorktreePath] = { claimToken, registeredAt: new Date().toISOString() };
+  await writeJsonRegistry(file, registry);
+  return { success: true };
+};
+
+/**
  * Register `claimToken` as the owner proof for the physical `worktreePath`.
  * Called right after `git worktree add` succeeds; serialized on the registry
  * mutex against verified removes so a delete can never interleave between an
@@ -102,12 +119,55 @@ export const registerWorktreeClaim = async (payload: {
   const file = await claimsRegistryPath(dirPath);
   if (!file) return { error: 'no git common dir for the claims registry', success: false };
   return withRepoFileMutex(file, async () => {
-    const { registry, error } = await readClaimsRegistry(file);
-    if (!registry) return { error, success: false };
     const canonical = await canonicalizePath(worktreePath);
-    registry[canonical] = { claimToken, registeredAt: new Date().toISOString() };
-    await writeJsonRegistry(file, registry);
-    return { success: true };
+    return writeClaim(file, canonical, claimToken);
+  });
+};
+
+/**
+ * Claim-bound writer admission: `git worktree add` and the claim registration
+ * run inside the ONE claims-registry mutex section — the server-issued token
+ * is bound to the physical directory before any other writer (or a verified
+ * remove) can observe it unclaimed. Writer admission and cleanup share the
+ * exclusion boundary.
+ *
+ * A host that cannot maintain the claims registry refuses BEFORE creating
+ * anything — the capability is negotiated, never silently skipped. When the
+ * registration write itself fails the just-created directory is rolled back
+ * inside the same section, so no foreign claim can interleave in the gap.
+ */
+export const addGitWorktreeClaimed = async (payload: {
+  branch: string;
+  claimToken: string;
+  detach?: boolean;
+  path: string;
+  ref?: string;
+  worktreePath: string;
+}): Promise<GitAddWorktreeResult & { claimRegistered?: boolean }> => {
+  const { claimToken, path: dirPath, worktreePath } = payload;
+  if (!claimToken?.trim()) return { error: 'Claim token is required', success: false };
+  const file = await claimsRegistryPath(dirPath);
+  if (!file) {
+    return {
+      error: 'claim refused: this host maintains no worktree-claim registry',
+      success: false,
+    };
+  }
+  return withRepoFileMutex(file, async () => {
+    const added = await addGitWorktree(payload);
+    if (!added.success) return added;
+    const canonical = await canonicalizePath(worktreePath);
+    const written = await writeClaim(file, canonical, claimToken);
+    if (!written.success) {
+      // The claim could not be bound — roll the just-created directory back
+      // inside this same exclusive section before anyone else can see it.
+      await removeGitWorktree({ force: true, path: dirPath, worktreePath }).catch(() => undefined);
+      return {
+        error: `claim registration failed: ${written.error ?? 'unknown'}`,
+        success: false,
+      };
+    }
+    return { ...added, claimRegistered: true };
   });
 };
 

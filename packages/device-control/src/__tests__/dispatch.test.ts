@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -420,6 +420,57 @@ describe('executeDeviceRpc', () => {
       expect(added.success).toBe(true);
       expect(added.claimRegistered).toBeUndefined();
     } finally {
+      await rm(parent, { force: true, recursive: true });
+      await rm(repo, { force: true, recursive: true });
+    }
+  });
+
+  it('SC01: inspectGitWorktreePath advertises the claim capability to callers', async () => {
+    const repo = await initRepo();
+    try {
+      const inspection = (await executeDeviceRpc(
+        'inspectGitWorktreePath',
+        { path: repo, worktreePath: path.join(repo, 'ghost') },
+        makeDeps(),
+      )) as {
+        capabilities?: { worktreeClaims?: boolean };
+        kind: string;
+      };
+      expect(inspection.capabilities?.worktreeClaims).toBe(true);
+    } finally {
+      await rm(repo, { force: true, recursive: true });
+    }
+  });
+
+  it('SC01: a claim-token add runs worktree creation inside the claims mutex', async () => {
+    // The claims registry lock must fence the whole writer admission —
+    // create + register together — not merely the registration write. A
+    // foreign live holder of that lock must therefore block the add too.
+    const repo = await initRepo();
+    const parent = await mkdtemp(path.join(tmpdir(), 'device-control-wt-'));
+    const linked = path.join(parent, 'linked');
+    const lockPath = path.join(repo, '.git', 'orvilo-worktree-claims.json.lock');
+    await writeFile(
+      lockPath,
+      `${JSON.stringify({ hostname: hostname(), pid: process.pid, token: 'foreign' })}\n`,
+      { flag: 'wx' },
+    );
+    try {
+      const pending = executeDeviceRpc(
+        'addGitWorktree',
+        { branch: 'task/T-1', claimToken: 'tok-secret', path: repo, worktreePath: linked },
+        makeDeps(),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const createdWhileHeld = existsSync(linked);
+      await rm(lockPath, { force: true });
+      const added = (await pending) as { claimRegistered?: boolean; success: boolean };
+
+      expect(createdWhileHeld).toBe(false);
+      expect(added).toMatchObject({ claimRegistered: true, success: true });
+      expect(existsSync(linked)).toBe(true);
+    } finally {
+      await rm(lockPath, { force: true });
       await rm(parent, { force: true, recursive: true });
       await rm(repo, { force: true, recursive: true });
     }

@@ -1,6 +1,7 @@
 import { moveLocalFiles, renameLocalFile, writeLocalFile } from '@orvilo/local-file-shell/file';
 import {
   addGitWorktree,
+  addGitWorktreeClaimed,
   checkoutGitBranch,
   deleteGitBranch,
   finalizeGitMerge,
@@ -19,7 +20,6 @@ import {
   probeGitRemoteRef,
   pullGitBranch,
   pushGitBranch,
-  registerWorktreeClaim,
   removeGitWorktree,
   removeGitWorktreeVerified,
   renameGitBranch,
@@ -247,6 +247,12 @@ export const executeDeviceRpc = async (
     case 'inspectGitWorktreePath': {
       const payload = params as { path: string; worktreePath: string };
       const inspection = await inspectGitWorktreePath(payload);
+      // Capability negotiation before writer admission: this host binds a
+      // presented claim token to the created checkout inside the claims
+      // mutex. Hosts that predate it simply omit the field, and the server
+      // refuses claim-bound provisioning on them instead of creating a
+      // directory that could never be safely cleaned up.
+      inspection.capabilities = { worktreeClaims: true };
       // Writer presence is the host's signal: when the host exposes a run
       // registry the dep answers which run owns the path; without one the
       // field stays undefined — "cannot prove safe", never "free".
@@ -302,30 +308,16 @@ export const executeDeviceRpc = async (
         ref?: string;
         worktreePath: string;
       };
-      const result = await addGitWorktree(payload);
-      if (!result.success || payload.claimToken === undefined) return result;
-      // Bind the server-issued claim token to the physical checkout on this
-      // host — the delete path later verifies against this registration. The
-      // `claimRegistered` flag in the result is the capability signal callers
-      // use to distinguish "host can verify claims" from "host silently
-      // dropped the token"; a failed registration rolls the worktree back.
-      const registered = await registerWorktreeClaim({
-        claimToken: payload.claimToken,
-        path: payload.path,
-        worktreePath: payload.worktreePath,
-      });
-      if (!registered.success) {
-        await removeGitWorktree({
-          force: true,
-          path: payload.path,
-          worktreePath: payload.worktreePath,
-        }).catch(() => undefined);
-        return {
-          error: `claim registration failed: ${registered.error ?? 'unknown'}`,
-          success: false,
-        };
+      // A claim-bound add is writer admission: the worktree is created and
+      // the server-issued token bound inside the ONE claims-registry mutex
+      // section — never create first and register in the open, where a crash
+      // between the two leaves a directory no cleanup can verify. The
+      // `claimRegistered` flag in the result remains the capability signal
+      // callers check before relying on verified deletes.
+      if (payload.claimToken !== undefined) {
+        return addGitWorktreeClaimed(payload);
       }
-      return { ...result, claimRegistered: true };
+      return addGitWorktree(payload);
     }
 
     case 'mergeGitBranch': {

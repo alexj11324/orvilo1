@@ -8,7 +8,7 @@ import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
-import ProjectSidebar from './Sidebar';
+import ProjectTabsBar from './TabsBar';
 
 const ProjectLayout = memo(() => {
   const enabled = useUserStore(labPreferSelectors.enableProjects);
@@ -16,9 +16,9 @@ const ProjectLayout = memo(() => {
   if (!enabled) return <ProjectDisabled />;
 
   return (
-    <Flexbox horizontal height="100%" style={{ minWidth: 0 }}>
-      <ProjectSidebar />
-      <Flexbox flex={1} height="100%" style={{ minWidth: 0 }}>
+    <Flexbox height="100%" style={{ minWidth: 0 }}>
+      <ProjectTabsBar />
+      <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
         <Outlet />
       </Flexbox>
     </Flexbox>

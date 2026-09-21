@@ -71,7 +71,7 @@
     {
       "id": "conversation-surface",
       "disposition": "REWRITE_FOR_ACP",
-      "reason": "Conversation/ChatInput/shared activity/intervention stay as the multiplayer agent control surface, but must not own prompt/model/provider/tool-loop execution (ORV-107).",
+      "reason": "Conversation/ChatInput/shared activity/intervention stay as the multiplayer agent control surface, but must not own prompt/model/provider/tool-loop execution (ORV-107). ASR transcription router kept (ChatInput Dictation is its sole consumer).",
       "globs": [
         "src/features/{Conversation,ChatInput,ChatMiniMap,ChatTerminal,DailyBrief,HomeInbox,Recommendations,Billboard}/**",
         "src/store/chat/**",
@@ -85,7 +85,8 @@
         "apps/server/src/routers/lambda/brief.ts",
         "packages/conversation-flow/**",
         "apps/server/src/routers/lambda/{message,aiChat,followUpAction}.ts",
-        "apps/server/src/services/{message*,conversation*}/**"
+        "apps/server/src/services/{message*,conversation*}/**",
+        "apps/server/src/routers/lambda/asr.ts"
       ],
       "issue": "ORV-107"
     },
@@ -320,25 +321,29 @@
       "issue": "ORV-102"
     },
     {
-      "id": "knowledge-rag",
-      "disposition": "INVESTIGATE",
-      "reason": "Knowledge base / file loaders / chunk pipeline are wired into agent context but absent from the named product boundary; needs a product call on whether Knowledge stays as a workspace capability.",
-      "globs": [
-        "apps/server/src/routers/lambda/{knowledge,knowledgeBase,asr}.ts",
-        "apps/server/src/services/{knowledge*,rag*,chunk*,embedding*}/**",
-        "packages/file-loaders/**",
-        "src/features/{Knowledge*,DataImporter}/**"
-      ],
-      "issue": "ORV-100",
-      "owner": "alexj11324",
-      "followUp": "Decide if knowledge-base is inside the ACP product boundary; if not, close via ORV-108."
-    },
-    {
       "id": "achaos-chaos-toolkit",
       "disposition": "DELETE",
       "reason": "Orphan chaos-engineering toolkit: 7 private workspace packages under packages/achaos/**, zero external inbound imports, README consumers aspirational. Deleted by ORV-115; guard keeps it dead.",
       "globs": ["packages/achaos/**"],
       "issue": "ORV-115"
+    },
+    {
+      "id": "knowledge-context",
+      "disposition": "KEEP",
+      "reason": "Knowledge base + chunk pipeline are live in-boundary infrastructure: consumed by knowledgeBase server runtime (agent-tools), Agent/Project/Document flows, and workspace-permission-gated routers. Resolved by ORV-114.",
+      "globs": [
+        "apps/server/src/routers/lambda/{knowledge,knowledgeBase}.ts",
+        "apps/server/src/routers/lambda/{__tests__/knowledgeBase.test.ts,_helpers/knowledgeBaseAccess.ts}",
+        "apps/server/src/services/{knowledgeBase,knowledgeBaseAccess,chunk}/**"
+      ],
+      "issue": "ORV-114"
+    },
+    {
+      "id": "file-ingestion",
+      "disposition": "KEEP",
+      "reason": "packages/file-loaders is the shared document/file parsing pipeline consumed by Document service, documentAccess, local-file-shell and OpenAPI file service — all retained surfaces. Resolved by ORV-114.",
+      "globs": ["packages/file-loaders/**"],
+      "issue": "ORV-114"
     }
   ],
   "fixedBoundary": [

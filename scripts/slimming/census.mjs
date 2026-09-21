@@ -492,6 +492,26 @@ function main() {
     })),
     uncoveredFiles: files.filter((f) => fileDisposition(f) === 'UNCOVERED').length,
     uncoveredByArea: {},
+    // Files matched by capabilities whose dispositions disagree — silent
+    // precedence (DELETE > INVESTIGATE > REWRITE > KEEP) would hide the
+    // conflict, so surface it explicitly and fail `--check` on it.
+    conflictingDispositionFiles: files
+      .filter((f) => {
+        const disps = new Set(
+          (capOfFile.get(f) || []).map((id) => capabilities.find((c) => c.id === id).disposition),
+        );
+        return disps.size > 1;
+      })
+      .sort()
+      .map((f) => ({
+        file: f,
+        capabilities: (capOfFile.get(f) || []).sort(),
+        dispositions: [
+          ...new Set(
+            (capOfFile.get(f) || []).map((id) => capabilities.find((c) => c.id === id).disposition),
+          ),
+        ].sort(),
+      })),
   };
 
   // uncovered distribution by top dir (helps spot ungoverned areas)
@@ -514,15 +534,24 @@ function main() {
   const badCaps = census.capabilities.filter(
     (c) => c.disposition === 'DELETE' && c.inbound.unexplained.length > 0,
   );
-  if (CHECK && badCaps.length) {
-    console.error('DELETE capabilities with unexplained inbound dependencies:');
-    for (const c of badCaps) {
-      console.error(`  ${c.id}: ${c.inbound.unexplained.length} unexplained importers`);
+  const conflicts = census.conflictingDispositionFiles;
+  if (CHECK && (badCaps.length || conflicts.length)) {
+    if (badCaps.length) {
+      console.error('DELETE capabilities with unexplained inbound dependencies:');
+      for (const c of badCaps) {
+        console.error(`  ${c.id}: ${c.inbound.unexplained.length} unexplained importers`);
+      }
+    }
+    if (conflicts.length) {
+      console.error('Files with conflicting capability dispositions:');
+      for (const c of conflicts) {
+        console.error(`  ${c.file}: ${c.capabilities.join(' + ')} (${c.dispositions.join(' + ')})`);
+      }
     }
     process.exit(1);
   }
   console.log(
-    `census: ${files.length} source files, ${pkgByName.size} workspace packages, ${badCaps.length} DELETE caps with open inbound deps`,
+    `census: ${files.length} source files, ${pkgByName.size} workspace packages, ${badCaps.length} DELETE caps with open inbound deps, ${conflicts.length} conflicting dispositions`,
   );
 }
 
@@ -572,6 +601,18 @@ function renderMarkdown(census, boundary) {
     }
     lines.push('');
   }
+  lines.push('## Conflicting dispositions');
+  lines.push('');
+  if ((census.conflictingDispositionFiles || []).length === 0) {
+    lines.push('None — every file has a single unambiguous disposition.');
+  } else {
+    lines.push('| File | Capabilities | Dispositions |');
+    lines.push('| --- | --- | --- |');
+    for (const c of census.conflictingDispositionFiles.slice(0, 200)) {
+      lines.push(`| \`${c.file}\` | ${c.capabilities.join(', ')} | ${c.dispositions.join(', ')} |`);
+    }
+  }
+  lines.push('');
   lines.push('## UNCOVERED source files by area (top 40)');
   lines.push('');
   lines.push('| Area | Files |');

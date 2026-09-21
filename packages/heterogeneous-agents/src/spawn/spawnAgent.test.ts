@@ -1603,7 +1603,7 @@ describe('spawnAgent', () => {
       const { spawnAgent } = await import('./spawnAgent');
       const handle = await spawnAgent({
         agentType: 'claude-code',
-        mcpServers: [{ name: 'lobe_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }],
+        mcpServers: [{ name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }],
         operationId: 'op-mcp',
         prompt: 'hi',
       });
@@ -1614,7 +1614,7 @@ describe('spawnAgent', () => {
 
       expect(
         fake.requests.find(({ method }) => method === 'session/new')?.params?.mcpServers,
-      ).toEqual([{ name: 'lobe_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }]);
+      ).toEqual([{ name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }]);
     } finally {
       killSpy.mockRestore();
     }

@@ -787,6 +787,8 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         const result = await taskCaller().run({
           continueTopicId: args.continueTopicId,
           id,
+          // A tool-initiated continuation declares its intent explicitly.
+          intent: args.continueTopicId ? 'continue' : undefined,
           prompt: args.prompt,
         });
 

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+
+import type { VerificationPollStage } from '@orvilo/types';
 import { vi } from 'vitest';
 
 import {
@@ -8,6 +10,7 @@ import {
   MERGE,
   NEW_HEAD,
 } from '../../githubRepo/__tests__/reviewSnapshot.fixtures';
+import type * as GithubMerge from '../../githubRepo/mergePullRequest';
 import { isRemotePrMergeReady } from '../../githubRepo/reviewGate';
 import type {
   ExpectedPullRequestIdentity,
@@ -22,10 +25,15 @@ type Row = {
     branch: string;
     expectedHeadSha?: string;
     integratedSha?: string;
+    lastError?: null | string;
+    lastErrorCode?: string;
+    mergeIssuedAt?: string;
     prNumber?: number;
     repo: string;
     role: string;
     state: string;
+    verificationPollFailures?: number | Partial<Record<VerificationPollStage, number>>;
+    verificationPollFailureStages?: Partial<Record<VerificationPollStage, number>>;
   };
   seq: number;
   status: string;
@@ -79,6 +87,28 @@ function setup(
     liveTopic?: boolean;
     missingPr?: boolean;
     missingRemote?: boolean;
+    /** Seed the legacy scalar shape under the old key (mixed-version read). */
+    legacyPollFailures?: number;
+    /**
+     * Route the merge through the REAL `mergePullRequest` implementation with a
+     * stubbed global fetch — injection happens at the HTTP boundary, not by
+     * rewriting the helper's semantics. `'drop'` rejects the fetch call
+     * (response lost in flight); a number answers with that HTTP status. Only
+     * the first merge call is routed — later calls use the default success,
+     * so a released intent can be observed retrying.
+     */
+    mergeHttp?: 'drop' | number;
+    /**
+     * The fake remote is self-consistent: reads reflect whether a merge
+     * mutation actually executed, instead of a fixed call-index sequence.
+     * Needed when several sweeps interleave and call order is unpredictable.
+     */
+    followRemote?: boolean;
+    /** mergePullRequest throws — the accepted-merge acknowledgement is lost. */
+    mergeThrows?: boolean;
+    pollFailures?: Partial<Record<VerificationPollStage, number>>;
+    /** Ordered per-call snapshot overrides — 'unavailable' makes the read fail. */
+    reads?: (Partial<RemotePrReviewSnapshot> | 'unavailable')[];
     runningTask?: boolean;
     noMatchingRowsAtConfirmation?: boolean;
     otherRepositoryRow?: boolean;
@@ -102,6 +132,7 @@ function setup(
       repo: 'acme/widgets',
       role: 'task',
       state: options.rowState ?? 'verification_pending',
+      verificationPollFailures: options.legacyPollFailures ?? options.pollFailures,
     },
     seq: 1,
     status: options.liveTopic ? 'running' : 'completed',
@@ -157,7 +188,13 @@ function setup(
     }),
   };
   const mocks: Record<string, Record<string, unknown>> = {
-    '@orvilo/types': { cloudSandboxRepoPath: () => '/workspace/widgets' },
+    '@orvilo/types': {
+      // The mergeHttp path imports the REAL githubRepo module — its transitive
+      // imports reach into @orvilo/types, so the mock must provide every
+      // top-level binding those modules touch.
+      AgentChatConfigSchema: {},
+      cloudSandboxRepoPath: () => '/workspace/widgets',
+    },
     'debug': { __esModule: true, default: () => () => {} },
     'drizzle-orm': {
       ...Object.fromEntries(
@@ -191,12 +228,39 @@ function setup(
         async findByTaskId() {
           return structuredClone(state.rows);
         }
-        async updateIntegration(_task: string, topic: string, patch: Partial<Row['integration']>) {
+        async updateIntegration(
+          _task: string,
+          topic: string,
+          patch: Partial<Row['integration']>,
+          _expectPollFailures?: unknown,
+          expectMergeIssuedAt?: null | string,
+        ) {
           state.events.push('persist-pr');
-          if (options.failPersistence) return false;
+          // failPersistence simulates durable-write failure EXCEPT the
+          // merge-intent claim — under SA03 that write happens before the
+          // remote call, so a proof-write failure is exercised separately.
+          if (
+            options.failPersistence &&
+            !(Object.keys(patch).length === 1 && 'mergeIssuedAt' in patch)
+          )
+            return false;
           const found = state.rows.find((item) => item.topicId === topic);
           if (!found) return false;
-          Object.assign(found.integration, patch);
+          // Emulate the mergeIssuedAt CAS guard — only the claimant that sees
+          // the marker in its expected state may write.
+          if (
+            expectMergeIssuedAt !== undefined &&
+            (found.integration.mergeIssuedAt ?? null) !== expectMergeIssuedAt
+          )
+            return false;
+          // Emulate jsonb_strip_nulls: keys patched to null are removed.
+          for (const [key, value] of Object.entries(patch)) {
+            if (value === null) {
+              delete (found.integration as Record<string, unknown>)[key];
+            } else {
+              (found.integration as Record<string, unknown>)[key] = value;
+            }
+          }
           return true;
         }
       },
@@ -224,10 +288,47 @@ function setup(
       findBranchPr: async () => undefined,
       getRemoteBranchSha: async () => (options.missingRemote ? undefined : HEAD),
       isRemotePrMergeReady,
-      mergePullRequest: async (args: { expectedHeadSha: string }) => {
+      mergePullRequest: async (args: {
+        expectedHeadSha: string;
+        mergeMethod?: 'merge' | 'rebase' | 'squash';
+        prNumber: number;
+        repo: string;
+        token?: string;
+      }) => {
         state.merges.push(args);
+        if (options.mergeHttp !== undefined && state.merges.length === 1) {
+          // Dependency-light leaf module — the real merge implementation with
+          // only the fetch layer beneath it, so importActual stays real even
+          // while the heavy '@/server/services/githubRepo' barrel is mocked.
+          const actual = await vi.importActual<typeof GithubMerge>(
+            '../../githubRepo/mergePullRequest',
+          );
+          const mergeHttp = options.mergeHttp;
+          vi.stubGlobal(
+            'fetch',
+            mergeHttp === 'drop'
+              ? async () => {
+                  throw new Error('ECONNRESET: merge response lost in flight');
+                }
+              : async () =>
+                  new Response(JSON.stringify({ message: `HTTP ${mergeHttp}` }), {
+                    status: mergeHttp,
+                  }),
+          );
+          try {
+            const mergeResult = await actual.mergePullRequest(args);
+            state.events.push(`merge-outcome:${mergeResult.outcome}`);
+            return mergeResult;
+          } catch (mergeError) {
+            state.events.push(`merge-threw:${String(mergeError)}`);
+            throw mergeError;
+          } finally {
+            vi.unstubAllGlobals();
+          }
+        }
+        if (options.mergeThrows) throw new Error('connection reset');
         // The confirmation, not this response body, is the authority for the merge SHA.
-        return { merged: true, sha: 'wrong-response-sha' };
+        return { outcome: 'confirmed_success', sha: 'wrong-response-sha' };
       },
       resolveGithubAccessToken: async () => 'fixture-token',
       getPullRequestReviewSnapshot: async (
@@ -237,13 +338,35 @@ function setup(
         expected?: ExpectedPullRequestIdentity,
       ) => {
         state.expected.push(expected);
-        if (options.unavailable) return undefined;
+        if (options.followRemote) {
+          const result = snapshot({
+            merged: state.merges.length > 0,
+            mergedAt: state.merges.length > 0 ? DATE : undefined,
+            mergeCommitSha: state.merges.length > 0 ? MERGE : undefined,
+            open: state.merges.length === 0,
+          });
+          if (
+            expected &&
+            (result.baseBranch !== expected.baseBranch ||
+              result.headBranch !== expected.headBranch ||
+              (expected.headSha !== undefined && expected.headSha !== result.headSha) ||
+              (expected.nodeId !== undefined && expected.nodeId !== result.nodeId) ||
+              (expected.repositoryId !== undefined &&
+                expected.repositoryId !== result.repositoryId))
+          )
+            return undefined;
+          return result;
+        }
+        const callIndex = state.expected.length - 1;
+        const queued = options.reads?.[callIndex];
+        if (options.unavailable || queued === 'unavailable') return undefined;
         // Call 1 is the sweep read, call 2 the merge-boundary revalidation,
-        // calls >= 3 the post-merge confirmation.
-        const result =
-          state.expected.length === 1
+        // calls >= 3 the post-merge confirmation. `reads` overrides per call.
+        const result = queued
+          ? snapshot(queued)
+          : callIndex === 0
             ? snapshot(options.first)
-            : state.expected.length === 2
+            : callIndex === 1
               ? snapshot(options.premerge)
               : snapshot({
                   merged: true,
@@ -310,6 +433,9 @@ add('confirmation cannot silently change target branch or repository identity', 
   }
 });
 
+// SA03/F08: with the write-ahead intent the only durable failure left at
+// merge time is the proof write — the merge itself already landed remotely,
+// so the pass must error (reconcile path) rather than complete or re-issue.
 add('failed proof persistence does not call completed', async (load) => {
   const f = setup({ failPersistence: true });
   await (
@@ -404,17 +530,14 @@ add(
   },
 );
 
-add(
-  'a delivered-but-unbound row is adopted into review by establishing its PR',
-  async (load) => {
-    const f = setup({ missingPr: true, rowState: 'pending', runningTask: true });
-    const result = await (await load(f.mocks))(f.db);
-    assert.ok(f.state.events.includes('create-pr'));
-    assert.equal(f.state.merges.length, 1);
-    assert.equal(f.state.completed.length, 1);
-    assert.deepEqual(result.merged, ['T-1']);
-  },
-);
+add('a delivered-but-unbound row is adopted into review by establishing its PR', async (load) => {
+  const f = setup({ missingPr: true, rowState: 'pending', runningTask: true });
+  const result = await (await load(f.mocks))(f.db);
+  assert.ok(f.state.events.includes('create-pr'));
+  assert.equal(f.state.merges.length, 1);
+  assert.equal(f.state.completed.length, 1);
+  assert.deepEqual(result.merged, ['T-1']);
+});
 
 add('the sweep stops taking new candidates once its time budget is spent', async (load) => {
   const f = setup({ taskCount: 50 });
@@ -513,5 +636,261 @@ add(
   },
   false,
 );
+
+add(
+  'a failed verification poll is counted and still waits below the cap',
+  async (load) => {
+    const f = setup({ unavailable: true });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.waiting, ['T-1']);
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, { snapshot: 1 });
+    assert.equal(f.state.rows[0].integration.state, 'verification_pending');
+    assert.equal(f.state.merges.length, 0);
+  },
+  false,
+);
+
+add(
+  'a permanently unreadable remote bounds the delivery into blocked',
+  async (load) => {
+    const f = setup({ pollFailures: { snapshot: 9 }, unavailable: true });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.paused, ['T-1']);
+    assert.equal(f.state.rows[0].integration.state, 'blocked');
+    assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, { snapshot: 10 });
+    assert.equal(f.state.merges.length, 0);
+    assert.equal(f.state.completed.length, 0);
+  },
+  false,
+);
+
+add('a successful remote read resets only the stage that was re-observed', async (load) => {
+  const f = setup({ pollFailures: { snapshot: 3 } });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.merged, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {});
+});
+
+// F08: a healthy first snapshot must not erase failures accumulated at the
+// merge boundary — merge_decision's budget is owned by that stage alone.
+add('a healthy snapshot preserves merge-boundary failure budgets', async (load) => {
+  const f = setup({
+    reads: [
+      // Pass 1: snapshot healthy, merge-boundary re-read unavailable.
+      {},
+      'unavailable',
+      // Pass 2: snapshot healthy again, then business-CI pending keeps the
+      // pass waiting before the merge boundary — budgets must survive.
+      { checks: { failed: [], pending: ['CI'], skipped: [], successful: [] } },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+    merge_decision: 1,
+  });
+  const second = await sweep(f.db);
+  assert.deepEqual(second.waiting, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+    merge_decision: 1,
+  });
+});
+
+// F08: a merge GitHub already accepted is never re-issued — a lost
+// confirmation reconciles by re-reading the merged state only.
+add('a merge accepted but unconfirmed reconciles without a second merge call', async (load) => {
+  const f = setup({
+    reads: [
+      // Pass 1: healthy reads, merge issued, confirmation unreadable.
+      {},
+      {},
+      'unavailable',
+      // Pass 2: still unmerged at both reads, mergeIssuedAt suppresses the
+      // duplicate merge call, then the confirmation finally lands.
+      { merged: false },
+      { merged: false },
+      { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.equal(f.state.merges.length, 1);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+    merge_confirm: 1,
+  });
+  assert.ok(f.state.rows[0].integration.mergeIssuedAt);
+  const second = await sweep(f.db);
+  assert.deepEqual(second.merged, ['T-1']);
+  // The merge RPC ran exactly once — the second pass reconciled by reading.
+  assert.equal(f.state.merges.length, 1);
+  assert.equal(f.state.completed.length, 1);
+});
+
+// Merge gate: first snapshot always succeeds, merge-boundary reads always
+// fail — 11 rounds must reach a bounded stop.
+add('a merge boundary that never confirms blocks after the per-stage cap', async (load) => {
+  const f = setup({
+    reads: Array.from({ length: 22 }, (_, i) => (i % 2 === 0 ? {} : 'unavailable')),
+  });
+  const sweep = await load(f.mocks);
+  for (let round = 0; round < 11; round++) await sweep(f.db);
+  assert.equal(f.state.merges.length, 0);
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+    merge_decision: 10,
+  });
+  assert.equal(f.state.rows[0].integration.state, 'blocked');
+  assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
+  // Bounded: the blocked row leaves the active-delivery set entirely.
+  const twelfth = await sweep(f.db);
+  assert.equal(twelfth.checked, 0);
+});
+
+// SA03-A: the same lost-acknowledgement exercised at the REAL fetch boundary
+// — githubFetch swallows the transport failure, mergePullRequest reports
+// outcome_unknown, and the controller keeps the durable intent instead of
+// releasing it as a "rejection". The second pass reconciles by reading merged
+// state; the merge mutation ran exactly once.
+add(
+  'a merge response lost at the real fetch boundary reconciles without re-issuing',
+  async (load) => {
+    const f = setup({
+      mergeHttp: 'drop',
+      reads: [
+        // Pass 1: healthy reads, real merge PUT issued, response dropped.
+        {},
+        {},
+        // Pass 2: head/base reads still show the unmerged PR; the persisted
+        // intent suppresses re-issue; the confirmation read finally lands.
+        { merged: false },
+        { merged: false },
+        { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+      ],
+    });
+    const sweep = await load(f.mocks);
+    const first = await sweep(f.db);
+    assert.deepEqual(first.waiting, ['T-1']);
+    assert.equal(f.state.merges.length, 1);
+    // The durable intent survived the dropped merge response.
+    assert.ok(f.state.rows[0].integration.mergeIssuedAt);
+    assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+      merge_decision: 1,
+    });
+    const second = await sweep(f.db);
+    // Still exactly one merge call — the intent forced reconcile-by-read.
+    assert.equal(f.state.merges.length, 1);
+    assert.deepEqual(second.merged, ['T-1']);
+  },
+);
+
+// SA03-A: an evidenced refusal (4xx — permission denied, head mismatch, not
+// mergeable) is the ONLY outcome allowed to release the write-ahead intent.
+// The marker clears and a later healthy pass may issue the merge again.
+add('a proven merge refusal releases the intent so a later sweep may retry', async (load) => {
+  const f = setup({
+    mergeHttp: 405,
+    reads: [
+      {},
+      {},
+      // Pass 2: healthy reads again — the released intent lets the merge
+      // mutation run once more, then the confirmation lands.
+      {},
+      {},
+      { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.equal(f.state.merges.length, 1);
+  // Rejection released the CAS marker and surfaced the remote reason.
+  assert.equal(f.state.rows[0].integration.mergeIssuedAt, undefined);
+  assert.ok(f.state.errors.some((error) => error?.includes('Waiting to merge')));
+  const second = await sweep(f.db);
+  assert.equal(f.state.merges.length, 2);
+  assert.deepEqual(second.merged, ['T-1']);
+});
+
+// SA03-A: two sweeps racing the same delivery row share a single durable
+// intent — the mergeIssuedAt CAS admits exactly one owner, so the merge
+// mutation runs exactly once even under concurrent sweep execution.
+add('concurrent sweeps admit exactly one merge owner', async (load) => {
+  const f = setup({ followRemote: true });
+  const sweep = await load(f.mocks);
+  const [a, b] = await Promise.all([sweep(f.db), sweep(f.db)]);
+  // Exactly one durable intent owner — the merge mutation ran once no matter
+  // how the sweeps interleaved.
+  assert.equal(f.state.merges.length, 1);
+  // The owner merged through proof; the loser either deferred to the CAS claim
+  // (waiting) or reconciled by observing the already-merged remote (merged).
+  assert.ok(f.state.completed.length >= 1);
+  for (const res of [a, b]) {
+    assert.equal(res.corrected.length + res.paused.length, 0);
+    assert.ok(res.merged.includes('T-1') || res.waiting.includes('T-1'));
+  }
+});
+
+// SA03/F08 (F02T): the merge acknowledgement is lost mid-flight — the intent
+// marker was already persisted, so the next sweep reconciles by re-reading
+// merged state and never issues a second merge mutation.
+add('a lost merge acknowledgement reconciles instead of re-issuing', async (load) => {
+  const f = setup({
+    mergeThrows: true,
+    reads: [
+      // Pass 1: healthy reads, merge RPC issued then the response is lost.
+      {},
+      {},
+      // Pass 2: head/base reads still show the unmerged PR; the confirmation
+      // read finally lands.
+      { merged: false },
+      { merged: false },
+      { merged: true, mergedAt: DATE, mergeCommitSha: MERGE, open: false },
+    ],
+  });
+  const sweep = await load(f.mocks);
+  const first = await sweep(f.db);
+  assert.deepEqual(first.waiting, ['T-1']);
+  assert.equal(f.state.merges.length, 1);
+  // The durable intent survived the lost acknowledgement.
+  assert.ok(f.state.rows[0].integration.mergeIssuedAt);
+  const second = await sweep(f.db);
+  // No second merge call — the persisted intent forces reconcile-by-read.
+  assert.equal(f.state.merges.length, 1);
+  assert.deepEqual(second.merged, ['T-1']);
+});
+
+// SA03/F08 (F03T): a sweep that observes an already-claimed merge intent
+// issues no mutation — only the claim owner may call mergePullRequest; the
+// sweep reconciles by reading remote state.
+add('a second sweep never issues a second merge mutation', async (load) => {
+  const f = setup();
+  const sweep = await load(f.mocks);
+  // Simulate a concurrently-claimed intent before this pass runs.
+  f.state.rows[0].integration.mergeIssuedAt = 'claimed-by-other-sweep';
+  await sweep(f.db);
+  // Zero merge calls — the persisted intent suppressed re-issue entirely.
+  assert.equal(f.state.merges.length, 0);
+});
+
+// SA03/F08 (F04T): rows written by the pre-map schema version carry a bare
+// number — the normalized reader counts it instead of producing
+// `[object Object]1` or dropping the budget.
+add('a legacy scalar poll-failure counter normalizes into the stage map', async (load) => {
+  const f = setup({ legacyPollFailures: 9, unavailable: true });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.paused, ['T-1']);
+  // The legacy scalar still bounds whichever stage runs next — 9 + this
+  // pass = 10 → capped into blocked, and the scalar is retained as evidence.
+  assert.equal(f.state.rows[0].integration.state, 'blocked');
+  assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, {
+    snapshot: 10,
+    sweep: 9,
+  });
+  // The legacy key was removed — a rolled-back reader never sees a map where
+  // it expects a number.
+  assert.equal(f.state.rows[0].integration.verificationPollFailures, undefined);
+});
 
 export { cases as reviewControllerCases };

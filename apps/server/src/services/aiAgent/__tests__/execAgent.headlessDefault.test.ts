@@ -76,7 +76,7 @@ vi.mock('@/database/models/thread', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: mockCreateOperation,
@@ -130,7 +130,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 vi.mock('model-bank', async (importOriginal) => {

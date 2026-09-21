@@ -5,9 +5,9 @@ export type ReviewPageCollection = 'checks' | 'comments' | 'files' | 'reviews' |
 /**
  * Write inputs carry the review-write contract: `observedHeadSha` pins the
  * write to the head the reviewer actually saw, `snapshotId` identifies the
- * loaded conversation snapshot, and `operationId` makes a retried submit
- * idempotent instead of a blind resubmit. `reviewSessionId` adopts an
- * existing pending review — required before submitting one.
+ * loaded conversation snapshot, and `operationId` — REQUIRED, derived from
+ * the write intent — makes a retried submit idempotent instead of a blind
+ * resubmit. `reviewSessionId` adopts an existing pending review.
  */
 class PullRequestService {
   addFileComment = (input: {
@@ -15,7 +15,7 @@ class PullRequestService {
     id: string;
     line: number;
     observedHeadSha: string;
-    operationId?: string;
+    operationId: string;
     path: string;
     side?: 'LEFT' | 'RIGHT';
     snapshotId?: string;
@@ -38,7 +38,7 @@ class PullRequestService {
     body: string;
     id: string;
     observedHeadSha: string;
-    operationId?: string;
+    operationId: string;
     snapshotId?: string;
     threadId: string;
   }) => lambdaClient.pullRequest.replyThread.mutate(input);
@@ -48,7 +48,7 @@ class PullRequestService {
     event: 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES';
     id: string;
     observedHeadSha: string;
-    operationId?: string;
+    operationId: string;
     reviewSessionId?: string;
     snapshotId?: string;
   }) => lambdaClient.pullRequest.submitReview.mutate(input);

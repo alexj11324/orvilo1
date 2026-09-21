@@ -144,7 +144,11 @@ export function registerLifecycleCommands(task: Command) {
           const result = (await client.task.run.mutate({
             id,
             ...(i === 0 && options.prompt && { prompt: options.prompt }),
-            ...(i === 0 && options.continue && { continueTopicId: options.continue }),
+            // SB08: continuing a topic declares its intent explicitly —
+            // an ambiguous constraint change is a conflict, never a silent
+            // adoption or frozen re-run.
+            ...(i === 0 &&
+              options.continue && { continueTopicId: options.continue, intent: 'continue' }),
           })) as any;
 
           if (!result.success) {

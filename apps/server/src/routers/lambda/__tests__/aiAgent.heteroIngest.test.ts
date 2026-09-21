@@ -34,7 +34,7 @@ vi.mock('@/server/services/heterogeneousAgent', () => ({
 
 // AgentRuntimeService and AiChatService are constructed by the procedure
 // middleware too — stub to keep the test isolated.
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {};
   }),

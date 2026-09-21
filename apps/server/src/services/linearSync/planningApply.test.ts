@@ -23,6 +23,13 @@ import { LinearPlanningWorker } from './planning';
 
 const runTask = vi.hoisted(() => vi.fn());
 
+// CAID admission defaults to off; planning tests exercise the orchestrated
+// wake path, so admission is allowed by default — one test flips it off.
+const caidAdmission = vi.hoisted(() => ({ allowed: vi.fn(async () => true) }));
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: caidAdmission.allowed,
+}));
+
 vi.mock('@/server/services/taskRunner', () => ({
   TaskRunnerService: vi.fn(function () {
     return { runTask };
@@ -251,6 +258,78 @@ describe('LinearPlanningWorker.applyProposal', () => {
       taskId: task.id,
       trigger: 'orchestrator',
     });
+  });
+
+  it('C08b keeps the dispatch intent requested while CAID admission is off (R10)', async () => {
+    caidAdmission.allowed.mockResolvedValue(false);
+    const { project, revision, task } = await createRevision('Resume intent gated', false, true);
+    const agentId = 'planning-resume-agent';
+    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db.insert(projectAgents).values({
+      agentId,
+      enabled: true,
+      projectId: project!.id,
+      workspaceId,
+    });
+    await db
+      .update(projects)
+      .set({
+        orchestrationPolicy: {
+          ...project!.orchestrationPolicy,
+          autoDispatch: true,
+          replanMode: 'apply',
+        },
+      })
+      .where(eq(projects.id, project!.id));
+    const [assignedTask] = await db
+      .update(tasks)
+      .set({ assigneeAgentId: agentId })
+      .where(eq(tasks.id, task.id))
+      .returning();
+    await db
+      .update(taskPlanningRevisions)
+      .set({
+        inputSnapshot: {
+          consistency: {
+            bindingVersion: 1,
+            orchestrationPolicyRevision: project!.orchestrationPolicyRevision,
+          },
+          tasks: [{ id: task.id, updatedAt: assignedTask.updatedAt.toISOString() }],
+        },
+        proposal: {
+          actions: [
+            {
+              action: 'request_resume',
+              instruction: 'Continue from the reconciled Linear requirement.',
+              reason: 'The task is ready and its dependencies are complete.',
+              taskId: task.id,
+            },
+          ],
+          explanation: 'Resume the ready task through the durable dispatcher.',
+          requiresApproval: false,
+        },
+      })
+      .where(eq(taskPlanningRevisions.id, revision.id));
+
+    await expect(
+      new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, userId, true),
+    ).resolves.toMatchObject({ stale: false, updatedTaskIds: [task.id] });
+
+    // The intent row commits 'requested' and stays sweep-visible — the
+    // taskDispatchStart sweep re-drives it when admission flips back on —
+    // instead of being woken (and dropped) in-line.
+    expect(runTask).not.toHaveBeenCalled();
+    await expect(
+      db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
+    ).resolves.toMatchObject([
+      expect.objectContaining({
+        idempotencyKey: `planning:${revision.id}:resume:${task.id}`,
+        phase: 'requested',
+      }),
+    ]);
+    await expect(TaskDispatchModel.findPlanningStartCandidates(db)).resolves.toContainEqual(
+      expect.objectContaining({ idempotencyKey: `planning:${revision.id}:resume:${task.id}` }),
+    );
   });
 
   it('C10 commits a fenced stop intent before the runtime interruption can be retried', async () => {

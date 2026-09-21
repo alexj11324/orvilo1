@@ -3,7 +3,7 @@ import {
   type AgentRuntimeContext,
   type AgentState,
   normalizeAgentState,
-} from '@orvilo/agent-runtime';
+} from '@orvilo/agent-execution';
 import debug from 'debug';
 import { type Redis } from 'ioredis';
 

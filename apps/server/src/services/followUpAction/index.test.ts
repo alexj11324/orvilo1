@@ -1,9 +1,8 @@
 // @vitest-environment node
-import { ModelRuntime } from '@orvilo/model-runtime';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { notShareVisitorMessage } from '@/database/utils/shareVisitor';
-import * as ModelRuntimeModule from '@/server/modules/ModelRuntime';
+import { AcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { FollowUpActionService } from './index';
 
@@ -15,10 +14,26 @@ const MODEL_CONFIG = {
   provider: 'scene-provider',
 };
 
+const mocks = vi.hoisted(() => ({
+  generateObject: vi.fn(),
+  topicFindById: vi.fn(),
+}));
+
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: vi.fn(function () {
+    return { findById: mocks.topicFindById };
+  }),
+}));
+vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  AiGenerationService: vi.fn(function () {
+    return { generateObject: mocks.generateObject };
+  }),
+}));
+
 describe('FollowUpActionService.extract', () => {
   let svc: FollowUpActionService;
   let dbMock: any;
-  let runtimeMock: { generateObject: ReturnType<typeof vi.fn> };
   let queryFindFirstSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -31,8 +46,9 @@ describe('FollowUpActionService.extract', () => {
       },
     };
 
-    runtimeMock = { generateObject: vi.fn() };
-    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockResolvedValue(runtimeMock as any);
+    mocks.generateObject.mockReset();
+    mocks.topicFindById.mockReset();
+    mocks.topicFindById.mockResolvedValue({ agentId: 'topic-agent-1' });
 
     svc = new FollowUpActionService(dbMock, TEST_USER);
   });
@@ -42,27 +58,13 @@ describe('FollowUpActionService.extract', () => {
     vi.unstubAllGlobals();
   });
 
-  it('reuses the source topic in outgoing OpenCode requests across extractions', async () => {
-    const sessions: (string | null)[] = [];
+  it('binds the extraction judgment to the topic agent on every call', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'Choose a next step.' });
-    vi.spyOn(ModelRuntimeModule, 'initModelRuntimeFromDB').mockImplementation(async () =>
-      ModelRuntime.initializeWithProvider('opencodecodingplan', { apiKey: 'test' }),
-    );
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init?: RequestInit) => {
-        if (String(url) === 'https://models.dev/api.json') {
-          return Response.json({ 'opencode-go': { models: {} } });
-        }
-        expect(String(url)).toBe('https://opencode.ai/zen/go/v1/chat/completions');
-        sessions.push(new Headers(init?.headers).get('x-opencode-session'));
-        return Response.json({
-          choices: [
-            { finish_reason: 'stop', message: { content: '{"chips":[]}', role: 'assistant' } },
-          ],
-        });
-      }),
-    );
+    mocks.generateObject.mockResolvedValue({ chips: [] });
+    mocks.topicFindById.mockImplementation(async (id: string) => ({
+      agentId: `agent-of-${id}`,
+      id,
+    }));
 
     for (const topicId of ['topic-1', 'topic-1', 'topic-2']) {
       expect(
@@ -73,7 +75,26 @@ describe('FollowUpActionService.extract', () => {
       ).toEqual({ chips: [], messageId: FOUND_MSG });
     }
 
-    expect(sessions).toEqual(['topic-1', 'topic-1', 'topic-2']);
+    expect(mocks.topicFindById.mock.calls.map((call) => call[0])).toEqual([
+      'topic-1',
+      'topic-1',
+      'topic-2',
+    ]);
+    for (const [, options] of mocks.generateObject.mock.calls) {
+      expect(options).toMatchObject({ kind: 'judgment' });
+    }
+    expect(
+      mocks.generateObject.mock.calls.map(([, options]) => options.judgment.binding.agentId),
+    ).toEqual(['agent-of-topic-1', 'agent-of-topic-1', 'agent-of-topic-2']);
+  });
+
+  it('surfaces a missing ACP binding instead of degrading', async () => {
+    queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'q?' });
+    mocks.generateObject.mockRejectedValue(new AcpJudgmentBindingError('followUp.extract'));
+
+    await expect(
+      svc.extract({ modelConfig: MODEL_CONFIG, topicId: TEST_TOPIC }),
+    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_NO_BINDING' });
   });
 
   it('excludes agent-share visitor messages from the assistant lookup', async () => {
@@ -107,7 +128,7 @@ describe('FollowUpActionService.extract', () => {
     queryFindFirstSpy.mockResolvedValue(undefined);
     const result = await svc.extract({ modelConfig: MODEL_CONFIG, topicId: TEST_TOPIC });
     expect(result).toEqual({ chips: [], messageId: '' });
-    expect(runtimeMock.generateObject).not.toHaveBeenCalled();
+    expect(mocks.generateObject).not.toHaveBeenCalled();
   });
 
   it('returns chips from a valid LLM JSON response, keyed by resolved message id', async () => {
@@ -115,7 +136,7 @@ describe('FollowUpActionService.extract', () => {
       id: FOUND_MSG,
       content: 'What would you like to call me?',
     });
-    runtimeMock.generateObject.mockResolvedValue({
+    mocks.generateObject.mockResolvedValue({
       chips: [
         { label: 'Lumi', message: 'Lumi' },
         { label: 'Atlas', message: 'Atlas' },
@@ -137,7 +158,7 @@ describe('FollowUpActionService.extract', () => {
       id: FOUND_MSG,
       content: 'What would you like to call me?',
     });
-    runtimeMock.generateObject.mockResolvedValue({ chips: [] });
+    mocks.generateObject.mockResolvedValue({ chips: [] });
 
     await svc.extract({
       topicId: TEST_TOPIC,
@@ -147,16 +168,14 @@ describe('FollowUpActionService.extract', () => {
       },
     });
 
-    expect(ModelRuntimeModule.initModelRuntimeFromDB).toHaveBeenCalledWith(
-      dbMock,
-      TEST_USER,
-      'custom-provider',
-    );
-    expect(runtimeMock.generateObject).toHaveBeenCalledWith(
+    expect(mocks.generateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'custom-scene-model',
+        provider: 'custom-provider',
       }),
       expect.objectContaining({
+        judgment: expect.objectContaining({ purpose: 'followUp.extract' }),
+        kind: 'judgment',
         metadata: expect.objectContaining({ topicId: TEST_TOPIC }),
         tracing: expect.objectContaining({
           promptVersion: 'v1.0',
@@ -170,7 +189,7 @@ describe('FollowUpActionService.extract', () => {
 
   it('truncates more than 4 chips', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'choose' });
-    runtimeMock.generateObject.mockResolvedValue({
+    mocks.generateObject.mockResolvedValue({
       chips: Array.from({ length: 6 }, (_, i) => ({ label: `c${i}`, message: `c${i}` })),
     });
     const result = await svc.extract({ modelConfig: MODEL_CONFIG, topicId: TEST_TOPIC });
@@ -179,7 +198,7 @@ describe('FollowUpActionService.extract', () => {
 
   it('drops chips that exceed length limits but keeps the rest', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'choose' });
-    runtimeMock.generateObject.mockResolvedValue({
+    mocks.generateObject.mockResolvedValue({
       chips: [
         { label: 'a'.repeat(50), message: 'too long label' },
         { label: 'ok', message: 'ok' },
@@ -191,7 +210,7 @@ describe('FollowUpActionService.extract', () => {
 
   it('drops chips with empty label or message', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'choose' });
-    runtimeMock.generateObject.mockResolvedValue({
+    mocks.generateObject.mockResolvedValue({
       chips: [
         { label: '', message: '' },
         { label: 'ok', message: 'ok' },
@@ -202,16 +221,16 @@ describe('FollowUpActionService.extract', () => {
     expect(result.chips).toEqual([{ label: 'ok', message: 'ok' }]);
   });
 
-  it('returns empty (with messageId) when LLM throws', async () => {
+  it('returns empty (with messageId) when the judgment run fails', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'q?' });
-    runtimeMock.generateObject.mockRejectedValue(new Error('boom'));
+    mocks.generateObject.mockRejectedValue(new Error('boom'));
     const result = await svc.extract({ modelConfig: MODEL_CONFIG, topicId: TEST_TOPIC });
     expect(result).toEqual({ chips: [], messageId: FOUND_MSG });
   });
 
   it('returns empty (with messageId) when LLM response fails schema validation', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'q?' });
-    runtimeMock.generateObject.mockResolvedValue({ chips: 'not-an-array' });
+    mocks.generateObject.mockResolvedValue({ chips: 'not-an-array' });
     const result = await svc.extract({ modelConfig: MODEL_CONFIG, topicId: TEST_TOPIC });
     expect(result).toEqual({ chips: [], messageId: FOUND_MSG });
   });
@@ -270,32 +289,30 @@ describe('FollowUpActionService.extract', () => {
     ]);
   });
 
-  it('filters workspace mode by workspaceId and forwards it to model runtime', async () => {
+  it('filters workspace mode by workspaceId and keeps the judgment on the same scope', async () => {
     svc = new FollowUpActionService(dbMock, TEST_USER, 'workspace-1');
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'q?' });
-    runtimeMock.generateObject.mockResolvedValue({ chips: [] });
+    mocks.generateObject.mockResolvedValue({ chips: [] });
 
     await svc.extract({ modelConfig: MODEL_CONFIG, topicId: TEST_TOPIC });
 
     const { parts, table } = captureWhereOps();
     expect(parts).toContainEqual({ col: table.workspaceId, op: 'eq', value: 'workspace-1' });
-    expect(ModelRuntimeModule.initModelRuntimeFromDB).toHaveBeenCalledWith(
-      dbMock,
-      TEST_USER,
-      MODEL_CONFIG.provider,
-      'workspace-1',
+    expect(mocks.generateObject).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ kind: 'judgment' }),
     );
   });
 
   it('appends onboarding addendum to system prompt when hint is onboarding', async () => {
     queryFindFirstSpy.mockResolvedValue({ id: FOUND_MSG, content: 'q?' });
-    runtimeMock.generateObject.mockResolvedValue({ chips: [] });
+    mocks.generateObject.mockResolvedValue({ chips: [] });
     await svc.extract({
       topicId: TEST_TOPIC,
       hint: { kind: 'onboarding', phase: 'discovery' },
       modelConfig: MODEL_CONFIG,
     });
-    const passedMessages = runtimeMock.generateObject.mock.calls[0][0].messages;
+    const passedMessages = mocks.generateObject.mock.calls[0][0].messages;
     const sysContent = passedMessages.find((m: any) => m.role === 'system').content;
     expect(sysContent).toContain('Phase: discovery');
     expect(sysContent).toContain('Phase tip:');

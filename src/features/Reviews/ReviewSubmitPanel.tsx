@@ -1,11 +1,13 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { GitPullRequestDraftIcon, PencilLineIcon } from 'lucide-react';
-import { memo, useRef, useState } from 'react';
+import { GitPullRequestDraftIcon, PencilLineIcon, RefreshCwIcon } from 'lucide-react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import TextArea from '@/components/TextArea';
+
+import type { WriteOutcome } from './types';
 
 const styles = createStaticStyles(({ css }) => ({
   banner: css`
@@ -28,42 +30,57 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
+type SubmitEvent = 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES';
+
 /**
  * The review-submit region — rendered below the code, never dominating above
- * it. Carries the write contract: operationId stays stable across retries of
- * the same payload and rotates after a landed write so a fresh review gets a
- * fresh operation.
+ * it. The write contract lives in the intent-derived operationId the caller
+ * computes: the same (head, session, body, action) intent keeps one id across
+ * retries and refreshes, so a retry is a server-side reconcile, never a
+ * blind resubmit. `unknown` keeps the draft and surfaces an explicit
+ * recoverable state; `applied` clears it.
  */
 const ReviewSubmitPanel = memo<{
   disabled?: boolean;
+  onSubmit: (event: SubmitEvent, body: string) => Promise<WriteOutcome>;
+  /** Re-read remote state before an unknown-outcome intent is retried. */
+  onVerify?: () => Promise<void>;
   pendingReviewId: string | null;
   stale?: boolean;
-  onSubmit: (
-    event: 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES',
-    body: string,
-    operationId: string,
-  ) => Promise<boolean>;
-}>(({ disabled, onSubmit, pendingReviewId, stale }) => {
+}>(({ disabled, onSubmit, onVerify, pendingReviewId, stale }) => {
   const { t } = useTranslation('common');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState<string | null>(null);
-  // One operationId per pending submit — a retried click replays the same
-  // operation server-side instead of becoming a blind resubmit. Rotated after
-  // a success so the next review is a new operation.
-  const operationIdRef = useRef<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  // The intent whose outcome could not be confirmed — the draft stays, the
+  // banner explains, and the only resend path re-verifies remote state first.
+  const [unknownIntent, setUnknownIntent] = useState<{ body: string; event: SubmitEvent } | null>(
+    null,
+  );
 
-  const submit = async (event: 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES') => {
-    operationIdRef.current ??= crypto.randomUUID();
-    const operationId = operationIdRef.current;
+  const submit = async (event: SubmitEvent, intentBody: string) => {
     setSubmitting(event);
     try {
-      const ok = await onSubmit(event, body.trim(), operationId);
-      if (ok) {
+      const outcome = await onSubmit(event, intentBody);
+      if (outcome === 'applied') {
         setBody('');
-        operationIdRef.current = null;
+        setUnknownIntent(null);
+      } else if (outcome === 'unknown') {
+        setUnknownIntent({ body: intentBody, event });
       }
     } finally {
       setSubmitting(null);
+    }
+  };
+
+  const verifyAndRetry = async () => {
+    if (!unknownIntent) return;
+    setVerifying(true);
+    try {
+      await onVerify?.();
+      await submit(unknownIntent.event, unknownIntent.body);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -77,6 +94,16 @@ const ReviewSubmitPanel = memo<{
         <Flexbox className={styles.banner} role={'status'}>
           <Icon color={cssVar.colorWarning} icon={GitPullRequestDraftIcon} size={14} />
           <Text fontSize={12}>{t('reviews.pendingDraftBanner')}</Text>
+        </Flexbox>
+      ) : null}
+      {unknownIntent ? (
+        <Flexbox className={styles.banner} role={'alert'}>
+          <Icon color={cssVar.colorWarning} icon={RefreshCwIcon} size={14} />
+          <Text fontSize={12}>{t('reviews.outcomeUnknown')}</Text>
+          <Flexbox flex={1} />
+          <Button loading={verifying} size={'small'} onClick={() => void verifyAndRetry()}>
+            {t('reviews.outcomeUnknownAction')}
+          </Button>
         </Flexbox>
       ) : null}
       {stale ? (
@@ -95,14 +122,14 @@ const ReviewSubmitPanel = memo<{
         <Button
           disabled={disabled || stale || !body.trim()}
           loading={submitting === 'COMMENT'}
-          onClick={() => void submit('COMMENT')}
+          onClick={() => void submit('COMMENT', body.trim())}
         >
           {t('reviews.submitComment')}
         </Button>
         <Button
           disabled={disabled || stale}
           loading={submitting === 'APPROVE'}
-          onClick={() => void submit('APPROVE')}
+          onClick={() => void submit('APPROVE', body.trim())}
         >
           {t('reviews.submitApprove')}
         </Button>
@@ -110,7 +137,7 @@ const ReviewSubmitPanel = memo<{
           danger
           disabled={disabled || stale}
           loading={submitting === 'REQUEST_CHANGES'}
-          onClick={() => void submit('REQUEST_CHANGES')}
+          onClick={() => void submit('REQUEST_CHANGES', body.trim())}
         >
           {t('reviews.submitRequestChanges')}
         </Button>

@@ -1,0 +1,1 @@
+ALTER TABLE "pull_request_review_receipts" ADD COLUMN IF NOT EXISTS "remote_id" text;

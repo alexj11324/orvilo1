@@ -1,5 +1,4 @@
 {
-  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
@@ -1239,7 +1238,83 @@
       "when": 1789827475641,
       "tag": "0176_work_attention",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1789999336886,
+      "tag": "0177_pull_request_review_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 178,
+      "version": "7",
+      "when": 1790004823709,
+      "tag": "0178_pull_request_review_receipts_remote_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 179,
+      "version": "7",
+      "when": 1790004824709,
+      "tag": "0179_task_topics_contract",
+      "breakpoints": true
+    },
+    {
+      "idx": 180,
+      "version": "7",
+      "when": 1790004825709,
+      "tag": "0180_shallow_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 181,
+      "version": "7",
+      "when": 1790004826709,
+      "tag": "0181_task_workspace_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 182,
+      "version": "7",
+      "when": 1790004827709,
+      "tag": "0182_lean_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 183,
+      "version": "7",
+      "when": 1790004828709,
+      "tag": "0183_task_dispatch_origin",
+      "breakpoints": true
+    },
+    {
+      "idx": 184,
+      "version": "7",
+      "when": 1790004829709,
+      "tag": "0184_task_workspace_claim_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 185,
+      "version": "7",
+      "when": 1790004830709,
+      "tag": "0185_fence_seq_forward_repair",
+      "breakpoints": true
+    },
+    {
+      "idx": 186,
+      "version": "7",
+      "when": 1790004831709,
+      "tag": "0186_agent_operation_launches",
+      "breakpoints": true
+    },
+    {
+      "idx": 187,
+      "version": "7",
+      "when": 1790004832709,
+      "tag": "0187_action_approval_dispatch_binding",
+      "breakpoints": true
     }
-  ],
-  "version": "6"
+  ]
 }

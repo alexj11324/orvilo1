@@ -48,10 +48,28 @@ describe('pullRequestRouter write gate', () => {
     async (procedure) => {
       const input =
         procedure === 'addFileComment'
-          ? { body: 'x', id: REVIEW_ID, line: 1, observedHeadSha: 'a1b2c3d', path: 'a.ts' }
+          ? {
+              body: 'x',
+              id: REVIEW_ID,
+              line: 1,
+              observedHeadSha: 'a1b2c3d',
+              operationId: 'op-file-comment',
+              path: 'a.ts',
+            }
           : procedure === 'replyThread'
-            ? { body: 'x', id: REVIEW_ID, observedHeadSha: 'a1b2c3d', threadId: 't-1' }
-            : { event: 'COMMENT', id: REVIEW_ID, observedHeadSha: 'a1b2c3d' };
+            ? {
+                body: 'x',
+                id: REVIEW_ID,
+                observedHeadSha: 'a1b2c3d',
+                operationId: 'op-reply-thread',
+                threadId: 't-1',
+              }
+            : {
+                event: 'COMMENT',
+                id: REVIEW_ID,
+                observedHeadSha: 'a1b2c3d',
+                operationId: 'op-submit-review',
+              };
 
       await expect(
         (createCaller()[procedure] as (i: unknown) => Promise<unknown>)(input),
@@ -61,7 +79,12 @@ describe('pullRequestRouter write gate', () => {
 
   it('does not reach the service while gated off', async () => {
     await expect(
-      createCaller().submitReview({ event: 'COMMENT', id: REVIEW_ID, observedHeadSha: 'a1b2c3d' }),
+      createCaller().submitReview({
+        event: 'COMMENT',
+        id: REVIEW_ID,
+        observedHeadSha: 'a1b2c3d',
+        operationId: 'op-gate-1',
+      }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(mockSubmitReview).not.toHaveBeenCalled();
   });
@@ -72,6 +95,7 @@ describe('pullRequestRouter write gate', () => {
       event: 'COMMENT',
       id: REVIEW_ID,
       observedHeadSha: 'a1b2c3d',
+      operationId: 'op-gate-2',
     });
     expect(result).toMatchObject({ success: true });
     expect(mockSubmitReview).toHaveBeenCalledWith({
@@ -79,7 +103,7 @@ describe('pullRequestRouter write gate', () => {
       event: 'COMMENT',
       id: REVIEW_ID,
       observedHeadSha: 'a1b2c3d',
-      operationId: undefined,
+      operationId: 'op-gate-2',
       reviewSessionId: undefined,
       snapshotId: undefined,
     });

@@ -55,7 +55,8 @@ vi.mock('@/database/models/verifyRun', () => ({
     return { ensureForOperation: mocks.runEnsureForOperation };
   }),
 }));
-vi.mock('@/server/services/aiGeneration', () => ({
+vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
   AiGenerationService: vi.fn(function () {
     return { generateObject: mocks.aiGenerateObject };
   }),

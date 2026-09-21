@@ -4,32 +4,23 @@ import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
 import { MarketService } from '@/server/services/market';
 
+import { githubFetch, parseGithubRepo } from './githubFetch';
 import {
   type ExpectedPullRequestIdentity,
   readPullRequestReviewSnapshot,
   type RemotePrReviewSnapshot,
 } from './reviewSnapshot';
 
+export { githubFetch, type GithubRepoCoordinate, parseGithubRepo } from './githubFetch';
+export {
+  mergePullRequest,
+  type MergePullRequestOutcome,
+  type MergePullRequestResult,
+} from './mergePullRequest';
 export { isRemotePrMergeReady } from './reviewGate';
 export type { ExpectedPullRequestIdentity, RemotePrReviewSnapshot } from './reviewSnapshot';
 
 const log = debug('github-repo');
-const GITHUB_API = 'https://api.github.com';
-
-export interface GithubRepoCoordinate {
-  name: string;
-  owner: string;
-}
-
-export const parseGithubRepo = (repo: string): GithubRepoCoordinate | undefined => {
-  const trimmed = repo
-    .trim()
-    .replace(/\.git$/, '')
-    .replace(/\/+$/, '');
-  const match = /^(?:https?:\/\/github\.com\/)?([\w.-]+)\/([\w.-]+)$/.exec(trimmed);
-  if (!match) return undefined;
-  return { name: match[2], owner: match[1] };
-};
 
 export const resolveGithubAccessToken = async (params: {
   credKey?: string;
@@ -64,31 +55,6 @@ export const resolveGithubAccessToken = async (params: {
   } catch (error) {
     log('resolveGithubAccessToken: %O', error);
     return undefined;
-  }
-};
-
-const githubFetch = async (
-  path: string,
-  token?: string,
-  init?: { body?: unknown; method?: 'GET' | 'POST' | 'PUT' },
-): Promise<{ ok: boolean; status: number; json?: any }> => {
-  try {
-    const res = await fetch(`${GITHUB_API}${path}`, {
-      body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        ...(init?.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      method: init?.method ?? 'GET',
-      signal: AbortSignal.timeout(30_000),
-    });
-    const json = res.status === 204 ? undefined : await res.json().catch(() => undefined);
-    return { json, ok: res.ok, status: res.status };
-  } catch (error) {
-    log('githubFetch %s failed: %O', path, error);
-    return { ok: false, status: 0 };
   }
 };
 
@@ -299,35 +265,4 @@ export const getPullRequestReviewSnapshot = async (
   const coordinate = parseGithubRepo(repo);
   if (!coordinate) return undefined;
   return readPullRequestReviewSnapshot(githubFetch, coordinate, prNumber, token, expected);
-};
-
-export interface MergePullRequestResult {
-  merged: boolean;
-  message?: string;
-  sha?: string;
-}
-
-/** Merge only the exact PR revision reviewed by the delivery controller. */
-export const mergePullRequest = async (params: {
-  expectedHeadSha: string;
-  mergeMethod?: 'merge' | 'rebase' | 'squash';
-  prNumber: number;
-  repo: string;
-  token?: string;
-}): Promise<MergePullRequestResult> => {
-  const coordinate = parseGithubRepo(params.repo);
-  if (!coordinate) return { merged: false, message: 'Invalid GitHub repository coordinate' };
-  const res = await githubFetch(
-    `/repos/${coordinate.owner}/${coordinate.name}/pulls/${params.prNumber}/merge`,
-    params.token,
-    {
-      body: { merge_method: params.mergeMethod ?? 'squash', sha: params.expectedHeadSha },
-      method: 'PUT',
-    },
-  );
-  return {
-    merged: res.ok && res.json?.merged === true,
-    message: typeof res.json?.message === 'string' ? res.json.message : undefined,
-    sha: typeof res.json?.sha === 'string' ? res.json.sha : undefined,
-  };
 };

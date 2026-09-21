@@ -6,7 +6,7 @@ import { ChatErrorType } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { auth } from '@/auth';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 
 import { POST } from './route';
 
@@ -15,7 +15,7 @@ vi.mock('@/app/(backend)/middleware/auth/utils', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
   createTraceOptions: vi.fn().mockReturnValue({}),
 }));
 
@@ -59,12 +59,13 @@ describe('POST handler', () => {
         chat: vi.fn().mockResolvedValue(mockChatResponse),
       };
 
-      vi.mocked(initModelRuntimeFromDB).mockResolvedValue(new ModelRuntime(mockRuntime));
+      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue(
+        new ModelRuntime(mockRuntime),
+      );
 
       await POST(request as unknown as Request, { params: mockParams });
 
-      expect(initModelRuntimeFromDB).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(initModelRuntimeFromDeploymentConfig).toHaveBeenCalledWith(
         'test-user-id',
         'test-provider',
         undefined,
@@ -100,7 +101,9 @@ describe('POST handler', () => {
           chat: vi.fn().mockResolvedValue(mockChatResponse),
         };
 
-        vi.mocked(initModelRuntimeFromDB).mockResolvedValue(new ModelRuntime(mockRuntime));
+        vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue(
+          new ModelRuntime(mockRuntime),
+        );
 
         const response = await POST(request as unknown as Request, { params: mockParams });
 
@@ -132,7 +135,9 @@ describe('POST handler', () => {
         chat: vi.fn().mockRejectedValue(mockErrorResponse),
       };
 
-      vi.mocked(initModelRuntimeFromDB).mockResolvedValue(new ModelRuntime(mockRuntime));
+      vi.mocked(initModelRuntimeFromDeploymentConfig).mockResolvedValue(
+        new ModelRuntime(mockRuntime),
+      );
 
       const response = await POST(request, { params: mockParams });
 

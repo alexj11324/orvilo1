@@ -11,13 +11,6 @@ export {
   PiAdapter,
   QoderAdapter,
 } from './adapters';
-export {
-  CLAUDE_CODE_API_LOCAL_ONLY_ERROR,
-  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-  HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR,
-  sanitizeClaudeCodeDirectArgs,
-  sanitizeClaudeCodeDirectEnv,
-} from './claudeCodeDirectEnv';
 export type {
   BuiltinHeterogeneousAgentDescriptor,
   BuiltinHeterogeneousAgentType,
@@ -103,23 +96,13 @@ export type {
   SetErrorIntent,
 } from './mainAgentCoordinator';
 export { createMainAgentRunState, reduceMainAgent } from './mainAgentCoordinator';
-export type {
-  HeterogeneousProviderBindingReference,
-  ServerDefaultHeterogeneousAgentType,
-  ServerDefaultHeterogeneousCompatibilityProfile,
-  ServerDefaultHeterogeneousIngress,
-  ServerDefaultHeterogeneousModelPolicy,
-  ServerDefaultHeterogeneousTokenHeader,
-} from './providerBinding';
 export {
-  getServerDefaultHeterogeneousAgentConfig,
-  isServerDefaultHeterogeneousAgentType,
-  isServerDefaultHeterogeneousProfileModel,
-  SERVER_DEFAULT_HETEROGENEOUS_AGENT_CONFIG,
-  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
-  SERVER_DEFAULT_HETEROGENEOUS_PROFILE_DEFAULT_MODELS,
-} from './providerBinding';
-export { createAdapter, listAgentTypes, listLocalAgentTypes } from './registry';
+  createLiveAdapter,
+  createTraceDecoder,
+  listLiveAgentTypes,
+  listLocalAgentTypes,
+  listTraceDecoderTypes,
+} from './registry';
 export type { HeterogeneousAgentScanMap, HeterogeneousAgentScanStatus } from './scan/types';
 export { ACP_RUNTIME_AGENT_TYPES } from './spawn/acpRuntime';
 export {

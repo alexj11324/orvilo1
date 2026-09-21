@@ -74,6 +74,8 @@ interface ReportContext {
   deliverable: string;
   goal: string;
   modelConfig: { model: string; provider: string };
+  /** Preferred ACP binding for the report-narrative judgment. */
+  verifierAgentId?: string;
 }
 
 /**
@@ -192,9 +194,7 @@ export const driveTaskFromVerify = async (
       if (!reservationId || !completionReservationActive) return;
       const renewed = await taskModel.renewRunReservation(taskId, reservationId);
       if (!renewed && completionReservationActive) {
-        throw new CompletionReservationLostError(
-          'Task completion reservation ownership was lost',
-        );
+        throw new CompletionReservationLostError('Task completion reservation ownership was lost');
       }
     };
     leaseTimer = setInterval(() => {

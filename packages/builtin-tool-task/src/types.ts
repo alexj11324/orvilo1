@@ -97,6 +97,11 @@ export interface CreateGoalParams {
   /** ISO-8601 calendar-time budget; past it the coordinator stops dispatching. */
   deadline?: string | null;
   instruction: string;
+  /**
+   * How many of the goal's Tasks may run at once (1–10). Null/undefined uses
+   * the coordinator's default.
+   */
+  maxConcurrentTasks?: number | null;
   maxIterations?: number | null;
   maxTotalCost?: number | null;
   name: string;

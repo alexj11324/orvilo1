@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 
 import { MessageModel } from '@/database/models/message';
 import { InMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
@@ -6,12 +6,12 @@ import type {
   StreamChunkData,
   StreamEvent,
 } from '@/server/modules/AgentExecution/StreamEventManager';
+import type { AgentRuntimeService } from '@/server/services/agentExecution';
 import {
   extractTextFromMessage,
   findLastAssistantMessage,
   normalizeCompletionMessages,
 } from '@/server/services/agentExecution/CompletionLifecycle';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { BaseService } from '../common/base.service';
@@ -36,7 +36,7 @@ import type {
 const DELEGATED_RUN_WAIT_MS = 5 * 60_000;
 const DELEGATED_RUN_POLL_MS = 2_000;
 
-// Mirrors `isParkedStatus` in @orvilo/agent-runtime — kept local because this
+// Mirrors `isParkedStatus` in @orvilo/agent-execution — kept local because this
 // package must not take a runtime dependency on the server-side runtime bundle.
 const isParked = (status: AgentState['status']): boolean =>
   status === 'waiting_for_human' || status === 'waiting_for_async_tool';
@@ -429,7 +429,9 @@ export class ResponsesService extends BaseService {
         prompt: prompt.slice(0, 50),
       });
 
-      // 1. Create agent operation without auto-start
+      // 1. Create the agent operation and dispatch it — under ACP the
+      // operation executes on its execution binding; we then poll the durable
+      // status surface below instead of driving an in-process step loop.
       // model field is used as agentId
       const additionalPluginIds = this.extractHostedToolIds(params.tools);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
@@ -439,7 +441,7 @@ export class ResponsesService extends BaseService {
         additionalPluginIds: additionalPluginIds.length > 0 ? additionalPluginIds : undefined,
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
-        autoStart: false,
+        autoStart: true,
         instructions,
         prompt,
         stream: false,
@@ -540,7 +542,7 @@ export class ResponsesService extends BaseService {
         additionalPluginIds: additionalPluginIds.length > 0 ? additionalPluginIds : undefined,
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
-        autoStart: false,
+        autoStart: true,
         instructions,
         prompt,
         stream: true,

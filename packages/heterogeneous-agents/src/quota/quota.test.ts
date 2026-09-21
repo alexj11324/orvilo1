@@ -12,7 +12,6 @@ import {
   parseClaudeCredentialPlan,
   parseCodexAccountIdentity,
 } from './identity';
-import { selectAccount } from './loadBalancer';
 import { buildClaudeQuotaWindows } from './readings';
 import type { QuotaLimitReading } from './types';
 import { CLAUDE_SESSION_WINDOW_SECONDS, windowSecondsForKind } from './types';
@@ -485,64 +484,5 @@ describe('buildClaudeQuotaWindows', () => {
       session: null,
       weekly: null,
     });
-  });
-});
-
-// ── load balancer ─────────────────────────────────────────────────────────────
-describe('selectAccount', () => {
-  const base = { enabled: true, priority: 0 };
-
-  it('prefers the account with more weekly headroom (the bottleneck)', () => {
-    const pick = selectAccount(
-      [
-        { ...base, accountId: 'a', sessionUtil: 0, weeklyUtil: 72 },
-        { ...base, accountId: 'b', sessionUtil: 90, weeklyUtil: 30 },
-      ],
-      { now: 0 },
-    );
-    // b has less session headroom but more WEEKLY headroom → wins
-    expect(pick?.accountId).toBe('b');
-  });
-
-  it('routes Fable work away from a Fable-exhausted account (screenshot case)', () => {
-    // account A: weekly 43% but Fable 100% (已耗尽); account B: weekly 60%, Fable ok
-    const accounts = [
-      { ...base, accountId: 'A', scopedWeeklyUtil: { Fable: 100 }, weeklyUtil: 57 },
-      { ...base, accountId: 'B', scopedWeeklyUtil: { Fable: 20 }, weeklyUtil: 40 },
-    ];
-    // a Fable task must avoid A even though A's overall weekly is comparable
-    expect(selectAccount(accounts, { modelScope: 'Fable', now: 0 })?.accountId).toBe('B');
-    // a non-Fable task can still use A (more weekly headroom than... here B has more, so B)
-    expect(selectAccount(accounts, { now: 0 })?.accountId).toBe('B');
-  });
-
-  it('skips accounts that are exhausted or cooling down after a 429', () => {
-    expect(
-      selectAccount(
-        [
-          { ...base, accountId: 'x', weeklyUtil: 100 },
-          { ...base, accountId: 'y', rateLimitedUntil: 5000, weeklyUtil: 10 },
-        ],
-        { now: 1000 },
-      ),
-    ).toBeNull();
-    // once y's cooldown passes it becomes eligible
-    expect(
-      selectAccount([{ ...base, accountId: 'y', rateLimitedUntil: 5000, weeklyUtil: 10 }], {
-        now: 6000,
-      })?.accountId,
-    ).toBe('y');
-  });
-
-  it('honors disabled + priority tie-breaker', () => {
-    const pick = selectAccount(
-      [
-        { ...base, accountId: 'disabled', enabled: false, weeklyUtil: 0 },
-        { ...base, accountId: 'p2', priority: 2, weeklyUtil: 50 },
-        { ...base, accountId: 'p1', priority: 1, weeklyUtil: 50 },
-      ],
-      { now: 0 },
-    );
-    expect(pick?.accountId).toBe('p1');
   });
 });

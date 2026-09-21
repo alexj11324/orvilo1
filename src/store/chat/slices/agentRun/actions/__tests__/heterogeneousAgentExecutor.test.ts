@@ -87,14 +87,12 @@ vi.mock('@/services/electron/heterogeneousAgent', () => ({
   },
 }));
 
-// agentQuotaService — account routing (pre-spawn) + usage ledger (per turn).
-// Unmocked, both fire REAL trpc fetches from inside the executor.
-const mockSelectAccountForAgent = vi.fn(async (..._args: any[]): Promise<unknown> => null);
+// agentQuotaService — usage ledger (per turn). Unmocked, it fires REAL trpc
+// fetches from inside the executor.
 const mockRecordQuotaUsage = vi.fn(async (..._args: any[]) => undefined);
 vi.mock('@/services/agentQuota', () => ({
   agentQuotaService: {
     recordUsage: (...args: any[]) => mockRecordQuotaUsage(...args),
-    selectAccountForAgent: (...args: any[]) => mockSelectAccountForAgent(...args),
   },
 }));
 
@@ -552,10 +550,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
     // test starts emitting raw events.
     mockStartSession.mockImplementation(async (params: any) => {
       ipc.setAgentType('ipc-sess-1', params.agentType ?? 'claude-code');
-      return {
-        providerBindingKey: params.providerBinding ? 'provider-binding:v1:test' : undefined,
-        sessionId: 'ipc-sess-1',
-      };
+      return { sessionId: 'ipc-sess-1' };
     });
     mockSendPrompt.mockResolvedValue(undefined);
     mockStopSession.mockResolvedValue(undefined);
@@ -781,159 +776,6 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       ipc.emitComplete('ipc-sess-1');
       resolvePrompt();
       await executor;
-    });
-  });
-
-  describe('Claude Code Desktop-local API binding', () => {
-    const apiProvider = {
-      apiConfig: { model: 'api-primary', providerId: 'anthropic-direct' },
-      args: ['--model', 'stale-arg-model', '--effort', 'high'],
-      authMode: 'api' as const,
-      command: 'claude',
-      env: {
-        ANTHROPIC_AUTH_TOKEN: 'stale-token',
-        CLAUDE_CODE_USE_BEDROCK: '1',
-        KEEP_ME: 'yes',
-      },
-      model: 'stale-config-model',
-      type: 'claude-code' as const,
-    };
-    const serverDefaultApiProvider = {
-      ...apiProvider,
-      apiConfig: { model: 'claude-server', source: 'server-default' as const },
-    };
-
-    const configureDirectProvider = () => {
-      useAiInfraStore.setState({
-        aiProviderRuntimeConfig: {
-          'anthropic-direct': {
-            keyVaults: { apiKey: 'direct-key', baseURL: 'https://direct.example.com' },
-            settings: { sdkType: 'anthropic' },
-          } as any,
-        },
-        enabledAiModels: [
-          {
-            enabled: true,
-            id: 'api-primary',
-            providerId: 'anthropic-direct',
-            type: 'chat',
-          } as any,
-        ],
-        enabledAiProviders: [{ id: 'anthropic-direct' } as any],
-      });
-    };
-
-    it('rejects legacy user-provider (BYOK) bindings before spawn', async () => {
-      configureDirectProvider();
-
-      // User-provider bindings are retired — only the `server-default` source is
-      // still a supported `authMode: 'api'` binding. A persisted BYOK config
-      // must surface the explicit configuration error instead of spawning.
-      await runWithEvents([ccResult()], {
-        params: { heterogeneousProvider: apiProvider },
-      });
-
-      expect(mockStartSession).not.toHaveBeenCalled();
-      expect(mockUpdateMessageError).toHaveBeenCalledWith(
-        'ast-initial',
-        expect.objectContaining({
-          message: expect.stringMatching(/configMissing|provider and model/),
-        }),
-        expect.anything(),
-      );
-      expect(mockSelectAccountForAgent).not.toHaveBeenCalled();
-      expect(mockGetClaudeCodeIdentity).not.toHaveBeenCalled();
-    });
-
-    it('uses the deployment provider inside API mode', async () => {
-      await runWithEvents([ccResult()], {
-        params: { heterogeneousProvider: serverDefaultApiProvider },
-      });
-
-      expect(mockStartSession).toHaveBeenCalledWith(
-        expect.objectContaining({
-          providerBinding: {
-            apiConfig: { model: 'claude-server', source: 'server-default' },
-            kind: 'server-default',
-            resumeBindingKey: undefined,
-          },
-        }),
-      );
-      expect(mockSelectAccountForAgent).not.toHaveBeenCalled();
-      expect(mockGetClaudeCodeIdentity).not.toHaveBeenCalled();
-    });
-
-    it('passes a Kimi Code deployment-provider reference to Desktop main', async () => {
-      const kimiServerDefaultProvider = {
-        apiConfig: { model: 'kimi-k2.6', source: 'server-default' as const },
-        authMode: 'api' as const,
-        command: 'kimi',
-        type: 'kimi-code' as const,
-      } satisfies HeterogeneousProviderConfig;
-
-      await runWithEvents([], {
-        params: { heterogeneousProvider: kimiServerDefaultProvider },
-      });
-
-      expect(mockStartSession).toHaveBeenCalledWith(
-        expect.objectContaining({
-          agentType: 'kimi-code',
-          providerBinding: {
-            apiConfig: { model: 'kimi-k2.6', source: 'server-default' },
-            kind: 'server-default',
-            resumeBindingKey: undefined,
-          },
-        }),
-      );
-    });
-
-    it.each(['aspectlylabs/claude-server', 'orvilo-default'])(
-      'persists the catalog model instead of the CLI report %s',
-      async (reportedModel) => {
-        await runWithEvents(
-          [
-            { ...ccInit(), model: reportedModel },
-            ccMessageStart('msg_01', reportedModel),
-            ccAssistant('msg_01', [{ text: 'Hello', type: 'text' }], { model: reportedModel }),
-            ccMessageDelta({ input_tokens: 10, output_tokens: 5 }),
-            ccResult(),
-          ],
-          { params: { heterogeneousProvider: serverDefaultApiProvider } },
-        );
-
-        expect(
-          mockUpdateMessage.mock.calls.some(
-            ([id, val]: any) => id === 'ast-initial' && val.model === 'claude-server',
-          ),
-        ).toBe(true);
-        expect(
-          mockUpdateMessage.mock.calls.every(
-            ([, val]: any) =>
-              val.model !== 'aspectlylabs/claude-server' && val.model !== 'orvilo-default',
-          ),
-        ).toBe(true);
-      },
-    );
-
-    it('fails before spawn when the binding reference is incomplete', async () => {
-      const store = createMockStore();
-
-      await executeHeterogeneousAgent(
-        vi.fn(() => store),
-        {
-          ...defaultParams,
-          heterogeneousProvider: { ...apiProvider, apiConfig: undefined },
-        },
-      );
-
-      expect(mockStartSession).not.toHaveBeenCalled();
-      expect(mockUpdateMessageError).toHaveBeenCalledWith(
-        'ast-initial',
-        expect.objectContaining({
-          message: expect.stringMatching(/configMissing|provider and model/),
-        }),
-        expect.anything(),
-      );
     });
   });
 
@@ -2171,35 +2013,6 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       );
     });
 
-    it('should reject TRAE legacy user-provider (BYOK) configs in API mode', async () => {
-      const store = createMockStore();
-      const get = vi.fn(() => store);
-
-      // `authMode: 'api'` without a `server-default` source is a retired BYOK
-      // binding — the run must fail with the explicit config error and never
-      // reach Desktop main.
-      await executeHeterogeneousAgent(get, {
-        ...defaultParams,
-        heterogeneousProvider: {
-          apiConfig: { model: 'api-model', providerId: 'openai' },
-          args: ['--feature=test'],
-          authMode: 'api',
-          command: 'traecli',
-          model: 'stale-subscription-model',
-          type: 'trae' as const,
-        },
-      });
-
-      expect(mockStartSession).not.toHaveBeenCalled();
-      expect(mockUpdateMessageError).toHaveBeenCalledWith(
-        'ast-initial',
-        expect.objectContaining({
-          message: expect.stringMatching(/configMissing|provider and model/),
-        }),
-        expect.anything(),
-      );
-    });
-
     it('should pass the selected Devin model through ACP and native args', async () => {
       const store = createMockStore();
       const get = vi.fn(() => store);
@@ -2574,7 +2387,6 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
         }),
       ).toEqual({
         cwdChanged: false,
-        resumeBindingKey: 'native:v1:claude-code',
         resumeSessionId: 'cc-session-rate-limited',
       });
     });
@@ -2666,7 +2478,6 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
       const decisionA2 = resolveHeteroResume(topicMeta, cwdA, nativeResumeOptions);
       expect(decisionA2).toEqual({
         cwdChanged: false,
-        resumeBindingKey: 'native:v1:claude-code',
         resumeSessionId: 'cc-session-A',
       });
       const spawnedA2 = await runTurn(cwdA, decisionA2.resumeSessionId, 'cc-session-A');
@@ -3487,7 +3298,7 @@ describe('heterogeneousAgentExecutor DB persistence', () => {
           codexCommandCompleted(
             'item_6',
             `/bin/zsh -lc 'rg -n "tool_call_id|tool_calls" src packages | head -n 10'`,
-            'packages/agent-runtime/src/agents/GeneralChatAgent.ts:34:...\n',
+            'packages/heterogeneous-agents/src/spawn/standardAcpSession.ts:200:...\n',
           ),
           codexAgentMessage(
             'item_7',

@@ -10,6 +10,8 @@ import type {
  * Input consumed by satisfaction classifier services.
  */
 export interface SatisfactionClassifierInput {
+  /** The agent whose turn the feedback targets — the ACP judgment binding. */
+  agentId?: string;
   /**
    * Trimmed user feedback message to classify.
    */
@@ -18,12 +20,16 @@ export interface SatisfactionClassifierInput {
    * Optional serialized runtime context captured with the source event.
    */
   serializedContext?: string;
+  /** The topic the feedback turn belongs to. */
+  topicId?: string;
 }
 
 /**
  * Input consumed by skill-intent routing classifiers.
  */
 export interface SkillIntentClassifierInput {
+  /** The agent whose turn the feedback targets — the ACP judgment binding. */
+  agentId?: string;
   /**
    * Trimmed user feedback message to classify.
    */
@@ -32,6 +38,8 @@ export interface SkillIntentClassifierInput {
    * Optional compact same-turn evidence or execution summary.
    */
   serializedContext?: string;
+  /** The topic the feedback turn belongs to. */
+  topicId?: string;
   /**
    * Optional compact topic/task label for model-backed classification.
    */

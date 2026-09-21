@@ -32,7 +32,7 @@ vi.mock('@/envs/app', () => ({
 }));
 
 // Mock AgentRuntimeService (required by service constructor path for checkAndHandleRunTimeout)
-vi.mock('@/server/services/agentRuntime/AgentRuntimeService', () => ({
+vi.mock('@/server/services/agentExecution/AgentRuntimeService', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       interruptOperation: vi.fn().mockResolvedValue(true),

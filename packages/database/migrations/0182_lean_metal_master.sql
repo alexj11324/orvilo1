@@ -1,0 +1,1 @@
+ALTER TABLE "integration_leases" ADD COLUMN "fence_seq" bigint DEFAULT 0 NOT NULL;

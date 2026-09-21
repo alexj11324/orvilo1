@@ -4,12 +4,10 @@ import { type AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { LOADING_FLAT } from '@orvilo/const';
 import { isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
 import { parse } from '@orvilo/conversation-flow';
-import { getServerDefaultHeterogeneousAgentConfig } from '@orvilo/heterogeneous-agents';
 import type { ExecAgentResult, TaskCurrentActivity, TaskStatusResult } from '@orvilo/types';
 import {
   CreateThreadWithMessageSchema,
   entityIdPattern,
-  isServerDefaultHeterogeneousRelayInvocation,
   LocalHeterogeneousAgentTypeSchema,
   RequestTrigger,
   ThreadStatus,
@@ -50,6 +48,7 @@ import {
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
@@ -66,13 +65,8 @@ import {
 } from '@/libs/trpc/utils/internalJwt';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
-import {
-  getServerDefaultHeterogeneousModels,
-  initModelRuntimeFromServerConfig,
-  resolveServerDefaultHeterogeneousModel,
-  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
-} from '@/server/modules/ModelRuntime';
 import { mapAgentInterventionTRPCError } from '@/server/routers/lambda/_helpers/agentInterventionError';
+import { mapAgentStartTRPCError } from '@/server/routers/lambda/_helpers/agentStartError';
 import {
   assertCanUseMessageTargets,
   assertCanUseTopicTargets,
@@ -85,8 +79,15 @@ import {
   ResolveAgentInterventionBySourceSchema,
   ResolveAgentInterventionSchema,
 } from '@/server/routers/lambda/_schema/agentIntervention';
+import {
+  submitToolApprovalDecision,
+  toolApprovalEventId,
+  type ToolApprovalSubmitOutcome,
+} from '@/server/services/agentExecution/toolApprovalReceipt';
+import { AgentStartError } from '@/server/services/agentExecution/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 import {
+  ackAcpChildResultDeliveries,
   AcpBuiltinToolForbiddenError,
   AcpBuiltinToolNotFoundError,
   awaitAcpBuiltinToolChildren,
@@ -985,7 +986,12 @@ const ExecAgentSchema = z
         topicId: z.string().nullish(),
       })
       .optional(),
-    /** Whether to auto-start execution after creating operation */
+    /**
+     * Retired lobehub deferred-start flag. Under ACP every accepted run is
+     * dispatched inside this call — there is no queued intent a later
+     * `startExecution` could release — so `false` is rejected (BAD_REQUEST)
+     * before any side effect. To defer a run, use `scheduleAgentRun`.
+     */
     autoStart: z.boolean().optional().default(true),
     /**
      * Client-minted ids for the rows this run creates, honoured verbatim —
@@ -1505,9 +1511,40 @@ const HeteroExecBuiltinToolSchema = z.object({
  */
 const HeteroAwaitBuiltinToolChildrenSchema = z.object({
   childOperationIds: z.array(z.string().min(1)).min(1).max(64),
+  /**
+   * Delivery-ledger contract the host understands (F06). `1` = legacy
+   * consume-on-settle; `2` = settle returns `offered` deliveries the host
+   * acks via `heteroAckChildResultDeliveries`. Omitted means `1` — older
+   * hosts keep their exact old semantics, never accidentally opting into
+   * fields they cannot interpret.
+   */
+  contractVersion: z.union([z.literal(1), z.literal(2)]).optional(),
   operationId: z.string().min(1),
   timeoutMs: z.number().int().positive().max(30_000).default(25_000),
   toolCallId: z.string().min(1).optional(),
+  /**
+   * Server-side cumulative bound for this await — the host's remaining
+   * budget at THIS poll. The server stamps an absolute `awaitDeadlineAt` on
+   * the anchor once (first accept) and only compares against it afterwards,
+   * so a shrinking remaining budget can never re-charge elapsed time.
+   */
+  waitDeadlineMs: z
+    .number()
+    .int()
+    .positive()
+    .max(60 * 60_000)
+    .optional(),
+});
+
+/**
+ * Schema for `aiAgent.heteroAckChildResultDeliveries` — the parent's durable
+ * inbox ACK for v2 child-result deliveries. Each `eventId` is rebound to the
+ * calling operation's `aggregateId` inside the update, so a captured op token
+ * cannot consume receipts that belong to another operation.
+ */
+const HeteroAckChildResultDeliveriesSchema = z.object({
+  deliveryEventIds: z.array(z.string().min(1)).min(1).max(64),
+  operationId: z.string().min(1),
 });
 
 /**
@@ -1528,6 +1565,12 @@ const SubmitHeteroInterventionSchema = z.object({
   /** Producer step index; harmless placeholder — correlation is by toolCallId. */
   stepIndex: z.number().int().nonnegative().default(0),
   toolCallId: z.string().min(1),
+  /**
+   * The approval window the answered card was minted for — CAS-matched
+   * against the receipt's current `windowId` so a stale card can never
+   * decide a rotated window. Optional only for legacy clients.
+   */
+  windowId: z.string().min(1).max(128).optional(),
 });
 
 const HeteroInterventionReviewTokenSchema = z.object({
@@ -1612,6 +1655,62 @@ const publishClaimedHeteroIntervention = async (params: {
   };
 };
 
+/**
+ * SC-SB03: every approval entry (Web/Desktop submits, Mobile token-only
+ * resolutions, business resolutions) funnels through the same durable
+ * decision → winner-confirmation → notify shape. A `stale_window` or
+ * `closed` outcome is a REFUSAL — the intervention is neither resolved nor
+ * notified — surfaced as CONFLICT so the caller's card reverts and the live
+ * window (reported in the message) can be retried. `already_decided`
+ * projects the stored WINNER's answer — never the loser's submitted input.
+ */
+const throwOnRefusedApprovalOutcome = (outcome: ToolApprovalSubmitOutcome | undefined): void => {
+  if (outcome?.kind === 'stale_window') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: `This approval card targets a rotated window — re-render it on the live window${
+        outcome.windowId ? ` '${outcome.windowId}'` : ''
+      } and resubmit.`,
+    });
+  }
+  if (outcome?.kind === 'scope_mismatch') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This approval was re-scoped since the claim — resubmit against the live scope.',
+    });
+  }
+  if (outcome?.kind === 'closed') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This approval was already consumed or closed — it cannot be decided now.',
+    });
+  }
+};
+
+/**
+ * Project a stored winner's verdict onto what a claim/submit publishes:
+ * the durable answer is what propagates, so a losing submit's opposite
+ * payload can never be broadcast as the resolution.
+ */
+const approvalWinnerProjection = (action: 'approved' | 'denied') =>
+  action === 'approved'
+    ? { cancelReason: undefined, cancelled: undefined, result: { approved: true } }
+    : {
+        cancelReason: 'user_cancelled' as const,
+        cancelled: true as const,
+        result: undefined,
+      };
+
+/**
+ * What the response carries so old clients can't mistake every 2xx for
+ * 'approved' — `state` is the discriminated receipt outcome, `action` the
+ * canonical verdict when one exists.
+ */
+const approvalOutcomeSummary = (outcome: ToolApprovalSubmitOutcome) => ({
+  action: outcome.action,
+  state: outcome.kind,
+});
+
 const aiAgentBaseProcedure = wsCompatProcedure.use(serverDatabase);
 
 const aiAgentProcedure = aiAgentBaseProcedure.use(async (opts) => {
@@ -1688,272 +1787,7 @@ const authorizeOperationCallback = async (
   }
 };
 
-const assertServerDefaultControlAuth = (oidcAuth: Record<string, unknown> | null | undefined) => {
-  if (!oidcAuth || oidcAuth.purpose) {
-    throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'Server-default operations require Desktop OIDC authentication',
-    });
-  }
-};
-
-export const resolveServerDefaultHeterogeneousCapability = async () => {
-  const base = {
-    model: 'orvilo-default' as const,
-  };
-  if (process.env.ENABLE_SERVER_DEFAULT_HETEROGENEOUS_AGENT === '0') {
-    return { ...base, agents: [], enabled: false as const, reason: 'disabled' as const };
-  }
-
-  try {
-    const models = await getServerDefaultHeterogeneousModels();
-    const agents = SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES.filter(
-      (agentType) => models[agentType].length > 0,
-    );
-    if (agents.length === 0) {
-      return {
-        ...base,
-        agents,
-        enabled: false as const,
-        models,
-        reason: 'invalidConfiguration' as const,
-      };
-    }
-    return { ...base, agents, enabled: true as const, models };
-  } catch (error) {
-    log('Server-default heterogeneous capability is unavailable: %O', error);
-    return {
-      ...base,
-      agents: [],
-      enabled: false as const,
-      reason: 'invalidConfiguration' as const,
-    };
-  }
-};
-
-const resolveServerDefaultControlOperation = async (params: {
-  db: OrviloDatabase;
-  operationId: string;
-  userId: string;
-}) => {
-  const [operation] = await params.db
-    .select({
-      metadata: agentOperations.metadata,
-      model: agentOperations.model,
-      provider: agentOperations.provider,
-      status: agentOperations.status,
-      workspaceId: agentOperations.workspaceId,
-    })
-    .from(agentOperations)
-    .where(
-      and(eq(agentOperations.id, params.operationId), eq(agentOperations.userId, params.userId)),
-    )
-    .limit(1);
-
-  if (!operation || operation.metadata?.serverDefaultHeterogeneous !== true) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-  }
-
-  if (operation.workspaceId) {
-    const [membership] = await params.db
-      .select({ userId: workspaceMembers.userId })
-      .from(workspaceMembers)
-      .where(
-        and(
-          eq(workspaceMembers.workspaceId, operation.workspaceId),
-          eq(workspaceMembers.userId, params.userId),
-          isNull(workspaceMembers.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (!membership) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-    }
-  }
-
-  return {
-    model: new AgentOperationModel(params.db, params.userId, operation.workspaceId ?? undefined),
-    operation,
-  };
-};
-
-const settleServerDefaultControlOperation = async (params: {
-  currentStatus: string;
-  model: AgentOperationModel;
-  operationId: string;
-  targetStatus: 'done' | 'error' | 'interrupted';
-}) => {
-  if (params.currentStatus === params.targetStatus) return;
-  if (params.currentStatus !== 'running') {
-    throw new TRPCError({ code: 'CONFLICT', message: 'Operation has already ended' });
-  }
-
-  if (await params.model.settleRunning(params.operationId, params.targetStatus)) return;
-
-  // Another terminal request won the CAS after the scope read. Treat an
-  // identical terminal result as idempotent and reject a conflicting result.
-  const current = await params.model.findById(params.operationId);
-  if (current?.status !== params.targetStatus) {
-    throw new TRPCError({ code: 'CONFLICT', message: 'Operation has already ended' });
-  }
-};
-
 export const aiAgentRouter = router({
-  getServerDefaultHeterogeneousCapability: aiAgentBaseProcedure.query(() =>
-    resolveServerDefaultHeterogeneousCapability(),
-  ),
-
-  beginServerDefaultHeterogeneousOperation: aiAgentBaseProcedure
-    .input(
-      z.object({
-        agentType: z.enum(SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES),
-        agentId: z.string().optional(),
-        model: z.string().min(1),
-        operationId: z.string().min(1),
-        topicId: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      assertServerDefaultControlAuth(ctx.oidcAuth);
-      const workspaceId = await resolveHeteroTopicWorkspace({
-        db: ctx.serverDB,
-        requestedWorkspaceId: ctx.workspaceId,
-        topicId: input.topicId,
-        userId: ctx.userId,
-      });
-      if (workspaceId && input.agentId) {
-        await assertCanUseWorkspaceAgent({
-          agentId: input.agentId,
-          db: ctx.serverDB,
-          userId: ctx.userId,
-          workspaceId,
-        });
-      }
-      const capability = await resolveServerDefaultHeterogeneousCapability();
-      if (!capability.enabled) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message:
-            capability.reason === 'disabled'
-              ? 'Server-default agents are disabled'
-              : 'No server model is available',
-        });
-      }
-      const selection = await resolveServerDefaultHeterogeneousModel(
-        input.agentType,
-        input.model,
-      ).catch((error) => {
-        throw new TRPCError({
-          cause: error,
-          code: 'BAD_REQUEST',
-          message: 'The selected server model is not available for this heterogeneous agent',
-        });
-      });
-      await initModelRuntimeFromServerConfig({
-        actorUserId: ctx.userId,
-        workspaceId,
-      }).catch((error) => {
-        log('Selected server model runtime is unavailable: %O', error);
-        throw new TRPCError({
-          cause: error,
-          code: 'PRECONDITION_FAILED',
-          message: 'The selected server model runtime is unavailable',
-        });
-      });
-
-      const model = new AgentOperationModel(ctx.serverDB, ctx.userId, workspaceId);
-      await model.recordStart({
-        agentId: input.agentId,
-        // This admission row belongs to a heterogeneous run minting a
-        // model-invoke token — the run itself executes through the hetero/ACP
-        // path, never the in-process runtime loop.
-        executionEngine: 'hetero',
-        metadata: { agentType: input.agentType, serverDefaultHeterogeneous: true },
-        model: selection.model,
-        operationId: input.operationId,
-        provider: selection.provider,
-        topicId: input.topicId,
-        trigger: RequestTrigger.Chat,
-      });
-      const operation = await model.findById(input.operationId);
-      if (
-        !operation ||
-        operation.userId !== ctx.userId ||
-        operation.workspaceId !== (workspaceId ?? null) ||
-        operation.status !== 'running' ||
-        operation.topicId !== input.topicId ||
-        operation.agentId !== (input.agentId ?? null) ||
-        operation.model !== selection.model ||
-        operation.provider !== selection.provider ||
-        operation.metadata?.agentType !== input.agentType
-      ) {
-        throw new TRPCError({ code: 'CONFLICT', message: 'Operation id is already in use' });
-      }
-
-      return {
-        model: 'orvilo-default' as const,
-        token: await signHeteroOperationJWT({
-          capabilities: ['model:invoke'],
-          model: selection.model,
-          operationId: input.operationId,
-          providerId: selection.provider,
-          userId: ctx.userId,
-          workspaceId,
-        }),
-      };
-    }),
-
-  finishServerDefaultHeterogeneousOperation: aiAgentBaseProcedure
-    .input(z.object({ operationId: z.string().min(1), result: z.enum(['done', 'error']) }))
-    .mutation(async ({ input, ctx }) => {
-      assertServerDefaultControlAuth(ctx.oidcAuth);
-      const { model, operation } = await resolveServerDefaultControlOperation({
-        db: ctx.serverDB,
-        operationId: input.operationId,
-        userId: ctx.userId,
-      });
-      const relayInvocation = operation.metadata?.serverDefaultRelayInvocation;
-      const agentType = operation.metadata?.agentType;
-      const agentConfig =
-        typeof agentType === 'string'
-          ? getServerDefaultHeterogeneousAgentConfig(agentType)
-          : undefined;
-      const verifiedRelayInvocation =
-        isServerDefaultHeterogeneousRelayInvocation(relayInvocation) &&
-        agentConfig?.ingress === relayInvocation.ingress &&
-        relayInvocation.operationId === input.operationId &&
-        relayInvocation.agentType === agentType &&
-        relayInvocation.model === operation.model &&
-        relayInvocation.provider === operation.provider
-          ? relayInvocation
-          : null;
-      await settleServerDefaultControlOperation({
-        currentStatus: operation.status,
-        model,
-        operationId: input.operationId,
-        targetStatus: input.result,
-      });
-      return { relayInvocation: verifiedRelayInvocation, success: true as const };
-    }),
-
-  cancelServerDefaultHeterogeneousOperation: aiAgentBaseProcedure
-    .input(z.object({ operationId: z.string().min(1) }))
-    .mutation(async ({ input, ctx }) => {
-      assertServerDefaultControlAuth(ctx.oidcAuth);
-      const { model, operation } = await resolveServerDefaultControlOperation({
-        db: ctx.serverDB,
-        operationId: input.operationId,
-        userId: ctx.userId,
-      });
-      await settleServerDefaultControlOperation({
-        currentStatus: operation.status,
-        model,
-        operationId: input.operationId,
-        targetStatus: 'interrupted',
-      });
-      return { success: true as const };
-    }),
-
   /**
    * Create Thread for client-side task execution in Group mode
    *
@@ -2417,6 +2251,12 @@ export const aiAgentRouter = router({
           code: 'CONFLICT',
           message: 'This approval has already been resolved.',
         });
+      }
+
+      // `autoStart:false` and other start-intent contract violations are
+      // caller-correctable 4xx, not server faults.
+      if (error instanceof AgentStartError) {
+        throw mapAgentStartTRPCError(error);
       }
 
       // A primary-key collision on a client-supplied id (a retried send
@@ -3441,7 +3281,7 @@ export const aiAgentRouter = router({
   heteroAwaitBuiltinToolChildren: heteroAgentProcedure
     .input(HeteroAwaitBuiltinToolChildrenSchema)
     .query(async ({ input, ctx }) => {
-      const { childOperationIds, operationId, timeoutMs, toolCallId } = input;
+      const { childOperationIds, operationId, timeoutMs, toolCallId, waitDeadlineMs } = input;
 
       await authorizeOperationCallback(ctx, operationId, 'hetero:tool:exec');
 
@@ -3462,8 +3302,46 @@ export const aiAgentRouter = router({
 
       return awaitAcpBuiltinToolChildren(
         { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-        { childOperationIds, operationId, timeoutMs, toolCallId },
+        {
+          childOperationIds,
+          contractVersion: input.contractVersion,
+          operationId,
+          timeoutMs,
+          toolCallId,
+          waitDeadlineMs,
+        },
       );
+    }),
+
+  /**
+   * Parent-side durable inbox ACK for v2 child-result deliveries (F06).
+   * Settle only OFFERS a result — this mutation is the consume point, keyed
+   * by the same op token as the await (`hetero:tool:exec`) plus the
+   * `aggregateId` binding inside each acked row.
+   */
+  heteroAckChildResultDeliveries: heteroAgentProcedure
+    .input(HeteroAckChildResultDeliveriesSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { operationId } = input;
+
+      await authorizeOperationCallback(ctx, operationId, 'hetero:tool:exec');
+
+      if (ctx.heteroAuthKind !== 'operation') {
+        const [operationRow] = await ctx.serverDB
+          .select({ userId: agentOperations.userId })
+          .from(agentOperations)
+          .where(eq(agentOperations.id, operationId))
+          .limit(1);
+
+        if (operationRow?.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Operation not found or not owned by the caller',
+          });
+        }
+      }
+
+      return ackAcpChildResultDeliveries({ db: ctx.serverDB }, input);
     }),
 
   /**
@@ -3631,7 +3509,14 @@ export const aiAgentRouter = router({
       }),
     ),
 
-  /** Token-only atomic resolution path used by Mobile review/deep links. */
+  /**
+   * Token-only atomic resolution path used by Mobile review/deep links.
+   * SC-SB03: after the business claim wins, the SAME durable decision commit
+   * every other entry uses runs BEFORE any notification — a refused write
+   * (closed receipt) rolls the claim back and reports a conflict instead of
+   * publishing, and an already-decided receipt projects the stored winner
+   * into the published response.
+   */
   resolveHeteroIntervention: aiAgentWriteProcedure
     .input(ResolveHeteroInterventionReviewSchema)
     .mutation(async ({ input, ctx }) => {
@@ -3652,11 +3537,143 @@ export const aiAgentRouter = router({
         return { status: resolution.status, success: true as const };
       }
 
-      return publishClaimedHeteroIntervention({
-        claim: resolution,
+      // Decision BEFORE notify — the durable approval receipt is the
+      // first-winner authority every entry shares. SC03: the token path must
+      // bind the receipt atomically too, but ONLY to the coordinates the
+      // trusted claim captured at mint time — `expectedWindowId: null`
+      // (bind-any) stays retired, and live receipt coordinates are never
+      // adopted for the CAS. Reading the current window only feeds the
+      // "this approval moved on" hint below: an exact-match CAS on re-read
+      // values can prove the row didn't drift after the read, never that the
+      // user approved THIS window.
+      const receiptPayload = await new EventOutboxModel(ctx.serverDB)
+        .getDeliveryReceiptPayload(
+          toolApprovalEventId(resolution.operationId, resolution.response.toolCallId),
+        )
+        .catch((error: unknown) => {
+          log(
+            'resolveHeteroIntervention receipt read failed claim=%s: %O',
+            resolution.claimId,
+            error,
+          );
+          return undefined;
+        });
+      const liveWindowId =
+        receiptPayload && typeof receiptPayload.windowId === 'string' && receiptPayload.windowId
+          ? receiptPayload.windowId
+          : undefined;
+      const pinnedWindowId =
+        typeof resolution.windowId === 'string' && resolution.windowId
+          ? resolution.windowId
+          : undefined;
+      const pinnedScopeHash =
+        typeof resolution.scopeHash === 'string' && resolution.scopeHash
+          ? resolution.scopeHash
+          : undefined;
+      if (
+        liveWindowId !== undefined &&
+        (pinnedWindowId === undefined || pinnedScopeHash === undefined)
+      ) {
+        // The receipt is windowed but the claim cannot pin the coordinates it
+        // was minted under (an impl predating the pinning contract, or a
+        // partial one) — refuse instead of re-scoping the stale approval
+        // onto the live window. The claim rolls back so the intervention
+        // stays reachable; the caller upgrades the claim impl or re-opens
+        // the approval to decide the live window. Legacy windowless receipts
+        // (liveWindowId undefined) skip this and keep compat semantics.
+        await rollbackHeteroInterventionResolution({
+          claimId: resolution.claimId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          toolCallId: resolution.response.toolCallId,
+          userId: ctx.userId,
+          workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+        }).catch((rollbackError) => {
+          log(
+            'unpinned-claim refusal rollback failed claim=%s: %O',
+            resolution.claimId,
+            rollbackError,
+          );
+        });
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `This approval was renewed after the review token was issued — reopen it on the live window '${liveWindowId}' to decide.`,
+        });
+      }
+      let approvalOutcome: ToolApprovalSubmitOutcome;
+      try {
+        approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {
+          cancelled: resolution.response.cancelled,
+          decidedByUserId: ctx.userId,
+          expectedScopeHash: pinnedScopeHash,
+          expectedWindowId: pinnedWindowId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          result: resolution.response.result,
+          toolCallId: resolution.response.toolCallId,
+        });
+      } catch (error) {
+        // A decision write that throws owns claim recovery too — the claim
+        // must not stay held when its receipt decision never landed.
+        await rollbackHeteroInterventionResolution({
+          claimId: resolution.claimId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          toolCallId: resolution.response.toolCallId,
+          userId: ctx.userId,
+          workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+        }).catch((rollbackError) => {
+          log(
+            'failed-decision claim rollback failed claim=%s: %O',
+            resolution.claimId,
+            rollbackError,
+          );
+        });
+        throw error;
+      }
+      if (
+        approvalOutcome.kind === 'stale_window' ||
+        approvalOutcome.kind === 'scope_mismatch' ||
+        approvalOutcome.kind === 'closed'
+      ) {
+        // The receipt cannot accept the decision — roll the claim back so
+        // the intervention stays live for the real window instead of
+        // reporting a phantom resolution.
+        await rollbackHeteroInterventionResolution({
+          claimId: resolution.claimId,
+          operationId: resolution.operationId,
+          resolutionRequestId: resolution.resolutionRequestId,
+          toolCallId: resolution.response.toolCallId,
+          userId: ctx.userId,
+          workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+        }).catch((rollbackError) => {
+          log(
+            'refused-approval claim rollback failed claim=%s: %O',
+            resolution.claimId,
+            rollbackError,
+          );
+        });
+        throwOnRefusedApprovalOutcome(approvalOutcome);
+      }
+      const claim =
+        approvalOutcome.kind === 'already_decided' && approvalOutcome.action
+          ? {
+              ...resolution,
+              resolutionRequestId:
+                approvalOutcome.resolutionRequestId ?? resolution.resolutionRequestId,
+              response: {
+                ...resolution.response,
+                ...approvalWinnerProjection(approvalOutcome.action),
+              },
+            }
+          : resolution;
+
+      const published = await publishClaimedHeteroIntervention({
+        claim,
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
       });
+      return { ...published, approval: approvalOutcomeSummary(approvalOutcome) };
     }),
 
   /**
@@ -3693,28 +3710,67 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
+      // SA02/F04 + SC-SB03: when this submit answers a `needs_approval` tool
+      // card, the exec-time gate's durable receipt records the decision
+      // BEFORE any claim resolution or publish — first-winner CAS bound to
+      // the card's `windowId`. A refused submit (`stale_window`/`closed`) is
+      // now an error, never a silent success: the card is NOT resolved and
+      // nothing is published, so the live window keeps its pending state and
+      // the caller can retry on it. `already_decided` projects the stored
+      // winner's answer rather than this submit's input. Ordinary askUser
+      // submits (no receipt → `not_tool_approval`) proceed untouched.
+      const approvalOutcome = await submitToolApprovalDecision(ctx.serverDB, {
+        cancelled,
+        decidedByUserId: ctx.userId,
+        expectedWindowId: input.windowId,
+        operationId,
+        resolutionRequestId,
+        result,
+        toolCallId,
+      });
+      throwOnRefusedApprovalOutcome(approvalOutcome);
+      const approval = approvalOutcomeSummary(approvalOutcome);
+
+      // What the durable winner says — the submitter's own answer on a fresh
+      // `decided`, the stored winner's on `already_decided`.
+      const winnerAction =
+        approvalOutcome.kind === 'already_decided' ? approvalOutcome.action : undefined;
+      const effectiveCancelled =
+        winnerAction === undefined ? cancelled : winnerAction !== 'approved';
+      const effectiveResult =
+        winnerAction === undefined
+          ? cancelled
+            ? undefined
+            : result
+          : approvalWinnerProjection(winnerAction).result;
+      const effectiveRequestId =
+        winnerAction === undefined
+          ? resolutionRequestId
+          : (approvalOutcome.resolutionRequestId ?? resolutionRequestId);
+
       // Cloud overrides this as an atomic first-winner claim shared by Web and
       // Mobile. OSS returns `handled:false` and preserves the legacy stream
       // publish below. A claimed response is authoritative: client-supplied
       // operation/tool fields cannot override what Cloud resolved durably.
       const businessResolution = await resolveHeteroIntervention({
-        action: cancelled ? 'skip' : 'submit',
-        cancelReason: cancelled ? 'user_cancelled' : undefined,
-        result: cancelled ? undefined : result,
-        resolutionRequestId,
+        action: effectiveCancelled ? 'skip' : 'submit',
+        cancelReason: effectiveCancelled ? 'user_cancelled' : undefined,
+        result: effectiveResult,
+        resolutionRequestId: effectiveRequestId,
         target: { operationId, toolCallId },
         userId: ctx.userId,
         workspaceId: ctx.workspaceId ?? undefined,
       });
       if (businessResolution.handled) {
         if (businessResolution.state === 'already_resolved') {
-          return { status: businessResolution.status, success: true as const };
+          return { approval, status: businessResolution.status, success: true as const };
         }
-        return publishClaimedHeteroIntervention({
+        const published = await publishClaimedHeteroIntervention({
           claim: businessResolution,
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
         });
+        return { ...published, approval };
       }
 
       const streamEventManager = createStreamEventManager();
@@ -3722,18 +3778,18 @@ export const aiAgentRouter = router({
         data: {
           // Client-driven cancellation cannot impersonate producer timeout or
           // session teardown; those terminal reasons originate from bridge ACKs.
-          cancelReason: cancelled ? 'user_cancelled' : undefined,
-          cancelled,
+          cancelReason: effectiveCancelled ? 'user_cancelled' : undefined,
+          cancelled: effectiveCancelled,
           producerAck: false,
-          result: cancelled ? undefined : result,
-          resolutionRequestId,
+          result: effectiveResult,
+          resolutionRequestId: effectiveRequestId,
           toolCallId,
         },
         stepIndex,
         type: 'agent_intervention_response',
       });
 
-      return { status: 'resolving' as const, success: true as const };
+      return { approval, status: 'resolving' as const, success: true as const };
     }),
 
   processHumanIntervention: aiAgentWriteProcedure
@@ -3903,19 +3959,24 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
-      // Start execution using AgentRuntimeService
-      const result = await ctx.agentRuntimeService.startExecution({
-        context,
-        delay,
-        operationId,
-        priority,
-      });
+      try {
+        const result = await ctx.agentRuntimeService.startExecution({
+          context,
+          delay,
+          operationId,
+          priority,
+        });
 
-      return {
-        ...result,
-        message: 'Agent execution started successfully',
-        timestamp: new Date().toISOString(),
-      };
+        return {
+          ...result,
+          message: result.alreadyStarted
+            ? 'Agent execution is already running'
+            : 'Agent execution started successfully',
+          timestamp: new Date().toISOString(),
+        };
+      } catch (error) {
+        throw mapAgentStartTRPCError(error);
+      }
     }),
 
   /**

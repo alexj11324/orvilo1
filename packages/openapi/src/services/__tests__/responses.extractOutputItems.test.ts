@@ -8,7 +8,7 @@ vi.mock('@/server/modules/AgentExecution/InMemoryStreamEventManager', () => ({
   InMemoryStreamEventManager: class {},
 }));
 vi.mock('@/server/modules/AgentExecution/StreamEventManager', () => ({}));
-vi.mock('@/server/services/agentRuntime', () => ({ AgentRuntimeService: class {} }));
+vi.mock('@/server/services/agentExecution', () => ({ AgentRuntimeService: class {} }));
 vi.mock('@/server/services/aiAgent', () => ({ AiAgentService: class {} }));
 vi.mock('../../common/base.service', () => ({
   BaseService: class {

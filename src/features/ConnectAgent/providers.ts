@@ -67,7 +67,7 @@ interface BuildConnectAgentConfigOptions {
   overrides?: { description?: string; name?: string };
   profile?: ConnectAgentProfile;
   provider: ConnectableProvider;
-  target: { deviceId: string; kind: 'device' } | { kind: 'local' };
+  target: { deviceId: string; kind: 'device' } | { deviceId?: string; kind: 'local' };
 }
 
 const CLI_BRANDS: Record<LocalHeterogeneousAgentType, ConnectableProvider['brand']> = {
@@ -166,6 +166,8 @@ export const buildConnectAgentConfig = ({
   return {
     ...base,
     agencyConfig: {
+      ...(target.deviceId ? { boundDeviceId: target.deviceId } : undefined),
+      executionTarget: 'local' as const,
       heterogeneousProvider: { command: provider.command, type: provider.type },
     },
   };

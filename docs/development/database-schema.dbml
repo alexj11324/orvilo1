@@ -655,6 +655,29 @@ table agent_labels {
   }
 }
 
+table agent_operation_launches {
+  id text [pk, not null]
+  user_id text [not null]
+  workspace_id text
+  purpose text [not null]
+  intent_key text [not null]
+  attempt integer [not null, default: 0]
+  operation_id text
+  status text [not null, default: 'claimed']
+  cancel_reason text
+  deadline_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (user_id, workspace_id, purpose, intent_key, attempt) [name: 'agent_operation_launches_intent_workspace_unique', unique]
+    (user_id, purpose, intent_key, attempt) [name: 'agent_operation_launches_intent_personal_unique', unique]
+    (status, deadline_at) [name: 'agent_operation_launches_status_deadline_idx']
+    operation_id [name: 'agent_operation_launches_operation_id_idx']
+  }
+}
+
 table agent_operations {
   id text [pk, not null]
   user_id text [not null]
@@ -2118,6 +2141,32 @@ table hatchet_workflow_steps {
   }
 }
 
+table integration_leases {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text
+  key text [not null]
+  target text [not null]
+  ref text [not null]
+  owner_token text [not null]
+  fence_seq bigint [not null, default: 0]
+  owner_task_id text
+  owner_topic_id text
+  phase text [not null, default: 'claimed']
+  expected_base_sha text
+  expected_head_sha text
+  outcome_unknown boolean [not null, default: false]
+  context jsonb
+  deadline "timestamp with time zone" [not null]
+  released_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    key [name: 'integration_leases_key_unique', unique]
+  }
+}
+
 table linear_external_comments {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
@@ -3318,6 +3367,30 @@ table project_works {
   }
 }
 
+table pull_request_review_receipts {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  workspace_id text [not null]
+  connection_id text [not null]
+  repo_id text [not null]
+  pull_request_id text [not null]
+  operation text [not null]
+  operation_id text [not null]
+  digest text [not null]
+  status text [not null]
+  remote_id text
+  applied_head_sha text
+  data jsonb
+  reconciled boolean [not null, default: false]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (user_id, workspace_id, connection_id, repo_id, pull_request_id, operation, operation_id) [name: 'pull_request_review_receipts_identity_unique', unique]
+    (user_id, workspace_id, repo_id, pull_request_id, operation, operation_id) [name: 'pull_request_review_receipts_scope_idx']
+  }
+}
+
 table push_live_activities {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   user_id text [not null]
@@ -3980,6 +4053,10 @@ table task_dispatches {
   operation_id text
   idempotency_key text [not null]
   requested_by text [not null]
+  origin text
+  initiator text
+  source_dispatch_id text
+  settlement_grant jsonb
   lease_owner text
   lease_expires_at "timestamp with time zone"
   waiting_reason text
@@ -4040,6 +4117,7 @@ table task_topics {
   execution_epoch integer [not null, default: 0]
   execution_grant_id text
   environment_snapshot jsonb
+  contract jsonb
   trigger text
   handoff jsonb
   integration jsonb
@@ -4179,6 +4257,73 @@ table task_inputs {
     (task_id, sequence) [name: 'task_inputs_task_id_sequence_unique', unique]
     task_id [name: 'task_inputs_task_id_idx']
     workspace_id [name: 'task_inputs_workspace_id_idx']
+  }
+}
+
+table task_inputs {
+  id text [pk, not null]
+  workspace_id text
+  task_id text [not null]
+  author_user_id text [not null]
+  sequence integer [not null]
+  base_task_version integer
+  intent_type text [not null]
+  payload jsonb [not null, default: `{}`]
+  status text [not null, default: 'pending']
+  idempotency_key text [unique]
+  decided_by text
+  decided_at "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (task_id, sequence) [name: 'task_inputs_task_id_sequence_unique', unique]
+    task_id [name: 'task_inputs_task_id_idx']
+    workspace_id [name: 'task_inputs_workspace_id_idx']
+  }
+}
+
+table task_workspace_claims {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text
+  key text [not null]
+  device_id text [not null]
+  repo_path text [not null]
+  repo_common_dir text
+  worktree_path text [not null]
+  task_id text [not null]
+  dispatch_id text [not null]
+  generation integer [not null]
+  owner_token text [not null]
+  base_branch text
+  expected_base_sha text
+  issued_at "timestamp with time zone" [not null, default: `now()`]
+  released_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    key [name: 'task_workspace_claims_key_unique', unique]
+  }
+}
+
+table task_workspace_recoveries {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text
+  key text [not null]
+  kind text [not null]
+  device_id text [not null]
+  repo_path text
+  worktree_path text [not null]
+  task_id text
+  detail jsonb
+  status text [not null, default: 'pending']
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    key [name: 'task_workspace_recoveries_key_unique', unique]
   }
 }
 

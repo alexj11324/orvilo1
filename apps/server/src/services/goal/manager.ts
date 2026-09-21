@@ -42,11 +42,56 @@ export const goalPlanSchema = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('escalate'), reason }).strict(),
+  /**
+   * CAID incremental plan patch. Unlike `tasks`/`verify` — which require all
+   * existing work settled — `patch` may land while sibling nodes still run:
+   * appends are additive, `replace`/`retire` are refused on nodes whose run
+   * contract is already frozen, and `expectedPlanRevision` is a
+   * compare-and-swap on `config.caidPlan.revision` so two managers cannot
+   * interleave plan revisions.
+   */
+  z
+    .object({
+      action: z.literal('patch'),
+      expectedPlanRevision: z.number().int().min(0),
+      patches: z
+        .array(
+          z.discriminatedUnion('op', [
+            z
+              .object({
+                dependsOn: z.array(z.string().min(1)).optional(),
+                key: z.string().trim().min(1).max(64).optional(),
+                op: z.literal('append'),
+                task: z
+                  .object({ title: z.string().trim().min(1).max(255), description: reason })
+                  .strict(),
+              })
+              .strict(),
+            z
+              .object({
+                description: reason.optional(),
+                nodeId: z.string().min(1),
+                op: z.literal('replace'),
+                title: z.string().trim().min(1).max(255).optional(),
+              })
+              .strict(),
+            z.object({ nodeId: z.string().min(1), op: z.literal('retire') }).strict(),
+          ]),
+        )
+        .min(1)
+        .max(20),
+      reason,
+      strategy: z.literal('caid'),
+    })
+    .strict(),
 ]);
 type GoalPlan = z.infer<typeof goalPlanSchema>;
 const activeStatuses = new Set(['planning', 'running']);
 const terminalOperations = new Set(['done', 'error', 'interrupted']);
 const terminalNodes = new Set(['resolved', 'retired', 'rejected']);
+/** Node states whose bound work is already frozen — a running/active Task row
+ * or an activated node carries a contract the plan must not rewrite. */
+const contractFrozenNodes = new Set(['active']);
 const TIMEOUT_MS = 20 * 60_000;
 
 /** Excludes only the manager's own receipt. Concurrent policy/graph changes invalidate its plan. */
@@ -509,6 +554,144 @@ export class GoalManagerService {
         });
       if (await this.budgetBlocked(graph, db))
         throw new TRPCError({ code: 'CONFLICT', message: 'Goal budget exhausted' });
+      const authored = new GoalGraphModel(db, this.userId, this.workspaceId, {
+        id: goal.config.manager.agentId,
+        type: 'agent',
+      });
+      if (plan.action === 'patch') {
+        const currentRevision = goal.config.caidPlan?.revision ?? 0;
+        if (currentRevision !== plan.expectedPlanRevision)
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Stale plan revision: expected ${plan.expectedPlanRevision}, current ${currentRevision}`,
+          });
+        const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+        const keyToNodeId = new Map<string, string>();
+        const pendingDeps: Array<{ sourceNodeId: string; target: string }> = [];
+        for (const patch of plan.patches) {
+          if (patch.op === 'append') {
+            const node = await authored.createNode(goalId, {
+              description: patch.task.description,
+              kind: 'task',
+              status: 'proposed',
+              title: patch.task.title,
+              createdByAgentId: goal.config.manager.agentId,
+            });
+            if (!node)
+              throw new TRPCError({
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Failed to create plan node',
+              });
+            if (patch.key) {
+              if (keyToNodeId.has(patch.key) || nodeById.has(patch.key))
+                throw new TRPCError({
+                  code: 'CONFLICT',
+                  message: `Duplicate patch key "${patch.key}"`,
+                });
+              keyToNodeId.set(patch.key, node.id);
+            }
+            nodeById.set(node.id, node);
+            for (const dep of new Set(patch.dependsOn ?? []))
+              pendingDeps.push({ sourceNodeId: node.id, target: dep });
+          } else {
+            const node = nodeById.get(patch.nodeId);
+            if (!node || node.kind !== 'task' || terminalNodes.has(node.status))
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: `Node ${patch.nodeId} is missing, not a task, or already terminal`,
+              });
+            if (patch.op === 'replace') {
+              if (contractFrozenNodes.has(node.status) || node.taskId)
+                throw new TRPCError({
+                  code: 'CONFLICT',
+                  message: `Node ${patch.nodeId} is bound to a running contract; cancel or replan it instead of rewriting`,
+                });
+              if (!patch.title && !patch.description)
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message: 'replace patch must set title or description',
+                });
+              await authored.updateNodeText(goalId, node.id, {
+                description: patch.description,
+                title: patch.title,
+              });
+            } else {
+              const hasDependents =
+                graph.edges.some(
+                  (edge) => edge.kind === 'depends_on' && edge.targetNodeId === node.id,
+                ) || pendingDeps.some((dep) => dep.target === node.id);
+              if (hasDependents)
+                throw new TRPCError({
+                  code: 'CONFLICT',
+                  message: `Node ${patch.nodeId} has dependents; retire their edges first`,
+                });
+              if (contractFrozenNodes.has(node.status) || node.taskId)
+                throw new TRPCError({
+                  code: 'CONFLICT',
+                  message: `Node ${patch.nodeId} is bound to a running contract; cancel or replan it instead of retiring`,
+                });
+              await authored.updateNodeStatus(goalId, node.id, 'retired', plan.reason);
+              nodeById.set(node.id, { ...node, status: 'retired' });
+            }
+          }
+        }
+        // dependsOn entries resolve as an existing node id or a `key` defined
+        // by an earlier append in the same batch.
+        for (const dep of pendingDeps) {
+          const target = keyToNodeId.get(dep.target) ?? dep.target;
+          const targetNode = nodeById.get(target);
+          if (!targetNode || targetNode.kind !== 'task' || terminalNodes.has(targetNode.status))
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: `dependsOn target "${dep.target}" is missing, not a task, or terminal`,
+            });
+          if (target === dep.sourceNodeId)
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'A task cannot depend on itself' });
+          dep.target = target;
+        }
+        // Cycle check over depends_on edges including this batch.
+        const adjacency = new Map<string, string[]>();
+        for (const edge of graph.edges)
+          if (edge.kind === 'depends_on')
+            adjacency.set(edge.sourceNodeId, [
+              ...(adjacency.get(edge.sourceNodeId) ?? []),
+              edge.targetNodeId,
+            ]);
+        for (const dep of pendingDeps)
+          adjacency.set(dep.sourceNodeId, [...(adjacency.get(dep.sourceNodeId) ?? []), dep.target]);
+        for (const dep of pendingDeps) {
+          const seen = new Set<string>();
+          const stack = [...(adjacency.get(dep.target) ?? [])];
+          while (stack.length) {
+            const next = stack.pop()!;
+            if (next === dep.sourceNodeId)
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'dependsOn would create a dependency cycle',
+              });
+            if (seen.has(next)) continue;
+            seen.add(next);
+            stack.push(...(adjacency.get(next) ?? []));
+          }
+        }
+        for (const dep of pendingDeps)
+          await authored.createEdge(goalId, dep.sourceNodeId, dep.target, 'depends_on');
+        // Bump the plan revision inside the same transaction: any stale
+        // expectedPlanRevision observes the increment and is refused.
+        await db
+          .update(goals)
+          .set({
+            config: sql`jsonb_set(COALESCE(${goals.config}, '{}'::jsonb), '{caidPlan}', ${JSON.stringify({ revision: currentRevision + 1 })}::jsonb)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(goals.id, goalId));
+        await this.save(db, goalId, {
+          ...state,
+          operationId,
+          submitted: { action: plan.action, reason: plan.reason },
+        });
+        return { recorded: true, action: plan.action };
+      }
       const unfinished = graph.nodes.filter(
         (n) => n.kind === 'task' && !terminalNodes.has(n.status),
       );
@@ -549,10 +732,6 @@ export class GoalManagerService {
           code: 'CONFLICT',
           message: 'Existing work must be delivered before planning or verification',
         });
-      const authored = new GoalGraphModel(db, this.userId, this.workspaceId, {
-        id: goal.config.manager.agentId,
-        type: 'agent',
-      });
       // Accepting a plan that REPLACES the inherited work has to settle it too.
       // Validation alone was not enough: the blocked node stayed nonterminal, so
       // the next tick's frontier reached it before the corrective node and routed

@@ -1,7 +1,8 @@
+import type { ServerActivityEvent } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 
-import type { ServerActivityEvent } from '@orvilo/types';
+import type { ActionApprovalItem } from '@/database/schemas/actionApproval';
 import type { OrviloDatabase, Transaction } from '@/database/type';
 
 import { actionApprovals, insertOutboxEvent, newEventId, tasks } from './contractTables';
@@ -13,6 +14,20 @@ export interface DecideApprovalParams {
   baseVersion?: number;
   decision: ApprovalDecision;
 }
+
+/**
+ * Discriminated outcome of {@link ActionApprovalService.consumeForDispatch}.
+ * `consumed` — this dispatch won the spend; `adopted` — the same dispatch
+ * already owned it (a retry after a transient failure); everything else is a
+ * refusal that left the grant untouched.
+ */
+export type ConsumeForDispatchOutcome =
+  | { approval?: undefined; kind: 'missing' }
+  | { approval: ActionApprovalItem; kind: 'adopted' | 'consumed' }
+  | {
+      approval: ActionApprovalItem;
+      kind: 'expired' | 'no_approver' | 'revision_mismatch' | 'scope_mismatch' | 'unavailable';
+    };
 
 const APPROVAL_STALE = 'approval no longer valid';
 
@@ -166,9 +181,92 @@ export class ActionApprovalService {
   };
 
   /**
+   * Scoped one-shot consumption bound to a stable dispatch (SC05):
+   *
+   * - the full expected scope and revision are validated INSIDE the same
+   *   lock/transaction that marks the grant — a wrong-target or stale-revision
+   *   request cannot consume (or even mutate) someone else's approval;
+   * - the winning consume stamps `consumedByDispatchId`, so a retry of the
+   *   SAME dispatch re-adopts the grant it already holds (`adopted`) instead
+   *   of re-consuming — and a consumed grant is never reset for another
+   *   request;
+   * - a grant consumed by a DIFFERENT dispatch reports `unavailable`, exactly
+   *   like a grant consumed before dispatch binding existed.
+   */
+  consumeForDispatch = async (params: {
+    approvalId: string;
+    dispatchId: string;
+    expected: {
+      actionType: string;
+      /** The resource version the approval must have been issued against. */
+      baseVersion?: number | null;
+      targetId: string;
+      targetType: string;
+      workspaceId: string | null;
+    };
+  }): Promise<ConsumeForDispatchOutcome> =>
+    this.db.transaction(async (tx) => {
+      const [approval] = await tx
+        .select()
+        .from(actionApprovals)
+        .where(eq(actionApprovals.id, params.approvalId))
+        .for('update')
+        .limit(1);
+      if (!approval) return { kind: 'missing' };
+
+      // Retry adoption first: this dispatch already owns the grant — a
+      // transient failure after the consume must not force re-approval.
+      if (approval.consumedByDispatchId === params.dispatchId && approval.consumedAt) {
+        return { approval, kind: 'adopted' };
+      }
+      if (approval.status !== 'approved' || approval.consumedAt) {
+        return { approval, kind: 'unavailable' };
+      }
+      if (
+        approval.actionType !== params.expected.actionType ||
+        approval.targetType !== params.expected.targetType ||
+        approval.targetId !== params.expected.targetId ||
+        approval.workspaceId !== params.expected.workspaceId
+      ) {
+        return { approval, kind: 'scope_mismatch' };
+      }
+      if (approval.expiresAt && approval.expiresAt.getTime() <= Date.now()) {
+        return { approval, kind: 'expired' };
+      }
+      if (
+        params.expected.baseVersion !== undefined &&
+        approval.baseVersion != null &&
+        approval.baseVersion !== params.expected.baseVersion
+      ) {
+        return { approval, kind: 'revision_mismatch' };
+      }
+      if (!approval.approverUserId) {
+        return { approval, kind: 'no_approver' };
+      }
+
+      const [updated] = await tx
+        .update(actionApprovals)
+        .set({ consumedAt: new Date(), consumedByDispatchId: params.dispatchId })
+        .where(
+          and(
+            eq(actionApprovals.id, approval.id),
+            eq(actionApprovals.status, 'approved'),
+            isNull(actionApprovals.consumedAt),
+          ),
+        )
+        .returning();
+      if (!updated) return { approval, kind: 'unavailable' };
+      return { approval: updated, kind: 'consumed' };
+    });
+
+  /**
    * One-shot consumption of an approved grant: the first consumer flips
    * `consumedAt` and wins; later callers get null and must re-request. The
    * approval is intentionally not re-decided — it is spent.
+   *
+   * Prefer {@link consumeForDispatch}: it validates the full scope inside the
+   * same transaction and binds the spend to a stable dispatch so retries of
+   * one logical run adopt instead of re-consuming.
    */
   consume = async (approvalId: string) => {
     const [row] = await this.db

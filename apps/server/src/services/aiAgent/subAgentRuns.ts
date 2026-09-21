@@ -11,13 +11,13 @@ import debug from 'debug';
 import type { AgentOperationModel } from '@/database/models/agentOperation';
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
+import type { AgentRuntimeService } from '@/server/services/agentExecution';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
-} from '@/server/services/agentRuntime/types';
+} from '@/server/services/agentExecution/types';
 
 import {
   createGroupActionMemberBridgeHook,

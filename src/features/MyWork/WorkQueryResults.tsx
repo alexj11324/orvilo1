@@ -7,6 +7,7 @@ import type {
   WorkQueryExternalReview,
   WorkQueryGroupBy,
   WorkQueryLayout,
+  WorkQuerySortMode,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
@@ -137,6 +138,8 @@ interface WorkQueryResultsProps {
   onLoadMoreGroup?: (key: string) => void;
   onMoved?: () => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
+  /** Saved-view sort mode — `field` boards refuse same-column position writes. */
+  sortMode?: WorkQuerySortMode;
   tasks: WorkQueryResultTask[];
   total?: number;
 }
@@ -341,6 +344,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onLoadMoreGroup,
     onMoved,
     onToggleFollow,
+    sortMode,
     tasks,
     total,
   }) => {
@@ -386,6 +390,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             external={{
               groups: workQueryBoardGroups(groups, boardGroupBy),
               movable,
+              sortMode,
               onLoadMoreGroup: onLoadMoreGroup
                 ? (columnKey) => {
                     for (const key of workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)) {

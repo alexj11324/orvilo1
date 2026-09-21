@@ -47,7 +47,11 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAttention';
 
-const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.object({
+// Predicate-first: a predicate object would also satisfy the filter object
+// (all/any are both optional), so the union must try predicates first and the
+// filter object must be strict, otherwise predicates collapse into empty
+// filters and unknown fields are silently stripped.
+const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
   field: z.enum([
     'assigneeUserId',
     'createdByUserId',

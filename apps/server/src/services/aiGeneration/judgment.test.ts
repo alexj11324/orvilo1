@@ -328,6 +328,12 @@ describe('runAcpJudgment', () => {
       }),
     ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_RUN_FAILED', operationId: 'op-1' });
     expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
+    expect(mocks.tracingRecord).toHaveBeenCalledTimes(1);
+    expect(mocks.tracingRecord.mock.calls[0][0]).toMatchObject({
+      errorCode: 'timeout',
+      metadata: expect.objectContaining({ operationId: 'op-1' }),
+      success: false,
+    });
   });
 
   it('propagates caller cancellation to interruptTask and reports the cancel authority', async () => {
@@ -360,6 +366,12 @@ describe('runAcpJudgment', () => {
       status: 'interrupted',
     });
     expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-1' });
+    expect(mocks.tracingRecord).toHaveBeenCalledTimes(1);
+    expect(mocks.tracingRecord.mock.calls[0][0]).toMatchObject({
+      errorCode: 'interrupted',
+      metadata: expect.objectContaining({ operationId: 'op-1' }),
+      success: false,
+    });
   });
 
   it('reports cancelResult unknown — never claims interrupted — when the cancel cannot be confirmed (F10)', async () => {

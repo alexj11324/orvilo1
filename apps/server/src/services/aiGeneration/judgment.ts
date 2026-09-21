@@ -406,6 +406,8 @@ const recordJudgmentTracing = async (params: {
   output: unknown;
   purpose: string;
   schema?: GenerateObjectSchema;
+  /** Failure status for runs cut short by abort/timeout (op row still runs). */
+  statusOverride?: string;
   /** False when the reply failed schema validation — success needs both halves. */
   succeeded?: boolean;
   systemPrompt?: string;
@@ -427,7 +429,8 @@ const recordJudgmentTracing = async (params: {
     scenario: tracing.scenario ?? params.purpose,
     trigger: tracing.trigger ?? ACP_JUDGMENT_TRIGGER,
   });
-  const success = (params.succeeded ?? true) && params.operation.status === 'done';
+  const outcomeStatus = params.statusOverride ?? params.operation.status;
+  const success = (params.succeeded ?? true) && outcomeStatus === 'done';
 
   let persisted: string | null = null;
   try {
@@ -436,8 +439,7 @@ const recordJudgmentTracing = async (params: {
       costUsd: params.operation.totalCost,
       errorCode: success
         ? null
-        : (params.errorCode ??
-          (params.operation.status === 'done' ? 'schema_mismatch' : params.operation.status)),
+        : (params.errorCode ?? (outcomeStatus === 'done' ? 'schema_mismatch' : outcomeStatus)),
       inputHint: tracing.inputHint,
       inputTokens: params.operation.totalInputTokens,
       latencyMs: params.operation.processingTimeMs,
@@ -730,6 +732,49 @@ export const runAcpJudgment = async <T = unknown>(
   };
 
   /**
+   * Abort/timeout/failure legs still write the failure tracing row — every
+   * judgment attempt stays traceable even when the operation itself never
+   * settles. A landed row that reached its own terminal state keeps that
+   * status; an 'interrupted' produced by our own interrupt reports the
+   * caller-facing failure reason instead.
+   */
+  const failAndTrace = async (
+    message: string,
+    detail: {
+      cancelResult?: 'confirmed' | 'unknown';
+      intentKey: string;
+      operationId?: string;
+      status?: AgentOperationStatus;
+    },
+    latest: AgentOperationItem | null | undefined,
+    reason: 'error' | 'interrupted' | 'timeout',
+  ): Promise<never> => {
+    const reported = detail.status;
+    const outcomeStatus =
+      reported && reported !== 'interrupted' && isTerminalAgentOperationStatus(reported)
+        ? reported
+        : reason;
+    await recordJudgmentTracing({
+      errorCode: outcomeStatus === 'done' ? reason : undefined,
+      input: input.messages,
+      operation: {
+        ...latest,
+        id: detail.operationId ?? latest?.id,
+        status: detail.status,
+      } as AgentOperationItem,
+      output: null,
+      purpose: judgment.purpose,
+      schema: input.schema,
+      statusOverride: outcomeStatus,
+      succeeded: false,
+      tracing: judgment.tracing,
+      userId,
+      workspaceId,
+    });
+    throw new AcpJudgmentRunError(message, detail);
+  };
+
+  /**
    * Same-intent adoption: read or take over the recorded launch — never
    * spawns a second writer. A `claimed` launch whose own deadline has lapsed
    * is an orphaned claim (the winner died between claim and bind): reconcile
@@ -749,22 +794,29 @@ export const runAcpJudgment = async <T = unknown>(
       }
 
       if (live.status === 'failed') {
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" launch already failed`, {
-          intentKey,
-          operationId: live.operationId ?? landed?.id,
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" launch already failed`,
+          { intentKey, operationId: live.operationId ?? landed?.id },
+          landed,
+          'error',
+        );
       }
       if (live.status === 'cancel_requested') {
         const { cancelResult, latest } = await convergeLaunch(
           live.cancelReason ?? 'cancel requested',
           landed?.id ?? live.operationId ?? undefined,
         );
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" was canceled`, {
-          cancelResult,
-          intentKey,
-          operationId: latest?.id ?? live.operationId ?? undefined,
-          status: reportedStatus(cancelResult, latest),
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" was canceled`,
+          {
+            cancelResult,
+            intentKey,
+            operationId: latest?.id ?? live.operationId ?? undefined,
+            status: reportedStatus(cancelResult, latest),
+          },
+          latest,
+          'interrupted',
+        );
       }
       if (landed && isTerminalAgentOperationStatus(landed.status)) {
         await operations.settleOperationLaunch(live.id, 'settled').catch(() => undefined);
@@ -775,12 +827,17 @@ export const runAcpJudgment = async <T = unknown>(
           'caller aborted',
           landed?.id ?? live.operationId ?? undefined,
         );
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-          cancelResult,
-          intentKey,
-          operationId: latest?.id ?? live.operationId ?? undefined,
-          status: reportedStatus(cancelResult, latest),
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" aborted by caller`,
+          {
+            cancelResult,
+            intentKey,
+            operationId: latest?.id ?? live.operationId ?? undefined,
+            status: reportedStatus(cancelResult, latest),
+          },
+          latest,
+          'interrupted',
+        );
       }
       const launchDeadline = live.deadlineAt?.getTime() ?? deadline;
       if (Date.now() > deadline || Date.now() > launchDeadline) {
@@ -790,12 +847,17 @@ export const runAcpJudgment = async <T = unknown>(
           'launch deadline exceeded',
           landed?.id ?? live.operationId ?? undefined,
         );
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" launch missed its deadline`, {
-          cancelResult,
-          intentKey,
-          operationId: latest?.id ?? live.operationId ?? undefined,
-          status: reportedStatus(cancelResult, latest),
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" launch missed its deadline`,
+          {
+            cancelResult,
+            intentKey,
+            operationId: latest?.id ?? live.operationId ?? undefined,
+            status: reportedStatus(cancelResult, latest),
+          },
+          latest,
+          'timeout',
+        );
       }
       if (
         (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
@@ -805,12 +867,17 @@ export const runAcpJudgment = async <T = unknown>(
           'caller aborted',
           landed?.id ?? live.operationId ?? undefined,
         );
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-          cancelResult,
-          intentKey,
-          operationId: latest?.id ?? live.operationId ?? undefined,
-          status: reportedStatus(cancelResult, latest),
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" aborted by caller`,
+          {
+            cancelResult,
+            intentKey,
+            operationId: latest?.id ?? live.operationId ?? undefined,
+            status: reportedStatus(cancelResult, latest),
+          },
+          latest,
+          'interrupted',
+        );
       }
     }
   };
@@ -907,16 +974,20 @@ export const runAcpJudgment = async <T = unknown>(
       };
       if (raced.kind === 'err' && !judgment.signal?.aborted && Date.now() <= deadline) {
         const message = raced.error instanceof Error ? raced.error.message : String(raced.error);
-        throw new AcpJudgmentRunError(
+        await failAndTrace(
           `Judgment "${judgment.purpose}" dispatch failed: ${message}`,
           detail,
+          latest,
+          'error',
         );
       }
-      throw new AcpJudgmentRunError(
+      await failAndTrace(
         judgment.signal?.aborted || raced.kind === 'caller'
           ? `Judgment "${judgment.purpose}" aborted by caller`
           : `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget during dispatch`,
         detail,
+        latest,
+        judgment.signal?.aborted || raced.kind === 'caller' ? 'interrupted' : 'timeout',
       );
     }
     const operationId = raced.value.operationId;
@@ -930,12 +1001,17 @@ export const runAcpJudgment = async <T = unknown>(
         'dispatch raced a cancel intent',
         operationId,
       );
-      throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" was canceled`, {
-        cancelResult,
-        intentKey,
-        operationId,
-        status: reportedStatus(cancelResult, latest),
-      });
+      await failAndTrace(
+        `Judgment "${judgment.purpose}" was canceled`,
+        {
+          cancelResult,
+          intentKey,
+          operationId,
+          status: reportedStatus(cancelResult, latest),
+        },
+        latest,
+        'interrupted',
+      );
     }
 
     let operation = await operations.findById(operationId);
@@ -945,7 +1021,7 @@ export const runAcpJudgment = async <T = unknown>(
         // a 'done' observed past the deadline is reported honestly but never
         // accepted as a successful judgment.
         const { cancelResult, latest } = await convergeLaunch('wait budget exceeded', operationId);
-        throw new AcpJudgmentRunError(
+        await failAndTrace(
           `Judgment "${judgment.purpose}" exceeded its ${timeoutMs}ms total budget (dispatch + wait)`,
           {
             cancelResult,
@@ -953,29 +1029,41 @@ export const runAcpJudgment = async <T = unknown>(
             operationId,
             status: reportedStatus(cancelResult, latest ?? operation),
           },
+          latest ?? operation,
+          'timeout',
         );
       }
       if (operation && isTerminalAgentOperationStatus(operation.status)) break;
       if (judgment.signal?.aborted) {
         const { cancelResult, latest } = await convergeLaunch('caller aborted', operationId);
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-          cancelResult,
-          intentKey,
-          operationId,
-          status: reportedStatus(cancelResult, latest ?? operation),
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" aborted by caller`,
+          {
+            cancelResult,
+            intentKey,
+            operationId,
+            status: reportedStatus(cancelResult, latest ?? operation),
+          },
+          latest ?? operation,
+          'interrupted',
+        );
       }
       if (
         (await sleep(judgment.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, judgment.signal)) ===
         'aborted'
       ) {
         const { cancelResult, latest } = await convergeLaunch('caller aborted', operationId);
-        throw new AcpJudgmentRunError(`Judgment "${judgment.purpose}" aborted by caller`, {
-          cancelResult,
-          intentKey,
-          operationId,
-          status: reportedStatus(cancelResult, latest ?? operation),
-        });
+        await failAndTrace(
+          `Judgment "${judgment.purpose}" aborted by caller`,
+          {
+            cancelResult,
+            intentKey,
+            operationId,
+            status: reportedStatus(cancelResult, latest ?? operation),
+          },
+          latest ?? operation,
+          'interrupted',
+        );
       }
       operation = await operations.findById(operationId);
     }

@@ -60,10 +60,30 @@ const { mockLeaseModel } = vi.hoisted(() => ({
 
 /**
  * Minimal `OrviloDatabase` stand-in: R02 moved repo/ref serialization off the
- * transaction-held advisory lock into IntegrationLeaseModel, so the mock DB
- * carries nothing — the lease mock below controls contention directly.
+ * transaction-held advisory lock into IntegrationLeaseModel. SB05 persists the
+ * pre-write remote intent directly on the lease row, so the mock DB only
+ * carries the `update(...).set(...).where(...).returning()` chain that intent
+ * write uses — `mockLeaseContextSet`/`mockLeaseIntentReturning` expose it.
  */
-const mockDb = {};
+const { mockLeaseContextSet, mockLeaseIntentReturning } = vi.hoisted(() => ({
+  mockLeaseContextSet: vi.fn(),
+  mockLeaseIntentReturning: vi.fn(),
+}));
+const mockDb = {
+  update: vi.fn(() => ({
+    set: mockLeaseContextSet,
+  })),
+};
+
+/**
+ * Default the intent write to succeed — the fenced row is still owned.
+ */
+const intentWriteOwned = () => {
+  mockLeaseIntentReturning.mockResolvedValue([{ id: 'lease-1' }]);
+  mockLeaseContextSet.mockImplementation(() => ({
+    where: vi.fn(() => ({ returning: mockLeaseIntentReturning })),
+  }));
+};
 
 const leaseGranted = () => {
   mockLeaseModel.acquire.mockResolvedValue({
@@ -225,6 +245,7 @@ describe('TaskIntegrationService', () => {
       taskRevision: 1,
     });
     mockTaskTopicModel.updateIntegration.mockResolvedValue(true);
+    intentWriteOwned();
     leaseGranted();
     service = new TaskIntegrationService(mockDb as any, 'user-1', 'ws-1');
     vi.mocked(deviceGateway.addGitWorktree).mockResolvedValue({ success: true });
@@ -1944,7 +1965,10 @@ describe('TaskIntegrationService', () => {
       expect(mockLeaseModel.clearOutcomeUnknown).not.toHaveBeenCalled();
     });
 
-    it('proceeds when the probe proves the remote still holds the pre-state', async () => {
+    it('holds when the probe only reads the pre-state — the lost write can still land after the read', async () => {
+      // SB05: remote == expected-old is only 'not yet visible', never proof
+      // the lost writer terminated — releasing a new writer here would race
+      // the old operation's delayed write.
       stolenAcquisition();
       mockTaskTopicModel.findByTopicId.mockResolvedValue(
         asTopic(seedRecord({ expectedBaseSha: 'base-sha' })),
@@ -1965,9 +1989,10 @@ describe('TaskIntegrationService', () => {
         taskTopicId: 'topic_1',
       });
 
-      expect(mockLeaseModel.clearOutcomeUnknown).toHaveBeenCalled();
-      expect(deviceGateway.mergeGitBranch).toHaveBeenCalled();
-      expect(outcome).toBe('settled');
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.clearOutcomeUnknown).not.toHaveBeenCalled();
     });
 
     it('proceeds when the probe proves the lost publish already landed', async () => {
@@ -2016,6 +2041,128 @@ describe('TaskIntegrationService', () => {
       expect(mockLeaseModel.clearOutcomeUnknown).not.toHaveBeenCalled();
     });
 
+    it('reconciles an unrelated remote value when the lost write carried a recorded operation identity', async () => {
+      // The recorded write was conditional on expected-old; a remote that
+      // moved to an unrelated value voids that compare, so the old operation
+      // can only fail — the new owner may proceed.
+      stolenAcquisition();
+      mockLeaseModel.acquire.mockResolvedValue({
+        lease: {
+          context: {
+            expectedBaseSha: 'base-sha',
+            expectedRemoteSha: 'old-merged-sha',
+            fenceSeq: 1,
+            phase: 'publish',
+            remoteOperationId: '1:lost-op',
+          },
+          fenceSeq: 2,
+          id: 'lease-1',
+          key: 'dev-1:/repos/orvilo#main',
+          outcomeUnknown: false,
+        },
+        prior: priorMutation,
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha', integratedSha: 'merged-sha' })),
+      );
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        sha: 'someone-else-sha',
+        state: 'found',
+      });
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      expect(mockLeaseModel.clearOutcomeUnknown).toHaveBeenCalled();
+    });
+
+    it('holds on a missing ref when the recorded pre-state was that the ref must not exist', async () => {
+      // expected-old '' means the write assumed a fresh ref — a 'missing'
+      // probe IS the pre-state read, which cannot prove the write is done.
+      stolenAcquisition();
+      mockLeaseModel.acquire.mockResolvedValue({
+        lease: {
+          context: {
+            expectedBaseSha: '',
+            expectedRemoteSha: 'new-branch-sha',
+            fenceSeq: 1,
+            phase: 'publish',
+            remoteOperationId: '1:lost-op',
+          },
+          fenceSeq: 2,
+          id: 'lease-1',
+          key: 'dev-1:/repos/orvilo#main',
+          outcomeUnknown: false,
+        },
+        prior: priorMutation,
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha', integratedSha: 'merged-sha' })),
+      );
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        state: 'missing',
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.clearOutcomeUnknown).not.toHaveBeenCalled();
+    });
+
+    it('reconciles a missing ref when the recorded pre-state was an existing ref that has since been removed', async () => {
+      stolenAcquisition();
+      mockLeaseModel.acquire.mockResolvedValue({
+        lease: {
+          context: {
+            expectedBaseSha: 'base-sha',
+            expectedRemoteSha: 'old-merged-sha',
+            fenceSeq: 1,
+            phase: 'publish',
+            remoteOperationId: '1:lost-op',
+          },
+          fenceSeq: 2,
+          id: 'lease-1',
+          key: 'dev-1:/repos/orvilo#main',
+          outcomeUnknown: false,
+        },
+        prior: priorMutation,
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha', integratedSha: 'merged-sha' })),
+      );
+      vi.mocked(deviceGateway.probeGitRemoteRef).mockResolvedValue({
+        ref: 'refs/heads/main',
+        state: 'missing',
+      });
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      expect(mockLeaseModel.clearOutcomeUnknown).toHaveBeenCalled();
+    });
+
     it('marks outcome_unknown with the minted operation identity when the lease is stolen mid-mutation', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(seedRecord()));
       vi.mocked(deviceGateway.mergeGitBranch).mockImplementation(async () => {
@@ -2048,6 +2195,75 @@ describe('TaskIntegrationService', () => {
         }),
       );
       expect(mockLeaseModel.release).not.toHaveBeenCalled();
+    });
+
+    it('persists the remote write intent — operation identity and expected pre/post state — before issuing the push', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha' })),
+      );
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+      vi.mocked(deviceGateway.pushGitBranch).mockResolvedValue({
+        fenceEnforced: true,
+        pushedSourceRef: 'merged-sha',
+        remoteSha: 'base-sha',
+        success: true,
+      });
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('settled');
+      // The intent write landed on the lease row BEFORE the device push — a
+      // crash after this point leaves the operation queryable by identity.
+      expect(mockDb.update).toHaveBeenCalled();
+      expect(mockLeaseContextSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            expectedBaseSha: 'base-sha',
+            expectedRemoteSha: 'merged-sha',
+            phase: 'publish',
+            remoteOperationId: expect.stringMatching(/^1:/),
+          }),
+        }),
+      );
+      expect(mockLeaseContextSet.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(deviceGateway.pushGitBranch).mock.invocationCallOrder[0],
+      );
+    });
+
+    it('refuses to issue the remote write when the intent record proves the lease was lost', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(seedRecord({ expectedBaseSha: 'base-sha' })),
+      );
+      vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
+        sha: 'merged-sha',
+        state: 'merged',
+        success: true,
+      });
+      // The fenced intent write returns no row — someone else owns the lease.
+      mockLeaseIntentReturning.mockResolvedValue([]);
+
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+
+      expect(outcome).toBe('hold');
+      expect(deviceGateway.pushGitBranch).not.toHaveBeenCalled();
+      expect(mockLeaseModel.markOutcomeUnknown).toHaveBeenCalledWith(
+        'lease-1',
+        expect.any(String),
+        expect.objectContaining({
+          phase: 'publish',
+          remoteOperationId: expect.stringMatching(/^1:/),
+        }),
+      );
     });
 
     it('passes the fence and expected-old remote ref to the publish push', async () => {

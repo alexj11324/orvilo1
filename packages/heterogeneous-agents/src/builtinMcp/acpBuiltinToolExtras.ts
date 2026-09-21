@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
 
@@ -103,6 +103,22 @@ export interface AcpBuiltinToolCaller {
     /** Approval-window id the card must echo back on submit (SA02-C). */
     windowId?: string;
   }) => Promise<{ cancelled?: boolean; cancelReason?: string; result?: unknown }>;
+  /**
+   * Durable invocation-identity resolver (SC-SB06): maps one protocol request
+   * (`requestKey`, e.g. `_meta.progressToken`) to the stable toolCallId the
+   * FIRST delivery used, so a transport resend reuses it while every genuinely
+   * new occurrence — including same-args calls — mints a fresh id. `argsHash`
+   * is only a content-consistency proof; it must never substitute for
+   * occurrence identity. Hosts without this resolver get the deterministic
+   * request-key digest / fresh-mint fallback in the handler.
+   */
+  resolveToolCallId?: (input: {
+    apiName: string;
+    argsHash: string;
+    identifier: string;
+    operationId: string;
+    requestKey?: string;
+  }) => Promise<string>;
 }
 
 const text = (value: string): McpToolResult => ({
@@ -143,26 +159,54 @@ export const buildAcpBuiltinToolExtras = (
     spec.apis.map((api) => ({
       description: api.description ?? `Orvilo builtin tool ${spec.identifier}.${api.name}`,
       handler: async (operationId, args, extra?: McpExtraToolCallExtra) => {
-        // Stable invocation id (SA04-A): prefer the host's own toolUseId when
-        // the MCP call carries it; otherwise derive a deterministic digest of
-        // the logical call. Crash/retry paths re-derive the SAME id instead
-        // of minting a fresh one — which is what makes approval receipts and
-        // child-result deliveries idempotent for one logical invocation.
+        // Invocation identity (SC-SB06/P1-A): identical args do NOT make one
+        // call — two legitimate same-args invocations must never share an id
+        // (the first's consumed approval would replay for the second). Order:
+        // the adapter's own toolUseId verbatim → the host's durable
+        // request-key resolver → a deterministic per-request digest → a fresh
+        // mint when no request identity reached this layer at all.
         const metaToolUseId = extra?._meta?.['claudecode/toolUseId'];
-        const toolCallId =
-          typeof metaToolUseId === 'string' && metaToolUseId.length > 0
-            ? metaToolUseId
-            : `mcp_${createHash('sha256')
-                .update(
-                  stableStringify({
-                    apiName: api.name,
-                    args,
-                    identifier: spec.identifier,
-                    operationId,
-                  }),
-                )
-                .digest('hex')
-                .slice(0, 48)}`;
+        const rawProgressToken = extra?._meta?.['progressToken'];
+        const requestKey =
+          typeof rawProgressToken === 'string' || typeof rawProgressToken === 'number'
+            ? `pt:${String(rawProgressToken)}`
+            : undefined;
+        const argsHash = createHash('sha256')
+          .update(
+            stableStringify({
+              apiName: api.name,
+              args,
+              identifier: spec.identifier,
+              operationId,
+            }),
+          )
+          .digest('hex');
+        let toolCallId: string;
+        if (typeof metaToolUseId === 'string' && metaToolUseId.length > 0) {
+          toolCallId = metaToolUseId;
+        } else if (caller.resolveToolCallId) {
+          try {
+            toolCallId = await caller.resolveToolCallId({
+              apiName: api.name,
+              argsHash,
+              identifier: spec.identifier,
+              operationId,
+              requestKey,
+            });
+          } catch (error) {
+            return errorText(String((error as Error)?.message ?? error));
+          }
+        } else if (requestKey !== undefined) {
+          // No durable map on this host — the request key + content hash is
+          // still a stable resend identity, and a key recycled for different
+          // args resolves to a different id.
+          toolCallId = `mcp_${createHash('sha256')
+            .update(`${operationId}\0${requestKey}\0${argsHash}`)
+            .digest('hex')
+            .slice(0, 48)}`;
+        } else {
+          toolCallId = `mcp_${randomBytes(24).toString('hex')}`;
+        }
         let result: Awaited<ReturnType<AcpBuiltinToolCaller['exec']>>;
         try {
           result = await caller.exec({
@@ -230,12 +274,11 @@ export const buildAcpBuiltinToolExtras = (
             try {
               poll = await caller.awaitChildren({
                 childOperationIds: children,
-                // contractVersion is negotiated by capability (SA04-A): only
-                // a host that can durably consume (inbox + ack) asks for v2;
-                // v1 keeps consume-on-settle. Never ask v2 while ack is
-                // optional-missing — that is what turned `offered` receipts
-                // into silent loss.
-                contractVersion: caller.ackChildResults ? 2 : 1,
+                // contractVersion is negotiated by capability (SA04-A + D03):
+                // v2 is the RELIABLE-delivery contract — it requires BOTH the
+                // durable inbox write AND the ack; a host missing either asks
+                // for v1 consume-on-settle and never claims crash-proof acks.
+                contractVersion: caller.ackChildResults && caller.persistChildResultInbox ? 2 : 1,
                 operationId,
                 timeoutMs: CHILD_POLL_TIMEOUT_MS,
                 toolCallId,
@@ -257,9 +300,9 @@ export const buildAcpBuiltinToolExtras = (
                   delivery.deliveryState !== 'acked' && delivery.deliveryState !== 'superseded',
               );
               if (settledVersion === 2 && pendingDeliveries.length > 0) {
-                if (!caller.ackChildResults) {
+                if (!caller.ackChildResults || !caller.persistChildResultInbox) {
                   return errorText(
-                    'Child results settled under delivery contract v2 but this host cannot acknowledge them — upgrade the host caller',
+                    'Child results settled under delivery contract v2 but this host cannot durably persist + acknowledge them — upgrade the host caller',
                   );
                 }
                 // Durable receiver inbox BEFORE ack (SA04-A): a crash between
@@ -267,7 +310,7 @@ export const buildAcpBuiltinToolExtras = (
                 // The write failing is reported, not swallowed — the receipts
                 // stay `offered` and the next settle re-delivers.
                 try {
-                  await caller.persistChildResultInbox?.({
+                  await caller.persistChildResultInbox({
                     deliveries: pendingDeliveries.map((delivery) => ({
                       childOperationId: delivery.childOperationId,
                       eventId: delivery.eventId,

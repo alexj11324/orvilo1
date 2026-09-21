@@ -33,3 +33,26 @@ export const TERMINAL_AGENT_OPERATION_STATUSES = [
 
 export const isTerminalAgentOperationStatus = (status: string | null | undefined): boolean =>
   (TERMINAL_AGENT_OPERATION_STATUSES as readonly string[]).includes(status ?? '');
+
+/**
+ * Lifecycle of a durable judgment launch registration
+ * (`agent_operation_launches`). The row is claimed atomically BEFORE any
+ * external side effect (`execAgent`), keyed on the stable business request
+ * identity; retries for the same key adopt the recorded launch instead of
+ * spawning a second writer.
+ *
+ * `claimed` — registered, `execAgent` may still be in flight or its ACK lost.
+ * `dispatched` — an `operationId` was bound after execAgent resolved.
+ * `cancel_requested` — a durable cancel intent persisted (timeout/abort/
+ * hang); reconcile then interrupts whatever operation landed.
+ * `settled` — the run produced its terminal result.
+ * `failed` — the launch never produced a usable operation (dispatch lost).
+ */
+export type AgentOperationLaunchStatus =
+  'cancel_requested' | 'claimed' | 'dispatched' | 'failed' | 'settled';
+
+export const LIVE_AGENT_OPERATION_LAUNCH_STATUSES = [
+  'cancel_requested',
+  'claimed',
+  'dispatched',
+] as const satisfies readonly AgentOperationLaunchStatus[];

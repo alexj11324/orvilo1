@@ -5,4 +5,5 @@ export * from './repoType';
 export * from './types';
 export * from './upstream';
 export * from './workingTree';
+export * from './worktreeClaims';
 export * from './worktrees';

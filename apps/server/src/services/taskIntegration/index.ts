@@ -12,6 +12,7 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { IntegrationLeaseItem } from '@/database/schemas';
+import { integrationLeases } from '@/database/schemas';
 import type { RepoRefLeaseOutcomeContext } from '@/database/schemas/integrationLease';
 import type { TaskTopicItem } from '@/database/schemas/task';
 import { tasks } from '@/database/schemas/task';
@@ -96,6 +97,12 @@ export interface RepoRefLeaseOperation {
 
 /** Remote-write terms for a mutation phase — persisted on outcome loss. */
 interface RepoRefLeaseRemoteWrite {
+  /**
+   * Pre-state the mutation expects on `ref` (the atomic compare value of the
+   * write — `''` when the ref must not exist). Persisted pre-write so a lost
+   * outcome can be reconciled against both pre- and post-state.
+   */
+  expectedOldSha?: string;
   /** Post-state the mutation was trying to establish on `ref`. */
   expectedRemoteSha?: string;
   /** Full remote ref the mutation writes (e.g. `refs/heads/main`). */
@@ -680,6 +687,25 @@ export class TaskIntegrationService {
               seq: lease.fenceSeq,
             }
           : undefined;
+        // Persist the remote write's intent — operation identity, expected
+        // pre/post state — BEFORE issuing it. A SIGKILL or a lease steal after
+        // this point leaves the intent queryable, so the next owner reconciles
+        // this exact operationId instead of guessing from a successful probe
+        // read. The write is fenced on ownerToken + releasedAt: a lost row
+        // means we were already preempted and must not issue the mutation.
+        if (remoteWrite && handle.lastOperation) {
+          const intent: RepoRefLeaseOutcomeContext = {
+            expectedBaseSha: remoteWrite.expectedOldSha,
+            expectedRemoteSha: remoteWrite.expectedRemoteSha,
+            fenceSeq: lease.fenceSeq,
+            phase,
+            recordedAt: new Date().toISOString(),
+            remoteOperationId: handle.lastOperation.operationId,
+          };
+          if (!(await this.persistRemoteWriteIntent(leaseId, ownerToken, intent))) {
+            throw new RepoRefLeaseLostError(key);
+          }
+        }
         const heartbeat = setInterval(() => {
           void renewAt(phase).catch(() => {
             lost = true;
@@ -770,6 +796,31 @@ export class TaskIntegrationService {
   }
 
   /**
+   * Persist a remote write's intent (operation identity + expected pre/post
+   * ref state) in one fenced statement before the write is issued. Fenced on
+   * `ownerToken` + `releasedAt IS NULL`: a false return means the row was
+   * stolen or released underneath us and the mutation must not fire.
+   */
+  private persistRemoteWriteIntent = async (
+    leaseId: string,
+    ownerToken: string,
+    intent: RepoRefLeaseOutcomeContext,
+  ): Promise<boolean> => {
+    const rows = await this.db
+      .update(integrationLeases)
+      .set({ context: intent, updatedAt: sql`now()` })
+      .where(
+        and(
+          eq(integrationLeases.id, leaseId),
+          eq(integrationLeases.ownerToken, ownerToken),
+          isNull(integrationLeases.releasedAt),
+        ),
+      )
+      .returning({ id: integrationLeases.id });
+    return rows.length > 0;
+  };
+
+  /**
    * Reconcile an inherited `outcomeUnknown` lease: the previous holder's
    * mutation may or may not have landed remotely, so this owner must observe
    * the remote terminal state before issuing its own writes. GitHub
@@ -808,18 +859,31 @@ export class TaskIntegrationService {
             workspaceId: this.workspaceId,
           });
           if (!probe || probe.state === 'unknown') return false;
-          // The ref is provably absent — no in-flight write of ours can land.
-          if (probe.state === 'missing') return true;
           const context = lease.recordedContext;
+          const expectedOldSha = context?.expectedBaseSha ?? record.expectedBaseSha;
+          // A recorded operation identity proves the lost write was issued
+          // under an atomic expected-old condition — only then can a moved
+          // remote prove the write terminated (its compare value is void).
+          const hasRecordedOp = context?.remoteOperationId !== undefined;
+          if (probe.state === 'missing') {
+            // Provably absent only releases when the claimed pre-state was an
+            // existing ref — the ref being gone voids the recorded write's
+            // compare value. When the pre-state itself was 'must not exist',
+            // a missing read IS the pre-state: the write can still be in
+            // flight, so hold.
+            return hasRecordedOp && expectedOldSha !== undefined && expectedOldSha !== '';
+          }
           // Post-state proof: the lost mutation reached the remote.
           if (probe.sha === (context?.expectedRemoteSha ?? record.integratedSha)) return true;
-          // Pre-state proof: remote never moved off the claimed base, so the
-          // lost mutation provably did not execute.
-          if (probe.sha === (context?.expectedBaseSha ?? record.expectedBaseSha)) return true;
+          // The remote still shows the pre-state — NOT proof of termination:
+          // the read only says the result wasn't visible yet; the old writer
+          // can still land it afterwards. Hold until the recorded operation
+          // resolves by deadline or by a moved remote.
+          if (probe.sha === expectedOldSha) return false;
           // Remote moved to an unrelated value. The lost operation only
           // provably failed when it wrote under an atomic expected-old
           // condition — identifiable by its recorded operation identity.
-          return context?.remoteOperationId !== undefined;
+          return hasRecordedOp;
         }
         return false;
       });
@@ -1677,7 +1741,7 @@ export class TaskIntegrationService {
             userId: this.userId,
             workspaceId: this.workspaceId,
           }),
-        { expectedRemoteSha: sha, ref: remoteRef },
+        { expectedOldSha: record.expectedBaseSha ?? '', expectedRemoteSha: sha, ref: remoteRef },
       );
       if (pushed.success && pushed.fenceEnforced !== true) {
         // Pre-fence device client: the write succeeded but was not fenced.

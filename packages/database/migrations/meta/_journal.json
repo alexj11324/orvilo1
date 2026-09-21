@@ -1274,6 +1274,20 @@
       "when": 1789907379748,
       "tag": "0181_task_workspace_claim_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 182,
+      "version": "7",
+      "when": 1789933086797,
+      "tag": "0182_fence_seq_forward_repair",
+      "breakpoints": true
+    },
+    {
+      "idx": 183,
+      "version": "7",
+      "when": 1789933605625,
+      "tag": "0183_agent_operation_launches",
+      "breakpoints": true
     }
   ],
   "version": "6"

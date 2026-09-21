@@ -233,7 +233,14 @@ class TaskService {
 
   run = async (
     id: string,
-    params?: { continueTopicId?: string; idempotencyKey?: string; prompt?: string },
+    params?: {
+      continueTopicId?: string;
+      idempotencyKey?: string;
+      intent?: 'continue' | 'repair' | 'authorized_replan';
+      prompt?: string;
+      replanApprovalId?: string;
+      sourceContractId?: string;
+    },
   ) =>
     lambdaClient.task.run.mutate({
       id,

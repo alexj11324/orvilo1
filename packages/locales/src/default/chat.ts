@@ -1613,6 +1613,9 @@ export default {
   'taskDetail.nextRunCountdown': 'Next run in {{countdown}}',
   'taskDetail.nextRunCountdownDays': 'Next run in {{days}}d {{hours}}h',
   'taskDetail.pauseTask': 'Pause task',
+  'taskDetail.pendingContractEdits.content':
+    'The goal or acceptance changed after contract revision {{revision}} was adopted. Running now uses the frozen contract; the edits stay pending until an approved replan adopts them.',
+  'taskDetail.pendingContractEdits.title': 'Constraints changed since the last run',
   'taskDetail.rerunTask': 'Re-run task',
   'taskDetail.runNow': 'Run now',
   'taskDetail.runTask': 'Run',

@@ -340,15 +340,17 @@ describe('EventOutboxModel', () => {
           eventId: event.eventId,
           expectedWindowId: 'w1',
         }),
-      ).toBe('decided');
-      // Second submit (double-click / retry) cannot flip the decision.
-      expect(
-        await model.recordToolApprovalDecision({
-          decision: { ...decision, action: 'denied' },
-          eventId: event.eventId,
-          expectedWindowId: 'w1',
-        }),
-      ).toBe('already_decided');
+      ).toEqual({ status: 'decided' });
+      // Second submit (double-click / retry) cannot flip the decision — the
+      // outcome echoes the stored winner so callers project it, not the
+      // losing input (SC-SB03).
+      const second = await model.recordToolApprovalDecision({
+        decision: { ...decision, action: 'denied' },
+        eventId: event.eventId,
+        expectedWindowId: 'w1',
+      });
+      expect(second.status).toBe('already_decided');
+      expect((second.decision as { action?: string })?.action).toBe('approved');
     });
 
     it('stamps the live windowId into the decision and binds consume to that window', async () => {
@@ -371,14 +373,15 @@ describe('EventOutboxModel', () => {
       await model.upsertDeliveryReceipt({ event });
 
       // A card rendered under window `w1` submits after the receipt moved to
-      // `w2` — the write must not land on the new window.
+      // `w2` — the write must not land on the new window; the outcome names
+      // the live window so the caller can retry against it (SC-SB03).
       expect(
         await model.recordToolApprovalDecision({
           decision: { action: 'approved', decidedAt: Date.now(), decidedByUserId: userId },
           eventId: event.eventId,
           expectedWindowId: 'w1',
         }),
-      ).toBe('stale_window');
+      ).toEqual({ status: 'stale_window', windowId: 'w2', windowVersion: 1 });
       const payload = await model.getDeliveryReceiptPayload(event.eventId);
       expect(payload?.decision).toBeUndefined();
 
@@ -389,7 +392,7 @@ describe('EventOutboxModel', () => {
           eventId: event.eventId,
           expectedWindowId: 'w2',
         }),
-      ).toBe('decided');
+      ).toEqual({ status: 'decided' });
     });
 
     it('consume CAS grants an approved, unexpired, scope+args-matched receipt exactly once', async () => {
@@ -484,6 +487,7 @@ describe('EventOutboxModel', () => {
       const freshExpiry = now + 60_000;
       expect(
         await model.renewToolApprovalReceipt({
+          argsHash: 'hash_a',
           eventId: event.eventId,
           expiresAt: freshExpiry,
           now,
@@ -504,6 +508,7 @@ describe('EventOutboxModel', () => {
       await model.upsertDeliveryReceipt({ event: live });
       expect(
         await model.renewToolApprovalReceipt({
+          argsHash: 'hash_a',
           eventId: live.eventId,
           expiresAt: freshExpiry,
           now,
@@ -525,6 +530,7 @@ describe('EventOutboxModel', () => {
 
       expect(
         await model.renewToolApprovalReceipt({
+          argsHash: 'hash_a',
           eventId: event.eventId,
           expiresAt: Date.now() + 60_000,
           now: Date.now(),
@@ -548,6 +554,7 @@ describe('EventOutboxModel', () => {
       // until a decision exists under the CURRENT window.
       await approve(model, event.eventId, {}, 'w1');
       await model.renewToolApprovalReceipt({
+        argsHash: 'hash_a',
         eventId: event.eventId,
         expiresAt: Date.now() + 60_000,
         now: Date.now(),
@@ -559,6 +566,66 @@ describe('EventOutboxModel', () => {
       // Approving under the live window (the fresh card's windowId) consumes.
       await approve(model, event.eventId, {}, 'w2');
       expect(await model.consumeToolApprovalReceipt(consumeParams(event))).toBe(true);
+    });
+
+    it('renew re-binds argsHash to the calling scope so the renewed card can be consumed', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const event = approvalEvent({ expiresAt: Date.now() - 1 });
+      await model.upsertDeliveryReceipt({ event });
+
+      // The retry arrives with different args — renew re-pends the card for
+      // THIS call's scope (window + scopeHash + argsHash), not the dead one.
+      expect(
+        await model.renewToolApprovalReceipt({
+          argsHash: 'hash_b',
+          eventId: event.eventId,
+          expiresAt: Date.now() + 60_000,
+          now: Date.now(),
+          scopeHash: 'scope_b',
+          windowId: 'w2',
+        }),
+      ).toBe(true);
+
+      const payload = await model.getDeliveryReceiptPayload(event.eventId);
+      expect(payload?.argsHash).toBe('hash_b');
+      expect(payload?.scopeHash).toBe('scope_b');
+
+      // The renewed card authorizes the calling scope it now binds.
+      await approve(model, event.eventId, {}, 'w2');
+      expect(
+        await model.consumeToolApprovalReceipt({
+          argsHash: 'hash_b',
+          eventId: event.eventId,
+          invocationId: 'inv_1',
+          now: Date.now(),
+          scopeHash: 'scope_b',
+        }),
+      ).toBe(true);
+    });
+  });
+
+  describe('upsertDeliveryReceipt', () => {
+    it('writes a personal-scope receipt with NULL workspace_id (empty string is not a workspace)', async () => {
+      const model = new EventOutboxModel(serverDB);
+      const eventId = `tool-approval:op_personal:tc_1`;
+
+      const outcome = await model.upsertDeliveryReceipt({
+        event: {
+          aggregateId: 'op_personal',
+          aggregateType: 'agent_operation',
+          eventId,
+          eventType: 'agent_operation.tool_approval',
+          payload: { argsHash: 'hash_a', workspaceId: '' },
+          workspaceId: '',
+        },
+      });
+
+      expect(outcome).toBe('inserted');
+      const [row] = await serverDB
+        .select()
+        .from(eventOutbox)
+        .where(eq(eventOutbox.eventId, eventId));
+      expect(row.workspaceId).toBeNull();
     });
   });
 });

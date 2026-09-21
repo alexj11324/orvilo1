@@ -250,6 +250,9 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
         },
         deliveryValid: true,
         dependsOnId: upstream.id,
+        // C02: an agent-produced delivery receipt is recorded as `delivery`
+        // evidence — distinct from a human completion.
+        evidenceKind: 'delivery',
         type: 'blocks',
       },
     ]);
@@ -301,6 +304,9 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       {
         deliveryValid: true,
         dependsOnId: upstream.id,
+        // C02: a human completion is a separate evidence kind — never
+        // recorded as a Git/CI delivery receipt.
+        evidenceKind: 'manual_completion',
         status: 'completed',
         type: 'blocks',
       },

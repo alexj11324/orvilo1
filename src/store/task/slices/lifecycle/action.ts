@@ -60,7 +60,13 @@ export class TaskLifecycleSliceActionImpl {
 
   runTask = async (
     id: string,
-    params?: { continueTopicId?: string; prompt?: string },
+    params?: {
+      continueTopicId?: string;
+      intent?: 'continue' | 'repair' | 'authorized_replan';
+      prompt?: string;
+      replanApprovalId?: string;
+      sourceContractId?: string;
+    },
     options?: { throwOnError?: boolean },
   ): Promise<Awaited<ReturnType<typeof taskService.run>> | null> => {
     this.#get().internal_dispatchTaskDetail({

@@ -754,9 +754,43 @@ describe('TaskDispatchService', () => {
       expect(held.operationId).toBeNull();
     });
 
+    /**
+     * A settled source dispatch: the delivery chain a settlement grant binds
+     * to. `executionGeneration` is advanced to the source's generation so the
+     * task stands on that delivery.
+     */
+    const seedSettledSourceDispatch = async (taskId: string, generation: number) => {
+      const dispatchId = `dsp-src-${taskId}-${generation}`;
+      await db.insert(taskDispatches).values({
+        generation,
+        id: dispatchId,
+        idempotencyKey: `src:${taskId}:${generation}`,
+        phase: 'succeeded',
+        policyRevision: 0,
+        requestedBy: `manual:${userId}`,
+        requirementRevision: 0,
+        taskId,
+        taskRevision: 0,
+        workspaceId,
+      });
+      await db.update(tasks).set({ executionGeneration: generation }).where(eq(tasks.id, taskId));
+      return dispatchId;
+    };
+
+    const boundGrant = (sourceDispatchId: string, sourceGeneration: number) => ({
+      allowedIntents: ['repair' as const],
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      kind: 'integration_seed' as const,
+      sourceDispatchId,
+      sourceGeneration,
+      sourceTopicId: 'tpc_src',
+      workspaceId,
+    });
+
     it('SA05-B — a verified internal settlement completes while admission is off', async () => {
       vi.mocked(isCaidDispatchAllowed).mockResolvedValue(false);
       const task = await seedAssignedTask('CAID-SETTLE-1');
+      const sourceDispatchId = await seedSettledSourceDispatch(task.id, 1);
       const service = new TaskDispatchService(db, workspaceId);
 
       const prepared = await service.prepare({
@@ -764,7 +798,8 @@ describe('TaskDispatchService', () => {
         initiator: 'planner-actor',
         origin: 'internal',
         requestedBy: 'planner',
-        settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+        settlementGrant: boundGrant(sourceDispatchId, 1),
+        sourceDispatchId,
         task,
         trigger: 'orchestrator',
       });
@@ -774,8 +809,17 @@ describe('TaskDispatchService', () => {
         initiator: 'planner-actor',
         origin: 'internal',
         phase: 'claimed',
-        settlementGrant: { kind: 'integration_seed', sourceTopicId: 'tpc_src' },
+        settlementGrant: {
+          ...boundGrant(sourceDispatchId, 1),
+          // Minted at persist time — assert the TTL window rather than the ms.
+          expiresAt: expect.any(String),
+        },
       });
+      const grant = prepared.dispatch.settlementGrant!;
+      expect(Date.parse(grant.expiresAt as string) - Date.now()).toBeGreaterThan(29 * 60 * 1000);
+      expect(Date.parse(grant.expiresAt as string) - Date.now()).toBeLessThanOrEqual(
+        30 * 60 * 1000,
+      );
 
       await expect(
         service.transition(prepared, {
@@ -784,6 +828,190 @@ describe('TaskDispatchService', () => {
           phase: 'dispatched',
         }),
       ).resolves.toMatchObject({ phase: 'dispatched' });
+    });
+
+    it('C03 — an internal claim without a settlement grant is rejected', async () => {
+      const task = await seedAssignedTask('CAID-NOGRANT-1');
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: 'orchestrator:CAID-NOGRANT-1:settle-1',
+          origin: 'internal',
+          requestedBy: userId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({ message: expect.stringContaining('settlement_grant_missing') });
+
+      expect(await db.select().from(taskDispatches)).toHaveLength(0);
+    });
+
+    it('C03 — a grant bound to a superseded generation is rejected at claim time', async () => {
+      const task = await seedAssignedTask('CAID-STALEGEN-1');
+      const sourceDispatchId = await seedSettledSourceDispatch(task.id, 1);
+      // The task has since advanced — generation 1 is now historical.
+      await seedSettledSourceDispatch(task.id, 2);
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: 'orchestrator:CAID-STALEGEN-1:settle-1',
+          origin: 'internal',
+          requestedBy: userId,
+          settlementGrant: boundGrant(sourceDispatchId, 7),
+          sourceDispatchId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('settlement_grant_source_stale'),
+      });
+    });
+
+    it('C03 — a grant bound to another task is rejected', async () => {
+      const task = await seedAssignedTask('CAID-XTASK-1');
+      const other = await seedAssignedTask('CAID-XTASK-2');
+      const otherDispatchId = await seedSettledSourceDispatch(other.id, 1);
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: 'orchestrator:CAID-XTASK-1:settle-1',
+          origin: 'internal',
+          requestedBy: userId,
+          settlementGrant: boundGrant(otherDispatchId, 1),
+          sourceDispatchId: otherDispatchId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('settlement_grant_source_stale'),
+      });
+    });
+
+    it('C03 — a grant past its deadline is rejected', async () => {
+      const task = await seedAssignedTask('CAID-EXPIRED-1');
+      const sourceDispatchId = await seedSettledSourceDispatch(task.id, 1);
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: 'orchestrator:CAID-EXPIRED-1:settle-1',
+          origin: 'internal',
+          requestedBy: userId,
+          settlementGrant: {
+            ...boundGrant(sourceDispatchId, 1),
+            expiresAt: new Date(Date.now() - 1000).toISOString(),
+          },
+          sourceDispatchId,
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('settlement_grant_expired'),
+      });
+    });
+
+    it('C04 — a grant that goes stale before final dispatch cancels the claim instead of dispatching', async () => {
+      const task = await seedAssignedTask('CAID-LATE-1');
+      const sourceDispatchId = await seedSettledSourceDispatch(task.id, 1);
+      const service = new TaskDispatchService(db, workspaceId);
+
+      const prepared = await service.prepare({
+        idempotencyKey: 'orchestrator:CAID-LATE-1:settle-1',
+        origin: 'internal',
+        requestedBy: userId,
+        settlementGrant: boundGrant(sourceDispatchId, 1),
+        sourceDispatchId,
+        task,
+        trigger: 'orchestrator',
+      });
+      expect(prepared.dispatch.phase).toBe('claimed');
+
+      // The bound source delivery disappeared between claim and dispatch —
+      // the grant no longer names a real delivery chain.
+      await db.delete(taskDispatches).where(eq(taskDispatches.id, sourceDispatchId));
+
+      await expect(
+        service.transition(prepared, { expected: ['claimed'], phase: 'dispatched' }),
+      ).rejects.toMatchObject({ message: expect.stringContaining('lost its lease') });
+
+      const [canceled] = await db
+        .select()
+        .from(taskDispatches)
+        .where(eq(taskDispatches.id, prepared.dispatch.id));
+      expect(canceled).toMatchObject({
+        leaseOwner: null,
+        phase: 'canceled',
+        waitingReason: 'settlement_grant_source_stale',
+      });
+      // No writer was produced.
+      expect(canceled.operationId).toBeNull();
+    });
+
+    it('C04 — a reservation takeover grant verifies the live reservation at both boundaries', async () => {
+      const task = await seedAssignedTask('CAID-RES-1');
+      await db
+        .update(tasks)
+        .set({
+          runReservationExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+          runReservationId: 'reservation-9',
+        })
+        .where(eq(tasks.id, task.id));
+      const service = new TaskDispatchService(db, workspaceId);
+
+      const prepared = await service.prepare({
+        idempotencyKey: 'orchestrator:CAID-RES-1:takeover-1',
+        origin: 'internal',
+        requestedBy: userId,
+        settlementGrant: {
+          allowedIntents: ['repair'],
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+          kind: 'reservation_takeover',
+          reservationId: 'reservation-9',
+          workspaceId,
+        },
+        task,
+        trigger: 'orchestrator',
+      });
+      expect(prepared.dispatch.phase).toBe('claimed');
+
+      // The reservation lapses before final dispatch — the takeover no
+      // longer holds current authority.
+      await db
+        .update(tasks)
+        .set({ runReservationExpiresAt: new Date(Date.now() - 1000) })
+        .where(eq(tasks.id, task.id));
+
+      await expect(
+        service.transition(prepared, { expected: ['claimed'], phase: 'dispatched' }),
+      ).rejects.toMatchObject({ message: expect.stringContaining('lost its lease') });
+
+      const [canceled] = await db
+        .select()
+        .from(taskDispatches)
+        .where(eq(taskDispatches.id, prepared.dispatch.id));
+      expect(canceled).toMatchObject({
+        phase: 'canceled',
+        waitingReason: 'settlement_grant_reservation_stale',
+      });
+    });
+
+    it('C04 — a plain reservation takeover grant naming no token is rejected as stale', async () => {
+      const task = await seedAssignedTask('CAID-LEGACY-1');
+
+      await expect(
+        new TaskDispatchService(db, workspaceId).prepare({
+          idempotencyKey: 'orchestrator:CAID-LEGACY-1:takeover-1',
+          origin: 'internal',
+          requestedBy: userId,
+          settlementGrant: {
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            kind: 'reservation_takeover',
+          },
+          task,
+          trigger: 'orchestrator',
+        }),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('settlement_grant_reservation_stale'),
+      });
     });
   });
 });

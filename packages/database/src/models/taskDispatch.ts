@@ -15,7 +15,7 @@ import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
-import type { OrviloDatabase } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './project';
@@ -65,6 +65,22 @@ const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
 
 export class TaskDispatchNotFoundError extends Error {}
 export class TaskDispatchIdempotencyConflictError extends Error {}
+
+/**
+ * An `internal` claim whose persisted settlement grant no longer verifies
+ * against the current task state — stale source generation, lapsed
+ * deadline, wrong workspace, or a reservation that expired before the claim.
+ * The claim is refused, never silently downgraded to another origin.
+ */
+export class TaskDispatchSettlementGrantError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`Settlement grant rejected: ${reason}`);
+    this.name = 'TaskDispatchSettlementGrantError';
+    this.reason = reason;
+  }
+}
 
 export interface RequestTaskDispatchInput {
   dispatchId?: string;
@@ -490,6 +506,18 @@ export class TaskDispatchModel {
       }
       if (active) return { active, state: 'busy' as const, task };
 
+      // Persisted-claim verification (SB09): an `internal` row exists only
+      // while its grant is current and bounded — verify under the same task
+      // lock that mints the claim so a grant cannot be persisted past the
+      // state it was minted on.
+      if (input.origin === 'internal') {
+        const settlementStale = await this.verifySettlementGrant(tx, task, {
+          expectedSourceGeneration: task.executionGeneration,
+          grant: input.settlementGrant,
+        });
+        if (settlementStale) throw new TaskDispatchSettlementGrantError(settlementStale);
+      }
+
       const waitingReason =
         (await this.projectDispatchWaitingReason(tx, task, input.trigger)) ??
         (await this.goalDispatchWaitingReason(tx, task, input.trigger));
@@ -809,13 +837,17 @@ export class TaskDispatchModel {
         // as `waiting`, not start a new orchestrated writer. Rows written
         // before the `origin` column existed derive the origin from the
         // `trigger:` prefix of `requestedBy`.
-        if (input.phase === 'dispatched' && input.admissionRecheck) {
+        if (input.phase === 'dispatched') {
           const persistedOrigin: TaskDispatchOrigin =
             dispatch.origin ??
             (requestedTrigger === 'goal' || requestedTrigger === 'orchestrator'
               ? 'caid'
               : 'external');
-          if (persistedOrigin === 'caid' && !(await input.admissionRecheck(dispatch))) {
+          if (
+            persistedOrigin === 'caid' &&
+            input.admissionRecheck &&
+            !(await input.admissionRecheck(dispatch))
+          ) {
             const [waiting] = await tx
               .update(taskDispatches)
               .set({
@@ -834,6 +866,38 @@ export class TaskDispatchModel {
               )
               .returning();
             return waiting ?? null;
+          }
+          // Final settlement verification (SB09): an `internal` writer only
+          // dispatches while its persisted grant is still current and
+          // bounded — a stale grant cancels the claim instead of letting a
+          // historical association start a new writer.
+          if (persistedOrigin === 'internal') {
+            const settlementStale = await this.verifySettlementGrant(tx, task, {
+              // The claim's own generation bumps executionGeneration at
+              // persist time, so the repaired delivery is the previous one.
+              expectedSourceGeneration: dispatch.generation - 1,
+              grant: dispatch.settlementGrant,
+            });
+            if (settlementStale) {
+              await tx
+                .update(taskDispatches)
+                .set({
+                  fence: sql`${taskDispatches.fence} + 1`,
+                  leaseExpiresAt: null,
+                  leaseOwner: null,
+                  phase: 'canceled',
+                  waitingReason: settlementStale,
+                })
+                .where(
+                  and(
+                    eq(taskDispatches.id, dispatch.id),
+                    eq(taskDispatches.fence, input.fence),
+                    eq(taskDispatches.leaseOwner, input.owner),
+                    inArray(taskDispatches.phase, input.expected),
+                  ),
+                );
+              return null;
+            }
           }
         }
       }
@@ -859,6 +923,71 @@ export class TaskDispatchModel {
         .returning();
       return updated ?? null;
     });
+  }
+
+  /**
+   * Bounded settlement authority check (SB09): returns a `stale reason` when
+   * the minted grant no longer holds against the task's current state, else
+   * `null`. Verified at claim time (request) and again at final dispatch
+   * (transition into `dispatched`) so a grant can never be exercised outside
+   * the window and delivery chain it was minted on.
+   *
+   * - `reservation_takeover` binds the task's LIVE run reservation token and
+   *   its expiry — the handoff the completing run is still holding.
+   * - `integration_seed`/`parent_operation` bind the named source dispatch
+   *   row: it must exist, belong to this task and workspace, and carry the
+   *   generation recorded in the grant.
+   * - Grants missing their binding fields (legacy callers) are stale.
+   */
+  private async verifySettlementGrant(
+    tx: Transaction,
+    task: TaskItem,
+    input: {
+      expectedSourceGeneration?: number;
+      grant: TaskDispatchSettlementGrant | null | undefined;
+    },
+  ): Promise<string | null> {
+    const grant = input.grant;
+    if (!grant) return 'settlement_grant_missing';
+    if (grant.workspaceId != null && grant.workspaceId !== task.workspaceId) {
+      return 'settlement_grant_workspace_mismatch';
+    }
+    // A grant without a deadline is unbounded — treat it as expired.
+    if (!grant.expiresAt || new Date(grant.expiresAt).getTime() <= Date.now()) {
+      return 'settlement_grant_expired';
+    }
+
+    if (grant.kind === 'reservation_takeover') {
+      if (
+        !grant.reservationId ||
+        task.runReservationId !== grant.reservationId ||
+        !task.runReservationExpiresAt ||
+        new Date(task.runReservationExpiresAt).getTime() <= Date.now()
+      ) {
+        return 'settlement_grant_reservation_stale';
+      }
+      return null;
+    }
+
+    if (!grant.sourceDispatchId || grant.sourceGeneration === undefined) {
+      return 'settlement_grant_stale';
+    }
+    const [source] = await tx
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.id, grant.sourceDispatchId))
+      .limit(1);
+    if (
+      !source ||
+      source.taskId !== task.id ||
+      source.workspaceId !== task.workspaceId ||
+      source.generation !== grant.sourceGeneration ||
+      (input.expectedSourceGeneration !== undefined &&
+        source.generation !== input.expectedSourceGeneration)
+    ) {
+      return 'settlement_grant_source_stale';
+    }
+    return null;
   }
 
   async requestStop(input: {

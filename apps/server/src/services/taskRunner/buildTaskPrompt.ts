@@ -175,6 +175,14 @@ const collectDependencyReceipts = async (
         verifyOperationId: delivered.integration?.verifyOperationId,
       };
     }
+    // A human-completed upstream is a valid admission but a different evidence
+    // class than an agent-produced delivery receipt — record which kind this
+    // `deliveryValid` decision rests on, never fabricate a delivery.
+    receipt.evidenceKind = delivered?.topicId
+      ? 'delivery'
+      : depStatusById.get(dep.dependsOnId) === 'completed'
+        ? 'manual_completion'
+        : undefined;
     // Valid only while the upstream is still standing on that delivery. An
     // upstream completed with no recorded attempt (a manual status flip) is
     // itself the delivery — the receipt honestly records `delivery` absent —

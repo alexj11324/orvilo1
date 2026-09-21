@@ -35,5 +35,6 @@ Gate D (Residual Disposition & Census Completeness). Deletes the unintegrated ch
 - `node scripts/slimming/census.mjs --check` → exit 0
 - `bunx tsgo --noEmit` → clean
 - zero live `@achaos/` references outside `docs/development/slimming/` metrics artifacts
+- `pnpm-workspace.yaml` uses `packages/**` glob — the seven AChaos packages were real workspace members; no manifest edit needed, workspace count drops automatically (108 → 101)
 
 Rollback: plain git revert — no DB or external contract involved.

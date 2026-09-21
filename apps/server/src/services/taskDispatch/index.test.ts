@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '@/database/core/getTestDB';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import {
+  actionApprovals,
   agents,
   projectAgents,
   projects,
@@ -16,6 +17,7 @@ import {
   workspaces,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { ActionApprovalService } from '@/server/services/agentDelegation';
 
 import { TaskDispatchService, TaskDispatchWaitingError } from './index';
 
@@ -32,6 +34,7 @@ const workspaceId = 'task-dispatch-service-workspace';
 
 const cleanup = async () => {
   await db.delete(taskDispatches);
+  await db.delete(actionApprovals).where(eq(actionApprovals.workspaceId, workspaceId));
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
   await db.delete(projects).where(eq(projects.workspaceId, workspaceId));
   await db.delete(agents).where(eq(agents.workspaceId, workspaceId));
@@ -1012,6 +1015,92 @@ describe('TaskDispatchService', () => {
       ).rejects.toMatchObject({
         message: expect.stringContaining('settlement_grant_reservation_stale'),
       });
+    });
+  });
+
+  describe('SC05 — a retryable prepare failure re-adopts its bound approval', () => {
+    it('prepare → consume → transient provision failure → same-key retry → adopted', async () => {
+      await db.insert(agents).values({ id: 'retry-agent', userId, workspaceId });
+      const [task] = await db
+        .insert(tasks)
+        .values({
+          assigneeAgentId: 'retry-agent',
+          createdByUserId: userId,
+          identifier: 'RETRY-1',
+          instruction: 'Retryable dispatch',
+          seq: 30,
+          workspaceId,
+        })
+        .returning();
+      const [approval] = await db
+        .insert(actionApprovals)
+        .values({
+          actionType: 'task.replan',
+          approverUserId: userId,
+          baseVersion: task.requirementRevision,
+          requestedBy: userId,
+          status: 'approved',
+          targetId: task.id,
+          targetType: 'task',
+          workspaceId,
+        })
+        .returning();
+
+      const service = new TaskDispatchService(db, workspaceId);
+      const approvals = new ActionApprovalService(db, userId, workspaceId);
+      const prepareInput = {
+        idempotencyKey: `replan:${task.id}:${approval.id}`,
+        origin: 'external' as const,
+        requestedBy: userId,
+        task,
+        trigger: 'manual' as const,
+      };
+      const expected = {
+        actionType: 'task.replan',
+        baseVersion: task.requirementRevision,
+        targetId: task.id,
+        targetType: 'task',
+        workspaceId,
+      };
+
+      // Attempt 1: claim, consume the approval bound to this dispatch, then a
+      // transient prepare-stage failure parks the row instead of settling it.
+      const first = await service.prepare(prepareInput);
+      expect(first.dispatch.phase).toBe('claimed');
+      await expect(
+        approvals.consumeForDispatch({
+          approvalId: approval.id,
+          dispatchId: first.dispatch.id,
+          expected,
+        }),
+      ).resolves.toMatchObject({ kind: 'consumed' });
+      await service.transition(first, {
+        expected: ['requested', 'claimed', 'provisioning'],
+        leaseExpiresAt: null,
+        phase: 'waiting',
+        waitingReason: 'dispatch_prepare_retryable',
+      });
+
+      // Attempt 2 under the same idempotency key resumes the same dispatch,
+      // and the consume re-enters as `adopted` — the external start happens
+      // at most once and no fresh approval is demanded.
+      const second = await service.prepare(prepareInput);
+      expect(second.dispatch.id).toBe(first.dispatch.id);
+      expect(second.dispatch.phase).toBe('claimed');
+      await expect(
+        approvals.consumeForDispatch({
+          approvalId: approval.id,
+          dispatchId: second.dispatch.id,
+          expected,
+        }),
+      ).resolves.toMatchObject({ kind: 'adopted' });
+
+      const [bound] = await db
+        .select()
+        .from(actionApprovals)
+        .where(eq(actionApprovals.id, approval.id));
+      expect(bound.consumedByDispatchId).toBe(first.dispatch.id);
+      expect(bound.consumedAt).not.toBeNull();
     });
   });
 });

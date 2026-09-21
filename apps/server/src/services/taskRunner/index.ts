@@ -1121,8 +1121,21 @@ export class TaskRunnerService {
               phase: 'outcome_unknown',
               waitingReason: error instanceof Error ? error.message : 'Dispatch outcome unknown',
             });
-          } else {
+          } else if (error instanceof TRPCError && error.code !== 'INTERNAL_SERVER_ERROR') {
+            // A deterministic refusal (approval rejected, bad input, contract
+            // violation) can never resolve by retrying this dispatch.
             await this.taskDispatch.settle(preparedDispatch, 'failed');
+          } else {
+            // A prepare-stage failure proved nothing reached the runtime:
+            // parking the dispatch (rather than settling it failed) lets the
+            // same idempotency key resume it and reach consumeForDispatch's
+            // adopt branch with the approval binding intact.
+            await this.taskDispatch.transition(preparedDispatch, {
+              expected: ['requested', 'claimed', 'provisioning'],
+              leaseExpiresAt: null,
+              phase: 'waiting',
+              waitingReason: 'dispatch_prepare_retryable',
+            });
           }
         } catch {
           // Preserve the original runner error; recovery will reconcile the dispatch.

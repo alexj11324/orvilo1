@@ -165,7 +165,9 @@ Provider/account-pool 控制入口 = 0          ← 已证（实机 404 + P19 gu
 
 ## 10. R11 固定 SHA 验收（进行中）
 
-**整合 SHA（终态冻结）**: `0b58f21c` —— `release/caid-remediation-integration`（P00–P21 + R00–R11 + SA01–SA08 + SB01–SB13 全部整改 + typecheckDiff 解析器修复）合并进 `test/live-acp-caid-and-release-readiness`（合并 tip `2bfe01ed`）。合并树复核：受影响套件（agentExecution + aiAgent + quota 摄取）579/579 绿；`apps/server` 作用域 tsc = **302** 条 = 基线零新增。
+**整合 SHA（终态冻结）**: `9ac1590283a319e68d27c7d1e2c4c8722a75b9ef` —— `release/caid-remediation-integration`（P00–P21 + R00–R11 + SA01–SA08 + SB01–SB13 + **SC01–SC07 整改**：`fix/sc-c02` `f375998a`/`4ab5d9a3`/`4f90c937`、`fix/sc-c01c03` `1cc9ba19`/`1aff676f`/`b32b6dc0`、`fix/sc-c04c05` `d69221cf`/`6f258c97`/`f76cd908`/`f79b2e8b`、`fix/sc-c06` `33ccd471`，PR #180 receipt FK + argsHash，`53eb73fa` judgment 追踪 cherry-pick + 收窄修复 `9ac15902`）合并进 `test/live-acp-caid-and-release-readiness`（合并 tip `d34c1293`，本节更正随文档提交）。合并树复核（@`9ac15902` 实测）：agentExecution + aiAgent + quota 摄取套件 **1100/1100 绿**（75 文件）；SC 批次触动的 18 个测试文件 **538 绿 1 skip**；`apps/server` 作用域 tsc = **302** 条 = 基线零新增；迁移 journal 0–183 连续且 `when` 严格递增（0182 fence_seq + 0183 agent_operation_launches 共存）。
+
+> 更正：本节此前冻结 `0b58f21c`；SC 批次当时未进入被审组合树，相关完成声明（含原「SC12」段落）属声明漂移，本节已按实测重写。
 
 SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/fence/merge-intent、SA05 contract 链 + CAID claim 准入、SA06 durable 状态权威 + judgment 加固、SA07 quota 身份撤销 + principal/workspace 信任键、SA02/SA04 外部工具授权 pins + 子结果 ACK 账本（CI 修复含 jsonb coalesce 哨兵、`pins` 断言、judgment binding mock）。SA09 真机验收保持 BLOCKED（环境缺位）。
 
@@ -173,16 +175,19 @@ SA 轮新增回归：SA01 工作树认领 / 孤儿恢复、SA03 租约 unknown/f
 
 ### 10.1 逐诊断 typecheck 对比（非总数免检）
 
-> **以下 `cb02a617` 运行为 R11 时代历史记录（旧合并树）**，仅证明当时状态；当前冻结 SHA `0b58f21c` 的 typecheck 对比以最新复跑结果为准（见本节末尾 SB/SC 更新）。
+> **以下 `cb02a617` 运行为 R11 时代历史记录（旧合并树）**，仅证明当时状态；当前冻结 SHA `9ac15902` 的 typecheck 对比以最新复跑结果为准（见本节末尾 SB/SC 更新）。
 
 - 工具：`scripts/ci/typecheckDiff.mjs` —— 以 `file|code|完整多行消息` 为 bucket 做多重集合差（行 / 列不参与匹配，行号漂移不算新增）；任何 head 诊断无 base bucket 对应即硬新增。
 - 已知修正：`pnpm type-check` 根脚本本地拒跑（`scripts/type-check.mjs` CI-only guard），脚本需 `CI=true`；作用域模式 `--scope apps/server` 走包内 `tsc --noEmit`。
 - head（`cb02a617`，旧整合树，历史记录）`apps/server` 实测 **302** 条 = 既有基线；merge 期间发现并修复两处回归：merge 冲突误留 `providerBinding` re-export（模块已被 P05 删除）→ `0750d823` 移除；connectorOverlap 测试类型收窄 → `f8c88403`。
 - **结果（历史运行，PASS\@cb02a617）**：base `origin/canary` = 309 条，head = 302 条；added keys 11（均为同文件行号漂移，base 中同 file+code 已存在）、removed 18、perFileCountDrift 1 个文件；**hard-new file+code = 0**。复跑：`node scripts/ci/typecheckDiff.mjs --base origin/canary --head HEAD --scope apps/server`（head 用 `--head-log` 复用日志）。
 - **SB12 协议收紧**：诊断消息不再截断 300 字符、多行 continuation 参与 bucket 匹配；`--head-log` 只接受带强制 envelope 的采集产物（`--capture <file>` 生成：head SHA/tree SHA、dirty 状态 + 补丁哈希、exit/signal/completed、scope、node+pnpm+lockfile+tsconfig 指纹、日志 sha256）。envelope 缺失 / 篡改 / 脏树 / 指纹漂移均拒绝；live `--head` 必须等于当前 checkout 且工作树干净；豁免条目必须有非空 `reason` + 未过期 `expires`。
-- **SC12 轮（第三轮终审残留）**：file-less 全局诊断（`error TS5083:` 类无定位行）解析为 `<global>` 诊断参与 diff（CE07）；冒号格式 `file:l:c - error TS####:` 同样可解析；未被识别的 error/warning 类别行（非 TS code、`warning` 类别、无 code 的 `error:`、畸形 `error TS...` 无冒号）默认阻塞不再静默当 runner 噪声；`--head-log` 回放补回「非零退出 + 零可解析诊断 = 失败」（CE08）；`tc-tree-sha` 必须是 40-hex 且等于 `git rev-parse <head-sha>^{tree}`（CE09）；env 指纹增加 tsc/tsgo 版本与 tsconfig extends 链；live 采集前后校验 `HEAD^{tree}` + 干净工作树。回归测试 `scripts/ci/typecheckDiff.test.ts`（37 例）。
+- **SB12 残留收口（SC07）——已并入被审组合树**：实现于 `fix/sc-c06` `33ccd471`（T3 合并 `2f7af894`）。file-less 全局诊断（`error TS5083:` 类无定位行）解析为 `<global>` 诊断参与 diff（CE07）；冒号格式 `file:l:c - error TS####:` 同样可解析；未被识别的 error/warning 类别行（非 TS code、`warning` 类别、无 code 的 `error:`、畸形 `error TS...` 无冒号）默认阻塞不再静默当 runner 噪声；`--head-log` 回放补回「非零退出 + 零可解析诊断 = 失败」（CE08）；`tc-tree-sha` 必须是 40-hex 且等于 `git rev-parse <head-sha>^{tree}`（CE09）；env 指纹增加 tsc/tsgo 版本与 tsconfig extends 链；live 采集前后校验 `HEAD^{tree}` + 干净工作树。回归测试 `scripts/ci/typecheckDiff.test.ts`（37 例，合并树 `9ac15902` 实测 37/37 绿）。
+  - *更正记录：旧文写作「SC12 轮」并在代码未落地前给出能力完成声明——属声明漂移；以上能力现已在 `9ac15902` 树上核验存在（脚本 + 测试均在场）。*
 
 ### 10.2 真机探针（dockerless：brew Postgres\@5432 + Redis\@6379 + s3rver\@29000，Next\@37620）
+
+> 探针结果采集自上一冻结树 `0b58f21c`；SC 批次（SC05/06 派发链改动）合并后需在新冻结树上重采后才可更新行状态——当前先标记为待重采。
 
 | 探针                                                                                                      | 结果                                                                                                                                                                                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

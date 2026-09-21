@@ -3,10 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiInfraRepos } from '../index';
 
-const loadModels = vi.hoisted(() => vi.fn());
+// vitest.config.server.mts runs with isolate:false, so one file's module mock
+// serves every file; delegate through a per-test-installed global instead.
+type GlobalWithMock = typeof globalThis & {
+  __orviloTestLoadModels?: ReturnType<typeof vi.fn>;
+};
 
 vi.mock('@orvilo/business-model-bank/model-config', () => ({
-  loadModels,
+  loadModels: (...args: unknown[]) =>
+    ((globalThis as GlobalWithMock).__orviloTestLoadModels ?? (() => Promise.resolve([])))(...args),
 }));
 
 const model = (over: Partial<EnabledAiModel> = {}): EnabledAiModel =>
@@ -21,13 +26,15 @@ const model = (over: Partial<EnabledAiModel> = {}): EnabledAiModel =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  loadModels.mockResolvedValue([
-    model(),
-    model({ id: 'm-off', enabled: false }),
-    model({ id: 'm-img', type: 'tts' }),
-    model({ id: 'm-vid', type: 'realtime' }),
-    model({ id: 'claude', providerId: 'anthropic' }),
-  ]);
+  (globalThis as GlobalWithMock).__orviloTestLoadModels = vi
+    .fn()
+    .mockResolvedValue([
+      model(),
+      model({ id: 'm-off', enabled: false }),
+      model({ id: 'm-img', type: 'tts' }),
+      model({ id: 'm-vid', type: 'realtime' }),
+      model({ id: 'claude', providerId: 'anthropic' }),
+    ]);
 });
 
 describe('AiInfraRepos', () => {

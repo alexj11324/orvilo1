@@ -18,7 +18,6 @@ import { goalRuntime } from '../goal';
 import { goalSupervisorRuntime } from '../goalSupervisor';
 import { groupAgentBuilderRuntime } from '../groupAgentBuilder';
 import { groupManagementRuntime } from '../groupManagement';
-import { imageGenerationRuntime } from '../imageGeneration';
 import { getServerRuntimeIdentifiers, hasServerRuntime } from '../index';
 import { knowledgeBaseRuntime } from '../knowledgeBase';
 import { localSystemRuntime } from '../localSystem';
@@ -59,7 +58,6 @@ const ALL_REGISTRATIONS = [
   goalSupervisorRuntime,
   groupAgentBuilderRuntime,
   groupManagementRuntime,
-  imageGenerationRuntime,
   knowledgeBaseRuntime,
   localSystemRuntime,
   memoryRuntime,

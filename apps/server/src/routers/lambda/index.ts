@@ -45,7 +45,6 @@ import { briefRouter } from './brief';
 import { changelogRouter } from './changelog';
 import { chunkRouter } from './chunk';
 import { collaborationRouter } from './collaboration';
-import { comfyuiRouter } from './comfyui';
 import { composioRouter } from './composio';
 import { configRouter } from './config';
 import { connectorRouter } from './connector';
@@ -57,12 +56,8 @@ import { expertiseRouter } from './expertise';
 import { exporterRouter } from './exporter';
 import { fileRouter } from './file';
 import { followUpActionRouter } from './followUpAction';
-import { generationRouter } from './generation';
-import { generationBatchRouter } from './generationBatch';
-import { generationTopicRouter } from './generationTopic';
 import { goalRouter } from './goal';
 import { homeRouter } from './home';
-import { imageRouter } from './image';
 import { importerRouter } from './importer';
 import { knowledgeRouter } from './knowledge';
 import { knowledgeBaseRouter } from './knowledgeBase';
@@ -97,7 +92,6 @@ import { userRouter } from './user';
 import { userMemoriesRouter } from './userMemories';
 import { userMemoryRouter } from './userMemory';
 import { verifyRouter } from './verify';
-import { videoRouter } from './video';
 import { webBrowsingRouter } from './webBrowsing';
 import { workRouter } from './work';
 import { workspaceUserSettingsRouter } from './workspaceUserSettings';
@@ -125,7 +119,6 @@ export const lambdaRouter = router({
   asr: asrRouter,
   chunk: chunkRouter,
   collaboration: collaborationRouter,
-  comfyui: comfyuiRouter,
   config: configRouter,
   connector: connectorRouter,
   device: deviceRouter,
@@ -135,14 +128,10 @@ export const lambdaRouter = router({
   exporter: exporterRouter,
   file: fileRouter,
   followUpAction: followUpActionRouter,
-  generation: generationRouter,
-  generationBatch: generationBatchRouter,
-  generationTopic: generationTopicRouter,
   goal: goalRouter,
   group: agentGroupRouter,
   healthcheck: publicProcedure.query(() => "i'm live!"),
   home: homeRouter,
-  image: imageRouter,
   importer: importerRouter,
   invitation: invitationRouter,
   composio: composioRouter,
@@ -181,7 +170,6 @@ export const lambdaRouter = router({
   userMemories: userMemoriesRouter,
   userMemory: userMemoryRouter,
   verify: verifyRouter,
-  video: videoRouter,
   webBrowsing: webBrowsingRouter,
   work: workRouter,
   workspace: workspaceRouter,

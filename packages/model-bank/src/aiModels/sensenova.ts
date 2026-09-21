@@ -1,4 +1,4 @@
-import type { AIChatModelCard, AIImageModelCard } from '../types/aiModel';
+import type { AIChatModelCard } from '../types/aiModel';
 
 // https://platform.sensenova.cn/docs
 
@@ -57,42 +57,6 @@ const sensenovaChatModels: AIChatModelCard[] = [
   },
 ];
 
-const sensenovaImageModels: AIImageModelCard[] = [
-  {
-    description:
-      'An accelerated version based on SenseNova U1, specifically optimized for infographic generation.',
-    displayName: 'SenseNova U1 Fast',
-    enabled: true,
-    id: 'sensenova-u1-fast',
-    parameters: {
-      prompt: {
-        default: '',
-      },
-      size: {
-        default: '2752x1536',
-        enum: [
-          '1664x2496',
-          '2496x1664',
-          '1760x2368',
-          '2368x1760',
-          '1824x2272',
-          '2272x1824',
-          '2048x2048',
-          '2752x1536',
-          '1536x2752',
-          '3072x1376',
-          '1344x3136',
-        ],
-      },
-    },
-    pricing: {
-      units: [{ name: 'imageGeneration', rate: 0, strategy: 'fixed', unit: 'image' }],
-    },
-    releasedAt: '2026-05-08',
-    type: 'image',
-  },
-];
-
-export const allModels = [...sensenovaChatModels, ...sensenovaImageModels];
+export const allModels = [...sensenovaChatModels];
 
 export default allModels;

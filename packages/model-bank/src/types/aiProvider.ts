@@ -107,13 +107,11 @@ export const AiProviderSDKEnum = {
   AzureAI: 'azureai',
   Bedrock: 'bedrock',
   Cloudflare: 'cloudflare',
-  ComfyUI: 'comfyui',
   Google: 'google',
   Huggingface: 'huggingface',
   Ollama: 'ollama',
   Openai: 'openai',
   Qwen: 'qwen',
-  Replicate: 'replicate',
   Router: 'router',
   Volcengine: 'volcengine',
 } as const;
@@ -122,7 +120,6 @@ export type AiProviderSDKType = (typeof AiProviderSDKEnum)[keyof typeof AiProvid
 
 const AiProviderSdkTypes = [
   'anthropic',
-  'comfyui',
   'openai',
   'ollama',
   'azure',
@@ -131,7 +128,6 @@ const AiProviderSdkTypes = [
   'cloudflare',
   'google',
   'huggingface',
-  'replicate',
   'router',
   'volcengine',
   'qwen',
@@ -426,7 +422,5 @@ export interface AiProviderRuntimeState {
   enabledAiModels: EnabledAiModel[];
   enabledAiProviders: EnabledProvider[];
   enabledChatAiProviders: EnabledProvider[];
-  enabledImageAiProviders: EnabledProvider[];
-  enabledVideoAiProviders: EnabledProvider[];
   runtimeConfig: Record<string, AiProviderRuntimeConfig>;
 }

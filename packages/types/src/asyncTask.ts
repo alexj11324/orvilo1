@@ -3,10 +3,8 @@ import type { SpendOrigin } from './agentRuntime';
 export enum AsyncTaskType {
   Chunking = 'chunk',
   Embedding = 'embedding',
-  ImageGeneration = 'image_generation',
   UserMemoryExtractionHourly = 'user_memory_extraction:hourly',
   UserMemoryExtractionWithChatTopic = 'user_memory_extraction:chat_topic',
-  VideoGeneration = 'video_generation',
 }
 
 export enum AsyncTaskStatus {

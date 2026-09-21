@@ -573,34 +573,6 @@ export const aiModelKeys = {
   ]),
 };
 
-// ---- image generation ---------------------------------------------------
-export const imageKeys = {
-  generationBatches: def('image:generationBatches', (topicId: string) => [
-    'image:generationBatches',
-    topicId,
-  ]),
-  generationStatus: def('image:generationStatus', (generationId: string, asyncTaskId?: string) => [
-    'image:generationStatus',
-    generationId,
-    asyncTaskId,
-  ]),
-  generationTopics: def('image:generationTopics', () => ['image:generationTopics']),
-};
-
-// ---- video generation ---------------------------------------------------
-export const videoKeys = {
-  generationBatches: def('video:generationBatches', (topicId: string) => [
-    'video:generationBatches',
-    topicId,
-  ]),
-  generationStatus: def('video:generationStatus', (generationId: string, asyncTaskId?: string) => [
-    'video:generationStatus',
-    generationId,
-    asyncTaskId,
-  ]),
-  generationTopics: def('video:generationTopics', () => ['video:generationTopics']),
-};
-
 // ---- serverConfig -------------------------------------------------------
 export const serverConfigKeys = {
   get: 'serverConfig:get' as const,
@@ -1193,7 +1165,6 @@ export const swrKeys = {
   global: globalKeys,
   group: groupKeys,
   home: homeKeys,
-  image: imageKeys,
   inbox: inboxKeys,
   knowledgeBase: knowledgeBaseKeys,
   localFile: localFileKeys,
@@ -1223,5 +1194,4 @@ export const swrKeys = {
   user: userKeys,
   userMemory: userMemoryKeys,
   verify: verifyKeys,
-  video: videoKeys,
 };

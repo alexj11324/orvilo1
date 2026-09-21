@@ -1,4 +1,5 @@
-import type { GenerationAsset } from '@orvilo/types';
+// GenerationAsset was part of the deleted @orvilo/types generation module;
+// the schema stays until the ORV-108 table drops, so the shape is inlined here.
 import { index, integer, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 
@@ -9,6 +10,27 @@ import { asyncTasks } from './asyncTask';
 import { files } from './file';
 import { users } from './user';
 import { workspaces } from './workspace';
+
+interface BaseGenerationAsset {
+  type: string;
+}
+interface ImageGenerationAsset extends BaseGenerationAsset {
+  height?: number;
+  originalUrl?: string;
+  thumbnailUrl?: string;
+  url?: string;
+  width?: number;
+}
+interface VideoGenerationAsset extends BaseGenerationAsset {
+  coverUrl?: string;
+  duration?: number;
+  height?: number;
+  originalUrl?: string;
+  thumbnailUrl?: string;
+  url?: string;
+  width?: number;
+}
+type GenerationAsset = ImageGenerationAsset | VideoGenerationAsset;
 
 /**
  * Generation topics table - Used to organize and manage AI-generated content topics

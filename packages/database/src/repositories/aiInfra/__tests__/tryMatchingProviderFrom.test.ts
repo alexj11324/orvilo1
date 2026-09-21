@@ -10,8 +10,6 @@ describe('AiInfraRepos', () => {
       enabledAiModels: models,
       enabledAiProviders: [],
       enabledChatAiProviders: [],
-      enabledImageAiProviders: [],
-      enabledVideoAiProviders: [],
       runtimeConfig: {},
     });
 

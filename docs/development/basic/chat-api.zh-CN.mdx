@@ -318,7 +318,7 @@ Model Runtime（`packages/model-runtime/`）是 Orvilo 中
   初始化对应的运行时实例
 - **能力封装**：`chat`（聊天流式请求）、
   `models`（模型列表）、`embeddings`（文本嵌入）、
-  `createImage`（图像生成）、`textToSpeech`（语音合成）、
+  `textToSpeech`（语音合成）、
   `generateObject`（结构化输出）
 
 **核心接口**：
@@ -340,9 +340,6 @@ export interface OrviloRuntimeAI {
     options?: EmbeddingsOptions,
   ): Promise<Embeddings[]>;
   models?(): Promise<any>;
-  createImage?: (
-    payload: CreateImagePayload,
-  ) => Promise<CreateImageResponse>;
   textToSpeech?: (
     payload: TextToSpeechPayload,
     options?: TextToSpeechOptions,

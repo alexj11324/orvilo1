@@ -353,7 +353,6 @@ into a unified interface.
   (`packages/model-runtime/src/runtimeMap.ts`)
 - **Capability Encapsulation**: `chat` (streaming chat),
   `models` (model listing), `embeddings` (text embeddings),
-  `createImage` (image generation),
   `textToSpeech` (speech synthesis),
   `generateObject` (structured output)
 
@@ -376,9 +375,6 @@ export interface OrviloRuntimeAI {
     options?: EmbeddingsOptions,
   ): Promise<Embeddings[]>;
   models?(): Promise<any>;
-  createImage?: (
-    payload: CreateImagePayload,
-  ) => Promise<CreateImageResponse>;
   textToSpeech?: (
     payload: TextToSpeechPayload,
     options?: TextToSpeechOptions,

@@ -137,12 +137,6 @@ export class AiInfraRepos {
     const enabledChatAiProviders = enabledAiProviders.filter((provider) => {
       return allModels.some((model) => model.providerId === provider.id && model.type === 'chat');
     });
-    const enabledImageAiProviders = enabledAiProviders.filter((provider) => {
-      return allModels.some((model) => model.providerId === provider.id && model.type === 'image');
-    });
-    const enabledVideoAiProviders = enabledAiProviders.filter((provider) => {
-      return allModels.some((model) => model.providerId === provider.id && model.type === 'video');
-    });
 
     const runtimeConfig = Object.fromEntries(
       enabledAiProviders.map((provider) => [
@@ -160,8 +154,6 @@ export class AiInfraRepos {
       enabledAiModels,
       enabledAiProviders,
       enabledChatAiProviders,
-      enabledImageAiProviders,
-      enabledVideoAiProviders,
       runtimeConfig,
     };
   };

@@ -3,7 +3,6 @@ import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
-import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
@@ -399,130 +398,6 @@ describe('createServerAgentToolsEngine', () => {
     });
 
     expect(result.enabledToolIds).not.toContain(WebBrowsingManifest.identifier);
-  });
-
-  it('should not auto-enable ImageGeneration in chat mode', () => {
-    const context = createMockContext();
-    const engine = createServerAgentToolsEngine(context, {
-      agentConfig: {
-        chatConfig: { enableAgentMode: false },
-        plugins: [],
-      },
-      model: 'claude-sonnet',
-      modelAbilities: { functionCall: true, imageOutput: false },
-      provider: 'anthropic',
-    });
-
-    const result = engine.generateToolsDetailed({
-      model: 'claude-sonnet',
-      provider: 'anthropic',
-      toolIds: [],
-    });
-
-    expect(result.enabledToolIds).not.toContain(ImageGenerationManifest.identifier);
-  });
-
-  it('should enable ImageGeneration in chat mode when the tool is pinned', () => {
-    const context = createMockContext();
-    const engine = createServerAgentToolsEngine(context, {
-      agentConfig: {
-        chatConfig: { enableAgentMode: false },
-        plugins: [ImageGenerationManifest.identifier],
-      },
-      model: 'claude-sonnet',
-      modelAbilities: { functionCall: true, imageOutput: false },
-      provider: 'anthropic',
-    });
-
-    const result = engine.generateToolsDetailed({
-      model: 'claude-sonnet',
-      provider: 'anthropic',
-      toolIds: [ImageGenerationManifest.identifier],
-    });
-
-    expect(result.enabledToolIds).toContain(ImageGenerationManifest.identifier);
-  });
-
-  it('should not enable ImageGeneration in chat mode when model has native image output', () => {
-    const context = createMockContext();
-    const engine = createServerAgentToolsEngine(context, {
-      agentConfig: {
-        chatConfig: { enableAgentMode: false },
-        plugins: [ImageGenerationManifest.identifier],
-      },
-      model: 'gpt-image-chat',
-      modelAbilities: { functionCall: true, imageOutput: true },
-      provider: 'openai',
-    });
-
-    const result = engine.generateToolsDetailed({
-      model: 'gpt-image-chat',
-      provider: 'openai',
-      toolIds: [ImageGenerationManifest.identifier],
-    });
-
-    expect(result.enabledToolIds).not.toContain(ImageGenerationManifest.identifier);
-  });
-
-  it('should not enable ImageGeneration in chat mode when model cannot call tools', () => {
-    const context = createMockContext({
-      isModelSupportToolUse: () => false,
-    });
-    const engine = createServerAgentToolsEngine(context, {
-      agentConfig: {
-        chatConfig: { enableAgentMode: false },
-        plugins: [ImageGenerationManifest.identifier],
-      },
-      model: 'plain-text-model',
-      modelAbilities: { functionCall: false, imageOutput: false },
-      provider: 'test',
-    });
-
-    const result = engine.generateToolsDetailed({
-      model: 'plain-text-model',
-      provider: 'test',
-      toolIds: [ImageGenerationManifest.identifier],
-    });
-
-    expect(result.enabledToolIds).not.toContain(ImageGenerationManifest.identifier);
-  });
-
-  it('should not enable ImageGeneration by default in agent mode', () => {
-    const context = createMockContext();
-    const engine = createServerAgentToolsEngine(context, {
-      agentConfig: { plugins: [] },
-      model: 'gpt-4',
-      modelAbilities: { functionCall: true, imageOutput: false },
-      provider: 'openai',
-    });
-
-    const result = engine.generateToolsDetailed({
-      model: 'gpt-4',
-      provider: 'openai',
-      toolIds: [],
-    });
-
-    expect(result.enabledToolIds).not.toContain(ImageGenerationManifest.identifier);
-  });
-
-  it('should allow ImageGeneration explicit activation in agent mode', () => {
-    const context = createMockContext();
-    const engine = createServerAgentToolsEngine(context, {
-      agentConfig: { plugins: [] },
-      model: 'gpt-4',
-      modelAbilities: { functionCall: true, imageOutput: true },
-      provider: 'openai',
-    });
-
-    const result = engine.generateToolsDetailed({
-      context: { isExplicitActivation: true },
-      model: 'gpt-4',
-      provider: 'openai',
-      skipDefaultTools: true,
-      toolIds: [ImageGenerationManifest.identifier],
-    });
-
-    expect(result.enabledToolIds).toContain(ImageGenerationManifest.identifier);
   });
 
   it('should enable MultimodalUnderstanding when injected into runtime plugins', () => {

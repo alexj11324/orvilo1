@@ -1572,9 +1572,6 @@ export default {
   'systemAgent.followUpAction.modelDesc':
     'Model used to suggest one-click follow-up replies under each assistant message',
   'systemAgent.followUpAction.title': 'Follow-up Suggestions',
-  'systemAgent.generationTopic.label': 'Model',
-  'systemAgent.generationTopic.modelDesc': 'Model used to name AI image topics',
-  'systemAgent.generationTopic.title': 'AI Image Topic Naming',
   'systemAgent.helpInfo':
     'When creating a new agent, the default agent settings will be used as preset values.',
   'systemAgent.historyCompress.label': 'Model',
@@ -3809,11 +3806,6 @@ export default {
   'tools.builtins.orvilo-web-browsing.readme':
     'Search the web for current information and crawl web pages to extract content. Supports multiple search engines, categories, and time ranges for comprehensive research.',
   'tools.builtins.orvilo-web-browsing.title': 'Web Browsing',
-  'tools.builtins.orvilo-image-generation.description':
-    'Generate images through Orvilo providers when the current chat model has no native image output.',
-  'tools.builtins.orvilo-image-generation.readme':
-    'Opt-in image generation for models without native image output. Pin this tool to enable it in chat or agent mode; leave unpinned to avoid the tool schema cost.',
-  'tools.builtins.orvilo-image-generation.title': 'Image Generation',
   'tools.builtins.orvilo-web-onboarding.description':
     'Drive the web onboarding flow with a controlled agent runtime',
   'tools.builtins.orvilo-web-onboarding.title': 'Web Onboarding',

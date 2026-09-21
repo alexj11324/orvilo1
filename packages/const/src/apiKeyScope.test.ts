@@ -100,9 +100,6 @@ describe('requiredApiKeyScopeForTrpc', () => {
     expect(requiredApiKeyScopeForTrpc('aiChat.outputJSON', 'mutation')).toEqual({
       scopes: ['model:invoke'],
     });
-    expect(requiredApiKeyScopeForTrpc('image.createImage', 'mutation')).toEqual({
-      scopes: ['model:invoke'],
-    });
   });
 
   it('stacks procedure-level extra scopes on the namespace rule', () => {

@@ -43,16 +43,12 @@ const DEPLOYMENT_RUNTIME_IMPORT_ALLOWLIST = new Set([
   // touch deployment config.
   'services/aiGeneration/index.ts',
   // Non-agent base services (see doc table): media understanding, embeddings,
-  // transcription, chunking, file/ragEval/video pipelines.
+  // transcription, chunking, file/ragEval pipelines.
   'routers/async/file.ts',
-  'routers/async/image.ts',
   'routers/async/ragEval.ts',
-  'routers/async/video.ts',
   'routers/lambda/asr.ts',
   'routers/lambda/chunk.ts',
   'routers/lambda/userMemories.ts',
-  'routers/lambda/video/index.ts',
-  'services/generation/videoBackgroundPolling.ts',
   'services/knowledgeBase/index.ts',
   'services/toolExecution/serverRuntimes/memory.ts',
   'services/toolExecution/serverRuntimes/orviloAgent.ts',

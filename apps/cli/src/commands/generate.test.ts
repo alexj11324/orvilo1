@@ -13,20 +13,6 @@ const { mockTrpcClient } = vi.hoisted(() => ({
     asr: {
       transcribe: { mutate: vi.fn() },
     },
-    generation: {
-      deleteGeneration: { mutate: vi.fn() },
-      getGenerationStatus: { query: vi.fn() },
-    },
-    generationTopic: {
-      createTopic: { mutate: vi.fn() },
-      getAllGenerationTopics: { query: vi.fn() },
-    },
-    image: {
-      createImage: { mutate: vi.fn() },
-    },
-    video: {
-      createVideo: { mutate: vi.fn() },
-    },
   },
 }));
 
@@ -211,120 +197,6 @@ describe('generate command', () => {
     });
   });
 
-  describe('image', () => {
-    it('should create image generation', async () => {
-      mockTrpcClient.generationTopic.createTopic.mutate.mockResolvedValue('topic-1');
-      mockTrpcClient.image.createImage.mutate.mockResolvedValue({
-        data: {
-          batch: { id: 'batch-1' },
-          generations: [{ asyncTaskId: 'task-1', id: 'gen-1' }],
-        },
-        success: true,
-      });
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'generate',
-        'image',
-        'a cute cat',
-        '--model',
-        'dall-e-3',
-        '--provider',
-        'openai',
-      ]);
-
-      expect(mockTrpcClient.generationTopic.createTopic.mutate).toHaveBeenCalledWith({
-        type: 'image',
-      });
-      expect(mockTrpcClient.image.createImage.mutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          generationTopicId: 'topic-1',
-          model: 'dall-e-3',
-          params: { prompt: 'a cute cat' },
-          provider: 'openai',
-        }),
-      );
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Image generation started'));
-    });
-  });
-
-  describe('video', () => {
-    it('should create video generation', async () => {
-      mockTrpcClient.generationTopic.createTopic.mutate.mockResolvedValue('topic-2');
-      mockTrpcClient.video.createVideo.mutate.mockResolvedValue({
-        data: { generationId: 'gen-v1' },
-        success: true,
-      });
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'generate',
-        'video',
-        'a dancing cat',
-        '--model',
-        'gen-3',
-        '--provider',
-        'runway',
-      ]);
-
-      expect(mockTrpcClient.video.createVideo.mutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          generationTopicId: 'topic-2',
-          model: 'gen-3',
-          params: { prompt: 'a dancing cat' },
-          provider: 'runway',
-        }),
-      );
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Video generation started'));
-    });
-
-    it('should pass image-to-video params', async () => {
-      mockTrpcClient.generationTopic.createTopic.mutate.mockResolvedValue('topic-3');
-      mockTrpcClient.video.createVideo.mutate.mockResolvedValue({
-        data: { generationId: 'gen-v2' },
-        success: true,
-      });
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'generate',
-        'video',
-        'a cat waving',
-        '--model',
-        'cogvideox',
-        '--provider',
-        'zhipu',
-        '--image',
-        'https://example.com/first.png',
-        '--end-image',
-        'https://example.com/last.png',
-        '--images',
-        'https://example.com/a.png',
-        'https://example.com/b.png',
-      ]);
-
-      expect(mockTrpcClient.video.createVideo.mutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          generationTopicId: 'topic-3',
-          model: 'cogvideox',
-          params: {
-            endImageUrl: 'https://example.com/last.png',
-            imageUrl: 'https://example.com/first.png',
-            imageUrls: ['https://example.com/a.png', 'https://example.com/b.png'],
-            prompt: 'a cat waving',
-          },
-          provider: 'zhipu',
-        }),
-      );
-    });
-  });
-
   describe('tts', () => {
     it('should call OpenAI TTS endpoint and save file', async () => {
       const audioBuffer = new ArrayBuffer(100);
@@ -487,61 +359,6 @@ describe('generate command', () => {
 
       expect(log.error).toHaveBeenCalledWith(expect.stringContaining('Failed to download audio'));
       expect(exitSpy).toHaveBeenCalledWith(1);
-    });
-  });
-
-  describe('delete', () => {
-    it('should delete a generation with --yes', async () => {
-      mockTrpcClient.generation.deleteGeneration.mutate.mockResolvedValue({});
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'generate', 'delete', 'gen-1', '--yes']);
-
-      expect(mockTrpcClient.generation.deleteGeneration.mutate).toHaveBeenCalledWith({
-        generationId: 'gen-1',
-      });
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Deleted generation'));
-    });
-  });
-
-  describe('status', () => {
-    it('should show generation status', async () => {
-      mockTrpcClient.generation.getGenerationStatus.query.mockResolvedValue({
-        generation: { asset: { url: 'https://example.com/image.png' }, id: 'gen-1' },
-        status: 'success',
-      });
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'generate', 'status', 'gen-1', 'task-1']);
-
-      expect(mockTrpcClient.generation.getGenerationStatus.query).toHaveBeenCalledWith({
-        asyncTaskId: 'task-1',
-        generationId: 'gen-1',
-      });
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('success'));
-    });
-  });
-
-  describe('list', () => {
-    it('should list generation topics', async () => {
-      mockTrpcClient.generationTopic.getAllGenerationTopics.query.mockResolvedValue([
-        { id: 't1', title: 'My Images', type: 'image', updatedAt: new Date().toISOString() },
-      ]);
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'generate', 'list']);
-
-      expect(consoleSpy).toHaveBeenCalledTimes(2);
-      expect(consoleSpy.mock.calls[0][0]).toContain('ID');
-    });
-
-    it('should show message when empty', async () => {
-      mockTrpcClient.generationTopic.getAllGenerationTopics.query.mockResolvedValue([]);
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'generate', 'list']);
-
-      expect(consoleSpy).toHaveBeenCalledWith('No generation topics found.');
     });
   });
 });

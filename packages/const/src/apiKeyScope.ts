@@ -208,7 +208,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // room tickets/snapshots stay inside the caller's verified membership —
   // the ticket itself grants nothing beyond it
   collaboration: { any: 'workspace:read' },
-  comfyui: rw('model:read', 'model:write'),
   // third-party integrations hold external credentials
   composio: 'blocked',
   config: 'open',
@@ -222,14 +221,10 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   exporter: 'blocked',
   file: rw('file:read', 'file:write'),
   followUpAction: rw('chat:read', 'chat:write'),
-  generation: { any: 'model:invoke' },
-  generationBatch: { any: 'model:invoke' },
-  generationTopic: { any: 'model:invoke' },
   goal: rw('agent:read', 'agent:write'),
   group: rw('agent:read', 'agent:write'),
   healthcheck: 'open',
   home: rw('chat:read', 'chat:write'),
-  image: { any: 'model:invoke' },
   // whole-account backup import can overwrite credential-bearing settings,
   // provider/model config and agents
   importer: 'blocked',
@@ -292,7 +287,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   userMemories: rw('user:read', 'user:write'),
   userMemory: rw('user:read', 'user:write'),
   verify: 'blocked',
-  video: { any: 'model:invoke' },
   waitlist: 'blocked',
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),
@@ -355,20 +349,8 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'aiChat.archiveToolResult': ['chat:write'],
   // creates user/assistant messages and topics alongside the model call
   'aiChat.sendMessageInServer': ['chat:write'],
-  // runs a ComfyUI image-generation workflow, not a config write
-  'comfyui.createImage': ['model:invoke'],
   // extracts follow-up actions via `AiGenerationService.generateObject`
   'followUpAction.extract': ['model:invoke'],
-  // asset cleanup/organization is file management, not model invocation —
-  // a model-only key must not delete or reorganize generated assets
-  'generation.deleteGeneration': ['file:write'],
-  'generationBatch.deleteGenerationBatch': ['file:write'],
-  'generationTopic.deleteTopic': ['file:write'],
-  // sharing/visibility control is asset management, not generation
-  'generationTopic.setTopicVisibility': ['file:write'],
-  'generationTopic.updateTopic': ['file:write'],
-  // fetches caller-supplied image data and uploads a cover file
-  'generationTopic.updateTopicCover': ['file:write'],
   // Market tool-execution surface (mounted on the tools router): external
   // tool calls burn quota / cause side effects; file export writes files
   'market.callCloudMcpEndpoint': ['model:invoke'],

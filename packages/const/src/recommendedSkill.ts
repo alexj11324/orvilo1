@@ -16,8 +16,6 @@ export const RECOMMENDED_SKILLS: RecommendedSkillItem[] = [
   { id: 'orvilo-cloud-sandbox', type: RecommendedSkillType.Builtin },
   { id: 'orvilo-task', type: RecommendedSkillType.Builtin },
   { id: 'orvilo-agent-documents', type: RecommendedSkillType.Builtin },
-  // Opt-in chat image generation: default-installed so Tools can pin it without Skill Store first.
-  { id: 'orvilo-image-generation', type: RecommendedSkillType.Builtin },
   // Orvilo skills
   { id: 'notion', type: RecommendedSkillType.Orvilo },
   { id: 'posthog', type: RecommendedSkillType.Orvilo },

@@ -36,7 +36,6 @@
     "@orvilo/builtin-tool-goal": "workspace:*",
     "@orvilo/builtin-tool-group-agent-builder": "workspace:*",
     "@orvilo/builtin-tool-group-management": "workspace:*",
-    "@orvilo/builtin-tool-image-generation": "workspace:*",
     "@orvilo/builtin-tool-knowledge-base": "workspace:*",
     "@orvilo/builtin-tool-local-system": "workspace:*",
     "@orvilo/builtin-tool-memory": "workspace:*",

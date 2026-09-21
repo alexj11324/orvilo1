@@ -10,8 +10,6 @@
     "./helpers/parseToolCalls": "./src/helpers/parseToolCalls.ts",
     "./providers/anthropic/modelId": "./src/providers/anthropic/modelId.ts",
     "./providers/openai/modelId": "./src/providers/openai/modelId.ts",
-    "./resolveImageSinglePrice": "./src/core/usageConverters/utils/resolveImageSinglePrice.ts",
-    "./resolveVideoSinglePrice": "./src/core/usageConverters/utils/resolveVideoSinglePrice.ts",
     "./types/error": "./src/types/error.ts",
     "./utils/createError": "./src/utils/createError.ts",
     "./utils/modelExtendParams": "./src/utils/modelExtendParams.ts",

@@ -60,11 +60,6 @@ import {
   GroupManagementStreamings,
 } from '@orvilo/builtin-tool-group-management/client';
 import {
-  ImageGenerationInspectors,
-  ImageGenerationManifest,
-  ImageGenerationRenders,
-} from '@orvilo/builtin-tool-image-generation/client';
-import {
   KnowledgeBaseInspectors,
   KnowledgeBaseManifest,
   KnowledgeBaseRenders,
@@ -266,7 +261,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [GroupManagementManifest.identifier]: GroupManagementRenders as Record<string, BuiltinRender>,
     [GoalManifest.identifier]: GoalRenders as Record<string, BuiltinRender>,
-    [ImageGenerationManifest.identifier]: ImageGenerationRenders as Record<string, BuiltinRender>,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseRenders as Record<string, BuiltinRender>,
     [OrviloAgentManifest.identifier]: OrviloAgentRenders as Record<string, BuiltinRender>,
     [LocalSystemManifest.identifier]: LocalSystemRenders as Record<string, BuiltinRender>,
@@ -329,10 +323,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [GoalManifest.identifier]: GoalInspectors as Record<string, BuiltinInspector>,
     [GoalSupervisorManifest.identifier]: GoalSupervisorInspectors,
-    [ImageGenerationManifest.identifier]: ImageGenerationInspectors as Record<
-      string,
-      BuiltinInspector
-    >,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseInspectors as Record<string, BuiltinInspector>,
     [OrviloAgentManifest.identifier]: OrviloAgentInspectors as Record<string, BuiltinInspector>,
     [LocalSystemManifest.identifier]: LocalSystemInspectors as Record<string, BuiltinInspector>,

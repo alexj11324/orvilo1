@@ -298,7 +298,7 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
 
         if (source === 'official') {
           if (builtinTools.some((t) => t.identifier === identifier)) {
-            // Builtin tools (orvilo-web-browsing, orvilo-image-generation, etc.) need no OAuth
+            // Builtin tools (orvilo-web-browsing, etc.) need no OAuth
             try {
               const agent = await agentModel.getAgentConfigById(agentId);
               if (!agent) return { content: `Agent "${agentId}" not found.`, success: false };

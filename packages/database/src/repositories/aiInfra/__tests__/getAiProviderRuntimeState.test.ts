@@ -45,8 +45,6 @@ describe('AiInfraRepos', () => {
       expect(state.enabledAiProviders.map((p) => p.id)).toEqual(['openai']);
       expect(state.enabledAiModels.map((m) => m.id).sort()).toEqual(['m-1', 'm-img', 'm-vid']);
       expect(state.enabledChatAiProviders.map((p) => p.id)).toEqual(['openai']);
-      expect(state.enabledImageAiProviders.map((p) => p.id)).toEqual(['openai']);
-      expect(state.enabledVideoAiProviders.map((p) => p.id)).toEqual(['openai']);
     });
 
     it('returns an empty state when nothing is deployment-enabled', async () => {

@@ -7,7 +7,6 @@ import { credsExecutor } from '@orvilo/builtin-tool-creds/executor';
 import { goalExecutor } from '@orvilo/builtin-tool-goal/client/executor';
 import { groupAgentBuilderExecutor } from '@orvilo/builtin-tool-group-agent-builder/executor';
 import { groupManagementExecutor } from '@orvilo/builtin-tool-group-management/executor';
-import { imageGenerationExecutor } from '@orvilo/builtin-tool-image-generation/executor';
 import { knowledgeBaseExecutor } from '@orvilo/builtin-tool-knowledge-base/client/executor';
 import { memoryExecutor } from '@orvilo/builtin-tool-memory/executor';
 import { orviloAgentExecutor } from '@orvilo/builtin-tool-orvilo-agent/client/executor';
@@ -66,7 +65,6 @@ export const builtinToolExecutors = [
   groupAgentBuilderExecutor,
   groupManagementExecutor,
   goalExecutor,
-  imageGenerationExecutor,
   knowledgeBaseExecutor,
   localSystemExecutorWithGitEffects,
   memoryExecutor,

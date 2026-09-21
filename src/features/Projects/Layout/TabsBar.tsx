@@ -149,7 +149,7 @@ const ProjectTabsBar = memo(() => {
                       avatar={member.user?.avatar ?? undefined}
                       key={member.userId}
                       size={20}
-                      title={member.user?.fullName || member.user?.username}
+                      title={member.user?.fullName || member.user?.username || undefined}
                     />
                   ))}
                 </div>

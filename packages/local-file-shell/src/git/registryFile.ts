@@ -32,6 +32,31 @@ export interface RepoFileMutexOptions {
   timeoutMs?: number;
 }
 
+/**
+ * A reclaim ticket (`<lock>.reclaim`) left behind by a reclaimer that crashed
+ * or cannot be attributed blocks acquisition with this error — never an
+ * automatic unlink. Cleaning the residue is a controlled-recovery step:
+ * pause every acquirer/writer of the resource, confirm the ticket's holder is
+ * gone, verify the lock and ticket records, then remove them. The acquire
+ * path deliberately does not recycle the ticket, because any check-then-
+ * unlink window lets a racing reclaimer delete a fresh ticket and land a
+ * lock record nobody actually acquired.
+ */
+export class RegistryLockRecoveryRequiredError extends Error {
+  readonly code = 'REGISTRY_LOCK_RECOVERY_REQUIRED';
+
+  constructor(
+    readonly lockPath: string,
+    readonly ticketPath: string,
+    detail: string,
+  ) {
+    super(
+      `Registry lock ${lockPath} blocked: reclaim ticket requires controlled recovery (${detail})`,
+    );
+    this.name = 'RegistryLockRecoveryRequiredError';
+  }
+}
+
 /** What a lock file announces about the process holding it. */
 interface LockHolder {
   hostname?: string;
@@ -129,11 +154,14 @@ const newLockRecord = () =>
  * off. The winner re-verifies the lock is still that same dead record, then
  * `rename`s its own holder record onto the lock path — an atomic takeover
  * where the path never goes absent, so no fresh owner can slip between the
- * check and the replacement. The ticket itself is reclaimed by the same
- * dead-pid + same-record rules (a stolen or stale ticket only costs the
- * holder a retry, never a wrong unlink). Returns the new holder's lock state
- * on success, `undefined` when the lock is no longer the observed dead record
- * or another reclaimer is ahead.
+ * check and the replacement. A leftover ticket is fail-closed: a live
+ * holder's ticket makes contenders back off, and a dead or unattributable
+ * ticket raises {@link RegistryLockRecoveryRequiredError} instead of being
+ * unlinked online — online unlink is exactly the check-then-delete window a
+ * racing reclaimer exploits to delete a fresh ticket and strand a lock
+ * record nobody acquired. Returns the new holder's lock state on success,
+ * `undefined` when the lock is no longer the observed dead record or a live
+ * reclaimer is ahead.
  */
 const takeOverDeadLock = async (
   lock: string,
@@ -146,14 +174,26 @@ const takeOverDeadLock = async (
     ticketHandle = await open(ticket, 'wx');
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error;
-    // Another reclaimer holds the ticket. If that holder is also dead, clear
-    // its stale ticket by the same verified-unlink rule; a ticket unlink can
-    // only cost a holder its retry — the pre-rename inode check catches it.
-    const state = await readLockState(ticket).catch(() => undefined);
-    if (state && holderLiveness(state.holder) === 'dead') {
-      await rmIfSameLock(ticket, state);
+    // Another reclaimer holds the ticket — decide by its holder, never by
+    // unlinking it here.
+    let state: LockState;
+    try {
+      state = await readLockState(ticket);
+    } catch (readError) {
+      // Vanished between the create attempt and this read — plain retry.
+      if ((readError as NodeJS.ErrnoException)?.code === 'ENOENT') return undefined;
+      throw new RegistryLockRecoveryRequiredError(
+        lock,
+        ticket,
+        `ticket unreadable: ${(readError as Error)?.message ?? readError}`,
+      );
     }
-    return undefined;
+    if (holderLiveness(state.holder) === 'alive') return undefined;
+    throw new RegistryLockRecoveryRequiredError(
+      lock,
+      ticket,
+      `ticket holder is ${state.holder.pid === undefined ? 'unattributable' : `pid ${state.holder.pid} (dead)`}`,
+    );
   }
   let mine: { dev: number; ino: number } | undefined;
   try {
@@ -224,7 +264,10 @@ export const withRepoFileMutex = async <T>(
           // reclaim ticket instead of unlinking a record we don't hold.
           created = await takeOverDeadLock(lock, before);
         }
-      } catch {
+      } catch (takeoverError) {
+        // A leftover reclaim ticket fails closed rather than being recycled
+        // in this racing path — surface it instead of retrying silently.
+        if (takeoverError instanceof RegistryLockRecoveryRequiredError) throw takeoverError;
         /* lock vanished between reads — retry the create */
       }
       if (!created) {

@@ -188,6 +188,7 @@
   "overview.descriptionSave": "保存",
   "overview.expandSection": "展开{{section}}区域",
   "overview.fieldSaveError": "保存失败，草稿已保留。请重新聚焦输入框后重试。",
+  "overview.firstUpdate": "撰写首条项目进展",
   "overview.goalCount": "{{total}} 个目标中 {{completed}} 个已完成",
   "overview.goalProgress": "目标进度",
   "overview.goalSummary": "项目目标",

@@ -112,6 +112,7 @@ export default {
   'list.columnKey': 'Key',
   'list.columnLead': 'Lead',
   'overview.updatePlaceholder': 'Write a project update…',
+  'overview.firstUpdate': 'Write first project update',
   'overview.updatePostError': 'Failed to post update',
   'overview.updateEditor': 'Project update',
   'overview.commentEditor': 'Comment',

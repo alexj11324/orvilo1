@@ -188,6 +188,7 @@
   "overview.descriptionSave": "Save",
   "overview.expandSection": "Expand {{section}} section",
   "overview.fieldSaveError": "Could not save. Your draft is kept; focus the field and try again.",
+  "overview.firstUpdate": "Write first project update",
   "overview.goalCount": "{{completed}} of {{total}} goals completed",
   "overview.goalProgress": "Goal progress",
   "overview.goalSummary": "Project goals",

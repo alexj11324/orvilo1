@@ -38,6 +38,36 @@ const styles = createStaticStyles(({ css }) => ({
       border-color: ${cssVar.colorPrimaryBorder};
     }
   `,
+  collapsedEmpty: css`
+    cursor: pointer;
+
+    justify-content: center;
+
+    box-sizing: border-box;
+    width: auto;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding-block: 0;
+    padding-inline: 10px 12px;
+    border-color: transparent;
+    border-radius: 9999px;
+
+    font-size: 13px;
+    font-weight: 500;
+    line-height: normal;
+    white-space: nowrap;
+  `,
+  emptyContainer: css`
+    display: flex;
+    justify-content: center;
+
+    box-sizing: border-box;
+    width: 100%;
+    padding: 16px;
+    border: 1px solid ${cssVar.colorBorder};
+    border-radius: 10px;
+  `,
   composer: css`
     overflow: hidden;
     border: 1px solid ${cssVar.colorBorder};
@@ -119,10 +149,11 @@ export const useProjectUpdates = (projectId?: string) =>
 export const ProjectUpdateComposer = memo<{
   defaultExpanded?: boolean;
   defaultMode?: ProjectUpdateKind;
+  emptyState?: boolean;
   onExpand?: () => void;
   onPosted?: () => void;
   projectId: string;
-}>(({ defaultExpanded, defaultMode = 'update', onExpand, onPosted, projectId }) => {
+}>(({ defaultExpanded, defaultMode = 'update', emptyState, onExpand, onPosted, projectId }) => {
   const { t } = useTranslation('project');
   const [body, setBody] = useState('');
   const [health, setHealth] = useState<ProjectHealth>('onTrack');
@@ -155,18 +186,31 @@ export const ProjectUpdateComposer = memo<{
   };
 
   if (!expanded) {
-    return (
+    const entry = (
       <button
-        className={styles.collapsed}
         type="button"
+        className={[styles.collapsed, emptyState && styles.collapsedEmpty]
+          .filter(Boolean)
+          .join(' ')}
         onClick={() => (onExpand ? onExpand() : setExpanded(true))}
       >
         <Icon icon={CircleDotIcon} size={14} style={{ opacity: 0.5 }} />
-        <Text fontSize={13} type={'secondary'}>
-          {t('overview.updatePlaceholder', { defaultValue: 'Write a project update…' })}
+        <Text fontSize={13} type={'secondary'} weight={emptyState ? 500 : undefined}>
+          {emptyState
+            ? t('overview.firstUpdate', { defaultValue: 'Write first project update' })
+            : t('overview.updatePlaceholder', { defaultValue: 'Write a project update…' })}
         </Text>
       </button>
     );
+
+    if (emptyState)
+      return (
+        <div className={styles.emptyContainer}>
+          <div>{entry}</div>
+        </div>
+      );
+
+    return entry;
   }
 
   return (

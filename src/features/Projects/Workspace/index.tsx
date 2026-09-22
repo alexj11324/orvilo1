@@ -26,6 +26,7 @@ import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
+import { getProjectOverviewUpdateState } from './projectOverviewUpdates';
 import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
@@ -80,6 +81,8 @@ const ProjectWorkspace = memo(() => {
 
   const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
   const knowledgeBases = detail.knowledgeBases ?? [];
+  const { emptyState: updatesEmpty, publishedUpdates: projectUpdates } =
+    getProjectOverviewUpdateState(updatesSWR.data);
 
   return (
     <Flexbox className={styles.shell} flex={1}>
@@ -167,6 +170,7 @@ const ProjectWorkspace = memo(() => {
 
             <Flexbox gap={8}>
               <ProjectUpdateComposer
+                emptyState={updatesEmpty}
                 projectId={project.id}
                 onPosted={() => void updatesSWR.mutate()}
                 onExpand={() =>
@@ -175,11 +179,9 @@ const ProjectWorkspace = memo(() => {
                   })
                 }
               />
-              {(updatesSWR.data ?? [])
-                .filter((update) => update.kind !== 'comment')
-                .map((update) => (
-                  <ProjectUpdateRow key={update.id} update={update} />
-                ))}
+              {projectUpdates.map((update) => (
+                <ProjectUpdateRow key={update.id} update={update} />
+              ))}
             </Flexbox>
             <ProjectDescription
               description={project.description}

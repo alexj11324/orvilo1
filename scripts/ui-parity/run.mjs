@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { compareTransitions, transition } from './compare.mjs';
+import { createStabilityWindow } from './stability.mjs';
 import { isPendingIndicator, partitionPending, selectTargets } from './targets.mjs';
 
 // Executed inside each actual renderer. No framework or application store assumptions.
@@ -189,6 +190,13 @@ async function record(surface, action, directory) {
     await client.send('Page.navigate', { url: surface.start });
     const deadline = Date.now() + 30000;
     let target;
+    let before;
+    let baselineSettled = false;
+    const baselineStable = createStabilityWindow();
+    const capture = async (name) => {
+      const shot = await client.send('Page.captureScreenshot', { format: 'png' });
+      await writeFile(path.join(directory, `${name}.png`), Buffer.from(shot.data, 'base64'));
+    };
     while (Date.now() < deadline) {
       try {
         // A same-URL reload can briefly leave the old DOM queryable after Page.navigate returns.
@@ -198,25 +206,42 @@ async function record(surface, action, directory) {
             `window.__parityNavigationMarker === ${JSON.stringify(navigationMarker)}`,
           )
         ) {
+          baselineStable(null, false, Date.now());
           await delay();
           continue;
         }
         target = await sample(true);
-        if (target.valid) break;
+        before = await sample();
+        const ready =
+          target.valid &&
+          !before.busy &&
+          (await client.evaluate('document.readyState === "complete"'));
+        if (baselineStable({ state: before, target: target.target }, ready, Date.now())) {
+          await capture('before');
+          // Screenshot capture is asynchronous: never click against a baseline that changed meanwhile.
+          target = await sample(true);
+          const confirmed = await sample();
+          if (
+            baselineStable(
+              { state: confirmed, target: target.target },
+              target.valid && !confirmed.busy,
+              Date.now(),
+            )
+          ) {
+            before = confirmed;
+            baselineSettled = true;
+            break;
+          }
+        }
       } catch {
+        baselineStable(null, false, Date.now());
         /* Navigation can destroy the old execution context. */
       }
       await delay();
     }
-    if (!target?.valid) throw new Error(target?.reason || 'Target never became ready');
-    const before = await sample();
+    if (!baselineSettled) throw new Error(target?.reason || 'Starting state never stabilized');
     if (new URL(surface.start).pathname !== (await client.evaluate('location.pathname')))
       throw new Error('Unexpected starting route');
-    const capture = async (name) => {
-      const shot = await client.send('Page.captureScreenshot', { format: 'png' });
-      await writeFile(path.join(directory, `${name}.png`), Buffer.from(shot.data, 'base64'));
-    };
-    await capture('before');
     // Re-resolve immediately before dispatch: earlier rectangles may have gone stale.
     target = await sample(true);
     if (!target.valid) throw new Error('Target changed before click');

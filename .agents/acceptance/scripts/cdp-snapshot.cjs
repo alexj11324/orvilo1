@@ -50,6 +50,18 @@ const PAGE_SCRIPT = `
 
   // A descendant of a display:none subtree still reports its OWN display as whatever it is,
   // so visibility must be decided by geometry plus an ancestor walk, never by self-style.
+  //
+  // Those checks answer "is this rendered". They do NOT answer "can it be seen", and the
+  // difference is not academic: a panel can render fully and still be covered by the surface
+  // layered over it. Every style- and geometry-based test calls that visible, because it is —
+  // it just is not on top. Measured cost of missing this: the Inbox right rail was counted as
+  // present when elementFromPoint at its own centre returned the main column instead.
+  //
+  // So occlusion is tested too, and reported separately rather than folded into visible, so a
+  // caller can tell "never rendered" apart from "rendered but covered" — they need different
+  // fixes. The test only applies while the centre is inside the viewport; below the fold
+  // elementFromPoint returns null for reasons that have nothing to do with occlusion, and
+  // treating that as hidden would be a new false negative in place of the old false positive.
   const isVisible = (el, rect) => {
     if (rect.width === 0 && rect.height === 0) return false;
     if (el.offsetParent === null) {
@@ -75,9 +87,23 @@ const PAGE_SCRIPT = `
   const index = new Map();
   all.forEach((el, i) => index.set(el, i));
 
+  const isOccluded = (el, rect) => {
+    const cx = rect.x + rect.width / 2;
+    const cy = rect.y + rect.height / 2;
+    // elementFromPoint cannot answer for a point outside the viewport, and returning false there
+    // would be a new false negative replacing the old false positive.
+    if (cx < 0 || cy < 0 || cx > innerWidth || cy > innerHeight) return null;
+    const top = document.elementFromPoint(cx, cy);
+    if (!top) return null;
+    // Covered means the topmost thing at our own centre is neither us, nor inside us, nor an
+    // ancestor of ours — the last case is a wrapper legitimately sitting over its own child.
+    return !(top === el || el.contains(top) || top.contains(el));
+  };
+
   const elements = all.map((el, i) => {
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
+    const visible = isVisible(el, r);
     const style = {};
     for (const p of STYLE_PROPS) {
       const v = cs[p];
@@ -122,7 +148,10 @@ const PAGE_SCRIPT = `
         x: Math.round(r.x), y: Math.round(r.y),
         w: Math.round(r.width), h: Math.round(r.height),
       },
-      visible: isVisible(el, r),
+      visible,
+      // Only meaningful when visible is true: a covered element is rendered, it is just not
+      // on top. Null when the centre is off-screen, because elementFromPoint cannot answer there.
+      occluded: visible ? isOccluded(el, r) : null,
       style,
       paint,
       // Behaviour layer: "does it look right" and "can you actually use it" are different

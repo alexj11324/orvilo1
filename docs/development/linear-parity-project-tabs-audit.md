@@ -167,6 +167,27 @@ node .agents/acceptance/scripts/parity-diff.cjs --reference ref.json --candidate
 颜色层同样有差：候选端表头用裸灰 `rgb(153,153,153)`、占位文案 `rgb(187,187,187)`，
 参考端走 token（`lch(39.176 1.25 282)` / `lch(19.588 1.25 282)`）。
 
+### 4.10 Project Overview 的加载态是转圈，不是骨架（observed 候选端 / **unknown 参考端**）
+
+用户指出「Skeleton 好像没有对齐」。查证候选端：
+
+- `src/features/Projects/Workspace/index.tsx:72-77` —— overview 的加载分支返回
+  `<Center height={'100%'}><NeuralNetworkLoading /></Center>`，即**整页居中转圈**。
+- 仓库**另有**一套骨架系统：`src/components/Skeleton/Surface.tsx` 的
+  `createSurfaceSkeleton`，支持 `detail | editor | form | grid | list` 五种变体，
+  用 `cssVar.colorFillQuaternary` / `borderRadiusLG` 等 token 绘制。
+- 但它**没有覆盖 overview 路由**：`src/features/Projects/routeMeta.ts` 只注册了
+  projects 列表（`grid`）、project Activity（`list`）、project Resources（`list`）、
+  项目内知识库（`list`）四条，**没有 project overview /workspace 这一条**。
+
+所以候选端 overview 在加载时与已加载后的布局**完全无关**（一个居中转圈 vs 三栏布局）。
+
+**参考端是什么样 —— 尚未观测**。这正是契约里「空态 / 加载态缺失不能推断」的同类陷阱：
+不能拿已加载态的三栏布局去推参考端骨架的形状。已让 ref-collector 在 `:9333` 上
+用限速 + 抢拍的方式采参考端 loading 骨架态（要采的包括骨架块的位置 / 颜色 / 圆角、
+有无 shimmer 动画及其 duration/timing-function、覆盖范围是主列还是主列 + 右栏）。
+**在拿到该证据前不动这一项。**
+
 ## 5. data-delta（不是缺陷，但会污染 diff）
 
 以下差异**全部由两端数据不同造成**，在差值表里占据了绝大多数条目：

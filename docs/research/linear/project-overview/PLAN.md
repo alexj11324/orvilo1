@@ -5,16 +5,16 @@
 
 ## Target
 
-| 项           | 值                                                                                                            |
-| ------------ | ------------------------------------------------------------------------------------------------------------- |
-| 参考 URL     | `https://linear.app/bdiverifier/project/repository-slimming-and-acp-boundary-hardening-89e1b7831472/overview` |
-| 同源其它 tab | `…/activity`、`…/issues`（page-key 复用 `project-overview`，见「状态」节）                                    |
-| `<app-root>` | `/Users/alexjiang/Desktop/vibe/orvilo-linear-parity`（git worktree，分支 `devin/v6-linear-polish`）           |
-| `<site-key>` | `linear`（沿用仓库既有约定）                                                                                  |
-| `<page-key>` | `project-overview`                                                                                            |
-| 候选路由     | `app://renderer/ws-useragenttes/project/parity-test-project/overview`（SPA `src/spa` 注册）                   |
-| 参考端 CDP   | `:9333`（Brave，已登录 `bdiverifier`）                                                                        |
-| 候选端 CDP   | `:9222`（本工作树 Electron）                                                                                  |
+| 项           | 值                                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| 参考 URL     | `https://linear.app/bdiverifier/project/<projectSlug>/overview`（项目 slug 已脱敏，本地保留真实值） |
+| 同源其它 tab | `…/activity`、`…/issues`（page-key 复用 `project-overview`，见「状态」节）                          |
+| `<app-root>` | `/Users/alexjiang/Desktop/vibe/orvilo-linear-parity`（git worktree，分支 `devin/v6-linear-polish`） |
+| `<site-key>` | `linear`（沿用仓库既有约定）                                                                        |
+| `<page-key>` | `project-overview`                                                                                  |
+| 候选路由     | `app://renderer/ws-useragenttes/project/parity-test-project/overview`（SPA `src/spa` 注册）         |
+| 参考端 CDP   | `:9333`（Brave，已登录 `bdiverifier`）                                                              |
+| 候选端 CDP   | `:9222`（本工作树 Electron）                                                                        |
 
 > 端口与仓库既有 spec 不同（旧的 `typography.spec.md` 写的是 9222/9223）。**以本文件的 9333/9222 为准**，
 > 因为本机当前实例的端口就是这样分配的；旧 spec 的数字是它当时的实例。

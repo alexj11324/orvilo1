@@ -66,6 +66,9 @@ export const systemStatus = (s: GlobalState) => s.status;
 
 export const NAV_PANEL_MIN_WIDTH = 240;
 export const NAV_PANEL_MAX_WIDTH = 400;
+// Viewport width below which the nav panel auto-collapses into the header
+// toggle instead of pinning a fixed column.
+export const NAV_PANEL_AUTO_COLLAPSE_BELOW = 960;
 
 const normalizeNavPanelWidth = (width: number | string | undefined): number => {
   const parsed = typeof width === 'string' ? Number.parseInt(width) : width;

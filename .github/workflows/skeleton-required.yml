@@ -1,0 +1,26 @@
+name: Skeleton requirement
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  skeleton-required:
+    name: Skeleton Required
+    runs-on: ubuntu-latest
+    steps:
+      # pull_request_target runs this workflow from the protected base branch.
+      # Do not check out or execute code from the PR: otherwise a PR could
+      # alter its own required check.
+      - uses: actions/checkout@v6
+
+      - name: Require skeleton parity for UI source changes
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/require-skeleton-for-ui-changes.mjs

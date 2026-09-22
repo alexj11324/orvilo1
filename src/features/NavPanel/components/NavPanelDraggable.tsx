@@ -3,7 +3,7 @@
 import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
-import { Activity, memo, Suspense, useMemo, useRef } from 'react';
+import { Activity, memo, Suspense, useEffect, useMemo, useRef } from 'react';
 
 import NavPanelUpgradeEntry from '@/business/client/features/NavPanelUpgradeEntry';
 import { isDesktop } from '@/const/version';
@@ -12,6 +12,7 @@ import { USER_DROPDOWN_ICON_ID } from '@/features/NavPanel/constants';
 import { TOGGLE_BUTTON_ID } from '@/features/NavPanel/ToggleLeftPanelButton';
 import { useGlobalStore } from '@/store/global';
 import {
+  NAV_PANEL_AUTO_COLLAPSE_BELOW,
   NAV_PANEL_MAX_WIDTH,
   NAV_PANEL_MIN_WIDTH,
   systemStatusSelectors,
@@ -120,6 +121,29 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, 
     systemStatusSelectors.isStatusInit(s),
   ]);
   const handleSizeChange = useNavPanelSizeChangeHandler();
+
+  // Narrow windows can't afford a fixed nav column: auto-collapse below the
+  // breakpoint (headers still expose ToggleLeftPanelButton) and restore the
+  // previous state when the window widens again.
+  const autoCollapsedRef = useRef(false);
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${NAV_PANEL_AUTO_COLLAPSE_BELOW - 1}px)`);
+    const apply = () => {
+      const store = useGlobalStore.getState();
+      if (media.matches) {
+        if (systemStatusSelectors.showLeftPanel(store)) {
+          autoCollapsedRef.current = true;
+          store.toggleLeftPanel(false);
+        }
+      } else if (autoCollapsedRef.current) {
+        autoCollapsedRef.current = false;
+        store.toggleLeftPanel(true);
+      }
+    };
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
 
   // Defer DraggablePanel mount until system status hydrates; otherwise defaultSize
   // captures the pre-hydration default and the DOM drifts off NavigationBar's live width.

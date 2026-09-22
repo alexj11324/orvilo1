@@ -16,7 +16,12 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
   close: vi.fn(),
   saveLink: vi.fn(),
-  linkQuery: { data: undefined, error: undefined, isLoading: true, mutate: vi.fn() },
+  linkQuery: {
+    data: undefined as { data: { id: string; title: string; url: string }[] } | undefined,
+    error: undefined,
+    isLoading: true,
+    mutate: vi.fn(),
+  },
 }));
 
 // Spelled out rather than spread from `importOriginal`: the real `Button` needs
@@ -102,6 +107,8 @@ beforeEach(() => {
   mocks.toastError.mockReset();
   mocks.close.mockReset();
   mocks.saveLink.mockReset().mockResolvedValue({ data: { id: 'saved-link' }, success: true });
+  mocks.linkQuery.data = undefined;
+  mocks.linkQuery.isLoading = true;
 });
 
 afterEach(cleanup);
@@ -109,6 +116,20 @@ afterEach(cleanup);
 describe('project resources', () => {
   it('renders the first-load link placeholder without crashing the project page', () => {
     expect(() => render(<ProjectLinks ownerId="owner" projectId="prj_1" />)).not.toThrow();
+  });
+  it('keeps resource links visible when the project creator has been deleted', () => {
+    mocks.linkQuery.data = {
+      data: [{ id: 'link-1', title: 'Project spec', url: 'https://example.com/spec' }],
+    };
+    mocks.linkQuery.isLoading = false;
+
+    render(<ProjectLinks ownerId={null} projectId="prj_1" />);
+
+    expect(screen.getByRole('link', { name: 'Project spec' })).toHaveAttribute(
+      'href',
+      'https://example.com/spec',
+    );
+    expect(screen.queryByText('overview.resourcesAdd')).not.toBeInTheDocument();
   });
   it('saves a URL without requiring a title and closes after confirmed success', async () => {
     render(<ProjectLinkForm projectId="prj_1" />);

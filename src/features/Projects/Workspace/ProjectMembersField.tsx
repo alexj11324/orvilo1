@@ -95,7 +95,7 @@ export function ProjectMembersField({
       <label className={styles.label} htmlFor={id}>
         {t('properties.members')}
       </label>
-      <Select<string | number>
+      <Select
         showSearch
         className={styles.field}
         disabled={!canEdit || mutating || query.isLoading || roster.isLoading}

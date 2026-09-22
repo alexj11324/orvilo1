@@ -345,7 +345,7 @@ describe('project store cache scope', () => {
 
   it('refreshes label bindings in cached slug and ID details after a label update', async () => {
     const project = { id: 'project-labels', name: 'Labels' } as ProjectListItem;
-    const stale = { project, labels: [{ id: 'old', name: 'Old' }] } as ProjectDetail;
+    const stale = { project, labels: [{ id: 'old', name: 'Old' }] } as unknown as ProjectDetail;
     const updated = { ...stale, labels: [] };
     vi.spyOn(projectService, 'update').mockResolvedValue({
       data: project,

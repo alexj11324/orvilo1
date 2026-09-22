@@ -858,6 +858,7 @@ export interface TaskItem {
   priority: number | null;
   priorityLocked: boolean;
   projectId: string | null;
+  projectMilestoneId?: string | null;
   requirementLocked: boolean;
   requirementRevision: number;
   /**

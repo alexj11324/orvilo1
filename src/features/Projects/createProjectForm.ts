@@ -14,7 +14,7 @@ const PROJECT_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PROJECT_IDENTIFIER_LENGTH = 4;
 
 export const PROJECT_PRIORITIES = [0, 1, 2, 3, 4] as const;
-export type { ProjectPriority };
+export type { ProjectPriority, ProjectStatus };
 
 const isCreateableProjectStatus = (
   status: ProjectStatus | undefined,
@@ -113,7 +113,10 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
     }))
     .filter((milestone) => milestone.name);
   const status = isCreateableProjectStatus(draft.status) ? draft.status : undefined;
-  const priority = PROJECT_PRIORITIES.includes(draft.priority) ? draft.priority : undefined;
+  const priority =
+    draft.priority !== undefined && PROJECT_PRIORITIES.includes(draft.priority)
+      ? draft.priority
+      : undefined;
 
   return {
     identifier,

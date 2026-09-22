@@ -1,3 +1,4 @@
+import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
@@ -292,12 +293,16 @@ const detail = {
 } as unknown as ProjectDetail;
 
 const milestone = {
+  accessedAt: new Date('2026-09-20T12:00:00Z'),
+  createdAt: new Date('2026-09-20T12:00:00Z'),
   date: '2026-10-01',
   description: 'Release the parity pass',
   id: 'ms_1',
   name: 'Ship the parity pass',
   projectId: 'prj_1',
   sortOrder: 0,
+  progress: null,
+  updatedAt: new Date('2026-09-20T12:00:00Z'),
 } satisfies NonNullable<ProjectDetail['milestones']>[number];
 
 const withMilestone = { ...detail, milestones: [milestone] };
@@ -365,7 +370,13 @@ const renderCharts = () => render(<ProjectDashboard detail={detail} projectId={'
 
 describe('project membership editing', () => {
   const member = { projectId: 'prj_1', role: 'manager', userId: 'user_1', user: null };
-  const query = { data: [member], error: undefined, isLoading: false, mutate: vi.fn() };
+  const query = {
+    data: [member],
+    error: undefined,
+    isLoading: false,
+    isValidating: false,
+    mutate: vi.fn(),
+  };
 
   it('opens a project-scoped invitation without treating the command as a member', async () => {
     mocks.canManageMembers = true;
@@ -653,16 +664,7 @@ describe('project dashboard milestones', () => {
         projectId={'prj_1'}
         detail={{
           ...detail,
-          milestones: [
-            {
-              date: '2026-10-01',
-              description: 'Release the parity pass',
-              id: 'milestone_1',
-              name: 'Ship the parity pass',
-              projectId: 'prj_1',
-              sortOrder: 0,
-            },
-          ],
+          milestones: [{ ...milestone, id: 'milestone_1' }],
         }}
       />,
     );
@@ -1036,7 +1038,7 @@ describe('project status glyph', () => {
   ] as const;
 
   /** The glyph the rail Properties card puts in its status control. */
-  const railGlyph = (status: string) => {
+  const railGlyph = (status: ProjectStatus) => {
     render(
       <ProjectPropertiesCard
         detail={{ ...detail, project: { ...detail.project, status } }}

@@ -38,12 +38,18 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-export function ProjectLinks({ projectId, ownerId }: { projectId: string; ownerId: string }) {
+export function ProjectLinks({
+  projectId,
+  ownerId,
+}: {
+  projectId: string;
+  ownerId: string | null;
+}) {
   const { t } = useTranslation('project');
   const query = useProjectStore((s) => s.useFetchProjectLinks)(projectId);
   const remove = useProjectStore((s) => s.removeProjectLink);
   const userId = useUserStore(userProfileSelectors.userId);
-  const canEdit = userId === ownerId;
+  const canEdit = !!ownerId && userId === ownerId;
   const links = query.data?.data ?? [];
   return (
     <Flexbox horizontal align="center" gap={4} wrap="wrap">

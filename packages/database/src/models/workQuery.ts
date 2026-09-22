@@ -562,7 +562,7 @@ const attentionGroupExpr = (ctx: {
           workspaceId: attentionBlockedTasks.workspaceId,
         },
       )}
-      AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks)}
+      AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks as unknown as typeof tasks)}
   ) THEN 'blocking'
   ELSE ${tasks.status}
 END`;

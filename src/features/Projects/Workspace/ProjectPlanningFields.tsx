@@ -65,7 +65,7 @@ const styles = createStaticStyles(({ css }) => ({
     height: 28px;
     padding-block: 3px;
     padding-inline: 6px;
-    border: 0;
+    border: 1px solid transparent;
     border-radius: 9999px;
 
     font-size: 13px;
@@ -154,7 +154,7 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
       <label className={styles.accessibleLabel} htmlFor={id}>
         {t('properties.labels')}
       </label>
-      <Select<string>
+      <Select
         showSearch
         className={styles.field}
         disabled={saving || query.isLoading}
@@ -223,7 +223,7 @@ export function ProjectLeadField({
       <label className={styles.accessibleLabel} htmlFor={id}>
         {t('properties.lead')}
       </label>
-      <Select<string | number>
+      <Select
         showSearch
         className={inline ? `${styles.field} ${styles.inline}` : styles.field}
         disabled={saving || members.isLoading}
@@ -352,7 +352,7 @@ export function ProjectDateField({
               label: t(`create.datePrecision.${value}`),
             }))}
             onChange={(value) => {
-              if (PROJECT_DATE_PRECISIONS.includes(value))
+              if (PROJECT_DATE_PRECISIONS.includes(value as ProjectDatePrecision))
                 setPrecision(value as ProjectDatePrecision);
             }}
           />
@@ -365,7 +365,7 @@ export function ProjectDateField({
         ) : null
       }
       onChange={(value) => {
-        let date = value;
+        let date = Array.isArray(value) ? value[0] : value;
         if (date && precision !== 'day') {
           const month =
             precision === 'year'

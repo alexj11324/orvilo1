@@ -78,25 +78,25 @@ interface CreateProjectFormState extends CreateProjectDraft {
   slugEdited: boolean;
 }
 
-const PROJECT_STATUS_OPTIONS: Array<{
-  icon: typeof CircleDashedIcon;
-  labelKey: string;
-  value: ProjectStatus;
-}> = [
+const PROJECT_STATUS_OPTIONS = [
   { icon: CircleDashedIcon, labelKey: 'status.backlog', value: 'backlog' },
   { icon: CircleDashedIcon, labelKey: 'create.status.planned', value: 'planned' },
   { icon: CircleDotIcon, labelKey: 'create.status.inProgress', value: 'active' },
   { icon: PauseCircleIcon, labelKey: 'create.status.paused', value: 'paused' },
   { icon: CircleSlashIcon, labelKey: 'status.canceled', value: 'canceled' },
-];
+] as const satisfies ReadonlyArray<{
+  icon: typeof CircleDashedIcon;
+  labelKey: string;
+  value: ProjectStatus;
+}>;
 
-const PROJECT_PRIORITY_OPTIONS: Array<{ labelKey: string; value: ProjectPriority }> = [
+const PROJECT_PRIORITY_OPTIONS = [
   { labelKey: 'create.priority.noPriority', value: 0 },
   { labelKey: 'create.priority.urgent', value: 1 },
   { labelKey: 'create.priority.high', value: 2 },
   { labelKey: 'create.priority.normal', value: 3 },
   { labelKey: 'create.priority.low', value: 4 },
-];
+] as const satisfies ReadonlyArray<{ labelKey: string; value: ProjectPriority }>;
 
 const toStringValues = (value: string | string[] | null | undefined) =>
   (Array.isArray(value) ? value : value ? [value] : []).filter(
@@ -283,7 +283,7 @@ export const CreateProjectTitle = memo(() => {
 interface ProjectDatePrecisionTabsProps {
   onChange: (precision: ProjectDatePrecision) => void;
   precision: ProjectDatePrecision;
-  t: (key: string) => string;
+  t: (key: `create.datePrecision.${ProjectDatePrecision}`) => string;
 }
 
 const ProjectDatePrecisionTabs = memo<ProjectDatePrecisionTabsProps>(
@@ -586,7 +586,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                 <>
                   <ProjectDatePrecisionTabs
                     precision={form.startDatePrecision ?? 'day'}
-                    t={t}
+                    t={(key) => t(key)}
                     onChange={(precision) => updateForm({ startDatePrecision: precision })}
                   />
                   <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
@@ -602,11 +602,11 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                     ? 'month'
                     : form.startDatePrecision
               }
-              onChange={(date) =>
+              onChange={(value) =>
                 updateDate(
                   'startDate',
                   'startDatePrecision',
-                  date,
+                  Array.isArray(value) ? (value[0] ?? null) : value,
                   form.startDatePrecision ?? 'day',
                 )
               }
@@ -627,7 +627,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                 <>
                   <ProjectDatePrecisionTabs
                     precision={form.targetDatePrecision ?? 'day'}
-                    t={t}
+                    t={(key) => t(key)}
                     onChange={(precision) => updateForm({ targetDatePrecision: precision })}
                   />
                   <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
@@ -643,11 +643,11 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                     ? 'month'
                     : form.targetDatePrecision
               }
-              onChange={(date) =>
+              onChange={(value) =>
                 updateDate(
                   'targetDate',
                   'targetDatePrecision',
-                  date,
+                  Array.isArray(value) ? (value[0] ?? null) : value,
                   form.targetDatePrecision ?? 'day',
                 )
               }

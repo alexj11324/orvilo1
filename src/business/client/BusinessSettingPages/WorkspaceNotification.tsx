@@ -67,7 +67,7 @@ interface ChannelDef {
   labelKey: string;
 }
 
-const CHANNELS: ChannelDef[] = [
+const CHANNELS = [
   {
     descriptionKey: 'workspaceSetting.notification.inboxDesc',
     icon: Bell,
@@ -86,7 +86,7 @@ const CHANNELS: ChannelDef[] = [
     key: 'push',
     labelKey: 'workspaceSetting.notification.push',
   },
-];
+] as const satisfies readonly ChannelDef[];
 
 const humanize = (key: string) => key.replaceAll(/[-_]/g, ' ');
 
@@ -123,7 +123,7 @@ const ItemRows = memo<{
 });
 
 const ChannelRow = memo<{
-  def: ChannelDef;
+  def: (typeof CHANNELS)[number];
   settings: NotificationChannelSettings | undefined;
   onToggleChannel: (key: ChannelDef['key'], value: boolean) => void;
   onToggleItem: (key: ChannelDef['key'], category: string, item: string, value: boolean) => void;

@@ -126,7 +126,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             onChange={(date) =>
               setDraft((current) => ({
                 ...current,
-                date: date?.format('YYYY-MM-DD'),
+                date: (Array.isArray(date) ? date[0] : date)?.format('YYYY-MM-DD'),
               }))
             }
           />

@@ -24,28 +24,77 @@
 | 8   | Project · Activity | `/project/:slug/activity`      | `/project/:id/activity`           | 未开始             |
 | 9   | Project · Issues   | `/project/:slug/tasks`         | `/project/:id/issues`             | 未开始             |
 
-## B. 参考端有、候选端**没有对应导航项** → 需产品裁决（**不是**样式工作）
+## B/C. 导航逐条枚举（2026-09-22 重测，取代此前那张表）
 
-| 参考端             | URL                     | 说明                                                   |
-| ------------------ | ----------------------- | ------------------------------------------------------ |
-| `Drafts`（角标 2） | `/bdiverifier/drafts`   | 候选端左栏无此项                                       |
-| `Home`             | `/team/ORV/overview`    | 候选端 teams 组下无 Home                               |
-| `Triage`           | `/team/ORV/triage`      | 候选端无                                               |
-| team `Issues`      | `/team/ORV/all`         | 候选端有 `/my-issues`，但是不同语义（Linear 两者并存） |
-| `Initiatives`      | `/settings/initiatives` | 候选端无                                               |
-| `Cycles`           | （Linear nav「Try」组） | 候选端无                                               |
+**这次是按 `PAGE-INVENTORY.md` 自己立的规矩重做的**：任何删除类决定前，必须证明枚举未被截断。
+判据不是「我看完了」，而是**展开全部折叠组后拿到条目总数，逐条核对**。
+做法也改了：**只读结构枚举，一个点击都不发** —— 上一版用 `.click()` 找 `More`，
+结果把参考端一个 tab 从 `/my-issues/assigned` 导航到了 `/views/issues`（已恢复）。
+「观察」和「戳一下」是两种方法，前者可复用，后者有副作用。
 
-**这些不是「漏画了控件」，是整页功能缺席。** left-join 口径要求「Linear 有的我们要有」，
-但补齐它们等于**新功能开发**（各自需要领域模型、路由、权限），不属于本轮样式对齐。
-**必须交用户裁决**，不能自行开建。已记为待裁决项。
+### 参考端 `nav` 实测：**13 个 `<a>`，全部可见**
 
-## C. 候选端有、参考端没有 → 按 left-join 需核查
+| #   | 文本         | href                          | 备注            |
+| --- | ------------ | ----------------------------- | --------------- |
+| 1   | Inbox        | `/bdiverifier/inbox`          | 角标 31         |
+| 2   | My issues    | `/bdiverifier/my-issues/assigned` |             |
+| 3   | Reviews      | `/bdiverifier/reviews`        | 角标 18         |
+| 4   | Agent        | `/bdiverifier/agent`          |                 |
+| 5   | Drafts       | `/bdiverifier/drafts`         | 角标 2          |
+| 6   | Projects     | `/bdiverifier/projects/all`   |                 |
+| 7   | Views        | `/bdiverifier/views/issues`   |                 |
+| 8   | Home         | `/bdiverifier/team/ORV/overview` | team 组      |
+| 9   | Triage       | `/bdiverifier/team/ORV/triage`   | team 组      |
+| 10  | Issues       | `/bdiverifier/team/ORV/all`      | team 组      |
+| 11  | Projects     | `/bdiverifier/team/ORV/projects/all` | team 组  |
+| 12  | Views        | `/bdiverifier/team/ORV/views/issues` | team 组  |
+| 13  | Initiatives  | `/bdiverifier/settings/initiatives` |            |
 
-| 候选端                                     | 是否属 parity 面                                    |
-| ------------------------------------------ | --------------------------------------------------- |
-| `Members` `/members`                       | 待核：Linear 有成员管理，但在 settings 下而非主 nav |
-| `Teams` `/teams`                           | 参考端有 teams 组，但入口形态不同                   |
-| 底部 `DevDock`、Electron 标签条、`AG` 头像 | **否** —— 开发 / 宿主 chrome，非产品 UI             |
+**参考端侧栏没有折叠手风琴。** 那两个 `aria-expanded="false"` 是头像下拉
+（`Workspace Menu` / `Team menu`），不是导航分组。team 组本来就展开 —— 所以
+「展开后会不会多出条目」在参考端不成立。
+
+**两个此前记错的事实，更正：**
+
+- **`Triggers` 不存在。** 整个 `nav` 里没有这个条目，也没有它的 href。
+  用户提过这一项，但它不在参考端导航中 —— 不能拿它做删除决定。
+- **`Cycles` 渲染了，但不是 `<a>`**（`childAnchors=0`），是 `Try` 分组下的非导航行。
+  它占位、可见、点不动 —— 归入「不是导航项」，与 `<a>` 不并列。
+
+未打开的行：`More`（y=310）。**我没有点它** —— 上一次点就造成了导航。
+它是什么、后面有什么，**属于未量**，不得当作「没有」。
+
+### 候选端 `nav` 实测：**8 个 `<a>`**
+
+| #   | 文本   | 参考端对应            | 判定              |
+| --- | ------ | --------------------- | ----------------- |
+| 1   | 收件箱 | Inbox                 | ✓                 |
+| 2   | 我的事项 | My issues           | ✓                 |
+| 3   | 待审核 | Reviews               | ✓                 |
+| 4   | 助理   | Agent                 | ✓                 |
+| 5   | 项目   | Projects              | ✓                 |
+| 6   | 视图   | Views                 | ✓                 |
+| 7   | 成员   | **无**                | ✗ 候选端多出      |
+| 8   | 团队   | **无**（参考端是分组标题，非链接） | ✗ 候选端多出 |
+
+**候选端的 team 分组是折叠的**：y 从 417 直接跳到 765，中间没有 Home/Triage/Issues/Projects/Views。
+这 5 项在 `TeamsSection` 的 `TEAM_SUB_ITEMS` 里**已经存在**，只是 `sidebarExpandedKeys`
+默认不含 `team:<id>`。**参考端展开，故候选端也应展开** —— 这是默认值问题，不是缺失功能。
+
+折算后的真实差额（`builder-nav` 落地后）：
+
+- **候选端仍将缺**：`Drafts`（用户：**要**）、`Initiatives`（用户：**不要**）
+- **候选端仍将多**：`成员`、`团队`（用户：**移除导航入口**）
+- **`Cycles`**：非导航行，不参与
+
+### 执行前必须完成的一步（仍未完成）
+
+`/members`、`/teams` 两个**路由与功能不要删** —— 要移除的是**导航入口**。
+删入口前必须确认该功能在别处仍可达（Linear 把成员/团队放在 settings 下），
+否则等于把一个功能变成不可达。**这一步没有完成**，不得只看导航项消失就收工。
+
+**采于** `2026-09-22`，参考 `:9333`（Brave，`my-issues` tab）、候选 `:9224`，两端 `--viewport 1440x900`。
+工具：`.agents/acceptance/scripts/cdp-inspect.cjs`，脚本 `/tmp/nav-structure.js`（只读）。
 
 ## 用户裁决（2026-09-22）
 

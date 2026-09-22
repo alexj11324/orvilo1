@@ -20,7 +20,6 @@ import {
   MoreHorizontalIcon,
   Settings2,
   SlidersHorizontalIcon,
-  UsersIcon,
 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +39,7 @@ interface WorkspaceSectionProps {
   itemKey: string;
 }
 
-/** Workspace section of the fixed IA: Projects / Views / Members / More. */
+/** Workspace section of the fixed IA: Projects / Views / More. */
 const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const tab = useActiveTabKey();
@@ -127,7 +126,6 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
         <Flexbox gap={1} paddingBlock={1}>
           {row('project', FolderKanbanIcon, t('navPanel.projects'), '/projects')}
           {row('views', LayoutList, t('tab.views'), '/views')}
-          {row('members', UsersIcon, t('navPanel.members'), '/members')}
           {/* Linear renders "More" as a row — it opens the menu holding the
               retired surfaces (Automations / Resource / workspace settings). */}
           <DropdownMenu items={moreMenu}>

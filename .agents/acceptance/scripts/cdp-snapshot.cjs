@@ -29,6 +29,9 @@ const PORT = Number(arg('port', '9222'));
 const OUT = arg('out', '');
 const VIEWPORT = arg('viewport', '');
 const MATCH = arg('match', '');
+// Per-CDP-call deadline; see the note on `send`. A snapshot walks the whole tree, so it gets a
+// longer default than cdp-inspect, but it is still finite: a wedged renderer answers nothing.
+const CALL_TIMEOUT = Number(arg('call-timeout', '60000'));
 const OUTLINE = process.argv.includes('--outline');
 const MAX_ELEMENTS = Number(arg('max', '20000'));
 
@@ -233,7 +236,28 @@ const main = async () => {
   const send = (method, params = {}) =>
     new Promise((resolve, reject) => {
       const id = ++nextId;
-      pending.set(id, { resolve, reject });
+      // A wedged renderer answers nothing, so without a deadline this waits forever and the
+      // silence reads as "still working" rather than as a failure. See cdp-inspect.cjs.
+      const timer = setTimeout(() => {
+        if (!pending.has(id)) return;
+        pending.delete(id);
+        const error = new Error(
+          `${method} got no response in ${CALL_TIMEOUT}ms — the page's main thread is likely ` +
+            `wedged. Close that tab and open a new one; do not read this as slowness.`,
+        );
+        error.code = 'CALL_TIMEOUT';
+        reject(error);
+      }, CALL_TIMEOUT);
+      pending.set(id, {
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+        resolve: (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+      });
       ws.send(JSON.stringify({ id, method, params }));
     });
 
@@ -283,5 +307,7 @@ const main = async () => {
 
 main().catch((error) => {
   process.stderr.write(`${error.message}\n`);
-  process.exit(1);
+  // 124 matches the shell's convention for "killed by timeout": a caller can branch on a hung
+  // browser without matching the message. `cmd | tail` then reading `$?` reports tail's status.
+  process.exit(error.code === 'CALL_TIMEOUT' ? 124 : 1);
 });

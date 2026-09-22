@@ -45,6 +45,9 @@ const SHOT = arg('shot', '');
 const VIEWPORT = arg('viewport', '');
 const MATCH = arg('match', '');
 const TIMEOUT = Number(arg('timeout', '20000'));
+// Per-CDP-call deadline; see the note on `send`. Generous by default because an expression is
+// allowed to await a settle delay, but finite so a dead renderer cannot stall forever.
+const CALL_TIMEOUT = Number(arg('call-timeout', '30000'));
 
 const loadSource = () => {
   if (EXPR_FILE) return require('node:fs').readFileSync(EXPR_FILE, 'utf8');
@@ -116,7 +119,30 @@ const main = async () => {
   const send = (method, params = {}) =>
     new Promise((resolve, reject) => {
       const id = ++nextId;
-      pending.set(id, { resolve, reject });
+      // Every CDP call needs its own deadline. A wedged renderer answers nothing — not even
+      // `return 1+1` — so without this the process waits forever, and that silence is
+      // indistinguishable from a slow page, which is how a hung browser gets recorded as
+      // "still running" rather than as a failure. TIMEOUT only covers the /json/list hop.
+      const timer = setTimeout(() => {
+        if (!pending.has(id)) return;
+        pending.delete(id);
+        const error = new Error(
+          `${method} got no response in ${CALL_TIMEOUT}ms — the page's main thread is likely ` +
+            `wedged. Close that tab and open a new one; do not read this as slowness.`,
+        );
+        error.code = 'CALL_TIMEOUT';
+        reject(error);
+      }, CALL_TIMEOUT);
+      pending.set(id, {
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+        resolve: (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+      });
       ws.send(JSON.stringify({ id, method, params }));
     });
 
@@ -221,5 +247,8 @@ const main = async () => {
 
 main().catch((error) => {
   process.stderr.write(`${error.message}\n`);
-  process.exit(1);
+  // 124 matches the shell's own convention for "killed by timeout", so a caller can branch on a
+  // hung browser without pattern-matching the message. Note `cmd | tail` then reading `$?`
+  // reports tail's status, not this one — check the exit code on its own.
+  process.exit(error.code === 'CALL_TIMEOUT' ? 124 : 1);
 });

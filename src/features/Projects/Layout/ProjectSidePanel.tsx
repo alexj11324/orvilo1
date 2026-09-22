@@ -7,19 +7,15 @@ import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
 import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  getMilestoneAnchorId,
-  MILESTONE_ICON_COLOR,
-  MILESTONE_ICON_SIZE,
-  scrollToMilestoneAnchor,
-} from '@/features/Projects/milestoneRow';
+import { MILESTONE_ICON_COLOR, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
-import { getProjectActivityPath } from './navigation';
+import { getProjectActivityPath, getProjectTasksPath } from './navigation';
 import { ProjectIssueProgress } from './ProjectIssueProgress';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -45,11 +41,6 @@ const styles = createStaticStyles(({ css }) => ({
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 10px;
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
-  `,
-  milestoneIconLink: css`
-    display: flex;
-    flex: none;
-    color: inherit;
   `,
   sectionTrigger: css`
     cursor: pointer;
@@ -117,6 +108,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
     const { t } = useTranslation('project');
     const detail = useCurrentProjectDetail(projectId);
     useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+    const navigate = useWorkspaceAwareNavigate();
     const databaseId = detail?.project.id;
 
     if (!detail || !databaseId) return null;
@@ -135,28 +127,35 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
             </Text>
           ) : (
             milestones.map((milestone) => (
-              <Flexbox horizontal align={'center'} gap={8} key={milestone.id}>
-                <a
-                  aria-label={milestone.name}
-                  className={styles.milestoneIconLink}
-                  href={`#${getMilestoneAnchorId(milestone.id)}`}
-                  onClick={() => scrollToMilestoneAnchor(milestone.id)}
-                >
+              // The rail row is a whole-row click target on the reference, not a
+              // link: two nested role=button layers opening the project's
+              // issues. The in-page `#milestone-<id>` anchor belongs to the
+              // overview card alone, and the rail is mounted on every project
+              // tab, so pointing it at that anchor would be a dead link off
+              // Overview.
+              <div
+                key={milestone.id}
+                role={'button'}
+                tabIndex={-1}
+                onClick={() => navigate(getProjectTasksPath(detail.project.slug || databaseId))}
+              >
+                <Flexbox horizontal align={'center'} gap={8} role={'button'} tabIndex={-1}>
                   <Icon
                     color={MILESTONE_ICON_COLOR}
+                    fill={MILESTONE_ICON_COLOR}
                     icon={DiamondIcon}
                     size={MILESTONE_ICON_SIZE}
                   />
-                </a>
-                <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }}>
-                  {milestone.name}
-                </Text>
-                {milestone.date && (
-                  <Text fontSize={12} type={'secondary'}>
-                    {formatProjectDate(milestone.date)}
+                  <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }}>
+                    {milestone.name}
                   </Text>
-                )}
-              </Flexbox>
+                  {milestone.date && (
+                    <Text fontSize={12} type={'secondary'}>
+                      {formatProjectDate(milestone.date)}
+                    </Text>
+                  )}
+                </Flexbox>
+              </div>
             ))
           )}
         </ProjectPanelSection>

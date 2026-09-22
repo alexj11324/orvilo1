@@ -85,6 +85,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
                 >
                   <Icon
                     color={MILESTONE_ICON_COLOR}
+                    fill={MILESTONE_ICON_COLOR}
                     icon={DiamondIcon}
                     size={MILESTONE_ICON_SIZE}
                   />

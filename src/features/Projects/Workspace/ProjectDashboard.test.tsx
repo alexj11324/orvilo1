@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
 import { DiamondIcon } from 'lucide-react';
@@ -618,27 +618,18 @@ describe('project milestone rows', () => {
     }
   });
 
-  it('links the rail milestone to the same anchor the overview row owns', () => {
+  it('opens the project issues from the rail row, which is a button and not a link', () => {
     mocks.milestones = [milestone];
     render(<ProjectSidePanel projectId="apollo" />);
 
-    expect(screen.getByRole('link', { name: milestone.name })).toHaveAttribute(
-      'href',
-      '#milestone-ms_1',
-    );
-  });
+    // The reference rail row is two nested role=button layers and carries no
+    // href at all: the in-page anchor belongs to the overview card alone.
+    const layers = screen.getAllByRole('button', { name: new RegExp(milestone.name) });
+    expect(layers).toHaveLength(2);
+    expect(screen.queryByRole('link', { name: milestone.name })).not.toBeInTheDocument();
 
-  it('sends the rail link to the row the overview owns, not to itself', () => {
-    mocks.milestones = [milestone];
-    const rail = render(<ProjectSidePanel projectId="apollo" />);
-    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
-
-    // Both surfaces name their link after the milestone, so scope the click to
-    // the rail: the row that must move is the overview's.
-    fireEvent.click(within(rail.container).getByRole('link', { name: milestone.name }));
-
-    expect(scrolls).toHaveLength(1);
-    expect(scrolls[0].el).toBe(document.getElementById('milestone-ms_1'));
+    fireEvent.click(layers[0]);
+    expect(mocks.navigate).toHaveBeenCalledWith('/project/apollo/tasks');
   });
 
   it('draws the milestone diamond with one shared colour and size on both surfaces', () => {
@@ -652,10 +643,12 @@ describe('project milestone rows', () => {
     render(<ProjectSidePanel projectId="apollo" />);
     const railIcon = renderedDiamonds()[0] ?? {};
 
-    // The reference glyph is purple and 16x16; antd exposes no purple status
-    // semantic, so the repo's violet palette token stands in for it.
+    // The reference glyph is a solid purple diamond at 16x16; antd exposes no
+    // purple status semantic, so the repo's violet palette token stands in for
+    // it, and `fill` needs the token too — `currentColor` here would resolve to
+    // the link colour, not the glyph colour.
     for (const icon of [overviewIcon, railIcon]) {
-      expect(icon).toMatchObject({ color: cssVar.purple, size: 16 });
+      expect(icon).toMatchObject({ color: cssVar.purple, fill: cssVar.purple, size: 16 });
     }
   });
 });

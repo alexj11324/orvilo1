@@ -24,20 +24,20 @@ export const MILESTONE_ICON_SIZE = 16;
 
 /**
  * In-page landing spot for a milestone. The overview row carries this as its
- * `id`; the rail links to the same string. Only the overview row owns the id —
- * the rail renders on every project tab, so an id there would either duplicate
- * the row's or point at itself.
+ * `id`, and the overview glyph is the only thing that points at it — the rail
+ * row navigates to the project's issues instead, and never renders on a tab
+ * that shows the overview.
  */
 export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milestoneId}`;
 
 /**
  * Bring a milestone's row into view.
  *
- * The reference wraps the glyph in `<a href="…/overview#milestone-<id>">`, but
- * **what that link does when clicked was never observed** — the reference was
- * only read, never clicked. So this is not a reproduction of the reference's
- * landing effect; it is the smallest provable one: in-page positioning onto the
- * row that owns the anchor.
+ * The reference wraps the overview glyph in
+ * `<a href="…/overview#milestone-<id>">`, but **what that link does when clicked
+ * was never observed** — the reference was only read, never clicked. So this is
+ * not a reproduction of the reference's landing effect; it is the smallest
+ * provable one: in-page positioning onto the row that owns the anchor.
  *
  * The scroll is driven from the click instead of left to the browser's fragment
  * navigation. The candidate is a react-router SPA, where a bare `#…` href is a
@@ -45,9 +45,6 @@ export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milest
  * scroll; the address is still the real `href`, so the link stays copyable.
  * Driving it in JS is also how this repo already moves to an in-page anchor
  * (`Acceptance/Viewer/Comments/anchor.ts`, `SettingsSearch/anchor.tsx`).
- *
- * The rail calls this too. It only resolves on Overview — the rail itself is
- * mounted on every project tab, and none of the others render the row.
  */
 export const scrollToMilestoneAnchor = (milestoneId: string) => {
   const target = document.getElementById(getMilestoneAnchorId(milestoneId));

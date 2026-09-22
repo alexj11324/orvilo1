@@ -6,7 +6,7 @@ import { TaskModel } from '../models/task';
 import { TeamModel } from '../models/team';
 import { WorkspaceModel } from '../models/workspace';
 import { projects } from '../schemas/project';
-import { tasks } from '../schemas/task';
+import { taskDependencies, tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { workspaceMembers, workspaces } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
@@ -27,6 +27,81 @@ export const LINEAR_PARITY_PROJECT = {
   name: 'Parity Test Project',
   slug: 'parity-test-project',
 } as const;
+
+/**
+ * Projectless rows reserved for the personal My issues verification surface.
+ * Keeping them out of `Parity Test Project` preserves that project's separately
+ * verified milestone totals and keeps the Projects list at one fixture project.
+ */
+export const LINEAR_PARITY_MY_ISSUES = [
+  {
+    id: 'taskparitymine0001',
+    identifier: 'PMI-1',
+    name: 'Urgent: review release evidence',
+    parentTaskId: null,
+    priority: 1,
+    status: 'backlog',
+    workflowCategory: 'todo',
+  },
+  {
+    id: 'taskparitymine0002',
+    identifier: 'PMI-2',
+    name: 'Urgent: verify handoff status',
+    parentTaskId: 'taskparitymine0001',
+    priority: 1,
+    status: 'backlog',
+    workflowCategory: 'todo',
+  },
+  {
+    id: 'taskparitymine0003',
+    identifier: 'PMI-3',
+    name: 'Blocking: resolve dependency contract',
+    parentTaskId: null,
+    priority: 2,
+    status: 'backlog',
+    workflowCategory: 'in_progress',
+  },
+  {
+    id: 'taskparitymine0004',
+    identifier: 'PMI-4',
+    name: 'Blocking: verify downstream acceptance',
+    parentTaskId: 'taskparitymine0003',
+    priority: 2,
+    status: 'backlog',
+    workflowCategory: 'in_progress',
+  },
+  {
+    id: 'taskparitymine0005',
+    identifier: 'PMI-5',
+    name: 'Assigned: document follow-up',
+    parentTaskId: null,
+    priority: 3,
+    status: 'backlog',
+    workflowCategory: 'todo',
+  },
+  {
+    id: 'taskparitymine0006',
+    identifier: 'PMI-6',
+    name: 'Assigned: completed example',
+    parentTaskId: null,
+    priority: 0,
+    status: 'completed',
+    workflowCategory: 'done',
+  },
+] as const satisfies ReadonlyArray<{
+  id: string;
+  identifier: string;
+  name: string;
+  parentTaskId: string | null;
+  priority: number;
+  status: 'backlog' | 'completed';
+  workflowCategory: TaskWorkflowCategory;
+}>;
+
+const LINEAR_PARITY_MY_ISSUES_EDGES = [
+  { dependsOnId: 'taskparitymine0003', taskId: 'taskparitymine0004' },
+  { dependsOnId: 'taskparitymine0004', taskId: 'taskparitymine0005' },
+] as const;
 
 const PARITY_TASK_COUNT = 16;
 const PARITY_TASK_IDS = Array.from(
@@ -66,6 +141,7 @@ export interface LinearParitySeedOptions {
 
 export interface LinearParitySeedResult {
   milestoneIds: string[];
+  myIssuesTaskIds: string[];
   projectId: string;
   taskIds: string[];
   teamId: string;
@@ -389,6 +465,140 @@ const ensureTasks = async (
     .returning();
 };
 
+const ensureMyIssuesTasks = async (
+  db: OrviloDatabase,
+  workspaceId: string,
+  userId: string,
+  teamId: string,
+  workflowStates: TeamWorkflowStateItem[],
+) => {
+  const ids = LINEAR_PARITY_MY_ISSUES.map(({ id }) => id);
+  const identifiers = LINEAR_PARITY_MY_ISSUES.map(({ identifier }) => identifier);
+  const existingById = await db.select().from(tasks).where(inArray(tasks.id, ids));
+  const existingByIdentifier = await db
+    .select({ id: tasks.id, identifier: tasks.identifier })
+    .from(tasks)
+    .where(and(eq(tasks.workspaceId, workspaceId), inArray(tasks.identifier, identifiers)));
+  const definitionById = new Map(
+    LINEAR_PARITY_MY_ISSUES.map((definition) => [definition.id, definition]),
+  );
+  const definitionByIdentifier = new Map(
+    LINEAR_PARITY_MY_ISSUES.map((definition) => [definition.identifier, definition]),
+  );
+
+  for (const row of existingById) {
+    const definition = definitionById.get(row.id);
+    if (
+      !definition ||
+      row.workspaceId !== workspaceId ||
+      row.createdByUserId !== userId ||
+      row.identifier !== definition.identifier ||
+      row.isDeleted
+    ) {
+      throw new Error('A My issues fixture task id belongs to another row');
+    }
+  }
+  for (const row of existingByIdentifier) {
+    const definition = definitionByIdentifier.get(row.identifier);
+    if (!definition || row.id !== definition.id) {
+      throw new Error('A non-fixture task occupies a My issues fixture identifier');
+    }
+  }
+
+  const existingIds = new Set(existingById.map(({ id }) => id));
+  for (const [index, definition] of LINEAR_PARITY_MY_ISSUES.entries()) {
+    if (existingIds.has(definition.id)) continue;
+    const workflowState = workflowStates.find(
+      ({ category }) => category === definition.workflowCategory,
+    );
+    if (!workflowState) {
+      throw new Error(`Missing parity workflow state: ${definition.workflowCategory}`);
+    }
+    await db.insert(tasks).values({
+      assigneeUserId: userId,
+      createdBySnapshot: { displayName: 'Agent Testing User', kind: 'user' as const },
+      createdBySubjectId: userId,
+      createdBySubjectKind: 'user',
+      createdByUserId: userId,
+      id: definition.id,
+      identifier: definition.identifier,
+      instruction: `Complete synthetic My issues task ${definition.identifier}.`,
+      name: definition.name,
+      parentTaskId: definition.parentTaskId,
+      priority: definition.priority,
+      seq: PARITY_TASK_COUNT + index + 1,
+      status: definition.status,
+      teamId,
+      triageStatus: 'accepted',
+      visibility: 'public',
+      workflowCategory: definition.workflowCategory,
+      workflowStateId: workflowState.remoteStateId,
+      workflowStateRefId: workflowState.id,
+      workspaceId,
+    });
+  }
+
+  // Repair every fixture-owned field on repeat runs without touching unrelated
+  // workspace tasks. The explicit ids above are the mutation boundary.
+  for (const [index, definition] of LINEAR_PARITY_MY_ISSUES.entries()) {
+    const workflowState = workflowStates.find(
+      ({ category }) => category === definition.workflowCategory,
+    );
+    if (!workflowState) {
+      throw new Error(`Missing parity workflow state: ${definition.workflowCategory}`);
+    }
+    await db
+      .update(tasks)
+      .set({
+        assigneeUserId: userId,
+        instruction: `Complete synthetic My issues task ${definition.identifier}.`,
+        name: definition.name,
+        parentTaskId: definition.parentTaskId,
+        priority: definition.priority,
+        projectId: null,
+        projectMilestoneId: null,
+        seq: PARITY_TASK_COUNT + index + 1,
+        status: definition.status,
+        teamId,
+        triageStatus: 'accepted',
+        visibility: 'public',
+        workflowCategory: definition.workflowCategory,
+        workflowStateId: workflowState.remoteStateId,
+        workflowStateRefId: workflowState.id,
+      })
+      .where(eq(tasks.id, definition.id));
+  }
+
+  for (const edge of LINEAR_PARITY_MY_ISSUES_EDGES) {
+    const [existing] = await db
+      .select({ id: taskDependencies.id })
+      .from(taskDependencies)
+      .where(
+        and(
+          eq(taskDependencies.taskId, edge.taskId),
+          eq(taskDependencies.dependsOnId, edge.dependsOnId),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      await db
+        .update(taskDependencies)
+        .set({ type: 'blocks', userId, visibility: 'public', workspaceId })
+        .where(eq(taskDependencies.id, existing.id));
+    } else {
+      await db.insert(taskDependencies).values({
+        ...edge,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      });
+    }
+  }
+
+  return db.select().from(tasks).where(inArray(tasks.id, ids)).orderBy(asc(tasks.seq));
+};
+
 export const seedLinearParity = async (
   db: OrviloDatabase,
   options: LinearParitySeedOptions,
@@ -439,9 +649,20 @@ export const seedLinearParity = async (
     });
     if (!linked) throw new Error(`Could not link parity task to milestone: ${task.identifier}`);
   }
+  const myIssuesTasks = await ensureMyIssuesTasks(
+    db,
+    workspace.id,
+    options.userId,
+    team.id,
+    workflowStates,
+  );
+  if (myIssuesTasks.length !== LINEAR_PARITY_MY_ISSUES.length) {
+    throw new Error('Parity My issues fixture is incomplete');
+  }
 
   return {
     milestoneIds: milestones.map(({ id }) => id),
+    myIssuesTaskIds: myIssuesTasks.map(({ id }) => id),
     projectId: project.id,
     taskIds: fixtureTasks.map(({ id }) => id),
     teamId: team.id,

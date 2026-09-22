@@ -14,3 +14,8 @@ Verified seed implementation in this commit, on application baseline `a97d07cfeb
 ![Actual team Issues board](./team-seed-board.png)
 
 This verifies fixture population, navigation and task retrieval. It does not certify full Linear visual or interaction parity for the team page. The all-completed fixture intentionally leaves the other board columns empty.
+
+> Historical evidence boundary: this screenshot and 16-row Team Issues count were produced by
+> seed revision `df5e94627`. The maintained seed now also adds six projectless, team-owned `PMI-*`
+> rows for My issues verification, so current Team Issues contains 22 rows. Project Overview is
+> unchanged: its four milestones still contain only the 16 completed `PTP-*` rows.

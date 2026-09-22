@@ -26,6 +26,7 @@ import {
   COLUMN_STATUS_VISUAL,
 } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
+import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -38,6 +39,7 @@ import {
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
 import { applyWorkQueryStatusChange } from './workQueryBoardMove';
+import { workQueryHierarchyRows } from './workQueryHierarchy';
 import {
   type WorkQueryGroupPage,
   workQueryHasMore,
@@ -106,7 +108,17 @@ const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillQuaternary};
     }
   `,
+  attentionGroupHeader: css`
+    padding-inline: 16px;
+    border-radius: 0;
+    background: transparent;
+
+    &:hover {
+      background: ${cssVar.colorFillQuaternary};
+    }
+  `,
   row: css`
+    min-height: 44px;
     padding-inline-end: 8px;
     border-radius: ${cssVar.borderRadiusLG};
     color: inherit;
@@ -148,16 +160,20 @@ interface WorkQueryResultsProps {
 const WorkQueryTaskRow = memo(
   ({
     followed,
+    depth = 0,
     groupBy,
     onMoved,
     onToggleFollow,
     task,
+    muted,
   }: {
     followed?: boolean;
+    depth?: number;
     groupBy: 'status' | 'workflowCategory';
     onMoved?: () => void;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
     task: WorkQueryResultTask;
+    muted?: boolean;
   }) => {
     const { t } = useTranslation('common');
     const changeTaskStatus = useTaskStatusChange();
@@ -176,25 +192,27 @@ const WorkQueryTaskRow = memo(
     // The same rich row /tasks renders — identifier, status glyph, title,
     // chips, assignee, date — instead of a second, thinner task row.
     return (
-      <Flexbox horizontal align={'center'} className={styles.row}>
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
-          <AgentTaskItem
-            routeScope={'global'}
-            task={{ ...task, participants: task.participants ?? [] }}
-            onStatusChange={handleStatusChange}
-          />
-        </Flexbox>
-        {onToggleFollow ? (
-          <span className={`${styles.actions} work-query-row-actions`}>
-            <ActionIcon
-              icon={followed ? BellOffIcon : BellPlusIcon}
-              size={'small'}
-              title={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
-              onClick={() => onToggleFollow(task.id, Boolean(followed))}
+      <TaskRowIndent depth={depth} muted={muted}>
+        <Flexbox horizontal align={'center'} className={styles.row}>
+          <Flexbox flex={1} style={{ minWidth: 0 }}>
+            <AgentTaskItem
+              routeScope={'global'}
+              task={{ ...task, participants: task.participants ?? [] }}
+              onStatusChange={handleStatusChange}
             />
-          </span>
-        ) : null}
-      </Flexbox>
+          </Flexbox>
+          {onToggleFollow ? (
+            <span className={`${styles.actions} work-query-row-actions`}>
+              <ActionIcon
+                icon={followed ? BellOffIcon : BellPlusIcon}
+                size={'small'}
+                title={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
+                onClick={() => onToggleFollow(task.id, Boolean(followed))}
+              />
+            </span>
+          ) : null}
+        </Flexbox>
+      </TaskRowIndent>
     );
   },
 );
@@ -210,9 +228,12 @@ WorkQueryTaskRow.displayName = 'WorkQueryTaskRow';
 const WorkQueryStatusGroup = memo<{
   columnKey: string;
   groupBy: 'status' | 'workflowCategory';
+  attention?: boolean;
+  allTasks: WorkQueryResultTask[];
   hasMore?: boolean;
   isFollowed?: (taskId: string) => boolean;
   loadMoreLabel?: string;
+  nested?: boolean;
   onLoadMore?: () => void;
   onMoved?: () => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
@@ -221,10 +242,13 @@ const WorkQueryStatusGroup = memo<{
 }>(
   ({
     columnKey,
+    attention,
+    allTasks,
     groupBy,
     hasMore,
     isFollowed,
     loadMoreLabel,
+    nested,
     onLoadMore,
     onMoved,
     onToggleFollow,
@@ -235,12 +259,15 @@ const WorkQueryStatusGroup = memo<{
     const [collapsed, setCollapsed] = useState(false);
     const visual = COLUMN_STATUS_VISUAL[columnKey];
     const labelKey = COLUMN_I18N_KEYS[columnKey];
+    const hierarchyRows = nested
+      ? workQueryHierarchyRows(tasks, allTasks)
+      : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
 
     return (
       <Flexbox>
         <button
           aria-expanded={!collapsed}
-          className={styles.groupHeader}
+          className={`${styles.groupHeader} ${attention ? styles.attentionGroupHeader : ''}`}
           type="button"
           onClick={() => setCollapsed((current) => !current)}
         >
@@ -248,22 +275,24 @@ const WorkQueryStatusGroup = memo<{
             className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
             size={14}
           />
-          {visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
-          <Text fontSize={12} weight={500}>
+          {visual && !attention ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
+          <Text fontSize={attention ? 13 : 12} weight={500}>
             {labelKey ? t(labelKey as never) : columnKey}
           </Text>
-          <Text fontSize={12} type={'secondary'}>
+          <Text fontSize={attention ? 13 : 12} type={'secondary'}>
             {total ?? tasks.length}
           </Text>
         </button>
         {collapsed ? null : (
           <Flexbox>
-            {tasks.map((task) => (
+            {hierarchyRows.map((row) => (
               <WorkQueryTaskRow
-                followed={isFollowed?.(task.id)}
+                depth={row.depth}
+                followed={isFollowed?.(row.task.id)}
                 groupBy={groupBy}
-                key={task.id}
-                task={task}
+                key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
+                muted={row.isParentContext}
+                task={row.task}
                 onMoved={onMoved}
                 onToggleFollow={onToggleFollow}
               />
@@ -355,6 +384,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const listSections =
       listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
+    const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
 
     const reviewBlock = externalReviews ? (
       <Flexbox gap={8}>
@@ -440,16 +470,22 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           <Flexbox gap={8}>
             {listSections.map((group) => (
               <WorkQueryStatusGroup
+                allTasks={allTasks}
                 columnKey={group.key}
+                groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
                 // Attention buckets aren't a writable status dimension — a
                 // status change inside them still writes `status`.
-                groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
                 hasMore={pageGroupPaging ? group.hasMore : false}
                 isFollowed={isFollowed}
                 key={group.key}
                 loadMoreLabel={loadMoreLabel}
+                nested={listGroupBy === 'attention'}
                 tasks={group.tasks}
                 total={group.total}
+                attention={
+                  listGroupBy === 'attention' &&
+                  (group.key === 'urgent' || group.key === 'blocking')
+                }
                 onMoved={onMoved}
                 onToggleFollow={onToggleFollow}
                 onLoadMore={

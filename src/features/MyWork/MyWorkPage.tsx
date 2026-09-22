@@ -46,7 +46,10 @@ const boardBodyStyle = {
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
+  paddingInline: 0,
 } as const;
+
+const listBodyStyle = { paddingInline: 0 } as const;
 
 /**
  * My issues tabs (v5 contract): Assigned / Created / Subscribed / Activity.
@@ -225,7 +228,7 @@ const MyWorkPage = memo(() => {
         }
       />
       <WorkSurfaceCollection
-        style={boardActive ? boardBodyStyle : undefined}
+        style={boardActive ? boardBodyStyle : listBodyStyle}
         toolbar={
           <WorkSurfaceToolbar
             asideLabel={t('members.filter')}

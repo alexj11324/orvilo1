@@ -3,15 +3,17 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { ProjectModel } from '../../models/project';
+import { applyWorkQueryLayout, myWorkQueryForMode, WorkQueryModel } from '../../models/workQuery';
 import { WorkspaceModel } from '../../models/workspace';
 import { projects } from '../../schemas/project';
-import { tasks } from '../../schemas/task';
+import { taskDependencies, tasks } from '../../schemas/task';
 import { projectTeams, teamMembers, teams, teamWorkflowStates } from '../../schemas/team';
 import { users } from '../../schemas/user';
 import { workspaceMembers } from '../../schemas/workspace';
 import type { OrviloDatabase } from '../../type';
 import {
   LINEAR_PARITY_MILESTONES,
+  LINEAR_PARITY_MY_ISSUES,
   LINEAR_PARITY_PROJECT,
   LINEAR_PARITY_TEAM,
   seedLinearParity,
@@ -45,6 +47,7 @@ describe('linear parity seed', () => {
     const result = await seedFixture();
 
     expect(result.taskIds).toHaveLength(16);
+    expect(result.myIssuesTaskIds).toHaveLength(6);
     expect(result.milestoneIds).toHaveLength(4);
     expect(result.workflowStateIds).toHaveLength(7);
 
@@ -95,6 +98,57 @@ describe('linear parity seed', () => {
     expect(fixtureTasks.every((task) => task.workflowCategory === 'done')).toBe(true);
     expect(fixtureTasks.every((task) => task.workflowStateRefId)).toBe(true);
 
+    const myIssuesTasks = await db
+      .select()
+      .from(tasks)
+      .where(inArray(tasks.id, result.myIssuesTaskIds));
+    expect(myIssuesTasks).toHaveLength(LINEAR_PARITY_MY_ISSUES.length);
+    expect(myIssuesTasks.every((task) => task.assigneeUserId === userId)).toBe(true);
+    expect(myIssuesTasks.every((task) => task.projectId === null)).toBe(true);
+
+    const assigned = await new WorkQueryModel(db, userId, result.workspaceId).queryTasks({
+      limit: 50,
+      query: applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list', 'attention'),
+    });
+    const populatedGroups = assigned.groups!.filter((group) => group.total > 0);
+    expect(populatedGroups.map(({ key }) => key)).toEqual([
+      'urgent',
+      'blocking',
+      'backlog',
+      'completed',
+    ]);
+    expect(
+      populatedGroups
+        .find(({ key }) => key === 'urgent')
+        ?.tasks.map(({ identifier }) => identifier)
+        .sort(),
+    ).toEqual(['PMI-1', 'PMI-2']);
+    expect(
+      populatedGroups
+        .find(({ key }) => key === 'blocking')
+        ?.tasks.map(({ identifier }) => identifier)
+        .sort(),
+    ).toEqual(['PMI-3', 'PMI-4']);
+    expect(myIssuesTasks.find(({ identifier }) => identifier === 'PMI-2')?.parentTaskId).toBe(
+      myIssuesTasks.find(({ identifier }) => identifier === 'PMI-1')?.id,
+    );
+    expect(myIssuesTasks.find(({ identifier }) => identifier === 'PMI-4')?.parentTaskId).toBe(
+      myIssuesTasks.find(({ identifier }) => identifier === 'PMI-3')?.id,
+    );
+    await expect(
+      db
+        .select()
+        .from(taskDependencies)
+        .where(inArray(taskDependencies.taskId, ['taskparitymine0004', 'taskparitymine0005'])),
+    ).resolves.toHaveLength(2);
+
+    const created = await new WorkQueryModel(db, userId, result.workspaceId).queryTasks({
+      limit: 50,
+      query: myWorkQueryForMode('created'),
+    });
+    expect(created.total).toBe(22);
+    expect(created.tasks).toHaveLength(22);
+
     const planning = await new ProjectModel(db, userId, result.workspaceId).getPlanning(
       result.projectId,
     );
@@ -121,6 +175,9 @@ describe('linear parity seed', () => {
     await expect(
       db.select().from(tasks).where(eq(tasks.projectId, first.projectId)),
     ).resolves.toHaveLength(16);
+    await expect(
+      db.select().from(tasks).where(inArray(tasks.id, first.myIssuesTaskIds)),
+    ).resolves.toHaveLength(6);
   });
 
   it('repairs a missing team membership and project-team link without duplicating rows', async () => {
@@ -150,6 +207,13 @@ describe('linear parity seed', () => {
           and(eq(projectTeams.projectId, first.projectId), eq(projectTeams.teamId, first.teamId)),
         ),
     ).resolves.toHaveLength(1);
+  });
+
+  it('rejects a tombstoned My issues fixture row instead of reporting a complete seed', async () => {
+    const first = await seedFixture();
+    await db.update(tasks).set({ isDeleted: true }).where(eq(tasks.id, first.myIssuesTaskIds[0]));
+
+    await expect(seedFixture()).rejects.toThrow('My issues fixture task id');
   });
 
   it('rejects a foreign project collision before mutating fixture tables', async () => {

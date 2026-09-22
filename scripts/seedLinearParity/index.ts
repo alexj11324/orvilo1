@@ -46,7 +46,7 @@ const main = async () => {
     });
 
     console.log(
-      `Linear parity fixture ready: workspace=${result.workspaceId} team=${result.teamId} project=${result.projectId} tasks=${result.taskIds.length} milestones=${result.milestoneIds.length}`,
+      `Linear parity fixture ready: workspace=${result.workspaceId} team=${result.teamId} project=${result.projectId} tasks=${result.taskIds.length} myIssues=${result.myIssuesTaskIds.length} milestones=${result.milestoneIds.length}`,
     );
   } finally {
     await closeDatabase(serverDB);

@@ -1,11 +1,11 @@
 'use client';
 
-import { Center, Flexbox, Icon, TextArea } from '@lobehub/ui';
+import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { CalendarIcon, Link2Icon, SendHorizontalIcon, SparklesIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { CalendarIcon, Link2Icon } from 'lucide-react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -13,10 +13,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import {
-  getProjectConversationStartPath,
-  getProjectResourcesPath,
-} from '@/features/Projects/Layout/navigation';
+import { getProjectResourcesPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
@@ -30,16 +27,6 @@ import ProjectDashboard from './ProjectDashboard';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
-  composer: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 12px;
-    background: ${cssVar.colorBgContainer};
-  `,
-  composerFooter: css`
-    padding-block: 4px 6px;
-    padding-inline: 12px 6px;
-  `,
   content: css`
     overflow: auto;
     width: 100%;
@@ -60,16 +47,6 @@ const styles = createStaticStyles(({ css }) => ({
     height: 100%;
     background: ${cssVar.colorBgContainer};
   `,
-  textarea: css`
-    padding-block: 10px 4px !important;
-    padding-inline: 12px !important;
-    border: 0 !important;
-
-    font-size: 14px !important;
-
-    background: transparent !important;
-    box-shadow: none !important;
-  `,
 }));
 
 const ProjectWorkspace = memo(() => {
@@ -78,7 +55,6 @@ const ProjectWorkspace = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const enabled = useUserStore(labPreferSelectors.enableProjects);
   const detail = useCurrentProjectDetail(projectId);
-  const [message, setMessage] = useState('');
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const updatesSWR = useProjectUpdates(detail?.project.id);
   const workspaceId = useActiveWorkspaceId();
@@ -97,15 +73,10 @@ const ProjectWorkspace = memo(() => {
 
   const project = detail.project;
   const projectReference = project.slug ?? projectId!;
+
   const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
   const members = membersSWR.data ?? [];
   const knowledgeBases = detail.knowledgeBases ?? [];
-
-  const startConversation = () => {
-    const content = message.trim();
-    if (!content || !projectId) return;
-    navigate(getProjectConversationStartPath(projectReference, content));
-  };
 
   return (
     <Flexbox className={styles.shell} flex={1}>
@@ -218,43 +189,9 @@ const ProjectWorkspace = memo(() => {
                 projectId={project.id}
                 onPosted={() => void updatesSWR.mutate()}
               />
-              {(updatesSWR.data ?? []).slice(0, 2).map((update) => (
+              {(updatesSWR.data ?? []).map((update) => (
                 <ProjectUpdateRow key={update.id} update={update} />
               ))}
-            </Flexbox>
-            <Flexbox className={styles.composer}>
-              <TextArea
-                autoSize={{ maxRows: 6, minRows: 2 }}
-                className={styles.textarea}
-                placeholder={t('overview.composerPlaceholder')}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter')
-                    startConversation();
-                }}
-              />
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.composerFooter}
-                justify={'space-between'}
-              >
-                <Flexbox horizontal align={'center'} gap={7}>
-                  <Tag icon={<SparklesIcon size={12} />} shape={'round'}>
-                    {project.name}
-                  </Tag>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t('overview.contextEnabled')}
-                  </Text>
-                </Flexbox>
-                <Button
-                  disabled={!message.trim()}
-                  icon={SendHorizontalIcon}
-                  type={'primary'}
-                  onClick={startConversation}
-                />
-              </Flexbox>
             </Flexbox>
           </Flexbox>
           <ProjectDashboard detail={detail} projectId={project.id} />

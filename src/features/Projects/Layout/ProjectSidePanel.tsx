@@ -4,7 +4,7 @@ import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
-import { memo, type ReactNode, useId, useState } from 'react';
+import { type KeyboardEvent, memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MILESTONE_ICON_COLOR, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
@@ -114,6 +114,13 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
     if (!detail || !databaseId) return null;
 
     const milestones = detail.milestones ?? [];
+    const openIssues = () => navigate(getProjectTasksPath(detail.project.slug || databaseId));
+    const activateIssues = (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      // Space would otherwise scroll the panel.
+      event.preventDefault();
+      openIssues();
+    };
 
     return (
       <Flexbox className={styles.panel} gap={12}>
@@ -127,26 +134,32 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
             </Text>
           ) : (
             milestones.map((milestone) => (
-              // The rail row is a whole-row click target on the reference, not a
-              // link: two nested role=button layers opening the project's
-              // issues. The in-page `#milestone-<id>` anchor belongs to the
-              // overview card alone, and the rail is mounted on every project
-              // tab, so pointing it at that anchor would be a dead link off
-              // Overview.
+              // Whole-row target opening the project's issues, not a link: the
+              // `#milestone-<id>` anchor belongs to the overview card alone, and
+              // the rail is mounted on every project tab, so pointing it at that
+              // anchor would be a dead link off Overview.
+              //
+              // Deliberately diverges from the reference in two ways. It renders
+              // the row as two nested `div[role=button]` layers, both
+              // `tabindex="-1"` — mouse-only, and a button inside a button. The
+              // clone contract asks to preserve accessibility while matching the
+              // reference, so this keeps one button role and stays reachable by
+              // keyboard. The destination, and the row's `role`, do match.
               <div
                 key={milestone.id}
                 role={'button'}
-                tabIndex={-1}
-                onClick={() => navigate(getProjectTasksPath(detail.project.slug || databaseId))}
+                tabIndex={0}
+                onClick={openIssues}
+                onKeyDown={activateIssues}
               >
-                <Flexbox horizontal align={'center'} gap={8} role={'button'} tabIndex={-1}>
+                <Flexbox horizontal align={'center'} gap={8}>
                   <Icon
                     color={MILESTONE_ICON_COLOR}
                     fill={MILESTONE_ICON_COLOR}
                     icon={DiamondIcon}
                     size={MILESTONE_ICON_SIZE}
                   />
-                  <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }}>
+                  <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
                     {milestone.name}
                   </Text>
                   {milestone.date && (

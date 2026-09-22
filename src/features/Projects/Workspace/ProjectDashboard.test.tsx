@@ -45,6 +45,8 @@ const mocks = vi.hoisted(() => ({
   // Props every `Icon` on the page rendered with. The stub below renders
   // nothing, so this is the only way a test can read the visual spec back.
   iconProps: [] as Record<string, unknown>[],
+  // Same for `Text`, which the stub flattens to a bare span.
+  textProps: [] as Record<string, unknown>[],
   // Milestones the mocked project detail resolves to; `[]` by default so the
   // existing empty-state assertions keep their fixture.
   milestones: [] as NonNullable<ProjectDetail['milestones']>,
@@ -75,7 +77,10 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ),
   DropdownMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
   Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  Text: (props: { children?: ReactNode } & Record<string, unknown>) => {
+    mocks.textProps.push(props);
+    return <span>{props.children}</span>;
+  },
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -241,6 +246,7 @@ beforeEach(() => {
   mocks.navigate.mockClear();
   mocks.goals = [];
   mocks.iconProps = [];
+  mocks.textProps = [];
   mocks.milestones = [];
 });
 
@@ -622,14 +628,41 @@ describe('project milestone rows', () => {
     mocks.milestones = [milestone];
     render(<ProjectSidePanel projectId="apollo" />);
 
-    // The reference rail row is two nested role=button layers and carries no
-    // href at all: the in-page anchor belongs to the overview card alone.
-    const layers = screen.getAllByRole('button', { name: new RegExp(milestone.name) });
-    expect(layers).toHaveLength(2);
+    // Whole-row target, no href: the in-page anchor belongs to the overview
+    // card alone. One button role rather than the reference's two nested ones,
+    // and reachable by keyboard — both are recorded deviations.
+    const rows = screen.getAllByRole('button', { name: new RegExp(milestone.name) });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveAttribute('tabindex', '0');
     expect(screen.queryByRole('link', { name: milestone.name })).not.toBeInTheDocument();
 
-    fireEvent.click(layers[0]);
+    fireEvent.click(rows[0]);
     expect(mocks.navigate).toHaveBeenCalledWith('/project/apollo/tasks');
+
+    // A keyboard user gets the same destination as a mouse user.
+    for (const key of ['Enter', ' ']) {
+      mocks.navigate.mockClear();
+      fireEvent.keyDown(rows[0], { key });
+      expect(mocks.navigate).toHaveBeenCalledWith('/project/apollo/tasks');
+    }
+  });
+
+  it('gives each milestone name the typography the reference measured', () => {
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+    const overviewName = mocks.textProps.find((props) => props.children === milestone.name) ?? {};
+
+    cleanup();
+    mocks.textProps = [];
+
+    mocks.milestones = [milestone];
+    render(<ProjectSidePanel projectId="apollo" />);
+    const railName = mocks.textProps.find((props) => props.children === milestone.name) ?? {};
+
+    // Measured on the reference: 15px/450 in the overview card, 12px/450 in the
+    // rail. Reading the name, not editing it — the reference's overview name is
+    // a ProseMirror editor, and we deliberately do not copy that.
+    expect(overviewName).toMatchObject({ fontSize: 15, weight: 450 });
+    expect(railName).toMatchObject({ fontSize: 12, weight: 450 });
   });
 
   it('draws the milestone diamond with one shared colour and size on both surfaces', () => {

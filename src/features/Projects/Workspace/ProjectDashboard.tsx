@@ -90,7 +90,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
                     size={MILESTONE_ICON_SIZE}
                   />
                 </a>
-                <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
+                <Text ellipsis fontSize={15} style={{ flex: 1, minWidth: 0 }} weight={450}>
                   {milestone.name}
                 </Text>
                 {milestone.date && (

@@ -28,6 +28,7 @@ const arg = (name, fallback) => {
 const PORT = Number(arg('port', '9222'));
 const OUT = arg('out', '');
 const VIEWPORT = arg('viewport', '');
+const MATCH = arg('match', '');
 const OUTLINE = process.argv.includes('--outline');
 const MAX_ELEMENTS = Number(arg('max', '20000'));
 
@@ -195,10 +196,26 @@ const outlineOf = (snap) => {
 
 const main = async () => {
   const targets = await getJson('/json/list');
-  const page = targets.find(
+  const pages = targets.filter(
     (t) => t.type === 'page' && !/^(?:devtools|chrome-extension)/.test(t.url),
   );
-  if (!page) throw new Error(`no page target on :${PORT}`);
+
+  if (process.argv.includes('--list')) {
+    process.stdout.write(
+      `${JSON.stringify(pages.map((t) => ({ title: t.title, url: t.url })), null, 2)}\n`,
+    );
+    return;
+  }
+
+  // See cdp-inspect.cjs: --match lets several agents share one browser by owning separate tabs.
+  // Taking the first page instead would silently point two collectors at the same tab.
+  const page = MATCH ? pages.find((t) => t.url.includes(MATCH)) : pages[0];
+  if (!page) {
+    const have = pages.map((t) => t.url).join(', ') || 'none';
+    throw new Error(
+      `no page target on :${PORT}${MATCH ? ` matching ${JSON.stringify(MATCH)}` : ''} (have: ${have})`,
+    );
+  }
 
   const WebSocket = require('ws');
   const ws = new WebSocket(page.webSocketDebuggerUrl, { maxPayload: 256 * 1024 * 1024 });

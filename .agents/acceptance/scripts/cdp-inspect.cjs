@@ -13,6 +13,12 @@
  *   node cdp-inspect.cjs --port 9333 --expr-file /tmp/q.js
  *   node cdp-inspect.cjs --port 9333 --expr "document.title"
  *   node cdp-inspect.cjs --port 9333 --expr "..." --click "selector"   # click first, then evaluate
+ *   node cdp-inspect.cjs --port 9333 --list                             # show page targets and exit
+ *   node cdp-inspect.cjs --port 9333 --match /inbox --expr "..."        # address one tab by URL
+ *
+ * Several agents can share one browser by owning separate tabs: navigation is per-target, so
+ * distinct tabs never contend. Pass `--match <url-substring>` so the tab you drive is the one
+ * you mean — without it the first page target wins, and two agents silently share a tab.
  *
  * The expression is wrapped: it may use `return` at top level, and is awaited, so
  * `await new Promise(r => setTimeout(r, 300))` works for post-click settling.
@@ -37,6 +43,7 @@ const EXPR_FILE = arg('expr-file', '');
 const CLICK = arg('click', '');
 const SHOT = arg('shot', '');
 const VIEWPORT = arg('viewport', '');
+const MATCH = arg('match', '');
 const TIMEOUT = Number(arg('timeout', '20000'));
 
 const loadSource = () => {
@@ -67,10 +74,28 @@ const getJson = (path) =>
 
 const main = async () => {
   const targets = await getJson('/json/list');
-  const page = targets.find(
+  const pages = targets.filter(
     (t) => t.type === 'page' && !/^(?:devtools|chrome-extension)/.test(t.url),
   );
-  if (!page) throw new Error(`no page target on :${PORT}`);
+
+  if (process.argv.includes('--list')) {
+    process.stdout.write(
+      `${JSON.stringify(pages.map((t) => ({ title: t.title, url: t.url })), null, 2)}\n`,
+    );
+    return;
+  }
+
+  // --match exists so several agents can share one browser: each owns a different tab, and
+  // navigation is per-target, so two collectors on distinct tabs never contend. Without it this
+  // takes the first page, which silently hands two agents the same tab — the second navigates
+  // out from under the first, and both report confidently on a page neither meant to measure.
+  const page = MATCH ? pages.find((t) => t.url.includes(MATCH)) : pages[0];
+  if (!page) {
+    const have = pages.map((t) => t.url).join(', ') || 'none';
+    throw new Error(
+      `no page target on :${PORT}${MATCH ? ` matching ${JSON.stringify(MATCH)}` : ''} (have: ${have})`,
+    );
+  }
   process.stderr.write(`target: ${page.url}\n`);
 
   const WebSocket = require('ws');

@@ -165,6 +165,22 @@ const main = async () => {
     });
     await new Promise((r) => setTimeout(r, 500));
   }
+  // No `else` that clears the override: `Emulation.clearDeviceMetricsOverride` returns success on
+  // this Electron build and does not restore the window. Measured on :9224 — real window
+  // 1770x986, set 1600x1000, clear, settle 300ms, and `innerWidth` still reads 1600x1000. A clear
+  // that silently no-ops is worse than none, because the caller reads "override cleared" as
+  // "I measured the window". The override survives a previous caller and this script cannot
+  // undo it; what it CAN do is refuse to let that be invisible — see the report below.
+
+  // Every measurement carries its own evidence condition, instead of relying on the reader to
+  // remember what was passed. When no --viewport was given the size may be a previous caller's
+  // override rather than the window, and that is stated outright rather than left to be assumed.
+  const effective = await send('Runtime.evaluate', {
+    expression: '`${innerWidth}x${innerHeight}@dpr${devicePixelRatio}`',
+    returnByValue: true,
+  });
+  const inherited = VIEWPORT ? '' : ' (INHERITED — no --viewport given; may be another caller\'s override, not the window)';
+  process.stderr.write(`viewport: ${effective.result?.value ?? 'unknown'}${inherited}\n`);
 
   if (CLICK) {
     // A real Input.dispatchMouseEvent click, not element.click(): the latter skips hit-testing,

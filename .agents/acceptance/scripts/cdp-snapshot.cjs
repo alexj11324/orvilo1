@@ -277,6 +277,16 @@ const main = async () => {
     });
     await new Promise((r) => setTimeout(r, 600));
   }
+  // No clearing here: `Emulation.clearDeviceMetricsOverride` reports success on this build and
+  // does not restore the window (measured on :9224). See cdp-inspect.cjs.
+
+  // Record the viewport the snapshot was actually taken at, and say so when it may be inherited.
+  const effective = await send('Runtime.evaluate', {
+    expression: '`${innerWidth}x${innerHeight}@dpr${devicePixelRatio}`',
+    returnByValue: true,
+  });
+  const inherited = VIEWPORT ? '' : ' (INHERITED — no --viewport given; may be another caller\'s override, not the window)';
+  process.stderr.write(`viewport: ${effective.result?.value ?? 'unknown'}${inherited}\n`);
 
   const res = await send('Runtime.evaluate', {
     expression: PAGE_SCRIPT,

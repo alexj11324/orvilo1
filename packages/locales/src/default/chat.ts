@@ -2210,6 +2210,8 @@ export default {
   'taskList.subtaskProgress.loadFailed':
     "Couldn't load sub-tasks. Click the progress badge to retry.",
   'taskList.title': 'Tasks',
+  'taskList.milestoneFilter': 'Milestone: {{name}}',
+  'taskList.milestoneFilterClear': 'Clear milestone filter',
   'taskList.unassigned': 'Unassigned',
   'taskList.unassignedAgentHint': 'Orvilo AI will run this task when no agent is selected',
   'taskList.assignTo': 'Assign to',

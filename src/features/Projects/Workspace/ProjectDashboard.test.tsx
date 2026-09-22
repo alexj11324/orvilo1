@@ -240,6 +240,11 @@ const milestone = {
 
 const withMilestone = { ...detail, milestones: [milestone] };
 
+const milestoneWithProgress = {
+  ...milestone,
+  progress: { completed: 2, issues: 2, percent: 100 },
+};
+
 /** Every diamond glyph the page drew, with the props it was drawn with. */
 const renderedDiamonds = () => mocks.iconProps.filter((props) => props.icon === DiamondIcon);
 
@@ -656,27 +661,53 @@ describe('project milestone rows', () => {
     }
   });
 
-  it('opens the project issues from the rail row, which is a button and not a link', () => {
-    mocks.milestones = [milestone];
+  it('keeps the rail row inert and puts the filtered issues behind See issues', () => {
+    mocks.milestones = [milestoneWithProgress];
     render(<ProjectSidePanel projectId="apollo" />);
 
-    // Whole-row target, no href: the in-page anchor belongs to the overview
-    // card alone. One button role rather than the reference's two nested ones,
-    // and reachable by keyboard — both are recorded deviations.
-    const rows = screen.getAllByRole('button', { name: new RegExp(milestone.name) });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveAttribute('tabindex', '0');
-    expect(screen.queryByRole('link', { name: milestone.name })).not.toBeInTheDocument();
+    // The reference row has no href and `cursor: default`; "go to issues" is a
+    // separate hover-revealed control pointing at the milestone-filtered list.
+    expect(
+      screen.queryByRole('button', { name: new RegExp(milestone.name) }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(milestone.name));
+    expect(mocks.navigate).not.toHaveBeenCalled();
 
-    fireEvent.click(rows[0]);
-    expect(mocks.navigate).toHaveBeenCalledWith('/project/apollo/tasks');
+    // Hidden until the row is hovered, like the reference's display:none
+    // button — which also empties its accessible name, so find it by text.
+    const seeIssues = screen.getByText('overview.milestoneSeeIssues');
+    expect(seeIssues.tagName).toBe('A');
+    expect(seeIssues).not.toBeVisible();
+    expect(seeIssues).toHaveAttribute('href', '/project/apollo/tasks?projectMilestoneId=ms_1');
+    // Mirrors the reference's tabindex=-1; keyboard users reach the same list
+    // from the overview card's always-visible progress link.
+    expect(seeIssues).toHaveAttribute('tabindex', '-1');
+  });
 
-    // A keyboard user gets the same destination as a mouse user.
-    for (const key of ['Enter', ' ']) {
-      mocks.navigate.mockClear();
-      fireEvent.keyDown(rows[0], { key });
-      expect(mocks.navigate).toHaveBeenCalledWith('/project/apollo/tasks');
-    }
+  it('links each overview milestone to its filtered issues, next to the untouched icon anchor', () => {
+    render(
+      <ProjectDashboard
+        detail={{ ...detail, milestones: [milestoneWithProgress] }}
+        projectId={'prj_1'}
+      />,
+    );
+
+    const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['#milestone-ms_1', '/project/apollo/tasks?projectMilestoneId=ms_1']);
+  });
+
+  it('renders no readout, and no progress link, when progress could not be computed', () => {
+    const unknown = { ...milestone, progress: null };
+    render(<ProjectDashboard detail={{ ...detail, milestones: [unknown] }} projectId={'prj_1'} />);
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '#milestone-ms_1',
+    ]);
+
+    cleanup();
+    mocks.textProps = [];
+    mocks.milestones = [unknown];
+    render(<ProjectSidePanel projectId="apollo" />);
+    expect(screen.queryByText('overview.milestoneProgressOf')).not.toBeInTheDocument();
   });
 
   it('gives each milestone name the typography the reference measured', () => {

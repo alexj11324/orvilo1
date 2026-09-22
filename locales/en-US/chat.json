@@ -1906,6 +1906,8 @@
   "taskList.kanban.showColumn": "Show column",
   "taskList.kanban.todo": "Todo",
   "taskList.kanban.triage": "Triage",
+  "taskList.milestoneFilter": "Milestone: {{name}}",
+  "taskList.milestoneFilterClear": "Clear milestone filter",
   "taskList.mine.assigned": "Assigned",
   "taskList.mine.created": "Created",
   "taskList.mine.emptyAssigned": "No tasks assigned to you yet",

@@ -4,19 +4,19 @@ import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
-import { type KeyboardEvent, memo, type ReactNode, useId, useState } from 'react';
+import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
-import { getProjectActivityPath, getProjectTasksPath } from './navigation';
+import { getProjectActivityPath } from './navigation';
 import { ProjectIssueProgress } from './ProjectIssueProgress';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -30,20 +30,29 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   panel: css`
-    overflow-y: auto;
-    flex: none;
+    scrollbar-width: thin;
 
     /* Linear parity: the rail's outer box must be 399px, not 412. The row is
        1186px once the nav is 244 and the shell's start gutter is gone; the
        content column needs a 787px left column, which leaves exactly 399 for
-       this panel. The asymmetric inline padding is the reference's own rail
-       chrome: 4px of it sits outside the card (the reference's <aside> carries
-       padding-left: 4px) and 10px replaces the reference's scrollbar gutter
-       on the end side — 23px of end chrome here against the reference's 23.5px. */
+       this panel. 4px of start chrome sits outside the card (the reference's
+       <aside> carries padding-left: 4px).
+
+       The end side is the reference's own mechanism, not a stand-in for it:
+       its rail scroller reserves a thin scrollbar gutter whether or not it
+       scrolls (scrollbar-gutter: stable, scrollbar-width: thin — 11px here).
+       An earlier 10px end padding imitated that gutter only while the rail fit
+       the viewport; once it scrolled, the real scrollbar took another 11px and
+       the card content shrank from 360 to 349. */
+    scrollbar-gutter: stable;
+
+    overflow-y: auto;
+    flex: none;
+
     width: 399px;
     height: 100%;
     padding-block: 12px;
-    padding-inline: 4px 10px;
+    padding-inline: 4px 0;
   `,
   railCard: css`
     /* Reference: the card's own content box starts at x=1048, 4px right of
@@ -61,15 +70,57 @@ const styles = createStaticStyles(({ css }) => ({
        now measures 4 + 11 + 1 = 16 against the reference's 16.5.
 
        Measured after the change: content left 1048, value x 1138, content box
-       360 wide. That closes the 2px that used to sit on the end side (the
-       reference's end chrome is 23.5px, ours 23px). The card's own border box
-       lands at 1036..1421 against the reference's 1035.5..1420.5. */
+       360 wide. The end padding is 11, not the reference's 12: our row is 1px
+       narrower than the reference's (the shell's end border), and taking that
+       pixel here keeps the content box at 1048..1408 with the stable gutter. */
     padding-block: 12px;
-    padding-inline: 11px 12px;
+    padding-inline: 11px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 10px;
 
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
+  `,
+  milestoneRow: css`
+    cursor: default;
+
+    /* Reference row: 380x42 against a 360 content box, i.e. its hover
+       surface reaches 10px past the card's content edge on both sides. */
+    position: relative;
+
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    height: 42px;
+    margin-inline: -10px;
+    padding-inline: 10px;
+    border-radius: 8px;
+
+    &:hover {
+      background: ${cssVar.colorFillQuaternary};
+    }
+
+    &:hover > a {
+      display: flex;
+    }
+  `,
+  seeIssues: css`
+    /* Reference: display none until the row is hovered, then laid over the
+       end of the row (it covers the readout rather than reflowing it). */
+    position: absolute;
+    inset-inline-end: 10px;
+
+    display: none;
+    align-items: center;
+
+    height: 24px;
+    padding-inline: 8px;
+    border-radius: 6px;
+
+    font-size: 12px;
+    color: ${cssVar.colorText};
+
+    background: ${cssVar.colorFillQuaternary};
   `,
   sectionTrigger: css`
     cursor: pointer;
@@ -135,19 +186,12 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
     const { t } = useTranslation('project');
     const detail = useCurrentProjectDetail(projectId);
     useProjectStore((s) => s.useFetchProjectDetail)(projectId);
-    const navigate = useWorkspaceAwareNavigate();
     const databaseId = detail?.project.id;
 
     if (!detail || !databaseId) return null;
 
     const milestones = detail.milestones ?? [];
-    const openIssues = () => navigate(getProjectTasksPath(detail.project.slug || databaseId));
-    const activateIssues = (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      // Space would otherwise scroll the panel.
-      event.preventDefault();
-      openIssues();
-    };
+    const projectRef = detail.project.slug || databaseId;
 
     return (
       <Flexbox className={styles.panel} gap={12}>
@@ -160,38 +204,49 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
               {t('overview.milestonesEmpty')}
             </Text>
           ) : (
-            milestones.map((milestone) => (
-              // Whole-row target opening the project's issues, not a link: the
-              // `#milestone-<id>` anchor belongs to the overview card alone, and
-              // the rail is mounted on every project tab, so pointing it at that
-              // anchor would be a dead link off Overview.
-              //
-              // Deliberately diverges from the reference in two ways. It renders
-              // the row as two nested `div[role=button]` layers, both
-              // `tabindex="-1"` — mouse-only, and a button inside a button. The
-              // clone contract asks to preserve accessibility while matching the
-              // reference, so this keeps one button role and stays reachable by
-              // keyboard. The destination, and the row's `role`, do match.
-              <div
-                key={milestone.id}
-                role={'button'}
-                tabIndex={0}
-                onClick={openIssues}
-                onKeyDown={activateIssues}
-              >
-                <Flexbox horizontal align={'center'} gap={8}>
+            <Flexbox gap={1}>
+              {milestones.map((milestone) => (
+                // The row itself is not a navigation target. This used to be a
+                // whole-row `role=button` that opened the project's issues —
+                // the right call while the reference row was only ever read:
+                // it kept the destination and one keyboard-reachable role.
+                // The reference has since been measured more closely: its row
+                // carries no href and `cursor: default`, and "go to issues" is
+                // a separate `See issues` control that only appears on hover,
+                // pointing at the milestone-filtered list rather than the whole
+                // project. So the row is now inert and the destination lives on
+                // that control. Keyboard users reach the same filtered list
+                // from the always-visible progress link on the overview card.
+                <div className={styles.milestoneRow} key={milestone.id}>
                   <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
                   <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
                     {milestone.name}
                   </Text>
                   {milestone.date && (
-                    <Text fontSize={12} type={'secondary'}>
+                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
                       {formatProjectDate(milestone.date)}
                     </Text>
                   )}
-                </Flexbox>
-              </div>
-            ))
+                  {/* A `null` readout could not be computed honestly — omit it
+                      rather than render it as 0%. */}
+                  {milestone.progress && (
+                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                      {t('overview.milestoneProgressOf', {
+                        count: milestone.progress.issues,
+                        percent: milestone.progress.percent,
+                      })}
+                    </Text>
+                  )}
+                  <WorkspaceLink
+                    className={styles.seeIssues}
+                    tabIndex={-1}
+                    to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
+                  >
+                    {t('overview.milestoneSeeIssues')}
+                  </WorkspaceLink>
+                </div>
+              ))}
+            </Flexbox>
           )}
         </ProjectPanelSection>
         <ProjectPanelSection title={t('overview.progressLabel', { defaultValue: 'Progress' })}>

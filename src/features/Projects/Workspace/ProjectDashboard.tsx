@@ -7,6 +7,7 @@ import { DiamondIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import {
   getMilestoneAnchorId,
   MILESTONE_ICON_PAINT,
@@ -15,6 +16,7 @@ import {
 } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectDetail } from '@/store/project';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -35,6 +37,26 @@ const styles = createStaticStyles(({ css }) => ({
     flex: none;
     color: inherit;
   `,
+  milestoneProgress: css`
+    /* Reference: <a href="…/issues?projectMilestoneId=<id>">N issues · 100%</a>,
+       13px/450, a 28px-tall hit area at the end of the milestone row. */
+    display: flex;
+    flex: none;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 8px;
+    border-radius: 6px;
+
+    font-size: 13px;
+    font-weight: 450;
+    color: ${cssVar.colorTextSecondary};
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillQuaternary};
+    }
+  `,
   section: css`
     padding-block: 16px;
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
@@ -54,6 +76,7 @@ interface ProjectDashboardProps {
 const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
   const { t } = useTranslation('project');
   const milestones = detail.milestones ?? [];
+  const projectRef = detail.project.slug || detail.project.id;
 
   return (
     <Flexbox className={styles.main} gap={24}>
@@ -91,6 +114,19 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
                   <Text fontSize={12} type={'secondary'}>
                     {formatProjectDate(milestone.date)}
                   </Text>
+                )}
+                {/* A `null` readout could not be computed honestly; the link
+                    and its number land together or not at all. */}
+                {milestone.progress && (
+                  <WorkspaceLink
+                    className={styles.milestoneProgress}
+                    to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
+                  >
+                    {t('overview.milestoneIssues', {
+                      count: milestone.progress.issues,
+                      percent: milestone.progress.percent,
+                    })}
+                  </WorkspaceLink>
                 )}
               </Flexbox>
             ))}

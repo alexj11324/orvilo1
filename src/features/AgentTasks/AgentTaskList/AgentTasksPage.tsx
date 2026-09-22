@@ -10,7 +10,7 @@ import {
   Text,
 } from '@lobehub/ui/base-ui';
 import { Pagination } from 'antd';
-import { ChevronDownIcon, Plus } from 'lucide-react';
+import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
 import { memo, use, useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +36,11 @@ import { CollaborationOverlay, CollaborationProvider } from '@/features/Collabor
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
 import NavHeader from '@/features/NavHeader';
 import { ProjectToolbarContext } from '@/features/Projects/Layout/ProjectToolbarContext';
+import {
+  filterTasksByMilestone,
+  PROJECT_MILESTONE_FILTER_PARAM,
+  readProjectMilestoneFilter,
+} from '@/features/Projects/milestoneFilter';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -112,6 +117,11 @@ interface AgentTasksPageProps {
   agentId?: string;
   /** When provided, shows the complete task workspace scoped to one project. */
   projectId?: string;
+  /**
+   * The project's milestones, so a `?projectMilestoneId=` link can name the
+   * milestone it narrows to. Only read when `projectId` is set.
+   */
+  projectMilestones?: readonly { id: string; name: string }[];
 }
 
 export type TaskCollection = 'mine' | 'scheduled' | 'tasks';
@@ -206,7 +216,7 @@ export const resolveTaskCollectionView = (
 export const resolveOrdinaryCollectionSurface = (viewMode: TaskViewMode): 'board' | 'list' =>
   resolveTaskCollectionView('tasks', viewMode);
 
-const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
+const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectMilestones }) => {
   const { t } = useTranslation('chat');
   const projectToolbar = use(ProjectToolbarContext);
   const navigate = useWorkspaceAwareNavigate();
@@ -216,8 +226,15 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // Linear parity scoped to this surface: a project's Issues collection opens
   // on the grouped list; every other collection keeps the board default. A
   // stored value is the user's own choice and always wins.
-  const viewMode = storedViewMode ?? (projectId ? 'list' : 'kanban');
   const [searchParams, setSearchParams] = useSearchParams();
+  // A project's issues narrowed to one milestone (the overview's progress link
+  // and the rail's See issues). Filtered client-side over the complete list,
+  // so the surface is pinned to that list: the board pages its columns on the
+  // server and would show counts for the unfiltered set.
+  const milestoneFilterId = projectId ? readProjectMilestoneFilter(searchParams) : undefined;
+  const viewMode: TaskViewMode = milestoneFilterId
+    ? 'list'
+    : (storedViewMode ?? (projectId ? 'list' : 'kanban'));
   const [collectionPage, setCollectionPage] = useState(1);
   const activeWorkspaceId = useActiveWorkspaceId();
   const mineRedirect = resolveMineCollectionRedirect({
@@ -290,6 +307,22 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // signal never disagrees with the emptiness signal. Still resets to false on a
   // failed first load, so we surface loading only while there's no error (below).
   const isTaskListInit = useTaskStore(taskListSelectors.isTaskListInit);
+  const storeTasks = useTaskStore(taskListSelectors.taskList);
+  const milestoneTasks = useMemo(
+    () => (milestoneFilterId ? filterTasksByMilestone(storeTasks, milestoneFilterId) : undefined),
+    [milestoneFilterId, storeTasks],
+  );
+  // An id no milestone answers to still narrows the list; say which id rather
+  // than pretend the filter is not there.
+  const milestoneFilterName =
+    milestoneFilterId &&
+    (projectMilestones?.find((milestone) => milestone.id === milestoneFilterId)?.name ??
+      milestoneFilterId);
+  const clearMilestoneFilter = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(PROJECT_MILESTONE_FILTER_PARAM);
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
   // The surface follows the stored view mode alone; an empty collection no
   // longer snaps onto the board (see resolveOrdinaryCollectionSurface).
   const ordinarySurface = resolveOrdinaryCollectionSurface(viewMode);
@@ -484,6 +517,19 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
       left={projectId ? undefined : headerLeft}
       right={
         <Flexbox horizontal align={'center'} gap={4}>
+          {milestoneFilterName && (
+            <Flexbox horizontal align={'center'} gap={2}>
+              <Text fontSize={12} type={'secondary'}>
+                {t('taskList.milestoneFilter', { name: milestoneFilterName })}
+              </Text>
+              <ActionIcon
+                icon={XIcon}
+                size={'small'}
+                title={t('taskList.milestoneFilterClear')}
+                onClick={clearMilestoneFilter}
+              />
+            </Flexbox>
+          )}
           {projectId && (
             <DropdownMenu
               items={[
@@ -664,6 +710,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
                 data={isTaskListInit || undefined}
                 error={error}
                 isLoading={isLoading || (!isTaskListInit && !error)}
+                items={milestoneTasks}
                 options={viewOptions}
                 routeScope={routeScope}
                 onRetry={() => mutate()}

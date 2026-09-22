@@ -1905,6 +1905,8 @@
   "taskList.kanban.showColumn": "显示分组",
   "taskList.kanban.todo": "待处理",
   "taskList.kanban.triage": "待分流",
+  "taskList.milestoneFilter": "里程碑：{{name}}",
+  "taskList.milestoneFilterClear": "清除里程碑筛选",
   "taskList.mine.assigned": "分配给我",
   "taskList.mine.created": "我创建的",
   "taskList.mine.emptyAssigned": "暂无分配给你的任务",

@@ -33,28 +33,32 @@ import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './Proj
 
 const styles = createStaticStyles(({ css }) => ({
   content: css`
-    overflow: auto;
-    width: 100%;
+    scrollbar-width: thin;
 
-    /* Linear parity: the reference's scroll container carries a fixed 48px
-       inline padding (measured 245 -> 293 on the reference at two viewports). */
+    /* Linear parity, read off the reference's own scroll container: a fixed
+       48px inline padding plus a thin scrollbar gutter reserved on BOTH edges
+       (scrollbar-gutter: stable both-edges; 11px each side here). Those two
+       gutters are the "constant 11px inset" measured at 1440 and 1600 — the
+       column is fluid, never centred and never capped.
+
+       An earlier version imitated the gutters with an 11px margin on the
+       page. That only held while the overview fit the viewport: once it
+       scrolled, the real scrollbar took a further 11px and the column shrank
+       from 669 to 658. Reserving the gutter keeps it at 669 either way. */
+    scrollbar-gutter: stable both-edges;
+
+    overflow: auto;
+
+    width: 100%;
     padding-inline: 48px;
 
     @media (width <= 720px) {
+      scrollbar-gutter: auto;
       padding-inline: 0;
     }
   `,
   page: css`
     box-sizing: border-box;
-
-    /* Linear parity: FLUID, never centred and never a max-width. The reference
-       column keeps a constant 11px inset on BOTH edges while the container
-       grows (measured: x stays 304 at 1440 and at 1600, only the width moves
-       669 -> 829), so the inset is a fixed margin and not margin-inline: auto
-       — the previous width: min(800px, calc(100% - 48px)) re-centred the
-       column at every width above ~1090 and diverged from the reference there.
-       Width stays auto so the block fills the container minus these margins. */
-    margin-inline: 11px;
     padding-block: 24px 32px;
 
     @media (width <= 720px) {

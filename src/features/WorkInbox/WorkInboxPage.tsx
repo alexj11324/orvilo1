@@ -36,7 +36,7 @@ import {
   MoreHorizontalIcon,
   TimerOffIcon,
 } from 'lucide-react';
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -75,6 +75,14 @@ import { inboxDraftKeyForCard, useInboxDraft } from './inboxDrafts';
 import { inboxFeedScopeKey, mergeInboxFeedPages, useInboxFeedPager } from './inboxFeedPager';
 import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedState';
 import {
+  armInboxReadReceiptSuppression,
+  type InboxReadReceiptAttempt,
+  type InboxReadReceiptRetention,
+  resolveInboxReadReceiptAttempt,
+  resolveInboxReadReceiptRetention,
+  retainSelectedInboxCard,
+} from './inboxListSelection';
+import {
   feedFilterForChip,
   INBOX_FILTER_CHIPS,
   INBOX_SNOOZE_PRESETS,
@@ -105,19 +113,30 @@ const styles = createStaticStyles(({ css }) => ({
   listColumn: css`
     display: flex;
     flex-direction: column;
+    min-height: 100%;
   `,
   listHeader: css`
     flex: none;
-    padding-block: 8px 4px;
+    padding-block: 6px;
     padding-inline: 12px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
   row: css`
     cursor: pointer;
 
-    padding-block: 8px;
+    width: 100%;
+    min-height: 55px;
+    padding-block: 6px;
     padding-inline: 12px;
+    border: 0;
     border-block-end: 1px solid ${cssVar.colorFillQuaternary};
+
+    font: inherit;
+    color: inherit;
+    text-align: start;
+
+    appearance: none;
+    background: transparent;
 
     transition: background ${cssVar.motionDurationFast};
 
@@ -127,6 +146,10 @@ const styles = createStaticStyles(({ css }) => ({
 
     &[data-active='true'] {
       background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
     }
   `,
   typeGlyph: css`
@@ -170,6 +193,9 @@ const styles = createStaticStyles(({ css }) => ({
     flex-direction: column;
     gap: 16px;
     padding: 24px;
+  `,
+  detailPlaceholder: css`
+    min-height: 100%;
   `,
   paneMeta: css`
     color: ${cssVar.colorTextTertiary};
@@ -221,6 +247,10 @@ const WorkInboxPage = memo(() => {
   const selectedId = searchParams.get('item');
   const detailOpen = searchParams.get('detail') === '1';
   const [pendingDecisions, setPendingDecisions] = useState<ReadonlySet<string>>(() => new Set());
+  const readReceiptRetentionRef = useRef<InboxReadReceiptRetention<NotificationFeedCard> | null>(
+    null,
+  );
+  const readReceiptAttemptRef = useRef<InboxReadReceiptAttempt | null>(null);
 
   const writeInboxParams = useCallback(
     (patch: { detail?: string | null; filter?: string; item?: string | null; tab?: string }) => {
@@ -283,11 +313,6 @@ const WorkInboxPage = memo(() => {
     );
   }, [data?.nextCursor, feedScope, filter, kind, pager]);
   const partial = Boolean(data?.partial);
-  const listMode = inboxFeedListMode({
-    cardCount: cards.length,
-    isLoading,
-    partial,
-  });
   const { data: summary } = useClientDataSWR(inboxKeys.feedSummary(workspaceId), () =>
     notificationService.feedSummary(),
   );
@@ -303,7 +328,18 @@ const WorkInboxPage = memo(() => {
     selectedId && !listed ? inboxKeys.feedCard(workspaceId, selectedId) : null,
     () => notificationService.feedCard(selectedId as string),
   );
-  const selected = listed ?? fetchedCard ?? null;
+  const readReceiptRetention = resolveInboxReadReceiptRetention(
+    readReceiptRetentionRef.current,
+    selectedId,
+    feedScope,
+  );
+  const selected = listed ?? fetchedCard ?? readReceiptRetention?.card ?? null;
+  const visibleCards = retainSelectedInboxCard(cards, selected, readReceiptRetention);
+  const listMode = inboxFeedListMode({
+    cardCount: visibleCards.length,
+    isLoading,
+    partial,
+  });
   const selectedTaskId =
     selected?.safeNavigation?.kind === 'task' ? selected.safeNavigation.taskId : undefined;
   // Reply drafts persist per (user, workspace, request, request generation):
@@ -317,10 +353,11 @@ const WorkInboxPage = memo(() => {
     return key ? t(key) : card.title;
   };
 
-  const cardIds = useMemo(() => cards.map((card) => card.notificationId), [cards]);
+  const cardIds = useMemo(() => visibleCards.map((card) => card.notificationId), [visibleCards]);
   const surface = inboxSurface(isMobile, detailOpen);
   const selectedNotificationId = selected?.notificationId;
   const selectedActivityVersion = selected?.activityVersion;
+  const selectedRead = selected?.read;
   const markSelectedRead = shouldMarkInboxCardRead({
     cardId: selectedNotificationId ?? '',
     selectedId,
@@ -328,16 +365,64 @@ const WorkInboxPage = memo(() => {
   });
 
   useEffect(() => {
-    // Clear a dead selection only once the list AND the by-id lookup both
-    // settled — a deep link into a not-yet-loaded page must not be dropped.
-    if (selectedId && !isLoading && !fetchingCard && !selected) {
-      writeInboxParams({ detail: null, item: null });
-    }
-  }, [fetchingCard, isLoading, selected, selectedId, writeInboxParams]);
+    // Departure is terminal for this transient row. Clear the stored object,
+    // not only the rendered resolution, so A → B → A cannot resurrect content
+    // captured under an earlier selection or workspace scope.
+    readReceiptRetentionRef.current = resolveInboxReadReceiptRetention(
+      readReceiptRetentionRef.current,
+      selectedId,
+      feedScope,
+    );
+    readReceiptAttemptRef.current = resolveInboxReadReceiptAttempt(
+      readReceiptAttemptRef.current,
+      selectedId,
+      feedScope,
+    );
+  }, [feedScope, selectedId]);
 
   useEffect(() => {
-    if (!markSelectedRead || !selectedNotificationId || selectedActivityVersion === undefined) {
+    // Clear a dead selection only once the list AND the by-id lookup both
+    // settled — a deep link into a not-yet-loaded page must not be dropped.
+    if (
+      selectedId &&
+      !isLoading &&
+      !fetchingCard &&
+      (!selected || (!listed && fetchedCard === null))
+    ) {
+      readReceiptRetentionRef.current = null;
+      writeInboxParams({ detail: null, item: null });
+    }
+  }, [fetchedCard, fetchingCard, isLoading, listed, selected, selectedId, writeInboxParams]);
+
+  useEffect(() => {
+    if (
+      !markSelectedRead ||
+      !selectedNotificationId ||
+      selectedActivityVersion === undefined ||
+      selectedRead !== false
+    ) {
       return;
+    }
+    const currentAttempt = readReceiptAttemptRef.current;
+    if (
+      currentAttempt?.scope === feedScope &&
+      currentAttempt.notificationId === selectedNotificationId &&
+      currentAttempt.activityVersion === selectedActivityVersion
+    ) {
+      return;
+    }
+    readReceiptAttemptRef.current = {
+      activityVersion: selectedActivityVersion,
+      notificationId: selectedNotificationId,
+      scope: feedScope,
+    };
+    const selectedIndex = cards.findIndex((card) => card.notificationId === selectedNotificationId);
+    if (selectedIndex >= 0 && selected) {
+      readReceiptRetentionRef.current = {
+        card: selected,
+        index: selectedIndex,
+        scope: feedScope,
+      };
     }
     notificationService
       .markReadObserved(selectedNotificationId, selectedActivityVersion)
@@ -348,16 +433,23 @@ const WorkInboxPage = memo(() => {
         void mutate(inboxKeys.feedSummary(workspaceId));
         void mutate(inboxKeys.unreadCount(workspaceId));
         void mutate(inboxKeys.feed(workspaceId, kind, filter, undefined));
+        void mutate(inboxKeys.feedCard(workspaceId, selectedNotificationId));
       })
       .catch(() => {
+        readReceiptAttemptRef.current = null;
+        readReceiptRetentionRef.current = null;
         toast.error(t('inbox.organizeFailed'));
       });
   }, [
+    cards,
+    feedScope,
     filter,
     kind,
     markSelectedRead,
+    selected,
     selectedActivityVersion,
     selectedNotificationId,
+    selectedRead,
     t,
     workspaceId,
   ]);
@@ -381,12 +473,16 @@ const WorkInboxPage = memo(() => {
         // The row leaves this view — update the loaded tail at once; the
         // archived filter keeps it because it still belongs there.
         if (filterChip !== 'archived') pager.removeCard(card.notificationId);
+        if (card.notificationId === selectedId) {
+          readReceiptRetentionRef.current = null;
+          writeInboxParams({ detail: null, item: null });
+        }
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [filterChip, organizeFailed, pager, refresh],
+    [filterChip, organizeFailed, pager, refresh, selectedId, writeInboxParams],
   );
 
   const snoozeCard = useCallback(
@@ -411,17 +507,25 @@ const WorkInboxPage = memo(() => {
     async (card: NotificationFeedCard) => {
       try {
         await notificationService.markUnread(card.notificationId, card.activityVersion);
+        const suppression = armInboxReadReceiptSuppression({
+          activityVersion: card.activityVersion,
+          notificationId: card.notificationId,
+          scope: feedScope,
+          selectedId,
+        });
+        if (suppression) readReceiptAttemptRef.current = suppression;
         pager.updateCard(card.notificationId, (current) => ({
           ...current,
           read: false,
           readVersion: current.readVersion + 1,
         }));
+        void mutate(inboxKeys.feedCard(workspaceId, card.notificationId));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [organizeFailed, pager, refresh],
+    [feedScope, organizeFailed, pager, refresh, selectedId, workspaceId],
   );
 
   const decide = useCallback(
@@ -504,6 +608,10 @@ const WorkInboxPage = memo(() => {
           // A decided card leaves the pending view — drop it from the tail
           // immediately instead of waiting for a full refetch.
           pager.removeCard(card.notificationId);
+          if (card.notificationId === selectedId) {
+            readReceiptRetentionRef.current = null;
+            writeInboxParams({ detail: null, item: null });
+          }
         }
         await refresh();
       } catch {
@@ -516,7 +624,17 @@ const WorkInboxPage = memo(() => {
         });
       }
     },
-    [pendingDecisions, refresh, t, userId, workspaceId, pager, clearDraftFor],
+    [
+      pendingDecisions,
+      refresh,
+      t,
+      userId,
+      workspaceId,
+      pager,
+      clearDraftFor,
+      selectedId,
+      writeInboxParams,
+    ],
   );
 
   const openTarget = useCallback(
@@ -562,11 +680,13 @@ const WorkInboxPage = memo(() => {
         queryFingerprint: inboxBulkFingerprint('archive', filterChip, kind),
       });
       await notificationService.applyBulk(prepared.data.token);
+      readReceiptRetentionRef.current = null;
+      writeInboxParams({ detail: null, item: null });
       await refresh();
     } catch {
       organizeFailed();
     }
-  }, [filterChip, kind, organizeFailed, refresh]);
+  }, [filterChip, kind, organizeFailed, refresh, writeInboxParams]);
 
   const filterLabel = (chip: InboxFilterChip) => {
     if (chip === 'all') return t('inbox.allStatus');
@@ -595,6 +715,7 @@ const WorkInboxPage = memo(() => {
       <Flexbox className={styles.listHeader} gap={4}>
         <Flexbox horizontal align={'center'} justify={'space-between'}>
           <TabsRoot
+            size={'small'}
             style={{ flex: 1, minWidth: 0 }}
             value={tab}
             onValueChange={(value) => writeInboxParams({ tab: value })}
@@ -683,12 +804,14 @@ const WorkInboxPage = memo(() => {
         </Center>
       ) : (
         <>
-          {cards.map((card) => (
-            <div
+          {visibleCards.map((card) => (
+            <button
+              aria-current={card.notificationId === selected?.notificationId ? 'true' : undefined}
               className={styles.row}
               data-active={card.notificationId === selected?.notificationId}
               data-inbox-id={card.notificationId}
               key={card.notificationId}
+              type="button"
               onClick={() => selectCard(card.notificationId, true)}
             >
               <Flexbox horizontal align={'center'} gap={10}>
@@ -707,7 +830,7 @@ const WorkInboxPage = memo(() => {
                 <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
                   <Flexbox horizontal align={'center'} gap={6}>
                     {card.read ? null : <span className={styles.unreadDot} />}
-                    <Text ellipsis weight={card.read ? 400 : 600}>
+                    <Text ellipsis fontSize={13} weight={500}>
                       {titleFor(card)}
                     </Text>
                   </Flexbox>
@@ -721,7 +844,7 @@ const WorkInboxPage = memo(() => {
                   </Flexbox>
                 </Flexbox>
               </Flexbox>
-            </div>
+            </button>
           ))}
           {hasMore || loadMoreError ? (
             <Center padding={12} style={{ flexDirection: 'column', gap: 8 }}>
@@ -866,6 +989,23 @@ const WorkInboxPage = memo(() => {
     </div>
   ) : null;
 
+  const detailPlaceholder = (
+    <Center className={styles.detailPlaceholder} flex={1} padding={48}>
+      <Empty
+        icon={InboxIcon}
+        description={
+          listMode === 'list' && filterChip === 'all' && summary
+            ? t('inbox.unreadCount', {
+                count: tab === 'priority' ? summary.unreadBadgeCount : summary.unreadOtherCount,
+              })
+            : listMode === 'list'
+              ? t('inbox.loadedCount', { count: visibleCards.length })
+              : t('inbox.selectItem')
+        }
+      />
+    </Center>
+  );
+
   return (
     <Flexbox flex={1} height="100%">
       <NavHeader
@@ -877,10 +1017,11 @@ const WorkInboxPage = memo(() => {
       />
       <div className={styles.stage}>
         <WorkSurfaceSplit
-          detail={surface === 'split' ? detailPane : undefined}
-          detailLabel={selected ? titleFor(selected) : undefined}
+          detail={surface === 'split' ? (detailPane ?? detailPlaceholder) : undefined}
+          detailLabel={selected ? titleFor(selected) : t('inbox.selectItem')}
           list={listPane}
           listLabel={tCommon('tab.inbox')}
+          listWidth={400}
         />
         {surface === 'detail' && detailPane && selected ? (
           <div aria-label={titleFor(selected)} className={styles.detailOverlay}>

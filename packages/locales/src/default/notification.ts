@@ -91,6 +91,8 @@ export default {
   'inbox.loading': 'Loading inbox…',
   'inbox.loadFailed': 'The inbox could not be loaded.',
   'inbox.loadMore': 'Load more',
+  'inbox.loadedCount_one': '{{count}} loaded notification',
+  'inbox.loadedCount_other': '{{count}} loaded notifications',
   'inbox.markAllRead': 'Mark all as read',
   'inbox.markUnread': 'Mark unread',
   'inbox.moreActions': 'More actions',
@@ -116,6 +118,8 @@ export default {
   'inbox.submitInput': 'Send reply',
   'inbox.title': 'Notifications',
   'inbox.unread': 'Unread',
+  'inbox.unreadCount_one': '{{count}} unread notification',
+  'inbox.unreadCount_other': '{{count}} unread notifications',
   'inbox.viewDetail': 'View details',
   'promotion_gift_granted': '{{credits}} bonus credits have been added to your account.',
   'promotion_gift_granted_card_binding':

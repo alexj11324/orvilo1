@@ -14,6 +14,7 @@ import {
 } from '@/features/AgentTransferMigration';
 import ChatMiniMap from '@/features/ChatMiniMap';
 import { ChatList, ConversationProvider } from '@/features/Conversation';
+import ToolAuthAlert from '@/features/Conversation/AgentWelcome/ToolAuthAlert';
 import { useMessageDeepLink } from '@/features/Conversation/ChatList/hooks/useMessageDeepLink';
 import ComposerDraftReceiver from '@/features/Conversation/ComposerDraftReceiver';
 import { useChatFollowUp } from '@/features/Conversation/hooks/useChatFollowUp';
@@ -28,13 +29,18 @@ import { useGatewayReconnect } from '@/hooks/useGatewayReconnect';
 import { useOperationState } from '@/hooks/useOperationState';
 import { useScheduledRunWatch } from '@/hooks/useScheduledRunWatch';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
+import {
+  agentByIdSelectors,
+  builtinAgentSelectors,
+  chatConfigByIdSelectors,
+} from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors, topicSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
 import ExposeMainEditor from './ExposeMainEditor';
 import HeterogeneousChatInput from './HeterogeneousChatInput';
+import InboxAgentLanding, { shouldShowInboxAgentLanding } from './InboxAgentLanding';
 import MainChatInput from './MainChatInput';
 import MessageFromUrl from './MainChatInput/MessageFromUrl';
 import ThreadHydration from './ThreadHydration';
@@ -92,6 +98,12 @@ const Conversation = memo(() => {
   // Subagent threads (spawned by an external agent's subagent tool call) are
   // read-only — the parent agent drives their execution, so hide the input.
   const isSubagentThread = useChatStore(threadSelectors.isActiveThreadSubagent);
+  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const isInboxLanding = shouldShowInboxAgentLanding({
+    agentId: context.agentId,
+    inboxAgentId,
+    topicId: context.topicId,
+  });
 
   // Auto-reconnect to running Gateway operation on topic load
   const runningOperation = useChatStore((s) =>
@@ -129,6 +141,12 @@ const Conversation = memo(() => {
     [businessAnalyticsHooks, chatFollowUpHooks],
   );
 
+  const chatInput = !isSubagentThread && !topicPending && (
+    <MessageForwardFooter>
+      {isHeterogeneousAgent ? <HeterogeneousChatInput /> : <MainChatInput />}
+    </MessageForwardFooter>
+  );
+
   return (
     <ConversationProvider
       actionsBar={actionsBarConfig}
@@ -141,52 +159,57 @@ const Conversation = memo(() => {
         replaceMessages(messages, { context: ctx, source: meta?.source });
       }}
     >
-      <SplitDropZone>
-        <Flexbox
-          flex={1}
-          width={'100%'}
-          style={{
-            overflowX: 'hidden',
-            overflowY: 'auto',
-            position: 'relative',
-          }}
-        >
-          {topicPending ? (
-            <TopicMigrationPlaceholder agentId={context.agentId} topicId={context.topicId} />
-          ) : (
-            <ChatList
-              headerSlot={<div aria-hidden className={styles.floatingHeaderSpacer} />}
-              messageDeepLink={messageDeepLink}
-              welcome={<AgentHome />}
-              footerSlot={
-                isSubagentThread ? (
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    justify={'center'}
-                    paddingBlock={6}
-                    paddingInline={16}
-                  >
-                    <span
-                      style={{
-                        color: cssVar.colorTextDescription,
-                        fontSize: 12,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {t('thread.subagentReadOnlyHint')}
-                    </span>
-                  </Flexbox>
-                ) : undefined
-              }
-            />
-          )}
-        </Flexbox>
-      </SplitDropZone>
-      {!isSubagentThread && !topicPending && (
-        <MessageForwardFooter>
-          {isHeterogeneousAgent ? <HeterogeneousChatInput /> : <MainChatInput />}
-        </MessageForwardFooter>
+      {isInboxLanding ? (
+        <InboxAgentLanding>
+          <ToolAuthAlert />
+          {chatInput}
+        </InboxAgentLanding>
+      ) : (
+        <>
+          <SplitDropZone>
+            <Flexbox
+              flex={1}
+              width={'100%'}
+              style={{
+                overflowX: 'hidden',
+                overflowY: 'auto',
+                position: 'relative',
+              }}
+            >
+              {topicPending ? (
+                <TopicMigrationPlaceholder agentId={context.agentId} topicId={context.topicId} />
+              ) : (
+                <ChatList
+                  headerSlot={<div aria-hidden className={styles.floatingHeaderSpacer} />}
+                  messageDeepLink={messageDeepLink}
+                  welcome={<AgentHome />}
+                  footerSlot={
+                    isSubagentThread ? (
+                      <Flexbox
+                        horizontal
+                        align={'center'}
+                        justify={'center'}
+                        paddingBlock={6}
+                        paddingInline={16}
+                      >
+                        <span
+                          style={{
+                            color: cssVar.colorTextDescription,
+                            fontSize: 12,
+                            textAlign: 'center',
+                          }}
+                        >
+                          {t('thread.subagentReadOnlyHint')}
+                        </span>
+                      </Flexbox>
+                    ) : undefined
+                  }
+                />
+              )}
+            </Flexbox>
+          </SplitDropZone>
+          {chatInput}
+        </>
       )}
       {topicPending && (
         <Flexbox horizontal align={'center'} justify={'center'} paddingBlock={6} paddingInline={16}>

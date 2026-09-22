@@ -8,6 +8,21 @@
 // and a computed-style histogram over every text-bearing node, so two pages can be
 // diffed without eyeballing screenshots.
 //
+// ── WHAT THIS CANNOT DO (read before quoting its output as evidence) ────────────
+// The style layer is a HISTOGRAM: it counts how many text-bearing nodes carry each
+// fontSize/color. A histogram answers "which values appear on this page", never "is
+// THIS element's value right". One wrong label disappears into its bucket.
+//
+// It also cannot see behaviour or geometry, so a purely decorative row and a
+// clickable one report identically.
+//
+// Use it to TRIAGE — to find where to look. Never as a parity verdict. This is not
+// hypothetical: four rounds of user-reported defects (a wrong label colour, two
+// competing status-icon maps, an extra card row, a wrapping value) were all invisible
+// here, and all four were found by enumerating members and pairing them element-wise.
+// For anything you intend to call "aligned", use cdp-snapshot.cjs and compare paired
+// elements on specific properties.
+//
 // Usage:
 //   node cdp-dom-probe.cjs --port 9333 --out probe.json [--target-url <substr>]
 //                          [--max-depth 9] [--timeout 20000]

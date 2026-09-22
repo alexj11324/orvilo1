@@ -10,6 +10,19 @@
 // question to resolve against the page, not a proven defect. Screenshots, behavior
 // probes and pixel comparison remain separate gates.
 //
+// ── HOW THIS CONJOINS, AND WHAT THAT COSTS ──────────────────────────────────────
+// The left join is keyed on NORMALISED TEXT. `Description` exists on both sides, so
+// it matches, so it is not reported — and its colour, size, weight, icon and geometry
+// were never part of the key, so they were never compared.
+//
+// Consequence: this can only find (a) labels present on one side only and (b) coarse
+// font-scale deltas. "Both sides have the element; its styling differs" — the defect
+// class users actually report — is structurally invisible to it.
+//
+// When that matters, pair elements explicitly instead: take a cdp-snapshot.cjs dump
+// of each side, name the element in each, and compare the specific properties. A
+// parity claim is only worth as much as its pairing key.
+//
 // Usage:
 //   node parity-diff.cjs --reference linear.json --candidate orvilo.json [--out diff.json]
 

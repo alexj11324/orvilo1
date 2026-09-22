@@ -46,18 +46,17 @@ import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 
 const styles = createStaticStyles(({ css }) => ({
   teamHeader: css`
-    display: flex;
-    align-items: center;
-  `,
-  teamLink: css`
-    flex: 1;
-    min-width: 0;
-    color: inherit;
-    text-decoration: none;
+    margin-inline: 8px;
   `,
   teamTrigger: css`
-    flex: none;
-    padding: 2px;
+    height: 28px;
+    padding-block: 0;
+    padding-inline: 4px;
+  `,
+  teamName: css`
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   `,
 }));
 
@@ -77,8 +76,8 @@ interface TeamsSectionProps {
 
 /**
  * "Your teams" group of the fixed IA. Each readable team is an expandable row
- * (Linear's Your teams): the chevron toggles the sub-navigation, the name
- * deep-links to the team's home tab. The sub-navigation starts OPEN — the only
+ * (Linear's Your teams): the whole team row toggles its sub-navigation and
+ * its Home child navigates to the team page. The sub-navigation starts OPEN — the only
  * state worth persisting is the team the user folded away.
  */
 const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
@@ -189,26 +188,14 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
             return (
               <AccordionItem key={team.id} value={teamAccordionKey(team.id)}>
                 <AccordionHeader className={styles.teamHeader}>
-                  <AccordionTrigger
-                    aria-label={t('navPanel.yourTeams')}
-                    className={styles.teamTrigger}
-                  />
-                  <WorkspaceLink className={styles.teamLink} to={`/teams/${team.id}`}>
-                    <NavItem
-                      active={tab === 'teams' && activeTab === 'home'}
-                      icon={undefined}
-                      title={team.name}
-                      slots={{
-                        titlePrefix: (
-                          <TeamIdentity
-                            color={team.color}
-                            id={team.id}
-                            letter={(team.key || team.name).slice(0, 1)}
-                          />
-                        ),
-                      }}
+                  <AccordionTrigger className={styles.teamTrigger}>
+                    <TeamIdentity
+                      color={team.color}
+                      id={team.id}
+                      letter={(team.key || team.name).slice(0, 1)}
                     />
-                  </WorkspaceLink>
+                    <span className={styles.teamName}>{team.name}</span>
+                  </AccordionTrigger>
                 </AccordionHeader>
                 <AccordionPanel>
                   <Flexbox gap={1} paddingBlock={1} style={{ paddingInlineStart: 20 }}>

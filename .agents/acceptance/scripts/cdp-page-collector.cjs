@@ -162,6 +162,10 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
     'button', 'link', 'menuitem', 'option', 'tab', 'checkbox', 'radio', 'switch',
     'combobox', 'listbox', 'treeitem', 'slider', 'spinbutton', 'textbox',
   ]);
+  const LANDMARK_TAGS = new Set(['main', 'nav', 'aside', 'header', 'footer', 'section', 'article']);
+  const LANDMARK_ROLES = new Set([
+    'main', 'navigation', 'complementary', 'banner', 'contentinfo', 'region', 'search',
+  ]);
 
   const ownText = (el) => {
     let t = '';
@@ -263,6 +267,25 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
     return null;
   };
 
+  const describeRegion = (el, index) => {
+    let candidate = el;
+    while (candidate && candidate.nodeType === 1) {
+      const tag = String(candidate.tagName || '').toLowerCase();
+      const role = candidate.getAttribute('role');
+      if (LANDMARK_TAGS.has(tag) || LANDMARK_ROLES.has(role)) {
+        return {
+          i: index.get(candidate) ?? null,
+          tag: candidate.tagName,
+          id: candidate.id || null,
+          role,
+          ariaLabel: candidate.getAttribute('aria-label'),
+        };
+      }
+      candidate = candidate.parentElement;
+    }
+    return { i: null, tag: 'DOCUMENT', id: null, role: 'document', ariaLabel: null };
+  };
+
   const isVisible = (el, rect, computed, svgish) => {
     if (rect.width === 0 && rect.height === 0) return false;
     // SVG elements generally have no HTML offsetParent despite being painted. Geometry plus the
@@ -318,6 +341,7 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       computedFill: computed.fill,
       computedStroke: computed.stroke,
     } : null;
+    const region = describeRegion(el, index);
 
     return {
       i,
@@ -344,6 +368,7 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       fractionalBox,
       visible,
       occluded: visible ? isOccluded(el, r) : null,
+      region,
       style,
       paint,
       svg: svgData(el, fractionalBox, computed),
@@ -367,6 +392,107 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
     };
   });
 
+  // This is an inventory, not a parity verdict. It deliberately includes every visible DOM
+  // element, including ordinary containers/text and SVG descendants. Consumers may add explicit
+  // pairs or heuristic candidates later, but those overlays cannot shrink inspection coverage.
+  const coverageInventory = elements.filter((el) => el.visible).map((el) => ({
+    i: el.i,
+    parent: el.parent,
+    depth: el.depth,
+    region: el.region,
+    geometry: el.fractionalBox,
+    identity: {
+      tag: el.tag,
+      id: el.id,
+      role: el.role,
+      ariaLabel: el.aria.label,
+      dataTestId: all[el.i]?.getAttribute('data-testid') ?? null,
+      name: all[el.i]?.getAttribute('name') ?? null,
+      type: all[el.i]?.getAttribute('type') ?? null,
+      href: el.behavior.href,
+      ownText: el.ownText,
+      subtreeText: el.subtreeText,
+      svg: el.svg ? {
+        tag: el.svg.tag,
+        viewBox: el.svg.viewBox,
+        path: el.svg.path,
+      } : null,
+    },
+    categories: {
+      interactive: Boolean(el.behavior.nearestInteractiveAncestor?.i === el.i),
+      svg: Boolean(el.svg),
+      svgRoot: el.svg?.tag === 'svg',
+      text: Boolean(el.ownText),
+      container: Boolean(all[el.i]?.children?.length),
+    },
+    interactionStates: {
+      hover: 'not-tested',
+      focus: 'not-tested',
+      click: 'not-tested',
+    },
+  }));
+  const requiredInteractionEdges = [
+    { edge: 'hover', conditional: false, safety: 'read-only' },
+    { edge: 'focus', conditional: false, safety: 'read-only' },
+    {
+      edge: 'activate',
+      conditional: false,
+      safety: 'requires-explicit-non-destructive-journey',
+    },
+    { edge: 'result-state', conditional: false, safety: 'observe-after-explicit-action' },
+    {
+      edge: 'options-enumerated',
+      conditional: true,
+      safety: 'observe-popup-after-explicit-action',
+    },
+    {
+      edge: 'selection-feedback',
+      conditional: true,
+      safety: 'requires-explicit-non-destructive-journey',
+    },
+    {
+      edge: 'persistence-or-navigation',
+      conditional: true,
+      safety: 'requires-explicit-non-destructive-journey',
+    },
+    {
+      edge: 'error-feedback',
+      conditional: true,
+      safety: 'requires-explicit-non-destructive-journey',
+    },
+  ];
+  const interactionControls = coverageInventory.filter((item) => item.categories.interactive).map(
+    (item) => ({
+      elementIndex: item.i,
+      identity: item.identity,
+      region: item.region,
+      geometry: item.geometry,
+      edges: requiredInteractionEdges.map((edge) => ({
+        ...edge,
+        status: 'not-tested',
+        evidence: [],
+      })),
+    }),
+  );
+  const interactionManifest = {
+    schemaVersion: 1,
+    scope: 'all-visible-interactive-roots',
+    complete: false,
+    safety:
+      'Static collection never activates controls. Activation evidence must come from an explicit non-destructive journey.',
+    controls: interactionControls,
+    summary: {
+      controlCount: interactionControls.length,
+      requiredEdgeCount: interactionControls.length * requiredInteractionEdges.length,
+      observedEdgeCount: 0,
+      blockerCount:
+        interactionControls.length === 0
+          ? 1
+          : interactionControls.length * requiredInteractionEdges.length,
+      emptySurfaceBlocker: interactionControls.length === 0,
+    },
+  };
+
   return {
     meta: {
       url: location.href,
@@ -378,8 +504,20 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       totalElements: document.querySelectorAll('*').length,
       truncated: document.querySelectorAll('*').length > ${max},
       interactionVerification: 'not-tested',
+      coverage: {
+        scope: 'all-visible-dom-elements',
+        inventoryCount: coverageInventory.length,
+        completeCapture: document.querySelectorAll('*').length <= ${max},
+        interactionStateCoverage: {
+          hover: 'not-tested',
+          focus: 'not-tested',
+          click: 'not-tested',
+        },
+      },
     },
     elements,
+    coverageInventory,
+    interactionManifest,
   };
 })()
 `.trim();

@@ -205,6 +205,32 @@ test('snapshot retains nested pills, textless SVG icon geometry, pseudo content,
   assert.equal(dead.behavior.nearestInteractiveAncestor, null);
   assert.equal(dead.behavior.interactionVerification, 'not-tested');
   assert.equal(snapshot.meta.interactionVerification, 'not-tested');
+
+  const visible = snapshot.elements.filter((item) => item.visible);
+  assert.equal(snapshot.coverageInventory.length, visible.length);
+  assert.ok(
+    snapshot.coverageInventory.some(
+      (item) => item.identity.ownText === 'Properties' && item.categories.text,
+    ),
+    'ordinary visible text must be inventoried even when it is not an explicit pair',
+  );
+  const iconInventory = snapshot.coverageInventory.find((item) => item.identity.id === 'calendar');
+  assert.equal(iconInventory.categories.svgRoot, true);
+  assert.deepEqual(iconInventory.geometry, svg.fractionalBox);
+  assert.equal(iconInventory.region.role, 'document');
+  assert.equal(iconInventory.interactionStates.hover, 'not-tested');
+  assert.equal(snapshot.meta.coverage.scope, 'all-visible-dom-elements');
+  assert.equal(snapshot.meta.coverage.interactionStateCoverage.hover, 'not-tested');
+  assert.equal(snapshot.interactionManifest.scope, 'all-visible-interactive-roots');
+  assert.equal(snapshot.interactionManifest.complete, false);
+  assert.equal(snapshot.interactionManifest.controls.length, 1);
+  assert.equal(snapshot.interactionManifest.controls[0].elementIndex, capsule.i);
+  assert.equal(snapshot.interactionManifest.controls[0].edges.length, 8);
+  assert.ok(
+    snapshot.interactionManifest.controls[0].edges.every(
+      (edge) => edge.status === 'not-tested' && edge.evidence.length === 0,
+    ),
+  );
 });
 
 test('dom probe keeps a textless SVG in triage structure while exposing full elements', async () => {

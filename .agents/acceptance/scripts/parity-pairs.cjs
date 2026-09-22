@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * Pairwise parity comparison, driven by an explicit pair list.
+ * Whole visible-DOM parity coverage with optional explicit inspection pairs.
  *
  * Why this exists next to parity-diff.cjs: that tool left-joins on normalised TEXT, so an
  * element present on both sides always matches and its colour/size/weight/geometry never
  * enter the comparison. Every defect users reported in this project was of exactly that
  * shape — "both sides have it, but it differs". A text-keyed join cannot see them.
  *
- * The fix is not a cleverer automatic matcher. Joining two different codebases
- * automatically produces confident nonsense, and its failures are invisible because a
- * wrong pair still prints two values. So pairing is EXPLICIT here: the pair list names each
- * side's element and the properties to compare, and every pair that cannot be resolved is
- * reported as unresolved rather than quietly matched to something else.
+ * Every visible element enters a coverage inventory. Unique identity matches receive a
+ * deterministic, heuristic property comparison; duplicate or missing matches block strict
+ * coverage. Explicit pairs can supplement that scan but cannot bypass identity, behavior, or
+ * one-to-one checks. Cross-application semantic equivalence still requires human review.
  *
  * Usage:
- *   node parity-pairs.cjs --reference ref.json --candidate cand.json --pairs pairs.json
- *                         [--out table.md]
+ *   node parity-pairs.cjs --reference ref.json --candidate cand.json [--pairs pairs.json]
+ *                         [--out table.md] [--coverage-out coverage.json]
+ *                         [--require-complete-coverage]
  *
  * Pair file shape (JSON array). Each side match is a set of conditions ANDed together;
  * `nth` disambiguates when several elements satisfy the rest (0-based, in document order):
@@ -55,14 +55,19 @@ const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? fallback : process.argv[i + 1];
 };
+const flag = (name) => process.argv.includes(`--${name}`);
 
 const REF = arg('reference', '');
 const CAND = arg('candidate', '');
 const PAIRS = arg('pairs', '');
 const OUT = arg('out', '');
-if (!REF || !CAND || !PAIRS) {
+const COVERAGE_OUT = arg('coverage-out', '');
+const REQUIRE_COMPLETE_COVERAGE = flag('require-complete-coverage');
+const AMBIGUITY_EXAMPLE_LIMIT = 5;
+if (!REF || !CAND) {
   process.stderr.write(
-    'usage: parity-pairs.cjs --reference R.json --candidate C.json --pairs P.json\n',
+    'usage: parity-pairs.cjs --reference R.json --candidate C.json [--pairs P.json] ' +
+      '[--coverage-out coverage.json] [--require-complete-coverage]\n',
   );
   process.exit(2);
 }
@@ -70,7 +75,7 @@ if (!REF || !CAND || !PAIRS) {
 const load = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
 const refSnap = load(REF);
 const candSnap = load(CAND);
-const pairs = load(PAIRS);
+const pairs = PAIRS ? load(PAIRS) : [];
 
 // The paint object's real keys are attrFill / attrStroke / computedFill / computedStroke. Asking
 // for `paint.fill` reads a key that does not exist and yields undefined on both sides — which the
@@ -222,7 +227,503 @@ const resolve = (snap, cond) => {
 
 const fmt = (v) => (v === undefined || v === null ? '—' : String(v));
 
+const normalizedText = (value) =>
+  value === undefined || value === null ? '' : String(value).replaceAll(/\s+/g, ' ').trim();
+
+const derivedRegion = (byIndex, el) => {
+  let current = el;
+  while (current) {
+    const tag = normalizedText(current.tag).toLowerCase();
+    const role = normalizedText(current.role).toLowerCase();
+    if (
+      ['main', 'nav', 'aside', 'header', 'footer', 'section', 'article'].includes(tag) ||
+      ['main', 'navigation', 'complementary', 'banner', 'contentinfo', 'region', 'search'].includes(
+        role,
+      )
+    ) {
+      return {
+        i: current.i,
+        tag: current.tag ?? null,
+        id: current.id ?? null,
+        role: current.role ?? null,
+        ariaLabel: current.aria?.label ?? null,
+      };
+    }
+    current = byIndex.get(current.parent);
+  }
+  return { i: null, tag: 'DOCUMENT', id: null, role: 'document', ariaLabel: null };
+};
+
+const inventoryFrom = (snap) => {
+  const elements = snap.elements || [];
+  const byIndex = new Map(elements.map((el) => [el.i, el]));
+  const hasCollectorInventory = Array.isArray(snap.coverageInventory);
+  const source = hasCollectorInventory
+    ? snap.coverageInventory
+    : elements.filter((el) => el.visible === true);
+
+  return source.map((raw) => {
+    const el = byIndex.get(raw.i) || raw;
+    const rawGeometry = raw.geometry || el.fractionalBox || el.box || {};
+    const geometry = {
+      x: rawGeometry.x,
+      y: rawGeometry.y,
+      width: rawGeometry.width ?? rawGeometry.w,
+      height: rawGeometry.height ?? rawGeometry.h,
+    };
+    const identity = {
+      tag: raw.identity?.tag ?? el.tag ?? null,
+      id: raw.identity?.id ?? el.id ?? null,
+      role: raw.identity?.role ?? el.role ?? null,
+      ariaLabel: raw.identity?.ariaLabel ?? el.aria?.label ?? null,
+      dataTestId: raw.identity?.dataTestId ?? null,
+      name: raw.identity?.name ?? null,
+      type: raw.identity?.type ?? null,
+      href: raw.identity?.href ?? el.behavior?.href ?? null,
+      ownText: raw.identity?.ownText ?? el.ownText ?? null,
+      subtreeText: raw.identity?.subtreeText ?? el.subtreeText ?? null,
+      svg:
+        raw.identity?.svg ??
+        (el.svg
+          ? { tag: el.svg.tag ?? null, viewBox: el.svg.viewBox ?? null, path: el.svg.path ?? null }
+          : null),
+    };
+    const issues = [];
+    if (!Number.isInteger(raw.i)) issues.push('missing integer element index');
+    if (!identity.tag) issues.push('missing tag identity');
+    if (![geometry.x, geometry.y, geometry.width, geometry.height].every(Number.isFinite))
+      issues.push('missing finite geometry');
+
+    return {
+      i: raw.i,
+      parent: raw.parent ?? el.parent ?? null,
+      depth: raw.depth ?? el.depth ?? null,
+      region: raw.region ?? el.region ?? derivedRegion(byIndex, el),
+      geometry,
+      identity,
+      categories: raw.categories ?? {
+        interactive: el.behavior?.nearestInteractiveAncestor?.i === el.i,
+        svg: Boolean(el.svg),
+        svgRoot: el.svg?.tag === 'svg',
+        text: Boolean(el.ownText),
+        container: false,
+      },
+      interactionStates: raw.interactionStates ?? {
+        hover: 'not-tested',
+        focus: 'not-tested',
+        click: 'not-tested',
+      },
+      inventorySource: hasCollectorInventory ? 'collector' : 'derived-from-elements',
+      issues,
+      status: null,
+      match: null,
+      ambiguity: null,
+    };
+  });
+};
+
+// Exact uniqueness makes the heuristic deterministic and conservative. Geometry is deliberately
+// excluded from the key: using x/y/order to force a match would silently pair duplicate labels or
+// structurally different containers. Ambiguous groups remain visible for human review.
+const heuristicKey = (item) => {
+  const identity = item.identity;
+  const regionKind = normalizedText(
+    item.region?.role || item.region?.tag || 'document',
+  ).toLowerCase();
+  return JSON.stringify([
+    normalizedText(identity.tag).toLowerCase(),
+    normalizedText(identity.role).toLowerCase(),
+    normalizedText(identity.ariaLabel),
+    normalizedText(identity.name),
+    normalizedText(identity.type),
+    normalizedText(identity.href),
+    normalizedText(identity.ownText),
+    normalizedText(identity.subtreeText),
+    normalizedText(identity.svg?.tag).toLowerCase(),
+    normalizedText(identity.svg?.viewBox),
+    normalizedText(identity.svg?.path),
+    regionKind,
+  ]);
+};
+
+const AUTOMATIC_TOLERANCES = Object.freeze({
+  geometryCssPixels: 0.5,
+  style: 'exact after volatile timestamp/generated-id normalization',
+  paint: 'exact after volatile timestamp/generated-id normalization',
+  svg: 'exact after volatile timestamp/generated-id normalization',
+  pseudo: 'exact after volatile timestamp/generated-id normalization',
+});
+
+const normalizeVolatileString = (value) =>
+  String(value)
+    .replaceAll(
+      /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\b/g,
+      '<timestamp>',
+    )
+    .replaceAll(
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi,
+      '<uuid>',
+    )
+    .replaceAll(
+      /:r[\w.-]+:|(?:radix|headlessui|react-aria|rc_select)[-_:][\w:.-]+/gi,
+      '<generated-id>',
+    );
+
+const flattenComparable = (value, prefix = '', output = new Map()) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const keys = Object.keys(value).sort();
+    if (keys.length === 0 && prefix) output.set(prefix, {});
+    for (const key of keys) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      flattenComparable(value[key], path, output);
+    }
+    return output;
+  }
+  if (prefix) output.set(prefix, value);
+  return output;
+};
+
+const comparablePayload = (element, inventoryItem) => {
+  if (!element) return null;
+  const svg = element.svg
+    ? {
+        tag: element.svg.tag,
+        viewBox: element.svg.viewBox,
+        path: element.svg.path,
+        pathData: element.svg.pathData,
+        geometry: element.svg.geometry,
+        attributes: element.svg.attributes,
+        paint: element.svg.paint,
+      }
+    : null;
+  return {
+    geometry: {
+      fractional: element.fractionalBox ?? inventoryItem.geometry,
+      rounded: element.box ?? null,
+    },
+    identity: inventoryItem.identity ?? null,
+    behavior: element.behavior ?? null,
+    style: element.style ?? null,
+    paint: element.paint ?? null,
+    svg,
+    pseudo: element.pseudo ?? null,
+  };
+};
+
+const compareCapturedProperties = ({
+  referenceElement,
+  candidateElement,
+  referenceItem,
+  candidateItem,
+}) => {
+  const referencePayload = comparablePayload(referenceElement, referenceItem);
+  const candidatePayload = comparablePayload(candidateElement, candidateItem);
+  if (!referencePayload || !candidatePayload) {
+    return {
+      status: 'unreadable',
+      differenceCount: 0,
+      differences: [],
+      error: 'paired inventory item is missing its source element',
+    };
+  }
+
+  const referenceValues = flattenComparable(referencePayload);
+  const candidateValues = flattenComparable(candidatePayload);
+  const paths = [...new Set([...referenceValues.keys(), ...candidateValues.keys()])].sort();
+  const differences = [];
+
+  for (const path of paths) {
+    const hasReference = referenceValues.has(path);
+    const hasCandidate = candidateValues.has(path);
+    const reference = referenceValues.get(path);
+    const candidate = candidateValues.get(path);
+    const geometryTolerance = path.startsWith('geometry.')
+      ? AUTOMATIC_TOLERANCES.geometryCssPixels
+      : 0;
+    let same = false;
+    let normalizedReference = reference;
+    let normalizedCandidate = candidate;
+
+    if (hasReference && hasCandidate) {
+      if (geometryTolerance > 0 && typeof reference === 'number' && typeof candidate === 'number') {
+        same = Math.abs(reference - candidate) <= geometryTolerance;
+      } else {
+        if (typeof reference === 'string') normalizedReference = normalizeVolatileString(reference);
+        if (typeof candidate === 'string') normalizedCandidate = normalizeVolatileString(candidate);
+        same = JSON.stringify(normalizedReference) === JSON.stringify(normalizedCandidate);
+      }
+    }
+
+    if (!same) {
+      differences.push({
+        path,
+        reference: hasReference ? reference : { missing: true },
+        candidate: hasCandidate ? candidate : { missing: true },
+        normalizedReference,
+        normalizedCandidate,
+        tolerance: geometryTolerance,
+      });
+    }
+  }
+
+  return {
+    status: differences.length > 0 ? 'different' : 'same',
+    differenceCount: differences.length,
+    differences,
+  };
+};
+
+const addManualMatch = (map, index, match) => {
+  if (!map.has(index)) map.set(index, []);
+  map.get(index).push(match);
+};
+
+const summarizeInventory = (records) => {
+  const count = (status) => records.filter((item) => item.status === status).length;
+  const pairedExplicit = count('paired-explicit');
+  const pairedHeuristic = count('paired-heuristic');
+  return {
+    total: records.length,
+    paired: pairedExplicit + pairedHeuristic,
+    pairedExplicit,
+    pairedHeuristic,
+    ambiguous: count('ambiguous'),
+    unpaired: count('unpaired'),
+    unreadable: count('unreadable'),
+  };
+};
+
+const validateCapture = (snap, label) => {
+  const issues = [];
+  const elements = Array.isArray(snap?.elements) ? snap.elements : [];
+  const meta = snap?.meta;
+  const coverage = meta?.coverage;
+  const rawInventory = snap?.coverageInventory;
+
+  if (!Array.isArray(snap?.elements)) issues.push(`${label}: elements must be an array`);
+  if (elements.length === 0) issues.push(`${label}: elements must not be empty`);
+  const elementIndexes = elements.map((item) => item.i);
+  const duplicateElementIndexCount = elementIndexes.length - new Set(elementIndexes).size;
+  if (duplicateElementIndexCount > 0)
+    issues.push(
+      `${label}: elements contains ${duplicateElementIndexCount} duplicate element indexes`,
+    );
+  if (!meta || typeof meta !== 'object') {
+    issues.push(`${label}: missing meta object`);
+  } else {
+    if (!Number.isInteger(meta.elementCount))
+      issues.push(`${label}: meta.elementCount must be an integer`);
+    else if (meta.elementCount !== elements.length)
+      issues.push(
+        `${label}: meta.elementCount=${meta.elementCount} does not match elements.length=${elements.length}`,
+      );
+    if (!Number.isInteger(meta.totalElements))
+      issues.push(`${label}: meta.totalElements must be an integer`);
+    else if (Number.isInteger(meta.elementCount) && meta.totalElements < meta.elementCount)
+      issues.push(`${label}: meta.totalElements is smaller than meta.elementCount`);
+    if (typeof meta.truncated !== 'boolean')
+      issues.push(`${label}: meta.truncated must be boolean`);
+    else if (
+      meta.truncated === false &&
+      Number.isInteger(meta.totalElements) &&
+      Number.isInteger(meta.elementCount) &&
+      meta.totalElements !== meta.elementCount
+    )
+      issues.push(`${label}: non-truncated totalElements does not match elementCount`);
+    if (!coverage || typeof coverage !== 'object') {
+      issues.push(`${label}: missing meta.coverage`);
+    } else {
+      if (coverage.scope !== 'all-visible-dom-elements')
+        issues.push(`${label}: meta.coverage.scope is not all-visible-dom-elements`);
+      if (!Number.isInteger(coverage.inventoryCount))
+        issues.push(`${label}: meta.coverage.inventoryCount must be an integer`);
+      if (typeof coverage.completeCapture !== 'boolean')
+        issues.push(`${label}: meta.coverage.completeCapture must be boolean`);
+      if (
+        typeof meta.truncated === 'boolean' &&
+        typeof coverage.completeCapture === 'boolean' &&
+        coverage.completeCapture === meta.truncated
+      )
+        issues.push(`${label}: completeCapture and truncated metadata contradict each other`);
+    }
+  }
+
+  if (!Array.isArray(rawInventory)) {
+    issues.push(`${label}: missing coverageInventory array`);
+    return issues;
+  }
+
+  if (Number.isInteger(coverage?.inventoryCount) && coverage.inventoryCount !== rawInventory.length)
+    issues.push(
+      `${label}: meta.coverage.inventoryCount=${coverage.inventoryCount} does not match coverageInventory.length=${rawInventory.length}`,
+    );
+
+  const visibleIndices = elements.filter((item) => item.visible === true).map((item) => item.i);
+  const unknownVisibilityCount = elements.filter(
+    (item) => typeof item.visible !== 'boolean',
+  ).length;
+  if (unknownVisibilityCount > 0)
+    issues.push(`${label}: ${unknownVisibilityCount} elements have unreadable visibility`);
+
+  const inventoryIndices = rawInventory.map((item) => item.i);
+  const inventoryIndexSet = new Set(inventoryIndices);
+  const duplicateCount = inventoryIndices.length - inventoryIndexSet.size;
+  if (duplicateCount > 0)
+    issues.push(`${label}: coverageInventory contains ${duplicateCount} duplicate element indexes`);
+
+  const visibleSet = new Set(visibleIndices);
+  const missing = visibleIndices.filter((index) => !inventoryIndexSet.has(index));
+  const extra = inventoryIndices.filter((index) => !visibleSet.has(index));
+  if (missing.length > 0)
+    issues.push(
+      `${label}: coverageInventory omits ${missing.length} visible elements (examples: ${missing
+        .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
+        .join(', ')})`,
+    );
+  if (extra.length > 0)
+    issues.push(
+      `${label}: coverageInventory includes ${extra.length} non-visible or unknown elements (examples: ${extra
+        .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
+        .join(', ')})`,
+    );
+  return issues;
+};
+
+const REQUIRED_INTERACTION_EDGES = [
+  'hover',
+  'focus',
+  'activate',
+  'result-state',
+  'options-enumerated',
+  'selection-feedback',
+  'persistence-or-navigation',
+  'error-feedback',
+];
+
+const validateInteractionManifest = (snap, inventory, label) => {
+  const manifest = snap?.interactionManifest;
+  const issues = [];
+  const blockers = [];
+  const expectedControlIndexes = inventory
+    .filter((item) => item.categories.interactive)
+    .map((item) => item.i);
+
+  if (!manifest || typeof manifest !== 'object') {
+    issues.push(`${label}: missing interactionManifest`);
+    blockers.push({
+      elementIndex: null,
+      edge: 'manifest',
+      status: 'missing',
+      reason: 'no interaction journey manifest was captured',
+    });
+    return { complete: false, issues, blockers, controlCount: 0, observedEdgeCount: 0 };
+  }
+  if (manifest.schemaVersion !== 1)
+    issues.push(`${label}: unsupported interactionManifest schemaVersion`);
+  if (manifest.scope !== 'all-visible-interactive-roots')
+    issues.push(`${label}: interactionManifest scope is incomplete`);
+  if (!Array.isArray(manifest.controls)) {
+    issues.push(`${label}: interactionManifest.controls must be an array`);
+    blockers.push({
+      elementIndex: null,
+      edge: 'manifest',
+      status: 'unreadable',
+      reason: 'control journey list is unreadable',
+    });
+    return { complete: false, issues, blockers, controlCount: 0, observedEdgeCount: 0 };
+  }
+
+  const controlIndexes = manifest.controls.map((control) => control.elementIndex);
+  const duplicateControlCount = controlIndexes.length - new Set(controlIndexes).size;
+  if (duplicateControlCount > 0)
+    issues.push(
+      `${label}: interactionManifest contains ${duplicateControlCount} duplicate controls`,
+    );
+  const controlIndexSet = new Set(controlIndexes);
+  const expectedControlSet = new Set(expectedControlIndexes);
+  const missingControls = expectedControlIndexes.filter((index) => !controlIndexSet.has(index));
+  const extraControls = controlIndexes.filter((index) => !expectedControlSet.has(index));
+  if (missingControls.length > 0)
+    issues.push(`${label}: interactionManifest omits ${missingControls.length} visible controls`);
+  if (extraControls.length > 0)
+    issues.push(
+      `${label}: interactionManifest includes ${extraControls.length} non-control elements`,
+    );
+
+  let observedEdgeCount = 0;
+  for (const control of manifest.controls) {
+    if (!Array.isArray(control.edges)) {
+      issues.push(`${label}: control ${control.elementIndex} has no readable interaction edges`);
+      blockers.push({
+        elementIndex: control.elementIndex,
+        edge: 'all',
+        status: 'unreadable',
+        reason: 'interaction edge list is unreadable',
+      });
+      continue;
+    }
+    const byEdge = new Map(control.edges.map((edge) => [edge.edge, edge]));
+    for (const edgeName of REQUIRED_INTERACTION_EDGES) {
+      const edge = byEdge.get(edgeName);
+      if (!edge) {
+        blockers.push({
+          elementIndex: control.elementIndex,
+          edge: edgeName,
+          status: 'missing',
+          reason: 'required interaction edge is absent',
+        });
+        continue;
+      }
+      const evidence = Array.isArray(edge.evidence) ? edge.evidence : [];
+      const observed = edge.status === 'observed' && evidence.length > 0;
+      const provenNotApplicable =
+        edge.status === 'not-applicable' && evidence.length > 0 && Boolean(edge.reason);
+      if (observed || provenNotApplicable) {
+        observedEdgeCount += 1;
+      } else {
+        blockers.push({
+          elementIndex: control.elementIndex,
+          edge: edgeName,
+          status: edge.status ?? 'unreadable',
+          reason:
+            edge.status === 'observed'
+              ? 'observed status has no evidence'
+              : 'explicit journey has not observed this edge',
+        });
+      }
+    }
+  }
+
+  if (expectedControlIndexes.length === 0) {
+    blockers.push({
+      elementIndex: null,
+      edge: 'interactive-surface',
+      status: 'empty',
+      reason:
+        'no visible interactive controls were captured; an empty shell is not acceptance evidence',
+    });
+  }
+  if (issues.length > 0) {
+    blockers.push({
+      elementIndex: null,
+      edge: 'manifest-schema',
+      status: 'unreadable',
+      reason: 'interaction manifest schema or coverage is incomplete',
+    });
+  }
+  return {
+    complete: blockers.length === 0,
+    issues,
+    blockers,
+    controlCount: manifest.controls.length,
+    observedEdgeCount,
+  };
+};
+
 const rows = [];
+const manualPairResults = [];
+const manualRefMatches = new Map();
+const manualCandMatches = new Map();
 let unresolved = 0;
 let diffs = 0;
 // Properties that produced no reading at all. Counted apart from diffs because they are not
@@ -236,6 +737,13 @@ for (const pair of pairs) {
 
   if (r.error || c.error) {
     unresolved += 1;
+    manualPairResults.push({
+      what: pair.what,
+      status: 'unresolved',
+      referenceIndex: r.el?.i ?? null,
+      candidateIndex: c.el?.i ?? null,
+      error: `ref: ${r.error || 'ok'} / cand: ${c.error || 'ok'}`,
+    });
     rows.push({
       what: pair.what,
       error: `ref: ${r.error || 'ok'} / cand: ${c.error || 'ok'}`,
@@ -243,6 +751,22 @@ for (const pair of pairs) {
     });
     continue;
   }
+
+  const manualMatch = {
+    what: pair.what,
+    status: 'resolved',
+    referenceIndex: r.el.i,
+    candidateIndex: c.el.i,
+  };
+  manualPairResults.push(manualMatch);
+  addManualMatch(manualRefMatches, r.el.i, {
+    what: pair.what,
+    candidateIndex: c.el.i,
+  });
+  addManualMatch(manualCandMatches, c.el.i, {
+    what: pair.what,
+    referenceIndex: r.el.i,
+  });
 
   const cells = props.map((p) => {
     const rv = getProp(refSnap, r.el, p);
@@ -275,6 +799,308 @@ for (const pair of pairs) {
   rows.push({ what: pair.what, cells });
 }
 
+const refInventory = inventoryFrom(refSnap);
+const candInventory = inventoryFrom(candSnap);
+const refInventoryIndexSet = new Set(refInventory.map((item) => item.i));
+const candInventoryIndexSet = new Set(candInventory.map((item) => item.i));
+
+// An explicit overlay cannot consume the same visible element more than once. Duplicate
+// labels for the same one-to-one pair are fine; distinct counterparts are ambiguous.
+const explicitRefTargets = new Map(
+  [...manualRefMatches].map(([index, matches]) => [
+    index,
+    new Set(
+      matches
+        .map((match) => match.candidateIndex)
+        .filter((index) => candInventoryIndexSet.has(index)),
+    ),
+  ]),
+);
+const explicitCandSources = new Map(
+  [...manualCandMatches].map(([index, matches]) => [
+    index,
+    new Set(
+      matches
+        .map((match) => match.referenceIndex)
+        .filter((index) => refInventoryIndexSet.has(index)),
+    ),
+  ]),
+);
+for (const item of refInventory) {
+  const visibleMatches = (manualRefMatches.get(item.i) || []).filter((match) =>
+    candInventoryIndexSet.has(match.candidateIndex),
+  );
+  const targets = explicitRefTargets.get(item.i) || new Set();
+  if (item.issues.length > 0) {
+    item.status = 'unreadable';
+  } else if (
+    targets.size > 0 &&
+    (targets.size !== 1 || [...targets].some((index) => explicitCandSources.get(index)?.size !== 1))
+  ) {
+    item.status = 'ambiguous';
+    item.ambiguity = {
+      groupKey: 'explicit-pair-conflict',
+      candidateCount: targets.size,
+      candidateExamples: [...targets].slice(0, AMBIGUITY_EXAMPLE_LIMIT),
+    };
+  } else if (visibleMatches.length > 0) {
+    item.status = 'paired-explicit';
+    item.match = { method: 'explicit-pair', pairs: visibleMatches };
+  }
+}
+for (const item of candInventory) {
+  const visibleMatches = (manualCandMatches.get(item.i) || []).filter((match) =>
+    refInventoryIndexSet.has(match.referenceIndex),
+  );
+  const sources = explicitCandSources.get(item.i) || new Set();
+  if (item.issues.length > 0) {
+    item.status = 'unreadable';
+  } else if (
+    sources.size > 0 &&
+    (sources.size !== 1 || [...sources].some((index) => explicitRefTargets.get(index)?.size !== 1))
+  ) {
+    item.status = 'ambiguous';
+    item.ambiguity = {
+      groupKey: 'explicit-pair-conflict',
+      candidateCount: sources.size,
+      candidateExamples: [...sources].slice(0, AMBIGUITY_EXAMPLE_LIMIT),
+    };
+  } else if (visibleMatches.length > 0) {
+    item.status = 'paired-explicit';
+    item.match = { method: 'explicit-pair', pairs: visibleMatches };
+  }
+}
+
+const groupByHeuristicKey = (records) => {
+  const groups = new Map();
+  for (const item of records.filter((record) => record.status === null)) {
+    const key = heuristicKey(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return groups;
+};
+
+const refGroups = groupByHeuristicKey(refInventory);
+const candGroups = groupByHeuristicKey(candInventory);
+const allHeuristicKeys = [...new Set([...refGroups.keys(), ...candGroups.keys()])].sort();
+
+for (const key of allHeuristicKeys) {
+  const refItems = refGroups.get(key) || [];
+  const candItems = candGroups.get(key) || [];
+  if (refItems.length === 1 && candItems.length === 1) {
+    refItems[0].status = 'paired-heuristic';
+    refItems[0].match = {
+      method: 'heuristic-exact-unique',
+      candidateIndex: candItems[0].i,
+    };
+    candItems[0].status = 'paired-heuristic';
+    candItems[0].match = {
+      method: 'heuristic-exact-unique',
+      referenceIndex: refItems[0].i,
+    };
+    continue;
+  }
+  if (refItems.length > 0 && candItems.length > 0) {
+    for (const item of refItems) {
+      item.status = 'ambiguous';
+      item.ambiguity = {
+        groupKey: key,
+        candidateCount: candItems.length,
+        candidateExamples: candItems
+          .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
+          .map((candidate) => candidate.i),
+      };
+    }
+    for (const item of candItems) {
+      item.status = 'ambiguous';
+      item.ambiguity = {
+        groupKey: key,
+        candidateCount: refItems.length,
+        candidateExamples: refItems
+          .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
+          .map((candidate) => candidate.i),
+      };
+    }
+    continue;
+  }
+  for (const item of [...refItems, ...candItems]) item.status = 'unpaired';
+}
+
+const refInventoryByIndex = new Map(refInventory.map((item) => [item.i, item]));
+const candInventoryByIndex = new Map(candInventory.map((item) => [item.i, item]));
+const refElementsByIndex = new Map((refSnap.elements || []).map((item) => [item.i, item]));
+const candElementsByIndex = new Map((candSnap.elements || []).map((item) => [item.i, item]));
+const comparisonRequests = new Map();
+
+for (const pair of manualPairResults.filter((item) => item.status === 'resolved')) {
+  if (
+    !refInventoryByIndex.has(pair.referenceIndex) ||
+    !candInventoryByIndex.has(pair.candidateIndex)
+  )
+    continue;
+  const key = `${pair.referenceIndex}:${pair.candidateIndex}`;
+  if (!comparisonRequests.has(key)) {
+    comparisonRequests.set(key, {
+      referenceIndex: pair.referenceIndex,
+      candidateIndex: pair.candidateIndex,
+      pairingMethod: 'explicit-pair',
+      labels: [],
+    });
+  }
+  comparisonRequests.get(key).labels.push(pair.what);
+}
+for (const item of refInventory.filter((record) => record.status === 'paired-heuristic')) {
+  const key = `${item.i}:${item.match.candidateIndex}`;
+  comparisonRequests.set(key, {
+    referenceIndex: item.i,
+    candidateIndex: item.match.candidateIndex,
+    pairingMethod: 'heuristic-exact-unique',
+    labels: [],
+  });
+}
+
+const capturedPropertyComparisons = [...comparisonRequests.values()]
+  .sort((a, b) => a.referenceIndex - b.referenceIndex || a.candidateIndex - b.candidateIndex)
+  .map((request) => ({
+    ...request,
+    ...compareCapturedProperties({
+      referenceElement: refElementsByIndex.get(request.referenceIndex),
+      candidateElement: candElementsByIndex.get(request.candidateIndex),
+      referenceItem: refInventoryByIndex.get(request.referenceIndex),
+      candidateItem: candInventoryByIndex.get(request.candidateIndex),
+    }),
+  }));
+const capturedPropertyDifferenceCount = capturedPropertyComparisons.reduce(
+  (sum, comparison) => sum + comparison.differenceCount,
+  0,
+);
+const differingCapturedPropertyPairs = capturedPropertyComparisons.filter(
+  (comparison) => comparison.status === 'different',
+).length;
+const unreadableCapturedPropertyPairs = capturedPropertyComparisons.filter(
+  (comparison) => comparison.status === 'unreadable',
+).length;
+
+const refCoverageSummary = summarizeInventory(refInventory);
+const candCoverageSummary = summarizeInventory(candInventory);
+const captureValidation = {
+  reference: validateCapture(refSnap, 'reference'),
+  candidate: validateCapture(candSnap, 'candidate'),
+};
+const captureIssues = [...captureValidation.reference, ...captureValidation.candidate];
+const interactionValidation = {
+  reference: validateInteractionManifest(refSnap, refInventory, 'reference'),
+  candidate: validateInteractionManifest(candSnap, candInventory, 'candidate'),
+};
+if (refSnap.meta?.truncated || refSnap.meta?.coverage?.completeCapture === false)
+  captureIssues.push('reference snapshot was truncated before every DOM element was captured');
+if (candSnap.meta?.truncated || candSnap.meta?.coverage?.completeCapture === false)
+  captureIssues.push('candidate snapshot was truncated before every DOM element was captured');
+
+const incompleteStatuses = ['ambiguous', 'unpaired', 'unreadable'];
+const inventoryCoverageComplete =
+  captureIssues.length === 0 &&
+  incompleteStatuses.every(
+    (status) =>
+      !refInventory.some((item) => item.status === status) &&
+      !candInventory.some((item) => item.status === status),
+  );
+const capturedPropertyComparisonComplete =
+  capturedPropertyDifferenceCount === 0 && unreadableCapturedPropertyPairs === 0;
+const interactionCoverageComplete =
+  interactionValidation.reference.complete && interactionValidation.candidate.complete;
+const interactionBlockerCount =
+  interactionValidation.reference.blockers.length + interactionValidation.candidate.blockers.length;
+const coverageComplete =
+  inventoryCoverageComplete && capturedPropertyComparisonComplete && interactionCoverageComplete;
+const coverageReport = {
+  schemaVersion: 1,
+  scope: 'all-visible-dom-elements',
+  certified: false,
+  completeMeaning:
+    'Every captured visible element has one explicit or unique heuristic candidate, those pairs have no captured-property differences, and every visible control has evidence for every required interaction edge; this remains heuristic evidence, not parity certification.',
+  pairingModel: {
+    explicitPairs: 'explanatory overlay',
+    automaticPairs: 'heuristic exact-identity candidates; not certified cross-application matches',
+  },
+  complete: coverageComplete,
+  inventoryComplete: inventoryCoverageComplete,
+  capturedPropertyComparisonComplete,
+  interactionCoverageComplete,
+  strictRequested: REQUIRE_COMPLETE_COVERAGE,
+  captureIssues,
+  captureValidation,
+  summary: {
+    reference: refCoverageSummary,
+    candidate: candCoverageSummary,
+    capturedProperties: {
+      comparedPairs: capturedPropertyComparisons.length,
+      differingPairs: differingCapturedPropertyPairs,
+      unreadablePairs: unreadableCapturedPropertyPairs,
+      differences: capturedPropertyDifferenceCount,
+    },
+  },
+  comparisonContract: {
+    fields: ['geometry', 'identity', 'behavior', 'style', 'paint', 'svg', 'pseudo'],
+    tolerances: AUTOMATIC_TOLERANCES,
+    normalizationRules: [
+      'ISO-8601 timestamps are replaced with <timestamp>',
+      'UUIDs are replaced with <uuid>',
+      'React/Radix/Headless UI/React Aria/rc-select generated ids are replaced with <generated-id>',
+    ],
+  },
+  capturedPropertyComparisons,
+  unmatched: {
+    reference: refInventory.filter((item) => item.status === 'unpaired').map((item) => item.i),
+    candidate: candInventory.filter((item) => item.status === 'unpaired').map((item) => item.i),
+  },
+  ambiguous: {
+    reference: refInventory.filter((item) => item.status === 'ambiguous').map((item) => item.i),
+    candidate: candInventory.filter((item) => item.status === 'ambiguous').map((item) => item.i),
+  },
+  unreadable: {
+    reference: refInventory.filter((item) => item.status === 'unreadable').map((item) => item.i),
+    candidate: candInventory.filter((item) => item.status === 'unreadable').map((item) => item.i),
+    capture: captureIssues,
+  },
+  interactionStateCoverage: {
+    reference: refSnap.meta?.coverage?.interactionStateCoverage ?? {
+      hover: 'not-tested',
+      focus: 'not-tested',
+      click: 'not-tested',
+    },
+    candidate: candSnap.meta?.coverage?.interactionStateCoverage ?? {
+      hover: 'not-tested',
+      focus: 'not-tested',
+      click: 'not-tested',
+    },
+  },
+  interactionCoverage: {
+    complete: interactionCoverageComplete,
+    requiredEdges: REQUIRED_INTERACTION_EDGES,
+    reference: interactionValidation.reference,
+    candidate: interactionValidation.candidate,
+  },
+  inventories: {
+    reference: refInventory,
+    candidate: candInventory,
+  },
+  manualPairs: manualPairResults,
+  limitations: [
+    'Automatic pairing is a deterministic candidate heuristic, not proof that two elements have the same product meaning.',
+    'Static capture does not exercise hover, focus, click, keyboard, delayed, or mutation states.',
+    'Untested interaction edges are strict blockers; this comparator does not click controls or manufacture journey evidence.',
+    'The collector inventories rendered light-DOM elements only; iframe and shadow-root contents require separate capture.',
+    'Virtualized or conditional elements that are not rendered in the captured state are outside this inventory.',
+  ],
+};
+
+if (COVERAGE_OUT) {
+  fs.writeFileSync(COVERAGE_OUT, `${JSON.stringify(coverageReport, null, 2)}\n`);
+  process.stderr.write(`wrote ${COVERAGE_OUT}\n`);
+}
+
 const lines = [
   '# Pairwise parity table',
   '',
@@ -285,6 +1111,28 @@ const lines = [
   '',
   `pairs: ${pairs.length} · differing properties: ${diffs} · unresolved pairs: ${unresolved} · ` +
     `unreadable properties: ${unreadable}`,
+  '',
+  '## Full visible-DOM coverage',
+  '',
+  `reference: total ${refCoverageSummary.total} · paired ${refCoverageSummary.paired} ` +
+    `(explicit ${refCoverageSummary.pairedExplicit}, heuristic ${refCoverageSummary.pairedHeuristic}) · ` +
+    `ambiguous ${refCoverageSummary.ambiguous} · unpaired ${refCoverageSummary.unpaired} · ` +
+    `unreadable ${refCoverageSummary.unreadable}`,
+  `candidate: total ${candCoverageSummary.total} · paired ${candCoverageSummary.paired} ` +
+    `(explicit ${candCoverageSummary.pairedExplicit}, heuristic ${candCoverageSummary.pairedHeuristic}) · ` +
+    `ambiguous ${candCoverageSummary.ambiguous} · unpaired ${candCoverageSummary.unpaired} · ` +
+    `unreadable ${candCoverageSummary.unreadable}`,
+  `inventory complete: ${inventoryCoverageComplete ? 'yes' : 'no'}`,
+  `captured-property comparisons: ${capturedPropertyComparisons.length} pairs · ` +
+    `differing pairs ${differingCapturedPropertyPairs} · differences ${capturedPropertyDifferenceCount} · ` +
+    `unreadable pairs ${unreadableCapturedPropertyPairs}`,
+  `interaction journeys: ${interactionCoverageComplete ? 'complete' : 'incomplete'} · blockers ${interactionBlockerCount}`,
+  `strict result complete: ${coverageComplete ? 'yes' : 'no'} · strict requested: ${REQUIRE_COMPLETE_COVERAGE ? 'yes' : 'no'}`,
+  'interaction states: hover not-tested · focus not-tested · click not-tested',
+  'automatic candidates are heuristic and do not certify cross-application semantic equivalence',
+  COVERAGE_OUT
+    ? `machine-readable detail: ${COVERAGE_OUT}`
+    : 'machine-readable detail: not requested',
   '',
 ];
 
@@ -319,7 +1167,17 @@ if (OUT) {
   process.stdout.write(`${table}\n`);
 }
 process.stderr.write(
-  `pairs=${pairs.length} diffs=${diffs} unresolved=${unresolved} unreadable=${unreadable}\n`,
+  `pairs=${pairs.length} diffs=${diffs} unresolved=${unresolved} unreadable=${unreadable} ` +
+    `coverage_complete=${coverageComplete} ref_unpaired=${refCoverageSummary.unpaired} ` +
+    `cand_unpaired=${candCoverageSummary.unpaired} ref_ambiguous=${refCoverageSummary.ambiguous} ` +
+    `cand_ambiguous=${candCoverageSummary.ambiguous} captured_diffs=${capturedPropertyDifferenceCount} ` +
+    `captured_unreadable=${unreadableCapturedPropertyPairs} interaction_blockers=${interactionBlockerCount}\n`,
 );
 // Every differing, unresolved, or unreadable measurement fails the parity gate.
-process.exit(diffs > 0 || unresolved > 0 || unreadable > 0 ? 1 : 0);
+// Inventory gaps become a gate only when explicitly requested so existing pair-only workflows keep
+// their previous behavior while still printing their actual coverage.
+process.exit(
+  diffs > 0 || unresolved > 0 || unreadable > 0 || (REQUIRE_COMPLETE_COVERAGE && !coverageComplete)
+    ? 1
+    : 0,
+);

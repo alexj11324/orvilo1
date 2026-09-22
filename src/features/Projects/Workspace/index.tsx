@@ -1,7 +1,7 @@
 'use client';
 
 import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Link2Icon } from 'lucide-react';
 import { memo } from 'react';
@@ -12,13 +12,10 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import {
-  getProjectActivityPath,
-  getProjectResourcesPath,
-} from '@/features/Projects/Layout/navigation';
+import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
-import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -27,6 +24,7 @@ import { labPreferSelectors } from '@/store/user/selectors';
 import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
+import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
 import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
@@ -64,7 +62,7 @@ const ProjectWorkspace = memo(() => {
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const updatesSWR = useProjectUpdates(detail?.project.id);
   const workspaceId = useActiveWorkspaceId();
-  const membersEnabled = useTeammatesEnabled() && !!workspaceId;
+  const membersEnabled = !!workspaceId;
   const databaseId = detail?.project.id;
   const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
 
@@ -81,7 +79,6 @@ const ProjectWorkspace = memo(() => {
   const projectReference = project.slug ?? projectId!;
 
   const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
-  const members = membersSWR.data ?? [];
   const knowledgeBases = detail.knowledgeBases ?? [];
 
   return (
@@ -134,28 +131,9 @@ const ProjectWorkspace = memo(() => {
                     defaultValue: project.status,
                   })}
                 </Tag>
-                {membersEnabled &&
-                  (members.length > 0 ? (
-                    <Flexbox horizontal align={'center'} gap={4}>
-                      {members.slice(0, 4).map((member) => (
-                        <Avatar
-                          avatar={member.user?.avatar ?? undefined}
-                          key={member.userId}
-                          size={18}
-                          title={member.user?.fullName || member.user?.username || undefined}
-                        />
-                      ))}
-                      {members.length > 4 && (
-                        <Text fontSize={12} type={'secondary'}>
-                          +{members.length - 4}
-                        </Text>
-                      )}
-                    </Flexbox>
-                  ) : (
-                    <Text fontSize={13} type={'secondary'}>
-                      {t('properties.membersEmpty', { defaultValue: 'Add members' })}
-                    </Text>
-                  ))}
+                {membersEnabled && (
+                  <ProjectMembersField projectId={project.id} query={membersSWR} />
+                )}
                 <ProjectPriorityField project={project} />
                 <ProjectLeadField project={project} />
                 <ProjectDateField kind="startDate" project={project} />
@@ -183,16 +161,7 @@ const ProjectWorkspace = memo(() => {
                     {link.knowledgeBase.name}
                   </Tag>
                 ))}
-                <Button
-                  icon={Link2Icon}
-                  size={'small'}
-                  type={'text'}
-                  onClick={() => navigate(getProjectResourcesPath(projectReference))}
-                >
-                  {t('overview.resourcesAdd', {
-                    defaultValue: 'Add document or link…',
-                  })}
-                </Button>
+                <ProjectLinks ownerId={project.userId} projectId={project.id} />
               </Flexbox>
             </Flexbox>
 

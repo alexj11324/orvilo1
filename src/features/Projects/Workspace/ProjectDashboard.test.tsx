@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,14 +8,28 @@ import type { ProjectDetail } from '@/store/project';
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
 import { ProjectIssueProgress } from '../Layout/ProjectIssueProgress';
 import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePanel';
+import ProjectTabsBar from '../Layout/TabsBar';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
+import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
 import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
+  canManageMembers: false,
+  canInvite: false,
+  openInvite: vi.fn(),
+  workspaceRole: null as string | null,
+  workspaceMembers: [] as {
+    userId: string;
+    user: { fullName: string };
+    deletedAt: null;
+    suspendedAt: null;
+  }[],
+  addProjectMember: vi.fn(),
+  removeProjectMember: vi.fn(),
   goalSWR: { data: undefined as unknown, error: undefined, isLoading: false, mutate: vi.fn() },
   goals: [] as { goal: { id: string; status: string; title: string } }[],
   navigate: vi.fn(),
@@ -62,35 +77,55 @@ vi.mock('@/components/Skeleton', () => ({ ArticleSkeleton: () => null }));
 vi.mock('@/business/client/hooks/useWorkspaceCapabilities', () => ({
   useWorkspaceCapabilities: () => ({
     canGrantAdmin: false,
-    canInvite: false,
+    canInvite: mocks.canInvite,
     canLeave: false,
-    canManageMembers: false,
+    canManageMembers: mocks.canManageMembers,
     isOwner: false,
-    role: null,
+    role: mocks.workspaceRole,
   }),
 }));
 
 vi.mock('@/features/Teammates/api/hooks', () => ({
   useProjectMembersQuery: mocks.projectMembersQuery,
+  useTeammateActions: () => ({
+    addProjectMember: mocks.addProjectMember,
+    removeProjectMember: mocks.removeProjectMember,
+    mutating: false,
+  }),
   useWorkspaceMembersQuery: () => ({
-    data: [],
+    data: mocks.workspaceMembers,
     error: undefined,
     isLoading: false,
     mutate: vi.fn(),
   }),
 }));
 
+vi.mock('@/features/Teammates/InviteTeammateModal', () => ({
+  openInviteTeammateModal: mocks.openInvite,
+}));
+
 vi.mock('@/features/Teammates/useTeammatesEnabled', () => ({
   useTeammatesEnabled: () => true,
 }));
 
-vi.mock('react-router', () => ({ useParams: () => ({ projectId: 'apollo' }) }));
+vi.mock('react-router', () => ({
+  useLocation: () => ({ pathname: '/acme/project/apollo/activity' }),
+  useParams: () => ({ projectId: 'apollo' }),
+}));
+vi.mock('@/features/HomeSidebar/Body/WorkFavoriteButton', () => ({ default: () => null }));
+vi.mock('@/features/NavHeader', () => ({ default: () => null }));
+vi.mock('@/features/NavPanel/SidebarHeaderSelect', () => ({
+  SidebarHeaderSelectPopover: () => null,
+  SidebarHeaderSelectTrigger: () => null,
+}));
+vi.mock('@/features/NavPanel/switcher/SwitcherMenu', () => ({ default: () => null }));
 vi.mock('@/components/Avatar', () => ({ default: () => null }));
 vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => null }));
 vi.mock('@/features/AgentTasks/features/AssigneeUserAvatar', () => ({ default: () => null }));
-vi.mock('@/store/user', () => ({ useUserStore: () => true }));
+vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
 vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
 vi.mock('@/store/project', () => ({
+  useCurrentProjectList: () => [],
   useCurrentProjectDetail: () => (mocks.projectResolved ? detail : undefined),
   useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: vi.fn() }),
 }));
@@ -105,7 +140,11 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 }));
 
 vi.mock('@/features/Workspace/WorkspaceLink', () => ({
-  default: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+  default: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/libs/swr', () => ({
@@ -143,7 +182,34 @@ const detail = {
   teams: [],
 } as unknown as ProjectDetail;
 
+it('exposes project sections as destination links with one current page, not tab buttons', () => {
+  render(<ProjectTabsBar />);
+  expect(screen.getByRole('link', { name: 'sections.overview' })).toHaveAttribute(
+    'href',
+    '/project/apollo/overview',
+  );
+  expect(screen.getByRole('link', { name: 'sections.activity' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  expect(screen.getByRole('link', { name: 'sections.issues' })).toHaveAttribute(
+    'href',
+    '/project/apollo/tasks',
+  );
+  expect(
+    screen.getAllByRole('link').filter((link) => link.getAttribute('aria-current') === 'page'),
+  ).toHaveLength(1);
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+});
+
 beforeEach(() => {
+  mocks.canManageMembers = false;
+  mocks.canInvite = false;
+  mocks.openInvite.mockClear();
+  mocks.workspaceRole = null;
+  mocks.workspaceMembers = [];
+  mocks.addProjectMember.mockReset().mockResolvedValue(true);
+  mocks.removeProjectMember.mockReset().mockResolvedValue(true);
   mocks.projectResolved = true;
   mocks.projectMembersQuery.mockClear();
   mocks.navigate.mockClear();
@@ -153,6 +219,100 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const renderCharts = () => render(<ProjectDashboard detail={detail} projectId={'prj_1'} />);
+
+describe('project membership editing', () => {
+  const member = { projectId: 'prj_1', role: 'manager', userId: 'user_1', user: null };
+  const query = { data: [member], error: undefined, isLoading: false, mutate: vi.fn() };
+
+  it('opens a project-scoped invitation without treating the command as a member', async () => {
+    mocks.canManageMembers = true;
+    mocks.canInvite = true;
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'properties.inviteAndAdd' }));
+    expect(mocks.openInvite).toHaveBeenCalledWith({
+      defaultProjectIds: ['prj_1'],
+      onClosed: expect.any(Function),
+    });
+    expect(mocks.addProjectMember).not.toHaveBeenCalled();
+    expect(mocks.removeProjectMember).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: 'properties.members' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    expect(screen.getByRole('combobox', { name: 'properties.members' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    mocks.openInvite.mock.calls[0][0].onClosed();
+    await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    expect(screen.getByRole('combobox', { name: 'properties.members' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+  });
+
+  it('does not offer workspace invitations to a project-only manager', async () => {
+    mocks.workspaceRole = 'member';
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    expect(
+      screen.queryByRole('option', { name: 'properties.inviteAndAdd' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps workspace viewers read-only even when their project role is manager', () => {
+    mocks.workspaceRole = 'viewer';
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeDisabled();
+  });
+
+  it('allows active project managers to edit without workspace administration rights', () => {
+    mocks.workspaceRole = 'member';
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    expect(screen.getByRole('combobox', { name: 'properties.members' })).not.toBeDisabled();
+  });
+
+  it('allows removing a selected member who is no longer in the workspace roster', async () => {
+    mocks.canManageMembers = true;
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    const option = await screen.findByRole('option', { name: 'user_1' });
+    expect(option).not.toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(option);
+    await waitFor(() => expect(mocks.removeProjectMember).toHaveBeenCalledWith('prj_1', 'user_1'));
+    expect(mocks.addProjectMember).not.toHaveBeenCalled();
+  });
+
+  it('adds only the new member without rewriting the existing manager role', async () => {
+    mocks.canManageMembers = true;
+    mocks.workspaceMembers = [
+      { userId: 'user_2', user: { fullName: 'New teammate' }, deletedAt: null, suspendedAt: null },
+    ];
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
+    await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
+    expect(mocks.addProjectMember).toHaveBeenCalledWith('prj_1', 'user_2', 'contributor');
+    expect(mocks.removeProjectMember).not.toHaveBeenCalled();
+  });
+
+  it('does not display an unsuccessful addition as saved membership', async () => {
+    mocks.canManageMembers = true;
+    mocks.addProjectMember.mockResolvedValue(false);
+    mocks.workspaceMembers = [
+      { userId: 'user_2', user: { fullName: 'New teammate' }, deletedAt: null, suspendedAt: null },
+    ];
+    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    const trigger = screen.getByRole('combobox', { name: 'properties.members' });
+    fireEvent.click(trigger);
+    await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
+    await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
+    expect(trigger).not.toHaveTextContent('New teammate');
+    expect(trigger).toHaveTextContent('user_1');
+  });
+});
 
 describe('project sidebar sections', () => {
   it('uses issue workflow counts, not the independent goal completion percentage', () => {
@@ -412,6 +572,8 @@ describe('project properties planning metadata', () => {
 
     expect(screen.getByText('create.priority.high')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.priority' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'properties.labels' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'create.startDate' })).toHaveValue('Sep 2026');
     expect(screen.getByRole('textbox', { name: 'create.targetDate' })).toHaveValue('2027 Q1');
     expect(screen.getByText('UI parity')).toBeInTheDocument();

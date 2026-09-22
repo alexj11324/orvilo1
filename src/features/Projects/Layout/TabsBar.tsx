@@ -1,7 +1,7 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { TabsIndicator, TabsList, TabsRoot, TabsTab, Tag } from '@lobehub/ui/base-ui';
+import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo, type Ref, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,7 @@ import { PROJECT_STATUS_META } from '@/features/Projects/Workspace/ProjectProper
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from '@/store/project';
 
@@ -48,8 +49,39 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   tabsRow: css`
     flex: none;
+    min-height: 40px;
     padding-inline: 20px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  navigationLink: css`
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 10px;
+    border-radius: 9999px;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: normal;
+    color: ${cssVar.colorTextSecondary};
+    text-decoration: none;
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &[aria-current='page'] {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillSecondary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 2px;
+    }
   `,
 }));
 
@@ -178,16 +210,18 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         }
       />
       <Flexbox horizontal align={'center'} className={styles.tabsRow} justify={'space-between'}>
-        <TabsRoot value={activeTab} onValueChange={(path) => navigate(path)}>
-          <TabsList>
-            <TabsIndicator />
-            {tabs.map((tab) => (
-              <TabsTab key={tab.path} value={tab.path}>
-                {tab.label}
-              </TabsTab>
-            ))}
-          </TabsList>
-        </TabsRoot>
+        <Flexbox horizontal gap={4}>
+          {tabs.map((tab) => (
+            <WorkspaceLink
+              aria-current={activeTab === tab.path ? 'page' : undefined}
+              className={styles.navigationLink}
+              key={tab.path}
+              to={tab.path}
+            >
+              {tab.label}
+            </WorkspaceLink>
+          ))}
+        </Flexbox>
         <div ref={toolbarRef} />
       </Flexbox>
     </>

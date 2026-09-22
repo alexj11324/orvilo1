@@ -17,14 +17,18 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import Avatar from '@/components/Avatar';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
-import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { projectService } from '@/services/project';
 import type { ProjectDetail } from '@/store/project';
 import { useProjectStore } from '@/store/project';
 
-import { ProjectDateFields, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
+import { ProjectMembersField } from './ProjectMembersField';
+import {
+  ProjectDateFields,
+  ProjectLabelsField,
+  ProjectLeadField,
+  ProjectPriorityField,
+} from './ProjectPlanningFields';
 
 const styles = createStaticStyles(({ css }) => ({
   label: css`
@@ -108,13 +112,11 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const detailSWR = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const workspaceId = useActiveWorkspaceId();
-  const membersEnabled = useTeammatesEnabled() && !!workspaceId;
+  const membersEnabled = !!workspaceId;
   const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
 
   const project = detail.project;
   const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
-  const members = membersSWR.data ?? [];
-  const labels = detail.labels ?? [];
   const teams = detail.teams ?? [];
 
   const changeStatus = useCallback(
@@ -182,24 +184,8 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.members')}
         </Text>
-        {membersEnabled && members.length > 0 ? (
-          <Flexbox horizontal align={'center'} gap={8}>
-            <div className={styles.members}>
-              {members.slice(0, 5).map((member) => (
-                <Avatar
-                  avatar={member.user?.avatar ?? undefined}
-                  key={member.userId}
-                  size={20}
-                  title={member.user?.fullName || member.user?.username || undefined}
-                />
-              ))}
-            </div>
-            {members.length > 5 && (
-              <Text fontSize={12} type={'secondary'}>
-                +{members.length - 5}
-              </Text>
-            )}
-          </Flexbox>
+        {membersEnabled ? (
+          <ProjectMembersField projectId={project.id} query={membersSWR} />
         ) : (
           <Text fontSize={12} type={'secondary'}>
             —
@@ -236,19 +222,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.labels')}
         </Text>
-        {labels.length === 0 ? (
-          <Text fontSize={12} type={'secondary'}>
-            —
-          </Text>
-        ) : (
-          <div className={styles.chipList}>
-            {labels.map((label) => (
-              <Tag key={label.id} shape={'round'} size={'small'}>
-                {label.name}
-              </Tag>
-            ))}
-          </div>
-        )}
+        <ProjectLabelsField detail={detail} />
       </div>
 
       {detail.milestones && detail.milestones.length > 0 && (

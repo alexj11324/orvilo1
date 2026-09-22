@@ -3,7 +3,7 @@ import { Select, Tabs, toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
-import { UserRoundIcon } from 'lucide-react';
+import { TagIcon, UserRoundIcon } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -72,6 +72,41 @@ function usePlanningMutation(projectId: string) {
 }
 
 const priorities = ['noPriority', 'urgent', 'high', 'normal', 'low'] as const;
+
+export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
+  const { t } = useTranslation('project');
+  const id = useId();
+  const query = useProjectStore((s) => s.useFetchProjectLabels)();
+  const { save, saving } = usePlanningMutation(detail.project.id);
+  if (query.error && !query.data)
+    return <AsyncError error={query.error} variant="inline" onRetry={() => void query.mutate()} />;
+  const labels = query.data?.data ?? detail.labels ?? [];
+  return (
+    <>
+      <label className={styles.accessibleLabel} htmlFor={id}>
+        {t('properties.labels')}
+      </label>
+      <Select<string>
+        showSearch
+        className={styles.field}
+        disabled={saving || query.isLoading}
+        id={id}
+        loading={saving || query.isLoading}
+        mode="multiple"
+        options={labels.map((label) => ({ label: label.name, value: label.id }))}
+        placeholder={t('properties.addLabels')}
+        popupMatchSelectWidth={false}
+        prefix={TagIcon}
+        size="small"
+        suffixIcon={null}
+        value={(detail.labels ?? []).map((label) => label.id)}
+        onChange={(value) => {
+          if (Array.isArray(value)) void save({ labelIds: value });
+        }}
+      />
+    </>
+  );
+}
 
 export function ProjectLeadField({ project }: { project: ProjectDetail['project'] }) {
   const { t } = useTranslation('project');

@@ -138,8 +138,7 @@ const TeamViewsSurface = ({
   const [sort, setSort] = useState<
     'createdAsc' | 'createdDesc' | 'nameAsc' | 'nameDesc' | 'updatedAsc' | 'updatedDesc'
   >('nameAsc');
-  const defaultName =
-    entityType === 'task' ? t('teams.viewAllIssues') : t('teams.viewAllProjects');
+  const defaultName = entityType === 'task' ? t('teams.viewAllIssues') : t('teams.viewAllProjects');
 
   const wasCreating = useRef(false);
   useEffect(() => {
@@ -164,8 +163,7 @@ const TeamViewsSurface = ({
   const filteredViews = filterSavedViewsByEntity(views, entityType, '', (view) => view.name);
   const sortedViews = [...filteredViews].sort((a, b) => {
     const direction = sort.endsWith('Desc') ? -1 : 1;
-    if (sort === 'nameAsc' || sort === 'nameDesc')
-      return direction * a.name.localeCompare(b.name);
+    if (sort === 'nameAsc' || sort === 'nameDesc') return direction * a.name.localeCompare(b.name);
     const field = sort.startsWith('created') ? 'createdAt' : 'updatedAt';
     const left = new Date(a[field] ?? 0).getTime();
     const right = new Date(b[field] ?? 0).getTime();
@@ -351,6 +349,7 @@ const TeamViewsSurface = ({
               groupBy={result && 'groupBy' in result ? result.groupBy : undefined}
               groups={groups}
               layout={draft.layout}
+              loadMoreLabel={t('savedViews.loadMore')}
               loading={previewLoading}
               loadingLabel={t('savedViews.loading')}
               tasks={tasks}

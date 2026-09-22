@@ -7,8 +7,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowRightIcon, FolderKanbanIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
@@ -53,7 +53,6 @@ const styles = createStaticStyles(({ css }) => ({
       flex-direction: row;
       gap: 4px;
       align-items: center;
-
       padding-inline: 12px;
     }
   `,
@@ -77,7 +76,6 @@ const styles = createStaticStyles(({ css }) => ({
       flex-flow: row wrap;
       gap: 0;
       align-items: center;
-
       padding-inline: 6px;
     }
   `,
@@ -111,7 +109,6 @@ const styles = createStaticStyles(({ css }) => ({
       flex-flow: row wrap;
       gap: 4px;
       align-items: center;
-
       padding-block-start: 16px;
     }
   `,
@@ -205,8 +202,8 @@ const TeamHome = ({ teamData, teamId, triageCapable, workspaceSlug }: TeamHomePr
           ) : membersQuery.error ? (
             <AsyncError
               error={membersQuery.error}
-              onRetry={() => void membersQuery.mutate()}
               variant="inline"
+              onRetry={() => void membersQuery.mutate()}
             />
           ) : teamMembers.length === 0 ? (
             <Text type="secondary">{t('teams.membersEmpty')}</Text>
@@ -216,7 +213,11 @@ const TeamHome = ({ teamData, teamId, triageCapable, workspaceSlug }: TeamHomePr
                 const name = member.user?.fullName || member.user?.username || member.user?.email;
                 return (
                   <span className={styles.member} key={member.userId} title={name}>
-                    <Avatar avatar={member.user?.avatar} name={name ?? undefined} size={26} />
+                    <Avatar
+                      avatar={member.user?.avatar ?? undefined}
+                      name={name ?? undefined}
+                      size={26}
+                    />
                   </span>
                 );
               })}

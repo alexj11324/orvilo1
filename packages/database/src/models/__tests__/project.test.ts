@@ -546,6 +546,24 @@ describe('ProjectModel', () => {
     expect(visible.id).toBeTruthy();
   });
 
+  it('reports project issue progress from readable, non-canceled tasks', async () => {
+    const project = await createProject(model, { name: 'Progress' });
+    const taskModel = new TaskModel(serverDB, userId);
+    const done = await taskModel.create({ instruction: 'Done', projectId: project.id });
+    await taskModel.create({ instruction: 'Open', projectId: project.id });
+    const canceled = await taskModel.create({ instruction: 'Canceled', projectId: project.id });
+
+    await serverDB.update(tasks).set({ workflowCategory: 'done' }).where(eq(tasks.id, done.id));
+    await serverDB
+      .update(tasks)
+      .set({ workflowCategory: 'canceled' })
+      .where(eq(tasks.id, canceled.id));
+
+    expect(await model.list()).toEqual([
+      expect.objectContaining({ id: project.id, progressPercent: 50, taskCount: 3 }),
+    ]);
+  });
+
   it('does not expose or mutate another user project in personal mode', async () => {
     const project = await createProject(otherModel, { name: 'Private effort' });
     expect(await model.findById(project.id)).toBeNull();

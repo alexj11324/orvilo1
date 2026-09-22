@@ -712,6 +712,19 @@ export class ProjectModel {
         // Column refs lose their table qualifier inside `sql` templates, so the
         // outer correlation is spelled out — a bare "id" would bind to tasks.id.
         taskCount: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${sql.raw(`"${getTableName(projects)}"."id"`)} and ${this.taskReadable()})`,
+        progressPercent: sql<number | null>`(
+          select case
+            when count(*) filter (where ${tasks.workflowCategory} not in ('triage', 'backlog', 'todo', 'in_progress', 'in_review', 'done', 'canceled')) > 0 then null
+            when count(*) filter (where ${tasks.workflowCategory} <> 'canceled') = 0 then 0
+            else round(
+              100.0 * count(*) filter (where ${tasks.workflowCategory} = 'done') /
+              count(*) filter (where ${tasks.workflowCategory} <> 'canceled')
+            )::int
+          end
+          from ${tasks}
+          where ${tasks.projectId} = ${sql.raw(`"${getTableName(projects)}"."id"`)}
+            and ${this.taskReadable()}
+        )`,
       })
       .from(projects)
       .where(and(this.readable(), statusWhere))

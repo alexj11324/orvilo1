@@ -55,6 +55,13 @@ const mocks = vi.hoisted(() => ({
   // And for `Tag`, which takes its glyph as an `icon` *element*: that element
   // is never mounted by the stub, so its props are only readable here.
   tagProps: [] as Record<string, unknown>[],
+  // `Flexbox` props, **keyed by the node the stub produced**. A list would have
+  // to be told which entry is the container under test; the render order that
+  // decides that is not a fact about the component. Reading them back off the
+  // `<div>` is not an option either: `gap` is a prop the stub flattens into an
+  // attribute that the real component never renders — a layout change that
+  // moved `gap` into CSS would fail such a test without touching the layout.
+  flexboxProps: new WeakMap<Element, Record<string, unknown>>(),
   // Milestones the mocked project detail resolves to; `[]` by default so the
   // existing empty-state assertions keep their fixture.
   milestones: [] as NonNullable<ProjectDetail['milestones']>,
@@ -69,9 +76,19 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   Block: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Empty: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
-  Flexbox: ({ children, ...props }: { children?: ReactNode } & HTMLAttributes<HTMLDivElement>) => (
-    <div {...props}>{children}</div>
-  ),
+  Flexbox: (props: { children?: ReactNode } & HTMLAttributes<HTMLDivElement>) => {
+    const { children, ...rest } = props;
+    return (
+      <div
+        {...rest}
+        ref={(node) => {
+          if (node) mocks.flexboxProps.set(node, props as Record<string, unknown>);
+        }}
+      >
+        {children}
+      </div>
+    );
+  },
   Icon: (props: Record<string, unknown>) => {
     mocks.iconProps.push(props);
     return null;
@@ -741,15 +758,17 @@ describe('project properties row set', () => {
 
   it('spaces the Properties rows at the 8px the reference measured', () => {
     const { container } = render(<ProjectPropertiesCard detail={detail} projectId={'prj_1'} />);
-    const card = container.firstElementChild as HTMLElement;
+    const card = container.firstElementChild as Element;
 
     // 8px between 28px rows is what makes the row pitch 36 on the reference;
-    // this card used to run at 6px, i.e. a 34 pitch. The gap is a component
-    // prop, so it is asserted here. The 90px label column and the 0 label→value
-    // gap on the same rows are layout CSS, which jsdom cannot resolve (it
-    // returns `''` for `width`, having no cascade for the injected sheet) —
-    // they are measured in the running app instead, not asserted as strings.
-    expect(card.getAttribute('gap')).toBe('8');
+    // this card used to run at 6px, i.e. a 34 pitch. Read as the *prop* the
+    // card was rendered with, never off the element: `gap` reaches the DOM only
+    // because the `Flexbox` stub spreads props onto a `<div>`, and the real
+    // component renders it as a class. The 90px label column and the 0
+    // label→value gap on the same rows are layout CSS, which jsdom cannot
+    // resolve (it returns `''` for `width`, having no cascade for the injected
+    // sheet) — those are measured in the running app instead.
+    expect(mocks.flexboxProps.get(card)?.gap).toBe(8);
   });
 
   it('renders Linear’s row set and no Milestones row', () => {

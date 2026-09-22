@@ -19,7 +19,6 @@ import {
   CircleDotIcon,
   CircleSlashIcon,
   GitBranchIcon,
-  MinusIcon,
   PauseCircleIcon,
   TagsIcon,
   UserRoundIcon,
@@ -32,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import EmojiPicker from '@/components/EmojiPicker';
+import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { type ProjectListItem, useProjectStore } from '@/store/project';
@@ -511,18 +511,20 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             />
             <Select
               className={styles.property}
-              prefix={MinusIcon}
               size={'small'}
               suffixIcon={null}
               value={form.priority ?? 0}
               options={PROJECT_PRIORITY_OPTIONS.map((option) => ({
-                label: t(option.labelKey),
+                label: (
+                  <Flexbox horizontal align="center" gap={6}>
+                    <PriorityIcon priority={option.value} size={16} />
+                    {t(option.labelKey)}
+                  </Flexbox>
+                ),
                 value: option.value,
               }))}
               onChange={(value) => {
-                if (typeof value === 'number') {
-                  updateForm({ priority: value as ProjectPriority });
-                }
+                if (isPriorityLevel(value)) updateForm({ priority: value });
               }}
             />
             {workspaceId && (

@@ -3,21 +3,13 @@ import { Select, Tabs, toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import {
-  CalendarDaysIcon,
-  CalendarIcon,
-  SignalHighIcon,
-  SignalLowIcon,
-  SignalMediumIcon,
-  SignalZeroIcon,
-  TagIcon,
-  UserRoundIcon,
-} from 'lucide-react';
+import { CalendarDaysIcon, CalendarIcon, TagIcon, UserRoundIcon } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
@@ -265,34 +257,20 @@ export function ProjectPriorityField({
         disabled={saving}
         id={id}
         loading={saving}
-        options={priorities.map((name, value) => ({ label: t(`create.priority.${name}`), value }))}
         size="small"
         suffixIcon={null}
         value={project.priority ?? 0}
-        prefix={
-          inline ? (
-            <Icon
-              size={16}
-              icon={
-                (
-                  [
-                    SignalZeroIcon,
-                    SignalHighIcon,
-                    SignalHighIcon,
-                    SignalMediumIcon,
-                    SignalLowIcon,
-                  ] as const
-                )[project.priority ?? 0]
-              }
-            />
-          ) : undefined
-        }
+        options={priorities.map((name, value) => ({
+          label: (
+            <Flexbox horizontal align="center" gap={6}>
+              <PriorityIcon priority={value} size={16} />
+              {t(`create.priority.${name}`)}
+            </Flexbox>
+          ),
+          value,
+        }))}
         onChange={(value) => {
-          if (
-            (value === 0 || value === 1 || value === 2 || value === 3 || value === 4) &&
-            value !== project.priority
-          )
-            void save({ priority: value });
+          if (isPriorityLevel(value) && value !== project.priority) void save({ priority: value });
         }}
       />
     </>

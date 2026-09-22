@@ -6,14 +6,15 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  getPriorityIconColor,
+  PRIORITY_ICONS,
+  PRIORITY_LEVELS,
+  resolvePriorityLevel,
+} from '@/components/PriorityIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 
-import PriorityHighIcon from './icons/PriorityHighIcon';
-import PriorityLowIcon from './icons/PriorityLowIcon';
-import PriorityMediumIcon from './icons/PriorityMediumIcon';
-import PriorityNoneIcon from './icons/PriorityNoneIcon';
-import PriorityUrgentIcon from './icons/PriorityUrgentIcon';
 import { renderMenuExtra } from './menuExtra';
 
 interface PriorityMeta {
@@ -24,14 +25,12 @@ interface PriorityMeta {
 }
 
 export const PRIORITY_META: Record<number, PriorityMeta> = {
-  0: { icon: PriorityNoneIcon, label: 'No priority', labelKey: 'priority.none', level: 0 },
-  1: { icon: PriorityUrgentIcon, label: 'Urgent', labelKey: 'priority.urgent', level: 1 },
-  2: { icon: PriorityHighIcon, label: 'High', labelKey: 'priority.high', level: 2 },
-  3: { icon: PriorityMediumIcon, label: 'Normal', labelKey: 'priority.normal', level: 3 },
-  4: { icon: PriorityLowIcon, label: 'Low', labelKey: 'priority.low', level: 4 },
+  0: { icon: PRIORITY_ICONS[0], label: 'No priority', labelKey: 'priority.none', level: 0 },
+  1: { icon: PRIORITY_ICONS[1], label: 'Urgent', labelKey: 'priority.urgent', level: 1 },
+  2: { icon: PRIORITY_ICONS[2], label: 'High', labelKey: 'priority.high', level: 2 },
+  3: { icon: PRIORITY_ICONS[3], label: 'Normal', labelKey: 'priority.normal', level: 3 },
+  4: { icon: PRIORITY_ICONS[4], label: 'Low', labelKey: 'priority.low', level: 4 },
 };
-
-const PRIORITY_LEVELS = [0, 1, 2, 3, 4];
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   trigger: css`
@@ -83,8 +82,8 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     const updateTask = useTaskStore((s) => s.updateTask);
     const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
 
-    const currentLevel = priority ?? 0;
-    const meta = PRIORITY_META[currentLevel] ?? PRIORITY_META[0];
+    const currentLevel = resolvePriorityLevel(priority);
+    const meta = PRIORITY_META[currentLevel];
 
     const handlePriorityChange = useCallback(
       async (nextPriority: number) => {
@@ -127,16 +126,10 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
         Object.entries(PRIORITY_META).map(([key, value], index) => {
           const level = Number(key);
           const IconRender = value.icon;
-          const isUrgentLevel = value.level === 1;
           const isCurrent = level === currentLevel;
           return {
             extra: renderMenuExtra(String(index + 1), isCurrent),
-            icon: (
-              <IconRender
-                color={isUrgentLevel ? cssVar.orange : cssVar.colorTextSecondary}
-                size={16}
-              />
-            ),
+            icon: <IconRender color={getPriorityIconColor(level)} size={16} />,
             key,
             label: t(`taskDetail.${value.labelKey}` as never, { defaultValue: value.label }),
             onClick: ({ domEvent }: MenuInfo) => {
@@ -151,20 +144,20 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     const IconRender = meta.icon;
     const isUrgent = currentLevel === 1;
 
-    const triggerNode = children ? (
-      children
-    ) : loading ? (
-      <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
-    ) : (
-      <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
-        <span
-          className={isUrgent ? styles.triggerUrgent : styles.trigger}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <IconRender size={size} />
-        </span>
-      </Tooltip>
-    );
+    const triggerNode =
+      children ||
+      (loading ? (
+        <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+      ) : (
+        <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
+          <span
+            className={isUrgent ? styles.triggerUrgent : styles.trigger}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <IconRender color={getPriorityIconColor(currentLevel)} size={size} />
+          </span>
+        </Tooltip>
+      ));
 
     if (disableDropdown) return <>{triggerNode}</>;
 

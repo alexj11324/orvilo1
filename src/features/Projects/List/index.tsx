@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
@@ -180,6 +181,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
   const deleteProject = useProjectStore((s) => s.deleteProject);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const canDelete = currentUserId === project.userId;
+  const priority = resolvePriorityLevel(project.priority);
   const status = resolveProjectStatus(project.status);
   const statusVisual = PROJECT_STATUS_VISUALS[status];
 
@@ -226,9 +228,14 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
           </Text>
         </Flexbox>
         <ProjectHealthCell health={project.health} />
-        <Text className={styles.cell} fontSize={12}>
-          {t(PROJECT_PRIORITY_LABEL_KEY[project.priority ?? 0])}
-        </Text>
+        <span className={styles.cell} title={t(PROJECT_PRIORITY_LABEL_KEY[priority])}>
+          <PriorityIcon
+            aria-label={t(PROJECT_PRIORITY_LABEL_KEY[priority])}
+            priority={priority}
+            role="img"
+            size={16}
+          />
+        </span>
         <span className={styles.owner}>
           {project.leadUserId ? <ProjectOwnerAvatar userId={project.leadUserId} /> : null}
         </span>

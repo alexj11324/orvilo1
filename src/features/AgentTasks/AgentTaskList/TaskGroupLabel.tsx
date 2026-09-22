@@ -4,25 +4,14 @@ import { cssVar } from 'antd-style';
 import { CalendarClock, HeartPulse, UserRound } from 'lucide-react';
 import { memo } from 'react';
 
+import { PriorityIcon } from '@/components/PriorityIcon';
+
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
-import PriorityHighIcon from '../features/icons/PriorityHighIcon';
-import PriorityLowIcon from '../features/icons/PriorityLowIcon';
-import PriorityMediumIcon from '../features/icons/PriorityMediumIcon';
-import PriorityNoneIcon from '../features/icons/PriorityNoneIcon';
-import PriorityUrgentIcon from '../features/icons/PriorityUrgentIcon';
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import type { TaskGroupMeta } from './listViewOptions';
-
-const PRIORITY_ICON_MAP = {
-  0: PriorityNoneIcon,
-  1: PriorityUrgentIcon,
-  2: PriorityHighIcon,
-  3: PriorityMediumIcon,
-  4: PriorityLowIcon,
-} as const;
 
 const AssigneeLabel = memo<{ agentId: string }>(({ agentId }) => {
   const displayMeta = useAgentDisplayMeta(agentId);
@@ -46,15 +35,7 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
   }
 
   if (group.groupBy === 'priority') {
-    const priority = group.priority ?? 0;
-    const PriorityIcon =
-      PRIORITY_ICON_MAP[priority as keyof typeof PRIORITY_ICON_MAP] || PriorityNoneIcon;
-    return (
-      <PriorityIcon
-        color={priority === 1 ? cssVar.orange : cssVar.colorTextDescription}
-        size={16}
-      />
-    );
+    return <PriorityIcon priority={group.priority} size={16} />;
   }
 
   if (group.groupBy === 'automationMode') {

@@ -23,6 +23,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { getPriorityIconColor } from '@/components/PriorityIcon';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -258,9 +259,7 @@ const PROPERTY_ICON: Record<'automation' | 'status', LucideIcon> = {
 const PriorityMark = ({ level }: { level: number | null }) => {
   const meta = PRIORITY_META[level ?? 0] ?? PRIORITY_META[0];
   const IconRender = meta.icon;
-  return (
-    <IconRender color={meta.level === 1 ? cssVar.orange : cssVar.colorTextTertiary} size={14} />
-  );
+  return <IconRender color={getPriorityIconColor(meta.level)} size={14} />;
 };
 
 /**

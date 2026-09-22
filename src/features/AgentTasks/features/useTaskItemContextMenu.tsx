@@ -1,7 +1,6 @@
 import { type ContextMenuItem, copyToClipboard, Icon, type MenuInfo } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   BarChart3Icon,
   CircleDashedIcon,
@@ -16,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
@@ -30,8 +30,6 @@ import { renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
 import { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
 import { useTaskStatusChange } from './useTaskStatusChange';
-
-const PRIORITY_LEVELS = [0, 1, 2, 3, 4];
 
 type ActiveSubmenu = 'status' | 'priority' | null;
 type TaskItemRouteScope = 'agent' | 'global';
@@ -126,13 +124,10 @@ export const useTaskContextMenuActions = (
       const priorityChildren = PRIORITY_LEVELS.map((level, index) => {
         const meta = PRIORITY_META[level];
         const PriorityIcon = meta.icon;
-        const isUrgent = level === 1;
         const isCurrent = level === currentPriority;
         return {
           extra: renderMenuExtra(String(index + 1), isCurrent),
-          icon: (
-            <PriorityIcon color={isUrgent ? cssVar.orange : cssVar.colorTextSecondary} size={16} />
-          ),
+          icon: <PriorityIcon color={getPriorityIconColor(level)} size={16} />,
           key: `priority-${level}`,
           label: t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label }),
           disabled: !canEditTask,

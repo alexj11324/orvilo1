@@ -1,4 +1,9 @@
-import { PROJECT_IDENTIFIER_REGEX, PROJECT_STATUSES, PROJECT_VISIBILITIES } from '@orvilo/types';
+import {
+  PROJECT_DATE_PRECISIONS,
+  PROJECT_IDENTIFIER_REGEX,
+  PROJECT_STATUSES,
+  PROJECT_VISIBILITIES,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -244,6 +249,33 @@ export const projectRouter = router({
   create: projectWriteProcedure
     .input(
       z.object({
+        dependencies: z
+          .array(
+            z.object({ projectId: z.string().min(1), type: z.enum(['blockedBy', 'blocking']) }),
+          )
+          .max(100)
+          .optional(),
+        labelIds: z.array(z.uuid()).max(100).optional(),
+        memberIds: z.array(z.string().min(1)).max(100).optional(),
+        milestones: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(255),
+              description: z.string().max(10000).optional(),
+              date: z.iso.date().optional(),
+            }),
+          )
+          .max(100)
+          .optional(),
+        newLabelNames: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
+        priority: z
+          .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+          .optional(),
+        startDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).optional(),
+        targetDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).optional(),
+        status: z
+          .enum(['backlog', 'planned', 'active', 'paused', 'canceled', 'archived'])
+          .optional(),
         avatar: z.string().optional(),
         description: z.string().optional(),
         identifier: projectIdentifierInput,
@@ -284,15 +316,26 @@ export const projectRouter = router({
   detail: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
     try {
       const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
-      const [agents, completionReviews, knowledgeBases, tasks, works] = await Promise.all([
-        ctx.projectModel.listAgents(project.id),
-        ctx.projectModel.listCompletionReviews(project.id),
-        ctx.projectModel.listKnowledgeBases(project.id),
-        ctx.projectModel.listTasks(project.id),
-        ctx.projectModel.listWorks(project.id),
-      ]);
+      const [agents, completionReviews, knowledgeBases, tasks, works, planning] = await Promise.all(
+        [
+          ctx.projectModel.listAgents(project.id),
+          ctx.projectModel.listCompletionReviews(project.id),
+          ctx.projectModel.listKnowledgeBases(project.id),
+          ctx.projectModel.listTasks(project.id),
+          ctx.projectModel.listWorks(project.id),
+          ctx.projectModel.getPlanning(project.id),
+        ],
+      );
       return {
-        data: { agents, completionReviews, knowledgeBases, project, tasks, works },
+        data: {
+          agents,
+          completionReviews,
+          knowledgeBases,
+          project,
+          tasks,
+          works,
+          ...requireResult(planning),
+        },
         success: true,
       };
     } catch (error) {
@@ -321,6 +364,11 @@ export const projectRouter = router({
       mapProjectError(error, 'getOrchestrationPolicy');
     }
   }),
+
+  labels: projectProcedure.query(async ({ ctx }) => ({
+    data: await ctx.projectModel.listLabels(),
+    success: true,
+  })),
 
   list: projectProcedure
     .input(

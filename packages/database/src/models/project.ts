@@ -1,6 +1,8 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
 import type {
+  ProjectDatePrecision,
   ProjectOrchestrationPolicy,
+  ProjectPriority,
   ProjectStatus,
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
@@ -24,21 +26,40 @@ import { knowledgeBases } from '../schemas/file';
 import {
   projectAgents,
   projectCompletionReviews,
+  projectDependencies,
   projectKnowledgeBases,
+  projectLabelBindings,
+  projectLabels,
+  projectMilestones,
   projects,
 } from '../schemas/project';
+import { projectMembers } from '../schemas/projectMember';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
+import { users } from '../schemas/user';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
+import { ProjectMemberModel } from './projectMember';
 import { TeamModel } from './team';
 import { hasActiveWorkspaceMembership } from './workspace';
 
-export interface CreateProjectInput {
+export interface ProjectPlanningInput {
+  dependencies?: { projectId: string; type: 'blockedBy' | 'blocking' }[];
+  labelIds?: string[];
+  memberIds?: string[];
+  milestones?: { name: string; description?: string; date?: string }[];
+  newLabelNames?: string[];
+  priority?: ProjectPriority;
+  startDatePrecision?: ProjectDatePrecision;
+  status?: ProjectStatus;
+  targetDatePrecision?: ProjectDatePrecision;
+}
+
+export interface CreateProjectInput extends ProjectPlanningInput {
   avatar?: string;
   /** Managed creation audit for import/integration-created projects. */
   creationSubject?: {
@@ -253,7 +274,39 @@ export class ProjectModel {
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
     }
-    const { creationSubject, teamId, ...projectInput } = input;
+    const {
+      creationSubject,
+      teamId,
+      dependencies = [],
+      labelIds = [],
+      memberIds = [],
+      milestones = [],
+      newLabelNames = [],
+      ...projectInput
+    } = input;
+    if (
+      input.status &&
+      !['backlog', 'planned', 'active', 'paused', 'canceled', 'archived'].includes(input.status)
+    ) {
+      throw new Error('Project completion requires a human review');
+    }
+    if (
+      input.priority !== undefined &&
+      (!Number.isInteger(input.priority) || input.priority < 0 || input.priority > 4)
+    ) {
+      throw new Error('Invalid project priority');
+    }
+    if (milestones.some(({ name }) => !name.trim())) throw new Error('Milestone name is required');
+    const dependencyDirections = new Map<string, string>();
+    for (const dependency of dependencies) {
+      if (
+        dependencyDirections.has(dependency.projectId) &&
+        dependencyDirections.get(dependency.projectId) !== dependency.type
+      ) {
+        throw new Error('Project dependencies cannot form a cycle');
+      }
+      dependencyDirections.set(dependency.projectId, dependency.type);
+    }
 
     return this.db.transaction(async (tx) => {
       const db = tx as OrviloDatabase;
@@ -278,6 +331,59 @@ export class ProjectModel {
       ) {
         throw new Error('Project team is not available in this workspace');
       }
+      if ((memberIds.length || labelIds.length || newLabelNames.length) && !this.workspaceId) {
+        throw new Error('Project members and labels require a workspace');
+      }
+      for (const memberId of new Set(memberIds)) {
+        if (
+          !this.workspaceId ||
+          !(await hasActiveWorkspaceMembership(db, {
+            userId: memberId,
+            workspaceId: this.workspaceId,
+          }))
+        ) {
+          throw new Error('Project member must be an active workspace member');
+        }
+      }
+      const planningModel = new ProjectModel(db, this.userId, this.workspaceId);
+      for (const dependencyId of dependencyDirections.keys()) {
+        if (!(await planningModel.findById(dependencyId)))
+          throw new Error('Dependent project is not available');
+      }
+      // A new project can close an existing path even without a direct reverse edge.
+      const predecessors = new Set(
+        [...dependencyDirections].filter(([, type]) => type === 'blockedBy').map(([id]) => id),
+      );
+      let frontier = [...dependencyDirections]
+        .filter(([, type]) => type === 'blocking')
+        .map(([id]) => id);
+      const visited = new Set<string>();
+      while (predecessors.size && frontier.length) {
+        if (frontier.some((id) => predecessors.has(id)))
+          throw new Error('Project dependencies cannot form a cycle');
+        frontier.forEach((id) => visited.add(id));
+        const edges = await db
+          .select({ id: projectDependencies.successorId })
+          .from(projectDependencies)
+          .where(inArray(projectDependencies.predecessorId, frontier));
+        frontier = [...new Set(edges.map(({ id }) => id).filter((id) => !visited.has(id)))];
+      }
+      const selectedLabels =
+        labelIds.length && this.workspaceId
+          ? await db
+              .select()
+              .from(projectLabels)
+              .where(
+                and(
+                  inArray(projectLabels.id, [...new Set(labelIds)]),
+                  eq(projectLabels.workspaceId, this.workspaceId),
+                ),
+              )
+          : [];
+      if (selectedLabels.length !== new Set(labelIds).size)
+        throw new Error('Project label is not available in this workspace');
+      if (newLabelNames.some((name) => !name.trim() || name.trim().length > 100))
+        throw new Error('Invalid project label');
       const coordinatorConfig = createProjectCoordinatorAgentConfig({
         avatar: input.avatar,
         description: input.description,
@@ -323,8 +429,119 @@ export class ProjectModel {
 
       if (teamId && teamModel) await teamModel.linkProject(project.id, teamId);
 
+      if (this.workspaceId) {
+        for (const memberId of new Set(memberIds)) {
+          await new ProjectMemberModel(db, this.userId).add({
+            projectId: project.id,
+            userId: memberId,
+            workspaceId: this.workspaceId,
+          });
+        }
+        for (const name of new Set(newLabelNames.map((value) => value.trim()))) {
+          const [label] = await db
+            .insert(projectLabels)
+            .values({ workspaceId: this.workspaceId, name })
+            .onConflictDoUpdate({
+              target: [projectLabels.workspaceId, projectLabels.name],
+              set: { name },
+            })
+            .returning();
+          selectedLabels.push(label);
+        }
+      }
+      const boundLabelIds = [...new Set(selectedLabels.map(({ id }) => id))];
+      if (boundLabelIds.length)
+        await db
+          .insert(projectLabelBindings)
+          .values(boundLabelIds.map((labelId) => ({ projectId: project.id, labelId })));
+      if (milestones.length)
+        await db.insert(projectMilestones).values(
+          milestones.map((milestone, sortOrder) => ({
+            ...milestone,
+            name: milestone.name.trim(),
+            projectId: project.id,
+            sortOrder,
+          })),
+        );
+      if (dependencyDirections.size)
+        await db.insert(projectDependencies).values(
+          [...dependencyDirections].map(([dependencyId, direction]) => ({
+            predecessorId: direction === 'blockedBy' ? dependencyId : project.id,
+            successorId: direction === 'blockedBy' ? project.id : dependencyId,
+          })),
+        );
       return project;
     });
+  }
+
+  async listLabels() {
+    if (
+      !this.workspaceId ||
+      !(await hasActiveWorkspaceMembership(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }))
+    )
+      return [];
+    return this.db
+      .select()
+      .from(projectLabels)
+      .where(eq(projectLabels.workspaceId, this.workspaceId))
+      .orderBy(asc(projectLabels.name));
+  }
+
+  async getPlanning(id: string) {
+    if (!(await this.findById(id))) return null;
+    const [milestones, labelRows, memberRows, edges] = await Promise.all([
+      this.db
+        .select()
+        .from(projectMilestones)
+        .where(eq(projectMilestones.projectId, id))
+        .orderBy(asc(projectMilestones.sortOrder)),
+      this.db
+        .select({ label: projectLabels })
+        .from(projectLabelBindings)
+        .innerJoin(projectLabels, eq(projectLabels.id, projectLabelBindings.labelId))
+        .where(eq(projectLabelBindings.projectId, id)),
+      this.db
+        .select({ userId: projectMembers.userId, name: users.fullName, avatar: users.avatar })
+        .from(projectMembers)
+        .innerJoin(users, eq(users.id, projectMembers.userId))
+        .where(
+          and(
+            eq(projectMembers.projectId, id),
+            isNull(projectMembers.deletedAt),
+            isNull(projectMembers.suspendedAt),
+          ),
+        ),
+      this.db
+        .select()
+        .from(projectDependencies)
+        .where(
+          or(eq(projectDependencies.predecessorId, id), eq(projectDependencies.successorId, id)),
+        ),
+    ]);
+    const relatedProjects = await this.findByIds(
+      edges.map((edge) => (edge.predecessorId === id ? edge.successorId : edge.predecessorId)),
+    );
+    const dependencies = edges.flatMap((edge) => {
+      const projectId = edge.predecessorId === id ? edge.successorId : edge.predecessorId;
+      const project = relatedProjects.find((row) => row.id === projectId);
+      return project
+        ? [
+            {
+              project,
+              type: edge.predecessorId === id ? ('blocking' as const) : ('blockedBy' as const),
+            },
+          ]
+        : [];
+    });
+    return {
+      dependencies,
+      labels: labelRows.map(({ label }) => label),
+      members: memberRows,
+      milestones,
+    };
   }
 
   async delete(id: string) {

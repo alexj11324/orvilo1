@@ -1,20 +1,59 @@
-import { PROJECT_IDENTIFIER_REGEX } from '@orvilo/types';
+import { PROJECT_IDENTIFIER_REGEX, type ProjectPriority, type ProjectStatus } from '@orvilo/types';
 import { kebabCase } from 'es-toolkit';
 import { pinyin } from 'pinyin-pro';
+
+import type { ProjectDatePrecision } from './projectPlanningDate';
 
 const PROJECT_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PROJECT_IDENTIFIER_LENGTH = 4;
 
+export const PROJECT_PRIORITIES = [0, 1, 2, 3, 4] as const;
+export type { ProjectPriority };
+
+const CREATEABLE_PROJECT_STATUSES = [
+  'backlog',
+  'planned',
+  'active',
+  'paused',
+  'canceled',
+  'archived',
+] as readonly string[];
+
+const isCreateableProjectStatus = (status: ProjectStatus | undefined): status is ProjectStatus =>
+  status !== undefined && CREATEABLE_PROJECT_STATUSES.includes(status);
+
+export type ProjectDependencyType = 'blockedBy' | 'blocking';
+
+export interface CreateProjectDependency {
+  projectId: string;
+  type: ProjectDependencyType;
+}
+
+export interface CreateProjectMilestone {
+  date?: string;
+  description?: string;
+  name: string;
+}
+
 export interface CreateProjectDraft {
   avatar?: string;
+  dependencies?: CreateProjectDependency[];
   description?: string;
   identifier: string;
+  labelIds?: string[];
   leadUserId?: string;
+  memberIds?: string[];
+  milestones?: CreateProjectMilestone[];
   name: string;
+  newLabelNames?: string[];
+  priority?: ProjectPriority;
   slug: string;
   startDate?: string;
+  startDatePrecision?: ProjectDatePrecision;
+  status?: ProjectStatus;
   summary?: string;
   targetDate?: string;
+  targetDatePrecision?: ProjectDatePrecision;
   teamId?: string;
 }
 
@@ -64,6 +103,19 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
 
   if (draft.startDate && draft.targetDate && draft.targetDate < draft.startDate) return null;
 
+  const newLabelNames = [
+    ...new Set((draft.newLabelNames ?? []).map((label) => label.trim())),
+  ].filter(Boolean);
+  const milestones = (draft.milestones ?? [])
+    .map((milestone) => ({
+      ...(milestone.date ? { date: milestone.date } : {}),
+      ...(milestone.description?.trim() ? { description: milestone.description.trim() } : {}),
+      name: milestone.name.trim(),
+    }))
+    .filter((milestone) => milestone.name);
+  const status = isCreateableProjectStatus(draft.status) ? draft.status : undefined;
+  const priority = PROJECT_PRIORITIES.includes(draft.priority) ? draft.priority : undefined;
+
   return {
     identifier,
     name,
@@ -72,8 +124,21 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
     ...(draft.summary?.trim() ? { summary: draft.summary.trim() } : {}),
     ...(draft.description?.trim() ? { description: draft.description.trim() } : {}),
     ...(draft.leadUserId ? { leadUserId: draft.leadUserId } : {}),
+    ...(draft.memberIds?.length ? { memberIds: draft.memberIds } : {}),
+    ...(draft.labelIds?.length ? { labelIds: draft.labelIds } : {}),
+    ...(newLabelNames.length ? { newLabelNames } : {}),
+    ...(status ? { status } : {}),
+    ...(priority !== undefined ? { priority } : {}),
+    ...(draft.dependencies?.length ? { dependencies: draft.dependencies } : {}),
+    ...(milestones.length ? { milestones } : {}),
     ...(draft.teamId ? { teamId: draft.teamId } : {}),
     ...(draft.startDate ? { startDate: draft.startDate } : {}),
+    ...(draft.startDate && draft.startDatePrecision
+      ? { startDatePrecision: draft.startDatePrecision }
+      : {}),
     ...(draft.targetDate ? { targetDate: draft.targetDate } : {}),
+    ...(draft.targetDate && draft.targetDatePrecision
+      ? { targetDatePrecision: draft.targetDatePrecision }
+      : {}),
   };
 };

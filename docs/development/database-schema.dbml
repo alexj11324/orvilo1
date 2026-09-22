@@ -3239,6 +3239,21 @@ table project_completion_reviews {
   }
 }
 
+table project_dependencies {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  predecessor_id text [not null]
+  successor_id text [not null]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (predecessor_id, successor_id) [name: 'project_dependencies_predecessor_successor_unique', unique]
+    predecessor_id [name: 'project_dependencies_predecessor_id_idx']
+    successor_id [name: 'project_dependencies_successor_id_idx']
+  }
+}
+
 table project_knowledge_bases {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   project_id text [not null]
@@ -3256,6 +3271,52 @@ table project_knowledge_bases {
     (project_id, sort_order) [name: 'project_knowledge_bases_project_id_sort_order_idx']
     knowledge_base_id [name: 'project_knowledge_bases_knowledge_base_id_idx']
     workspace_id [name: 'project_knowledge_bases_workspace_id_idx']
+  }
+}
+
+table project_label_bindings {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  project_id text [not null]
+  label_id uuid [not null]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (project_id, label_id) [name: 'project_label_bindings_project_id_label_id_unique', unique]
+    project_id [name: 'project_label_bindings_project_id_idx']
+    label_id [name: 'project_label_bindings_label_id_idx']
+  }
+}
+
+table project_labels {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text [not null]
+  name varchar(255) [not null]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (workspace_id, name) [name: 'project_labels_workspace_id_name_unique', unique]
+    workspace_id [name: 'project_labels_workspace_id_idx']
+  }
+}
+
+table project_milestones {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  project_id text [not null]
+  name varchar(255) [not null]
+  description text
+  date date
+  sort_order integer [not null, default: 0]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (project_id, sort_order) [name: 'project_milestones_project_id_sort_order_idx']
+    (project_id, date) [name: 'project_milestones_project_id_date_idx']
   }
 }
 
@@ -3295,9 +3356,12 @@ table projects {
   avatar text
   lead_user_id text
   start_date date
+  start_date_precision text
   target_date date
+  target_date_precision text
   coordinator_agent_id text
   status text [not null, default: 'backlog']
+  priority integer [not null, default: 0]
   user_id text
   workspace_id text
   created_by_subject_kind text [not null, default: 'user']
@@ -3326,6 +3390,7 @@ table projects {
     workspace_id [name: 'projects_workspace_id_idx']
     (workspace_id, visibility, user_id) [name: 'projects_workspace_visibility_idx']
     (status, updated_at) [name: 'projects_status_updated_at_idx']
+    priority [name: 'projects_priority_idx']
     coordinator_agent_id [name: 'projects_coordinator_agent_id_unique', unique]
     
   }

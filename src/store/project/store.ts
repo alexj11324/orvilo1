@@ -38,6 +38,7 @@ interface ProjectStore {
     orchestrationPolicy: ProjectOrchestrationPolicy;
   }) => Promise<ProjectOrchestrationPolicyView>;
   useFetchProjectDetail: (id?: string) => SWRResponse<ProjectDetailResponse>;
+  useFetchProjectLabels: () => SWRResponse<Awaited<ReturnType<typeof projectService.labels>>>;
   useFetchProjectList: (enabled?: boolean) => SWRResponse<ProjectListResponse>;
   useFetchProjectOrchestrationPolicy: (
     id?: string,
@@ -50,6 +51,10 @@ const devtools = createDevtools('project');
 
 export const useProjectStore = createWithEqualityFn<ProjectStore>()(
   devtools((set, get) => ({
+    useFetchProjectLabels: () =>
+      useClientDataSWR(getActiveWorkspaceId() ? ['project/labels'] : null, () =>
+        projectService.labels(),
+      ),
     useFetchProjectTeams: () =>
       useClientDataSWR(getActiveWorkspaceId() ? ['project/teams'] : null, () =>
         projectService.teams(),

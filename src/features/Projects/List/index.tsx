@@ -67,11 +67,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   columns: css`
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) 80px 80px 56px 88px 80px 24px;
+    grid-template-columns: minmax(200px, 1fr) 72px 64px 84px 96px 48px 84px 24px;
     gap: 12px;
     align-items: center;
 
-    min-width: 700px;
+    min-width: 760px;
   `,
   link: css`
     display: contents;
@@ -112,6 +112,14 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     white-space: nowrap;
   `,
 }));
+
+const PROJECT_PRIORITY_LABEL_KEY = {
+  0: 'create.priority.noPriority',
+  1: 'create.priority.urgent',
+  2: 'create.priority.high',
+  3: 'create.priority.normal',
+  4: 'create.priority.low',
+} as const;
 
 const ProjectOwnerAvatar = memo<{ userId: string }>(({ userId }) => {
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -187,16 +195,20 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
           {project.userId ? <ProjectOwnerAvatar userId={project.userId} /> : null}
         </span>
         <Text className={styles.cell} fontSize={12}>
+          {t(PROJECT_PRIORITY_LABEL_KEY[project.priority ?? 0])}
+        </Text>
+        <Text
+          className={styles.cell}
+          fontSize={12}
+          title={project.targetDate ? dayjs(project.targetDate).format('YYYY-MM-DD') : undefined}
+        >
+          {project.targetDate ? dayjs(project.targetDate).format('MMM D') : '—'}
+        </Text>
+        <Text className={styles.cell} fontSize={12}>
           {typeof project.taskCount === 'number' ? project.taskCount : '—'}
         </Text>
         <Text className={styles.cell} fontSize={12}>
           {t(`acceptance.status.${status}`)}
-        </Text>
-        <Text
-          className={styles.updatedAt}
-          title={dayjs(project.updatedAt).format('YYYY-MM-DD HH:mm')}
-        >
-          {dayjs(project.updatedAt).format('MMM D')}
         </Text>
       </WorkspaceLink>
       {canDelete && (
@@ -246,6 +258,7 @@ const ProjectListPage = memo(() => {
         right={
           <Button
             icon={PlusIcon}
+            shape={'round'}
             size={'small'}
             type="primary"
             onClick={() => openCreateProjectModal()}
@@ -300,13 +313,16 @@ const ProjectListPage = memo(() => {
                 </Text>
               </span>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                {t('list.columnPriority', { defaultValue: 'Priority' })}
+              </Text>
+              <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                {t('list.columnTarget', { defaultValue: 'Target' })}
+              </Text>
+              <Text className={styles.cell} fontSize={12} type={'secondary'}>
                 {t('list.columnIssues', { defaultValue: 'Issues' })}
               </Text>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>
                 {t('list.columnStatus', { defaultValue: 'Status' })}
-              </Text>
-              <Text className={styles.updatedAt} type={'secondary'}>
-                {t('list.columnUpdated', { defaultValue: 'Updated' })}
               </Text>
             </Flexbox>
             {filteredProjects.map((project) => (

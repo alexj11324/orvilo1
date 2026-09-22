@@ -12,7 +12,7 @@ const CreateProjectTitle = lazy(() =>
 const styles = createStaticStyles(({ css }) => ({
   popup: css`
     > div {
-      border-radius: 20px;
+      border-radius: 21px;
     }
   `,
 }));

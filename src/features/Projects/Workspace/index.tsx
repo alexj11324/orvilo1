@@ -81,7 +81,8 @@ const ProjectWorkspace = memo(() => {
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const workspaceId = useActiveWorkspaceId();
   const membersEnabled = useTeammatesEnabled() && !!workspaceId;
-  const membersSWR = useProjectMembersQuery(projectId ?? '', membersEnabled && !!projectId);
+  const databaseId = detail?.project.id;
+  const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
 
   if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
@@ -137,6 +138,7 @@ const ProjectWorkspace = memo(() => {
                 <Tag
                   color={statusMeta.color}
                   icon={<Icon icon={statusMeta.icon} size={12} />}
+                  shape={'round'}
                   size={'small'}
                 >
                   {t(`acceptance.status.${project.status}`, {
@@ -166,11 +168,11 @@ const ProjectWorkspace = memo(() => {
                     </Text>
                   ))}
                 {project.createdAt && (
-                  <Tag icon={<Icon icon={CalendarIcon} size={12} />} size={'small'}>
+                  <Tag icon={<Icon icon={CalendarIcon} size={12} />} shape={'round'} size={'small'}>
                     {dayjs(project.createdAt).format('MMM D')}
                   </Tag>
                 )}
-                <Tag size={'small'}>
+                <Tag shape={'round'} size={'small'}>
                   {t(`properties.visibilityValue.${project.visibility}`, {
                     defaultValue: project.visibility,
                   })}
@@ -187,6 +189,7 @@ const ProjectWorkspace = memo(() => {
                   <Tag
                     icon={<Icon icon={Link2Icon} size={12} />}
                     key={link.knowledgeBase.id}
+                    shape={'round'}
                     size={'small'}
                   >
                     {link.knowledgeBase.name}
@@ -227,7 +230,9 @@ const ProjectWorkspace = memo(() => {
                 justify={'space-between'}
               >
                 <Flexbox horizontal align={'center'} gap={7}>
-                  <Tag icon={<SparklesIcon size={12} />}>{project.name}</Tag>
+                  <Tag icon={<SparklesIcon size={12} />} shape={'round'}>
+                    {project.name}
+                  </Tag>
                   <Text fontSize={12} type={'secondary'}>
                     {t('overview.contextEnabled')}
                   </Text>

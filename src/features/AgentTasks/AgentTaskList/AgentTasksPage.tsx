@@ -499,7 +499,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
                 },
               ]}
             >
-              <Button icon={ChevronDownIcon} size={'small'} type={'text'}>
+              <Button icon={ChevronDownIcon} shape={'round'} size={'small'} type={'text'}>
                 {t(isScheduledCollection ? 'taskList.scheduled.title' : 'taskList.title')}
               </Button>
             </DropdownMenu>
@@ -510,6 +510,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
               disabled={createActionBehavior.disabled}
               icon={Plus}
               size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              style={{ borderRadius: 9999 }}
               title={createActionBehavior.disabled ? reason : undefined}
               onClick={handleCreateTask}
             />

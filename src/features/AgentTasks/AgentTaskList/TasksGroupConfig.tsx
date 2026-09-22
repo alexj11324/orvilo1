@@ -152,6 +152,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                 <Flexbox horizontal align={'center'} gap={8}>
                   <ActionIcon
                     size={'small'}
+                    style={{ borderRadius: 9999 }}
                     icon={
                       options.orderDirection === 'asc' ? ArrowDownWideNarrow : ArrowUpNarrowWide
                     }
@@ -271,7 +272,11 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         trigger={['click']}
         onOpenChange={setIsViewConfigOpen}
       >
-        <ActionIcon icon={Settings2Icon} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+        <ActionIcon
+          icon={Settings2Icon}
+          size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+          style={{ borderRadius: 9999 }}
+        />
       </Popover>
     );
   },

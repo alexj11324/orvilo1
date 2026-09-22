@@ -1,10 +1,17 @@
-import type { ProjectOrchestrationPolicy, ProjectStatus, ProjectVisibility } from '@orvilo/types';
+import type {
+  ProjectDatePrecision,
+  ProjectOrchestrationPolicy,
+  ProjectPriority,
+  ProjectStatus,
+  ProjectVisibility,
+} from '@orvilo/types';
 
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
 const PROJECT_PAGE_SIZE = 100;
 
 class ProjectService {
+  labels = async () => lambdaClient.project.labels.query();
   teams = async () => lambdaClient.team.teams.query();
   activityFeed = async (id: string, limit = 50, cursor?: string | null) =>
     lambdaClient.project.activityFeed.query({ cursor, id, limit });
@@ -48,6 +55,15 @@ class ProjectService {
 
   create = async (
     params: {
+      dependencies?: { projectId: string; type: 'blockedBy' | 'blocking' }[];
+      labelIds?: string[];
+      memberIds?: string[];
+      milestones?: { name: string; description?: string; date?: string }[];
+      newLabelNames?: string[];
+      priority?: ProjectPriority;
+      startDatePrecision?: ProjectDatePrecision;
+      targetDatePrecision?: ProjectDatePrecision;
+      status?: 'backlog' | 'planned' | 'active' | 'paused' | 'canceled' | 'archived';
       avatar?: string;
       description?: string;
       identifier: string;
@@ -93,8 +109,10 @@ class ProjectService {
     },
   ) => lambdaClient.project.updateOrchestrationPolicy.mutate({ id, ...input });
 
-  updateStatus = async (id: string, status: 'active' | 'archived' | 'backlog' | 'paused') =>
-    lambdaClient.project.updateStatus.mutate({ id, status });
+  updateStatus = async (
+    id: string,
+    status: 'active' | 'archived' | 'backlog' | 'paused' | 'planned',
+  ) => lambdaClient.project.updateStatus.mutate({ id, status });
 }
 
 export const projectService = new ProjectService();

@@ -624,14 +624,24 @@ const WorkInboxPage = memo(() => {
               }))}
             >
               <Tooltip title={t('inbox.filterBy', { filter: filterLabel(filterChip) })}>
-                <ActionIcon icon={ListFilterIcon} size={'small'} />
+                <ActionIcon icon={ListFilterIcon} size={'small'} style={{ borderRadius: 9999 }} />
               </Tooltip>
             </DropdownMenu>
             <Tooltip title={t('inbox.markAllRead')}>
-              <ActionIcon icon={CheckCheckIcon} size={'small'} onClick={() => void markAllRead()} />
+              <ActionIcon
+                icon={CheckCheckIcon}
+                size={'small'}
+                style={{ borderRadius: 9999 }}
+                onClick={() => void markAllRead()}
+              />
             </Tooltip>
             <Tooltip title={t('inbox.archiveAll')}>
-              <ActionIcon icon={ArchiveIcon} size={'small'} onClick={() => void archiveAll()} />
+              <ActionIcon
+                icon={ArchiveIcon}
+                size={'small'}
+                style={{ borderRadius: 9999 }}
+                onClick={() => void archiveAll()}
+              />
             </Tooltip>
           </Flexbox>
         </Flexbox>

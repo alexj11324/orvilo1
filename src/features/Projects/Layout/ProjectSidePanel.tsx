@@ -42,7 +42,7 @@ const styles = createStaticStyles(({ css }) => ({
   railCard: css`
     padding: 12px;
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
+    border-radius: 10px;
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
   `,
 }));
@@ -54,7 +54,7 @@ const SectionTitle = memo<{ count?: number; title: string }>(({ count, title }) 
     <Text fontSize={14} weight={500}>
       {title}
     </Text>
-    {count !== undefined && <Tag>{count}</Tag>}
+    {count !== undefined && <Tag shape={'round'}>{count}</Tag>}
   </Flexbox>
 ));
 

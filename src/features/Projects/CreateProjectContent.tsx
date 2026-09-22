@@ -8,12 +8,20 @@ import {
   toast,
   useModalContext,
 } from '@lobehub/ui/base-ui';
+import type { ProjectStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import {
   BoxIcon,
   CalendarIcon,
   ChevronRightIcon,
+  CircleDashedIcon,
+  CircleDotIcon,
+  CircleSlashIcon,
+  GitBranchIcon,
+  MinusIcon,
+  PauseCircleIcon,
+  TagsIcon,
   UserRoundIcon,
   UsersIcon,
   XIcon,
@@ -34,7 +42,15 @@ import {
   getProjectFieldSuggestions,
   isProjectIdentifierValid,
   isProjectSlugValid,
+  type ProjectDependencyType,
+  type ProjectPriority,
 } from './createProjectForm';
+import ProjectMilestoneEditor from './ProjectMilestoneEditor';
+import {
+  formatProjectDate,
+  PROJECT_DATE_PRECISIONS,
+  type ProjectDatePrecision,
+} from './projectPlanningDate';
 
 export interface CreateProjectOptions {
   /**
@@ -43,6 +59,14 @@ export interface CreateProjectOptions {
    * must not have the user navigated away from what they were doing.
    */
   onCreated?: (project: ProjectListItem) => void;
+  /** Workspace project labels are injected by the project taxonomy query. */
+  projectLabels?: CreateProjectLabelOption[];
+}
+
+export interface CreateProjectLabelOption {
+  color?: string;
+  id: string;
+  name: string;
 }
 
 interface CreateProjectFormState extends CreateProjectDraft {
@@ -53,6 +77,47 @@ interface CreateProjectFormState extends CreateProjectDraft {
   slug: string;
   slugEdited: boolean;
 }
+
+const PROJECT_STATUS_OPTIONS: Array<{
+  icon: typeof CircleDashedIcon;
+  labelKey: string;
+  value: ProjectStatus;
+}> = [
+  { icon: CircleDashedIcon, labelKey: 'acceptance.status.backlog', value: 'backlog' },
+  { icon: CircleDashedIcon, labelKey: 'create.status.planned', value: 'planned' },
+  { icon: CircleDotIcon, labelKey: 'create.status.inProgress', value: 'active' },
+  { icon: PauseCircleIcon, labelKey: 'create.status.paused', value: 'paused' },
+  { icon: CircleSlashIcon, labelKey: 'acceptance.status.canceled', value: 'canceled' },
+];
+
+const PROJECT_PRIORITY_OPTIONS: Array<{ labelKey: string; value: ProjectPriority }> = [
+  { labelKey: 'create.priority.noPriority', value: 0 },
+  { labelKey: 'create.priority.urgent', value: 1 },
+  { labelKey: 'create.priority.high', value: 2 },
+  { labelKey: 'create.priority.normal', value: 3 },
+  { labelKey: 'create.priority.low', value: 4 },
+];
+
+const toStringValues = (value: string | string[] | null | undefined) =>
+  (Array.isArray(value) ? value : value ? [value] : []).filter(
+    (item): item is string => typeof item === 'string',
+  );
+
+const getDependencyValue = (type: ProjectDependencyType, projectId: string) =>
+  `${type}:${projectId}`;
+
+const parseDependencyValue = (
+  value: string,
+): { projectId: string; type: ProjectDependencyType } | null => {
+  const separator = value.indexOf(':');
+  if (separator <= 0) return null;
+
+  const type = value.slice(0, separator);
+  const projectId = value.slice(separator + 1);
+  if ((type !== 'blockedBy' && type !== 'blocking') || !projectId) return null;
+
+  return { projectId, type };
+};
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   shell: css`
@@ -78,10 +143,21 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: 8px;
     border-radius: 999px;
 
-    font-size: 13px;
+    font-size: 12px;
+  `,
+  propertyWide: css`
+    min-width: 0;
+  `,
+  labels: css`
+    max-width: 160px;
+
+    input {
+      width: 6ch;
+      min-width: 0;
+    }
   `,
   date: css`
-    width: 112px;
+    width: 88px;
     height: 24px;
     padding-block: 0;
     padding-inline: 8px;
@@ -143,6 +219,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   summary: css`
     padding: 0;
     border: 0;
+
+    font-size: 16px;
+
     background: transparent;
     box-shadow: none !important;
   `,
@@ -155,6 +234,35 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     background: transparent;
     box-shadow: none !important;
+  `,
+  precisionTabs: css`
+    display: flex;
+    gap: 4px;
+    padding-block: 8px 4px;
+    padding-inline: 12px;
+  `,
+  precisionTab: css`
+    cursor: pointer;
+
+    padding-block: 3px;
+    padding-inline: 8px;
+    border: 0;
+    border-radius: 9999px;
+
+    font-size: 12px;
+    color: ${cssVar.colorTextSecondary};
+
+    background: transparent;
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+  precisionTabActive: css`
+    font-weight: 500;
+    color: ${cssVar.colorText};
+    background: ${cssVar.colorFillSecondary};
   `,
   advanced: css`
     color: ${cssVar.colorTextSecondary};
@@ -172,139 +280,252 @@ export const CreateProjectTitle = memo(() => {
   return t('create.title');
 });
 
-const CreateProjectContent = memo<CreateProjectOptions>(({ onCreated }) => {
-  const { t } = useTranslation(['project', 'common']);
-  const { close } = useModalContext();
-  const navigate = useWorkspaceAwareNavigate();
-  const workspaceId = useActiveWorkspaceId();
-  const membersSWR = useWorkspaceMembersQuery();
-  const teamsSWR = useProjectStore((s) => s.useFetchProjectTeams)();
-  const createProject = useProjectStore((s) => s.createProject);
-  const [form, setForm] = useState<CreateProjectFormState>({
-    avatar: '📦',
-    identifier: '',
-    identifierEdited: false,
-    loading: false,
-    name: '',
-    slug: '',
-    slugEdited: false,
-  });
-  const createInput = getCreateProjectInput(form);
-  const identifierValid = isProjectIdentifierValid(form.identifier);
-  const identifierInvalid =
-    (form.identifierEdited || Boolean(form.name.trim())) && !identifierValid;
-  const slugValid = isProjectSlugValid(form.slug);
+interface ProjectDatePrecisionTabsProps {
+  onChange: (precision: ProjectDatePrecision) => void;
+  precision: ProjectDatePrecision;
+  t: (key: string) => string;
+}
 
-  const updateForm = (patch: Partial<CreateProjectFormState>) => {
-    setForm((current) => ({ ...current, ...patch }));
-  };
+const ProjectDatePrecisionTabs = memo<ProjectDatePrecisionTabsProps>(
+  ({ onChange, precision, t }) => (
+    <div className={styles.precisionTabs} role="tablist">
+      {PROJECT_DATE_PRECISIONS.map((item) => (
+        <button
+          aria-selected={item === precision}
+          className={`${styles.precisionTab} ${item === precision ? styles.precisionTabActive : ''}`}
+          key={item}
+          role="tab"
+          type="button"
+          onClick={() => onChange(item)}
+        >
+          {t(`create.datePrecision.${item}`)}
+        </button>
+      ))}
+    </div>
+  ),
+);
 
-  const updateName = (name: string) => {
-    const suggestions = getProjectFieldSuggestions(name);
-    setForm((current) => ({
-      ...current,
-      identifier: current.identifierEdited ? current.identifier : suggestions.identifier,
-      name,
-      slug: current.slugEdited ? current.slug : suggestions.slug,
-    }));
-  };
+ProjectDatePrecisionTabs.displayName = 'ProjectDatePrecisionTabs';
 
-  const handleCreate = async () => {
-    if (!createInput || form.loading) return;
-    updateForm({ loading: true });
-    try {
-      const project = await createProject(createInput);
-      close();
-      if (onCreated) onCreated(project);
-      else navigate(`/project/${project.slug ?? project.id}`);
-    } catch (error) {
-      console.error('Failed to create project', error);
-      toast.error(t('operationFailed', { ns: 'common' }));
-    } finally {
-      updateForm({ loading: false });
-    }
-  };
+const CreateProjectContent = memo<CreateProjectOptions>(
+  ({ onCreated, projectLabels: suppliedLabels }) => {
+    const { t } = useTranslation(['project', 'common']);
+    const { close } = useModalContext();
+    const navigate = useWorkspaceAwareNavigate();
+    const workspaceId = useActiveWorkspaceId();
+    const membersSWR = useWorkspaceMembersQuery();
+    const teamsSWR = useProjectStore((s) => s.useFetchProjectTeams)();
+    const projectsSWR = useProjectStore((s) => s.useFetchProjectList)(Boolean(workspaceId));
+    const labelsSWR = useProjectStore((s) => s.useFetchProjectLabels)();
+    const projectLabels = suppliedLabels ?? labelsSWR.data?.data ?? [];
+    const createProject = useProjectStore((s) => s.createProject);
+    const [form, setForm] = useState<CreateProjectFormState>({
+      avatar: '📦',
+      dependencies: [],
+      identifier: '',
+      identifierEdited: false,
+      labelIds: [],
+      loading: false,
+      memberIds: [],
+      milestones: [],
+      name: '',
+      priority: 0,
+      slug: '',
+      slugEdited: false,
+      startDatePrecision: 'day',
+      status: 'backlog',
+      targetDatePrecision: 'day',
+    });
+    const createInput = getCreateProjectInput(form);
+    const identifierValid = isProjectIdentifierValid(form.identifier);
+    const identifierInvalid =
+      (form.identifierEdited || Boolean(form.name.trim())) && !identifierValid;
+    const slugValid = isProjectSlugValid(form.slug);
 
-  return (
-    <Flexbox className={styles.shell}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={6}>
-        {workspaceId && (
-          <Select
-            allowClear
-            showSearch
-            className={styles.property}
-            loading={teamsSWR.isLoading}
-            placeholder={t('create.team')}
-            popupMatchSelectWidth={false}
-            prefix={UsersIcon}
-            size={'small'}
-            suffixIcon={null}
-            value={form.teamId ?? null}
-            options={(teamsSWR.data?.data ?? [])
-              .filter((team) => team.status === 'active')
-              .map((team) => ({ label: team.name, value: team.id }))}
-            onChange={(value) =>
-              updateForm({ teamId: typeof value === 'string' ? value : undefined })
-            }
-          />
-        )}
-        {workspaceId && <Icon icon={ChevronRightIcon} size={12} />}
-        <Text fontSize={13}>{t('create.title')}</Text>
-        <Flexbox flex={1} />
-        <ActionIcon
-          aria-label={t('close', { ns: 'common' })}
-          icon={XIcon}
-          size={'small'}
-          onClick={close}
-        />
-      </Flexbox>
-      <Flexbox className={styles.body} gap={12}>
-        <EmojiPicker
-          allowDelete
-          size={28}
-          title={t('create.icon')}
-          value={form.avatar || '📦'}
-          customRender={(avatar) => (
-            <span
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 28,
-                height: 28,
-                borderRadius: 4,
-                background: cssVar.colorFillTertiary,
-                color: cssVar.colorTextSecondary,
-              }}
-            >
-              {avatar === '📦' ? <Icon icon={BoxIcon} size={18} /> : avatar}
-            </span>
+    const projectOptions = projectsSWR.data?.data ?? [];
+    const dependencyValues = (form.dependencies ?? []).map(({ projectId, type }) =>
+      getDependencyValue(type, projectId),
+    );
+    const labelValues = [...(form.labelIds ?? []), ...(form.newLabelNames ?? [])];
+
+    const updateDate = (
+      field: 'startDate' | 'targetDate',
+      precisionField: 'startDatePrecision' | 'targetDatePrecision',
+      date: Dayjs | null,
+      precision: ProjectDatePrecision,
+    ) => {
+      updateForm({
+        [field]: date?.isValid() ? date.format('YYYY-MM-DD') : undefined,
+        [precisionField]: precision,
+      });
+    };
+
+    const updateForm = (patch: Partial<CreateProjectFormState>) => {
+      setForm((current) => ({ ...current, ...patch }));
+    };
+
+    const updateName = (name: string) => {
+      const suggestions = getProjectFieldSuggestions(name);
+      setForm((current) => ({
+        ...current,
+        identifier: current.identifierEdited ? current.identifier : suggestions.identifier,
+        name,
+        slug: current.slugEdited ? current.slug : suggestions.slug,
+      }));
+    };
+
+    const updateLabels = (value: string | string[] | null | undefined) => {
+      const selected = toStringValues(value);
+      const knownIds = new Set(projectLabels.map((label) => label.id));
+      const knownNames = new Map(
+        projectLabels.map((label) => [label.name.trim().toLowerCase(), label.id]),
+      );
+      const labelIds = selected
+        .map((item) => knownNames.get(item.trim().toLowerCase()) ?? item)
+        .filter((item) => knownIds.has(item));
+      const newLabelNames = selected
+        .filter((item) => !knownIds.has(item) && !knownNames.has(item.trim().toLowerCase()))
+        .map((item) => item.trim())
+        .filter(Boolean);
+      updateForm({ labelIds, newLabelNames });
+    };
+
+    const updateDependencies = (value: string | string[] | null | undefined) => {
+      const dependencies = toStringValues(value)
+        .map(parseDependencyValue)
+        .filter((dependency): dependency is NonNullable<typeof dependency> => dependency !== null);
+      updateForm({ dependencies });
+    };
+
+    const handleCreate = async () => {
+      if (!createInput || form.loading) return;
+      updateForm({ loading: true });
+      try {
+        const project = await createProject(createInput);
+        close();
+        if (onCreated) onCreated(project);
+        else navigate(`/project/${project.slug ?? project.id}`);
+      } catch (error) {
+        console.error('Failed to create project', error);
+        toast.error(t('operationFailed', { ns: 'common' }));
+      } finally {
+        updateForm({ loading: false });
+      }
+    };
+
+    return (
+      <Flexbox className={styles.shell}>
+        <Flexbox horizontal align={'center'} className={styles.header} gap={6}>
+          {workspaceId && (
+            <Select
+              allowClear
+              showSearch
+              className={styles.property}
+              loading={teamsSWR.isLoading}
+              placeholder={t('create.team')}
+              popupMatchSelectWidth={false}
+              prefix={UsersIcon}
+              size={'small'}
+              suffixIcon={null}
+              value={form.teamId ?? null}
+              options={(teamsSWR.data?.data ?? [])
+                .filter((team) => team.status === 'active')
+                .map((team) => ({ label: team.name, value: team.id }))}
+              onChange={(value) =>
+                updateForm({ teamId: typeof value === 'string' ? value : undefined })
+              }
+            />
           )}
-          onChange={(avatar) => updateForm({ avatar: avatar || undefined })}
-        />
-        <Flexbox gap={8}>
-          <Input
-            autoFocus
-            aria-label={t('create.nameLabel')}
-            className={styles.name}
-            maxLength={255}
-            placeholder={t('create.nameLabel')}
-            value={form.name}
-            onChange={(event) => updateName(event.target.value)}
-            onPressEnter={handleCreate}
-          />
-          <Input
-            aria-label={t('create.summary')}
-            className={styles.summary}
-            maxLength={280}
-            placeholder={t('create.summaryPlaceholder')}
-            value={form.summary ?? ''}
-            onChange={(event) => updateForm({ summary: event.target.value })}
+          {workspaceId && <Icon icon={ChevronRightIcon} size={12} />}
+          <Text fontSize={13}>{t('create.title')}</Text>
+          <Flexbox flex={1} />
+          <ActionIcon
+            aria-label={t('close', { ns: 'common' })}
+            icon={XIcon}
+            size={'small'}
+            onClick={close}
           />
         </Flexbox>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-          {workspaceId && (
-            <>
+        <Flexbox className={styles.body} gap={12}>
+          <EmojiPicker
+            allowDelete
+            size={28}
+            title={t('create.icon')}
+            value={form.avatar || '📦'}
+            customRender={(avatar) => (
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 4,
+                  background: cssVar.colorFillTertiary,
+                  color: cssVar.colorTextSecondary,
+                }}
+              >
+                {avatar === '📦' ? <Icon icon={BoxIcon} size={18} /> : avatar}
+              </span>
+            )}
+            onChange={(avatar) => updateForm({ avatar: avatar || undefined })}
+          />
+          <Flexbox gap={8}>
+            <Input
+              autoFocus
+              aria-label={t('create.nameLabel')}
+              className={styles.name}
+              maxLength={255}
+              placeholder={t('create.nameLabel')}
+              value={form.name}
+              onChange={(event) => updateName(event.target.value)}
+              onPressEnter={handleCreate}
+            />
+            <Input
+              aria-label={t('create.summary')}
+              className={styles.summary}
+              maxLength={280}
+              placeholder={t('create.summaryPlaceholder')}
+              value={form.summary ?? ''}
+              onChange={(event) => updateForm({ summary: event.target.value })}
+            />
+          </Flexbox>
+          <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+            <Select
+              className={styles.property}
+              size={'small'}
+              suffixIcon={null}
+              value={form.status ?? 'backlog'}
+              options={PROJECT_STATUS_OPTIONS.map((option) => ({
+                label: (
+                  <Flexbox horizontal align="center" gap={6}>
+                    <Icon icon={option.icon} size={13} />
+                    {t(option.labelKey)}
+                  </Flexbox>
+                ),
+                value: option.value,
+              }))}
+              onChange={(value) => {
+                if (typeof value === 'string') updateForm({ status: value as ProjectStatus });
+              }}
+            />
+            <Select
+              className={styles.property}
+              prefix={MinusIcon}
+              size={'small'}
+              suffixIcon={null}
+              value={form.priority ?? 0}
+              options={PROJECT_PRIORITY_OPTIONS.map((option) => ({
+                label: t(option.labelKey),
+                value: option.value,
+              }))}
+              onChange={(value) => {
+                if (typeof value === 'number') {
+                  updateForm({ priority: value as ProjectPriority });
+                }
+              }}
+            />
+            {workspaceId && (
               <Select
                 allowClear
                 showSearch
@@ -326,140 +547,270 @@ const CreateProjectContent = memo<CreateProjectOptions>(({ onCreated }) => {
                   updateForm({ leadUserId: typeof value === 'string' ? value : undefined })
                 }
               />
-            </>
-          )}
-          <DatePicker
-            aria-label={t('create.startDate')}
-            className={styles.date}
-            classNames={{ popup: { root: styles.calendar } }}
-            format={'MMM D'}
-            placeholder={t('create.startDate')}
-            prefix={<Icon icon={CalendarIcon} size={13} />}
-            size={'small'}
-            suffixIcon={null}
-            value={form.startDate ? dayjs(form.startDate) : null}
-            panelRender={(panel) => (
-              <>
-                <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
-                  {t('create.startDate')}
-                </Text>
-                {panel}
-              </>
             )}
-            onChange={(date) => updateForm({ startDate: date?.format('YYYY-MM-DD') })}
-          />
-          <DatePicker
-            aria-label={t('create.targetDate')}
-            className={styles.date}
-            classNames={{ popup: { root: styles.calendar } }}
-            format={'MMM D'}
-            placeholder={t('create.targetDate')}
-            prefix={<Icon icon={CalendarIcon} size={13} />}
-            size={'small'}
-            suffixIcon={null}
-            value={form.targetDate ? dayjs(form.targetDate) : null}
-            panelRender={(panel) => (
-              <>
-                <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
-                  {t('create.targetDate')}
-                </Text>
-                {panel}
-              </>
+            {workspaceId && (
+              <Select
+                allowClear
+                showSearch
+                className={`${styles.property} ${styles.propertyWide}`}
+                loading={membersSWR.isLoading}
+                mode={'multiple'}
+                placeholder={t('create.members')}
+                popupMatchSelectWidth={false}
+                prefix={UsersIcon}
+                size={'small'}
+                suffixIcon={null}
+                value={form.memberIds ?? []}
+                options={(membersSWR.data ?? [])
+                  .filter((member) => !member.deletedAt && !member.suspendedAt)
+                  .map((member) => ({
+                    label: member.user?.fullName || member.user?.username || member.userId,
+                    value: member.userId,
+                  }))}
+                onChange={(value) => updateForm({ memberIds: toStringValues(value) })}
+              />
             )}
-            onChange={(date) => updateForm({ targetDate: date?.format('YYYY-MM-DD') })}
-          />
-        </Flexbox>
-        {form.startDate && form.targetDate && form.targetDate < form.startDate && (
-          <Text role={'alert'} type={'danger'}>
-            {t('create.dateOrderInvalid')}
-          </Text>
-        )}
-        {teamsSWR.error && (
-          <AsyncError
-            error={teamsSWR.error}
-            variant={'inline'}
-            onRetry={() => void teamsSWR.mutate()}
-          />
-        )}
-        {membersSWR.error && (
-          <AsyncError
-            error={membersSWR.error}
-            variant={'inline'}
-            onRetry={() => void membersSWR.mutate()}
-          />
-        )}
-        <TextArea
-          aria-label={t('create.description')}
-          className={styles.description}
-          placeholder={t('create.descriptionPlaceholder')}
-          style={{ flex: 1, minHeight: 120, resize: 'none' }}
-          value={form.description ?? ''}
-          onChange={(event) => updateForm({ description: event.target.value })}
-        />
-        {(identifierInvalid || !slugValid) && (
-          <Text role={'alert'} type={'danger'}>
-            {t(identifierInvalid ? 'create.identifierInvalid' : 'create.slugInvalid')}
-          </Text>
-        )}
-        <details className={styles.advanced}>
-          <summary>{t('create.advanced')}</summary>
-          <Flexbox gap={12} paddingBlock={12}>
-            <Flexbox gap={4}>
-              <Text fontSize={12} weight={500}>
-                {t('create.identifierLabel')}
-              </Text>
-              <Input
-                maxLength={6}
-                placeholder={t('create.identifierPlaceholder')}
-                status={identifierInvalid ? 'error' : undefined}
-                value={form.identifier}
-                onPressEnter={handleCreate}
-                onChange={(event) =>
-                  updateForm({
-                    identifier: event.target.value.toUpperCase(),
-                    identifierEdited: true,
-                  })
-                }
-              />
-              <Text fontSize={12} type={identifierInvalid ? 'danger' : 'secondary'}>
-                {t(identifierInvalid ? 'create.identifierInvalid' : 'create.identifierDescription')}
-              </Text>
-            </Flexbox>
-            <Flexbox gap={6}>
-              <Text fontSize={13} weight={500}>
-                {t('create.slugLabel')}
-              </Text>
-              <Input
-                maxLength={100}
-                placeholder={t('create.slugPlaceholder')}
-                status={slugValid ? undefined : 'error'}
-                value={form.slug}
-                onPressEnter={handleCreate}
-                onChange={(event) =>
-                  updateForm({ slug: event.target.value.toLowerCase(), slugEdited: true })
-                }
-              />
-              <Text fontSize={12} type={slugValid ? 'secondary' : 'danger'}>
-                {t(slugValid ? 'create.slugDescription' : 'create.slugInvalid')}
-              </Text>
-            </Flexbox>
+            <DatePicker
+              aria-label={t('create.startDate')}
+              className={styles.date}
+              classNames={{ popup: { root: styles.calendar } }}
+              placeholder={t('create.start')}
+              prefix={<Icon icon={CalendarIcon} size={13} />}
+              size={'small'}
+              suffixIcon={null}
+              value={form.startDate ? dayjs(form.startDate) : null}
+              format={(date) =>
+                formatProjectDate(date.format('YYYY-MM-DD'), form.startDatePrecision ?? 'day')
+              }
+              panelRender={(panel) => (
+                <>
+                  <ProjectDatePrecisionTabs
+                    precision={form.startDatePrecision ?? 'day'}
+                    t={t}
+                    onChange={(precision) => updateForm({ startDatePrecision: precision })}
+                  />
+                  <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
+                    {t('create.startDate')}
+                  </Text>
+                  {panel}
+                </>
+              )}
+              picker={
+                form.startDatePrecision === 'day'
+                  ? 'date'
+                  : form.startDatePrecision === 'halfYear'
+                    ? 'month'
+                    : form.startDatePrecision
+              }
+              onChange={(date) =>
+                updateDate(
+                  'startDate',
+                  'startDatePrecision',
+                  date,
+                  form.startDatePrecision ?? 'day',
+                )
+              }
+            />
+            <DatePicker
+              aria-label={t('create.targetDate')}
+              className={styles.date}
+              classNames={{ popup: { root: styles.calendar } }}
+              placeholder={t('create.target')}
+              prefix={<Icon icon={CalendarIcon} size={13} />}
+              size={'small'}
+              suffixIcon={null}
+              value={form.targetDate ? dayjs(form.targetDate) : null}
+              format={(date) =>
+                formatProjectDate(date.format('YYYY-MM-DD'), form.targetDatePrecision ?? 'day')
+              }
+              panelRender={(panel) => (
+                <>
+                  <ProjectDatePrecisionTabs
+                    precision={form.targetDatePrecision ?? 'day'}
+                    t={t}
+                    onChange={(precision) => updateForm({ targetDatePrecision: precision })}
+                  />
+                  <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
+                    {t('create.targetDate')}
+                  </Text>
+                  {panel}
+                </>
+              )}
+              picker={
+                form.targetDatePrecision === 'day'
+                  ? 'date'
+                  : form.targetDatePrecision === 'halfYear'
+                    ? 'month'
+                    : form.targetDatePrecision
+              }
+              onChange={(date) =>
+                updateDate(
+                  'targetDate',
+                  'targetDatePrecision',
+                  date,
+                  form.targetDatePrecision ?? 'day',
+                )
+              }
+            />
+            <Select
+              allowClear
+              showSearch
+              className={`${styles.property} ${styles.labels}`}
+              mode={'tags'}
+              placeholder={t('create.labels')}
+              popupMatchSelectWidth={false}
+              prefix={TagsIcon}
+              size={'small'}
+              suffixIcon={null}
+              value={labelValues}
+              options={projectLabels.map((label) => ({
+                label: label.name,
+                value: label.id,
+              }))}
+              onChange={updateLabels}
+            />
+            <Select
+              allowClear
+              showSearch
+              className={`${styles.property} ${styles.propertyWide}`}
+              loading={projectsSWR.isLoading}
+              mode={'multiple'}
+              placeholder={t('create.dependencies.title')}
+              popupMatchSelectWidth={false}
+              prefix={GitBranchIcon}
+              size={'small'}
+              suffixIcon={null}
+              value={dependencyValues}
+              options={[
+                {
+                  label: t('create.dependencies.yourProjects'),
+                  options: projectOptions.flatMap((project) => [
+                    {
+                      label: `${t('create.dependencies.blockedBy')} · ${project.name}`,
+                      value: getDependencyValue('blockedBy', project.id),
+                    },
+                    {
+                      label: `${t('create.dependencies.blocking')} · ${project.name}`,
+                      value: getDependencyValue('blocking', project.id),
+                    },
+                  ]),
+                },
+              ]}
+              onChange={updateDependencies}
+            />
           </Flexbox>
-        </details>
+          {form.startDate && form.targetDate && form.targetDate < form.startDate && (
+            <Text role={'alert'} type={'danger'}>
+              {t('create.dateOrderInvalid')}
+            </Text>
+          )}
+          {teamsSWR.error && (
+            <AsyncError
+              error={teamsSWR.error}
+              variant={'inline'}
+              onRetry={() => void teamsSWR.mutate()}
+            />
+          )}
+          {membersSWR.error && (
+            <AsyncError
+              error={membersSWR.error}
+              variant={'inline'}
+              onRetry={() => void membersSWR.mutate()}
+            />
+          )}
+          {labelsSWR.error && (
+            <AsyncError
+              error={labelsSWR.error}
+              variant={'inline'}
+              onRetry={() => void labelsSWR.mutate()}
+            />
+          )}
+          {projectsSWR.error && (
+            <AsyncError
+              error={projectsSWR.error}
+              variant={'inline'}
+              onRetry={() => void projectsSWR.mutate()}
+            />
+          )}
+          <TextArea
+            aria-label={t('create.description')}
+            className={styles.description}
+            placeholder={t('create.descriptionPlaceholder')}
+            style={{ flex: 1, minHeight: 120, resize: 'none' }}
+            value={form.description ?? ''}
+            onChange={(event) => updateForm({ description: event.target.value })}
+          />
+          <ProjectMilestoneEditor
+            milestones={form.milestones ?? []}
+            onChange={(milestones) => updateForm({ milestones })}
+          />
+          {(identifierInvalid || !slugValid) && (
+            <Text role={'alert'} type={'danger'}>
+              {t(identifierInvalid ? 'create.identifierInvalid' : 'create.slugInvalid')}
+            </Text>
+          )}
+          <details className={styles.advanced}>
+            <summary>{t('create.advanced')}</summary>
+            <Flexbox gap={12} paddingBlock={12}>
+              <Flexbox gap={4}>
+                <Text fontSize={12} weight={500}>
+                  {t('create.identifierLabel')}
+                </Text>
+                <Input
+                  maxLength={6}
+                  placeholder={t('create.identifierPlaceholder')}
+                  status={identifierInvalid ? 'error' : undefined}
+                  value={form.identifier}
+                  onPressEnter={handleCreate}
+                  onChange={(event) =>
+                    updateForm({
+                      identifier: event.target.value.toUpperCase(),
+                      identifierEdited: true,
+                    })
+                  }
+                />
+                <Text fontSize={12} type={identifierInvalid ? 'danger' : 'secondary'}>
+                  {t(
+                    identifierInvalid ? 'create.identifierInvalid' : 'create.identifierDescription',
+                  )}
+                </Text>
+              </Flexbox>
+              <Flexbox gap={6}>
+                <Text fontSize={13} weight={500}>
+                  {t('create.slugLabel')}
+                </Text>
+                <Input
+                  maxLength={100}
+                  placeholder={t('create.slugPlaceholder')}
+                  status={slugValid ? undefined : 'error'}
+                  value={form.slug}
+                  onPressEnter={handleCreate}
+                  onChange={(event) =>
+                    updateForm({ slug: event.target.value.toLowerCase(), slugEdited: true })
+                  }
+                />
+                <Text fontSize={12} type={slugValid ? 'secondary' : 'danger'}>
+                  {t(slugValid ? 'create.slugDescription' : 'create.slugInvalid')}
+                </Text>
+              </Flexbox>
+            </Flexbox>
+          </details>
+        </Flexbox>
+        <ModalFooter className={styles.footer}>
+          <Button
+            disabled={!createInput}
+            loading={form.loading}
+            size={'small'}
+            style={{ borderRadius: 999 }}
+            type="primary"
+            onClick={handleCreate}
+          >
+            {t('create.action')}
+          </Button>
+        </ModalFooter>
       </Flexbox>
-      <ModalFooter className={styles.footer}>
-        <Button
-          disabled={!createInput}
-          loading={form.loading}
-          size={'small'}
-          style={{ borderRadius: 999 }}
-          type="primary"
-          onClick={handleCreate}
-        >
-          {t('create.action')}
-        </Button>
-      </ModalFooter>
-    </Flexbox>
-  );
-});
+    );
+  },
+);
 
 export default CreateProjectContent;

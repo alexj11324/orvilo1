@@ -91,6 +91,99 @@ describe('ProjectModel', () => {
     await expect(createProject(model, { ...draft, leadUserId: otherUserId })).rejects.toThrow();
   });
 
+  it('persists project priority, status and date precision', async () => {
+    const draft = {
+      name: 'Planning precision',
+      priority: 2,
+      status: 'active',
+      startDate: '2026-10-01',
+      startDatePrecision: 'quarter',
+      targetDate: '2027-06-30',
+      targetDatePrecision: 'halfYear',
+    } as const;
+    const project = await createProject(model, draft);
+    expect(await model.findById(project.id)).toMatchObject(draft);
+  });
+
+  it('persists independent project milestones and rejects empty milestones atomically', async () => {
+    const milestones = [{ name: 'Launch', description: 'Ship the release', date: '2026-12-01' }];
+    const project = await createProject(model, { name: 'Milestone project', milestones });
+    expect((await model.getPlanning(project.id))?.milestones).toEqual([
+      expect.objectContaining(milestones[0]),
+    ]);
+    await expect(
+      createProject(model, { name: 'Invalid milestone', milestones: [{ name: ' ' }] }),
+    ).rejects.toThrow();
+    expect((await model.list()).map(({ name }) => name)).toEqual(['Milestone project']);
+    expect(await otherModel.getPlanning(project.id)).toBeNull();
+  });
+
+  it('persists workspace members, project labels and directional dependencies without leaking scope', async () => {
+    const workspaceId = 'planning-fields-workspace';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Planning', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    const scoped = new ProjectModel(serverDB, userId, workspaceId);
+    const predecessor = await createProject(scoped, { name: 'Predecessor' });
+    const project = await createProject(scoped, {
+      name: 'Launch',
+      memberIds: [userId],
+      newLabelNames: ['Launch'],
+      dependencies: [{ projectId: predecessor.id, type: 'blockedBy' }],
+    });
+    const planning = await scoped.getPlanning(project.id);
+    expect(planning?.members).toEqual([expect.objectContaining({ userId })]);
+    expect(planning?.labels).toEqual([expect.objectContaining({ name: 'Launch' })]);
+    expect(planning?.dependencies).toEqual([
+      expect.objectContaining({
+        type: 'blockedBy',
+        project: expect.objectContaining({ id: predecessor.id }),
+      }),
+    ]);
+    expect((await scoped.getPlanning(predecessor.id))?.dependencies).toEqual([
+      expect.objectContaining({
+        type: 'blocking',
+        project: expect.objectContaining({ id: project.id }),
+      }),
+    ]);
+    await expect(
+      createProject(scoped, {
+        name: 'Transitive cycle',
+        dependencies: [
+          { projectId: predecessor.id, type: 'blocking' },
+          { projectId: project.id, type: 'blockedBy' },
+        ],
+      }),
+    ).rejects.toThrow('cycle');
+    const labels = await scoped.listLabels();
+    expect(labels).toHaveLength(1);
+    await expect(
+      createProject(model, { name: 'Wrong labels', labelIds: [labels[0].id] }),
+    ).rejects.toThrow();
+    await expect(
+      createProject(scoped, { name: 'Wrong member', memberIds: [otherUserId] }),
+    ).rejects.toThrow();
+    const privateProject = await createProject(otherModel, { name: 'Private' });
+    await expect(
+      createProject(scoped, {
+        name: 'Private dependency',
+        dependencies: [{ projectId: privateProject.id, type: 'blockedBy' }],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      createProject(scoped, {
+        name: 'Cycle',
+        dependencies: [
+          { projectId: predecessor.id, type: 'blockedBy' },
+          { projectId: predecessor.id, type: 'blocking' },
+        ],
+      }),
+    ).rejects.toThrow();
+    expect((await scoped.list()).map(({ name }) => name).sort()).toEqual(['Launch', 'Predecessor']);
+    expect(await otherModel.getPlanning(project.id)).toBeNull();
+  });
+
   it('links the selected team atomically and rejects a team from another workspace', async () => {
     const workspaceId = 'project-planning-workspace';
     const otherWorkspaceId = 'project-planning-other';

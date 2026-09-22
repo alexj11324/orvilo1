@@ -8,6 +8,7 @@ import {
   CheckCircle2Icon,
   CircleDotIcon,
   Clock3Icon,
+  FlagIcon,
   PackageOpenIcon,
   TargetIcon,
 } from 'lucide-react';
@@ -29,6 +30,8 @@ import { workKeys } from '@/libs/swr/keys';
 import { workService } from '@/services/work';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 import type { ProjectDetail } from '@/store/project';
+
+import { formatProjectDate } from '../projectPlanningDate';
 
 const styles = createStaticStyles(({ css }) => ({
   main: css`
@@ -75,7 +78,7 @@ const SectionTitle = memo<{
       <Text fontSize={16} weight={600}>
         {title}
       </Text>
-      {count !== undefined && <Tag>{count}</Tag>}
+      {count !== undefined && <Tag shape={'round'}>{count}</Tag>}
     </Flexbox>
     {action && (
       <Button size={'small'} type={'text'} onClick={onAction}>
@@ -106,6 +109,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
   );
 
   const tasks = detail.tasks ?? [];
+  const milestones = detail.milestones ?? [];
   const activeTasks = tasks.filter((task) => !TERMINAL_STATUSES.has(task.status)).slice(0, 5);
   const completedGoals = goals.filter(({ goal }) => goal.status === 'achieved').length;
   const works = workSWR.data?.items ?? [];
@@ -117,7 +121,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
         <SectionTitle
           action={t('overview.viewAllGoals', { defaultValue: 'View all' })}
           count={goals.length}
-          title={t('overview.milestones', { defaultValue: 'Milestones' })}
+          title={t('sections.goals')}
           onAction={() => navigate(getProjectGoalsPath(projectReference))}
         />
         {goalSWR.error ? (
@@ -164,6 +168,37 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
         )}
       </Flexbox>
 
+      <Flexbox className={styles.section} gap={10}>
+        <SectionTitle count={milestones.length} title={t('overview.milestones')} />
+        {milestones.length === 0 ? (
+          <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
+            {t('overview.milestonesEmpty')}
+          </Text>
+        ) : (
+          <Flexbox gap={0}>
+            {milestones.map((milestone) => (
+              <Flexbox
+                horizontal
+                align={'center'}
+                className={styles.milestone}
+                gap={10}
+                key={milestone.id}
+              >
+                <Icon icon={FlagIcon} size={15} />
+                <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
+                  {milestone.name}
+                </Text>
+                {milestone.date && (
+                  <Text fontSize={12} type={'secondary'}>
+                    {formatProjectDate(milestone.date)}
+                  </Text>
+                )}
+              </Flexbox>
+            ))}
+          </Flexbox>
+        )}
+      </Flexbox>
+
       <Flexbox className={styles.section} gap={8}>
         <SectionTitle
           action={t('overview.viewAllTasks')}
@@ -187,7 +222,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail, projectId }) => 
                   : undefined
               }
               extra={
-                <Tag size={'small'}>
+                <Tag shape={'round'} size={'small'}>
                   {t(`goals.status.${task.status}`, { defaultValue: task.status })}
                 </Tag>
               }

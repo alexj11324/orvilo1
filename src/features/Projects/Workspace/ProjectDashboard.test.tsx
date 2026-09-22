@@ -1,15 +1,25 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
 
+import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
+import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
   goalSWR: { data: undefined as unknown, error: undefined, isLoading: false, mutate: vi.fn() },
   goals: [] as { goal: { id: string; status: string; title: string } }[],
   listByWorkspace: vi.fn(),
+  navigate: vi.fn(),
+  projectMembersQuery: vi.fn(() => ({
+    data: [],
+    error: undefined,
+    isLoading: false,
+    mutate: vi.fn(),
+  })),
+  projectResolved: true,
   requestedKeys: [] as unknown[],
   workSWR: {
     data: undefined as { items: unknown[] } | undefined,
@@ -29,6 +39,7 @@ vi.mock('@lobehub/ui', () => ({
     <div className={className}>{children}</div>
   ),
   Icon: () => null,
+  TextArea: () => <textarea />,
 }));
 
 vi.mock('@lobehub/ui/base-ui', () => ({
@@ -77,11 +88,22 @@ vi.mock('@/business/client/hooks/useWorkspaceCapabilities', () => ({
 }));
 
 vi.mock('@/features/Teammates/api/hooks', () => ({
-  useProjectMembersQuery: () => ({ data: [], error: undefined, isLoading: false, mutate: vi.fn() }),
+  useProjectMembersQuery: mocks.projectMembersQuery,
 }));
 
 vi.mock('@/features/Teammates/useTeammatesEnabled', () => ({
-  useTeammatesEnabled: () => false,
+  useTeammatesEnabled: () => true,
+}));
+
+vi.mock('react-router', () => ({ useParams: () => ({ projectId: 'apollo' }) }));
+vi.mock('@/components/Avatar', () => ({ default: () => null }));
+vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => null }));
+vi.mock('@/features/AgentTasks/features/AssigneeUserAvatar', () => ({ default: () => null }));
+vi.mock('@/store/user', () => ({ useUserStore: () => true }));
+vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
+vi.mock('@/store/project', () => ({
+  useCurrentProjectDetail: () => (mocks.projectResolved ? detail : undefined),
+  useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: vi.fn() }),
 }));
 
 vi.mock('@/features/Work/WorkSummaryCard', () => ({
@@ -90,7 +112,7 @@ vi.mock('@/features/Work/WorkSummaryCard', () => ({
 
 vi.mock('@/features/WorkGallery/useOpenWork', () => ({ useOpenWork: () => vi.fn() }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => vi.fn(),
+  useWorkspaceAwareNavigate: () => mocks.navigate,
 }));
 
 // Standing in for SWR: recording the key is the point of the test (the card
@@ -118,14 +140,21 @@ vi.mock('@/store/goal', () => ({
 const detail = {
   agents: [],
   completionReviews: [],
+  dependencies: [],
   goals: [],
   knowledgeBases: [],
+  labels: [],
+  members: [],
+  milestones: [],
   project: { coordinatorAgentId: 'agt_coordinator', id: 'prj_1', name: 'Apollo', slug: 'apollo' },
   tasks: [],
 } as unknown as ProjectDetail;
 
 beforeEach(() => {
+  mocks.projectResolved = true;
   mocks.requestedKeys = [];
+  mocks.projectMembersQuery.mockClear();
+  mocks.navigate.mockClear();
   mocks.goals = [];
   mocks.listByWorkspace.mockReset().mockResolvedValue({ items: [], nextCursor: null });
   mocks.workSWR = { data: undefined, error: undefined, isLoading: false, mutate: vi.fn() };
@@ -180,10 +209,7 @@ describe('project dashboard artifacts', () => {
 });
 
 describe('project dashboard milestones', () => {
-  // Linear shape: goals render as a milestone-style row list under a
-  // "Milestones" section (icon + title + status), not as the old goal-progress
-  // card grid.
-  it('lists goals as milestone rows under the Milestones section', () => {
+  it('does not label agent goals as project milestones', () => {
     mocks.goals = [
       { goal: { id: 'goal_1', status: 'active', title: 'Ship parity' } },
       { goal: { id: 'goal_2', status: 'achieved', title: 'Draft spec' } },
@@ -191,9 +217,37 @@ describe('project dashboard milestones', () => {
 
     renderCharts();
 
-    expect(screen.getByText('Milestones')).toBeInTheDocument();
+    expect(screen.getByText('sections.goals')).toBeInTheDocument();
     expect(screen.getByText('Ship parity')).toBeInTheDocument();
     expect(screen.getByText('Draft spec')).toBeInTheDocument();
+  });
+
+  it('renders project milestones separately from agent goals', () => {
+    mocks.goals = [{ goal: { id: 'goal_1', status: 'active', title: 'Ship parity' } }];
+
+    render(
+      <ProjectDashboard
+        projectId={'prj_1'}
+        detail={{
+          ...detail,
+          milestones: [
+            {
+              date: '2026-10-01',
+              description: 'Release the parity pass',
+              id: 'milestone_1',
+              name: 'Ship the parity pass',
+              projectId: 'prj_1',
+              sortOrder: 0,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText('overview.milestones')).toBeInTheDocument();
+    expect(screen.getByText('Ship the parity pass')).toBeInTheDocument();
+    expect(screen.getByText('Ship parity')).toBeInTheDocument();
+    expect(screen.queryByText('overview.milestonesEmpty')).not.toBeInTheDocument();
   });
 
   it('keeps the orchestration policy reachable inside the overview', () => {
@@ -222,5 +276,55 @@ describe('project dashboard task previews', () => {
       />,
     );
     expect(screen.getAllByText('Ship navigation')).toHaveLength(1);
+  });
+});
+
+describe('project overview member scope', () => {
+  it('does not query members until the project resolves', () => {
+    mocks.projectResolved = false;
+    render(<ProjectWorkspace />);
+    expect(mocks.projectMembersQuery).toHaveBeenCalledWith(undefined, false);
+  });
+
+  it('loads members using the resolved project ID when the route uses a slug', () => {
+    render(<ProjectWorkspace />);
+    expect(mocks.projectMembersQuery).toHaveBeenCalledWith('prj_1', true);
+    expect(mocks.projectMembersQuery).not.toHaveBeenCalledWith('apollo', true);
+  });
+});
+
+describe('project properties planning metadata', () => {
+  it('renders priority, precision dates, labels, and clickable dependencies', () => {
+    render(
+      <ProjectPropertiesCard
+        goalProgress={50}
+        projectId={'prj_1'}
+        detail={{
+          ...detail,
+          dependencies: [
+            {
+              project: { id: 'prj_dependency', name: 'Blocked release', slug: 'blocked-release' },
+              type: 'blockedBy',
+            },
+          ] as NonNullable<ProjectDetail['dependencies']>,
+          labels: [{ id: 'label_ui', name: 'UI parity' }] as NonNullable<ProjectDetail['labels']>,
+          project: {
+            ...detail.project,
+            priority: 2,
+            startDate: '2026-09-21',
+            startDatePrecision: 'month',
+            targetDate: '2027-02-01',
+            targetDatePrecision: 'quarter',
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('create.priority.high')).toBeInTheDocument();
+    expect(screen.getByText('Sep 2026 → 2027 Q1')).toBeInTheDocument();
+    expect(screen.getByText('UI parity')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('create.dependencies.blockedBy · Blocked release'));
+    expect(mocks.navigate).toHaveBeenCalledWith('/project/blocked-release');
   });
 });

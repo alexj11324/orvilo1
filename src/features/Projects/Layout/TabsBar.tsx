@@ -140,6 +140,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
                 color={PROJECT_STATUS_META[detail.project.status]?.color}
+                shape={'round'}
                 size={'small'}
                 icon={
                   <Icon

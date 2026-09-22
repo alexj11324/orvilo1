@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import type { ProjectPriority, ProjectStatus } from './createProjectForm';
 import {
   getCreateProjectInput,
   getProjectFieldSuggestions,
   isProjectIdentifierValid,
   isProjectSlugValid,
 } from './createProjectForm';
+import { formatProjectDate, getProjectDatePickerMode } from './projectPlanningDate';
 
 describe('createProjectForm', () => {
   it.each(['2026 Roadmap', '2026'])('suggests a submittable identifier for %s', (name) => {
@@ -31,6 +33,99 @@ describe('createProjectForm', () => {
       summary: 'Short summary',
       description: 'Project brief',
     });
+  });
+
+  it('keeps selectable project fields and milestone drafts in the create input', () => {
+    expect(
+      getCreateProjectInput({
+        dependencies: [
+          { projectId: 'project-a', type: 'blockedBy' },
+          { projectId: 'project-b', type: 'blocking' },
+        ],
+        identifier: 'NEW',
+        labelIds: ['label-a'],
+        memberIds: ['member-a', 'member-b'],
+        milestones: [
+          {
+            date: '2026-10-01',
+            description: ' Brief ',
+            name: ' Launch ',
+          },
+        ],
+        name: 'Launch',
+        newLabelNames: [' UI parity ', 'UI parity'],
+        priority: 2,
+        slug: '',
+        startDate: '2026-09-01',
+        startDatePrecision: 'month',
+        status: 'active',
+        targetDate: '2026-10-01',
+        targetDatePrecision: 'quarter',
+      }),
+    ).toEqual({
+      dependencies: [
+        { projectId: 'project-a', type: 'blockedBy' },
+        { projectId: 'project-b', type: 'blocking' },
+      ],
+      identifier: 'NEW',
+      labelIds: ['label-a'],
+      memberIds: ['member-a', 'member-b'],
+      milestones: [{ date: '2026-10-01', description: 'Brief', name: 'Launch' }],
+      name: 'Launch',
+      newLabelNames: ['UI parity'],
+      priority: 2,
+      startDate: '2026-09-01',
+      startDatePrecision: 'month',
+      status: 'active',
+      targetDate: '2026-10-01',
+      targetDatePrecision: 'quarter',
+    });
+  });
+
+  it('formats planning dates according to their selected precision', () => {
+    expect(formatProjectDate('2026-02-14', 'day')).toBe('Feb 14, 2026');
+    expect(formatProjectDate('2026-02-14', 'month')).toBe('Feb 2026');
+    expect(formatProjectDate('2026-02-14', 'quarter')).toBe('2026 Q1');
+    expect(formatProjectDate('2026-09-14', 'halfYear')).toBe('2026 H2');
+    expect(formatProjectDate('2026-09-14', 'year')).toBe('2026');
+    expect(formatProjectDate('not-a-date', 'day')).toBe('');
+    expect(formatProjectDate(undefined, 'month')).toBe('');
+  });
+
+  it.each([
+    ['day', 'date'],
+    ['month', 'month'],
+    ['quarter', 'quarter'],
+    ['halfYear', 'month'],
+    ['year', 'year'],
+  ] as const)('maps %s precision to its date input mode', (precision, pickerMode) => {
+    expect(getProjectDatePickerMode(precision)).toBe(pickerMode);
+  });
+
+  it.each(['completed', 'reviewing'] as const)(
+    'filters %s and out-of-range priority from create input',
+    (status) => {
+      expect(
+        getCreateProjectInput({
+          identifier: 'NEW',
+          name: 'Launch',
+          priority: 99 as ProjectPriority,
+          slug: '',
+          status,
+        }),
+      ).toEqual({ identifier: 'NEW', name: 'Launch' });
+    },
+  );
+
+  it('keeps Planned as a non-completion project status', () => {
+    expect(
+      getCreateProjectInput({
+        identifier: 'NEW',
+        name: 'Launch',
+        slug: '',
+        status: 'planned' as ProjectStatus,
+      }),
+    ).toMatchObject({ status: 'planned' });
   });
 
   it('does not allow a target date before the start date', () => {

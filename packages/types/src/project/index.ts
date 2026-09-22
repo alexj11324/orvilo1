@@ -2,6 +2,7 @@ export const PROJECT_IDENTIFIER_REGEX = /^[A-Z][A-Z0-9]{2,5}$/;
 
 export const PROJECT_STATUSES = [
   'backlog',
+  'planned',
   'active',
   'paused',
   'reviewing',
@@ -11,6 +12,16 @@ export const PROJECT_STATUSES = [
 ] as const;
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+/** Linear-style project priority, ordered from no priority to low priority. */
+export const PROJECT_PRIORITIES = [0, 1, 2, 3, 4] as const;
+
+export type ProjectPriority = (typeof PROJECT_PRIORITIES)[number];
+
+/** Precision used when a project date represents a period rather than a day. */
+export const PROJECT_DATE_PRECISIONS = ['day', 'month', 'quarter', 'halfYear', 'year'] as const;
+
+export type ProjectDatePrecision = (typeof PROJECT_DATE_PRECISIONS)[number];
 
 export const PROJECT_VISIBILITIES = ['private', 'public'] as const;
 

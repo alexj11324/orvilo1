@@ -1322,6 +1322,13 @@
       "when": 1790030419400,
       "tag": "0188_project_planning_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 189,
+      "version": "7",
+      "when": 1790034917561,
+      "tag": "0189_project_fields",
+      "breakpoints": true
     }
   ]
 }

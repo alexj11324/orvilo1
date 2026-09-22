@@ -76,6 +76,7 @@ const TaskListVisibilityFilter = memo(() => {
       <ActionIcon
         icon={CurrentIcon}
         size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+        style={{ borderRadius: 9999 }}
         title={`${t('taskList.visibility.label', { defaultValue: 'Visibility' })}: ${currentLabel}`}
       />
     </DropdownMenu>

@@ -1,7 +1,9 @@
 import type {
   ProjectCompletionDecision,
+  ProjectDatePrecision,
   ProjectMigrationClass,
   ProjectOrchestrationPolicy,
+  ProjectPriority,
   ProjectStatus,
   ProjectVisibility,
   ProjectWorkingDirectoryPermission,
@@ -54,7 +56,9 @@ export const projects = pgTable(
     leadUserId: text('lead_user_id').references(() => users.id, { onDelete: 'set null' }),
     /** Planned dates, independent of execution lifecycle startedAt/completedAt. */
     startDate: date('start_date'),
+    startDatePrecision: text('start_date_precision').$type<ProjectDatePrecision>(),
     targetDate: date('target_date'),
+    targetDatePrecision: text('target_date_precision').$type<ProjectDatePrecision>(),
 
     /**
      * Dedicated agent that coordinates all conversations and work inside this
@@ -67,6 +71,8 @@ export const projects = pgTable(
     }),
 
     status: text('status').$type<ProjectStatus>().notNull().default('backlog'),
+    /** Linear-style project priority: 0 (no priority) through 4 (low). */
+    priority: integer('priority').$type<ProjectPriority>().notNull().default(0),
 
     /**
      * Owning user. Nullable (linear-workspace-v3): when the owner account is
@@ -134,13 +140,108 @@ export const projects = pgTable(
     index('projects_workspace_id_idx').on(t.workspaceId),
     index('projects_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.userId),
     index('projects_status_updated_at_idx').on(t.status, t.updatedAt),
+    index('projects_priority_idx').on(t.priority),
     uniqueIndex('projects_coordinator_agent_id_unique').on(t.coordinatorAgentId),
     check(
       'projects_completed_requires_human_review',
       sql`${t.status} <> 'completed' OR (${t.completedReviewId} IS NOT NULL AND ${t.completedAt} IS NOT NULL)`,
     ),
+    check('projects_priority_valid', sql`${t.priority} BETWEEN 0 AND 4`),
   ],
 );
+
+/** Workspace-level project label taxonomy. Labels are independent from agent labels. */
+export const projectLabels = pgTable(
+  'project_labels',
+  {
+    id: uuid('id').defaultRandom().notNull().primaryKey(),
+    workspaceId: text('workspace_id')
+      .references(() => workspaces.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('project_labels_workspace_id_name_unique').on(t.workspaceId, t.name),
+    index('project_labels_workspace_id_idx').on(t.workspaceId),
+  ],
+);
+
+export type NewProjectLabel = typeof projectLabels.$inferInsert;
+export type ProjectLabelItem = typeof projectLabels.$inferSelect;
+
+/** Many-to-many binding between a project and a workspace project label. */
+export const projectLabelBindings = pgTable(
+  'project_label_bindings',
+  {
+    id: uuid('id').defaultRandom().notNull().primaryKey(),
+    projectId: text('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    labelId: uuid('label_id')
+      .references(() => projectLabels.id, { onDelete: 'cascade' })
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('project_label_bindings_project_id_label_id_unique').on(t.projectId, t.labelId),
+    index('project_label_bindings_project_id_idx').on(t.projectId),
+    index('project_label_bindings_label_id_idx').on(t.labelId),
+  ],
+);
+
+export type NewProjectLabelBinding = typeof projectLabelBindings.$inferInsert;
+export type ProjectLabelBindingItem = typeof projectLabelBindings.$inferSelect;
+
+/** Directional end-to-start dependency: predecessor must finish before successor starts. */
+export const projectDependencies = pgTable(
+  'project_dependencies',
+  {
+    id: uuid('id').defaultRandom().notNull().primaryKey(),
+    predecessorId: text('predecessor_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    successorId: text('successor_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('project_dependencies_predecessor_successor_unique').on(
+      t.predecessorId,
+      t.successorId,
+    ),
+    index('project_dependencies_predecessor_id_idx').on(t.predecessorId),
+    index('project_dependencies_successor_id_idx').on(t.successorId),
+    check('project_dependencies_no_self_reference', sql`${t.predecessorId} <> ${t.successorId}`),
+  ],
+);
+
+export type NewProjectDependency = typeof projectDependencies.$inferInsert;
+export type ProjectDependencyItem = typeof projectDependencies.$inferSelect;
+
+/** A project delivery milestone, independent from agent goals. */
+export const projectMilestones = pgTable(
+  'project_milestones',
+  {
+    id: uuid('id').defaultRandom().notNull().primaryKey(),
+    projectId: text('project_id')
+      .references(() => projects.id, { onDelete: 'cascade' })
+      .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    date: date('date'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    index('project_milestones_project_id_sort_order_idx').on(t.projectId, t.sortOrder),
+    index('project_milestones_project_id_date_idx').on(t.projectId, t.date),
+  ],
+);
+
+export type NewProjectMilestone = typeof projectMilestones.$inferInsert;
+export type ProjectMilestoneItem = typeof projectMilestones.$inferSelect;
 
 /**
  * A device-backed directory made available to a project as an execution context.

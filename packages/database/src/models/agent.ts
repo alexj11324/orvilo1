@@ -1387,9 +1387,9 @@ export class AgentModel {
     if (agent.slug === INBOX_SESSION_ID) {
       // The builtin 'orvilo' harness is the inbox agent's own engine — only
       // external-CLI bindings would reroute it through the device gateway.
-      const hetero = mergedValue.agencyConfig?.heterogeneousProvider;
-      if (hetero && hetero.type !== 'orvilo') {
-        delete mergedValue.agencyConfig.heterogeneousProvider;
+      const agency = mergedValue.agencyConfig;
+      if (agency?.heterogeneousProvider && agency.heterogeneousProvider.type !== 'orvilo') {
+        delete agency.heterogeneousProvider;
       }
       if (isHeterogeneousAgentModelId(mergedValue.model)) {
         mergedValue.model = null;

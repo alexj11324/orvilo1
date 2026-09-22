@@ -10,6 +10,8 @@ This is one action's observable behavior comparison, not automatic certification
 
 Regression checks: `node --test scripts/ui-parity/compare.test.mjs`.
 
+Before navigating to the scenario start, the runner marks the old window and waits for a new document before resolving controls. `Page.navigate` returning, or a matching URL alone, is not proof of a completed reload. This runner expects a document navigation; a same-document-only transition that retains the marker cannot pass readiness.
+
 An optional per-surface `readinessScope` selector limits loading readiness to one visible page root. It must exist uniquely and contain the clicked control; missing/ambiguous roots cannot pass. Busy indicators outside it remain recorded as `outsideBusy` in every snapshot, not silently discarded. Route and all semantic changes are still observed document-wide (including portals). The example uses Orvilo's development source marker to locate its project layout; adapt this selector for other builds. A scoped result makes no health claim about the application shell.
 
 Target resolution prefers named interactive controls over nested text labels; multiple matching controls remain ambiguous. Loading detection honors visible `aria-busy="true"` and indeterminate progress bars. Determinate progress alone does not block settling: applications should mark actual pending work with `aria-busy`. This accessibility-based heuristic does not replace network or application-specific completion evidence.

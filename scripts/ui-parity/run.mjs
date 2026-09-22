@@ -184,11 +184,23 @@ async function record(surface, action, directory) {
   try {
     await client.send('Page.enable');
     await client.send('Page.bringToFront');
+    const navigationMarker = crypto.randomUUID();
+    await client.evaluate(`window.__parityNavigationMarker = ${JSON.stringify(navigationMarker)}`);
     await client.send('Page.navigate', { url: surface.start });
     const deadline = Date.now() + 30000;
     let target;
     while (Date.now() < deadline) {
       try {
+        // A same-URL reload can briefly leave the old DOM queryable after Page.navigate returns.
+        // Do not use those controls as proof that the requested start document is ready.
+        if (
+          await client.evaluate(
+            `window.__parityNavigationMarker === ${JSON.stringify(navigationMarker)}`,
+          )
+        ) {
+          await delay();
+          continue;
+        }
         target = await sample(true);
         if (target.valid) break;
       } catch {

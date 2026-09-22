@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
 
-import { ProjectUpdateComposer } from '../Updates';
+import { ProjectPanelSection } from '../Layout/ProjectSidePanel';
+import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
@@ -26,7 +27,8 @@ const mocks = vi.hoisted(() => ({
 
 // Only the dashboard/panel components are under test; shell components are
 // stand-ins so the assertions read the data, not markup details.
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@lobehub/ui', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Block: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Empty: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
@@ -134,9 +136,49 @@ afterEach(cleanup);
 
 const renderCharts = () => render(<ProjectDashboard detail={detail} projectId={'prj_1'} />);
 
+describe('project sidebar sections', () => {
+  it('collapses and reopens its content while exposing the disclosure relationship', () => {
+    render(
+      <ProjectPanelSection title="Properties">
+        <button>Change priority</button>
+      </ProjectPanelSection>,
+    );
+    const trigger = screen.getByRole('button', { name: 'overview.collapseSection' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(trigger.getAttribute('aria-controls')!)).toContainElement(
+      screen.getByRole('button', { name: 'Change priority' }),
+    );
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Change priority' })).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(screen.getByRole('button', { name: 'Change priority' })).toBeVisible();
+  });
+});
+
 describe('project update composer controls', () => {
+  it('renders persisted Markdown formatting instead of showing its source markers', () => {
+    render(
+      <ProjectUpdateRow
+        update={{
+          id: 'update_1',
+          projectId: 'prj_1',
+          authorId: 'user_1',
+          body: '**Launch ready**',
+          createdAt: '2026-09-22T00:00:00Z',
+          kind: 'comment',
+        }}
+      />,
+    );
+    expect(screen.getByText('Launch ready').tagName).toBe('STRONG');
+    expect(screen.queryByText('**Launch ready**')).not.toBeInTheDocument();
+  });
   it('starts in comment mode when Activity is opened without an update intent', () => {
     render(<ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="prj_1" />);
+    expect(screen.getByRole('textbox', { name: 'overview.commentEditor' })).toHaveAttribute(
+      'contenteditable',
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'overview.postComment' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /onTrack|On track/ })).not.toBeInTheDocument();
   });

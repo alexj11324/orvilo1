@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
+import { Flexbox, Icon, Markdown } from '@lobehub/ui';
 import { Button, DropdownMenu, Tabs, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
+
+import { ProjectUpdateEditor } from './ProjectUpdateEditor';
 
 const styles = createStaticStyles(({ css }) => ({
   collapsed: css`
@@ -64,16 +66,6 @@ const styles = createStaticStyles(({ css }) => ({
   modeTabs: css`
     flex: none;
     width: auto;
-  `,
-  textarea: css`
-    padding-block: 10px 4px !important;
-    padding-inline: 12px !important;
-    border: 0 !important;
-
-    font-size: 15px !important;
-
-    background: transparent !important;
-    box-shadow: none !important;
   `,
   updateRow: css`
     padding-block: 10px;
@@ -135,13 +127,14 @@ export const ProjectUpdateComposer = memo<{
   const [body, setBody] = useState('');
   const [health, setHealth] = useState<ProjectHealth>('onTrack');
   const [posting, setPosting] = useState(false);
+  const [editorRevision, setEditorRevision] = useState(0);
 
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [mode, setMode] = useState<ProjectUpdateKind>(defaultMode);
 
   const post = async () => {
     const content = body.trim();
-    if (!content) return;
+    if (!content || posting) return;
     setPosting(true);
     try {
       await projectService.createUpdate(projectId, {
@@ -150,6 +143,7 @@ export const ProjectUpdateComposer = memo<{
         kind: mode,
       });
       setBody('');
+      setEditorRevision((revision) => revision + 1);
       if (!defaultExpanded) setExpanded(false);
       onPosted?.();
     } catch (error) {
@@ -210,19 +204,15 @@ export const ProjectUpdateComposer = memo<{
           </DropdownMenu>
         )}
       </Flexbox>
-      <TextArea
-        autoFocus
-        aria-label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
-        autoSize={{ maxRows: 8, minRows: 2 }}
-        className={styles.textarea}
-        value={body}
+      <ProjectUpdateEditor
+        disabled={posting}
+        key={editorRevision}
+        label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
         placeholder={t(
           mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
         )}
-        onChange={(event) => setBody(event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') void post();
-        }}
+        onChange={setBody}
+        onSubmit={() => void post()}
       />
       <Flexbox horizontal align={'center'} className={styles.composerFooter} justify={'flex-end'}>
         <Button
@@ -268,9 +258,7 @@ export const ProjectUpdateRow = memo<{ update: ProjectUpdate }>(({ update }) => 
             {dayjs(update.createdAt).format('MMM D')}
           </Text>
         </Flexbox>
-        <Text fontSize={13} style={{ whiteSpace: 'pre-wrap' }}>
-          {update.body}
-        </Text>
+        <Markdown fontSize={15}>{update.body}</Markdown>
       </Flexbox>
     </Flexbox>
   );

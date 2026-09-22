@@ -1,10 +1,10 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
+import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { DiamondIcon } from 'lucide-react';
-import { memo } from 'react';
+import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
+import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
@@ -28,16 +28,52 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: 10px;
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
   `,
+  sectionTrigger: css`
+    cursor: pointer;
+
+    display: flex;
+    gap: 6px;
+    align-items: center;
+
+    width: 100%;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+
+    color: ${cssVar.colorTextSecondary};
+    text-align: start;
+
+    background: transparent;
+  `,
 }));
 
-const SectionTitle = memo<{ count?: number; title: string }>(({ count, title }) => (
-  <Flexbox horizontal align={'center'} gap={7}>
-    <Text fontSize={13} type={'secondary'} weight={500}>
-      {title}
-    </Text>
-    {count !== undefined && <Tag shape={'round'}>{count}</Tag>}
-  </Flexbox>
-));
+export function ProjectPanelSection({ children, title }: { children: ReactNode; title: string }) {
+  const { t } = useTranslation('project');
+  const [expanded, setExpanded] = useState(true);
+  const contentId = useId();
+  return (
+    <Flexbox className={styles.railCard} gap={expanded ? 8 : 0}>
+      <button
+        aria-controls={contentId}
+        aria-expanded={expanded}
+        className={styles.sectionTrigger}
+        type="button"
+        aria-label={t(expanded ? 'overview.collapseSection' : 'overview.expandSection', {
+          section: title.toLocaleLowerCase(),
+        })}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <Text fontSize={13} type={'secondary'} weight={500}>
+          {title}
+        </Text>
+        <Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size={12} />
+      </button>
+      <div hidden={!expanded} id={contentId}>
+        <Flexbox gap={8}>{children}</Flexbox>
+      </div>
+    </Flexbox>
+  );
+}
 
 // Linear keeps one persistent right-hand panel across every project tab
 // (Overview | Activity | Issues), so it lives on the layout rather than any
@@ -63,12 +99,10 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
 
   return (
     <Flexbox className={styles.panel} gap={12}>
-      <Flexbox className={styles.railCard} gap={12}>
-        <SectionTitle title={t('overview.propertiesLabel')} />
+      <ProjectPanelSection title={t('overview.propertiesLabel')}>
         <ProjectPropertiesCard detail={detail} projectId={databaseId} />
-      </Flexbox>
-      <Flexbox className={styles.railCard} gap={8}>
-        <SectionTitle title={t('overview.milestones', { defaultValue: 'Milestones' })} />
+      </ProjectPanelSection>
+      <ProjectPanelSection title={t('overview.milestones', { defaultValue: 'Milestones' })}>
         {milestones.length === 0 ? (
           <Text fontSize={12} type={'secondary'}>
             {t('overview.milestonesEmpty')}
@@ -88,10 +122,9 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
             </Flexbox>
           ))
         )}
-      </Flexbox>
+      </ProjectPanelSection>
       {progress !== null && (
-        <Flexbox className={styles.railCard} gap={8}>
-          <SectionTitle title={t('overview.progressLabel', { defaultValue: 'Progress' })} />
+        <ProjectPanelSection title={t('overview.progressLabel', { defaultValue: 'Progress' })}>
           <Flexbox horizontal align={'center'} gap={8}>
             <Text fontSize={12} type={'secondary'}>
               {t('overview.progressCompleted', {
@@ -104,7 +137,7 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
               {progress}%
             </Text>
           </Flexbox>
-        </Flexbox>
+        </ProjectPanelSection>
       )}
     </Flexbox>
   );

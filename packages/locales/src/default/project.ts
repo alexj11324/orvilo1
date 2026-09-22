@@ -177,6 +177,8 @@ export default {
 
   'overview.nothingNeedsAttention': 'Nothing needs your attention right now.',
   'overview.projectSummary': 'Project summary',
+  'overview.collapseSection': 'Collapse {{section}} section',
+  'overview.expandSection': 'Expand {{section}} section',
   'overview.fieldSaveError': 'Could not save. Your draft is kept; focus the field and try again.',
   'overview.reviewProject': 'Review project completion',
   'overview.taskFailed': 'This task needs recovery',

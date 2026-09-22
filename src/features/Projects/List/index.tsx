@@ -192,7 +192,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
           {project.identifier}
         </Text>
         <span className={styles.owner}>
-          {project.userId ? <ProjectOwnerAvatar userId={project.userId} /> : null}
+          {project.leadUserId ? <ProjectOwnerAvatar userId={project.leadUserId} /> : null}
         </span>
         <Text className={styles.cell} fontSize={12}>
           {t(PROJECT_PRIORITY_LABEL_KEY[project.priority ?? 0])}
@@ -309,7 +309,7 @@ const ProjectListPage = memo(() => {
               </Text>
               <span className={styles.owner}>
                 <Text fontSize={12} type={'secondary'}>
-                  {t('list.columnOwner', { defaultValue: 'Owner' })}
+                  {t('list.columnLead', { defaultValue: 'Lead' })}
                 </Text>
               </span>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>

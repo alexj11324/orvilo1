@@ -108,7 +108,7 @@ export default {
   'list.emptyDescription': 'Create your first project to organize goals, tasks, and resources.',
   'list.columnIssues': 'Issues',
   'list.columnKey': 'Key',
-  'list.columnOwner': 'Owner',
+  'list.columnLead': 'Lead',
   'list.columnPriority': 'Priority',
   'list.columnTarget': 'Target',
   'list.columnName': 'Name',

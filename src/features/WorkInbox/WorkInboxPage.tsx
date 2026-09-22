@@ -677,7 +677,11 @@ const WorkInboxPage = memo(() => {
         <Center flex={1} padding={48}>
           <Empty description={t('inbox.empty')} icon={InboxIcon} />
         </Center>
-      ) : listMode === 'partial-empty' ? null : (
+      ) : listMode === 'partial-empty' ? (
+        <Center flex={1} padding={48}>
+          <Empty description={t('inbox.empty')} icon={InboxIcon} />
+        </Center>
+      ) : (
         <>
           {cards.map((card) => (
             <div

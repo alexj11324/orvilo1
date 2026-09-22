@@ -47,6 +47,7 @@ import { otherTeamOptions } from './otherTeamOptions';
 import { reassignMemberOptions } from './reassignMemberOptions';
 import TeamHome from './TeamHome';
 import TeamIdentity from './TeamIdentity';
+import { nextTeamIssueScopeNavigation } from './teamIssueScopeNavigation';
 import { teamSurfaceState } from './teamSurfaceState';
 import { teamTriageCreateOptions } from './teamTriageCreate';
 import {
@@ -545,13 +546,7 @@ const TeamPage = memo(() => {
                   }))}
                   onChange={(value) =>
                     setSearchParams(
-                      (current) => {
-                        const next = new URLSearchParams(current);
-                        if (value === 'all') next.delete('scope');
-                        else next.set('scope', String(value));
-                        return next;
-                      },
-                      { replace: true },
+                      ...nextTeamIssueScopeNavigation(searchParams, value as TeamIssueScope),
                     )
                   }
                 />

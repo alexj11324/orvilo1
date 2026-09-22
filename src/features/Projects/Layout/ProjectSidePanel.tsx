@@ -38,9 +38,23 @@ const styles = createStaticStyles(({ css }) => ({
     padding: 12px;
   `,
   railCard: css`
-    padding: 12px;
+    /* Reference: the card's own content box starts at x=1048, 4px right of
+       ours (1044). This is the *card's* start inset, not the row's label
+       column — that is a 90px column with a 0 gap, already correct, and it is
+       what the 1138 in §1 of the parity table decomposes to: 1048 + 90 + 0.
+       With the inset fixed the same decomposition gives the same number, so
+       the value column lands on 1138 instead of reaching it by coincidence.
+
+       Measured after the change: content left 1048, value x 1138. The card's
+       content box is then 358 wide against the reference's 360 — that 2px sits
+       on the *end* side (the reference's end inset pair is 22px, ours 24px) and
+       is left alone: which of padding/width carries it is not something either
+       side has measured. */
+    padding-block: 12px;
+    padding-inline: 16px 12px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 10px;
+
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
   `,
   sectionTrigger: css`

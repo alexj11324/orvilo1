@@ -111,6 +111,8 @@ export default {
   'list.columnLead': 'Lead',
   'overview.updatePlaceholder': 'Write a project update…',
   'overview.updatePostError': 'Failed to post update',
+  'overview.updateModeComment': 'Comment',
+  'overview.updateModeUpdate': 'Update',
   'overview.updateAnonymous': 'Member',
   'overview.health.onTrack': 'On track',
   'overview.health.atRisk': 'At risk',

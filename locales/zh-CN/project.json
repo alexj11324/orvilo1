@@ -213,6 +213,8 @@
   "overview.tasksTitle": "项目任务",
   "overview.title": "继续推进这个项目",
   "overview.updateAnonymous": "成员",
+  "overview.updateModeComment": "评论",
+  "overview.updateModeUpdate": "进展",
   "overview.updatePlaceholder": "撰写项目进展…",
   "overview.updatePostError": "发布失败",
   "overview.viewAllGoals": "查看全部",

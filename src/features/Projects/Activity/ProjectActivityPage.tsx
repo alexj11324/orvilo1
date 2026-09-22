@@ -27,7 +27,7 @@ import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { useProjectStore } from '@/store/project';
 
-import { ProjectUpdateRow, useProjectUpdates } from '../Updates';
+import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -350,15 +350,27 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
         <AsyncError error={error} variant={'block'} onRetry={() => void mutate()} />
       </Center>
     );
+  const composer = (
+    <ProjectUpdateComposer
+      defaultExpanded
+      projectId={projectId}
+      onPosted={() => void updatesSWR.mutate()}
+    />
+  );
+
   if (merged.length === 0)
     return (
-      <Center flex={1} padding={48}>
-        <Empty description={t('activity.empty')} icon={HistoryIcon} />
-      </Center>
+      <div className={styles.body}>
+        {composer}
+        <Center flex={1} padding={48}>
+          <Empty description={t('activity.empty')} icon={HistoryIcon} />
+        </Center>
+      </div>
     );
 
   return (
     <div className={styles.body}>
+      {composer}
       {error ? <AsyncError error={error} variant={'inline'} onRetry={() => void mutate()} /> : null}
       {merged.map((item) =>
         item.kind === 'update' ? (

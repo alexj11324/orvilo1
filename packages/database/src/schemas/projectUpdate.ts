@@ -1,4 +1,4 @@
-import type { ProjectHealth } from '@orvilo/types';
+import type { ProjectHealth, ProjectUpdateKind } from '@orvilo/types';
 import { index, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 
 import { timestamps } from './_helpers';
@@ -21,7 +21,9 @@ export const projectUpdates = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
 
-    health: text('health').$type<ProjectHealth>().notNull(),
+    /** 'update' carries a health pill and bumps projects.health; 'comment' is a plain feed note. */
+    kind: text('kind').$type<ProjectUpdateKind>().default('update').notNull(),
+    health: text('health').$type<ProjectHealth>(),
     body: text('body').notNull(),
 
     ...timestamps,

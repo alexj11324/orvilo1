@@ -213,6 +213,8 @@
   "overview.tasksTitle": "Project tasks",
   "overview.title": "Keep this project moving",
   "overview.updateAnonymous": "Member",
+  "overview.updateModeComment": "Comment",
+  "overview.updateModeUpdate": "Update",
   "overview.updatePlaceholder": "Write a project update…",
   "overview.updatePostError": "Failed to post update",
   "overview.viewAllGoals": "View all",

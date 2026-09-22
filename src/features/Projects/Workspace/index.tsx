@@ -13,7 +13,10 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { getProjectResourcesPath } from '@/features/Projects/Layout/navigation';
+import {
+  getProjectActivityPath,
+  getProjectResourcesPath,
+} from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
@@ -185,11 +188,14 @@ const ProjectWorkspace = memo(() => {
             <Flexbox gap={8}>
               <ProjectUpdateComposer
                 projectId={project.id}
+                onExpand={() => navigate(getProjectActivityPath(projectReference))}
                 onPosted={() => void updatesSWR.mutate()}
               />
-              {(updatesSWR.data ?? []).map((update) => (
-                <ProjectUpdateRow key={update.id} update={update} />
-              ))}
+              {(updatesSWR.data ?? [])
+                .filter((update) => update.kind !== 'comment')
+                .map((update) => (
+                  <ProjectUpdateRow key={update.id} update={update} />
+                ))}
             </Flexbox>
             <ProjectDescription
               description={project.description}

@@ -4,6 +4,7 @@ import type {
   ProjectOrchestrationPolicy,
   ProjectPriority,
   ProjectStatus,
+  ProjectUpdateKind,
   ProjectVisibility,
 } from '@orvilo/types';
 
@@ -51,8 +52,10 @@ class ProjectService {
 
   listUpdates = async (id: string) => lambdaClient.project.listUpdates.query({ id });
 
-  createUpdate = async (id: string, input: { body: string; health: ProjectHealth }) =>
-    lambdaClient.project.createUpdate.mutate({ id, ...input });
+  createUpdate = async (
+    id: string,
+    input: { body: string; health?: ProjectHealth; kind?: ProjectUpdateKind },
+  ) => lambdaClient.project.createUpdate.mutate({ id, ...input });
 
   getOrchestrationPolicy = async (id: string) =>
     lambdaClient.project.getOrchestrationPolicy.query({ id });

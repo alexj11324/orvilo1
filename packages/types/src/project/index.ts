@@ -53,6 +53,11 @@ export const PROJECT_HEALTH_STATES = ['onTrack', 'atRisk', 'offTrack'] as const;
 
 export type ProjectHealth = (typeof PROJECT_HEALTH_STATES)[number];
 
+/** Linear's activity composer splits notes into status updates and plain comments. */
+export const PROJECT_UPDATE_KINDS = ['update', 'comment'] as const;
+
+export type ProjectUpdateKind = (typeof PROJECT_UPDATE_KINDS)[number];
+
 /** A single project update post — Linear's project-update entity. */
 export interface ProjectUpdate {
   authorAvatar?: string;
@@ -60,8 +65,9 @@ export interface ProjectUpdate {
   authorName?: string;
   body: string;
   createdAt: string;
-  health: ProjectHealth;
+  health?: ProjectHealth;
   id: string;
+  kind: ProjectUpdateKind;
   projectId: string;
 }
 

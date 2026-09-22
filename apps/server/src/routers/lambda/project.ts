@@ -4,6 +4,7 @@ import {
   PROJECT_HEALTH_STATES,
   PROJECT_IDENTIFIER_REGEX,
   PROJECT_STATUSES,
+  PROJECT_UPDATE_KINDS,
   PROJECT_VISIBILITIES,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -398,7 +399,13 @@ export const projectRouter = router({
   }),
 
   createUpdate: projectWriteProcedure
-    .input(idInput.extend({ body: z.string().min(1), health: healthInput }))
+    .input(
+      idInput.extend({
+        body: z.string().min(1),
+        health: healthInput.optional(),
+        kind: z.enum(PROJECT_UPDATE_KINDS).optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
@@ -407,6 +414,7 @@ export const projectRouter = router({
             await ctx.projectModel.createUpdate(project.id, {
               body: input.body,
               health: input.health,
+              kind: input.kind,
             }),
           ),
           success: true,

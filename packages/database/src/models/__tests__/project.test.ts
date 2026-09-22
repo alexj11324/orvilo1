@@ -49,6 +49,33 @@ describe('ProjectModel', () => {
     await serverDB.delete(users);
   });
 
+  it('keeps comments separate from project health and scopes activity to the owner', async () => {
+    const project = await createProject(model, { name: 'Activity' });
+    await model.createUpdate(project.id, { body: 'Risk identified', health: 'atRisk' });
+    const comment = await model.createUpdate(project.id, {
+      body: 'Discuss the mitigation',
+      health: 'onTrack',
+      kind: 'comment',
+    });
+
+    expect(comment).toMatchObject({ kind: 'comment', health: null });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'atRisk' });
+    expect(await model.listUpdates(project.id)).toHaveLength(2);
+    expect(await otherModel.listUpdates(project.id)).toBeNull();
+    expect(
+      await otherModel.createUpdate(project.id, { body: 'Not allowed', kind: 'comment' }),
+    ).toBeNull();
+  });
+
+  it('uses the same default health on the update and its project', async () => {
+    const project = await createProject(model, { name: 'Default update health' });
+    await model.createUpdate(project.id, { body: 'Blocked', health: 'offTrack' });
+    const update = await model.createUpdate(project.id, { body: 'Recovered' });
+
+    expect(update).toMatchObject({ kind: 'update', health: 'onTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
+  });
+
   it('creates, lists, updates, and deletes a project in the owner scope', async () => {
     const project = await createProject(model, { description: 'A large effort', name: 'Apollo' });
     expect(project.status).toBe('backlog');

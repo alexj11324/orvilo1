@@ -5,6 +5,7 @@ import type {
   ProjectOrchestrationPolicy,
   ProjectPriority,
   ProjectStatus,
+  ProjectUpdateKind,
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
@@ -1190,6 +1191,7 @@ export class ProjectModel {
         createdAt: projectUpdates.createdAt,
         health: projectUpdates.health,
         id: projectUpdates.id,
+        kind: projectUpdates.kind,
         projectId: projectUpdates.projectId,
       })
       .from(projectUpdates)
@@ -1198,23 +1200,32 @@ export class ProjectModel {
       .orderBy(desc(projectUpdates.createdAt));
   }
 
-  async createUpdate(projectId: string, input: { body: string; health: ProjectHealth }) {
+  async createUpdate(
+    projectId: string,
+    input: { body: string; health?: ProjectHealth; kind?: ProjectUpdateKind },
+  ) {
     if (!(await this.findById(projectId))) return null;
+    const kind = input.kind ?? 'update';
+    const health = kind === 'update' ? (input.health ?? 'onTrack') : null;
     return this.db.transaction(async (tx) => {
       const db = tx as OrviloDatabase;
       const [update] = await db
         .insert(projectUpdates)
         .values({
           body: input.body,
-          health: input.health,
+          health,
+          kind,
           projectId,
           userId: this.userId,
         })
         .returning();
-      await db
-        .update(projects)
-        .set({ health: input.health, updatedAt: new Date() })
-        .where(eq(projects.id, projectId));
+      // Only real status updates move the project's denormalized health.
+      if (health !== null) {
+        await db
+          .update(projects)
+          .set({ health, updatedAt: new Date() })
+          .where(eq(projects.id, projectId));
+      }
       return update;
     });
   }

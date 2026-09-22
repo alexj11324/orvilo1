@@ -15,7 +15,10 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 `AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
 
+- **Live application UI parity**: Read `clone-website-orvilo` and its required references before reference collection, specification or implementation. It owns evidence-backed state coverage, isolated builder handoffs and whole-page acceptance; use existing domain skills for the code changes. Its upstream directory is a provenance archive, not an alternate skill.
+
 - **React and TSX**: Before editing components, component state, render boundaries, or memoization, read the `react` skill. It owns component selection, styling, state locality, and render-performance rules.
+
 - **Heavy domain features**: When splitting a fat Viewer/Page into reusable pieces (page vs portal vs share vs micro-app), read the `compose-atoms` skill. Split on mountable capabilities, not visual sections, and do not hide unused work behind `readOnly` / `mode` flags.
 
 ## Code Ownership

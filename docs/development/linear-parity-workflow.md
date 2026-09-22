@@ -1,5 +1,10 @@
 # Linear parity execution contract
 
+The canonical executable instructions now live in
+[clone-website-orvilo](../../.agents/skills/clone-website-orvilo/SKILL.md), adapted
+directly from the pinned upstream original and its inspection guide. This
+earlier workflow summary is context only; use the skill for execution.
+
 Adopted with user approval on 2026-09-22. This adapts the inspection/specification/
 worktree/assembly workflow from
 [AI Website Cloner Template](https://github.com/JCodesMore/ai-website-cloner-template).

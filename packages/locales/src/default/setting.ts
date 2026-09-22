@@ -3737,6 +3737,11 @@ export default {
   'workspaceSetting.members.workspaceRoleLabel': 'Workspace role',
   'workspaceSetting.tab.auditLog': 'Audit logs',
   'workspaceSetting.tab.general': 'General',
+  'workspaceSetting.general.logo': 'Logo',
+  'workspaceSetting.general.name': 'Name',
+  'workspaceSetting.general.url': 'URL',
+  'workspaceSetting.general.created': 'Created',
+
   'workspaceSetting.tab.labels': 'Labels',
   'workspaceSetting.tab.members': 'Members',
   'workspaceSetting.storage.comingSoon': 'Workspace-scoped data import & export is coming soon.',

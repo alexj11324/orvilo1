@@ -4,17 +4,50 @@ import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import type { LucideIcon } from 'lucide-react';
-import { Circle, CircleCheck, CircleDashed, CircleDot, CircleX, Eye, Loader2 } from 'lucide-react';
+import { CircleDashed, CircleDot } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const CATEGORY_META: Record<TaskWorkflowCategory, { color: string; icon: LucideIcon }> = {
-  backlog: { color: cssVar.colorTextTertiary, icon: Circle },
-  canceled: { color: cssVar.colorTextTertiary, icon: CircleX },
-  done: { color: cssVar.colorSuccess, icon: CircleCheck },
-  in_progress: { color: cssVar.colorInfo, icon: Loader2 },
-  in_review: { color: cssVar.colorWarning, icon: Eye },
+import {
+  EXECUTION_STATUS_VISUALS,
+  type ExecutionStatusVisual,
+  TASK_STATUS_VISUALS,
+} from '@/components/ExecutionStatus';
+
+/**
+ * One glyph per business workflow category, taken from the canonical status
+ * visuals rather than restated here.
+ *
+ * This map used to invent its own seven, and the reason is worth keeping: it
+ * was not carelessness, it read the wrong convention. `Loader2` + `colorInfo`
+ * (a spinner) is this repo's **run-in-progress** visual — `RunIntegrationTag`'s
+ * `merging` and `RunVerifyTag`'s `running` both use it with `spin: true`, and
+ * they are right to, because they describe a run that is executing right now.
+ * This badge is a *workflow classification*; its own docstring calls it
+ * "displayed separately from execution and delivery". So borrowing that
+ * spinner drew a run-in-progress glyph for a business state, and put a blue
+ * turn on the card while the column header above it drew the canonical amber
+ * circle dot for the same task. `in_review` made the same mistake with `Eye`
+ * against the canonical `Clock`.
+ *
+ * Two entries have no canonical counterpart and are deliberately local. Both
+ * say so, rather than looking like an oversight:
+ *   * `triage` — the canonical maps have no triage; this repo's `TaskStatus`
+ *     and Cordy's issue categories do not contain one either.
+ *   * `todo` — glyph and colour both stay local. Cordy tints its todo
+ *     `sky-500`, a literal Tailwind palette step with no semantic token here;
+ *     minting a token for one literal would break the rule that status colour
+ *     comes from `cssVar`. Recorded as a known divergence.
+ */
+const CATEGORY_META: Record<TaskWorkflowCategory, ExecutionStatusVisual> = {
+  backlog: EXECUTION_STATUS_VISUALS.backlog,
+  canceled: EXECUTION_STATUS_VISUALS.canceled,
+  done: EXECUTION_STATUS_VISUALS.completed,
+  in_progress: EXECUTION_STATUS_VISUALS.running,
+  // The canonical map names this state `paused` and files it under "Pending
+  // review" - the same visual `TASK_STATUS_VISUALS.paused` gives a task whose
+  // delivery is awaiting a human.
+  in_review: TASK_STATUS_VISUALS.paused,
   todo: { color: cssVar.colorTextSecondary, icon: CircleDot },
   triage: { color: cssVar.colorTextTertiary, icon: CircleDashed },
 };

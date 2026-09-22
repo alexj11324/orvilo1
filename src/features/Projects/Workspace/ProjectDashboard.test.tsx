@@ -21,6 +21,7 @@ import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
+import { ProjectDateField } from './ProjectPlanningFields';
 import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
@@ -753,6 +754,61 @@ describe('project properties row set', () => {
         'properties.labels',
       ]),
     );
+  });
+});
+
+// The row's geometry, measured on the reference: a 90px label column with no
+// gap after it, 8px between rows, and a Dates row that stays on one line.
+// Only the parts a DOM can hold are asserted here — jsdom computes no layout,
+// so the pixel values themselves are CDP work (`PARITY-TABLE.md`).
+describe('project properties row geometry', () => {
+  const LABELS = [
+    'properties.status',
+    'properties.priority',
+    'properties.lead',
+    'properties.members',
+    'properties.dates',
+    'Teams',
+    'properties.labels',
+  ];
+
+  const dated = {
+    ...detail,
+    project: { ...detail.project, startDate: '2026-09-21', targetDate: '2027-02-01' },
+  } as ProjectDetail;
+
+  /** Every date control the page rendered, by class list. */
+  const pickerClasses = () =>
+    [...document.querySelectorAll('.ant-picker')].map((el) => el.className);
+
+  it('gives every row label the same 12px, including Status', () => {
+    render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
+    for (const label of LABELS) {
+      expect(mocks.textProps.find((props) => props.children === label)).toMatchObject({
+        fontSize: 12,
+      });
+    }
+  });
+
+  it('keeps the Dates row on one line instead of the fixed 120px boxes', () => {
+    render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
+    const inCard = pickerClasses();
+    expect(inCard).toHaveLength(2);
+    // The row cannot wrap any more (this reads the prop the component passes;
+    // jsdom cannot measure the 60px → 28px row height it buys).
+    expect(screen.getByText('properties.dates').parentElement?.children[1]).not.toHaveAttribute(
+      'wrap',
+    );
+
+    cleanup();
+
+    // The standalone usage in the overview's chip row keeps its fixed box, so
+    // the difference is exactly that class — and it must be absent in the card.
+    render(<ProjectDateField kind={'startDate'} project={dated.project} />);
+    const standalone = pickerClasses()[0] ?? '';
+    const cardTokens = new Set((inCard[0] ?? '').split(/\s+/));
+    const onlyOnStandalone = standalone.split(/\s+/).filter((token) => !cardTokens.has(token));
+    expect(onlyOnStandalone).toHaveLength(1);
   });
 });
 

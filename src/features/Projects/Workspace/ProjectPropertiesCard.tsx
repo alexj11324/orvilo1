@@ -24,9 +24,13 @@ import {
 } from './ProjectPlanningFields';
 
 const styles = createStaticStyles(({ css }) => ({
+  // Reference geometry (§3.1): a 90px hard column, `flex: 0 0 auto`. The row
+  // gap below is 0 so the value column starts at 1048+90 = 1138 — the same x
+  // the candidate reached with 84px + a 10px gap, which is the same number
+  // from a different decomposition and diverges as soon as a label is long.
   label: css`
-    flex: none;
-    width: 84px;
+    flex: 0 0 auto;
+    width: 90px;
     font-weight: 450;
   `,
   value: css`
@@ -49,7 +53,6 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   row: css`
     display: flex;
-    gap: 10px;
     align-items: center;
     min-height: 28px;
   `,
@@ -145,9 +148,10 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   );
 
   return (
-    <Flexbox gap={6}>
+    // 8px between rows on the reference, which puts the row pitch at 36.
+    <Flexbox gap={8}>
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={13}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.status')}
         </Text>
         <DropdownMenu items={statusItems}>

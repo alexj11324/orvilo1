@@ -202,9 +202,21 @@ export function ProjectPriorityField({ project }: { project: ProjectDetail['proj
 }
 
 export function ProjectDateField({
+  fitContent = false,
   kind,
   project,
 }: {
+  /**
+   * Size to content instead of the fixed box the overview's chip row keeps.
+   *
+   * The rail's `Dates` row holds two controls plus an arrow inside a 257px
+   * value column. At a fixed 120px each the row overflowed and wrapped, which
+   * doubled it: measured 60px on the candidate against the reference's 28px,
+   * where the controls are content-sized ("Sep 21st" 84px, "Target" 72px).
+   * The standalone usage keeps its box — it sits in a wrapping row of chips,
+   * where the fixed width is what keeps them even.
+   */
+  fitContent?: boolean;
   kind: 'startDate' | 'targetDate';
   project: ProjectDetail['project'];
 }) {
@@ -217,7 +229,7 @@ export function ProjectDateField({
     <DatePicker
       allowClear
       aria-label={t(`create.${kind}`)}
-      className={`${styles.field} ${styles.date}`}
+      className={fitContent ? styles.field : `${styles.field} ${styles.date}`}
       disabled={saving}
       format={(date) => formatProjectDate(date.format('YYYY-MM-DD'), storedPrecision)}
       picker={getProjectDatePickerMode(precision)}
@@ -269,10 +281,12 @@ export function ProjectDateField({
 
 export function ProjectDateFields({ project }: { project: ProjectDetail['project'] }) {
   return (
-    <Flexbox horizontal align="center" gap={4} style={{ minWidth: 0, flex: 1 }} wrap="wrap">
-      <ProjectDateField kind="startDate" project={project} />
+    // No `wrap`: the reference keeps `Dates` on one line, and content-sized
+    // controls leave this row far short of the column (≈175px in 257px).
+    <Flexbox horizontal align="center" gap={4} style={{ minWidth: 0, flex: 1 }}>
+      <ProjectDateField fitContent kind="startDate" project={project} />
       <span aria-hidden>→</span>
-      <ProjectDateField kind="targetDate" project={project} />
+      <ProjectDateField fitContent kind="targetDate" project={project} />
     </Flexbox>
   );
 }

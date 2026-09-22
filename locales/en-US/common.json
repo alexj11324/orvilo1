@@ -702,6 +702,7 @@
   "savedViews.sort.updatedAsc": "Oldest updated",
   "savedViews.sort.updatedDesc": "Newest updated",
   "savedViews.sortDefault": "Default order",
+  "savedViews.tabIssues": "Issues",
   "savedViews.teamRequired": "Choose a team to share with",
   "savedViews.unfavorite": "Remove from favorites",
   "savedViews.values.priority.0": "No priority",

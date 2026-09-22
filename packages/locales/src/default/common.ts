@@ -870,6 +870,7 @@ export default {
   'savedViews.sort.updatedDesc': 'Newest updated',
   'savedViews.sortDefault': 'Default order',
   'savedViews.teamRequired': 'Choose a team to share with',
+  'savedViews.tabIssues': 'Issues',
   'savedViews.unfavorite': 'Remove from favorites',
   'savedViews.values.priority.0': 'No priority',
   'savedViews.values.priority.1': 'Urgent',

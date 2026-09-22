@@ -2,7 +2,7 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { Button, Modal, Text, toast } from '@lobehub/ui/base-ui';
-import type { WorkQuery } from '@orvilo/types';
+import type { WorkQuery, WorkQueryEntityType } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,7 @@ import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEdit
 import { builderToFilter } from './workQueryBuilder';
 
 interface NewViewModalProps {
+  defaultEntityType?: WorkQueryEntityType;
   /**
    * When opened from a team surface the share row starts scoped to that team —
    * the visitor can still widen to workspace/private before saving.
@@ -40,13 +41,14 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
  * name + share → save lands on the new view. Nothing is persisted before the
  * explicit save (cancel leaves no draft behind).
  */
-const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) => {
+const NewViewModal = memo<NewViewModalProps>((props) => {
+  const { defaultEntityType = 'task', defaultTeamId, onClose, open } = props;
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const [state, setState] = useState<ViewEditorState>({
     builder: { any: [], rows: [], slots: [] },
-    entityType: 'task',
+    entityType: defaultEntityType,
     groupBy: 'none',
     layout: 'list',
     name: '',
@@ -60,7 +62,7 @@ const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) 
     if (!open) {
       setState({
         builder: { any: [], rows: [], slots: [] },
-        entityType: 'task',
+        entityType: defaultEntityType,
         groupBy: 'none',
         layout: 'list',
         name: '',
@@ -69,7 +71,7 @@ const NewViewModal = memo<NewViewModalProps>(({ defaultTeamId, onClose, open }) 
       });
       setPreview(null);
     }
-  }, [defaultTeamId, open]);
+  }, [defaultEntityType, defaultTeamId, open]);
 
   const query = useMemo(() => draftQuery(state), [state]);
 

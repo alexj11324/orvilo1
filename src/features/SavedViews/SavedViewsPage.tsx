@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
@@ -41,10 +42,33 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import NewViewModal from './NewViewModal';
+import { filterSavedViewsByEntity, viewEntityFromSearch } from './savedViewDirectory';
 import { savedViewTitle } from './savedViewTitle';
 import { savedViewVisibilityKey } from './savedViewVisibility';
 
 const styles = createStaticStyles(({ css }) => ({
+  entityTab: css`
+    display: inline-flex;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 10px;
+    border-radius: 9999px;
+
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar.colorTextSecondary};
+    text-decoration: none;
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+  entityTabActive: css`
+    color: ${cssVar.colorText};
+    background: ${cssVar.colorFillSecondary};
+  `,
   groupLabel: css`
     padding-block: 12px 4px;
 
@@ -92,6 +116,8 @@ const viewIcon = (view: SavedViewItem) =>
  */
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
+  const location = useLocation();
+  const entityType = viewEntityFromSearch(location.search);
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const ownerUserId = useUserStore(userProfileSelectors.userId);
@@ -108,13 +134,10 @@ const SavedViewsPage = memo(() => {
   const views = useMemo(() => data?.data ?? [], [data?.data]);
 
   const filteredViews = useMemo(() => {
-    const needle = keyword.trim().toLocaleLowerCase();
-    return needle
-      ? views.filter((view) =>
-          savedViewTitle(view.id, view.name, t).toLocaleLowerCase().includes(needle),
-        )
-      : views;
-  }, [keyword, t, views]);
+    return filterSavedViewsByEntity(views, entityType, keyword, (view) =>
+      savedViewTitle(view.id, view.name, t),
+    );
+  }, [entityType, keyword, t, views]);
 
   const groups = useMemo(
     () =>
@@ -283,10 +306,26 @@ const SavedViewsPage = memo(() => {
       <WorkSurfaceCollection
         toolbar={
           <WorkSurfaceToolbar>
+            <Flexbox horizontal align="center" gap={6}>
+              <WorkspaceLink
+                aria-current={entityType === 'task' ? 'page' : undefined}
+                className={`${styles.entityTab} ${entityType === 'task' ? styles.entityTabActive : ''}`}
+                to="/views"
+              >
+                {t('savedViews.tabIssues')}
+              </WorkspaceLink>
+              <WorkspaceLink
+                aria-current={entityType === 'project' ? 'page' : undefined}
+                className={`${styles.entityTab} ${entityType === 'project' ? styles.entityTabActive : ''}`}
+                to="/views?entity=project"
+              >
+                {t('savedViews.entityProject')}
+              </WorkspaceLink>
+            </Flexbox>
             <SearchBar
               allowClear
               placeholder={t('savedViews.searchPlaceholder')}
-              style={{ maxWidth: 280 }}
+              style={{ marginInlineStart: 'auto', maxWidth: 280 }}
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
@@ -320,7 +359,11 @@ const SavedViewsPage = memo(() => {
           ))
         )}
       </WorkSurfaceCollection>
-      <NewViewModal open={creating} onClose={() => setCreating(false)} />
+      <NewViewModal
+        defaultEntityType={entityType}
+        open={creating}
+        onClose={() => setCreating(false)}
+      />
     </WorkSurface>
   );
 });

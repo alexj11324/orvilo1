@@ -33,9 +33,17 @@ const styles = createStaticStyles(({ css }) => ({
     overflow-y: auto;
     flex: none;
 
-    width: 412px;
+    /* Linear parity: the rail's outer box must be 399px, not 412. The row is
+       1186px once the nav is 244 and the shell's start gutter is gone; the
+       content column needs a 787px left column, which leaves exactly 399 for
+       this panel. The asymmetric inline padding is the reference's own rail
+       chrome: 4px of it sits outside the card (the reference's <aside> carries
+       padding-left: 4px) and 10px replaces the reference's scrollbar gutter
+       on the end side — 23px of end chrome here against the reference's 23.5px. */
+    width: 399px;
     height: 100%;
-    padding: 12px;
+    padding-block: 12px;
+    padding-inline: 4px 10px;
   `,
   railCard: css`
     /* Reference: the card's own content box starts at x=1048, 4px right of
@@ -45,13 +53,19 @@ const styles = createStaticStyles(({ css }) => ({
        With the inset fixed the same decomposition gives the same number, so
        the value column lands on 1138 instead of reaching it by coincidence.
 
-       Measured after the change: content left 1048, value x 1138. The card's
-       content box is then 358 wide against the reference's 360 — that 2px sits
-       on the *end* side (the reference's end inset pair is 22px, ours 24px) and
-       is left alone: which of padding/width carries it is not something either
-       side has measured. */
+       The start inset moved 16 -> 11 when the shell narrowed this rail from
+       412 to 399: the card's content box is anchored to the rail's LEFT edge
+       (panel padding + card padding + card border), so shrinking the rail by
+       13px would have pushed the label column to 1061 and the value column to
+       1151 unless the accumulated start chrome dropped by the same 13px. It
+       now measures 4 + 11 + 1 = 16 against the reference's 16.5.
+
+       Measured after the change: content left 1048, value x 1138, content box
+       360 wide. That closes the 2px that used to sit on the end side (the
+       reference's end chrome is 23.5px, ours 23px). The card's own border box
+       lands at 1036..1421 against the reference's 1035.5..1420.5. */
     padding-block: 12px;
-    padding-inline: 16px 12px;
+    padding-inline: 11px 12px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 10px;
 

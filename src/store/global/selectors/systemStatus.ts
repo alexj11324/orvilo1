@@ -64,6 +64,9 @@ export const routeOverlayWrites = (
 
 export const systemStatus = (s: GlobalState) => s.status;
 
+// The Linear parity default `INITIAL_STATUS.leftPanelWidth` (244) sits only 4px
+// above this floor. Raising the floor past 244 silently swallows it: the clamp
+// returns the floor and nothing downstream can tell the parity value was rejected.
 export const NAV_PANEL_MIN_WIDTH = 240;
 export const NAV_PANEL_MAX_WIDTH = 400;
 // Viewport width below which the nav panel auto-collapses into the header

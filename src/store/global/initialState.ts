@@ -577,7 +577,11 @@ export const INITIAL_STATUS = {
   imageTopicViewMode: 'grid' as const,
   imageTopicPanelWidth: 80,
   knowledgeBaseModalViewMode: 'list' as const,
-  leftPanelWidth: 280,
+  // Linear parity: the reference nav panel is 244px, and the whole shell budget
+  // (787px left column, 669px content column at x=304) is derived from it. Only
+  // the DEFAULT moves — a user who dragged the panel keeps their width, which is
+  // why the persisted `leftPanelWidth` in localStorage wins over this value.
+  leftPanelWidth: 244,
   mobileShowTopic: false,
   modelDetailPanelCollapsedKeys: [],
   modelSwitchPanelGroupMode: 'byProvider',

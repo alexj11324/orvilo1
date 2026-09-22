@@ -35,15 +35,30 @@ const styles = createStaticStyles(({ css }) => ({
   content: css`
     overflow: auto;
     width: 100%;
+
+    /* Linear parity: the reference's scroll container carries a fixed 48px
+       inline padding (measured 245 -> 293 on the reference at two viewports). */
+    padding-inline: 48px;
+
+    @media (width <= 720px) {
+      padding-inline: 0;
+    }
   `,
   page: css`
     box-sizing: border-box;
-    width: min(800px, calc(100% - 48px));
-    margin-inline: auto;
+
+    /* Linear parity: FLUID, never centred and never a max-width. The reference
+       column keeps a constant 11px inset on BOTH edges while the container
+       grows (measured: x stays 304 at 1440 and at 1600, only the width moves
+       669 -> 829), so the inset is a fixed margin and not margin-inline: auto
+       — the previous width: min(800px, calc(100% - 48px)) re-centred the
+       column at every width above ~1090 and diverged from the reference there.
+       Width stays auto so the block fills the container minus these margins. */
+    margin-inline: 11px;
     padding-block: 24px 32px;
 
     @media (width <= 720px) {
-      width: calc(100% - 40px);
+      margin-inline: 20px;
       padding-block: 20px 48px;
     }
   `,

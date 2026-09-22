@@ -133,6 +133,13 @@ describe('systemStatusSelectors', () => {
         ),
       ).toBe(360);
     });
+
+    it('should resolve an unpersisted left panel to the Linear parity width, unclamped', () => {
+      // 244 is the reference nav width the whole shell budget is derived from. It sits
+      // 4px above the clamp floor, so this fails both if the default drifts and if the
+      // floor is raised far enough to swallow it.
+      expect(systemStatusSelectors.leftPanelWidth(initialState)).toBe(244);
+    });
   });
 
   describe('modelDetailPanelExpandedKeys', () => {

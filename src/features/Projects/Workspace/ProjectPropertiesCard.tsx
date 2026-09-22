@@ -24,10 +24,17 @@ import {
 } from './ProjectPlanningFields';
 
 const styles = createStaticStyles(({ css }) => ({
-  // Reference geometry (§3.1): a 90px hard column, `flex: 0 0 auto`. The row
-  // gap below is 0 so the value column starts at 1048+90 = 1138 — the same x
-  // the candidate reached with 84px + a 10px gap, which is the same number
-  // from a different decomposition and diverges as soon as a label is long.
+  // Reference geometry (§3.1): a 90px hard column, `flex: 0 0 auto`, with no gap
+  // after it. The two are one number — the reference's value column starts at
+  // 1048 + 90 = 1138 — and this file only owns the `90` and the `0`: the `1048`
+  // is the card's content box, which the rail card's start inset sets
+  // (`Layout/ProjectSidePanel`, where the 4px that moved it there is recorded).
+  //
+  // Reached as that sum, not as a total. The card used to run 84px with a 10px
+  // row gap, which also lands on 1138 — 1044 + 84 + 10 — so both sides agreed on
+  // the number while disagreeing on its parts, and the agreement held only while
+  // every label fitted in 84px. That is why the column is a width and a gap
+  // rather than an x: a shared total is not a shared structure.
   label: css`
     flex: 0 0 auto;
     width: 90px;

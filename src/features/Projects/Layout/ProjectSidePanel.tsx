@@ -11,6 +11,7 @@ import {
   getMilestoneAnchorId,
   MILESTONE_ICON_COLOR,
   MILESTONE_ICON_SIZE,
+  scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
@@ -139,6 +140,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                   aria-label={milestone.name}
                   className={styles.milestoneIconLink}
                   href={`#${getMilestoneAnchorId(milestone.id)}`}
+                  onClick={() => scrollToMilestoneAnchor(milestone.id)}
                 >
                   <Icon
                     color={MILESTONE_ICON_COLOR}

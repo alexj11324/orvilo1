@@ -11,6 +11,7 @@ import {
   getMilestoneAnchorId,
   MILESTONE_ICON_COLOR,
   MILESTONE_ICON_SIZE,
+  scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import type { ProjectDetail } from '@/store/project';
@@ -80,6 +81,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
                   aria-label={milestone.name}
                   className={styles.milestoneIconLink}
                   href={`#${getMilestoneAnchorId(milestone.id)}`}
+                  onClick={() => scrollToMilestoneAnchor(milestone.id)}
                 >
                   <Icon
                     color={MILESTONE_ICON_COLOR}

@@ -29,3 +29,30 @@ export const MILESTONE_ICON_SIZE = 16;
  * the row's or point at itself.
  */
 export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milestoneId}`;
+
+/**
+ * Bring a milestone's row into view.
+ *
+ * The reference wraps the glyph in `<a href="…/overview#milestone-<id>">`, but
+ * **what that link does when clicked was never observed** — the reference was
+ * only read, never clicked. So this is not a reproduction of the reference's
+ * landing effect; it is the smallest provable one: in-page positioning onto the
+ * row that owns the anchor.
+ *
+ * The scroll is driven from the click instead of left to the browser's fragment
+ * navigation. The candidate is a react-router SPA, where a bare `#…` href is a
+ * URL update that a router is free to treat as a navigation rather than a
+ * scroll; the address is still the real `href`, so the link stays copyable.
+ * Driving it in JS is also how this repo already moves to an in-page anchor
+ * (`Acceptance/Viewer/Comments/anchor.ts`, `SettingsSearch/anchor.tsx`).
+ *
+ * The rail calls this too. It only resolves on Overview — the rail itself is
+ * mounted on every project tab, and none of the others render the row.
+ */
+export const scrollToMilestoneAnchor = (milestoneId: string) => {
+  const target = document.getElementById(getMilestoneAnchorId(milestoneId));
+  if (!target) return;
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+};

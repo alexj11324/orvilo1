@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
 import { DiamondIcon } from 'lucide-react';
@@ -567,6 +567,23 @@ describe('project dashboard milestones', () => {
 // The candidate shipped the icon as a bare glyph, so nothing could be opened
 // from either surface.
 describe('project milestone rows', () => {
+  // The DOM env cannot scroll, so the call itself is the observable behaviour.
+  // Capture it together with the element it was called on, the way
+  // `useScrollActiveThreadIntoView.test.tsx` does.
+  const scrolls: { el: Element; options: unknown }[] = [];
+  const originalScrollIntoView = Element.prototype.scrollIntoView;
+
+  beforeEach(() => {
+    scrolls.length = 0;
+    Element.prototype.scrollIntoView = vi.fn(function (this: Element, options: unknown) {
+      scrolls.push({ el: this, options });
+    });
+  });
+
+  afterEach(() => {
+    Element.prototype.scrollIntoView = originalScrollIntoView;
+  });
+
   it('anchors each overview milestone row and links its icon to that row', () => {
     render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
 
@@ -579,6 +596,28 @@ describe('project milestone rows', () => {
     expect(target).toHaveTextContent(milestone.name);
   });
 
+  it('scrolls the overview row into view when its icon is clicked', () => {
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+    fireEvent.click(screen.getByRole('link', { name: milestone.name }));
+
+    expect(scrolls).toHaveLength(1);
+    expect(scrolls[0].el).toBe(document.getElementById('milestone-ms_1'));
+    expect(scrolls[0].options).toEqual({ behavior: 'smooth', block: 'center' });
+  });
+
+  it('does not animate the scroll when the reader asked for reduced motion', () => {
+    const matchMedia = vi
+      .spyOn(window, 'matchMedia')
+      .mockReturnValue({ matches: true } as MediaQueryList);
+    try {
+      render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+      fireEvent.click(screen.getByRole('link', { name: milestone.name }));
+      expect(scrolls[0].options).toEqual({ behavior: 'auto', block: 'center' });
+    } finally {
+      matchMedia.mockRestore();
+    }
+  });
+
   it('links the rail milestone to the same anchor the overview row owns', () => {
     mocks.milestones = [milestone];
     render(<ProjectSidePanel projectId="apollo" />);
@@ -587,6 +626,19 @@ describe('project milestone rows', () => {
       'href',
       '#milestone-ms_1',
     );
+  });
+
+  it('sends the rail link to the row the overview owns, not to itself', () => {
+    mocks.milestones = [milestone];
+    const rail = render(<ProjectSidePanel projectId="apollo" />);
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+
+    // Both surfaces name their link after the milestone, so scope the click to
+    // the rail: the row that must move is the overview's.
+    fireEvent.click(within(rail.container).getByRole('link', { name: milestone.name }));
+
+    expect(scrolls).toHaveLength(1);
+    expect(scrolls[0].el).toBe(document.getElementById('milestone-ms_1'));
   });
 
   it('draws the milestone diamond with one shared colour and size on both surfaces', () => {

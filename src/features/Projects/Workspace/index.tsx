@@ -130,7 +130,7 @@ const ProjectWorkspace = memo(() => {
                   shape={'round'}
                   size={'small'}
                 >
-                  {t(`acceptance.status.${project.status}`, {
+                  {t(`status.${project.status}`, {
                     defaultValue: project.status,
                   })}
                 </Tag>

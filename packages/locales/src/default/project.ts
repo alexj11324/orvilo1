@@ -330,6 +330,18 @@ export default {
   'sections.tasks': 'Tasks',
   'sections.teammates': 'Teammates',
   'sections.teammatesHint': 'People collaborating in this project',
+  // Project lifecycle wording, matching Linear's own labels. Deliberately NOT reusing
+  // `acceptance.status.*`: those strings describe completion review ("Completed and
+  // accepted", "Awaiting your review"), so a project's plain lifecycle leaked review
+  // semantics into its status chip. 'active' is Linear's "In Progress".
+  'status.active': 'In Progress',
+  'status.archived': 'Archived',
+  'status.backlog': 'Backlog',
+  'status.canceled': 'Canceled',
+  'status.completed': 'Completed',
+  'status.paused': 'Paused',
+  'status.planned': 'Planned',
+  'status.reviewing': 'In Review',
   'sidebar.emptyAction': 'Create your first project',
   'sidebar.agentsEmpty': 'No agents are connected yet',
   'sidebar.conversationsEmpty': 'No project topics yet',

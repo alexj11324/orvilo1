@@ -120,7 +120,7 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
   return (
     <Flexbox horizontal align="center" className={styles.row}>
       <WorkspaceLink className={styles.link} to={savedViewProjectPath(project)}>
-        <Tooltip title={t(`acceptance.status.${status}`)}>
+        <Tooltip title={t(`status.${status}`)}>
           <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
         </Tooltip>
         <Flexbox flex={1} style={{ minWidth: 0 }}>
@@ -168,7 +168,7 @@ const SavedViewProjectBoard = memo<{
             <Flexbox horizontal className={styles.boardColumnHeader}>
               <Icon color={visual.color} icon={visual.icon} size={14} />
               <Text fontSize={13} weight={500}>
-                {t(`acceptance.status.${status}`)}
+                {t(`status.${status}`)}
               </Text>
               <Text fontSize={12} type="secondary">
                 {group.total}

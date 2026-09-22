@@ -218,7 +218,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
     <Flexbox horizontal align={'center'} className={`${styles.row} ${styles.columns}`} gap={0}>
       <WorkspaceLink className={styles.link} to={`/project/${project.slug ?? project.id}`}>
         <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
-          <Tooltip title={t(`acceptance.status.${status}`)}>
+          <Tooltip title={t(`status.${status}`)}>
             <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
           </Tooltip>
           <Text ellipsis weight={500}>
@@ -243,7 +243,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
           {typeof project.taskCount === 'number' ? project.taskCount : '—'}
         </Text>
         <Text className={styles.cell} fontSize={12}>
-          {t(`acceptance.status.${status}`)}
+          {t(`status.${status}`)}
         </Text>
       </WorkspaceLink>
       {canDelete && (

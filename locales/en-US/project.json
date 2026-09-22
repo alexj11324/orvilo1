@@ -317,5 +317,13 @@
   "sidebar.librariesEmpty": "No libraries are connected yet",
   "sidebar.newConversation": "New conversation",
   "sidebar.title": "Projects",
-  "sidebar.untitledConversation": "Untitled conversation"
+  "sidebar.untitledConversation": "Untitled conversation",
+  "status.active": "In Progress",
+  "status.archived": "Archived",
+  "status.backlog": "Backlog",
+  "status.canceled": "Canceled",
+  "status.completed": "Completed",
+  "status.paused": "Paused",
+  "status.planned": "Planned",
+  "status.reviewing": "In Review"
 }

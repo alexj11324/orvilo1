@@ -138,7 +138,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       WRITABLE_STATUSES.map((status) => ({
         icon: <Icon icon={PROJECT_STATUS_META[status].icon} size={14} />,
         key: status,
-        label: t(`acceptance.status.${status}`),
+        label: t(`status.${status}`),
         onClick: () => void changeStatus(status),
       })),
     [changeStatus, t],
@@ -158,7 +158,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
               shape={'round'}
               size={'small'}
             >
-              {t(`acceptance.status.${project.status}`)}
+              {t(`status.${project.status}`)}
             </Tag>
             {updatingStatus ? null : (
               <Icon icon={ChevronDownIcon} size={12} style={{ opacity: 0.5 }} />

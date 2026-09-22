@@ -83,11 +83,11 @@ const PROJECT_STATUS_OPTIONS: Array<{
   labelKey: string;
   value: ProjectStatus;
 }> = [
-  { icon: CircleDashedIcon, labelKey: 'acceptance.status.backlog', value: 'backlog' },
+  { icon: CircleDashedIcon, labelKey: 'status.backlog', value: 'backlog' },
   { icon: CircleDashedIcon, labelKey: 'create.status.planned', value: 'planned' },
   { icon: CircleDotIcon, labelKey: 'create.status.inProgress', value: 'active' },
   { icon: PauseCircleIcon, labelKey: 'create.status.paused', value: 'paused' },
-  { icon: CircleSlashIcon, labelKey: 'acceptance.status.canceled', value: 'canceled' },
+  { icon: CircleSlashIcon, labelKey: 'status.canceled', value: 'canceled' },
 ];
 
 const PROJECT_PRIORITY_OPTIONS: Array<{ labelKey: string; value: ProjectPriority }> = [

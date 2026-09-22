@@ -184,7 +184,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
                   />
                 }
               >
-                {t(`acceptance.status.${detail.project.status}`, {
+                {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,
                 })}
               </Tag>

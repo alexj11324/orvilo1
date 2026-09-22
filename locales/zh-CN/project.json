@@ -317,5 +317,13 @@
   "sidebar.librariesEmpty": "还没有关联资料库",
   "sidebar.newConversation": "新对话",
   "sidebar.title": "项目",
-  "sidebar.untitledConversation": "未命名对话"
+  "sidebar.untitledConversation": "未命名对话",
+  "status.active": "进行中",
+  "status.archived": "已归档",
+  "status.backlog": "待办",
+  "status.canceled": "已取消",
+  "status.completed": "已完成",
+  "status.paused": "已暂停",
+  "status.planned": "已计划",
+  "status.reviewing": "审核中"
 }

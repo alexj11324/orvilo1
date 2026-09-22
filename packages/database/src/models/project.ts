@@ -8,6 +8,7 @@ import type {
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
+import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import {
   and,
   asc,
@@ -286,10 +287,7 @@ export class ProjectModel {
       newLabelNames = [],
       ...projectInput
     } = input;
-    if (
-      input.status &&
-      !['backlog', 'planned', 'active', 'paused', 'canceled', 'archived'].includes(input.status)
-    ) {
+    if (input.status && !(PROJECT_CREATABLE_STATUSES as readonly string[]).includes(input.status)) {
       throw new Error('Project completion requires a human review');
     }
     if (
@@ -351,6 +349,16 @@ export class ProjectModel {
       for (const dependencyId of dependencyDirections.keys()) {
         if (!(await planningModel.findById(dependencyId)))
           throw new Error('Dependent project is not available');
+      }
+      // Lock the dependency endpoints first so concurrent creates referencing
+      // the same projects serialize: a second transaction waits here, then
+      // re-reads the dependency graph committed by the first.
+      if (dependencyDirections.size) {
+        await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(inArray(projects.id, [...dependencyDirections.keys()]))
+          .for('update');
       }
       // A new project can close an existing path even without a direct reverse edge.
       const predecessors = new Set(

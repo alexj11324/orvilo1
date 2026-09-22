@@ -1,4 +1,5 @@
 import {
+  PROJECT_CREATABLE_STATUSES,
   PROJECT_DATE_PRECISIONS,
   PROJECT_HEALTH_STATES,
   PROJECT_IDENTIFIER_REGEX,
@@ -276,9 +277,7 @@ export const projectRouter = router({
           .optional(),
         startDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).optional(),
         targetDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).optional(),
-        status: z
-          .enum(['backlog', 'planned', 'active', 'paused', 'canceled', 'archived'])
-          .optional(),
+        status: z.enum(PROJECT_CREATABLE_STATUSES).optional(),
         avatar: z.string().optional(),
         description: z.string().optional(),
         identifier: projectIdentifierInput,

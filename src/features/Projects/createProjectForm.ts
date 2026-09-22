@@ -1,4 +1,10 @@
-import { PROJECT_IDENTIFIER_REGEX, type ProjectPriority, type ProjectStatus } from '@orvilo/types';
+import {
+  PROJECT_CREATABLE_STATUSES,
+  PROJECT_IDENTIFIER_REGEX,
+  type ProjectCreatableStatus,
+  type ProjectPriority,
+  type ProjectStatus,
+} from '@orvilo/types';
 import { kebabCase } from 'es-toolkit';
 import { pinyin } from 'pinyin-pro';
 
@@ -10,17 +16,10 @@ const PROJECT_IDENTIFIER_LENGTH = 4;
 export const PROJECT_PRIORITIES = [0, 1, 2, 3, 4] as const;
 export type { ProjectPriority };
 
-const CREATEABLE_PROJECT_STATUSES = [
-  'backlog',
-  'planned',
-  'active',
-  'paused',
-  'canceled',
-  'archived',
-] as readonly string[];
-
-const isCreateableProjectStatus = (status: ProjectStatus | undefined): status is ProjectStatus =>
-  status !== undefined && CREATEABLE_PROJECT_STATUSES.includes(status);
+const isCreateableProjectStatus = (
+  status: ProjectStatus | undefined,
+): status is ProjectCreatableStatus =>
+  status !== undefined && (PROJECT_CREATABLE_STATUSES as readonly string[]).includes(status);
 
 export type ProjectDependencyType = 'blockedBy' | 'blocking';
 

@@ -13,6 +13,18 @@ export const PROJECT_STATUSES = [
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
+/** Statuses a caller may set at create time — 'reviewing'/'completed' are terminal-of-flow. */
+export const PROJECT_CREATABLE_STATUSES = [
+  'backlog',
+  'planned',
+  'active',
+  'paused',
+  'canceled',
+  'archived',
+] as const;
+
+export type ProjectCreatableStatus = (typeof PROJECT_CREATABLE_STATUSES)[number];
+
 /** Linear-style project priority, ordered from no priority to low priority. */
 export const PROJECT_PRIORITIES = [0, 1, 2, 3, 4] as const;
 

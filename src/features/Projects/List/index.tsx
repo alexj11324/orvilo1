@@ -71,7 +71,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   columns: css`
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) 96px 72px 64px 84px 96px 48px 84px 24px;
+    grid-template-columns: minmax(200px, 1fr) 96px 64px 84px 96px 48px 84px 24px;
     gap: 12px;
     align-items: center;
 
@@ -227,14 +227,11 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
         </Flexbox>
         <ProjectHealthCell health={project.health} />
         <Text className={styles.cell} fontSize={12}>
-          {project.identifier}
+          {t(PROJECT_PRIORITY_LABEL_KEY[project.priority ?? 0])}
         </Text>
         <span className={styles.owner}>
           {project.leadUserId ? <ProjectOwnerAvatar userId={project.leadUserId} /> : null}
         </span>
-        <Text className={styles.cell} fontSize={12}>
-          {t(PROJECT_PRIORITY_LABEL_KEY[project.priority ?? 0])}
-        </Text>
         <Text
           className={styles.cell}
           fontSize={12}
@@ -346,16 +343,13 @@ const ProjectListPage = memo(() => {
                 {t('list.columnHealth', { defaultValue: 'Health' })}
               </Text>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnKey', { defaultValue: 'Key' })}
+                {t('list.columnPriority', { defaultValue: 'Priority' })}
               </Text>
               <span className={styles.owner}>
                 <Text fontSize={12} type={'secondary'}>
                   {t('list.columnLead', { defaultValue: 'Lead' })}
                 </Text>
               </span>
-              <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnPriority', { defaultValue: 'Priority' })}
-              </Text>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>
                 {t('list.columnTarget', { defaultValue: 'Target' })}
               </Text>

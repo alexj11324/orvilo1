@@ -67,6 +67,7 @@ export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual
   canceled: VISUALS.canceled,
   completed: VISUALS.completed,
   paused: { color: cssVar.colorTextSecondary, icon: PauseCircle },
+  planned: { color: cssVar.purple, icon: CircleDot },
   reviewing: VISUALS.waitingForHuman,
 };
 

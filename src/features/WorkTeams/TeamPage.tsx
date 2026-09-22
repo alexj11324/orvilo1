@@ -46,7 +46,9 @@ import MarkDuplicateModal from './MarkDuplicateModal';
 import { otherTeamOptions } from './otherTeamOptions';
 import { reassignMemberOptions } from './reassignMemberOptions';
 import TeamHome from './TeamHome';
+import TeamIdentity from './TeamIdentity';
 import { teamSurfaceState } from './teamSurfaceState';
+import { teamTriageCreateOptions } from './teamTriageCreate';
 import {
   TEAM_TRIAGE_OVERFLOW_I18N,
   type TeamTriageOverflowItem,
@@ -448,13 +450,30 @@ const TeamPage = memo(() => {
     [t, teamData?.data.cycles],
   );
 
+  const openTriageIssueComposer = () => {
+    if (!teamId) return;
+
+    createTaskModal(teamTriageCreateOptions(teamId, () => void revalidateTriage()));
+  };
+
   return (
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {teamData?.data.team.name ?? t('tab.teams')}
-          </Text>
+          wantsTriage && teamData ? (
+            <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+              <TeamIdentity
+                color={teamData.data.team.color}
+                id={teamData.data.team.id}
+                letter={(teamData.data.team.key || teamData.data.team.name).slice(0, 1)}
+              />
+              <Text weight={500}>{t('teams.triage')}</Text>
+            </Flexbox>
+          ) : (
+            <Text style={{ paddingInlineStart: 4 }} weight={500}>
+              {teamData?.data.team.name ?? t('tab.teams')}
+            </Text>
+          )
         }
         right={
           <Flexbox horizontal align={'center'} gap={8}>
@@ -561,7 +580,6 @@ const TeamPage = memo(() => {
               ) : null}
               {wantsTriage ? (
                 <>
-                  <Text weight={500}>{t('teams.triage')}</Text>
                   {triageState === 'error' ? (
                     <AsyncError error={triageError} onRetry={() => revalidateTriage()} />
                   ) : triageState === 'loading' ? (
@@ -569,7 +587,7 @@ const TeamPage = memo(() => {
                   ) : triageState === 'empty' ? (
                     <Center flex={1} gap={12} padding={48}>
                       <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
-                      <Button icon={PlusIcon} size={'small'} onClick={() => createTaskModal()}>
+                      <Button icon={PlusIcon} size={'small'} onClick={openTriageIssueComposer}>
                         {t('teams.triageCreate')}
                       </Button>
                     </Center>

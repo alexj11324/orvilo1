@@ -1,0 +1,15 @@
+# Live UI behavior comparison
+
+Run `node scripts/ui-parity/run.mjs scripts/ui-parity/composer.example.json /tmp/orvilo-composer-parity` with both authenticated reference and candidate applications open. The example records one read-only composer-entry action. Change the start pages and semantic control names for another scenario; no expected destination is specified.
+
+The runner requires one matching tab and one visible semantic target, verifies `elementFromPoint`, re-resolves immediately before a real CDP mouse click, and checks that a trusted click actually reached that element. It captures before/after screenshots and records route, dialog, menu, editor, selected/expanded state and focus changes. Explicit mappings normalize workspace and entity identities; never map different destination pages into the same value.
+
+Exit 0 means **observed-match**, 1 means **different**, and 2 means **inconclusive**. Missing or ambiguous targets, unconfirmed events, timeouts and no observable transition cannot pass. Review `comparison.json`, each `trace.json`, and the screenshots together. Stable samples for 1.5 seconds are a bounded heuristic, not proof that all asynchronous work has completed.
+
+This is one action's observable behavior comparison, not automatic certification of an entire page. Different datasets, permissions, language and starting states require aligned fixtures. Editor accessibility names and placeholders are compared conservatively; differences require review. DOM structure and pixel equality, network semantics, persistence after reload, delayed side effects, new windows and arbitrary multi-step workflows are not yet compared. Full-document navigation may lose the click witness and correctly returns inconclusive. Before broad use, enumerate the page's controls and keep an explicit coverage list; untested controls remain unverified. Only configure actions known to be read-only on the reference account. Submission/deletion actions require a separate authorized fixture workflow.
+
+Regression checks: `node --test scripts/ui-parity/compare.test.mjs`.
+
+An optional per-surface `readinessScope` selector limits loading readiness to one visible page root. It must exist uniquely and contain the clicked control; missing/ambiguous roots cannot pass. Busy indicators outside it remain recorded as `outsideBusy` in every snapshot, not silently discarded. Route and all semantic changes are still observed document-wide (including portals). The example uses Orvilo's development source marker to locate its project layout; adapt this selector for other builds. A scoped result makes no health claim about the application shell.
+
+Target resolution prefers named interactive controls over nested text labels; multiple matching controls remain ambiguous. Loading detection honors visible `aria-busy="true"` and indeterminate progress bars. Determinate progress alone does not block settling: applications should mark actual pending work with `aria-busy`. This accessibility-based heuristic does not replace network or application-specific completion evidence.

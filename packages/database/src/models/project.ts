@@ -1150,6 +1150,10 @@ export class ProjectModel {
    * placeholder). A linked task whose workflow category this build cannot
    * classify makes its milestone read `null`: unavailable beats a number that
    * silently drops the row.
+   *
+   * No surface renders this yet — deliberately: the readout belongs with the
+   * `<a>` that points at the milestone-filtered issue list, so both land in
+   * that page's task. `ProjectMilestoneProgress` carries the full reasoning.
    */
   async listMilestoneProgress(projectId: string) {
     if (!(await this.findById(projectId))) return null;

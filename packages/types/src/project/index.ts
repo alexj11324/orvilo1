@@ -83,6 +83,19 @@ export interface ProjectUpdate {
  * The denominator convention is an **unverified choice**; see
  * `ProjectModel.listMilestoneProgress` for what was chosen, why, and what
  * could not be observed on the reference.
+ *
+ * **Nothing renders this yet, and that is deliberate — not an oversight.** On
+ * the reference the readout is one thing with its destination, not bare text:
+ * the overview row measures `<a href="…/issues?projectMilestoneId=<id>">N
+ * issues · 100%</a>`, and the rail variant reads `100% of N`. Rendering the
+ * numbers without that link would put a non-interactive element exactly where
+ * the reference is interactive — a fresh parity gap that a diff reads as
+ * "already done", which is worse than absent. Rendering the link would mean
+ * half-building the milestone-filtered issue list, a page deliberately left to
+ * its own task. So the readout and its `<a>` target are one unit and land
+ * together, there. (That landing also needs two new i18n keys for the two text
+ * variants, which is why none were added here.) This payload field *is* the
+ * readout; nothing is waiting on data.
  */
 export interface ProjectMilestoneProgress {
   /** Linked tasks in scope whose workflow category is `done`. */

@@ -4,7 +4,7 @@ import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { FilePenLineIcon, Trash2Icon } from 'lucide-react';
+import { FilePenLineIcon, MessageCircleIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +15,7 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 
+import DraftContentPreview from './DraftContentPreview';
 import { draftEditPath } from './draftEditPath';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -38,15 +39,28 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   cardLink: css`
     position: absolute;
+    z-index: 1;
     inset: 0;
 
     display: block;
 
-    padding-block: 12px;
-    padding-inline: 28px;
-
     color: inherit;
     text-decoration: none;
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 2px;
+    }
+  `,
+  cardContent: css`
+    padding-block: 12px;
+    padding-inline: 16px;
+  `,
+  cardHeading: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-inline-end: 24px;
   `,
   cardGrid: css`
     display: grid;
@@ -62,6 +76,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   cardTitle: css`
     overflow: hidden;
+    flex: 1;
+
+    min-width: 0;
 
     font-size: 13px;
     font-weight: 500;
@@ -70,7 +87,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   discard: css`
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     inset-block-start: 11px;
     inset-inline-end: 11px;
   `,
@@ -84,6 +101,35 @@ const styles = createStaticStyles(({ css }) => ({
 
     font-size: 13px;
     line-height: 21px;
+
+    p {
+      margin: 0;
+    }
+  `,
+  preview: css`
+    overflow: hidden;
+
+    height: 82px;
+    margin-block-start: 16px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 6px;
+  `,
+  previewLabel: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    height: 32px;
+    padding-inline: 12px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    font-size: 12px;
+    color: ${cssVar.colorTextSecondary};
+  `,
+  previewBody: css`
+    overflow: hidden;
+    padding-block: 8px;
+    padding-inline: 12px;
   `,
   header: css`
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
@@ -190,23 +236,33 @@ const TaskDraftsPage = () => {
                   }
                 />
                 <WorkspaceLink
-                  aria-label={t('drafts.edit')}
+                  aria-label={`${t('drafts.edit')}: ${draft.taskName || draft.taskIdentifier}`}
                   className={styles.cardLink}
                   to={draftEditPath(draft)}
-                >
-                  <div className={styles.cardTitle}>{draft.content || t('drafts.attachment')}</div>
-                  <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
-                    {dayjs(draft.updatedAt).fromNow()}
-                  </Text>
-                  <div style={{ marginTop: 12 }}>
-                    <Text fontSize={12} type="secondary">
-                      {t('drafts.commentingOnIssue')}
+                />
+                <div className={styles.cardContent}>
+                  <div className={styles.cardHeading}>
+                    <div className={styles.cardTitle}>{draft.taskName || draft.taskIdentifier}</div>
+                    <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
+                      {dayjs(draft.updatedAt).fromNow()}
                     </Text>
                   </div>
-                  <div className={styles.excerpt} style={{ marginTop: 8 }}>
-                    {draft.taskIdentifier} {draft.taskName}
+                  <div className={styles.preview}>
+                    <div className={styles.previewLabel}>
+                      <MessageCircleIcon size={16} />
+                      {t('drafts.commentingOnIssue')}
+                    </div>
+                    <div aria-hidden inert className={styles.previewBody}>
+                      <div className={styles.excerpt}>
+                        <DraftContentPreview
+                          attachmentLabel={t('drafts.attachment')}
+                          content={draft.content}
+                          editorData={draft.editorData}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </WorkspaceLink>
+                </div>
               </div>
             ))}
           </div>

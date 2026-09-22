@@ -1385,7 +1385,10 @@ export class AgentModel {
     // GATEWAY_NOT_CONFIGURED, so sanitize both at this write chokepoint regardless
     // of caller (mirrors AGENT_BUILDER_PROTECTED_FIELDS).
     if (agent.slug === INBOX_SESSION_ID) {
-      if (mergedValue.agencyConfig?.heterogeneousProvider) {
+      // The builtin 'orvilo' harness is the inbox agent's own engine — only
+      // external-CLI bindings would reroute it through the device gateway.
+      const hetero = mergedValue.agencyConfig?.heterogeneousProvider;
+      if (hetero && hetero.type !== 'orvilo') {
         delete mergedValue.agencyConfig.heterogeneousProvider;
       }
       if (isHeterogeneousAgentModelId(mergedValue.model)) {
@@ -1719,10 +1722,25 @@ export class AgentModel {
     });
 
     if (existing) {
-      if (persistConfig?.chatConfig) {
+      // Persist-config keys a builtin must carry (e.g. the inbox's harness
+      // binding) heal on read: an existing row that predates the config is
+      // backfilled, while user-customized values on the same key are left alone.
+      const persistAgency = persistConfig?.agencyConfig;
+      const existingAgency = existing.agencyConfig as OrviloAgentAgencyConfig | null | undefined;
+      const healAgency =
+        persistAgency?.heterogeneousProvider && !existingAgency?.heterogeneousProvider
+          ? { ...existingAgency, ...persistAgency }
+          : undefined;
+
+      if (persistConfig?.chatConfig || healAgency) {
         const [updated] = await this.db
           .update(agents)
-          .set({ chatConfig: persistConfig.chatConfig })
+          .set({
+            ...(persistConfig?.chatConfig ? { chatConfig: persistConfig.chatConfig } : {}),
+            ...(healAgency
+              ? { agencyConfig: this.withWorkspaceSelectionPolicyDefaults(healAgency) }
+              : {}),
+          })
           .where(eq(agents.id, existing.id))
           .returning();
         return normalizeInboxAgentMeta(updated ?? existing, { slug: existing.slug });
@@ -1778,7 +1796,7 @@ export class AgentModel {
         buildWorkspacePayload(
           { userId: this.userId, workspaceId: this.workspaceId },
           {
-            agencyConfig: this.withWorkspaceSelectionPolicyDefaults(undefined),
+            agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
             chatConfig: persistConfig.chatConfig,
             model: persistConfig.model,
             provider: persistConfig.provider,

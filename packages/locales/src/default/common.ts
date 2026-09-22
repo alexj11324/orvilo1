@@ -921,6 +921,16 @@ export default {
   'teams.triageFailed': 'Could not update triage',
   'teams.triageUpdated': 'Triage updated',
   'teams.viewsEmpty': 'No views shared with this team',
+  'teams.viewAllIssues': 'All issues',
+  'teams.viewAllProjects': 'All projects',
+  'teams.viewCreateNew': 'Create new view',
+  'teams.viewDescription': 'Description (optional)',
+  'teams.viewDirectoryDescriptionIssues':
+    'Create custom views using filters to show only the issues you want to see. You can save, share, and favorite these views for faster team collaboration.',
+  'teams.viewDirectoryDescriptionProjects':
+    'Create custom views using filters to show only the projects you want to see. You can save, share, and favorite these views for faster team collaboration.',
+  'teams.viewDocumentation': 'Documentation',
+  'teams.viewSaveTo': 'Save to',
   'teams.activeCycle': 'Current cycle',
   'teams.markDuplicateConfirm': 'Mark as duplicate',
   'teams.markDuplicateEmpty': 'No matching task',

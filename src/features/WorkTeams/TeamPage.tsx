@@ -30,9 +30,7 @@ import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/work
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
-import { savedViewVisibilityKey } from '@/features/SavedViews/savedViewVisibility';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
@@ -55,6 +53,7 @@ import {
   type TeamTriageOverflowItem,
   teamTriageOverflowItems,
 } from './teamTriageOverflow';
+import TeamViewsSurface from './TeamViewsSurface';
 import {
   ALL_TEAM_CYCLES,
   type TeamIssueScope,
@@ -259,7 +258,6 @@ const TeamPage = memo(() => {
   const [noProject, setNoProject] = useState(false);
   const [layout, setLayout] = useState<WorkQueryLayout>('list');
   const [duplicateTaskId, setDuplicateTaskId] = useState<string | null>(null);
-  const [creatingView, setCreatingView] = useState(false);
   const {
     data: teamData,
     error: teamError,
@@ -457,6 +455,58 @@ const TeamPage = memo(() => {
     createTaskModal(teamTriageCreateOptions(teamId, () => void revalidateTriage()));
   };
 
+  // The views tab is a routed surface of its own — a team-scoped directory
+  // plus the `?new=1` draft editor — so it returns before the shared team
+  // chrome. The team fetch still gates it: the editor header and save-to
+  // copy need the real team name, and a failed team response must never
+  // leave the tab blank.
+  if (teamTab === 'views' && teamId) {
+    if (!workspaceId)
+      return (
+        <WorkSurface>
+          <NavHeader
+            left={
+              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+                {t('tab.views')}
+              </Text>
+            }
+          />
+          <Center flex={1}>
+            <Empty description={t('teams.personal')} icon={UsersIcon} />
+          </Center>
+        </WorkSurface>
+      );
+    if (teamError || !teamData)
+      return (
+        <WorkSurface>
+          <NavHeader
+            left={
+              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+                {t('tab.views')}
+              </Text>
+            }
+          />
+          <WorkSurfaceCollection>
+            {teamError ? (
+              <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
+            ) : (
+              <SkeletonList aria-label={t('teams.loading')} rows={4} />
+            )}
+          </WorkSurfaceCollection>
+        </WorkSurface>
+      );
+    return (
+      <TeamViewsSurface
+        error={teamViewsError}
+        isLoading={isTeamViewsLoading}
+        teamId={teamId}
+        teamName={teamData.data.team.name}
+        views={teamViews}
+        onRetry={() => revalidateTeamViews()}
+      />
+    );
+  }
+
   return (
     <WorkSurface>
       <NavHeader
@@ -478,11 +528,6 @@ const TeamPage = memo(() => {
         }
         right={
           <Flexbox horizontal align={'center'} gap={8}>
-            {teamTab === 'views' ? (
-              <Button icon={PlusIcon} size={'small'} onClick={() => setCreatingView(true)}>
-                {t('savedViews.newView')}
-              </Button>
-            ) : null}
             <WorkFavoriteButton targetId={teamId} targetType="team" />
           </Flexbox>
         }
@@ -632,50 +677,6 @@ const TeamPage = memo(() => {
                   </Flexbox>
                 )
               ) : null}
-              {teamTab === 'views' ? (
-                isTeamViewsLoading ? (
-                  <SkeletonList aria-label={t('teams.loading')} rows={4} />
-                ) : teamViewsError && teamViews.length === 0 ? (
-                  <AsyncError error={teamViewsError} onRetry={() => revalidateTeamViews()} />
-                ) : (
-                  <Flexbox gap={2}>
-                    {teamViewsError ? (
-                      <AsyncError
-                        error={teamViewsError}
-                        variant={'inline'}
-                        onRetry={() => revalidateTeamViews()}
-                      />
-                    ) : null}
-                    {teamViews.length === 0 ? (
-                      <Center flex={1} padding={48}>
-                        <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
-                      </Center>
-                    ) : (
-                      teamViews.map((view) => (
-                        <WorkspaceLink
-                          className={styles.link}
-                          key={view.id}
-                          to={`/views/${view.id}`}
-                        >
-                          <Flexbox horizontal align="center" className={styles.row} gap={8}>
-                            <Flexbox flex={1} style={{ minWidth: 0 }}>
-                              <Text ellipsis weight={500}>
-                                {view.name}
-                              </Text>
-                            </Flexbox>
-                            <Text fontSize={12} type={'secondary'}>
-                              {t(savedViewVisibilityKey(view.visibility))}
-                            </Text>
-                            <Text fontSize={12} type={'secondary'}>
-                              {view.layout}
-                            </Text>
-                          </Flexbox>
-                        </WorkspaceLink>
-                      ))
-                    )}
-                  </Flexbox>
-                )
-              ) : null}
               {wantsTasks ? (
                 workState === 'error' ? (
                   <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
@@ -710,11 +711,6 @@ const TeamPage = memo(() => {
           )}
         </WorkSurfaceCollection>
       )}
-      <NewViewModal
-        defaultTeamId={teamId}
-        open={creatingView}
-        onClose={() => setCreatingView(false)}
-      />
       <MarkDuplicateModal
         open={duplicateTaskId !== null}
         taskId={duplicateTaskId}

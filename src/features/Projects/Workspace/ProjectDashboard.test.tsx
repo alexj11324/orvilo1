@@ -2,13 +2,14 @@ import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
-import { CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
+import { BoxIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
 import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
 import { useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
+import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { projectService } from '@/services/project';
 import type { ProjectDetail, ProjectListItem } from '@/store/project';
@@ -1058,7 +1059,7 @@ describe('project status glyph', () => {
     return control?.icon as ReactElement<{ children?: unknown; icon?: unknown }> | undefined;
   };
 
-  /** The glyph the `/projects` list row draws beside the project name. */
+  /** The glyph the `/projects` list row draws in its Status column. */
   const listGlyph = (status: string) => {
     mocks.projectList = [{ ...detail.project, status } as ProjectListItem];
     render(<ProjectListPage />);
@@ -1079,17 +1080,43 @@ describe('project status glyph', () => {
 
   it('draws the measured 16px filled In Progress glyph in the rail', () => {
     const icon = railIcon('active');
-    expect(icon?.type).toBe('svg');
-    expect(icon?.props).toMatchObject({
-      height: 16,
-      style: { color: cssVar.colorWarning, flex: 'none' },
-      viewBox: '-1 -1 16 16',
-      width: 16,
-    });
-    const [perimeter] = icon?.props.children as ReactElement<{ d: string }>[];
-    expect(perimeter.props.d).toBe(
+    expect(icon?.type).toBe(ProjectActiveStatusIcon);
+    expect(icon?.props).toMatchObject({ color: cssVar.colorWarning });
+    render(icon!);
+    const svg = document.querySelector('svg[viewBox="-1 -1 16 16"]');
+    expect(svg).toHaveAttribute('height', '16');
+    expect(svg).toHaveAttribute('width', '16');
+    expect(svg?.querySelector('path')).toHaveAttribute(
+      'd',
       'M2.95778 3.02069L5.70777 1.36023C6.50244 0.88041 7.49756 0.88041 8.29223 1.36024L11.0422 3.02074C11.7918 3.47336 12.25 4.2852 12.25 5.16086V8.84803C12.25 9.7251 11.7904 10.5381 11.0388 10.9902L8.29114 12.6433C7.49693 13.1211 6.50355 13.1203 5.71011 12.6412L2.95775 10.9792C2.20815 10.5266 1.75 9.7148 1.75 8.83911V5.16082C1.75 4.28516 2.20816 3.47332 2.95778 3.02069Z',
     );
+  });
+});
+
+describe('project list indicators', () => {
+  it('shows the priority glyph, missing health update, and issue completion percentage', () => {
+    mocks.projectList = [
+      {
+        ...detail.project,
+        avatar: '📦',
+        health: null,
+        priority: 2,
+        progressPercent: 50,
+        status: 'active',
+        taskCount: 3,
+      } as ProjectListItem,
+    ];
+
+    render(<ProjectListPage />);
+
+    expect(screen.getByRole('img', { name: 'create.priority.high' })).toBeInTheDocument();
+    expect(mocks.iconProps.some((props) => props.icon === BoxIcon)).toBe(true);
+    expect(screen.getByText('list.health.noUpdates')).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.getByText('status.active')).toBeInTheDocument();
+    expect(document.querySelector('svg[viewBox="-1 -1 16 16"]')).toBeInTheDocument();
+    expect(screen.getByText('Target date')).toBeInTheDocument();
+    expect(screen.queryByText('High')).not.toBeInTheDocument();
   });
 });
 

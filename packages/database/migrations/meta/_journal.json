@@ -1343,6 +1343,13 @@
       "when": 1790053618682,
       "tag": "0191_project_update_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 192,
+      "version": "7",
+      "when": 1790055037737,
+      "tag": "0192_user_job_title",
+      "breakpoints": true
     }
   ]
 }

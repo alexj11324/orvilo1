@@ -39,12 +39,14 @@ const FullNameRow = () => {
       <Flexbox horizontal align="center" gap={8}>
         {saving && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />}
         <Input
+          aria-label={t('profile.fullName')}
           defaultValue={fullName || ''}
           disabled={saving}
           key={fullName}
           placeholder={t('profile.fullName')}
           ref={inputRef}
-          variant="filled"
+          size={'small'}
+          style={{ width: 180, maxWidth: '100%' }}
           onBlur={handleSave}
           onPressEnter={handleSave}
         />

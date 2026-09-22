@@ -1,13 +1,15 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
-import { DiamondIcon } from 'lucide-react';
+import { CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
 import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
+import { projectService } from '@/services/project';
 import type { ProjectDetail, ProjectListItem } from '@/store/project';
 
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
@@ -47,6 +49,12 @@ const mocks = vi.hoisted(() => ({
     mutate: vi.fn(),
   })),
   projectResolved: true,
+  projectStatus: 'active',
+  serverStatus: 'active',
+  completedReviewId: null as string | null,
+  projectVersion: 0,
+  projectListeners: new Set<() => void>(),
+  detailMutate: vi.fn(),
   // Props every `Icon` on the page rendered with. The stub below renders
   // nothing, so this is the only way a test can read the visual spec back.
   iconProps: [] as Record<string, unknown>[],
@@ -102,7 +110,43 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
-  DropdownMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  DropdownMenu: ({
+    children,
+    items,
+  }: {
+    children?: ReactNode;
+    items?: { key: string; label: ReactNode; onClick: () => void }[];
+  }) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div
+        role="presentation"
+        onClick={() => setOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') setOpen(true);
+        }}
+      >
+        {children}
+        {open && (
+          <div role="menu">
+            {items?.map((item) => (
+              <button
+                key={item.key}
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  item.onClick();
+                  setOpen(false);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  },
   Tag: (props: { children?: ReactNode; icon?: ReactNode } & Record<string, unknown>) => {
     mocks.tagProps.push(props);
     return <span>{props.children}</span>;
@@ -172,9 +216,27 @@ vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
 vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
 vi.mock('@/store/project', () => ({
   useCurrentProjectList: () => mocks.projectList,
-  useCurrentProjectDetail: () =>
-    mocks.projectResolved ? { ...detail, milestones: mocks.milestones } : undefined,
-  useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: vi.fn() }),
+  useCurrentProjectDetail: () => {
+    useSyncExternalStore(
+      (listener) => {
+        mocks.projectListeners.add(listener);
+        return () => mocks.projectListeners.delete(listener);
+      },
+      () => mocks.projectVersion,
+    );
+    return mocks.projectResolved
+      ? {
+          ...detail,
+          project: {
+            ...detail.project,
+            completedReviewId: mocks.completedReviewId,
+            status: mocks.projectStatus,
+          },
+          milestones: mocks.milestones,
+        }
+      : undefined;
+  },
+  useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: mocks.detailMutate }),
 }));
 
 vi.mock('@/features/Work/WorkSummaryCard', () => ({
@@ -277,6 +339,16 @@ beforeEach(() => {
   mocks.addProjectMember.mockReset().mockResolvedValue(true);
   mocks.removeProjectMember.mockReset().mockResolvedValue(true);
   mocks.projectResolved = true;
+  mocks.projectStatus = 'active';
+  mocks.serverStatus = 'active';
+  mocks.completedReviewId = null;
+  mocks.projectVersion = 0;
+  mocks.projectListeners.clear();
+  mocks.detailMutate.mockReset().mockImplementation(async () => {
+    mocks.projectStatus = mocks.serverStatus;
+    mocks.projectVersion += 1;
+    for (const listener of mocks.projectListeners) listener();
+  });
   mocks.projectMembersQuery.mockClear();
   mocks.navigate.mockClear();
   mocks.goals = [];
@@ -769,6 +841,71 @@ describe('project overview member scope', () => {
     render(<ProjectWorkspace />);
     expect(mocks.projectMembersQuery).toHaveBeenCalledWith('prj_1', true);
     expect(mocks.projectMembersQuery).not.toHaveBeenCalledWith('apollo', true);
+  });
+});
+
+describe('project overview inline properties', () => {
+  it('opens the main status menu and refreshes its label after a successful status write', async () => {
+    const user = userEvent.setup();
+    vi.mocked(projectService.updateStatus).mockImplementation(async (_id, status) => {
+      mocks.serverStatus = status;
+      return { data: { status } } as Awaited<ReturnType<typeof projectService.updateStatus>>;
+    });
+    render(<ProjectWorkspace />);
+
+    await user.click(screen.getByRole('button', { name: 'properties.status' }));
+    expect(screen.getByRole('menuitem', { name: 'status.planned' })).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: 'status.planned' }));
+    await waitFor(() => {
+      expect(mocks.detailMutate).toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'properties.status' })).toHaveTextContent(
+        'planned',
+      );
+    });
+    expect(projectService.updateStatus).toHaveBeenCalledWith('prj_1', 'planned');
+  });
+
+  it('offers Canceled on writable projects and saves that transition', async () => {
+    const user = userEvent.setup();
+    vi.mocked(projectService.updateStatus).mockImplementation(async (_id, status) => {
+      mocks.serverStatus = status;
+      return { data: { status } } as Awaited<ReturnType<typeof projectService.updateStatus>>;
+    });
+    render(<ProjectWorkspace />);
+
+    await user.click(screen.getByRole('button', { name: 'properties.status' }));
+    await user.click(screen.getByRole('menuitem', { name: 'status.canceled' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'properties.status' })).toHaveTextContent(
+        'canceled',
+      ),
+    );
+    expect(projectService.updateStatus).toHaveBeenCalledWith('prj_1', 'canceled');
+  });
+
+  it('offers only Archived after completion and locks an archived completed project', async () => {
+    const user = userEvent.setup();
+    mocks.projectStatus = 'completed';
+    const view = render(<ProjectWorkspace />);
+
+    await user.click(screen.getByRole('button', { name: 'properties.status' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'status.archived',
+    ]);
+    expect(screen.queryByRole('menuitem', { name: 'status.canceled' })).not.toBeInTheDocument();
+
+    mocks.projectStatus = 'archived';
+    mocks.completedReviewId = 'review_1';
+    mocks.projectVersion += 1;
+    for (const listener of mocks.projectListeners) listener();
+    view.rerender(<ProjectWorkspace />);
+    expect(screen.getByRole('button', { name: 'properties.status' })).toBeDisabled();
+  });
+
+  it('renders both date glyphs in the main property row', () => {
+    render(<ProjectWorkspace />);
+    expect(mocks.iconProps.some((props) => props.icon === CalendarDaysIcon)).toBe(true);
+    expect(mocks.iconProps.some((props) => props.icon === CalendarIcon)).toBe(true);
   });
 });
 

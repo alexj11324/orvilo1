@@ -1,9 +1,18 @@
-import { DatePicker, Flexbox } from '@lobehub/ui';
+import { DatePicker, Flexbox, Icon } from '@lobehub/ui';
 import { Select, Tabs, toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { TagIcon, UserRoundIcon } from 'lucide-react';
+import {
+  CalendarDaysIcon,
+  CalendarIcon,
+  SignalHighIcon,
+  SignalLowIcon,
+  SignalMediumIcon,
+  SignalZeroIcon,
+  TagIcon,
+  UserRoundIcon,
+} from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,6 +55,65 @@ const styles = createStaticStyles(({ css }) => ({
     flex: 0 0 120px;
     width: 120px;
     min-width: 0;
+  `,
+  inline: css`
+    flex: 0 0 auto;
+
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    height: 28px;
+    padding-block: 3px;
+    padding-inline: 6px;
+    border: 0;
+    border-radius: 9999px;
+
+    font-size: 13px;
+    font-weight: 500;
+
+    background: transparent;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-within {
+      outline: 2px solid ${cssVar.colorPrimary};
+    }
+
+    .ant-select-selector {
+      height: 28px !important;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 9999px !important;
+
+      background: transparent !important;
+    }
+
+    .ant-select-selection-item,
+    .ant-picker-input > input {
+      font-size: 13px !important;
+      font-weight: 500 !important;
+    }
+  `,
+  inlineDate: css`
+    border-radius: 8px;
+
+    .ant-picker-input {
+      gap: 8px;
+    }
+
+    .ant-picker-suffix {
+      order: -1;
+      margin-inline: 0;
+    }
+
+    .ant-picker-input > input {
+      width: auto;
+      min-width: 4ch;
+
+      field-sizing: content;
+    }
   `,
 }));
 
@@ -108,7 +176,13 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
   );
 }
 
-export function ProjectLeadField({ project }: { project: ProjectDetail['project'] }) {
+export function ProjectLeadField({
+  inline = false,
+  project,
+}: {
+  inline?: boolean;
+  project: ProjectDetail['project'];
+}) {
   const { t } = useTranslation('project');
   const id = useId();
   const members = useWorkspaceMembersQuery();
@@ -151,7 +225,7 @@ export function ProjectLeadField({ project }: { project: ProjectDetail['project'
       </label>
       <Select<string | number>
         showSearch
-        className={styles.field}
+        className={inline ? `${styles.field} ${styles.inline}` : styles.field}
         disabled={saving || members.isLoading}
         id={id}
         labelRender={(option) => (option.value === 0 ? t('properties.addLead') : option.label)}
@@ -171,7 +245,13 @@ export function ProjectLeadField({ project }: { project: ProjectDetail['project'
   );
 }
 
-export function ProjectPriorityField({ project }: { project: ProjectDetail['project'] }) {
+export function ProjectPriorityField({
+  inline = false,
+  project,
+}: {
+  inline?: boolean;
+  project: ProjectDetail['project'];
+}) {
   const { t } = useTranslation('project');
   const { save, saving } = usePlanningMutation(project.id);
   const id = useId();
@@ -181,7 +261,7 @@ export function ProjectPriorityField({ project }: { project: ProjectDetail['proj
         {t('properties.priority')}
       </label>
       <Select
-        className={styles.field}
+        className={inline ? `${styles.field} ${styles.inline}` : styles.field}
         disabled={saving}
         id={id}
         loading={saving}
@@ -189,6 +269,24 @@ export function ProjectPriorityField({ project }: { project: ProjectDetail['proj
         size="small"
         suffixIcon={null}
         value={project.priority ?? 0}
+        prefix={
+          inline ? (
+            <Icon
+              size={16}
+              icon={
+                (
+                  [
+                    SignalZeroIcon,
+                    SignalHighIcon,
+                    SignalHighIcon,
+                    SignalMediumIcon,
+                    SignalLowIcon,
+                  ] as const
+                )[project.priority ?? 0]
+              }
+            />
+          ) : undefined
+        }
         onChange={(value) => {
           if (
             (value === 0 || value === 1 || value === 2 || value === 3 || value === 4) &&
@@ -203,6 +301,7 @@ export function ProjectPriorityField({ project }: { project: ProjectDetail['proj
 
 export function ProjectDateField({
   fitContent = false,
+  inline = false,
   kind,
   project,
 }: {
@@ -217,6 +316,7 @@ export function ProjectDateField({
    * where the fixed width is what keeps them even.
    */
   fitContent?: boolean;
+  inline?: boolean;
   kind: 'startDate' | 'targetDate';
   project: ProjectDetail['project'];
 }) {
@@ -229,14 +329,19 @@ export function ProjectDateField({
     <DatePicker
       allowClear
       aria-label={t(`create.${kind}`)}
-      className={fitContent ? styles.field : `${styles.field} ${styles.date}`}
       disabled={saving}
       format={(date) => formatProjectDate(date.format('YYYY-MM-DD'), storedPrecision)}
       picker={getProjectDatePickerMode(precision)}
       placeholder={t(kind === 'startDate' ? 'create.start' : 'create.target')}
       size="small"
-      suffixIcon={null}
       value={project[kind] ? dayjs(project[kind]) : null}
+      className={
+        inline
+          ? `${styles.field} ${styles.inline} ${styles.inlineDate}`
+          : fitContent
+            ? styles.field
+            : `${styles.field} ${styles.date}`
+      }
       panelRender={(panel) => (
         <>
           <Tabs
@@ -254,6 +359,11 @@ export function ProjectDateField({
           {panel}
         </>
       )}
+      suffixIcon={
+        inline ? (
+          <Icon icon={kind === 'startDate' ? CalendarDaysIcon : CalendarIcon} size={16} />
+        ) : null
+      }
       onChange={(value) => {
         let date = value;
         if (date && precision !== 'day') {

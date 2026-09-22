@@ -1,10 +1,10 @@
 'use client';
 
 import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
+import { DropdownMenu, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Link2Icon } from 'lucide-react';
-import { memo } from 'react';
+import { ArrowRightIcon, Link2Icon } from 'lucide-react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -19,6 +19,7 @@ import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { projectService } from '@/services/project';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
@@ -71,7 +72,54 @@ const styles = createStaticStyles(({ css }) => ({
     height: 100%;
     background: ${cssVar.colorBgContainer};
   `,
+  properties: css`
+    flex: 1;
+    gap: 2px 4px;
+    min-width: 0;
+  `,
+  status: css`
+    cursor: pointer;
+
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+
+    height: 28px;
+    padding-block: 3px;
+    padding-inline: 6px;
+    border: 0;
+    border-radius: 9999px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: ${cssVar.colorText};
+
+    background: transparent;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+  `,
 }));
+
+const editableStatuses = [
+  'backlog',
+  'planned',
+  'active',
+  'paused',
+  'canceled',
+  'archived',
+] as const;
 
 const ProjectWorkspace = memo(() => {
   const { t } = useTranslation('project');
@@ -86,6 +134,7 @@ const ProjectWorkspace = memo(() => {
   const membersEnabled = !!workspaceId;
   const databaseId = detail?.project.id;
   const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
@@ -103,6 +152,32 @@ const ProjectWorkspace = memo(() => {
   const knowledgeBases = detail.knowledgeBases ?? [];
   const { emptyState: updatesEmpty, publishedUpdates: projectUpdates } =
     getProjectOverviewUpdateState(updatesSWR.data);
+  const changeStatus = async (status: (typeof editableStatuses)[number]) => {
+    if (updatingStatus || status === project.status) return;
+    setUpdatingStatus(true);
+    try {
+      await projectService.updateStatus(project.id, status);
+      await mutate();
+    } catch (error) {
+      console.error('Failed to update project status', error);
+      toast.error(t('properties.saveError'));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+  const lifecycleLocked =
+    project.status === 'reviewing' ||
+    (project.status === 'archived' && !!project.completedReviewId);
+  const availableStatuses =
+    project.status === 'completed' || project.completedReviewId
+      ? editableStatuses.filter((status) => status === 'archived')
+      : editableStatuses;
+  const statusItems = availableStatuses.map((status) => ({
+    icon: <Icon icon={PROJECT_STATUS_VISUALS[status].icon} size={16} />,
+    key: status,
+    label: t(`status.${status}`),
+    onClick: () => void changeStatus(status),
+  }));
 
   return (
     <Flexbox className={styles.shell} flex={1}>
@@ -137,30 +212,26 @@ const ProjectWorkspace = memo(() => {
               <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 72 }}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
-              <Flexbox
-                horizontal
-                align={'center'}
-                gap={8}
-                style={{ minWidth: 0, flex: 1 }}
-                wrap={'wrap'}
-              >
-                <Tag
-                  color={statusVisual.color}
-                  icon={<Icon icon={statusVisual.icon} size={12} />}
-                  shape={'round'}
-                  size={'small'}
-                >
-                  {t(`status.${project.status}`, {
-                    defaultValue: project.status,
-                  })}
-                </Tag>
+              <Flexbox horizontal align={'center'} className={styles.properties} wrap={'wrap'}>
+                <DropdownMenu items={statusItems}>
+                  <button
+                    aria-label={t('properties.status')}
+                    className={styles.status}
+                    disabled={updatingStatus || lifecycleLocked}
+                    type="button"
+                  >
+                    <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
+                    {t(`status.${project.status}`, { defaultValue: project.status })}
+                  </button>
+                </DropdownMenu>
+                <ProjectPriorityField inline project={project} />
+                <ProjectLeadField inline project={project} />
+                <ProjectDateField inline kind="startDate" project={project} />
+                <Icon aria-hidden icon={ArrowRightIcon} size={16} />
+                <ProjectDateField inline kind="targetDate" project={project} />
                 {membersEnabled && (
                   <ProjectMembersField projectId={project.id} query={membersSWR} />
                 )}
-                <ProjectPriorityField project={project} />
-                <ProjectLeadField project={project} />
-                <ProjectDateField kind="startDate" project={project} />
-                <ProjectDateField kind="targetDate" project={project} />
                 <Tag shape={'round'} size={'small'}>
                   {t(`properties.visibilityValue.${project.visibility}`, {
                     defaultValue: project.visibility,

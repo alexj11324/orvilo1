@@ -138,7 +138,7 @@ class ProjectService {
 
   updateStatus = async (
     id: string,
-    status: 'active' | 'archived' | 'backlog' | 'paused' | 'planned',
+    status: 'active' | 'archived' | 'backlog' | 'canceled' | 'paused' | 'planned',
   ) => lambdaClient.project.updateStatus.mutate({ id, status });
 }
 

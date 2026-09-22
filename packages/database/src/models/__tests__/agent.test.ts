@@ -1352,6 +1352,32 @@ describe('AgentModel', () => {
       expect(result?.model).toBe('gpt-4');
     });
 
+    it('should keep the builtin orvilo harness binding when updating the inbox agent', async () => {
+      // 'orvilo' is the inbox agent's own builtin engine, not an external-CLI
+      // binding — the guard must not strip it, or the Migrate-to-Orvilo write
+      // is silently reverted.
+      const agent = await serverDB
+        .insert(agents)
+        .values({ slug: INBOX_SESSION_ID, userId })
+        .returning()
+        .then((res) => res[0]);
+
+      await agentModel.updateConfig(agent.id, {
+        agencyConfig: {
+          heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
+        },
+      } as any);
+
+      const result = await serverDB.query.agents.findFirst({
+        where: eq(agents.id, agent.id),
+      });
+
+      expect((result?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+        engine: 'claude-sdk',
+        type: 'orvilo',
+      });
+    });
+
     it('should keep heterogeneousProvider for non-inbox agents', async () => {
       const agent = await serverDB
         .insert(agents)
@@ -1752,6 +1778,65 @@ describe('AgentModel', () => {
         expect(result?.virtual).toBe(true);
       });
 
+      it('should create the inbox agent bound to the builtin orvilo harness', async () => {
+        // A builtin agent must never exist unbound — provisioning writes the
+        // harness binding as part of the persist payload.
+        const result = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+
+        expect(result).toBeDefined();
+
+        const row = await serverDB.query.agents.findFirst({
+          where: eq(agents.id, result!.id),
+        });
+        expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+          engine: 'claude-sdk',
+          type: 'orvilo',
+        });
+      });
+
+      it('should heal an existing inbox agent missing its harness binding', async () => {
+        // Rows provisioned before the binding invariant existed get backfilled
+        // on the next read; a user-set binding is never overwritten.
+        const [unbound] = await serverDB
+          .insert(agents)
+          .values({ slug: INBOX_SESSION_ID, userId })
+          .returning();
+
+        const healed = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+        expect(healed?.id).toBe(unbound.id);
+
+        const row = await serverDB.query.agents.findFirst({
+          where: eq(agents.id, unbound.id),
+        });
+        expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+          engine: 'claude-sdk',
+          type: 'orvilo',
+        });
+      });
+
+      it('should not overwrite an existing inbox harness binding', async () => {
+        const [bound] = await serverDB
+          .insert(agents)
+          .values({
+            agencyConfig: {
+              heterogeneousProvider: { engine: 'codex-app-server', type: 'orvilo' },
+            },
+            slug: INBOX_SESSION_ID,
+            userId,
+          })
+          .returning();
+
+        await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+
+        const row = await serverDB.query.agents.findFirst({
+          where: eq(agents.id, bound.id),
+        });
+        expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+          engine: 'codex-app-server',
+          type: 'orvilo',
+        });
+      });
+
       it('should return the same agent on subsequent calls (idempotent)', async () => {
         // First call - creates the agent
         const result1 = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
@@ -1844,6 +1929,7 @@ describe('AgentModel', () => {
         expect(result?.userId).toBe(userId);
         expect(result?.agencyConfig).toEqual({
           executionTargetSelectionPolicy: 'member',
+          heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
           modelSelectionPolicy: 'member',
           topicSharePolicy: 'member',
         });

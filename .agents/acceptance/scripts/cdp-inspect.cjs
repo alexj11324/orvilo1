@@ -16,6 +16,13 @@
  *
  * The expression is wrapped: it may use `return` at top level, and is awaited, so
  * `await new Promise(r => setTimeout(r, 300))` works for post-click settling.
+ *
+ * YOU MUST WRITE `return`. The wrapper is `(async () => { <source> })()`, so a bare expression
+ * is evaluated and thrown away, and the caller gets no value. That used to print `null`, which
+ * is indistinguishable from an expression that legitimately returned null — so "I forgot return"
+ * and "the element is not there" read identically, at exit 0. The two are now separated: a
+ * discarded value prints `<undefined>` (never `null`) and warns on stderr. Callers that treat a
+ * `null` result as absence are safe; callers that see `<undefined>` know they measured nothing.
  */
 const http = require('node:http');
 
@@ -170,6 +177,19 @@ const main = async () => {
     process.stderr.write(`${res.exceptionDetails.exception?.description ?? ''}\n`);
     process.exit(2);
   }
+
+  // `undefined` must never be printed as `null`: the two mean opposite things to a caller
+  // deciding whether an element is absent, and collapsing them hides a forgotten `return`.
+  if (res.result?.value === undefined && !res.result?.unserializableValue) {
+    process.stderr.write('WARN: expression produced no value (undefined), not null\n');
+    if (!/\breturn\b/.test(loadSource())) {
+      process.stderr.write('WARN: source has no `return` — its value was discarded. Add `return`.\n');
+    }
+    process.stdout.write('<undefined>\n');
+    ws.close();
+    return;
+  }
+
   process.stdout.write(`${JSON.stringify(res.result?.value ?? null, null, 2)}\n`);
   ws.close();
 };

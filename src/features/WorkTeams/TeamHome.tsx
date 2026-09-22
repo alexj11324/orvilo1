@@ -1,87 +1,151 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
-import type { TeamCycleItem, TeamItem, TeamMemberItem } from '@orvilo/types';
+import { Text } from '@lobehub/ui/base-ui';
+import type { TeamItem, TeamMemberItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import {
-  ArrowRightIcon,
-  FolderKanbanIcon,
-  LayoutListIcon,
-  ListChecksIcon,
-  RepeatIcon,
-} from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { ArrowRightIcon, FolderKanbanIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import AsyncError from '@/components/AsyncError';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { useClientDataSWR } from '@/libs/swr';
-import { workAttentionService } from '@/services/workAttention';
 
 import type { WorkspaceMemberSummary } from '../Teammates/api/contract';
 import { useWorkspaceMembersQuery } from '../Teammates/api/hooks';
+import { type TeamHomeDestination, teamHomeDestinations } from './teamHomeDestinations';
+import TeamIdentity from './TeamIdentity';
 
 const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
+  description: css`
+    margin-block-start: 20px;
+    padding-inline: 12px;
 
-    background: ${cssVar.colorBgContainer};
+    font-size: 15px;
+    font-weight: 450;
+    line-height: 23px;
+    white-space: pre-wrap;
   `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
+  identity: css`
+    padding-inline: 12px;
+  `,
+  main: css`
     min-width: 0;
+    padding-block-start: 24px;
 
-    color: inherit;
-    text-decoration: none;
+    @container work-surface (max-width: 1000px) {
+      padding-block-start: 4px;
+    }
   `,
-  memberChip: css`
+  member: css`
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    height: 26px;
+  `,
+  memberGroup: css`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    @container work-surface (max-width: 1000px) {
+      flex-direction: row;
+      gap: 4px;
+      align-items: center;
+
+      padding-inline: 12px;
+    }
+  `,
+  name: css`
+    overflow: hidden;
+
+    margin: 0;
+
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 32px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
+  navGroup: css`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    @container work-surface (max-width: 1000px) {
+      flex-flow: row wrap;
+      gap: 0;
+      align-items: center;
+
+      padding-inline: 6px;
+    }
+  `,
+  navLink: css`
     display: flex;
     gap: 8px;
     align-items: center;
 
-    padding-block: 4px;
-    padding-inline: 4px 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 999px;
-  `,
-  navRow: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
+    width: fit-content;
+    min-height: 28px;
+    padding-block: 5px;
+    padding-inline: 6px;
+    border-radius: ${cssVar.borderRadius};
 
-    padding-block: 9px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: inherit;
+    color: ${cssVar.colorText};
     text-decoration: none;
 
     &:hover {
       background: ${cssVar.colorFillTertiary};
     }
   `,
+  rail: css`
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    min-width: 0;
+    padding-block-start: 40px;
+
+    @container work-surface (max-width: 1000px) {
+      flex-flow: row wrap;
+      gap: 4px;
+      align-items: center;
+
+      padding-block-start: 16px;
+    }
+  `,
+  root: css`
+    display: grid;
+    grid-template-columns: minmax(0, 712px) 212px;
+    gap: 48px;
+
+    width: min(972px, 100%);
+    margin-block-start: 36px;
+    margin-inline: auto;
+
+    @container work-surface (max-width: 1000px) {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+
+      width: 100%;
+      margin-block-start: 0;
+    }
+  `,
   sectionTitle: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 14px;
+    font-weight: 500;
+    color: ${cssVar.colorTextSecondary};
+
+    @container work-surface (max-width: 1000px) {
+      display: none;
+    }
   `,
 }));
 
 interface TeamHomeProps {
   teamData: {
-    cycles: TeamCycleItem[];
     members: TeamMemberItem[];
     team: TeamItem;
   };
@@ -90,177 +154,88 @@ interface TeamHomeProps {
   workspaceSlug: string;
 }
 
-/**
- * Team Home — the team's context surface: what the team is, who's on it, and
- * the real entry points into its work surfaces. It deliberately does not
- * embed the task list; Issues/Triage are their own tabs.
- */
-const TeamHome = memo<TeamHomeProps>(({ teamData, teamId, triageCapable, workspaceSlug }) => {
+const destinationIcons = {
+  issues: ListChecksIcon,
+  projects: FolderKanbanIcon,
+  triage: ArrowRightIcon,
+  views: LayoutListIcon,
+} satisfies Record<TeamHomeDestination, typeof ListChecksIcon>;
+
+const destinationLabels = {
+  issues: 'teams.navIssues',
+  projects: 'teams.navProjects',
+  triage: 'teams.navTriage',
+  views: 'teams.navViews',
+} as const satisfies Record<TeamHomeDestination, string>;
+
+const TeamHome = ({ teamData, teamId, triageCapable, workspaceSlug }: TeamHomeProps) => {
   const { t } = useTranslation('common');
+  const { t: tProject } = useTranslation('project');
   const membersQuery = useWorkspaceMembersQuery({ enabled: true });
-
-  const { data: teamProjectsData } = useClientDataSWR(['team-home-projects', teamId], () =>
-    workAttentionService.query({
-      limit: 6,
-      query: {
-        entityType: 'project',
-        filter: { all: [{ field: 'teamId', op: 'eq', value: teamId }] },
-        schemaVersion: 1,
-      },
-    }),
+  const memberByUserId = new Map<string, WorkspaceMemberSummary>(
+    (membersQuery.members ?? []).map((member) => [member.userId, member]),
   );
-  const { data: viewsData } = useClientDataSWR(['team-home-views', teamId], () =>
-    workAttentionService.savedViewList(),
-  );
-
-  const memberByUserId = useMemo(() => {
-    const map = new Map<string, WorkspaceMemberSummary>();
-    for (const member of membersQuery.members ?? []) map.set(member.userId, member);
-    return map;
-  }, [membersQuery.members]);
-
-  const teamMembers = useMemo(
-    () =>
-      teamData.members
-        .map((member) => ({
-          profile: memberByUserId.get(member.userId),
-          role: member.role,
-          userId: member.userId,
-        }))
-        .filter((row) => row.profile),
-    [memberByUserId, teamData.members],
-  );
-
-  const teamProjects =
-    teamProjectsData?.data && 'projects' in teamProjectsData.data
-      ? (teamProjectsData.data.projects ?? [])
-      : [];
-  const teamViews = (viewsData?.data ?? []).filter(
-    (view) => view.visibility === 'team' && view.teamId === teamId,
-  );
-
-  const now = Date.now();
-  const activeCycles = teamData.cycles.filter((cycle) =>
-    cycle.startsAt && cycle.endsAt && new Date(cycle.startsAt).getTime() <= now
-      ? new Date(cycle.endsAt).getTime() >= now
-      : false,
-  );
-
-  const teamPath = (tab: string) =>
-    buildWorkspaceAwarePath(`/teams/${teamId}?tab=${tab}`, workspaceSlug);
-
-  const navEntries = [
-    { icon: ListChecksIcon, label: t('teams.navIssues'), to: teamPath('issues') },
-    ...(triageCapable
-      ? [{ icon: ArrowRightIcon, label: t('teams.navTriage'), to: teamPath('triage') }]
-      : []),
-    { icon: FolderKanbanIcon, label: t('teams.navProjects'), to: teamPath('projects') },
-    { icon: LayoutListIcon, label: t('teams.navViews'), to: teamPath('views') },
-  ];
+  const teamMembers = teamData.members
+    .map((member) => memberByUserId.get(member.userId))
+    .filter((member): member is WorkspaceMemberSummary => Boolean(member));
+  const destinations = teamHomeDestinations(teamId, workspaceSlug, triageCapable);
 
   return (
-    <Flexbox gap={20}>
-      {teamData.team.description ? (
-        <Text style={{ whiteSpace: 'pre-wrap' }} type="secondary">
-          {teamData.team.description}
+    <div className={styles.root}>
+      <div className={styles.main}>
+        <Flexbox horizontal align="center" className={styles.identity} gap={12}>
+          <TeamIdentity
+            color={teamData.team.color}
+            id={teamData.team.id}
+            letter={(teamData.team.key || teamData.team.name).slice(0, 1)}
+            size={36}
+          />
+          <h1 className={styles.name}>{teamData.team.name}</h1>
+        </Flexbox>
+        <Text className={styles.description} type="secondary">
+          {teamData.team.description || tProject('overview.descriptionEmpty')}
         </Text>
-      ) : null}
+      </div>
 
-      <div className={styles.card}>
-        <div className={styles.sectionTitle}>{t('teams.members')}</div>
-        <Flexbox gap={8} paddingBlock={8} wrap="wrap">
+      <aside className={styles.rail}>
+        <div className={styles.memberGroup}>
+          <div className={styles.sectionTitle}>{t('teams.members')}</div>
           {membersQuery.isLoading ? (
             <SkeletonList aria-label={t('teams.loading')} rows={1} />
+          ) : membersQuery.error ? (
+            <AsyncError
+              error={membersQuery.error}
+              onRetry={() => void membersQuery.mutate()}
+              variant="inline"
+            />
           ) : teamMembers.length === 0 ? (
             <Text type="secondary">{t('teams.membersEmpty')}</Text>
           ) : (
-            teamMembers.map(({ profile, role, userId }) => (
-              <WorkspaceLink
-                className={styles.memberChip}
-                key={userId}
-                to={buildWorkspaceAwarePath('/members', workspaceSlug)}
-              >
-                <Avatar
-                  avatar={profile!.user?.avatar}
-                  name={profile!.user?.fullName ?? profile!.user?.username ?? undefined}
-                  size={20}
-                />
-                <Text ellipsis fontSize={13}>
-                  {profile!.user?.fullName || profile!.user?.username || profile!.user?.email}
-                </Text>
-                {role === 'lead' ? <Tag color="gold">{t('teams.roleLead')}</Tag> : null}
-              </WorkspaceLink>
-            ))
-          )}
-        </Flexbox>
-      </div>
-
-      <Flexbox gap={4}>
-        <div className={styles.sectionTitle}>{t('teams.quickLinks')}</div>
-        {navEntries.map((entry) => (
-          <WorkspaceLink className={styles.navRow} key={entry.to} to={entry.to}>
-            <Icon icon={entry.icon} size={16} />
-            <Text style={{ flex: 1 }}>{entry.label}</Text>
-            <Icon icon={ArrowRightIcon} size={14} style={{ color: cssVar.colorTextTertiary }} />
-          </WorkspaceLink>
-        ))}
-      </Flexbox>
-
-      {activeCycles.length > 0 ? (
-        <Flexbox gap={4}>
-          <div className={styles.sectionTitle}>{t('teams.activeCycle')}</div>
-          {activeCycles.map((cycle) => (
-            <Flexbox horizontal align="center" gap={8} key={cycle.id} paddingBlock={4}>
-              <Icon icon={RepeatIcon} size={14} />
-              <Text weight={500}>{cycle.name || `#${cycle.number ?? cycle.id.slice(0, 8)}`}</Text>
-              <Text fontSize={12} type="secondary">
-                {new Date(cycle.startsAt!).toLocaleDateString()} –{' '}
-                {new Date(cycle.endsAt!).toLocaleDateString()}
-              </Text>
+            <Flexbox horizontal align="center" gap={4} wrap="wrap">
+              {teamMembers.map((member) => {
+                const name = member.user?.fullName || member.user?.username || member.user?.email;
+                return (
+                  <span className={styles.member} key={member.userId} title={name}>
+                    <Avatar avatar={member.user?.avatar} name={name ?? undefined} size={26} />
+                  </span>
+                );
+              })}
             </Flexbox>
-          ))}
-        </Flexbox>
-      ) : null}
+          )}
+        </div>
 
-      {teamProjects.length > 0 ? (
-        <Flexbox gap={4}>
-          <div className={styles.sectionTitle}>{t('teams.navProjects')}</div>
-          {teamProjects.slice(0, 5).map((project) => (
-            <WorkspaceLink
-              className={styles.navRow}
-              key={project.id}
-              to={buildWorkspaceAwarePath(`/project/${project.id}`, workspaceSlug)}
-            >
-              <Icon icon={FolderKanbanIcon} size={16} />
-              <Text ellipsis style={{ flex: 1 }}>
-                {project.name}
-              </Text>
+        <nav aria-label={t('teams.quickLinks')} className={styles.navGroup}>
+          <div className={styles.sectionTitle}>{t('teams.quickLinks')}</div>
+          {destinations.map(({ key, to }) => (
+            <WorkspaceLink className={styles.navLink} key={key} to={to}>
+              <Icon icon={destinationIcons[key]} size={16} />
+              <Text fontSize={14}>{t(destinationLabels[key])}</Text>
             </WorkspaceLink>
           ))}
-        </Flexbox>
-      ) : null}
-
-      {teamViews.length > 0 ? (
-        <Flexbox gap={4}>
-          <div className={styles.sectionTitle}>{t('teams.navViews')}</div>
-          {teamViews.slice(0, 5).map((view) => (
-            <WorkspaceLink
-              className={styles.navRow}
-              key={view.id}
-              to={buildWorkspaceAwarePath(`/views/${view.id}`, workspaceSlug)}
-            >
-              <Icon icon={LayoutListIcon} size={16} />
-              <Text ellipsis style={{ flex: 1 }}>
-                {view.name}
-              </Text>
-            </WorkspaceLink>
-          ))}
-        </Flexbox>
-      ) : null}
-    </Flexbox>
+        </nav>
+      </aside>
+    </div>
   );
-});
-
-TeamHome.displayName = 'TeamHome';
+};
 
 export default TeamHome;

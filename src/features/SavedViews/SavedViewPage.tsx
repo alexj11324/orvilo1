@@ -1,12 +1,28 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Alert, Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  confirmModal,
+  DropdownMenu,
+  Popover,
+  Text,
+  toast,
+} from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQuery } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { EllipsisIcon, FolderClosedIcon, SlidersHorizontalIcon } from 'lucide-react';
+import {
+  EllipsisIcon,
+  FilterIcon,
+  FolderClosedIcon,
+  PanelRightCloseIcon,
+  PanelRightOpenIcon,
+  Settings2Icon,
+} from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -27,7 +43,7 @@ import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
+import { WorkSurface, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -36,6 +52,8 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
+import { type SavedViewControl, transitionSavedViewControl } from './savedViewControlState';
+import SavedViewDetailsPanel from './SavedViewDetailsPanel';
 import { savedViewProjectPath } from './savedViewProjectPath';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
@@ -66,6 +84,53 @@ const styles = createStaticStyles(({ css }) => ({
 
     font-size: ${cssVar.fontSizeSM};
     color: ${cssVar.colorTextSecondary};
+  `,
+  controlPopover: css`
+    width: min(420px, calc(100vw - 32px));
+    padding: 12px;
+  `,
+  detailLayout: css`
+    position: relative;
+
+    overflow: hidden;
+    display: flex;
+    flex: 1;
+
+    height: 0;
+    min-height: 0;
+  `,
+  detailPane: css`
+    overflow-y: auto;
+    flex: none;
+
+    width: 400px;
+    padding: 12px;
+    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
+
+    background: ${cssVar.colorBgLayout};
+
+    @container work-surface (max-width: 900px) {
+      position: absolute;
+      z-index: 10;
+      inset-block: 0;
+      inset-inline-end: 0;
+
+      width: min(400px, calc(100% - 40px));
+
+      box-shadow: ${cssVar.boxShadowSecondary};
+    }
+  `,
+  resultsBody: css`
+    box-sizing: border-box;
+    min-height: 100%;
+    padding-block: 8px;
+    padding-inline: 16px;
+  `,
+  resultsScroll: css`
+    overflow: auto;
+    overscroll-behavior: contain;
+    flex: 1;
+    min-width: 0;
   `,
   identifier: css`
     flex: none;
@@ -279,7 +344,8 @@ const SavedViewPage = memo(() => {
   const [draft, setDraft] = useState<ViewEditorState | null>(null);
   const [draftBase, setDraftBase] = useState<number | undefined>();
   const [conflict, setConflict] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [openControl, setOpenControl] = useState<SavedViewControl | null>(null);
 
   const dirty = useMemo(() => {
     if (!draft || !view) return false;
@@ -385,10 +451,10 @@ const SavedViewPage = memo(() => {
     [projectGroups, queryHash, viewId],
   );
 
-  const saveView = useCallback(async () => {
-    if (!viewId || !view || !draft || !shareReady) return;
+  const saveView = useCallback(async (): Promise<boolean> => {
+    if (!viewId || !view || !draft || !shareReady) return false;
     const trimmed = draft.name.trim();
-    if (!trimmed) return;
+    if (!trimmed) return false;
     try {
       await workAttentionService.savedViewUpdate({
         expectedDefinitionVersion: draftBase ?? view.definitionVersion,
@@ -401,12 +467,14 @@ const SavedViewPage = memo(() => {
       setConflict(false);
       await refreshView();
       toast.success(t('savedViews.saved'));
+      return true;
     } catch (error) {
       if (isTrpcErrorCode(error, 'CONFLICT')) {
         setConflict(true);
-        return;
+        return false;
       }
       toast.error(t('savedViews.saveFailed'));
+      return false;
     }
   }, [draft, draftBase, refreshView, shareReady, t, view, viewId]);
 
@@ -474,166 +542,262 @@ const SavedViewPage = memo(() => {
 
   const projectBoard =
     view?.entityType === 'project' && (evaluation?.layout ?? view?.layout) === 'board';
-  const boardActive = (evaluation?.layout ?? view?.layout) === 'board';
+  const resolvedLayout = evaluation?.layout ?? view?.layout ?? 'list';
+  const boardActive = resolvedLayout === 'board';
+  const viewTitle = view ? savedViewTitle(view.id, view.name, t) : t('tab.views');
+  const detailGroups = view?.entityType === 'project' ? projectGroups : groups;
+
+  const closeEditors = useCallback(() => {
+    setOpenControl(null);
+  }, []);
+
+  const cancelDraft = useCallback(() => {
+    reloadDraft();
+    closeEditors();
+  }, [closeEditors, reloadDraft]);
+
+  const commitDraft = useCallback(async () => {
+    if (await saveView()) closeEditors();
+  }, [closeEditors, saveView]);
+
+  const handleControlOpenChange = useCallback(
+    (control: SavedViewControl, open: boolean) => {
+      const transition = transitionSavedViewControl(openControl, control, open);
+      if (transition.resetDraft) reloadDraft();
+      setOpenControl(transition.next);
+    },
+    [openControl, reloadDraft],
+  );
 
   return (
     <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {view ? savedViewTitle(view.id, view.name, t) : t('tab.views')}
+            {viewTitle}
           </Text>
         }
         right={
           <Flexbox horizontal gap={8}>
             <WorkFavoriteButton targetId={viewId} targetType="savedView" />
-            {isOwner ? (
-              <Button
-                icon={SlidersHorizontalIcon}
-                size="small"
-                type={editing ? 'primary' : 'default'}
-                onClick={() => setEditing((current) => !current)}
-              >
-                {t('savedViews.editView')}
-              </Button>
-            ) : null}
             {view ? (
               <DropdownMenu items={moreMenuItems} placement="bottomRight">
-                <Button icon={EllipsisIcon} size="small" />
+                <ActionIcon
+                  aria-label={t('savedViews.viewOptions')}
+                  icon={EllipsisIcon}
+                  size="small"
+                />
               </DropdownMenu>
             ) : null}
           </Flexbox>
         }
       />
-      {/* Board mode bounds the collection body so the kanban's own column
-          scrollers engage; list mode lets the body grow and the scroll host
-          stays the single scroll owner. */}
-      <WorkSurfaceCollection
-        style={
-          boardActive
-            ? {
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-              }
-            : undefined
-        }
-      >
-        <Flexbox gap={12} style={boardActive ? { flex: 1, minHeight: 0 } : undefined}>
-          {conflict ? (
-            <Alert
-              showIcon
-              description={t('savedViews.conflictDesc')}
-              title={t('savedViews.conflictTitle')}
-              type="warning"
-              action={
-                <Flexbox horizontal gap={8}>
-                  <Button size="small" onClick={reloadDraft}>
-                    {t('savedViews.conflictReload')}
-                  </Button>
-                  <Button size="small" onClick={() => void saveCopy()}>
-                    {t('savedViews.saveAs')}
-                  </Button>
-                </Flexbox>
-              }
-            />
-          ) : null}
-          {isOwner && editing && draft ? (
-            <Flexbox gap={12}>
-              <ViewDefinitionEditor showName showShare value={draft} onChange={setDraft} />
-              <Flexbox horizontal gap={8}>
-                <Button
-                  disabled={!dirty || !shareReady || !draft.name.trim()}
+      <WorkSurfaceToolbar>
+        <Text fontSize={12} type="secondary">
+          {t('savedViews.resultCount', { count: evaluation?.total ?? 0 })}
+        </Text>
+        <Flexbox
+          horizontal
+          align="center"
+          gap={6}
+          style={{ flex: 'none', marginInlineStart: 'auto' }}
+        >
+          {isOwner && draft ? (
+            <>
+              <Popover
+                open={openControl === 'filters'}
+                placement="bottomRight"
+                trigger="click"
+                content={
+                  <Flexbox className={styles.controlPopover} gap={12}>
+                    <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
+                    <Flexbox horizontal gap={8} justify="flex-end">
+                      <Button size="small" onClick={cancelDraft}>
+                        {t('cancel')}
+                      </Button>
+                      <Button
+                        disabled={!dirty || !shareReady || !draft.name.trim()}
+                        size="small"
+                        type="primary"
+                        onClick={() => void commitDraft()}
+                      >
+                        {t('save')}
+                      </Button>
+                    </Flexbox>
+                  </Flexbox>
+                }
+                onOpenChange={(open) => handleControlOpenChange('filters', open)}
+              >
+                <ActionIcon
+                  aria-expanded={openControl === 'filters'}
+                  aria-label={t('savedViews.filters.add')}
+                  icon={FilterIcon}
                   size="small"
-                  type="primary"
-                  onClick={() => void saveView()}
-                >
-                  {t('save')}
-                </Button>
-                <Button size="small" onClick={reloadDraft}>
-                  {t('cancel')}
-                </Button>
-              </Flexbox>
-            </Flexbox>
-          ) : null}
-          {error ? (
-            <AsyncError
-              error={error}
-              variant={view ? 'inline' : 'block'}
-              onRetry={() => void refreshView()}
-            />
-          ) : null}
-          {error && !view ? null : evaluation?.needsRepair ? (
-            <Alert
-              showIcon
-              description={t('savedViews.needsRepairDesc')}
-              title={t('savedViews.needsRepair')}
-              type="warning"
-            />
-          ) : null}
-          {evaluation?.needsRepair ? (
-            isLoading ? (
-              <Text type="secondary">{t('savedViews.loading')}</Text>
-            ) : (
-              <Empty description={t('savedViews.needsRepairEmpty')} />
-            )
-          ) : view?.entityType === 'project' ? (
-            <Flexbox gap={16}>
-              {isLoading ? (
-                <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
-              ) : projectBoard ? (
-                <SavedViewProjectBoard
-                  groups={projectGroups}
-                  loadMoreLabel={t('savedViews.loadMore')}
-                  onLoadMoreGroup={loadMoreProjectGroup}
+                  title={t('savedViews.filters.add')}
                 />
-              ) : projectRows.length === 0 ? (
-                <Center flex={1} padding={48}>
-                  <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
-                </Center>
-              ) : (
-                <Flexbox gap={2}>
-                  {projectRows.map((project) => (
-                    <SavedViewProjectRow key={project.id} project={project} />
-                  ))}
-                </Flexbox>
-              )}
-              {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
-                <Flexbox horizontal justify="center">
-                  <Button size="small" onClick={() => void loadMore()}>
-                    {t('savedViews.loadMore')}
-                  </Button>
-                </Flexbox>
-              ) : null}
-            </Flexbox>
-          ) : (
-            <WorkQueryResults
-              emptyLabel={t('savedViews.emptyResults')}
-              groupBy={evaluation?.groupBy}
-              groups={groups}
-              layout={evaluation?.layout ?? view?.layout ?? 'list'}
-              loadMoreLabel={t('savedViews.loadMore')}
-              loading={isLoading}
-              loadingLabel={t('savedViews.loading')}
-              movable={(evaluation?.layout ?? view?.layout) === 'board'}
-              sortMode={view?.queryAst.sortMode}
-              tasks={tasks}
-              total={evaluation?.total}
-              createContext={
-                workspaceId && joinedTeamOptions.length > 0
-                  ? { teamOptions: joinedTeamOptions }
-                  : undefined
-              }
-              onLoadMoreGroup={(key) => void loadMoreGroup(key)}
-              onMoved={() => void refreshView()}
-              onLoadMore={
-                (evaluation?.layout ?? view?.layout) === 'list' ? () => void loadMore() : undefined
-              }
-            />
-          )}
+              </Popover>
+              <Popover
+                open={openControl === 'display'}
+                placement="bottomRight"
+                trigger="click"
+                content={
+                  <Flexbox className={styles.controlPopover} gap={12}>
+                    <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
+                    <Flexbox horizontal gap={8} justify="flex-end">
+                      <Button size="small" onClick={cancelDraft}>
+                        {t('cancel')}
+                      </Button>
+                      <Button
+                        disabled={!dirty || !shareReady || !draft.name.trim()}
+                        size="small"
+                        type="primary"
+                        onClick={() => void commitDraft()}
+                      >
+                        {t('save')}
+                      </Button>
+                    </Flexbox>
+                  </Flexbox>
+                }
+                onOpenChange={(open) => handleControlOpenChange('display', open)}
+              >
+                <ActionIcon
+                  aria-expanded={openControl === 'display'}
+                  aria-label={t('savedViews.displayOptions')}
+                  icon={Settings2Icon}
+                  size="small"
+                  title={t('savedViews.displayOptions')}
+                />
+              </Popover>
+            </>
+          ) : null}
+          <ActionIcon
+            aria-expanded={detailsOpen}
+            icon={detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon}
+            size="small"
+            title={t(detailsOpen ? 'savedViews.closeViewDetails' : 'savedViews.openViewDetails')}
+            aria-label={t(
+              detailsOpen ? 'savedViews.closeViewDetails' : 'savedViews.openViewDetails',
+            )}
+            onClick={() => setDetailsOpen((open) => !open)}
+          />
         </Flexbox>
-      </WorkSurfaceCollection>
+      </WorkSurfaceToolbar>
+      <div className={styles.detailLayout}>
+        <div className={styles.resultsScroll}>
+          <div
+            className={styles.resultsBody}
+            style={
+              boardActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : undefined
+            }
+          >
+            <Flexbox gap={12} style={boardActive ? { flex: 1, minHeight: 0 } : undefined}>
+              {conflict ? (
+                <Alert
+                  showIcon
+                  description={t('savedViews.conflictDesc')}
+                  title={t('savedViews.conflictTitle')}
+                  type="warning"
+                  action={
+                    <Flexbox horizontal gap={8}>
+                      <Button size="small" onClick={reloadDraft}>
+                        {t('savedViews.conflictReload')}
+                      </Button>
+                      <Button size="small" onClick={() => void saveCopy()}>
+                        {t('savedViews.saveAs')}
+                      </Button>
+                    </Flexbox>
+                  }
+                />
+              ) : null}
+              {error ? (
+                <AsyncError
+                  error={error}
+                  variant={view ? 'inline' : 'block'}
+                  onRetry={() => void refreshView()}
+                />
+              ) : null}
+              {error && !view ? null : evaluation?.needsRepair ? (
+                <Alert
+                  showIcon
+                  description={t('savedViews.needsRepairDesc')}
+                  title={t('savedViews.needsRepair')}
+                  type="warning"
+                />
+              ) : null}
+              {evaluation?.needsRepair ? (
+                isLoading ? (
+                  <Text type="secondary">{t('savedViews.loading')}</Text>
+                ) : (
+                  <Empty description={t('savedViews.needsRepairEmpty')} />
+                )
+              ) : view?.entityType === 'project' ? (
+                <Flexbox gap={16}>
+                  {isLoading ? (
+                    <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
+                  ) : projectBoard ? (
+                    <SavedViewProjectBoard
+                      groups={projectGroups}
+                      loadMoreLabel={t('savedViews.loadMore')}
+                      onLoadMoreGroup={loadMoreProjectGroup}
+                    />
+                  ) : projectRows.length === 0 ? (
+                    <Center flex={1} padding={48}>
+                      <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
+                    </Center>
+                  ) : (
+                    <Flexbox gap={2}>
+                      {projectRows.map((project) => (
+                        <SavedViewProjectRow key={project.id} project={project} />
+                      ))}
+                    </Flexbox>
+                  )}
+                  {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
+                    <Flexbox horizontal justify="center">
+                      <Button size="small" onClick={() => void loadMore()}>
+                        {t('savedViews.loadMore')}
+                      </Button>
+                    </Flexbox>
+                  ) : null}
+                </Flexbox>
+              ) : (
+                <WorkQueryResults
+                  emptyLabel={t('savedViews.emptyResults')}
+                  groupBy={evaluation?.groupBy}
+                  groups={groups}
+                  layout={resolvedLayout}
+                  loadMoreLabel={t('savedViews.loadMore')}
+                  loading={isLoading}
+                  loadingLabel={t('savedViews.loading')}
+                  movable={resolvedLayout === 'board'}
+                  sortMode={view?.queryAst.sortMode}
+                  tasks={tasks}
+                  total={evaluation?.total}
+                  createContext={
+                    workspaceId && joinedTeamOptions.length > 0
+                      ? { teamOptions: joinedTeamOptions }
+                      : undefined
+                  }
+                  onLoadMore={resolvedLayout === 'list' ? () => void loadMore() : undefined}
+                  onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+                  onMoved={() => void refreshView()}
+                />
+              )}
+            </Flexbox>
+          </div>
+        </div>
+        {detailsOpen && view ? (
+          <aside aria-label={t('savedViews.viewDetails')} className={styles.detailPane}>
+            <SavedViewDetailsPanel
+              groupBy={evaluation?.groupBy}
+              groups={detailGroups}
+              layout={resolvedLayout}
+              title={viewTitle}
+              total={evaluation?.total}
+              view={view}
+            />
+          </aside>
+        ) : null}
+      </div>
     </WorkSurface>
   );
 });

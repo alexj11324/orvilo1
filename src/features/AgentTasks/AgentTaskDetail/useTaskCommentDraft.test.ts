@@ -27,7 +27,7 @@ vi.mock('@/services/taskDraft', () => ({
 }));
 
 const editorMock = {
-  getDocument: vi.fn((format: string) =>
+  getDocument: vi.fn((format: string): unknown =>
     format === 'markdown'
       ? 'An unsent comment'
       : { root: { children: [{ text: 'An unsent comment' }] } },

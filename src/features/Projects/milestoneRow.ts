@@ -16,13 +16,26 @@
  * token's own comment used to claim antd purple-6 `#722ED1`; the palette in
  * this app is customised, so the claim was simply wrong.)
  *
+ * **The glyph is two-tone, so the paint is one object rather than two
+ * constants.** The reference fills the diamond `#505ec4` and draws its outline
+ * in the lighter `#5e6ad2`; drawn from separate constants, the fill can
+ * silently collapse onto the stroke value and the diamond renders flat — which
+ * is exactly what it did (both at `#5e6ad2`) until the two layers were read
+ * apart. The candidate's `svg` carries the paint as inherited attributes, so
+ * the reference's `fill="none"` + painted `path` shape is *not* reproduced;
+ * comparing the two by the `svg`'s own `fill` reads as "none vs #5e6ad2" and
+ * mistakes a difference in technique for a difference in colour.
+ *
  * A literal is correct here for the same reason as
  * `AgentSidebar/Topic/List/Item/metaCardData`'s `MERGED_PURPLE`: there is no
- * token to read. The glyph paints in the stroke colour for both `color` and
- * `fill`, so the reference's slightly darker fill is not split out — one
- * constant keeps the revert to an Orvilo palette colour a one-line edit.
+ * token to read. Both surfaces spread this one object, so the revert to an
+ * Orvilo palette colour stays a one-line edit. `color` (the stroke, as
+ * `Icon` names it) is the lighter of the pair; `fill` is the darker.
  */
-export const MILESTONE_ICON_COLOR = '#5e6ad2';
+export const MILESTONE_ICON_PAINT = {
+  color: '#5e6ad2',
+  fill: '#505ec4',
+} as const;
 
 /** Reference glyph box, measured with `getComputedStyle` on the reference. */
 export const MILESTONE_ICON_SIZE = 16;

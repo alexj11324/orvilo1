@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   getMilestoneAnchorId,
-  MILESTONE_ICON_COLOR,
+  MILESTONE_ICON_PAINT,
   MILESTONE_ICON_SIZE,
   scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
@@ -82,12 +82,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
                   href={`#${getMilestoneAnchorId(milestone.id)}`}
                   onClick={() => scrollToMilestoneAnchor(milestone.id)}
                 >
-                  <Icon
-                    color={MILESTONE_ICON_COLOR}
-                    fill={MILESTONE_ICON_COLOR}
-                    icon={DiamondIcon}
-                    size={MILESTONE_ICON_SIZE}
-                  />
+                  <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
                 </a>
                 <Text ellipsis fontSize={15} style={{ flex: 1, minWidth: 0 }} weight={450}>
                   {milestone.name}

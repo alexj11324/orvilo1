@@ -6,7 +6,7 @@ import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } fro
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
-import { MILESTONE_ICON_COLOR, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
+import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import type { ProjectDetail, ProjectListItem } from '@/store/project';
 
@@ -680,7 +680,7 @@ describe('project milestone rows', () => {
     expect(railName).toMatchObject({ fontSize: 12, weight: 450 });
   });
 
-  it('draws the milestone diamond with one shared spec on both surfaces', () => {
+  it('draws the milestone diamond with one shared paint on both surfaces', () => {
     render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
     const overviewIcon = renderedDiamonds()[0] ?? {};
 
@@ -691,16 +691,21 @@ describe('project milestone rows', () => {
     render(<ProjectSidePanel projectId="apollo" />);
     const railIcon = renderedDiamonds()[0] ?? {};
 
-    // Asserted against the shared constants rather than a literal, so the two
-    // surfaces can never drift apart, and so the glyph's colour stays free to
-    // change in one place. `fill` must repeat `color`: `currentColor` would
-    // resolve to the enclosing link's colour instead of the glyph's.
+    // The surfaces are compared to **each other** and to the one shared paint
+    // object, never to a re-typed hex: either surface moving on its own turns
+    // this red, while the paint itself stays free to change in one place.
+    expect(railIcon).toMatchObject({ color: overviewIcon.color, fill: overviewIcon.fill });
     for (const icon of [overviewIcon, railIcon]) {
-      expect(icon).toMatchObject({
-        color: MILESTONE_ICON_COLOR,
-        fill: MILESTONE_ICON_COLOR,
-        size: MILESTONE_ICON_SIZE,
-      });
+      expect(icon).toMatchObject({ ...MILESTONE_ICON_PAINT, size: MILESTONE_ICON_SIZE });
+    }
+
+    // Two tones, not one flat colour: the reference fills the diamond a step
+    // darker (`#505ec4`) than the outline it draws it in (`#5e6ad2`). Read off
+    // the rendered props rather than the constant, so a call site that passes
+    // the stroke colour as its own fill is caught too — that flat glyph is what
+    // shipped, and comparing the two surfaces alone cannot see it.
+    for (const icon of [overviewIcon, railIcon]) {
+      expect(icon.fill).not.toBe(icon.color);
     }
   });
 });
@@ -733,6 +738,19 @@ describe('project properties row set', () => {
     if (!card) throw new Error('ProjectPropertiesCard rendered no card');
     return new Set([...card.children].map((row) => row.firstElementChild?.textContent ?? ''));
   };
+
+  it('spaces the Properties rows at the 8px the reference measured', () => {
+    const { container } = render(<ProjectPropertiesCard detail={detail} projectId={'prj_1'} />);
+    const card = container.firstElementChild as HTMLElement;
+
+    // 8px between 28px rows is what makes the row pitch 36 on the reference;
+    // this card used to run at 6px, i.e. a 34 pitch. The gap is a component
+    // prop, so it is asserted here. The 90px label column and the 0 label→value
+    // gap on the same rows are layout CSS, which jsdom cannot resolve (it
+    // returns `''` for `width`, having no cascade for the injected sheet) —
+    // they are measured in the running app instead, not asserted as strings.
+    expect(card.getAttribute('gap')).toBe('8');
+  });
 
   it('renders Linear’s row set and no Milestones row', () => {
     expect(

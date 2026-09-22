@@ -7,7 +7,7 @@ import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
 import { type KeyboardEvent, memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { MILESTONE_ICON_COLOR, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
+import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
@@ -152,12 +152,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                 onKeyDown={activateIssues}
               >
                 <Flexbox horizontal align={'center'} gap={8}>
-                  <Icon
-                    color={MILESTONE_ICON_COLOR}
-                    fill={MILESTONE_ICON_COLOR}
-                    icon={DiamondIcon}
-                    size={MILESTONE_ICON_SIZE}
-                  />
+                  <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
                   <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
                     {milestone.name}
                   </Text>

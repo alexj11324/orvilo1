@@ -12,8 +12,16 @@ import { projectService } from '@/services/project';
 const styles = createStaticStyles(({ css }) => ({
   body: css`
     cursor: text;
+
+    width: 100%;
     padding-block: 4px;
+    padding-inline: 0;
+    border: 0;
     border-radius: 6px;
+
+    text-align: start;
+
+    background: transparent;
 
     &:hover {
       background: ${cssVar.colorFillQuaternary};
@@ -22,6 +30,18 @@ const styles = createStaticStyles(({ css }) => ({
   header: css`
     cursor: pointer;
     user-select: none;
+
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    align-self: flex-start;
+
+    padding: 0;
+    border: 0;
+
+    color: inherit;
+
+    background: transparent;
   `,
 }));
 
@@ -59,23 +79,23 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
 
   return (
     <Flexbox gap={4}>
-      <Flexbox
-        horizontal
-        align={'center'}
+      <button
+        aria-expanded={open}
         className={styles.header}
-        gap={4}
+        type="button"
         onClick={() => setOpen((value) => !value)}
       >
         <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} size={14} />
         <Text fontSize={13} weight={500}>
           {t('overview.descriptionLabel')}
         </Text>
-      </Flexbox>
+      </button>
       {open &&
         (editing ? (
           <Flexbox gap={8}>
             <TextArea
               autoFocus
+              aria-label={t('overview.descriptionLabel')}
               autoSize={{ minRows: 3 }}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -97,8 +117,9 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
             </Flexbox>
           </Flexbox>
         ) : (
-          <div
+          <button
             className={styles.body}
+            type="button"
             onClick={() => {
               setDraft(description ?? '');
               setEditing(true);
@@ -117,7 +138,7 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
                 {t('overview.descriptionEmpty', { defaultValue: 'Add a description…' })}
               </Text>
             )}
-          </div>
+          </button>
         ))}
     </Flexbox>
   );

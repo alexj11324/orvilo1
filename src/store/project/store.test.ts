@@ -196,30 +196,33 @@ describe('project store cache scope', () => {
     expect(mutate).toHaveBeenCalledWith(['project/list', 'user-1:personal']);
   });
 
-  it('updates project list and detail caches after renaming', async () => {
-    const project = { id: 'project-1', name: 'Original', slug: 'launch' } as ProjectListItem;
-    const renamed = { ...project, name: 'Renamed' };
-    const detail = { project } as unknown as ProjectDetail;
-    const refreshProjectList = vi.fn().mockResolvedValue(undefined);
-    vi.spyOn(projectService, 'update').mockResolvedValue({
-      data: renamed,
-      message: 'Project updated',
-      success: true,
-    });
-    useProjectStore.setState({
-      projectDetails: { 'user-1:personal': { launch: detail } },
-      projectLists: { 'user-1:personal': [project] },
-      refreshProjectList,
-    });
+  it.each([{ name: 'Renamed' }, { summary: 'Revised summary' }, { summary: '' }])(
+    'updates project list and detail caches after editing %j',
+    async (input) => {
+      const project = { id: 'project-1', name: 'Original', slug: 'launch' } as ProjectListItem;
+      const renamed = { ...project, ...input };
+      const detail = { project } as unknown as ProjectDetail;
+      const refreshProjectList = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(projectService, 'update').mockResolvedValue({
+        data: renamed,
+        message: 'Project updated',
+        success: true,
+      });
+      useProjectStore.setState({
+        projectDetails: { 'user-1:personal': { launch: detail } },
+        projectLists: { 'user-1:personal': [project] },
+        refreshProjectList,
+      });
 
-    await useProjectStore.getState().updateProject('project-1', { name: 'Renamed' });
+      await useProjectStore.getState().updateProject('project-1', input);
 
-    expect(useProjectStore.getState().projectLists['user-1:personal'][0].name).toBe('Renamed');
-    expect(useProjectStore.getState().projectDetails['user-1:personal'].launch.project.name).toBe(
-      'Renamed',
-    );
-    expect(refreshProjectList).toHaveBeenCalledOnce();
-  });
+      expect(useProjectStore.getState().projectLists['user-1:personal'][0]).toMatchObject(input);
+      expect(
+        useProjectStore.getState().projectDetails['user-1:personal'].launch.project,
+      ).toMatchObject(input);
+      expect(refreshProjectList).toHaveBeenCalledOnce();
+    },
+  );
 
   it('updates the cached project after an orchestration policy save', async () => {
     const project = {

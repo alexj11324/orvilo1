@@ -3,6 +3,7 @@
 import { Center, Empty, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
+import { isRecord } from '@orvilo/utils/object';
 import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
 import {
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
@@ -289,6 +291,8 @@ const ActivityRowItem = memo<{ row: FeedRow }>(({ row }) => {
 ActivityRowItem.displayName = 'ActivityRowItem';
 
 const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
+  const { state } = useLocation();
+  const defaultMode = isRecord(state) && state.projectUpdate === true ? 'update' : 'comment';
   const { t } = useTranslation('project');
   const { data, error, isLoading, mutate } = useClientDataSWR(
     ['project:activityFeed', projectId],
@@ -353,6 +357,7 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
   const composer = (
     <ProjectUpdateComposer
       defaultExpanded
+      defaultMode={defaultMode}
       projectId={projectId}
       onPosted={() => void updatesSWR.mutate()}
     />

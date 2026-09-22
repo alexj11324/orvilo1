@@ -1,11 +1,11 @@
 'use client';
 
 import { Flexbox, Icon, TextArea } from '@lobehub/ui';
-import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Button, DropdownMenu, Tabs, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { CircleCheckIcon, CircleDotIcon, OctagonAlertIcon, SendHorizontalIcon } from 'lucide-react';
+import { CircleCheckIcon, CircleDotIcon, OctagonAlertIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,12 +21,16 @@ const styles = createStaticStyles(({ css }) => ({
     gap: 8px;
     align-items: center;
 
+    width: 100%;
     padding-block: 8px;
     padding-inline: 12px;
     border: 1px solid ${cssVar.colorBorder};
     border-radius: 8px;
 
     color: ${cssVar.colorTextSecondary};
+    text-align: start;
+
+    background: transparent;
 
     &:hover {
       border-color: ${cssVar.colorPrimaryBorder};
@@ -37,6 +41,10 @@ const styles = createStaticStyles(({ css }) => ({
     border: 1px solid ${cssVar.colorBorder};
     border-radius: 12px;
     background: ${cssVar.colorBgContainer};
+
+    &:focus-within {
+      border-color: ${cssVar.colorPrimary};
+    }
   `,
   composerFooter: css`
     padding-block: 4px 6px;
@@ -45,12 +53,24 @@ const styles = createStaticStyles(({ css }) => ({
   healthPick: css`
     cursor: pointer;
   `,
+  modeTab: css`
+    height: 24px;
+    min-height: 24px;
+    padding-block: 0;
+    padding-inline: 8px;
+
+    font-size: 12px;
+  `,
+  modeTabs: css`
+    flex: none;
+    width: auto;
+  `,
   textarea: css`
     padding-block: 10px 4px !important;
     padding-inline: 12px !important;
     border: 0 !important;
 
-    font-size: 14px !important;
+    font-size: 15px !important;
 
     background: transparent !important;
     box-shadow: none !important;
@@ -73,6 +93,8 @@ export const PROJECT_UPDATE_HEALTH_META: Record<
   offTrack: { color: 'colorError', icon: CircleCheckIcon },
   onTrack: { color: 'colorSuccess', icon: CircleDotIcon },
 };
+
+const PROJECT_UPDATE_HEALTH_ORDER: ProjectHealth[] = ['onTrack', 'atRisk', 'offTrack'];
 
 const toUpdate = (row: {
   authorAvatar?: null | string;
@@ -104,17 +126,18 @@ export const useProjectUpdates = (projectId?: string) =>
 
 export const ProjectUpdateComposer = memo<{
   defaultExpanded?: boolean;
+  defaultMode?: ProjectUpdateKind;
   onExpand?: () => void;
   onPosted?: () => void;
   projectId: string;
-}>(({ defaultExpanded, onExpand, onPosted, projectId }) => {
+}>(({ defaultExpanded, defaultMode = 'update', onExpand, onPosted, projectId }) => {
   const { t } = useTranslation('project');
   const [body, setBody] = useState('');
   const [health, setHealth] = useState<ProjectHealth>('onTrack');
   const [posting, setPosting] = useState(false);
 
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [mode, setMode] = useState<ProjectUpdateKind>('update');
+  const [mode, setMode] = useState<ProjectUpdateKind>(defaultMode);
 
   const post = async () => {
     const content = body.trim();
@@ -139,94 +162,78 @@ export const ProjectUpdateComposer = memo<{
 
   if (!expanded) {
     return (
-      <div className={styles.collapsed} onClick={() => (onExpand ? onExpand() : setExpanded(true))}>
+      <button
+        className={styles.collapsed}
+        type="button"
+        onClick={() => (onExpand ? onExpand() : setExpanded(true))}
+      >
         <Icon icon={CircleDotIcon} size={14} style={{ opacity: 0.5 }} />
         <Text fontSize={13} type={'secondary'}>
           {t('overview.updatePlaceholder', { defaultValue: 'Write a project update…' })}
         </Text>
-      </div>
+      </button>
     );
   }
 
   return (
     <Flexbox className={styles.composer}>
       <Flexbox horizontal align={'center'} gap={4} padding={8}>
-        <Tag
-          className={styles.healthPick}
-          color={mode === 'comment' ? 'default' : undefined}
-          shape={'round'}
-          size={'small'}
-          onClick={() => setMode('comment')}
-        >
-          {t('overview.updateModeComment', { defaultValue: 'Comment' })}
-        </Tag>
-        <Tag
-          className={styles.healthPick}
-          color={mode === 'update' ? 'default' : undefined}
-          shape={'round'}
-          size={'small'}
-          onClick={() => setMode('update')}
-        >
-          {t('overview.updateModeUpdate', { defaultValue: 'Update' })}
-        </Tag>
+        <Tabs
+          activeKey={mode}
+          className={styles.modeTabs}
+          classNames={{ tab: styles.modeTab }}
+          size="small"
+          items={[
+            { key: 'comment', label: t('overview.updateModeComment') },
+            { key: 'update', label: t('overview.updateModeUpdate') },
+          ]}
+          onChange={(key) => {
+            if (key === 'comment' || key === 'update') setMode(key);
+          }}
+        />
         {mode === 'update' && (
-          <Tag
-            color={PROJECT_UPDATE_HEALTH_META[health].color}
-            icon={<Icon icon={PROJECT_UPDATE_HEALTH_META[health].icon} size={12} />}
-            shape={'round'}
-            size={'small'}
+          <DropdownMenu
+            items={PROJECT_UPDATE_HEALTH_ORDER.map((state) => ({
+              key: state,
+              label: t(`overview.health.${state}`),
+              icon: <Icon icon={PROJECT_UPDATE_HEALTH_META[state].icon} size={12} />,
+              onClick: () => setHealth(state),
+            }))}
           >
-            {t(`overview.health.${health}`, { defaultValue: health })}
-          </Tag>
+            <Button
+              className={styles.modeTab}
+              icon={<Icon icon={PROJECT_UPDATE_HEALTH_META[health].icon} size={12} />}
+              size={'small'}
+            >
+              {t(`overview.health.${health}`, { defaultValue: health })}
+            </Button>
+          </DropdownMenu>
         )}
       </Flexbox>
       <TextArea
         autoFocus
+        aria-label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
         autoSize={{ maxRows: 8, minRows: 2 }}
         className={styles.textarea}
         value={body}
-        placeholder={t('overview.updatePlaceholder', {
-          defaultValue: 'Write a project update…',
-        })}
+        placeholder={t(
+          mode === 'update' ? 'overview.updatePlaceholder' : 'overview.commentPlaceholder',
+        )}
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={(event) => {
           if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') void post();
         }}
       />
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.composerFooter}
-        justify={'space-between'}
-      >
-        <Flexbox horizontal align={'center'} gap={6}>
-          {mode === 'update' &&
-            (Object.keys(PROJECT_UPDATE_HEALTH_META) as ProjectHealth[]).map((state) => {
-              const meta = PROJECT_UPDATE_HEALTH_META[state];
-              const active = health === state;
-              return (
-                <Tag
-                  bordered={active}
-                  className={styles.healthPick}
-                  color={active ? meta.color : undefined}
-                  icon={<Icon icon={meta.icon} size={12} />}
-                  key={state}
-                  shape={'round'}
-                  size={'small'}
-                  onClick={() => setHealth(state)}
-                >
-                  {t(`overview.health.${state}`, { defaultValue: state })}
-                </Tag>
-              );
-            })}
-        </Flexbox>
+      <Flexbox horizontal align={'center'} className={styles.composerFooter} justify={'flex-end'}>
         <Button
+          className={styles.modeTab}
           disabled={!body.trim()}
-          icon={SendHorizontalIcon}
           loading={posting}
           type={'primary'}
           onClick={() => void post()}
-        />
+        >
+          {t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}
+        </Button>
       </Flexbox>
     </Flexbox>
   );

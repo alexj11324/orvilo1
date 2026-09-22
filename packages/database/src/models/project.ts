@@ -88,6 +88,7 @@ export interface UpdateProjectInput {
   description?: string | null;
   name?: string;
   slug?: string | null;
+  summary?: string;
   visibility?: ProjectVisibility;
 }
 

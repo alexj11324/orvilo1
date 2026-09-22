@@ -30,7 +30,10 @@ interface ProjectStore {
   projectDetails: Record<string, Record<string, ProjectDetail>>;
   projectLists: Record<string, ProjectListItem[]>;
   refreshProjectList: () => Promise<void>;
-  updateProject: (id: string, input: { name: string }) => Promise<ProjectListItem>;
+  updateProject: (
+    id: string,
+    input: Parameters<typeof projectService.update>[1],
+  ) => Promise<ProjectListItem>;
   updateProjectOrchestrationPolicy: (input: {
     coordinatorAgentId: string;
     expectedRevision: number;

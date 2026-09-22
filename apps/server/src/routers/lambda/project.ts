@@ -529,6 +529,7 @@ export const projectRouter = router({
         description: z.string().nullish(),
         name: z.string().min(1).max(255).optional(),
         slug: projectSlugInput.nullish(),
+        summary: z.string().max(280).optional(),
         visibility: z.enum(PROJECT_VISIBILITIES).optional(),
       }),
     )

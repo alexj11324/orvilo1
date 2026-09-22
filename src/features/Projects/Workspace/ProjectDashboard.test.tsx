@@ -1,11 +1,14 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { InputHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
 
+import { ProjectUpdateComposer } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
+import ProjectDescription from './ProjectDescription';
+import { ProjectOverviewField } from './ProjectOverviewField';
 import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
@@ -31,10 +34,12 @@ vi.mock('@lobehub/ui', () => ({
     <div className={className}>{children}</div>
   ),
   Icon: () => null,
+  Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   TextArea: () => <textarea />,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
+vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
@@ -128,6 +133,99 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const renderCharts = () => render(<ProjectDashboard detail={detail} projectId={'prj_1'} />);
+
+describe('project update composer controls', () => {
+  it('starts in comment mode when Activity is opened without an update intent', () => {
+    render(<ProjectUpdateComposer defaultExpanded defaultMode="comment" projectId="prj_1" />);
+    expect(screen.getByRole('button', { name: 'overview.postComment' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /onTrack|On track/ })).not.toBeInTheDocument();
+  });
+  it('offers a keyboard-accessible overview entry that calls the navigation handler', () => {
+    const onExpand = vi.fn();
+    render(<ProjectUpdateComposer projectId="prj_1" onExpand={onExpand} />);
+    const entry = screen.getByRole('button', {
+      name: /Write a project update|overview.updatePlaceholder/,
+    });
+    expect(entry).toHaveAttribute('type', 'button');
+    fireEvent.click(entry);
+    expect(onExpand).toHaveBeenCalledOnce();
+  });
+
+  it('names the post action for the selected mode and removes health in comment mode', () => {
+    render(<ProjectUpdateComposer defaultExpanded projectId="prj_1" />);
+    expect(screen.getByRole('button', { name: 'overview.postUpdate' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /onTrack|On track/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /updateModeComment|Comment/ }));
+    expect(screen.getByRole('button', { name: 'overview.postComment' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /onTrack|On track/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('project description disclosure', () => {
+  it('exposes disclosure state and a keyboard-accessible editing entry', () => {
+    render(<ProjectDescription description="Project scope" projectId="prj_1" />);
+    const disclosure = screen.getByRole('button', { name: 'overview.descriptionLabel' });
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    const entry = screen.getByRole('button', { name: 'Project scope' });
+    expect(entry).toHaveAttribute('type', 'button');
+    fireEvent.click(disclosure);
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Project scope' })).not.toBeInTheDocument();
+    fireEvent.click(disclosure);
+    fireEvent.click(screen.getByRole('button', { name: 'Project scope' }));
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /descriptionCancel|Cancel/ }));
+    expect(screen.getByRole('button', { name: 'Project scope' })).toBeInTheDocument();
+  });
+});
+
+describe('project overview inline fields', () => {
+  it('saves an empty summary without substituting a description', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    render(<ProjectOverviewField kind="summary" value="Original" onSave={save} />);
+    const field = screen.getByRole('textbox');
+    fireEvent.change(field, { target: { value: '' } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(save).toHaveBeenCalledWith(''));
+  });
+
+  it('cancels drafts with Escape and does not save a blank name', () => {
+    const save = vi.fn();
+    render(<ProjectOverviewField kind="name" value="Apollo" onSave={save} />);
+    const field = screen.getByRole('textbox');
+    field.focus();
+    fireEvent.change(field, { target: { value: 'Draft' } });
+    fireEvent.keyDown(field, { key: 'Escape' });
+    expect(field).toHaveValue('Apollo');
+    expect(save).not.toHaveBeenCalled();
+    field.focus();
+    fireEvent.change(field, { target: { value: '  ' } });
+    fireEvent.blur(field);
+    expect(field).toHaveValue('Apollo');
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('keeps a rejected draft and allows retry', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Offline'))
+      .mockResolvedValueOnce(undefined);
+    try {
+      render(<ProjectOverviewField kind="summary" value="Original" onSave={save} />);
+      const field = screen.getByRole('textbox');
+      fireEvent.change(field, { target: { value: 'Draft' } });
+      fireEvent.blur(field);
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
+      expect(field).toHaveValue('Draft');
+      fireEvent.blur(field);
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+      expect(save).toHaveBeenCalledTimes(2);
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
+});
 
 describe('project dashboard milestones', () => {
   it('renders the project milestones section', () => {

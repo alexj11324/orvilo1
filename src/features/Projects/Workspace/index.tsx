@@ -28,6 +28,7 @@ import { labPreferSelectors } from '@/store/user/selectors';
 import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
+import { ProjectOverviewField } from './ProjectOverviewField';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -59,6 +60,7 @@ const ProjectWorkspace = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const enabled = useUserStore(labPreferSelectors.enableProjects);
   const detail = useCurrentProjectDetail(projectId);
+  const updateProject = useProjectStore((s) => s.updateProject);
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const updatesSWR = useProjectUpdates(detail?.project.id);
   const workspaceId = useActiveWorkspaceId();
@@ -96,14 +98,18 @@ const ProjectWorkspace = memo(() => {
                 title={project.name}
               />
               <Flexbox gap={2}>
-                <Text fontSize={24} weight={600}>
-                  {project.name}
-                </Text>
-                {project.summary || project.description ? (
-                  <Text fontSize={14} type={'secondary'}>
-                    {project.summary || project.description}
-                  </Text>
-                ) : null}
+                <ProjectOverviewField
+                  key={`${project.id}:name`}
+                  kind="name"
+                  value={project.name}
+                  onSave={(name) => updateProject(project.id, { name })}
+                />
+                <ProjectOverviewField
+                  key={`${project.id}:summary`}
+                  kind="summary"
+                  value={project.summary ?? ''}
+                  onSave={(summary) => updateProject(project.id, { summary })}
+                />
               </Flexbox>
             </Flexbox>
 
@@ -188,8 +194,12 @@ const ProjectWorkspace = memo(() => {
             <Flexbox gap={8}>
               <ProjectUpdateComposer
                 projectId={project.id}
-                onExpand={() => navigate(getProjectActivityPath(projectReference))}
                 onPosted={() => void updatesSWR.mutate()}
+                onExpand={() =>
+                  navigate(getProjectActivityPath(projectReference), {
+                    state: { projectUpdate: true },
+                  })
+                }
               />
               {(updatesSWR.data ?? [])
                 .filter((update) => update.kind !== 'comment')

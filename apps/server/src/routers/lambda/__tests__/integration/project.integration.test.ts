@@ -31,6 +31,23 @@ describe('Project Router Integration', () => {
     await cleanupTestUser(serverDB, userId);
   });
 
+  it('updates and clears the summary independently of the long description', async () => {
+    const created = await caller.create({
+      description: 'Full project scope',
+      identifier: 'SUM',
+      name: 'Summary project',
+      summary: 'Original summary',
+    });
+    const input = { id: created.data.id, summary: 'Revised summary' };
+    await caller.update(input);
+    const revised = await caller.detail({ id: created.data.id });
+    expect(revised.data.project.summary).toBe('Revised summary');
+    expect(revised.data.project.description).toBe('Full project scope');
+    await caller.update({ ...input, summary: '' });
+    expect((await caller.detail({ id: created.data.id })).data.project.summary).toBe('');
+    await expect(caller.update({ ...input, summary: 'x'.repeat(281) })).rejects.toThrow();
+  });
+
   it('serves the complete project management and human review flow', async () => {
     const created = await caller.create({
       identifier: 'apollo',

@@ -3,6 +3,10 @@
 **这份文件是「参考端到底长什么样」的只读测量记录**，供实现端逐条对齐。它不是实现方案，
 也不含任何候选端信息。
 
+> **追加内容**：文末 `## Loading state (skeleton)` 一节是后补的加载态采集
+> （结论：参考端本页**没有骨架**）。该节自带证据条件与手法，与 §1–§5 同视口，
+> 因此几何可直接互相对照。
+
 ## 0. 采集条件与证据等级
 
 | 项          | 值                                                                                                         |
@@ -23,7 +27,7 @@
 
 本文每项尽量给三层，缺哪层就明确写缺：
 
-1. **结构层** — tag /role/aria / 文本 / DOM 层级
+1. **结构层** — tag /role/aria/ 文本 / DOM 层级
 2. **样式层** — `getComputedStyle` **原值**（颜色 / 字号 / 字重 / 尺寸 / 间距）+ 几何（x/y/w/h）
 3. **行为层** — `cursor` / `href` / `role` / `tabindex` / 是否有 click handler + **点击之后的去向**
 
@@ -35,7 +39,7 @@ SVG 一律单独采 `fill` / `stroke` 的**属性值**与 **computed 值**（图
 | --- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | 1   | **零尺寸容器 ≠ 不可见**。`#root` 外套 `theme-provider-*`（`display: contents`，0×0），按 rect 剪枝会砍掉整页      | 剪枝只认 `display:none` / `visibility:hidden`；0 尺寸只跳过打印，继续下钻         |
 | 2   | **0×0 包装 div 中断下钻**：`if (!visible) return` 会把子树一起吞掉                                                | 同上；用「结构隐藏」和「未绘制」两级判断                                          |
-| 3   | **深度剪枝会漏内容**：本页标题距 `#mainLayoutContainer` 有 22 层                                                  | 用信号剪枝（文本 /role/aria / 叶子），深度上限 ≥ 16                               |
+| 3   | **深度剪枝会漏内容**：本页标题距 `#mainLayoutContainer` 有 22 层                                                  | 用信号剪枝（文本 /role/aria/ 叶子），深度上限 ≥ 16                                |
 | 4   | **应用左栏不在 `#mainLayoutContainer` 里**，它是 `theme-provider` 下的兄弟 `NAV`                                  | 遍历起点选 `[class^="theme-provider-"]` 或 `#root`，不要选「主内容容器」          |
 | 5   | **hover-only 控件**：至少 5 处靠 hover 才出现（见 §4），祖先 `opacity:0` / 自身 `display:none`                    | 只查元素自身 style 会误报「可见」；必须做**祖先链** opacity 乘积 + hover 前后对比 |
 | 6   | **CDP 鼠标位置跨调用保留**：上一轮点击留下的 hover 会污染下一轮的「静止态」读数                                   | 每次静止态测量前先把鼠标派发到中性空点（如 `(720,880)`）                          |
@@ -749,3 +753,157 @@ node .agents/acceptance/scripts/cdp-inspect.cjs --port 9333 --viewport 1440x900 
 
 > **`/tmp` 是共享的**：本轮有另一个 agent 同时在用 `/tmp/q-*.js` 这批文件名，
 > 发生过同路径被覆写。跨 agent 并行采集请用带端口号的私有目录。
+
+---
+
+## Loading state (skeleton)
+
+> 本节是追加采集（用户指出「Skeleton 好像没有对齐」后补）。**结论：参考端在本页没有骨架。**
+> 下面先给证据条件与手法，再给启动加载态的完整规格，最后给 unknown。
+
+### 证据条件
+
+| 项       | 值                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------- |
+| 视口     | `1440x900`，`deviceScaleFactor: 2`（与 §1–§5 同视口，几何可直接对比）                         |
+| 日期     | 2026-09-22，浅色主题，`:9333` 参考端                                                          |
+| 本地证据 | `/tmp/ref9333/loading-d/s01..s06_*.png`（启动序列逐帧）、`loading-a/`、`loading-e/`（不入库） |
+| 探针     | `/tmp/ref9333/loading-probe.cjs`（私有，含 Fetch 拦截与自动放行）                             |
+
+### 制造加载窗口的三种手法（以及为什么用它们）
+
+1. **`Fetch.enable` + `Fetch.requestPaused` 延迟放行**（主手法）。
+   匹配到的请求被暂停后，**固定延迟 9–30s 再由探针主动 `Fetch.continueRequest`**。
+   为什么不是「永久挂起」：永久挂起会把页面留给下一个采集者时仍是卡死状态；
+   为什么不是 `Network.emulateNetworkConditions`：限速的窗口不可精确控制，而且一旦忘记恢复
+   `latency/throughput`，会污染**之后所有人**对这个页面的采集。延迟放行两头都占：
+   窗口由我定时，页面自愈。
+   本轮用过的 pattern：`*sync/batch*`、`*graphql*`、`*client-api.linear.app/*`。
+   **恢复已核实**：收尾调用 `Fetch.disable`，回读 `fetchDisabled: true`，
+   页面回到 3720 元素基线（右栏、里程碑区、主列滚动容器均在）。
+   本轮**没有**使用网络限速，因此不存在「忘记恢复限速」的风险。
+2. **直接读静态标记**（关键技巧）。启动占位符是文档里的**静态 HTML**（`DIV#loading`，1395 字符），
+   **不在 React 树里** —— 启动时 `#root` 的子节点数是 **0**。App 只是在启动完成后给它加行内
+   `display: none`。所以它的 DOM 与样式可以**在页面空闲时随时读全，不需要抢时间窗**；
+   只有依赖布局的几何值需要在窗口内实测。这消掉了「加载态窗口太短抓不到」的绝大部分风险。
+3. **SPA 切 tab 快速采样**（点击后～20 / 150 / 300ms）验证**路由级**有没有加载态。
+
+### 结论：没有骨架 —— 三条独立证据
+
+1. **文档里不存在任何骨架形态的 `@keyframes`。** 扫 `document.styleSheets` 得到全站动画名，
+   与加载相关的只有 `logoBackgroundPulse` / `fadeIn` / `bootstrapFadeIn` / `suspenseFadeIn`，
+   **没有** `shimmer` / `skeleton` / `wave` / 循环 `pulse` 这类骨架动画。
+2. **启动占位符的完整 HTML 里没有任何灰块**（全文见下），只有卡片外框 + logo + 一行文案。
+3. **三个受控窗口内的灰块检测都是 0**：挂起 `sync/batch` 时 `grayCount: 0`；
+   SPA 切回 Overview 的 +20ms 中间态 `grayCount: 0`。
+   （灰块判据：叶子节点、无自身文本、`background-color` 非透明、`≥8×3`。）
+
+### 启动加载态（app boot loader）完整规格
+
+`DIV#loading` 的静态标记（observed，原文，仅省略 script 内容）：
+
+```html
+<div id="loading" style="transition-duration: 100ms; display: none;">
+  <div id="appBorders">
+    <div id="loading-content">
+      <div id="preloader">
+        <div id="preloaderContent">
+          <svg class="bkg" width="64" height="64" viewBox="0 0 512 512" fill="none">
+            <circle cx="256" cy="256" r="244" fill="url(#bkg)"></circle>
+          </svg>
+          <script>
+            /* DOMContentLoaded → body.content-loaded；+8000ms → body.loadingText */
+          </script>
+          <svg id="logo" fill="none" width="32" height="32" viewBox="0 0 32 32">
+            <path d="M.392 19.687c-.071-.303.29-.494.511-.274l11.684 11.684…"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div id="loadingText">Loading…</div>
+  </div>
+</div>
+```
+
+启动窗口内实测的 computed 原值与几何（`#root` 子节点数 = 0 时）：
+
+| 元素                | 几何           | computed 原值                                                                                                                                                                                                                                |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#loading`          | 0,0 1440×900   | `display: flex; position: absolute; inset: 0px; z-index: 99999`；`background-color: lch(94.44 0.5 282)`；`color: rgb(176,181,192)`；`font-size: 12px; font-weight: 500`；行内 `transition-duration: 100ms`；启动完成后加行内 `display: none` |
+| `#appBorders`       | 244,8 1188×856 | `display: flex; border-radius: 12px; background-color: lch(97.94 0.5 282); border: 0.5px solid lch(88.49 0 282); margin: 8px 8px 36px 244px`                                                                                                 |
+| `#loading-content`  | 622,404 440×64 | `position: absolute; display: flex; width: 440px; height: 64px; opacity: 0; animation: fadeIn 0.4s ease-out delay=1s iteration=1 fill-mode=both`；`inset: 450px 378px 432px 500px` + `margin: -46px 0px 0px 122px`                           |
+| `#preloaderContent` | 810,404 64×64  | `display: grid; position: relative`                                                                                                                                                                                                          |
+| `svg.bkg`           | 810,404 64×64  | **`opacity: 0`（完全不可见）**；`animation-name: none`（`logoBackgroundPulse` 未挂在此处）                                                                                                                                                   |
+| └ `circle`          | 812,406 61×61  | 属性 `fill="url(#bkg)"`，但 **computed `fill: none`**（引用的渐变未解析，不渲染）；computed `stroke: rgb(176,181,192)`                                                                                                                       |
+| `svg#logo` → `path` | 826,420 32×32  | path computed `fill: rgb(176,181,192)`                                                                                                                                                                                                       |
+| `#loadingText`      | 811,476 62×20  | `display: block; position: relative; opacity: 0`（与父同组淡入）；`font-size: 13px; font-weight: 500`；`color: rgb(176,181,192)`；`margin: 0px 0px -8px`                                                                                     |
+
+**从规格里读出来的三件事**：
+
+1. **`#appBorders` 与真实主卡同形同尺寸**：真实 `MAIN` 是 `244,8 1188×856`、`border-radius 12px`、
+   bg `lch(97.94 0.5 282)`；占位符完全一致，只有边框色略深
+   （`lch(88.49 0 282)` vs 真实 `lch(89.84 0 282)`）。
+   **即启动态画的是「卡片外框」，不是内容骨架。**
+2. **指示器的水平中心是 `x = 842 = (244 + 1440) / 2`** —— 内容区中心（已排除 244px 左栏），
+   `#loading-content`（622+220）与 `#loadingText`（811+31）都落在这条线上；
+   整组竖向中心 `y = 450`（视口中心，`#loading-content` 404..468 加文案 476..496）。
+3. **淡入延迟 1s 才开始**（`fadeIn 0.4s ease-out delay=1s fill-mode=both`），
+   所以刷新后**前 1 秒屏幕上只有卡片外框**，没有任何指示器、没有 spinner、没有进度条、没有灰块。
+
+### 时序（`sync/batch` 延迟放行，180ms 采样，从 `Page.reload` 起算）
+
+| t             | `#root` 子节点 | `#loading`                                   | 主列文本长度 | 右栏文本长度 |                                           |
+| ------------- | -------------- | -------------------------------------------- | ------------ | ------------ | ----------------------------------------- |
+| 212ms         | 5              | `display: none`                              | 4018（旧页） | 909（旧页）  |                                           |
+| \~800ms       | —              | —                                            | —            | —            | （reload 后执行上下文销毁，该次求值失败） |
+| **1131ms**    | **0**          | **可见**，`#loading-content` @622,404 440×64 | 0            | 0            |                                           |
+| **1436ms**    | **0**          | 可见，同上                                   | 0            | 0            |                                           |
+| 1973ms        | 5              | 可见                                         | 3026         | **0**        |                                           |
+| 2259ms        | 5              | `display: none`                              | 3108         | **0**        |                                           |
+| 4490ms 起稳定 | 5              | `display: none`                              | 3108         | **0**        |                                           |
+| 请求放行后    | 5              | `display: none`                              | 4018         | 909          |                                           |
+
+→ 启动占位符的可见窗口约 **1.0–1.9s**（热启动，本地缓存已在）。
+注意 2259ms 之后 `#loading` 已隐藏，而主列 / 右栏**还在继续变** —— 说明壳先撤、内容后到，
+**中间没有过渡骨架**。
+
+### 路由级加载态：也没有
+
+- 点 `Activity` tab 后 +0 / +150 / +300ms：主列 `innerText` 长度恒为 4018，且内容**仍是上一个路由的**
+  （`mainHead` 还是 Overview 的文本）→ **stale render，无骨架、无占位**。
+- 从 Activity 切回 Overview 的 +20ms 中间态：`els 3278`、主列 3145 字符、右栏 480 字符、
+  `#milestone-list` 尚不存在；**灰块检测 0**，当时挂在页面上的动画名只有 Linear 自己的
+  `sx-18re5ia-B` / `suspenseFadeIn` / `fadeIn`。1.5s 后稳定到 `els 3720` / 主列 4018 / 右栏 909。
+  → **真实内容渐进挂载，还没准备好的部分直接不画。**
+
+### 数据缺失时右栏的表现
+
+| 挂起的请求                                            | 主列                 | 右栏 `[aria-label="Project sidebar"]`                |
+| ----------------------------------------------------- | -------------------- | ---------------------------------------------------- |
+| `*client-api.linear.app/*`（含 graphql + sync/batch） | 从缓存渲染（有内容） | **元素不存在**（该区域是主卡内的空白，无占位无骨架） |
+| `*sync/batch*`                                        | 从缓存渲染（有内容） | **元素不存在**                                       |
+| `*graphql*`                                           | 完整                 | **完整（909 字符）**                                 |
+
+→ Overview 的内容来自**本地同步缓存**，不走 graphql；右栏依赖 `sync/batch`。
+缺数据时右栏是 \*\*「不存在」而不是「骨架」\*\*。
+
+### 对候选端的直接含义（只陈述事实，不下结论）
+
+候选端 overview 的加载分支返回整页居中转圈（`NeuralNetworkLoading`），
+而 route 级骨架系统 `createSurfaceSkeleton` 未覆盖 overview 路由。
+就本页而言，参考端**两种都不是**：
+
+- 它**没有** skeleton；
+- 它**也没有**居中转圈；
+- 它的启动态是「**卡片外框 + 延迟 1s 淡入的 logo / 文案**（居中于内容区，不是视口）」，
+  路由态是「**直接渲染缓存里的真实内容**，缺的部分不画」。
+
+### unknown（本节）
+
+| #   | 项                                                                                            | 为什么不知道                                                                                                  | 想看需要做什么                                            |
+| --- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | **冷启动**（无本地缓存 / 首次访问）时占位符停留多久、是否进入 `body.loadingText`（8s 后）形态 | 本轮全部是热启动，窗口只有～1s                                                                                | 清站点数据后冷启动重采（会登出，需谨慎）                  |
+| 2   | `logoBackgroundPulse` 到底挂在谁身上                                                          | 关键帧存在于文档，但 `svg.bkg` 的 `animation-name: none`；推测由 `body.loadingText` 触发（8s 后），**未验证** | 让加载超过 8s（延迟放行加到 >10s）后重采 `svg.bkg`        |
+| 3   | `svg.bkg circle` 的真实外观                                                                   | `fill="url(#bkg)"` 的渐变定义不在序列化出的 HTML 里，computed `fill: none`（不渲染）                          | 在启动窗口内 dump `#loading` 所在 `<svg>` 的 `<defs>`     |
+| 4   | **错误态**长什么样                                                                            | 本轮只做「延迟」，没让请求**失败**                                                                            | 用 `Fetch.failRequest` 造失败后观测（只读，需确认可接受） |
+| 5   | 占位符 `z-index: 99999` 覆盖全屏，是否会遮住 DevDock / 其它浮层                               | 未测                                                                                                          | 启动窗口内做一次 `elementFromPoint` 命中测试              |

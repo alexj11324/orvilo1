@@ -64,6 +64,10 @@ const OUT = arg('out', '');
 const COVERAGE_OUT = arg('coverage-out', '');
 const REQUIRE_COMPLETE_COVERAGE = flag('require-complete-coverage');
 const AMBIGUITY_EXAMPLE_LIMIT = 5;
+const LEGACY_COVERAGE_SCOPE = 'all-visible-dom-elements';
+const LATENT_COVERAGE_SCOPE = 'all-visible-and-opacity-hidden-semantic-elements';
+const LEGACY_INTERACTION_SCOPE = 'all-visible-interactive-roots';
+const LATENT_INTERACTION_SCOPE = 'all-visible-and-opacity-hidden-semantic-interactive-roots';
 if (!REF || !CAND) {
   process.stderr.write(
     'usage: parity-pairs.cjs --reference R.json --candidate C.json [--pairs P.json] ' +
@@ -254,13 +258,19 @@ const derivedRegion = (byIndex, el) => {
   return { i: null, tag: 'DOCUMENT', id: null, role: 'document', ariaLabel: null };
 };
 
+const isOpacityHiddenSemantic = (el) =>
+  el?.visible === false &&
+  el?.visibility?.state === 'opacity-hidden' &&
+  el?.visibility?.geometryBearing === true &&
+  el?.visibility?.semantic === true;
+
 const inventoryFrom = (snap) => {
   const elements = snap.elements || [];
   const byIndex = new Map(elements.map((el) => [el.i, el]));
   const hasCollectorInventory = Array.isArray(snap.coverageInventory);
   const source = hasCollectorInventory
     ? snap.coverageInventory
-    : elements.filter((el) => el.visible === true);
+    : elements.filter((el) => el.visible === true || isOpacityHiddenSemantic(el));
 
   return source.map((raw) => {
     const el = byIndex.get(raw.i) || raw;
@@ -300,6 +310,16 @@ const inventoryFrom = (snap) => {
       depth: raw.depth ?? el.depth ?? null,
       region: raw.region ?? el.region ?? derivedRegion(byIndex, el),
       geometry,
+      exposure: raw.exposure ??
+        el.visibility ?? {
+          state: el.visible === true ? 'visible' : 'unknown',
+          geometryBearing: Number.isFinite(geometry.width) && Number.isFinite(geometry.height),
+          opacityHiddenBy: null,
+          semantic: false,
+          semanticReasons: [],
+        },
+      interactionRootIndex:
+        raw.interactionRootIndex ?? el.behavior?.nearestInteractiveAncestor?.i ?? null,
       identity,
       categories: raw.categories ?? {
         interactive: el.behavior?.nearestInteractiveAncestor?.i === el.i,
@@ -307,6 +327,7 @@ const inventoryFrom = (snap) => {
         svgRoot: el.svg?.tag === 'svg',
         text: Boolean(el.ownText),
         container: false,
+        latent: isOpacityHiddenSemantic(el),
       },
       interactionStates: raw.interactionStates ?? {
         hover: 'not-tested',
@@ -402,6 +423,14 @@ const comparablePayload = (element, inventoryItem) => {
       rounded: element.box ?? null,
     },
     identity: inventoryItem.identity ?? null,
+    exposure: inventoryItem.exposure
+      ? {
+          state: inventoryItem.exposure.state,
+          geometryBearing: inventoryItem.exposure.geometryBearing,
+          semantic: inventoryItem.exposure.semantic,
+          semanticReasons: inventoryItem.exposure.semanticReasons,
+        }
+      : null,
     behavior: element.behavior ?? null,
     style: element.style ?? null,
     paint: element.paint ?? null,
@@ -493,6 +522,28 @@ const summarizeInventory = (records) => {
   };
 };
 
+const summarizeLatentOpacityHidden = (records) => {
+  const latent = records.filter(
+    (item) => item.categories?.latent || item.exposure?.state === 'opacity-hidden',
+  );
+  return {
+    total: latent.length,
+    paired: latent.filter((item) => item.status?.startsWith('paired-')).length,
+    ambiguous: latent.filter((item) => item.status === 'ambiguous').length,
+    unpaired: latent.filter((item) => item.status === 'unpaired').length,
+    unreadable: latent.filter((item) => item.status === 'unreadable').length,
+  };
+};
+
+const describeInventoryItem = (item) => {
+  const identity = item.identity || {};
+  const label = identity.ariaLabel || identity.ownText || identity.subtreeText;
+  const svg = identity.svg
+    ? ` svg=${identity.svg.tag || 'svg'}${identity.svg.viewBox ? ` viewBox=${JSON.stringify(identity.svg.viewBox)}` : ''}`
+    : '';
+  return `#${item.i} ${identity.tag || 'UNKNOWN'}${label ? ` aria/text=${JSON.stringify(label)}` : ''}${svg} reason=${item.exposure?.state || 'unknown'}`;
+};
+
 const validateCapture = (snap, label) => {
   const issues = [];
   const elements = Array.isArray(snap?.elements) ? snap.elements : [];
@@ -533,8 +584,8 @@ const validateCapture = (snap, label) => {
     if (!coverage || typeof coverage !== 'object') {
       issues.push(`${label}: missing meta.coverage`);
     } else {
-      if (coverage.scope !== 'all-visible-dom-elements')
-        issues.push(`${label}: meta.coverage.scope is not all-visible-dom-elements`);
+      if (![LEGACY_COVERAGE_SCOPE, LATENT_COVERAGE_SCOPE].includes(coverage.scope))
+        issues.push(`${label}: meta.coverage.scope is unsupported`);
       if (!Number.isInteger(coverage.inventoryCount))
         issues.push(`${label}: meta.coverage.inventoryCount must be an integer`);
       if (typeof coverage.completeCapture !== 'boolean')
@@ -558,7 +609,10 @@ const validateCapture = (snap, label) => {
       `${label}: meta.coverage.inventoryCount=${coverage.inventoryCount} does not match coverageInventory.length=${rawInventory.length}`,
     );
 
-  const visibleIndices = elements.filter((item) => item.visible === true).map((item) => item.i);
+  const includesLatent = coverage?.scope === LATENT_COVERAGE_SCOPE;
+  const expectedIndices = elements
+    .filter((item) => item.visible === true || (includesLatent && isOpacityHiddenSemantic(item)))
+    .map((item) => item.i);
   const unknownVisibilityCount = elements.filter(
     (item) => typeof item.visible !== 'boolean',
   ).length;
@@ -571,18 +625,18 @@ const validateCapture = (snap, label) => {
   if (duplicateCount > 0)
     issues.push(`${label}: coverageInventory contains ${duplicateCount} duplicate element indexes`);
 
-  const visibleSet = new Set(visibleIndices);
-  const missing = visibleIndices.filter((index) => !inventoryIndexSet.has(index));
-  const extra = inventoryIndices.filter((index) => !visibleSet.has(index));
+  const expectedSet = new Set(expectedIndices);
+  const missing = expectedIndices.filter((index) => !inventoryIndexSet.has(index));
+  const extra = inventoryIndices.filter((index) => !expectedSet.has(index));
   if (missing.length > 0)
     issues.push(
-      `${label}: coverageInventory omits ${missing.length} visible elements (examples: ${missing
+      `${label}: coverageInventory omits ${missing.length} in-scope elements (examples: ${missing
         .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
         .join(', ')})`,
     );
   if (extra.length > 0)
     issues.push(
-      `${label}: coverageInventory includes ${extra.length} non-visible or unknown elements (examples: ${extra
+      `${label}: coverageInventory includes ${extra.length} elements outside its declared scope (examples: ${extra
         .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
         .join(', ')})`,
     );
@@ -620,7 +674,7 @@ const validateInteractionManifest = (snap, inventory, label) => {
   }
   if (manifest.schemaVersion !== 1)
     issues.push(`${label}: unsupported interactionManifest schemaVersion`);
-  if (manifest.scope !== 'all-visible-interactive-roots')
+  if (![LEGACY_INTERACTION_SCOPE, LATENT_INTERACTION_SCOPE].includes(manifest.scope))
     issues.push(`${label}: interactionManifest scope is incomplete`);
   if (!Array.isArray(manifest.controls)) {
     issues.push(`${label}: interactionManifest.controls must be an array`);
@@ -984,11 +1038,42 @@ const unreadableCapturedPropertyPairs = capturedPropertyComparisons.filter(
 
 const refCoverageSummary = summarizeInventory(refInventory);
 const candCoverageSummary = summarizeInventory(candInventory);
+const refLatentSummary = summarizeLatentOpacityHidden(refInventory);
+const candLatentSummary = summarizeLatentOpacityHidden(candInventory);
+const referenceOnlyLatent = refInventory.filter(
+  (item) =>
+    (item.categories?.latent || item.exposure?.state === 'opacity-hidden') &&
+    item.status === 'unpaired',
+);
+const candidateOnlyLatent = candInventory.filter(
+  (item) =>
+    (item.categories?.latent || item.exposure?.state === 'opacity-hidden') &&
+    item.status === 'unpaired',
+);
+const incompleteLatent = [...refInventory, ...candInventory].filter(
+  (item) =>
+    (item.categories?.latent || item.exposure?.state === 'opacity-hidden') &&
+    ['ambiguous', 'unpaired', 'unreadable'].includes(item.status),
+);
+const latentCapturedPropertyMismatch = capturedPropertyComparisons.some((comparison) => {
+  const referenceItem = refInventoryByIndex.get(comparison.referenceIndex);
+  const candidateItem = candInventoryByIndex.get(comparison.candidateIndex);
+  const includesLatent = [referenceItem, candidateItem].some(
+    (item) => item?.categories?.latent || item?.exposure?.state === 'opacity-hidden',
+  );
+  return includesLatent && comparison.status !== 'same';
+});
+const latentParityMismatch = incompleteLatent.length > 0 || latentCapturedPropertyMismatch;
 const captureValidation = {
   reference: validateCapture(refSnap, 'reference'),
   candidate: validateCapture(candSnap, 'candidate'),
 };
 const captureIssues = [...captureValidation.reference, ...captureValidation.candidate];
+if (refSnap.meta?.coverage?.scope !== candSnap.meta?.coverage?.scope) {
+  captureIssues.push(
+    'reference and candidate coverage scopes differ; recapture both snapshots with the current collector',
+  );
+}
 const interactionValidation = {
   reference: validateInteractionManifest(refSnap, refInventory, 'reference'),
   candidate: validateInteractionManifest(candSnap, candInventory, 'candidate'),
@@ -1016,10 +1101,13 @@ const coverageComplete =
   inventoryCoverageComplete && capturedPropertyComparisonComplete && interactionCoverageComplete;
 const coverageReport = {
   schemaVersion: 1,
-  scope: 'all-visible-dom-elements',
+  scope:
+    refSnap.meta?.coverage?.scope === candSnap.meta?.coverage?.scope
+      ? refSnap.meta?.coverage?.scope
+      : 'mixed-declared-scopes',
   certified: false,
   completeMeaning:
-    'Every captured visible element has one explicit or unique heuristic candidate, those pairs have no captured-property differences, and every visible control has evidence for every required interaction edge; this remains heuristic evidence, not parity certification.',
+    'Every captured visible element and every geometry-bearing semantic element hidden only by opacity has one explicit or unique heuristic candidate, those pairs have no captured-property differences, and every inventoried control has evidence for every required interaction edge; this remains heuristic evidence, not parity certification.',
   pairingModel: {
     explicitPairs: 'explanatory overlay',
     automaticPairs: 'heuristic exact-identity candidates; not certified cross-application matches',
@@ -1041,8 +1129,29 @@ const coverageReport = {
       differences: capturedPropertyDifferenceCount,
     },
   },
+  latentOpacityHidden: {
+    meaning:
+      'Geometry-bearing semantic DOM that exists at rest but is hidden by its own or an ancestor opacity:0. Potential hover reveal is unverified until a journey supplies evidence.',
+    reference: refLatentSummary,
+    candidate: candLatentSummary,
+    parityBlockingMismatch: latentParityMismatch,
+    referenceOnlyExamples: referenceOnlyLatent.slice(0, AMBIGUITY_EXAMPLE_LIMIT).map((item) => ({
+      elementIndex: item.i,
+      identity: item.identity,
+      exposure: item.exposure,
+      geometry: item.geometry,
+      reason: 'reference-only opacity-hidden semantic element',
+    })),
+    candidateOnlyExamples: candidateOnlyLatent.slice(0, AMBIGUITY_EXAMPLE_LIMIT).map((item) => ({
+      elementIndex: item.i,
+      identity: item.identity,
+      exposure: item.exposure,
+      geometry: item.geometry,
+      reason: 'candidate-only opacity-hidden semantic element',
+    })),
+  },
   comparisonContract: {
-    fields: ['geometry', 'identity', 'behavior', 'style', 'paint', 'svg', 'pseudo'],
+    fields: ['geometry', 'identity', 'exposure', 'behavior', 'style', 'paint', 'svg', 'pseudo'],
     tolerances: AUTOMATIC_TOLERANCES,
     normalizationRules: [
       'ISO-8601 timestamps are replaced with <timestamp>',
@@ -1054,6 +1163,8 @@ const coverageReport = {
   unmatched: {
     reference: refInventory.filter((item) => item.status === 'unpaired').map((item) => item.i),
     candidate: candInventory.filter((item) => item.status === 'unpaired').map((item) => item.i),
+    latentReference: referenceOnlyLatent.map((item) => item.i),
+    latentCandidate: candidateOnlyLatent.map((item) => item.i),
   },
   ambiguous: {
     reference: refInventory.filter((item) => item.status === 'ambiguous').map((item) => item.i),
@@ -1090,6 +1201,7 @@ const coverageReport = {
   limitations: [
     'Automatic pairing is a deterministic candidate heuristic, not proof that two elements have the same product meaning.',
     'Static capture does not exercise hover, focus, click, keyboard, delayed, or mutation states.',
+    'potential-hover-not-tested means opacity-hidden semantic content shares a control relationship; it does not prove hover is the reveal trigger.',
     'Untested interaction edges are strict blockers; this comparator does not click controls or manufacture journey evidence.',
     'The collector inventories rendered light-DOM elements only; iframe and shadow-root contents require separate capture.',
     'Virtualized or conditional elements that are not rendered in the captured state are outside this inventory.',
@@ -1122,13 +1234,29 @@ const lines = [
     `(explicit ${candCoverageSummary.pairedExplicit}, heuristic ${candCoverageSummary.pairedHeuristic}) · ` +
     `ambiguous ${candCoverageSummary.ambiguous} · unpaired ${candCoverageSummary.unpaired} · ` +
     `unreadable ${candCoverageSummary.unreadable}`,
+  `opacity-hidden semantic inventory: reference total ${refLatentSummary.total} · paired ${refLatentSummary.paired} · ` +
+    `ambiguous ${refLatentSummary.ambiguous} · unpaired ${refLatentSummary.unpaired} · unreadable ${refLatentSummary.unreadable}; ` +
+    `candidate total ${candLatentSummary.total} · paired ${candLatentSummary.paired} · ` +
+    `ambiguous ${candLatentSummary.ambiguous} · unpaired ${candLatentSummary.unpaired} · unreadable ${candLatentSummary.unreadable}`,
+  referenceOnlyLatent.length > 0
+    ? `reference-only latent semantic examples: ${referenceOnlyLatent
+        .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
+        .map(describeInventoryItem)
+        .join(' · ')}`
+    : 'reference-only latent semantic examples: none',
+  candidateOnlyLatent.length > 0
+    ? `candidate-only latent semantic examples: ${candidateOnlyLatent
+        .slice(0, AMBIGUITY_EXAMPLE_LIMIT)
+        .map(describeInventoryItem)
+        .join(' · ')}`
+    : 'candidate-only latent semantic examples: none',
   `inventory complete: ${inventoryCoverageComplete ? 'yes' : 'no'}`,
   `captured-property comparisons: ${capturedPropertyComparisons.length} pairs · ` +
     `differing pairs ${differingCapturedPropertyPairs} · differences ${capturedPropertyDifferenceCount} · ` +
     `unreadable pairs ${unreadableCapturedPropertyPairs}`,
   `interaction journeys: ${interactionCoverageComplete ? 'complete' : 'incomplete'} · blockers ${interactionBlockerCount}`,
   `strict result complete: ${coverageComplete ? 'yes' : 'no'} · strict requested: ${REQUIRE_COMPLETE_COVERAGE ? 'yes' : 'no'}`,
-  'interaction states: hover not-tested · focus not-tested · click not-tested',
+  'interaction states: hover not-tested · focus not-tested · click not-tested; opacity-hidden reveal candidates potential-hover-not-tested',
   'automatic candidates are heuristic and do not certify cross-application semantic equivalence',
   COVERAGE_OUT
     ? `machine-readable detail: ${COVERAGE_OUT}`
@@ -1171,13 +1299,20 @@ process.stderr.write(
     `coverage_complete=${coverageComplete} ref_unpaired=${refCoverageSummary.unpaired} ` +
     `cand_unpaired=${candCoverageSummary.unpaired} ref_ambiguous=${refCoverageSummary.ambiguous} ` +
     `cand_ambiguous=${candCoverageSummary.ambiguous} captured_diffs=${capturedPropertyDifferenceCount} ` +
-    `captured_unreadable=${unreadableCapturedPropertyPairs} interaction_blockers=${interactionBlockerCount}\n`,
+    `captured_unreadable=${unreadableCapturedPropertyPairs} latent_mismatch=${latentParityMismatch} ` +
+    `interaction_blockers=${interactionBlockerCount}\n`,
 );
-// Every differing, unresolved, or unreadable measurement fails the parity gate.
+// Every differing, unresolved, unreadable, or invalid capture fails the parity gate.
 // Inventory gaps become a gate only when explicitly requested so existing pair-only workflows keep
-// their previous behavior while still printing their actual coverage.
+// their previous behavior while still printing their actual coverage. Invalid or mixed capture
+// scopes and latent semantic mismatches always fail: either could hide an unmeasured icon.
 process.exit(
-  diffs > 0 || unresolved > 0 || unreadable > 0 || (REQUIRE_COMPLETE_COVERAGE && !coverageComplete)
+  diffs > 0 ||
+    unresolved > 0 ||
+    unreadable > 0 ||
+    captureIssues.length > 0 ||
+    latentParityMismatch ||
+    (REQUIRE_COMPLETE_COVERAGE && !coverageComplete)
     ? 1
     : 0,
 );

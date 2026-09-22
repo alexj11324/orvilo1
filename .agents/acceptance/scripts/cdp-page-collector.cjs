@@ -286,25 +286,47 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
     return { i: null, tag: 'DOCUMENT', id: null, role: 'document', ariaLabel: null };
   };
 
-  const isVisible = (el, rect, computed, svgish) => {
-    if (rect.width === 0 && rect.height === 0) return false;
+  const visibilityOf = (el, rect, computed, svgish) => {
+    // A stroked SVG line can have one zero-sized dimension and still be painted.
+    const geometryBearing = rect.width > 0 || rect.height > 0;
+    if (!geometryBearing) {
+      return {
+        state: 'zero-geometry',
+        geometryBearing: false,
+        opacityHiddenBy: null,
+      };
+    }
     // SVG elements generally have no HTML offsetParent despite being painted. Geometry plus the
     // ancestor checks below is the visibility signal that works for both HTML and SVG.
     if (!svgish && el.offsetParent === null) {
-      if (computed.position !== 'fixed' && el.tagName !== 'BODY' && el.tagName !== 'HTML') return false;
+      if (computed.position !== 'fixed' && el.tagName !== 'BODY' && el.tagName !== 'HTML') {
+        return {
+          state: 'layout-hidden',
+          geometryBearing,
+          opacityHiddenBy: null,
+        };
+      }
     }
+    let opacityHiddenBy = null;
     let parent = el;
     while (parent && parent.nodeType === 1) {
       let parentStyle;
       try { parentStyle = getComputedStyle(parent); } catch { parentStyle = null; }
-      if (parentStyle && (
-        parentStyle.display === 'none' ||
-        parentStyle.visibility === 'hidden' ||
-        Number(parentStyle.opacity) === 0
-      )) return false;
+      if (parentStyle?.display === 'none') {
+        return { state: 'display-hidden', geometryBearing, opacityHiddenBy: null };
+      }
+      if (parentStyle?.visibility === 'hidden') {
+        return { state: 'visibility-hidden', geometryBearing, opacityHiddenBy: null };
+      }
+      if (parentStyle && Number(parentStyle.opacity) === 0 && opacityHiddenBy === null) {
+        opacityHiddenBy = index.get(parent) ?? null;
+      }
       parent = parent.parentElement;
     }
-    return true;
+    if (opacityHiddenBy !== null) {
+      return { state: 'opacity-hidden', geometryBearing, opacityHiddenBy };
+    }
+    return { state: 'visible', geometryBearing, opacityHiddenBy: null };
   };
 
   const all = [...document.querySelectorAll('*')].slice(0, ${max});
@@ -330,7 +352,8 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       top: r.top, right: r.right, bottom: r.bottom, left: r.left,
     };
     const svgish = isSvgish(el);
-    const visible = isVisible(el, r, computed, svgish);
+    const visibility = visibilityOf(el, r, computed, svgish);
+    const visible = visibility.state === 'visible';
     const anchor = el.closest('a');
     const before = pseudo(el, '::before');
     const after = pseudo(el, '::after');
@@ -342,6 +365,20 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       computedStroke: computed.stroke,
     } : null;
     const region = describeRegion(el, index);
+    const nearestInteractiveAncestor = describeInteractive(el, index);
+    const directText = ownText(el);
+    const semanticReasons = [];
+    if (svgish) semanticReasons.push('svg');
+    if (el.getAttribute('aria-label')) semanticReasons.push('aria-label');
+    if (el.getAttribute('role')) semanticReasons.push('role');
+    if (el.getAttribute('alt')) semanticReasons.push('alt');
+    if (directText) semanticReasons.push('text');
+    if (computed.backgroundImage && computed.backgroundImage !== 'none')
+      semanticReasons.push('background-image');
+    if (before || after) semanticReasons.push('pseudo');
+    if (interactive(el)) semanticReasons.push('control');
+    visibility.semantic = semanticReasons.length > 0;
+    visibility.semanticReasons = semanticReasons;
 
     return {
       i,
@@ -359,7 +396,7 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
         current: el.getAttribute('aria-current'),
       },
       tabindex: el.getAttribute('tabindex'),
-      ownText: ownText(el).slice(0, 200) || null,
+      ownText: directText.slice(0, 200) || null,
       subtreeText: (el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 200) || null,
       box: {
         x: Math.round(r.x), y: Math.round(r.y),
@@ -367,6 +404,7 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       },
       fractionalBox,
       visible,
+      visibility,
       occluded: visible ? isOccluded(el, r) : null,
       region,
       style,
@@ -384,7 +422,7 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
         disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
         hasOnClick: typeof el.onclick === 'function',
         pointerEvents: computed.pointerEvents,
-        nearestInteractiveAncestor: describeInteractive(el, index),
+        nearestInteractiveAncestor,
         // This collector never dispatches clicks. A static onclick property or semantic tag is
         // a hint about a potential control, never evidence that the control works.
         interactionVerification: 'not-tested',
@@ -392,15 +430,31 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
     };
   });
 
-  // This is an inventory, not a parity verdict. It deliberately includes every visible DOM
-  // element, including ordinary containers/text and SVG descendants. Consumers may add explicit
-  // pairs or heuristic candidates later, but those overlays cannot shrink inspection coverage.
-  const coverageInventory = elements.filter((el) => el.visible).map((el) => ({
+  // This is an inventory, not a parity verdict. It includes every visible DOM element plus
+  // geometry-bearing semantic elements hidden only by opacity. The latter are latent rendered
+  // content: they may be revealed by hover, focus, selection, or another state transition, but
+  // static collection does not claim which trigger works.
+  const inventoryElements = elements.filter(
+    (el) =>
+      el.visible ||
+      (el.visibility.state === 'opacity-hidden' &&
+        el.visibility.geometryBearing &&
+        el.visibility.semantic),
+  );
+  const latentInteractionRoots = new Set(
+    inventoryElements
+      .filter((el) => el.visibility.state === 'opacity-hidden')
+      .map((el) => el.behavior.nearestInteractiveAncestor?.i)
+      .filter(Number.isInteger),
+  );
+  const coverageInventory = inventoryElements.map((el) => ({
     i: el.i,
     parent: el.parent,
     depth: el.depth,
     region: el.region,
     geometry: el.fractionalBox,
+    exposure: el.visibility,
+    interactionRootIndex: el.behavior.nearestInteractiveAncestor?.i ?? null,
     identity: {
       tag: el.tag,
       id: el.id,
@@ -424,9 +478,13 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       svgRoot: el.svg?.tag === 'svg',
       text: Boolean(el.ownText),
       container: Boolean(all[el.i]?.children?.length),
+      latent: el.visibility.state === 'opacity-hidden',
     },
     interactionStates: {
-      hover: 'not-tested',
+      hover:
+        el.visibility.state === 'opacity-hidden' || latentInteractionRoots.has(el.i)
+          ? 'potential-hover-not-tested'
+          : 'not-tested',
       focus: 'not-tested',
       click: 'not-tested',
     },
@@ -467,16 +525,31 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       identity: item.identity,
       region: item.region,
       geometry: item.geometry,
+      exposure: item.exposure,
+      latentSemanticDescendants: coverageInventory
+        .filter(
+          (candidate) =>
+            candidate.categories.latent && candidate.interactionRootIndex === item.i,
+        )
+        .map((candidate) => ({
+          elementIndex: candidate.i,
+          identity: candidate.identity,
+          exposure: candidate.exposure,
+          geometry: candidate.geometry,
+        })),
       edges: requiredInteractionEdges.map((edge) => ({
         ...edge,
-        status: 'not-tested',
+        status:
+          edge.edge === 'hover' && item.interactionStates.hover === 'potential-hover-not-tested'
+            ? 'potential-hover-not-tested'
+            : 'not-tested',
         evidence: [],
       })),
     }),
   );
   const interactionManifest = {
     schemaVersion: 1,
-    scope: 'all-visible-interactive-roots',
+    scope: 'all-visible-and-opacity-hidden-semantic-interactive-roots',
     complete: false,
     safety:
       'Static collection never activates controls. Activation evidence must come from an explicit non-destructive journey.',
@@ -505,7 +578,7 @@ const buildSnapshotScript = ({ maxElements = 20_000 } = {}) => {
       truncated: document.querySelectorAll('*').length > ${max},
       interactionVerification: 'not-tested',
       coverage: {
-        scope: 'all-visible-dom-elements',
+        scope: 'all-visible-and-opacity-hidden-semantic-elements',
         inventoryCount: coverageInventory.length,
         completeCapture: document.querySelectorAll('*').length <= ${max},
         interactionStateCoverage: {

@@ -17,7 +17,10 @@ const element = ({
   parent,
   tag = 'DIV',
   role = null,
+  ariaLabel = null,
   ownText = null,
+  visible = true,
+  visibility = null,
   style = {},
   svg = null,
   behavior = {},
@@ -26,9 +29,15 @@ const element = ({
   parent,
   tag,
   role,
-  aria: { label: null },
+  aria: { label: ariaLabel },
   ownText,
-  visible: true,
+  visible,
+  visibility: visibility ?? {
+    state: visible ? 'visible' : 'not-rendered',
+    geometryBearing: true,
+    semantic: Boolean(role || ariaLabel || svg),
+    opacityHiddenBy: null,
+  },
   box: { x: 20 + i * 4, y: 20 + i * 4, w: 100, h: 28 },
   fractionalBox: { x: 20 + i * 4, y: 20 + i * 4, width: 100, height: 28 },
   style,
@@ -178,7 +187,13 @@ const pairs = [
 const withCoverageMetadata = (snapshot) => {
   const result = structuredClone(snapshot);
   result.coverageInventory = result.elements
-    .filter((item) => item.visible)
+    .filter(
+      (item) =>
+        item.visible ||
+        (item.visibility?.state === 'opacity-hidden' &&
+          item.visibility?.geometryBearing === true &&
+          item.visibility?.semantic === true),
+    )
     .map((item) => ({
       i: item.i,
       parent: item.parent,
@@ -216,20 +231,33 @@ const withCoverageMetadata = (snapshot) => {
         svgRoot: item.tag.toLowerCase() === 'svg',
         text: Boolean(item.ownText),
         container: false,
+        latent: item.visibility?.state === 'opacity-hidden',
       },
+      exposure: item.visibility,
+      interactionRootIndex: item.behavior?.nearestInteractiveAncestor?.i ?? null,
       interactionStates: {
         hover: 'not-tested',
         focus: 'not-tested',
         click: 'not-tested',
       },
     }));
+  const latentInteractionRoots = new Set(
+    result.coverageInventory
+      .filter((item) => item.categories.latent && Number.isInteger(item.interactionRootIndex))
+      .map((item) => item.interactionRootIndex),
+  );
+  for (const item of result.coverageInventory) {
+    if (item.categories.latent || latentInteractionRoots.has(item.i)) {
+      item.interactionStates.hover = 'potential-hover-not-tested';
+    }
+  }
   result.meta = {
     ...result.meta,
     elementCount: result.elements.length,
     totalElements: result.elements.length,
     truncated: false,
     coverage: {
-      scope: 'all-visible-dom-elements',
+      scope: 'all-visible-and-opacity-hidden-semantic-elements',
       inventoryCount: result.coverageInventory.length,
       completeCapture: true,
       interactionStateCoverage: {
@@ -256,17 +284,21 @@ const withCoverageMetadata = (snapshot) => {
       identity: item.identity,
       region: item.region,
       geometry: item.geometry,
+      exposure: item.exposure,
       edges: requiredEdges.map((edge) => ({
         edge,
         conditional: edge.includes('options') || edge.includes('feedback'),
         safety: 'test-fixture',
-        status: 'not-tested',
+        status:
+          edge === 'hover' && item.interactionStates.hover === 'potential-hover-not-tested'
+            ? 'potential-hover-not-tested'
+            : 'not-tested',
         evidence: [],
       })),
     }));
   result.interactionManifest = {
     schemaVersion: 1,
-    scope: 'all-visible-interactive-roots',
+    scope: 'all-visible-and-opacity-hidden-semantic-interactive-roots',
     complete: false,
     controls,
     summary: {
@@ -418,7 +450,7 @@ test('full inventory exposes unpaired ordinary DOM, an icon, and duplicate-text 
   assert.notEqual(result.status, 0, 'strict coverage must fail on gaps and ambiguity');
   assert.match(result.stdout, /Full visible-DOM coverage/);
   assert.match(result.stdout, /interaction states: hover not-tested/);
-  assert.equal(coverage.scope, 'all-visible-dom-elements');
+  assert.equal(coverage.scope, 'all-visible-and-opacity-hidden-semantic-elements');
   assert.equal(coverage.complete, false);
   assert.equal(coverage.certified, false);
   assert.equal(
@@ -602,6 +634,19 @@ test('strict coverage rejects malformed or incomplete capture metadata', () => {
       issue.includes('elements must not be empty'),
     ),
   );
+
+  const legacyScope = structuredClone(valid);
+  legacyScope.meta.coverage.scope = 'all-visible-dom-elements';
+  const mixedScopeDefault = compareWithCoverage(legacyScope, valid, []);
+  assert.notEqual(mixedScopeDefault.result.status, 0, 'mixed capture scopes must fail by default');
+  const mixedScopeResult = compareWithCoverage(legacyScope, valid, [], { strict: true });
+  assert.notEqual(mixedScopeResult.result.status, 0);
+  assert.equal(mixedScopeResult.coverage.scope, 'mixed-declared-scopes');
+  assert.ok(
+    mixedScopeResult.coverage.captureIssues.some((issue) =>
+      issue.includes('coverage scopes differ; recapture both snapshots'),
+    ),
+  );
 });
 
 test('pair comparison flags nested pill/icon differences and rejects unsupported selectors', () => {
@@ -755,4 +800,77 @@ test('automatic inventory runs without an explicit pair file', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('automatic comparison reports a reference-only opacity-hidden semantic icon without manual pairs', () => {
+  const visibleRow = element({ i: 0, parent: -1, ownText: 'Owner' });
+  const latentControl = element({
+    i: 1,
+    parent: 0,
+    tag: 'BUTTON',
+    role: 'button',
+    ariaLabel: 'Assign owner',
+    visible: true,
+    behavior: {
+      isButton: true,
+      nearestInteractiveAncestor: { i: 1, tag: 'BUTTON', role: 'button' },
+    },
+  });
+  const latentIcon = element({
+    i: 2,
+    parent: 1,
+    tag: 'svg',
+    ariaLabel: 'No owner',
+    visible: false,
+    visibility: {
+      state: 'opacity-hidden',
+      geometryBearing: true,
+      semantic: true,
+      opacityHiddenBy: 1,
+    },
+    svg: { tag: 'svg', viewBox: '0 0 16 16', path: null, geometry: {} },
+    behavior: {
+      nearestInteractiveAncestor: { i: 1, tag: 'BUTTON', role: 'button' },
+    },
+  });
+  const latentPath = element({
+    i: 3,
+    parent: 2,
+    tag: 'path',
+    visible: false,
+    visibility: {
+      state: 'opacity-hidden',
+      geometryBearing: true,
+      semantic: true,
+      opacityHiddenBy: 1,
+    },
+    svg: { tag: 'path', viewBox: '0 0 16 16', path: 'M2 8h12', geometry: {} },
+    behavior: {
+      nearestInteractiveAncestor: { i: 1, tag: 'BUTTON', role: 'button' },
+    },
+  });
+  const referenceSnapshot = withCoverageMetadata({
+    meta: meta('http://reference.test/latent'),
+    elements: [visibleRow, latentControl, latentIcon, latentPath],
+  });
+  const candidateSnapshot = withCoverageMetadata({
+    meta: meta('http://candidate.test/latent'),
+    elements: [structuredClone(visibleRow)],
+  });
+
+  const { result, coverage } = compareWithCoverage(referenceSnapshot, candidateSnapshot, []);
+
+  assert.equal(result.status, 1);
+  assert.equal(coverage.complete, false);
+  assert.equal(coverage.strictRequested, false);
+  assert.equal(coverage.latentOpacityHidden.reference.total, 2);
+  assert.equal(coverage.latentOpacityHidden.reference.unpaired, 2);
+  assert.equal(coverage.latentOpacityHidden.candidate.total, 0);
+  assert.equal(coverage.latentOpacityHidden.parityBlockingMismatch, true);
+  assert.ok(coverage.unmatched.latentReference.includes(latentIcon.i));
+  assert.match(result.stdout, /reference-only latent semantic examples:.*No owner/);
+  assert.equal(
+    coverage.interactionCoverage.reference.blockers[0].status,
+    'potential-hover-not-tested',
+  );
 });

@@ -26,11 +26,23 @@ const runInFixture = async (expressionBuilder) => {
       <div id="chip">
         <svg id="calendar" width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path id="calendar-path" d="M3 2v12M13 2v12M2 5h12" stroke="currentColor"></path>
+          <line id="thin-line" x1="8" y1="0" x2="8" y2="20" stroke="currentColor"></line>
         </svg>
         <span id="label">Properties</span>
       </div>
     </div>
     <div id="dead">Properties</div>
+    <button id="latent-control" aria-label="Assign owner">
+      <span id="latent-opacity-wrapper">
+        <svg id="latent-icon" aria-label="No owner" width="16" height="16" viewBox="0 0 16 16">
+          <path id="latent-icon-path" d="M2 8h12"></path>
+        </svg>
+        <span id="latent-text">Delete</span>
+        <span id="latent-role" role="img"></span>
+        <img id="latent-image" alt="Owner avatar" />
+        <span id="latent-css"></span>
+      </span>
+    </button>
   `;
 
   Object.defineProperty(page, 'innerWidth', { configurable: true, value: 800 });
@@ -118,8 +130,14 @@ const runInFixture = async (expressionBuilder) => {
   });
   setStyle('calendar', { display: 'block', width: '16px', height: '16px', fill: 'none' });
   setStyle('calendar-path', { display: 'inline', fill: 'none', stroke: 'currentColor' });
+  setStyle('thin-line', { display: 'inline', stroke: 'currentColor' });
   setStyle('label', { display: 'inline', fontSize: '13px', fontWeight: '500' });
   setStyle('dead', { display: 'block', fontSize: '13px', fontWeight: '400' });
+  setStyle('latent-control', { display: 'flex', width: '28px', height: '28px' });
+  setStyle('latent-opacity-wrapper', { display: 'block', opacity: '0' });
+  setStyle('latent-icon', { display: 'block', width: '16px', height: '16px' });
+  setStyle('latent-icon-path', { display: 'inline', stroke: 'currentColor' });
+  setStyle('latent-css', { backgroundImage: 'url("icon.svg")' });
   pseudoStyles.set(key(byId('capsule'), '::before'), {
     ...defaults,
     content: '"calendar"',
@@ -147,8 +165,17 @@ const runInFixture = async (expressionBuilder) => {
   setRect('chip', { x: 28.5, y: 24.25, width: 92.5, height: 28 });
   setRect('calendar', { x: 32.5, y: 30, width: 16, height: 16 });
   setRect('calendar-path', { x: 32.5, y: 30, width: 16, height: 16 });
+  setRect('thin-line', { x: 40.5, y: 30, width: 0, height: 20 });
   setRect('label', { x: 52.5, y: 30, width: 60.5, height: 16 });
   setRect('dead', { x: 20, y: 70, width: 90, height: 20 });
+  setRect('latent-control', { x: 200, y: 20, width: 28, height: 28 });
+  setRect('latent-opacity-wrapper', { x: 206, y: 26, width: 16, height: 16 });
+  setRect('latent-icon', { x: 206, y: 26, width: 16, height: 16 });
+  setRect('latent-icon-path', { x: 208, y: 32, width: 12, height: 1 });
+  setRect('latent-text', { x: 206, y: 44, width: 40, height: 16 });
+  setRect('latent-role', { x: 206, y: 62, width: 16, height: 16 });
+  setRect('latent-image', { x: 224, y: 62, width: 16, height: 16 });
+  setRect('latent-css', { x: 242, y: 62, width: 16, height: 16 });
   document.elementFromPoint = () => null;
 
   const getComputedStyle = (element, pseudo) =>
@@ -174,7 +201,11 @@ test('snapshot retains nested pills, textless SVG icon geometry, pseudo content,
   const chip = element('chip');
   const svg = element('calendar');
   const path = element('calendar-path');
+  const thinLine = element('thin-line');
   const dead = element('dead');
+  const latentControl = element('latent-control');
+  const latentIcon = element('latent-icon');
+  const latentPath = element('latent-icon-path');
 
   assert.ok(capsule, 'outer rolebutton layer should be present');
   assert.ok(chip, 'inner pill layer should be present');
@@ -196,6 +227,8 @@ test('snapshot retains nested pills, textless SVG icon geometry, pseudo content,
   assert.equal(path.svg.path, 'M3 2v12M13 2v12M2 5h12');
   assert.equal(path.svg.viewBox, '0 0 16 16');
   assert.equal(path.paint.computedStroke, 'currentColor');
+  assert.equal(thinLine.visible, true, 'one-dimensional SVG strokes remain visible');
+  assert.ok(snapshot.coverageInventory.some((item) => item.i === thinLine.i));
   assert.equal(capsule.pseudo.before.content, '"calendar"');
 
   assert.equal(capsule.behavior.nearestInteractiveAncestor.id, 'capsule');
@@ -207,7 +240,10 @@ test('snapshot retains nested pills, textless SVG icon geometry, pseudo content,
   assert.equal(snapshot.meta.interactionVerification, 'not-tested');
 
   const visible = snapshot.elements.filter((item) => item.visible);
-  assert.equal(snapshot.coverageInventory.length, visible.length);
+  assert.ok(
+    snapshot.coverageInventory.length > visible.length,
+    'geometry-bearing opacity-hidden semantic elements must extend visible coverage',
+  );
   assert.ok(
     snapshot.coverageInventory.some(
       (item) => item.identity.ownText === 'Properties' && item.categories.text,
@@ -219,11 +255,48 @@ test('snapshot retains nested pills, textless SVG icon geometry, pseudo content,
   assert.deepEqual(iconInventory.geometry, svg.fractionalBox);
   assert.equal(iconInventory.region.role, 'document');
   assert.equal(iconInventory.interactionStates.hover, 'not-tested');
-  assert.equal(snapshot.meta.coverage.scope, 'all-visible-dom-elements');
+  assert.equal(latentIcon.visible, false);
+  assert.equal(latentIcon.visibility.state, 'opacity-hidden');
+  assert.equal(latentIcon.visibility.opacityHiddenBy, element('latent-opacity-wrapper').i);
+  assert.equal(latentPath.visibility.state, 'opacity-hidden');
+  const latentControlInventory = snapshot.coverageInventory.find(
+    (item) => item.i === latentControl.i,
+  );
+  assert.equal(latentControlInventory.categories.latent, false);
+  assert.equal(latentControlInventory.exposure.state, 'visible');
+  assert.equal(latentControlInventory.interactionStates.hover, 'potential-hover-not-tested');
+  for (const latentElement of [latentIcon, latentPath]) {
+    const inventoryItem = snapshot.coverageInventory.find((item) => item.i === latentElement.i);
+    assert.ok(inventoryItem, `${latentElement.id} must remain in automatic coverage`);
+    assert.equal(inventoryItem.categories.latent, true);
+    assert.equal(inventoryItem.exposure.state, 'opacity-hidden');
+    assert.equal(inventoryItem.interactionStates.hover, 'potential-hover-not-tested');
+  }
+  for (const [id, reason] of [
+    ['latent-text', 'text'],
+    ['latent-role', 'role'],
+    ['latent-image', 'alt'],
+    ['latent-css', 'background-image'],
+  ]) {
+    const latentElement = element(id);
+    const inventoryItem = snapshot.coverageInventory.find((item) => item.i === latentElement.i);
+    assert.ok(inventoryItem, `${id} must remain in automatic latent coverage`);
+    assert.equal(inventoryItem.exposure.state, 'opacity-hidden');
+    assert.ok(inventoryItem.exposure.semanticReasons.includes(reason));
+  }
+  const latentIconInventory = snapshot.coverageInventory.find(
+    (item) => item.identity.id === 'latent-icon',
+  );
+  assert.equal(latentIconInventory.identity.ariaLabel, 'No owner');
+  assert.equal(latentIconInventory.categories.svgRoot, true);
+  assert.equal(snapshot.meta.coverage.scope, 'all-visible-and-opacity-hidden-semantic-elements');
   assert.equal(snapshot.meta.coverage.interactionStateCoverage.hover, 'not-tested');
-  assert.equal(snapshot.interactionManifest.scope, 'all-visible-interactive-roots');
+  assert.equal(
+    snapshot.interactionManifest.scope,
+    'all-visible-and-opacity-hidden-semantic-interactive-roots',
+  );
   assert.equal(snapshot.interactionManifest.complete, false);
-  assert.equal(snapshot.interactionManifest.controls.length, 1);
+  assert.equal(snapshot.interactionManifest.controls.length, 2);
   assert.equal(snapshot.interactionManifest.controls[0].elementIndex, capsule.i);
   assert.equal(snapshot.interactionManifest.controls[0].edges.length, 8);
   assert.ok(
@@ -231,6 +304,13 @@ test('snapshot retains nested pills, textless SVG icon geometry, pseudo content,
       (edge) => edge.status === 'not-tested' && edge.evidence.length === 0,
     ),
   );
+  const latentControlManifest = snapshot.interactionManifest.controls.find(
+    (control) => control.elementIndex === latentControl.i,
+  );
+  assert.equal(latentControlManifest.exposure.state, 'visible');
+  assert.equal(latentControlManifest.edges[0].edge, 'hover');
+  assert.equal(latentControlManifest.edges[0].status, 'potential-hover-not-tested');
+  assert.equal(latentControlManifest.edges[0].evidence.length, 0);
 });
 
 test('dom probe keeps a textless SVG in triage structure while exposing full elements', async () => {

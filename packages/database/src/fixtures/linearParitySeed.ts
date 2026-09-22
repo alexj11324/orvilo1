@@ -479,10 +479,10 @@ const ensureMyIssuesTasks = async (
     .select({ id: tasks.id, identifier: tasks.identifier })
     .from(tasks)
     .where(and(eq(tasks.workspaceId, workspaceId), inArray(tasks.identifier, identifiers)));
-  const definitionById = new Map(
+  const definitionById = new Map<string, (typeof LINEAR_PARITY_MY_ISSUES)[number]>(
     LINEAR_PARITY_MY_ISSUES.map((definition) => [definition.id, definition]),
   );
-  const definitionByIdentifier = new Map(
+  const definitionByIdentifier = new Map<string, (typeof LINEAR_PARITY_MY_ISSUES)[number]>(
     LINEAR_PARITY_MY_ISSUES.map((definition) => [definition.identifier, definition]),
   );
 

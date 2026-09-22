@@ -289,6 +289,8 @@ export default {
   'resources.link.save': 'Save',
   'resources.link.saveError': 'Could not save the link. Check the URL and try again.',
   'resources.link.title': 'Title (optional)',
+  'resources.link.titleLabel': 'Title',
+  'resources.link.optional': '(optional)',
   'resources.link.url': 'URL',
   'resources.addError': 'Could not add the library to this project.',
   'resources.addModal.added': 'Added',

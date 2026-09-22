@@ -123,6 +123,12 @@ describe('project resources', () => {
     });
   });
 
+  it('keeps the add action available so an empty URL receives form validation', () => {
+    render(<ProjectLinkForm projectId="prj_1" />);
+
+    expect(screen.getByRole('button', { name: 'resources.link.add' })).toBeEnabled();
+  });
+
   it('keeps input after a rejected save and rejects unsafe URLs before submitting', async () => {
     mocks.saveLink.mockRejectedValue(new Error('Forbidden'));
     render(<ProjectLinkForm projectId="prj_1" />);

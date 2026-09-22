@@ -8,6 +8,7 @@
     ],
     "safety": "read-only"
   },
+  "authorization": "composer-entry-example-v1",
   "candidate": {
     "cdp": "http://localhost:9223",
     "match": "app://renderer/",
@@ -20,7 +21,7 @@
   },
   "reference": {
     "cdp": "http://localhost:9222",
-    "match": "https://linear.app/",
+    "match": "https://linear.app/bdiverifier/project/acp-harness-%E9%80%80%E5%BD%B9-caid-%E5%B7%A5%E7%A8%8B%E5%8C%96-0b1d5e6029a2/",
     "start": "https://linear.app/bdiverifier/project/acp-harness-%E9%80%80%E5%BD%B9-caid-%E5%B7%A5%E7%A8%8B%E5%8C%96-0b1d5e6029a2/overview",
     "mappings": [
       ["/bdiverifier", "/:workspace"],

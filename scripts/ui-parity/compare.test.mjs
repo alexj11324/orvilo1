@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { compareTransitions, transition } from './compare.mjs';
+import { compareSequences, compareTransitions, transition } from './compare.mjs';
 import { isPendingIndicator, partitionPending, selectTargets } from './targets.mjs';
 
 test('scoped loading remains blocking while shell loading is retained separately', () => {
@@ -96,4 +96,43 @@ test('matching measured transitions have a scoped verdict', () => {
     ).verdict,
     'observed-match',
   );
+});
+
+test('compares every action in a sequence instead of only the final state', () => {
+  const matchingSecond = run({ dialogs: ['dialog:Properties'] });
+  assert.equal(
+    compareSequences(
+      [run({ menus: ['menu:Actions'] }), matchingSecond],
+      [run({ dialogs: ['dialog:Wrong first step'] }), matchingSecond],
+    ).verdict,
+    'different',
+  );
+});
+
+test('a reload observation may match without inventing a click or semantic change', () => {
+  const reload = {
+    actionType: 'reload',
+    actionVerified: true,
+    settled: true,
+    changed: false,
+    after: before,
+    effect: transition(before, before),
+  };
+  assert.equal(compareSequences([reload], [reload]).verdict, 'observed-match');
+});
+
+test('an unverified sequence step is inconclusive even when later steps match', () => {
+  const untrusted = { ...run({ menus: ['menu:Actions'] }), eventVerified: false };
+  assert.equal(
+    compareSequences(
+      [untrusted, run({ dialogs: ['dialog:Properties'] })],
+      [run({ menus: ['menu:Actions'] }), run({ dialogs: ['dialog:Properties'] })],
+    ).verdict,
+    'inconclusive',
+  );
+});
+
+test('an empty or truncated sequence cannot pass', () => {
+  assert.equal(compareSequences([], []).verdict, 'inconclusive');
+  assert.equal(compareSequences([run({})], []).verdict, 'inconclusive');
 });

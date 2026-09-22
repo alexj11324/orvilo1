@@ -1,8 +1,15 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { compareTransitions, transition } from './compare.mjs';
+import { assertAuthorizedScenario } from './authorization.mjs';
+import { compareSequences, transition } from './compare.mjs';
 import { installEventTrace } from './events.mjs';
+import {
+  normalizeLocationRoute,
+  parseActions,
+  routeMappingsForSurface,
+  validateSurfaceMappings,
+} from './scenario.mjs';
 import { createStabilityWindow } from './stability.mjs';
 import { isPendingIndicator, partitionPending, selectTargets } from './targets.mjs';
 
@@ -10,6 +17,7 @@ import { isPendingIndicator, partitionPending, selectTargets } from './targets.m
 function observe(
   action,
   mappings,
+  routeMappings,
   inspectTarget,
   selectTargets,
   isPendingIndicator,
@@ -17,6 +25,7 @@ function observe(
   readinessScope,
   arm,
   installEventTrace,
+  normalizeLocationRoute,
 ) {
   const visible = (element) => {
     if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
@@ -95,7 +104,7 @@ function observe(
     root,
   );
   return {
-    route: normalize(location.pathname + location.search + location.hash),
+    route: normalizeLocationRoute(location.pathname, location.search, location.hash, routeMappings),
     dialogs: values('[role="dialog"],[role="alertdialog"],dialog[open]'),
     menus: values('[role="menu"],[role="listbox"]'),
     editors: elements(
@@ -169,128 +178,176 @@ async function connect(surface) {
 }
 
 const delay = () => new Promise((resolve) => setTimeout(resolve, 250));
-async function record(surface, action, directory) {
+async function record(surface, actions, directory) {
   const client = await connect(surface);
-  const sample = (target = false, arm = false) =>
+  const routeMappings = routeMappingsForSurface(surface);
+  const sample = (action, target = false, arm = false) =>
     client.evaluate(
-      `(${observe.toString()})(${JSON.stringify(action)},${JSON.stringify(surface.mappings || [])},${target},${selectTargets.toString()},${isPendingIndicator.toString()},${partitionPending.toString()},${JSON.stringify(surface.readinessScope || null)},${arm},${installEventTrace.toString()})`,
+      `(${observe.toString()})(${JSON.stringify(action)},${JSON.stringify(surface.mappings || [])},${JSON.stringify(routeMappings)},${target},${selectTargets.toString()},${isPendingIndicator.toString()},${partitionPending.toString()},${JSON.stringify(surface.readinessScope || null)},${arm},${installEventTrace.toString()},${normalizeLocationRoute.toString()})`,
     );
   try {
     await client.send('Page.enable');
     await client.send('Page.bringToFront');
-    const navigationMarker = crypto.randomUUID();
+    let navigationMarker = crypto.randomUUID();
     await client.evaluate(`window.__parityNavigationMarker = ${JSON.stringify(navigationMarker)}`);
     await client.send('Page.navigate', { url: surface.start });
-    const deadline = Date.now() + 30000;
-    let target;
-    let before;
-    let baselineSettled = false;
-    const baselineStable = createStabilityWindow();
     const capture = async (name) => {
       const shot = await client.send('Page.captureScreenshot', { format: 'png' });
       await writeFile(path.join(directory, `${name}.png`), Buffer.from(shot.data, 'base64'));
     };
-    while (Date.now() < deadline) {
-      try {
-        // A same-URL reload can briefly leave the old DOM queryable after Page.navigate returns.
-        // Do not use those controls as proof that the requested start document is ready.
-        if (
-          await client.evaluate(
-            `window.__parityNavigationMarker === ${JSON.stringify(navigationMarker)}`,
-          )
-        ) {
-          baselineStable(null, false, Date.now());
-          await delay();
-          continue;
-        }
-        target = await sample(true);
-        before = await sample();
-        const ready =
-          target.valid &&
-          !before.busy &&
-          (await client.evaluate('document.readyState === "complete"'));
-        if (baselineStable({ state: before, target: target.target }, ready, Date.now())) {
-          await capture('before');
-          // Screenshot capture is asynchronous: never click against a baseline that changed meanwhile.
-          target = await sample(true);
-          const confirmed = await sample();
-          if (
-            baselineStable(
-              { state: confirmed, target: target.target },
-              target.valid && !confirmed.busy,
-              Date.now(),
-            )
-          ) {
-            before = confirmed;
-            baselineSettled = true;
-            break;
+    const markerRemains = (marker) =>
+      client.evaluate(`window.__parityNavigationMarker === ${JSON.stringify(marker)}`);
+    const readiness = async (state) =>
+      !state.busy && (await client.evaluate('document.readyState === "complete"'));
+    const establishBaseline = async (action, imageName, marker) => {
+      const stable = createStabilityWindow();
+      const deadline = Date.now() + 30000;
+      let target;
+      while (Date.now() < deadline) {
+        try {
+          if (marker && (await markerRemains(marker))) {
+            stable(null, false, Date.now());
+            await delay();
+            continue;
           }
+          target = action.type === 'click' ? await sample(action, true) : null;
+          const state = await sample(action);
+          const ready = (action.type !== 'click' || target.valid) && (await readiness(state));
+          const value = { state, target: target?.target || null };
+          if (stable(value, ready, Date.now())) {
+            await capture(imageName);
+            const confirmedTarget = action.type === 'click' ? await sample(action, true) : null;
+            const confirmed = await sample(action);
+            const confirmedValue = { state: confirmed, target: confirmedTarget?.target || null };
+            if (
+              (action.type !== 'click' || confirmedTarget.valid) &&
+              (await readiness(confirmed)) &&
+              JSON.stringify(confirmedValue) === JSON.stringify(value)
+            ) {
+              return { before: confirmed, target: confirmedTarget };
+            }
+            stable(null, false, Date.now());
+          }
+        } catch {
+          stable(null, false, Date.now());
+          /* Navigation can destroy the old execution context. */
         }
-      } catch {
-        baselineStable(null, false, Date.now());
-        /* Navigation can destroy the old execution context. */
+        await delay();
       }
-      await delay();
-    }
-    if (!baselineSettled) throw new Error(target?.reason || 'Starting state never stabilized');
-    if (new URL(surface.start).pathname !== (await client.evaluate('location.pathname')))
-      throw new Error('Unexpected starting route');
-    // Re-resolve immediately before dispatch: earlier rectangles may have gone stale.
-    target = await sample(true, true);
-    if (!target.valid) throw new Error('Target changed before click');
-    await client.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed',
-      x: target.x,
-      y: target.y,
-      button: 'left',
-      clickCount: 1,
-    });
-    await client.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased',
-      x: target.x,
-      y: target.y,
-      button: 'left',
-      clickCount: 1,
-    });
-    const event = await client.evaluate('window.__parityEventTrace?.read().click ?? null');
-    const samples = [];
-    let previous = '';
-    let stableSince = Date.now();
-    let settled = false;
-    let after = before;
-    const end = Date.now() + 15000;
-    while (Date.now() < end) {
-      await delay();
-      after = await sample();
-      samples.push(after);
-      const signature = JSON.stringify(after);
-      if (signature !== previous || after.busy) stableSince = Date.now();
-      previous = signature;
-      if (signature !== JSON.stringify(before) && Date.now() - stableSince >= 1500) {
-        settled = true;
-        break;
-      }
-    }
-    await capture('after');
-    const result = {
-      before,
-      after,
-      target,
-      event,
-      eventTrace: await client.evaluate('window.__parityEventTrace?.read() ?? null'),
-      samples,
-      hitVerified: target.valid,
-      eventVerified: !!event?.trusted && !!event?.matched,
-      settled,
-      changed: JSON.stringify(before) !== JSON.stringify(after),
-      effect: transition(before, after),
+      throw new Error(target?.reason || 'Action baseline never stabilized');
     };
-    await writeFile(path.join(directory, 'trace.json'), JSON.stringify(result, null, 2));
-    return result;
+    const establishAfter = async (action, before, marker, requireChange) => {
+      const stable = createStabilityWindow();
+      const deadline = Date.now() + 30000;
+      const samples = [];
+      let after = before;
+      while (Date.now() < deadline) {
+        try {
+          if (marker && (await markerRemains(marker))) {
+            stable(null, false, Date.now());
+            await delay();
+            continue;
+          }
+          after = await sample(action);
+          samples.push(after);
+          const changed = JSON.stringify(before) !== JSON.stringify(after);
+          if (stable(after, (await readiness(after)) && (!requireChange || changed), Date.now()))
+            return { after, samples, settled: true };
+        } catch {
+          stable(null, false, Date.now());
+          /* Navigation can destroy the old execution context. */
+        }
+        await delay();
+      }
+      return { after, samples, settled: false };
+    };
+
+    const results = [];
+    for (const [index, action] of actions.entries()) {
+      const prefix = actions.length === 1 ? '' : `step-${String(index + 1).padStart(2, '0')}-`;
+      const baseline = await establishBaseline(action, `${prefix}before`, navigationMarker);
+      navigationMarker = null;
+      if (index === 0) {
+        const expected = new URL(surface.start);
+        const actual = await client.evaluate('location.pathname + location.search + location.hash');
+        if (expected.pathname + expected.search + expected.hash !== actual)
+          throw new Error('Unexpected starting route');
+      }
+
+      let result;
+      if (action.type === 'reload') {
+        const reloadMarker = crypto.randomUUID();
+        await client.evaluate(`window.__parityNavigationMarker = ${JSON.stringify(reloadMarker)}`);
+        await client.send('Page.reload');
+        const observed = await establishAfter(action, baseline.before, reloadMarker, false);
+        await capture(`${prefix}after`);
+        result = {
+          actionType: 'reload',
+          actionVerified: !(await markerRemains(reloadMarker)),
+          before: baseline.before,
+          after: observed.after,
+          samples: observed.samples,
+          settled: observed.settled,
+          changed: JSON.stringify(baseline.before) !== JSON.stringify(observed.after),
+          effect: transition(baseline.before, observed.after),
+        };
+      } else {
+        // Re-resolve and arm immediately before dispatch: earlier rectangles may have gone stale.
+        const target = await sample(action, true, true);
+        if (!target.valid) throw new Error(target.reason || 'Target changed before click');
+        await client.send('Input.dispatchMouseEvent', {
+          type: 'mousePressed',
+          x: target.x,
+          y: target.y,
+          button: 'left',
+          clickCount: 1,
+        });
+        await client.send('Input.dispatchMouseEvent', {
+          type: 'mouseReleased',
+          x: target.x,
+          y: target.y,
+          button: 'left',
+          clickCount: 1,
+        });
+        let eventTrace = null;
+        try {
+          eventTrace = await client.evaluate('window.__parityEventTrace?.read() ?? null');
+        } catch {
+          /* A document navigation loses the witness and must remain inconclusive. */
+        }
+        const observed = await establishAfter(action, baseline.before, null, true);
+        await capture(`${prefix}after`);
+        result = {
+          actionType: 'click',
+          actionVerified:
+            target.valid && !!eventTrace?.click?.trusted && !!eventTrace?.click?.matched,
+          before: baseline.before,
+          after: observed.after,
+          target,
+          event: eventTrace?.click || null,
+          eventTrace,
+          samples: observed.samples,
+          hitVerified: target.valid,
+          eventVerified: !!eventTrace?.click?.trusted && !!eventTrace?.click?.matched,
+          settled: observed.settled,
+          changed: JSON.stringify(baseline.before) !== JSON.stringify(observed.after),
+          effect: transition(baseline.before, observed.after),
+        };
+      }
+      results.push(result);
+      if (!result.actionVerified || !result.settled) break;
+    }
+    await writeFile(
+      path.join(directory, 'trace.json'),
+      JSON.stringify(actions.length === 1 ? results[0] : { steps: results }, null, 2),
+    );
+    return results;
   } finally {
-    await client
-      .evaluate('window.__parityEventTrace?.stop(); delete window.__parityEventTrace')
-      .catch(() => {});
+    try {
+      await client.evaluate('window.__parityEventTrace?.stop(); delete window.__parityEventTrace');
+    } catch {
+      /* The last action may already have destroyed its execution context. */
+    }
     client.close();
   }
 }
@@ -299,19 +356,24 @@ const [configFile, output] = process.argv.slice(2);
 if (!configFile || !output)
   throw new Error('Usage: node scripts/ui-parity/run.mjs scenario.json output-directory');
 const config = JSON.parse(await readFile(configFile, 'utf8'));
-if (config.action.safety !== 'read-only')
-  throw new Error('This runner only executes explicitly classified read-only actions.');
+const actions = parseActions(config);
+validateSurfaceMappings(config.reference, 'reference');
+validateSurfaceMappings(config.candidate, 'candidate');
+assertAuthorizedScenario(config, actions);
 const runs = {};
+const sequences = {};
 for (const side of ['reference', 'candidate']) {
   const directory = path.join(output, side);
   await mkdir(directory, { recursive: true });
   try {
-    runs[side] = await record(config[side], config.action, directory);
+    sequences[side] = await record(config[side], actions, directory);
+    runs[side] = actions.length === 1 ? sequences[side][0] : sequences[side];
   } catch (error) {
     runs[side] = { error: String(error) };
+    sequences[side] = runs[side];
   }
 }
-const verdict = compareTransitions(runs.reference, runs.candidate);
+const verdict = compareSequences(sequences.reference, sequences.candidate);
 await writeFile(
   path.join(output, 'comparison.json'),
   JSON.stringify({ scenario: config, runs, verdict }, null, 2),

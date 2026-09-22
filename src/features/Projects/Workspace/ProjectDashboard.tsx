@@ -14,6 +14,7 @@ import {
   scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
+import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import type { ProjectDetail } from '@/store/project';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -58,9 +59,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
     <Flexbox className={styles.main} gap={24}>
       <Flexbox className={styles.section} gap={10}>
         <Flexbox horizontal align={'center'} gap={7}>
-          <Text fontSize={15} weight={600}>
-            {t('overview.milestones')}
-          </Text>
+          <Text {...SECTION_LABEL_PROPS}>{t('overview.milestones')}</Text>
         </Flexbox>
         {milestones.length === 0 ? (
           <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>

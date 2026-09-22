@@ -1,5 +1,3 @@
-import { cssVar } from 'antd-style';
-
 /**
  * One visual spec for the milestone diamond, shared by the overview body
  * (`Workspace/ProjectDashboard`) and the right-hand rail
@@ -7,17 +5,24 @@ import { cssVar } from 'antd-style';
  * two local copies of these numbers drift apart the moment one is touched —
  * which is exactly how the rail ended up at 12px while the body sat at 14px.
  *
- * Linear draws the glyph in purple (measured `fill: lch(42.969% 59.31 288.43)`,
- * `stroke: lch(48% 59.31 288.43)` on the reference, 2026-09-22). antd's status
- * semantics only cover `success | processing | error | warning`, none of which
- * is purple, so this uses the palette token the repo already reads as its
- * violet marker — `cssVar.purple` (antd purple-6, `#722ED1` in light mode),
- * the same one `components/ExecutionStatus` uses for its violet states.
+ * Linear draws the glyph in its own brand indigo — measured on the reference
+ * (2026-09-22) as `stroke: #5e6ad2`, `fill: #505ec4`. This is a **borrowed
+ * brand colour, not an Orvilo one**: antd has no semantic for it (`success |
+ * processing | error | warning` is the whole set), so the previous
+ * `cssVar.purple` was standing in — and rendering the wrong hue entirely.
+ * Measured on the candidate, that token resolves to `#bd54c6`, a **magenta**;
+ * the reference's is a blue-leaning indigo. That is a hue difference, not a
+ * shade difference, so no amount of lightening or darkening closes it. (The
+ * token's own comment used to claim antd purple-6 `#722ED1`; the palette in
+ * this app is customised, so the claim was simply wrong.)
  *
- * Deliberately not `cssVar.colorPrimary`: that token follows the user's
- * appearance setting, which would make a milestone change colour per user.
+ * A literal is correct here for the same reason as
+ * `AgentSidebar/Topic/List/Item/metaCardData`'s `MERGED_PURPLE`: there is no
+ * token to read. The glyph paints in the stroke colour for both `color` and
+ * `fill`, so the reference's slightly darker fill is not split out — one
+ * constant keeps the revert to an Orvilo palette colour a one-line edit.
  */
-export const MILESTONE_ICON_COLOR = cssVar.purple;
+export const MILESTONE_ICON_COLOR = '#5e6ad2';
 
 /** Reference glyph box, measured with `getComputedStyle` on the reference. */
 export const MILESTONE_ICON_SIZE = 16;

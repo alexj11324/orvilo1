@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MILESTONE_ICON_COLOR, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
+import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -86,9 +87,7 @@ export function ProjectPanelSection({
           })}
           onClick={() => setExpanded((value) => !value)}
         >
-          <Text fontSize={13} type={'secondary'} weight={500}>
-            {title}
-          </Text>
+          <Text {...SECTION_LABEL_PROPS}>{title}</Text>
           <Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size={12} />
         </button>
         {action}

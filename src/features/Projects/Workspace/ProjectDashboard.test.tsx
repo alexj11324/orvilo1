@@ -2,15 +2,19 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
 import { DiamondIcon } from 'lucide-react';
-import type { HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ProjectDetail } from '@/store/project';
+import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { MILESTONE_ICON_COLOR, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
+import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
+import type { ProjectDetail, ProjectListItem } from '@/store/project';
 
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
 import { ProjectIssueProgress } from '../Layout/ProjectIssueProgress';
 import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePanel';
 import ProjectTabsBar from '../Layout/TabsBar';
+import ProjectListPage from '../List';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
@@ -47,9 +51,14 @@ const mocks = vi.hoisted(() => ({
   iconProps: [] as Record<string, unknown>[],
   // Same for `Text`, which the stub flattens to a bare span.
   textProps: [] as Record<string, unknown>[],
+  // And for `Tag`, which takes its glyph as an `icon` *element*: that element
+  // is never mounted by the stub, so its props are only readable here.
+  tagProps: [] as Record<string, unknown>[],
   // Milestones the mocked project detail resolves to; `[]` by default so the
   // existing empty-state assertions keep their fixture.
   milestones: [] as NonNullable<ProjectDetail['milestones']>,
+  // Rows the mocked project list resolves to; empty unless a test seeds it.
+  projectList: [] as ProjectListItem[],
 }));
 
 // Only the dashboard/panel components are under test; shell components are
@@ -76,7 +85,10 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
     <button onClick={onClick}>{children}</button>
   ),
   DropdownMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  Tag: (props: { children?: ReactNode; icon?: ReactNode } & Record<string, unknown>) => {
+    mocks.tagProps.push(props);
+    return <span>{props.children}</span>;
+  },
   Text: (props: { children?: ReactNode } & Record<string, unknown>) => {
     mocks.textProps.push(props);
     return <span>{props.children}</span>;
@@ -141,7 +153,7 @@ vi.mock('@/features/AgentTasks/features/AssigneeUserAvatar', () => ({ default: (
 vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
 vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
 vi.mock('@/store/project', () => ({
-  useCurrentProjectList: () => [],
+  useCurrentProjectList: () => mocks.projectList,
   useCurrentProjectDetail: () =>
     mocks.projectResolved ? { ...detail, milestones: mocks.milestones } : undefined,
   useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: vi.fn() }),
@@ -247,7 +259,9 @@ beforeEach(() => {
   mocks.goals = [];
   mocks.iconProps = [];
   mocks.textProps = [];
+  mocks.tagProps = [];
   mocks.milestones = [];
+  mocks.projectList = [];
 });
 
 afterEach(cleanup);
@@ -665,7 +679,7 @@ describe('project milestone rows', () => {
     expect(railName).toMatchObject({ fontSize: 12, weight: 450 });
   });
 
-  it('draws the milestone diamond with one shared colour and size on both surfaces', () => {
+  it('draws the milestone diamond with one shared spec on both surfaces', () => {
     render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
     const overviewIcon = renderedDiamonds()[0] ?? {};
 
@@ -676,12 +690,16 @@ describe('project milestone rows', () => {
     render(<ProjectSidePanel projectId="apollo" />);
     const railIcon = renderedDiamonds()[0] ?? {};
 
-    // The reference glyph is a solid purple diamond at 16x16; antd exposes no
-    // purple status semantic, so the repo's violet palette token stands in for
-    // it, and `fill` needs the token too — `currentColor` here would resolve to
-    // the link colour, not the glyph colour.
+    // Asserted against the shared constants rather than a literal, so the two
+    // surfaces can never drift apart, and so the glyph's colour stays free to
+    // change in one place. `fill` must repeat `color`: `currentColor` would
+    // resolve to the enclosing link's colour instead of the glyph's.
     for (const icon of [overviewIcon, railIcon]) {
-      expect(icon).toMatchObject({ color: cssVar.purple, fill: cssVar.purple, size: 16 });
+      expect(icon).toMatchObject({
+        color: MILESTONE_ICON_COLOR,
+        fill: MILESTONE_ICON_COLOR,
+        size: MILESTONE_ICON_SIZE,
+      });
     }
   });
 });
@@ -697,6 +715,140 @@ describe('project overview member scope', () => {
     render(<ProjectWorkspace />);
     expect(mocks.projectMembersQuery).toHaveBeenCalledWith('prj_1', true);
     expect(mocks.projectMembersQuery).not.toHaveBeenCalledWith('apollo', true);
+  });
+});
+
+// Linear's rail Properties card has exactly eight rows — Status, Priority,
+// Lead, Members, Dates, Teams, Slack, Labels — and no `Milestones` row:
+// milestones live in their own card below it. An earlier pass added the row
+// anyway, and nothing could see it: `require-linear-tokens` only checks size
+// ceilings, so a row Linear does not have passes that gate by construction.
+// This asserts the row *set*, by membership rather than by count, so any row
+// added or dropped has to be acknowledged here.
+describe('project properties row set', () => {
+  const renderedRowLabels = (value: ProjectDetail) => {
+    const { container } = render(<ProjectPropertiesCard detail={value} projectId={'prj_1'} />);
+    const card = container.firstElementChild;
+    if (!card) throw new Error('ProjectPropertiesCard rendered no card');
+    return new Set([...card.children].map((row) => row.firstElementChild?.textContent ?? ''));
+  };
+
+  it('renders Linear’s row set and no Milestones row', () => {
+    expect(
+      renderedRowLabels({
+        ...detail,
+        milestones: [milestone],
+        teams: [{ id: 'team_1', name: 'orvilo' }] as NonNullable<ProjectDetail['teams']>,
+      }),
+    ).toEqual(
+      new Set([
+        'properties.status',
+        'properties.priority',
+        'properties.lead',
+        'properties.members',
+        'properties.dates',
+        // The one label whose call site carries an inline default, so this is
+        // the string the row renders rather than its key in this i18n stub.
+        'Teams',
+        'properties.labels',
+      ]),
+    );
+  });
+});
+
+// One project status, one glyph. The details side had grown a private
+// status → icon map — seven of its eight entries disagreed with the shared
+// spec — so `/projects` and a project's own pages drew a different icon for the
+// same status. `Icon` is stubbed here, so the props it was drawn with are all
+// there is to see; the assertion is therefore *equality between the surfaces*
+// rather than any particular icon, which turns red whichever side moves.
+describe('project status glyph', () => {
+  const STATUSES = [
+    'active',
+    'archived',
+    'backlog',
+    'canceled',
+    'completed',
+    'paused',
+    'planned',
+    'reviewing',
+  ] as const;
+
+  /** The glyph the rail Properties card puts in its status control. */
+  const railGlyph = (status: string) => {
+    render(
+      <ProjectPropertiesCard
+        detail={{ ...detail, project: { ...detail.project, status } }}
+        projectId={'prj_1'}
+      />,
+    );
+    const visual = PROJECT_STATUS_VISUALS[resolveProjectStatus(status)];
+    // Identified by the colour the control paints itself, so this reads the
+    // glyph of the status under test and not whichever icon came first.
+    const control = mocks.tagProps.find((props) => props.color === visual.color);
+    return (control?.icon as ReactElement<{ icon?: unknown }> | undefined)?.props.icon;
+  };
+
+  /** The glyph the `/projects` list row draws beside the project name. */
+  const listGlyph = (status: string) => {
+    mocks.projectList = [{ ...detail.project, status } as ProjectListItem];
+    render(<ProjectListPage />);
+    const visual = PROJECT_STATUS_VISUALS[resolveProjectStatus(status)];
+    return mocks.iconProps.find((props) => props.color === visual.color)?.icon;
+  };
+
+  it.each(STATUSES)('draws %s the same way on the project list and in the rail', (status) => {
+    const rail = railGlyph(status);
+    expect(rail).toBeDefined();
+
+    cleanup();
+    mocks.iconProps = [];
+    mocks.tagProps = [];
+
+    expect(listGlyph(status)).toBe(rail);
+  });
+});
+
+// One muted tone for every section label. The candidate had grown several
+// greys for that single semantic, and wrong in both directions: `#999999` on
+// the overview's `Properties` / `Resources` headings (the placeholder tone) and
+// body ink `#080808` on the `Description` label and the `Milestones` heading.
+// Asserted through the shared constant, so a surface that picks a private grey
+// again turns this red — and against the token, so swapping the constant for
+// some other grey has to be deliberate too.
+describe('project section label tone', () => {
+  const labelProps = (key: string) => mocks.textProps.find((props) => props.children === key) ?? {};
+
+  it('pins the tone to the one shared token', () => {
+    expect(MUTED_LABEL_COLOR).toBe(cssVar.colorTextSecondary);
+  });
+
+  it('dims the description disclosure instead of leaving it at body colour', () => {
+    render(<ProjectDescription description="Initial" projectId="prj_1" />);
+    expect(labelProps('overview.descriptionLabel')).toMatchObject({ color: MUTED_LABEL_COLOR });
+    expect(labelProps('overview.descriptionLabel')).not.toHaveProperty('type');
+  });
+
+  // These two call sites pass an inline English default, so the rendered string
+  // is that default rather than the key, in this i18n stub and in en-US alike.
+  it.each(['Properties', 'Resources'])('dims the overview %s heading', (rendered) => {
+    render(<ProjectWorkspace />);
+    expect(labelProps(rendered)).toMatchObject({ color: MUTED_LABEL_COLOR });
+    expect(labelProps(rendered)).not.toHaveProperty('type');
+  });
+
+  it('brings the milestones heading down from body-title scale', () => {
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+    expect(labelProps('overview.milestones')).toMatchObject({
+      color: MUTED_LABEL_COLOR,
+      fontSize: 13,
+      weight: 500,
+    });
+  });
+
+  it('dims the rail section titles the same way as the overview ones', () => {
+    render(<ProjectSidePanel projectId="apollo" />);
+    expect(labelProps('overview.propertiesLabel')).toMatchObject({ color: MUTED_LABEL_COLOR });
   });
 });
 

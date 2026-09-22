@@ -5,6 +5,21 @@
 // offending line with a reason, or `linear-tokens: manual-review` in the PR
 // body for surfaces that legitimately deviate (auth flows, welcome screens).
 //
+// Scope — read this before treating a pass as parity:
+//   * It checks ONE direction of ONE property: added numeric literals against
+//     an upper bound. No lower bound.
+//   * It does not check colour, weight, spacing or icon identity.
+//   * It cannot check *set membership* — whether an element should exist at
+//     all. A row Linear does not have passes this gate by construction,
+//     because nothing in it exceeds a size ceiling. That is not hypothetical:
+//     the rail's Properties card carried an invented `Milestones` row through
+//     this gate. Membership is guarded by a unit test asserting the rendered
+//     row set instead (`Workspace/ProjectDashboard.test.tsx`,
+//     "project properties row set").
+//   * It only sees added lines on gated paths, so a violation moved to an
+//     ungated path, or introduced by a decrease, is invisible to it.
+// A green run here means "no oversized literal was added", nothing more.
+//
 // Usage: node require-linear-tokens.mjs <diff-file> [pr-body-file]
 // Exit 1 with a findings list when a violation is found.
 

@@ -3,20 +3,13 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { DropdownMenu, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import {
-  ArchiveIcon,
-  CheckCircle2Icon,
-  ChevronDownIcon,
-  CircleDashedIcon,
-  CircleDotIcon,
-  CircleSlashIcon,
-  PauseCircleIcon,
-  PlayCircleIcon,
-} from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { projectService } from '@/services/project';
 import type { ProjectDetail } from '@/store/project';
@@ -35,7 +28,6 @@ const styles = createStaticStyles(({ css }) => ({
     flex: none;
     width: 84px;
     font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
   `,
   value: css`
     font-weight: 450;
@@ -77,18 +69,26 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-export const PROJECT_STATUS_META: Record<
-  string,
-  { color?: string; icon: typeof CircleDotIcon; writable: boolean }
-> = {
-  active: { color: 'processing', icon: PlayCircleIcon, writable: true },
-  archived: { icon: ArchiveIcon, writable: true },
-  backlog: { icon: CircleDashedIcon, writable: true },
-  canceled: { icon: CircleSlashIcon, writable: false },
-  completed: { color: 'success', icon: CheckCircle2Icon, writable: false },
-  paused: { color: 'warning', icon: PauseCircleIcon, writable: true },
-  planned: { icon: CircleDotIcon, writable: true },
-  reviewing: { color: 'warning', icon: CircleDotIcon, writable: false },
+/**
+ * Per-status behaviour of the inline status control, and deliberately nothing
+ * else: how a status *looks* comes from `PROJECT_STATUS_VISUALS`, so one
+ * project status can no longer render two different glyphs depending on which
+ * surface drew it. This map used to carry its own icon and colour per status —
+ * seven of the eight disagreed with the shared spec.
+ *
+ * `writable` is the part that is genuinely local: it is editability, i.e.
+ * behaviour, not appearance. Drop it and terminal statuses become settable
+ * again.
+ */
+export const PROJECT_STATUS_META: Record<string, { writable: boolean }> = {
+  active: { writable: true },
+  archived: { writable: true },
+  backlog: { writable: true },
+  canceled: { writable: false },
+  completed: { writable: false },
+  paused: { writable: true },
+  planned: { writable: true },
+  reviewing: { writable: false },
 };
 
 type WritableProjectStatus = 'active' | 'archived' | 'backlog' | 'paused' | 'planned';
@@ -116,7 +116,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
 
   const project = detail.project;
-  const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
+  const statusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(project.status)];
   const teams = detail.teams ?? [];
 
   const changeStatus = useCallback(
@@ -136,7 +136,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const statusItems = useMemo(
     () =>
       WRITABLE_STATUSES.map((status) => ({
-        icon: <Icon icon={PROJECT_STATUS_META[status].icon} size={14} />,
+        icon: <Icon icon={PROJECT_STATUS_VISUALS[status].icon} size={14} />,
         key: status,
         label: t(`status.${status}`),
         onClick: () => void changeStatus(status),
@@ -147,14 +147,14 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   return (
     <Flexbox gap={6}>
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={13} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={13}>
           {t('properties.status')}
         </Text>
         <DropdownMenu items={statusItems}>
           <span className={styles.statusTrigger}>
             <Tag
-              color={statusMeta.color}
-              icon={<Icon icon={statusMeta.icon} size={12} />}
+              color={statusVisual.color}
+              icon={<Icon icon={statusVisual.icon} size={12} />}
               shape={'round'}
               size={'small'}
             >
@@ -168,20 +168,20 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
 
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={12} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.priority')}
         </Text>
         <ProjectPriorityField project={project} />
       </div>
 
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={12} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.lead')}
         </Text>
         <ProjectLeadField project={project} />
       </div>
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={12} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.members')}
         </Text>
         {membersEnabled ? (
@@ -193,14 +193,14 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         )}
       </div>
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={12} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.dates')}
         </Text>
         <ProjectDateFields project={project} />
       </div>
 
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={12} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.teams', { defaultValue: 'Teams' })}
         </Text>
         {teams.length === 0 ? (
@@ -219,26 +219,11 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
 
       <div className={styles.row}>
-        <Text className={styles.label} fontSize={12} type={'secondary'}>
+        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
           {t('properties.labels')}
         </Text>
         <ProjectLabelsField detail={detail} />
       </div>
-
-      {detail.milestones && detail.milestones.length > 0 && (
-        <div className={styles.row}>
-          <Text className={styles.label} fontSize={12} type={'secondary'}>
-            {t('overview.milestones', { defaultValue: 'Milestones' })}
-          </Text>
-          <div className={styles.chipList}>
-            {detail.milestones.map((milestone) => (
-              <Tag key={milestone.id} shape={'round'} size={'small'}>
-                {milestone.name}
-              </Tag>
-            ))}
-          </div>
-        </div>
-      )}
     </Flexbox>
   );
 });

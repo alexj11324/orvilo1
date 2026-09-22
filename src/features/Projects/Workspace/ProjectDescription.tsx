@@ -9,6 +9,7 @@ import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { projectService } from '@/services/project';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -109,9 +110,7 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
         onClick={() => setOpen((value) => !value)}
       >
         <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} size={14} />
-        <Text fontSize={13} weight={500}>
-          {t('overview.descriptionLabel')}
-        </Text>
+        <Text {...SECTION_LABEL_PROPS}>{t('overview.descriptionLabel')}</Text>
       </button>
       <div hidden={!open} id={bodyId}>
         <Editor

@@ -11,10 +11,12 @@ import { useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
+import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
@@ -28,7 +30,6 @@ import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
 import { getProjectOverviewUpdateState } from './projectOverviewUpdates';
 import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
-import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
   content: css`
@@ -79,7 +80,7 @@ const ProjectWorkspace = memo(() => {
   const project = detail.project;
   const projectReference = project.slug ?? projectId!;
 
-  const statusMeta = PROJECT_STATUS_META[project.status] ?? PROJECT_STATUS_META.backlog;
+  const statusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(project.status)];
   const knowledgeBases = detail.knowledgeBases ?? [];
   const { emptyState: updatesEmpty, publishedUpdates: projectUpdates } =
     getProjectOverviewUpdateState(updatesSWR.data);
@@ -114,7 +115,7 @@ const ProjectWorkspace = memo(() => {
             </Flexbox>
 
             <Flexbox horizontal align={'center'} gap={16}>
-              <Text fontSize={13} style={{ minWidth: 72 }} type={'secondary'} weight={500}>
+              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 72 }}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
               <Flexbox
@@ -125,8 +126,8 @@ const ProjectWorkspace = memo(() => {
                 wrap={'wrap'}
               >
                 <Tag
-                  color={statusMeta.color}
-                  icon={<Icon icon={statusMeta.icon} size={12} />}
+                  color={statusVisual.color}
+                  icon={<Icon icon={statusVisual.icon} size={12} />}
                   shape={'round'}
                   size={'small'}
                 >
@@ -150,7 +151,7 @@ const ProjectWorkspace = memo(() => {
             </Flexbox>
 
             <Flexbox horizontal align={'center'} gap={16}>
-              <Text fontSize={13} style={{ minWidth: 72 }} type={'secondary'} weight={500}>
+              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 72 }}>
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
               </Text>
               <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>

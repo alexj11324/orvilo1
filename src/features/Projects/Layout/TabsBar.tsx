@@ -9,6 +9,7 @@ import { useLocation } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
+import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import {
@@ -17,7 +18,6 @@ import {
 } from '@/features/NavPanel/SidebarHeaderSelect';
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
-import { PROJECT_STATUS_META } from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -100,6 +100,8 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
   const membersSWR = useProjectMembersQuery(detail?.project.id, membersEnabled);
 
   const projectReference = detail?.project.slug ?? projectId ?? '';
+  // Same glyph and colour the project list and the rail draw for this status.
+  const headerStatusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(detail?.project.status)];
 
   const items = useMemo<SwitcherItem[]>(
     () =>
@@ -171,18 +173,10 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
           detail?.project.id ? (
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
-                color={PROJECT_STATUS_META[detail.project.status]?.color}
+                color={headerStatusVisual.color}
+                icon={<Icon icon={headerStatusVisual.icon} size={12} />}
                 shape={'round'}
                 size={'small'}
-                icon={
-                  <Icon
-                    size={12}
-                    icon={
-                      (PROJECT_STATUS_META[detail.project.status] ?? PROJECT_STATUS_META.backlog)
-                        .icon
-                    }
-                  />
-                }
               >
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,

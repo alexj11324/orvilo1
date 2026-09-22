@@ -822,6 +822,7 @@
   "teams.transferTo": "目标团队",
   "teams.transferUpdated": "已转到其他团队",
   "teams.triage": "分诊",
+  "teams.triageCreate": "创建待分诊任务",
   "teams.triageDisabled": "该团队已关闭分诊入口",
   "teams.triageEmpty": "没有待分诊的任务",
   "teams.triageFailed": "分诊更新失败",

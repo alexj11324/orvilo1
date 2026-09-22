@@ -22,6 +22,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import { resolveTaskStatus } from '@/components/ExecutionStatus';
+import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
@@ -566,8 +567,11 @@ const TeamPage = memo(() => {
                   ) : triageState === 'loading' ? (
                     <SkeletonList aria-label={t('teams.loading')} rows={4} />
                   ) : triageState === 'empty' ? (
-                    <Center flex={1} padding={48}>
+                    <Center flex={1} gap={12} padding={48}>
                       <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
+                      <Button icon={PlusIcon} size={'small'} onClick={() => createTaskModal()}>
+                        {t('teams.triageCreate')}
+                      </Button>
                     </Center>
                   ) : (
                     <Flexbox gap={2}>

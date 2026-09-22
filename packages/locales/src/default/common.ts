@@ -889,6 +889,7 @@ export default {
   'teams.transferUpdated': 'Moved to the other team',
   'teams.triage': 'Triage',
   'teams.triageDisabled': 'Triage intake is turned off for this team',
+  'teams.triageCreate': 'Create triage issue',
   'teams.triageEmpty': 'Nothing waiting to be triaged',
   'teams.triageFailed': 'Could not update triage',
   'teams.triageUpdated': 'Triage updated',

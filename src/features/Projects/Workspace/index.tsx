@@ -209,6 +209,7 @@ const ProjectWorkspace = memo(() => {
             </Flexbox>
             <ProjectDescription
               description={project.description}
+              key={project.id}
               projectId={project.id}
               onSaved={() => void mutate()}
             />

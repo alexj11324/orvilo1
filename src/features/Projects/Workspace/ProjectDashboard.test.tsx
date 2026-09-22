@@ -204,20 +204,28 @@ describe('project update composer controls', () => {
 });
 
 describe('project description disclosure', () => {
-  it('exposes disclosure state and a keyboard-accessible editing entry', () => {
-    render(<ProjectDescription description="Project scope" projectId="prj_1" />);
+  it('renders new server descriptions and empty content without requiring an edit-mode click', async () => {
+    const { rerender } = render(<ProjectDescription description="Initial" projectId="prj_1" />);
+    const editor = await screen.findByRole('textbox', { name: 'overview.descriptionEditor' });
+    rerender(<ProjectDescription description="**Revised**" projectId="prj_1" />);
+    await waitFor(() => expect(editor.querySelector('strong')).toHaveTextContent('Revised'));
+    rerender(<ProjectDescription description="" projectId="prj_1" />);
+    await waitFor(() => expect(editor.textContent).toBe(''));
+    expect(screen.queryByRole('button', { name: /descriptionSave|Save/ })).not.toBeInTheDocument();
+  });
+
+  it('exposes an immediately editable rich description and preserves it across disclosure toggles', async () => {
+    render(<ProjectDescription description="**Project scope**" projectId="prj_1" />);
     const disclosure = screen.getByRole('button', { name: 'overview.descriptionLabel' });
     expect(disclosure).toHaveAttribute('aria-expanded', 'true');
-    const entry = screen.getByRole('button', { name: 'Project scope' });
-    expect(entry).toHaveAttribute('type', 'button');
+    const entry = await screen.findByRole('textbox', { name: 'overview.descriptionEditor' });
+    expect(entry).toHaveAttribute('contenteditable', 'true');
+    await waitFor(() => expect(entry.querySelector('strong')).toHaveTextContent('Project scope'));
     fireEvent.click(disclosure);
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('button', { name: 'Project scope' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     fireEvent.click(disclosure);
-    fireEvent.click(screen.getByRole('button', { name: 'Project scope' }));
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /descriptionCancel|Cancel/ }));
-    expect(screen.getByRole('button', { name: 'Project scope' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'overview.descriptionEditor' })).toBe(entry);
   });
 });
 

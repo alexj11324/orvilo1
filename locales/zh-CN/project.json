@@ -178,6 +178,7 @@
   "overview.contextTitle": "项目上下文",
   "overview.description": "从一个问题开始，或查看项目当前的进度与产物。",
   "overview.descriptionCancel": "取消",
+  "overview.descriptionEditor": "项目描述",
   "overview.descriptionEmpty": "添加描述…",
   "overview.descriptionLabel": "描述",
   "overview.descriptionSave": "保存",

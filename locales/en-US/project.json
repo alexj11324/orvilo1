@@ -178,6 +178,7 @@
   "overview.contextTitle": "Project context",
   "overview.description": "Start with a question, or review the project’s progress and outputs.",
   "overview.descriptionCancel": "Cancel",
+  "overview.descriptionEditor": "Project description",
   "overview.descriptionEmpty": "Add a description…",
   "overview.descriptionLabel": "Description",
   "overview.descriptionSave": "Save",

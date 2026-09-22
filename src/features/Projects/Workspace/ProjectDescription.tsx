@@ -1,30 +1,23 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
+import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
+import { Editor, useEditor } from '@lobehub/editor/react';
+import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { projectService } from '@/services/project';
 
 const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    cursor: text;
-
-    width: 100%;
-    padding-block: 4px;
-    padding-inline: 0;
-    border: 0;
-    border-radius: 6px;
-
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
+  editor: css`
+    [contenteditable] {
+      min-height: 32px;
+      font-size: 15px !important;
+      font-weight: 450;
+      line-height: 24px;
     }
   `,
   header: css`
@@ -51,28 +44,57 @@ interface ProjectDescriptionProps {
   projectId: string;
 }
 
-/**
- * Linear's overview keeps the project description as a collapsible document
- * under the updates feed, editable in place. Ours mirrors that: a
- * "Description" disclosure whose body opens an inline editor on click and
- * saves through `project.update`.
- */
-const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved, projectId }) => {
+const plugins = [ReactLinkPlugin, ReactListPlugin];
+
+// Keep the document mounted when collapsed so disclosure never discards a draft.
+const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescriptionProps) => {
   const { t } = useTranslation('project');
+  const editor = useEditor();
+  const bodyId = useId();
   const [open, setOpen] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(description ?? '');
+  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
+  const baseline = useRef<string | undefined>(undefined);
+  const source = useRef(description ?? '');
+  const incoming = useRef(description ?? '');
+  const label = t('overview.descriptionEditor');
+
+  useEffect(
+    () =>
+      editor.getLexicalEditor()?.registerRootListener((root) => {
+        root?.setAttribute('aria-label', label);
+        root?.setAttribute('role', 'textbox');
+        root?.setAttribute('aria-multiline', 'true');
+      }),
+    [editor, label],
+  );
+
+  useEffect(() => {
+    const next = description ?? '';
+    if (!dirty && !pending.current && next !== incoming.current) {
+      incoming.current = next;
+      source.current = next;
+      baseline.current = undefined;
+      editor.setDocument(next ? 'markdown' : 'text', next);
+    }
+  }, [description, dirty, editor]);
 
   const save = async () => {
+    if (pending.current) return;
+    const draft = String(editor.getDocument('markdown') ?? '');
+    pending.current = true;
     setSaving(true);
     try {
       await projectService.update(projectId, { description: draft });
-      setEditing(false);
+      source.current = draft;
+      baseline.current = draft;
+      setDirty(false);
       onSaved?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     } finally {
+      pending.current = false;
       setSaving(false);
     }
   };
@@ -80,6 +102,7 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
   return (
     <Flexbox gap={4}>
       <button
+        aria-controls={bodyId}
         aria-expanded={open}
         className={styles.header}
         type="button"
@@ -90,16 +113,27 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
           {t('overview.descriptionLabel')}
         </Text>
       </button>
-      {open &&
-        (editing ? (
+      <div hidden={!open} id={bodyId}>
+        <Editor
+          className={styles.editor}
+          content={description || ''}
+          debounceWait={0}
+          editable={!saving}
+          editor={editor}
+          placeholder={t('overview.descriptionEmpty')}
+          plugins={plugins}
+          style={{ padding: '4px 0' }}
+          type={description ? 'markdown' : 'text'}
+          onChange={(current) => {
+            if (baseline.current !== undefined && !pending.current)
+              setDirty(String(current.getDocument('markdown') ?? '') !== baseline.current);
+          }}
+          onFocus={() => {
+            baseline.current ??= String(editor.getDocument('markdown') ?? '');
+          }}
+        />
+        {dirty && (
           <Flexbox gap={8}>
-            <TextArea
-              autoFocus
-              aria-label={t('overview.descriptionLabel')}
-              autoSize={{ minRows: 3 }}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-            />
             <Flexbox horizontal gap={8}>
               <Button loading={saving} size={'small'} type={'primary'} onClick={() => void save()}>
                 {t('overview.descriptionSave', { defaultValue: 'Save' })}
@@ -108,42 +142,20 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
                 disabled={saving}
                 size={'small'}
                 onClick={() => {
-                  setDraft(description ?? '');
-                  setEditing(false);
+                  if (pending.current) return;
+                  baseline.current = undefined;
+                  editor.setDocument(source.current ? 'markdown' : 'text', source.current);
+                  setDirty(false);
                 }}
               >
                 {t('overview.descriptionCancel', { defaultValue: 'Cancel' })}
               </Button>
             </Flexbox>
           </Flexbox>
-        ) : (
-          <button
-            className={styles.body}
-            type="button"
-            onClick={() => {
-              setDraft(description ?? '');
-              setEditing(true);
-            }}
-          >
-            {description ? (
-              <Text
-                fontSize={15}
-                style={{ color: 'lch(19.588 1.25 282)', whiteSpace: 'pre-wrap' }}
-                weight={450}
-              >
-                {description}
-              </Text>
-            ) : (
-              <Text fontSize={14} type={'secondary'}>
-                {t('overview.descriptionEmpty', { defaultValue: 'Add a description…' })}
-              </Text>
-            )}
-          </button>
-        ))}
+        )}
+      </div>
     </Flexbox>
   );
-});
-
-ProjectDescription.displayName = 'ProjectDescription';
+};
 
 export default ProjectDescription;

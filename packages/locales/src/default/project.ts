@@ -146,6 +146,7 @@ export default {
   'overview.activeTasks': 'In progress',
   'overview.contextEnabled': 'Project context loaded',
   'overview.descriptionLabel': 'Description',
+  'overview.descriptionEditor': 'Project description',
   'overview.contextTitle': 'Project context',
   'overview.description': 'Start with a question, or review the project’s progress and outputs.',
   'overview.goalCount': '{{completed}} of {{total}} goals completed',

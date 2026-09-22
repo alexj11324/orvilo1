@@ -13,6 +13,7 @@ import { TOGGLE_BUTTON_ID } from '@/features/NavPanel/ToggleLeftPanelButton';
 import { useGlobalStore } from '@/store/global';
 import {
   NAV_PANEL_AUTO_COLLAPSE_BELOW,
+  NAV_PANEL_AUTO_COLLAPSED_KEY,
   NAV_PANEL_MAX_WIDTH,
   NAV_PANEL_MIN_WIDTH,
   systemStatusSelectors,
@@ -124,8 +125,9 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, 
 
   // Narrow windows can't afford a fixed nav column: auto-collapse below the
   // breakpoint (headers still expose ToggleLeftPanelButton) and restore the
-  // previous state when the window widens again.
-  const autoCollapsedRef = useRef(false);
+  // previous state when the window widens again. The session flag separates an
+  // auto-collapse from a deliberate user collapse across reloads.
+  const autoCollapsedRef = useRef(sessionStorage.getItem(NAV_PANEL_AUTO_COLLAPSED_KEY) === '1');
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${NAV_PANEL_AUTO_COLLAPSE_BELOW - 1}px)`);
     const apply = () => {
@@ -133,10 +135,12 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, 
       if (media.matches) {
         if (systemStatusSelectors.showLeftPanel(store)) {
           autoCollapsedRef.current = true;
+          sessionStorage.setItem(NAV_PANEL_AUTO_COLLAPSED_KEY, '1');
           store.toggleLeftPanel(false);
         }
       } else if (autoCollapsedRef.current) {
         autoCollapsedRef.current = false;
+        sessionStorage.removeItem(NAV_PANEL_AUTO_COLLAPSED_KEY);
         store.toggleLeftPanel(true);
       }
     };

@@ -69,6 +69,9 @@ export const NAV_PANEL_MAX_WIDTH = 400;
 // Viewport width below which the nav panel auto-collapses into the header
 // toggle instead of pinning a fixed column.
 export const NAV_PANEL_AUTO_COLLAPSE_BELOW = 960;
+// Session flag marking that the current collapsed nav state was set by the
+// narrow-viewport auto-collapse (not by the user), so a wide relaunch restores.
+export const NAV_PANEL_AUTO_COLLAPSED_KEY = 'nav-panel-auto-collapsed';
 
 const normalizeNavPanelWidth = (width: number | string | undefined): number => {
   const parsed = typeof width === 'string' ? Number.parseInt(width) : width;

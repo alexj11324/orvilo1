@@ -4,7 +4,21 @@ interface ProgressIssue {
   workflowCategory: TaskWorkflowCategory;
 }
 
-/** Workflow progress is independent of agent execution state and project goals. */
+/**
+ * Workflow progress is independent of agent execution state and project goals.
+ *
+ * The milestone readout beside this card on the rail
+ * (`ProjectModel.listMilestoneProgress`) classifies the same categories the
+ * same way — `done` completes, `canceled` leaves scope, an unrecognised state
+ * makes the readout unavailable rather than a number. **That repetition is
+ * deliberate, not an oversight**, and it cannot be removed by extracting a
+ * shared helper here: `packages/database` may not import from the app, so the
+ * only way to share one implementation would be to sink the classifier into a
+ * package both can import (`@orvilo/types` hosts pure helpers already). Do
+ * that as its own change if the duplication is ever worth it; until then **a
+ * new `TaskWorkflowCategory` member has to be classified in both places**, or
+ * the two numbers shown side by side will disagree.
+ */
 export function projectIssueProgress(issues: readonly ProgressIssue[] | null | undefined) {
   if (!issues) return null;
   const result = { completed: 0, scope: 0, started: 0 };

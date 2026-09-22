@@ -1194,6 +1194,14 @@ export class ProjectModel {
    * `moveTaskTree`. Cross-project links are rejected rather than stored: the
    * milestone has to belong to the same project as the task, or a project's
    * readout would count work filed elsewhere.
+   *
+   * ⚠️ **Known inconsistency:** this writes `tasks` directly and so skips the
+   * domain accounting `TaskModel.update` performs — no `domainRevision` bump,
+   * no `task.*` domain event, no Linear-sync outbox row, and
+   * `projectMilestoneId` is absent from `TASK_DOMAIN_COLUMNS`. That matches
+   * `moveTaskTree`, which moves a task between projects the same way, and it
+   * is recorded rather than fixed because the fix belongs in `models/task.ts`
+   * (planning/Linear-sync territory) and should land once for both callers.
    */
   async setTaskMilestone(input: { milestoneId: string | null; projectId: string; taskId: string }) {
     const { milestoneId, projectId, taskId } = input;

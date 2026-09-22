@@ -70,17 +70,17 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   composer: css`
     overflow: hidden;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 12px;
-    background: ${cssVar.colorBgContainer};
 
-    &:focus-within {
-      border-color: ${cssVar.colorPrimary};
-    }
+    min-height: 172px;
+    border: 0.5px solid ${cssVar.colorBorder};
+    border-radius: 10px;
+
+    background: ${cssVar.colorBgContainer};
   `,
   composerFooter: css`
-    padding-block: 4px 6px;
-    padding-inline: 12px 6px;
+    margin-block-start: auto;
+    padding-block: 14px;
+    padding-inline: 12px 14px;
   `,
   healthPick: css`
     cursor: pointer;

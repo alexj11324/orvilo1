@@ -1648,6 +1648,7 @@
   "taskDetail.comment.deleteConfirm.title": "删除这条评论？",
   "taskDetail.comment.edit": "编辑",
   "taskDetail.comment.save": "保存",
+  "taskDetail.commentDraftSaveFailed": "无法保存评论草稿",
   "taskDetail.commentPlaceholder": "留下评论，输入 @ 可提及成员，评论也会引导下次运行...",
   "taskDetail.deleteConfirm.content": "此操作不可撤销。",
   "taskDetail.deleteConfirm.ok": "删除",

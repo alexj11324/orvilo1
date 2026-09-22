@@ -57,6 +57,7 @@ import {
 import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
 import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
+import { taskDraftsRouteMeta } from '@/features/TaskDrafts/routeMeta';
 import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
@@ -732,6 +733,19 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'inbox',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/drafts'), 'Desktop > Drafts', {
+              preloadId: 'tasks',
+            }),
+            handle: { meta: taskDraftsRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'drafts',
       },
       {
         children: [

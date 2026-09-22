@@ -4344,6 +4344,23 @@ table tasks {
   }
 }
 
+table task_comment_drafts {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  task_id text [not null]
+  user_id text [not null]
+  workspace_id text
+  content text [not null]
+  editor_data jsonb
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (task_id, user_id) [name: 'task_comment_drafts_task_user_unique', unique]
+    (user_id, workspace_id) [name: 'task_comment_drafts_user_workspace_idx']
+  }
+}
+
 table task_inputs {
   id text [pk, not null]
   workspace_id text

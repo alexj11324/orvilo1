@@ -22,6 +22,7 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -34,6 +35,7 @@ import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
+import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
 import TaskRunReport from './TaskRunReport';
@@ -386,6 +388,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const { t } = useTranslation('chat');
   const activities = useTaskStore(taskActivitySelectors.activeTaskActivities);
   const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const workspaceId = useActiveWorkspaceId();
   const activeTaskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -406,7 +409,9 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     [activities],
   );
 
-  const commentInput = activeTaskId ? <CommentInput taskId={activeTaskId} /> : null;
+  const commentInput = activeTaskId ? (
+    <CommentInput key={commentComposerKey(activeTaskId, workspaceId)} taskId={activeTaskId} />
+  ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so
   // the latest result is not buried under older ones.

@@ -1,11 +1,16 @@
 import superjson from 'superjson';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { lambdaClient } from './lambda';
+import { createWorkspaceLambdaClient, lambdaClient } from './lambda';
+
+const workspaceHeaders = vi.hoisted(() => ({ activeId: null as string | null }));
 
 vi.mock('@/const/version', () => ({ isDesktop: false }));
 vi.mock('@/services/_auth', () => ({ createHeaderWithAuth: async () => ({}) }));
-vi.mock('@/business/client/trpc-headers', () => ({ getBusinessTrpcHeaders: async () => ({}) }));
+vi.mock('@/business/client/trpc-headers', () => ({
+  getBusinessTrpcHeaders: async () =>
+    workspaceHeaders.activeId ? { 'X-Workspace-Id': workspaceHeaders.activeId } : {},
+}));
 vi.mock('@/store/user/store', () => ({ getUserStoreState: () => ({ isSignedIn: false }) }));
 // i18next is never initialised in this suite, so `t` echoes the key — assertions
 // below check which copy was selected, not its wording.
@@ -16,6 +21,39 @@ const okTrpcResponse = (data: unknown) =>
     headers: { 'content-type': 'application/json' },
     status: 200,
   });
+
+describe('workspace-pinned lambda client', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('location', new URL('http://localhost/chat'));
+    workspaceHeaders.activeId = null;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+    workspaceHeaders.activeId = null;
+  });
+
+  it.each([
+    ['ws-origin', 'ws-other', 'ws-origin'],
+    [null, 'ws-other', null],
+  ] as const)(
+    'sends %s scope after the active workspace changes to %s',
+    async (origin, active, expected) => {
+      const client = createWorkspaceLambdaClient(origin);
+      workspaceHeaders.activeId = active;
+      fetchMock.mockResolvedValueOnce(okTrpcResponse({ data: 0, success: true }));
+
+      await client.taskDraft.count.query();
+
+      const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+      expect(new Headers(init.headers).get('X-Workspace-Id')).toBe(expected);
+    },
+  );
+});
 
 describe('lambdaClient large-input query transport', () => {
   const fetchMock = vi.fn();

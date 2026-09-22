@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
       { key: 'my-work', title: 'My issues', url: '/my-issues' },
       { key: 'reviews', title: 'Reviews', url: '/reviews' },
       { key: 'agent', title: 'Agent', url: '/agents' },
+      { key: 'drafts', title: 'Drafts', url: '/drafts' },
     ],
   },
   searchParams: new URLSearchParams(),
@@ -164,9 +165,10 @@ describe('Home sidebar body', () => {
     expect(texts[1]).toBe('My issues');
     expect(texts[2]).toBe('Reviews');
     expect(texts[3]).toBe('Agent');
+    expect(texts[4]).toBe('Drafts');
     // The standalone quick-create row sits between the flat links and the
     // first accordion, mirroring Linear's `+` slot.
-    expect(children[4]).toHaveAttribute('data-testid', 'sidebar-item-create');
+    expect(children[5]).toHaveAttribute('data-testid', 'sidebar-item-create');
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
     // There is no personal mode — Your teams renders even while the

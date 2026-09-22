@@ -1572,6 +1572,7 @@ export default {
   'taskDetail.comment.deleteConfirm.title': 'Delete this comment?',
   'taskDetail.comment.edit': 'Edit',
   'taskDetail.comment.save': 'Save',
+  'taskDetail.commentDraftSaveFailed': 'Could not save comment draft',
   'taskDetail.commentPlaceholder':
     'Leave a comment, or @ a teammate — comments also guide the next run...',
   'taskDetail.runCollapse': 'Collapse run',

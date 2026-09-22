@@ -63,6 +63,7 @@ export * from './resourceTransferRequest';
 export * from './session';
 export * from './systemBotProvider';
 export * from './task';
+export * from './taskCommentDraft';
 export * from './taskInput';
 export * from './taskWorkspace';
 export * from './team';

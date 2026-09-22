@@ -19,6 +19,7 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
+import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
@@ -44,7 +45,7 @@ const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, 
 
 /** Core entries can never be hidden — the fixed IA keeps them always mounted.
  * `create` is the standalone quick-create row (Linear's `+`). */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'create']);
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'drafts', 'create']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
@@ -106,6 +107,14 @@ const Body = memo(() => {
     { revalidateOnFocus: false },
   );
   const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
+  const draftCount =
+    useClientDataSWR(
+      taskDraftKeys.count(activeWorkspaceId),
+      () => taskDraftService.count(activeWorkspaceId),
+      {
+        revalidateOnFocus: true,
+      },
+    ).data?.data ?? 0;
 
   const hideSection = useCallback(
     (key: string) => {
@@ -205,13 +214,25 @@ const Body = memo(() => {
                 <Text fontSize={12} type={'secondary'}>
                   {reviewsPendingCount}
                 </Text>
+              ) : key === 'drafts' && draftCount > 0 ? (
+                <Text fontSize={12} type={'secondary'}>
+                  {draftCount}
+                </Text>
               ) : undefined
             }
           />
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, getContextMenuItems, navigate, inboxUnreadCount, reviewsPendingCount],
+    [
+      navLinkItems,
+      tab,
+      getContextMenuItems,
+      navigate,
+      inboxUnreadCount,
+      reviewsPendingCount,
+      draftCount,
+    ],
   );
 
   const handleAccordionExpandedChange = useCallback(

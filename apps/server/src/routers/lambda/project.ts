@@ -495,6 +495,30 @@ export const projectRouter = router({
       }
     }),
 
+  /**
+   * Attach a task to one of this project's milestones, or detach it with
+   * `milestoneId: null`. No UI sets a milestone yet: the issue-side control
+   * that would belongs with the filterable issue list, which is still to be
+   * built. Until then this is the programmatic path to the association that
+   * `detail` already serves a readout for.
+   */
+  setTaskMilestone: projectWriteProcedure
+    .input(idInput.extend({ milestoneId: z.uuid().nullable(), taskId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const task = requireResult(
+          await ctx.projectModel.setTaskMilestone({
+            milestoneId: input.milestoneId,
+            projectId: input.id,
+            taskId: input.taskId,
+          }),
+        );
+        return { data: task, message: 'Task milestone updated', success: true };
+      } catch (error) {
+        mapProjectError(error, 'setTaskMilestone');
+      }
+    }),
+
   rejectCompletion: projectWriteProcedure
     .input(idInput.extend({ comment: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {

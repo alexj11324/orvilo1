@@ -4274,6 +4274,7 @@ table tasks {
   workflow_state_id text
   workflow_state_ref_id uuid
   cycle_ref_id uuid
+  project_milestone_id uuid
   workflow_category text [not null, default: 'backlog']
   domain_revision integer [not null, default: 1]
   requirement_revision integer [not null, default: 1]
@@ -4334,6 +4335,7 @@ table tasks {
     (team_id, triage_status) [name: 'tasks_team_id_triage_idx']
     workflow_state_ref_id [name: 'tasks_workflow_state_ref_idx']
     cycle_ref_id [name: 'tasks_cycle_ref_idx']
+    project_milestone_id [name: 'tasks_project_milestone_id_idx']
     (workspace_id, visibility, created_by_user_id) [name: 'tasks_workspace_visibility_idx']
     (workspace_id, identifier) [name: 'tasks_identifier_workspace_id_unique', unique]
     (id, workspace_id) [name: 'tasks_id_workspace_id_unique', unique]

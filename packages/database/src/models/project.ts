@@ -2,12 +2,14 @@ import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
 import type {
   ProjectDatePrecision,
   ProjectHealth,
+  ProjectMilestoneProgress,
   ProjectOrchestrationPolicy,
   ProjectPriority,
   ProjectStatus,
   ProjectUpdateKind,
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import {
@@ -18,6 +20,7 @@ import {
   getTableColumns,
   getTableName,
   inArray,
+  isNotNull,
   isNull,
   max,
   or,
@@ -232,6 +235,71 @@ const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrat
   orchestrationPolicyRevision: project.orchestrationPolicyRevision,
   requireHumanReviewRequired: projectRequiresHumanReview(project),
 });
+
+/** How one task's workflow category counts toward its milestone's readout. */
+type MilestoneProgressBucket = 'canceled' | 'completed' | 'open' | 'unknown';
+
+/**
+ * Classify a task's workflow category for milestone progress.
+ *
+ * This restates `src/features/Projects/projectIssueProgress.ts` rather than
+ * sharing it: that module lives in the app and cannot be imported from this
+ * package. The two must agree — the project rail renders both readouts at
+ * once, and a milestone that reads 50% next to a Progress card that reads
+ * 40% is a bug in one of them. **A new `TaskWorkflowCategory` member has to be
+ * classified in both places.**
+ */
+const milestoneProgressBucket = (category: TaskWorkflowCategory): MilestoneProgressBucket => {
+  switch (category) {
+    case 'done': {
+      return 'completed';
+    }
+    case 'canceled': {
+      return 'canceled';
+    }
+    case 'in_progress':
+    case 'in_review':
+    case 'triage':
+    case 'backlog':
+    case 'todo': {
+      return 'open';
+    }
+    default: {
+      // Unreachable through the type, reachable through the database. An
+      // unrecognised state must not be counted as open work (that reports a
+      // smaller, prettier percentage than the truth) nor as done.
+      return 'unknown';
+    }
+  }
+};
+
+interface MilestoneTally {
+  completed: number;
+  /** In scope: linked tasks that are neither canceled nor unclassifiable. */
+  issues: number;
+  unknown: number;
+}
+
+const EMPTY_MILESTONE_TALLY: MilestoneTally = { completed: 0, issues: 0, unknown: 0 };
+
+const tallyMilestoneCategory = (tally: MilestoneTally, category: TaskWorkflowCategory) => {
+  switch (milestoneProgressBucket(category)) {
+    case 'canceled': {
+      // Out of scope, exactly as the project-level Progress card treats it:
+      // canceled work neither counts as done nor dilutes the percentage.
+      return tally;
+    }
+    case 'completed': {
+      return { ...tally, completed: tally.completed + 1, issues: tally.issues + 1 };
+    }
+    case 'open': {
+      return { ...tally, issues: tally.issues + 1 };
+    }
+    default: {
+      return { ...tally, unknown: tally.unknown + 1 };
+    }
+  }
+};
 
 export class ProjectModel {
   private readonly canManageAll: boolean;
@@ -512,38 +580,40 @@ export class ProjectModel {
 
   async getPlanning(id: string) {
     if (!(await this.findById(id))) return null;
-    const [milestones, labelRows, memberRows, edges, teamIdRows] = await Promise.all([
-      this.db
-        .select()
-        .from(projectMilestones)
-        .where(eq(projectMilestones.projectId, id))
-        .orderBy(asc(projectMilestones.sortOrder)),
-      this.db
-        .select({ label: projectLabels })
-        .from(projectLabelBindings)
-        .innerJoin(projectLabels, eq(projectLabels.id, projectLabelBindings.labelId))
-        .where(eq(projectLabelBindings.projectId, id)),
-      this.db
-        .select({ userId: projectMembers.userId, name: users.fullName, avatar: users.avatar })
-        .from(projectMembers)
-        .innerJoin(users, eq(users.id, projectMembers.userId))
-        .where(
-          and(
-            eq(projectMembers.projectId, id),
-            isNull(projectMembers.deletedAt),
-            isNull(projectMembers.suspendedAt),
+    const [milestones, milestoneProgress, labelRows, memberRows, edges, teamIdRows] =
+      await Promise.all([
+        this.db
+          .select()
+          .from(projectMilestones)
+          .where(eq(projectMilestones.projectId, id))
+          .orderBy(asc(projectMilestones.sortOrder)),
+        this.listMilestoneProgress(id),
+        this.db
+          .select({ label: projectLabels })
+          .from(projectLabelBindings)
+          .innerJoin(projectLabels, eq(projectLabels.id, projectLabelBindings.labelId))
+          .where(eq(projectLabelBindings.projectId, id)),
+        this.db
+          .select({ userId: projectMembers.userId, name: users.fullName, avatar: users.avatar })
+          .from(projectMembers)
+          .innerJoin(users, eq(users.id, projectMembers.userId))
+          .where(
+            and(
+              eq(projectMembers.projectId, id),
+              isNull(projectMembers.deletedAt),
+              isNull(projectMembers.suspendedAt),
+            ),
           ),
-        ),
-      this.db
-        .select()
-        .from(projectDependencies)
-        .where(
-          or(eq(projectDependencies.predecessorId, id), eq(projectDependencies.successorId, id)),
-        ),
-      this.workspaceId
-        ? new TeamModel(this.db, this.userId, this.workspaceId).listTeamIdsForProject(id)
-        : Promise.resolve([] as string[]),
-    ]);
+        this.db
+          .select()
+          .from(projectDependencies)
+          .where(
+            or(eq(projectDependencies.predecessorId, id), eq(projectDependencies.successorId, id)),
+          ),
+        this.workspaceId
+          ? new TeamModel(this.db, this.userId, this.workspaceId).listTeamIdsForProject(id)
+          : Promise.resolve([] as string[]),
+      ]);
     const teamModel = this.workspaceId
       ? new TeamModel(this.db, this.userId, this.workspaceId)
       : null;
@@ -571,7 +641,16 @@ export class ProjectModel {
       dependencies,
       labels: labelRows.map(({ label }) => label),
       members: memberRows,
-      milestones,
+      milestones: milestones.map((milestone) => {
+        // Three states, and `??` cannot tell the first two apart: the map only
+        // holds milestones that have linked tasks, so a missing key is a real
+        // zero while a present-but-`null` value means the readout could not be
+        // computed. Collapsing them would print 0% over unknown work.
+        if (!milestoneProgress?.has(milestone.id)) {
+          return { ...milestone, progress: { completed: 0, issues: 0, percent: 0 } };
+        }
+        return { ...milestone, progress: milestoneProgress.get(milestone.id) ?? null };
+      }),
       teams: teamRows,
     };
   }
@@ -1016,27 +1095,138 @@ export class ProjectModel {
     return deleted.length > 0;
   }
 
+  /**
+   * The project's tasks as this reader may see them. Every project task read
+   * shares this scope, so a milestone readout can never count work the reader
+   * is not allowed to see.
+   */
+  private projectTaskScope(projectId: string) {
+    return and(
+      eq(tasks.projectId, projectId),
+      buildWorkspaceWhere(
+        { userId: this.userId, workspaceId: this.workspaceId },
+        {
+          userId: tasks.createdByUserId,
+          visibility: tasks.visibility,
+          workspaceId: tasks.workspaceId,
+        },
+      ),
+    );
+  }
+
   async listTasks(projectId: string) {
     if (!(await this.findById(projectId))) return null;
     const rows = await this.db
       .select()
       .from(tasks)
-      .where(
-        and(
-          eq(tasks.projectId, projectId),
-          buildWorkspaceWhere(
-            { userId: this.userId, workspaceId: this.workspaceId },
-            {
-              userId: tasks.createdByUserId,
-              visibility: tasks.visibility,
-              workspaceId: tasks.workspaceId,
-            },
-          ),
-        ),
-      )
+      .where(this.projectTaskScope(projectId))
       .orderBy(asc(tasks.sortOrder), asc(tasks.seq));
 
     return rows;
+  }
+
+  /**
+   * Completion readout for each milestone of a project, keyed by milestone id.
+   *
+   * ⚠️ **The denominator convention below is an unverified choice.** On the
+   * reference (2026-09-22) every milestone reachable in the workspace read
+   * `100%` because all 16 of its issues were Done — so whether Linear divides
+   * by *all* linked issues or only by completed ones **cannot be observed
+   * there**; both conventions produce 100% on that data. Do not read the
+   * choice below as a verified parity claim.
+   *
+   * Chosen: divide by every linked issue that is in scope, `completed / issues`
+   * — the convention that can produce a number other than 0% or 100%. The
+   * alternatives were rejected for cause: "completed only" is degenerate
+   * (always 100%, so it can never disagree with the reference or with itself),
+   * and it would make the readout indistinguishable from a milestone with one
+   * done issue and twenty open ones. Canceled issues leave the denominator
+   * entirely, which is how the project-level Progress card on the same rail
+   * already counts scope (`src/features/Projects/projectIssueProgress.ts`).
+   *
+   * The map holds one entry per milestone that has linked tasks; a milestone
+   * with none is absent (callers rendering a fixed milestone list read that as
+   * `{ completed: 0, issues: 0, percent: 0 }` — an honest zero, not a
+   * placeholder). A linked task whose workflow category this build cannot
+   * classify makes its milestone read `null`: unavailable beats a number that
+   * silently drops the row.
+   */
+  async listMilestoneProgress(projectId: string) {
+    if (!(await this.findById(projectId))) return null;
+    const rows = await this.db
+      .select({ category: tasks.workflowCategory, milestoneId: tasks.projectMilestoneId })
+      .from(tasks)
+      .where(and(this.projectTaskScope(projectId), isNotNull(tasks.projectMilestoneId)));
+
+    const tallies = rows.reduce((acc, row) => {
+      if (!row.milestoneId) return acc;
+      const tally = tallyMilestoneCategory(
+        acc.get(row.milestoneId) ?? EMPTY_MILESTONE_TALLY,
+        row.category,
+      );
+      return acc.set(row.milestoneId, tally);
+    }, new Map<string, MilestoneTally>());
+
+    return new Map<string, ProjectMilestoneProgress | null>(
+      [...tallies].map(([milestoneId, tally]) => [
+        milestoneId,
+        tally.unknown > 0
+          ? null
+          : {
+              completed: tally.completed,
+              issues: tally.issues,
+              percent: tally.issues === 0 ? 0 : Math.round((tally.completed / tally.issues) * 100),
+            },
+      ]),
+    );
+  }
+
+  /**
+   * Attach a task to one of its project's milestones, or clear the link with
+   * `milestoneId: null`. A task belongs to at most one milestone, so this
+   * replaces whatever was there.
+   *
+   * Returns `null` when the project is not the caller's to manage, matching
+   * `moveTaskTree`. Cross-project links are rejected rather than stored: the
+   * milestone has to belong to the same project as the task, or a project's
+   * readout would count work filed elsewhere.
+   */
+  async setTaskMilestone(input: { milestoneId: string | null; projectId: string; taskId: string }) {
+    const { milestoneId, projectId, taskId } = input;
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const [task] = await tx
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
+        .limit(1);
+      if (!task) throw new Error('Task not found');
+
+      if (milestoneId) {
+        const [milestone] = await tx
+          .select({ id: projectMilestones.id })
+          .from(projectMilestones)
+          .where(
+            and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.projectId, projectId)),
+          )
+          .limit(1);
+        if (!milestone) throw new Error('Milestone is not available in this project');
+      }
+
+      const [updated] = await tx
+        .update(tasks)
+        .set({ projectMilestoneId: milestoneId, updatedAt: new Date() })
+        .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
+        .returning();
+      return updated ?? null;
+    });
   }
 
   async getEnabledKnowledgeBaseIdsForTask(taskId: string) {

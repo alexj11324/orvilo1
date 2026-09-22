@@ -71,6 +71,28 @@ export interface ProjectUpdate {
   projectId: string;
 }
 
+/**
+ * Completion readout for one project milestone — Linear's `N issues · 100%`.
+ *
+ * Derived from the tasks actually linked to the milestone
+ * (`tasks.project_milestone_id`), never stored: a milestone has no completion
+ * column of its own, and a cached percentage would drift from the work. A
+ * `null` readout means it could not be computed honestly (an unclassifiable
+ * workflow category is linked) — never render that as 0%.
+ *
+ * The denominator convention is an **unverified choice**; see
+ * `ProjectModel.listMilestoneProgress` for what was chosen, why, and what
+ * could not be observed on the reference.
+ */
+export interface ProjectMilestoneProgress {
+  /** Linked tasks in scope whose workflow category is `done`. */
+  completed: number;
+  /** Linked tasks in scope — see the denominator note on the model method. */
+  issues: number;
+  /** `completed / issues` as a rounded 0–100 integer. */
+  percent: number;
+}
+
 export interface ProjectOrchestrationPolicy {
   allowedAgentIds?: string[];
   allowedRoles?: string[];

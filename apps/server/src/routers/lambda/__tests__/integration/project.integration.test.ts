@@ -1,7 +1,8 @@
 // @vitest-environment node
 import type { OrviloDatabase } from '@orvilo/database';
-import { agents, knowledgeBases } from '@orvilo/database/schemas';
+import { agents, knowledgeBases, tasks } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { projectRouter } from '../../project';
@@ -217,6 +218,50 @@ describe('Project Router Integration', () => {
 
     const reopened = await caller.reopen({ id: created.data.id });
     expect(reopened.data.status).toBe('active');
+  });
+
+  it('links a task to a milestone and serves the completion readout it earns', async () => {
+    const created = await caller.create({
+      identifier: 'MILE',
+      milestones: [{ name: 'Launch' }],
+      name: 'Milestone contract',
+    });
+    const { id: projectId } = created.data;
+    const milestoneId = (await caller.detail({ id: projectId })).data.milestones[0].id;
+    const taskCaller = taskRouter.createCaller(createTestContext(userId));
+    const first = await taskCaller.create({ instruction: 'First', projectId });
+    const second = await taskCaller.create({ instruction: 'Second', projectId });
+
+    const readout = async () => {
+      const detail = await caller.detail({ id: projectId });
+      return detail.data.milestones.find(({ id }) => id === milestoneId)?.progress;
+    };
+
+    // Nothing linked: an honest zero, not a placeholder percentage.
+    expect(await readout()).toEqual({ completed: 0, issues: 0, percent: 0 });
+
+    await caller.setTaskMilestone({ id: projectId, milestoneId, taskId: first.data.id });
+    await caller.setTaskMilestone({ id: projectId, milestoneId, taskId: second.data.id });
+    expect(await readout()).toEqual({ completed: 0, issues: 2, percent: 0 });
+
+    // Workflow category is what "done" means for an issue, and the API only
+    // accepts it alongside a linked Linear issue — so the state is written
+    // directly. The readout under test is the one the API serves.
+    await serverDB
+      .update(tasks)
+      .set({ workflowCategory: 'done' })
+      .where(eq(tasks.id, first.data.id));
+    expect(await readout()).toEqual({ completed: 1, issues: 2, percent: 50 });
+
+    await expect(
+      caller.setTaskMilestone({
+        id: projectId,
+        milestoneId: '00000000-0000-0000-0000-000000000000',
+        taskId: second.data.id,
+      }),
+    ).rejects.toThrow('Milestone is not available in this project');
+    await caller.setTaskMilestone({ id: projectId, milestoneId: null, taskId: first.data.id });
+    expect(await readout()).toEqual({ completed: 0, issues: 1, percent: 0 });
   });
 
   it('reads and fences project orchestration policy writes', async () => {

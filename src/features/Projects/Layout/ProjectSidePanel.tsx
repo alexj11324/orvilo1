@@ -1,11 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { DiamondIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
@@ -57,13 +59,53 @@ const ProjectSidePanel = memo<{ projectId: string }>(({ projectId }) => {
   // No goals (or a failed fetch) is not 0% progress — report it as unknown
   // instead of letting an error render as a real zero.
   const progress = goals.length ? Math.round((completedGoals / goals.length) * 100) : null;
+  const milestones = detail.milestones ?? [];
 
   return (
     <Flexbox className={styles.panel} gap={12}>
       <Flexbox className={styles.railCard} gap={12}>
         <SectionTitle title={t('overview.propertiesLabel')} />
-        <ProjectPropertiesCard detail={detail} goalProgress={progress} projectId={databaseId} />
+        <ProjectPropertiesCard detail={detail} projectId={databaseId} />
       </Flexbox>
+      <Flexbox className={styles.railCard} gap={8}>
+        <SectionTitle title={t('overview.milestones', { defaultValue: 'Milestones' })} />
+        {milestones.length === 0 ? (
+          <Text fontSize={12} type={'secondary'}>
+            {t('overview.milestonesEmpty')}
+          </Text>
+        ) : (
+          milestones.map((milestone) => (
+            <Flexbox horizontal align={'center'} gap={8} key={milestone.id}>
+              <Icon color={cssVar.colorPrimary} icon={DiamondIcon} size={12} />
+              <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }}>
+                {milestone.name}
+              </Text>
+              {milestone.date && (
+                <Text fontSize={12} type={'secondary'}>
+                  {formatProjectDate(milestone.date)}
+                </Text>
+              )}
+            </Flexbox>
+          ))
+        )}
+      </Flexbox>
+      {progress !== null && (
+        <Flexbox className={styles.railCard} gap={8}>
+          <SectionTitle title={t('overview.progressLabel', { defaultValue: 'Progress' })} />
+          <Flexbox horizontal align={'center'} gap={8}>
+            <Text fontSize={12} type={'secondary'}>
+              {t('overview.progressCompleted', {
+                completed: completedGoals,
+                defaultValue: 'Completed',
+                total: goals.length,
+              })}
+            </Text>
+            <Text fontSize={12} weight={500}>
+              {progress}%
+            </Text>
+          </Flexbox>
+        </Flexbox>
+      )}
     </Flexbox>
   );
 });

@@ -502,7 +502,7 @@ export class ProjectModel {
 
   async getPlanning(id: string) {
     if (!(await this.findById(id))) return null;
-    const [milestones, labelRows, memberRows, edges] = await Promise.all([
+    const [milestones, labelRows, memberRows, edges, teamIdRows] = await Promise.all([
       this.db
         .select()
         .from(projectMilestones)
@@ -530,7 +530,18 @@ export class ProjectModel {
         .where(
           or(eq(projectDependencies.predecessorId, id), eq(projectDependencies.successorId, id)),
         ),
+      this.workspaceId
+        ? new TeamModel(this.db, this.userId, this.workspaceId).listTeamIdsForProject(id)
+        : Promise.resolve([] as string[]),
     ]);
+    const teamModel = this.workspaceId
+      ? new TeamModel(this.db, this.userId, this.workspaceId)
+      : null;
+    const teamRows = teamModel
+      ? (await Promise.all(teamIdRows.map((teamId) => teamModel.findById(teamId)))).filter(
+          (team): team is NonNullable<typeof team> => team !== null,
+        )
+      : [];
     const relatedProjects = await this.findByIds(
       edges.map((edge) => (edge.predecessorId === id ? edge.successorId : edge.predecessorId)),
     );
@@ -551,6 +562,7 @@ export class ProjectModel {
       labels: labelRows.map(({ label }) => label),
       members: memberRows,
       milestones,
+      teams: teamRows,
     };
   }
 

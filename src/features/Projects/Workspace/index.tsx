@@ -24,6 +24,7 @@ import { labPreferSelectors } from '@/store/user/selectors';
 
 import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import ProjectDashboard from './ProjectDashboard';
+import ProjectDescription from './ProjectDescription';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -181,9 +182,6 @@ const ProjectWorkspace = memo(() => {
               </Flexbox>
             </Flexbox>
 
-            {project.summary && project.description && (
-              <Text style={{ whiteSpace: 'pre-wrap' }}>{project.description}</Text>
-            )}
             <Flexbox gap={8}>
               <ProjectUpdateComposer
                 projectId={project.id}
@@ -193,6 +191,11 @@ const ProjectWorkspace = memo(() => {
                 <ProjectUpdateRow key={update.id} update={update} />
               ))}
             </Flexbox>
+            <ProjectDescription
+              description={project.description}
+              projectId={project.id}
+              onSaved={() => void mutate()}
+            />
           </Flexbox>
           <ProjectDashboard detail={detail} projectId={project.id} />
         </Flexbox>

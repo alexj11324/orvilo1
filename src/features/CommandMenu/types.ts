@@ -20,6 +20,16 @@ export interface Context {
   type: MenuContext;
 }
 
-export type MenuContext = 'general' | 'agent' | 'group' | 'resource' | 'settings' | 'memory';
+export type MenuContext =
+  | 'agent'
+  | 'general'
+  | 'group'
+  | 'inbox'
+  | 'memory'
+  | 'project'
+  | 'resource'
+  | 'settings'
+  | 'task'
+  | 'team';
 
 export type ContextType = Extract<MenuContext, 'agent' | 'group' | 'resource' | 'settings'>;

@@ -508,6 +508,15 @@ export const taskKeys = {
   sidebarGroups: def('task:sidebarGroups', (agentId: string) => ['task:sidebarGroups', agentId]),
 };
 
+// ---- project ------------------------------------------------------------
+export const projectKeys = {
+  links: def('project:links', (scope: string, projectId: string) => [
+    'project:links',
+    scope,
+    projectId,
+  ]),
+};
+
 // ---- work ---------------------------------------------------------------
 export const workKeys = {
   conversation: def('work:conversation', (topicId: string, threadId?: string | null) => [

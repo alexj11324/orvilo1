@@ -13,6 +13,11 @@ import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 const PROJECT_PAGE_SIZE = 100;
 
 class ProjectService {
+  listLinks = async (id: string) => lambdaClient.project.listLinks.query({ id });
+  saveLink = async (id: string, input: { linkId?: string; title?: string; url: string }) =>
+    lambdaClient.project.saveLink.mutate({ id, ...input });
+  removeLink = async (id: string, linkId: string) =>
+    lambdaClient.project.removeLink.mutate({ id, linkId });
   labels = async () => lambdaClient.project.labels.query();
   teams = async () => lambdaClient.team.teams.query();
   activityFeed = async (id: string, limit = 50, cursor?: string | null) =>
@@ -110,6 +115,7 @@ class ProjectService {
     id: string,
     input: {
       description?: string;
+      labelIds?: string[];
       leadUserId?: string | null;
       name?: string;
       summary?: string;

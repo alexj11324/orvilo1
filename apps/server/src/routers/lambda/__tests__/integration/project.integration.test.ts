@@ -48,6 +48,63 @@ describe('Project Router Integration', () => {
     await expect(caller.update({ ...input, summary: 'x'.repeat(281) })).rejects.toThrow();
   });
 
+  it('validates label edits instead of silently stripping them from project updates', async () => {
+    const { data: project } = await caller.create({ identifier: 'LABEL', name: 'Label contract' });
+    await expect(caller.update({ id: project.id, labelIds: ['not-a-uuid'] })).rejects.toThrow();
+    await expect(
+      caller.update({
+        id: project.id,
+        name: 'Must not save',
+        labelIds: ['00000000-0000-0000-0000-000000000000'],
+      }),
+    ).rejects.toThrow('Project label is not available');
+    const detail = await caller.detail({ id: project.id });
+    expect(detail.data.project.name).toBe('Label contract');
+    expect(detail.data.labels).toEqual([]);
+    await caller.update({ id: project.id, labelIds: [] });
+    expect((await caller.detail({ id: project.id })).data.labels).toEqual([]);
+  });
+
+  it('creates, edits and removes project links through the API without accepting unsafe URLs', async () => {
+    const { data: project } = await caller.create({ identifier: 'LINK', name: 'Link contract' });
+    const { data: link } = await caller.saveLink({
+      id: project.id,
+      title: 'Brief',
+      url: 'https://example.com/brief',
+    });
+    expect((await caller.listLinks({ id: project.slug! })).data).toEqual([link]);
+    await caller.saveLink({
+      id: project.id,
+      linkId: link.id,
+      title: 'Updated brief',
+      url: 'https://example.com/revised',
+    });
+    expect((await caller.listLinks({ id: project.id })).data[0]).toMatchObject({
+      id: link.id,
+      title: 'Updated brief',
+    });
+    await expect(
+      caller.saveLink({ id: project.id, title: 'Unsafe', url: 'javascript:alert(1)' }),
+    ).rejects.toThrow();
+    await caller.saveLink({ id: project.id, linkId: link.id, url: 'https://example.com' });
+    expect((await caller.listLinks({ id: project.id })).data[0]).toMatchObject({
+      title: '',
+      url: 'https://example.com/',
+    });
+    const stranger = await createTestUser(serverDB);
+    try {
+      const other = projectRouter.createCaller(createTestContext(stranger));
+      await expect(other.listLinks({ id: project.id })).rejects.toThrow('Project not found');
+      await expect(other.removeLink({ id: project.id, linkId: link.id })).rejects.toThrow(
+        'Project not found',
+      );
+    } finally {
+      await cleanupTestUser(serverDB, stranger);
+    }
+    await caller.removeLink({ id: project.id, linkId: link.id });
+    expect((await caller.listLinks({ id: project.id })).data).toEqual([]);
+  });
+
   it('persists planning edits, validates them against saved dates, and supports clearing', async () => {
     const { data: project } = await caller.create({ identifier: 'PLAN', name: 'Planning edits' });
     await caller.update({

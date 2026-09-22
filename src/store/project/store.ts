@@ -6,6 +6,7 @@ import { createWithEqualityFn } from 'zustand/traditional';
 
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { mutate, useClientDataSWR } from '@/libs/swr';
+import { projectKeys } from '@/libs/swr/keys';
 import { getCacheScope, useCacheScope } from '@/libs/swr/useCacheScope';
 import { projectService } from '@/services/project';
 import { createDevtools } from '@/store/middleware/createDevtools';
@@ -27,9 +28,18 @@ const detailKey = (scope: string, id: string) => ['project/detail', scope, id] a
 interface ProjectStore {
   createProject: (input: Parameters<typeof projectService.create>[0]) => Promise<ProjectListItem>;
   deleteProject: (id: string) => Promise<void>;
+  pendingProjectLinkKeys: string[];
   projectDetails: Record<string, Record<string, ProjectDetail>>;
   projectLists: Record<string, ProjectListItem[]>;
   refreshProjectList: () => Promise<void>;
+  removeProjectLink: (
+    id: string,
+    linkId: string,
+  ) => Promise<Awaited<ReturnType<typeof projectService.removeLink>> & { refreshError?: unknown }>;
+  saveProjectLink: (
+    id: string,
+    input: Parameters<typeof projectService.saveLink>[1],
+  ) => Promise<Awaited<ReturnType<typeof projectService.saveLink>> & { refreshError?: unknown }>;
   updateProject: (
     id: string,
     input: Parameters<typeof projectService.update>[1],
@@ -42,6 +52,9 @@ interface ProjectStore {
   }) => Promise<ProjectOrchestrationPolicyView>;
   useFetchProjectDetail: (id?: string) => SWRResponse<ProjectDetailResponse>;
   useFetchProjectLabels: () => SWRResponse<Awaited<ReturnType<typeof projectService.labels>>>;
+  useFetchProjectLinks: (
+    id?: string,
+  ) => SWRResponse<Awaited<ReturnType<typeof projectService.listLinks>>>;
   useFetchProjectList: (enabled?: boolean) => SWRResponse<ProjectListResponse>;
   useFetchProjectOrchestrationPolicy: (
     id?: string,
@@ -52,8 +65,65 @@ interface ProjectStore {
 
 const devtools = createDevtools('project');
 
+export const projectLinkPendingKey = (scope: string, id: string, linkId?: string) =>
+  JSON.stringify([scope, id, linkId ?? 'create']);
+
+const refreshLinksAfterWrite = async (scope: string, id: string) => {
+  // An already-committed write must not be presented as a failed save if only
+  // readback failed: retrying creation would produce a duplicate resource.
+  if (scope !== getCacheScope()) return {};
+  try {
+    await mutate(projectKeys.links(scope, id), projectService.listLinks(id), {
+      revalidate: false,
+      throwOnError: true,
+    });
+    return {};
+  } catch (refreshError) {
+    return { refreshError };
+  }
+};
+
 export const useProjectStore = createWithEqualityFn<ProjectStore>()(
   devtools((set, get) => ({
+    pendingProjectLinkKeys: [],
+    useFetchProjectLinks: (id) => {
+      const scope = useCacheScope();
+      return useClientDataSWR(id ? projectKeys.links(scope, id) : null, () =>
+        projectService.listLinks(id!),
+      );
+    },
+    saveProjectLink: async (id, input) => {
+      const scope = getCacheScope();
+      const key = projectLinkPendingKey(scope, id, input.linkId);
+      if (get().pendingProjectLinkKeys.includes(key))
+        throw new Error('Project link save in progress');
+      set({ pendingProjectLinkKeys: [...get().pendingProjectLinkKeys, key] });
+      try {
+        const response = await projectService.saveLink(id, input);
+        // The API client and SWR invalidator use the active workspace. A late
+        // response must not revalidate a retained view using another workspace.
+        return { ...response, ...(await refreshLinksAfterWrite(scope, id)) };
+      } finally {
+        set({
+          pendingProjectLinkKeys: get().pendingProjectLinkKeys.filter((item) => item !== key),
+        });
+      }
+    },
+    removeProjectLink: async (id, linkId) => {
+      const scope = getCacheScope();
+      const key = projectLinkPendingKey(scope, id, linkId);
+      if (get().pendingProjectLinkKeys.includes(key))
+        throw new Error('Project link save in progress');
+      set({ pendingProjectLinkKeys: [...get().pendingProjectLinkKeys, key] });
+      try {
+        const response = await projectService.removeLink(id, linkId);
+        return { ...response, ...(await refreshLinksAfterWrite(scope, id)) };
+      } finally {
+        set({
+          pendingProjectLinkKeys: get().pendingProjectLinkKeys.filter((item) => item !== key),
+        });
+      }
+    },
     useFetchProjectLabels: () =>
       useClientDataSWR(getActiveWorkspaceId() ? ['project/labels'] : null, () =>
         projectService.labels(),
@@ -124,8 +194,15 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
       return policy;
     },
     updateProject: async (id, input) => {
+      const requestScope = getCacheScope();
       const response = await projectService.update(id, input);
       const project = response.data;
+      // Bindings are not part of the scalar update response. Read the confirmed
+      // detail so retained slug/ID views do not keep the previous label selection.
+      const labels =
+        input.labelIds !== undefined && requestScope === getCacheScope()
+          ? (await projectService.detail(id)).data.labels
+          : undefined;
 
       set(
         (state) => ({
@@ -135,7 +212,13 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
               Object.fromEntries(
                 Object.entries(details).map(([reference, detail]) => [
                   reference,
-                  detail.project.id === id ? { ...detail, project } : detail,
+                  detail.project.id === id
+                    ? {
+                        ...detail,
+                        project,
+                        ...(scope === requestScope && labels !== undefined ? { labels } : {}),
+                      }
+                    : detail,
                 ]),
               ),
             ]),

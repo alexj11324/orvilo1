@@ -1,11 +1,16 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mutate } from '@/libs/swr';
 import { projectService } from '@/services/project';
 
 import type { ProjectDetail, ProjectListItem } from './store';
-import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from './store';
+import {
+  projectLinkPendingKey,
+  useCurrentProjectDetail,
+  useCurrentProjectList,
+  useProjectStore,
+} from './store';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: null as string | null,
@@ -43,6 +48,8 @@ vi.mock('@/libs/swr', () => ({
 }));
 
 describe('project store cache scope', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   beforeEach(() => {
     mocks.activeWorkspaceId = null;
     mocks.cacheScope = 'user-1:personal';
@@ -51,7 +58,119 @@ describe('project store cache scope', () => {
     mocks.swrDataByKey = {};
     mocks.swrConfigs = [];
     mocks.swrKeys = [];
-    useProjectStore.setState({ projectDetails: {}, projectLists: {} });
+    useProjectStore.setState({ pendingProjectLinkKeys: [], projectDetails: {}, projectLists: {} });
+    vi.mocked(mutate).mockReset();
+    vi.mocked(mutate).mockImplementation(async (_key, data) => data);
+    vi.spyOn(projectService, 'listLinks').mockResolvedValue({ data: [], success: true });
+  });
+
+  it('isolates link reads by account and project and disables absent project reads', () => {
+    const response = {
+      data: [{ id: 'link-1', title: 'Spec', url: 'https://example.com' }],
+      success: true,
+    };
+    mocks.swrDataByKey[JSON.stringify(['project:links', 'user-1:personal', 'project-1'])] =
+      response;
+    const { result, rerender } = renderHook(
+      ({ id }) => useProjectStore.getState().useFetchProjectLinks(id),
+      {
+        initialProps: { id: 'project-1' as string | undefined },
+      },
+    );
+    expect(result.current.data).toBe(response);
+    rerender({ id: 'project-2' });
+    expect(result.current.data).toBeUndefined();
+    mocks.cacheScope = 'user-2:personal';
+    rerender({ id: 'project-1' });
+    expect(result.current.data).toBeUndefined();
+    rerender({ id: undefined });
+    expect(mocks.swrKeys.at(-1)).toBeNull();
+  });
+
+  it('keeps link saves pending through readback and prevents duplicate submissions', async () => {
+    let finishSave!: () => void;
+    let finishReadback!: () => void;
+    vi.spyOn(projectService, 'saveLink').mockImplementation(async () => {
+      await new Promise<void>((resolve) => {
+        finishSave = resolve;
+      });
+      return { data: { id: 'link-1' }, success: true } as Awaited<
+        ReturnType<typeof projectService.saveLink>
+      >;
+    });
+    vi.mocked(projectService.listLinks).mockImplementation(async () => {
+      await new Promise<void>((resolve) => {
+        finishReadback = resolve;
+      });
+      return { data: [], success: true };
+    });
+    const input = { title: 'Spec', url: 'https://example.com' };
+    const save = useProjectStore.getState().saveProjectLink('project-1', input);
+    const key = projectLinkPendingKey('user-1:personal', 'project-1');
+    expect(useProjectStore.getState().pendingProjectLinkKeys).toContain(key);
+    await expect(useProjectStore.getState().saveProjectLink('project-1', input)).rejects.toThrow(
+      'in progress',
+    );
+    expect(projectService.saveLink).toHaveBeenCalledOnce();
+    finishSave();
+    await vi.waitFor(() => expect(projectService.listLinks).toHaveBeenCalledWith('project-1'));
+    expect(useProjectStore.getState().pendingProjectLinkKeys).toContain(key);
+    finishReadback();
+    await save;
+    expect(useProjectStore.getState().pendingProjectLinkKeys).toEqual([]);
+  });
+
+  it('retains links on failed deletion, surfaces the error, and permits retry', async () => {
+    const remove = vi
+      .spyOn(projectService, 'removeLink')
+      .mockRejectedValueOnce(new Error('Forbidden'));
+    await expect(
+      useProjectStore.getState().removeProjectLink('project-1', 'link-1'),
+    ).rejects.toThrow('Forbidden');
+    expect(mutate).not.toHaveBeenCalled();
+    expect(useProjectStore.getState().pendingProjectLinkKeys).toEqual([]);
+    remove.mockResolvedValue({ data: { id: 'link-1' }, success: true } as Awaited<
+      ReturnType<typeof projectService.removeLink>
+    >);
+    await useProjectStore.getState().removeProjectLink('project-1', 'link-1');
+    expect(projectService.listLinks).toHaveBeenCalledWith('project-1');
+    expect(mutate).toHaveBeenCalledWith(
+      ['project:links', 'user-1:personal', 'project-1'],
+      expect.any(Promise),
+      { revalidate: false, throwOnError: true },
+    );
+  });
+
+  it('does not revalidate links with a different account after a late save', async () => {
+    vi.spyOn(projectService, 'saveLink').mockImplementation(async () => {
+      mocks.currentCacheScope = 'user-2:workspace-2';
+      return { data: { id: 'link-1' }, success: true } as Awaited<
+        ReturnType<typeof projectService.saveLink>
+      >;
+    });
+    await useProjectStore
+      .getState()
+      .saveProjectLink('project-1', { title: 'Spec', url: 'https://example.com' });
+    expect(mutate).not.toHaveBeenCalled();
+    expect(useProjectStore.getState().pendingProjectLinkKeys).toEqual([]);
+  });
+
+  it('distinguishes a committed save from a failed readback so retry does not create duplicates', async () => {
+    vi.spyOn(projectService, 'saveLink').mockResolvedValue({
+      data: { id: 'link-1' },
+      success: true,
+    } as Awaited<ReturnType<typeof projectService.saveLink>>);
+    vi.mocked(projectService.listLinks).mockRejectedValueOnce(new Error('Readback unavailable'));
+    await expect(
+      useProjectStore
+        .getState()
+        .saveProjectLink('project-1', { title: 'Spec', url: 'https://example.com' }),
+    ).resolves.toMatchObject({
+      data: { id: 'link-1' },
+      success: true,
+      refreshError: new Error('Readback unavailable'),
+    });
+    expect(useProjectStore.getState().pendingProjectLinkKeys).toEqual([]);
   });
 
   it('restores a persisted project list into the store before the first paint', () => {
@@ -223,6 +342,26 @@ describe('project store cache scope', () => {
       expect(refreshProjectList).toHaveBeenCalledOnce();
     },
   );
+
+  it('refreshes label bindings in cached slug and ID details after a label update', async () => {
+    const project = { id: 'project-labels', name: 'Labels' } as ProjectListItem;
+    const stale = { project, labels: [{ id: 'old', name: 'Old' }] } as ProjectDetail;
+    const updated = { ...stale, labels: [] };
+    vi.spyOn(projectService, 'update').mockResolvedValue({
+      data: project,
+      message: '',
+      success: true,
+    });
+    vi.spyOn(projectService, 'detail').mockResolvedValue({ data: updated, success: true });
+    useProjectStore.setState({
+      projectDetails: { 'user-1:personal': { 'labels': stale, 'project-labels': stale } },
+      refreshProjectList: vi.fn().mockResolvedValue(undefined),
+    });
+    await useProjectStore.getState().updateProject(project.id, { labelIds: [] });
+    const details = useProjectStore.getState().projectDetails['user-1:personal'];
+    expect(details.labels.labels).toEqual([]);
+    expect(details['project-labels'].labels).toEqual([]);
+  });
 
   it('updates the cached project after an orchestration policy save', async () => {
     const project = {

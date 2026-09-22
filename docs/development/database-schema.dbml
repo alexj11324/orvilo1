@@ -3400,6 +3400,21 @@ table projects {
   }
 }
 
+table project_links {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  project_id text [not null]
+  added_by_user_id text
+  title varchar(255) [not null]
+  url text [not null]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    project_id [name: 'project_links_project_id_idx']
+  }
+}
+
 table project_members {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]
@@ -3425,7 +3440,8 @@ table project_updates {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   project_id text [not null]
   user_id text [not null]
-  health text [not null]
+  kind text [not null, default: 'update']
+  health text
   body text [not null]
   accessed_at "timestamp with time zone" [not null, default: `now()`]
   created_at "timestamp with time zone" [not null, default: `now()`]
@@ -4727,6 +4743,7 @@ table users {
   first_name text
   last_name text
   full_name text
+  job_title varchar(128)
   interests "varchar(64)[]"
   is_onboarded boolean [default: false]
   agent_onboarding jsonb

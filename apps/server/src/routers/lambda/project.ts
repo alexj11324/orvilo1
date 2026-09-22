@@ -398,6 +398,55 @@ export const projectRouter = router({
     }
   }),
 
+  listLinks: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
+    try {
+      const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+      return { data: requireResult(await ctx.projectModel.listLinks(project.id)), success: true };
+    } catch (error) {
+      mapProjectError(error, 'listLinks');
+    }
+  }),
+
+  saveLink: projectWriteProcedure
+    .input(
+      idInput.extend({
+        linkId: z.uuid().optional(),
+        title: z.string().trim().max(255).optional(),
+        url: z.string().trim().url().max(8192),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.saveLink(project.id, {
+              id: input.linkId,
+              title: input.title,
+              url: input.url,
+            }),
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'saveLink');
+      }
+    }),
+
+  removeLink: projectWriteProcedure
+    .input(idInput.extend({ linkId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(await ctx.projectModel.removeLink(project.id, input.linkId)),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'removeLink');
+      }
+    }),
+
   createUpdate: projectWriteProcedure
     .input(
       idInput.extend({
@@ -528,6 +577,7 @@ export const projectRouter = router({
         avatar: z.string().nullish(),
         description: z.string().nullish(),
         leadUserId: z.string().min(1).nullish(),
+        labelIds: z.array(z.uuid()).max(100).optional(),
         name: z.string().min(1).max(255).optional(),
         slug: projectSlugInput.nullish(),
         summary: z.string().max(280).optional(),

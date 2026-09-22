@@ -76,6 +76,84 @@ describe('ProjectModel', () => {
     expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
   });
 
+  it('persists external links independently and rejects cross-project or cross-user edits', async () => {
+    const project = await createProject(model, { name: 'Linked project' });
+    const sibling = await createProject(model, { name: 'Other project' });
+    const input = { title: '  Design brief  ', url: 'https://example.com/brief' };
+    const link = await model.saveLink(project.id, input);
+    expect(link).toMatchObject({ title: 'Design brief', url: input.url, projectId: project.id });
+    expect(await model.listLinks(project.id)).toEqual([link]);
+    expect(await otherModel.listLinks(project.id)).toBeNull();
+    expect(await otherModel.saveLink(project.id, input)).toBeNull();
+    expect(await otherModel.removeLink(project.id, link!.id)).toBeNull();
+    expect(await model.saveLink(sibling.id, { ...input, id: link!.id })).toBeNull();
+    expect(await model.removeLink(sibling.id, link!.id)).toBeNull();
+    await model.saveLink(project.id, {
+      id: link!.id,
+      title: 'Edited',
+      url: 'https://example.com/revised',
+    });
+    expect(await model.listLinks(project.id)).toEqual([
+      expect.objectContaining({
+        id: link!.id,
+        title: 'Edited',
+        url: 'https://example.com/revised',
+      }),
+    ]);
+    await model.removeLink(project.id, link!.id);
+    expect(await model.listLinks(project.id)).toEqual([]);
+    expect(await model.findById(project.id)).not.toBeNull();
+  });
+
+  it('rejects unsafe or invalid external link values without persisting them', async () => {
+    const project = await createProject(model, { name: 'Link validation' });
+    for (const url of [
+      'javascript:alert(1)',
+      'data:text/html,hello',
+      'file:///etc/passwd',
+      '/relative',
+      'https://user:pass@example.com',
+      'https://example.com/' + 'a'.repeat(8192),
+    ]) {
+      await expect(model.saveLink(project.id, { title: 'Invalid', url })).rejects.toThrow();
+    }
+    for (const title of ['a'.repeat(256)]) {
+      await expect(
+        model.saveLink(project.id, { title, url: 'https://example.com' }),
+      ).rejects.toThrow();
+    }
+    expect(await model.listLinks(project.id)).toEqual([]);
+  });
+
+  it('accepts an optional link title and allows clearing a previously saved title', async () => {
+    const project = await createProject(model, { name: 'Optional title' });
+    const link = await model.saveLink(project.id, { url: 'https://example.com/spec' });
+    expect(link).toMatchObject({ title: '', url: 'https://example.com/spec' });
+    await model.saveLink(project.id, { id: link!.id, title: 'Spec', url: link!.url });
+    await model.saveLink(project.id, { id: link!.id, title: '  ', url: link!.url });
+    expect(await model.listLinks(project.id)).toEqual([
+      expect.objectContaining({ id: link!.id, title: '' }),
+    ]);
+  });
+
+  it('does not expose project links across workspaces even to the same owner', async () => {
+    const firstId = 'project-links-scope-a';
+    const secondId = 'project-links-scope-b';
+    for (const id of [firstId, secondId]) {
+      await serverDB.insert(workspaces).values({ id, name: id, slug: id, primaryOwnerId: userId });
+      await serverDB.insert(workspaceMembers).values({ workspaceId: id, userId, role: 'owner' });
+    }
+    const first = new ProjectModel(serverDB, userId, firstId);
+    const second = new ProjectModel(serverDB, userId, secondId);
+    const project = await createProject(first, { name: 'Scoped links' });
+    const input = { title: 'Brief', url: 'https://example.com/brief' };
+    const link = await first.saveLink(project.id, input);
+    expect(await second.listLinks(project.id)).toBeNull();
+    expect(await second.saveLink(project.id, input)).toBeNull();
+    expect(await second.removeLink(project.id, link!.id)).toBeNull();
+    expect(await first.listLinks(project.id)).toEqual([link]);
+  });
+
   it('creates, lists, updates, and deletes a project in the owner scope', async () => {
     const project = await createProject(model, { description: 'A large effort', name: 'Apollo' });
     expect(project.status).toBe('backlog');
@@ -298,6 +376,56 @@ describe('ProjectModel', () => {
     await expect(model.create({ identifier: 'ABCDEF', name: 'Maximum' })).resolves.toEqual(
       expect.objectContaining({ identifier: 'ABCDEF' }),
     );
+  });
+
+  it('replaces project labels atomically, preserving taxonomy and workspace isolation', async () => {
+    const workspaceId = 'project-label-edit-ws';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Labels', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    const scoped = new ProjectModel(serverDB, userId, workspaceId);
+    const project = await createProject(scoped, {
+      name: 'Labels',
+      newLabelNames: ['Keep', 'Remove'],
+    });
+    const labels = await scoped.listLabels();
+    const keep = labels.find((label) => label.name === 'Keep')!;
+    await scoped.update(project.id, { labelIds: [keep.id, keep.id] });
+    expect((await scoped.getPlanning(project.id))?.labels.map((label) => label.id)).toEqual([
+      keep.id,
+    ]);
+    expect(await scoped.listLabels()).toHaveLength(2);
+    const foreignWorkspaceId = 'project-label-foreign-ws';
+    await serverDB.insert(workspaces).values({
+      id: foreignWorkspaceId,
+      name: 'Foreign labels',
+      slug: foreignWorkspaceId,
+      primaryOwnerId: otherUserId,
+    });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ workspaceId: foreignWorkspaceId, userId: otherUserId, role: 'owner' });
+    const foreign = new ProjectModel(serverDB, otherUserId, foreignWorkspaceId);
+    await createProject(foreign, { name: 'Foreign', newLabelNames: ['Foreign label'] });
+    const [foreignLabel] = await foreign.listLabels();
+    await expect(scoped.update(project.id, { labelIds: [foreignLabel.id] })).rejects.toThrow(
+      'Project label is not available',
+    );
+    await expect(
+      scoped.update(project.id, {
+        name: 'Must roll back',
+        labelIds: ['00000000-0000-0000-0000-000000000000'],
+      }),
+    ).rejects.toThrow('Project label is not available');
+    expect((await scoped.findById(project.id))?.name).toBe('Labels');
+    expect((await scoped.getPlanning(project.id))?.labels.map((label) => label.id)).toEqual([
+      keep.id,
+    ]);
+    expect(await otherModel.update(project.id, { labelIds: [] })).toBeNull();
+    await scoped.update(project.id, { labelIds: [] });
+    expect((await scoped.getPlanning(project.id))?.labels).toEqual([]);
+    expect(await scoped.listLabels()).toHaveLength(2);
   });
 
   it('only assigns active members of the project workspace as lead', async () => {

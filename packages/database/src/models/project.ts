@@ -36,6 +36,7 @@ import {
   projectMilestones,
   projects,
 } from '../schemas/project';
+import { projectLinks } from '../schemas/projectLink';
 import { projectMembers } from '../schemas/projectMember';
 import { projectUpdates } from '../schemas/projectUpdate';
 import { projectWorks } from '../schemas/projectWork';
@@ -86,6 +87,7 @@ export interface CreateProjectInput extends ProjectPlanningInput {
 export interface UpdateProjectInput {
   avatar?: string | null;
   description?: string | null;
+  labelIds?: string[];
   leadUserId?: string | null;
   name?: string;
   priority?: ProjectPriority;
@@ -640,6 +642,7 @@ export class ProjectModel {
   }
 
   async update(id: string, input: UpdateProjectInput) {
+    const { labelIds, ...fields } = input;
     return this.db.transaction(async (tx) => {
       const [current] = await tx
         .select()
@@ -663,9 +666,31 @@ export class ProjectModel {
       const targetDate = input.targetDate === undefined ? current.targetDate : input.targetDate;
       if (startDate && targetDate && targetDate < startDate)
         throw new Error('Target date must not precede start date');
+      if (labelIds !== undefined) {
+        const selectedIds = [...new Set(labelIds)];
+        const labels =
+          selectedIds.length && this.workspaceId
+            ? await tx
+                .select({ id: projectLabels.id })
+                .from(projectLabels)
+                .where(
+                  and(
+                    inArray(projectLabels.id, selectedIds),
+                    eq(projectLabels.workspaceId, this.workspaceId),
+                  ),
+                )
+            : [];
+        if (labels.length !== selectedIds.length)
+          throw new Error('Project label is not available in this workspace');
+        await tx.delete(projectLabelBindings).where(eq(projectLabelBindings.projectId, current.id));
+        if (selectedIds.length)
+          await tx
+            .insert(projectLabelBindings)
+            .values(selectedIds.map((labelId) => ({ projectId: current.id, labelId })));
+      }
       const [project] = await tx
         .update(projects)
-        .set({ ...input, updatedAt: new Date() })
+        .set({ ...fields, updatedAt: new Date() })
         .where(and(eq(projects.id, id), this.manageable()))
         .returning();
       return project ?? null;
@@ -1229,6 +1254,63 @@ export class ProjectModel {
       .innerJoin(users, eq(users.id, projectUpdates.userId))
       .where(eq(projectUpdates.projectId, projectId))
       .orderBy(desc(projectUpdates.createdAt));
+  }
+
+  async listLinks(projectId: string) {
+    if (!(await this.findById(projectId))) return null;
+    return this.db
+      .select()
+      .from(projectLinks)
+      .where(eq(projectLinks.projectId, projectId))
+      .orderBy(asc(projectLinks.createdAt), asc(projectLinks.id));
+  }
+
+  async saveLink(projectId: string, input: { id?: string; title?: string; url: string }) {
+    const title = input.title?.trim() ?? '';
+    if (title.length > 255) throw new Error('Project link title must not exceed 255 characters');
+    const url = new URL(input.url.trim());
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
+      throw new Error('Project links require an HTTP(S) URL without credentials');
+    if (url.href.length > 8192) throw new Error('Project link URL is too long');
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+      if (input.id) {
+        const [link] = await tx
+          .update(projectLinks)
+          .set({ title, url: url.href, updatedAt: new Date() })
+          .where(and(eq(projectLinks.id, input.id), eq(projectLinks.projectId, projectId)))
+          .returning();
+        return link ?? null;
+      }
+      const [link] = await tx
+        .insert(projectLinks)
+        .values({ projectId, title, url: url.href, addedByUserId: this.userId })
+        .returning();
+      return link;
+    });
+  }
+
+  async removeLink(projectId: string, linkId: string) {
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+      const [link] = await tx
+        .delete(projectLinks)
+        .where(and(eq(projectLinks.projectId, projectId), eq(projectLinks.id, linkId)))
+        .returning();
+      return link ?? null;
+    });
   }
 
   async createUpdate(

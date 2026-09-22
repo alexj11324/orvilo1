@@ -97,7 +97,7 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: 8px;
 
     &:hover {
-      background: ${cssVar.colorFillQuaternary};
+      background: ${cssVar.colorFillTertiary};
     }
 
     &:hover > a {
@@ -114,13 +114,20 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     height: 24px;
-    padding-inline: 8px;
-    border-radius: 6px;
+
+    /* CDP: the reference reserves 35px before the label, with no icon. */
+    padding-inline: 35px 8px;
+    border-radius: 2px;
 
     font-size: 12px;
+    font-weight: 450;
     color: ${cssVar.colorText};
 
-    background: ${cssVar.colorFillQuaternary};
+    /* An opaque overlay conceals the progress readout without stacking two
+       translucent hover fills. Both colors follow the active theme. */
+    background:
+      linear-gradient(${cssVar.colorFillTertiary}, ${cssVar.colorFillTertiary}),
+      ${cssVar.colorBgContainer};
   `,
   sectionTrigger: css`
     cursor: pointer;

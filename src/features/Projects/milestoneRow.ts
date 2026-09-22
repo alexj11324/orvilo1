@@ -42,9 +42,9 @@ export const MILESTONE_ICON_SIZE = 16;
 
 /**
  * In-page landing spot for a milestone. The overview row carries this as its
- * `id`, and the overview glyph is the only thing that points at it — the rail
- * row navigates to the project's issues instead, and never renders on a tab
- * that shows the overview.
+ * `id`, and the overview glyph points at it. The rail also appears beside
+ * the overview; its row is not a navigation target. Its separate See issues
+ * control and the overview progress link open the milestone-filtered list.
  */
 export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milestoneId}`;
 
@@ -52,10 +52,12 @@ export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milest
  * Bring a milestone's row into view.
  *
  * The reference wraps the overview glyph in
- * `<a href="…/overview#milestone-<id>">`, but **what that link does when clicked
- * was never observed** — the reference was only read, never clicked. So this is
- * not a reproduction of the reference's landing effect; it is the smallest
- * provable one: in-page positioning onto the row that owns the anchor.
+ * `<a href="…/overview#milestone-<id>">`. With only read-only evidence,
+ * in-page positioning was the smallest provable implementation. Later CDP
+ * clicks reached the reference target but were canceled by its draggable
+ * row, so the landing effect remains unresolved. That observation does not
+ * justify removing the candidate's working anchor behavior. The separately
+ * observed progress link now opens issues filtered to the milestone.
  *
  * The scroll is driven from the click instead of left to the browser's fragment
  * navigation. The candidate is a react-router SPA, where a bare `#…` href is a

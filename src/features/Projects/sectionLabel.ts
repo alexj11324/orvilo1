@@ -12,12 +12,27 @@ import { cssVar } from 'antd-style';
  *
  * `cssVar.colorTextSecondary` is that tone here. It is **not** antd's stock
  * `rgba(0, 0, 0, 0.65)`: this app runs a customised palette, so the value was
- * read out of the app's own theme pipeline rather than assumed — the same
- * `createLobeAntdTheme` + `theme.getDesignToken` pair
- * `layout/GlobalProvider/AppTheme` hands the provider. It resolves to
- * `#666666`, ΔE 4.2 from the reference's `#5c5c5e`; the two greys it replaces
- * sit at ΔE 24 (`colorTextDescription`, `#999999`) and ΔE 37 (`colorText`,
- * `#080808`).
+ * read out of the app's own theme pipeline rather than assumed. A token's real
+ * rendered value needs no browser — run the same two calls
+ * `layout/GlobalProvider/AppTheme` hands the provider (`neutralColor` and
+ * `primaryColor` are both unset there, so the seed carries neither):
+ *
+ *     const cfg = createLobeAntdTheme({ appearance: 'light', neutralColor: undefined });
+ *     const tok = theme.getDesignToken({ algorithm: cfg.algorithm, token: cfg.token });
+ *     // colorText #080808 · colorTextSecondary #666666 · colorTextDescription #999999
+ *     // colorTextTertiary #999999 · colorTextQuaternary #bbbbbb · purple #bd54c6
+ *     // colorWarning #ee9e0b · colorInfo #0072f5 · colorSuccess #379d4a
+ *
+ * (`@lobehub/ui/es/styles/theme/antdTheme.mjs` + `antd`'s `theme`.) Three of
+ * those reproduce live CDP measurements on the running candidate exactly —
+ * `#080808`, `#999999` and `#bd54c6` — which is why this counts as a
+ * measurement and not an inference.
+ *
+ * `colorTextSecondary` resolves to `#666666`: ΔE 4.2 from the reference's
+ * `#5c5c5e`, against ΔE 24 for `colorTextDescription` (`#999999`) and ΔE 37
+ * for `colorText` (`#080808`). Use ΔE, not sRGB distance — the same pairs are
+ * 16 / 105 / 147 in sRGB, which ranks them the same way here but overstates
+ * the winner badly enough to pick wrong elsewhere in the dark end.
  *
  * A literal `#5c5c5e` would be marginally closer, but it would be a
  * light-mode-only number: the reference was only measured in light mode, and

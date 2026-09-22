@@ -8,7 +8,9 @@ Exit 0 means **observed-match**, 1 means **different**, and 2 means **inconclusi
 
 This is one action's observable behavior comparison, not automatic certification of an entire page. Different datasets, permissions, language and starting states require aligned fixtures. Editor accessibility names and placeholders are compared conservatively; differences require review. DOM structure and pixel equality, network semantics, persistence after reload, delayed side effects, new windows and arbitrary multi-step workflows are not yet compared. Full-document navigation may lose the click witness and correctly returns inconclusive. Before broad use, enumerate the page's controls and keep an explicit coverage list; untested controls remain unverified. Only configure actions known to be read-only on the reference account. Submission/deletion actions require a separate authorized fixture workflow.
 
-Regression checks: `node --test scripts/ui-parity/compare.test.mjs scripts/ui-parity/stability.test.mjs`.
+Regression checks: `node --test scripts/ui-parity/*.test.mjs`.
+
+Each trace also includes a bounded `eventTrace` (128 pointer/mouse/focus events, with an overflow count). It records relative time, trusted/target-match flags, mouse buttons, target tag and the action target's expanded/connected state; it never records event-target text or input values. The first click witness is retained even if the diagnostic buffer fills. Listeners are armed only immediately before dispatch, not during baseline polling, and cleaned up on exit. These diagnostics do not influence semantic comparison or prove the cause of an intermittent failure. Navigation can destroy the trace along with its document.
 
 Before clicking, the runner requires a complete document, a hittable target, no scoped loading indicators, and unchanged observable semantics and target geometry for 1.5 seconds. It rechecks that baseline after screenshot capture. Late-rendered controls restart the window; failure to establish a baseline is inconclusive, not a mismatch or pass. This bounded quiet-window heuristic cannot prove that arbitrarily delayed work has finished.
 

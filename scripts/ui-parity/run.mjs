@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { compareTransitions, transition } from './compare.mjs';
+import { installEventTrace } from './events.mjs';
 import { createStabilityWindow } from './stability.mjs';
 import { isPendingIndicator, partitionPending, selectTargets } from './targets.mjs';
 
@@ -14,6 +15,8 @@ function observe(
   isPendingIndicator,
   partitionPending,
   readinessScope,
+  arm,
+  installEventTrace,
 ) {
   const visible = (element) => {
     if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
@@ -81,19 +84,9 @@ function observe(
       element.tagName !== 'HTML' &&
       element.tagName !== 'BODY' &&
       (hit === element || element.contains(hit));
-    if (valid) {
-      window.__parityClick = null;
-      document.addEventListener(
-        'click',
-        (event) => {
-          window.__parityClick = {
-            trusted: event.isTrusted,
-            matched: event.composedPath().includes(element),
-            target: summary(event.target),
-          };
-        },
-        { capture: true, once: true },
-      );
+    if (valid && arm) {
+      window.__parityEventTrace?.stop();
+      window.__parityEventTrace = installEventTrace(document, element);
     }
     return { valid, x, y, target: summary(element), hit: hit ? summary(hit) : null };
   }
@@ -178,9 +171,9 @@ async function connect(surface) {
 const delay = () => new Promise((resolve) => setTimeout(resolve, 250));
 async function record(surface, action, directory) {
   const client = await connect(surface);
-  const sample = (target = false) =>
+  const sample = (target = false, arm = false) =>
     client.evaluate(
-      `(${observe.toString()})(${JSON.stringify(action)},${JSON.stringify(surface.mappings || [])},${target},${selectTargets.toString()},${isPendingIndicator.toString()},${partitionPending.toString()},${JSON.stringify(surface.readinessScope || null)})`,
+      `(${observe.toString()})(${JSON.stringify(action)},${JSON.stringify(surface.mappings || [])},${target},${selectTargets.toString()},${isPendingIndicator.toString()},${partitionPending.toString()},${JSON.stringify(surface.readinessScope || null)},${arm},${installEventTrace.toString()})`,
     );
   try {
     await client.send('Page.enable');
@@ -243,7 +236,7 @@ async function record(surface, action, directory) {
     if (new URL(surface.start).pathname !== (await client.evaluate('location.pathname')))
       throw new Error('Unexpected starting route');
     // Re-resolve immediately before dispatch: earlier rectangles may have gone stale.
-    target = await sample(true);
+    target = await sample(true, true);
     if (!target.valid) throw new Error('Target changed before click');
     await client.send('Input.dispatchMouseEvent', {
       type: 'mousePressed',
@@ -259,7 +252,7 @@ async function record(surface, action, directory) {
       button: 'left',
       clickCount: 1,
     });
-    const event = await client.evaluate('window.__parityClick');
+    const event = await client.evaluate('window.__parityEventTrace?.read().click ?? null');
     const samples = [];
     let previous = '';
     let stableSince = Date.now();
@@ -284,6 +277,7 @@ async function record(surface, action, directory) {
       after,
       target,
       event,
+      eventTrace: await client.evaluate('window.__parityEventTrace?.read() ?? null'),
       samples,
       hitVerified: target.valid,
       eventVerified: !!event?.trusted && !!event?.matched,
@@ -294,6 +288,9 @@ async function record(surface, action, directory) {
     await writeFile(path.join(directory, 'trace.json'), JSON.stringify(result, null, 2));
     return result;
   } finally {
+    await client
+      .evaluate('window.__parityEventTrace?.stop(); delete window.__parityEventTrace')
+      .catch(() => {});
     client.close();
   }
 }

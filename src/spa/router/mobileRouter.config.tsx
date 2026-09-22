@@ -213,24 +213,12 @@ export const sharedMainAreaChildren: RouteObject[] = [
         path: 'my-work',
       },
       {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Mobile > Reviews', {
-              preloadId: 'mobile-reviews',
-            }),
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/reviews/[reviewId]'),
-              'Mobile > Pull Request Review',
-              { preloadId: 'mobile-reviews' },
-            ),
-            path: ':reviewId',
-          },
-        ],
+        element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Mobile > Reviews', {
+          preloadId: 'mobile-reviews',
+        }),
         errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'reviews',
+        // Keep queue pagination/scroll mounted while only the selected review changes.
+        path: 'reviews/:reviewId?',
       },
       {
         children: [

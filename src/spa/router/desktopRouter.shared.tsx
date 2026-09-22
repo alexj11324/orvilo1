@@ -780,26 +780,14 @@ export const sharedMainAreaChildren: RouteObject[] = [
         path: 'my-work',
       },
       {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
-              preloadId: 'reviews',
-            }),
-            handle: { meta: reviewsRouteMeta },
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/reviews/[reviewId]'),
-              'Desktop > Pull Request Review',
-              { preloadId: 'reviews' },
-            ),
-            handle: { meta: reviewsRouteMeta },
-            path: ':reviewId',
-          },
-        ],
+        element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
+          preloadId: 'reviews',
+        }),
         errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'reviews',
+        handle: { meta: reviewsRouteMeta },
+        // One route identity owns list and detail. Changing `reviewId` must not
+        // remount ReviewsPage and discard queue tails or scroll position.
+        path: 'reviews/:reviewId?',
       },
       {
         children: [

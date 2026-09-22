@@ -42,6 +42,12 @@ import {
   type ReviewPagerPage,
   reviewPagerScope,
 } from './reviewPager';
+import {
+  isReviewStale,
+  reviewStaleKey,
+  reviewStaleState,
+  updateReviewStaleState,
+} from './reviewStaleState';
 import ReviewSubmitPanel from './ReviewSubmitPanel';
 import ReviewThreadCard from './ReviewThreadCard';
 import type { PullRequestDetail, ReviewThread, WriteOutcome } from './types';
@@ -158,7 +164,15 @@ const writeErrorCode = (error: unknown): string | null => {
  * `observedHeadSha`; drift and stale pages gate the write instead of landing
  * on a head the reviewer never saw.
  */
-const ReviewPullRequestPage = memo(() => {
+interface ReviewPullRequestPageProps {
+  /** Mount inside the Reviews master-detail shell instead of owning the page root. */
+  embedded?: boolean;
+  /** Narrow detail overlays need an explicit route back to the preserved list. */
+  showBack?: boolean;
+}
+
+const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
+  const { embedded = false, showBack = true } = props;
   const { t } = useTranslation('common');
   const { reviewId: rawId } = useParams<{ reviewId: string }>();
   const reviewId = rawId ? decodeURIComponent(rawId) : '';
@@ -166,7 +180,8 @@ const ReviewPullRequestPage = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const location = useLocation();
   // The queue passes its exact URL; fall back to the workspace-aware list.
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? '/reviews';
+  const returnTo =
+    (location.state as { returnTo?: string } | null)?.returnTo ?? `/reviews${location.search}`;
 
   const { data, error, isLoading } = useClientDataSWR(
     reviewId ? pullRequestKeys.detail(workspaceId, reviewId) : null,
@@ -175,7 +190,15 @@ const ReviewPullRequestPage = memo(() => {
   const pullRequest = data?.data as PullRequestDetail | undefined;
   const notConnected = isTrpcErrorCode(error, 'PRECONDITION_FAILED');
 
-  const [stale, setStale] = useState(false);
+  const staleKey = reviewStaleKey(workspaceId, reviewId);
+  const [staleState, setStaleState] = useState(() => reviewStaleState(staleKey, false));
+  const stale = isReviewStale(staleState, staleKey);
+  // Async work started under review A retains A's key. If it settles after the
+  // user selects B, that result only changes A's stale flag, not B's write gate.
+  const setStale = useCallback(
+    (next: boolean) => setStaleState((current) => updateReviewStaleState(current, staleKey, next)),
+    [staleKey],
+  );
   const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
 
   // On-demand collection tails + cursors, bound to the exact snapshot they
@@ -207,7 +230,7 @@ const ReviewPullRequestPage = memo(() => {
     // Writes stay disabled until a complete, consistent new snapshot is in
     // the cache — only then is the stale flag lifted.
     setStale(false);
-  }, [reviewId, workspaceId]);
+  }, [reviewId, setStale, workspaceId]);
 
   const loadMore = useCallback(
     async (collection: ReviewPageCollection, cursor: string, threadId?: string) => {
@@ -231,7 +254,7 @@ const ReviewPullRequestPage = memo(() => {
       }
       setPager((current) => applyReviewPagerPage(current, generation, page));
     },
-    [pullRequest?.headSha, reviewId],
+    [pullRequest?.headSha, reviewId, setStale],
   );
 
   /** Handle a write failure — conflict codes refresh, others toast. */
@@ -256,7 +279,7 @@ const ReviewPullRequestPage = memo(() => {
       }
       toast.error(t(fallbackKey as never));
     },
-    [refresh, t],
+    [refresh, setStale, t],
   );
 
   /**
@@ -459,13 +482,15 @@ const ReviewPullRequestPage = memo(() => {
       <NavHeader
         left={
           <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-            <Button
-              aria-label={t('reviews.backToPullRequests')}
-              icon={<Icon icon={ChevronLeftIcon} />}
-              size={'small'}
-              type={'text'}
-              onClick={() => navigate(returnTo)}
-            />
+            {!embedded || showBack ? (
+              <Button
+                aria-label={t('reviews.backToPullRequests')}
+                icon={<Icon icon={ChevronLeftIcon} />}
+                size={'small'}
+                type={'text'}
+                onClick={() => navigate(returnTo)}
+              />
+            ) : null}
             <Text ellipsis weight={500}>
               {pullRequest?.title ?? t('tab.reviews')}
             </Text>

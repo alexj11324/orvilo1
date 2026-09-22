@@ -2,20 +2,19 @@
 
 import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
 import { GitPullRequestIcon, PlugIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useSearchParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
-import Avatar from '@/components/Avatar';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { WorkSurface, WorkSurfaceSplit } from '@/features/WorkSurface';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
@@ -24,18 +23,32 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { mergeWorkQueryGroups } from '../MyWork/workQueryPaging';
 import WorkQueryResults from '../MyWork/WorkQueryResults';
+import ReviewPullRequestPage from './ReviewPullRequestPage';
+import {
+  reviewsDetailPath,
+  reviewsIsNarrow,
+  reviewsListPath,
+  reviewsSurface,
+  type ReviewsTab,
+  reviewsTabDestination,
+} from './reviewsSurface';
 
-type ReviewTab = 'created' | 'for-me';
-
-const resolveTab = (value: string | null): ReviewTab =>
+const resolveTab = (value: string | null): ReviewsTab =>
   value === 'created' ? 'created' : 'for-me';
 
 const styles = createStaticStyles(({ css }) => ({
-  identifier: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
+  detailEmpty: css`
+    height: 100%;
     color: ${cssVar.colorTextTertiary};
+  `,
+  detailOverlay: css`
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+
+    overflow: hidden;
+
+    background: ${cssVar.colorBgLayout};
   `,
   meta: css`
     flex: none;
@@ -46,6 +59,17 @@ const styles = createStaticStyles(({ css }) => ({
     flex: none;
     color: ${cssVar.colorSuccess};
   `,
+  queueHeading: css`
+    position: sticky;
+    z-index: 1;
+    inset-block-start: 88px;
+
+    padding-block: 6px;
+    padding-inline: 12px;
+    border-radius: ${cssVar.borderRadiusLG};
+
+    background: ${cssVar.colorFillQuaternary};
+  `,
   row: css`
     cursor: pointer;
 
@@ -53,8 +77,8 @@ const styles = createStaticStyles(({ css }) => ({
     gap: 8px;
     align-items: center;
 
-    padding-block: 7px;
-    padding-inline: 8px;
+    min-height: 40px;
+    padding-inline: 12px;
     border-radius: ${cssVar.borderRadiusLG};
 
     color: inherit;
@@ -63,6 +87,43 @@ const styles = createStaticStyles(({ css }) => ({
     &:hover {
       background: ${cssVar.colorFillQuaternary};
     }
+
+    &[data-active='true'] {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: -2px;
+    }
+  `,
+  stage: css`
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  `,
+  list: css`
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  `,
+  listBody: css`
+    flex: 1;
+    min-height: 0;
+    padding-block-end: 8px;
+  `,
+  listChrome: css`
+    position: sticky;
+    z-index: 2;
+    inset-block-start: 0;
+    background: ${cssVar.colorBgLayout};
+  `,
+  tabs: css`
+    flex: none;
+    padding-block: 8px;
+    padding-inline: 12px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
 }));
 
@@ -82,32 +143,31 @@ type QueueItem = {
   url: string;
 };
 
-const PullRequestRow = memo<{ item: QueueItem }>(({ item }) => {
+const PullRequestRow = memo<{
+  active: boolean;
+  detailPath: string;
+  item: QueueItem;
+  returnTo: string;
+}>(({ active, detailPath, item, returnTo }) => {
   const { t } = useTranslation('common');
   const navigate = useWorkspaceAwareNavigate();
-  const location = useLocation();
-  // Carry the list URL so the detail page's Back returns to this exact
-  // workspace + tab instead of dropping context.
-  const returnTo = `${location.pathname}${location.search}`;
   return (
     <Flexbox
       horizontal
       align={'center'}
       className={styles.row}
+      data-active={active}
       role={'link'}
       tabIndex={0}
-      onClick={() => navigate(`/reviews/${encodeURIComponent(item.id)}`, { state: { returnTo } })}
+      title={`${item.repository}#${item.number}${item.author ? ` · ${item.author}` : ''}`}
+      onClick={() => navigate(detailPath, { state: { returnTo } })}
       onKeyDown={(event) => {
-        if (event.key === 'Enter')
-          navigate(`/reviews/${encodeURIComponent(item.id)}`, { state: { returnTo } });
+        if (event.key === 'Enter') navigate(detailPath, { state: { returnTo } });
       }}
     >
-      <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={16} />
-      <Text className={styles.identifier}>
-        {item.repository}#{item.number}
-      </Text>
+      <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={14} />
       <Flexbox flex={1} style={{ minWidth: 0 }}>
-        <Text ellipsis weight={500}>
+        <Text ellipsis fontSize={13} weight={500}>
           {item.title}
         </Text>
       </Flexbox>
@@ -116,15 +176,6 @@ const PullRequestRow = memo<{ item: QueueItem }>(({ item }) => {
       ) : null}
       {item.reviewDecision === 'CHANGES_REQUESTED' ? (
         <Tag color={'red'}>{t('reviews.decision.changesRequested')}</Tag>
-      ) : null}
-      <Text className={styles.meta}>
-        +{item.additions} −{item.deletions}
-      </Text>
-      {item.author ? (
-        <Flexbox horizontal align={'center'} flex={'none'} gap={6}>
-          <Avatar avatar={item.authorAvatar ?? undefined} name={item.author} size={20} />
-          <Text className={styles.meta}>{item.author}</Text>
-        </Flexbox>
       ) : null}
       {item.updatedAt ? (
         <Text className={styles.meta} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
@@ -147,8 +198,14 @@ const ReviewsPage = memo(() => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { reviewId: rawReviewId } = useParams<{ reviewId?: string }>();
+  const selectedId = rawReviewId ? decodeURIComponent(rawReviewId) : null;
+  const [searchParams] = useSearchParams();
   const tab = resolveTab(searchParams.get('tab'));
+  const responsive = useResponsive();
+  const isNarrow = reviewsIsNarrow(responsive.lg);
+  const surface = reviewsSurface(isNarrow, Boolean(selectedId));
+  const listPath = reviewsListPath(tab);
 
   const queue = useClientDataSWR(
     pullRequestKeys.queue(workspaceId, tab),
@@ -237,42 +294,40 @@ const ReviewsPage = memo(() => {
     [t],
   );
 
-  const writeTab = (next: ReviewTab) =>
-    setSearchParams(next === 'for-me' ? {} : { tab: next }, { replace: true });
+  const writeTab = (next: ReviewsTab) => navigate(reviewsTabDestination(next), { replace: true });
 
   const tasks = data?.data.tasks ?? [];
   const externalReviews = data?.data.externalReviews ?? [];
   const taskReviewError = error;
 
-  return (
-    <WorkSurface>
-      <NavHeader
-        left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {t('tab.reviews')}
-          </Text>
-        }
-      />
-      <WorkSurfaceCollection
-        toolbar={
-          <WorkSurfaceToolbar>
-            <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewTab)}>
-              <TabsList>
-                <TabsIndicator />
-                {tabs.map((item) => (
-                  <TabsTab key={item.key} value={item.key}>
-                    {item.label}
-                  </TabsTab>
-                ))}
-              </TabsList>
-            </TabsRoot>
-          </WorkSurfaceToolbar>
-        }
-      >
+  const listPane = (
+    <div className={styles.list}>
+      <div className={styles.listChrome}>
+        <NavHeader
+          left={
+            <Text fontSize={13} style={{ paddingInlineStart: 4 }} weight={500}>
+              {t('tab.reviews')}
+            </Text>
+          }
+        />
+        <div className={styles.tabs}>
+          <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
+            <TabsList>
+              <TabsIndicator />
+              {tabs.map((item) => (
+                <TabsTab key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
+                  {item.label}
+                </TabsTab>
+              ))}
+            </TabsList>
+          </TabsRoot>
+        </div>
+      </div>
+      <div className={styles.listBody}>
         <Flexbox gap={16}>
           <Flexbox gap={4}>
-            <Text type={'secondary'} weight={500}>
-              {t('reviews.pullRequests')}
+            <Text className={styles.queueHeading} fontSize={12} weight={500}>
+              {t(tab === 'created' ? 'reviews.state.open' : 'reviews.pullRequests')}
             </Text>
             {queue.isLoading ? (
               <SkeletonList />
@@ -291,13 +346,19 @@ const ReviewsPage = memo(() => {
               <Flexbox gap={4}>
                 <Flexbox>
                   {allPullRequests.map((item) => (
-                    <PullRequestRow item={item} key={item.id} />
+                    <PullRequestRow
+                      active={selectedId === item.id}
+                      detailPath={reviewsDetailPath(item.id, tab)}
+                      item={item}
+                      key={item.id}
+                      returnTo={listPath}
+                    />
                   ))}
                 </Flexbox>
                 {/* A partial queue is never presented as complete — the tail
-                  counts stay visible and pages load on demand. */}
+                    counts stay visible and pages load on demand. */}
                 {queueHasMore || queueTail.length > 0 ? (
-                  <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={8}>
+                  <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
                     <Text fontSize={12} type={'secondary'}>
                       {t('reviews.loadedCount', {
                         loaded: allPullRequests.length,
@@ -321,7 +382,7 @@ const ReviewsPage = memo(() => {
           </Flexbox>
 
           <Flexbox gap={4}>
-            <Text type={'secondary'} weight={500}>
+            <Text className={styles.queueHeading} fontSize={12} weight={500}>
               {t('reviews.inProductReviews')}
             </Text>
             {taskReviewError && tasks.length === 0 && externalReviews.length === 0 ? (
@@ -333,7 +394,7 @@ const ReviewsPage = memo(() => {
             ) : (
               <WorkQueryResults
                 emptyLabel={t('myWork.externalReviewsEmpty')}
-                externalReviews={externalReviews}
+                externalReviews={externalReviews.length > 0 ? externalReviews : undefined}
                 groupBy={data?.data.groupBy}
                 groups={groups}
                 layout={'list'}
@@ -347,7 +408,50 @@ const ReviewsPage = memo(() => {
             )}
           </Flexbox>
         </Flexbox>
-      </WorkSurfaceCollection>
+      </div>
+    </div>
+  );
+
+  const detailPane = selectedId ? (
+    <ReviewPullRequestPage embedded showBack={surface === 'detail'} />
+  ) : queue.isLoading ? (
+    <SkeletonList padding={24} rows={5} />
+  ) : notConnected ? (
+    <Center className={styles.detailEmpty} padding={24}>
+      <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+    </Center>
+  ) : queue.error ? (
+    <Center className={styles.detailEmpty} padding={24}>
+      <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
+    </Center>
+  ) : (
+    <Center className={styles.detailEmpty} gap={8}>
+      <Icon icon={GitPullRequestIcon} size={44} />
+      <Text fontSize={13} type={'secondary'}>
+        {queueTotal ?? allPullRequests.length}
+      </Text>
+      <Text fontSize={13} type={'secondary'}>
+        {t('reviews.pullRequests')}
+      </Text>
+    </Center>
+  );
+
+  return (
+    <WorkSurface>
+      <div className={styles.stage}>
+        <WorkSurfaceSplit
+          detail={surface === 'split' ? detailPane : undefined}
+          detailLabel={selectedId ?? t('reviews.pullRequests')}
+          list={listPane}
+          listLabel={t('tab.reviews')}
+          listWidth={482}
+        />
+        {surface === 'detail' ? (
+          <div aria-label={selectedId ?? undefined} className={styles.detailOverlay}>
+            {detailPane}
+          </div>
+        ) : null}
+      </div>
     </WorkSurface>
   );
 });

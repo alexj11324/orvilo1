@@ -7,6 +7,11 @@ import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
 import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  getMilestoneAnchorId,
+  MILESTONE_ICON_COLOR,
+  MILESTONE_ICON_SIZE,
+} from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -39,6 +44,11 @@ const styles = createStaticStyles(({ css }) => ({
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 10px;
     background: color-mix(in srgb, ${cssVar.colorBgContainer} 78%, transparent);
+  `,
+  milestoneIconLink: css`
+    display: flex;
+    flex: none;
+    color: inherit;
   `,
   sectionTrigger: css`
     cursor: pointer;
@@ -125,7 +135,17 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
           ) : (
             milestones.map((milestone) => (
               <Flexbox horizontal align={'center'} gap={8} key={milestone.id}>
-                <Icon color={cssVar.colorPrimary} icon={DiamondIcon} size={12} />
+                <a
+                  aria-label={milestone.name}
+                  className={styles.milestoneIconLink}
+                  href={`#${getMilestoneAnchorId(milestone.id)}`}
+                >
+                  <Icon
+                    color={MILESTONE_ICON_COLOR}
+                    icon={DiamondIcon}
+                    size={MILESTONE_ICON_SIZE}
+                  />
+                </a>
                 <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }}>
                   {milestone.name}
                 </Text>

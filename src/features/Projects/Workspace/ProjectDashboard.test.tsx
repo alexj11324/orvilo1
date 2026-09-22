@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { InputHTMLAttributes, ReactNode } from 'react';
+import { cssVar } from 'antd-style';
+import { DiamondIcon } from 'lucide-react';
+import type { HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
@@ -40,6 +42,12 @@ const mocks = vi.hoisted(() => ({
     mutate: vi.fn(),
   })),
   projectResolved: true,
+  // Props every `Icon` on the page rendered with. The stub below renders
+  // nothing, so this is the only way a test can read the visual spec back.
+  iconProps: [] as Record<string, unknown>[],
+  // Milestones the mocked project detail resolves to; `[]` by default so the
+  // existing empty-state assertions keep their fixture.
+  milestones: [] as NonNullable<ProjectDetail['milestones']>,
 }));
 
 // Only the dashboard/panel components are under test; shell components are
@@ -49,10 +57,13 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   Block: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Empty: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
-  Flexbox: ({ children, className }: { children?: ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
+  Flexbox: ({ children, ...props }: { children?: ReactNode } & HTMLAttributes<HTMLDivElement>) => (
+    <div {...props}>{children}</div>
   ),
-  Icon: () => null,
+  Icon: (props: Record<string, unknown>) => {
+    mocks.iconProps.push(props);
+    return null;
+  },
   Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   TextArea: () => <textarea />,
 }));
@@ -126,7 +137,8 @@ vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
 vi.mock('@/services/project', () => ({ projectService: { updateStatus: vi.fn() } }));
 vi.mock('@/store/project', () => ({
   useCurrentProjectList: () => [],
-  useCurrentProjectDetail: () => (mocks.projectResolved ? detail : undefined),
+  useCurrentProjectDetail: () =>
+    mocks.projectResolved ? { ...detail, milestones: mocks.milestones } : undefined,
   useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: vi.fn() }),
 }));
 
@@ -182,6 +194,20 @@ const detail = {
   teams: [],
 } as unknown as ProjectDetail;
 
+const milestone = {
+  date: '2026-10-01',
+  description: 'Release the parity pass',
+  id: 'ms_1',
+  name: 'Ship the parity pass',
+  projectId: 'prj_1',
+  sortOrder: 0,
+} satisfies NonNullable<ProjectDetail['milestones']>[number];
+
+const withMilestone = { ...detail, milestones: [milestone] };
+
+/** Every diamond glyph the page drew, with the props it was drawn with. */
+const renderedDiamonds = () => mocks.iconProps.filter((props) => props.icon === DiamondIcon);
+
 it('exposes project sections as destination links with one current page, not tab buttons', () => {
   render(<ProjectTabsBar />);
   expect(screen.getByRole('link', { name: 'sections.overview' })).toHaveAttribute(
@@ -214,6 +240,8 @@ beforeEach(() => {
   mocks.projectMembersQuery.mockClear();
   mocks.navigate.mockClear();
   mocks.goals = [];
+  mocks.iconProps = [];
+  mocks.milestones = [];
 });
 
 afterEach(cleanup);
@@ -532,6 +560,51 @@ describe('project dashboard milestones', () => {
   it('shows the empty state when the project has no milestones', () => {
     renderCharts();
     expect(screen.getByText('overview.milestonesEmpty')).toBeInTheDocument();
+  });
+});
+
+// Linear's milestone row is clickable: the diamond is an anchor into the page.
+// The candidate shipped the icon as a bare glyph, so nothing could be opened
+// from either surface.
+describe('project milestone rows', () => {
+  it('anchors each overview milestone row and links its icon to that row', () => {
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+
+    expect(screen.getByRole('link', { name: milestone.name })).toHaveAttribute(
+      'href',
+      '#milestone-ms_1',
+    );
+    const target = document.getElementById('milestone-ms_1');
+    expect(target).not.toBeNull();
+    expect(target).toHaveTextContent(milestone.name);
+  });
+
+  it('links the rail milestone to the same anchor the overview row owns', () => {
+    mocks.milestones = [milestone];
+    render(<ProjectSidePanel projectId="apollo" />);
+
+    expect(screen.getByRole('link', { name: milestone.name })).toHaveAttribute(
+      'href',
+      '#milestone-ms_1',
+    );
+  });
+
+  it('draws the milestone diamond with one shared colour and size on both surfaces', () => {
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+    const overviewIcon = renderedDiamonds()[0] ?? {};
+
+    cleanup();
+    mocks.iconProps = [];
+
+    mocks.milestones = [milestone];
+    render(<ProjectSidePanel projectId="apollo" />);
+    const railIcon = renderedDiamonds()[0] ?? {};
+
+    // The reference glyph is purple and 16x16; antd exposes no purple status
+    // semantic, so the repo's violet palette token stands in for it.
+    for (const icon of [overviewIcon, railIcon]) {
+      expect(icon).toMatchObject({ color: cssVar.purple, size: 16 });
+    }
   });
 });
 

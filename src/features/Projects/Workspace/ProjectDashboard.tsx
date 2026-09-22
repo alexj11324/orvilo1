@@ -7,6 +7,11 @@ import { DiamondIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  getMilestoneAnchorId,
+  MILESTONE_ICON_COLOR,
+  MILESTONE_ICON_SIZE,
+} from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import type { ProjectDetail } from '@/store/project';
 
@@ -22,6 +27,11 @@ const styles = createStaticStyles(({ css }) => ({
     &:last-child {
       border-block-end: 0;
     }
+  `,
+  milestoneIconLink: css`
+    display: flex;
+    flex: none;
+    color: inherit;
   `,
   section: css`
     padding-block: 16px;
@@ -63,9 +73,20 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
                 align={'center'}
                 className={styles.milestone}
                 gap={10}
+                id={getMilestoneAnchorId(milestone.id)}
                 key={milestone.id}
               >
-                <Icon icon={DiamondIcon} size={14} />
+                <a
+                  aria-label={milestone.name}
+                  className={styles.milestoneIconLink}
+                  href={`#${getMilestoneAnchorId(milestone.id)}`}
+                >
+                  <Icon
+                    color={MILESTONE_ICON_COLOR}
+                    icon={DiamondIcon}
+                    size={MILESTONE_ICON_SIZE}
+                  />
+                </a>
                 <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
                   {milestone.name}
                 </Text>

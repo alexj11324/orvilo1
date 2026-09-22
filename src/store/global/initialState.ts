@@ -352,6 +352,18 @@ export interface SystemStatus {
   /** Visibility of the lightweight chat overview card. Independent from the workspace panel. */
   showWorkingOverview?: boolean;
   /**
+   * Sidebar accordion keys the user has explicitly COLLAPSED. Only keys whose
+   * default is expanded belong here — today the per-team sub-navigation rows of
+   * "Your teams" (`team:<id>`).
+   *
+   * Persisted as the collapsed set rather than the expanded one for the same
+   * reason as `modelDetailPanelCollapsedKeys`: an expanded-keys array written
+   * before a team existed (or before it defaulted to open) leaves that team
+   * folded with nothing to unfold it, while a collapsed-keys array keeps every
+   * absent key open — including teams joined later.
+   */
+  sidebarCollapsedKeys?: string[];
+  /**
    * Flat ordered list of sidebar items.
    */
   sidebarExpandedKeys?: string[];
@@ -459,11 +471,16 @@ export interface SystemStatus {
  * overlay is empty.
  */
 export type WorkspaceOverridableField =
-  'expandSessionGroupKeys' | 'hiddenSidebarSections' | 'sidebarExpandedKeys' | 'sidebarItems';
+  | 'expandSessionGroupKeys'
+  | 'hiddenSidebarSections'
+  | 'sidebarCollapsedKeys'
+  | 'sidebarExpandedKeys'
+  | 'sidebarItems';
 
 export const WORKSPACE_OVERRIDABLE_FIELDS = [
   'expandSessionGroupKeys',
   'hiddenSidebarSections',
+  'sidebarCollapsedKeys',
   'sidebarExpandedKeys',
   'sidebarItems',
 ] as const satisfies readonly WorkspaceOverridableField[];

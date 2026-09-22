@@ -41,8 +41,8 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { teamAccordionKey, useTeamSubNav } from '../hooks/useTeamSubNav';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
-import { mergeSidebarExpandedKeys } from './index';
 
 const styles = createStaticStyles(({ css }) => ({
   teamHeader: css`
@@ -71,8 +71,6 @@ const TEAM_SUB_ITEMS = [
   { icon: Layers, key: 'views', tab: 'views', titleKey: 'teams.subNav.views' },
 ] as const;
 
-const teamAccordionKey = (teamId: string) => `team:${teamId}`;
-
 interface TeamsSectionProps {
   itemKey: string;
 }
@@ -80,7 +78,8 @@ interface TeamsSectionProps {
 /**
  * "Your teams" group of the fixed IA. Each readable team is an expandable row
  * (Linear's Your teams): the chevron toggles the sub-navigation, the name
- * deep-links to the team's home tab.
+ * deep-links to the team's home tab. The sub-navigation starts OPEN — the only
+ * state worth persisting is the team the user folded away.
  */
 const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
@@ -91,9 +90,6 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   const activeWorkspaceId = useActiveWorkspaceId();
   const hiddenSections = useGlobalStore(
     systemStatusSelectors.hiddenSidebarSections(activeWorkspaceId),
-  );
-  const sidebarExpandedKeys = useGlobalStore(
-    systemStatusSelectors.sidebarExpandedKeys(activeWorkspaceId),
   );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
@@ -110,10 +106,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   // teams stay discoverable on /teams (the directory surface), not here.
   const teams = useMemo(() => (data?.data ?? []).filter((team) => team.joined === true), [data]);
   const teamKeys = useMemo(() => teams.map((team) => teamAccordionKey(team.id)), [teams]);
-  const expandedTeams = useMemo(
-    () => teamKeys.filter((key) => sidebarExpandedKeys.includes(key)),
-    [sidebarExpandedKeys, teamKeys],
-  );
+  const { expandedTeamKeys, setExpandedTeamKeys } = useTeamSubNav(teamKeys);
 
   const contextMenu = useMemo(() => {
     const items: NativeContextMenuItem[] = [
@@ -142,19 +135,6 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
       navigate('/teams');
     },
     [navigate],
-  );
-
-  const handleTeamsExpandedChange = useCallback(
-    (keys: unknown) => {
-      updateSystemStatus({
-        sidebarExpandedKeys: mergeSidebarExpandedKeys(
-          sidebarExpandedKeys,
-          teamKeys,
-          (keys as (string | number)[]).map(String),
-        ),
-      });
-    },
-    [sidebarExpandedKeys, teamKeys, updateSystemStatus],
   );
 
   const activeTeamTab = useCallback(
@@ -201,8 +181,8 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
         <AccordionRoot
           indicatorPlacement="start"
           style={{ gap: 1 }}
-          value={expandedTeams}
-          onValueChange={handleTeamsExpandedChange}
+          value={expandedTeamKeys}
+          onValueChange={setExpandedTeamKeys}
         >
           {teams.map((team) => {
             const activeTab = activeTeamTab(team.id);

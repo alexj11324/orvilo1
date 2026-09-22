@@ -163,7 +163,11 @@ const CustomizeSidebarContent = memo(() => {
       {
         hiddenSidebarSections: hiddenSections,
         ...(shouldResetExpandedKeys
-          ? { sidebarExpandedKeys: DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS }
+          ? {
+              // Defaults: no group key added, no team sub-navigation folded.
+              sidebarCollapsedKeys: [],
+              sidebarExpandedKeys: DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
+            }
           : {}),
       },
       'customizeSidebar',

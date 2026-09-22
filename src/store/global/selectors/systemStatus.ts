@@ -176,6 +176,17 @@ const hiddenSidebarSections =
     return withoutRetiredItems(s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS);
   };
 
+/**
+ * Keys the user folded away, in the same `team:<id>` vocabulary as
+ * `sidebarExpandedKeys`. Empty means "nothing was ever folded", which is also
+ * the state of every account that predates the field — those keys default to
+ * expanded (Linear keeps a team's sub-navigation open until you close it).
+ */
+const sidebarCollapsedKeys =
+  (workspaceId: string | null) =>
+  (s: GlobalState): string[] =>
+    readOverridableField(s.status, 'sidebarCollapsedKeys', workspaceId) ?? [];
+
 const sidebarExpandedKeys =
   (workspaceId: string | null) =>
   (s: GlobalState): string[] =>
@@ -504,6 +515,7 @@ export const systemStatusSelectors = {
   taskKanbanHiddenPanelCollapsed,
   taskListViewMode,
   taskListViewOptions,
+  sidebarCollapsedKeys,
   sidebarExpandedKeys,
   agentSidebarSections,
   sidebarItems,

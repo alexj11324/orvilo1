@@ -56,8 +56,10 @@ const accordionComponents: Record<string, (key: string) => ReactElement> = {
   [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
 };
 
-/** Exported for TeamsSection — each expanded `team:<id>` accordion shares
- * the same persisted `sidebarExpandedKeys` bucket. */
+/** Rewrite the group keys of `sidebarExpandedKeys` to exactly the accordions the
+ * user left open. Keys outside `accordionKeys` pass through untouched — the
+ * team sub-accordions keep their own bucket (`sidebarCollapsedKeys`, which
+ * defaults to open) instead of sharing this one. */
 export const mergeSidebarExpandedKeys = (
   currentKeys: string[],
   accordionKeys: string[],

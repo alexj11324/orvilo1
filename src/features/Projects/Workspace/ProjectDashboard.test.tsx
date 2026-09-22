@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
 
-import { ProjectPanelSection } from '../Layout/ProjectSidePanel';
+import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
+import { ProjectIssueProgress } from '../Layout/ProjectIssueProgress';
+import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePanel';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
@@ -96,6 +98,10 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
 }));
 
+vi.mock('@/features/Workspace/WorkspaceLink', () => ({
+  default: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
+
 vi.mock('@/libs/swr', () => ({
   useClientDataSWR: () => ({
     data: undefined,
@@ -120,7 +126,13 @@ const detail = {
   labels: [],
   members: [],
   milestones: [],
-  project: { coordinatorAgentId: 'agt_coordinator', id: 'prj_1', name: 'Apollo', slug: 'apollo' },
+  project: {
+    coordinatorAgentId: 'agt_coordinator',
+    createdAt: '2026-09-20T12:00:00Z',
+    id: 'prj_1',
+    name: 'Apollo',
+    slug: 'apollo',
+  },
   tasks: [],
   teams: [],
 } as unknown as ProjectDetail;
@@ -137,6 +149,54 @@ afterEach(cleanup);
 const renderCharts = () => render(<ProjectDashboard detail={detail} projectId={'prj_1'} />);
 
 describe('project sidebar sections', () => {
+  it('uses issue workflow counts, not the independent goal completion percentage', () => {
+    mocks.goals = [{ goal: { id: 'goal_1', status: 'achieved', title: 'Unrelated goal' } }];
+    render(<ProjectSidePanel projectId="apollo" />);
+    expect(screen.getByText('overview.progress.scope').nextElementSibling).toHaveTextContent('0');
+    expect(screen.getByText('overview.progress.started').nextElementSibling).toHaveTextContent('0');
+    expect(screen.getByText('overview.progress.completed').nextElementSibling).toHaveTextContent(
+      '0',
+    );
+    expect(screen.queryByText('100%')).not.toBeInTheDocument();
+  });
+
+  it('reports missing issue data as unavailable rather than zero progress', () => {
+    render(<ProjectIssueProgress issues={null} />);
+    expect(screen.getByRole('status')).toHaveTextContent('overview.progressUnavailable');
+    expect(screen.queryByText('overview.progress.scope')).not.toBeInTheDocument();
+  });
+
+  it('shows real project creation on Overview and links to full Activity without keeping a redundant card there', () => {
+    const { rerender } = render(<ProjectSidePanel showActivity projectId="apollo" />);
+    expect(screen.getByText(/^activity.created/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'activity.seeAll' })).toHaveAttribute(
+      'href',
+      '/project/apollo/activity',
+    );
+    expect(document.querySelector('time')).toHaveAttribute('datetime', '2026-09-20T12:00:00.000Z');
+    rerender(<ProjectSidePanel projectId="apollo" showActivity={false} />);
+    expect(screen.queryByRole('link', { name: 'activity.seeAll' })).not.toBeInTheDocument();
+  });
+
+  it('attributes creation only to the immutable audit snapshot, and never invents a missing timestamp', () => {
+    const { rerender } = render(
+      <ProjectCreationActivity
+        project={{
+          ...detail.project,
+          createdBySnapshot: { displayName: 'Original creator', kind: 'user' },
+        }}
+      />,
+    );
+    expect(screen.getByText(/^activity.createdBy/)).toBeInTheDocument();
+    rerender(<ProjectCreationActivity project={{ ...detail.project, createdBySnapshot: null }} />);
+    expect(screen.queryByText(/^activity.createdBy/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^activity.created/)).toBeInTheDocument();
+    rerender(
+      <ProjectCreationActivity project={{ ...detail.project, createdAt: new Date('invalid') }} />,
+    );
+    expect(document.querySelector('time')).toBeNull();
+  });
+
   it('collapses and reopens its content while exposing the disclosure relationship', () => {
     render(
       <ProjectPanelSection title="Properties">

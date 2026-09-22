@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Empty, Icon } from '@lobehub/ui';
+import { Center, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
@@ -9,7 +9,6 @@ import type { TFunction } from 'i18next';
 import {
   ArrowRightLeft,
   CircleDot,
-  HistoryIcon,
   MessageSquareText as MessageSquareTextIcon,
   Timer,
   UserRoundCog,
@@ -27,10 +26,11 @@ import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
-import { useProjectStore } from '@/store/project';
+import { type ProjectDetail, useProjectStore } from '@/store/project';
 
 import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
+import { ProjectCreationActivity } from './ProjectCreationActivity';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   body: css`
@@ -290,7 +290,8 @@ const ActivityRowItem = memo<{ row: FeedRow }>(({ row }) => {
 
 ActivityRowItem.displayName = 'ActivityRowItem';
 
-const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
+const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] }) => {
+  const projectId = project.id;
   const { state } = useLocation();
   const defaultMode = isRecord(state) && state.projectUpdate === true ? 'update' : 'comment';
   const { t } = useTranslation('project');
@@ -333,18 +334,17 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
   }, [loadingMore, nextCursor, projectId]);
 
   const rows = activityFeedRows((data?.data.items ?? []) as FeedRow[], tail);
-  const updates = updatesSWR.data ?? [];
   const merged = useMemo<RowItem[]>(
     () =>
       [
         ...rows.map((row) => ({ kind: 'activity' as const, row })),
-        ...updates.map((update) => ({ kind: 'update' as const, update })),
+        ...(updatesSWR.data ?? []).map((update) => ({ kind: 'update' as const, update })),
       ].sort((a, b) => {
         const at = a.kind === 'activity' ? a.row.createdAt : a.update.createdAt;
         const bt = b.kind === 'activity' ? b.row.createdAt : b.update.createdAt;
         return bt.localeCompare(at);
       }),
-    [rows, updates],
+    [rows, updatesSWR.data],
   );
 
   if (isLoading && !data) return <SkeletonList padding={12} rows={8} />;
@@ -362,16 +362,6 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
       onPosted={() => void updatesSWR.mutate()}
     />
   );
-
-  if (merged.length === 0)
-    return (
-      <div className={styles.body}>
-        {composer}
-        <Center flex={1} padding={48}>
-          <Empty description={t('activity.empty')} icon={HistoryIcon} />
-        </Center>
-      </div>
-    );
 
   return (
     <div className={styles.body}>
@@ -401,6 +391,11 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
           </Button>
         </Center>
       ) : null}
+      {!nextCursor && (
+        <div className={styles.row}>
+          <ProjectCreationActivity project={project} />
+        </div>
+      )}
     </div>
   );
 };
@@ -416,7 +411,7 @@ const ProjectActivityPage = () => {
     return <AsyncError error={error} variant={'page'} onRetry={() => void mutate()} />;
   if (!data) return null;
 
-  return <ProjectActivityFeed key={data.data.project.id} projectId={data.data.project.id} />;
+  return <ProjectActivityFeed key={data.data.project.id} project={data.data.project} />;
 };
 
 export default ProjectActivityPage;

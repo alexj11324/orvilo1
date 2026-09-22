@@ -55,7 +55,12 @@ const ProjectLayout = memo(() => {
           <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
             <Outlet />
           </Flexbox>
-          {showPanel && projectId && <ProjectSidePanel projectId={projectId} />}
+          {showPanel && projectId && (
+            <ProjectSidePanel
+              projectId={projectId}
+              showActivity={projectPathSection(pathname) === 'overview'}
+            />
+          )}
         </Flexbox>
       </Flexbox>
     </ProjectToolbarContext>

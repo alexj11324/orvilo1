@@ -93,7 +93,7 @@ const ProjectWorkspace = memo(() => {
                 title={project.name}
               />
               <Flexbox gap={2}>
-                <Text fontSize={22} weight={650}>
+                <Text fontSize={20} weight={600}>
                   {project.name}
                 </Text>
                 {project.summary || project.description ? (
@@ -105,7 +105,7 @@ const ProjectWorkspace = memo(() => {
             </Flexbox>
 
             <Flexbox horizontal align={'center'} gap={16}>
-              <Text fontSize={12} style={{ minWidth: 72 }} type={'secondary'}>
+              <Text fontSize={13} style={{ minWidth: 72 }} type={'secondary'} weight={500}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
               <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
@@ -155,7 +155,7 @@ const ProjectWorkspace = memo(() => {
             </Flexbox>
 
             <Flexbox horizontal align={'center'} gap={16}>
-              <Text fontSize={12} style={{ minWidth: 72 }} type={'secondary'}>
+              <Text fontSize={13} style={{ minWidth: 72 }} type={'secondary'} weight={500}>
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
               </Text>
               <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>

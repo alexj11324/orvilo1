@@ -30,6 +30,12 @@ const styles = createStaticStyles(({ css }) => ({
   label: css`
     flex: none;
     width: 84px;
+    font-weight: 450;
+    color: ${cssVar.colorTextSecondary};
+  `,
+  value: css`
+    font-weight: 450;
+    color: ${cssVar.colorText};
   `,
   members: css`
     display: flex;
@@ -171,7 +177,9 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.priority')}
         </Text>
-        <Text fontSize={12}>{t(priorityLabel)}</Text>
+        <Text className={styles.value} fontSize={12}>
+          {t(priorityLabel)}
+        </Text>
       </div>
 
       <div className={styles.row}>
@@ -218,7 +226,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.dates')}
         </Text>
-        <Text fontSize={12}>
+        <Text className={styles.value} fontSize={12}>
           {project.startDate
             ? formatProjectDate(project.startDate, project.startDatePrecision ?? 'day')
             : '—'}

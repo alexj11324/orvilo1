@@ -1,5 +1,6 @@
 import {
   PROJECT_DATE_PRECISIONS,
+  PROJECT_HEALTH_STATES,
   PROJECT_IDENTIFIER_REGEX,
   PROJECT_STATUSES,
   PROJECT_VISIBILITIES,
@@ -68,6 +69,8 @@ const orchestrationPolicySchema = z.object({
   replanMode: z.enum(['disabled', 'observe', 'suggest', 'apply']),
   requireHumanReview: z.boolean(),
 });
+
+const healthInput = z.enum(PROJECT_HEALTH_STATES);
 
 function requireResult<T>(result: T | null, message = 'Project not found'): T {
   if (!result) throw new TRPCError({ code: 'NOT_FOUND', message });
@@ -383,6 +386,34 @@ export const projectRouter = router({
         return { data: await ctx.projectModel.list(input), success: true };
       } catch (error) {
         mapProjectError(error, 'list');
+      }
+    }),
+
+  listUpdates: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
+    try {
+      const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+      return { data: requireResult(await ctx.projectModel.listUpdates(project.id)), success: true };
+    } catch (error) {
+      mapProjectError(error, 'listUpdates');
+    }
+  }),
+
+  createUpdate: projectWriteProcedure
+    .input(idInput.extend({ body: z.string().min(1), health: healthInput }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.createUpdate(project.id, {
+              body: input.body,
+              health: input.health,
+            }),
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'createUpdate');
       }
     }),
 

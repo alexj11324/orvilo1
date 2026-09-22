@@ -95,6 +95,7 @@ table action_approvals {
   expires_at "timestamp with time zone"
   decided_at "timestamp with time zone"
   consumed_at "timestamp with time zone"
+  consumed_by_dispatch_id text
   created_at "timestamp with time zone" [not null, default: `now()`]
 
   indexes {
@@ -3251,6 +3252,7 @@ table project_dependencies {
     (predecessor_id, successor_id) [name: 'project_dependencies_predecessor_successor_unique', unique]
     predecessor_id [name: 'project_dependencies_predecessor_id_idx']
     successor_id [name: 'project_dependencies_successor_id_idx']
+    
   }
 }
 
@@ -3369,6 +3371,7 @@ table projects {
   created_by_snapshot jsonb
   migration_class text [not null, default: 'undetermined']
   visibility text [not null, default: 'public']
+  health text
   orchestration_policy jsonb [not null, default: `{"autoDispatch":false,"requireHumanReview":true,"replanMode":"disabled"}`]
   orchestration_policy_revision integer [not null, default: 1]
   completed_review_id uuid
@@ -3393,6 +3396,7 @@ table projects {
     priority [name: 'projects_priority_idx']
     coordinator_agent_id [name: 'projects_coordinator_agent_id_unique', unique]
     
+    
   }
 }
 
@@ -3414,6 +3418,21 @@ table project_members {
     
     (workspace_id, user_id) [name: 'project_members_workspace_id_user_id_idx']
     (workspace_id, project_id) [name: 'project_members_workspace_id_project_id_idx']
+  }
+}
+
+table project_updates {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  project_id text [not null]
+  user_id text [not null]
+  health text [not null]
+  body text [not null]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (project_id, created_at) [name: 'project_updates_project_created_idx']
   }
 }
 
@@ -4304,28 +4323,6 @@ table tasks {
     (id, workspace_id) [name: 'tasks_id_workspace_id_unique', unique]
     
     
-  }
-}
-
-table task_inputs {
-  id text [pk, not null]
-  workspace_id text
-  task_id text [not null]
-  author_user_id text [not null]
-  sequence integer [not null]
-  base_task_version integer
-  intent_type text [not null]
-  payload jsonb [not null, default: `{}`]
-  status text [not null, default: 'pending']
-  idempotency_key text [unique]
-  decided_by text
-  decided_at "timestamp with time zone"
-  created_at "timestamp with time zone" [not null, default: `now()`]
-
-  indexes {
-    (task_id, sequence) [name: 'task_inputs_task_id_sequence_unique', unique]
-    task_id [name: 'task_inputs_task_id_idx']
-    workspace_id [name: 'task_inputs_workspace_id_idx']
   }
 }
 

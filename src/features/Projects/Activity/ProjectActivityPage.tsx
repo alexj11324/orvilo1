@@ -2,11 +2,18 @@
 
 import { Center, Empty, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
-import type { TaskActivityLogType } from '@orvilo/types';
+import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
-import { ArrowRightLeft, CircleDot, HistoryIcon, Timer, UserRoundCog } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
+import {
+  ArrowRightLeft,
+  CircleDot,
+  HistoryIcon,
+  MessageSquareText as MessageSquareTextIcon,
+  Timer,
+  UserRoundCog,
+} from 'lucide-react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
@@ -20,6 +27,7 @@ import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { useProjectStore } from '@/store/project';
 
+import { ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -128,6 +136,8 @@ type FeedRow = {
   taskTitle: string;
   type: TaskActivityLogType;
 };
+
+type RowItem = { kind: 'activity'; row: FeedRow } | { kind: 'update'; update: ProjectUpdate };
 
 const RelTime = memo<{ time: string }>(({ time }) => {
   const { text, title } = useActivityTime(time);
@@ -254,12 +264,37 @@ const RowSentence = ({ row }: { row: FeedRow }) => {
   }
 };
 
+const ActivityRowItem = memo<{ row: FeedRow }>(({ row }) => {
+  const RowIcon = TYPE_ICON[row.type] ?? ArrowRightLeft;
+  return (
+    <div className={styles.row}>
+      <span className={styles.mark}>
+        <Icon icon={RowIcon} size={13} />
+      </span>
+      <div className={styles.sentence}>
+        <RowSentence row={row} />{' '}
+        <WorkspaceLink
+          className={styles.taskRef}
+          to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}
+        >
+          {row.taskIdentifier} · {row.taskTitle}
+        </WorkspaceLink>
+        {' · '}
+        <RelTime time={row.createdAt} />
+      </div>
+    </div>
+  );
+});
+
+ActivityRowItem.displayName = 'ActivityRowItem';
+
 const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
   const { t } = useTranslation('project');
   const { data, error, isLoading, mutate } = useClientDataSWR(
     ['project:activityFeed', projectId],
     () => projectService.activityFeed(projectId),
   );
+  const updatesSWR = useProjectUpdates(projectId);
 
   // Older pages append below the first SWR page; keyset cursor keeps the
   // feed stable while new rows land at the top.
@@ -294,6 +329,19 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
   }, [loadingMore, nextCursor, projectId]);
 
   const rows = activityFeedRows((data?.data.items ?? []) as FeedRow[], tail);
+  const updates = updatesSWR.data ?? [];
+  const merged = useMemo<RowItem[]>(
+    () =>
+      [
+        ...rows.map((row) => ({ kind: 'activity' as const, row })),
+        ...updates.map((update) => ({ kind: 'update' as const, update })),
+      ].sort((a, b) => {
+        const at = a.kind === 'activity' ? a.row.createdAt : a.update.createdAt;
+        const bt = b.kind === 'activity' ? b.row.createdAt : b.update.createdAt;
+        return bt.localeCompare(at);
+      }),
+    [rows, updates],
+  );
 
   if (isLoading && !data) return <SkeletonList padding={12} rows={8} />;
   if (error && rows.length === 0)
@@ -302,7 +350,7 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
         <AsyncError error={error} variant={'block'} onRetry={() => void mutate()} />
       </Center>
     );
-  if (rows.length === 0)
+  if (merged.length === 0)
     return (
       <Center flex={1} padding={48}>
         <Empty description={t('activity.empty')} icon={HistoryIcon} />
@@ -312,27 +360,20 @@ const ProjectActivityFeed = ({ projectId }: { projectId: string }) => {
   return (
     <div className={styles.body}>
       {error ? <AsyncError error={error} variant={'inline'} onRetry={() => void mutate()} /> : null}
-      {rows.map((row) => {
-        const RowIcon = TYPE_ICON[row.type] ?? ArrowRightLeft;
-        return (
-          <div className={styles.row} key={row.id}>
+      {merged.map((item) =>
+        item.kind === 'update' ? (
+          <div className={styles.row} key={`update-${item.update.id}`}>
             <span className={styles.mark}>
-              <Icon icon={RowIcon} size={13} />
+              <Icon icon={MessageSquareTextIcon} size={13} />
             </span>
             <div className={styles.sentence}>
-              <RowSentence row={row} />{' '}
-              <WorkspaceLink
-                className={styles.taskRef}
-                to={taskDetailPath(row.taskIdentifier, undefined, row.taskTitle)}
-              >
-                {row.taskIdentifier} · {row.taskTitle}
-              </WorkspaceLink>
-              {' · '}
-              <RelTime time={row.createdAt} />
+              <ProjectUpdateRow update={item.update} />
             </div>
           </div>
-        );
-      })}
+        ) : (
+          <ActivityRowItem key={item.row.id} row={item.row} />
+        ),
+      )}
       {moreError ? (
         <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />
       ) : null}

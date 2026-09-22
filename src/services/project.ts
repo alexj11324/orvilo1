@@ -1,5 +1,6 @@
 import type {
   ProjectDatePrecision,
+  ProjectHealth,
   ProjectOrchestrationPolicy,
   ProjectPriority,
   ProjectStatus,
@@ -47,6 +48,11 @@ class ProjectService {
   };
 
   detail = async (id: string) => lambdaClient.project.detail.query({ id });
+
+  listUpdates = async (id: string) => lambdaClient.project.listUpdates.query({ id });
+
+  createUpdate = async (id: string, input: { body: string; health: ProjectHealth }) =>
+    lambdaClient.project.createUpdate.mutate({ id, ...input });
 
   getOrchestrationPolicy = async (id: string) =>
     lambdaClient.project.getOrchestrationPolicy.query({ id });

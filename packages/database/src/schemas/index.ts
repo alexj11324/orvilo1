@@ -48,6 +48,7 @@ export * from './notification';
 export * from './oidc';
 export * from './project';
 export * from './projectMember';
+export * from './projectUpdate';
 export * from './projectWork';
 export * from './pullRequestReview';
 export * from './pushToken';

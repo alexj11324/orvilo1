@@ -25,6 +25,7 @@ import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
+import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
 import ProjectDashboard from './ProjectDashboard';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
@@ -79,6 +80,7 @@ const ProjectWorkspace = memo(() => {
   const detail = useCurrentProjectDetail(projectId);
   const [message, setMessage] = useState('');
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+  const updatesSWR = useProjectUpdates(detail?.project.id);
   const workspaceId = useActiveWorkspaceId();
   const membersEnabled = useTeammatesEnabled() && !!workspaceId;
   const databaseId = detail?.project.id;
@@ -211,6 +213,15 @@ const ProjectWorkspace = memo(() => {
             {project.summary && project.description && (
               <Text style={{ whiteSpace: 'pre-wrap' }}>{project.description}</Text>
             )}
+            <Flexbox gap={8}>
+              <ProjectUpdateComposer
+                projectId={project.id}
+                onPosted={() => void updatesSWR.mutate()}
+              />
+              {(updatesSWR.data ?? []).slice(0, 2).map((update) => (
+                <ProjectUpdateRow key={update.id} update={update} />
+              ))}
+            </Flexbox>
             <Flexbox className={styles.composer}>
               <TextArea
                 autoSize={{ maxRows: 6, minRows: 2 }}

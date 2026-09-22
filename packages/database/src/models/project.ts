@@ -1,6 +1,7 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
 import type {
   ProjectDatePrecision,
+  ProjectHealth,
   ProjectOrchestrationPolicy,
   ProjectPriority,
   ProjectStatus,
@@ -34,6 +35,7 @@ import {
   projects,
 } from '../schemas/project';
 import { projectMembers } from '../schemas/projectMember';
+import { projectUpdates } from '../schemas/projectUpdate';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
@@ -1155,5 +1157,45 @@ export class ProjectModel {
       .where(and(eq(projects.id, id), this.manageable()))
       .limit(1);
     return project ?? null;
+  }
+
+  async listUpdates(projectId: string) {
+    if (!(await this.findById(projectId))) return null;
+    return this.db
+      .select({
+        authorAvatar: users.avatar,
+        authorId: projectUpdates.userId,
+        authorName: users.fullName,
+        body: projectUpdates.body,
+        createdAt: projectUpdates.createdAt,
+        health: projectUpdates.health,
+        id: projectUpdates.id,
+        projectId: projectUpdates.projectId,
+      })
+      .from(projectUpdates)
+      .innerJoin(users, eq(users.id, projectUpdates.userId))
+      .where(eq(projectUpdates.projectId, projectId))
+      .orderBy(desc(projectUpdates.createdAt));
+  }
+
+  async createUpdate(projectId: string, input: { body: string; health: ProjectHealth }) {
+    if (!(await this.findById(projectId))) return null;
+    return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      const [update] = await db
+        .insert(projectUpdates)
+        .values({
+          body: input.body,
+          health: input.health,
+          projectId,
+          userId: this.userId,
+        })
+        .returning();
+      await db
+        .update(projects)
+        .set({ health: input.health, updatedAt: new Date() })
+        .where(eq(projects.id, projectId));
+      return update;
+    });
   }
 }

@@ -1,6 +1,7 @@
 import type {
   ProjectCompletionDecision,
   ProjectDatePrecision,
+  ProjectHealth,
   ProjectMigrationClass,
   ProjectOrchestrationPolicy,
   ProjectPriority,
@@ -98,6 +99,8 @@ export const projects = pgTable(
       .notNull()
       .default('undetermined'),
     visibility: text('visibility').$type<ProjectVisibility>().notNull().default('public'),
+    /** Latest project-update health, denormalized for list surfaces. */
+    health: text('health').$type<ProjectHealth>(),
     orchestrationPolicy: jsonb('orchestration_policy')
       .$type<ProjectOrchestrationPolicy>()
       .notNull()

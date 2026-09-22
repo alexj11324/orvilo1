@@ -36,6 +36,23 @@ export const PROJECT_COMPLETION_DECISIONS = ['accepted', 'rejected'] as const;
 
 export type ProjectCompletionDecision = (typeof PROJECT_COMPLETION_DECISIONS)[number];
 
+/** Linear-style project health reported by project updates. */
+export const PROJECT_HEALTH_STATES = ['onTrack', 'atRisk', 'offTrack'] as const;
+
+export type ProjectHealth = (typeof PROJECT_HEALTH_STATES)[number];
+
+/** A single project update post — Linear's project-update entity. */
+export interface ProjectUpdate {
+  authorAvatar?: string;
+  authorId: string;
+  authorName?: string;
+  body: string;
+  createdAt: string;
+  health: ProjectHealth;
+  id: string;
+  projectId: string;
+}
+
 export interface ProjectOrchestrationPolicy {
   allowedAgentIds?: string[];
   allowedRoles?: string[];

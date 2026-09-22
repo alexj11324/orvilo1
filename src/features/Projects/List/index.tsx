@@ -10,11 +10,15 @@ import {
   Text,
   toast,
 } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import type { ProjectHealth } from '@orvilo/types';
+import { createStaticStyles, useTheme } from 'antd-style';
 import dayjs from 'dayjs';
 import {
+  CircleCheckIcon,
+  CircleDotIcon,
   FolderClosedIcon,
   MoreHorizontalIcon,
+  OctagonAlertIcon,
   PlusIcon,
   SearchXIcon,
   TrashIcon,
@@ -67,7 +71,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   columns: css`
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) 72px 64px 84px 96px 48px 84px 24px;
+    grid-template-columns: minmax(200px, 1fr) 96px 72px 64px 84px 96px 48px 84px 24px;
     gap: 12px;
     align-items: center;
 
@@ -113,6 +117,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+const PROJECT_HEALTH_META = {
+  atRisk: { icon: OctagonAlertIcon, key: 'list.health.atRisk' },
+  offTrack: { icon: CircleCheckIcon, key: 'list.health.offTrack' },
+  onTrack: { icon: CircleDotIcon, key: 'list.health.onTrack' },
+} as const;
+
 const PROJECT_PRIORITY_LABEL_KEY = {
   0: 'create.priority.noPriority',
   1: 'create.priority.urgent',
@@ -136,6 +146,33 @@ const ProjectOwnerAvatar = memo<{ userId: string }>(({ userId }) => {
 });
 
 ProjectOwnerAvatar.displayName = 'ProjectOwnerAvatar';
+
+const ProjectHealthCell = memo<{ health?: ProjectHealth | null }>(({ health }) => {
+  const { t } = useTranslation('project');
+  const theme = useTheme();
+  if (!health || !(health in PROJECT_HEALTH_META)) {
+    return (
+      <Text className={styles.cell} fontSize={12} type={'secondary'}>
+        —
+      </Text>
+    );
+  }
+  const meta = PROJECT_HEALTH_META[health];
+  const color =
+    health === 'onTrack'
+      ? theme.colorSuccess
+      : health === 'atRisk'
+        ? theme.colorWarning
+        : theme.colorError;
+  return (
+    <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
+      <Icon color={color} icon={meta.icon} size={14} />
+      <Text fontSize={12}>{t(meta.key, { defaultValue: health })}</Text>
+    </Flexbox>
+  );
+});
+
+ProjectHealthCell.displayName = 'ProjectHealthCell';
 
 const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
   const { t } = useTranslation(['project', 'common']);
@@ -188,6 +225,7 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
             {project.name}
           </Text>
         </Flexbox>
+        <ProjectHealthCell health={project.health} />
         <Text className={styles.cell} fontSize={12}>
           {project.identifier}
         </Text>
@@ -304,6 +342,9 @@ const ProjectListPage = memo(() => {
                   {t('list.columnName', { defaultValue: 'Name' })}
                 </Text>
               </Flexbox>
+              <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                {t('list.columnHealth', { defaultValue: 'Health' })}
+              </Text>
               <Text className={styles.cell} fontSize={12} type={'secondary'}>
                 {t('list.columnKey', { defaultValue: 'Key' })}
               </Text>

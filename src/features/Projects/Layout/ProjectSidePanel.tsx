@@ -30,10 +30,9 @@ const styles = createStaticStyles(({ css }) => ({
     overflow-y: auto;
     flex: none;
 
-    width: 300px;
+    width: 412px;
     height: 100%;
     padding: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
   railCard: css`
     padding: 12px;

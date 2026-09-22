@@ -72,6 +72,12 @@ vi.mock('@/business/client/hooks/useWorkspaceCapabilities', () => ({
 
 vi.mock('@/features/Teammates/api/hooks', () => ({
   useProjectMembersQuery: mocks.projectMembersQuery,
+  useWorkspaceMembersQuery: () => ({
+    data: [],
+    error: undefined,
+    isLoading: false,
+    mutate: vi.fn(),
+  }),
 }));
 
 vi.mock('@/features/Teammates/useTeammatesEnabled', () => ({
@@ -405,7 +411,9 @@ describe('project properties planning metadata', () => {
     );
 
     expect(screen.getByText('create.priority.high')).toBeInTheDocument();
-    expect(screen.getByText('Sep 2026 → 2027 Q1')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'properties.priority' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'create.startDate' })).toHaveValue('Sep 2026');
+    expect(screen.getByRole('textbox', { name: 'create.targetDate' })).toHaveValue('2027 Q1');
     expect(screen.getByText('UI parity')).toBeInTheDocument();
     expect(screen.getByText('orvilo')).toBeInTheDocument();
   });

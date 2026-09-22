@@ -3,8 +3,7 @@
 import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
-import { CalendarIcon, Link2Icon } from 'lucide-react';
+import { Link2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -29,6 +28,7 @@ import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../U
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectOverviewField } from './ProjectOverviewField';
+import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
 import { PROJECT_STATUS_META } from './ProjectPropertiesCard';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -117,7 +117,13 @@ const ProjectWorkspace = memo(() => {
               <Text fontSize={13} style={{ minWidth: 72 }} type={'secondary'} weight={500}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
-              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+              <Flexbox
+                horizontal
+                align={'center'}
+                gap={8}
+                style={{ minWidth: 0, flex: 1 }}
+                wrap={'wrap'}
+              >
                 <Tag
                   color={statusMeta.color}
                   icon={<Icon icon={statusMeta.icon} size={12} />}
@@ -150,11 +156,10 @@ const ProjectWorkspace = memo(() => {
                       {t('properties.membersEmpty', { defaultValue: 'Add members' })}
                     </Text>
                   ))}
-                {project.createdAt && (
-                  <Tag icon={<Icon icon={CalendarIcon} size={12} />} shape={'round'} size={'small'}>
-                    {dayjs(project.createdAt).format('MMM D')}
-                  </Tag>
-                )}
+                <ProjectPriorityField project={project} />
+                <ProjectLeadField project={project} />
+                <ProjectDateField kind="startDate" project={project} />
+                <ProjectDateField kind="targetDate" project={project} />
                 <Tag shape={'round'} size={'small'}>
                   {t(`properties.visibilityValue.${project.visibility}`, {
                     defaultValue: project.visibility,

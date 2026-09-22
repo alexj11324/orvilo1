@@ -48,6 +48,74 @@ describe('Project Router Integration', () => {
     await expect(caller.update({ ...input, summary: 'x'.repeat(281) })).rejects.toThrow();
   });
 
+  it('persists planning edits, validates them against saved dates, and supports clearing', async () => {
+    const { data: project } = await caller.create({ identifier: 'PLAN', name: 'Planning edits' });
+    await caller.update({
+      id: project.id,
+      priority: 2,
+      startDate: '2026-09-01',
+      targetDate: '2026-12-01',
+      startDatePrecision: 'month',
+      targetDatePrecision: 'quarter',
+    });
+    expect((await caller.detail({ id: project.id })).data.project).toMatchObject({
+      priority: 2,
+      startDate: '2026-09-01',
+      targetDate: '2026-12-01',
+      startDatePrecision: 'month',
+      targetDatePrecision: 'quarter',
+    });
+    await expect(caller.update({ id: project.id, startDate: '2027-01-01' })).rejects.toThrow(
+      'Target date must not precede start date',
+    );
+    await expect(caller.update({ id: project.id, targetDate: '2026-08-01' })).rejects.toThrow(
+      'Target date must not precede start date',
+    );
+    await caller.update({
+      id: project.id,
+      priority: 0,
+      startDate: null,
+      targetDate: null,
+      startDatePrecision: null,
+      targetDatePrecision: null,
+    });
+    expect((await caller.detail({ id: project.id })).data.project).toMatchObject({
+      priority: 0,
+      startDate: null,
+      targetDate: null,
+      startDatePrecision: null,
+      targetDatePrecision: null,
+    });
+    await expect(caller.update({ id: project.id, startDate: '2026-02-30' })).rejects.toThrow();
+    const stranger = await createTestUser(serverDB);
+    try {
+      const other = projectRouter.createCaller(createTestContext(stranger));
+      await expect(other.update({ id: project.id, priority: 1 })).rejects.toThrow(
+        'Project not found',
+      );
+      expect((await caller.detail({ id: project.id })).data.project.priority).toBe(0);
+    } finally {
+      await cleanupTestUser(serverDB, stranger);
+    }
+  });
+
+  it('persists and clears the project lead without assigning an unrelated user', async () => {
+    const { data: project } = await caller.create({ identifier: 'LEAD', name: 'Editable lead' });
+    await caller.update({ id: project.id, leadUserId: userId });
+    expect((await caller.detail({ id: project.id })).data.project.leadUserId).toBe(userId);
+    const stranger = await createTestUser(serverDB);
+    try {
+      await expect(caller.update({ id: project.id, leadUserId: stranger })).rejects.toThrow(
+        'Project lead must be an active workspace member',
+      );
+      expect((await caller.detail({ id: project.id })).data.project.leadUserId).toBe(userId);
+      await caller.update({ id: project.id, leadUserId: null });
+      expect((await caller.detail({ id: project.id })).data.project.leadUserId).toBeNull();
+    } finally {
+      await cleanupTestUser(serverDB, stranger);
+    }
+  });
+
   it('serves the complete project management and human review flow', async () => {
     const created = await caller.create({
       identifier: 'apollo',

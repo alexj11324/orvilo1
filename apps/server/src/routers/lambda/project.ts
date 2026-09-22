@@ -527,9 +527,17 @@ export const projectRouter = router({
       idInput.extend({
         avatar: z.string().nullish(),
         description: z.string().nullish(),
+        leadUserId: z.string().min(1).nullish(),
         name: z.string().min(1).max(255).optional(),
         slug: projectSlugInput.nullish(),
         summary: z.string().max(280).optional(),
+        priority: z
+          .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+          .optional(),
+        startDate: z.iso.date().nullish(),
+        startDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).nullish(),
+        targetDate: z.iso.date().nullish(),
+        targetDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).nullish(),
         visibility: z.enum(PROJECT_VISIBILITIES).optional(),
       }),
     )

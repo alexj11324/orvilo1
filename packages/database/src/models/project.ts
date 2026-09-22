@@ -86,9 +86,15 @@ export interface CreateProjectInput extends ProjectPlanningInput {
 export interface UpdateProjectInput {
   avatar?: string | null;
   description?: string | null;
+  leadUserId?: string | null;
   name?: string;
+  priority?: ProjectPriority;
   slug?: string | null;
+  startDate?: string | null;
+  startDatePrecision?: ProjectDatePrecision | null;
   summary?: string;
+  targetDate?: string | null;
+  targetDatePrecision?: ProjectDatePrecision | null;
   visibility?: ProjectVisibility;
 }
 
@@ -634,12 +640,36 @@ export class ProjectModel {
   }
 
   async update(id: string, input: UpdateProjectInput) {
-    const [project] = await this.db
-      .update(projects)
-      .set({ ...input, updatedAt: new Date() })
-      .where(and(eq(projects.id, id), this.manageable()))
-      .returning();
-    return project ?? null;
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(projects)
+        .where(and(eq(projects.id, id), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!current) return null;
+      if (input.leadUserId) {
+        const validLead = this.workspaceId
+          ? await hasActiveWorkspaceMembership(tx as OrviloDatabase, {
+              userId: input.leadUserId,
+              workspaceId: this.workspaceId,
+            })
+          : input.leadUserId === this.userId;
+        if (!validLead) throw new Error('Project lead must be an active workspace member');
+      }
+      // Validate the merged range under a row lock: partial/concurrent edits must
+      // not validate against an obsolete opposite endpoint.
+      const startDate = input.startDate === undefined ? current.startDate : input.startDate;
+      const targetDate = input.targetDate === undefined ? current.targetDate : input.targetDate;
+      if (startDate && targetDate && targetDate < startDate)
+        throw new Error('Target date must not precede start date');
+      const [project] = await tx
+        .update(projects)
+        .set({ ...input, updatedAt: new Date() })
+        .where(and(eq(projects.id, id), this.manageable()))
+        .returning();
+      return project ?? null;
+    });
   }
 
   async getOrchestrationPolicy(id: string) {

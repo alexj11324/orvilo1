@@ -18,13 +18,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
-import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { projectService } from '@/services/project';
 import type { ProjectDetail } from '@/store/project';
 import { useProjectStore } from '@/store/project';
+
+import { ProjectDateFields, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
 
 const styles = createStaticStyles(({ css }) => ({
   label: css`
@@ -116,14 +116,6 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const members = membersSWR.data ?? [];
   const labels = detail.labels ?? [];
   const teams = detail.teams ?? [];
-  const priorityLabel =
-    {
-      0: 'create.priority.noPriority',
-      1: 'create.priority.urgent',
-      2: 'create.priority.high',
-      3: 'create.priority.normal',
-      4: 'create.priority.low',
-    }[project.priority ?? 0] ?? 'create.priority.noPriority';
 
   const changeStatus = useCallback(
     async (status: WritableProjectStatus) => {
@@ -177,22 +169,14 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.priority')}
         </Text>
-        <Text className={styles.value} fontSize={12}>
-          {t(priorityLabel)}
-        </Text>
+        <ProjectPriorityField project={project} />
       </div>
 
       <div className={styles.row}>
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.lead')}
         </Text>
-        {project.leadUserId ? (
-          <AssigneeUserAvatar userId={project.leadUserId} />
-        ) : (
-          <Text fontSize={12} type={'secondary'}>
-            {t('properties.noLead')}
-          </Text>
-        )}
+        <ProjectLeadField project={project} />
       </div>
       <div className={styles.row}>
         <Text className={styles.label} fontSize={12} type={'secondary'}>
@@ -226,15 +210,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
         <Text className={styles.label} fontSize={12} type={'secondary'}>
           {t('properties.dates')}
         </Text>
-        <Text className={styles.value} fontSize={12}>
-          {project.startDate
-            ? formatProjectDate(project.startDate, project.startDatePrecision ?? 'day')
-            : '—'}
-          {' → '}
-          {project.targetDate
-            ? formatProjectDate(project.targetDate, project.targetDatePrecision ?? 'day')
-            : '—'}
-        </Text>
+        <ProjectDateFields project={project} />
       </div>
 
       <div className={styles.row}>

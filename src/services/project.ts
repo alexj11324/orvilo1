@@ -106,8 +106,20 @@ class ProjectService {
 
   requestCompletion = async (id: string) => lambdaClient.project.requestCompletion.mutate({ id });
 
-  update = async (id: string, input: { description?: string; name?: string; summary?: string }) =>
-    lambdaClient.project.update.mutate({ id, ...input });
+  update = async (
+    id: string,
+    input: {
+      description?: string;
+      leadUserId?: string | null;
+      name?: string;
+      summary?: string;
+      priority?: ProjectPriority;
+      startDate?: string | null;
+      startDatePrecision?: ProjectDatePrecision | null;
+      targetDate?: string | null;
+      targetDatePrecision?: ProjectDatePrecision | null;
+    },
+  ) => lambdaClient.project.update.mutate({ id, ...input });
 
   updateOrchestrationPolicy = async (
     id: string,

@@ -300,6 +300,44 @@ describe('ProjectModel', () => {
     );
   });
 
+  it('only assigns active members of the project workspace as lead', async () => {
+    const workspaceId = 'project-lead-edit-ws';
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Lead editing',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    const owner = new ProjectModel(serverDB, userId, workspaceId);
+    const project = await createProject(owner, { name: 'Lead editing' });
+    await expect(owner.update(project.id, { leadUserId: otherUserId })).rejects.toThrow(
+      'Project lead must be an active workspace member',
+    );
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'member', userId: otherUserId, workspaceId });
+    expect(await owner.update(project.id, { leadUserId: otherUserId })).toMatchObject({
+      leadUserId: otherUserId,
+    });
+    await serverDB
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, otherUserId),
+        ),
+      );
+    await expect(owner.update(project.id, { leadUserId: otherUserId })).rejects.toThrow(
+      'Project lead must be an active workspace member',
+    );
+    expect(await owner.update(project.id, { leadUserId: null })).toMatchObject({
+      leadUserId: null,
+    });
+    expect(await otherModel.update(project.id, { leadUserId: otherUserId })).toBeNull();
+  });
+
   it('filters and paginates projects', async () => {
     await createProject(model, { name: 'Backlog' });
     const active = await createProject(model, { name: 'Active' });

@@ -72,6 +72,53 @@ The dev Electron instance CAN be signed in fully scripted — no manual step nee
 - `save-login <id>` is **only for pool instances**, not the golden profile — the golden profile persists the refresh token itself (access token \~167 h). A future `electron-dev.sh start` boots signed in.
 - There is **no** `@IpcMethod`-decorated IPC that accepts raw tokens (`saveTokens` is not registered) — you cannot inject a session via `electronAPI.invoke`; the OIDC drive is the only scripted path.
 
+## Logged-in reference browser (Brave profile copy + CDP)
+
+To inspect a **logged-in** third-party reference app (e.g. `linear.app`) when the user's real session is required: do NOT use the chrome-devtools MCP scratch Chrome (clean profile, logged out) and do NOT resurrect stale temp profiles. Copy the user's real Brave `Default` profile to a temp dir and launch a second Brave instance with its own CDP port. The "Brave Safe Storage" cookie key lives in macOS Keychain keyed to the Brave binary, so the copy still decrypts cookies and keeps login.
+
+```bash
+SRC="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"
+DST=/tmp/linear-ref-brave   # any temp dir; use a per-task name
+
+# 1) Which profile holds the login? (reads host_key only, never cookie values;
+#    immutable=1 reads Cookies while the real Brave is running)
+sqlite3 "file:$SRC/Default/Cookies?immutable=1" \
+  "select count(*) from cookies where host_key like '%linear%';"
+# -> >0 means logged in; check "Profile N" dirs the same way if Default is empty.
+
+# 2) Copy the profile minus heavy caches (verified 2026-09-22: 2.1G -> ~1.5G)
+mkdir -p "$DST/Default"
+cp "$SRC/Local State" "$DST/"
+rsync -a \
+  --exclude='Cache/' --exclude='Code Cache/' --exclude='GPUCache/' \
+  --exclude='Service Worker/' --exclude='blob_storage/' --exclude='File System/' \
+  --exclude='Crashpad/' --exclude='ShaderCache/' --exclude='GrShaderCache/' \
+  --exclude='DawnGraphiteCache/' --exclude='DawnWebGPUCache/' \
+  --exclude='GraphiteDawnCache/' --exclude='Sessions/' \
+  --exclude='Segmentation Platform/' --exclude='Safe Browsing/' \
+  --exclude='shared_proto_db/' --exclude='Trusted Vault/' \
+  --exclude='Optimization Guide*/' \
+  "$SRC/Default/" "$DST/Default/"
+
+# 3) Launch a SECOND Brave instance on the copy — safe while the real Brave runs
+#    (separate user-data-dir; Singleton* locks live at the dir root and are not copied)
+"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
+  --user-data-dir="$DST" --remote-debugging-port=9666 \
+  --no-first-run --no-default-browser-check --disable-session-crashed-bubble \
+  "https://linear.app/<workspace>/<route>" &
+
+# 4) Verify the page target is the real app, not a login/interstitial page
+curl -s http://127.0.0.1:9666/json/list
+```
+
+Rules:
+
+- Read-only on the reference: navigate and `Runtime.evaluate`; never create/edit/delete in the real workspace.
+- One agent per tab; tab ids change on restart — always rediscover via `/json/list`.
+- The copied profile goes stale as cookies rotate; re-copy into a fresh DST when login expires — never rsync into a DST a running instance is using.
+- Keep localStorage/IndexedDB/Cookies/Login Data/Preferences in the copy — they carry session state; only exclude caches.
+- Verified endpoint: `http://127.0.0.1:9666` → `linear.app/bdiverifier/inbox` rendered logged-in ("Inbox (30)").
+
 ## Probes that worked here
 
 ```bash

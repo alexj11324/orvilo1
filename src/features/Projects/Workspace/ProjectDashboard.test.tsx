@@ -369,7 +369,7 @@ afterEach(cleanup);
 const renderCharts = () => render(<ProjectDashboard detail={detail} projectId={'prj_1'} />);
 
 describe('project membership editing', () => {
-  const member = { projectId: 'prj_1', role: 'manager', userId: 'user_1', user: null };
+  const member = { projectId: 'prj_1', role: 'manager' as const, userId: 'user_1', user: null };
   const query = {
     data: [member],
     error: undefined,

@@ -26,14 +26,15 @@ vi.mock('@/services/taskDraft', () => ({
   taskDraftService: { delete: mock.delete, get: mock.get, upsert: mock.upsert },
 }));
 
-const editor = {
+const editorMock = {
   getDocument: vi.fn((format: string) =>
     format === 'markdown'
       ? 'An unsent comment'
       : { root: { children: [{ text: 'An unsent comment' }] } },
   ),
   setDocument: vi.fn(),
-} as unknown as IEditor;
+};
+const editor = editorMock as unknown as IEditor;
 
 describe('task comment draft', () => {
   beforeEach(() => {
@@ -44,8 +45,8 @@ describe('task comment draft', () => {
     mock.upsert.mockReset().mockResolvedValue({ data: {} });
     mock.delete.mockReset().mockResolvedValue({ data: true });
     mock.mutate.mockReset().mockResolvedValue(undefined);
-    vi.mocked(editor.setDocument).mockClear();
-    vi.mocked(editor.getDocument).mockImplementation((format: string) =>
+    editorMock.setDocument.mockClear();
+    editorMock.getDocument.mockImplementation((format: string) =>
       format === 'markdown'
         ? 'An unsent comment'
         : { root: { children: [{ text: 'An unsent comment' }] } },
@@ -64,7 +65,7 @@ describe('task comment draft', () => {
     renderHook(() => useTaskCommentDraft('task-1', editor, true, onRestore, vi.fn()));
     await act(async () => {});
 
-    expect(editor.setDocument).toHaveBeenCalledWith(
+    expect(editorMock.setDocument).toHaveBeenCalledWith(
       'json',
       JSON.stringify({ root: { children: [{ text: 'Saved' }] } }),
     );
@@ -107,7 +108,7 @@ describe('task comment draft', () => {
 
   it('preserves attachment-only drafts with empty markdown', async () => {
     mock.attachments = ['file-1'];
-    vi.mocked(editor.getDocument).mockImplementation((format: string) =>
+    editorMock.getDocument.mockImplementation((format: string) =>
       format === 'markdown' ? '' : { root: { children: [{ type: 'file' }] } },
     );
     const { result } = renderHook(() =>

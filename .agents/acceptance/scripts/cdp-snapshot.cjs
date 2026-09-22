@@ -19,6 +19,7 @@
  */
 const http = require('node:http');
 const fs = require('node:fs');
+const { buildSnapshotScript } = require('./cdp-page-collector.cjs');
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -36,155 +37,8 @@ const OUTLINE = process.argv.includes('--outline');
 const MAX_ELEMENTS = Number(arg('max', '20000'));
 
 // The expression runs inside the page. Kept as one string so the page does the walking and
-// only the (large) result crosses the wire.
-const PAGE_SCRIPT = `
-(() => {
-  const STYLE_PROPS = [
-    'color','backgroundColor','backgroundImage','fontSize','fontWeight','fontFamily',
-    'lineHeight','letterSpacing','textTransform','textDecorationLine','textAlign',
-    'display','position','flexDirection','justifyContent','alignItems','gap',
-    'gridTemplateColumns','gridAutoFlow','padding','margin','borderRadius','border',
-    'borderTopWidth','borderBottomWidth','boxShadow','opacity','overflow','overflowX',
-    'overflowY','whiteSpace','textOverflow','zIndex','transform','transition','cursor','visibility'
-  ];
-
-  // A descendant of a display:none subtree still reports its OWN display as whatever it is,
-  // so visibility must be decided by geometry plus an ancestor walk, never by self-style.
-  //
-  // Those checks answer "is this rendered". They do NOT answer "can it be seen", and the
-  // difference is not academic: a panel can render fully and still be covered by the surface
-  // layered over it. Every style- and geometry-based test calls that visible, because it is —
-  // it just is not on top. Measured cost of missing this: the Inbox right rail was counted as
-  // present when elementFromPoint at its own centre returned the main column instead.
-  //
-  // So occlusion is tested too, and reported separately rather than folded into visible, so a
-  // caller can tell "never rendered" apart from "rendered but covered" — they need different
-  // fixes. The test only applies while the centre is inside the viewport; below the fold
-  // elementFromPoint returns null for reasons that have nothing to do with occlusion, and
-  // treating that as hidden would be a new false negative in place of the old false positive.
-  const isVisible = (el, rect) => {
-    if (rect.width === 0 && rect.height === 0) return false;
-    if (el.offsetParent === null) {
-      const cs = getComputedStyle(el);
-      if (cs.position !== 'fixed' && el.tagName !== 'BODY' && el.tagName !== 'HTML') return false;
-    }
-    let p = el;
-    while (p && p.nodeType === 1) {
-      const cs = getComputedStyle(p);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
-      p = p.parentElement;
-    }
-    return true;
-  };
-
-  const ownText = (el) => {
-    let t = '';
-    for (const n of el.childNodes) if (n.nodeType === 3) t += n.nodeValue;
-    return t.replace(/\\s+/g, ' ').trim();
-  };
-
-  const all = [...document.querySelectorAll('*')].slice(0, ${MAX_ELEMENTS});
-  const index = new Map();
-  all.forEach((el, i) => index.set(el, i));
-
-  const isOccluded = (el, rect) => {
-    const cx = rect.x + rect.width / 2;
-    const cy = rect.y + rect.height / 2;
-    // elementFromPoint cannot answer for a point outside the viewport, and returning false there
-    // would be a new false negative replacing the old false positive.
-    if (cx < 0 || cy < 0 || cx > innerWidth || cy > innerHeight) return null;
-    const top = document.elementFromPoint(cx, cy);
-    if (!top) return null;
-    // Covered means the topmost thing at our own centre is neither us, nor inside us, nor an
-    // ancestor of ours — the last case is a wrapper legitimately sitting over its own child.
-    return !(top === el || el.contains(top) || top.contains(el));
-  };
-
-  const elements = all.map((el, i) => {
-    const cs = getComputedStyle(el);
-    const r = el.getBoundingClientRect();
-    const visible = isVisible(el, r);
-    const style = {};
-    for (const p of STYLE_PROPS) {
-      const v = cs[p];
-      if (v && v !== 'none' && v !== 'normal' && v !== 'auto' && v !== '0px' && v !== 'rgba(0, 0, 0, 0)') {
-        style[p] = v;
-      }
-    }
-
-    // SVG paint lives on the element/attributes, not in the text histogram — capture it
-    // separately or an icon's colour is invisible to every text-based comparison.
-    const isSvgish = /^(svg|path|circle|rect|line|polygon|polyline|ellipse|g)$/i.test(el.tagName);
-    const paint = isSvgish
-      ? {
-          attrFill: el.getAttribute('fill'),
-          attrStroke: el.getAttribute('stroke'),
-          computedFill: cs.fill,
-          computedStroke: cs.stroke,
-        }
-      : null;
-
-    const anchor = el.closest('a');
-    return {
-      i,
-      parent: el.parentElement ? (index.get(el.parentElement) ?? -1) : -1,
-      depth: (() => { let d = 0, p = el.parentElement; while (p) { d += 1; p = p.parentElement; } return d; })(),
-      tag: el.tagName,
-      id: el.id || null,
-      cls: (el.className || '').toString().slice(0, 120) || null,
-      insp: el.getAttribute('data-insp-path'),
-      role: el.getAttribute('role'),
-      aria: {
-        label: el.getAttribute('aria-label'),
-        expanded: el.getAttribute('aria-expanded'),
-        hidden: el.getAttribute('aria-hidden'),
-        current: el.getAttribute('aria-current'),
-      },
-      tabindex: el.getAttribute('tabindex'),
-      ownText: ownText(el).slice(0, 200) || null,
-      // Full subtree text is what a user perceives; own text is what this node contributes.
-      subtreeText: (el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 200) || null,
-      box: {
-        x: Math.round(r.x), y: Math.round(r.y),
-        w: Math.round(r.width), h: Math.round(r.height),
-      },
-      visible,
-      // Only meaningful when visible is true: a covered element is rendered, it is just not
-      // on top. Null when the centre is off-screen, because elementFromPoint cannot answer there.
-      occluded: visible ? isOccluded(el, r) : null,
-      style,
-      paint,
-      // Behaviour layer: "does it look right" and "can you actually use it" are different
-      // questions, and only this block answers the second one.
-      behavior: {
-        cursor: cs.cursor,
-        tag: el.tagName,
-        isAnchor: el.tagName === 'A',
-        href: el.tagName === 'A' ? el.getAttribute('href') : null,
-        closestAnchorHref: el.tagName === 'A' ? null : (anchor ? anchor.getAttribute('href') : null),
-        isButton: el.tagName === 'BUTTON' || el.getAttribute('role') === 'button',
-        disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
-        hasOnClick: typeof el.onclick === 'function',
-        pointerEvents: cs.pointerEvents,
-      },
-    };
-  });
-
-  return {
-    meta: {
-      url: location.href,
-      title: document.title,
-      viewport: { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio },
-      scrollHeight: document.documentElement.scrollHeight,
-      capturedAt: new Date().toISOString(),
-      elementCount: elements.length,
-      totalElements: document.querySelectorAll('*').length,
-      truncated: document.querySelectorAll('*').length > ${MAX_ELEMENTS},
-    },
-    elements,
-  };
-})()
-`;
+// only the (large) result crosses the wire. It is also exported for connector clients and tests.
+const PAGE_SCRIPT = buildSnapshotScript({ maxElements: MAX_ELEMENTS });
 
 const getJson = (path) =>
   new Promise((resolve, reject) => {
@@ -227,6 +81,11 @@ const outlineOf = (snap) => {
 };
 
 const main = async () => {
+  if (process.argv.includes('--print-script')) {
+    process.stdout.write(`${PAGE_SCRIPT}\n`);
+    return;
+  }
+
   const targets = await getJson('/json/list');
   const pages = targets.filter(
     (t) => t.type === 'page' && !/^(?:devtools|chrome-extension)/.test(t.url),
@@ -234,7 +93,11 @@ const main = async () => {
 
   if (process.argv.includes('--list')) {
     process.stdout.write(
-      `${JSON.stringify(pages.map((t) => ({ title: t.title, url: t.url })), null, 2)}\n`,
+      `${JSON.stringify(
+        pages.map((t) => ({ title: t.title, url: t.url })),
+        null,
+        2,
+      )}\n`,
     );
     return;
   }
@@ -314,7 +177,9 @@ const main = async () => {
     expression: '`${innerWidth}x${innerHeight}@dpr${devicePixelRatio}`',
     returnByValue: true,
   });
-  const inherited = VIEWPORT ? '' : ' (INHERITED — no --viewport given; may be another caller\'s override, not the window)';
+  const inherited = VIEWPORT
+    ? ''
+    : " (INHERITED — no --viewport given; may be another caller's override, not the window)";
   process.stderr.write(`viewport: ${effective.result?.value ?? 'unknown'}${inherited}\n`);
 
   const res = await send('Runtime.evaluate', {
@@ -344,9 +209,13 @@ const main = async () => {
   ws.close();
 };
 
-main().catch((error) => {
-  process.stderr.write(`${error.message}\n`);
-  // 124 matches the shell's convention for "killed by timeout": a caller can branch on a hung
-  // browser without matching the message. `cmd | tail` then reading `$?` reports tail's status.
-  process.exit(error.code === 'CALL_TIMEOUT' ? 124 : 1);
-});
+module.exports = { buildSnapshotScript, outlineOf };
+
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    // 124 matches the shell's convention for "killed by timeout": a caller can branch on a hung
+    // browser without matching the message. `cmd | tail` then reading `$?` reports tail's status.
+    process.exit(error.code === 'CALL_TIMEOUT' ? 124 : 1);
+  });
+}

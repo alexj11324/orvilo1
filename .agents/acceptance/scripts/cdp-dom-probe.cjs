@@ -4,17 +4,16 @@
 // the agent-browser daemon, hard-timeout guarded).
 //
 // Implements the structural and style layers of the Linear-parity probe contract
-// (ORV-125): a pruned DOM element-tree summary (tag / role / child count / text hash)
-// and a computed-style histogram over every text-bearing node, so two pages can be
-// diffed without eyeballing screenshots.
+// (ORV-125): a compact DOM summary plus the full measured element inventory (geometry,
+// pseudo-elements and SVG paint) and a computed-style histogram over every text-bearing node.
 //
 // ── WHAT THIS CANNOT DO (read before quoting its output as evidence) ────────────
 // The style layer is a HISTOGRAM: it counts how many text-bearing nodes carry each
 // fontSize/color. A histogram answers "which values appear on this page", never "is
 // THIS element's value right". One wrong label disappears into its bucket.
 //
-// It also cannot see behaviour or geometry, so a purely decorative row and a
-// clickable one report identically.
+// It does not verify behavior. Every element carries interactionVerification="not-tested";
+// no click is dispatched, and a static onclick property is never a functional pass.
 //
 // Use it to TRIAGE — to find where to look. Never as a parity verdict. This is not
 // hypothetical: four rounds of user-reported defects (a wrong label colour, two
@@ -30,6 +29,7 @@
 
 const http = require('node:http');
 const fs = require('node:fs');
+const { buildSnapshotScript } = require('./cdp-page-collector.cjs');
 
 function resolveWs() {
   try {
@@ -45,7 +45,6 @@ function resolveWs() {
   }
 }
 
-const WebSocket = resolveWs();
 const arg = (k, d) => {
   const i = process.argv.indexOf(k);
   return i === -1 ? d : process.argv[i + 1];
@@ -56,94 +55,99 @@ const OUT = arg('--out', '/tmp/cdp-dom-probe.json');
 const TARGET_SUBSTR = arg('--target-url', '');
 const MAX_DEPTH = Number(arg('--max-depth', 9));
 const TIMEOUT = Number(arg('--timeout', 20000));
+const MAX_ELEMENTS = Number(arg('--max-elements', 20000));
 // e.g. --viewport 1440x900 — applied to BOTH sides so pixel/position data is comparable.
 const VIEWPORT = arg('--viewport', '');
 
 // The probe runs inside the page. Kept as a string so it can be sent verbatim
 // through Runtime.evaluate with returnByValue.
-const buildProbe = (maxDepth) => `(() => {
+
+// Keep the triage output shape while sourcing its measurements from the full collector. The
+// previous walk dropped textless SVG leaves and only retained a style histogram, so calendar
+// icons, nested chips and zero/normal style values disappeared before comparison.
+const buildProbe = (maxDepth = 9, maxElements = MAX_ELEMENTS) => {
+  const snapshotScript = buildSnapshotScript({ maxElements });
+  const depth =
+    Number.isSafeInteger(Number(maxDepth)) && Number(maxDepth) >= 0 ? Number(maxDepth) : 9;
+  return `(() => {
+  const snapshot = ${snapshotScript};
   const norm = (s) => (s || '').replace(/\\s+/g, ' ').trim();
-  const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; } return (h >>> 0).toString(36); };
-  const ownText = (el) => {
-    let t = '';
-    for (const n of el.childNodes) { if (n.nodeType === 3) t += norm(n.textContent) + ' '; }
-    return t.trim();
-  };
+  const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+  const children = new Map();
+  for (const el of snapshot.elements) {
+    if (!children.has(el.parent)) children.set(el.parent, []);
+    children.get(el.parent).push(el);
+  }
 
   let nodeCount = 0;
-  const walk = (el, depth) => {
-    if (depth > ${maxDepth}) return null;
-    const text = ownText(el);
-    const role = el.getAttribute('role');
-    const aria = el.getAttribute('aria-label');
+  const walk = (el, level) => {
+    if (!el || level > ${depth}) return null;
+    const text = el.ownText || '';
+    const role = el.role;
+    const aria = el.aria?.label;
+    const visual = Boolean(el.svg);
+    const pseudo = Boolean(el.pseudo?.before || el.pseudo?.after);
     const kids = [];
-    for (const c of el.children) { const w = walk(c, depth + 1); if (w) kids.push(w); }
+    for (const child of children.get(el.i) || []) {
+      const node = walk(child, level + 1);
+      if (node) kids.push(node);
+    }
 
-    // Collapse semantically-empty single-child chains (framework wrapper divs).
-    // Depth limits alone are the wrong instrument here: they cut real content and
-    // wrapper noise alike, so two pages with different nesting depth are not
-    // comparable. Promoting the lone child keeps structure comparable instead.
-    if (!text && !role && !aria && kids.length === 1) return kids[0];
+    // Preserve visual leaves even when they have no text. In particular, an SVG calendar path
+    // is evidence that a date control has an icon; dropping it makes the probe blind to that UI.
+    const signal = text || role || aria || visual || pseudo;
+    if (!signal && !kids.length) return null;
+    if (!signal && kids.length === 1) return kids[0];
 
-    // Drop leaves that carry no observable signal at all.
-    if (!text && !role && !aria && kids.length === 0) return null;
-
-    nodeCount++;
-    const out = { t: el.tagName.toLowerCase() };
+    nodeCount += 1;
+    const out = { t: el.tag.toLowerCase() };
     if (role) out.r = role;
     if (aria) out.a = norm(aria).slice(0, 60);
     if (text) { out.x = text.slice(0, 60); out.h = hash(text); }
+    if (visual) out.v = { tag: el.svg.tag, viewBox: el.svg.viewBox, path: el.svg.path, geometry: el.svg.geometry };
+    if (pseudo) out.p = el.pseudo;
     if (kids.length) out.c = kids;
     return out;
   };
 
-  // Only text the user can actually see counts toward the style histogram.
-  // A framework may keep unmounted tabs / portals in the DOM with text intact;
-  // counting those would compare rendered UI against hidden markup.
-  const styles = [];
-  let hiddenTexts = 0;
-  for (const el of document.querySelectorAll('*')) {
-    const text = ownText(el);
-    if (!text) continue;
-    const cs = getComputedStyle(el);
-    const r = el.getBoundingClientRect();
-    const visible =
-      r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
-    if (!visible) { hiddenTexts++; continue; }
-    styles.push({
-      x: text.slice(0, 40),
-      fs: cs.fontSize,
-      fw: cs.fontWeight,
-      lh: cs.lineHeight,
-      c: cs.color,
-      ff: (cs.fontFamily || '').split(',')[0].replace(/["']/g, ''),
-    });
-  }
-
+  const styles = snapshot.elements
+    .filter((el) => el.ownText && el.visible)
+    .map((el) => ({
+      x: el.ownText.slice(0, 40),
+      fs: el.style.fontSize,
+      fw: el.style.fontWeight,
+      lh: el.style.lineHeight,
+      c: el.style.color,
+      ff: (el.style.fontFamily || '').split(',')[0].replace(/["']/g, ''),
+    }));
+  const hiddenTexts = snapshot.elements.filter((el) => el.ownText && !el.visible).length;
   const histo = {};
-  for (const s of styles) {
-    const k = s.fs + '|' + s.fw + '|' + s.c;
-    histo[k] = (histo[k] || 0) + 1;
+  for (const style of styles) {
+    const key = style.fs + '|' + style.fw + '|' + style.c;
+    histo[key] = (histo[key] || 0) + 1;
   }
 
-  // Evaluate the walk BEFORE building the result object: object-literal properties
-  // are evaluated in source order, so reading nodeCount on the same line-set as the
-  // walk() call would capture the pre-traversal value (always 0).
-  const structure = walk(document.body, 0);
-
+  const body = snapshot.elements.find((el) => el.tag === 'BODY');
+  const structure = walk(body, 0);
   return {
-    url: location.href,
-    title: document.title,
-    viewport: [window.innerWidth, window.innerHeight],
-    dpr: window.devicePixelRatio,
+    url: snapshot.meta.url,
+    title: snapshot.meta.title,
+    viewport: [snapshot.meta.viewport.w, snapshot.meta.viewport.h],
+    dpr: snapshot.meta.viewport.dpr,
     nodeCount,
     structure,
     textNodes: styles.length,
     hiddenTexts,
     styleHistogram: histo,
     styles: styles.slice(0, 400),
+    // Full elements make this probe useful for triage without requiring a second CDP round trip.
+    // Interaction remains explicitly static: this output has not clicked anything.
+    elements: snapshot.elements,
+    visualNodes: snapshot.elements.filter((el) => el.svg || el.pseudo?.before || el.pseudo?.after),
+    interactionVerification: 'not-tested',
   };
 })()`;
+};
 
 const fetchJson = (path) =>
   new Promise((resolve, reject) => {
@@ -162,7 +166,13 @@ const fetchJson = (path) =>
     req.setTimeout(5000, () => req.destroy(new Error('list timeout')));
   });
 
-(async () => {
+const main = async () => {
+  if (process.argv.includes('--print-script')) {
+    process.stdout.write(`${buildProbe(MAX_DEPTH, MAX_ELEMENTS)}\n`);
+    return;
+  }
+
+  const WebSocket = resolveWs();
   let targets;
   try {
     targets = await fetchJson('/json/list');
@@ -270,4 +280,13 @@ const fetchJson = (path) =>
     console.log(JSON.stringify({ ok: false, error: `ws error: ${e.message}` }));
     process.exit(8);
   });
-})();
+};
+
+module.exports = { buildProbe, buildSnapshotScript };
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.log(JSON.stringify({ ok: false, error: error.message }));
+    process.exit(1);
+  });
+}

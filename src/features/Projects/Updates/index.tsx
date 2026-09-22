@@ -14,6 +14,24 @@ import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 
 const styles = createStaticStyles(({ css }) => ({
+  collapsed: css`
+    cursor: text;
+
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    padding-block: 8px;
+    padding-inline: 12px;
+    border: 1px solid ${cssVar.colorBorder};
+    border-radius: 8px;
+
+    color: ${cssVar.colorTextSecondary};
+
+    &:hover {
+      border-color: ${cssVar.colorPrimaryBorder};
+    }
+  `,
   composer: css`
     overflow: hidden;
     border: 1px solid ${cssVar.colorBorder};
@@ -89,6 +107,8 @@ export const ProjectUpdateComposer = memo<{ projectId: string; onPosted?: () => 
     const [health, setHealth] = useState<ProjectHealth>('onTrack');
     const [posting, setPosting] = useState(false);
 
+    const [expanded, setExpanded] = useState(false);
+
     const post = async () => {
       const content = body.trim();
       if (!content) return;
@@ -96,6 +116,7 @@ export const ProjectUpdateComposer = memo<{ projectId: string; onPosted?: () => 
       try {
         await projectService.createUpdate(projectId, { body: content, health });
         setBody('');
+        setExpanded(false);
         onPosted?.();
       } catch (error) {
         console.error('Failed to post project update', error);
@@ -105,9 +126,21 @@ export const ProjectUpdateComposer = memo<{ projectId: string; onPosted?: () => 
       }
     };
 
+    if (!expanded) {
+      return (
+        <div className={styles.collapsed} onClick={() => setExpanded(true)}>
+          <Icon icon={CircleDotIcon} size={14} style={{ opacity: 0.5 }} />
+          <Text fontSize={13} type={'secondary'}>
+            {t('overview.updatePlaceholder', { defaultValue: 'Write a project update…' })}
+          </Text>
+        </div>
+      );
+    }
+
     return (
       <Flexbox className={styles.composer}>
         <TextArea
+          autoFocus
           autoSize={{ maxRows: 8, minRows: 2 }}
           className={styles.textarea}
           value={body}

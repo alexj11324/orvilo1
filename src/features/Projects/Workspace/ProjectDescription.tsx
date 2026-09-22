@@ -105,7 +105,11 @@ const ProjectDescription = memo<ProjectDescriptionProps>(({ description, onSaved
             }}
           >
             {description ? (
-              <Text fontSize={14} style={{ whiteSpace: 'pre-wrap' }}>
+              <Text
+                fontSize={15}
+                style={{ color: 'lch(19.588 1.25 282)', whiteSpace: 'pre-wrap' }}
+                weight={450}
+              >
                 {description}
               </Text>
             ) : (

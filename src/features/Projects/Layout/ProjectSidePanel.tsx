@@ -32,7 +32,7 @@ const styles = createStaticStyles(({ css }) => ({
 
 const SectionTitle = memo<{ count?: number; title: string }>(({ count, title }) => (
   <Flexbox horizontal align={'center'} gap={7}>
-    <Text fontSize={14} weight={500}>
+    <Text fontSize={13} type={'secondary'} weight={500}>
       {title}
     </Text>
     {count !== undefined && <Tag shape={'round'}>{count}</Tag>}

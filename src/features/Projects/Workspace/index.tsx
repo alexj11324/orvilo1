@@ -93,7 +93,7 @@ const ProjectWorkspace = memo(() => {
                 title={project.name}
               />
               <Flexbox gap={2}>
-                <Text fontSize={20} weight={600}>
+                <Text fontSize={24} weight={600}>
                   {project.name}
                 </Text>
                 {project.summary || project.description ? (

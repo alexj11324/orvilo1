@@ -47,7 +47,7 @@ const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
     <Flexbox className={styles.main} gap={24}>
       <Flexbox className={styles.section} gap={10}>
         <Flexbox horizontal align={'center'} gap={7}>
-          <Text fontSize={16} weight={600}>
+          <Text fontSize={15} weight={600}>
             {t('overview.milestones')}
           </Text>
         </Flexbox>

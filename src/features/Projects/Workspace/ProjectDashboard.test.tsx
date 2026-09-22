@@ -525,6 +525,13 @@ describe('project sidebar sections', () => {
     );
     const trigger = screen.getByRole('button', { name: 'overview.collapseSection' });
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const disclosureIcon = trigger.querySelector('svg');
+    expect(disclosureIcon).toHaveAttribute('viewBox', '0 0 16 16');
+    expect(disclosureIcon).toHaveAttribute('width', '16');
+    expect(disclosureIcon?.querySelector('path')).toHaveAttribute(
+      'd',
+      'M7.002 10.624a.5.5 0 01-.752-.432V5.808a.5.5 0 01.752-.432l3.758 2.192a.5.5 0 010 .864l-3.758 2.192z',
+    );
     expect(document.getElementById(trigger.getAttribute('aria-controls')!)).toContainElement(
       screen.getByRole('button', { name: 'Change priority' }),
     );
@@ -1019,15 +1026,14 @@ describe('project properties row geometry', () => {
   });
 });
 
-// One project status, one glyph. The details side had grown a private
-// status → icon map — seven of its eight entries disagreed with the shared
-// spec — so `/projects` and a project's own pages drew a different icon for the
-// same status. `Icon` is stubbed here, so the props it was drawn with are all
-// there is to see; the assertion is therefore *equality between the surfaces*
-// rather than any particular icon, which turns red whichever side moves.
+// Unmeasured project states keep one shared glyph. The details side had grown a
+// private status → icon map — seven of its eight entries disagreed with the
+// shared spec — so `/projects` and a project's own pages drew different icons
+// without reference evidence. Active is the deliberate exception below: the
+// live rail exposes its complete In Progress SVG, so that geometry is asserted
+// directly instead of generalized to other surfaces.
 describe('project status glyph', () => {
   const STATUSES = [
-    'active',
     'archived',
     'backlog',
     'canceled',
@@ -1037,8 +1043,8 @@ describe('project status glyph', () => {
     'reviewing',
   ] as const;
 
-  /** The glyph the rail Properties card puts in its status control. */
-  const railGlyph = (status: ProjectStatus) => {
+  /** The icon element the rail Properties card puts in its status control. */
+  const railIcon = (status: ProjectStatus) => {
     render(
       <ProjectPropertiesCard
         detail={{ ...detail, project: { ...detail.project, status } }}
@@ -1049,7 +1055,7 @@ describe('project status glyph', () => {
     // Identified by the colour the control paints itself, so this reads the
     // glyph of the status under test and not whichever icon came first.
     const control = mocks.tagProps.find((props) => props.color === visual.color);
-    return (control?.icon as ReactElement<{ icon?: unknown }> | undefined)?.props.icon;
+    return control?.icon as ReactElement<{ children?: unknown; icon?: unknown }> | undefined;
   };
 
   /** The glyph the `/projects` list row draws beside the project name. */
@@ -1061,7 +1067,7 @@ describe('project status glyph', () => {
   };
 
   it.each(STATUSES)('draws %s the same way on the project list and in the rail', (status) => {
-    const rail = railGlyph(status);
+    const rail = railIcon(status)?.props.icon;
     expect(rail).toBeDefined();
 
     cleanup();
@@ -1069,6 +1075,21 @@ describe('project status glyph', () => {
     mocks.tagProps = [];
 
     expect(listGlyph(status)).toBe(rail);
+  });
+
+  it('draws the measured 16px filled In Progress glyph in the rail', () => {
+    const icon = railIcon('active');
+    expect(icon?.type).toBe('svg');
+    expect(icon?.props).toMatchObject({
+      height: 16,
+      style: { color: cssVar.colorWarning, flex: 'none' },
+      viewBox: '-1 -1 16 16',
+      width: 16,
+    });
+    const [perimeter] = icon?.props.children as ReactElement<{ d: string }>[];
+    expect(perimeter.props.d).toBe(
+      'M2.95778 3.02069L5.70777 1.36023C6.50244 0.88041 7.49756 0.88041 8.29223 1.36024L11.0422 3.02074C11.7918 3.47336 12.25 4.2852 12.25 5.16086V8.84803C12.25 9.7251 11.7904 10.5381 11.0388 10.9902L8.29114 12.6433C7.49693 13.1211 6.50355 13.1203 5.71011 12.6412L2.95775 10.9792C2.20815 10.5266 1.75 9.7148 1.75 8.83911V5.16082C1.75 4.28516 2.20816 3.47332 2.95778 3.02069Z',
+    );
   });
 });
 

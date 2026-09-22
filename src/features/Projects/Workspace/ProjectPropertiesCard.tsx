@@ -4,7 +4,7 @@ import { Flexbox, Icon } from '@lobehub/ui';
 import { DropdownMenu, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -81,10 +81,11 @@ const styles = createStaticStyles(({ css }) => ({
 
 /**
  * Per-status behaviour of the inline status control, and deliberately nothing
- * else: how a status *looks* comes from `PROJECT_STATUS_VISUALS`, so one
- * project status can no longer render two different glyphs depending on which
- * surface drew it. This map used to carry its own icon and colour per status —
- * seven of the eight disagreed with the shared spec.
+ * else. Status colour and the unmeasured states still come from
+ * `PROJECT_STATUS_VISUALS`; the active rail trigger below is the one evidenced
+ * exception, because the live reference exposes its complete SVG geometry.
+ * This map used to carry its own private icon and colour for every status —
+ * seven of the eight disagreed with the shared spec without evidence.
  *
  * `writable` is the part that is genuinely local: it is editability, i.e.
  * behaviour, not appearance. Drop it and terminal statuses become settable
@@ -107,6 +108,11 @@ const WRITABLE_STATUSES = Object.keys(PROJECT_STATUS_META).filter(
   (status): status is WritableProjectStatus => PROJECT_STATUS_META[status].writable,
 );
 
+const ACTIVE_STATUS_PERIMETER =
+  'M2.95778 3.02069L5.70777 1.36023C6.50244 0.88041 7.49756 0.88041 8.29223 1.36024L11.0422 3.02074C11.7918 3.47336 12.25 4.2852 12.25 5.16086V8.84803C12.25 9.7251 11.7904 10.5381 11.0388 10.9902L8.29114 12.6433C7.49693 13.1211 6.50355 13.1203 5.71011 12.6412L2.95775 10.9792C2.20815 10.5266 1.75 9.7148 1.75 8.83911V5.16082C1.75 4.28516 2.20816 3.47332 2.95778 3.02069Z';
+const ACTIVE_STATUS_MASK =
+  'M8.3779 4.74233C8.14438 4.60607 7.85562 4.60607 7.6221 4.74233L5.37209 6.05513C5.14168 6.18957 5 6.4363 5 6.70311V9.34216C5 9.60897 5.14168 9.85573 5.37209 9.99016L7.6221 11.303C7.85562 11.4392 8.14438 11.4392 8.3779 11.303L10.6279 9.99016C10.8583 9.85573 11 9.60897 11 9.34216V6.70311C11 6.4363 10.8583 6.18957 10.6279 6.05513L8.3779 4.74233Z';
+
 interface ProjectPropertiesCardProps {
   detail: ProjectDetail;
   projectId: string;
@@ -119,6 +125,7 @@ interface ProjectPropertiesCardProps {
  */
 const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projectId }) => {
   const { t } = useTranslation('project');
+  const activeStatusMaskId = `project-active-status-${useId().replaceAll(':', '')}`;
   const detailSWR = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const workspaceId = useActiveWorkspaceId();
@@ -126,7 +133,8 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const membersSWR = useProjectMembersQuery(projectId, membersEnabled);
 
   const project = detail.project;
-  const statusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(project.status)];
+  const resolvedStatus = resolveProjectStatus(project.status);
+  const statusVisual = PROJECT_STATUS_VISUALS[resolvedStatus];
   const teams = detail.teams ?? [];
 
   const changeStatus = useCallback(
@@ -165,9 +173,49 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
           <span className={styles.statusTrigger}>
             <Tag
               color={statusVisual.color}
-              icon={<Icon icon={statusVisual.icon} size={12} />}
               shape={'round'}
               size={'small'}
+              icon={
+                resolvedStatus === 'active' ? (
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height={16}
+                    stroke="none"
+                    style={{ color: statusVisual.color, flex: 'none' }}
+                    viewBox="-1 -1 16 16"
+                    width={16}
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d={ACTIVE_STATUS_PERIMETER}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeDasharray="3.14 0"
+                      strokeDashoffset={1}
+                      strokeLinejoin="bevel"
+                      strokeWidth={1.5}
+                    />
+                    <g mask={`url(#${activeStatusMaskId})`}>
+                      <circle
+                        cx={7}
+                        cy={7}
+                        fill="none"
+                        r={4}
+                        stroke="currentColor"
+                        strokeDasharray="9.453493333333332 25.12"
+                        strokeWidth={8}
+                        transform="rotate(-90) translate(-14, 0)"
+                      />
+                    </g>
+                    <mask id={activeStatusMaskId} maskUnits="userSpaceOnUse">
+                      <path d={ACTIVE_STATUS_MASK} fill="white" transform="translate(-1, -1)" />
+                    </mask>
+                  </svg>
+                ) : (
+                  <Icon icon={statusVisual.icon} size={12} />
+                )
+              }
             >
               {t(`status.${project.status}`)}
             </Tag>

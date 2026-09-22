@@ -3,10 +3,11 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { ChevronDownIcon, ChevronRightIcon, DiamondIcon } from 'lucide-react';
+import { DiamondIcon } from 'lucide-react';
 import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
@@ -133,10 +134,11 @@ const styles = createStaticStyles(({ css }) => ({
     cursor: pointer;
 
     display: flex;
+    flex: 1;
     gap: 6px;
     align-items: center;
 
-    width: 100%;
+    min-width: 0;
     min-height: 28px;
     padding: 0;
     border: 0;
@@ -174,7 +176,7 @@ export function ProjectPanelSection({
           onClick={() => setExpanded((value) => !value)}
         >
           <Text {...SECTION_LABEL_PROPS}>{title}</Text>
-          <Icon icon={expanded ? ChevronDownIcon : ChevronRightIcon} size={12} />
+          <AccordionArrowIcon isOpen={expanded} size={16} />
         </button>
         {action}
       </Flexbox>

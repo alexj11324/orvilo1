@@ -32,12 +32,21 @@
  * Supported match keys: text (exact, trimmed), textIncludes, tag, role, ariaLabel, href,
  * visible, nth.
  * Supported props: any key of `style`, plus `box.w|box.h|box.x|box.y`, `paint.fill`,
- * `paint.stroke`, `behavior.href`, `behavior.role`.
+ * `paint.stroke` (aliases for the snapshot's `computedFill`/`computedStroke`), `behavior.href`,
+ * `behavior.role`.
+ *
+ * Two ways this used to report a pass while measuring nothing, both now errors:
+ *   * A property that reads `undefined` on both sides. It used to stringify to `—`/`—` and score
+ *     `ok`, so `paint.fill` (not a real snapshot key) looked aligned against every element.
+ *   * More than one element matching when `nth` is omitted. The two sides differ in how many
+ *     elements share a name, so "the first one" means different things on each side and a hidden
+ *     1x1 <label> can be the one that gets paired. Pin `nth` per side and verify the column
+ *     geometrically.
  *
  * Not implemented: region scoping. Snapshots are whole-page, so a text match can also hit a
- * same-named element in the sidebar. Disambiguate with `nth` (check the region visually
- * once, then pin the ordinal), or take the snapshot while the region of interest is the only
- * one rendered. Do not add a `region` key to a pair file — it would be ignored silently.
+ * same-named element in the sidebar. Disambiguate with `nth`, which is now REQUIRED whenever
+ * more than one element matches (check the region visually once, then pin the ordinal per side).
+ * Do not add a `region` key to a pair file — it would be ignored silently.
  */
 const fs = require('node:fs');
 
@@ -62,9 +71,26 @@ const refSnap = load(REF);
 const candSnap = load(CAND);
 const pairs = load(PAIRS);
 
+// The paint object's real keys are attrFill / attrStroke / computedFill / computedStroke. Asking
+// for `paint.fill` reads a key that does not exist and yields undefined on both sides — which the
+// comparison below used to stringify to '—' on both sides and report as agreement. Map the short
+// names so the obvious spelling works, and refuse the long-name typos below instead of scoring them.
+const PAINT_ALIASES = {
+  fill: 'computedFill',
+  stroke: 'computedStroke',
+  attrFill: 'attrFill',
+  attrStroke: 'attrStroke',
+  computedFill: 'computedFill',
+  computedStroke: 'computedStroke',
+};
+
 const getProp = (el, path) => {
   if (path.startsWith('box.')) return el.box?.[path.slice(4)];
-  if (path.startsWith('paint.')) return el.paint?.[path.slice(6)];
+  if (path.startsWith('paint.')) {
+    const key = PAINT_ALIASES[path.slice(6)];
+    if (!key) return { __badProp: `unknown paint field '${path.slice(6)}'` };
+    return el.paint?.[key];
+  }
   if (path.startsWith('behavior.')) return el.behavior?.[path.slice(9)];
   return el.style?.[path];
 };
@@ -85,6 +111,16 @@ const resolve = (snap, cond) => {
   if (!cond) return { error: 'no condition given' };
   const hits = snap.elements.filter((el) => matches(el, cond));
   if (hits.length === 0) return { error: 'no element matched' };
+  if (hits.length > 1 && cond.nth === undefined) {
+    // Defaulting to the first hit is how a hidden 1x1 <label> in the sidebar gets paired against
+    // the real row and printed as a match. The two sides routinely differ in how many elements
+    // share a name (`Members` was 1 on the reference and 4 here), so "the first one" means
+    // different things on each side. Only the caller knows which column it wants.
+    const where = hits
+      .map((h) => `${h.tag}@${Math.round(h.box?.x ?? -1)},${Math.round(h.box?.y ?? -1)}`)
+      .join(' ');
+    return { error: `${hits.length} matched and \`nth\` was not given — ambiguous: ${where}` };
+  }
   const idx = cond.nth ?? 0;
   if (idx >= hits.length) return { error: `nth=${idx} but only ${hits.length} matched` };
   return { el: hits[idx], candidates: hits.length };
@@ -95,6 +131,9 @@ const fmt = (v) => (v === undefined || v === null ? '—' : String(v));
 const rows = [];
 let unresolved = 0;
 let diffs = 0;
+// Properties that produced no reading at all. Counted apart from diffs because they are not
+// "different" — they are unmeasured, and folding them into either column would be a lie.
+let unreadable = 0;
 
 for (const pair of pairs) {
   const props = pair.props || [];
@@ -114,6 +153,27 @@ for (const pair of pairs) {
   const cells = props.map((p) => {
     const rv = getProp(r.el, p);
     const cv = getProp(c.el, p);
+
+    const bad = rv?.__badProp || cv?.__badProp;
+    if (bad) {
+      unreadable += 1;
+      return { prop: p, ref: '?', cand: '?', same: false, note: bad };
+    }
+
+    // A property that reads undefined on BOTH sides is not agreement — it is a property nobody
+    // measured. Stringifying both to '—' and calling it same is how `paint.fill` reported
+    // "aligned" while testing nothing. Absence of a reading must never render as a match.
+    if (rv === undefined && cv === undefined) {
+      unreadable += 1;
+      return {
+        prop: p,
+        ref: '—',
+        cand: '—',
+        same: false,
+        note: 'unreadable on both sides — check the key exists in the snapshot',
+      };
+    }
+
     const same = String(fmt(rv)) === String(fmt(cv));
     if (!same) diffs += 1;
     return { prop: p, ref: fmt(rv), cand: fmt(cv), same };
@@ -129,7 +189,8 @@ const lines = [
   `viewport: ${refSnap.meta?.viewport?.w}x${refSnap.meta?.viewport?.h} vs ` +
     `${candSnap.meta?.viewport?.w}x${candSnap.meta?.viewport?.h}`,
   '',
-  `pairs: ${pairs.length} · differing properties: ${diffs} · unresolved pairs: ${unresolved}`,
+  `pairs: ${pairs.length} · differing properties: ${diffs} · unresolved pairs: ${unresolved} · ` +
+    `unreadable properties: ${unreadable}`,
   '',
 ];
 
@@ -149,9 +210,9 @@ for (const row of rows) {
   lines.push('| property | reference | candidate | |');
   lines.push('| --- | --- | --- | --- |');
   for (const cell of row.cells) {
-    lines.push(
-      `| \`${cell.prop}\` | ${cell.ref} | ${cell.cand} | ${cell.same ? 'ok' : '**DIFF**'} |`,
-    );
+    const verdict = cell.note ? '**UNREADABLE**' : cell.same ? 'ok' : '**DIFF**';
+    const note = cell.note ? ` — ${cell.note}` : '';
+    lines.push(`| \`${cell.prop}\` | ${cell.ref} | ${cell.cand} | ${verdict}${note} |`);
   }
   lines.push('');
 }
@@ -163,5 +224,9 @@ if (OUT) {
 } else {
   process.stdout.write(`${table}\n`);
 }
-process.stderr.write(`pairs=${pairs.length} diffs=${diffs} unresolved=${unresolved}\n`);
-process.exit(unresolved > 0 ? 1 : 0);
+process.stderr.write(
+  `pairs=${pairs.length} diffs=${diffs} unresolved=${unresolved} unreadable=${unreadable}\n`,
+);
+// Unreadable counts as a failure alongside unresolved: a property nobody could read is not a
+// pass, and exiting 0 would let a pair file full of typos look like a clean comparison.
+process.exit(unresolved > 0 || unreadable > 0 ? 1 : 0);

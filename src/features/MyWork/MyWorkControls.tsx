@@ -125,11 +125,26 @@ const MyWorkControls = memo<MyWorkControlsProps>(
         ? t(myWorkOrderingDefaultKey(mode) as never)
         : t(`myWork.ordering.${ordering}` as never);
 
-    /** Shared groupBy labels — `activityDate` is the only My-issues-only one. */
-    const groupingLabel = (value: string): string =>
-      value === 'activityDate'
-        ? t('myWork.grouping.activityDate')
-        : t(`savedViews.groupBy.${value}` as never);
+    /** Shared groupBy labels — the client-bucketed row fields live under `myWork.grouping`. */
+    const groupingLabel = (value: string): string => {
+      switch (value) {
+        case 'activityDate': {
+          return t('myWork.grouping.activityDate');
+        }
+        case 'assignee': {
+          return t('myWork.grouping.assignee');
+        }
+        case 'priority': {
+          return t('myWork.grouping.priority');
+        }
+        case 'project': {
+          return t('myWork.grouping.project');
+        }
+        default: {
+          return t(`savedViews.groupBy.${value}` as never);
+        }
+      }
+    };
 
     return (
       <Flexbox horizontal align="center" gap={6} style={{ flex: 'none' }}>

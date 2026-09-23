@@ -8,12 +8,16 @@ import {
   filterMyWorkTaskRows,
   isCompletedWindowHidden,
   isInteractiveRowClick,
+  isMyWorkClientGrouping,
+  MY_WORK_PRIORITY_LABEL_KEYS,
   myWorkDisplayFiltersRows,
   myWorkListGroupingOptions,
   myWorkOrderingOptions,
+  myWorkPriorityGroupRank,
   myWorkServerGroupBy,
   sortTasksByImportance,
   workQueryActivitySections,
+  workQueryFieldSections,
 } from './myWorkDisplay';
 import type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -56,6 +60,33 @@ describe('myWorkListGroupingOptions', () => {
       expect(myWorkListGroupingOptions(mode)).not.toContain('activityDate');
     }
   });
+
+  it('offers the row-field groupings (priority/project/assignee) on every tab', () => {
+    for (const mode of ['assigned', 'created', 'subscribed', 'activity'] as const) {
+      const options = myWorkListGroupingOptions(mode);
+      expect(options).toContain('priority');
+      expect(options).toContain('project');
+      expect(options).toContain('assignee');
+    }
+  });
+
+  it('keeps the tab default first', () => {
+    expect(myWorkListGroupingOptions('assigned')[0]).toBe('attention');
+    expect(myWorkListGroupingOptions('created')[0]).toBe('none');
+    expect(myWorkListGroupingOptions('subscribed')[0]).toBe('none');
+    expect(myWorkListGroupingOptions('activity')[0]).toBe('activityDate');
+  });
+});
+
+describe('isMyWorkClientGrouping', () => {
+  it('marks the client-bucketed groupings', () => {
+    for (const grouping of ['activityDate', 'assignee', 'priority', 'project'] as const) {
+      expect(isMyWorkClientGrouping(grouping)).toBe(true);
+    }
+    for (const grouping of ['attention', 'none', 'status', 'workflowCategory'] as const) {
+      expect(isMyWorkClientGrouping(grouping)).toBe(false);
+    }
+  });
 });
 
 describe('myWorkServerGroupBy', () => {
@@ -65,8 +96,18 @@ describe('myWorkServerGroupBy', () => {
     );
   });
 
+  it('fetches a flat list for the client-bucketed field groupings', () => {
+    for (const grouping of ['assignee', 'priority', 'project'] as const) {
+      expect(myWorkServerGroupBy({ boardGrouping: 'status', grouping }, 'list')).toBe('none');
+    }
+  });
+
   it('passes the board grouping through in board layout', () => {
     expect(myWorkServerGroupBy({ boardGrouping: 'status', grouping: 'attention' }, 'board')).toBe(
+      'status',
+    );
+    // A client grouping must not leak into the board's column dimension.
+    expect(myWorkServerGroupBy({ boardGrouping: 'status', grouping: 'project' }, 'board')).toBe(
       'status',
     );
   });
@@ -193,6 +234,77 @@ describe('workQueryActivitySections', () => {
       'Yesterday',
     );
     expect(activityDayTitle('unknown', { labels, now })).toBe('Unknown date');
+  });
+});
+
+describe('workQueryFieldSections', () => {
+  const titleOf = (key: string | null) => (key === null ? 'None' : `label:${key}`);
+
+  it('buckets rows by the field key, preserving arrival order', () => {
+    const a = task({ id: 'a', projectId: 'p1' });
+    const b = task({ id: 'b', projectId: 'p2' });
+    const c = task({ id: 'c', projectId: 'p1' });
+    const sections = workQueryFieldSections([a, b, c], {
+      keyOf: (row) => row.projectId,
+      titleOf,
+    });
+    expect(sections.map((section) => section.key)).toEqual(['p1', 'p2']);
+    expect(sections[0].tasks.map((row) => row.id)).toEqual(['a', 'c']);
+    expect(sections[0].title).toBe('label:p1');
+  });
+
+  it('sorts sections by rankOf, then title', () => {
+    const rows = [
+      task({ id: 'a', priority: 3 }),
+      task({ id: 'b', priority: 1 }),
+      task({ id: 'c', priority: 2 }),
+    ];
+    const sections = workQueryFieldSections(rows, {
+      keyOf: (row) => row.priority,
+      rankOf: myWorkPriorityGroupRank,
+      titleOf,
+    });
+    // Urgent (1) → High (2) → Normal (3), regardless of arrival order.
+    expect(sections.map((section) => section.key)).toEqual(['1', '2', '3']);
+  });
+
+  it('sends the null bucket last and titles it through titleOf(null)', () => {
+    const rows = [task({ id: 'a', projectId: null }), task({ id: 'b', projectId: 'p1' })];
+    const sections = workQueryFieldSections(rows, {
+      keyOf: (row) => row.projectId,
+      titleOf,
+    });
+    expect(sections.map((section) => section.key)).toEqual(['p1', 'none']);
+    expect(sections[1].title).toBe('None');
+  });
+
+  it('keeps a missing field out of the named buckets for assignee rows', () => {
+    const rows = [
+      task({ id: 'a', assigneeUserId: 'u1' }),
+      task({ id: 'b', assigneeUserId: null }),
+      task({ id: 'c', assigneeUserId: undefined }),
+    ];
+    const sections = workQueryFieldSections(rows, {
+      keyOf: (row) => row.assigneeUserId,
+      titleOf,
+    });
+    expect(sections.map((section) => section.key)).toEqual(['u1', 'none']);
+    expect(sections[1].tasks.map((row) => row.id)).toEqual(['b', 'c']);
+  });
+});
+
+describe('myWorkPriorityGroupRank', () => {
+  it('orders urgent → high → normal → low → none, null last', () => {
+    const keys = ['0', '4', '2', '1', '3', null];
+    expect(
+      [...keys].sort((a, b) => myWorkPriorityGroupRank(a) - myWorkPriorityGroupRank(b)),
+    ).toEqual(['1', '2', '3', '4', '0', null]);
+  });
+
+  it('covers every Orvilo priority value with a label key', () => {
+    for (const value of [0, 1, 2, 3, 4]) {
+      expect(MY_WORK_PRIORITY_LABEL_KEYS[value]).toMatch(/^taskDetail\.priority\./);
+    }
   });
 });
 

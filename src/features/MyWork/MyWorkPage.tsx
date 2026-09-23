@@ -13,11 +13,14 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
+import { PriorityIcon } from '@/components/PriorityIcon';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
+import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
 import { builderToFilter, stableStringify } from '@/features/SavedViews/workQueryBuilder';
+import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -34,13 +37,16 @@ import {
   activityDayTitle,
   defaultMyWorkDisplay,
   filterMyWorkTaskRows,
+  MY_WORK_PRIORITY_LABEL_KEYS,
   type MyWorkDisplay,
   myWorkDisplayFiltersRows,
   myWorkListGroupingOptions,
   myWorkOrderingOptions,
+  myWorkPriorityGroupRank,
   myWorkServerGroupBy,
   sortTasksByImportance,
   workQueryActivitySections,
+  workQueryFieldSections,
 } from './myWorkDisplay';
 import {
   EMPTY_FILTER_BUILDER,
@@ -150,7 +156,7 @@ const resolveLayout = (mode: MyWorkMode, value: string | null): WorkQueryLayout 
 };
 
 const MyWorkPage = memo(() => {
-  const { t, i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'chat']);
   const workspaceId = useActiveWorkspaceId();
   const workspaceSlug = useActiveWorkspaceSlug();
   const navigate = useWorkspaceAwareNavigate();
@@ -357,22 +363,6 @@ const MyWorkPage = memo(() => {
     [display, displayFiltersRows, groups, importanceOrdered],
   );
 
-  // Activity groups by day — the work-query enum has no activity-date
-  // dimension, so the flat activity-ordered feed is bucketed locally by
-  // `updatedAt` day (the row carries no notification timestamp).
-  const flatSections = useMemo(() => {
-    if (layout !== 'list' || display.grouping !== 'activityDate') return undefined;
-    const labels = {
-      today: t('time.today'),
-      unknown: t('myWork.unknownDate'),
-      yesterday: t('time.yesterday'),
-    };
-    return workQueryActivitySections(displayTasks).map((section) => ({
-      ...section,
-      title: activityDayTitle(section.key, { labels, locale: i18n.language }),
-    }));
-  }, [display.grouping, displayTasks, i18n.language, layout, t]);
-
   /* --------------------------- selection + peek --------------------------- */
 
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -421,6 +411,94 @@ const MyWorkPage = memo(() => {
     }
     return map;
   }, [projects]);
+
+  // Assignee group headers need member display names — the row model carries
+  // `assigneeUserId` only. The roster fetch stays dormant until the grouping
+  // is actually picked.
+  const { members } = useWorkspaceMembersQuery({
+    enabled: layout === 'list' && display.grouping === 'assignee',
+  });
+  const memberNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const member of members ?? []) {
+      if (!member.userId) continue;
+      map.set(
+        member.userId,
+        member.user?.fullName || member.user?.username || member.user?.email || member.userId,
+      );
+    }
+    return map;
+  }, [members]);
+
+  // Client-side list groupings — the work-query enum has no activity-date,
+  // priority, project or assignee dimension, so the page fetches the flat
+  // feed (`myWorkServerGroupBy` → 'none') and buckets the loaded page here.
+  // Arrival order inside a section is the feed's own ordering; Load-more
+  // keeps paging the flat list at the bottom.
+  const flatSections = useMemo(() => {
+    if (layout !== 'list') return undefined;
+    if (display.grouping === 'activityDate') {
+      const labels = {
+        today: t('time.today'),
+        unknown: t('myWork.unknownDate'),
+        yesterday: t('time.yesterday'),
+      };
+      return workQueryActivitySections(displayTasks).map((section) => ({
+        ...section,
+        title: activityDayTitle(section.key, { labels, locale: i18n.language }),
+      }));
+    }
+    if (display.grouping === 'priority') {
+      return workQueryFieldSections(displayTasks, {
+        // null and 0 are the same "No priority" bucket — matching
+        // `taskImportanceRank`, which ranks them identically.
+        keyOf: (task) => task.priority ?? 0,
+        rankOf: myWorkPriorityGroupRank,
+        titleOf: (key) =>
+          t(
+            `chat:${
+              MY_WORK_PRIORITY_LABEL_KEYS[Number(key ?? 0)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0]
+            }` as never,
+          ),
+      }).map((section) => ({
+        ...section,
+        icon: (
+          <PriorityIcon priority={section.key === 'none' ? 0 : Number(section.key)} size={14} />
+        ),
+      }));
+    }
+    if (display.grouping === 'project') {
+      return workQueryFieldSections(displayTasks, {
+        keyOf: (task) => task.projectId,
+        // A projectId that resolves to no known name keeps its id as the
+        // honest group label (stale link / unreadable project) instead of
+        // folding into "No project" — the row does carry a project.
+        titleOf: (key) =>
+          key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
+      }).map((section) => ({
+        ...section,
+        icon: (
+          <Icon
+            color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
+            icon={FolderIcon}
+            size={14}
+          />
+        ),
+      }));
+    }
+    if (display.grouping === 'assignee') {
+      return workQueryFieldSections(displayTasks, {
+        keyOf: (task) => task.assigneeUserId,
+        titleOf: (key) =>
+          key === null ? t('chat:taskList.unassigned') : (memberNameById.get(key) ?? key),
+      }).map((section) => ({
+        ...section,
+        icon: <AssigneeUserAvatar size={18} userId={section.key === 'none' ? null : section.key} />,
+      }));
+    }
+    return undefined;
+  }, [display.grouping, displayTasks, i18n.language, layout, memberNameById, projectNameById, t]);
+
   const rowExtras = useCallback(
     (task: WorkQueryResultTask) => {
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
@@ -463,15 +541,28 @@ const MyWorkPage = memo(() => {
     [refresh, t],
   );
 
-  const createInGroup = useCallback(() => {
-    createTaskModal({
-      onCreated: (task) => {
-        navigate(taskDetailPath(task.identifier, task.agentId ?? undefined, task.name));
-      },
-      showInlineToggle: false,
-      teamOptions: joinedTeamOptions,
-    });
-  }, [joinedTeamOptions, navigate]);
+  const openCreateModal = useCallback(
+    (preset?: { projectId?: string }) => {
+      createTaskModal({
+        onCreated: (task) => {
+          navigate(taskDetailPath(task.identifier, task.agentId ?? undefined, task.name));
+        },
+        projectId: preset?.projectId,
+        showInlineToggle: false,
+        teamOptions: joinedTeamOptions,
+      });
+    },
+    [joinedTeamOptions, navigate],
+  );
+
+  const createInGroup = useCallback(() => openCreateModal(), [openCreateModal]);
+
+  // Of the client-bucketed groupings only Project can preset a create-modal
+  // field — the `+` stays off the day/priority/assignee headers.
+  const createInFlatSection = useCallback(
+    (key: string) => openCreateModal({ projectId: key === 'none' ? undefined : key }),
+    [openCreateModal],
+  );
 
   const saveCopy = useCallback(async () => {
     if (!isMyWorkSaveableMode(mode)) return;
@@ -600,6 +691,7 @@ const MyWorkPage = memo(() => {
           onOpenTask={openTaskPage}
           onSelectTask={setSelected}
           onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
+          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
         />
       </>
     );

@@ -171,10 +171,11 @@ interface WorkQueryResultsProps {
   flatNested?: boolean;
   /**
    * Sections rendered in place of the flat list when the effective grouping
-   * is `none` — My issues uses it for the client-side activity-date buckets
-   * the work-query groupBy enum cannot express.
+   * is `none` — My issues uses it for the client-side day/field buckets the
+   * work-query groupBy enum cannot express. `icon` is the optional group
+   * header glyph (priority icon, assignee avatar, …).
    */
-  flatSections?: { key: string; tasks: WorkQueryResultTask[]; title: string }[];
+  flatSections?: { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[];
   groupBy?: WorkQueryGroupBy;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
   isFollowed?: (taskId: string) => boolean;
@@ -183,6 +184,12 @@ interface WorkQueryResultsProps {
   loadingLabel: string;
   loadMoreLabel: string;
   movable?: boolean;
+  /**
+   * Hover `+` on caller-computed (`flatSections`) headers. Only supplied when
+   * the bucket key is a real create preset (e.g. a project id) — day/priority
+   * buckets have nothing honest to preset, so they keep the header bare.
+   */
+  onCreateInFlatSection?: (sectionKey: string) => void;
   /** Group-header hover `+` — the handler owns the actual create flow. */
   onCreateInGroup?: (groupKey: string) => void;
   onLoadMore?: () => void;
@@ -329,6 +336,8 @@ const WorkQueryStatusGroup = memo<{
   allTasks: WorkQueryResultTask[];
   createLabel?: string;
   hasMore?: boolean;
+  /** Optional header glyph — field-bucket sections (priority icon, avatar). */
+  icon?: ReactNode;
   isFollowed?: (taskId: string) => boolean;
   /** Explicit header text — date buckets etc. that are not status keys. */
   label?: string;
@@ -353,6 +362,7 @@ const WorkQueryStatusGroup = memo<{
     createLabel,
     groupBy,
     hasMore,
+    icon,
     isFollowed,
     label,
     loadMoreLabel,
@@ -390,9 +400,10 @@ const WorkQueryStatusGroup = memo<{
               className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
               size={14}
             />
-            {visual && !attention && !label ? (
+            {visual && !attention && !label && !icon ? (
               <Icon color={visual.color} icon={visual.icon} size={14} />
             ) : null}
+            {icon}
             <Text ellipsis fontSize={attention ? 13 : 12} weight={500}>
               {label ?? (labelKey ? t(labelKey as never) : columnKey)}
             </Text>
@@ -508,6 +519,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     loadingLabel,
     loadMoreLabel,
     movable,
+    onCreateInFlatSection,
     onCreateInGroup,
     onLoadMore,
     onLoadMoreGroup,
@@ -612,15 +624,17 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           ) : flatSections && flatSections.length > 0 ? (
             <Flexbox gap={8}>
               {flatSections.map((section) => (
-                /* Date buckets borrow the banner header (`attention`) — the
-                   filled status pill would be wrong chrome for a day label.
-                   No `+` here: the key is a day, not a status, and the create
-                   modal has no day-scoped contract to honour. */
+                /* Client-bucketed sections borrow the banner header
+                   (`attention`) — the filled status pill would be wrong chrome
+                   for a field label. `+` only appears when the caller's
+                   `onCreateInFlatSection` says the key presets a real field
+                   (a day or a priority rank presets nothing). */
                 <WorkQueryStatusGroup
                   attention
                   allTasks={allTasks}
                   columnKey={section.key}
                   groupBy={'status'}
+                  icon={section.icon}
                   isFollowed={isFollowed}
                   key={section.key}
                   label={section.title}
@@ -628,6 +642,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   selectedTaskId={selectedTaskId}
                   tasks={section.tasks}
                   total={section.tasks.length}
+                  onCreateInGroup={onCreateInFlatSection}
                   {...rowProps}
                 />
               ))}

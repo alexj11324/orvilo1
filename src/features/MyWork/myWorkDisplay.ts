@@ -10,11 +10,20 @@ import type { WorkQueryResultTask } from './workQueryPaging';
  * `activityDate` is a client-side presentation grouping: the work-query API
  * has no activity-date dimension (`groupBy` covers attention/status/
  * workflowCategory/none only), so the page fetches the flat activity-ordered
- * list and buckets rows by their day locally.
+ * list and buckets rows by their day locally. `priority`/`project`/`assignee`
+ * group the same way — real row fields the wire enum cannot express, bucketed
+ * over the loaded flat page (`workQueryFieldSections`).
  */
 
 export type MyWorkListGrouping =
-  'activityDate' | 'attention' | 'none' | 'status' | 'workflowCategory';
+  | 'activityDate'
+  | 'assignee'
+  | 'attention'
+  | 'none'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 export type MyWorkBoardGrouping = 'status' | 'workflowCategory';
 export type MyWorkOrdering =
   'createdAsc' | 'createdDesc' | 'default' | 'updatedAsc' | 'updatedDesc';
@@ -61,13 +70,28 @@ export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   showTriage: true,
 });
 
-/** Grouping choices offered per tab — the tab's Linear default comes first. */
+/**
+ * Grouping choices offered per tab — the tab's Linear default comes first,
+ * then the status dimensions, then the row-field groupings Linear's menu
+ * lists (Priority / Project / Assignee) which bucket client-side.
+ */
 export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[] => {
-  if (mode === 'assigned') return ['attention', 'status', 'workflowCategory', 'none'];
-  if (mode === 'activity') {
-    return ['activityDate', 'none', 'status', 'workflowCategory', 'attention'];
+  if (mode === 'assigned') {
+    return ['attention', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'none'];
   }
-  return ['none', 'status', 'workflowCategory', 'attention'];
+  if (mode === 'activity') {
+    return [
+      'activityDate',
+      'status',
+      'workflowCategory',
+      'priority',
+      'project',
+      'assignee',
+      'attention',
+      'none',
+    ];
+  }
+  return ['none', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'attention'];
 };
 
 export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = ['workflowCategory', 'status'];
@@ -83,13 +107,22 @@ export const myWorkOrderingOptions = (mode: MyWorkMode): MyWorkOrdering[] =>
     ? ['default', 'updatedDesc', 'updatedAsc', 'createdDesc', 'createdAsc']
     : ['default'];
 
-/** The `groupBy` actually sent to `myWork` — `activityDate` fetches the flat list. */
+/** Groupings bucketed client-side over the flat feed — they never reach the wire. */
+export const isMyWorkClientGrouping = (
+  grouping: MyWorkListGrouping,
+): grouping is 'activityDate' | 'assignee' | 'priority' | 'project' =>
+  grouping === 'activityDate' ||
+  grouping === 'assignee' ||
+  grouping === 'priority' ||
+  grouping === 'project';
+
+/** The `groupBy` actually sent to `myWork` — client-side groupings fetch the flat list. */
 export const myWorkServerGroupBy = (
   display: Pick<MyWorkDisplay, 'boardGrouping' | 'grouping'>,
   layout: 'board' | 'list',
 ): 'attention' | 'none' | 'status' | 'workflowCategory' => {
   if (layout === 'board') return display.boardGrouping;
-  return display.grouping === 'activityDate' ? 'none' : display.grouping;
+  return isMyWorkClientGrouping(display.grouping) ? 'none' : display.grouping;
 };
 
 export const MY_WORK_ORDERING_SORTS: Record<Exclude<MyWorkOrdering, 'default'>, WorkQuerySort[]> = {
@@ -259,6 +292,73 @@ export const workQueryActivitySections = <T extends WorkQueryResultTask>(
     tasks: bucketTasks,
     total: bucketTasks.length,
   }));
+};
+
+/* ------------------- field groupings (priority/project/assignee) ------------------- */
+
+export interface MyWorkFieldSection<T> {
+  key: string;
+  tasks: T[];
+  title: string;
+}
+
+/**
+ * Bucket a flat (`groupBy: 'none'`) feed by a row field the work-query enum
+ * cannot express — the same client-side contract as the activity-date
+ * sections. Arrival order is preserved inside each section; sections sort by
+ * `rankOf` then title, and the null bucket ("No project" / "Unassigned")
+ * trails the named groups like Linear's menus. Counts reflect the loaded
+ * page, so Load-more keeps appending under the bottom of the list.
+ */
+export const workQueryFieldSections = <T>(
+  tasks: readonly T[],
+  options: {
+    /** Bucket key — `null`/`undefined` lands in the trailing "no field" group. */
+    keyOf: (task: T) => number | string | null | undefined;
+    /** Lower rank sorts first; ties fall back to the title. Null always trails. */
+    rankOf?: (key: string | null) => number;
+    titleOf: (key: string | null) => string;
+  },
+): MyWorkFieldSection<T>[] => {
+  const buckets = new Map<string | null, T[]>();
+  for (const task of tasks) {
+    const raw = options.keyOf(task);
+    const key = raw === null || raw === undefined ? null : String(raw);
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(task);
+    else buckets.set(key, [task]);
+  }
+  const rankOf = options.rankOf ?? (() => 0);
+  return [...buckets.entries()]
+    .sort(([left], [right]) => {
+      if (left === null) return right === null ? 0 : 1;
+      if (right === null) return -1;
+      const byRank = rankOf(left) - rankOf(right);
+      if (byRank !== 0) return byRank;
+      return options.titleOf(left).localeCompare(options.titleOf(right));
+    })
+    .map(([key, bucketTasks]) => ({
+      key: key ?? 'none',
+      tasks: bucketTasks,
+      title: options.titleOf(key),
+    }));
+};
+
+/**
+ * Priority group order — Linear's Urgent → High → Normal → Low → No priority.
+ * Keys are the bucket keys `workQueryFieldSections` produces for
+ * `keyOf: task.priority` (i.e. the raw priority value as a string).
+ */
+export const myWorkPriorityGroupRank = (key: string | null): number =>
+  key === null ? Number.MAX_SAFE_INTEGER : taskImportanceRank(Number(key));
+
+/** `taskDetail.priority.*` (chat ns) label key per Orvilo priority value. */
+export const MY_WORK_PRIORITY_LABEL_KEYS: Record<number, string> = {
+  0: 'taskDetail.priority.none',
+  1: 'taskDetail.priority.urgent',
+  2: 'taskDetail.priority.high',
+  3: 'taskDetail.priority.normal',
+  4: 'taskDetail.priority.low',
 };
 
 /* ------------------------------- row clicks ------------------------------- */

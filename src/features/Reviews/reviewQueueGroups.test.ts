@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   inProductReviewsCount,
+  REVIEW_QUEUE_GROUP_LABEL_KEYS,
   reviewQueueGroups,
   type ReviewQueueItem,
 } from './reviewQueueGroups';
@@ -34,7 +35,7 @@ describe('reviewQueueGroups', () => {
     expect(groups[0]?.items).toHaveLength(2);
   });
 
-  it('buckets the for-me queue into ready-to-merge / pull-requests / created-by-you', () => {
+  it('buckets the for-me queue into approved / pull-requests / created-by-you', () => {
     const groups = reviewQueueGroups(
       [
         item({ author: 'me', number: 1, reviewDecision: 'APPROVED' }),
@@ -45,14 +46,39 @@ describe('reviewQueueGroups', () => {
       { tab: 'for-me', viewer: 'me' },
     );
     expect(groups.map((group) => group.key)).toEqual([
-      'ready-to-merge',
+      'approved',
       'pull-requests',
       'created-by-you',
     ]);
-    // An approved own PR is ready to merge, not filed under created-by-you.
+    // An approved own PR is approved, not filed under created-by-you.
     expect(groups[0]?.items.map((row) => row.number)).toEqual([1]);
     expect(groups[1]?.items.map((row) => row.number)).toEqual([2, 3]);
     expect(groups[2]?.items.map((row) => row.number)).toEqual([4]);
+  });
+
+  it('buckets an authored PR that reached for-me via authorship under created-by-you', () => {
+    // The for-me search is author ∪ review-requested — a PR that only
+    // matches the author side (no pending request) still files by author.
+    const groups = reviewQueueGroups(
+      [
+        item({ author: 'me', number: 1 }),
+        item({ author: 'me', number: 2, reviewDecision: 'REVIEW_REQUIRED' }),
+        item({ number: 3, reviewDecision: 'REVIEW_REQUIRED' }),
+      ],
+      { tab: 'for-me', viewer: 'me' },
+    );
+    expect(groups.map((group) => group.key)).toEqual(['pull-requests', 'created-by-you']);
+    expect(groups[0]?.items.map((row) => row.number)).toEqual([3]);
+    expect(groups[1]?.items.map((row) => row.number)).toEqual([1, 2]);
+  });
+
+  it('labels the approved bucket honestly — the payload has no mergeable field', () => {
+    // F6: `APPROVED` is a review decision, not mergeability — the label must
+    // not claim "ready to merge" until the payload carries a real field.
+    expect(REVIEW_QUEUE_GROUP_LABEL_KEYS.approved).toBe('reviews.groups.approved');
+    expect(Object.values(REVIEW_QUEUE_GROUP_LABEL_KEYS)).not.toContain(
+      'reviews.groups.readyToMerge',
+    );
   });
 
   it('drops empty buckets so a uniform queue keeps one header', () => {

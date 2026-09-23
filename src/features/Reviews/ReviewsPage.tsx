@@ -273,9 +273,9 @@ const QueueGroup = ({
 
 /**
  * `/reviews` — the real PR review workspace (F02). The GitHub queue is the
- * primary surface: For-me = PRs with a pending review request, Created = my
- * open PRs. In-product task approvals stay in a separate section so approval
- * requests never mix into the PR list.
+ * primary surface: For-me = PRs authored by me or awaiting my review,
+ * Created = my open PRs. In-product task approvals stay in a separate
+ * section so approval requests never mix into the PR list.
  */
 const ReviewsPage = memo(() => {
   const { t } = useTranslation('common');

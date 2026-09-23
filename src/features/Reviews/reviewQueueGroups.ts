@@ -2,7 +2,10 @@
  * `/reviews` list aggregation — queue grouping plus the `In-product
  * approvals` header count. Linear's For-you lane buckets pull requests into
  * `Ready to merge` / `Created by you`; the Created lane stays a single
- * `Open` list (audit D5/D6, BEHAVIORS §Group header).
+ * `Open` list (audit D5/D6, BEHAVIORS §Group header). Our lead bucket is
+ * labeled `Approved`, not `Ready to merge`: the queue payload carries no
+ * mergeable/check-rollup field, so approval is the strongest claim it can
+ * honestly make (audit F6).
  */
 
 export type ReviewQueueTab = 'created' | 'for-me';
@@ -24,7 +27,7 @@ export interface ReviewQueueItem {
   url: string;
 }
 
-export type ReviewQueueGroupKey = 'created-by-you' | 'open' | 'pull-requests' | 'ready-to-merge';
+export type ReviewQueueGroupKey = 'approved' | 'created-by-you' | 'open' | 'pull-requests';
 
 export interface ReviewQueueGroup<T extends ReviewQueueItem = ReviewQueueItem> {
   items: T[];
@@ -37,27 +40,23 @@ export interface ReviewQueueGroup<T extends ReviewQueueItem = ReviewQueueItem> {
  * cast (typed resources, `keySeparator: false`).
  */
 export const REVIEW_QUEUE_GROUP_LABEL_KEYS = {
+  'approved': 'reviews.groups.approved',
   'created-by-you': 'reviews.groups.createdByYou',
   'open': 'reviews.state.open',
   'pull-requests': 'reviews.pullRequests',
-  'ready-to-merge': 'reviews.groups.readyToMerge',
 } as const satisfies Record<ReviewQueueGroupKey, string>;
 
 /**
- * Best derivable mapping onto the For-you buckets from the existing queue
- * payload (`reviewDecision` + `author` + the top-level `viewer` login):
- * - `ready-to-merge` — the PR carries an APPROVED review decision, the
- *   strongest mergeable signal this payload has (check rollup is only loaded
- *   on the detail surface);
- * - `created-by-you` — the item's author is the signed-in viewer;
+ * For-you bucketing over the queue payload (`reviewDecision` + `author` +
+ * the top-level `viewer` login):
+ * - `approved` — the PR carries an APPROVED review decision. It is labeled
+ *   `Approved`, never `Ready to merge`: mergeable/check state only loads on
+ *   the detail surface, so the list cannot prove mergeability (audit F6);
+ * - `created-by-you` — the item's author is the signed-in viewer. The for-me
+ *   search is `author:<viewer> OR review-requested:<viewer>` (advanced
+ *   search), so authored PRs reach the lane even with no pending request;
  * - `pull-requests` — everything else still waiting on a review.
  * Empty buckets are dropped so a uniform queue keeps its single header.
- *
- * Known contract gap: the for-me search is `review-requested:<viewer>` only,
- * so authored PRs without a pending review request never reach this lane —
- * Linear's full For-you aggregation needs a merged author ∪ review-requested
- * query plus mergeable/check fields on the item (audit D5, spec §Remaining
- * gaps).
  */
 export const reviewQueueGroups = <T extends ReviewQueueItem>(
   items: T[],
@@ -66,7 +65,7 @@ export const reviewQueueGroups = <T extends ReviewQueueItem>(
   if (items.length === 0) return [];
   if (params.tab === 'created') return [{ items, key: 'open' }];
 
-  const readyToMerge: T[] = [];
+  const approved: T[] = [];
   const createdByYou: T[] = [];
   const rest: T[] = [];
   // GitHub logins are case-insensitive identifiers — `author` arrives with
@@ -74,8 +73,8 @@ export const reviewQueueGroups = <T extends ReviewQueueItem>(
   const viewerLogin = params.viewer?.toLowerCase() ?? null;
   for (const item of items) {
     if (item.reviewDecision === 'APPROVED') {
-      // An approved PR can be merged — including one the viewer authored.
-      readyToMerge.push(item);
+      // An approved PR leads the lane — including one the viewer authored.
+      approved.push(item);
     } else if (viewerLogin !== null && item.author?.toLowerCase() === viewerLogin) {
       createdByYou.push(item);
     } else {
@@ -84,9 +83,9 @@ export const reviewQueueGroups = <T extends ReviewQueueItem>(
   }
 
   const groups: ReviewQueueGroup<T>[] = [];
-  // Reference order: `Ready to merge` leads, `Created by you` trails; the
-  // review-requested remainder keeps its `Pull requests` label between them.
-  if (readyToMerge.length > 0) groups.push({ items: readyToMerge, key: 'ready-to-merge' });
+  // Reference order: `Approved` leads, `Created by you` trails; the
+  // awaiting-review remainder keeps its `Pull requests` label between them.
+  if (approved.length > 0) groups.push({ items: approved, key: 'approved' });
   if (rest.length > 0) groups.push({ items: rest, key: 'pull-requests' });
   if (createdByYou.length > 0) groups.push({ items: createdByYou, key: 'created-by-you' });
   return groups;

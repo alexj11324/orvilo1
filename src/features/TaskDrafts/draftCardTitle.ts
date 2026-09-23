@@ -65,3 +65,26 @@ const firstLine = (content: string): string | null => {
  */
 export const draftCardTitle = (draft: DraftTitleSource, attachmentLabel: string): string =>
   draftExcerpt(draft.editorData) ?? firstLine(draft.content) ?? attachmentLabel;
+
+interface IssueDraftTitleSource {
+  content: string;
+  editorData?: unknown;
+  hasAttachments?: boolean;
+  title: string;
+}
+
+/**
+ * An issue draft's card leads with its own title field — that is the text the
+ * composer edits — then falls back to the body's first line, then to the
+ * generic attachment / untitled labels so the card is never blank.
+ */
+export const issueDraftCardTitle = (
+  draft: IssueDraftTitleSource,
+  labels: { attachment: string; untitled: string },
+): string => {
+  const title = draft.title.trim();
+  if (title) return title;
+  const excerpt = draftExcerpt(draft.editorData) ?? firstLine(draft.content);
+  if (excerpt) return excerpt;
+  return draft.hasAttachments ? labels.attachment : labels.untitled;
+};

@@ -7,6 +7,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { isDesktop } from '@/const/version';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useCreateNewModal } from '@/features/LibraryModal';
+import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
@@ -236,6 +237,15 @@ export const useCommandMenu = () => {
     onClose();
   }, [canCreate, navigate, onClose, updateSystemStatus]);
 
+  const handleCreateProject = useCallback(() => {
+    if (!canCreate) return;
+
+    // Close the palette first — same pattern as the feedback entry in MainMenu:
+    // the modal mounts outside the palette and the overlay must not linger.
+    onClose();
+    openCreateProjectModal();
+  }, [canCreate, onClose]);
+
   const handleCreateAgentTeam = useCallback(() => {
     if (!canCreate) return;
 
@@ -256,6 +266,7 @@ export const useCommandMenu = () => {
     handleBack,
     handleCreateAgentTeam,
     handleCreateLibrary,
+    handleCreateProject,
     handleCreateSession,
     handleCreateTask,
     handleCreateTopic,

@@ -4,21 +4,34 @@ import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { FilePenLineIcon, MessageCircleIcon, Trash2Icon } from 'lucide-react';
-import { useState } from 'react';
+import { FilePenLineIcon, MessageCircleIcon, SquarePenIcon, Trash2Icon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
+import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
+import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
+import { lambdaClient } from '@/libs/trpc/client';
 import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
-import { draftCardTitle } from './draftCardTitle';
+import { draftCardTitle, issueDraftCardTitle } from './draftCardTitle';
 import DraftContentPreview from './DraftContentPreview';
 import { draftEditPath } from './draftEditPath';
+import {
+  removeAllTaskCreateDrafts,
+  removeTaskCreateDraft,
+  type TaskCreateDraft,
+  useTaskCreateDrafts,
+} from './taskCreateDrafts';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -37,6 +50,29 @@ const styles = createStaticStyles(({ css }) => ({
 
     &:hover {
       background: ${cssVar.colorFillTertiary};
+    }
+  `,
+  cardButton: css`
+    cursor: pointer;
+
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+
+    display: block;
+
+    padding: 0;
+    border: none;
+
+    font: inherit;
+    color: inherit;
+    text-align: start;
+
+    background: none;
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 2px;
     }
   `,
   cardLink: css`
@@ -177,10 +213,29 @@ const DraftsSkeleton = createSurfaceSkeleton('list', false);
 const TaskDraftsPage = () => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
+  const navigate = useWorkspaceAwareNavigate();
+  const currentUserId = useUserStore(userProfileSelectors.userId);
   const { data, error, isLoading } = useClientDataSWR(taskDraftKeys.list(workspaceId), () =>
     taskDraftService.list(workspaceId),
   );
   const drafts = data?.data ?? [];
+  // Issue drafts are local (a draft has no task yet), so they read through the
+  // reactive localStorage store rather than the comment-draft service.
+  const issueDrafts = useTaskCreateDrafts(workspaceId);
+  // Same key + fetcher as MyWorkPage — one shared cache entry — so a reopened
+  // draft keeps its team editable in the composer's team picker.
+  const { data: teamsData } = useSWR(
+    workspaceId && currentUserId ? ['work-joined-teams', currentUserId, workspaceId] : null,
+    () => lambdaClient.team.teams.query(),
+    { revalidateOnFocus: false },
+  );
+  const joinedTeamOptions = useMemo(
+    () =>
+      (teamsData?.data ?? [])
+        .filter((team) => team.joined === true)
+        .map((team) => ({ id: team.id, name: team.name })),
+    [teamsData],
+  );
   const [deleting, setDeleting] = useState<string | null>(null);
   const refresh = async () => {
     await Promise.all([
@@ -200,11 +255,15 @@ const TaskDraftsPage = () => {
       setDeleting(null);
     }
   };
+  const discardIssueDraft = (id: string) => {
+    removeTaskCreateDraft(workspaceId, id);
+  };
   const discardAll = async () => {
     if (deleting) return;
     setDeleting('all');
     try {
       await taskDraftService.deleteAll(workspaceId);
+      removeAllTaskCreateDrafts(workspaceId);
       await refresh();
     } catch {
       toast.error(t('drafts.error.discard'));
@@ -212,6 +271,19 @@ const TaskDraftsPage = () => {
       setDeleting(null);
     }
   };
+  // Reopen the create-issue composer on the draft — Linear's Edit-draft flow
+  // for issue drafts is the same modal, prefilled.
+  const openIssueDraft = (draft: TaskCreateDraft) => {
+    createTaskModal({
+      draft,
+      onCreated: (task) =>
+        navigate(taskDetailPath(task.identifier, task.agentId ?? undefined, task.name)),
+      projectId: draft.projectId,
+      showInlineToggle: false,
+      teamOptions: joinedTeamOptions,
+    });
+  };
+  const isEmpty = drafts.length === 0 && issueDrafts.length === 0;
 
   return (
     <Flexbox flex={1} height="100%" style={{ minHeight: 0 }}>
@@ -219,7 +291,7 @@ const TaskDraftsPage = () => {
         className={styles.header}
         left={<Text weight={500}>{t('drafts.title')}</Text>}
         right={
-          drafts.length > 0 && (
+          !isEmpty && (
             <ActionIcon
               aria-label={t('drafts.discardAll')}
               disabled={!!deleting}
@@ -241,74 +313,145 @@ const TaskDraftsPage = () => {
         <AsyncError error={error} variant="page" onRetry={refresh} />
       ) : isLoading ? (
         <DraftsSkeleton />
-      ) : drafts.length === 0 ? (
+      ) : isEmpty ? (
         <Flexbox align="center" flex={1} gap={8} justify="center">
           <FilePenLineIcon size={28} />
           <Text>{t('drafts.empty')}</Text>
         </Flexbox>
       ) : (
         <div style={{ overflowY: 'auto' }}>
-          <div className={styles.sectionTitle}>{t('drafts.comments')}</div>
-          <div className={styles.cardGrid}>
-            {drafts.map((draft) => {
-              const title = draftCardTitle(draft, t('drafts.attachment'));
-              return (
-                <div className={styles.card} key={draft.id}>
-                  <ActionIcon
-                    aria-label={t('drafts.discard')}
-                    className={styles.discard}
-                    disabled={!!deleting}
-                    icon={Trash2Icon}
-                    onClick={() =>
-                      confirmModal({
-                        content: t('drafts.confirmDiscard.content'),
-                        okButtonProps: { danger: true },
-                        okText: t('drafts.discard'),
-                        onOk: () => discard(draft.taskId),
-                        title: t('drafts.confirmDiscard.title'),
-                      })
-                    }
-                  />
-                  <WorkspaceLink
-                    aria-label={`${t('drafts.edit')}: ${title}`}
-                    className={styles.cardLink}
-                    to={draftEditPath(draft)}
-                  />
-                  <div className={styles.cardContent}>
-                    <div className={styles.cardHeading}>
-                      <div className={styles.cardTitle}>{title}</div>
-                      <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
-                        {dayjs(draft.updatedAt).fromNow()}
-                      </Text>
-                    </div>
-                    <div className={styles.preview}>
-                      <div className={styles.previewLabel}>
-                        <MessageCircleIcon size={16} style={{ flex: 'none' }} />
-                        <span className={styles.previewLabelText}>
-                          {t('drafts.commentingOnIssue')}
-                        </span>
-                        <span className={styles.issueChip}>
-                          <span className={styles.issueChipIdentifier}>{draft.taskIdentifier}</span>
-                          {draft.taskName ? (
-                            <span className={styles.issueChipName}>{draft.taskName}</span>
-                          ) : null}
-                        </span>
-                      </div>
-                      <div aria-hidden inert className={styles.previewBody}>
-                        <div className={styles.excerpt}>
-                          <DraftContentPreview
-                            attachmentLabel={t('drafts.attachment')}
-                            content={draft.content}
-                            editorData={draft.editorData}
-                          />
+          {issueDrafts.length > 0 && (
+            <>
+              <div className={styles.sectionTitle}>{t('drafts.issues')}</div>
+              <div className={styles.cardGrid}>
+                {issueDrafts.map((draft) => {
+                  const title = issueDraftCardTitle(draft, {
+                    attachment: t('drafts.attachment'),
+                    untitled: t('drafts.untitled'),
+                  });
+                  return (
+                    <div className={styles.card} key={draft.id}>
+                      <ActionIcon
+                        aria-label={t('drafts.discard')}
+                        className={styles.discard}
+                        disabled={!!deleting}
+                        icon={Trash2Icon}
+                        onClick={() =>
+                          confirmModal({
+                            content: t('drafts.confirmDiscardIssue.content'),
+                            okButtonProps: { danger: true },
+                            okText: t('drafts.discard'),
+                            onOk: () => discardIssueDraft(draft.id),
+                            title: t('drafts.confirmDiscard.title'),
+                          })
+                        }
+                      />
+                      <button
+                        aria-label={`${t('drafts.edit')}: ${title}`}
+                        className={styles.cardButton}
+                        type="button"
+                        onClick={() => openIssueDraft(draft)}
+                      />
+                      <div className={styles.cardContent}>
+                        <div className={styles.cardHeading}>
+                          <div className={styles.cardTitle}>{title}</div>
+                          <Text
+                            fontSize={12}
+                            title={dayjs(draft.updatedAt).toString()}
+                            type="secondary"
+                          >
+                            {dayjs(draft.updatedAt).fromNow()}
+                          </Text>
+                        </div>
+                        <div className={styles.preview}>
+                          <div className={styles.previewLabel}>
+                            <SquarePenIcon size={16} style={{ flex: 'none' }} />
+                            <span className={styles.previewLabelText}>{t('drafts.newIssue')}</span>
+                          </div>
+                          <div aria-hidden inert className={styles.previewBody}>
+                            <div className={styles.excerpt}>
+                              <DraftContentPreview
+                                attachmentLabel={t('drafts.attachment')}
+                                content={draft.content}
+                                editorData={draft.editorData}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {drafts.length > 0 && (
+            <>
+              <div className={styles.sectionTitle}>{t('drafts.comments')}</div>
+              <div className={styles.cardGrid}>
+                {drafts.map((draft) => {
+                  const title = draftCardTitle(draft, t('drafts.attachment'));
+                  return (
+                    <div className={styles.card} key={draft.id}>
+                      <ActionIcon
+                        aria-label={t('drafts.discard')}
+                        className={styles.discard}
+                        disabled={!!deleting}
+                        icon={Trash2Icon}
+                        onClick={() =>
+                          confirmModal({
+                            content: t('drafts.confirmDiscard.content'),
+                            okButtonProps: { danger: true },
+                            okText: t('drafts.discard'),
+                            onOk: () => discard(draft.taskId),
+                            title: t('drafts.confirmDiscard.title'),
+                          })
+                        }
+                      />
+                      <WorkspaceLink
+                        aria-label={`${t('drafts.edit')}: ${title}`}
+                        className={styles.cardLink}
+                        to={draftEditPath(draft)}
+                      />
+                      <div className={styles.cardContent}>
+                        <div className={styles.cardHeading}>
+                          <div className={styles.cardTitle}>{title}</div>
+                          <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
+                            {dayjs(draft.updatedAt).fromNow()}
+                          </Text>
+                        </div>
+                        <div className={styles.preview}>
+                          <div className={styles.previewLabel}>
+                            <MessageCircleIcon size={16} style={{ flex: 'none' }} />
+                            <span className={styles.previewLabelText}>
+                              {t('drafts.commentingOnIssue')}
+                            </span>
+                            <span className={styles.issueChip}>
+                              <span className={styles.issueChipIdentifier}>
+                                {draft.taskIdentifier}
+                              </span>
+                              {draft.taskName ? (
+                                <span className={styles.issueChipName}>{draft.taskName}</span>
+                              ) : null}
+                            </span>
+                          </div>
+                          <div aria-hidden inert className={styles.previewBody}>
+                            <div className={styles.excerpt}>
+                              <DraftContentPreview
+                                attachmentLabel={t('drafts.attachment')}
+                                content={draft.content}
+                                editorData={draft.editorData}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
     </Flexbox>

@@ -4,6 +4,7 @@ import { Command } from 'cmdk';
 import {
   Bot,
   FeatherIcon,
+  FolderKanbanIcon,
   LibraryBig,
   ListTodo,
   MessageSquarePlusIcon,
@@ -41,6 +42,7 @@ const MainMenu = memo(() => {
     handleCreateSession,
     handleCreateTopic,
     handleCreateLibrary,
+    handleCreateProject,
     handleCreateTask,
     handleNavigate,
     handleExternalLink,
@@ -54,7 +56,7 @@ const MainMenu = memo(() => {
     <>
       <ContextCommands />
 
-      <Command.Group>
+      <Command.Group heading={t('cmdk.actions')}>
         {/* Creating a task leads the list: the product's default working surface
             is the task board, so the palette's first command should be the one
             that puts work into it. */}
@@ -66,6 +68,16 @@ const MainMenu = memo(() => {
           onSelect={handleCreateTask}
         >
           {t('cmdk.newTask')}
+        </CommandItem>
+
+        <CommandItem
+          disabled={!canCreate}
+          icon={<FolderKanbanIcon />}
+          keywords={['project', 'create', 'new', 'initiative', 'milestone']}
+          value="create new project"
+          onSelect={handleCreateProject}
+        >
+          {t('cmdk.newProject')}
         </CommandItem>
 
         <CommandItem

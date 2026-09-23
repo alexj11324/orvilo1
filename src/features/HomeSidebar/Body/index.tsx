@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { useTaskCreateDrafts } from '@/features/TaskDrafts/taskCreateDrafts';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
@@ -107,7 +108,9 @@ const Body = memo(() => {
     { revalidateOnFocus: false },
   );
   const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
-  const draftCount =
+  // Drafts badge = server-side comment drafts + local issue drafts (Linear
+  // counts both kinds on the Drafts nav item).
+  const commentDraftCount =
     useClientDataSWR(
       taskDraftKeys.count(activeWorkspaceId),
       () => taskDraftService.count(activeWorkspaceId),
@@ -115,6 +118,8 @@ const Body = memo(() => {
         revalidateOnFocus: true,
       },
     ).data?.data ?? 0;
+  const issueDraftCount = useTaskCreateDrafts(activeWorkspaceId).length;
+  const draftCount = commentDraftCount + issueDraftCount;
 
   const hideSection = useCallback(
     (key: string) => {

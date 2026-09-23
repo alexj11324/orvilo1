@@ -14,6 +14,8 @@ import {
   getAttachmentFileIdsFromEditor,
   pickAndInsertAttachments,
 } from '@/features/EditorCanvas/editorAttachments';
+import { type TaskCreateDraft } from '@/features/TaskDrafts/taskCreateDrafts';
+import { useTaskCreateDraftSync } from '@/features/TaskDrafts/useTaskCreateDraftSync';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { useTaskStore } from '@/store/task';
@@ -34,6 +36,12 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 
 export interface CreateTaskContentProps {
   agentId?: string;
+  /**
+   * Continue-editing an issue draft (Drafts page → Edit draft): hydrates
+   * title/body/properties once and binds autosave to the draft's id, so edits
+   * update it and a successful submit removes it.
+   */
+  draft?: TaskCreateDraft;
   /**
    * Locks the assignee to `agentId` and hides the agent picker. Used on the
    * agent-scoped task list where every task belongs to that agent.
@@ -60,6 +68,7 @@ export interface CreateTaskContentProps {
 const CreateTaskContent = memo<CreateTaskContentProps>(
   ({
     agentId,
+    draft,
     lockAssignee,
     onCreated,
     projectId,
@@ -109,6 +118,40 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     const editor = useEditor();
     const instructionRef = useRef('');
 
+    // Issue-draft sync (Drafts page continue-editing): a `draft` prop
+    // rehydrates the composer once the editor mounts; either way the composer
+    // autosaves so closing with content leaves a draft behind, and a
+    // successful submit removes it.
+    const applyDraft = useCallback(
+      (next: TaskCreateDraft, markdown: string) => {
+        setTitle(next.title);
+        setPriority(next.priority);
+        if (!lockAssignee) setAssigneeAgentId(next.assigneeAgentId);
+        setAssigneeUserId(next.assigneeUserId);
+        if (next.visibility) setVisibility(next.visibility);
+        if (next.teamId) setPickedTeamId(next.teamId);
+        instructionRef.current = markdown;
+      },
+      [lockAssignee],
+    );
+    const { markSubmitted: markDraftSubmitted, schedule: scheduleDraftPersist } =
+      useTaskCreateDraftSync({
+        applyDraft,
+        draft,
+        editor,
+        enabled: canCreateTask,
+        fields: {
+          assigneeAgentId,
+          assigneeUserId,
+          priority,
+          projectId,
+          teamId: pickedTeamId,
+          title,
+          visibility,
+        },
+        workspaceId: activeWorkspaceId,
+      });
+
     const assigneeMeta = useAgentDisplayMeta(assigneeAgentId);
     const memberMeta = useUserDisplayMeta(assigneeUserId);
 
@@ -120,15 +163,59 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     }, []);
 
     const handleInline = useCallback(() => {
+      // Minimize hands the in-progress text to the inline entry's scope draft
+      // (same `orvilo:task-create-draft:*` convention as CreateTaskInlineEntry)
+      // instead of parking it on the Drafts page — the user is still actively
+      // composing, and an extra modal draft would go stale after inline submit.
+      // Attachments can't ride the markdown-only inline format, and a failed
+      // write means no handoff either — in both cases the modal's own autosave
+      // keeps the draft on the Drafts page instead of losing content.
+      const markdown = String(editor?.getDocument?.('markdown') ?? '');
+      const hasFiles = getAttachmentFileIdsFromEditor(editor).length > 0;
+      const handoff = [title.trim(), markdown.trim()].filter(Boolean).join('\n\n');
+      let handedOff = false;
+      if (handoff && !hasFiles) {
+        try {
+          localStorage.setItem(
+            `orvilo:task-create-draft:${activeWorkspaceId ?? 'personal'}:${projectId ?? agentId ?? 'all'}`,
+            JSON.stringify({
+              assigneeAgentId: lockAssignee ? undefined : assigneeAgentId,
+              assigneeUserId,
+              markdown: handoff,
+              priority,
+              visibility,
+            }),
+          );
+          handedOff = true;
+        } catch {
+          /* storage unavailable — fall through to the modal draft */
+        }
+      }
+      if (handedOff || (!handoff && !hasFiles)) markDraftSubmitted();
       updateSystemStatus({ taskCreateInlineCollapsed: false }, 'expandTaskCreateInline');
       close();
-    }, [close, updateSystemStatus]);
+    }, [
+      activeWorkspaceId,
+      agentId,
+      assigneeAgentId,
+      assigneeUserId,
+      close,
+      editor,
+      lockAssignee,
+      markDraftSubmitted,
+      priority,
+      projectId,
+      title,
+      updateSystemStatus,
+      visibility,
+    ]);
 
     const handleContentChange = useCallback(() => {
       if (!canCreateTask) return;
       if (!editor) return;
       instructionRef.current = String(editor.getDocument('markdown') ?? '');
-    }, [canCreateTask, editor]);
+      scheduleDraftPersist();
+    }, [canCreateTask, editor, scheduleDraftPersist]);
 
     const handleAttach = useCallback(() => {
       pickAndInsertAttachments(editor);
@@ -159,6 +246,9 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
         });
 
         if (result) {
+          // Draft → issue conversion: remove the draft before the modal's
+          // unmount flush can write it back.
+          markDraftSubmitted();
           close();
           onCreated?.({
             agentId: result.assigneeAgentId ?? undefined,
@@ -177,6 +267,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       close,
       createTask,
       editor,
+      markDraftSubmitted,
       onCreated,
       priority,
       projectId,

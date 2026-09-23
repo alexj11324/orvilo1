@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { draftCardTitle, draftExcerpt } from './draftCardTitle';
+import { draftCardTitle, draftExcerpt, issueDraftCardTitle } from './draftCardTitle';
 
 const document = (children: unknown[]) => ({ root: { children, type: 'root' } });
 const paragraph = (children: unknown[]) => ({ children, type: 'paragraph' });
@@ -73,5 +73,37 @@ describe('draftCardTitle', () => {
 
   it('falls back to the attachment label when the draft has no text', () => {
     expect(draftCardTitle({ ...draft, content: '' }, 'Attachment')).toBe('Attachment');
+  });
+});
+
+describe('issueDraftCardTitle', () => {
+  const labels = { attachment: 'Attachment', untitled: 'Untitled' };
+
+  it('leads with the draft title field', () => {
+    expect(
+      issueDraftCardTitle(
+        { content: 'body text', hasAttachments: false, title: '  Ship parity  ' },
+        labels,
+      ),
+    ).toBe('Ship parity');
+  });
+
+  it('falls back to the body excerpt when the title is blank', () => {
+    const editorData = document([paragraph([text('Body first line')])]);
+    expect(
+      issueDraftCardTitle({ content: '', editorData, hasAttachments: false, title: '' }, labels),
+    ).toBe('Body first line');
+    expect(
+      issueDraftCardTitle({ content: '\ncontent line', hasAttachments: false, title: ' ' }, labels),
+    ).toBe('content line');
+  });
+
+  it('uses the attachment label for attachment-only drafts, else untitled', () => {
+    expect(issueDraftCardTitle({ content: '', hasAttachments: true, title: '' }, labels)).toBe(
+      'Attachment',
+    );
+    expect(issueDraftCardTitle({ content: '', hasAttachments: false, title: '' }, labels)).toBe(
+      'Untitled',
+    );
   });
 });

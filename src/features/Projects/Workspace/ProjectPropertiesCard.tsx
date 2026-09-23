@@ -172,7 +172,12 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
               size={'small'}
               icon={
                 resolvedStatus === 'active' ? (
-                  <ProjectActiveStatusIcon color={statusVisual.color} />
+                  <ProjectActiveStatusIcon
+                    color={statusVisual.color}
+                    percent={
+                      typeof project.progressPercent === 'number' ? project.progressPercent : 0
+                    }
+                  />
                 ) : (
                   <Icon icon={statusVisual.icon} size={12} />
                 )

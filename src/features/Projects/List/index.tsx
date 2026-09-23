@@ -359,11 +359,11 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
       to={getProjectActivityPath(project.slug ?? project.id)}
     >
       <ProjectHealthIcon health={health} size={14} />
-      <Text fontSize={12}>
-        {health
-          ? t(PROJECT_HEALTH_META[health].key, { defaultValue: health })
-          : t('list.health.noUpdates')}
-      </Text>
+      {/* Linear renders the no-update state as the dashed circle alone —
+          the label appears only once a real update set the health. */}
+      {health ? (
+        <Text fontSize={12}>{t(PROJECT_HEALTH_META[health].key, { defaultValue: health })}</Text>
+      ) : null}
     </WorkspaceLink>
   );
 });
@@ -635,7 +635,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
           <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
             <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
             {status === 'active' ? (
-              <ProjectActiveStatusIcon color={statusVisual.color} />
+              <ProjectActiveStatusIcon color={statusVisual.color} percent={percent ?? 0} />
             ) : (
               <Icon aria-hidden color={statusVisual.color} icon={statusVisual.icon} size={14} />
             )}

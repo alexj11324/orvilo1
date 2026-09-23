@@ -550,7 +550,10 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                       <span className={styles.cellIcons}>
                         {options.properties.status ? (
                           status === 'active' ? (
-                            <ProjectActiveStatusIcon color={statusVisual.color} />
+                            <ProjectActiveStatusIcon
+                              color={statusVisual.color}
+                              percent={progress ?? 0}
+                            />
                           ) : (
                             <Icon
                               aria-label={t(`status.${status}`)}

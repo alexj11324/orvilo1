@@ -3,8 +3,6 @@ import type {
   AgentContextDocument,
   AgentGroupConfig,
   AgentManagementContext,
-  BotPlatformContext,
-  DiscordContext,
   EvalContext,
   FileContextConfig,
   GroupAgentBuilderContext,
@@ -110,9 +108,7 @@ export interface ContextToolsSnapshot {
  * channel the run came in on. Mirrors `AgentState.world`.
  */
 export interface ContextWorldSnapshot {
-  botPlatformContext?: BotPlatformContext;
   connectorOwnershipNote?: string;
-  discordContext?: DiscordContext;
   evalContext?: EvalContext;
   group?: AgentGroupConfig;
   projectInstructions?: ProjectInstructionFile[];

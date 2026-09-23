@@ -11,10 +11,8 @@ export {
 } from './AgentDocumentInjector';
 export { AgentIdentityInjector } from './AgentIdentityInjector';
 export { AgentManagementContextInjector } from './AgentManagementContextInjector';
-export { BotPlatformContextInjector } from './BotPlatformContextInjector';
 export { ConnectorOwnershipInjector } from './ConnectorOwnershipInjector';
 export { ContextSelectionsInjector } from './ContextSelectionsInjector';
-export { DiscordContextProvider } from './DiscordContextProvider';
 export { EvalContextSystemInjector } from './EvalContextSystemInjector';
 export {
   buildExpertiseContextSnapshot,
@@ -84,13 +82,8 @@ export type {
   AvailablePluginInfo,
   AvailableProviderInfo,
 } from './AgentManagementContextInjector';
-export type {
-  BotPlatformContext,
-  BotPlatformContextInjectorConfig,
-} from './BotPlatformContextInjector';
 export type { ConnectorOwnershipInjectorConfig } from './ConnectorOwnershipInjector';
 export type { ContextSelectionsInjectorConfig } from './ContextSelectionsInjector';
-export type { DiscordContext, DiscordContextProviderConfig } from './DiscordContextProvider';
 export type { EvalContext, EvalContextSystemInjectorConfig } from './EvalContextSystemInjector';
 export type {
   ExpertiseContextInjectorConfig,

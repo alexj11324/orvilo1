@@ -1,7 +1,4 @@
-import type { BotPlatformContext } from '@orvilo/context-engine';
 import type {
-  BotSenderMetadata,
-  ChatTopicBotContext,
   ExecAgentParams,
   OrviloAgentChatConfig,
   RuntimeMentionedAgent,
@@ -14,8 +11,6 @@ import type { EvalContext } from '@/server/modules/Mecha/ContextEngineering/type
 import type { AgentConfigWithId } from '@/server/services/agent';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import type { EvalRuntimeContext } from '@/server/services/agentExecution/types';
-
-import type { DeviceAccessReason } from './deviceAccessPolicy';
 
 /**
  * Resolved run state shared by the {@link AiAgentService.execAgent} pipeline
@@ -34,7 +29,6 @@ export interface ExecRunContext {
   /** Persisted assistant placeholder row id (spinner anchor / error sink). */
   assistantMessageId: string;
   canUseDevice: boolean;
-  deviceAccessReason: DeviceAccessReason;
   /** Effective model for this run (topic-pinned model already applied). */
   model: string;
   parentMessageId?: string;
@@ -72,15 +66,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   approvalSourceOperationId?: string;
   /** Persist caller-owned run metadata before createOperation can execute. */
   beforeOperationStart?: (input: { operationId: string; topicId: string }) => Promise<void>;
-  /** Bot context for topic metadata (platform, applicationId, platformThreadId) */
-  botContext?: ChatTopicBotContext;
-  /** Bot platform context for injecting platform capabilities (e.g. markdown support) */
-  botPlatformContext?: BotPlatformContext;
-  /**
-   * Real platform author of a bot-channel turn, persisted on the inbound user
-   * message as `metadata.botSender` so the UI shows them instead of the owner.
-   */
-  botSender?: BotSenderMetadata;
   /**
    * chatConfig overrides (thinking / reasoning-effort extend params) merged over
    * the executing agent's own chatConfig, skipping nulled keys. Internal-only:
@@ -103,7 +88,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   /** Disable all tools (no plugins, no system manifests). Useful for eval/benchmark scenarios. */
   disableTools?: boolean;
   /** Discord context for injecting channel/guild info into agent system message */
-  discordContext?: any;
   /**
    * Inject a user-role message into the LLM context for this turn WITHOUT
    * persisting it (no DB row, no Agent Signal). Used for ephemeral orchestration

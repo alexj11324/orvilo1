@@ -17,7 +17,6 @@ type LabFeatureI18nKey =
   | 'desktopSplitView'
   | 'evalCapture'
   | 'heteroSessionImport'
-  | 'imessage'
   | 'inputMarkdown'
   | 'messageTextSelectionActions'
   | 'projects'
@@ -90,13 +89,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     flag: 'enableDesktopSplitView',
     i18nKey: 'desktopSplitView',
     searchKeywords: ['split view', 'split tab'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableImessage',
-    i18nKey: 'imessage',
-    searchKeywords: ['imessage', 'bluebubbles'],
     stage: 'alpha',
   },
   // rides on the Claude Code hetero-agent stack: scans local CLI transcripts

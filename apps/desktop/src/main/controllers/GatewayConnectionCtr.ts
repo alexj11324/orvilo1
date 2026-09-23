@@ -17,7 +17,6 @@ import { sleep } from '@orvilo/utils/sleep';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
-import ImessageBridgeService from '@/services/imessageBridgeSrv';
 import { createLogger } from '@/utils/logger';
 import { setDesktopUserAgentHeader } from '@/utils/user-agent';
 
@@ -173,10 +172,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     return this.app.getController(ShellCommandCtr);
   }
 
-  private get imessageBridgeSrv() {
-    return this.app.getService(ImessageBridgeService);
-  }
-
   private get heterogeneousAgentCtr() {
     return this.app.getController(HeterogeneousAgentCtr);
   }
@@ -205,9 +200,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     srv.setMcpCallHandler((mcpCall) => this.executeMcpCall(mcpCall));
 
     // Wire up message API handler
-    srv.setMessageApiHandler((platform, apiName, payload) =>
-      this.executeMessageApi(platform, apiName, payload),
-    );
 
     // Wire up agent run handler
     srv.setAgentRunHandler((request) => this.executeAgentRun(request));
@@ -647,20 +639,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
       },
       toolName: apiName,
     });
-  }
-
-  private async executeMessageApi(
-    platform: string,
-    apiName: string,
-    payload: Record<string, unknown>,
-  ): Promise<unknown> {
-    if (platform === 'imessage') {
-      return this.imessageBridgeSrv.handleGatewayMessageApi(apiName, payload);
-    }
-
-    throw new Error(
-      `Message API "${platform}/${apiName}" is not available on this device. It may not be supported in the current desktop version.`,
-    );
   }
 
   // ─── Platform Capability Probing ───

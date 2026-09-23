@@ -3,12 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { merge } from '@/utils/merge';
 
 import type { GlobalState } from '../initialState';
-import {
-  DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
-  INITIAL_STATUS,
-  initialState,
-  MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
-} from '../initialState';
+import { DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS, INITIAL_STATUS, initialState } from '../initialState';
 import {
   DEFAULT_SIDEBAR_ITEMS,
   readOverridableField,
@@ -139,46 +134,6 @@ describe('systemStatusSelectors', () => {
       // 4px above the clamp floor, so this fails both if the default drifts and if the
       // floor is raised far enough to swallow it.
       expect(systemStatusSelectors.leftPanelWidth(initialState)).toBe(244);
-    });
-  });
-
-  describe('modelDetailPanelExpandedKeys', () => {
-    it('should expand every section by default', () => {
-      const s: GlobalState = {
-        ...initialState,
-        status: {
-          ...initialState.status,
-          modelDetailPanelCollapsedKeys: undefined,
-        },
-      };
-
-      expect(systemStatusSelectors.modelDetailPanelExpandedKeys(s)).toEqual(
-        MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
-      );
-    });
-
-    it('should exclude collapsed keys stored by the user', () => {
-      const s: GlobalState = merge(initialState, {
-        status: {
-          modelDetailPanelCollapsedKeys: ['abilities', 'config'],
-        },
-      });
-
-      expect(systemStatusSelectors.modelDetailPanelExpandedKeys(s)).toEqual(['rating', 'pricing']);
-    });
-
-    it('should ignore a legacy persisted expanded-keys array and keep new sections expanded', () => {
-      // before the collapsed-keys migration, an expanded-keys array persisted prior to the
-      // rating section shipping kept it collapsed forever — the legacy field must be inert
-      const s: GlobalState = merge(initialState, {
-        status: {
-          modelDetailPanelExpandedKeys: ['pricing', 'config'],
-        } as never,
-      });
-
-      expect(systemStatusSelectors.modelDetailPanelExpandedKeys(s)).toEqual(
-        MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
-      );
     });
   });
 

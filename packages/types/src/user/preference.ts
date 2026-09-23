@@ -177,7 +177,6 @@ export const UserLabSchema = z.object({
   /**
    * enable the iMessage channel (BlueBubbles Desktop bridge)
    */
-  enableImessage: z.boolean().optional(),
   /**
    * enable markdown rendering in chat input editor
    */

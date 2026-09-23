@@ -7,7 +7,6 @@ export type ApiType =
   | 'bedrock'
   | 'cloudflare'
   | 'deepseek'
-  | 'fal'
   | 'google'
   | 'meta'
   | 'minimax'

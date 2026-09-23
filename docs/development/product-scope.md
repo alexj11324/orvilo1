@@ -79,13 +79,13 @@ fork 那条链路，而不是上游同名机制的消费者。
 
 ## 已确认的共享依赖（不得按名称批量删除）
 
-| 名称                                   | 为什么必须保留                                                                                                                               |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `generation*` / `image*` 路由          | `imageGeneration.ts` 通过 `router.createCaller(ctx)` **进程内**调用 generation /generationTopic/image/aiModel/aiProvider，Agent 工具仍在使用 |
-| `persona`                              | Agent 每次运行都读它（`operationPrep` → `AgentRuntimeService` → `ContextEngineering`）；退役的只是 `/memory` 的浏览 UI                       |
-| `DndContextWrapper`                    | 物理位置在 `ResourceManager` 目录内，但挂在**两个主布局**上，依赖 ResourceManager store 与 tree store                                        |
-| 共享编辑器                             | 任务描述、评论、项目规范、Agent 文档、产物预览都在用                                                                                         |
-| `/resource/images`、`/resource/videos` | 是**资源库分类**，与生成工作台无关                                                                                                           |
+| 名称                                   | 为什么必须保留                                                                                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `generation*` / `image*` 路由          | ⚠️ ORV-106 已随 ComfyUI/image-generation 栈整体删除（服务端链 + 内置工具均已退役），此保留说明失效                     |
+| `persona`                              | Agent 每次运行都读它（`operationPrep` → `AgentRuntimeService` → `ContextEngineering`）；退役的只是 `/memory` 的浏览 UI |
+| `DndContextWrapper`                    | 物理位置在 `ResourceManager` 目录内，但挂在**两个主布局**上，依赖 ResourceManager store 与 tree store                  |
+| 共享编辑器                             | 任务描述、评论、项目规范、Agent 文档、产物预览都在用                                                                   |
+| `/resource/images`、`/resource/videos` | 是**资源库分类**，与生成工作台无关                                                                                     |
 
 ## 禁止的捷径
 

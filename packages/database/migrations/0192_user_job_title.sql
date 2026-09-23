@@ -1,1 +1,0 @@
-ALTER TABLE "users" ADD COLUMN "job_title" varchar(128);

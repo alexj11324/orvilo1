@@ -599,22 +599,6 @@ describe('createRouterRuntime', () => {
           runtime.chat({ messages: [], model: 'request-model', temperature: 0.7 }, options),
       ],
       [
-        'createImage',
-        (runtime, options) =>
-          runtime.createImage(
-            { model: 'request-model', params: { prompt: 'a cat' } } as any,
-            options,
-          ),
-      ],
-      [
-        'createVideo',
-        (runtime, options) =>
-          runtime.createVideo(
-            { model: 'request-model', params: { prompt: 'a cat' } } as any,
-            options,
-          ),
-      ],
-      [
         'generateObject',
         (runtime, options) =>
           runtime.generateObject(
@@ -641,8 +625,6 @@ describe('createRouterRuntime', () => {
       async (_method, call) => {
         class MockRuntime implements OrviloRuntimeAI {
           chat = vi.fn().mockResolvedValue('chat-response');
-          createImage = vi.fn().mockResolvedValue({ imageUrl: 'image-url' });
-          createVideo = vi.fn().mockResolvedValue({ inferenceId: 'video-id' });
           embeddings = vi.fn().mockResolvedValue([]);
           generateObject = vi.fn().mockResolvedValue({});
           textToSpeech = vi.fn().mockResolvedValue('speech-response');
@@ -1577,170 +1559,6 @@ describe('createRouterRuntime', () => {
       });
 
       expect(result).toBe('fallback-response');
-    });
-  });
-
-  describe('createImage method', () => {
-    it('should call createImage on the correct runtime', async () => {
-      const mockCreateImage = vi
-        .fn()
-        .mockResolvedValue({ imageUrl: 'https://example.com/image.png' });
-
-      class MockRuntime implements OrviloRuntimeAI {
-        createImage = mockCreateImage;
-      }
-
-      const Runtime = createRouterRuntime({
-        id: 'test-runtime',
-        routers: [
-          {
-            apiType: 'openai',
-            options: {},
-            runtime: MockRuntime as any,
-            models: ['gpt-image-1'],
-          },
-        ],
-      });
-
-      const runtime = new Runtime();
-      const payload = { model: 'gpt-image-1', params: { prompt: 'a cat' } };
-
-      const result = await runtime.createImage(payload);
-      expect(result).toEqual({ imageUrl: 'https://example.com/image.png' });
-      expect(mockCreateImage).toHaveBeenCalledWith(payload, undefined);
-    });
-
-    it('should forward options.metadata to onRouteAttempt', async () => {
-      const mockCreateImage = vi
-        .fn()
-        .mockResolvedValue({ imageUrl: 'https://example.com/image.png' });
-      const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
-
-      class MockRuntime implements OrviloRuntimeAI {
-        createImage = mockCreateImage;
-      }
-
-      const Runtime = createRouterRuntime({
-        id: 'test-runtime',
-        onRouteAttempt,
-        routers: [
-          {
-            apiType: 'openai',
-            options: {},
-            runtime: MockRuntime as any,
-            models: ['gpt-image-1'],
-          },
-        ],
-      });
-
-      const runtime = new Runtime();
-      const payload = { model: 'gpt-image-1', params: { prompt: 'a cat' } };
-      const metadata = { trigger: 'image' };
-      const options = {
-        metadata,
-        pricingContext: { plan: 'premium', scope: 'personal' },
-      } as const;
-
-      await runtime.createImage(payload, options);
-
-      expect(mockCreateImage).toHaveBeenCalledWith(payload, options);
-      expect(onRouteAttempt).toHaveBeenCalledWith(expect.objectContaining({ metadata }));
-    });
-  });
-
-  describe('createVideo method', () => {
-    it('should call createVideo on the correct runtime', async () => {
-      const mockCreateVideo = vi.fn().mockResolvedValue({ inferenceId: 'job-1' });
-
-      class MockRuntime implements OrviloRuntimeAI {
-        createVideo = mockCreateVideo;
-      }
-
-      const Runtime = createRouterRuntime({
-        id: 'test-runtime',
-        routers: [
-          {
-            apiType: 'openai',
-            options: {},
-            runtime: MockRuntime as any,
-            models: ['sora-1'],
-          },
-        ],
-      });
-
-      const runtime = new Runtime();
-      const payload = { model: 'sora-1', params: { prompt: 'a cat' } } as any;
-
-      const result = await runtime.createVideo(payload);
-      expect(result).toEqual({ inferenceId: 'job-1' });
-      expect(mockCreateVideo).toHaveBeenCalledWith(payload, undefined);
-    });
-
-    it('should forward options.metadata to onRouteAttempt', async () => {
-      const mockCreateVideo = vi.fn().mockResolvedValue({ inferenceId: 'job-1' });
-      const onRouteAttempt = vi.fn().mockResolvedValue(undefined);
-
-      class MockRuntime implements OrviloRuntimeAI {
-        createVideo = mockCreateVideo;
-      }
-
-      const Runtime = createRouterRuntime({
-        id: 'test-runtime',
-        onRouteAttempt,
-        routers: [
-          {
-            apiType: 'openai',
-            options: {},
-            runtime: MockRuntime as any,
-            models: ['sora-1'],
-          },
-        ],
-      });
-
-      const runtime = new Runtime();
-      const payload = { model: 'sora-1', params: { prompt: 'a cat' } } as any;
-      const metadata = { trigger: 'video' };
-      const options = {
-        metadata,
-        pricingContext: { plan: 'premium', scope: 'personal' },
-      } as const;
-
-      await runtime.createVideo(payload, options);
-
-      expect(mockCreateVideo).toHaveBeenCalledWith(payload, options);
-      expect(onRouteAttempt).toHaveBeenCalledWith(expect.objectContaining({ metadata }));
-    });
-
-    it('should delegate video polling to the matched runtime', async () => {
-      const mockHandlePollVideoStatus = vi.fn().mockResolvedValue({
-        status: 'success',
-        videoUrl: 'https://example.com/video.mp4',
-      });
-
-      class MockRuntime implements OrviloRuntimeAI {
-        handlePollVideoStatus = mockHandlePollVideoStatus;
-      }
-
-      const Runtime = createRouterRuntime({
-        id: 'test-runtime',
-        routers: [
-          {
-            apiType: 'openai',
-            options: {},
-            runtime: MockRuntime as any,
-          },
-        ],
-      });
-
-      const runtime = new Runtime();
-
-      const result = await runtime.handlePollVideoStatus('job-1');
-
-      expect(result).toEqual({
-        status: 'success',
-        videoUrl: 'https://example.com/video.mp4',
-      });
-      expect(mockHandlePollVideoStatus).toHaveBeenCalledWith('job-1');
     });
   });
 

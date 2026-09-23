@@ -26,11 +26,9 @@ import { FileService } from '@/server/services/file';
 import { resolveAttachmentsByFileIds } from '@/server/services/file/resolveAttachments';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
-import type { DeviceAccessReason } from '../deviceAccessPolicy';
-import { resolveDeviceAccessPolicy } from '../deviceAccessPolicy';
 import { ingestAttachment } from '../ingestAttachment';
-import { resolveExecutionBinding } from './resolveExecutionBinding';
 import type { InternalExecAgentParams } from '../types';
+import { resolveExecutionBinding } from './resolveExecutionBinding';
 
 const log = debug('orvilo-server:ai-agent-service');
 
@@ -280,8 +278,6 @@ export interface TurnSetupInput {
   attachedFileIds?: string[];
   /** Spine anchor for a batch approval — overrides the assistant's parent. */
   batchApprovalAnchorId?: string;
-  botContext?: InternalExecAgentParams['botContext'];
-  botSender?: InternalExecAgentParams['botSender'];
   clientIds?: InternalExecAgentParams['clientIds'];
   /** Stable assistant id for a generic intervention continuation. */
   continuationAssistantId?: string;
@@ -307,7 +303,6 @@ export interface TurnSetupInput {
 export interface TurnSetupResult {
   assistantMessageId: string;
   canUseDevice: boolean;
-  deviceAccessReason: DeviceAccessReason;
   effectiveRequestedDeviceId?: string;
   heterogeneousProvider?: NonNullable<AgentConfigWithId['agencyConfig']>['heterogeneousProvider'];
   heteroType: HeterogeneousAgentType;
@@ -351,8 +346,6 @@ export const setupTurn = async (
     assistantAgentId,
     attachedFileIds,
     batchApprovalAnchorId,
-    botContext,
-    botSender,
     clientIds,
     continuationAssistantId,
     conversationAgentId,
@@ -414,7 +407,7 @@ export const setupTurn = async (
       throw new Error('Resume mode requires the parent message to belong to a topic');
     }
 
-    // Prepare metadata with cronJobId, taskId, botContext, bound device, and any
+    // Prepare metadata with cronJobId, taskId, bound device, and any
     // client-supplied initial metadata (e.g. repos selected before first message).
     const initialTopicMeta = appContext?.initialTopicMetadata;
     // Builder conversations are owned by a builtin builder agent and get no
@@ -425,7 +418,6 @@ export const setupTurn = async (
     // nothing filters on it yet.
     const { editingAgentId, editingGroupId } = appContext ?? {};
     const metadata = {
-      bot: botContext,
       executionConfig: snapshotTopicExecutionConfig({
         ...agentConfig.agencyConfig,
         ...(effectiveRequestedDeviceId && { boundDeviceId: effectiveRequestedDeviceId }),
@@ -563,22 +555,11 @@ export const setupTurn = async (
 
   await throwIfExecutionAborted('topic setup');
 
-  // Resolve device-tool access ONCE per turn, BEFORE the hetero early exit —
-  // hetero dispatch routes the whole run to a user machine, so it must honour
-  // the same policy as native device tools. Discord-only flows (no
-  // botContext) keep the legacy first-party allow path; an external bot
-  // sender returns canUseDevice=false and reason='bot-external-sender',
-  // which degrades device-capable targets (hetero → sandbox, native → plain
-  // chat) and stops the device list from leaking into the LLM context.
-  const { canUseDevice, reason: deviceAccessReason } = resolveDeviceAccessPolicy({
-    botContext,
-  });
-  log(
-    'execAgent: device access policy → canUseDevice=%s, reason=%s, hasBotContext=%s',
-    canUseDevice,
-    deviceAccessReason,
-    !!botContext,
-  );
+  // Device-tool access is resolved once per turn BEFORE the hetero early
+  // exit — hetero dispatch routes the whole run to a user machine, so it
+  // honours the same policy as native device tools. First-party callers are
+  // always allowed.
+  const canUseDevice = true;
 
   // Every run is an ACP run — the execution binding was resolved above
   // (explicit provider, legacy hetero model id, or the builtin 'orvilo'
@@ -593,9 +574,6 @@ export const setupTurn = async (
     ...(appContext?.conversationAgentId && appContext.scope === 'sub_agent'
       ? { agentDispatch: { kind: 'callAgent' as const, visibility: 'internal' as const } }
       : undefined),
-    // Bot-channel turns are inserted under the OWNER's userId; keep the real
-    // platform author alongside so the UI can attribute the bubble correctly.
-    ...(botSender ? { botSender } : undefined),
   };
 
   // Attachment ingestion: raw bot/IM `files` → S3, pre-uploaded
@@ -747,7 +725,6 @@ export const setupTurn = async (
   return {
     assistantMessageId: assistantMessageRecord.id,
     canUseDevice,
-    deviceAccessReason,
     effectiveRequestedDeviceId,
     heteroType,
     heterogeneousProvider,

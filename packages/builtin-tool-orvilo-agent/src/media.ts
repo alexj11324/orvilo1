@@ -314,6 +314,24 @@ export const selectMediaFileItems = (items: MediaFileItem[], refs?: string[]) =>
   return { availableRefs, invalidRefs, selected };
 };
 
+export const MEDIA_ANALYSIS_PROMPT_VERSION = 'v1';
+
+export const MEDIA_ANALYSIS_JSON_SCHEMA = {
+  name: 'media_analysis',
+  schema: {
+    additionalProperties: false,
+    properties: {
+      answer: {
+        description: 'The answer to the user question about the attached media',
+        type: 'string',
+      },
+    },
+    required: ['answer'],
+    type: 'object' as const,
+  },
+  strict: true,
+};
+
 export const buildAnalyzeMediaContent = (
   items: MediaFileItem[],
   question: string,

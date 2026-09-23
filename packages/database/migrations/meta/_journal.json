@@ -1319,57 +1319,8 @@
     {
       "idx": 188,
       "version": "7",
-      "when": 1790030419400,
-      "tag": "0188_project_planning_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 189,
-      "version": "7",
-      "when": 1790034917561,
-      "tag": "0189_project_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 190,
-      "version": "7",
-      "when": 1790039707289,
-      "tag": "0190_project_updates_and_health",
-      "breakpoints": true
-    },
-    {
-      "idx": 191,
-      "version": "7",
-      "when": 1790053618682,
-      "tag": "0191_project_update_kind",
-      "breakpoints": true
-    },
-    {
-      "idx": 192,
-      "version": "7",
-      "when": 1790055037737,
-      "tag": "0192_user_job_title",
-      "breakpoints": true
-    },
-    {
-      "idx": 193,
-      "version": "7",
-      "when": 1790076518129,
-      "tag": "0193_project_links",
-      "breakpoints": true
-    },
-    {
-      "idx": 194,
-      "version": "7",
-      "when": 1790092113813,
-      "tag": "0194_task_project_milestone",
-      "breakpoints": true
-    },
-    {
-      "idx": 195,
-      "version": "7",
-      "when": 1790102909110,
-      "tag": "0195_task_comment_drafts",
+      "when": 1790004833709,
+      "tag": "0188_drop_retired_capability_tables",
       "breakpoints": true
     }
   ]

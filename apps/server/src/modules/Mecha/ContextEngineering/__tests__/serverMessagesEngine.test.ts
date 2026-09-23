@@ -764,22 +764,6 @@ describe('serverMessagesEngine', () => {
   });
 
   describe('extended context params forwarding', () => {
-    it('should forward discordContext when provided', async () => {
-      const messages = createBasicMessages();
-
-      const result = await serverMessagesEngine({
-        discordContext: {
-          channel: { id: 'ch-1', name: 'general' },
-          guild: { id: 'guild-1', name: 'Test Guild' },
-        },
-        messages,
-        model: 'gpt-4',
-        provider: 'openai',
-      });
-
-      expect(result).toBeDefined();
-    });
-
     it('should forward evalContext when provided', async () => {
       const messages = createBasicMessages();
 
@@ -819,10 +803,6 @@ describe('serverMessagesEngine', () => {
         agentBuilderContext: {
           config: { model: 'gpt-4', systemRole: 'Test role' },
           meta: { description: 'Test agent', title: 'Test' },
-        },
-        discordContext: {
-          channel: { id: 'ch-1', name: 'general' },
-          guild: { id: 'guild-1', name: 'Test Guild' },
         },
         messages,
         model: 'gpt-4',

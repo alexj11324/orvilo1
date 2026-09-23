@@ -1,4 +1,3 @@
-import debug from 'debug';
 import { ModelProvider } from 'model-bank';
 import type OpenAI from 'openai';
 
@@ -6,12 +5,10 @@ import { pruneReasoningPayload } from '../../core/contextBuilders/openai';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import type { ChatMethodOptions, ChatStreamPayload } from '../../types';
 import { AgentRuntimeErrorType } from '../../types/error';
-import type { CreateImagePayload } from '../../types/image';
 import { AgentRuntimeError } from '../../utils/createError';
 import { sanitizeError } from '../../utils/sanitizeError';
 import { isResponsesAPIModel, responsesAPIModels, systemToUserModels } from '../openai/modelId';
 
-const azureImageLogger = debug('orvilo-image:azure');
 const azureSearchContextSize = process.env.OPENAI_SEARCH_CONTEXT_SIZE;
 
 /**
@@ -25,8 +22,6 @@ const azureSearchContextSize = process.env.OPENAI_SEARCH_CONTEXT_SIZE;
  */
 const isAzureReasoningModel = (model: string) =>
   /gpt-[5-9](?:$|[.-])/.test(model) || model.includes('o1') || model.includes('o3');
-
-const supportsImageInputFidelity = (model: string) => /^gpt-image-1(?:$|[-.])/.test(model);
 
 const transformAzureSystemMessages = (messages: ChatStreamPayload['messages'], model: string) =>
   messages.map((message) => ({
@@ -210,91 +205,6 @@ export class OrviloAzureOpenAI extends BaseAzureOpenAI {
       return await super.chat(payload, options);
     } catch (error) {
       throw this.attachDeploymentId(error, payload.deploymentName ?? payload.model);
-    }
-  }
-
-  async createImage(payload: CreateImagePayload) {
-    const { model, params } = payload;
-    const requestModel = this.getMappedModelId(model);
-    azureImageLogger('Creating image with model: %s and params: %O', requestModel, params);
-
-    try {
-      const userInput: Record<string, any> = { ...params };
-      const hasImageUrlsInput =
-        Array.isArray(userInput.imageUrls) && userInput.imageUrls.length > 0;
-      const hasSingleImageUrlInput = userInput.imageUrl && !userInput.image;
-
-      if (hasImageUrlsInput || hasSingleImageUrlInput) {
-        const { convertImageUrlToFile } = await import('../../core/contextBuilders/openai');
-
-        if (hasImageUrlsInput) {
-          const imageFiles = await Promise.all(
-            userInput.imageUrls.map((url: string) => convertImageUrlToFile(url)),
-          );
-          userInput.image = imageFiles.length === 1 ? imageFiles[0] : imageFiles;
-        } else if (hasSingleImageUrlInput) {
-          userInput.image = await convertImageUrlToFile(userInput.imageUrl);
-        }
-      }
-
-      delete userInput.imageUrls;
-      delete userInput.imageUrl;
-
-      const isImageEdit = Boolean(userInput.image);
-      azureImageLogger('Is Image Edit: %s', isImageEdit);
-
-      if (userInput.size === 'auto') delete userInput.size;
-
-      // gpt-image-2 rejects input_fidelity because it is always high fidelity by default.
-      // Keep the parameter limited to the gpt-image-1 family, matching OpenAI-compatible runtime.
-      const shouldUseInputFidelity = isImageEdit && supportsImageInputFidelity(model);
-
-      const azureImageOptions: Record<string, any> = {
-        model: requestModel,
-        n: 1,
-        ...(shouldUseInputFidelity ? { input_fidelity: 'high' } : {}),
-        ...userInput,
-      };
-
-      if (!isImageEdit) delete azureImageOptions.image;
-
-      const imageResponse = isImageEdit
-        ? await this.client.images.edit(azureImageOptions as any)
-        : await this.client.images.generate(azureImageOptions as any);
-
-      let result: any = imageResponse;
-      if (typeof result === 'string') {
-        result = JSON.parse(result);
-      } else if (result && typeof result === 'object') {
-        if (typeof result.bodyAsText === 'string') {
-          result = JSON.parse(result.bodyAsText);
-        } else if (typeof result.body === 'string') {
-          result = JSON.parse(result.body);
-        }
-      }
-
-      if (!result || !Array.isArray(result.data) || result.data.length === 0) {
-        throw new Error(
-          `Invalid image response: missing or empty data array. Response: ${JSON.stringify(result)}`,
-        );
-      }
-
-      const imageData = result.data[0];
-      if (!imageData) {
-        throw new Error('Invalid image response: first data item is null or undefined');
-      }
-
-      if (imageData.b64_json) {
-        return { imageUrl: `data:image/png;base64,${imageData.b64_json}` };
-      }
-
-      if (imageData.url) {
-        return { imageUrl: imageData.url };
-      }
-
-      throw new Error('Invalid image response: missing both b64_json and url fields');
-    } catch (error) {
-      throw this.handleError(error);
     }
   }
 

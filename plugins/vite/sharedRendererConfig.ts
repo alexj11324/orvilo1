@@ -28,8 +28,6 @@ const APP_SHELL_NS = new Set(['chat', 'home']);
 const EAGER_DEFAULT_NS = new Set(['hotkey']);
 
 const MODEL_RUNTIME_CLIENT_MODULES = [
-  '/core/usageConverters/utils/resolveImageSinglePrice.ts',
-  '/core/usageConverters/utils/resolveVideoSinglePrice.ts',
   '/helpers/parseToolCalls.ts',
   '/providers/openai/modelId.ts',
   '/types/error.ts',

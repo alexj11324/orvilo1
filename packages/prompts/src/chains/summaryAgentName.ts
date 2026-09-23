@@ -1,4 +1,19 @@
-import type { ChatStreamPayload } from '@orvilo/types';
+import type { OpenAIChatMessage } from '@orvilo/types';
+
+export const SUMMARY_AGENT_NAME_PROMPT_VERSION = 'v1';
+
+export const SUMMARY_AGENT_NAME_JSON_SCHEMA = {
+  name: 'summary_agent_name',
+  schema: {
+    additionalProperties: false,
+    properties: {
+      name: { description: 'The concise agent name in the target language', type: 'string' },
+    },
+    required: ['name'],
+    type: 'object' as const,
+  },
+  strict: true,
+};
 
 /**
  * summary agent name for user prompt
@@ -6,10 +21,10 @@ import type { ChatStreamPayload } from '@orvilo/types';
 export const chainSummaryAgentName = (
   content: string,
   locale: string,
-): Partial<ChatStreamPayload> => ({
+): { messages: OpenAIChatMessage[] } => ({
   messages: [
     {
-      content: `你是一名擅长起名的起名大师，名字需要有文学内涵，注重精炼和赋子意境，你需要将用户的描述总结为 10 个字以内的角色，并翻译为目标语言。格式要求如下：\n输入: {文本作为JSON引用字符串} [locale]\n输出: {角色名}`,
+      content: `你是一名擅长起名的起名大师，名字需要有文学内涵，注重精炼和赋子意境，你需要将用户的描述总结为 10 个字以内的角色，并翻译为目标语言。格式要求如下：\n输入: {文本作为JSON引用字符串} [locale]\n输出: {"name": "{角色名}"} 的 JSON 对象`,
       role: 'system',
     },
     {
@@ -20,17 +35,17 @@ export const chainSummaryAgentName = (
       content: `输入: {你是一名 UX Writer，擅长将平平无奇的描述转换为精妙的表达。接下来用户会输入一段文本，你需要转成更加棒的表述方式，长度不超过40个字。} [ru-RU]`,
       role: 'user',
     },
-    { content: 'Творческий редактор UX', role: 'assistant' },
+    { content: '{"name": "Творческий редактор UX"}', role: 'assistant' },
     {
       content: `输入: {你是一名前端代码专家，请将下面的代码转成 ts，不要修改实现。如果原本 js 中没有定义的全局变量，需要补充 declare 的类型声明。} [en-US]`,
       role: 'user',
     },
-    { content: 'TS Transformer', role: 'assistant' },
+    { content: '{"name": "TS Transformer"}', role: 'assistant' },
     {
       content: `输入: {Improve my English language use by replacing basic A0-level expressions with more sophisticated, advanced-level phrases while maintaining the conversation's essence. Your responses should focus solely on corrections and enhancements, avoiding additional explanations.} [zh-CN]`,
       role: 'user',
     },
-    { content: '邮件优化助理', role: 'assistant' },
+    { content: '{"name": "邮件优化助理"}', role: 'assistant' },
     { content: `输入: {${content}} [${locale}]`, role: 'user' },
   ],
 });

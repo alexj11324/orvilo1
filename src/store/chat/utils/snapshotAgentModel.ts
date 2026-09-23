@@ -3,8 +3,6 @@ import { resolveHeterogeneousProviderTopicModel } from '@orvilo/types';
 
 import { getAgentStoreState } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
-import { getAiInfraStoreState } from '@/store/aiInfra';
-import { aiModelSelectors } from '@/store/aiInfra/slices/aiModel/selectors';
 
 /**
  * Snapshot the given agent's current model/provider so a newly created topic
@@ -50,18 +48,16 @@ export type TopicReasoningSnapshot = Pick<ChatTopicMetadata, 'heteroEffort' | 'r
  * `topics.metadata.reasoningConfig` / `heteroEffort`, see `ChatTopicMetadata`).
  *
  * - Heterogeneous agents pin the agent's `heterogeneousProvider.effort`.
- * - API models pin the user's model-instance reasoning config for the
- *   snapshotted model — an empty object when nothing is saved, which pins the
- *   topic to the model's own defaults. Wait for the saved config before
- *   snapshotting; if loading fails, retain the generation fallback instead
- *   of freezing an unverified default.
+ * - API models pin nothing at creation — the user-managed model-instance
+ *   reasoning config is retired; a topic only carries `reasoningConfig` once
+ *   something explicitly pins it.
  *
  * Returns undefined when there is nothing to pin, so callers can spread it
  * into `metadata` without leaving empty keys behind.
  */
 export const snapshotAgentReasoning = async (
   agentId: string | null | undefined,
-  modelSnapshot: { model?: string; provider?: string },
+  _modelSnapshot: { model?: string; provider?: string },
 ): Promise<TopicReasoningSnapshot | undefined> => {
   if (!agentId) return undefined;
 
@@ -72,16 +68,5 @@ export const snapshotAgentReasoning = async (
     return effort === undefined ? undefined : { heteroEffort: effort };
   }
 
-  const { model, provider } = modelSnapshot;
-  if (!model || !provider) return undefined;
-
-  /** Creation must settle the saved config before persistence, including a first send after reload. */
-  await getAiInfraStoreState().ensureModelReasoningConfig(model, provider);
-  const aiInfraState = getAiInfraStoreState();
-  if (!aiModelSelectors.isModelHasReasoningExtendParams(model, provider)(aiInfraState)) return;
-  if (!aiModelSelectors.isModelReasoningConfigLoaded(model, provider)(aiInfraState)) return;
-
-  return {
-    reasoningConfig: aiModelSelectors.modelReasoningConfig(model, provider)(aiInfraState) ?? {},
-  };
+  return undefined;
 };

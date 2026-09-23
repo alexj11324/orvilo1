@@ -11,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { App } from '@/core/App';
 import AuvService from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
-import ImessageBridgeService from '@/services/imessageBridgeSrv';
 
 import GatewayConnectionCtr from '../GatewayConnectionCtr';
 import HeterogeneousAgentCtr from '../HeterogeneousAgentCtr';
@@ -43,7 +42,6 @@ const { ipcMainHandleMock, MockGatewayClient } = vi.hoisted(() => {
     });
 
     sendToolCallResponse = vi.fn();
-    sendMessageApiResponse = vi.fn();
     sendAgentRunAck = vi.fn();
 
     constructor(options: any) {
@@ -99,19 +97,6 @@ const { ipcMainHandleMock, MockGatewayClient } = vi.hoisted(() => {
           type: 'mcp',
         },
         type: 'tool_call_request',
-      });
-    }
-
-    simulateMessageApiRequest(
-      platform: string,
-      apiName: string,
-      payload: Record<string, unknown>,
-      requestId = 'msg-req-1',
-    ) {
-      this.emit('message_api_request', {
-        api: { apiName, payload, platform },
-        requestId,
-        type: 'message_api_request',
       });
     }
 
@@ -221,10 +206,6 @@ vi.mock('@orvilo/device-gateway-client', () => ({
   GatewayClient: MockGatewayClient,
 }));
 
-vi.mock('@/services/imessageBridgeSrv', () => ({
-  default: class ImessageBridgeService {},
-}));
-
 vi.mock('fast-glob', () => ({ default: vi.fn().mockResolvedValue([]) }));
 vi.mock('fflate', () => ({ unzipSync: vi.fn() }));
 
@@ -267,10 +248,6 @@ const mockHeterogeneousAgentCtr = {
   startSession: vi.fn().mockResolvedValue({ sessionId: 'mock-session-id' }),
 } as unknown as HeterogeneousAgentCtr;
 
-const mockImessageBridgeSrv = {
-  handleGatewayMessageApi: vi.fn().mockResolvedValue({ ok: true }),
-} as unknown as ImessageBridgeService;
-
 const mockAuvSrv = {
   runCommand: vi.fn().mockResolvedValue({
     argv: ['invoke', 'display.capture'],
@@ -307,7 +284,6 @@ const mockApp = {
   getService: vi.fn((Cls) => {
     if (Cls === AuvService) return mockAuvSrv;
     if (Cls === GatewayConnectionService) return mockGatewayConnectionSrv;
-    if (Cls === ImessageBridgeService) return mockImessageBridgeSrv;
     return null;
   }),
   storeManager: { get: mockStoreGet, set: mockStoreSet },
@@ -902,66 +878,6 @@ describe('GatewayConnectionCtr', () => {
           content: 'spawn ENOENT',
           error: 'spawn ENOENT',
           executionTimeMs: expect.any(Number),
-          success: false,
-        },
-      });
-    });
-  });
-
-  describe('message API routing', () => {
-    async function connectAndOpen() {
-      ctr.afterFirstFrame();
-      await vi.advanceTimersByTimeAsync(0);
-      const client = MockGatewayClient.lastInstance!;
-      client.simulateConnected();
-      return client;
-    }
-
-    it('should route iMessage message API requests to the iMessage bridge service', async () => {
-      vi.mocked(mockImessageBridgeSrv.handleGatewayMessageApi).mockResolvedValueOnce({
-        guid: 'sent-1',
-      });
-      const client = await connectAndOpen();
-
-      client.simulateMessageApiRequest(
-        'imessage',
-        'sendText',
-        {
-          applicationId: 'home-mac-mini',
-          chatGuid: 'iMessage;-;chat-1',
-          message: 'hello',
-        },
-        'msg-req-42',
-      );
-      await vi.advanceTimersByTimeAsync(0);
-
-      expect(mockImessageBridgeSrv.handleGatewayMessageApi).toHaveBeenCalledWith('sendText', {
-        applicationId: 'home-mac-mini',
-        chatGuid: 'iMessage;-;chat-1',
-        message: 'hello',
-      });
-      expect(client.sendMessageApiResponse).toHaveBeenCalledWith({
-        requestId: 'msg-req-42',
-        result: {
-          content: JSON.stringify({ guid: 'sent-1' }),
-          success: true,
-        },
-      });
-    });
-
-    it('should send message_api_response with error for unsupported platforms', async () => {
-      const client = await connectAndOpen();
-
-      client.simulateMessageApiRequest('unsupported', 'sendText', {}, 'msg-req-err');
-      await vi.advanceTimersByTimeAsync(0);
-
-      const errorMsg =
-        'Message API "unsupported/sendText" is not available on this device. It may not be supported in the current desktop version.';
-      expect(client.sendMessageApiResponse).toHaveBeenCalledWith({
-        requestId: 'msg-req-err',
-        result: {
-          content: errorMsg,
-          error: errorMsg,
           success: false,
         },
       });

@@ -4,8 +4,6 @@ import { ModelProvider } from 'model-bank';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
 import type { ChatCompletionTool, ChatResponseFormat, ChatStreamPayload } from '../../types';
 import { MODEL_LIST_CONFIGS, processModelList } from '../../utils/modelParse';
-import { createXAIImage } from './createImage';
-import { createXAIVideo } from './createVideo';
 
 export interface XAIModelCard {
   id: string;
@@ -135,15 +133,6 @@ export const OrviloXAI = createOpenAICompatibleRuntime({
   chatCompletion: {
     handlePayload: handleXAIChatCompletionPayload,
     useResponse: true,
-  },
-  createImage: createXAIImage,
-  createVideo: createXAIVideo,
-  handlePollVideoStatus: async (inferenceId, options) => {
-    const { pollXAIVideoStatus } = await import('./createVideo');
-    return pollXAIVideoStatus(inferenceId, {
-      apiKey: options.apiKey,
-      baseURL: options.baseURL || '',
-    });
   },
   debug: {
     chatCompletion: () => process.env.DEBUG_XAI_CHAT_COMPLETION === '1',

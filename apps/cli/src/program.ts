@@ -4,7 +4,6 @@ import { registerAgentCommand } from './commands/agent';
 import { registerAgentGroupCommand } from './commands/agent-group';
 import { registerAgentSignalCommand } from './commands/agent-signal';
 import { registerArtifactCommand } from './commands/artifact';
-import { registerBotCommand } from './commands/bot';
 import { registerCompletionCommand } from './commands/completion';
 import { registerConfigCommand } from './commands/config';
 import { registerConnectCommand } from './commands/connect';
@@ -83,7 +82,6 @@ export function createProgram() {
   registerAgentCommand(program);
   registerAgentGroupCommand(program);
   registerAgentSignalCommand(program);
-  registerBotCommand(program);
   registerGenerateCommand(program);
   registerGoalCommand(program);
   registerFileCommand(program);

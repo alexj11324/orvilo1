@@ -5,8 +5,6 @@ import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactor
 import { resolveParameters } from '../../core/parameterResolver';
 import { QwenAIStream } from '../../core/streams';
 import { processMultiProviderModelList } from '../../utils/modelParse';
-import { createQwenImage } from './createImage';
-import { createQwenVideo } from './createVideo';
 import { isThinkingForcedQwenModel } from './modelId';
 
 export interface QwenModelCard {
@@ -141,19 +139,8 @@ export const params = {
     },
     handleStream: QwenAIStream,
   },
-  createImage: createQwenImage,
   debug: {
     chatCompletion: () => process.env.DEBUG_QWEN_CHAT_COMPLETION === '1',
-  },
-  createVideo: createQwenVideo,
-  handlePollVideoStatus: async (inferenceId, options) => {
-    const { pollQwenVideoStatus } = await import('./createVideo');
-    const baseURL = options.baseURL || '';
-
-    const suffixIndex = baseURL.indexOf('/compatible-mode/v1');
-    const dashscopeURL = suffixIndex > -1 ? baseURL.slice(0, suffixIndex) : baseURL;
-
-    return pollQwenVideoStatus(inferenceId, options.apiKey || '', dashscopeURL);
   },
   models: async ({ client }) => {
     const modelsPage = (await client.models.list()) as any;

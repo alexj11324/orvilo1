@@ -34,7 +34,7 @@ export const generateConnectorOAuthState = (): string => randomUUID().replaceAll
  * Persist the connect-flow payload under an explicit `state` value. The state
  * is chosen first (so it can be embedded in the authorize URL), then the PKCE
  * verifier returned by `startAuthorization` is stored alongside it. Same
- * Redis-backed single-use pattern as the messenger Slack OAuth state store
+ * Redis-backed single-use pattern as the connector OAuth state store
  * (TTL expiry, delete-on-consume, no replay).
  */
 export const saveConnectorOAuthState = async (

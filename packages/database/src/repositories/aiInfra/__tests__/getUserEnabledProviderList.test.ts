@@ -1,79 +1,41 @@
-import type { AiProviderListItem } from '@orvilo/types';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { getTestDB } from '../../../core/getTestDB';
-import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
 
-const userId = 'test-user-id';
-const mockProviderConfigs = {
-  openai: { enabled: true },
-  anthropic: { enabled: false },
-};
-
-let serverDB: OrviloDatabase;
-let repo: AiInfraRepos;
-
-beforeAll(async () => {
-  serverDB = await getTestDB();
-}, 30000);
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  repo = new AiInfraRepos(serverDB, userId, mockProviderConfigs);
-});
+// vitest.config.server.mts runs with isolate:false, so one file's module mock
+// serves every file; delegate through a per-test-installed global instead.
+vi.mock('@orvilo/business-model-bank/model-config', () => ({
+  loadModels: () =>
+    (
+      globalThis as typeof globalThis & {
+        __orviloTestLoadModels?: () => Promise<unknown[]>;
+      }
+    ).__orviloTestLoadModels?.() ?? Promise.resolve([]),
+}));
 
 describe('AiInfraRepos', () => {
   describe('getUserEnabledProviderList', () => {
-    it('should return only enabled providers', async () => {
-      const mockProviders = [
-        { id: 'openai', enabled: true, name: 'OpenAI', sort: 1 },
-        { id: 'anthropic', enabled: false, name: 'Anthropic', sort: 2 },
-      ] as AiProviderListItem[];
-
-      vi.spyOn(repo, 'getAiProviderList').mockResolvedValue(mockProviders);
-
-      const result = await repo.getUserEnabledProviderList();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({
-        id: 'openai',
-        name: 'OpenAI',
+    it('returns only deployment-enabled providers in catalog order', async () => {
+      const repo = new AiInfraRepos({
+        anthropic: { enabled: true },
+        openai: { enabled: true },
       });
+      const list = await repo.getUserEnabledProviderList();
+
+      const { DEFAULT_MODEL_PROVIDER_LIST } = await import('model-bank/modelProviders');
+      const catalogOrder = DEFAULT_MODEL_PROVIDER_LIST.map((p) => p.id);
+      expect(list.map((p) => p.id)).toEqual(
+        [...list.map((p) => p.id)].sort(
+          (a, b) => catalogOrder.indexOf(a) - catalogOrder.indexOf(b),
+        ),
+      );
+      expect(new Set(list.map((p) => p.id))).toEqual(new Set(['anthropic', 'openai']));
+      expect(list.every((p) => p.source === 'builtin')).toBe(true);
     });
 
-    it('should return only enabled provider', async () => {
-      const mockProviders = [
-        {
-          enabled: true,
-          id: 'openai',
-          logo: 'logo1',
-          name: 'OpenAI',
-          sort: 1,
-          source: 'builtin' as const,
-        },
-        {
-          enabled: false,
-          id: 'anthropic',
-          logo: 'logo2',
-          name: 'Anthropic',
-          sort: 2,
-          source: 'builtin' as const,
-        },
-      ];
-
-      vi.spyOn(repo.aiProviderModel, 'getAiProviderList').mockResolvedValue(mockProviders);
-
-      const result = await repo.getUserEnabledProviderList();
-
-      expect(result).toEqual([
-        {
-          id: 'openai',
-          logo: 'logo1',
-          name: 'OpenAI',
-          source: 'builtin',
-        },
-      ]);
+    it('returns an empty list when nothing is enabled', async () => {
+      const repo = new AiInfraRepos({ openai: { enabled: false } });
+      expect(await repo.getUserEnabledProviderList()).toEqual([]);
     });
   });
 });

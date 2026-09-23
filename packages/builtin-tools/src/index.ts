@@ -20,11 +20,9 @@ import { CredsManifest } from '@orvilo/builtin-tool-creds';
 import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
-import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest, resolveLocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
-import { MessageManifest, resolveMessageManifest } from '@orvilo/builtin-tool-message';
 import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
@@ -97,20 +95,18 @@ export const manualModeExcludeToolIds = [OrviloActivatorManifest.identifier];
  * (`chatConfig.enableAgentMode === false`). Each one still passes through
  * its own runtime gate (e.g. knowledge base requires `hasEnabledKnowledgeBases`,
  * memory requires the global memory setting, web-browsing requires search
- * enabled, image-generation requires an explicit pin). This list is the
+ * enabled). This list is the
  * strict outer whitelist.
  *
  * In chat mode, both the server `createServerAgentToolsEngine` and the
  * frontend `createAgentToolsEngine` build their rules from ONLY these
  * identifiers, drop user plugins / `alwaysOnToolIds` entirely (except
- * image-generation, which is re-enabled only when pinned), and disable
  * `allowExplicitActivation` so the activator can't smuggle other tools in.
  */
 export const chatModeAllowedToolIds = [
   KnowledgeBaseManifest.identifier,
   MemoryManifest.identifier,
   WebBrowsingManifest.identifier,
-  ImageGenerationManifest.identifier,
 ];
 
 /**
@@ -195,7 +191,7 @@ export const runtimeManagedToolIds = [
  * Every entry was verified against its actual server runtime
  * (`apps/server/src/services/toolExecution/serverRuntimes/*`), not just its
  * manifest. For the rationale behind every DENIED identifier
- * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`, `orvilo-message`,
+ * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`,
  * `orvilo-agent-builder`, `orvilo-skills`,
  * `orvilo-group-agent-builder`, `orvilo-group-management`, `agent-signal-review`,
  * `orvilo-user-interaction`, `orvilo-activator`,
@@ -207,7 +203,6 @@ export const runtimeManagedToolIds = [
 export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
   CalculatorManifest.identifier,
   WebBrowsingManifest.identifier,
-  ImageGenerationManifest.identifier,
   VerifyToolManifest.identifier,
   AcceptanceEvidenceManifest.identifier,
   OrviloAgentManifest.identifier,
@@ -379,13 +374,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     type: 'builtin',
   },
   {
-    // Opt-in image generation: chat mode no longer auto-injects it, so the
-    // Tools popover must expose a pin/disable control.
-    identifier: ImageGenerationManifest.identifier,
-    manifest: ImageGenerationManifest,
-    type: 'builtin',
-  },
-  {
     discoverable: false,
     hidden: true,
     identifier: PageAgentManifest.identifier,
@@ -424,14 +412,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     identifier: CalculatorManifest.identifier,
     manifest: CalculatorManifest,
-    type: 'builtin',
-  },
-  {
-    identifier: MessageManifest.identifier,
-    manifest: MessageManifest,
-    // Context-aware: drops APIs the current IM platform can't fulfil (e.g.
-    // WeChat has no `readMessages`), trimming both the tool list and systemRole.
-    resolveManifest: resolveMessageManifest,
     type: 'builtin',
   },
   {

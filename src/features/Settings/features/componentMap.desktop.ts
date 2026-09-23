@@ -15,7 +15,6 @@ import Hotkey from '../hotkey';
 import Labels from '../labels';
 import Labs from '../labs';
 import Memory from '../memory';
-import Messenger from '../messenger';
 import { DesktopNotificationSettings } from '../notification';
 import Profile from '../profile';
 import Proxy from '../proxy';
@@ -29,7 +28,6 @@ export const componentMap = {
   [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,
   [SettingsTabs.Memory]: Memory,
-  [SettingsTabs.Messenger]: Messenger,
   [SettingsTabs.Notification]: DesktopNotificationSettings,
   [SettingsTabs.About]: About,
   [SettingsTabs.Hotkey]: Hotkey,

@@ -36,8 +36,6 @@ export interface PendingTransferRequest {
  * other users' task assignments on a private agent detach.
  */
 export interface TransferManifest {
-  botBindings: number;
-  botPlatforms: string[];
   connectorsAffected: number;
   cronJobs: number;
   deviceBindingAffected: boolean;

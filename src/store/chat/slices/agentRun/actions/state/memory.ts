@@ -1,8 +1,12 @@
-import { chainSummaryHistory } from '@orvilo/prompts';
+import { TRACING_SCENARIOS } from '@orvilo/const';
+import {
+  chainSummaryHistory,
+  SUMMARY_HISTORY_JSON_SCHEMA,
+  SUMMARY_HISTORY_PROMPT_VERSION,
+} from '@orvilo/prompts';
 import { type UIChatMessage } from '@orvilo/types';
-import { TraceNameMap } from '@orvilo/types';
 
-import { chatService } from '@/services/chat';
+import { aiChatService } from '@/services/aiChat';
 import { topicService } from '@/services/topic';
 import { type ChatStore } from '@/store/chat';
 import { type StoreSetter } from '@/store/types';
@@ -28,18 +32,24 @@ export class ChatMemoryActionImpl {
 
     const { model, provider } = systemAgentSelectors.historyCompress(useUserStore.getState());
 
-    let historySummary = '';
-    await chatService.fetchPresetTaskResult({
-      onFinish: async (text) => {
-        historySummary = text;
+    const envelope = await aiChatService.generateJSON(
+      {
+        ...chainSummaryHistory(messages),
+        model,
+        provider,
+        schema: SUMMARY_HISTORY_JSON_SCHEMA,
+        tracing: {
+          agentId: this.#get().activeAgentId,
+          promptVersion: SUMMARY_HISTORY_PROMPT_VERSION,
+          scenario: TRACING_SCENARIOS.HistorySummary,
+          schemaName: SUMMARY_HISTORY_JSON_SCHEMA.name,
+          topicId,
+        },
       },
-      params: { ...chainSummaryHistory(messages), model, provider, stream: false },
-      trace: {
-        sessionId: this.#get().activeAgentId,
-        topicId: this.#get().activeTopicId,
-        traceName: TraceNameMap.SummaryHistoryMessages,
-      },
-    });
+      new AbortController(),
+    );
+
+    const historySummary = (envelope?.data as { summary?: string } | undefined)?.summary ?? '';
 
     await topicService.updateTopic(topicId, {
       historySummary,

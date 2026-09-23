@@ -1,7 +1,7 @@
+import { type ResolvedAgentConfig } from '@orvilo/mecha';
 import { type UIChatMessage } from '@orvilo/types';
 
 import { DEFAULT_AGENT_CHAT_CONFIG, DEFAULT_AGENT_CONFIG } from '@/const/settings';
-import { type ResolvedAgentConfig } from '@/services/chat/mecha';
 
 // Test Constants
 export const TEST_IDS = {

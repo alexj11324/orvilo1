@@ -1352,6 +1352,32 @@ describe('AgentModel', () => {
       expect(result?.model).toBe('gpt-4');
     });
 
+    it('should keep the builtin orvilo harness binding when updating the inbox agent', async () => {
+      // 'orvilo' is the inbox agent's own builtin engine, not an external-CLI
+      // binding — the guard must not strip it, or the Migrate-to-Orvilo write
+      // is silently reverted.
+      const agent = await serverDB
+        .insert(agents)
+        .values({ slug: INBOX_SESSION_ID, userId })
+        .returning()
+        .then((res) => res[0]);
+
+      await agentModel.updateConfig(agent.id, {
+        agencyConfig: {
+          heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
+        },
+      } as any);
+
+      const result = await serverDB.query.agents.findFirst({
+        where: eq(agents.id, agent.id),
+      });
+
+      expect((result?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+        engine: 'claude-sdk',
+        type: 'orvilo',
+      });
+    });
+
     it('should keep heterogeneousProvider for non-inbox agents', async () => {
       const agent = await serverDB
         .insert(agents)
@@ -1752,6 +1778,65 @@ describe('AgentModel', () => {
         expect(result?.virtual).toBe(true);
       });
 
+      it('should create the inbox agent bound to the builtin orvilo harness', async () => {
+        // A builtin agent must never exist unbound — provisioning writes the
+        // harness binding as part of the persist payload.
+        const result = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+
+        expect(result).toBeDefined();
+
+        const row = await serverDB.query.agents.findFirst({
+          where: eq(agents.id, result!.id),
+        });
+        expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+          engine: 'claude-sdk',
+          type: 'orvilo',
+        });
+      });
+
+      it('should heal an existing inbox agent missing its harness binding', async () => {
+        // Rows provisioned before the binding invariant existed get backfilled
+        // on the next read; a user-set binding is never overwritten.
+        const [unbound] = await serverDB
+          .insert(agents)
+          .values({ slug: INBOX_SESSION_ID, userId })
+          .returning();
+
+        const healed = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+        expect(healed?.id).toBe(unbound.id);
+
+        const row = await serverDB.query.agents.findFirst({
+          where: eq(agents.id, unbound.id),
+        });
+        expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+          engine: 'claude-sdk',
+          type: 'orvilo',
+        });
+      });
+
+      it('should not overwrite an existing inbox harness binding', async () => {
+        const [bound] = await serverDB
+          .insert(agents)
+          .values({
+            agencyConfig: {
+              heterogeneousProvider: { engine: 'codex-app-server', type: 'orvilo' },
+            },
+            slug: INBOX_SESSION_ID,
+            userId,
+          })
+          .returning();
+
+        await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+
+        const row = await serverDB.query.agents.findFirst({
+          where: eq(agents.id, bound.id),
+        });
+        expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+          engine: 'codex-app-server',
+          type: 'orvilo',
+        });
+      });
+
       it('should return the same agent on subsequent calls (idempotent)', async () => {
         // First call - creates the agent
         const result1 = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
@@ -1844,6 +1929,7 @@ describe('AgentModel', () => {
         expect(result?.userId).toBe(userId);
         expect(result?.agencyConfig).toEqual({
           executionTargetSelectionPolicy: 'member',
+          heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
           modelSelectionPolicy: 'member',
           topicSharePolicy: 'member',
         });
@@ -3140,109 +3226,6 @@ describe('AgentModel', () => {
       const result = await agentModel.rank(1);
 
       expect(result).toHaveLength(1);
-    });
-  });
-
-  describe('listMessengerBindableAgents', () => {
-    it('should keep the inbox, exclude other virtual agents, pin inbox first, and fallback its meta', async () => {
-      await serverDB.insert(agents).values([
-        // Inbox is the oldest, yet must be pinned to the top.
-        {
-          avatar: null,
-          id: 'mb-inbox',
-          slug: INBOX_SESSION_ID,
-          title: null,
-          updatedAt: new Date('2023-01-01'),
-          userId,
-          virtual: true,
-        },
-        {
-          id: 'mb-normal',
-          title: 'Normal',
-          updatedAt: new Date('2024-01-01'),
-          userId,
-        },
-        { id: 'mb-virtual', title: 'Virtual', userId, virtual: true },
-      ]);
-
-      const result = await agentModel.listMessengerBindableAgents();
-
-      expect(result.map((r) => r.id)).toEqual(['mb-inbox', 'mb-normal']);
-      expect(result[0]).toMatchObject({
-        avatar: DEFAULT_INBOX_AVATAR,
-        id: 'mb-inbox',
-        isInbox: true,
-        title: DEFAULT_INBOX_TITLE,
-      });
-      expect(result[1]).toMatchObject({ id: 'mb-normal', isInbox: false, title: 'Normal' });
-    });
-
-    it('should fall back a blank non-inbox title to options.fallbackTitle (null by default)', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'mb-blank', title: null, userId },
-        { id: 'mb-named', title: 'Named', userId },
-      ]);
-
-      const withoutFallback = await agentModel.listMessengerBindableAgents();
-      expect(withoutFallback.find((r) => r.id === 'mb-blank')?.title).toBeNull();
-
-      const withFallback = await agentModel.listMessengerBindableAgents({
-        fallbackTitle: 'Custom Agent',
-      });
-      expect(withFallback.find((r) => r.id === 'mb-blank')?.title).toBe('Custom Agent');
-      // A real title is never overridden by the fallback.
-      expect(withFallback.find((r) => r.id === 'mb-named')?.title).toBe('Named');
-    });
-
-    it('should only list the current user agents', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'mb-mine', title: 'Mine', userId },
-        { id: 'mb-theirs', title: 'Theirs', userId: userId2 },
-      ]);
-
-      const result = await agentModel.listMessengerBindableAgents();
-
-      expect(result.map((r) => r.id)).toEqual(['mb-mine']);
-    });
-
-    it('should keep isPrivate false in personal mode', async () => {
-      await serverDB.insert(agents).values([{ id: 'mb-personal', title: 'Personal', userId }]);
-
-      const result = await agentModel.listMessengerBindableAgents();
-
-      expect(result.map((r) => r.isPrivate)).toEqual([false]);
-    });
-
-    it('should flag own private workspace agents and hide other members private ones', async () => {
-      const [workspace] = await serverDB
-        .insert(workspaces)
-        .values({ name: 'mb-ws', primaryOwnerId: userId, slug: 'mb-ws' })
-        .returning();
-
-      await serverDB.insert(agents).values([
-        { id: 'mb-ws-shared', title: 'Shared', userId: userId2, workspaceId: workspace.id },
-        {
-          id: 'mb-ws-private-mine',
-          title: 'Mine Private',
-          userId,
-          visibility: 'private',
-          workspaceId: workspace.id,
-        },
-        {
-          id: 'mb-ws-private-theirs',
-          title: 'Theirs Private',
-          userId: userId2,
-          visibility: 'private',
-          workspaceId: workspace.id,
-        },
-      ]);
-
-      const wsAgentModel = new AgentModel(serverDB, userId, workspace.id);
-      const result = await wsAgentModel.listMessengerBindableAgents();
-
-      expect(result.map((r) => r.id).sort()).toEqual(['mb-ws-private-mine', 'mb-ws-shared']);
-      expect(result.find((r) => r.id === 'mb-ws-shared')?.isPrivate).toBe(false);
-      expect(result.find((r) => r.id === 'mb-ws-private-mine')?.isPrivate).toBe(true);
     });
   });
 });

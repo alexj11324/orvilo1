@@ -21,6 +21,7 @@ import dayjs from 'dayjs';
 import {
   ArchiveIcon,
   ArrowLeftRightIcon,
+  ArrowUpRightIcon,
   AtSignIcon,
   BellIcon,
   CheckCheckIcon,
@@ -47,6 +48,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -58,6 +60,7 @@ import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -93,6 +96,7 @@ import {
   INBOX_SNOOZE_PRESETS,
   inboxBulkFingerprint,
   type InboxFilterChip,
+  inboxIssueTaskId,
   inboxOpenTarget,
   type InboxSnoozePreset,
   resolveInboxFilterChip,
@@ -220,6 +224,27 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   detailPlaceholder: css`
     min-height: 100%;
+  `,
+  /**
+   * Task-linked cards get the reference's detail chrome: a sticky header row
+   * carrying the issue identifier plus pin/open/overflow actions (Linear's
+   * `ORV-115` · ★ · ⋯), while the issue body scrolls beneath it — the same
+   * peek-header contract `MyWorkIssuePane` uses.
+   */
+  paneHeader: css`
+    position: sticky;
+    z-index: 2;
+    inset-block-start: 0;
+
+    display: flex;
+    gap: 4px;
+    align-items: center;
+
+    padding-block: 8px;
+    padding-inline: 16px 8px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    background: ${cssVar.colorBgLayout};
   `,
   paneMeta: css`
     color: ${cssVar.colorTextTertiary};
@@ -383,8 +408,16 @@ const WorkInboxPage = memo(() => {
     isLoading,
     partial,
   });
-  const selectedTaskId =
-    selected?.safeNavigation?.kind === 'task' ? selected.safeNavigation.taskId : undefined;
+  // Task-linked cards render the shared issue surface as the pane body. The
+  // open target is the single eligibility check — a card that cannot route to
+  // a task never mounts one.
+  const selectedIssueTaskId = selected ? inboxIssueTaskId(selected) : null;
+  // The canonical identifier (e.g. `T-501`) resolves once the issue fetch
+  // lands — the store double-keys `taskDetailMap` under the requested id, so a
+  // raw DB-id target still surfaces the readable crumb in the pane header.
+  const selectedIssueIdentifier = useTaskStore((s) =>
+    selectedIssueTaskId ? s.taskDetailMap[selectedIssueTaskId]?.identifier : undefined,
+  );
   // Reply drafts persist per (user, workspace, request, request generation):
   // switching between pending requests never loses or leaks an unsubmitted
   // draft, and a notification-level update never orphans it.
@@ -1003,102 +1036,208 @@ const WorkInboxPage = memo(() => {
   );
 
   const detailPane = selected ? (
-    <div className={styles.detail}>
-      {surface === 'detail' ? (
-        <Flexbox horizontal>
-          <Button
-            icon={ChevronLeftIcon}
-            size={'small'}
-            onClick={() => writeInboxParams({ detail: null, item: null })}
-          >
-            {tCommon('back')}
-          </Button>
-        </Flexbox>
-      ) : null}
-      <Flexbox gap={4}>
-        <Text fontSize={16} weight={600}>
-          {titleFor(selected)}
-        </Text>
-        <Text className={styles.paneMeta} fontSize={12}>
-          {dayjs(selected.lastActivityAt).fromNow()}
-          {!selected.read ? ` · ${t('inbox.unread')}` : ''}
-        </Text>
-      </Flexbox>
-      <Text type={'secondary'}>{selected.content}</Text>
-      <div className={styles.divider} />
-      <Flexbox gap={8}>
-        {decisionVerbs.includes('submit_input') ? (
-          <Input
-            placeholder={t('inbox.inputPlaceholder')}
-            value={inputDraft}
-            onChange={(event) => setInputDraft(event.target.value)}
-          />
-        ) : null}
-        <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
-          {decisionVerbs.includes('approve') ? (
-            <Button
-              loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
-              type="primary"
-              onClick={() => void decide(selected, 'approve')}
-            >
-              {t('inbox.approve')}
-            </Button>
+    selectedIssueTaskId ? (
+      // Task-linked card — the pane IS the issue detail (Linear's inbox detail
+      // surface), not a bare notification card. The sticky header carries the
+      // issue identifier plus pin/open/overflow (the reference's `ORV-115` ·
+      // ★ · ⋯ row); the notification's own context and decision row stay above
+      // the shared issue body so the request remains first-class for
+      // approval-type cards. IssueContent mounts directly in the pane's scroll
+      // owner — no nested scroll host, no page chrome.
+      <>
+        <div className={styles.paneHeader}>
+          {surface === 'detail' ? (
+            <ActionIcon
+              icon={ChevronLeftIcon}
+              size={'small'}
+              title={tCommon('back')}
+              onClick={() => writeInboxParams({ detail: null, item: null })}
+            />
           ) : null}
-          {decisionVerbs.includes('decline') ? (
-            <Button
-              loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
-              onClick={() => void decide(selected, 'decline')}
-            >
-              {t('inbox.decline')}
-            </Button>
-          ) : null}
-          {decisionVerbs.includes('cancel') ? (
-            <Button
-              loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
-              onClick={() => void decide(selected, 'cancel')}
-            >
-              {t('inbox.cancel')}
-            </Button>
-          ) : null}
-          {decisionVerbs.includes('submit_input') ? (
-            <Button
-              disabled={!inputDraft.trim()}
-              loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
-              type="primary"
-              onClick={() => void decide(selected, 'submit_input', { text: inputDraft.trim() })}
-            >
-              {t('inbox.submitInput')}
-            </Button>
-          ) : null}
-          {selectedOpenTarget ? (
-            <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
-              {t('inbox.open')}
-            </Button>
-          ) : null}
-          {detailMoreItems.length > 0 ? (
-            <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
-              <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
-            </DropdownMenu>
-          ) : null}
-          {decisionVerbs.length === 0 && !selectedOpenTarget && detailMoreItems.length === 0 ? (
-            // Truthful empty state: the card offers no action the client can
-            // perform, so no dead controls render.
-            <Text fontSize={12} type={'secondary'}>
-              {t('inbox.noActions')}
+          <Text ellipsis fontSize={13} style={{ minWidth: 0 }} weight={500}>
+            {selectedIssueIdentifier ?? titleFor(selected)}
+          </Text>
+          <Flexbox horizontal align={'center'} flex={1} gap={4} justify={'flex-end'}>
+            <WorkFavoriteButton
+              targetId={selectedIssueIdentifier}
+              targetType="task"
+              variant={'icon'}
+            />
+            {selectedOpenTarget ? (
+              <ActionIcon
+                icon={ArrowUpRightIcon}
+                size={'small'}
+                title={t('inbox.open')}
+                onClick={() => openTarget(selected)}
+              />
+            ) : null}
+            {detailMoreItems.length > 0 ? (
+              <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
+                <ActionIcon
+                  icon={MoreHorizontalIcon}
+                  size={'small'}
+                  title={t('inbox.moreActions')}
+                />
+              </DropdownMenu>
+            ) : null}
+          </Flexbox>
+        </div>
+        <div className={styles.detail}>
+          <Flexbox gap={4}>
+            <Text fontSize={16} weight={600}>
+              {titleFor(selected)}
             </Text>
+            <Text className={styles.paneMeta} fontSize={12}>
+              {dayjs(selected.lastActivityAt).fromNow()}
+              {!selected.read ? ` · ${t('inbox.unread')}` : ''}
+            </Text>
+          </Flexbox>
+          <Text type={'secondary'}>{selected.content}</Text>
+          <div className={styles.divider} />
+          {decisionVerbs.length > 0 ? (
+            <Flexbox gap={8}>
+              {decisionVerbs.includes('submit_input') ? (
+                <Input
+                  placeholder={t('inbox.inputPlaceholder')}
+                  value={inputDraft}
+                  onChange={(event) => setInputDraft(event.target.value)}
+                />
+              ) : null}
+              <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+                {decisionVerbs.includes('approve') ? (
+                  <Button
+                    loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                    type="primary"
+                    onClick={() => void decide(selected, 'approve')}
+                  >
+                    {t('inbox.approve')}
+                  </Button>
+                ) : null}
+                {decisionVerbs.includes('decline') ? (
+                  <Button
+                    loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    onClick={() => void decide(selected, 'decline')}
+                  >
+                    {t('inbox.decline')}
+                  </Button>
+                ) : null}
+                {decisionVerbs.includes('cancel') ? (
+                  <Button
+                    loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    onClick={() => void decide(selected, 'cancel')}
+                  >
+                    {t('inbox.cancel')}
+                  </Button>
+                ) : null}
+                {decisionVerbs.includes('submit_input') ? (
+                  <Button
+                    disabled={!inputDraft.trim()}
+                    loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
+                    type="primary"
+                    onClick={() =>
+                      void decide(selected, 'submit_input', { text: inputDraft.trim() })
+                    }
+                  >
+                    {t('inbox.submitInput')}
+                  </Button>
+                ) : null}
+              </Flexbox>
+            </Flexbox>
           ) : null}
+          <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
+            <LazyIssueContent taskId={selectedIssueTaskId} />
+          </Suspense>
+        </div>
+      </>
+    ) : (
+      <div className={styles.detail}>
+        {surface === 'detail' ? (
+          <Flexbox horizontal>
+            <Button
+              icon={ChevronLeftIcon}
+              size={'small'}
+              onClick={() => writeInboxParams({ detail: null, item: null })}
+            >
+              {tCommon('back')}
+            </Button>
+          </Flexbox>
+        ) : null}
+        <Flexbox gap={4}>
+          <Text fontSize={16} weight={600}>
+            {titleFor(selected)}
+          </Text>
+          <Text className={styles.paneMeta} fontSize={12}>
+            {dayjs(selected.lastActivityAt).fromNow()}
+            {!selected.read ? ` · ${t('inbox.unread')}` : ''}
+          </Text>
         </Flexbox>
-      </Flexbox>
-      {selectedTaskId ? (
-        // Task-backed cards open the shared issue body in place — properties,
-        // activity and comments work without leaving the inbox; the action
-        // card above stays the request itself. IssueContent mounts directly
-        // in the pane's scroll owner — no nested scroll host, no page chrome.
-        <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
-          <LazyIssueContent taskId={selectedTaskId} />
-        </Suspense>
-      ) : null}
-    </div>
+        <Text type={'secondary'}>{selected.content}</Text>
+        <div className={styles.divider} />
+        <Flexbox gap={8}>
+          {decisionVerbs.includes('submit_input') ? (
+            <Input
+              placeholder={t('inbox.inputPlaceholder')}
+              value={inputDraft}
+              onChange={(event) => setInputDraft(event.target.value)}
+            />
+          ) : null}
+          <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+            {decisionVerbs.includes('approve') ? (
+              <Button
+                loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                type="primary"
+                onClick={() => void decide(selected, 'approve')}
+              >
+                {t('inbox.approve')}
+              </Button>
+            ) : null}
+            {decisionVerbs.includes('decline') ? (
+              <Button
+                loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                onClick={() => void decide(selected, 'decline')}
+              >
+                {t('inbox.decline')}
+              </Button>
+            ) : null}
+            {decisionVerbs.includes('cancel') ? (
+              <Button
+                loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                onClick={() => void decide(selected, 'cancel')}
+              >
+                {t('inbox.cancel')}
+              </Button>
+            ) : null}
+            {decisionVerbs.includes('submit_input') ? (
+              <Button
+                disabled={!inputDraft.trim()}
+                loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
+                type="primary"
+                onClick={() => void decide(selected, 'submit_input', { text: inputDraft.trim() })}
+              >
+                {t('inbox.submitInput')}
+              </Button>
+            ) : null}
+            {selectedOpenTarget ? (
+              <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
+                {t('inbox.open')}
+              </Button>
+            ) : null}
+            {detailMoreItems.length > 0 ? (
+              <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
+                <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
+              </DropdownMenu>
+            ) : null}
+            {decisionVerbs.length === 0 && !selectedOpenTarget && detailMoreItems.length === 0 ? (
+              // Truthful empty state: the card offers no action the client can
+              // perform, so no dead controls render.
+              <Text fontSize={12} type={'secondary'}>
+                {t('inbox.noActions')}
+              </Text>
+            ) : null}
+          </Flexbox>
+        </Flexbox>
+      </div>
+    )
   ) : null;
 
   const detailPlaceholder = (

@@ -108,3 +108,17 @@ export const inboxOpenTarget = (
   }
   return null;
 };
+
+/**
+ * The task a card's open target resolves to. The detail pane mounts the shared
+ * issue surface (title, description, properties, activity) only for a routable
+ * task target — the same eligibility `inboxOpenTarget` enforces — so a card
+ * that cannot open a task never renders one. Non-task targets keep the plain
+ * notification card.
+ */
+export const inboxIssueTaskId = (
+  card: Pick<NotificationFeedCard, 'availableActions' | 'safeNavigation'>,
+): string | null => {
+  const target = inboxOpenTarget(card);
+  return target?.kind === 'task' ? target.taskId : null;
+};

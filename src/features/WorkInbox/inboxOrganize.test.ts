@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   feedFilterForChip,
   inboxBulkFingerprint,
+  inboxIssueTaskId,
   inboxOpenTarget,
   inboxUrlOpenMode,
 } from './inboxOrganize';
@@ -123,5 +124,44 @@ describe('inboxOpenTarget', () => {
     expect(
       inboxOpenTarget({ ...base, safeNavigation: { kind: 'savedView', savedViewId: 'v1' } }),
     ).toBeNull();
+  });
+});
+
+describe('inboxIssueTaskId', () => {
+  const base: { availableActions: Array<'archive' | 'open' | 'snooze'> } = {
+    availableActions: ['archive', 'open', 'snooze'],
+  };
+
+  it('resolves the task id behind a routable task target', () => {
+    expect(inboxIssueTaskId({ ...base, safeNavigation: { kind: 'task', taskId: 'T-501' } })).toBe(
+      'T-501',
+    );
+  });
+
+  it('returns null for a task target the card never offered to open', () => {
+    // The pane must not render an issue surface for a target the card does not
+    // route to — same eligibility as the Open action itself.
+    expect(
+      inboxIssueTaskId({
+        availableActions: ['archive', 'snooze'],
+        safeNavigation: { kind: 'task', taskId: 't1' },
+      }),
+    ).toBeNull();
+  });
+
+  it('returns null when the task target carries no id', () => {
+    expect(inboxIssueTaskId({ ...base, safeNavigation: { kind: 'task' } })).toBeNull();
+    expect(inboxIssueTaskId({ ...base, safeNavigation: null })).toBeNull();
+    expect(inboxIssueTaskId({ ...base, safeNavigation: undefined })).toBeNull();
+  });
+
+  it('returns null for non-task targets so they keep the plain card', () => {
+    expect(
+      inboxIssueTaskId({ ...base, safeNavigation: { kind: 'project', projectId: 'p1' } }),
+    ).toBeNull();
+    expect(
+      inboxIssueTaskId({ ...base, safeNavigation: { kind: 'url', url: '/task/t1' } }),
+    ).toBeNull();
+    expect(inboxIssueTaskId({ ...base, safeNavigation: { kind: 'inbox' } })).toBeNull();
   });
 });

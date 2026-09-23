@@ -2,7 +2,7 @@
 
 import { Center, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
-import type { TaskActivityLogType } from '@orvilo/types';
+import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
@@ -37,7 +37,12 @@ import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
-import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
+import {
+  ProjectUpdateComposer,
+  ProjectUpdateRow,
+  useCanModerateProjectUpdate,
+  useProjectUpdates,
+} from '../Updates';
 import {
   type ActivityFeedItem,
   type ActivityFeedRow,
@@ -434,13 +439,47 @@ const EventRowItem = memo<{ event: ProjectFeedEvent; projectRef: string }>(
 
 EventRowItem.displayName = 'EventRowItem';
 
-const FeedItem = ({ item, projectRef }: { item: ActivityFeedItem; projectRef: string }) => {
-  if (item.kind === 'update')
+const FeedItem = ({
+  item,
+  projectRef,
+  canModerate,
+  editing,
+  onEditUpdate,
+  onUpdateChanged,
+}: {
+  canModerate: (update: ProjectUpdate) => boolean;
+  editing: boolean;
+  item: ActivityFeedItem;
+  onEditUpdate: (updateId: string | null) => void;
+  onUpdateChanged: () => void;
+  projectRef: string;
+}) => {
+  if (item.kind === 'update') {
+    // The composer is already a bordered card — while editing it replaces the
+    // card rather than nesting inside it.
+    if (editing)
+      return (
+        <ProjectUpdateComposer
+          editingUpdate={item.update}
+          projectId={item.update.projectId}
+          onCancelEdit={() => onEditUpdate(null)}
+          onPosted={() => {
+            onEditUpdate(null);
+            onUpdateChanged();
+          }}
+        />
+      );
     return (
       <div className={styles.card}>
-        <ProjectUpdateRow update={item.update} />
+        <ProjectUpdateRow
+          canEdit={canModerate(item.update)}
+          update={item.update}
+          onChanged={onUpdateChanged}
+          onEdit={(update) => onEditUpdate(update.id)}
+        />
       </div>
     );
+  }
   if (item.kind === 'event') return <EventRowItem event={item.event} projectRef={projectRef} />;
   return <ActivityRowItem row={item.row} />;
 };
@@ -459,6 +498,8 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
     () => projectService.activityFeed(projectId),
   );
   const updatesSWR = useProjectUpdates(projectId);
+  const canModerateUpdate = useCanModerateProjectUpdate(project);
+  const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null);
 
   // Older pages append below the first SWR page; keyset cursor keeps the
   // feed stable while new rows land at the top.
@@ -532,6 +573,8 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
       ) : null}
       {merged.map((item) => (
         <FeedItem
+          canModerate={canModerateUpdate}
+          editing={item.kind === 'update' && editingUpdateId === item.update.id}
           item={item}
           projectRef={projectRef}
           key={
@@ -541,6 +584,8 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
                 ? `update-${item.update.id}`
                 : `event-${item.event.id}`
           }
+          onEditUpdate={setEditingUpdateId}
+          onUpdateChanged={() => void updatesSWR.mutate()}
         />
       ))}
       {moreError ? (

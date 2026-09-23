@@ -17,6 +17,8 @@ const styles = createStaticStyles(({ css }) => ({
 
 interface ProjectUpdateEditorProps {
   disabled: boolean;
+  /** Markdown to prefill the editor with — used when editing an existing update. */
+  initialContent?: string;
   label: string;
   onChange: (markdown: string) => void;
   onSubmit: () => void;
@@ -25,6 +27,7 @@ interface ProjectUpdateEditorProps {
 
 export function ProjectUpdateEditor({
   disabled,
+  initialContent,
   label,
   onChange,
   onSubmit,
@@ -45,7 +48,7 @@ export function ProjectUpdateEditor({
     <Editor
       autoFocus
       className={styles.editor}
-      content=""
+      content={initialContent ?? ''}
       debounceWait={0}
       editable={!disabled}
       editor={editor}
@@ -53,7 +56,7 @@ export function ProjectUpdateEditor({
       plugins={plugins}
       style={{ minHeight: 32, maxHeight: 240, overflowY: 'auto', padding: '10px 12px 4px' }}
       theme={{ fontSize: 15, lineHeight: 1.6 }}
-      type="text"
+      type={initialContent ? 'markdown' : 'text'}
       variant="chat"
       onChange={(current) => onChange(String(current.getDocument('markdown') ?? ''))}
       onPressEnter={({ event }) => {

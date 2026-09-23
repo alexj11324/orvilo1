@@ -106,6 +106,40 @@ describe('Project Router Integration', () => {
     expect((await caller.listLinks({ id: project.id })).data).toEqual([]);
   });
 
+  it('edits and deletes project updates through the API and keeps health in sync', async () => {
+    const { data: project } = await caller.create({ identifier: 'UPDT', name: 'Update contract' });
+    const { data: posted } = await caller.createUpdate({
+      body: 'Initial status',
+      health: 'atRisk',
+      id: project.id,
+    });
+    expect((await caller.detail({ id: project.id })).data.project.health).toBe('atRisk');
+
+    const { data: edited } = await caller.updateUpdate({
+      body: 'Revised status',
+      health: 'offTrack',
+      id: project.slug!,
+      updateId: posted.id,
+    });
+    expect(edited).toMatchObject({ body: 'Revised status', health: 'offTrack' });
+    expect((await caller.detail({ id: project.id })).data.project.health).toBe('offTrack');
+
+    const stranger = await createTestUser(serverDB);
+    try {
+      const other = projectRouter.createCaller(createTestContext(stranger));
+      await expect(
+        other.updateUpdate({ body: 'Nope', id: project.id, updateId: posted.id }),
+      ).rejects.toThrow();
+      await expect(other.deleteUpdate({ id: project.id, updateId: posted.id })).rejects.toThrow();
+    } finally {
+      await cleanupTestUser(serverDB, stranger);
+    }
+
+    await caller.deleteUpdate({ id: project.id, updateId: posted.id });
+    expect((await caller.detail({ id: project.id })).data.project.health).toBeNull();
+    expect((await caller.listUpdates({ id: project.id })).data).toEqual([]);
+  });
+
   it('persists planning edits, validates them against saved dates, and supports clearing', async () => {
     const { data: project } = await caller.create({ identifier: 'PLAN', name: 'Planning edits' });
     await caller.update({

@@ -62,6 +62,15 @@ class ProjectService {
     input: { body: string; health?: ProjectHealth; kind?: ProjectUpdateKind },
   ) => lambdaClient.project.createUpdate.mutate({ id, ...input });
 
+  updateUpdate = async (
+    id: string,
+    updateId: string,
+    input: { body: string; health?: ProjectHealth },
+  ) => lambdaClient.project.updateUpdate.mutate({ id, updateId, ...input });
+
+  deleteUpdate = async (id: string, updateId: string) =>
+    lambdaClient.project.deleteUpdate.mutate({ id, updateId });
+
   createMilestone = async (
     id: string,
     input: { date?: string | null; description?: string | null; name: string; sortOrder?: number },

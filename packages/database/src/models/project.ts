@@ -1707,13 +1707,105 @@ export class ProjectModel {
         })
         .returning();
       // Only real status updates move the project's denormalized health.
-      if (health !== null) {
-        await db
-          .update(projects)
-          .set({ health, updatedAt: new Date() })
-          .where(eq(projects.id, projectId));
-      }
+      if (health !== null) await this.syncProjectHealthFromUpdates(db, projectId);
       return update;
+    });
+  }
+
+  /**
+   * Fetch one update row joined to its project under the moderation ACL —
+   * the author may edit/delete their own post; the project owner, the project
+   * lead, or a workspace admin (`canManageAll`) may moderate anyone's. The
+   * row-level lock serializes concurrent edit/delete against the denormalized
+   * `projects.health` recompute that follows.
+   */
+  private async findModeratableUpdate(db: OrviloDatabase, projectId: string, updateId: string) {
+    const [row] = await db
+      .select({
+        leadUserId: projects.leadUserId,
+        ownerUserId: projects.userId,
+        update: projectUpdates,
+      })
+      .from(projectUpdates)
+      .innerJoin(projects, eq(projects.id, projectUpdates.projectId))
+      .where(
+        and(
+          eq(projectUpdates.id, updateId),
+          eq(projectUpdates.projectId, projectId),
+          this.readable(),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    if (!row) return null;
+    const canModerate =
+      this.canManageAll ||
+      row.update.userId === this.userId ||
+      row.ownerUserId === this.userId ||
+      row.leadUserId === this.userId;
+    return canModerate ? row : null;
+  }
+
+  /**
+   * `projects.health` denormalizes the newest `kind = 'update'` row's health.
+   * Recomputed — never patched — after any mutation that could change which
+   * row is newest or what health it carries (create/edit/delete), so a stale
+   * value cannot survive the row it came from.
+   */
+  private async syncProjectHealthFromUpdates(db: OrviloDatabase, projectId: string) {
+    const [latest] = await db
+      .select({ health: projectUpdates.health })
+      .from(projectUpdates)
+      .where(and(eq(projectUpdates.projectId, projectId), eq(projectUpdates.kind, 'update')))
+      .orderBy(desc(projectUpdates.createdAt))
+      .limit(1);
+    await db
+      .update(projects)
+      .set({ health: latest?.health ?? null, updatedAt: new Date() })
+      .where(eq(projects.id, projectId));
+  }
+
+  /**
+   * Edit a published project update or comment. Status updates take `body`
+   * and optionally `health`; comments take `body` only — a comment can never
+   * gain a health pill (same rule as `createUpdate`).
+   */
+  async updateUpdate(
+    projectId: string,
+    updateId: string,
+    input: { body: string; health?: ProjectHealth },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      const current = await this.findModeratableUpdate(db, projectId, updateId);
+      if (!current) return null;
+      const isStatusUpdate = current.update.kind === 'update';
+      const [updated] = await db
+        .update(projectUpdates)
+        .set({
+          body: input.body,
+          ...(isStatusUpdate && input.health ? { health: input.health } : {}),
+        })
+        .where(eq(projectUpdates.id, updateId))
+        .returning();
+      if (!updated) return null;
+      if (isStatusUpdate) await this.syncProjectHealthFromUpdates(db, projectId);
+      return updated;
+    });
+  }
+
+  async deleteUpdate(projectId: string, updateId: string) {
+    return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      const current = await this.findModeratableUpdate(db, projectId, updateId);
+      if (!current) return null;
+      const [deleted] = await db
+        .delete(projectUpdates)
+        .where(eq(projectUpdates.id, updateId))
+        .returning();
+      if (!deleted) return null;
+      if (deleted.kind === 'update') await this.syncProjectHealthFromUpdates(db, projectId);
+      return deleted;
     });
   }
 }

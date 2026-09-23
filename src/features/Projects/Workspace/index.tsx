@@ -26,7 +26,12 @@ import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
-import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
+import {
+  ProjectUpdateComposer,
+  ProjectUpdateRow,
+  useCanModerateProjectUpdate,
+  useProjectUpdates,
+} from '../Updates';
 import ProjectDashboard from './ProjectDashboard';
 import ProjectDescription from './ProjectDescription';
 import { ProjectMembersField } from './ProjectMembersField';
@@ -159,6 +164,8 @@ const ProjectWorkspace = memo(() => {
   const updateProject = useProjectStore((s) => s.updateProject);
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
   const updatesSWR = useProjectUpdates(detail?.project.id);
+  const canModerateUpdate = useCanModerateProjectUpdate(detail?.project);
+  const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null);
   const workspaceId = useActiveWorkspaceId();
   const membersEnabled = !!workspaceId;
   const databaseId = detail?.project.id;
@@ -322,9 +329,28 @@ const ProjectWorkspace = memo(() => {
                   onRetry={() => void updatesSWR.mutate()}
                 />
               ) : null}
-              {projectUpdates.map((update) => (
-                <ProjectUpdateRow key={update.id} update={update} />
-              ))}
+              {projectUpdates.map((update) =>
+                editingUpdateId === update.id ? (
+                  <ProjectUpdateComposer
+                    editingUpdate={update}
+                    key={update.id}
+                    projectId={project.id}
+                    onCancelEdit={() => setEditingUpdateId(null)}
+                    onPosted={() => {
+                      setEditingUpdateId(null);
+                      void updatesSWR.mutate();
+                    }}
+                  />
+                ) : (
+                  <ProjectUpdateRow
+                    canEdit={canModerateUpdate(update)}
+                    key={update.id}
+                    update={update}
+                    onChanged={() => void updatesSWR.mutate()}
+                    onEdit={() => setEditingUpdateId(update.id)}
+                  />
+                ),
+              )}
             </Flexbox>
             <ProjectDescription
               description={project.description}

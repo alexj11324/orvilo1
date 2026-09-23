@@ -473,6 +473,54 @@ export const projectRouter = router({
       }
     }),
 
+  /**
+   * Edit a published project update/comment. Uses `projectPolicyModel` so the
+   * model's moderation ACL sees `canManageAll`: the author, the project
+   * owner/lead, or a workspace admin may edit — everyone else gets NOT_FOUND.
+   */
+  updateUpdate: projectWriteProcedure
+    .input(
+      idInput.extend({
+        body: z.string().min(1),
+        health: healthInput.optional(),
+        updateId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectPolicyModel.updateUpdate(project.id, input.updateId, {
+              body: input.body,
+              health: input.health,
+            }),
+            'Update not found',
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'updateUpdate');
+      }
+    }),
+
+  deleteUpdate: projectWriteProcedure
+    .input(idInput.extend({ updateId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectPolicyModel.deleteUpdate(project.id, input.updateId),
+            'Update not found',
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'deleteUpdate');
+      }
+    }),
+
   listCompletionReviews: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
     try {
       return {

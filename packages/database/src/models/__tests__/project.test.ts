@@ -76,6 +76,138 @@ describe('ProjectModel', () => {
     expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
   });
 
+  it('recomputes denormalized health when the newest update is edited or deleted', async () => {
+    const project = await createProject(model, { name: 'Health denorm' });
+    const stale = await model.createUpdate(project.id, { body: 'Early', health: 'atRisk' });
+    const latest = await model.createUpdate(project.id, { body: 'Now', health: 'onTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
+
+    // Editing the newest update's health moves the project health.
+    const edited = await model.updateUpdate(project.id, latest!.id, {
+      body: 'Now — revised',
+      health: 'offTrack',
+    });
+    expect(edited).toMatchObject({ body: 'Now — revised', health: 'offTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'offTrack' });
+
+    // Editing an older update leaves the newest one's health in charge.
+    await model.updateUpdate(project.id, stale!.id, { body: 'Early', health: 'onTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'offTrack' });
+
+    // Deleting the newest update falls back to the previous update's health.
+    await model.deleteUpdate(project.id, latest!.id);
+    expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
+
+    // Deleting the last status update clears the denormalized health.
+    await model.deleteUpdate(project.id, stale!.id);
+    expect(await model.findById(project.id)).toMatchObject({ health: null });
+    expect(await model.listUpdates(project.id)).toEqual([]);
+  });
+
+  it('keeps comments body-only on edit and never lets them move project health', async () => {
+    const project = await createProject(model, { name: 'Comment edit' });
+    const status = await model.createUpdate(project.id, { body: 'Status', health: 'atRisk' });
+    const comment = await model.createUpdate(project.id, {
+      body: 'Draft comment',
+      kind: 'comment',
+    });
+
+    // A comment stays body-only: a health payload is ignored.
+    const edited = await model.updateUpdate(project.id, comment!.id, {
+      body: 'Edited comment',
+      health: 'offTrack',
+    });
+    expect(edited).toMatchObject({ body: 'Edited comment', health: null, kind: 'comment' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'atRisk' });
+
+    // Deleting a comment does not disturb the denormalized health.
+    await model.deleteUpdate(project.id, comment!.id);
+    expect(await model.findById(project.id)).toMatchObject({ health: 'atRisk' });
+    expect(await model.listUpdates(project.id)).toEqual([
+      expect.objectContaining({ id: status!.id }),
+    ]);
+  });
+
+  it('rejects update edits and deletes from users who cannot moderate them', async () => {
+    const project = await createProject(model, { name: 'Moderated update' });
+    const update = await model.createUpdate(project.id, { body: 'Owner status' });
+    const missingId = '00000000-0000-0000-0000-000000000000';
+
+    // Another user cannot even see the personal project, let alone moderate it.
+    expect(await otherModel.updateUpdate(project.id, update!.id, { body: 'Nope' })).toBeNull();
+    expect(await otherModel.deleteUpdate(project.id, update!.id)).toBeNull();
+    // Missing rows and cross-project ids collapse to the same null.
+    expect(await model.updateUpdate(project.id, missingId, { body: 'Nope' })).toBeNull();
+    expect(await model.deleteUpdate(project.id, missingId)).toBeNull();
+    const sibling = await createProject(model, { name: 'Sibling' });
+    expect(await model.updateUpdate(sibling.id, update!.id, { body: 'Nope' })).toBeNull();
+    expect(await model.deleteUpdate(sibling.id, update!.id)).toBeNull();
+    expect(await model.listUpdates(project.id)).toHaveLength(1);
+  });
+
+  it('lets the author, project lead and workspace admin moderate updates', async () => {
+    const workspaceId = 'project-update-mod-workspace';
+    const leadId = 'project-update-lead';
+    const memberId = 'project-update-member';
+    await serverDB.insert(users).values([{ id: leadId }, { id: memberId }]);
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Update moderation',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    // project create validates the lead is an active workspace member.
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: leadId, workspaceId },
+      { role: 'member', userId: memberId, workspaceId },
+      { role: 'admin', userId: otherUserId, workspaceId },
+    ]);
+    const owner = new ProjectModel(serverDB, userId, workspaceId);
+    const lead = new ProjectModel(serverDB, leadId, workspaceId);
+    const member = new ProjectModel(serverDB, memberId, workspaceId);
+    const admin = new ProjectModel(serverDB, otherUserId, workspaceId, { canManageAll: true });
+    const project = await createProject(owner, { leadUserId: leadId, name: 'Moderated' });
+
+    const ownerUpdate = await owner.createUpdate(project.id, {
+      body: 'Owner status',
+      health: 'atRisk',
+    });
+    // Any member who can read the project may post a comment on it.
+    const memberComment = await member.createUpdate(project.id, {
+      body: 'Member note',
+      kind: 'comment',
+    });
+    expect(memberComment).not.toBeNull();
+
+    // The author edits their own comment; a plain member cannot touch the
+    // owner's update.
+    expect(
+      await member.updateUpdate(project.id, memberComment!.id, { body: 'Member note v2' }),
+    ).toMatchObject({ body: 'Member note v2' });
+    expect(await member.updateUpdate(project.id, ownerUpdate!.id, { body: 'Nope' })).toBeNull();
+    expect(await member.deleteUpdate(project.id, ownerUpdate!.id)).toBeNull();
+
+    // The project lead may edit another member's update — denorm follows.
+    expect(
+      await lead.updateUpdate(project.id, ownerUpdate!.id, {
+        body: 'Owner status',
+        health: 'offTrack',
+      }),
+    ).toMatchObject({ health: 'offTrack' });
+    expect(await owner.findById(project.id)).toMatchObject({ health: 'offTrack' });
+
+    // A workspace admin may delete another member's comment; the owner may
+    // delete the remaining update, which clears the denormalized health.
+    expect(await admin.deleteUpdate(project.id, memberComment!.id)).toMatchObject({
+      id: memberComment!.id,
+    });
+    expect(await owner.deleteUpdate(project.id, ownerUpdate!.id)).toMatchObject({
+      id: ownerUpdate!.id,
+    });
+    expect(await owner.findById(project.id)).toMatchObject({ health: null });
+  });
+
   it('persists external links independently and rejects cross-project or cross-user edits', async () => {
     const project = await createProject(model, { name: 'Linked project' });
     const sibling = await createProject(model, { name: 'Other project' });

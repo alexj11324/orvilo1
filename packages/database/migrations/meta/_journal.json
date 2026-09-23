@@ -1322,6 +1322,13 @@
       "when": 1790004833709,
       "tag": "0188_drop_retired_capability_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 189,
+      "version": "7",
+      "when": 1790123247960,
+      "tag": "0189_linear_parity_project_layering",
+      "breakpoints": true
     }
   ]
 }

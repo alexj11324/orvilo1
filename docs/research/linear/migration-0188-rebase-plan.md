@@ -1,6 +1,16 @@
 # Migration fork resolution plan — PR #209 vs canary `0188_drop_retired_capability_tables`
 
-Status: **plan only — do not execute from this file without a fresh re-check of canary's tip.**
+Status: **EXECUTED** via the merge path on `devin/v6-linear-polish` — merge commit
+`5bc25ee7` resolved the two predicted conflicts to canary's versions and removed all
+eight draft migrations; `bun run db:generate` produced the consolidated
+`0189_linear_parity_project_layering` (snapshot id `9ac100e7-…`, prevId correctly
+pointing at canary's `29bcefbc-…`), hardened with `IF NOT EXISTS` / `DROP CONSTRAINT
+IF EXISTS` + `ADD` per convention. Local dev DB was remediated via the
+preserve-data path (idempotent 0189 no-oped onto existing draft shapes; the eight
+stale `__drizzle_migrations` rows deleted). Note the generated SQL also picks up
+canary's own schema drift: the `tasks_duplicate_of_task_id_tasks_id_fk` constraint
+existed in `schemas/task.ts` but no canary migration — it is included deliberately.
+
 Written against worktree `orvilo-linear-parity`, branch `devin/v6-linear-polish`, HEAD `67f2bed84`,
 `origin/canary` fetched at investigation time (contains `91b103696` which added canary's 0188).
 

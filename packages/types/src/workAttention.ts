@@ -336,7 +336,7 @@ export const TASK_TRIAGE_STATUS_VALUES = [
   'untriaged',
 ] as const;
 
-export const TASK_PRIORITY_VALUES = [0, 1, 2, 3] as const;
+export const TASK_PRIORITY_VALUES = [0, 1, 2, 3, 4] as const;
 
 export const PROJECT_STATUS_VALUES = [
   'backlog',

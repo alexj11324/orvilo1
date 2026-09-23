@@ -978,7 +978,7 @@ export default {
   'savedViews.values.status.canceled': 'Canceled',
   'savedViews.values.status.completed': 'Completed',
   'savedViews.values.status.failed': 'Failed',
-  'savedViews.values.status.paused': 'Paused',
+  'savedViews.values.status.paused': 'Pending review',
   'savedViews.values.status.reviewing': 'In Review',
   'savedViews.values.status.running': 'In progress',
   'savedViews.values.status.scheduled': 'Scheduled',

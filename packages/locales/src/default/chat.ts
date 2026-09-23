@@ -1641,7 +1641,7 @@ export default {
   'taskDetail.priority.high': 'High',
   'taskDetail.priority.low': 'Low',
   'taskDetail.priority.none': 'No priority',
-  'taskDetail.priority.normal': 'Normal',
+  'taskDetail.priority.normal': 'Medium',
   'taskDetail.priority.urgent': 'Urgent',
   'taskDetail.properties': 'Properties',
   'taskDetail.project': 'Project',

@@ -1,7 +1,7 @@
 import { type FormItemProps } from '@lobehub/ui';
 import { Flexbox, Form, Icon, Popover } from '@lobehub/ui';
-import { ActionIcon, Select, Switch, Tabs } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { ActionIcon, Button, Select, Switch, Tabs } from '@lobehub/ui/base-ui';
+import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -13,15 +13,25 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useGlobalStore } from '@/store/global';
 import type { TaskViewMode } from '@/store/global/initialState';
+import { systemStatusSelectors } from '@/store/global/selectors';
 
 import type { TaskGroupBy, TaskListViewOptions, TaskOrderBy } from './listViewOptions';
+import { normalizeTaskListViewOptions, toStoredTaskListViewOptions } from './listViewOptions';
 
 /** A display control the active collection fixes, so it has nothing to change. */
 export type TaskListPinnedOption = 'ordering' | 'showSubTasks';
 
 interface TasksHeaderProps {
+  /**
+   * The scope's milestone catalog. Its presence opts the panel into the
+   * milestone surfaces — the "Milestones" display-property switch and the
+   * milestone grouping dimension — which surfaces without a catalog (global,
+   * agent) never offer, rather than grouping on ids they cannot name.
+   */
+  milestones?: readonly TaskMilestoneRef[];
   options: TaskListViewOptions;
   /**
    * Controls the active collection overrides (see
@@ -50,11 +60,13 @@ const styles = createStaticStyles(({ css, cssVar }) => {
 });
 
 const TasksGroupConfig = memo<TasksHeaderProps>(
-  ({ options, pinnedOptions, setOptions, viewMode }) => {
+  ({ milestones, options, pinnedOptions, setOptions, viewMode }) => {
     const [isViewConfigOpen, setIsViewConfigOpen] = useState(false);
     const isPinned = (option: TaskListPinnedOption) => !!pinnedOptions?.includes(option);
     const { t } = useTranslation('chat');
     const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+    const viewDefaults = useGlobalStore(systemStatusSelectors.taskListViewDefaults);
+    const hasMilestones = !!milestones;
     const groupingOptions = useMemo<Array<{ label: string; value: TaskGroupBy }>>(
       () => [
         { label: t('taskList.groupBy.none'), value: 'none' },
@@ -62,15 +74,25 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         { label: t('taskList.groupBy.assignee'), value: 'assignee' },
         { label: t('taskList.groupBy.member'), value: 'member' },
         { label: t('taskList.groupBy.priority'), value: 'priority' },
+        // Grouping on milestones only exists where a catalog can name them.
+        ...(hasMilestones
+          ? [{ label: t('taskList.groupBy.milestone'), value: 'milestone' as const }]
+          : []),
       ],
-      [t],
+      [hasMilestones, t],
     );
     const boardGroupingOptions = useMemo(
-      () => groupingOptions.filter((item) => item.value !== 'none'),
+      // The board has no milestone columns — `normalizeKanbanGroupBy` would
+      // silently fall back to status, so the dimension is left out rather
+      // than offered as a pick that does something else.
+      () => groupingOptions.filter((item) => item.value !== 'none' && item.value !== 'milestone'),
       [groupingOptions],
     );
     const orderOptions = useMemo<Array<{ label: string; value: TaskOrderBy }>>(
       () => [
+        // "Manual" orders by the same position the board's drag-and-drop
+        // persists, so the list shows exactly what a drag would reorder.
+        { label: t('taskList.orderBy.manual'), value: 'manual' },
         { label: t('taskList.orderBy.status'), value: 'status' },
         { label: t('taskList.orderBy.priority'), value: 'priority' },
         { label: t('taskList.orderBy.updatedAt'), value: 'updatedAt' },
@@ -88,8 +110,20 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
     );
     const isSubGroupingEnabled = options.groupBy !== 'none';
     const groupingSelectOptions = viewMode === 'kanban' ? boardGroupingOptions : groupingOptions;
+    // A stored pick is only renderable where the select carries it: the board
+    // can't express 'none' or 'milestone', and 'milestone' also needs the
+    // scope's catalog. Elsewhere display the fallback the surface groups by
+    // rather than a raw value (TaskList degrades milestone the same way).
+    const milestoneGroupingAvailable = hasMilestones && viewMode !== 'kanban';
     const groupingValue =
-      viewMode === 'kanban' && options.groupBy === 'none' ? 'status' : options.groupBy;
+      (viewMode === 'kanban' && options.groupBy === 'none') ||
+      (options.groupBy === 'milestone' && !milestoneGroupingAvailable)
+        ? 'status'
+        : options.groupBy;
+    const subGroupingValue =
+      options.subGroupBy === 'milestone' && !milestoneGroupingAvailable
+        ? 'none'
+        : options.subGroupBy;
 
     const groupingFormItem = {
       children: (
@@ -134,7 +168,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                   options={subGroupingOptions}
                   size={'small'}
                   style={{ width: 150 }}
-                  value={options.subGroupBy}
+                  value={subGroupingValue}
                   onChange={(value: TaskGroupBy) => {
                     setOptions((prev) => ({ ...prev, subGroupBy: value }));
                   }}
@@ -227,6 +261,25 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
             } satisfies FormItemProps,
           ]
         : []),
+      // Linear's "Milestones" display property — the row's milestone chip.
+      // Only offered where the scope ships a catalog the chip can read.
+      ...(hasMilestones
+        ? [
+            {
+              children: (
+                <Switch
+                  checked={options.showMilestone}
+                  size={'small'}
+                  onChange={(checked) => {
+                    setOptions((prev) => ({ ...prev, showMilestone: checked }));
+                  }}
+                />
+              ),
+              minWidth: undefined,
+              label: t('taskList.form.milestones'),
+            } satisfies FormItemProps,
+          ]
+        : []),
     ];
     const boardFormItems = [groupingFormItem, showCompletedFormItem];
 
@@ -260,6 +313,35 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
             item: { padding: 0 },
           }}
         />
+        <Flexbox
+          horizontal
+          justify={'space-between'}
+          style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, paddingTop: 8 }}
+        >
+          <Button
+            size={'small'}
+            type={'text'}
+            onClick={() => {
+              // Restore the user's saved baseline; without one, the built-in
+              // defaults are the baseline.
+              setOptions(() => normalizeTaskListViewOptions(viewDefaults));
+            }}
+          >
+            {t('taskList.form.reset')}
+          </Button>
+          <Button
+            size={'small'}
+            type={'text'}
+            onClick={() => {
+              updateSystemStatus(
+                { taskListViewDefaults: toStoredTaskListViewOptions(options) },
+                'setTaskListViewDefaults',
+              );
+            }}
+          >
+            {t('taskList.form.setDefault')}
+          </Button>
+        </Flexbox>
       </Flexbox>
     );
 

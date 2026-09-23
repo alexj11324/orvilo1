@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { taskMilestoneById } from '@/features/Projects/milestoneFilter';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import {
@@ -11,6 +12,7 @@ import {
   groupTaskItems,
   HIDDEN_WHEN_COMPLETED_STATUSES,
   normalizeTaskListViewOptions,
+  toStoredTaskListViewOptions,
 } from './listViewOptions';
 
 const task = (id: string, overrides: Partial<TaskListItem> = {}): TaskListItem =>
@@ -65,6 +67,29 @@ describe('normalizeTaskListViewOptions', () => {
     expect(options.showSubTasks).toBe(true);
     expect(options.nestedSubTasks).toBe(false);
   });
+
+  it('keeps the milestone property on by default and honors a persisted off', () => {
+    expect(normalizeTaskListViewOptions().showMilestone).toBe(true);
+    // Options persisted before the property existed get the default, not `undefined`.
+    expect(normalizeTaskListViewOptions({ groupBy: 'priority' }).showMilestone).toBe(true);
+    expect(normalizeTaskListViewOptions({ showMilestone: false }).showMilestone).toBe(false);
+  });
+
+  it('accepts the milestone grouping and manual ordering persisted by the display panel', () => {
+    const options = normalizeTaskListViewOptions({ groupBy: 'milestone', orderBy: 'manual' });
+
+    expect(options.groupBy).toBe('milestone');
+    expect(options.orderBy).toBe('manual');
+  });
+});
+
+describe('toStoredTaskListViewOptions', () => {
+  it('snapshots a normalized full options object — what "Set default" persists', () => {
+    expect(toStoredTaskListViewOptions({ groupBy: 'milestone', orderBy: 'manual' })).toEqual(
+      normalizeTaskListViewOptions({ groupBy: 'milestone', orderBy: 'manual' }),
+    );
+    expect(toStoredTaskListViewOptions({})).toEqual(DEFAULT_TASK_LIST_VIEW_OPTIONS);
+  });
 });
 
 describe('automation mode grouping', () => {
@@ -87,6 +112,88 @@ describe('automation mode grouping', () => {
     const groups = groupTaskItems([heartbeat], 'automationMode');
 
     expect(groups.map(([group]) => group.key)).toEqual(['automationMode:heartbeat']);
+  });
+});
+
+describe('milestone grouping', () => {
+  // The catalog arrives unordered; `sortOrder` is the project's own ordering.
+  const milestoneById = taskMilestoneById([
+    { id: 'ms-beta', name: 'Beta', sortOrder: 1 },
+    { date: '2026-10-01', id: 'ms-alpha', name: 'Alpha', sortOrder: 0 },
+  ]);
+
+  it('buckets tasks by milestone and orders the groups by the catalog order', () => {
+    const inBeta = task('beta', { projectMilestoneId: 'ms-beta' });
+    const inAlpha = task('alpha', { projectMilestoneId: 'ms-alpha' });
+    const inNone = task('none', { projectMilestoneId: null });
+
+    expect(
+      groupTaskItems([inBeta, inNone, inAlpha], 'milestone', 'asc', milestoneById).map(
+        ([meta, items]) => [meta.key, meta.label, items.map((item) => item.id)],
+      ),
+    ).toEqual([
+      ['milestone:ms-alpha', 'Alpha', ['alpha']],
+      ['milestone:ms-beta', 'Beta', ['beta']],
+      // "No milestone" always trails the named groups.
+      ['milestone:none', expect.any(String), ['none']],
+    ]);
+  });
+
+  it('keeps a milestone the catalog does not know out of "No milestone"', () => {
+    const stale = task('stale', { projectMilestoneId: 'ms-gone' });
+    const unlinked = task('unlinked', { projectMilestoneId: null });
+
+    const groups = groupTaskItems([unlinked, stale], 'milestone', 'asc', milestoneById);
+
+    expect(groups.map(([meta]) => meta.key)).toEqual(['milestone:ms-gone', 'milestone:none']);
+    // The group still carries the raw id, so its label can be honest about
+    // which link it buckets.
+    expect(groups[0][0].milestoneId).toBe('ms-gone');
+    expect(groups[1][0].milestoneId).toBeNull();
+  });
+
+  it('still groups by milestone id when no catalog was supplied at all', () => {
+    const linked = task('linked', { projectMilestoneId: 'ms-alpha' });
+    const unlinked = task('unlinked');
+
+    const groups = groupTaskItems([linked, unlinked], 'milestone');
+
+    expect(groups.map(([meta]) => meta.key)).toEqual(['milestone:ms-alpha', 'milestone:none']);
+  });
+});
+
+describe('manual ordering', () => {
+  it('orders by the persisted board position, untouched rows falling back to newest-first', () => {
+    const options = { ...DEFAULT_TASK_LIST_VIEW_OPTIONS, orderBy: 'manual' as const };
+    const dragged = task('dragged', { position: 5 });
+    const untouchedNewer = task('untouchedNewer', {
+      createdAt: new Date('2026-02-01'),
+      position: null,
+    });
+    const untouchedOlder = task('untouchedOlder', {
+      createdAt: new Date('2026-01-01'),
+      position: null,
+    });
+
+    expect(
+      [dragged, untouchedOlder, untouchedNewer]
+        .sort((a, b) => compareTaskItems(a, b, options))
+        .map((item) => item.id),
+    ).toEqual(['untouchedNewer', 'untouchedOlder', 'dragged']);
+  });
+
+  it('lets the direction toggle flip the manual order like the other orderings', () => {
+    const options = {
+      ...DEFAULT_TASK_LIST_VIEW_OPTIONS,
+      orderBy: 'manual' as const,
+      orderDirection: 'desc' as const,
+    };
+    const low = task('low', { position: -100 });
+    const high = task('high', { position: -50 });
+
+    expect(
+      [low, high].sort((a, b) => compareTaskItems(a, b, options)).map((item) => item.id),
+    ).toEqual(['high', 'low']);
   });
 });
 

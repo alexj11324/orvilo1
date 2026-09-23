@@ -2,11 +2,18 @@ import { Block, ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import dayjs from 'dayjs';
+import { DiamondIcon, LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import {
+  getProjectMilestoneIssuesPath,
+  type TaskMilestoneRef,
+} from '@/features/Projects/milestoneFilter';
+import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
@@ -30,6 +37,12 @@ import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
+  /**
+   * The resolved milestone this row links, supplied by the list when the
+   * "Milestones" display property is on and the scope's catalog names the
+   * link. `undefined` renders no badge — rows never invent one from a raw id.
+   */
+  milestone?: TaskMilestoneRef;
   onStatusChange?: (status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
@@ -48,7 +61,8 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
 const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
-const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 'agent' }) => {
+const AgentTaskItem = memo<TaskItemProps>((props) => {
+  const { milestone, onStatusChange, task, routeScope = 'agent' } = props;
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -95,6 +109,18 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
     [navigate, routeScope],
   );
 
+  // The chip opens the project's milestone-filtered issues — the same door the
+  // overview's progress link uses — without tripping the row's own detail
+  // navigation.
+  const handleMilestoneClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (!milestone || !task.projectId) return;
+      event.stopPropagation();
+      navigate(getProjectMilestoneIssuesPath(task.projectId, milestone.id));
+    },
+    [milestone, navigate, task.projectId],
+  );
+
   const scheduledBadge =
     status === 'scheduled' ? (
       <Block
@@ -111,6 +137,33 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
         </Text>
       </Block>
     ) : null;
+
+  // Linear's issue-row milestone marker: `◆ name · Sep 30`, drawn with the
+  // shared brand-indigo paint so it matches the overview/rail milestones.
+  const milestoneBadge = milestone ? (
+    <Block
+      horizontal
+      align={'center'}
+      flex={'none'}
+      gap={4}
+      height={20}
+      paddingInline={6}
+      style={{ borderRadius: 4, cursor: task.projectId ? 'pointer' : undefined }}
+      title={milestone.name}
+      variant={'outlined'}
+      onClick={handleMilestoneClick}
+    >
+      <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={10} />
+      <Text ellipsis fontSize={12} style={{ maxWidth: 140 }} type={'secondary'}>
+        {milestone.name}
+      </Text>
+      {milestone.date ? (
+        <Text fontSize={12} style={{ whiteSpace: 'nowrap' }} type={'secondary'}>
+          {dayjs(milestone.date).format('MMM D')}
+        </Text>
+      ) : null}
+    </Block>
+  ) : null;
 
   const isPrivate = task.visibility === 'private';
   const privacyBadge = isPrivate ? (
@@ -283,6 +336,7 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
         <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
           {titleRow}
           <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+            {milestoneBadge}
             {openRunNode}
             {scheduleNode}
             {assigneeNode}

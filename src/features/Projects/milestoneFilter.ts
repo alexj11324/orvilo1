@@ -15,6 +15,31 @@ export const readProjectMilestoneFilter = (searchParams: URLSearchParams): strin
   searchParams.get(PROJECT_MILESTONE_FILTER_PARAM) || undefined;
 
 /**
+ * The milestone fields the issues list needs: identity + label for grouping,
+ * `sortOrder` so groups follow the project's milestone order, and `date` for
+ * the row badge's `◆ name · date` chip (the form the reference's projects
+ * list was measured with). `ProjectDetail['milestones']` rows already carry
+ * all of these.
+ */
+export interface TaskMilestoneRef {
+  date?: string | null;
+  id: string;
+  name: string;
+  sortOrder?: number;
+}
+
+/**
+ * Index a project's milestones by id for the issues list's group labels and
+ * row badges. Returns `undefined` when no catalog was supplied — surfaces
+ * without one (the global/agent scopes) offer no milestone dimension at all
+ * rather than rendering raw ids.
+ */
+export const taskMilestoneById = (
+  milestones?: readonly TaskMilestoneRef[],
+): ReadonlyMap<string, TaskMilestoneRef> | undefined =>
+  milestones ? new Map(milestones.map((milestone) => [milestone.id, milestone])) : undefined;
+
+/**
  * Narrow a project's issues to one milestone, client-side.
  *
  * This is exact only because the project issues list fetches the whole list

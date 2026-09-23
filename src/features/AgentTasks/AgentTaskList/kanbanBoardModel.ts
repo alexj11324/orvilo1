@@ -16,12 +16,17 @@ import type {
 
 import type { TaskGroupBy, TaskGroupMeta } from './listViewOptions';
 import {
+  effectiveTaskPosition,
   getTaskAssigneeGroupMeta,
   getTaskGroupMeta,
   getTaskMemberGroupMeta,
   getTaskPriorityGroupMeta,
   sortGroupEntries,
 } from './listViewOptions';
+
+// The position helper now lives with the other view-option primitives (the
+// "Manual" list ordering reads it too); re-export keeps existing imports here.
+export { effectiveTaskPosition };
 
 export interface KanbanColumnDefinition {
   droppable: boolean;
@@ -569,18 +574,6 @@ export const resolveKanbanDropColumn = (
   if (taskMatchesKanbanColumn(task, groupBy, overCol)) return overCol;
   if (!def.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, def)) return null;
   return overCol;
-};
-
-/**
- * The board ordering key a row renders at. Rows never dragged carry
- * `position: null` and fall back to `-epoch(createdAt)` — the same fallback
- * the server applies — so untouched rows keep their newest-first order.
- */
-export const effectiveTaskPosition = (task: TaskListItem): number => {
-  if (task.position !== null && task.position !== undefined) return task.position;
-  const createdAt = task.createdAt;
-  const time = createdAt instanceof Date ? createdAt.getTime() : new Date(createdAt).getTime();
-  return -(time / 1000);
 };
 
 /**

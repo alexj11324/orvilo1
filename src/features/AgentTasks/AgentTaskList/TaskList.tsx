@@ -16,6 +16,7 @@ import type { Components } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 import { COMPLETE_TASK_LIST_MAX_ITEMS } from '@/store/task/slices/list/action';
@@ -53,6 +54,13 @@ interface TaskListProps {
   isLoading?: boolean;
   /** Optional list source for alternate task collections such as scheduled tasks. */
   items?: TaskListItem[];
+  /**
+   * The scope's milestone catalog — resolves `projectMilestoneId` into a label
+   * for milestone grouping and the row badge. Absent on scopes that have no
+   * catalog; milestone grouping still buckets by id there, but nothing offers
+   * that dimension, and badges stay off.
+   */
+  milestones?: readonly TaskMilestoneRef[];
   onRetry?: () => void;
   onShowHiddenCompleted?: () => void;
   options: TaskListViewOptions;
@@ -68,6 +76,7 @@ const TASK_GROUP_BY_VALUES = new Set<TaskGroupBy>([
   'assignee',
   'automationMode',
   'member',
+  'milestone',
   'none',
   'priority',
   'status',
@@ -142,19 +151,40 @@ const VIRTUAL_LIST_COMPONENTS: Components<TaskListVirtualItem, TaskListVirtualCo
 };
 
 const TaskList = memo<TaskListProps>((props) => {
-  const { data, error, isLoading, items, onRetry, onShowHiddenCompleted, options, routeScope } =
-    props;
+  const {
+    data,
+    error,
+    isLoading,
+    items,
+    milestones,
+    onRetry,
+    onShowHiddenCompleted,
+    options,
+    routeScope,
+  } = props;
   const { t } = useTranslation('chat');
   const storeTasks = useTaskStore(taskListSelectors.taskList);
   const storeTasksTotal = useTaskStore(taskListSelectors.taskListTotal);
   const tasks = items ?? storeTasks;
+  const milestoneById = useMemo(() => taskMilestoneById(milestones), [milestones]);
   // The store list is fetched in full up to a ceiling; past it the server's
   // `total` still counts every task, so say the list is a subset rather than
   // let the missing rows vanish silently. Alternate collections (`items`)
   // paginate on their own.
   const isTruncated = !items && storeTasksTotal > COMPLETE_TASK_LIST_MAX_ITEMS;
-  const groupBy = normalizeGroupBy(options.groupBy, 'status');
-  const subGroupBy = normalizeGroupBy(options.subGroupBy, 'none');
+  const groupBy = normalizeGroupBy(
+    // Milestone grouping needs a catalog to name its buckets; a stored pick
+    // traveling to a scope without one (the global/agent lists) degrades to
+    // status rather than grouping on raw ids.
+    options.groupBy === 'milestone' && !milestoneById ? 'status' : options.groupBy,
+    'status',
+  );
+  const subGroupBy = normalizeGroupBy(
+    // Same catalog check for the secondary dimension — without one a stored
+    // 'milestone' pick would subgroup on raw ids, so it simply drops.
+    options.subGroupBy === 'milestone' && !milestoneById ? 'none' : options.subGroupBy,
+    'none',
+  );
   const effectiveSubGroupBy = groupBy === 'none' ? 'none' : subGroupBy;
   const unfinishedTasks = useMemo(
     () =>
@@ -187,7 +217,12 @@ const TaskList = memo<TaskListProps>((props) => {
     const subGroupOrderDirection =
       options.orderBy === effectiveSubGroupBy ? options.orderDirection : undefined;
 
-    const primaryGroups = groupTaskItems(sortedTasks, groupBy, primaryGroupOrderDirection);
+    const primaryGroups = groupTaskItems(
+      sortedTasks,
+      groupBy,
+      primaryGroupOrderDirection,
+      milestoneById,
+    );
 
     return primaryGroups.map(([meta, groupedTasks]) => {
       if (effectiveSubGroupBy === 'none') {
@@ -198,16 +233,19 @@ const TaskList = memo<TaskListProps>((props) => {
         count: groupedTasks.length,
         meta,
         rows: toRows(groupedTasks),
-        subGroups: groupTaskItems(groupedTasks, effectiveSubGroupBy, subGroupOrderDirection).map(
-          ([subMeta, subItems]) => ({
-            count: subItems.length,
-            meta: subMeta,
-            rows: toRows(subItems),
-          }),
-        ),
+        subGroups: groupTaskItems(
+          groupedTasks,
+          effectiveSubGroupBy,
+          subGroupOrderDirection,
+          milestoneById,
+        ).map(([subMeta, subItems]) => ({
+          count: subItems.length,
+          meta: subMeta,
+          rows: toRows(subItems),
+        })),
       };
     });
-  }, [effectiveSubGroupBy, groupBy, nested, options, taskById, visibleTasks]);
+  }, [effectiveSubGroupBy, groupBy, milestoneById, nested, options, taskById, visibleTasks]);
 
   // Collapse state lives here (not in the Accordion) because headers and rows
   // are flattened into one virtual list; a collapsed key simply drops its rows
@@ -239,16 +277,23 @@ const TaskList = memo<TaskListProps>((props) => {
   const renderItem = useCallback(
     (_index: number, item: TaskListVirtualItem) => {
       if (item.kind !== 'row') return <TaskGroupHeader item={item} onToggle={toggleCollapsed} />;
+      // The chip only renders when the display property is on AND the catalog
+      // names the link — an unresolved id would paint a raw id, which is
+      // worse than no badge.
+      const milestone =
+        options.showMilestone && item.row.task.projectMilestoneId
+          ? milestoneById?.get(item.row.task.projectMilestoneId)
+          : undefined;
       return (
         // Matches the 2px row gap the former Block wrapper gave the list.
         <div style={{ paddingBlock: 1, paddingInline: 2 }}>
           <TaskRowIndent depth={item.row.depth} muted={item.row.isParentContext}>
-            <AgentTaskItem routeScope={routeScope} task={item.row.task} />
+            <AgentTaskItem milestone={milestone} routeScope={routeScope} task={item.row.task} />
           </TaskRowIndent>
         </div>
       );
     },
-    [routeScope, toggleCollapsed],
+    [milestoneById, options.showMilestone, routeScope, toggleCollapsed],
   );
 
   const skeleton = (

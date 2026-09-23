@@ -78,6 +78,9 @@ describe('kanbanBoardModel', () => {
     expect(normalizeKanbanGroupBy('member')).toBe('member');
     expect(normalizeKanbanGroupBy('priority')).toBe('priority');
     expect(normalizeKanbanGroupBy('none')).toBe('status');
+    // A stored 'milestone' pick travels here too — the board has no milestone
+    // columns, so it lands on the same status fallback as 'none'.
+    expect(normalizeKanbanGroupBy('milestone')).toBe('status');
   });
 
   it('keeps the column header in skeleton mode for every loading group shape', () => {

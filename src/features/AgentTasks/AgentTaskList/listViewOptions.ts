@@ -2,10 +2,13 @@ import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import type { TaskStatus } from '@orvilo/types';
 import { t } from 'i18next';
 
+import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
-export type TaskGroupBy = 'assignee' | 'automationMode' | 'member' | 'none' | 'priority' | 'status';
-export type TaskOrderBy = 'assignee' | 'createdAt' | 'priority' | 'status' | 'title' | 'updatedAt';
+export type TaskGroupBy =
+  'assignee' | 'automationMode' | 'member' | 'milestone' | 'none' | 'priority' | 'status';
+export type TaskOrderBy =
+  'assignee' | 'createdAt' | 'manual' | 'priority' | 'status' | 'title' | 'updatedAt';
 export type TaskOrderDirection = 'asc' | 'desc';
 
 export interface TaskListViewOptions {
@@ -16,6 +19,12 @@ export interface TaskListViewOptions {
   orderBy: TaskOrderBy;
   orderCompletedByRecency: boolean;
   orderDirection: TaskOrderDirection;
+  /**
+   * Display-property switch (Linear's "Milestones"): render the row's project
+   * milestone chip. Only materializes where a milestone catalog resolves the
+   * link — surfaces without one offer no toggle, so the flag is inert there.
+   */
+  showMilestone: boolean;
   /** List sub-tasks whose parent is already on the list as rows of their own. */
   showSubTasks: boolean;
   subGroupBy: TaskGroupBy;
@@ -48,6 +57,10 @@ export interface TaskGroupMeta {
   groupBy: TaskGroupBy;
   key: string;
   label: string;
+  /** The milestone a `milestone` group buckets by; `null` = "No milestone". */
+  milestoneId?: string | null;
+  /** The milestone's own `sortOrder` — groups follow the project's ordering. */
+  milestoneOrder?: number;
   priority?: number;
   status?: 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running' | 'scheduled';
 }
@@ -61,6 +74,9 @@ export const DEFAULT_TASK_LIST_VIEW_OPTIONS: TaskListViewOptions = {
   orderBy: 'updatedAt',
   orderCompletedByRecency: true,
   orderDirection: 'asc',
+  // Same default posture: the badge only appears on rows that carry a
+  // milestone, so it cannot clutter a milestone-free list.
+  showMilestone: true,
   showSubTasks: true,
   subGroupBy: 'none',
 };
@@ -69,6 +85,7 @@ const TASK_GROUP_BY_SET = new Set<TaskGroupBy>([
   'assignee',
   'automationMode',
   'member',
+  'milestone',
   'none',
   'priority',
   'status',
@@ -76,6 +93,7 @@ const TASK_GROUP_BY_SET = new Set<TaskGroupBy>([
 const TASK_ORDER_BY_SET = new Set<TaskOrderBy>([
   'assignee',
   'createdAt',
+  'manual',
   'priority',
   'status',
   'title',
@@ -114,6 +132,10 @@ export const normalizeTaskListViewOptions = (
     orderDirection: TASK_ORDER_DIRECTION_SET.has(next.orderDirection as TaskOrderDirection)
       ? (next.orderDirection as TaskOrderDirection)
       : DEFAULT_TASK_LIST_VIEW_OPTIONS.orderDirection,
+    showMilestone:
+      typeof next.showMilestone === 'boolean'
+        ? next.showMilestone
+        : DEFAULT_TASK_LIST_VIEW_OPTIONS.showMilestone,
     showSubTasks:
       typeof next.showSubTasks === 'boolean'
         ? next.showSubTasks
@@ -121,6 +143,17 @@ export const normalizeTaskListViewOptions = (
     subGroupBy: groupBy === 'none' || subGroupBy !== groupBy ? subGroupBy : 'none',
   };
 };
+
+/**
+ * Project the running options down to the shape persisted in
+ * `systemStatus.taskListViewOptions` — "Set default" snapshots the view
+ * config through this; "Reset" restores it. All fields already flow through
+ * `normalizeTaskListViewOptions`, so this is a semantic alias that keeps the
+ * caller honest about which shape it is writing.
+ */
+export const toStoredTaskListViewOptions = (
+  options: Partial<TaskListViewOptions>,
+): TaskListViewOptions => normalizeTaskListViewOptions(options);
 
 const PRIORITY_RANK_MAP: Record<number, number> = {
   0: 4,
@@ -212,9 +245,56 @@ export const getTaskPriorityGroupMeta = (
   };
 };
 
+export const getTaskMilestoneGroupMeta = (
+  milestoneId: string | null | undefined,
+  milestoneById?: ReadonlyMap<string, TaskMilestoneRef>,
+): TaskGroupMeta => {
+  const milestone = milestoneId ? milestoneById?.get(milestoneId) : undefined;
+  if (milestone) {
+    return {
+      groupBy: 'milestone',
+      key: `milestone:${milestone.id}`,
+      label: milestone.name,
+      milestoneId: milestone.id,
+      milestoneOrder: milestone.sortOrder,
+    };
+  }
+  if (milestoneId) {
+    // The task links a milestone the catalog doesn't know (stale link, or a
+    // scope that never loaded one). Keep the group's identity honest rather
+    // than folding it into "No milestone".
+    return {
+      groupBy: 'milestone',
+      key: `milestone:${milestoneId}`,
+      label: milestoneId,
+      milestoneId,
+    };
+  }
+  return {
+    groupBy: 'milestone',
+    key: 'milestone:none',
+    label: t('taskList.noMilestone', { ns: 'chat' }),
+    milestoneId: null,
+  };
+};
+
 const toTime = (value: Date | string | null | undefined): number => {
   if (!value) return 0;
   return value instanceof Date ? value.getTime() : new Date(value).getTime();
+};
+
+/**
+ * The manual ordering key a row renders at — shared with the kanban board so
+ * "Manual" list ordering shows exactly what drag-and-drop persists. Rows
+ * never dragged carry `position: null` and fall back to `-epoch(createdAt)`,
+ * the same fallback the server applies, so untouched rows keep their
+ * newest-first order.
+ */
+export const effectiveTaskPosition = (task: TaskListItem): number => {
+  if (task.position !== null && task.position !== undefined) return task.position;
+  const createdAt = task.createdAt;
+  const time = createdAt instanceof Date ? createdAt.getTime() : new Date(createdAt).getTime();
+  return -(time / 1000);
 };
 
 const compareNumbers = (a: number, b: number, direction: TaskOrderDirection) => {
@@ -232,6 +312,9 @@ const getComparableValue = (task: TaskListItem, orderBy: TaskOrderBy): number | 
     }
     case 'createdAt': {
       return toTime(task.createdAt);
+    }
+    case 'manual': {
+      return effectiveTaskPosition(task);
     }
     case 'priority': {
       return PRIORITY_RANK_MAP[getPriorityValue(task)];
@@ -281,13 +364,20 @@ export const compareTaskItems = (
   return compareStrings(a.identifier, b.identifier, 'asc');
 };
 
-export const getTaskGroupMeta = (task: TaskListItem, groupBy: TaskGroupBy): TaskGroupMeta => {
+export const getTaskGroupMeta = (
+  task: TaskListItem,
+  groupBy: TaskGroupBy,
+  milestoneById?: ReadonlyMap<string, TaskMilestoneRef>,
+): TaskGroupMeta => {
   switch (groupBy) {
     case 'assignee': {
       return getTaskAssigneeGroupMeta(task.assigneeAgentId);
     }
     case 'member': {
       return getTaskMemberGroupMeta(task.assigneeUserId);
+    }
+    case 'milestone': {
+      return getTaskMilestoneGroupMeta(task.projectMilestoneId, milestoneById);
     }
     case 'automationMode': {
       // Automated tasks created before automationMode was introduced are schedules.
@@ -335,6 +425,14 @@ const getGroupRank = (group: TaskGroupMeta, groupBy: TaskGroupBy): number => {
     case 'automationMode': {
       return group.automationMode === 'schedule' ? 0 : 1;
     }
+    case 'milestone': {
+      // Groups follow the project's own milestone ordering (the catalog's
+      // `sortOrder`); unresolvable links trail behind, "No milestone" last.
+      if (group.milestoneId === null || group.milestoneId === undefined) {
+        return Number.MAX_SAFE_INTEGER;
+      }
+      return group.milestoneOrder ?? Number.MAX_SAFE_INTEGER - 1;
+    }
     case 'priority': {
       if (group.priority === undefined) return Number.MAX_SAFE_INTEGER;
       return PRIORITY_RANK_MAP[group.priority] ?? Number.MAX_SAFE_INTEGER;
@@ -371,11 +469,12 @@ export const groupTaskItems = (
   items: TaskListItem[],
   groupBy: TaskGroupBy,
   orderDirection?: TaskOrderDirection,
+  milestoneById?: ReadonlyMap<string, TaskMilestoneRef>,
 ): Array<[TaskGroupMeta, TaskListItem[]]> => {
   const groups = new Map<string, { items: TaskListItem[]; meta: TaskGroupMeta }>();
 
   for (const task of items) {
-    const meta = getTaskGroupMeta(task, groupBy);
+    const meta = getTaskGroupMeta(task, groupBy, milestoneById);
     const bucket = groups.get(meta.key);
 
     if (bucket) {

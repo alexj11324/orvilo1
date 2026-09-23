@@ -40,6 +40,7 @@ import {
   filterTasksByMilestone,
   PROJECT_MILESTONE_FILTER_PARAM,
   readProjectMilestoneFilter,
+  type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -105,6 +106,11 @@ export const getTaskPageHeaderVisibility = ({
   return {
     showBreadcrumb: isScoped,
     showTaskAgentPanelToggle: !projectId && shouldRenderTaskAgentPanelToggle(isMobile),
+    // The visibility chip is the issues surface's filter entry; a project
+    // scope is still a workspace list, so hiding it there was collateral of
+    // the `!projectId` header gates — not intent. Agent scope stays without
+    // it (its list is already scoped to one assignee).
+    showVisibilityFilter: !agentId,
     showViewOptions: true,
   };
 };
@@ -118,10 +124,11 @@ interface AgentTasksPageProps {
   /** When provided, shows the complete task workspace scoped to one project. */
   projectId?: string;
   /**
-   * The project's milestones, so a `?projectMilestoneId=` link can name the
-   * milestone it narrows to. Only read when `projectId` is set.
+   * The project's milestones — names the `?projectMilestoneId=` chip and feeds
+   * the issues list's milestone grouping and row badges. Only read when
+   * `projectId` is set.
    */
-  projectMilestones?: readonly { id: string; name: string }[];
+  projectMilestones?: readonly TaskMilestoneRef[];
 }
 
 export type TaskCollection = 'mine' | 'scheduled' | 'tasks';
@@ -287,7 +294,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
           complete: isListView,
           enabled: isOrdinaryCollection,
           projectId,
-          visibility: 'all',
+          // No `visibility` pin: the header's visibility chip is the filter
+          // entry for this scope too, so the fetch follows it like the
+          // global list does.
         }
       : agentId
         ? { agentId, automated: false, complete: isListView, enabled: isOrdinaryCollection }
@@ -551,7 +560,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               </Button>
             </DropdownMenu>
           )}
-          {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
+          {isOrdinaryCollection && headerVisibility.showVisibilityFilter && (
+            <TaskListVisibilityFilter />
+          )}
           {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
             <ActionIcon
               disabled={createActionBehavior.disabled}
@@ -564,6 +575,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
           )}
           {!isScheduledCollection && headerVisibility.showViewOptions && (
             <TasksGroupConfig
+              milestones={projectId ? projectMilestones : undefined}
               options={viewOptions}
               pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
               setOptions={setViewOptions}
@@ -712,6 +724,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 error={error}
                 isLoading={isLoading || (!isTaskListInit && !error)}
                 items={milestoneTasks}
+                milestones={projectId ? projectMilestones : undefined}
                 options={viewOptions}
                 routeScope={routeScope}
                 onRetry={() => mutate()}

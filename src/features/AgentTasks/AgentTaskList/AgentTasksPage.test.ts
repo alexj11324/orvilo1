@@ -232,6 +232,7 @@ describe('AgentTasksPage', () => {
       expect(getTaskPageHeaderVisibility({ agentId: undefined, isMobile: false })).toEqual({
         showBreadcrumb: false,
         showTaskAgentPanelToggle: true,
+        showVisibilityFilter: true,
         showViewOptions: true,
       });
     });
@@ -240,6 +241,9 @@ describe('AgentTasksPage', () => {
       expect(getTaskPageHeaderVisibility({ agentId: 'agent-1', isMobile: false })).toEqual({
         showBreadcrumb: true,
         showTaskAgentPanelToggle: true,
+        // The agent scope's list is already narrowed to one assignee; the
+        // visibility chip stays off it.
+        showVisibilityFilter: false,
         showViewOptions: true,
       });
     });
@@ -248,11 +252,16 @@ describe('AgentTasksPage', () => {
       expect(getTaskPageHeaderVisibility({ isMobile: false, projectId: 'p-1' })).toEqual({
         showBreadcrumb: false,
         showTaskAgentPanelToggle: false,
+        // The regression this guards: the `!projectId` header gate used to
+        // hide the visibility chip — the issues surface's only filter entry —
+        // inside a project. It must stay on.
+        showVisibilityFilter: true,
         showViewOptions: true,
       });
       expect(getTaskPageHeaderVisibility({ isMobile: false })).toEqual({
         showBreadcrumb: false,
         showTaskAgentPanelToggle: true,
+        showVisibilityFilter: true,
         showViewOptions: true,
       });
     });
@@ -261,6 +270,7 @@ describe('AgentTasksPage', () => {
       expect(getTaskPageHeaderVisibility({ isMobile: true })).toEqual({
         showBreadcrumb: false,
         showTaskAgentPanelToggle: false,
+        showVisibilityFilter: true,
         showViewOptions: true,
       });
     });

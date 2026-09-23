@@ -5,6 +5,7 @@ import {
   getProjectMilestoneIssuesPath,
   PROJECT_MILESTONE_FILTER_PARAM,
   readProjectMilestoneFilter,
+  taskMilestoneById,
 } from './milestoneFilter';
 
 describe('getProjectMilestoneIssuesPath', () => {
@@ -27,6 +28,24 @@ describe('readProjectMilestoneFilter', () => {
   it('treats a missing or blank parameter as no filter', () => {
     expect(readProjectMilestoneFilter(new URLSearchParams(''))).toBeUndefined();
     expect(readProjectMilestoneFilter(new URLSearchParams('projectMilestoneId='))).toBeUndefined();
+  });
+});
+
+describe('taskMilestoneById', () => {
+  it('indexes a project catalog by id, keeping the fields groups and badges read', () => {
+    const byId = taskMilestoneById([
+      { id: 'ms-1', name: 'Beta', sortOrder: 1 },
+      { date: '2026-10-01', id: 'ms-2', name: 'Alpha', sortOrder: 0 },
+    ]);
+
+    expect(byId?.get('ms-1')).toMatchObject({ name: 'Beta', sortOrder: 1 });
+    expect(byId?.get('ms-2')).toMatchObject({ date: '2026-10-01', name: 'Alpha', sortOrder: 0 });
+    expect(byId?.get('ms-9')).toBeUndefined();
+  });
+
+  it('returns undefined without a catalog — callers then offer no milestone surfaces', () => {
+    expect(taskMilestoneById(undefined)).toBeUndefined();
+    expect(taskMilestoneById([])).toEqual(new Map());
   });
 });
 

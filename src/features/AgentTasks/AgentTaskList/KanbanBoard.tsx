@@ -921,7 +921,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                   createContext,
                   external: Boolean(external),
                   groupBy,
-                  myTaskScope,
+                  myTaskScope: Boolean(myTaskScope),
                 })
                   ? () => handleCreateTask(col.key)
                   : undefined

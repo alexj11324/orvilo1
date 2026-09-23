@@ -5,6 +5,7 @@ import { ActionIcon, Button, Popover, Text, Tooltip } from '@lobehub/ui/base-ui'
 import type { ProjectHealth, ProjectStatus } from '@orvilo/types';
 import { PROJECT_HEALTH_STATES, PROJECT_STATUSES } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import type { ParseKeys } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   ALargeSmallIcon,
@@ -216,7 +217,7 @@ type PaneView =
   | { kind: 'group'; group: ProjectListFilterGroupId }
   | { kind: 'menu' };
 
-const PRIORITY_LABEL_KEY: Record<number, string> = {
+const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'project'>> = {
   0: 'create.priority.noPriority',
   1: 'create.priority.urgent',
   2: 'create.priority.high',

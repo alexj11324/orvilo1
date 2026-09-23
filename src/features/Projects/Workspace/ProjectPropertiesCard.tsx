@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
@@ -172,11 +173,9 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
               size={'small'}
               icon={
                 <ProjectStatusIcon
+                  percent={projectIssueProgressPercent(detail.tasks) ?? 0}
                   size={12}
                   status={resolvedStatus}
-                  percent={
-                    typeof project.progressPercent === 'number' ? project.progressPercent : 0
-                  }
                 />
               }
             >

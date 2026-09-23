@@ -52,3 +52,17 @@ export function projectIssueProgress(issues: readonly ProgressIssue[] | null | u
   }
   return result;
 }
+
+/**
+ * Completion percent for the status icon ring: `completed / scope`, the same
+ * fraction `ProjectModel.list` computes server-side as `progressPercent`.
+ * Empty scope reads 0; an unclassifiable state reads `null`.
+ */
+export function projectIssueProgressPercent(
+  issues: readonly ProgressIssue[] | null | undefined,
+): number | null {
+  const progress = projectIssueProgress(issues);
+  if (!progress) return null;
+  if (progress.scope === 0) return 0;
+  return Math.round((progress.completed / progress.scope) * 100);
+}

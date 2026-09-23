@@ -199,7 +199,7 @@ export const deriveProjectEvents = (source: ProjectEventSource): ProjectFeedEven
 export const feedWindowStart = (
   rows: readonly { createdAt: string }[],
   nextCursor?: string | null,
-): string | undefined => (nextCursor && rows.length > 0 ? rows.at(-1).createdAt : undefined);
+): string | undefined => (nextCursor ? rows.at(-1)?.createdAt : undefined);
 
 const itemCreatedAt = (item: ActivityFeedItem) =>
   item.kind === 'activity'

@@ -701,7 +701,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
 
 ProjectRow.displayName = 'ProjectRow';
 
-export const COLUMN_HEADER_KEYS: Record<ProjectListColumn['key'], string> = {
+export const COLUMN_HEADER_KEYS = {
   completed: 'list.columnCompleted',
   created: 'list.columnCreated',
   health: 'list.columnHealth',
@@ -713,7 +713,7 @@ export const COLUMN_HEADER_KEYS: Record<ProjectListColumn['key'], string> = {
   summary: 'list.display.property.summary',
   targetDate: 'list.columnTarget',
   updated: 'list.columnUpdated',
-};
+} as const satisfies Record<ProjectListColumn['key'], string>;
 
 /**
  * Sortable column header — the reference's Name/Health/Priority/Target

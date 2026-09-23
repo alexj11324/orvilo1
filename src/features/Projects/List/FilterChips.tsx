@@ -3,6 +3,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import type { ParseKeys } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +54,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const PRIORITY_LABEL_KEY: Record<number, string> = {
+const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'project'>> = {
   0: 'create.priority.noPriority',
   1: 'create.priority.urgent',
   2: 'create.priority.high',

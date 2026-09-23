@@ -108,7 +108,8 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
     isSearching && activeAgentId
       ? ['agent-chat-history-search', trimmedKeyword, activeAgentId]
       : null,
-    ([, keywords, agentId]) => topicService.searchTopics(keywords, agentId),
+    ([, keywords, agentId]: [string, string, string]) =>
+      topicService.searchTopics(keywords, agentId),
   );
 
   const { navigateToTopic } = useTopicNavigation();

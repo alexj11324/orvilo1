@@ -5,6 +5,7 @@ import { ActionIcon, Button, Popover, Text, Tooltip } from '@lobehub/ui/base-ui'
 import type { TaskStatus } from '@orvilo/types';
 import { agentDisplayName, TASK_STATUS_VALUES, TASK_TRIAGE_STATUS_VALUES } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import type { ParseKeys } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   ALargeSmallIcon,
@@ -233,7 +234,7 @@ type PaneView =
   | { kind: 'group'; group: ProjectIssueFilterGroupId }
   | { kind: 'menu' };
 
-const PRIORITY_LABEL_KEY: Record<number, string> = {
+const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'chat'>> = {
   0: 'taskDetail.priority.none',
   1: 'taskDetail.priority.urgent',
   2: 'taskDetail.priority.high',
@@ -297,7 +298,7 @@ const IssueFilterPopover = memo<IssueFilterPopoverProps>(
       () =>
         (agents ?? [])
           .map((agent: SidebarAgentItem) => ({ id: agent.id, name: agentDisplayName(agent) }))
-          .filter((agent) => agent.name)
+          .filter((agent): agent is { id: string; name: string } => Boolean(agent.name))
           .sort((a, b) => a.name.toLocaleLowerCase().localeCompare(b.name.toLocaleLowerCase())),
       [agents],
     );

@@ -4,19 +4,31 @@ import { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';
 import { FluentEmoji } from '@lobehub/ui';
 import type { AvatarProps as OrviloAvatarProps } from '@lobehub/ui/base-ui';
 import { cssVar, cx } from 'antd-style';
-import { isValidElement, memo, type ReactNode } from 'react';
+import { type ComponentProps, isValidElement, memo, type ReactNode } from 'react';
 
 import { remoteAvatarSrc, resolveAvatar } from './fallback';
 import { useBrokenSrc } from './useBrokenSrc';
 
 const EMOJI_RE = /^\p{Extended_Pictographic}/u;
 
-export interface AvatarProps extends OrviloAvatarProps {
+type AvatarRootElementProps = Omit<ComponentProps<'span'>, 'children' | 'title'>;
+
+export interface AvatarProps
+  extends Omit<OrviloAvatarProps, keyof ComponentProps<'div'>>, AvatarRootElementProps {
+  children?: ReactNode;
+  /** Accepted for compatibility with legacy callers; the tile has a single slot. */
+  gap?: number;
+  /** Accepted for compatibility with legacy callers; pass the node via `avatar`. */
+  icon?: ReactNode;
   /**
    * Person/entity display name. When the image URL is missing or fails to load,
    * the tile falls back to these initials so the avatar still carries identity.
    */
   name?: string;
+  /** Image URL; alias of `avatar` for `<img>`-style callers. */
+  src?: string;
+  srcSet?: string;
+  title?: string;
 }
 
 /**

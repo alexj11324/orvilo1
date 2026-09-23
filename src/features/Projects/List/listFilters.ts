@@ -505,7 +505,9 @@ const MY_LEAD_PHRASES = [
 const NO_LEAD_PHRASES = ['no lead', 'unassigned', 'without lead', '无负责人', '没有负责人'];
 const MY_CREATOR_PHRASES = ['created by me', 'i created', '我创建的', '由我创建'];
 
-const mergeValues = <T>(a: readonly T[], b: readonly T[]): T[] => [...new Set([...a, ...b])];
+const mergeValues = (a: readonly unknown[], b: readonly unknown[]): unknown[] => [
+  ...new Set([...a, ...b]),
+];
 
 const mergeFilter = (
   filters: ProjectListFilter[],
@@ -589,7 +591,7 @@ export const parseAiProjectFilters = (
         (filter) =>
           projectListFilterKey(filter) === 'lead' &&
           'values' in filter &&
-          filter.values.includes(member.userId),
+          (filter.values as readonly (string | null)[]).includes(member.userId),
       );
       if (alreadyLead) continue;
     }

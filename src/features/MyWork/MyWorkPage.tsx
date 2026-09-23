@@ -92,6 +92,8 @@ import { applyWorkQueryStatusChange } from './workQueryBoardMove';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
+  workQueryResponseGroups,
+  workQueryResponseTasks,
   type WorkQueryResultTask,
 } from './workQueryPaging';
 import WorkQueryResults from './WorkQueryResults';
@@ -311,8 +313,8 @@ const MyWorkPage = memo(() => {
           noProject,
         }),
   );
-  const firstTasks = data?.data.tasks ?? [];
-  const firstGroups = data?.data.groups ?? [];
+  const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(data?.data);
+  const firstGroups = workQueryResponseGroups<WorkQueryResultTask>(data?.data);
   const queryHash = data?.data.queryHash;
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [taskTail, setTaskTail] = useState<typeof firstTasks>([]);
@@ -386,7 +388,9 @@ const MyWorkPage = memo(() => {
       const last = column?.tasks.at(-1);
       if (!last || !queryHash) return;
       const next = await fetchNextPage({ afterId: last.id, groupKey });
-      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
+      setGroupTail((current) =>
+        mergeWorkQueryGroups(current, workQueryResponseGroups<WorkQueryResultTask>(next.data)),
+      );
       setExtraSubscribed((current) => [
         ...current,
         ...((next.data as { subscribedTaskIds?: string[] }).subscribedTaskIds ?? []),
@@ -401,7 +405,9 @@ const MyWorkPage = memo(() => {
     const last = tasks.at(-1);
     if (!last || !queryHash) return;
     const next = await fetchNextPage({ afterId: last.id });
-    setTaskTail((current) => mergeWorkQueryPage(current, next.data.tasks ?? []));
+    setTaskTail((current) =>
+      mergeWorkQueryPage(current, workQueryResponseTasks<WorkQueryResultTask>(next.data)),
+    );
     setExtraSubscribed((current) => [
       ...current,
       ...((next.data as { subscribedTaskIds?: string[] }).subscribedTaskIds ?? []),

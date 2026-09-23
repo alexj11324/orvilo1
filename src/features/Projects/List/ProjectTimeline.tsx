@@ -304,6 +304,12 @@ const TimelineHealthIcon = memo<{ health?: null | string }>(({ health }) => {
 
 TimelineHealthIcon.displayName = 'TimelineHealthIcon';
 
+/** Clamped 0–100 completion, or `null` while the server can't compute one. */
+const projectProgress = (project: Pick<ProjectListItem, 'progressPercent'>): number | null =>
+  typeof project.progressPercent === 'number'
+    ? Math.min(100, Math.max(0, project.progressPercent))
+    : null;
+
 interface TimelineRowProps {
   leadAvatar: (userId: string) => string | undefined;
   leadName: (userId: string) => string | undefined;
@@ -344,10 +350,7 @@ const TimelineRow = memo<TimelineRowProps>(
     );
     const lead = project.leadUserId;
     const leadDisplayName = lead ? (leadName(lead) ?? lead) : undefined;
-    const progress =
-      typeof project.progressPercent === 'number'
-        ? Math.min(100, Math.max(0, project.progressPercent))
-        : null;
+    const progress = projectProgress(project);
     const barRight = rect
       ? rect.left + rect.width
       : placeholder
@@ -519,6 +522,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                   const status = resolveProjectStatus(project.status);
                   const statusVisual = PROJECT_STATUS_VISUALS[status];
                   const priority = resolvePriorityLevel(project.priority);
+                  const progress = projectProgress(project);
                   const lead = project.leadUserId;
                   const leadDisplayName = lead ? (leadName(lead) ?? lead) : undefined;
                   return (

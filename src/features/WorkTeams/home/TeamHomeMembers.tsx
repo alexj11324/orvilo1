@@ -11,7 +11,7 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
-import type { TeamHomeMember } from './teamHomeMembers';
+import type { TeamHomeMember } from './teamHomeMembersModel';
 
 const styles = createStaticStyles(({ css }) => ({
   email: css`

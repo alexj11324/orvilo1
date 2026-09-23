@@ -3,6 +3,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import type { ParseKeys } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const PRIORITY_LABEL_KEY: Record<number, string> = {
+const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'chat'>> = {
   0: 'taskDetail.priority.none',
   1: 'taskDetail.priority.urgent',
   2: 'taskDetail.priority.high',

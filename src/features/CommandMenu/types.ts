@@ -1,3 +1,19 @@
+import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
+
+import type { CommandMenuWorkType } from './utils/queryParser';
+
+export interface CommandMenuWorkResult {
+  createdAt: Date;
+  description?: string | null;
+  id: string;
+  relevance: number;
+  title: string;
+  type: CommandMenuWorkType;
+  updatedAt: Date;
+}
+
+export type CommandMenuSearchResult = FtsSearchResult | CommandMenuWorkResult;
+
 export interface ChatMessage {
   content: string;
   id: string;

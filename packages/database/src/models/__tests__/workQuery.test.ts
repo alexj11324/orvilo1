@@ -3,6 +3,7 @@ import {
   applyDelegatedFilter,
   applyNoProjectFilter,
   WORK_QUERY_MAX_IN_VALUES,
+  type WorkQueryPredicate,
 } from '@orvilo/types';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -1531,7 +1532,7 @@ describe('WorkQueryModel', () => {
 });
 
 describe('labelId predicates', () => {
-  const labelQuery = (predicate: Record<string, unknown>) => ({
+  const labelQuery = (predicate: Omit<WorkQueryPredicate, 'field'>) => ({
     entityType: 'task' as const,
     filter: { all: [{ field: 'labelId' as const, ...predicate }] },
     schemaVersion: 1 as const,

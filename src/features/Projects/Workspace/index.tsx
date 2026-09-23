@@ -14,6 +14,7 @@ import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
@@ -259,11 +260,9 @@ const ProjectWorkspace = memo(() => {
                     type="button"
                   >
                     <ProjectStatusIcon
+                      percent={projectIssueProgressPercent(detail.tasks) ?? 0}
                       size={16}
                       status={project.status}
-                      percent={
-                        typeof project.progressPercent === 'number' ? project.progressPercent : 0
-                      }
                     />
                     {t(`status.${project.status}`, { defaultValue: project.status })}
                   </button>

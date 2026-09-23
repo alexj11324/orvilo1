@@ -94,8 +94,12 @@ describe('directorySectionKey', () => {
   });
 
   it('splits suspended and removed people out of the active band', () => {
-    const suspended = buildDirectoryRows([{ ...member, suspendedAt: '2024-03-01T00:00:00.000Z' }]);
-    const removed = buildDirectoryRows([{ ...member, deletedAt: new Date() }]);
+    const suspended = buildDirectoryRows(
+      [{ ...member, suspendedAt: new Date('2024-03-01T00:00:00.000Z') }],
+      [],
+      [],
+    );
+    const removed = buildDirectoryRows([{ ...member, deletedAt: new Date() }], [], []);
 
     expect(directorySectionKey(suspended[0])).toBe('suspended');
     expect(directorySectionKey(removed[0])).toBe('removed');

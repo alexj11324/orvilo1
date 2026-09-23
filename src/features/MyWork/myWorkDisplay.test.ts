@@ -340,13 +340,14 @@ describe('normalizeMyWorkDisplay', () => {
       expect(MY_WORK_DEFAULT_ROW_PROPERTIES[property]).toBe(true);
     }
     // Linear's panel order: status, assignee, priority, project, milestone,
-    // dates, then the Orvilo workflow badge.
+    // labels, dates, then the Orvilo workflow badge.
     expect(MY_WORK_ROW_PROPERTIES).toEqual([
       'status',
       'assignee',
       'priority',
       'project',
       'milestone',
+      'labels',
       'updated',
       'workflowBadge',
     ]);

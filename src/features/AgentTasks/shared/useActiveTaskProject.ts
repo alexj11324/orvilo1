@@ -41,7 +41,7 @@ export const useActiveTaskProject = (): ActiveTaskProject => {
 
   const project = detail?.project;
   const milestones = detail?.milestones ?? [];
-  const milestoneId = taskMilestoneIdInProject(detail?.tasks, taskDatabaseId);
+  const milestoneId = taskMilestoneIdInProject(detail?.tasks ?? undefined, taskDatabaseId);
 
   return {
     milestone: milestoneById(milestones, milestoneId),

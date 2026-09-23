@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { projectIssueProgress } from './projectIssueProgress';
+import { projectIssueProgress, projectIssueProgressPercent } from './projectIssueProgress';
 
 describe('project issue progress', () => {
   it('counts workflow scope, started work and completion independently of goals or execution', () => {
@@ -21,5 +21,17 @@ describe('project issue progress', () => {
     expect(projectIssueProgress(undefined)).toBeNull();
     expect(projectIssueProgress(null)).toBeNull();
     expect(projectIssueProgress([])).toEqual({ scope: 0, started: 0, completed: 0 });
+  });
+
+  it('derives the status-ring percent from completed over scope', () => {
+    expect(
+      projectIssueProgressPercent([
+        { workflowCategory: 'done' },
+        { workflowCategory: 'todo' },
+        { workflowCategory: 'canceled' },
+      ]),
+    ).toBe(50);
+    expect(projectIssueProgressPercent([])).toBe(0);
+    expect(projectIssueProgressPercent(undefined)).toBeNull();
   });
 });

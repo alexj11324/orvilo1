@@ -1,5 +1,6 @@
 import { Empty, Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import type { ParseKeys } from 'i18next';
 import {
   Brain,
   FileText,
@@ -103,7 +104,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 /** Group headings reuse the palette's shipped plural labels. */
-const GROUP_LABEL_KEYS: Record<GlobalSearchDisplayType, string> = {
+const GROUP_LABEL_KEYS: Record<GlobalSearchDisplayType, ParseKeys<'common'>> = {
   agent: 'cmdk.search.agents',
   chatGroup: 'cmdk.search.chatGroups',
   file: 'cmdk.search.files',

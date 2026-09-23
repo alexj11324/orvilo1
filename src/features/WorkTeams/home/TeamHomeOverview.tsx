@@ -23,7 +23,7 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
-import type { TeamHomeMember } from './teamHomeMembers';
+import type { TeamHomeMember } from './teamHomeMembersModel';
 import { TEAM_HOME_RECENT_LIMIT, teamRecentIssuesQuery } from './teamHomeSection';
 
 const styles = createStaticStyles(({ css }) => ({

@@ -90,12 +90,12 @@ describe('mergeWorkQueryFilters', () => {
   it('merges all/any sides independently', () => {
     expect(
       mergeWorkQueryFilters(
-        { all: [{ field: 'a', op: 'eq', value: 1 }] },
-        { any: [{ field: 'b', op: 'eq', value: 2 }] },
+        { all: [{ field: 'teamId', op: 'eq', value: 'a' }] },
+        { any: [{ field: 'status', op: 'eq', value: 'b' }] },
       ),
     ).toEqual({
-      all: [{ field: 'a', op: 'eq', value: 1 }],
-      any: [{ field: 'b', op: 'eq', value: 2 }],
+      all: [{ field: 'teamId', op: 'eq', value: 'a' }],
+      any: [{ field: 'status', op: 'eq', value: 'b' }],
     });
   });
 
@@ -108,7 +108,9 @@ describe('workQueryFilterHasPredicates', () => {
   it('treats missing and empty filters as inactive', () => {
     expect(workQueryFilterHasPredicates(undefined)).toBe(false);
     expect(workQueryFilterHasPredicates({ all: [] })).toBe(false);
-    expect(workQueryFilterHasPredicates({ all: [{ field: 'a', op: 'eq', value: 1 }] })).toBe(true);
+    expect(workQueryFilterHasPredicates({ all: [{ field: 'teamId', op: 'eq', value: 'a' }] })).toBe(
+      true,
+    );
   });
 });
 

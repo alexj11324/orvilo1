@@ -33,6 +33,7 @@ import {
   PROJECT_LIST_PROPERTIES,
   type ProjectListClosedWindow,
   type ProjectListDisplayOptions,
+  type ProjectListOrdering,
   TIMELINE_PROJECT_LIST_PROPERTIES,
 } from './displayOptions';
 
@@ -221,7 +222,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                   ? options.orderDirection === 'desc'
                     ? 'Z–A'
                     : 'A–Z'
-                  : t(`list.display.ordering.${option.value}`)
+                  : t(`list.display.ordering.${option.value as ProjectListOrdering}`)
               }
               options={[
                 ...PROJECT_LIST_MENU_ORDERINGS.map((value) => ({

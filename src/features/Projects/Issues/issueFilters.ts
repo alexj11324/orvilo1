@@ -572,7 +572,9 @@ const ISSUE_MY_CREATOR_PHRASES = ['created by me', 'i created', '我创建的', 
 const ISSUE_UNTRIAGED_PHRASES = ['untriaged', 'needs triage', 'in triage', '待分类', '待分流'];
 const ISSUE_NO_LABEL_PHRASES = ['unlabeled', 'no label', 'without label', '无标签', '没有标签'];
 
-const mergeValues = <T>(a: readonly T[], b: readonly T[]): T[] => [...new Set([...a, ...b])];
+const mergeValues = (a: readonly unknown[], b: readonly unknown[]): unknown[] => [
+  ...new Set([...a, ...b]),
+];
 
 const mergeFilter = (
   filters: ProjectIssueFilter[],

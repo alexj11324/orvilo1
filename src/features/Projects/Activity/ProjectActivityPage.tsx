@@ -397,11 +397,13 @@ const EventSentence = ({ event, projectRef }: { event: ProjectFeedEvent; project
     default: {
       // project_started | project_completed | project_archived — plain
       // lifecycle sentences with no actor claim (none is recorded).
-      const key = {
-        project_archived: 'activity.event.archived',
-        project_completed: 'activity.event.completed',
-        project_started: 'activity.event.started',
-      }[event.type];
+      const key = (
+        {
+          project_archived: 'activity.event.archived',
+          project_completed: 'activity.event.completed',
+          project_started: 'activity.event.started',
+        } as const
+      )[event.type];
       return <Trans i18nKey={key} ns={'project'} />;
     }
   }

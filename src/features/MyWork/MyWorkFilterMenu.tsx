@@ -5,6 +5,7 @@ import { ActionIcon, Button, Checkbox, Popover, Text } from '@lobehub/ui/base-ui
 import type { WorkQueryField } from '@orvilo/types';
 import { workQueryFieldSpec } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import type { ParseKeys } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   CheckIcon,
@@ -456,7 +457,7 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
         active: myWorkDirectoryFieldActive(builder, field),
         field,
         icon: DIRECTORY_FIELD_ICONS[field],
-        label: t(`savedViews.fields.${field}` as never, { defaultValue: field }),
+        label: t(`savedViews.fields.${field}` as ParseKeys<'common'>, { defaultValue: field }),
       })).filter((entry) => !needle || entry.label.toLowerCase().includes(needle));
     }, [builder, keyword, t]);
 
@@ -501,10 +502,10 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
               {directoryFields.map((entry) => (
                 <MenuRow
                   checked={entry.active}
+                  icon={entry.icon ? <Icon icon={entry.icon} size={14} /> : undefined}
                   key={entry.field}
                   label={entry.label}
                   trailing={<ChevronRightIcon className={styles.menuRowIcon} size={14} />}
-                  icon={entry.icon ? <Icon icon={entry.icon} size={14} /> : undefined}
                   onClick={() => setPane({ field: entry.field, kind: 'field' })}
                 />
               ))}

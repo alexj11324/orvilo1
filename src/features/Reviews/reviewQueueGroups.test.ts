@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { reviewQueueGroups, type ReviewQueueItem } from './reviewQueueGroups';
+import {
+  inProductReviewsCount,
+  reviewQueueGroups,
+  type ReviewQueueItem,
+} from './reviewQueueGroups';
 
 const item = (over: Partial<ReviewQueueItem>): ReviewQueueItem => ({
   additions: 0,
@@ -71,5 +75,82 @@ describe('reviewQueueGroups', () => {
       viewer: null,
     });
     expect(groups.map((group) => group.key)).toEqual(['pull-requests']);
+  });
+
+  it('matches author to viewer case-insensitively (GitHub logins)', () => {
+    const groups = reviewQueueGroups(
+      [item({ author: 'OctoCat', number: 1 }), item({ author: 'hubot', number: 2 })],
+      { tab: 'for-me', viewer: 'octocat' },
+    );
+    expect(groups.map((group) => group.key)).toEqual(['pull-requests', 'created-by-you']);
+    expect(groups[0]?.items.map((row) => row.number)).toEqual([2]);
+    expect(groups[1]?.items.map((row) => row.number)).toEqual([1]);
+  });
+});
+
+describe('inProductReviewsCount', () => {
+  const group = (tasks: number, total?: number) => ({
+    tasks: Array.from({ length: tasks }, (_, index) => index),
+    total,
+  });
+
+  it('is undefined until the first response lands', () => {
+    expect(
+      inProductReviewsCount({
+        externalCount: 0,
+        groups: [],
+        loaded: false,
+        loadedTaskCount: 0,
+        total: undefined,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('prefers the server task total plus external reviews', () => {
+    expect(
+      inProductReviewsCount({
+        externalCount: 2,
+        groups: [group(3, 3)],
+        loaded: true,
+        loadedTaskCount: 3,
+        total: 40,
+      }),
+    ).toBe(42);
+  });
+
+  it('falls back to the summed merged-group counts so tail-loaded buckets count', () => {
+    expect(
+      inProductReviewsCount({
+        externalCount: 1,
+        groups: [group(30, 50), group(10)],
+        loaded: true,
+        loadedTaskCount: 40,
+        total: undefined,
+      }),
+    ).toBe(61);
+  });
+
+  it('falls back to the loaded task count for an ungrouped result', () => {
+    expect(
+      inProductReviewsCount({
+        externalCount: 0,
+        groups: [],
+        loaded: true,
+        loadedTaskCount: 7,
+        total: undefined,
+      }),
+    ).toBe(7);
+  });
+
+  it('keeps a real zero total instead of dropping to the fallback', () => {
+    expect(
+      inProductReviewsCount({
+        externalCount: 3,
+        groups: [],
+        loaded: true,
+        loadedTaskCount: 0,
+        total: 0,
+      }),
+    ).toBe(3);
   });
 });

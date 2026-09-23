@@ -5,7 +5,7 @@ import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
@@ -25,6 +25,7 @@ import { mergeWorkQueryGroups } from '../MyWork/workQueryPaging';
 import WorkQueryResults from '../MyWork/WorkQueryResults';
 import ReviewPullRequestPage from './ReviewPullRequestPage';
 import {
+  inProductReviewsCount,
   REVIEW_QUEUE_GROUP_LABEL_KEYS,
   reviewQueueGroups,
   type ReviewQueueItem,
@@ -190,6 +191,7 @@ const PullRequestRow = memo<{
       </Flexbox>
       {item.isDraft ? (
         <Icon
+          aria-label={t('reviews.state.draft')}
           className={styles.draftIcon}
           icon={SquarePenIcon}
           size={14}
@@ -215,29 +217,38 @@ PullRequestRow.displayName = 'PullRequestRow';
 
 /**
  * Sticky, collapsible queue group header — the same disclosure pattern as
- * `WorkQueryStatusGroup` (chevron + aria-expanded), minus the status glyph.
- * Reference review groups carry no count; `count` exists only for our extra
- * `In-product approvals` section so its header reports the same aggregate
- * its inner status groups display per bucket. No memo: children are fresh
- * JSX each render, so a memo wrapper would never hit.
+ * `WorkQueryStatusGroup` (chevron + aria-expanded) and `ProjectSidePanel`
+ * (`aria-controls` + a `hidden` region so the controlled element stays
+ * addressable while folded). Reference review groups carry no count; `count`
+ * exists only for our extra `In-product approvals` section so its header
+ * reports the same aggregate its inner status groups display per bucket.
+ * Controlled: the page owns collapse state keyed by group so a tab switch
+ * (which swaps the whole queue branch) or a fallback↔populated swap does
+ * not reset it. No memo: children are fresh JSX each render, so a memo
+ * wrapper would never hit.
  */
 const QueueGroup = ({
   children,
+  collapsed,
   count,
   label,
+  onToggle,
 }: {
   children: ReactNode;
+  collapsed: boolean;
   count?: number;
   label: string;
+  onToggle: () => void;
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const regionId = useId();
   return (
-    <Flexbox gap={4}>
+    <Flexbox gap={collapsed ? 0 : 4}>
       <button
+        aria-controls={regionId}
         aria-expanded={!collapsed}
         className={styles.queueHeading}
         type={'button'}
-        onClick={() => setCollapsed((current) => !current)}
+        onClick={onToggle}
       >
         <ChevronDownIcon
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
@@ -252,7 +263,9 @@ const QueueGroup = ({
           </Text>
         ) : null}
       </button>
-      {collapsed ? null : children}
+      <div hidden={collapsed} id={regionId}>
+        {children}
+      </div>
     </Flexbox>
   );
 };
@@ -373,12 +386,32 @@ const ReviewsPage = memo(() => {
   const tasks = data?.data.tasks ?? [];
   const externalReviews = data?.data.externalReviews ?? [];
   const taskReviewError = error;
-  // Aggregate of the whole in-product block (task query total + non-task
-  // external approvals) so the collapsible header matches the per-bucket
-  // counts its inner status groups already show.
-  const inProductCount = data
-    ? (data.data.total ?? tasks.length) + externalReviews.length
-    : undefined;
+  // Aggregate of the whole in-product block so the collapsible header
+  // matches the per-bucket counts its inner status groups already show —
+  // the merged-groups sum is the fallback when the contract drops `total`,
+  // so tail-loaded buckets still count.
+  const inProductCount = inProductReviewsCount({
+    externalCount: externalReviews.length,
+    groups,
+    loaded: Boolean(data),
+    loadedTaskCount: tasks.length,
+    total: data?.data.total,
+  });
+  // Group collapse is owned here, keyed by group key: a tab switch swaps the
+  // whole queue branch (fallback ↔ populated groups), and mounted-local
+  // state would reset with it.
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
+  const toggleQueueGroup = useCallback((key: string) => {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
 
   const listPane = (
     <div className={styles.list}>
@@ -408,9 +441,12 @@ const ReviewsPage = memo(() => {
           {queue.isLoading || notConnected || queue.error || allPullRequests.length === 0 ? (
             /* A single fallback group keeps the header visible — and
                collapsible — over loading / disconnected / error / empty
-               queue states. */
+               queue states. Its key matches the bucket it stands in for, so
+               folding `Pull requests` while empty stays folded once filled. */
             <QueueGroup
+              collapsed={collapsedGroups.has(tab === 'created' ? 'open' : 'pull-requests')}
               label={t(tab === 'created' ? 'reviews.state.open' : 'reviews.pullRequests')}
+              onToggle={() => toggleQueueGroup(tab === 'created' ? 'open' : 'pull-requests')}
             >
               {queue.isLoading ? (
                 <SkeletonList />
@@ -424,7 +460,12 @@ const ReviewsPage = memo(() => {
               ) : queue.error ? (
                 <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
               ) : (
-                <Empty description={t('reviews.queueEmpty')} icon={GitPullRequestIcon} />
+                <Empty
+                  icon={GitPullRequestIcon}
+                  description={t(
+                    tab === 'created' ? 'reviews.queueEmptyCreated' : 'reviews.queueEmpty',
+                  )}
+                />
               )}
             </QueueGroup>
           ) : (
@@ -432,8 +473,10 @@ const ReviewsPage = memo(() => {
               <Flexbox gap={8}>
                 {queueGroups.map((group) => (
                   <QueueGroup
+                    collapsed={collapsedGroups.has(group.key)}
                     key={group.key}
-                    label={String(t(REVIEW_QUEUE_GROUP_LABEL_KEYS[group.key] as never))}
+                    label={t(REVIEW_QUEUE_GROUP_LABEL_KEYS[group.key])}
+                    onToggle={() => toggleQueueGroup(group.key)}
                   >
                     <Flexbox>
                       {group.items.map((item) => (
@@ -474,7 +517,12 @@ const ReviewsPage = memo(() => {
             </Flexbox>
           )}
 
-          <QueueGroup count={inProductCount} label={t('reviews.inProductReviews')}>
+          <QueueGroup
+            collapsed={collapsedGroups.has('in-product')}
+            count={inProductCount}
+            label={t('reviews.inProductReviews')}
+            onToggle={() => toggleQueueGroup('in-product')}
+          >
             {taskReviewError && tasks.length === 0 && externalReviews.length === 0 ? (
               <AsyncError
                 error={taskReviewError}
@@ -518,13 +566,12 @@ const ReviewsPage = memo(() => {
       <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
     </Center>
   ) : (
+    /* Reference shows a single `N reviews` line under the illustration —
+       the queue total for the active tab is the closest count we own. */
     <Center className={styles.detailEmpty} gap={8}>
       <Icon icon={GitPullRequestIcon} size={44} />
       <Text fontSize={13} type={'secondary'}>
-        {queueTotal ?? allPullRequests.length}
-      </Text>
-      <Text fontSize={13} type={'secondary'}>
-        {t('reviews.pullRequests')}
+        {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
       </Text>
     </Center>
   );

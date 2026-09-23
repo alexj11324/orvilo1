@@ -124,7 +124,7 @@ describe('project milestone link migration', () => {
       await applyMigration(client);
       await client.exec(`
         INSERT INTO "projects" ("id") VALUES ('p1');
-        INSERT INTO "project_milestones" ("id", "project_id") VALUES ('${MILESTONE_ID}', 'p1');
+        INSERT INTO "project_milestones" ("id", "project_id", "name") VALUES ('${MILESTONE_ID}', 'p1', 'm1');
         INSERT INTO "tasks" ("id", "project_id", "project_milestone_id")
           VALUES ('t1', 'p1', '${MILESTONE_ID}');
       `);
@@ -161,7 +161,7 @@ describe('project milestone link migration', () => {
       await applyMigration(client);
       await client.exec(`
         INSERT INTO "projects" ("id") VALUES ('p1');
-        INSERT INTO "project_milestones" ("id", "project_id") VALUES ('${MILESTONE_ID}', 'p1');
+        INSERT INTO "project_milestones" ("id", "project_id", "name") VALUES ('${MILESTONE_ID}', 'p1', 'm1');
         INSERT INTO "tasks" ("id", "project_id", "project_milestone_id")
           VALUES ('t1', 'p1', '${MILESTONE_ID}');
       `);

@@ -1,0 +1,185 @@
+{
+  "missingCand": [],
+  "rows": [
+    {
+      "name": "team-issues",
+      "score": 310,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 1,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 82,
+      "missingSections": 24,
+      "dataMissing": 88
+    },
+    {
+      "name": "inbox",
+      "score": 283,
+      "summary": {
+        "matched": 7,
+        "missingInCandidate": 0,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 98,
+      "missingSections": 25,
+      "dataMissing": 16
+    },
+    {
+      "name": "project-issues",
+      "score": 271,
+      "summary": {
+        "matched": 7,
+        "missingInCandidate": 0,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 94,
+      "missingSections": 25,
+      "dataMissing": 26
+    },
+    {
+      "name": "my-issues",
+      "score": 264,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 0,
+        "extraInCandidate": 1
+      },
+      "styleDeltaCount": 92,
+      "missingSections": 23,
+      "dataMissing": 28
+    },
+    {
+      "name": "reviews",
+      "score": 246,
+      "summary": {
+        "matched": 7,
+        "missingInCandidate": 0,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 100,
+      "missingSections": 19,
+      "dataMissing": 1
+    },
+    {
+      "name": "project-overview",
+      "score": 229,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 1,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 80,
+      "missingSections": 25,
+      "dataMissing": 9
+    },
+    {
+      "name": "team-home",
+      "score": 218,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 0,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 82,
+      "missingSections": 23,
+      "dataMissing": 2
+    },
+    {
+      "name": "issue-detail",
+      "score": 215,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 1,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 75,
+      "missingSections": 23,
+      "dataMissing": 9
+    },
+    {
+      "name": "projects-list",
+      "score": 214,
+      "summary": {
+        "matched": 5,
+        "missingInCandidate": 0,
+        "extraInCandidate": 1
+      },
+      "styleDeltaCount": 73,
+      "missingSections": 25,
+      "dataMissing": 11
+    },
+    {
+      "name": "members",
+      "score": 213,
+      "summary": {
+        "matched": 5,
+        "missingInCandidate": 0,
+        "extraInCandidate": 1
+      },
+      "styleDeltaCount": 68,
+      "missingSections": 25,
+      "dataMissing": 2
+    },
+    {
+      "name": "team-projects",
+      "score": 213,
+      "summary": {
+        "matched": 5,
+        "missingInCandidate": 1,
+        "extraInCandidate": 1
+      },
+      "styleDeltaCount": 70,
+      "missingSections": 25,
+      "dataMissing": 8
+    },
+    {
+      "name": "team-views",
+      "score": 206,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 0,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 81,
+      "missingSections": 18,
+      "dataMissing": 2
+    },
+    {
+      "name": "team-triage",
+      "score": 202,
+      "summary": {
+        "matched": 6,
+        "missingInCandidate": 0,
+        "extraInCandidate": 0
+      },
+      "styleDeltaCount": 80,
+      "missingSections": 17,
+      "dataMissing": 2
+    },
+    {
+      "name": "views-directory",
+      "score": 175,
+      "summary": {
+        "matched": 5,
+        "missingInCandidate": 0,
+        "extraInCandidate": 2
+      },
+      "styleDeltaCount": 63,
+      "missingSections": 21,
+      "dataMissing": 2
+    },
+    {
+      "name": "drafts",
+      "score": 147,
+      "summary": {
+        "matched": 4,
+        "missingInCandidate": 0,
+        "extraInCandidate": 2
+      },
+      "styleDeltaCount": 49,
+      "missingSections": 21,
+      "dataMissing": 3
+    }
+  ]
+}

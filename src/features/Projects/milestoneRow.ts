@@ -43,8 +43,10 @@ export const MILESTONE_ICON_SIZE = 16;
 /**
  * In-page landing spot for a milestone. The overview row carries this as its
  * `id`, and the overview glyph points at it. The rail also appears beside
- * the overview; its row is not a navigation target. Its separate See issues
- * control and the overview progress link open the milestone-filtered list.
+ * the overview; its row is not a navigation target. Of the two issues
+ * affordances, the overview progress link opens the milestone-filtered list
+ * while the rail's hover-only See issues opens the project's unfiltered
+ * issues — the same split the reference was measured with.
  */
 export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milestoneId}`;
 

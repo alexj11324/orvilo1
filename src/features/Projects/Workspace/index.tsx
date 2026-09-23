@@ -19,6 +19,8 @@ import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
 import { projectService } from '@/services/project';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -110,6 +112,33 @@ const styles = createStaticStyles(({ css }) => ({
       opacity: 0.6;
     }
   `,
+  /* The reference's fifth property chip is the project's team: a 28px pill
+     carrying the team's accent glyph (14px) and name, and it is a real
+     navigation target. Ours links to the team page — the destination this
+     codebase already gives a team everywhere else. */
+  teamChip: css`
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 6px;
+    border-radius: 9999px;
+
+    font-size: 13px;
+    font-weight: 500;
+    color: ${cssVar.colorText};
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: none;
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+    }
+  `,
 }));
 
 const editableStatuses = [
@@ -147,6 +176,7 @@ const ProjectWorkspace = memo(() => {
 
   const project = detail.project;
   const projectReference = project.slug ?? projectId!;
+  const teams = detail.teams ?? [];
 
   const statusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(project.status)];
   const knowledgeBases = detail.knowledgeBases ?? [];
@@ -209,7 +239,9 @@ const ProjectWorkspace = memo(() => {
             </Flexbox>
 
             <Flexbox horizontal align={'center'} gap={16}>
-              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 72 }}>
+              {/* Label column: the reference sizes one shared grid column by
+                  the widest label — "Resources" at 65.4766px (≈65.5). */}
+              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 65.5 }}>
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </Text>
               <Flexbox horizontal align={'center'} className={styles.properties} wrap={'wrap'}>
@@ -229,19 +261,25 @@ const ProjectWorkspace = memo(() => {
                 <ProjectDateField inline kind="startDate" project={project} />
                 <Icon aria-hidden icon={ArrowRightIcon} size={16} />
                 <ProjectDateField inline kind="targetDate" project={project} />
+                {teams.map((team) => (
+                  <WorkspaceLink className={styles.teamChip} key={team.id} to={`/teams/${team.id}`}>
+                    <TeamIdentity
+                      color={team.color}
+                      id={team.id}
+                      letter={(team.key || team.name).slice(0, 1)}
+                      size={14}
+                    />
+                    {team.name}
+                  </WorkspaceLink>
+                ))}
                 {membersEnabled && (
                   <ProjectMembersField projectId={project.id} query={membersSWR} />
                 )}
-                <Tag shape={'round'} size={'small'}>
-                  {t(`properties.visibilityValue.${project.visibility}`, {
-                    defaultValue: project.visibility,
-                  })}
-                </Tag>
               </Flexbox>
             </Flexbox>
 
             <Flexbox horizontal align={'center'} gap={16}>
-              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 72 }}>
+              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 65.5 }}>
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
               </Text>
               <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>

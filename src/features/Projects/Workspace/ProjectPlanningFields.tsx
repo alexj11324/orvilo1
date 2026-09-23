@@ -3,7 +3,13 @@ import { Select, Tabs, toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { CalendarDaysIcon, CalendarIcon, TagIcon, UserRoundIcon } from 'lucide-react';
+import {
+  ArrowRightIcon,
+  CalendarDaysIcon,
+  CalendarIcon,
+  TagIcon,
+  UserRoundIcon,
+} from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -88,7 +94,12 @@ const styles = createStaticStyles(({ css }) => ({
       font-weight: 500 !important;
     }
   `,
-  inlineDate: css`
+  /* A date control whose calendar glyph leads the text instead of trailing
+     it, and whose input hugs its content. Shared by the overview's inline
+     chip and the rail's `Dates` row — the reference puts a 16px icon inside
+     each of those buttons (text offset +30px = the icon's lane) rather than
+     antd's trailing suffix. */
+  leadingIconDate: css`
     border-radius: 8px;
 
     .ant-picker-input {
@@ -315,9 +326,9 @@ export function ProjectDateField({
       value={project[kind] ? dayjs(project[kind]) : null}
       className={
         inline
-          ? `${styles.field} ${styles.inline} ${styles.inlineDate}`
+          ? `${styles.field} ${styles.inline} ${styles.leadingIconDate}`
           : fitContent
-            ? styles.field
+            ? `${styles.field} ${styles.leadingIconDate}`
             : `${styles.field} ${styles.date}`
       }
       panelRender={(panel) => (
@@ -338,7 +349,7 @@ export function ProjectDateField({
         </>
       )}
       suffixIcon={
-        inline ? (
+        inline || fitContent ? (
           <Icon icon={kind === 'startDate' ? CalendarDaysIcon : CalendarIcon} size={16} />
         ) : null
       }
@@ -371,9 +382,11 @@ export function ProjectDateFields({ project }: { project: ProjectDetail['project
   return (
     // No `wrap`: the reference keeps `Dates` on one line, and content-sized
     // controls leave this row far short of the column (≈175px in 257px).
+    // The separator is a bare 16px svg arrow on the reference, not a text
+    // glyph — same treatment as the overview's main property row.
     <Flexbox horizontal align="center" gap={4} style={{ minWidth: 0, flex: 1 }}>
       <ProjectDateField fitContent kind="startDate" project={project} />
-      <span aria-hidden>→</span>
+      <Icon aria-hidden icon={ArrowRightIcon} size={16} />
       <ProjectDateField fitContent kind="targetDate" project={project} />
     </Flexbox>
   );

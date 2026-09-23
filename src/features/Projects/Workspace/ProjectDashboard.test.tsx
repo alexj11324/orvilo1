@@ -2,7 +2,7 @@ import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
-import { BoxIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
+import { ArrowRightIcon, BoxIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
 import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
 import { useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,6 +78,8 @@ const mocks = vi.hoisted(() => ({
   // Milestones the mocked project detail resolves to; `[]` by default so the
   // existing empty-state assertions keep their fixture.
   milestones: [] as NonNullable<ProjectDetail['milestones']>,
+  // Same pattern for the project's teams row data.
+  teams: [] as NonNullable<ProjectDetail['teams']>,
   // Rows the mocked project list resolves to; empty unless a test seeds it.
   projectList: [] as ProjectListItem[],
 }));
@@ -243,6 +245,7 @@ vi.mock('@/store/project', () => ({
             status: mocks.projectStatus,
           },
           milestones: mocks.milestones,
+          teams: mocks.teams,
         }
       : undefined;
   },
@@ -371,6 +374,7 @@ beforeEach(() => {
   mocks.tagProps = [];
   mocks.avatarProps = [];
   mocks.milestones = [];
+  mocks.teams = [];
   mocks.projectList = [];
 });
 
@@ -752,12 +756,15 @@ describe('project milestone rows', () => {
     }
   });
 
-  it('keeps the rail row inert and puts the filtered issues behind See issues', () => {
+  it('keeps the rail row inert and puts the unfiltered issues list behind See issues', () => {
     mocks.milestones = [milestoneWithProgress];
     render(<ProjectSidePanel projectId="apollo" />);
 
     // The reference row has no href and `cursor: default`; "go to issues" is a
-    // separate hover-revealed control pointing at the milestone-filtered list.
+    // separate hover-revealed control. Clicked on the reference it lands on
+    // the project's issues with `location.search` EMPTY — the unfiltered
+    // list, not the milestone-filtered one the overview card's progress link
+    // opens (reference-inventory §3.2).
     expect(
       screen.queryByRole('button', { name: new RegExp(milestone.name) }),
     ).not.toBeInTheDocument();
@@ -769,9 +776,9 @@ describe('project milestone rows', () => {
     const seeIssues = screen.getByText('overview.milestoneSeeIssues');
     expect(seeIssues.tagName).toBe('A');
     expect(seeIssues).not.toBeVisible();
-    expect(seeIssues).toHaveAttribute('href', '/project/apollo/tasks?projectMilestoneId=ms_1');
-    // Mirrors the reference's tabindex=-1; keyboard users reach the same list
-    // from the overview card's always-visible progress link.
+    expect(seeIssues).toHaveAttribute('href', '/project/apollo/tasks');
+    // Mirrors the reference's tabindex=-1; keyboard users reach the
+    // milestone-filtered list from the overview card's progress link.
     expect(seeIssues).toHaveAttribute('tabindex', '-1');
   });
 
@@ -926,6 +933,43 @@ describe('project overview inline properties', () => {
     expect(mocks.iconProps.some((props) => props.icon === CalendarDaysIcon)).toBe(true);
     expect(mocks.iconProps.some((props) => props.icon === CalendarIcon)).toBe(true);
   });
+
+  // The reference's property row is Status / Priority / Lead / dates / Teams /
+  // `…` — no visibility chip (reference-inventory §2.2). The candidate had one
+  // extra `Public`/`Private` Tag trailing the row.
+  it('drops the visibility tag from the main property row', () => {
+    render(<ProjectWorkspace />);
+    expect(screen.queryByText(/visibilityValue/)).not.toBeInTheDocument();
+  });
+
+  // The same row's fifth item is a Teams chip on the reference: the team's
+  // accent glyph plus its name, and it is a real navigation target. Ours
+  // links to the team page — the destination this codebase already gives a
+  // team everywhere else.
+  it('links each team chip in the main property row to its team page', () => {
+    mocks.teams = [
+      { id: 'team_1', key: 'ORV', name: 'orvilo' },
+      { id: 'team_2', key: 'ENG', name: 'engineering' },
+    ] as NonNullable<ProjectDetail['teams']>;
+    render(<ProjectWorkspace />);
+
+    expect(screen.getByRole('link', { name: 'orvilo' })).toHaveAttribute('href', '/teams/team_1');
+    expect(screen.getByRole('link', { name: 'engineering' })).toHaveAttribute(
+      'href',
+      '/teams/team_2',
+    );
+  });
+
+  // Both label cells share one grid column on the reference, sized by the
+  // widest label ("Resources") at 65.4766px — not the 72 the candidate used.
+  it('keeps the overview label column at the reference-measured 65.5px', () => {
+    render(<ProjectWorkspace />);
+    for (const label of ['Properties', 'Resources']) {
+      expect(mocks.textProps.find((props) => props.children === label)?.style).toMatchObject({
+        minWidth: 65.5,
+      });
+    }
+  });
 });
 
 // Linear's rail Properties card has exactly eight rows — Status, Priority,
@@ -1033,6 +1077,20 @@ describe('project properties row geometry', () => {
     const cardTokens = new Set((inCard[0] ?? '').split(/\s+/));
     const onlyOnStandalone = standalone.split(/\s+/).filter((token) => !cardTokens.has(token));
     expect(onlyOnStandalone).toHaveLength(1);
+  });
+
+  // On the reference each rail date button carries a leading 16px calendar
+  // glyph (text offset +30 = the icon's lane) and the two controls are split
+  // by a bare 16px svg arrow — not the text `→` the candidate used.
+  it('draws a leading calendar glyph inside each rail date control, split by an svg arrow', () => {
+    render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
+
+    expect(mocks.iconProps.filter((props) => props.icon === CalendarDaysIcon)).toHaveLength(1);
+    expect(mocks.iconProps.filter((props) => props.icon === CalendarIcon)).toHaveLength(1);
+    expect(
+      mocks.iconProps.some((props) => props.icon === ArrowRightIcon && props.size === 16),
+    ).toBe(true);
+    expect(screen.queryByText('→')).not.toBeInTheDocument();
   });
 });
 

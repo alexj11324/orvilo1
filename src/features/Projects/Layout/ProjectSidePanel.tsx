@@ -8,7 +8,6 @@ import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
-import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
@@ -17,7 +16,7 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
-import { getProjectActivityPath } from './navigation';
+import { getProjectActivityPath, getProjectTasksPath } from './navigation';
 import { ProjectIssueProgress } from './ProjectIssueProgress';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -221,11 +220,13 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                 // it kept the destination and one keyboard-reachable role.
                 // The reference has since been measured more closely: its row
                 // carries no href and `cursor: default`, and "go to issues" is
-                // a separate `See issues` control that only appears on hover,
-                // pointing at the milestone-filtered list rather than the whole
-                // project. So the row is now inert and the destination lives on
-                // that control. Keyboard users reach the same filtered list
-                // from the always-visible progress link on the overview card.
+                // a separate `See issues` control that only appears on hover.
+                // Measured on click, that control lands on the project's
+                // issues with `location.search` EMPTY — the unfiltered list,
+                // not a milestone-filtered one (reference-inventory §3.2). So
+                // the row is inert and this link opens `/tasks` plain. The
+                // milestone-filtered list stays reachable from the overview
+                // card's always-visible progress link.
                 <div className={styles.milestoneRow} key={milestone.id}>
                   <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
                   <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
@@ -249,7 +250,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                   <WorkspaceLink
                     className={styles.seeIssues}
                     tabIndex={-1}
-                    to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
+                    to={getProjectTasksPath(projectRef)}
                   >
                     {t('overview.milestoneSeeIssues')}
                   </WorkspaceLink>

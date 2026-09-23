@@ -227,8 +227,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   // on the grouped list; every other collection keeps the board default. A
   // stored value is the user's own choice and always wins.
   const [searchParams, setSearchParams] = useSearchParams();
-  // A project's issues narrowed to one milestone (the overview's progress link
-  // and the rail's See issues). Filtered client-side over the complete list,
+  // A project's issues narrowed to one milestone (the overview's progress
+  // link; the rail's See issues opens the unfiltered list, as measured on
+  // the reference). Filtered client-side over the complete list,
   // so the surface is pinned to that list: the board pages its columns on the
   // server and would show counts for the unfiltered set.
   const milestoneFilterId = projectId ? readProjectMilestoneFilter(searchParams) : undefined;

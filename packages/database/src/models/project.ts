@@ -1254,6 +1254,165 @@ export class ProjectModel {
     });
   }
 
+  /**
+   * Create a milestone inside one of the caller's manageable projects.
+   *
+   * Returns `null` when the project is not the caller's to manage, matching
+   * `setTaskMilestone`. `sortOrder` defaults to one past the current last
+   * milestone so a created row lands at the bottom of the overview list —
+   * the same place Linear's `+ Milestone` button appends.
+   */
+  async createMilestone(
+    projectId: string,
+    input: { date?: string | null; description?: string | null; name: string; sortOrder?: number },
+  ) {
+    const name = input.name.trim();
+    if (!name) throw new Error('Milestone name is required');
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      let sortOrder = input.sortOrder;
+      if (sortOrder === undefined) {
+        const [row] = await tx
+          .select({ value: max(projectMilestones.sortOrder) })
+          .from(projectMilestones)
+          .where(eq(projectMilestones.projectId, projectId));
+        sortOrder = (row?.value ?? -1) + 1;
+      }
+
+      const [milestone] = await tx
+        .insert(projectMilestones)
+        .values({
+          date: input.date ?? null,
+          description: input.description?.trim() || null,
+          name,
+          projectId,
+          sortOrder,
+        })
+        .returning();
+      return milestone ?? null;
+    });
+  }
+
+  /**
+   * Update a milestone's name, description, or target date. `undefined`
+   * leaves a field untouched; `null` clears `description`/`date`.
+   *
+   * Returns `null` when the project is not manageable or the milestone does
+   * not belong to it — a milestone id taken from another project must not
+   * leak its existence, the same read `findManageableById` applies.
+   */
+  async updateMilestone(
+    projectId: string,
+    milestoneId: string,
+    input: { date?: string | null; description?: string | null; name?: string },
+  ) {
+    const name = input.name?.trim();
+    if (name !== undefined && !name) throw new Error('Milestone name is required');
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const [milestone] = await tx
+        .update(projectMilestones)
+        .set({
+          ...(input.date !== undefined ? { date: input.date } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description?.trim() || null }
+            : {}),
+          ...(name !== undefined ? { name } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.projectId, projectId)),
+        )
+        .returning();
+      return milestone ?? null;
+    });
+  }
+
+  /**
+   * Delete a milestone. Tasks linked to it keep their place in the project —
+   * `tasks.projectMilestoneId` is `onDelete: 'set null'`, so they land in the
+   * "No milestone" bucket rather than being removed with the milestone.
+   */
+  async deleteMilestone(projectId: string, milestoneId: string) {
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const deleted = await tx
+        .delete(projectMilestones)
+        .where(
+          and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.projectId, projectId)),
+        )
+        .returning({ id: projectMilestones.id });
+      return deleted.length > 0;
+    });
+  }
+
+  /**
+   * Persist the overview's milestone order. `milestoneIds` must be a full
+   * permutation of the project's milestones — a partial list would leave the
+   * omitted rows sharing stale sort keys, and a foreign id would silently
+   * reorder another project's card. Stale clients get an error, not a
+   * half-applied order.
+   */
+  async reorderMilestones(projectId: string, milestoneIds: string[]) {
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const existing = await tx
+        .select({ id: projectMilestones.id })
+        .from(projectMilestones)
+        .where(eq(projectMilestones.projectId, projectId));
+      const existingIds = new Set(existing.map(({ id }) => id));
+      if (
+        milestoneIds.length !== existingIds.size ||
+        milestoneIds.some((id) => !existingIds.has(id))
+      ) {
+        throw new Error('Milestone order does not match this project');
+      }
+
+      await Promise.all(
+        milestoneIds.map((id, sortOrder) =>
+          tx
+            .update(projectMilestones)
+            .set({ sortOrder, updatedAt: new Date() })
+            .where(and(eq(projectMilestones.id, id), eq(projectMilestones.projectId, projectId))),
+        ),
+      );
+
+      return tx
+        .select()
+        .from(projectMilestones)
+        .where(eq(projectMilestones.projectId, projectId))
+        .orderBy(asc(projectMilestones.sortOrder));
+    });
+  }
+
   async getEnabledKnowledgeBaseIdsForTask(taskId: string) {
     const [task] = await this.db
       .select({ projectId: tasks.projectId })

@@ -1,65 +1,17 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { DiamondIcon } from 'lucide-react';
+import { Flexbox } from '@lobehub/ui';
+import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
-import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
-import {
-  getMilestoneAnchorId,
-  MILESTONE_ICON_PAINT,
-  MILESTONE_ICON_SIZE,
-  scrollToMilestoneAnchor,
-} from '@/features/Projects/milestoneRow';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
-import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectDetail } from '@/store/project';
+
+import ProjectMilestones from './ProjectMilestones';
 
 const styles = createStaticStyles(({ css }) => ({
   main: css`
     min-width: 0;
     margin-block-start: 24px;
-  `,
-  milestone: css`
-    padding-block: 6px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: 0;
-    }
-  `,
-  milestoneIconLink: css`
-    display: flex;
-    flex: none;
-    color: inherit;
-  `,
-  milestoneProgress: css`
-    /* Reference: <a href="…/issues?projectMilestoneId=<id>">N issues · 100%</a>,
-       13px/450, a 28px-tall hit area at the end of the milestone row. */
-    display: flex;
-    flex: none;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border-radius: 6px;
-
-    font-size: 13px;
-    font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  section: css`
-    padding-block: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
 }));
 
@@ -74,65 +26,9 @@ interface ProjectDashboardProps {
  * live on their own pages/tabs, not on the overview.
  */
 const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
-  const { t } = useTranslation('project');
-  const milestones = detail.milestones ?? [];
-  const projectRef = detail.project.slug || detail.project.id;
-
   return (
     <Flexbox className={styles.main} gap={24}>
-      <Flexbox className={styles.section} gap={10}>
-        <Flexbox horizontal align={'center'} gap={7}>
-          <Text {...SECTION_LABEL_PROPS}>{t('overview.milestones')}</Text>
-        </Flexbox>
-        {milestones.length === 0 ? (
-          <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
-            {t('overview.milestonesEmpty')}
-          </Text>
-        ) : (
-          <Flexbox gap={0}>
-            {milestones.map((milestone) => (
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.milestone}
-                gap={10}
-                id={getMilestoneAnchorId(milestone.id)}
-                key={milestone.id}
-              >
-                <a
-                  aria-label={milestone.name}
-                  className={styles.milestoneIconLink}
-                  href={`#${getMilestoneAnchorId(milestone.id)}`}
-                  onClick={() => scrollToMilestoneAnchor(milestone.id)}
-                >
-                  <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
-                </a>
-                <Text ellipsis fontSize={15} style={{ flex: 1, minWidth: 0 }} weight={450}>
-                  {milestone.name}
-                </Text>
-                {milestone.date && (
-                  <Text fontSize={12} type={'secondary'}>
-                    {formatProjectDate(milestone.date)}
-                  </Text>
-                )}
-                {/* A `null` readout could not be computed honestly; the link
-                    and its number land together or not at all. */}
-                {milestone.progress && (
-                  <WorkspaceLink
-                    className={styles.milestoneProgress}
-                    to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
-                  >
-                    {t('overview.milestoneIssues', {
-                      count: milestone.progress.issues,
-                      percent: milestone.progress.percent,
-                    })}
-                  </WorkspaceLink>
-                )}
-              </Flexbox>
-            ))}
-          </Flexbox>
-        )}
-      </Flexbox>
+      <ProjectMilestones detail={detail} />
     </Flexbox>
   );
 });

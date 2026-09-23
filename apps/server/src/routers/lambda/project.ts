@@ -495,12 +495,86 @@ export const projectRouter = router({
       }
     }),
 
+  createMilestone: projectWriteProcedure
+    .input(
+      idInput.extend({
+        date: z.iso.date().nullish(),
+        description: z.string().max(10_000).nullish(),
+        name: z.string().trim().min(1).max(255),
+        sortOrder: z.number().int().min(0).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input: { id, ...input } }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(id));
+        return {
+          data: requireResult(await ctx.projectModel.createMilestone(project.id, input)),
+          message: 'Milestone created',
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'createMilestone');
+      }
+    }),
+
+  updateMilestone: projectWriteProcedure
+    .input(
+      idInput.extend({
+        date: z.iso.date().nullish(),
+        description: z.string().max(10_000).nullish(),
+        milestoneId: z.uuid(),
+        name: z.string().trim().min(1).max(255).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input: { id, milestoneId, ...input } }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.updateMilestone(project.id, milestoneId, input),
+          ),
+          message: 'Milestone updated',
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'updateMilestone');
+      }
+    }),
+
+  deleteMilestone: projectWriteProcedure
+    .input(idInput.extend({ milestoneId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        const removed = await ctx.projectModel.deleteMilestone(project.id, input.milestoneId);
+        if (!removed) throw new TRPCError({ code: 'NOT_FOUND', message: 'Milestone not found' });
+        return { message: 'Milestone deleted', success: true };
+      } catch (error) {
+        mapProjectError(error, 'deleteMilestone');
+      }
+    }),
+
+  reorderMilestones: projectWriteProcedure
+    .input(idInput.extend({ milestoneIds: z.array(z.uuid()).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.reorderMilestones(project.id, input.milestoneIds),
+          ),
+          message: 'Milestones reordered',
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'reorderMilestones');
+      }
+    }),
+
   /**
    * Attach a task to one of this project's milestones, or detach it with
-   * `milestoneId: null`. No UI sets a milestone yet: the issue-side control
-   * that would belongs with the filterable issue list, which is still to be
-   * built. Until then this is the programmatic path to the association that
-   * `detail` already serves a readout for.
+   * `milestoneId: null`. The overview's "No milestone" row calls this to file
+   * an unassigned issue under a milestone; the same path clears the link.
    */
   setTaskMilestone: projectWriteProcedure
     .input(idInput.extend({ milestoneId: z.uuid().nullable(), taskId: z.string().min(1) }))

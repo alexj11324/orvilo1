@@ -263,3 +263,174 @@ describe('ProjectModel milestone progress', () => {
     });
   });
 });
+
+describe('ProjectModel milestone CRUD', () => {
+  const model = new ProjectModel(serverDB, userId);
+  const otherModel = new ProjectModel(serverDB, otherUserId);
+
+  beforeEach(async () => {
+    await serverDB.delete(users);
+    await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
+  });
+
+  afterEach(async () => {
+    await serverDB.delete(users);
+  });
+
+  it('creates a milestone at the bottom of the overview order', async () => {
+    const project = await model.create({
+      identifier: `M${String(++projectSequence).padStart(5, '0')}`,
+      milestones: [{ name: 'M1' }, { name: 'M2' }],
+      name: 'Milestone project',
+    });
+
+    const created = await model.createMilestone(project.id, {
+      date: '2026-12-01',
+      description: '  Cut the release  ',
+      name: 'M3',
+    });
+
+    expect(created).toMatchObject({
+      date: '2026-12-01',
+      description: 'Cut the release',
+      name: 'M3',
+      projectId: project.id,
+    });
+    const planning = await model.getPlanning(project.id);
+    expect(planning?.milestones.map((row) => row.name)).toEqual(['M1', 'M2', 'M3']);
+    expect(planning?.milestones[2].sortOrder).toBeGreaterThan(planning!.milestones[1].sortOrder);
+  });
+
+  it('honours an explicit sortOrder when creating', async () => {
+    const project = await model.create({
+      identifier: `M${String(++projectSequence).padStart(5, '0')}`,
+      milestones: [{ name: 'M1' }],
+      name: 'Milestone project',
+    });
+
+    await model.createMilestone(project.id, { name: 'Front', sortOrder: -1 });
+
+    const planning = await model.getPlanning(project.id);
+    expect(planning?.milestones.map((row) => row.name)).toEqual(['Front', 'M1']);
+  });
+
+  it('rejects a blank name instead of writing an anonymous row', async () => {
+    const project = await model.create({
+      identifier: `M${String(++projectSequence).padStart(5, '0')}`,
+      name: 'Milestone project',
+    });
+
+    await expect(model.createMilestone(project.id, { name: '   ' })).rejects.toThrow(
+      'Milestone name is required',
+    );
+    expect(await model.getPlanning(project.id)).toMatchObject({ milestones: [] });
+  });
+
+  it('updates only the fields it is given and clears the rest on null', async () => {
+    const { milestoneId, project } = await createProjectWithMilestone(model);
+    await model.updateMilestone(project.id, milestoneId, {
+      date: '2026-11-05',
+      description: 'Scoped',
+      name: 'Renamed',
+    });
+
+    const planning = await model.getPlanning(project.id);
+    expect(planning?.milestones[0]).toMatchObject({
+      date: '2026-11-05',
+      description: 'Scoped',
+      name: 'Renamed',
+    });
+
+    // `undefined` leaves a field alone; `null` clears it.
+    await model.updateMilestone(project.id, milestoneId, { description: null });
+    expect((await model.getPlanning(project.id))?.milestones[0]).toMatchObject({
+      date: '2026-11-05',
+      description: null,
+      name: 'Renamed',
+    });
+    await model.updateMilestone(project.id, milestoneId, { date: null });
+    expect((await model.getPlanning(project.id))?.milestones[0].date).toBeNull();
+  });
+
+  it('refuses a rename to a blank name', async () => {
+    const { milestoneId, project } = await createProjectWithMilestone(model);
+
+    await expect(model.updateMilestone(project.id, milestoneId, { name: '  ' })).rejects.toThrow(
+      'Milestone name is required',
+    );
+    expect((await model.getPlanning(project.id))?.milestones[0].name).toBe('M1');
+  });
+
+  it('does not let a non-owner create, update, delete or reorder milestones', async () => {
+    const { milestoneId, project } = await createProjectWithMilestone(model);
+
+    expect(await otherModel.createMilestone(project.id, { name: 'Nope' })).toBeNull();
+    expect(await otherModel.updateMilestone(project.id, milestoneId, { name: 'Nope' })).toBeNull();
+    expect(await otherModel.deleteMilestone(project.id, milestoneId)).toBeNull();
+    expect(await otherModel.reorderMilestones(project.id, [milestoneId])).toBeNull();
+    expect((await model.getPlanning(project.id))?.milestones[0].name).toBe('M1');
+  });
+
+  it('does not leak a milestone id borrowed from another project', async () => {
+    const owner = await createProjectWithMilestone(model, 'Owner');
+    const foreign = await createProjectWithMilestone(model, 'Foreign');
+
+    expect(
+      await model.updateMilestone(owner.project.id, foreign.milestoneId, { name: 'Nope' }),
+    ).toBeNull();
+    expect(await model.deleteMilestone(owner.project.id, foreign.milestoneId)).toBe(false);
+    expect((await model.getPlanning(foreign.project.id))?.milestones[0].name).toBe('M1');
+  });
+
+  it('deletes a milestone and leaves its tasks in the project, unlinked', async () => {
+    const { milestoneId, project } = await createProjectWithMilestone(model);
+    const tasks = new TaskModel(serverDB, userId);
+    const task = await tasks.create({ instruction: 'Keep me', projectId: project.id });
+    await model.setTaskMilestone({ milestoneId, projectId: project.id, taskId: task.id });
+
+    expect(await model.deleteMilestone(project.id, milestoneId)).toBe(true);
+
+    expect((await model.getPlanning(project.id))?.milestones).toEqual([]);
+    // `onDelete: 'set null'` — the task survives in the "No milestone" bucket.
+    expect(await model.listTasks(project.id)).toEqual([
+      expect.objectContaining({ id: task.id, projectMilestoneId: null }),
+    ]);
+  });
+
+  it('returns false for a milestone that does not exist', async () => {
+    const { project } = await createProjectWithMilestone(model);
+
+    expect(await model.deleteMilestone(project.id, '00000000-0000-0000-0000-000000000000')).toBe(
+      false,
+    );
+  });
+
+  it('persists a full reordered permutation and rejects a partial one', async () => {
+    const project = await model.create({
+      identifier: `M${String(++projectSequence).padStart(5, '0')}`,
+      milestones: [{ name: 'M1' }, { name: 'M2' }, { name: 'M3' }],
+      name: 'Milestone project',
+    });
+    const ids = (await model.getPlanning(project.id))!.milestones.map((row) => row.id);
+
+    const reordered = await model.reorderMilestones(project.id, [ids[2], ids[0], ids[1]]);
+    expect(reordered?.map((row) => row.id)).toEqual([ids[2], ids[0], ids[1]]);
+    expect((await model.getPlanning(project.id))?.milestones.map((row) => row.name)).toEqual([
+      'M3',
+      'M1',
+      'M2',
+    ]);
+
+    await expect(model.reorderMilestones(project.id, [ids[0]])).rejects.toThrow(
+      'Milestone order does not match this project',
+    );
+    await expect(
+      model.reorderMilestones(project.id, [...ids, '00000000-0000-0000-0000-000000000000']),
+    ).rejects.toThrow('Milestone order does not match this project');
+    expect((await model.getPlanning(project.id))?.milestones.map((row) => row.name)).toEqual([
+      'M3',
+      'M1',
+      'M2',
+    ]);
+  });
+});

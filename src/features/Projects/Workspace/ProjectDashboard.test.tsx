@@ -2,9 +2,10 @@ import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
+import dayjs from 'dayjs';
 import { ArrowRightIcon, BoxIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
 import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
-import { useState, useSyncExternalStore } from 'react';
+import { act, useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
@@ -78,6 +79,29 @@ const mocks = vi.hoisted(() => ({
   // Milestones the mocked project detail resolves to; `[]` by default so the
   // existing empty-state assertions keep their fixture.
   milestones: [] as NonNullable<ProjectDetail['milestones']>,
+  // Project-detail tasks feed the "No milestone" bucket.
+  detailTasks: [] as NonNullable<ProjectDetail['tasks']>,
+  // Milestone store actions, spied so writes can be asserted directly.
+  createMilestone: vi.fn(),
+  updateMilestone: vi.fn(),
+  deleteMilestone: vi.fn(),
+  reorderMilestones: vi.fn(),
+  setTaskMilestone: vi.fn(),
+  // The imperative confirm dialog, captured the way
+  // `useFileItemDropdown.test.tsx` does: assert the config, then invoke `onOk`.
+  confirmModal: vi.fn(),
+  toastError: vi.fn(),
+  // Props every `DatePicker` rendered with, so a test can fire `onChange`
+  // directly — driving the real antd calendar grid in jsdom is not practical.
+  datePickerProps: [] as Record<string, unknown>[],
+  // The last `SortableList` render's props, so a test can fire `onChange`
+  // with a reordered list without simulating dnd-kit pointer drags.
+  sortableProps: undefined as
+    | {
+        items: { id: string }[];
+        onChange: (items: { id: string }[]) => void;
+      }
+    | undefined,
   // Same pattern for the project's teams row data.
   teams: [] as NonNullable<ProjectDetail['teams']>,
   // Rows the mocked project list resolves to; empty unless a test seeds it.
@@ -86,43 +110,99 @@ const mocks = vi.hoisted(() => ({
 
 // Only the dashboard/panel components are under test; shell components are
 // stand-ins so the assertions read the data, not markup details.
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Block: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Empty: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
-  Flexbox: (props: { children?: ReactNode } & HTMLAttributes<HTMLDivElement>) => {
-    const { children, ...rest } = props;
-    return (
-      <div
-        {...rest}
-        ref={(node) => {
-          if (node) mocks.flexboxProps.set(node, props as Record<string, unknown>);
-        }}
-      >
-        {children}
-      </div>
-    );
-  },
-  Icon: (props: Record<string, unknown>) => {
-    mocks.iconProps.push(props);
-    return null;
-  },
-  Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
-  TextArea: () => <textarea />,
-}));
+vi.mock('@lobehub/ui', async (importOriginal) => {
+  const original = await importOriginal<Record<string, unknown>>();
+  // The real picker stays mounted — planning-field tests read `.ant-picker`
+  // classes off it — but its props are captured so a test can fire `onChange`
+  // with a dayjs directly instead of clicking through the calendar grid.
+  const CapturedDatePicker = Object.assign((props: Record<string, unknown>) => {
+    mocks.datePickerProps.push(props);
+    const Real = original.DatePicker as unknown as (props: Record<string, unknown>) => ReactNode;
+    return <Real {...props} />;
+  }, original.DatePicker as object);
+  // dnd-kit pointer drags cannot be simulated in jsdom; the stub renders the
+  // same children and records `items`/`onChange` for the reorder test.
+  const StubSortableList = Object.assign(
+    (props: {
+      items: { id: string }[];
+      onChange: (items: { id: string }[]) => void;
+      renderItem: (item: { id: string }) => ReactNode;
+    }) => {
+      mocks.sortableProps = props;
+      return (
+        <ul>
+          {props.items.map((item) => (
+            <li key={item.id}>{props.renderItem(item)}</li>
+          ))}
+        </ul>
+      );
+    },
+    {
+      DragHandle: (props: Record<string, unknown>) => (
+        <button
+          aria-label={props['aria-label'] as string}
+          className={props.className as string}
+          type="button"
+        />
+      ),
+      Item: ({ children }: { children?: ReactNode }) => children,
+    },
+  );
+  return {
+    ...original,
+    Block: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    DatePicker: CapturedDatePicker,
+    Empty: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
+    Flexbox: (props: { children?: ReactNode } & HTMLAttributes<HTMLDivElement>) => {
+      const { children, ...rest } = props;
+      return (
+        <div
+          {...rest}
+          ref={(node) => {
+            if (node) mocks.flexboxProps.set(node, props as Record<string, unknown>);
+          }}
+        >
+          {children}
+        </div>
+      );
+    },
+    Icon: (props: Record<string, unknown>) => {
+      mocks.iconProps.push(props);
+      return null;
+    },
+    Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+    SortableList: StubSortableList,
+    TextArea: () => <textarea />,
+  };
+});
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick}>{children}</button>
+  Button: ({
+    children,
+    className,
+    disabled,
+    onClick,
+    'aria-label': ariaLabel,
+  }: {
+    'children'?: ReactNode;
+    'className'?: string;
+    'disabled'?: boolean;
+    'onClick'?: () => void;
+    'aria-label'?: string;
+  }) => (
+    <button aria-label={ariaLabel} className={className} disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
   ),
+  confirmModal: mocks.confirmModal,
   DropdownMenu: ({
     children,
     items,
   }: {
     children?: ReactNode;
-    items?: { key: string; label: ReactNode; onClick: () => void }[];
+    items?: { key?: string; label?: ReactNode; onClick?: () => void; type?: string }[];
   }) => {
     const [open, setOpen] = useState(false);
     return (
@@ -136,19 +216,23 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
         {children}
         {open && (
           <div role="menu">
-            {items?.map((item) => (
-              <button
-                key={item.key}
-                role="menuitem"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  item.onClick();
-                  setOpen(false);
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
+            {items?.map((item, index) =>
+              (item as { type?: string }).type === 'divider' ? (
+                <hr key={index} role="separator" />
+              ) : (
+                <button
+                  key={item.key}
+                  role="menuitem"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    item.onClick?.();
+                    setOpen(false);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ),
+            )}
           </div>
         )}
       </div>
@@ -161,6 +245,10 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   Text: (props: { children?: ReactNode } & Record<string, unknown>) => {
     mocks.textProps.push(props);
     return <span>{props.children}</span>;
+  },
+  toast: {
+    error: mocks.toastError,
+    success: vi.fn(),
   },
 }));
 
@@ -245,11 +333,30 @@ vi.mock('@/store/project', () => ({
             status: mocks.projectStatus,
           },
           milestones: mocks.milestones,
+          tasks: mocks.detailTasks,
           teams: mocks.teams,
         }
       : undefined;
   },
-  useProjectStore: () => () => ({ error: undefined, isLoading: false, mutate: mocks.detailMutate }),
+  // Selectors mostly pick hooks/actions (`s.useFetchProjectDetail`,
+  // `s.updateProject`) — a function that returns a shared SWR-shaped result
+  // satisfies both, exactly like the previous `() => () => result` mock did.
+  // The milestone actions are real spies so writes can be asserted; any other
+  // key falls through to the same shared function.
+  useProjectStore: (selector?: (state: Record<string, unknown>) => unknown) => {
+    const fallback = () => ({ error: undefined, isLoading: false, mutate: mocks.detailMutate });
+    const state = new Proxy(
+      {
+        createMilestone: mocks.createMilestone,
+        deleteMilestone: mocks.deleteMilestone,
+        reorderMilestones: mocks.reorderMilestones,
+        setTaskMilestone: mocks.setTaskMilestone,
+        updateMilestone: mocks.updateMilestone,
+      } as Record<string, unknown>,
+      { get: (target, prop) => (prop in target ? target[prop as string] : fallback) },
+    );
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/features/Work/WorkSummaryCard', () => ({
@@ -374,6 +481,16 @@ beforeEach(() => {
   mocks.tagProps = [];
   mocks.avatarProps = [];
   mocks.milestones = [];
+  mocks.detailTasks = [];
+  mocks.createMilestone.mockReset().mockResolvedValue({ id: 'ms_new' });
+  mocks.updateMilestone.mockReset().mockResolvedValue({ id: 'ms_1' });
+  mocks.deleteMilestone.mockReset().mockResolvedValue(undefined);
+  mocks.reorderMilestones.mockReset().mockResolvedValue([]);
+  mocks.setTaskMilestone.mockReset().mockResolvedValue({ id: 'task_1' });
+  mocks.confirmModal.mockReset();
+  mocks.toastError.mockReset();
+  mocks.datePickerProps = [];
+  mocks.sortableProps = undefined;
   mocks.teams = [];
   mocks.projectList = [];
 });
@@ -790,8 +907,14 @@ describe('project milestone rows', () => {
       />,
     );
 
+    // The pinned `No milestone` row closes the list with its link to the
+    // unfiltered issues page.
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['#milestone-ms_1', '/project/apollo/tasks?projectMilestoneId=ms_1']);
+    expect(hrefs).toEqual([
+      '#milestone-ms_1',
+      '/project/apollo/tasks?projectMilestoneId=ms_1',
+      '/project/apollo/tasks',
+    ]);
   });
 
   it('renders no readout, and no progress link, when progress could not be computed', () => {
@@ -799,6 +922,7 @@ describe('project milestone rows', () => {
     render(<ProjectDashboard detail={{ ...detail, milestones: [unknown] }} projectId={'prj_1'} />);
     expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '#milestone-ms_1',
+      '/project/apollo/tasks',
     ]);
 
     cleanup();
@@ -852,6 +976,202 @@ describe('project milestone rows', () => {
     // shipped, and comparing the two surfaces alone cannot see it.
     for (const icon of [overviewIcon, railIcon]) {
       expect(icon.fill).not.toBe(icon.color);
+    }
+  });
+});
+
+// The overview's milestone zone is not a read-only list on the reference —
+// each card carries collapse, a date control, a `⋯` menu and a drag strip,
+// with `+ Milestone` underneath and a pinned `No milestone` row for
+// unassigned issues. These cover the writes the affordances drive.
+describe('project milestone management', () => {
+  // `manageable()` is owner-only server-side, and the cards gate every write
+  // affordance on the same `project.userId === me` check `ProjectLinks` uses.
+  const editable = {
+    ...detail,
+    milestones: [milestone],
+    project: { ...detail.project, userId: 'user_1' },
+  } as unknown as ProjectDetail;
+  const secondMilestone = { ...milestone, id: 'ms_2', name: 'Follow-up', sortOrder: 1 };
+  const editableTwo = {
+    ...editable,
+    milestones: [milestone, secondMilestone],
+  } as unknown as ProjectDetail;
+  const unassignedTask = {
+    id: 'task_1',
+    identifier: 'AP-1',
+    name: 'Unassigned fix',
+    projectMilestoneId: null,
+    workflowCategory: 'todo',
+  } as unknown as NonNullable<ProjectDetail['tasks']>[number];
+
+  it('creates a milestone from the add affordance', async () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneAdd' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'create.milestone.name' }), {
+      target: { value: 'Beta' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'create.milestone.create' }));
+    await waitFor(() =>
+      expect(mocks.createMilestone).toHaveBeenCalledWith('prj_1', {
+        date: null,
+        description: null,
+        name: 'Beta',
+      }),
+    );
+    // The composer closes on success — the refreshed list is the store's job.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', { name: 'create.milestone.name' }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('edits a milestone through the row menu', async () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneMenu' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'overview.milestoneEdit' }));
+
+    const nameField = screen.getByRole('textbox', { name: 'create.milestone.name' });
+    expect(nameField).toHaveValue('Ship the parity pass');
+    fireEvent.change(nameField, { target: { value: 'Renamed pass' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:save' }));
+    await waitFor(() =>
+      expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', {
+        date: '2026-10-01',
+        description: 'Release the parity pass',
+        name: 'Renamed pass',
+      }),
+    );
+  });
+
+  it('asks for confirmation before deleting a milestone', async () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneMenu' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'overview.milestoneDelete' }));
+
+    expect(mocks.confirmModal).toHaveBeenCalledTimes(1);
+    const config = mocks.confirmModal.mock.calls[0][0] as {
+      content: string;
+      okButtonProps?: { danger?: boolean };
+      okText: string;
+      onOk: () => unknown;
+      title: string;
+    };
+    expect(config).toMatchObject({
+      content: 'overview.milestoneDeleteConfirm.content',
+      okButtonProps: { danger: true },
+      okText: 'overview.milestoneDeleteConfirm.ok',
+      title: 'overview.milestoneDeleteConfirm.title',
+    });
+    expect(mocks.deleteMilestone).not.toHaveBeenCalled();
+    await act(async () => {
+      await config.onOk();
+    });
+    expect(mocks.deleteMilestone).toHaveBeenCalledWith('prj_1', 'ms_1');
+  });
+
+  it('writes a picked target date, and a cleared one, through the update action', async () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    const picker = () =>
+      mocks.datePickerProps.find((props) => props['aria-label'] === 'overview.milestoneChooseDate');
+    expect(picker()).toBeDefined();
+
+    await act(async () => {
+      (picker()!.onChange as (value: unknown) => void)(dayjs('2026-12-24'));
+    });
+    await waitFor(() =>
+      expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', {
+        date: '2026-12-24',
+      }),
+    );
+
+    await act(async () => {
+      (picker()!.onChange as (value: unknown) => void)(null);
+    });
+    await waitFor(() =>
+      expect(mocks.updateMilestone).toHaveBeenCalledWith('prj_1', 'ms_1', { date: null }),
+    );
+  });
+
+  it('collapses a milestone card down to its header row and reopens it', () => {
+    render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+    expect(screen.getByText('Release the parity pass')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneCollapse' }));
+    expect(screen.queryByText('Release the parity pass')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneExpand' }));
+    expect(screen.getByText('Release the parity pass')).toBeInTheDocument();
+  });
+
+  it('persists a reordered card list through the reorder action', async () => {
+    render(<ProjectDashboard detail={editableTwo} projectId={'prj_1'} />);
+    expect(mocks.sortableProps?.items.map((item) => item.id)).toEqual(['ms_1', 'ms_2']);
+
+    await act(async () => {
+      mocks.sortableProps!.onChange([{ id: 'ms_2' }, { id: 'ms_1' }]);
+    });
+    await waitFor(() =>
+      expect(mocks.reorderMilestones).toHaveBeenCalledWith('prj_1', ['ms_2', 'ms_1']),
+    );
+  });
+
+  it('ignores a reorder callback that lands on the existing order', async () => {
+    render(<ProjectDashboard detail={editableTwo} projectId={'prj_1'} />);
+    await act(async () => {
+      mocks.sortableProps!.onChange([{ id: 'ms_1' }, { id: 'ms_2' }]);
+    });
+    expect(mocks.reorderMilestones).not.toHaveBeenCalled();
+  });
+
+  it('files an unassigned issue under a milestone from the No milestone row', async () => {
+    render(
+      <ProjectDashboard detail={{ ...editable, tasks: [unassignedTask] }} projectId={'prj_1'} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'overview.noMilestone' }));
+    expect(screen.getByText('Unassigned fix')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneAssign' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ship the parity pass' }));
+    await waitFor(() =>
+      expect(mocks.setTaskMilestone).toHaveBeenCalledWith('prj_1', 'task_1', 'ms_1'),
+    );
+  });
+
+  it('keeps the cards read-only for a non-owner while still showing content', () => {
+    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+    expect(screen.getByText('Ship the parity pass')).toBeInTheDocument();
+    expect(screen.getByText('Release the parity pass')).toBeInTheDocument();
+    // The date stays readable as text, not a picker.
+    expect(
+      mocks.datePickerProps.some((props) => props['aria-label'] === 'overview.milestoneChooseDate'),
+    ).toBe(false);
+    expect(
+      screen.queryByRole('button', { name: 'overview.milestoneMenu' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'overview.milestoneAdd' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'overview.milestoneDrag' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('surfaces a failed write as a toast and keeps the composer open for retry', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.createMilestone.mockRejectedValueOnce(new Error('Offline'));
+    try {
+      render(<ProjectDashboard detail={editable} projectId={'prj_1'} />);
+      fireEvent.click(screen.getByRole('button', { name: 'overview.milestoneAdd' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'create.milestone.name' }), {
+        target: { value: 'Beta' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'create.milestone.create' }));
+      await waitFor(() =>
+        expect(mocks.toastError).toHaveBeenCalledWith('overview.milestoneSaveError'),
+      );
+      expect(screen.getByRole('textbox', { name: 'create.milestone.name' })).toBeInTheDocument();
+    } finally {
+      errorLog.mockRestore();
     }
   });
 });

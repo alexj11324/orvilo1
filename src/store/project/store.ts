@@ -26,7 +26,12 @@ const listKey = (scope: string) => [LIST_KEY, scope] as const;
 const detailKey = (scope: string, id: string) => ['project/detail', scope, id] as const;
 
 interface ProjectStore {
+  createMilestone: (
+    id: string,
+    input: Parameters<typeof projectService.createMilestone>[1],
+  ) => Promise<Awaited<ReturnType<typeof projectService.createMilestone>>['data']>;
   createProject: (input: Parameters<typeof projectService.create>[0]) => Promise<ProjectListItem>;
+  deleteMilestone: (id: string, milestoneId: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   pendingProjectLinkKeys: string[];
   projectDetails: Record<string, Record<string, ProjectDetail>>;
@@ -36,10 +41,24 @@ interface ProjectStore {
     id: string,
     linkId: string,
   ) => Promise<Awaited<ReturnType<typeof projectService.removeLink>> & { refreshError?: unknown }>;
+  reorderMilestones: (
+    id: string,
+    milestoneIds: string[],
+  ) => Promise<Awaited<ReturnType<typeof projectService.reorderMilestones>>['data']>;
   saveProjectLink: (
     id: string,
     input: Parameters<typeof projectService.saveLink>[1],
   ) => Promise<Awaited<ReturnType<typeof projectService.saveLink>> & { refreshError?: unknown }>;
+  setTaskMilestone: (
+    id: string,
+    taskId: string,
+    milestoneId: string | null,
+  ) => Promise<Awaited<ReturnType<typeof projectService.setTaskMilestone>>['data']>;
+  updateMilestone: (
+    id: string,
+    milestoneId: string,
+    input: Parameters<typeof projectService.updateMilestone>[2],
+  ) => Promise<Awaited<ReturnType<typeof projectService.updateMilestone>>['data']>;
   updateProject: (
     id: string,
     input: Parameters<typeof projectService.update>[1],
@@ -81,6 +100,16 @@ const refreshLinksAfterWrite = async (scope: string, id: string) => {
   } catch (refreshError) {
     return { refreshError };
   }
+};
+
+/**
+ * A milestone write commits before the detail refresh runs, so a scope switch
+ * mid-flight must not revalidate — and overwrite — a retained view keyed to a
+ * different workspace. Same reasoning as `refreshLinksAfterWrite`.
+ */
+const refreshDetailAfterWrite = async (scope: string, id: string) => {
+  if (scope !== getCacheScope()) return;
+  await mutate(detailKey(scope, id));
 };
 
 export const useProjectStore = createWithEqualityFn<ProjectStore>()(
@@ -135,6 +164,35 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
     createProject: async (input) => {
       const response = await projectService.create(input, getActiveWorkspaceId());
       await get().refreshProjectList();
+      return response.data;
+    },
+    createMilestone: async (id, input) => {
+      const scope = getCacheScope();
+      const response = await projectService.createMilestone(id, input);
+      await refreshDetailAfterWrite(scope, id);
+      return response.data;
+    },
+    updateMilestone: async (id, milestoneId, input) => {
+      const scope = getCacheScope();
+      const response = await projectService.updateMilestone(id, milestoneId, input);
+      await refreshDetailAfterWrite(scope, id);
+      return response.data;
+    },
+    deleteMilestone: async (id, milestoneId) => {
+      const scope = getCacheScope();
+      await projectService.deleteMilestone(id, milestoneId);
+      await refreshDetailAfterWrite(scope, id);
+    },
+    reorderMilestones: async (id, milestoneIds) => {
+      const scope = getCacheScope();
+      const response = await projectService.reorderMilestones(id, milestoneIds);
+      await refreshDetailAfterWrite(scope, id);
+      return response.data;
+    },
+    setTaskMilestone: async (id, taskId, milestoneId) => {
+      const scope = getCacheScope();
+      const response = await projectService.setTaskMilestone(id, taskId, milestoneId);
+      await refreshDetailAfterWrite(scope, id);
       return response.data;
     },
     deleteProject: async (id) => {

@@ -264,6 +264,100 @@ describe('Project Router Integration', () => {
     expect(await readout()).toEqual({ completed: 0, issues: 1, percent: 0 });
   });
 
+  it('creates, edits, reorders and deletes milestones through the API', async () => {
+    const created = await caller.create({
+      identifier: 'CRUD',
+      milestones: [{ name: 'Launch' }],
+      name: 'Milestone CRUD',
+    });
+    const { id: projectId } = created.data;
+    const [launch] = (await caller.detail({ id: projectId })).data.milestones;
+
+    const added = await caller.createMilestone({
+      date: '2026-12-01',
+      description: 'Post-launch fixes',
+      id: projectId,
+      name: 'Stabilise',
+    });
+    expect(added.data).toMatchObject({
+      date: '2026-12-01',
+      description: 'Post-launch fixes',
+      name: 'Stabilise',
+      projectId,
+    });
+    // Appended after the seeded milestone — where `+ Milestone` lands a card.
+    let names = (await caller.detail({ id: projectId })).data.milestones.map(({ name }) => name);
+    expect(names).toEqual(['Launch', 'Stabilise']);
+
+    const edited = await caller.updateMilestone({
+      id: projectId,
+      milestoneId: launch.id,
+      name: 'Launch day',
+    });
+    expect(edited.data.name).toBe('Launch day');
+    expect(
+      (await caller.detail({ id: projectId })).data.milestones.find(({ id }) => id === launch.id)
+        ?.name,
+    ).toBe('Launch day');
+
+    const reordered = await caller.reorderMilestones({
+      id: projectId,
+      milestoneIds: [added.data.id, launch.id],
+    });
+    expect(reordered.data.map(({ id }) => id)).toEqual([added.data.id, launch.id]);
+    names = (await caller.detail({ id: projectId })).data.milestones.map(({ name }) => name);
+    expect(names).toEqual(['Stabilise', 'Launch day']);
+
+    // Linked issues stay in the project when their milestone goes away.
+    const taskCaller = taskRouter.createCaller(createTestContext(userId));
+    const task = await taskCaller.create({ instruction: 'Survives', projectId });
+    await caller.setTaskMilestone({
+      id: projectId,
+      milestoneId: added.data.id,
+      taskId: task.data.id,
+    });
+    await caller.deleteMilestone({ id: projectId, milestoneId: added.data.id });
+    const detail = await caller.detail({ id: projectId });
+    expect(detail.data.milestones.map(({ id }) => id)).toEqual([launch.id]);
+    expect(detail.data.tasks?.find(({ id }) => id === task.data.id)?.projectMilestoneId).toBeNull();
+  });
+
+  it('rejects malformed milestone writes and strangers', async () => {
+    const created = await caller.create({ identifier: 'GUARD', name: 'Milestone guards' });
+    const { id: projectId } = created.data;
+    const milestoneId = '00000000-0000-0000-0000-000000000000';
+
+    await expect(caller.createMilestone({ id: projectId, name: '   ' })).rejects.toThrow();
+    await expect(
+      caller.updateMilestone({ id: projectId, milestoneId, name: 'Nope' }),
+    ).rejects.toThrow();
+    await expect(caller.deleteMilestone({ id: projectId, milestoneId })).rejects.toThrow(
+      'Milestone not found',
+    );
+    await expect(
+      caller.reorderMilestones({ id: projectId, milestoneIds: [milestoneId] }),
+    ).rejects.toThrow();
+    // A non-uuid milestone id never reaches the model.
+    await expect(caller.deleteMilestone({ id: projectId, milestoneId: 'ms_1' })).rejects.toThrow();
+
+    const stranger = await createTestUser(serverDB);
+    try {
+      const other = projectRouter.createCaller(createTestContext(stranger));
+      await expect(other.createMilestone({ id: projectId, name: 'Nope' })).rejects.toThrow(
+        'Project not found',
+      );
+      await expect(
+        other.updateMilestone({ id: projectId, milestoneId, name: 'Nope' }),
+      ).rejects.toThrow('Project not found');
+      await expect(other.deleteMilestone({ id: projectId, milestoneId })).rejects.toThrow(
+        'Project not found',
+      );
+    } finally {
+      await cleanupTestUser(serverDB, stranger);
+    }
+    expect((await caller.detail({ id: projectId })).data.milestones).toEqual([]);
+  });
+
   it('reads and fences project orchestration policy writes', async () => {
     const project = await caller.create({ identifier: 'POLICY', name: 'Policy project' });
     const [agent] = await serverDB

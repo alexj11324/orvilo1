@@ -62,6 +62,26 @@ class ProjectService {
     input: { body: string; health?: ProjectHealth; kind?: ProjectUpdateKind },
   ) => lambdaClient.project.createUpdate.mutate({ id, ...input });
 
+  createMilestone = async (
+    id: string,
+    input: { date?: string | null; description?: string | null; name: string; sortOrder?: number },
+  ) => lambdaClient.project.createMilestone.mutate({ id, ...input });
+
+  updateMilestone = async (
+    id: string,
+    milestoneId: string,
+    input: { date?: string | null; description?: string | null; name?: string },
+  ) => lambdaClient.project.updateMilestone.mutate({ id, milestoneId, ...input });
+
+  deleteMilestone = async (id: string, milestoneId: string) =>
+    lambdaClient.project.deleteMilestone.mutate({ id, milestoneId });
+
+  reorderMilestones = async (id: string, milestoneIds: string[]) =>
+    lambdaClient.project.reorderMilestones.mutate({ id, milestoneIds });
+
+  setTaskMilestone = async (id: string, taskId: string, milestoneId: string | null) =>
+    lambdaClient.project.setTaskMilestone.mutate({ id, milestoneId, taskId });
+
   getOrchestrationPolicy = async (id: string) =>
     lambdaClient.project.getOrchestrationPolicy.query({ id });
 

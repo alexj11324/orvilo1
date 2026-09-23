@@ -292,9 +292,12 @@ const PROJECT_PRIORITY_KEY = {
 const TimelineHealthIcon = memo<{ health?: null | string }>(({ health }) => {
   const { t } = useTranslation('project');
   const valid = health && health in PROJECT_HEALTH_META ? (health as ProjectHealth) : null;
+  const label = valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates');
   return (
-    <Tooltip title={valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates')}>
-      <ProjectHealthIcon health={valid} size={12} />
+    <Tooltip title={label}>
+      <span aria-label={label} role="img">
+        <ProjectHealthIcon health={valid} size={12} />
+      </span>
     </Tooltip>
   );
 });

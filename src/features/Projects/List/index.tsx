@@ -31,7 +31,7 @@ import { useSearchParams } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -39,8 +39,8 @@ import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
-import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -363,7 +363,9 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
           the label appears only once a real update set the health. */}
       {health ? (
         <Text fontSize={12}>{t(PROJECT_HEALTH_META[health].key, { defaultValue: health })}</Text>
-      ) : null}
+      ) : (
+        <span className={styles.screenReaderOnly}>{t('list.health.noUpdates')}</span>
+      )}
     </WorkspaceLink>
   );
 });
@@ -543,7 +545,6 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
   const canDelete = currentUserId === project.userId;
   const priority = resolvePriorityLevel(project.priority);
   const status = resolveProjectStatus(project.status);
-  const statusVisual = PROJECT_STATUS_VISUALS[status];
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -634,14 +635,10 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
         return (
           <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
             <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
-            {status === 'active' ? (
-              <ProjectActiveStatusIcon color={statusVisual.color} percent={percent ?? 0} />
-            ) : (
-              <Icon aria-hidden color={statusVisual.color} icon={statusVisual.icon} size={14} />
-            )}
+            <ProjectStatusIcon percent={percent ?? 0} size={14} status={status} />
             <Text fontSize={12}>{percent == null ? '—' : `${percent}%`}</Text>
             {percent == null ? null : (
-              <span className={styles.progressTrack}>
+              <span aria-hidden className={styles.progressTrack}>
                 <span className={styles.progressFill} style={{ width: `${percent}%` }} />
               </span>
             )}
@@ -815,10 +812,9 @@ export const ProjectListGroupHeader = memo<{
   if (groupKey === 'all') return null;
   if (groupKey.startsWith('status:')) {
     const status = resolveProjectStatus(groupKey.slice(7));
-    const visual = PROJECT_STATUS_VISUALS[status];
     return (
       <>
-        <Icon color={visual.color} icon={visual.icon} size={14} />
+        <ProjectStatusIcon size={14} status={status} />
         <Text fontSize={12} weight={500}>
           {t(`status.${status}`)}
         </Text>

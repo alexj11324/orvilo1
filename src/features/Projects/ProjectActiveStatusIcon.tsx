@@ -9,7 +9,15 @@ const ACTIVE_STATUS_PERIMETER =
 const ACTIVE_STATUS_MASK =
   'M8.3779 4.74233C8.14438 4.60607 7.85562 4.60607 7.6221 4.74233L5.37209 6.05513C5.14168 6.18957 5 6.4363 5 6.70311V9.34216C5 9.60897 5.14168 9.85573 5.37209 9.99016L7.6221 11.303C7.85562 11.4392 8.14438 11.4392 8.3779 11.303L10.6279 9.99016C10.8583 9.85573 11 9.60897 11 9.34216V6.70311C11 6.4363 10.8583 6.18957 10.6279 6.05513L8.3779 4.74233Z';
 
-export function ProjectActiveStatusIcon({ color, percent }: { color: string; percent?: number }) {
+export function ProjectActiveStatusIcon({
+  color,
+  percent,
+  size = 16,
+}: {
+  color: string;
+  percent?: number;
+  size?: number;
+}) {
   const maskId = `project-active-status-${useId().replaceAll(':', '')}`;
   // The filled arc encodes issue completion — Linear's In Progress mark is a
   // progress ring, not a fixed-fill glyph. r=4 → circumference ≈ 25.13.
@@ -18,11 +26,11 @@ export function ProjectActiveStatusIcon({ color, percent }: { color: string; per
     <svg
       aria-hidden="true"
       fill="none"
-      height={16}
+      height={size}
       stroke="none"
       style={{ color, flex: 'none' }}
       viewBox="-1 -1 16 16"
-      width={16}
+      width={size}
       xmlns="http://www.w3.org/2000/svg"
     >
       <path

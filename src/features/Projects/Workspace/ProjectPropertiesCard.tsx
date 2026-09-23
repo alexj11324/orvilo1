@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
-import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { projectService } from '@/services/project';
@@ -149,7 +149,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
   const statusItems = useMemo(
     () =>
       WRITABLE_STATUSES.map((status) => ({
-        icon: <Icon icon={PROJECT_STATUS_VISUALS[status].icon} size={14} />,
+        icon: <ProjectStatusIcon size={14} status={status} />,
         key: status,
         label: t(`status.${status}`),
         onClick: () => void changeStatus(status),
@@ -171,22 +171,19 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
               shape={'round'}
               size={'small'}
               icon={
-                resolvedStatus === 'active' ? (
-                  <ProjectActiveStatusIcon
-                    color={statusVisual.color}
-                    percent={
-                      typeof project.progressPercent === 'number' ? project.progressPercent : 0
-                    }
-                  />
-                ) : (
-                  <Icon icon={statusVisual.icon} size={12} />
-                )
+                <ProjectStatusIcon
+                  size={12}
+                  status={resolvedStatus}
+                  percent={
+                    typeof project.progressPercent === 'number' ? project.progressPercent : 0
+                  }
+                />
               }
             >
               {t(`status.${project.status}`)}
             </Tag>
             {updatingStatus ? null : (
-              <Icon icon={ChevronDownIcon} size={12} style={{ opacity: 0.5 }} />
+              <Icon aria-hidden icon={ChevronDownIcon} size={12} style={{ opacity: 0.5 }} />
             )}
           </span>
         </DropdownMenu>

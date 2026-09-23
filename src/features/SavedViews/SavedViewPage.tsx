@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Center, Empty, Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Alert, Button, confirmModal, Popover, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
@@ -21,7 +21,7 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { resolveProjectStatus } from '@/components/ExecutionStatus';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
@@ -33,6 +33,7 @@ import {
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -177,13 +178,12 @@ interface SavedViewProjectRowData {
 export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({ project }) => {
   const { t } = useTranslation('project');
   const status = resolveProjectStatus(project.status);
-  const statusVisual = PROJECT_STATUS_VISUALS[status];
 
   return (
     <Flexbox horizontal align="center" className={styles.row}>
       <WorkspaceLink className={styles.link} to={savedViewProjectPath(project)}>
         <Tooltip title={t(`status.${status}`)}>
-          <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
+          <ProjectStatusIcon size={16} status={status} />
         </Tooltip>
         <Flexbox flex={1} style={{ minWidth: 0 }}>
           <Text ellipsis weight={500}>
@@ -224,11 +224,10 @@ const SavedViewProjectBoard = memo<{
     <Flexbox horizontal align="flex-start" gap={12} style={{ overflowX: 'auto' }}>
       {groups.map((group) => {
         const status = resolveProjectStatus(group.key);
-        const visual = PROJECT_STATUS_VISUALS[status];
         return (
           <Flexbox className={styles.boardColumn} key={group.key}>
             <Flexbox horizontal className={styles.boardColumnHeader}>
-              <Icon color={visual.color} icon={visual.icon} size={14} />
+              <ProjectStatusIcon size={14} status={status} />
               <Text fontSize={13} weight={500}>
                 {t(`status.${status}`)}
               </Text>

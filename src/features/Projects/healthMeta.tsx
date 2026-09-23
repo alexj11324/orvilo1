@@ -39,10 +39,12 @@ export const ProjectHealthIcon = memo<{ health?: null | ProjectHealth; size?: nu
   ({ health, size = 12 }) => {
     const theme = useTheme();
     if (!health || !(health in PROJECT_HEALTH_META)) {
-      return <Icon color={theme.colorTextQuaternary} icon={CircleDashedIcon} size={size} />;
+      return (
+        <Icon aria-hidden color={theme.colorTextQuaternary} icon={CircleDashedIcon} size={size} />
+      );
     }
     const color = theme[PROJECT_HEALTH_META[health].color];
-    return <Icon color={color} fill={color} icon={CircleIcon} size={size} />;
+    return <Icon aria-hidden color={color} fill={color} icon={CircleIcon} size={size} />;
   },
 );
 

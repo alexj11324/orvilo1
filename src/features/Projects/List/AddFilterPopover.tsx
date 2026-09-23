@@ -32,8 +32,9 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import { PROJECT_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { ProjectHealthIcon } from '@/features/Projects/healthMeta';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import type { ProjectListItem } from '@/store/project/store';
 
 import {
@@ -409,11 +410,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                     selected,
                     status,
                   ),
-                <Icon
-                  color={PROJECT_STATUS_VISUALS[status].color}
-                  icon={PROJECT_STATUS_VISUALS[status].icon}
-                  size={14}
-                />,
+                <ProjectStatusIcon size={14} status={status} />,
               ),
             ),
           );
@@ -445,20 +442,30 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
             t('list.filter.group.health'),
             <>
               {PROJECT_HEALTH_STATES.map((health) =>
-                checkRow(health, selected.includes(health), t(`list.health.${health}`), () =>
+                checkRow(
+                  health,
+                  selected.includes(health),
+                  t(`list.health.${health}`),
+                  () =>
+                    toggleValues(
+                      (values) => ({ type: 'health', values: values as (ProjectHealth | null)[] }),
+                      selected,
+                      health,
+                    ),
+                  <ProjectHealthIcon health={health} size={14} />,
+                ),
+              )}
+              {checkRow(
+                'none',
+                selected.includes(null),
+                t('list.health.noUpdates'),
+                () =>
                   toggleValues(
                     (values) => ({ type: 'health', values: values as (ProjectHealth | null)[] }),
                     selected,
-                    health,
+                    null,
                   ),
-                ),
-              )}
-              {checkRow('none', selected.includes(null), t('list.health.noUpdates'), () =>
-                toggleValues(
-                  (values) => ({ type: 'health', values: values as (ProjectHealth | null)[] }),
-                  selected,
-                  null,
-                ),
+                <ProjectHealthIcon health={null} size={14} />,
               )}
             </>,
           );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
+import { Flexbox } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo, type Ref, useCallback, useMemo } from 'react';
@@ -18,6 +18,7 @@ import {
 } from '@/features/NavPanel/SidebarHeaderSelect';
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -180,9 +181,9 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
                 color={headerStatusVisual.color}
-                icon={<Icon icon={headerStatusVisual.icon} size={12} />}
                 shape={'round'}
                 size={'small'}
+                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
               >
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,

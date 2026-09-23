@@ -10,9 +10,10 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectListItem } from '@/store/project';
 
@@ -103,11 +104,10 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
     <div className={styles.board}>
       {groups.map((group) => {
         const status = resolveProjectStatus(group.key.replace(/^status:/, ''));
-        const visual = PROJECT_STATUS_VISUALS[status];
         return (
           <div className={styles.column} key={group.key}>
             <div className={styles.columnHeader}>
-              <Icon color={visual.color} icon={visual.icon} size={14} />
+              <ProjectStatusIcon size={14} status={status} />
               <Text fontSize={13} weight={500}>
                 {t(`status.${status}`)}
               </Text>
@@ -192,9 +192,12 @@ const PROJECT_PRIORITY_KEY = {
 const ProjectHealthDot = memo<{ health: string }>(({ health }) => {
   const { t } = useTranslation('project');
   const valid = health in PROJECT_HEALTH_META ? (health as ProjectHealth) : null;
+  const label = valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates');
   return (
-    <Tooltip title={valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates')}>
-      <ProjectHealthIcon health={valid} size={12} />
+    <Tooltip title={label}>
+      <span aria-label={label} role="img">
+        <ProjectHealthIcon health={valid} size={12} />
+      </span>
     </Tooltip>
   );
 });

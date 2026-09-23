@@ -11,10 +11,10 @@ import { useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
@@ -178,7 +178,6 @@ const ProjectWorkspace = memo(() => {
   const projectReference = project.slug ?? projectId!;
   const teams = detail.teams ?? [];
 
-  const statusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(project.status)];
   const knowledgeBases = detail.knowledgeBases ?? [];
   const { emptyState: updatesEmpty, publishedUpdates: projectUpdates } =
     getProjectOverviewUpdateState(updatesSWR.data);
@@ -203,7 +202,7 @@ const ProjectWorkspace = memo(() => {
       ? editableStatuses.filter((status) => status === 'archived')
       : editableStatuses;
   const statusItems = availableStatuses.map((status) => ({
-    icon: <Icon icon={PROJECT_STATUS_VISUALS[status].icon} size={16} />,
+    icon: <ProjectStatusIcon size={16} status={status} />,
     key: status,
     label: t(`status.${status}`),
     onClick: () => void changeStatus(status),
@@ -252,7 +251,13 @@ const ProjectWorkspace = memo(() => {
                     disabled={updatingStatus || lifecycleLocked}
                     type="button"
                   >
-                    <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
+                    <ProjectStatusIcon
+                      size={16}
+                      status={project.status}
+                      percent={
+                        typeof project.progressPercent === 'number' ? project.progressPercent : 0
+                      }
+                    />
                     {t(`status.${project.status}`, { defaultValue: project.status })}
                   </button>
                 </DropdownMenu>

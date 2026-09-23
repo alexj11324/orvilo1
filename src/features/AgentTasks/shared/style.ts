@@ -8,9 +8,6 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
       min-height: auto;
       padding: 0;
 
-      font-family:
-        Charter, 'Iowan Old Style', 'Source Serif Pro', 'Source Serif 4', Georgia, 'Songti SC',
-        SimSun, serif;
       font-size: 26px;
       font-weight: 600;
       line-height: 1.25;

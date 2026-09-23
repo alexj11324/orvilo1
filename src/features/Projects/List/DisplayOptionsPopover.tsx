@@ -16,6 +16,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
+  defaultDirectionForOrdering,
   isDataBackedProjectListProperty,
   PROJECT_LIST_CLOSED_WINDOWS,
   PROJECT_LIST_GROUPINGS,
@@ -184,7 +185,12 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                 value,
               }))}
               onChange={(value) =>
-                onChange({ orderBy: value as ProjectListDisplayOptions['orderBy'] })
+                onChange({
+                  orderBy: value as ProjectListDisplayOptions['orderBy'],
+                  orderDirection: defaultDirectionForOrdering(
+                    value as ProjectListDisplayOptions['orderBy'],
+                  ),
+                })
               }
             />
             <Tooltip title={t('list.display.reverseOrder')}>

@@ -250,7 +250,8 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
     const [saving, setSaving] = useState(false);
     const updateProject = useProjectStore((s) => s.updateProject);
     const lead = members.data?.find((member) => member.userId === project.leadUserId);
-    const leadName = lead?.user?.fullName || lead?.user?.username || project.leadUserId;
+    const leadName =
+      lead?.user?.fullName || lead?.user?.username || project.leadUserId || undefined;
     const availableMembers = useMemo(() => {
       if (!open) return [];
       const normalizedKeyword = keyword.trim().toLocaleLowerCase();

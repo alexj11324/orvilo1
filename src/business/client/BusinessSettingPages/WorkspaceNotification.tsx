@@ -2,13 +2,9 @@
 
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Switch, Text } from '@lobehub/ui/base-ui';
-import type {
-  IMNotificationChannelSettings,
-  NotificationChannelSettings,
-  NotificationSettings,
-} from '@orvilo/types';
+import type { NotificationChannelSettings, NotificationSettings } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
-import { Bell, Mail, MessageSquareText, Smartphone } from 'lucide-react';
+import { Bell, Mail, Smartphone } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -63,7 +59,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface ChannelDef {
   descriptionKey: string;
   icon: typeof Bell;
-  key: keyof Omit<NotificationSettings, 'im'>;
+  key: keyof NotificationSettings;
   labelKey: string;
 }
 
@@ -167,7 +163,6 @@ export const WorkspaceNotification = memo(() => {
   const preference = useUserStore((s) => s.workspaceUserPreference);
   const updateWorkspaceUserPreference = useUserStore((s) => s.updateWorkspaceUserPreference);
   const notification = useMemo(() => preference.notification ?? {}, [preference.notification]);
-  const imPlatforms = (notification.im as IMNotificationChannelSettings | undefined)?.platforms;
 
   const patch = (partial: NotificationSettings) =>
     updateWorkspaceUserPreference({ notification: partial });
@@ -189,33 +184,6 @@ export const WorkspaceNotification = memo(() => {
           />
         ))}
       </Flexbox>
-      {imPlatforms && Object.keys(imPlatforms).length > 0 && (
-        <Flexbox className={styles.section}>
-          <Text className={styles.groupTitle}>{t('workspaceSetting.notification.im')}</Text>
-          <Text className={styles.sectionHint}>{t('workspaceSetting.notification.imDesc')}</Text>
-          {Object.entries(imPlatforms).map(([platform, platformSettings]) => (
-            <Flexbox
-              horizontal
-              align="center"
-              className={styles.channelRow}
-              gap={12}
-              justify="space-between"
-              key={platform}
-            >
-              <Flexbox horizontal align="center" gap={10}>
-                <Icon icon={MessageSquareText} size={16} />
-                <Text className={styles.channelLabel}>{humanize(platform)}</Text>
-              </Flexbox>
-              <Switch
-                checked={platformSettings?.enabled !== false}
-                onChange={(value: boolean) =>
-                  patch({ im: { platforms: { [platform]: { enabled: value } } } })
-                }
-              />
-            </Flexbox>
-          ))}
-        </Flexbox>
-      )}
     </Flexbox>
   );
 });

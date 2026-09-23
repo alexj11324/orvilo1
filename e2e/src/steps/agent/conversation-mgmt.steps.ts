@@ -87,7 +87,10 @@ Given('用户已有一个对话', async function (this: CustomWorld) {
     }
   }
 
-  await chatInputContainer.click();
+  // Click the inner editable: the card's footer rows (action bar, control
+  // bar) sit inside the `chat-input` container, so a bare container click can
+  // land on them and leave the editor unfocused — the typed text never lands.
+  await chatInputContainer.locator('[contenteditable="true"]').first().click();
   await this.page.waitForTimeout(300);
   await this.page.keyboard.type('hello', { delay: 30 });
   await this.page.keyboard.press('Enter');
@@ -125,7 +128,7 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   }
 
   // First conversation - use "测试" content for search test
-  await chatInputContainer.click();
+  await chatInputContainer.locator('[contenteditable="true"]').first().click();
   await this.page.waitForTimeout(300);
   await this.page.keyboard.type('测试对话内容', { delay: 30 });
   const firstSentAt = Date.now();
@@ -163,7 +166,7 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     .not.toContain('opacity: 0.5');
 
   const sendSecondMessage = async () => {
-    await chatInputContainer.click();
+    await chatInputContainer.locator('[contenteditable="true"]').first().click();
     await this.page.waitForTimeout(300);
     await this.page.keyboard.type('hello world', { delay: 30 });
     await this.page.keyboard.press('Enter');

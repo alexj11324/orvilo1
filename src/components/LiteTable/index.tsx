@@ -60,6 +60,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorFillQuaternary};
     }
 
+    /* Section header/footer rows span the full width and never highlight. */
+    tbody tr[data-list-section]:hover {
+      background: transparent;
+    }
+
     @container (max-width: ${LIST_BREAKPOINT}px) {
       display: block;
       min-width: 0;
@@ -135,6 +140,26 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       td[data-list-slot='actions'] {
         justify-content: flex-end;
       }
+
+      /* Section header/footer rows stay plain full-width rows — they never
+         become cards. */
+      tbody tr[data-list-section] {
+        display: block;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+
+        &:hover {
+          background: transparent;
+        }
+      }
+
+      tbody tr[data-list-section] td {
+        display: block;
+        padding-block: 0;
+        padding-inline: 16px !important;
+        border-block-end: none;
+      }
     }
   `,
 }));
@@ -146,6 +171,20 @@ export interface LiteTableColumn<RecordType> {
   render: (record: RecordType, index: number) => ReactNode;
   title: ReactNode;
   width?: number | string;
+}
+
+/**
+ * A labelled slice of one table. Sections share the single `<thead>` above
+ * them, so column widths never drift between groups — the reference Views
+ * directory renders one header over several visibility sections.
+ */
+export interface LiteTableSection<RecordType> {
+  /** Full-width row rendered after the section's records (e.g. a create entry). */
+  footer?: ReactNode;
+  /** Full-width row rendered above the section's records (e.g. a group label). */
+  header?: ReactNode;
+  items: RecordType[];
+  key: string;
 }
 
 export interface LiteTableProps<RecordType> {
@@ -160,6 +199,12 @@ export interface LiteTableProps<RecordType> {
    */
   onRowClick?: (record: RecordType) => void;
   rowKey: (record: RecordType) => string;
+  /**
+   * Grouped alternative to `dataSource`: each section renders its own
+   * `<tbody>` under the shared header, optionally wrapped by header/footer
+   * rows. Section key order is render order.
+   */
+  sections?: LiteTableSection<RecordType>[];
 }
 
 const LiteTableInner = <RecordType,>({
@@ -170,18 +215,57 @@ const LiteTableInner = <RecordType,>({
   loading,
   onRowClick,
   rowKey,
+  sections,
 }: LiteTableProps<RecordType>) => {
   const items = dataSource ?? [];
-  const initialLoading = !!loading && items.length === 0;
+  const initialLoading =
+    !!loading &&
+    (sections ? sections.every((section) => section.items.length === 0) : items.length === 0);
+  const isEmpty = sections
+    ? sections.every((section) => !section.header && !section.footer && section.items.length === 0)
+    : items.length === 0;
 
   const listLabelOf = (column: LiteTableColumn<RecordType>) =>
     column.listSlot || column.listLabel === false
       ? undefined
       : (column.listLabel ?? (typeof column.title === 'string' ? column.title : undefined));
 
+  const renderRecordRow = (record: RecordType, index: number) => (
+    <tr
+      className={onRowClick ? styles.clickableRow : undefined}
+      key={rowKey(record)}
+      tabIndex={onRowClick ? 0 : undefined}
+      onClick={onRowClick ? () => onRowClick(record) : undefined}
+      onKeyDown={
+        onRowClick
+          ? (event) => {
+              // only the row itself — a key pressed inside a cell
+              // control (switch, button, input) belongs to it
+              if (event.target !== event.currentTarget) return;
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              onRowClick(record);
+            }
+          : undefined
+      }
+    >
+      {columns.map((column) => (
+        <td data-label={listLabelOf(column)} data-list-slot={column.listSlot} key={column.key}>
+          {column.render(record, index)}
+        </td>
+      ))}
+    </tr>
+  );
+
+  const renderSectionRow = (content: ReactNode, key: string) => (
+    <tr data-list-section key={key}>
+      <td colSpan={columns.length}>{content}</td>
+    </tr>
+  );
+
   return (
     <div aria-busy={initialLoading} className={cx(styles.container, className)}>
-      {!initialLoading && items.length === 0 ? (
+      {!initialLoading && isEmpty ? (
         emptyText
       ) : (
         // The loading state keeps the table chrome and skeletonises only the
@@ -197,52 +281,51 @@ const LiteTableInner = <RecordType,>({
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {initialLoading
-                ? Array.from({ length: SKELETON_ROWS }, (_, index) => (
-                    <tr key={index}>
-                      {columns.map((column) => (
-                        <td
-                          data-label={listLabelOf(column)}
-                          data-list-slot={column.listSlot}
-                          key={column.key}
-                        >
-                          <Skeleton style={{ height: 14, minWidth: 0, width: '100%' }} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                : items.map((record, index) => (
-                    <tr
-                      className={onRowClick ? styles.clickableRow : undefined}
-                      key={rowKey(record)}
-                      tabIndex={onRowClick ? 0 : undefined}
-                      onClick={onRowClick ? () => onRowClick(record) : undefined}
-                      onKeyDown={
-                        onRowClick
-                          ? (event) => {
-                              // only the row itself — a key pressed inside a cell
-                              // control (switch, button, input) belongs to it
-                              if (event.target !== event.currentTarget) return;
-                              if (event.key !== 'Enter' && event.key !== ' ') return;
-                              event.preventDefault();
-                              onRowClick(record);
-                            }
-                          : undefined
-                      }
-                    >
-                      {columns.map((column) => (
-                        <td
-                          data-label={listLabelOf(column)}
-                          data-list-slot={column.listSlot}
-                          key={column.key}
-                        >
-                          {column.render(record, index)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-            </tbody>
+            {sections ? (
+              sections.map((section) => (
+                <tbody key={section.key}>
+                  {section.header === undefined || section.header === null
+                    ? null
+                    : renderSectionRow(section.header, `${section.key}:header`)}
+                  {initialLoading
+                    ? Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                        <tr key={index}>
+                          {columns.map((column) => (
+                            <td
+                              data-label={listLabelOf(column)}
+                              data-list-slot={column.listSlot}
+                              key={column.key}
+                            >
+                              <Skeleton style={{ height: 14, minWidth: 0, width: '100%' }} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    : section.items.map(renderRecordRow)}
+                  {section.footer === undefined || section.footer === null
+                    ? null
+                    : renderSectionRow(section.footer, `${section.key}:footer`)}
+                </tbody>
+              ))
+            ) : (
+              <tbody>
+                {initialLoading
+                  ? Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                      <tr key={index}>
+                        {columns.map((column) => (
+                          <td
+                            data-label={listLabelOf(column)}
+                            data-list-slot={column.listSlot}
+                            key={column.key}
+                          >
+                            <Skeleton style={{ height: 14, minWidth: 0, width: '100%' }} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  : items.map(renderRecordRow)}
+              </tbody>
+            )}
           </table>
         </div>
       )}

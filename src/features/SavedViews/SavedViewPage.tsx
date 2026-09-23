@@ -1,22 +1,12 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  confirmModal,
-  DropdownMenu,
-  Popover,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
+import { ActionIcon, Alert, Button, confirmModal, Popover, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
-import type { WorkQuery } from '@orvilo/types';
+import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import {
-  EllipsisIcon,
   FilterIcon,
   FolderClosedIcon,
   PanelRightCloseIcon,
@@ -29,8 +19,10 @@ import { useParams } from 'react-router';
 import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
   mergeWorkQueryGroups,
@@ -42,8 +34,10 @@ import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -52,7 +46,9 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
+import SavedViewActionsMenu from './SavedViewActionsMenu';
 import { type SavedViewControl, transitionSavedViewControl } from './savedViewControlState';
+import { buildSavedViewCsv, fetchAllSavedViewRows } from './savedViewCsv';
 import SavedViewDetailsPanel from './SavedViewDetailsPanel';
 import { savedViewProjectPath } from './savedViewProjectPath';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
@@ -284,6 +280,8 @@ const SavedViewPage = memo(() => {
   const { t } = useTranslation('common');
   const { viewId } = useParams<{ viewId: string }>();
   const workspaceId = useActiveWorkspaceId();
+  const workspaceSlug = useActiveWorkspaceSlug();
+  const origin = useAppOrigin();
   const navigate = useWorkspaceAwareNavigate();
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const { data, error, isLoading } = useClientDataSWR(
@@ -345,6 +343,7 @@ const SavedViewPage = memo(() => {
   const [draftBase, setDraftBase] = useState<number | undefined>();
   const [conflict, setConflict] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [openControl, setOpenControl] = useState<SavedViewControl | null>(null);
 
   const dirty = useMemo(() => {
@@ -495,6 +494,26 @@ const SavedViewPage = memo(() => {
     }
   }, [draft, navigate, t, view, workspaceId]);
 
+  /* Menu "Duplicate view" copies the persisted definition — unsaved draft
+     edits stay out of the copy (the draft-based saveCopy remains the
+     conflict-resolution escape hatch). */
+  const duplicateView = useCallback(async () => {
+    if (!view) return;
+    try {
+      const created = await workAttentionService.savedViewCreate({
+        entityType: view.entityType,
+        layout: view.layout,
+        name: savedViewCopyName(savedViewTitle(view.id, view.name, t), t('copy')),
+        query: view.queryAst,
+        visibility: 'private',
+      });
+      await mutate(workAttentionKeys.savedViews(workspaceId));
+      navigate(`/views/${created.data.id}`);
+    } catch {
+      toast.error(t('savedViews.saveAsFailed'));
+    }
+  }, [navigate, t, view, workspaceId]);
+
   const reloadDraft = useCallback(() => {
     if (!view) return;
     setDraft(viewToEditorState(view));
@@ -523,22 +542,68 @@ const SavedViewPage = memo(() => {
     });
   }, [navigate, t, view, viewId, workspaceId]);
 
-  const moreMenuItems = useMemo(
-    () => [
-      { key: 'copy', label: t('savedViews.saveAs'), onClick: () => void saveCopy() },
-      ...(isOwner
-        ? [
-            {
-              danger: true,
-              key: 'delete',
-              label: t('savedViews.delete'),
-              onClick: deleteView,
-            },
-          ]
-        : []),
-    ],
-    [deleteView, isOwner, saveCopy, t],
+  const moveViewTo = useCallback(
+    async (visibility: SavedViewVisibility, teamId?: string) => {
+      if (!viewId || !view) return;
+      try {
+        await workAttentionService.savedViewUpdate({
+          expectedDefinitionVersion: view.definitionVersion,
+          id: viewId,
+          ...savedViewSharePatch(visibility, teamId ?? null),
+        });
+        setConflict(false);
+        await refreshView();
+        toast.success(t('savedViews.saved'));
+      } catch (error) {
+        if (isTrpcErrorCode(error, 'CONFLICT')) {
+          setConflict(true);
+          reloadDraft();
+        } else {
+          toast.error(t('savedViews.moveFailed'));
+        }
+      }
+    },
+    [refreshView, reloadDraft, t, view, viewId],
   );
+
+  const copyLink = useCallback(async () => {
+    if (!viewId) return;
+    try {
+      const href = buildWorkspaceAwarePath(`/views/${viewId}`, workspaceSlug);
+      await navigator.clipboard.writeText(`${origin}${href}`);
+      toast.success(t('savedViews.linkCopied'));
+    } catch {
+      toast.error(t('savedViews.linkCopyFailed'));
+    }
+  }, [origin, t, viewId, workspaceSlug]);
+
+  const exportCsv = useCallback(async () => {
+    if (!viewId || !view || exporting) return;
+    setExporting(true);
+    try {
+      const rows = await fetchAllSavedViewRows(viewId);
+      const csv = buildSavedViewCsv(view.entityType, rows, {
+        priority: (value) => t(`savedViews.values.priority.${value ?? 0}` as never),
+        status: (value) =>
+          value && COLUMN_I18N_KEYS[value]
+            ? t(COLUMN_I18N_KEYS[value] as never, { ns: 'chat' })
+            : (value ?? ''),
+      });
+      const filename = `${(view.name || 'view').replaceAll(/[\\/:*?"<>|]+/g, '-')}.csv`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success(t('savedViews.exportCsvDone'));
+    } catch {
+      toast.error(t('savedViews.exportCsvFailed'));
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, t, view, viewId]);
 
   const projectBoard =
     view?.entityType === 'project' && (evaluation?.layout ?? view?.layout) === 'board';
@@ -581,13 +646,24 @@ const SavedViewPage = memo(() => {
           <Flexbox horizontal gap={8}>
             <WorkFavoriteButton targetId={viewId} targetType="savedView" />
             {view ? (
-              <DropdownMenu items={moreMenuItems} placement="bottomRight">
-                <ActionIcon
-                  aria-label={t('savedViews.viewOptions')}
-                  icon={EllipsisIcon}
-                  size="small"
-                />
-              </DropdownMenu>
+              <SavedViewActionsMenu
+                canEdit={isOwner}
+                dirty={dirty}
+                draft={draft}
+                exporting={exporting}
+                shareReady={shareReady}
+                teamOptions={joinedTeamOptions}
+                workspaceId={workspaceId}
+                onCancelDraft={cancelDraft}
+                onCopyLink={() => void copyLink()}
+                onDelete={deleteView}
+                onDraftChange={setDraft}
+                onDuplicate={() => void duplicateView()}
+                onExportCsv={() => void exportCsv()}
+                onMoveTo={(visibility, teamId) => void moveViewTo(visibility, teamId)}
+                onReloadDraft={reloadDraft}
+                onSave={saveView}
+              />
             ) : null}
           </Flexbox>
         }

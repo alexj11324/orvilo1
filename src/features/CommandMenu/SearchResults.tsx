@@ -17,6 +17,7 @@ import {
   ListTodo,
   MessageCircle,
   MessageSquare,
+  MoreHorizontalIcon,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -24,7 +25,6 @@ import { memo, type ReactNode, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
@@ -34,29 +34,19 @@ import { markdownToTxt } from '@/utils/markdownToTxt';
 import type { CommandMenuResultClick } from './analytics';
 import { CommandItem } from './components';
 import { styles } from './styles';
+import type { CommandMenuSearchResult, CommandMenuWorkResult } from './types';
 import { groupSearchResults } from './utils/groupResults';
-import {
-  type CommandMenuWorkType,
-  isValidSearchType,
-  type ValidSearchType,
-} from './utils/queryParser';
+import { isValidSearchType, type ValidSearchType } from './utils/queryParser';
+import { isActionableResult } from './utils/resultActions';
 import { createVisibleResultPositionMap } from './utils/visibleResultPosition';
 
-export interface CommandMenuWorkResult {
-  createdAt: Date;
-  description?: string | null;
-  id: string;
-  relevance: number;
-  title: string;
-  type: CommandMenuWorkType;
-  updatedAt: Date;
-}
-
-export type CommandMenuSearchResult = FtsSearchResult | CommandMenuWorkResult;
+export type { CommandMenuSearchResult, CommandMenuWorkResult } from './types';
 
 interface SearchResultsProps {
   isLoading: boolean;
   onClose: () => void;
+  /** Open the result-action submenu for a task/project row (⋯ or →). */
+  onOpenResultActions: (result: CommandMenuWorkResult) => void;
   onResultClick: (input: CommandMenuResultClick) => void;
   onSetTypeFilter: (typeFilter: ValidSearchType | undefined) => void;
   onTypeFilterChange: () => void;
@@ -73,6 +63,7 @@ const SearchResults = memo<SearchResultsProps>(
   ({
     isLoading,
     onClose,
+    onOpenResultActions,
     onResultClick,
     onSetTypeFilter,
     onTypeFilterChange,
@@ -323,10 +314,35 @@ const SearchResults = memo<SearchResultsProps>(
       return null;
     }
 
+    const renderActionsAffordance = (target: CommandMenuWorkResult) => (
+      <button
+        aria-label={t('cmdk.resultActions.label')}
+        className={styles.itemActionsButton}
+        tabIndex={-1}
+        title={`${t('cmdk.resultActions.label')} →`}
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenResultActions(target);
+        }}
+      >
+        <span className={styles.itemActionsKey}>→</span>
+        <MoreHorizontalIcon size={14} />
+      </button>
+    );
+
     // Render a single result item. The group heading already names the type,
     // so the title needs no inline "Type ›" prefix.
     const renderResultItem = (result: CommandMenuSearchResult) => {
       const subtitle = getSubtitle(result);
+
+      // Task/project rows get a Linear-style actions affordance (⋯ button or
+      // → on the highlighted row) that drills into the result-action submenu
+      // without leaving the palette.
+      const trailingLabel = isActionableResult(result)
+        ? renderActionsAffordance(result)
+        : undefined;
 
       return (
         <CommandItem
@@ -335,6 +351,7 @@ const SearchResults = memo<SearchResultsProps>(
           icon={getIcon(result.type)}
           key={result.id}
           title={resultTitle(result)}
+          trailingLabel={trailingLabel}
           value={getItemValue(result)}
           variant="detailed"
           onSelect={() => handleNavigate(result, visibleResultPositions.get(result) ?? 1)}

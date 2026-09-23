@@ -232,6 +232,16 @@ export default {
 
   'cmdk.resource': 'Resources',
 
+  'cmdk.resultActions.assignToMe': 'Assign to me',
+  'cmdk.resultActions.copyLink': 'Copy link',
+  'cmdk.resultActions.copyLinkSuccess': 'Link copied',
+  'cmdk.resultActions.failed': 'Action failed',
+  'cmdk.resultActions.label': 'Actions',
+  'cmdk.resultActions.open': 'Open',
+  'cmdk.resultActions.setLeadToMe': 'Set lead to me',
+  'cmdk.resultActions.setPriority': 'Set priority',
+  'cmdk.resultActions.setStatus': 'Set status',
+
   'cmdk.search.agent': 'Agent',
 
   'cmdk.search.agents': 'Agents',
@@ -1018,6 +1028,7 @@ export default {
   'teams.loading': 'Loading teams…',
   'teams.markDuplicate': 'Mark duplicate',
   'teams.moreActions': 'More triage actions',
+  'teams.noCycle': 'No cycle',
   'teams.noProject': 'No project',
   'teams.canonical': 'Canonical task',
   'teams.personal': 'Switch to a workspace to see teams',
@@ -1079,6 +1090,7 @@ export default {
   'teams.scope.all': 'All',
   'teams.scope.allIssues': 'All issues',
   'teams.scope.backlog': 'Backlog',
+  'teams.showEmptyColumns': 'Show empty columns',
   'teams.work': 'Team work',
   'teams.workEmpty': 'No tasks in this team',
   'taskDock.activeOf': '{{active}} running · {{total}} total',

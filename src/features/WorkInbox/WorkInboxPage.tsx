@@ -7,6 +7,7 @@ import {
   Button,
   type DropdownItem,
   DropdownMenu,
+  SplitButton,
   TabsIndicator,
   TabsList,
   TabsRoot,
@@ -27,6 +28,7 @@ import {
   ChevronLeftIcon,
   CircleUserRoundIcon,
   ExternalLinkIcon,
+  EyeIcon,
   GitPullRequestIcon,
   InboxIcon,
   KeyRoundIcon,
@@ -34,6 +36,7 @@ import {
   type LucideIcon,
   MailOpenIcon,
   MoreHorizontalIcon,
+  SlidersHorizontalIcon,
   TimerOffIcon,
 } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -53,6 +56,8 @@ import { mutate, useClientDataSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
 import { notificationService } from '@/services/notification';
 import { workAttentionService } from '@/services/workAttention';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -88,12 +93,19 @@ import {
   INBOX_SNOOZE_PRESETS,
   inboxBulkFingerprint,
   type InboxFilterChip,
+  inboxOpenTarget,
   type InboxSnoozePreset,
-  inboxUrlOpenMode,
   resolveInboxFilterChip,
   resolveInboxTab,
   snoozeUntilForPreset,
 } from './inboxOrganize';
+import {
+  inboxFeedKind,
+  type InboxPriorityMode,
+  inboxPriorityScopeKey,
+  inboxScopeKindToken,
+  resolveInboxPriority,
+} from './inboxPriority';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
 import { useInboxListKeyboard } from './useInboxListKeyboard';
 
@@ -120,6 +132,18 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 6px;
     padding-inline: 12px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  /* Linear-style onboarding region: sits inside the list column between the
+     control row and the first notification row. */
+  banner: css`
+    flex: none;
+
+    margin: 12px;
+    padding: 12px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: ${cssVar.borderRadiusLG};
+
+    background: ${cssVar.colorFillQuaternary};
   `,
   row: css`
     cursor: pointer;
@@ -281,9 +305,28 @@ const WorkInboxPage = memo(() => {
     [setSearchParams],
   );
 
+  // Priority-inbox choice is persisted per (user, workspace) in SystemStatus:
+  // there is no server field for it, so the local record is the source of
+  // truth. Undecided scopes get the Linear-style onboarding banner; 'all'
+  // collapses the tabs into one unified feed.
+  const priorityScopeKey = inboxPriorityScopeKey({ userId, workspaceId });
+  const priorityMode = useGlobalStore(systemStatusSelectors.inboxPriorityMode(priorityScopeKey));
+  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+  const { bannerVisible, priorityEnabled } = resolveInboxPriority(priorityMode);
+  const setPriorityMode = useCallback(
+    (mode: InboxPriorityMode) => {
+      updateSystemStatus({ inboxPriorityMode: { [priorityScopeKey]: mode } });
+    },
+    [priorityScopeKey, updateSystemStatus],
+  );
+
   // `kind` is the feed bucket: the tab queries the priority classification
-  // (pending action or unread mention) rather than the stored row kind.
-  const kind = tab;
+  // (pending action or unread mention) rather than the stored row kind. In
+  // unified mode the request omits the bucket so the server returns one list.
+  const kind = inboxFeedKind(priorityEnabled, tab);
+  // The pager identity must still differ per logical feed — 'all' keeps the
+  // unified tail from ever committing into a tab bucket's scope.
+  const scopeKind = inboxScopeKindToken(priorityEnabled, tab);
   const filter = feedFilterForChip(filterChip);
   const { data, error, isLoading } = useClientDataSWR(
     inboxKeys.feed(workspaceId, kind, filter, undefined),
@@ -295,8 +338,8 @@ const WorkInboxPage = memo(() => {
   // bound to user + workspace + query fingerprint + request generation: a
   // page fetched under a stale scope can never commit into the new one.
   const feedScope = useMemo(
-    () => inboxFeedScopeKey({ filter, kind, userId, workspaceId }),
-    [filter, kind, userId, workspaceId],
+    () => inboxFeedScopeKey({ filter, kind: scopeKind, userId, workspaceId }),
+    [filter, scopeKind, userId, workspaceId],
   );
   const pager = useInboxFeedPager(feedScope);
   const tail = pager.tailFor(feedScope);
@@ -639,19 +682,59 @@ const WorkInboxPage = memo(() => {
 
   const openTarget = useCallback(
     (card: NotificationFeedCard) => {
-      const nav = card.safeNavigation;
-      if (nav?.kind === 'task' && nav.taskId) {
-        navigate(taskDetailPath(nav.taskId, undefined, card.title));
+      // `inboxOpenTarget` is the single eligibility check — it also rejects
+      // targets the card never offered (no `open` action) or that have no
+      // client route, so callers can never fire a dead navigation.
+      const target = inboxOpenTarget(card);
+      if (!target) return;
+      if (target.kind === 'task') {
+        navigate(taskDetailPath(target.taskId, undefined, card.title));
         return;
       }
-      if (nav?.kind === 'url' && nav.url) {
-        const mode = inboxUrlOpenMode(nav.url);
-        if (mode === 'internal') navigate(nav.url);
-        if (mode === 'external') window.open(nav.url, '_blank', 'noopener,noreferrer');
-      }
+      if (target.kind === 'navigate') navigate(target.to);
+      if (target.kind === 'external') window.open(target.url, '_blank', 'noopener,noreferrer');
     },
     [navigate],
   );
+  const selectedOpenTarget = selected ? inboxOpenTarget(selected) : null;
+
+  // Secondary card actions live behind `…` — only actions the card actually
+  // advertises make the list, and an empty list hides the trigger entirely.
+  const detailMoreItems = useMemo(() => {
+    if (!selected) return [] as DropdownItem[];
+    return [
+      selected.availableActions.includes('archive')
+        ? {
+            icon: <Icon icon={ArchiveIcon} />,
+            key: 'archive',
+            label: t('inbox.archive'),
+            onClick: () => void archiveCard(selected),
+          }
+        : null,
+      selected.availableActions.includes('snooze')
+        ? {
+            // Pick an absolute moment, not a bare "4h" —
+            // every preset resolves against local time.
+            children: INBOX_SNOOZE_PRESETS.map((preset) => ({
+              key: `snooze-${preset}`,
+              label: t(`inbox.snoozePreset.${preset}`),
+              onClick: () => void snoozeCard(selected, preset),
+            })),
+            icon: <Icon icon={TimerOffIcon} />,
+            key: 'snooze',
+            label: t('inbox.snooze'),
+          }
+        : null,
+      selected.read
+        ? {
+            icon: <Icon icon={MailOpenIcon} />,
+            key: 'markUnread',
+            label: t('inbox.markUnread'),
+            onClick: () => void markCardUnread(selected),
+          }
+        : null,
+    ].filter(Boolean) as DropdownItem[];
+  }, [archiveCard, markCardUnread, selected, snoozeCard, t]);
 
   const selectCard = useCallback(
     (id: string, openDetail: boolean) => {
@@ -714,27 +797,46 @@ const WorkInboxPage = memo(() => {
     <div className={styles.listColumn}>
       <Flexbox className={styles.listHeader} gap={4}>
         <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <TabsRoot
-            size={'small'}
-            style={{ flex: 1, minWidth: 0 }}
-            value={tab}
-            onValueChange={(value) => writeInboxParams({ tab: value })}
-          >
-            <TabsList>
-              <TabsIndicator />
-              <TabsTab value="priority">
-                {t('inbox.priorityTab')}
-                {(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)
-                  ? ` ${(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)}`
-                  : ''}
-              </TabsTab>
-              <TabsTab value="other">
-                {t('inbox.otherTab')}
-                {summary?.unreadOtherCount ? ` ${summary.unreadOtherCount}` : ''}
-              </TabsTab>
-            </TabsList>
-          </TabsRoot>
+          {priorityEnabled ? (
+            <TabsRoot
+              size={'small'}
+              style={{ flex: 1, minWidth: 0 }}
+              value={tab}
+              onValueChange={(value) => writeInboxParams({ tab: value })}
+            >
+              <TabsList>
+                <TabsIndicator />
+                <TabsTab value="priority">
+                  {t('inbox.priorityTab')}
+                  {(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)
+                    ? ` ${(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)}`
+                    : ''}
+                </TabsTab>
+                <TabsTab value="other">
+                  {t('inbox.otherTab')}
+                  {summary?.unreadOtherCount ? ` ${summary.unreadOtherCount}` : ''}
+                </TabsTab>
+              </TabsList>
+            </TabsRoot>
+          ) : (
+            // Unified mode (Linear's "Disable"): no Priority/Other segments —
+            // one list over the whole feed.
+            <Text fontSize={13} style={{ paddingInlineStart: 4 }} type={'secondary'} weight={500}>
+              {t('inbox.all')}
+            </Text>
+          )}
           <Flexbox horizontal align={'center'} flex={'none'}>
+            <Tooltip title={t('inbox.filterUnread')}>
+              <ActionIcon
+                active={filterChip === 'unread'}
+                icon={EyeIcon}
+                size={'small'}
+                style={{ borderRadius: 9999 }}
+                onClick={() =>
+                  writeInboxParams({ filter: filterChip === 'unread' ? 'all' : 'unread' })
+                }
+              />
+            </Tooltip>
             <DropdownMenu
               placement={'bottomRight'}
               items={INBOX_FILTER_CHIPS.map((chip) => ({
@@ -744,29 +846,64 @@ const WorkInboxPage = memo(() => {
                 onClick: () => writeInboxParams({ filter: chip }),
               }))}
             >
-              <Tooltip title={t('inbox.filterBy', { filter: filterLabel(filterChip) })}>
+              <Tooltip title={t('inbox.addFilter')}>
                 <ActionIcon icon={ListFilterIcon} size={'small'} style={{ borderRadius: 9999 }} />
               </Tooltip>
             </DropdownMenu>
-            <Tooltip title={t('inbox.markAllRead')}>
-              <ActionIcon
-                icon={CheckCheckIcon}
-                size={'small'}
-                style={{ borderRadius: 9999 }}
-                onClick={() => void markAllRead()}
-              />
-            </Tooltip>
-            <Tooltip title={t('inbox.archiveAll')}>
-              <ActionIcon
-                icon={ArchiveIcon}
-                size={'small'}
-                style={{ borderRadius: 9999 }}
-                onClick={() => void archiveAll()}
-              />
-            </Tooltip>
+            <DropdownMenu
+              placement={'bottomRight'}
+              items={[
+                // The only display option the Orvilo feed can honour: Linear's
+                // snoozed visibility and unread-first ordering have no backend
+                // support here, so they are omitted rather than faked.
+                {
+                  checked: priorityEnabled,
+                  closeOnClick: false,
+                  key: 'priorityInbox',
+                  label: t('inbox.displayPriorityInbox'),
+                  onCheckedChange: (checked: boolean) =>
+                    setPriorityMode(checked ? 'priority' : 'all'),
+                  type: 'switch',
+                },
+              ]}
+            >
+              <Tooltip title={t('inbox.displayOptions')}>
+                <ActionIcon
+                  icon={SlidersHorizontalIcon}
+                  size={'small'}
+                  style={{ borderRadius: 9999 }}
+                />
+              </Tooltip>
+            </DropdownMenu>
           </Flexbox>
         </Flexbox>
       </Flexbox>
+      {bannerVisible ? (
+        <div className={styles.banner}>
+          <Text fontSize={13} weight={500}>
+            {t('inbox.priorityBanner.title')}
+          </Text>
+          <Flexbox horizontal align={'center'} gap={8} style={{ marginTop: 10 }}>
+            <SplitButton size={'small'} type={'primary'}>
+              <SplitButton.Main onClick={() => setPriorityMode('priority')}>
+                {t('inbox.priorityBanner.keep')}
+              </SplitButton.Main>
+              <SplitButton.Menu
+                items={[
+                  {
+                    key: 'disable',
+                    label: t('inbox.priorityBanner.disable'),
+                    onClick: () => setPriorityMode('all'),
+                  },
+                ]}
+              />
+            </SplitButton>
+            <Button size={'small'} onClick={() => setPriorityMode('all')}>
+              {t('inbox.priorityBanner.disable')}
+            </Button>
+          </Flexbox>
+        </div>
+      ) : null}
       {partial ? (
         <Alert
           showIcon
@@ -933,48 +1070,23 @@ const WorkInboxPage = memo(() => {
               {t('inbox.submitInput')}
             </Button>
           ) : null}
-          <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
-            {t('inbox.open')}
-          </Button>
-          <DropdownMenu
-            placement={'bottomRight'}
-            items={
-              [
-                selected.availableActions.includes('archive')
-                  ? {
-                      icon: <Icon icon={ArchiveIcon} />,
-                      key: 'archive',
-                      label: t('inbox.archive'),
-                      onClick: () => void archiveCard(selected),
-                    }
-                  : null,
-                selected.availableActions.includes('snooze')
-                  ? {
-                      // Pick an absolute moment, not a bare "4h" —
-                      // every preset resolves against local time.
-                      children: INBOX_SNOOZE_PRESETS.map((preset) => ({
-                        key: `snooze-${preset}`,
-                        label: t(`inbox.snoozePreset.${preset}`),
-                        onClick: () => void snoozeCard(selected, preset),
-                      })),
-                      icon: <Icon icon={TimerOffIcon} />,
-                      key: 'snooze',
-                      label: t('inbox.snooze'),
-                    }
-                  : null,
-                selected.read
-                  ? {
-                      icon: <Icon icon={MailOpenIcon} />,
-                      key: 'markUnread',
-                      label: t('inbox.markUnread'),
-                      onClick: () => void markCardUnread(selected),
-                    }
-                  : null,
-              ].filter(Boolean) as DropdownItem[]
-            }
-          >
-            <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
-          </DropdownMenu>
+          {selectedOpenTarget ? (
+            <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
+              {t('inbox.open')}
+            </Button>
+          ) : null}
+          {detailMoreItems.length > 0 ? (
+            <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
+              <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
+            </DropdownMenu>
+          ) : null}
+          {decisionVerbs.length === 0 && !selectedOpenTarget && detailMoreItems.length === 0 ? (
+            // Truthful empty state: the card offers no action the client can
+            // perform, so no dead controls render.
+            <Text fontSize={12} type={'secondary'}>
+              {t('inbox.noActions')}
+            </Text>
+          ) : null}
         </Flexbox>
       </Flexbox>
       {selectedTaskId ? (
@@ -996,7 +1108,12 @@ const WorkInboxPage = memo(() => {
         description={
           listMode === 'list' && filterChip === 'all' && summary
             ? t('inbox.unreadCount', {
-                count: tab === 'priority' ? summary.unreadBadgeCount : summary.unreadOtherCount,
+                // `unreadBadgeCount` is already the unique badge-worthy total —
+                // correct for both the Priority tab and the unified list.
+                count:
+                  priorityEnabled && tab === 'other'
+                    ? summary.unreadOtherCount
+                    : summary.unreadBadgeCount,
               })
             : listMode === 'list'
               ? t('inbox.loadedCount', { count: visibleCards.length })
@@ -1013,6 +1130,27 @@ const WorkInboxPage = memo(() => {
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {tCommon('tab.inbox')}
           </Text>
+        }
+        right={
+          <DropdownMenu
+            placement={'bottomRight'}
+            items={[
+              {
+                icon: <Icon icon={CheckCheckIcon} />,
+                key: 'markAllRead',
+                label: t('inbox.markAllRead'),
+                onClick: () => void markAllRead(),
+              },
+              {
+                icon: <Icon icon={ArchiveIcon} />,
+                key: 'archiveAll',
+                label: t('inbox.archiveAll'),
+                onClick: () => void archiveAll(),
+              },
+            ]}
+          >
+            <ActionIcon icon={MoreHorizontalIcon} size={'small'} title={t('inbox.moreActions')} />
+          </DropdownMenu>
         }
       />
       <div className={styles.stage}>

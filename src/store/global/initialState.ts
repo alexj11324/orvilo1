@@ -216,6 +216,19 @@ export interface SystemStatus {
   imageTopicPanelWidth?: number;
   imageTopicViewMode?: 'grid' | 'list';
   /**
+   * Inbox-agent landing: the `Get started with some examples` block stays
+   * dismissed once the user closes it (the reference keeps it dismissed).
+   */
+  inboxAgentExamplesDismissed?: boolean;
+  /**
+   * Per (user, workspace) priority-inbox choice, keyed by the WorkInbox
+   * `inboxPriorityScopeKey` (`userId:workspaceId`). 'priority' keeps the
+   * Priority/Other tab split; 'all' is Linear's "Disable" — one unified list.
+   * Absent = undecided: the onboarding banner shows until the user picks.
+   * Not workspace-overlaid — the workspace id is already inside each key.
+   */
+  inboxPriorityMode?: Record<string, 'all' | 'priority'>;
+  /**
    * Do not enable PGLite on app initialization, only enable when user manually turns it on
    */
   isEnablePglite?: boolean;
@@ -595,6 +608,15 @@ export const createInitialSystemStatus = (): SystemStatus => {
     hiddenHomeWidgets: Array.isArray(persistedStatus.hiddenHomeWidgets)
       ? persistedStatus.hiddenHomeWidgets
       : INITIAL_STATUS.hiddenHomeWidgets,
+    // The priority-inbox choice decides which feed the page fetches and whether
+    // the onboarding banner renders — restore it with the boot shell so neither
+    // flashes its undecided state before the async status init lands.
+    inboxPriorityMode:
+      persistedStatus.inboxPriorityMode &&
+      typeof persistedStatus.inboxPriorityMode === 'object' &&
+      !Array.isArray(persistedStatus.inboxPriorityMode)
+        ? persistedStatus.inboxPriorityMode
+        : undefined,
     leftPanelWidth:
       typeof persistedStatus.leftPanelWidth === 'number'
         ? persistedStatus.leftPanelWidth

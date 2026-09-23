@@ -461,6 +461,16 @@ const tokenDisplayFormatShort = (s: GlobalState) =>
 
 const homeSelectedAgentId = (s: GlobalState) => s.status.homeSelectedAgentId;
 
+/**
+ * Per (user, workspace) priority-inbox choice. `scopeKey` is the WorkInbox
+ * `inboxPriorityScopeKey` (`userId:workspaceId`); `undefined` means the user
+ * has not decided yet, which is what keeps the onboarding banner visible.
+ */
+const inboxPriorityMode =
+  (scopeKey: string) =>
+  (s: GlobalState): 'all' | 'priority' | undefined =>
+    s.status.inboxPriorityMode?.[scopeKey];
+
 export const systemStatusSelectors = {
   agentBuilderPanelWidth,
   agentListExpandedGroupKeys,
@@ -483,6 +493,7 @@ export const systemStatusSelectors = {
   homeRecentsCount,
   homeSelectedAgentId,
   homeTaskCount,
+  inboxPriorityMode,
   isBannerDismissed,
   isNotificationRead,
   isShowCredit,

@@ -268,6 +268,30 @@ export interface SystemStatus {
    * number of private agents (ungrouped) to display in the Private sidebar bucket
    */
   privateAgentPageSize?: number;
+  /**
+   * Display options of the `/projects` list page (Linear's "Display options"
+   * panel: layout / grouping / ordering / closed-projects window / property
+   * visibility). Personal-scope persistence — the reference's "Set default for
+   * everyone" is a workspace write and stays disabled until a workspace
+   * settings path exists. `timeline` is a valid reference layout but falls
+   * back to `list` until the timeline surface lands.
+   */
+  projectListViewOptions?: {
+    grouping?: 'lead' | 'none' | 'status';
+    layout?: 'board' | 'list' | 'timeline';
+    orderBy?:
+      | 'createdAt'
+      | 'health'
+      | 'manual'
+      | 'name'
+      | 'priority'
+      | 'status'
+      | 'targetDate'
+      | 'updatedAt';
+    orderDirection?: 'asc' | 'desc';
+    properties?: Record<string, boolean>;
+    showClosed?: 'all' | 'none' | 'pastMonth' | 'pastWeek' | 'pastYear';
+  };
   readNotificationSlugs?: string[];
   /**
    * number of recent items to display
@@ -560,6 +584,35 @@ export const INITIAL_STATUS = {
   pagePageSize: 20,
   portalWidth: 400,
   portalWidths: {},
+  // Mirrors DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS in
+  // features/Projects/List/displayOptions.ts — duplicated inline because the
+  // store cannot import feature code (feature→store is the allowed direction).
+  projectListViewOptions: {
+    grouping: 'none' as const,
+    layout: 'list' as const,
+    orderBy: 'manual' as const,
+    orderDirection: 'asc' as const,
+    properties: {
+      completed: false,
+      created: false,
+      dependencies: false,
+      health: true,
+      id: false,
+      issues: true,
+      labels: false,
+      lead: true,
+      members: false,
+      milestones: true,
+      priority: true,
+      startDate: false,
+      status: true,
+      summary: false,
+      targetDate: true,
+      teams: false,
+      updated: false,
+    },
+    showClosed: 'all' as const,
+  },
   readNotificationSlugs: [],
   resourceManagerColumnWidths: DEFAULT_RESOURCE_MANAGER_COLUMN_WIDTHS,
   showCommandMenu: false,
@@ -616,6 +669,12 @@ export const createInitialSystemStatus = (): SystemStatus => {
       typeof persistedStatus.inboxPriorityMode === 'object' &&
       !Array.isArray(persistedStatus.inboxPriorityMode)
         ? persistedStatus.inboxPriorityMode
+        : undefined,
+    // Same synchronous-restore rationale as inboxPriorityMode — without it the
+    // example prompts flash in then vanish once async status init lands.
+    inboxAgentExamplesDismissed:
+      typeof persistedStatus.inboxAgentExamplesDismissed === 'boolean'
+        ? persistedStatus.inboxAgentExamplesDismissed
         : undefined,
     leftPanelWidth:
       typeof persistedStatus.leftPanelWidth === 'number'

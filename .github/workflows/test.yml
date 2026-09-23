@@ -40,6 +40,13 @@ jobs:
           # do_not_skip gives the pair a deterministic owner: the push run
           # always executes, the PR run always mirrors it.
           do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+          # do_not_skip alone does not save the push run: the PR run's
+          # concurrent_skipping check still issues a cancel on its "duplicate"
+          # sibling ~80s in, killing every leaf job mid-flight — the PR gate
+          # then mirrors the murdered owner's failure. With push pinned as the
+          # canonical owner there is nothing to cancel: PR leafs skip via
+          # should_skip and only the mirror gate follows the push verdict.
+          cancel_others: 'false'
 
   # Path triage — one cheap job diffs the PR and reports which test areas
   # actually need to run. Leaf jobs skip when their area is untouched, and the

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
-import { INBOX_HEADER_MENU, type InboxHeaderMenuItemKey } from './inboxHeaderMenu';
+import { INBOX_HEADER_MENU, type InboxHeaderMenuItemKey } from './inboxHeaderMenuModel';
 
 interface InboxHeaderMenuProps {
   /** `archive` bulk — labelled "Delete all" to match the reference. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { INBOX_HEADER_MENU, type InboxHeaderMenuEntry } from './inboxHeaderMenu';
+import { INBOX_HEADER_MENU, type InboxHeaderMenuEntry } from './inboxHeaderMenuModel';
 
 const itemKeys = (entries: readonly InboxHeaderMenuEntry[]) =>
   entries.filter((entry) => entry.type === 'item').map((entry) => entry.key);

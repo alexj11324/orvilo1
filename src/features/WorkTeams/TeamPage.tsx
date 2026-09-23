@@ -1,10 +1,9 @@
 'use client';
 
 import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Button, Segmented, Select, Text } from '@lobehub/ui/base-ui';
-import type { WorkQueryLayout } from '@orvilo/types';
-import { FolderXIcon, InboxIcon, UsersIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Text } from '@lobehub/ui/base-ui';
+import { InboxIcon, UsersIcon } from 'lucide-react';
+import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -12,14 +11,11 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
-import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
-import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
-import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
-import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -29,49 +25,21 @@ import { workAttentionService } from '@/services/workAttention';
 import { otherTeamOptions } from './otherTeamOptions';
 import TeamHome from './TeamHome';
 import TeamIdentity from './TeamIdentity';
-import { nextTeamIssueScopeNavigation } from './teamIssueScopeNavigation';
+import TeamIssuesSurface from './TeamIssuesSurface';
 import TeamProjectsSurface from './TeamProjectsSurface';
-import { teamSurfaceState } from './teamSurfaceState';
 import TeamViewsSurface from './TeamViewsSurface';
-import {
-  ALL_TEAM_CYCLES,
-  type TeamIssueScope,
-  teamTaskQuery,
-  teamTriageQuery,
-} from './teamWorkQuery';
+import { ALL_TEAM_CYCLES, teamTriageQuery } from './teamWorkQuery';
 import TeamTriageSurface from './triage/TeamTriageSurface';
-
-// Reference team-issues chrome orders the scope switch Active → Backlog →
-// All issues; 'all' stays the canonical no-param URL.
-const ISSUE_SCOPES: TeamIssueScope[] = ['active', 'backlog', 'all'];
-
-// Board mode bounds the collection body to the scrollport so the kanban's own
-// column scrollers engage; list mode lets the body grow and the scroll host
-// stays the single scroll owner.
-const boardBodyStyle = {
-  boxSizing: 'border-box',
-  display: 'flex',
-  flexDirection: 'column',
-  height: '100%',
-} as const;
-
-const resolveIssueScope = (value: string | null): TeamIssueScope =>
-  ISSUE_SCOPES.includes(value as TeamIssueScope) ? (value as TeamIssueScope) : 'all';
 
 const TeamPage = memo(() => {
   const { t } = useTranslation('common');
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useActiveWorkspaceId();
   const workspaceSlug = useActiveWorkspaceSlug();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   // Linear's per-team sub-navigation lands here: home is the team context
   // surface; triage, issues, projects and views each get their own tab.
   const teamTab = searchParams.get('tab') ?? 'home';
-  const issueScope = resolveIssueScope(searchParams.get('scope'));
-  const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
-  const [noProject, setNoProject] = useState(false);
-  // Linear's team issues surface opens on the status-grouped board.
-  const [layout, setLayout] = useState<WorkQueryLayout>('board');
   const {
     data: teamData,
     error: teamError,
@@ -87,9 +55,6 @@ const TeamPage = memo(() => {
   // no triage surface, and a `?tab=triage` deep link falls back to home.
   const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
   const wantsTriage = triageCapable && teamTab === 'triage';
-  const wantsTasks = teamTab === 'issues';
-  // Board mode escapes the centered column — same WorkSurface frame as My issues.
-  const boardActive = wantsTasks && layout === 'board';
   const {
     data: triageData,
     error: triageError,
@@ -97,25 +62,11 @@ const TeamPage = memo(() => {
     mutate: revalidateTriage,
   } = useClientDataSWR(
     wantsTriage && teamId && workspaceId
-      ? ['team-triage', workspaceId, teamId, cycleId, noProject]
+      ? ['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]
       : null,
     () =>
       workAttentionService.query({
-        query: teamTriageQuery(teamId!, cycleId, noProject),
-      }),
-  );
-  const {
-    data: teamTasksData,
-    error: teamTasksError,
-    isLoading: isTeamTasksLoading,
-    mutate: revalidateTeamTasks,
-  } = useClientDataSWR(
-    wantsTasks && teamId && workspaceId
-      ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope, triageCapable]
-      : null,
-    () =>
-      workAttentionService.query({
-        query: teamTaskQuery(teamId!, cycleId, noProject, layout, issueScope, triageCapable),
+        query: teamTriageQuery(teamId!, ALL_TEAM_CYCLES, false),
       }),
   );
   const {
@@ -153,106 +104,23 @@ const TeamPage = memo(() => {
     (view) =>
       (view.visibility === 'team' && view.teamId === teamId) || view.visibility === 'workspace',
   );
-  const firstTeamTasks =
-    teamTasksData?.data && 'tasks' in teamTasksData.data ? teamTasksData.data.tasks : [];
-  const firstTeamGroups =
-    teamTasksData?.data && 'groups' in teamTasksData.data ? (teamTasksData.data.groups ?? []) : [];
-  const teamQueryHash =
-    teamTasksData?.data && 'queryHash' in teamTasksData.data
-      ? teamTasksData.data.queryHash
-      : undefined;
-  const [teamTail, setTeamTail] = useState<typeof firstTeamTasks>([]);
-  const [teamGroupTail, setTeamGroupTail] = useState<typeof firstTeamGroups>([]);
-  const {
-    loadMoreError,
-    loadMoreGroupErrors,
-    resetLoadMoreError,
-    retryLoadMore,
-    retryLoadMoreGroup,
-    runLoadMore,
-    runLoadMoreGroup,
-  } = usePagedLoadMore();
-  useEffect(() => {
-    setTeamTail([]);
-    setTeamGroupTail([]);
-    resetLoadMoreError();
-  }, [
-    cycleId,
-    issueScope,
-    layout,
-    noProject,
-    resetLoadMoreError,
-    teamId,
-    teamQueryHash,
-    workspaceId,
-  ]);
-  const teamTasks = mergeWorkQueryPage(firstTeamTasks, teamTail);
-  const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
-  const workState = teamSurfaceState({
-    error: teamTasksError,
-    isLoading: isTeamTasksLoading,
-    itemCount: teamTasks.length + teamGroups.reduce((sum, group) => sum + group.tasks.length, 0),
-  });
 
   const refreshTriage = useCallback(() => {
-    setTeamTail([]);
-    setTeamGroupTail([]);
     void Promise.all([
-      mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-      mutate([
-        'team-tasks',
-        workspaceId,
-        teamId,
-        cycleId,
-        noProject,
-        layout,
-        issueScope,
-        triageCapable,
-      ]),
+      mutate(['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]),
+      // The issues surface owns its own query shape — prefix-match the key so
+      // a triage accept/decline still revalidates whatever it is showing.
+      mutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'team-tasks' &&
+          key[1] === workspaceId &&
+          key[2] === teamId,
+      ),
     ]);
-  }, [cycleId, issueScope, layout, noProject, teamId, triageCapable, workspaceId]);
-
-  const loadMoreTeam = useCallback(async () => {
-    const last = teamTasks.at(-1);
-    if (!last || !teamId || !teamQueryHash) return;
-    const next = await workAttentionService.query({
-      afterId: last.id,
-      query: teamTaskQuery(teamId, cycleId, noProject, 'list', issueScope, triageCapable),
-      queryHash: teamQueryHash,
-    });
-    const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
-    setTeamTail((current) => mergeWorkQueryPage(current, incoming));
-  }, [cycleId, issueScope, noProject, teamId, teamQueryHash, teamTasks, triageCapable]);
-
-  const loadMoreTeamGroup = useCallback(
-    async (groupKey: string) => {
-      const column = teamGroups.find((group) => group.key === groupKey);
-      const last = column?.tasks.at(-1);
-      if (!last || !teamId || !teamQueryHash) return;
-      const next = await workAttentionService.query({
-        afterId: last.id,
-        groupKey,
-        query: teamTaskQuery(teamId, cycleId, noProject, layout, issueScope, triageCapable),
-        queryHash: teamQueryHash,
-      });
-      const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
-      setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
-    },
-    [cycleId, issueScope, layout, noProject, teamGroups, teamId, teamQueryHash, triageCapable],
-  );
-
-  const cycleOptions = useMemo(
-    () => [
-      { label: t('teams.cycleAll'), value: ALL_TEAM_CYCLES },
-      ...(teamData?.data.cycles ?? []).map((cycle) => ({
-        label: cycle.name || cycle.id,
-        value: cycle.id,
-      })),
-    ],
-    [t, teamData?.data.cycles],
-  );
+  }, [teamId, workspaceId]);
 
   // The views tab is a routed surface of its own — a team-scoped directory
   // plus the `?new=1` draft editor — so it returns before the shared team
@@ -308,6 +176,10 @@ const TeamPage = memo(() => {
 
   if (teamTab === 'projects' && teamId) return <TeamProjectsSurface teamId={teamId} />;
 
+  // The issues tab owns its full chrome — scope switch, filter/display/detail
+  // controls, paging and the peek pane — in a dedicated surface.
+  if (teamTab === 'issues' && teamId) return <TeamIssuesSurface teamId={teamId} />;
+
   return (
     <WorkSurface>
       <NavHeader
@@ -338,69 +210,7 @@ const TeamPage = memo(() => {
           <Empty description={t('teams.personal')} icon={UsersIcon} />
         </Center>
       ) : (
-        <WorkSurfaceCollection
-          style={boardActive ? boardBodyStyle : undefined}
-          toolbar={
-            /* Issues toolbar: the Active–Backlog–All issues scope stays
-               primary; cycle / no-project filters and the list/board switch
-               ride the aside so they overflow into the popover instead of
-               wrapping. Triage never shows the layout toggle — it renders
-               its own row surface. */
-            teamTab === 'issues' && !teamError ? (
-              <WorkSurfaceToolbar
-                asideLabel={t('members.filter')}
-                aside={
-                  <>
-                    {cycleOptions.length > 1 ? (
-                      <Select
-                        aria-label={t('teams.cycle')}
-                        options={cycleOptions}
-                        size="small"
-                        style={{ maxWidth: 280 }}
-                        value={cycleId}
-                        onChange={(next) => {
-                          if (typeof next === 'string') setCycleId(next);
-                        }}
-                      />
-                    ) : null}
-                    <Button
-                      icon={FolderXIcon}
-                      size="small"
-                      type={noProject ? 'primary' : 'default'}
-                      onClick={() => setNoProject((current) => !current)}
-                    >
-                      {t('teams.noProject')}
-                    </Button>
-                    <Segmented
-                      size="small"
-                      value={layout}
-                      options={[
-                        { label: t('teams.layoutList'), value: 'list' },
-                        { label: t('teams.layoutBoard'), value: 'board' },
-                      ]}
-                      onChange={(value) => setLayout(value as WorkQueryLayout)}
-                    />
-                  </>
-                }
-              >
-                <Segmented
-                  size="small"
-                  value={issueScope}
-                  options={ISSUE_SCOPES.map((scope) => ({
-                    // Linear labels the unfiltered scope "All issues".
-                    label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
-                    value: scope,
-                  }))}
-                  onChange={(value) =>
-                    setSearchParams(
-                      ...nextTeamIssueScopeNavigation(searchParams, value as TeamIssueScope),
-                    )
-                  }
-                />
-              </WorkSurfaceToolbar>
-            ) : undefined
-          }
-        >
+        <WorkSurfaceCollection>
           {/* The team fetch gates every tab — a failed team response never
               renders a half-populated tab surface underneath the error. */}
           {teamError ? (
@@ -455,41 +265,6 @@ const TeamPage = memo(() => {
                       <SavedViewProjectRow key={project.id} project={project} />
                     ))}
                   </Flexbox>
-                )
-              ) : null}
-              {wantsTasks ? (
-                workState === 'error' ? (
-                  <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
-                ) : (
-                  <WorkQueryResults
-                    hideEmptyColumns
-                    createContext={{ teamId }}
-                    emptyLabel={t('teams.workEmpty')}
-                    groups={teamGroups}
-                    layout={layout}
-                    loadMoreError={loadMoreError}
-                    loadMoreGroupErrors={loadMoreGroupErrors}
-                    loadMoreLabel={t('myWork.loadMore')}
-                    loading={workState === 'loading'}
-                    loadingLabel={t('teams.loading')}
-                    movable={layout === 'board'}
-                    tasks={teamTasks}
-                    groupBy={
-                      teamTasksData?.data && 'groupBy' in teamTasksData.data
-                        ? teamTasksData.data.groupBy
-                        : undefined
-                    }
-                    total={
-                      teamTasksData?.data && 'total' in teamTasksData.data
-                        ? teamTasksData.data.total
-                        : undefined
-                    }
-                    onMoved={refreshTriage}
-                    onRetryLoadMore={retryLoadMore}
-                    onRetryLoadMoreGroup={retryLoadMoreGroup}
-                    onLoadMore={layout === 'list' ? () => runLoadMore(loadMoreTeam) : undefined}
-                    onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreTeamGroup(key))}
-                  />
                 )
               ) : null}
             </>

@@ -2,7 +2,7 @@ import { ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { FolderIcon, LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import { FolderIcon, MessageSquareTextIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,6 +23,7 @@ import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
+import { TASK_VISIBILITY_ICONS } from '../features/taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from '../features/useTaskItemContextMenu';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
@@ -191,7 +192,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
     const isPrivate = task.visibility === 'private';
     const privacyBadge = isPrivate ? (
       <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-        <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+        <Icon color={cssVar.colorTextDescription} icon={TASK_VISIBILITY_ICONS.private} size={14} />
       </Tooltip>
     ) : null;
 

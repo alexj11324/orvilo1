@@ -10,7 +10,7 @@ import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowRightLeft,
+  ArrowLeftRight,
   BotMessageSquare,
   CircleDot,
   CirclePlus,
@@ -52,7 +52,7 @@ const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent
 
 const ROW_TYPE_ICON = {
   assignment: UserRoundCog,
-  property: ArrowRightLeft,
+  property: ArrowLeftRight,
   comment: MessageCircle,
   created: CirclePlus,
   topic: CircleDot,

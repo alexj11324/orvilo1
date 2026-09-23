@@ -3,7 +3,7 @@ import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { DiamondIcon, LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import { MessageSquareTextIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ import {
   getProjectMilestoneIssuesPath,
   type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
-import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
@@ -31,6 +31,7 @@ import TaskPriorityTag from './TaskPriorityTag';
 import TaskStatusTag from './TaskStatusTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
 import TaskTriggerTag from './TaskTriggerTag';
+import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 
@@ -153,7 +154,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       variant={'outlined'}
       onClick={handleMilestoneClick}
     >
-      <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={10} />
+      <MilestoneIcon size={10} />
       <Text ellipsis fontSize={12} style={{ maxWidth: 140 }} type={'secondary'}>
         {milestone.name}
       </Text>
@@ -168,7 +169,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const isPrivate = task.visibility === 'private';
   const privacyBadge = isPrivate ? (
     <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-      <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+      <Icon color={cssVar.colorTextDescription} icon={TASK_VISIBILITY_ICONS.private} size={14} />
     </Tooltip>
   ) : null;
 

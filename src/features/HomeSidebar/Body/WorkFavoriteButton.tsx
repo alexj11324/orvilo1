@@ -2,10 +2,10 @@
 
 import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import type { NavigationFavoriteTargetType } from '@orvilo/types';
-import { Pin, PinOff, Star, StarOff } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FAVORITE_MARK, FAVORITE_MARK_OFF, type FavoriteIconSet } from './favoriteIcons';
 import { useWorkFavoriteToggle } from './useWorkFavoriteToggle';
 
 interface WorkFavoriteButtonProps {
@@ -14,7 +14,7 @@ interface WorkFavoriteButtonProps {
    * `star` (Linear's issue-header favourite). Additive — existing callsites
    * keep the pin look; the task detail page opts into `star`.
    */
-  icon?: 'pin' | 'star';
+  icon?: FavoriteIconSet;
   targetId?: string;
   targetType: NavigationFavoriteTargetType;
   variant?: 'button' | 'icon';
@@ -27,7 +27,7 @@ const WorkFavoriteButton = memo<WorkFavoriteButtonProps>(
     if (!targetId) return null;
     const label = pinned ? t('savedViews.unfavorite') : t('savedViews.favorite');
     if (variant === 'icon') {
-      const glyph = icon === 'star' ? (pinned ? StarOff : Star) : pinned ? PinOff : Pin;
+      const glyph = pinned ? FAVORITE_MARK_OFF[icon] : FAVORITE_MARK[icon];
       return <ActionIcon icon={glyph} size="small" title={label} onClick={() => void toggle()} />;
     }
     return (

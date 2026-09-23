@@ -15,11 +15,11 @@ import {
   ChevronRightIcon,
   CircleDotIcon,
   CircleUserIcon,
+  DiamondIcon,
   FilterIcon,
   HeartPulseIcon,
   LayoutTemplateIcon,
   LinkIcon,
-  MilestoneIcon,
   SignalHighIcon,
   SlidersHorizontalIcon,
   SparklesIcon,
@@ -179,7 +179,9 @@ const GROUP_ICONS: Record<ProjectListFilterGroupId, LucideIcon> = {
   labels: TagIcon,
   lead: UserRoundIcon,
   members: UsersRoundIcon,
-  milestones: MilestoneIcon,
+  // The milestone entity mark is the diamond, not lucide's signpost
+  // `MilestoneIcon` — same glyph the MilestoneIcon component paints.
+  milestones: DiamondIcon,
   priority: SignalHighIcon,
   projects: BoxIcon,
   relations: LinkIcon,

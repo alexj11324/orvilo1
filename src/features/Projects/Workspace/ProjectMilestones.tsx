@@ -4,23 +4,16 @@ import { DatePicker, Flexbox, Icon, Input, SortableList, TextArea } from '@lobeh
 import { Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
-import {
-  CalendarIcon,
-  DiamondIcon,
-  EllipsisIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-} from 'lucide-react';
+import { CalendarIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
 import { getProjectTasksPath } from '@/features/Projects/Layout/navigation';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import {
   getMilestoneAnchorId,
-  MILESTONE_ICON_PAINT,
   MILESTONE_ICON_SIZE,
   scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
@@ -223,9 +216,6 @@ const styles = createStaticStyles(({ css }) => ({
       color: ${cssVar.colorText};
       background: ${cssVar.colorFillQuaternary};
     }
-  `,
-  noMilestoneIcon: css`
-    color: ${cssVar.colorTextDescription};
   `,
   noMilestoneRow: css`
     min-height: 42px;
@@ -469,7 +459,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                 href={`#${getMilestoneAnchorId(milestone.id)}`}
                 onClick={() => scrollToMilestoneAnchor(milestone.id)}
               >
-                <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
+                <MilestoneIcon size={MILESTONE_ICON_SIZE} />
               </a>
               <Text fontSize={15} style={{ flex: '0 1 auto', minWidth: 0 }} weight={450}>
                 {milestone.name}
@@ -602,7 +592,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
             )}
             renderOverlay={(milestone) => (
               <Flexbox horizontal align={'center'} className={styles.card} gap={8}>
-                <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
+                <MilestoneIcon size={MILESTONE_ICON_SIZE} />
                 <Text fontSize={15} weight={450}>
                   {milestone.name}
                 </Text>
@@ -623,9 +613,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               under a milestone — the only UI path onto `setTaskMilestone`. */}
           <div className={styles.noMilestoneRow}>
             <Flexbox horizontal align={'center'} gap={10}>
-              <span className={styles.noMilestoneIcon}>
-                <Icon icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
-              </span>
+              <MilestoneIcon muted size={MILESTONE_ICON_SIZE} />
               {unassignedTasks.length > 0 ? (
                 <button
                   aria-expanded={unassignedOpen}
@@ -681,7 +669,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                   {canEdit && (
                     <DropdownMenu
                       items={milestones.map((milestone) => ({
-                        icon: DiamondIcon,
+                        icon: <MilestoneIcon size={14} />,
                         key: milestone.id,
                         label: milestone.name,
                         onClick: () =>
@@ -698,7 +686,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                           name: task.name ?? task.identifier,
                         })}
                       >
-                        <Icon icon={DiamondIcon} size={12} />
+                        <MilestoneIcon muted size={12} />
                         {t('overview.milestoneSet')}
                       </button>
                     </DropdownMenu>

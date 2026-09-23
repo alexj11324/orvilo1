@@ -1,12 +1,12 @@
 'use client';
 
 import { ActionIcon } from '@lobehub/ui/base-ui';
-import { Star } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
+import { FAVORITE_MARK } from '@/features/HomeSidebar/Body/favoriteIcons';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -34,7 +34,7 @@ const FavoriteToggle = memo(() => {
       aria-label={label}
       aria-pressed={isFavorite}
       fill={isFavorite ? 'currentColor' : 'none'}
-      icon={Star}
+      icon={FAVORITE_MARK.star}
       size={DESKTOP_HEADER_ICON_SMALL_SIZE}
       title={label}
       tooltipProps={{ placement: 'bottom' }}

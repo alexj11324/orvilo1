@@ -1,14 +1,13 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
+import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { DiamondIcon } from 'lucide-react';
 import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
-import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
@@ -228,7 +227,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                 // milestone-filtered list stays reachable from the overview
                 // card's always-visible progress link.
                 <div className={styles.milestoneRow} key={milestone.id}>
-                  <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
+                  <MilestoneIcon />
                   <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
                     {milestone.name}
                   </Text>

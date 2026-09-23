@@ -1,6 +1,6 @@
 import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2Icon, LockIcon, UsersIcon } from 'lucide-react';
+import { Loader2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,11 @@ import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 
 import { renderMenuCheck } from './menuExtra';
-import { getTaskVisibilityDefaultLabel, getTaskVisibilityLabelKey } from './taskVisibilityLabel';
+import {
+  getTaskVisibilityDefaultLabel,
+  getTaskVisibilityLabelKey,
+  TASK_VISIBILITY_ICONS,
+} from './taskVisibilityLabel';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   trigger: css`
@@ -94,7 +98,7 @@ const TaskVisibilityTag = memo<TaskVisibilityTagProps>(
       [onChange, taskIdentifier, updateTaskVisibility, visibility],
     );
 
-    const IconComp = visibility === 'private' ? LockIcon : UsersIcon;
+    const IconComp = TASK_VISIBILITY_ICONS[visibility];
     const label = t(getTaskVisibilityLabelKey(visibility) as never, {
       defaultValue: getTaskVisibilityDefaultLabel(visibility),
     });
@@ -102,7 +106,7 @@ const TaskVisibilityTag = memo<TaskVisibilityTagProps>(
     const menuItems = useMemo<DropdownItem[]>(
       () =>
         VISIBILITY_OPTIONS.map((option) => {
-          const OptionIcon = option === 'private' ? LockIcon : UsersIcon;
+          const OptionIcon = TASK_VISIBILITY_ICONS[option];
           const isCurrent = option === visibility;
           return {
             extra: renderMenuCheck(isCurrent),

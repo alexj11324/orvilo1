@@ -8,7 +8,8 @@ import { memo, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
-import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
+import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -213,7 +214,7 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
     const progress = milestoneProgressView(milestone.progress);
     return (
       <div className={styles.row} key={milestone.id}>
-        <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={MILESTONE_ICON_SIZE} />
+        <MilestoneIcon />
         <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={450}>
           {milestone.name}
         </Text>

@@ -1,5 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
-import { Link2Icon, Pin, PinOff } from 'lucide-react';
+import { Link2Icon } from 'lucide-react';
+
+import { FAVORITE_MARK, FAVORITE_MARK_OFF } from './favoriteIcons';
 
 /**
  * Model of the per-team `⋯` menu in "Your teams" (Linear renders a hover
@@ -17,7 +19,7 @@ export interface TeamMenuEntry {
 
 export const buildTeamMenuEntries = (pinned: boolean): TeamMenuEntry[] => [
   {
-    icon: pinned ? PinOff : Pin,
+    icon: pinned ? FAVORITE_MARK_OFF.pin : FAVORITE_MARK.pin,
     key: 'favorite',
     labelKey: pinned ? 'savedViews.unfavorite' : 'savedViews.favorite',
   },

@@ -5,7 +5,7 @@ import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
-import { BoxIcon, DiamondIcon } from 'lucide-react';
+import { BoxIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,7 @@ import Avatar from '@/components/Avatar';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
-import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useProjectStore } from '@/store/project';
@@ -409,7 +409,7 @@ const TimelineRow = memo<TimelineRowProps>(
               style={{ left: mark.offset }}
               title={mark.names.join(', ')}
             >
-              <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={10} />
+              <MilestoneIcon size={10} />
               {mark.count > 1 ? <span>+{mark.count - 1}</span> : null}
             </span>
           ))}

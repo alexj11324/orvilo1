@@ -8,7 +8,7 @@ import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
 import {
   Archive,
-  ArrowRightLeft,
+  ArrowLeftRight,
   BadgeCheck,
   CircleDot,
   CirclePlay,
@@ -28,7 +28,8 @@ import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { getProjectOverviewPath } from '@/features/Projects/Layout/navigation';
-import { getMilestoneAnchorId, MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
+import { getMilestoneAnchorId } from '@/features/Projects/milestoneRow';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useActivityTime } from '@/hooks/useActivityTime';
@@ -159,11 +160,11 @@ const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent
   4: 'low',
 };
 
-const TYPE_ICON: Record<TaskActivityLogType, typeof ArrowRightLeft> = {
+const TYPE_ICON: Record<TaskActivityLogType, typeof ArrowLeftRight> = {
   assignee_agent: UserRoundCog,
   assignee_user: UserRoundCog,
   automation: Timer,
-  priority: ArrowRightLeft,
+  priority: ArrowLeftRight,
   reviewer: UserRoundCog,
   status: CircleDot,
 };
@@ -304,7 +305,7 @@ const RowSentence = ({ row }: { row: ActivityFeedRow }) => {
 };
 
 const ActivityRowItem = memo<{ row: ActivityFeedRow }>(({ row }) => {
-  const RowIcon = TYPE_ICON[row.type] ?? ArrowRightLeft;
+  const RowIcon = TYPE_ICON[row.type] ?? ArrowLeftRight;
   return (
     <div className={styles.row}>
       <span className={styles.glyph}>
@@ -408,7 +409,7 @@ const EventRowItem = memo<{ event: ProjectFeedEvent; projectRef: string }>(
       <div className={styles.row}>
         <span className={styles.glyph}>
           {event.type === 'milestone_added' ? (
-            <Icon {...MILESTONE_ICON_PAINT} icon={EventIcon} size={16} />
+            <MilestoneIcon size={16} />
           ) : (
             <Icon icon={EventIcon} size={16} />
           )}

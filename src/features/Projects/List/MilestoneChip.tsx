@@ -1,12 +1,10 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { DiamondIcon } from 'lucide-react';
 import { memo } from 'react';
 
-import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useCurrentProjectDetail } from '@/store/project';
 
 import { pickNextMilestone } from './displayOptions';
@@ -53,7 +51,7 @@ const ProjectMilestoneChip = memo<{ projectId: string }>(({ projectId }) => {
   if (!milestone) return null;
   return (
     <span className={styles.chip} title={milestone.name}>
-      <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={10} />
+      <MilestoneIcon size={10} />
       <span className={styles.name}>{milestone.name}</span>
       {milestone.date ? (
         <span className={styles.date}>{dayjs(milestone.date).format('MMM D')}</span>

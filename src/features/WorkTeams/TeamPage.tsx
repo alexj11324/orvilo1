@@ -3,7 +3,7 @@
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Button, Segmented, Select, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryLayout } from '@orvilo/types';
-import { FolderXIcon, ListChecksIcon, UsersIcon } from 'lucide-react';
+import { FolderXIcon, InboxIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -396,7 +396,7 @@ const TeamPage = memo(() => {
               ) : null}
               {teamTab === 'triage' && !triageCapable ? (
                 <Center flex={1} padding={48}>
-                  <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
+                  <Empty description={t('teams.triageDisabled')} icon={InboxIcon} />
                 </Center>
               ) : null}
               {wantsTriage && teamId ? (

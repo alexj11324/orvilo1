@@ -2,11 +2,12 @@ import { DatePicker, Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
-import { CalendarIcon, FlagIcon, PlusIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, XIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type CreateProjectMilestone } from './createProjectForm';
+import MilestoneIcon from './MilestoneIcon';
 import { formatProjectDate } from './projectPlanningDate';
 
 interface ProjectMilestoneEditorProps {
@@ -80,7 +81,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
       {milestones.map((milestone, index) => (
         <Flexbox className={styles.row} gap={4} key={`${milestone.name}-${index}`}>
           <Flexbox horizontal align="center" gap={8}>
-            <Icon icon={FlagIcon} size={14} />
+            <MilestoneIcon size={14} />
             <Text fontSize={13} weight={500}>
               {milestone.name}
             </Text>

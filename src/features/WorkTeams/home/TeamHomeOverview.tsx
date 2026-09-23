@@ -5,7 +5,7 @@ import { Text } from '@lobehub/ui/base-ui';
 import type { TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { ArrowRightIcon, FolderKanbanIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
+import { FolderKanbanIcon, InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -212,10 +212,12 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
+// The rail destinations draw the same entity marks the sidebar's team
+// sub-navigation uses — triage is the inbox tray, not a generic arrow.
 const destinationIcons = {
   issues: ListChecksIcon,
   projects: FolderKanbanIcon,
-  triage: ArrowRightIcon,
+  triage: InboxIcon,
   views: LayoutListIcon,
 } satisfies Record<TeamHomeDestination, typeof ListChecksIcon>;
 

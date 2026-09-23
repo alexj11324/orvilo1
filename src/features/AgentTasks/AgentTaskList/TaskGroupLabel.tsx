@@ -1,11 +1,11 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { CalendarClock, DiamondIcon, HeartPulse, UserRound } from 'lucide-react';
+import { CalendarClock, HeartPulse, UserRound } from 'lucide-react';
 import { memo } from 'react';
 
 import { PriorityIcon } from '@/components/PriorityIcon';
-import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
@@ -42,13 +42,7 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
   if (group.groupBy === 'milestone') {
     // The same brand-indigo diamond the overview/rail milestones carry —
     // "No milestone" keeps it muted like the other unassigned buckets.
-    return (
-      <Icon
-        {...(group.milestoneId ? MILESTONE_ICON_PAINT : { color: cssVar.colorTextDescription })}
-        icon={DiamondIcon}
-        size={14}
-      />
-    );
+    return <MilestoneIcon muted={!group.milestoneId} size={14} />;
   }
 
   if (group.groupBy === 'automationMode') {

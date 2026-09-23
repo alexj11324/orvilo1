@@ -2,13 +2,13 @@
 
 import { Block, type DropdownItem, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { Text, toast } from '@lobehub/ui/base-ui';
-import { CheckIcon, DiamondIcon } from 'lucide-react';
+import { CheckIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
-import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useProjectStore } from '@/store/project';
@@ -98,7 +98,7 @@ const TaskProjectSection = memo(() => {
         title={t('taskDetail.milestone.hint')}
         variant={'borderless'}
       >
-        <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={14} style={{ flex: 'none' }} />
+        <MilestoneIcon size={14} style={{ flex: 'none' }} />
         <Text
           ellipsis
           style={{ minWidth: 0 }}
@@ -120,7 +120,7 @@ const TaskProjectSection = memo(() => {
       variant={'borderless'}
       onClick={() => milestone && navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))}
     >
-      <Icon {...MILESTONE_ICON_PAINT} icon={DiamondIcon} size={14} style={{ flex: 'none' }} />
+      <MilestoneIcon size={14} style={{ flex: 'none' }} />
       <Text ellipsis style={{ minWidth: 0 }} weight={500}>
         {milestoneLabel}
       </Text>

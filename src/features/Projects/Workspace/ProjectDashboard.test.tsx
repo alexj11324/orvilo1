@@ -35,7 +35,7 @@ const mocks = vi.hoisted(() => ({
   workspaceRole: null as string | null,
   workspaceMembers: [] as {
     userId: string;
-    user: { fullName: string };
+    user: { avatar?: null | string; fullName: string };
     deletedAt: null;
     suspendedAt: null;
   }[],
@@ -65,6 +65,9 @@ const mocks = vi.hoisted(() => ({
   // And for `Tag`, which takes its glyph as an `icon` *element*: that element
   // is never mounted by the stub, so its props are only readable here.
   tagProps: [] as Record<string, unknown>[],
+  // Same capture for `Avatar`: the lead trigger must hand it the member row's
+  // own name/avatar, not a slot that resolves to nothing outside the app.
+  avatarProps: [] as Record<string, unknown>[],
   // `Flexbox` props, **keyed by the node the stub produced**. A list would have
   // to be told which entry is the container under test; the render order that
   // decides that is not a fact about the component. Reading them back off the
@@ -211,7 +214,12 @@ vi.mock('@/features/NavPanel/SidebarHeaderSelect', () => ({
   SidebarHeaderSelectTrigger: () => null,
 }));
 vi.mock('@/features/NavPanel/switcher/SwitcherMenu', () => ({ default: () => null }));
-vi.mock('@/components/Avatar', () => ({ default: () => null }));
+vi.mock('@/components/Avatar', () => ({
+  default: (props: Record<string, unknown>) => {
+    mocks.avatarProps.push(props);
+    return null;
+  },
+}));
 vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => null }));
 vi.mock('@/features/AgentTasks/features/AssigneeUserAvatar', () => ({ default: () => null }));
 vi.mock('@/store/user', () => ({ useUserStore: () => 'user_1' }));
@@ -361,6 +369,7 @@ beforeEach(() => {
   mocks.iconProps = [];
   mocks.textProps = [];
   mocks.tagProps = [];
+  mocks.avatarProps = [];
   mocks.milestones = [];
   mocks.projectList = [];
 });
@@ -1117,6 +1126,33 @@ describe('project list indicators', () => {
     expect(document.querySelector('svg[viewBox="-1 -1 16 16"]')).toBeInTheDocument();
     expect(screen.getByText('Target date')).toBeInTheDocument();
     expect(screen.queryByText('High')).not.toBeInTheDocument();
+  });
+
+  it('renders the assigned lead through the member row avatar, not an empty trigger', () => {
+    mocks.workspaceMembers = [
+      {
+        deletedAt: null,
+        suspendedAt: null,
+        user: { avatar: 'https://img.test/lead.png', fullName: 'Agent Testing User' },
+        userId: 'user_lead',
+      },
+    ];
+    mocks.projectList = [
+      { ...detail.project, leadUserId: 'user_lead', status: 'active' } as ProjectListItem,
+    ];
+
+    render(<ProjectListPage />);
+
+    expect(
+      screen.getByRole('button', { name: 'properties.lead: Agent Testing User' }),
+    ).toBeInTheDocument();
+    expect(mocks.avatarProps).toContainEqual(
+      expect.objectContaining({
+        avatar: 'https://img.test/lead.png',
+        name: 'Agent Testing User',
+        size: 20,
+      }),
+    );
   });
 });
 

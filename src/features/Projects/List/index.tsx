@@ -29,7 +29,6 @@ import {
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
@@ -41,8 +40,6 @@ import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
-import TopicCreatorAvatar from '@/features/TopicCreatorAvatar';
-import UserAvatar from '@/features/User/UserAvatar';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
@@ -215,22 +212,6 @@ const PROJECT_PRIORITY_LABEL_KEY = {
   4: 'create.priority.low',
 } as const;
 
-const ProjectOwnerAvatar = memo<{ userId: string }>(({ userId }) => {
-  const activeWorkspaceId = useActiveWorkspaceId();
-
-  return (
-    <span className={styles.owner}>
-      {activeWorkspaceId ? (
-        <TopicCreatorAvatar size={20} userId={userId} />
-      ) : (
-        <UserAvatar size={20} />
-      )}
-    </span>
-  );
-});
-
-ProjectOwnerAvatar.displayName = 'ProjectOwnerAvatar';
-
 const ProjectHealthCell = memo<{ health?: ProjectHealth | null }>(({ health }) => {
   const { t } = useTranslation('project');
   const theme = useTheme();
@@ -383,7 +364,17 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
             event.stopPropagation();
           }}
         >
-          {project.leadUserId ? <ProjectOwnerAvatar userId={project.leadUserId} /> : <NoLeadIcon />}
+          {project.leadUserId ? (
+            <Avatar
+              avatar={lead?.user?.avatar ?? undefined}
+              name={leadName}
+              shape="circle"
+              size={20}
+              title={leadName}
+            />
+          ) : (
+            <NoLeadIcon />
+          )}
         </button>
       </Popover>
     );

@@ -57,6 +57,7 @@ import {
   getKanbanTaskPatch,
   kanbanBoardCapabilities,
   kanbanColumnAllowsCreate,
+  kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -733,20 +734,24 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [changeTaskStatus, external?.queryGroupBy, refreshGroups],
   );
 
-  const handleCreateTask = useCallback(() => {
-    if (!canEditTask) return;
-    createTaskModal({
-      agentId,
-      lockAssignee: !!agentId,
-      projectId: kanbanCreateTaskProjectId(projectId),
-      teamId: createContext?.teamId,
-      teamOptions: createContext?.teamOptions,
-      onCreated: (task) => {
-        navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
-      },
-      showInlineToggle: false,
-    });
-  }, [agentId, canEditTask, createContext, navigate, projectId]);
+  const handleCreateTask = useCallback(
+    (columnKey: string) => {
+      if (!canEditTask) return;
+      createTaskModal({
+        agentId,
+        lockAssignee: !!agentId,
+        projectId: kanbanCreateTaskProjectId(projectId),
+        teamId: createContext?.teamId,
+        teamOptions: createContext?.teamOptions,
+        ...kanbanColumnCreatePreset(columnKey),
+        onCreated: (task) => {
+          navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
+        },
+        showInlineToggle: false,
+      });
+    },
+    [agentId, canEditTask, createContext, navigate, projectId],
+  );
 
   // ── Derived layout ─────────────────────────────────────────────
 
@@ -888,7 +893,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                   groupBy,
                   myTaskScope,
                 })
-                  ? handleCreateTask
+                  ? () => handleCreateTask(col.key)
                   : undefined
               }
             />

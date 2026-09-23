@@ -302,8 +302,10 @@ export class TaskDetailSliceActionImpl {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    status?: TaskStatus;
     teamId?: string;
     visibility?: 'private' | 'public';
+    workflowCategory?: TaskWorkflowCategory;
   }): Promise<CreatedTask | null> => {
     this.#set({ isCreatingTask: true }, false, 'createTask/start');
     try {

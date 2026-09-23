@@ -18,6 +18,7 @@ import {
   KANBAN_WORKFLOW_COLUMN_KEY,
   kanbanBoardCapabilities,
   kanbanColumnAllowsCreate,
+  kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -624,8 +625,8 @@ describe('kanbanColumnAllowsCreate', () => {
     ).toBe(true);
   });
 
-  it('refuses create on non-backlog columns and non-status groupings', () => {
-    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'in_progress' })).toBe(false);
+  it('offers create on every column of a status-grouped board (Linear per-column +)', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'in_progress' })).toBe(true);
     expect(
       kanbanColumnAllowsCreate({
         ...base,
@@ -633,10 +634,18 @@ describe('kanbanColumnAllowsCreate', () => {
         createContext: { teamId: 'team-1' },
         external: true,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', groupBy: 'assignee' })).toBe(
       false,
     );
+  });
+
+  it('presets the clicked column dimension on the created issue', () => {
+    expect(kanbanColumnCreatePreset('backlog')).toEqual({ status: 'backlog' });
+    expect(kanbanColumnCreatePreset('wf:in_progress')).toEqual({
+      workflowCategory: 'in_progress',
+    });
+    expect(kanbanColumnCreatePreset('st:paused')).toEqual({ status: 'paused' });
   });
 
   it('refuses create in my-task scope and on external boards without a team context', () => {

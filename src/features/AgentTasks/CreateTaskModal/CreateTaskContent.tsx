@@ -3,6 +3,7 @@
 import { useEditor } from '@lobehub/editor/react';
 import { Block, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
+import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { Minimize2, Paperclip, X } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -54,6 +55,8 @@ export interface CreateTaskContentProps {
    * inline entry target, so contexts like the Kanban board pass `false` to hide it.
    */
   showInlineToggle?: boolean;
+  /** Execution-status preset — per-column board `+` on status-grouped boards. */
+  status?: TaskStatus;
   /** Owning team for workspace tasks — create entry points on a team surface
    *  pass it so the issue lands on that team (Linear parity). */
   teamId?: string;
@@ -63,6 +66,8 @@ export interface CreateTaskContentProps {
    *  choice instead of silently picking a team or hiding create entirely.
    */
   teamOptions?: { id: string; name: string }[];
+  /** Business-workflow preset — per-column board `+` on work-query boards. */
+  workflowCategory?: TaskWorkflowCategory;
 }
 
 const CreateTaskContent = memo<CreateTaskContentProps>(
@@ -73,8 +78,10 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     onCreated,
     projectId,
     showInlineToggle = true,
+    status,
     teamId,
     teamOptions,
+    workflowCategory,
   }) => {
     const { t } = useTranslation('chat');
     const { close } = useModalContext();
@@ -240,9 +247,11 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           name: title.trim() || undefined,
           priority: priority || undefined,
           projectId,
+          status,
           teamId: pickedTeamId,
           // Only send visibility in workspace mode; personal mode ignores it.
           visibility: activeWorkspaceId ? visibility : undefined,
+          workflowCategory,
         });
 
         if (result) {

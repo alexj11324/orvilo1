@@ -337,9 +337,9 @@ export const externalKanbanColumnMoveScope = (
  * was started from. An external (work-query) board only shows it when the
  * caller declared where the card belongs.
  *
- * Create lands on the backlog column only: `backlog` for store boards,
- * `wf:backlog` for work-query boards — matching by raw key is what let the
- * team board silently lose its create entry.
+ * Every column on a status-grouped board offers `+` (Linear parity): the
+ * clicked column's dimension value presets the new issue via
+ * {@link kanbanColumnCreatePreset}.
  */
 export const kanbanColumnAllowsCreate = (input: {
   columnKey: string;
@@ -349,11 +349,24 @@ export const kanbanColumnAllowsCreate = (input: {
   myTaskScope?: boolean;
 }): boolean =>
   input.groupBy === 'status' &&
-  (input.columnKey === 'backlog' || input.columnKey === 'wf:backlog') &&
   !input.myTaskScope &&
   (!input.external ||
     Boolean(input.createContext?.teamId) ||
     (input.createContext?.teamOptions?.length ?? 0) > 0);
+
+/**
+ * The create preset a `+` click on a column carries — `wf:`/`st:` work-query
+ * keys map back to their dimension, internal status columns to `status`.
+ */
+export const kanbanColumnCreatePreset = (
+  columnKey: string,
+): { status?: TaskStatus; workflowCategory?: TaskWorkflowCategory } => {
+  if (columnKey.startsWith('wf:'))
+    return { workflowCategory: workQueryKeyForKanbanColumn(columnKey) as TaskWorkflowCategory };
+  if (columnKey.startsWith('st:'))
+    return { status: workQueryKeyForKanbanColumn(columnKey) as TaskStatus };
+  return { status: columnKey as TaskStatus };
+};
 
 export const getKanbanAssigneeUpdate = (
   task: TaskListItem,

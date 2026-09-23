@@ -66,7 +66,8 @@ const TeamPage = memo(() => {
   const issueScope = resolveIssueScope(searchParams.get('scope'));
   const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
   const [noProject, setNoProject] = useState(false);
-  const [layout, setLayout] = useState<WorkQueryLayout>('list');
+  // Linear's team issues surface opens on the status-grouped board.
+  const [layout, setLayout] = useState<WorkQueryLayout>('board');
   const {
     data: teamData,
     error: teamError,

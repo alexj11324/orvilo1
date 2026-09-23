@@ -4,7 +4,7 @@ import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
-import { FolderClosedIcon, PanelRightIcon, PlusIcon } from 'lucide-react';
+import { PanelRightIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +50,7 @@ import {
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
 import ProjectBoard from '@/features/Projects/List/ProjectBoard';
 import ProjectTimeline from '@/features/Projects/List/ProjectTimeline';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -368,9 +369,9 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
           {summary.health.map(({ count, state }) => (
             <button
               aria-pressed={activeHealth.has(state)}
+              className={cx(styles.sidebarRow, activeHealth.has(state) && styles.sidebarRowActive)}
               key={state}
               type="button"
-              className={cx(styles.sidebarRow, activeHealth.has(state) && styles.sidebarRowActive)}
               onClick={() => toggleHealth(state)}
             >
               <ProjectHealthIcon health={state} size={14} />
@@ -530,7 +531,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               <Center flex={1} padding={48}>
                 <Flexbox align={'center'} gap={16}>
                   <Empty
-                    icon={FolderClosedIcon}
+                    icon={PROJECT_ENTITY_ICON}
                     description={
                       filters.length > 0
                         ? t('list.filter.noResults', { ns: 'project' })

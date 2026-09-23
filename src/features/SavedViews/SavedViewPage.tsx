@@ -6,13 +6,7 @@ import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import {
-  FilterIcon,
-  FolderClosedIcon,
-  PanelRightCloseIcon,
-  PanelRightOpenIcon,
-  Settings2Icon,
-} from 'lucide-react';
+import { FilterIcon, PanelRightCloseIcon, PanelRightOpenIcon, Settings2Icon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -33,6 +27,7 @@ import {
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -823,7 +818,10 @@ const SavedViewPage = memo(() => {
                     />
                   ) : projectRows.length === 0 ? (
                     <Center flex={1} padding={48}>
-                      <Empty description={t('savedViews.emptyResults')} icon={FolderClosedIcon} />
+                      <Empty
+                        description={t('savedViews.emptyResults')}
+                        icon={PROJECT_ENTITY_ICON}
+                      />
                     </Center>
                   ) : (
                     <Flexbox gap={2}>

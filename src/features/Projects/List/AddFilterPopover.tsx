@@ -9,7 +9,6 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ALargeSmallIcon,
   ArrowLeftIcon,
-  BoxIcon,
   CalendarDaysIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -34,6 +33,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { ProjectHealthIcon } from '@/features/Projects/healthMeta';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import type { ProjectListItem } from '@/store/project/store';
 
@@ -183,7 +183,7 @@ const GROUP_ICONS: Record<ProjectListFilterGroupId, LucideIcon> = {
   // `MilestoneIcon` — same glyph the MilestoneIcon component paints.
   milestones: DiamondIcon,
   priority: SignalHighIcon,
-  projects: BoxIcon,
+  projects: PROJECT_ENTITY_ICON,
   relations: LinkIcon,
   status: CircleDotIcon,
   teams: UsersRoundIcon,

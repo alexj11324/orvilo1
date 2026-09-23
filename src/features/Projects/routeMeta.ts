@@ -1,10 +1,12 @@
-import { DiamondIcon, FolderClosedIcon, HistoryIcon, LibraryBigIcon } from 'lucide-react';
+import { DiamondIcon, HistoryIcon, LibraryBigIcon } from 'lucide-react';
 
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { routeMeta } from '@/spa/router/routeMeta';
 
+import { PROJECT_ENTITY_ICON } from './ProjectIcon';
+
 export const projectsRouteMeta = routeMeta({
-  icon: FolderClosedIcon,
+  icon: PROJECT_ENTITY_ICON,
   Skeleton: createSurfaceSkeleton('grid'),
   titleKey: 'navigation.projects',
 });

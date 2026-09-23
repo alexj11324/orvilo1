@@ -1,11 +1,12 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
+import { Center, Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { FolderKanbanIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+
+import { ProjectIcon } from './ProjectIcon';
 
 const ProjectDisabled = () => {
   const { t } = useTranslation('project');
@@ -14,7 +15,7 @@ const ProjectDisabled = () => {
   return (
     <Center height={'100%'} width={'100%'}>
       <Flexbox align={'center'} gap={12}>
-        <Icon icon={FolderKanbanIcon} size={40} />
+        <ProjectIcon size={40} />
         <Text fontSize={18} weight={600}>
           {t('disabled.title')}
         </Text>

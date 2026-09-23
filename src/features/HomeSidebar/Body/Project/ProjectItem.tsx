@@ -3,11 +3,12 @@
 import type { MenuProps } from '@lobehub/ui';
 import { DropdownMenu, Icon } from '@lobehub/ui';
 import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
-import { FolderClosedIcon, MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
+import { MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { openRenameProjectModal } from '@/features/Projects/RenameProjectModal';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectListItem } from '@/store/project';
@@ -70,7 +71,7 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
       <NavItem
         contextMenuItems={canManage ? menuItems : undefined}
         disabled={deleting}
-        icon={project.avatar || FolderClosedIcon}
+        icon={project.avatar || PROJECT_ENTITY_ICON}
         title={project.name}
         actions={
           canManage ? (

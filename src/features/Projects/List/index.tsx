@@ -17,8 +17,6 @@ import dayjs from 'dayjs';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  BoxIcon,
-  FolderClosedIcon,
   MoreHorizontalIcon,
   PlusIcon,
   SearchXIcon,
@@ -40,6 +38,7 @@ import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/heal
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { PROJECT_ENTITY_ICON, ProjectIcon } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -665,7 +664,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
         {project.avatar && project.avatar !== '📦' ? (
           <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
         ) : (
-          <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={16} />
+          <ProjectIcon color={cssVar.colorTextTertiary} size={16} />
         )}
         {properties.id ? (
           <Text className={styles.identifier} fontSize={11}>
@@ -1028,7 +1027,7 @@ const ProjectListPage = memo(() => {
         ) : visibleProjects.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty
-              icon={keyword.trim() || filters.length > 0 ? SearchXIcon : FolderClosedIcon}
+              icon={keyword.trim() || filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON}
               description={
                 filters.length > 0
                   ? t('list.filter.noResults')

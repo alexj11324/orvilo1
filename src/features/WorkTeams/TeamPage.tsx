@@ -16,6 +16,7 @@ import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/work
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
@@ -419,7 +420,7 @@ const TeamPage = memo(() => {
                   <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
                 ) : teamProjects.length === 0 ? (
                   <Center flex={1} padding={48}>
-                    <Empty description={t('teams.projectsEmpty')} icon={FolderXIcon} />
+                    <Empty description={t('teams.projectsEmpty')} icon={PROJECT_ENTITY_ICON} />
                   </Center>
                 ) : (
                   <Flexbox gap={2}>

@@ -5,7 +5,6 @@ import {
   FileText,
   Filter,
   Folder,
-  FolderKanban,
   Library,
   ListTodo,
   MessageCircle,
@@ -17,6 +16,7 @@ import {
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import type { GlobalSearchResult } from '@/services/globalSearch';
@@ -128,7 +128,7 @@ const TYPE_ICONS: Record<GlobalSearchDisplayType, ReactNode> = {
   memory: <Brain size={16} />,
   message: <MessageCircle size={16} />,
   page: <FileText size={16} />,
-  project: <FolderKanban size={16} />,
+  project: <PROJECT_ENTITY_ICON size={16} />,
   savedView: <Filter size={16} />,
   task: <ListTodo size={16} />,
   team: <Users size={16} />,

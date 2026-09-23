@@ -4,7 +4,6 @@ import { Command } from 'cmdk';
 import {
   Bot,
   FeatherIcon,
-  FolderKanbanIcon,
   LibraryBig,
   ListTodo,
   MessageSquarePlusIcon,
@@ -18,6 +17,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -72,7 +72,7 @@ const MainMenu = memo(() => {
 
         <CommandItem
           disabled={!canCreate}
-          icon={<FolderKanbanIcon />}
+          icon={<PROJECT_ENTITY_ICON />}
           keywords={['project', 'create', 'new', 'initiative', 'milestone']}
           value="create new project"
           onSelect={handleCreateProject}

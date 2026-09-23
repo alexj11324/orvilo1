@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { ArrowRightIcon, BoxIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
+import { ArrowRightIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
 import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
 import { act, useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,6 +20,7 @@ import { ProjectIssueProgress } from '../Layout/ProjectIssueProgress';
 import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePanel';
 import ProjectTabsBar from '../Layout/TabsBar';
 import ProjectListPage from '../List';
+import { PROJECT_ENTITY_ICON } from '../ProjectIcon';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
@@ -1497,7 +1498,7 @@ describe('project list indicators', () => {
     render(<ProjectListPage />);
 
     expect(screen.getByRole('img', { name: 'create.priority.high' })).toBeInTheDocument();
-    expect(mocks.iconProps.some((props) => props.icon === BoxIcon)).toBe(true);
+    expect(mocks.iconProps.some((props) => props.icon === PROJECT_ENTITY_ICON)).toBe(true);
     expect(screen.getByText('list.health.noUpdates')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
     expect(screen.getByText('status.active')).toBeInTheDocument();

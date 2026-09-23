@@ -17,7 +17,6 @@ import { createStaticStyles, cx } from 'antd-style';
 import {
   ArrowRight,
   EyeOffIcon,
-  FolderKanbanIcon,
   House,
   InboxIcon,
   Layers,
@@ -32,6 +31,7 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -73,7 +73,12 @@ const TEAM_SUB_ITEMS = [
   { icon: House, key: 'home', tab: 'home', titleKey: 'teams.subNav.home' },
   { icon: InboxIcon, key: 'triage', tab: 'triage', titleKey: 'teams.subNav.triage' },
   { icon: ListChecksIcon, key: 'issues', tab: 'issues', titleKey: 'teams.subNav.issues' },
-  { icon: FolderKanbanIcon, key: 'projects', tab: 'projects', titleKey: 'teams.subNav.projects' },
+  {
+    icon: PROJECT_ENTITY_ICON,
+    key: 'projects',
+    tab: 'projects',
+    titleKey: 'teams.subNav.projects',
+  },
   { icon: Layers, key: 'views', tab: 'views', titleKey: 'teams.subNav.views' },
 ] as const;
 

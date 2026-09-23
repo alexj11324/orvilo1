@@ -14,7 +14,6 @@ import {
   AlarmClock,
   BotIcon,
   EyeOffIcon,
-  FolderKanbanIcon,
   Layers,
   LayoutList,
   LibraryBigIcon,
@@ -28,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
@@ -154,7 +154,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
       </ContextMenuTrigger>
       <AccordionPanel>
         <Flexbox gap={1} paddingBlock={1}>
-          {row('project', FolderKanbanIcon, t('navPanel.projects'), '/projects')}
+          {row('project', PROJECT_ENTITY_ICON, t('navPanel.projects'), '/projects')}
           {row('views', LayoutList, t('tab.views'), '/views')}
           {/* Linear renders "More" as a row — it opens a menu headed by
               "Showing all items" (Members / Teams / Customize sidebar),

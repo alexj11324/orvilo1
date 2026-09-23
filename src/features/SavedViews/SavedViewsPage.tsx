@@ -5,7 +5,7 @@ import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/b
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { FolderClosedIcon, ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
+import { ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -15,6 +15,7 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
 import NavHeader from '@/features/NavHeader';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -139,7 +140,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const viewIcon = (view: SavedViewItem) =>
-  view.entityType === 'project' ? FolderClosedIcon : ListTodoIcon;
+  view.entityType === 'project' ? PROJECT_ENTITY_ICON : ListTodoIcon;
 
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (

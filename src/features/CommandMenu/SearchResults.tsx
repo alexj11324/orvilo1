@@ -13,7 +13,6 @@ import {
   FileText,
   Filter,
   Folder,
-  FolderKanban,
   Library,
   ListTodo,
   MessageCircle,
@@ -27,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { markdownToTxt } from '@/utils/markdownToTxt';
@@ -185,7 +185,7 @@ const SearchResults = memo<SearchResultsProps>(
           return <Users size={16} />;
         }
         case 'project': {
-          return <FolderKanban size={16} />;
+          return <PROJECT_ENTITY_ICON size={16} />;
         }
         case 'savedView': {
           return <Filter size={16} />;

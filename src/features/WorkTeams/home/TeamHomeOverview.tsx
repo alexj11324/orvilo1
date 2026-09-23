@@ -5,7 +5,7 @@ import { Text } from '@lobehub/ui/base-ui';
 import type { TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { FolderKanbanIcon, InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
+import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,7 @@ import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionService } from '@/services/workAttention';
@@ -216,7 +217,7 @@ const styles = createStaticStyles(({ css }) => ({
 // sub-navigation uses — triage is the inbox tray, not a generic arrow.
 const destinationIcons = {
   issues: ListChecksIcon,
-  projects: FolderKanbanIcon,
+  projects: PROJECT_ENTITY_ICON,
   triage: InboxIcon,
   views: LayoutListIcon,
 } satisfies Record<TeamHomeDestination, typeof ListChecksIcon>;

@@ -5,7 +5,6 @@ import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
-import { BoxIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +15,7 @@ import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
+import { ProjectIcon } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
@@ -540,7 +540,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                           size={18}
                         />
                       ) : (
-                        <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={16} />
+                        <ProjectIcon color={cssVar.colorTextTertiary} size={16} />
                       )}
                       {options.properties.id ? (
                         <Text fontSize={11} type="secondary">

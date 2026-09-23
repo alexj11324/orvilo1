@@ -1,10 +1,10 @@
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { BoxIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { ProjectDetail } from '@/store/project';
+
+import { ProjectIcon } from '../ProjectIcon';
 
 /**
  * Compact inline row matching the activity feed's measured reference spec:
@@ -45,7 +45,7 @@ export function ProjectCreationActivity({ project }: { project: ProjectDetail['p
   return (
     <div className={styles.row}>
       <span className={styles.glyph}>
-        <Icon icon={BoxIcon} size={16} />
+        <ProjectIcon size={16} />
       </span>
       <span className={styles.event}>
         {creator ? t('activity.createdBy', { name: creator }) : t('activity.created')}

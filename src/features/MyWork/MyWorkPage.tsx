@@ -13,7 +13,6 @@ import {
 } from '@lobehub/ui/base-ui';
 import { type MyWorkMode, type TaskStatus, type WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { FolderIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router';
@@ -28,6 +27,7 @@ import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvata
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
 import { builderToFilter, stableStringify } from '@/features/SavedViews/workQueryBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -665,7 +665,7 @@ const MyWorkPage = memo(() => {
         icon: (
           <Icon
             color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
-            icon={FolderIcon}
+            icon={PROJECT_ENTITY_ICON}
             size={14}
           />
         ),
@@ -690,7 +690,7 @@ const MyWorkPage = memo(() => {
       if (!name) return null;
       return (
         <Flexbox flex="none">
-          <Tag icon={<Icon icon={FolderIcon} size={12} />} size="small" variant="outlined">
+          <Tag icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />} size="small" variant="outlined">
             {name}
           </Tag>
         </Flexbox>

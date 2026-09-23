@@ -2,12 +2,13 @@ import { ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { FolderIcon, MessageSquareTextIcon } from 'lucide-react';
+import { MessageSquareTextIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
@@ -334,7 +335,11 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             workflowStateId={task.workflowStateId}
           />
           {projectName ? (
-            <Tag icon={<Icon icon={FolderIcon} size={12} />} size="small" variant="outlined">
+            <Tag
+              icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />}
+              size="small"
+              variant="outlined"
+            >
               {projectName}
             </Tag>
           ) : null}

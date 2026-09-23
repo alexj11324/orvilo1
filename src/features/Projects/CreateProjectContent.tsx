@@ -12,7 +12,6 @@ import type { ProjectStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
-  BoxIcon,
   CalendarIcon,
   ChevronRightIcon,
   CircleDashedIcon,
@@ -45,6 +44,7 @@ import {
   type ProjectDependencyType,
   type ProjectPriority,
 } from './createProjectForm';
+import { ProjectIcon } from './ProjectIcon';
 import ProjectMilestoneEditor from './ProjectMilestoneEditor';
 import {
   formatProjectDate,
@@ -471,7 +471,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   color: cssVar.colorTextSecondary,
                 }}
               >
-                {avatar === '📦' ? <Icon icon={BoxIcon} size={18} /> : avatar}
+                {avatar === '📦' ? <ProjectIcon size={18} /> : avatar}
               </span>
             )}
             onChange={(avatar) => updateForm({ avatar: avatar || undefined })}

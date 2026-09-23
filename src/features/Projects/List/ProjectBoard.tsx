@@ -1,11 +1,10 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { BoxIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +12,7 @@ import Avatar from '@/components/Avatar';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
+import { ProjectIcon } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectListItem } from '@/store/project';
@@ -134,7 +134,7 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                           size={16}
                         />
                       ) : (
-                        <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={14} />
+                        <ProjectIcon color={cssVar.colorTextTertiary} size={14} />
                       )}
                       <Text ellipsis fontSize={13} weight={500}>
                         {project.name}

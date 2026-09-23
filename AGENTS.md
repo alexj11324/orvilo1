@@ -35,6 +35,8 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 
 ### Starting the Dev Environment
 
+Full local setup — Postgres/Redis, migrations, seeds, troubleshooting — lives in [docs/development/local-setup.md](./docs/development/local-setup.md).
+
 ```bash
 # SPA dev mode (frontend only, proxies API to localhost:3010)
 bun run dev:spa

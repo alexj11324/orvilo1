@@ -33,10 +33,16 @@ const main = async () => {
     throw new Error('DATABASE_URL is not set. Run the local dev environment bootstrap first.');
   }
 
-  const [{ serverDB }, { LINEAR_PARITY_USER, seedLinearParity }] = await Promise.all([
+  const [
+    { serverDB },
+    { LINEAR_PARITY_USER, seedLinearParity },
+    { assertLocalParityDatabase, seedLinearParityVolume },
+  ] = await Promise.all([
     import('../../packages/database/src/server'),
     import('../../packages/database/src/fixtures/linearParitySeed'),
+    import('./seedParityVolume'),
   ]);
+  assertLocalParityDatabase(process.env.DATABASE_URL);
 
   try {
     const result = await seedLinearParity(serverDB, {
@@ -44,9 +50,17 @@ const main = async () => {
       userId: LINEAR_PARITY_USER.id,
       workspaceId: process.env.ORVILO_PARITY_WORKSPACE_ID,
     });
+    const volume = await seedLinearParityVolume(serverDB, {
+      base: result,
+      userId: LINEAR_PARITY_USER.id,
+      workspaceId: result.workspaceId,
+    });
 
     console.log(
       `Linear parity fixture ready: workspace=${result.workspaceId} team=${result.teamId} project=${result.projectId} tasks=${result.taskIds.length} myIssues=${result.myIssuesTaskIds.length} milestones=${result.milestoneIds.length}`,
+    );
+    console.log(
+      `Linear parity volume ready: teams=${volume.teamIds.length} projects=${volume.projectIds.length} tasks=${volume.taskIds.length} milestones=${volume.milestoneIds.length} approvals=${volume.approvalIds.length} notifications=${volume.notificationIds.length} views=${volume.savedViewIds.length} favorites=${volume.favoriteIds.length}`,
     );
   } finally {
     await closeDatabase(serverDB);

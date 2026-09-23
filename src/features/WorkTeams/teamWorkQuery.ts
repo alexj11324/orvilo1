@@ -59,9 +59,20 @@ export const teamTaskQuery = (
   noProject = false,
   layout: WorkQueryLayout = 'list',
   scope: TeamIssueScope = 'all',
+  triageCapable = false,
 ): WorkQuery => {
   const category = teamScopePredicate(scope);
-  const query = withTeamScope(teamId, category ? [category] : [], cycleId, noProject);
+  // Triaging teams park new issues in `untriaged` until the triage action
+  // resolves them — they must not leak into All/Backlog scopes or the
+  // `wf:backlog` board column while pending. Non-triage teams never produce
+  // untriaged rows, so the predicate stays off there.
+  const extra: WorkQueryPredicate[] = [
+    ...(category ? [category] : []),
+    ...(triageCapable
+      ? [{ field: 'triageStatus' as const, op: 'neq' as const, value: 'untriaged' }]
+      : []),
+  ];
+  const query = withTeamScope(teamId, extra, cycleId, noProject);
   if (layout !== 'board') {
     return { ...query, groupBy: 'status', layout: 'list' };
   }

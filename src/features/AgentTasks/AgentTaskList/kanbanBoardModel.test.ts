@@ -17,6 +17,7 @@ import {
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
   kanbanBoardCapabilities,
+  kanbanColumnAllowsCreate,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -600,5 +601,55 @@ describe('kanbanBoardCapabilities', () => {
         canReorderWithinGroup: false,
       });
     }
+  });
+});
+
+describe('kanbanColumnAllowsCreate', () => {
+  const base = { groupBy: 'status', myTaskScope: false };
+
+  it('offers create on the backlog column of store and work-query boards', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog' })).toBe(true);
+    // Team boards render `wf:`-prefixed columns — matching only the raw
+    // 'backlog' key silently removed their create entry.
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:backlog',
+        createContext: { teamId: 'team-1' },
+        external: true,
+      }),
+    ).toBe(true);
+  });
+
+  it('refuses create on non-backlog columns and non-status groupings', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'in_progress' })).toBe(false);
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:in_progress',
+        createContext: { teamId: 'team-1' },
+        external: true,
+      }),
+    ).toBe(false);
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', groupBy: 'assignee' })).toBe(
+      false,
+    );
+  });
+
+  it('refuses create in my-task scope and on external boards without a team context', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', myTaskScope: true })).toBe(
+      false,
+    );
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'wf:backlog', external: true })).toBe(
+      false,
+    );
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:backlog',
+        createContext: { teamOptions: [{ id: 'team-1', name: 'Team' }] },
+        external: true,
+      }),
+    ).toBe(true);
   });
 });

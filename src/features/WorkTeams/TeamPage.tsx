@@ -301,7 +301,7 @@ const TeamPage = memo(() => {
       : null,
     () =>
       workAttentionService.query({
-        query: teamTaskQuery(teamId!, cycleId, noProject, layout, issueScope),
+        query: teamTaskQuery(teamId!, cycleId, noProject, layout, issueScope, triageCapable),
       }),
   );
   const {
@@ -386,7 +386,16 @@ const TeamPage = memo(() => {
         });
         await Promise.all([
           mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope]),
+          mutate([
+            'team-tasks',
+            workspaceId,
+            teamId,
+            cycleId,
+            noProject,
+            layout,
+            issueScope,
+            triageCapable,
+          ]),
         ]);
         toast.success(t('teams.triageUpdated'));
       } catch (error) {
@@ -397,7 +406,7 @@ const TeamPage = memo(() => {
         );
       }
     },
-    [cycleId, issueScope, layout, noProject, t, teamId, workspaceId],
+    [cycleId, issueScope, layout, noProject, t, teamId, triageCapable, workspaceId],
   );
 
   const refreshTriage = useCallback(() => {
@@ -405,21 +414,30 @@ const TeamPage = memo(() => {
     setTeamGroupTail([]);
     void Promise.all([
       mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope]),
+      mutate([
+        'team-tasks',
+        workspaceId,
+        teamId,
+        cycleId,
+        noProject,
+        layout,
+        issueScope,
+        triageCapable,
+      ]),
     ]);
-  }, [cycleId, issueScope, layout, noProject, teamId, workspaceId]);
+  }, [cycleId, issueScope, layout, noProject, teamId, triageCapable, workspaceId]);
 
   const loadMoreTeam = useCallback(async () => {
     const last = teamTasks.at(-1);
     if (!last || !teamId || !teamQueryHash) return;
     const next = await workAttentionService.query({
       afterId: last.id,
-      query: teamTaskQuery(teamId, cycleId, noProject, 'list', issueScope),
+      query: teamTaskQuery(teamId, cycleId, noProject, 'list', issueScope, triageCapable),
       queryHash: teamQueryHash,
     });
     const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
     setTeamTail((current) => mergeWorkQueryPage(current, incoming));
-  }, [cycleId, issueScope, noProject, teamId, teamQueryHash, teamTasks]);
+  }, [cycleId, issueScope, noProject, teamId, teamQueryHash, teamTasks, triageCapable]);
 
   const loadMoreTeamGroup = useCallback(
     async (groupKey: string) => {
@@ -429,13 +447,13 @@ const TeamPage = memo(() => {
       const next = await workAttentionService.query({
         afterId: last.id,
         groupKey,
-        query: teamTaskQuery(teamId, cycleId, noProject, layout, issueScope),
+        query: teamTaskQuery(teamId, cycleId, noProject, layout, issueScope, triageCapable),
         queryHash: teamQueryHash,
       });
       const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
       setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
     },
-    [cycleId, issueScope, layout, noProject, teamGroups, teamId, teamQueryHash],
+    [cycleId, issueScope, layout, noProject, teamGroups, teamId, teamQueryHash, triageCapable],
   );
 
   const cycleOptions = useMemo(

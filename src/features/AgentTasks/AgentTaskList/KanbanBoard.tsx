@@ -56,6 +56,7 @@ import {
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
   kanbanBoardCapabilities,
+  kanbanColumnAllowsCreate,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -880,17 +881,13 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               onHide={groupBy === 'status' ? () => handleHideColumn(col.key) : undefined}
               onStatusChange={handleCardStatusChange}
               onCreate={
-                // "My tasks" offers no create entry (its list view has none
-                // either): a task created here carries neither the member
-                // assignment nor — under `created` — any guarantee it lands
-                // in the column it was started from. An external board only
-                // shows it when the caller declared where the card belongs.
-                groupBy === 'status' &&
-                col.key === 'backlog' &&
-                !myTaskScope &&
-                (!external ||
-                  Boolean(createContext?.teamId) ||
-                  (createContext?.teamOptions?.length ?? 0) > 0)
+                kanbanColumnAllowsCreate({
+                  columnKey: col.key,
+                  createContext,
+                  external: Boolean(external),
+                  groupBy,
+                  myTaskScope,
+                })
                   ? handleCreateTask
                   : undefined
               }

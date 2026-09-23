@@ -58,4 +58,20 @@ describe('teamWorkQuery', () => {
       teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'backlog').filter?.all,
     ).toContainEqual({ field: 'workflowCategory', op: 'eq', value: 'backlog' });
   });
+
+  it('keeps untriaged issues out of team scopes only while triage is enabled', () => {
+    // Triage-capable teams park new issues in `untriaged`; they must not leak
+    // into All/Active/Backlog lists or the `wf:backlog` board column.
+    for (const scope of ['all', 'active', 'backlog'] as const) {
+      for (const layout of ['list', 'board'] as const) {
+        expect(
+          teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, layout, scope, true).filter?.all,
+        ).toContainEqual({ field: 'triageStatus', op: 'neq', value: 'untriaged' });
+      }
+    }
+    // Non-triage teams never produce untriaged rows — no predicate is added.
+    expect(
+      teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'all', false).filter?.all,
+    ).toEqual([{ field: 'teamId', op: 'eq', value: 'team-1' }]);
+  });
 });

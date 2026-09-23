@@ -325,6 +325,31 @@ export const externalKanbanColumnMoveScope = (
       ? { statuses: [column.targetStatus] }
       : undefined;
 
+/**
+ * Board-column create gate. "My tasks" offers no create entry (its list view
+ * has none either): a task created there carries neither the member
+ * assignment nor — under `created` — any guarantee it lands in the column it
+ * was started from. An external (work-query) board only shows it when the
+ * caller declared where the card belongs.
+ *
+ * Create lands on the backlog column only: `backlog` for store boards,
+ * `wf:backlog` for work-query boards — matching by raw key is what let the
+ * team board silently lose its create entry.
+ */
+export const kanbanColumnAllowsCreate = (input: {
+  columnKey: string;
+  createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
+  external?: boolean;
+  groupBy: string;
+  myTaskScope?: boolean;
+}): boolean =>
+  input.groupBy === 'status' &&
+  (input.columnKey === 'backlog' || input.columnKey === 'wf:backlog') &&
+  !input.myTaskScope &&
+  (!input.external ||
+    Boolean(input.createContext?.teamId) ||
+    (input.createContext?.teamOptions?.length ?? 0) > 0);
+
 export const getKanbanAssigneeUpdate = (
   task: TaskListItem,
   patch: Partial<TaskListItem>,

@@ -1885,6 +1885,7 @@
   "taskList.contextMenu.transferTitle": "移动任务",
   "taskList.contextMenu.transferTo": "移动到…",
   "taskList.contextMenu.transferWarning": "跨工作区的引用（如分配的代理和活动主题）将被清除。",
+  "taskList.createdAt": "创建于 {{date}}",
   "taskList.empty": "暂无任务",
   "taskList.form.columns": "列",
   "taskList.form.grouping": "分组",

@@ -39,7 +39,9 @@ import {
 } from './teamWorkQuery';
 import TeamTriageSurface from './triage/TeamTriageSurface';
 
-const ISSUE_SCOPES: TeamIssueScope[] = ['all', 'active', 'backlog'];
+// Reference team-issues chrome orders the scope switch Active → Backlog →
+// All issues; 'all' stays the canonical no-param URL.
+const ISSUE_SCOPES: TeamIssueScope[] = ['active', 'backlog', 'all'];
 
 // Board mode bounds the collection body to the scrollport so the kanban's own
 // column scrollers engage; list mode lets the body grow and the scroll host
@@ -318,11 +320,11 @@ const TeamPage = memo(() => {
         <WorkSurfaceCollection
           style={boardActive ? boardBodyStyle : undefined}
           toolbar={
-            /* Issues toolbar: the All–Active–Backlog scope stays primary;
-               cycle / no-project filters and the list/board switch ride the
-               aside so they overflow into the popover instead of wrapping.
-               Triage never shows the layout toggle — it renders its own row
-               surface. */
+            /* Issues toolbar: the Active–Backlog–All issues scope stays
+               primary; cycle / no-project filters and the list/board switch
+               ride the aside so they overflow into the popover instead of
+               wrapping. Triage never shows the layout toggle — it renders
+               its own row surface. */
             teamTab === 'issues' && !teamError ? (
               <WorkSurfaceToolbar
                 asideLabel={t('members.filter')}
@@ -364,7 +366,8 @@ const TeamPage = memo(() => {
                   size="small"
                   value={issueScope}
                   options={ISSUE_SCOPES.map((scope) => ({
-                    label: t(`teams.scope.${scope}`),
+                    // Linear labels the unfiltered scope "All issues".
+                    label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
                     value: scope,
                   }))}
                   onChange={(value) =>
@@ -438,6 +441,7 @@ const TeamPage = memo(() => {
                   <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
                 ) : (
                   <WorkQueryResults
+                    hideEmptyColumns
                     createContext={{ teamId }}
                     emptyLabel={t('teams.workEmpty')}
                     groups={teamGroups}

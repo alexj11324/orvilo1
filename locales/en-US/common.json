@@ -960,6 +960,7 @@
   "teams.roleLead": "Lead",
   "teams.scope.active": "Active",
   "teams.scope.all": "All",
+  "teams.scope.allIssues": "All issues",
   "teams.scope.backlog": "Backlog",
   "teams.searchEmpty": "No teams match that search",
   "teams.searchPlaceholder": "Search teams…",

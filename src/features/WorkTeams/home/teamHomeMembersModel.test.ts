@@ -2,7 +2,7 @@ import type { TeamMemberItem } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import type { WorkspaceMemberSummary } from '../../Teammates/api/contract';
-import { resolveTeamHomeMembers, teamMemberDisplayName } from './teamHomeMembers';
+import { resolveTeamHomeMembers, teamMemberDisplayName } from './teamHomeMembersModel';
 
 const teamMember = (userId: string, role: 'lead' | 'member' = 'member'): TeamMemberItem => ({
   id: `tm-${userId}`,

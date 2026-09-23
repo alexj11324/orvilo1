@@ -8,7 +8,7 @@ import { useSearchParams } from '@/libs/router/navigation';
 import { useWorkspaceMembersQuery } from '../Teammates/api/hooks';
 import TeamHomeDocuments from './home/TeamHomeDocuments';
 import TeamHomeMembers from './home/TeamHomeMembers';
-import { resolveTeamHomeMembers } from './home/teamHomeMembers';
+import { resolveTeamHomeMembers } from './home/teamHomeMembersModel';
 import TeamHomeOverview from './home/TeamHomeOverview';
 import { resolveTeamHomeSection } from './home/teamHomeSection';
 import TeamHomeTabs from './home/TeamHomeTabs';

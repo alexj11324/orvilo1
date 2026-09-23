@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveWorkflowMove, type WorkflowMoveState } from '../workflowMove';
+import {
+  resolveWorkflowCreatePreset,
+  resolveWorkflowMove,
+  type WorkflowMoveState,
+} from '../workflowMove';
 
 const state = (
   id: string,
@@ -62,5 +66,59 @@ describe('resolveWorkflowMove', () => {
         targetWorkflowStateRefId: 'todo-1',
       }),
     ).toEqual({ type: 'invalid' });
+  });
+});
+
+describe('resolveWorkflowCreatePreset', () => {
+  it('stamps the only mapped state and accepts the issue out of intake', () => {
+    expect(
+      resolveWorkflowCreatePreset({
+        category: 'todo',
+        states: [state('todo-1', 'todo', 'remote-todo'), state('done-1', 'done')],
+        teamId: 'team-1',
+      }),
+    ).toEqual({
+      triageStatus: 'accepted',
+      workflowCategory: 'todo',
+      workflowStateId: 'remote-todo',
+      workflowStateRefId: 'todo-1',
+    });
+  });
+
+  it('keeps the bare category when no state matches or several could', () => {
+    expect(
+      resolveWorkflowCreatePreset({ category: 'in_review', states: [], teamId: 'team-1' }),
+    ).toEqual({ triageStatus: 'accepted', workflowCategory: 'in_review' });
+    expect(
+      resolveWorkflowCreatePreset({
+        category: 'in_review',
+        states: [state('review-1', 'in_review'), state('review-2', 'in_review')],
+        teamId: 'team-1',
+      }),
+    ).toEqual({ triageStatus: 'accepted', workflowCategory: 'in_review' });
+  });
+
+  it('keeps a Triage-column create in intake', () => {
+    expect(
+      resolveWorkflowCreatePreset({ category: 'triage', states: [], teamId: 'team-1' }),
+    ).toEqual({ workflowCategory: 'triage' });
+  });
+
+  it('accepts a status-preset create on a team task', () => {
+    expect(resolveWorkflowCreatePreset({ states: [], status: 'paused', teamId: 'team-1' })).toEqual(
+      { triageStatus: 'accepted' },
+    );
+  });
+
+  it('leaves team-less and unpreset creates to the model default', () => {
+    expect(
+      resolveWorkflowCreatePreset({ category: 'todo', states: [state('todo-1', 'todo')] }),
+    ).toEqual({
+      workflowCategory: 'todo',
+      workflowStateId: 'todo-1',
+      workflowStateRefId: 'todo-1',
+    });
+    expect(resolveWorkflowCreatePreset({ states: [] })).toEqual({});
+    expect(resolveWorkflowCreatePreset({ states: [], teamId: 'team-1' })).toEqual({});
   });
 });

@@ -2189,6 +2189,8 @@ export default {
   'taskList.visibility.all': 'All',
   'taskList.visibility.label': 'Visibility',
   'taskList.breadcrumb.task': 'Task',
+  // Board-card meta line — Linear stamps "Created <date>" on every card.
+  'taskList.createdAt': 'Created {{date}}',
   'taskList.empty': 'No tasks yet',
   'taskList.form.columns': 'Columns',
   'taskList.form.grouping': 'Grouping',

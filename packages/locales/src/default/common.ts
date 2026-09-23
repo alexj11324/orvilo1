@@ -1077,6 +1077,7 @@ export default {
   'teams.roleLead': 'Lead',
   'teams.scope.active': 'Active',
   'teams.scope.all': 'All',
+  'teams.scope.allIssues': 'All issues',
   'teams.scope.backlog': 'Backlog',
   'teams.work': 'Team work',
   'teams.workEmpty': 'No tasks in this team',

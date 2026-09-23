@@ -15,6 +15,8 @@ import type {
   TaskSchedulerContext,
   TaskStatus,
   TaskTopicHandoff,
+  TaskTriageStatus,
+  TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -107,15 +109,29 @@ export interface CreateTaskInput {
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
+  /** Execution-status preset — a status-grouped board column's `+`. */
+  status?: TaskStatus;
   /**
    * Owning team for workspace-mode tasks (linear-workspace-v3). TaskModel
    * allocates the identifier from the team's `next_issue_seq` counter.
    */
   teamId?: string;
+  /**
+   * Intake state override. Board-column creates resolve 'accepted' (the issue
+   * never passed through triage); absent → TaskModel's default (`untriaged`
+   * on team tasks, NULL otherwise).
+   */
+  triageStatus?: TaskTriageStatus;
   // Explicit visibility for the new task. When omitted, the service derives it
   // from `parentTaskId` (if present) or `assigneeAgentId`'s visibility, and
   // finally falls back to the schema default ('public').
   visibility?: 'private' | 'public';
+  /** Workflow-category preset — a work-query board column's `+`. */
+  workflowCategory?: TaskWorkflowCategory;
+  /** External provider state identity resolved from `workflowCategory`. */
+  workflowStateId?: string | null;
+  /** Local `team_workflow_states` row resolved from `workflowCategory`. */
+  workflowStateRefId?: string | null;
 }
 
 export interface UpdateStatusResult {

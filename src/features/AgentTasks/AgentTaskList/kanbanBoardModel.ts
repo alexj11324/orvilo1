@@ -280,6 +280,22 @@ export const kanbanBoardCapabilities = (input: {
 export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanColumnDefinition[] =>
   groupBy === 'workflowCategory' ? WORKFLOW_KANBAN_COLUMNS : RAW_STATUS_KANBAN_COLUMNS;
 
+/**
+ * Linear parity: a work-query board hides a column whose group is empty —
+ * the reference team-issues board only renders categories that hold issues.
+ * Columns the query never returned count as empty too. A board where every
+ * column is empty keeps all of them — the status-board contract still wants
+ * its column chrome (and `+` pills) rather than a blank area.
+ */
+export const externalVisibleKanbanColumns = (
+  columns: KanbanColumnDefinition[],
+  taskGroups: Pick<TaskGroupItem, 'key' | 'total'>[],
+): KanbanColumnDefinition[] => {
+  const totals = new Map(taskGroups.map((group) => [group.key, group.total]));
+  const visible = columns.filter((column) => (totals.get(column.key) ?? 0) > 0);
+  return visible.length === 0 ? columns : visible;
+};
+
 /** The work-query group key a column represents — strips the `wf:`/`st:` prefix. */
 export const workQueryKeyForKanbanColumn = (columnKey: string): string =>
   columnKey.replace(/^(?:wf|st):/, '');

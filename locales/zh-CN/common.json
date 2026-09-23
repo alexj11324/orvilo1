@@ -960,6 +960,7 @@
   "teams.roleLead": "负责人",
   "teams.scope.active": "进行中",
   "teams.scope.all": "全部",
+  "teams.scope.allIssues": "所有问题",
   "teams.scope.backlog": "待排期",
   "teams.searchEmpty": "没有匹配的团队",
   "teams.searchPlaceholder": "搜索团队…",

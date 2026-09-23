@@ -9,6 +9,7 @@ import {
   canDropTaskIntoKanbanColumn,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanColumnHeaderVariant,
@@ -663,5 +664,37 @@ describe('kanbanColumnAllowsCreate', () => {
         external: true,
       }),
     ).toBe(true);
+  });
+});
+
+describe('externalVisibleKanbanColumns', () => {
+  const columns: KanbanColumnDefinition[] = ['wf:todo', 'wf:in_progress', 'wf:done'].map((key) => ({
+    droppable: true,
+    key,
+    targetStatus: null,
+  }));
+
+  it('keeps only columns whose group carries tasks — empty and unreturned groups hide', () => {
+    const visible = externalVisibleKanbanColumns(columns, [
+      group('wf:todo', [task('1')]),
+      group('wf:done', []),
+    ]);
+    expect(visible.map((column) => column.key)).toEqual(['wf:todo']);
+  });
+
+  it('counts paged groups by total, not by the loaded page length', () => {
+    const paged = group('wf:todo', [task('1')]);
+    paged.total = 40;
+    const visible = externalVisibleKanbanColumns(columns, [paged]);
+    expect(visible.map((column) => column.key)).toEqual(['wf:todo']);
+  });
+
+  it('keeps every column when the whole board is empty', () => {
+    const visible = externalVisibleKanbanColumns(columns, [
+      group('wf:todo', []),
+      group('wf:done', []),
+    ]);
+    expect(visible.map((column) => column.key)).toEqual(columns.map((column) => column.key));
+    expect(externalVisibleKanbanColumns(columns, [])).toEqual(columns);
   });
 });

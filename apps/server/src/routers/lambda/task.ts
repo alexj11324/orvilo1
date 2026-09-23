@@ -23,6 +23,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
+import { resolveWorkflowCreatePreset } from '@/database/models/workflowMove';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
@@ -140,13 +141,18 @@ const createSchema = z.object({
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().optional(),
   schedulePattern: z.string().optional(),
+  scheduleTimezone: z.string().optional(),
+  /** Execution-status preset — a status-grouped board column's `+`. */
+  status: z.enum(TASK_STATUSES).optional(),
   /** Owning team for workspace tasks — the team's issue-seq allocates the identifier. */
   teamId: z.string().optional(),
-  scheduleTimezone: z.string().optional(),
   // When omitted, the server derives visibility from the parent task or the
   // assignee agent's visibility (private agent → private task). UI surfaces
   // such as the top-level "Tasks" create form pass it explicitly.
   visibility: z.enum(['private', 'public']).optional(),
+  /** Workflow-category preset — a work-query board column's `+`; resolved to
+   *  the team's mapped workflow state below when exactly one matches. */
+  workflowCategory: z.enum(TASK_WORKFLOW_CATEGORIES).optional(),
   // Removed contract, kept so the server can recognise it. A task no longer
   // carries a goal — the Goal Graph owns execution and dispatches its own Work
   // Tasks — and silently dropping this field would let a released client report
@@ -931,8 +937,24 @@ export const taskRouter = router({
     try {
       const parsedVerify = taskVerifyConfigPatchSchema.safeParse(createInput.config?.verify);
       const { verify: _legacyVerify, ...taskConfig } = createInput.config ?? {};
+      // Board `+` presets: a workflow-category target resolves against the
+      // team's imported states (exact match → stamp the state; otherwise keep
+      // the bare category — the board groups on it regardless). Creating into
+      // a real column also bypasses intake, so `triageStatus` lands 'accepted'
+      // instead of the model's 'untriaged' default and the new card stays
+      // visible on a triage-capable team's board.
+      const workflowPreset = resolveWorkflowCreatePreset({
+        category: createInput.workflowCategory,
+        states:
+          createInput.workflowCategory && createInput.teamId && ctx.teamModel
+            ? await ctx.teamModel.listWorkflowStates(createInput.teamId)
+            : [],
+        status: createInput.status,
+        teamId: createInput.teamId,
+      });
       const task = await ctx.taskService.createTask({
         ...createInput,
+        ...workflowPreset,
         config: parsedVerify.success ? taskConfig : createInput.config,
       });
       try {

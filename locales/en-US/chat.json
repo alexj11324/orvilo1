@@ -1886,6 +1886,7 @@
   "taskList.contextMenu.transferTitle": "Move task",
   "taskList.contextMenu.transferTo": "Move to…",
   "taskList.contextMenu.transferWarning": "Cross-workspace references like assigned agent and active topic will be cleared.",
+  "taskList.createdAt": "Created {{date}}",
   "taskList.empty": "No tasks yet",
   "taskList.form.columns": "Columns",
   "taskList.form.grouping": "Grouping",

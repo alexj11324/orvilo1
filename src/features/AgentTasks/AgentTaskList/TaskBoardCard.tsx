@@ -1,14 +1,15 @@
 import { ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import { FolderIcon, LockIcon, MessageSquareTextIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import GeneratingBorder from '@/components/GeneratingBorder';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
@@ -147,10 +148,17 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       useTaskItemContextMenu(task, routeScope, onStatusChange);
     const navigate = useWorkspaceAwareNavigate();
     const activeWorkspaceId = useActiveWorkspaceId();
+    // Project chip: `projectId` resolves through the cached project list — an
+    // unknown project renders no chip rather than a raw id (Linear honesty).
+    useProjectStore((s) => s.useFetchProjectList)(Boolean(activeWorkspaceId && task.projectId));
+    const projects = useCurrentProjectList();
+    const projectName = task.projectId
+      ? projects.find((project) => project.id === task.projectId)?.name
+      : undefined;
 
     const status = toTaskStatus(task.status);
     const hasName = Boolean(task.name?.trim());
-    const time = formatTaskItemDate(task.updatedAt || task.createdAt, {
+    const time = formatTaskItemDate(task.createdAt, {
       formatOtherYear: t('time.formatOtherYear'),
       formatThisYear: t('time.formatThisYear'),
       locale: i18n.language,
@@ -324,6 +332,11 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             workflowCategory={task.workflowCategory}
             workflowStateId={task.workflowStateId}
           />
+          {projectName ? (
+            <Tag icon={<Icon icon={FolderIcon} size={12} />} size="small" variant="outlined">
+              {projectName}
+            </Tag>
+          ) : null}
           {task.automationMode ? (
             <TaskTriggerTag
               automationMode={task.automationMode}
@@ -359,7 +372,8 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           </Flexbox>
           {time ? (
             <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
-              {time}
+              {/* Linear cards stamp the creation date, not the last touch. */}
+              {tChat('taskList.createdAt', { date: time })}
             </Text>
           ) : null}
           <Flexbox horizontal align={'center'} flex={'none'} gap={4} style={{ marginLeft: 'auto' }}>

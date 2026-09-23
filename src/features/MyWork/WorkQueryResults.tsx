@@ -227,6 +227,11 @@ interface WorkQueryResultsProps {
   flatSections?: { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[];
   groupBy?: WorkQueryGroupBy;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
+  /**
+   * Board chrome: hide columns whose group is empty (Linear's team-issues
+   * board default). Off unless the caller's reference hides empty columns.
+   */
+  hideEmptyColumns?: boolean;
   isFollowed?: (taskId: string) => boolean;
   layout?: WorkQueryLayout;
   loading: boolean;
@@ -645,6 +650,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     flatSections,
     groupBy,
     groups,
+    hideEmptyColumns,
     isFollowed,
     layout = 'list',
     loading,
@@ -732,6 +738,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             routeScope={'global'}
             external={{
               groups: workQueryBoardGroups(groups, boardGroupBy),
+              hideEmptyColumns,
               movable,
               sortMode,
               onLoadMoreGroup: onLoadMoreGroup

@@ -51,6 +51,7 @@ import {
   externalKanbanColumnMoveScope,
   externalKanbanColumns,
   externalKanbanTaskPatch,
+  externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanMoveAnchors,
@@ -146,6 +147,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 export interface KanbanExternalGroups {
   error?: unknown;
   groups: TaskGroupItem[];
+  /**
+   * Linear parity: hide a column whose group is empty instead of rendering
+   * an empty drop area. Team-issues boards opt in; other callers keep every
+   * column visible.
+   */
+  hideEmptyColumns?: boolean;
   isLoading?: boolean;
   /** Whether cards may be dragged (default true, still gated by permission). */
   movable?: boolean;
@@ -757,13 +764,14 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
 
-  const visibleColumns = useMemo(
-    () =>
-      groupBy === 'status'
-        ? allColumns.filter((column) => !hiddenColumnSet.has(column.key))
-        : allColumns,
-    [allColumns, groupBy, hiddenColumnSet],
-  );
+  const visibleColumns = useMemo(() => {
+    if (external?.hideEmptyColumns) {
+      return externalVisibleKanbanColumns(allColumns, currentTaskGroups);
+    }
+    return groupBy === 'status'
+      ? allColumns.filter((column) => !hiddenColumnSet.has(column.key))
+      : allColumns;
+  }, [allColumns, currentTaskGroups, external?.hideEmptyColumns, groupBy, hiddenColumnSet]);
 
   const hiddenColumnEntries = useMemo(
     () =>

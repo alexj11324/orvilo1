@@ -79,6 +79,7 @@
   "inbox.deleteAll": "全部删除",
   "inbox.displayOptions": "显示选项",
   "inbox.displayPriorityInbox": "优先收件箱",
+  "inbox.displayShowSnoozed": "显示已稍后",
   "inbox.empty": "暂无通知",
   "inbox.emptyRead": "暂无已读通知",
   "inbox.emptyUnread": "没有未读通知",

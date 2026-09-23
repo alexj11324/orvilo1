@@ -476,6 +476,12 @@ const inboxPriorityMode =
   (s: GlobalState): 'all' | 'priority' | undefined =>
     s.status.inboxPriorityMode?.[scopeKey];
 
+/** Per (user, workspace) inbox "show snoozed" toggle; undefined/false hides. */
+const inboxShowSnoozed =
+  (scopeKey: string) =>
+  (s: GlobalState): boolean | undefined =>
+    s.status.inboxShowSnoozed?.[scopeKey];
+
 export const systemStatusSelectors = {
   agentBuilderPanelWidth,
   agentListExpandedGroupKeys,
@@ -499,6 +505,7 @@ export const systemStatusSelectors = {
   homeSelectedAgentId,
   homeTaskCount,
   inboxPriorityMode,
+  inboxShowSnoozed,
   isBannerDismissed,
   isNotificationRead,
   isShowCredit,

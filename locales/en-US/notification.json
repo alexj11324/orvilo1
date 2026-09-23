@@ -79,6 +79,7 @@
   "inbox.deleteAll": "Delete all",
   "inbox.displayOptions": "Display options",
   "inbox.displayPriorityInbox": "Priority inbox",
+  "inbox.displayShowSnoozed": "Show snoozed",
   "inbox.empty": "No notifications yet",
   "inbox.emptyRead": "No read notifications",
   "inbox.emptyUnread": "No unread notifications",

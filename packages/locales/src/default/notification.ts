@@ -94,6 +94,7 @@ export default {
   'inbox.filterUnread': 'Show unread only',
   'inbox.displayOptions': 'Display options',
   'inbox.displayPriorityInbox': 'Priority inbox',
+  'inbox.displayShowSnoozed': 'Show snoozed',
   'inbox.goToSettings': 'Go to settings',
   'inbox.inputPlaceholder': 'Reply to the agent',
   'inbox.loading': 'Loading inbox…',

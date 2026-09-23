@@ -324,6 +324,16 @@ const WorkInboxPage = memo(() => {
     },
     [priorityScopeKey, updateSystemStatus],
   );
+  // Linear's display-options "Show snoozed" — same per-(user, workspace)
+  // persistence channel as the priority-inbox choice.
+  const showSnoozed =
+    useGlobalStore(systemStatusSelectors.inboxShowSnoozed(priorityScopeKey)) ?? false;
+  const setShowSnoozed = useCallback(
+    (show: boolean) => {
+      updateSystemStatus({ inboxShowSnoozed: { [priorityScopeKey]: show } });
+    },
+    [priorityScopeKey, updateSystemStatus],
+  );
 
   // `kind` is the feed bucket: the tab queries the priority classification
   // (pending action or unread mention) rather than the stored row kind. In
@@ -334,8 +344,14 @@ const WorkInboxPage = memo(() => {
   const scopeKind = inboxScopeKindToken(priorityEnabled, tab);
   const filter = feedFilterForChip(filterChip);
   const { data, error, isLoading } = useClientDataSWR(
-    inboxKeys.feed(workspaceId, kind, filter, undefined),
-    () => notificationService.feed({ filter, kind, limit: 50 }),
+    inboxKeys.feed(workspaceId, kind, filter, showSnoozed ? 'snoozed' : undefined),
+    () =>
+      notificationService.feed({
+        filter,
+        includeSnoozed: showSnoozed || undefined,
+        kind,
+        limit: 50,
+      }),
     { focusThrottleInterval: INBOX_FEED_FOCUS_THROTTLE_MS },
   );
   // Pages beyond the first stay client-side so a focus-triggered refetch of
@@ -343,8 +359,8 @@ const WorkInboxPage = memo(() => {
   // bound to user + workspace + query fingerprint + request generation: a
   // page fetched under a stale scope can never commit into the new one.
   const feedScope = useMemo(
-    () => inboxFeedScopeKey({ filter, kind: scopeKind, userId, workspaceId }),
-    [filter, scopeKind, userId, workspaceId],
+    () => inboxFeedScopeKey({ filter, kind: scopeKind, snoozed: showSnoozed, userId, workspaceId }),
+    [filter, scopeKind, showSnoozed, userId, workspaceId],
   );
   const pager = useInboxFeedPager(feedScope);
   const tail = pager.tailFor(feedScope);
@@ -357,9 +373,15 @@ const WorkInboxPage = memo(() => {
   const loadingMore = pager.loadingMore;
   const loadMore = useCallback(async () => {
     await pager.loadMore(feedScope, data?.nextCursor ?? null, (cursor) =>
-      notificationService.feed({ cursor, filter, kind, limit: 50 }),
+      notificationService.feed({
+        cursor,
+        filter,
+        includeSnoozed: showSnoozed || undefined,
+        kind,
+        limit: 50,
+      }),
     );
-  }, [data?.nextCursor, feedScope, filter, kind, pager]);
+  }, [data?.nextCursor, feedScope, filter, kind, pager, showSnoozed]);
   const partial = Boolean(data?.partial);
   const { data: summary } = useClientDataSWR(inboxKeys.feedSummary(workspaceId), () =>
     notificationService.feedSummary(),
@@ -488,7 +510,7 @@ const WorkInboxPage = memo(() => {
         // the unread dot clears at the same moment the badge does.
         void mutate(inboxKeys.feedSummary(workspaceId));
         void mutate(inboxKeys.unreadCount(workspaceId));
-        void mutate(inboxKeys.feed(workspaceId, kind, filter, undefined));
+        void mutate(inboxKeys.feed(workspaceId, kind, filter, showSnoozed ? 'snoozed' : undefined));
         void mutate(inboxKeys.feedCard(workspaceId, selectedNotificationId));
       })
       .catch(() => {
@@ -506,17 +528,18 @@ const WorkInboxPage = memo(() => {
     selectedActivityVersion,
     selectedNotificationId,
     selectedRead,
+    showSnoozed,
     t,
     workspaceId,
   ]);
 
   const refresh = useCallback(async () => {
     await Promise.all([
-      mutate(inboxKeys.feed(workspaceId, kind, filter, undefined)),
+      mutate(inboxKeys.feed(workspaceId, kind, filter, showSnoozed ? 'snoozed' : undefined)),
       mutate(inboxKeys.feedSummary(workspaceId)),
       mutate(inboxKeys.unreadCount(workspaceId)),
     ]);
-  }, [filter, kind, workspaceId]);
+  }, [filter, kind, showSnoozed, workspaceId]);
 
   const organizeFailed = useCallback(() => {
     toast.error(t('inbox.organizeFailed'));
@@ -546,17 +569,22 @@ const WorkInboxPage = memo(() => {
       try {
         const until = snoozeUntilForPreset(preset);
         await notificationService.snooze(card.notificationId, until, card.activityVersion);
-        // Snoozed cards stay listed in every view; patch the tail copy too.
-        pager.updateCard(card.notificationId, (current) => ({
-          ...current,
-          snoozedUntil: until,
-        }));
+        // Snoozed cards hide until wake (Linear semantics): drop the tail copy
+        // unless the snoozed filter or the show-snoozed toggle keeps it listed.
+        if (filter === 'snoozed' || showSnoozed) {
+          pager.updateCard(card.notificationId, (current) => ({
+            ...current,
+            snoozedUntil: until,
+          }));
+        } else {
+          pager.removeCard(card.notificationId);
+        }
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [organizeFailed, pager, refresh],
+    [filter, organizeFailed, pager, refresh, showSnoozed],
   );
 
   const markCardUnread = useCallback(
@@ -870,9 +898,6 @@ const WorkInboxPage = memo(() => {
             <DropdownMenu
               placement={'bottomRight'}
               items={[
-                // The only display option the Orvilo feed can honour: Linear's
-                // snoozed visibility and unread-first ordering have no backend
-                // support here, so they are omitted rather than faked.
                 {
                   checked: priorityEnabled,
                   closeOnClick: false,
@@ -882,6 +907,16 @@ const WorkInboxPage = memo(() => {
                     setPriorityMode(checked ? 'priority' : 'all'),
                   type: 'switch',
                 },
+                {
+                  checked: showSnoozed,
+                  closeOnClick: false,
+                  key: 'showSnoozed',
+                  label: t('inbox.displayShowSnoozed'),
+                  onCheckedChange: (checked: boolean) => setShowSnoozed(checked),
+                  type: 'switch',
+                },
+                // Linear's unread-first ordering still has no backend support
+                // here — omitted rather than faked.
               ]}
             >
               <Tooltip title={t('inbox.displayOptions')}>

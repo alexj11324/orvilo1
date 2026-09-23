@@ -915,8 +915,8 @@ export const inboxKeys = {
       workspaceId: string | null,
       kind: string | undefined,
       filter: string | undefined,
-      cursor: string | undefined,
-    ) => ['inbox:feed', workspaceId, kind, filter, cursor],
+      variant: string | undefined,
+    ) => ['inbox:feed', workspaceId, kind, filter, variant],
   ),
   feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
     'inbox:feedSummary',

@@ -252,6 +252,12 @@ export interface SystemStatus {
    */
   inboxPriorityMode?: Record<string, 'all' | 'priority'>;
   /**
+   * Per (user, workspace) "show snoozed" display option for the inbox feed,
+   * keyed by the same scope key as `inboxPriorityMode`. Absent/false hides
+   * snoozed-until-wake cards (Linear's default).
+   */
+  inboxShowSnoozed?: Record<string, boolean>;
+  /**
    * Do not enable PGLite on app initialization, only enable when user manually turns it on
    */
   isEnablePglite?: boolean;
@@ -719,6 +725,12 @@ export const createInitialSystemStatus = (): SystemStatus => {
       typeof persistedStatus.inboxPriorityMode === 'object' &&
       !Array.isArray(persistedStatus.inboxPriorityMode)
         ? persistedStatus.inboxPriorityMode
+        : undefined,
+    inboxShowSnoozed:
+      persistedStatus.inboxShowSnoozed &&
+      typeof persistedStatus.inboxShowSnoozed === 'object' &&
+      !Array.isArray(persistedStatus.inboxShowSnoozed)
+        ? persistedStatus.inboxShowSnoozed
         : undefined,
     // Same synchronous-restore rationale as inboxPriorityMode — without it the
     // example prompts flash in then vanish once async status init lands.

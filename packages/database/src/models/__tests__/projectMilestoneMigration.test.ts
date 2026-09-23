@@ -32,17 +32,23 @@ const inverseSql = [
 const MILESTONE_ID = '11111111-1111-4111-8111-111111111111';
 
 /**
- * Only the tables this migration touches. Replaying it against the real
- * migrations folder would drag in pg_search and every unrelated concern.
+ * Only the parent tables the consolidated migration's foreign keys reference.
+ * The milestone DDL now lives inside `0189_linear_parity_project_layering`,
+ * which creates `project_milestones` itself (with the columns its indexes
+ * need) but expects `users`, `workspaces`, `projects`, and
+ * `tasks.duplicate_of_task_id` to already exist — stub them minimally so the
+ * test still replays the real file end to end.
  */
 const setupDependencies = async (client: PGlite) => {
   await client.exec(`
+    CREATE TABLE "users" ("id" text PRIMARY KEY NOT NULL);
+    CREATE TABLE "workspaces" ("id" text PRIMARY KEY NOT NULL);
     CREATE TABLE "projects" ("id" text PRIMARY KEY NOT NULL);
-    CREATE TABLE "project_milestones" (
-      "id" uuid PRIMARY KEY NOT NULL,
-      "project_id" text NOT NULL
+    CREATE TABLE "tasks" (
+      "id" text PRIMARY KEY NOT NULL,
+      "project_id" text,
+      "duplicate_of_task_id" text
     );
-    CREATE TABLE "tasks" ("id" text PRIMARY KEY NOT NULL, "project_id" text);
   `);
 };
 

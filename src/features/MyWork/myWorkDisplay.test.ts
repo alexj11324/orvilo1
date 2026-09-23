@@ -9,12 +9,17 @@ import {
   isCompletedWindowHidden,
   isInteractiveRowClick,
   isMyWorkClientGrouping,
+  MY_WORK_DEFAULT_ROW_PROPERTIES,
   MY_WORK_PRIORITY_LABEL_KEYS,
+  MY_WORK_ROW_PROPERTIES,
   myWorkDisplayFiltersRows,
   myWorkListGroupingOptions,
   myWorkOrderingOptions,
   myWorkPriorityGroupRank,
   myWorkServerGroupBy,
+  myWorkStatusGroupRank,
+  myWorkSubGroupingOptions,
+  normalizeMyWorkDisplay,
   sortTasksByImportance,
   workQueryActivitySections,
   workQueryFieldSections,
@@ -290,6 +295,87 @@ describe('workQueryFieldSections', () => {
     });
     expect(sections.map((section) => section.key)).toEqual(['u1', 'none']);
     expect(sections[1].tasks.map((row) => row.id)).toEqual(['b', 'c']);
+  });
+});
+
+describe('normalizeMyWorkDisplay', () => {
+  it('returns the tab defaults when nothing was persisted', () => {
+    expect(normalizeMyWorkDisplay('assigned', undefined)).toEqual(defaultMyWorkDisplay('assigned'));
+    expect(normalizeMyWorkDisplay('created', null)).toEqual(defaultMyWorkDisplay('created'));
+  });
+
+  it('rejects a grouping the tab does not offer', () => {
+    // `activityDate` is Activity-only — a stale persisted value on Created
+    // falls back to that tab's default rather than rendering a dead section.
+    const display = normalizeMyWorkDisplay('created', { grouping: 'activityDate' });
+    expect(display.grouping).toBe('none');
+    const kept = normalizeMyWorkDisplay('created', { grouping: 'priority' });
+    expect(kept.grouping).toBe('priority');
+  });
+
+  it('drops unknown property keys and keeps boolean overrides', () => {
+    const display = normalizeMyWorkDisplay('assigned', {
+      properties: { assignee: false, bogus: true },
+    });
+    expect(display.properties.assignee).toBe(false);
+    expect(display.properties.status).toBe(true);
+    expect('bogus' in display.properties).toBe(false);
+  });
+
+  it('normalizes sub-grouping and booleans independently', () => {
+    const display = normalizeMyWorkDisplay('subscribed', {
+      nestedSubIssues: false,
+      subGrouping: 'status',
+    });
+    expect(display.subGrouping).toBe('status');
+    expect(display.nestedSubIssues).toBe(false);
+    const bad = normalizeMyWorkDisplay('subscribed', {
+      subGrouping: 'bogus' as never,
+    });
+    expect(bad.subGrouping).toBe('none');
+  });
+
+  it('covers every row property in the persisted shape', () => {
+    for (const property of MY_WORK_ROW_PROPERTIES) {
+      expect(MY_WORK_DEFAULT_ROW_PROPERTIES[property]).toBe(true);
+    }
+    // Linear's panel order: status, assignee, priority, project, milestone,
+    // dates, then the Orvilo workflow badge.
+    expect(MY_WORK_ROW_PROPERTIES).toEqual([
+      'status',
+      'assignee',
+      'priority',
+      'project',
+      'milestone',
+      'updated',
+      'workflowBadge',
+    ]);
+  });
+});
+
+describe('myWorkSubGroupingOptions', () => {
+  it('always offers none and drops the active primary dimension', () => {
+    expect(myWorkSubGroupingOptions('status')).toEqual(['none', 'priority', 'assignee', 'project']);
+    expect(myWorkSubGroupingOptions('priority')).toEqual(['none', 'status', 'assignee', 'project']);
+    expect(myWorkSubGroupingOptions('none')).toEqual([
+      'none',
+      'status',
+      'priority',
+      'assignee',
+      'project',
+    ]);
+  });
+});
+
+describe('myWorkStatusGroupRank', () => {
+  it('follows the kanban column order, null last', () => {
+    const keys = ['canceled', 'backlog', 'running', null];
+    expect([...keys].sort((a, b) => myWorkStatusGroupRank(a) - myWorkStatusGroupRank(b))).toEqual([
+      'backlog',
+      'running',
+      'canceled',
+      null,
+    ]);
   });
 });
 

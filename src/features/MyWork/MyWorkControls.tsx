@@ -1,12 +1,11 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Checkbox, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
 import type { MyWorkMode, WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   BookmarkPlusIcon,
-  FilterIcon,
   PanelRightCloseIcon,
   PanelRightOpenIcon,
   Settings2Icon,
@@ -16,17 +15,20 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
-import WorkQueryFilterBuilder from '@/features/SavedViews/WorkQueryFilterBuilder';
 
 import {
   MY_WORK_BOARD_GROUPING_OPTIONS,
+  MY_WORK_ROW_PROPERTIES,
   type MyWorkBoardGrouping,
   type MyWorkCompletedWindow,
   type MyWorkDisplay,
   type MyWorkListGrouping,
   type MyWorkOrdering,
   myWorkOrderingDefaultKey,
+  type MyWorkSubGrouping,
+  myWorkSubGroupingOptions,
 } from './myWorkDisplay';
+import MyWorkFilterMenu from './MyWorkFilterMenu';
 
 const styles = createStaticStyles(({ css }) => ({
   // Same popover width contract as the saved-view editors.
@@ -52,6 +54,20 @@ const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, labe
 ));
 
 OptionRow.displayName = 'OptionRow';
+
+/** A display-property toggle — label left, switch right (Linear's list). */
+const PropertyRow = memo<{
+  checked: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}>(({ checked, label, onChange }) => (
+  <Flexbox horizontal align="center" justify="space-between">
+    <Text fontSize={13}>{label}</Text>
+    <Switch checked={checked} size="small" onChange={onChange} />
+  </Flexbox>
+));
+
+PropertyRow.displayName = 'PropertyRow';
 
 interface MyWorkControlsProps {
   /** Applied extra predicates — paints the Filter icon's active state. */
@@ -84,6 +100,10 @@ interface MyWorkControlsProps {
   onSaveAs: () => void;
   onToggleDetails: () => void;
   orderingOptions: MyWorkOrdering[];
+  /** Project catalog for the filter directory's `projectId` picker. */
+  projects: { id: string; name: string }[];
+  /** Joined teams for the filter directory's `teamId` picker. */
+  teamOptions: { id: string; name: string }[];
 }
 
 /**
@@ -117,6 +137,8 @@ const MyWorkControls = memo<MyWorkControlsProps>(
     onSaveAs,
     onToggleDetails,
     orderingOptions,
+    projects,
+    teamOptions,
   }) => {
     const { t } = useTranslation('common');
 
@@ -148,48 +170,19 @@ const MyWorkControls = memo<MyWorkControlsProps>(
 
     return (
       <Flexbox horizontal align="center" gap={6} style={{ flex: 'none' }}>
-        <Popover
-          placement="bottomRight"
-          trigger="click"
-          content={
-            <Flexbox className={styles.controlPopover} gap={12}>
-              <Flexbox gap={4}>
-                <Checkbox checked={noProject} onChange={onNoProjectChange}>
-                  {t('myWork.noProject')}
-                </Checkbox>
-                <Checkbox checked={delegated} onChange={onDelegatedChange}>
-                  {t('myWork.delegated')}
-                </Checkbox>
-              </Flexbox>
-              {filterSupported ? (
-                <WorkQueryFilterBuilder
-                  entityType={'task'}
-                  value={builder}
-                  onChange={onBuilderChange}
-                />
-              ) : (
-                <Text fontSize={12} type="secondary">
-                  {t('myWork.filterUnsupported')}
-                </Text>
-              )}
-              {activeFilterCount > 0 ? (
-                <Flexbox horizontal justify="flex-end">
-                  <Button size="small" type="text" onClick={onResetFilters}>
-                    {t('myWork.filtersReset')}
-                  </Button>
-                </Flexbox>
-              ) : null}
-            </Flexbox>
-          }
-        >
-          <ActionIcon
-            active={activeFilterCount > 0 || noProject || delegated}
-            aria-label={t('myWork.addFilter')}
-            icon={FilterIcon}
-            size="small"
-            title={t('myWork.addFilter')}
-          />
-        </Popover>
+        <MyWorkFilterMenu
+          activeFilterCount={activeFilterCount}
+          builder={builder}
+          delegated={delegated}
+          filterSupported={filterSupported}
+          noProject={noProject}
+          projects={projects}
+          teamOptions={teamOptions}
+          onBuilderChange={onBuilderChange}
+          onDelegatedChange={onDelegatedChange}
+          onNoProjectChange={onNoProjectChange}
+          onResetFilters={onResetFilters}
+        />
         <Popover
           placement="bottomRight"
           trigger="click"
@@ -244,6 +237,29 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                   />
                 )}
               </OptionRow>
+              {layout === 'list' ? (
+                <OptionRow label={t('myWork.subGrouping')}>
+                  <Select
+                    disabled={display.grouping === 'none'}
+                    size="small"
+                    style={{ minWidth: 150 }}
+                    value={display.grouping === 'none' ? 'none' : display.subGrouping}
+                    options={myWorkSubGroupingOptions(display.grouping).map((value) => ({
+                      label: groupingLabel(value),
+                      value,
+                    }))}
+                    onChange={(next) => {
+                      if (
+                        myWorkSubGroupingOptions(display.grouping).includes(
+                          next as MyWorkSubGrouping,
+                        )
+                      ) {
+                        onDisplayChange({ subGrouping: next as MyWorkSubGrouping });
+                      }
+                    }}
+                  />
+                </OptionRow>
+              ) : null}
               {orderingOptions.length > 1 ? (
                 <OptionRow label={t('savedViews.ordering')}>
                   <Select
@@ -300,6 +316,27 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                   onChange={(checked) => onDisplayChange({ nestedSubIssues: checked })}
                 />
               </OptionRow>
+              {layout === 'list' ? (
+                <>
+                  <Text fontSize={12} type="secondary">
+                    {t('myWork.displayProperties')}
+                  </Text>
+                  <Flexbox gap={6}>
+                    {MY_WORK_ROW_PROPERTIES.map((property) => (
+                      <PropertyRow
+                        checked={display.properties[property]}
+                        key={property}
+                        label={t(`myWork.properties.${property}` as never)}
+                        onChange={(checked) =>
+                          onDisplayChange({
+                            properties: { ...display.properties, [property]: checked },
+                          })
+                        }
+                      />
+                    ))}
+                  </Flexbox>
+                </>
+              ) : null}
               {canSaveAs ? (
                 <Flexbox horizontal justify="flex-end">
                   <Button icon={BookmarkPlusIcon} size="small" onClick={onSaveAs}>

@@ -36,6 +36,7 @@ import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
 import {
   bulkGestureFromModifiers,
@@ -43,7 +44,7 @@ import {
   type BulkSelectGesture,
 } from './bulkSelection';
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
-import { isInteractiveRowClick } from './myWorkDisplay';
+import { isInteractiveRowClick, type MyWorkRowProperty } from './myWorkDisplay';
 import {
   workQueryBoardGroups,
   workQueryListGroupBy,
@@ -200,7 +201,90 @@ const styles = createStaticStyles(({ css }) => ({
   bulkCheckActive: css`
     opacity: 1;
   `,
+  /**
+   * Second-level group header (Linear's Sub-grouping) — transparent chrome,
+   * indented under its primary group instead of repeating the filled pill.
+   */
+  subGroupHeaderRow: css`
+    padding-inline-end: 8px;
+    border-radius: 0;
+    background: transparent;
+  `,
+  subGroupHeader: css`
+    min-height: 28px;
+    padding-inline: 28px 16px;
+  `,
+  /**
+   * Display-property toggles hide their chip inside the shared task row.
+   * `AgentTaskItem` owns the chip DOM, so hiding rides on its stable collab
+   * hooks (`data-collab-id` slots) and the workflow badge's data attribute
+   * rather than forking the component. The trailing date is the trailing
+   * flex's last child when it renders; the `:not` guard keeps the assignee
+   * slot alive if the date ever comes back empty.
+   */
+  rowHideAssignee: css`
+    & [data-collab-id$=':assignee'] {
+      display: none;
+    }
+  `,
+  rowHideLabels: css`
+    & [data-task-labels] {
+      display: none;
+    }
+  `,
+  rowHidePriority: css`
+    & div:has(> [data-collab-id$=':status']) > :first-child {
+      display: none;
+    }
+  `,
+  rowHideStatus: css`
+    & [data-collab-id$=':status'] {
+      display: none;
+    }
+  `,
+  rowHideUpdated: css`
+    & div:has(> [data-collab-id$=':assignee']) > :last-child:not([data-collab-id$=':assignee']) {
+      display: none;
+    }
+  `,
+  rowHideWorkflowBadge: css`
+    & [data-task-workflow-state] {
+      display: none;
+    }
+  `,
 }));
+
+/** Property → row modifier class, in one place so a hidden chip is one lookup. */
+const ROW_PROPERTY_HIDE_CLASS: Record<MyWorkRowProperty, string | undefined> = {
+  assignee: styles.rowHideAssignee,
+  labels: styles.rowHideLabels,
+  // project + milestone chips are caller-supplied (rowExtras / milestone
+  // prop) — the page drops them upstream instead of hiding DOM.
+  milestone: undefined,
+  priority: styles.rowHidePriority,
+  project: undefined,
+  status: styles.rowHideStatus,
+  updated: styles.rowHideUpdated,
+  workflowBadge: styles.rowHideWorkflowBadge,
+};
+
+const rowPropertyClassNames = (hidden?: ReadonlySet<MyWorkRowProperty>): string[] => {
+  if (!hidden || hidden.size === 0) return [];
+  const classes: string[] = [];
+  for (const property of hidden) {
+    const className = ROW_PROPERTY_HIDE_CLASS[property];
+    if (className) classes.push(className);
+  }
+  return classes;
+};
+
+/** Second-level section inside a list group — Linear's nested sub-headers. */
+export interface WorkQuerySubSection {
+  icon?: ReactNode;
+  key: string;
+  tasks: WorkQueryResultTask[];
+  title: string;
+}
 
 interface WorkQueryResultsProps {
   /**
@@ -231,6 +315,12 @@ interface WorkQueryResultsProps {
   groupBy?: WorkQueryGroupBy;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
   /**
+   * Display-property toggles — the set of row chips to hide. Project and
+   * milestone chips are caller-supplied (`rowExtras`/`milestoneFor`), so the
+   * page simply stops supplying them; the rest hide inside the shared row.
+   */
+  hiddenRowProperties?: ReadonlySet<MyWorkRowProperty>;
+  /**
    * Board chrome: hide columns whose group is empty (Linear's team-issues
    * board default). Off unless the caller's reference hides empty columns.
    */
@@ -252,6 +342,11 @@ interface WorkQueryResultsProps {
    */
   loadMoreGroupErrors?: Record<string, unknown>;
   loadMoreLabel: string;
+  /**
+   * Resolve a row's milestone for the `◆ name · date` badge — the page owns
+   * the project-milestone catalog; `undefined` renders no badge.
+   */
+  milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
   movable?: boolean;
   /**
    * Multi-select row gesture: cmd/ctrl-click `toggle`, shift-click `range`.
@@ -294,6 +389,12 @@ interface WorkQueryResultsProps {
   selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
+  /**
+   * Second-level grouping inside each list section — Linear's "Sub-grouping"
+   * nested headers. Called with a section's tasks; `undefined` renders the
+   * flat body. Sub-sections never nest further (Linear stops at two levels).
+   */
+  subSectionsFor?: (tasks: WorkQueryResultTask[]) => WorkQuerySubSection[] | undefined;
   tasks: WorkQueryResultTask[];
   total?: number;
 }
@@ -305,6 +406,8 @@ const WorkQueryTaskRow = memo(
     groupBy,
     bulkSelected,
     bulkSelectionActive,
+    hiddenProperties,
+    milestoneFor,
     onBulkSelectTask,
     onMoved,
     onOpenTask,
@@ -322,6 +425,10 @@ const WorkQueryTaskRow = memo(
     bulkSelected?: boolean;
     /** Any selection — every row's checkbox stays revealed (Linear). */
     bulkSelectionActive?: boolean;
+    /** Display properties the user switched off — hide their chips in place. */
+    hiddenProperties?: ReadonlySet<MyWorkRowProperty>;
+    /** Resolves the row's milestone for the `◆` badge — `undefined` renders nothing. */
+    milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
     onBulkSelectTask?: (
       task: WorkQueryResultTask,
       gesture: BulkSelectGesture,
@@ -409,6 +516,7 @@ const WorkQueryTaskRow = memo(
             styles.row,
             selected && styles.rowSelected,
             bulkSelected && styles.rowBulkSelected,
+            ...rowPropertyClassNames(hiddenProperties),
           )}
           onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
           onClickCapture={
@@ -433,6 +541,7 @@ const WorkQueryTaskRow = memo(
           ) : null}
           <Flexbox flex={1} style={{ minWidth: 0 }}>
             <AgentTaskItem
+              milestone={milestoneFor?.(task)}
               routeScope={'global'}
               task={{ ...task, participants: task.participants ?? [] }}
               onStatusChange={handleStatusChange}
@@ -472,6 +581,7 @@ const WorkQueryStatusGroup = memo<{
   bulkSelectionActive?: boolean;
   createLabel?: string;
   hasMore?: boolean;
+  hiddenProperties?: ReadonlySet<MyWorkRowProperty>;
   /** Optional header glyph — field-bucket sections (priority icon, avatar). */
   icon?: ReactNode;
   isFollowed?: (taskId: string) => boolean;
@@ -483,6 +593,7 @@ const WorkQueryStatusGroup = memo<{
    */
   loadMoreError?: unknown;
   loadMoreLabel?: string;
+  milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
   nested?: boolean;
   onBulkSelectTask?: (
     task: WorkQueryResultTask,
@@ -500,6 +611,13 @@ const WorkQueryStatusGroup = memo<{
   peekOnSelect?: boolean;
   rowExtras?: (task: WorkQueryResultTask) => ReactNode;
   selectedTaskId?: string;
+  /** Rendered as the nested second-level header, not a top-level group. */
+  subGroup?: boolean;
+  /**
+   * Nested second-level sections (Linear's Sub-grouping) — when present they
+   * replace the flat row body; the group's own load-more footer stays.
+   */
+  subSections?: WorkQuerySubSection[];
   tasks: WorkQueryResultTask[];
   total?: number;
 }>(
@@ -512,11 +630,13 @@ const WorkQueryStatusGroup = memo<{
     createLabel,
     groupBy,
     hasMore,
+    hiddenProperties,
     icon,
     isFollowed,
     label,
     loadMoreError,
     loadMoreLabel,
+    milestoneFor,
     nested,
     onBulkSelectTask,
     onCreateInGroup,
@@ -529,6 +649,8 @@ const WorkQueryStatusGroup = memo<{
     peekOnSelect,
     rowExtras,
     selectedTaskId,
+    subGroup,
+    subSections,
     tasks,
     total,
   }) => {
@@ -551,11 +673,21 @@ const WorkQueryStatusGroup = memo<{
 
     return (
       <Flexbox>
-        <div className={cx(styles.groupHeaderRow, attention && styles.attentionGroupHeaderRow)}>
+        <div
+          className={cx(
+            styles.groupHeaderRow,
+            (attention || subGroup) && styles.attentionGroupHeaderRow,
+            subGroup && styles.subGroupHeaderRow,
+          )}
+        >
           <button
             aria-expanded={!collapsed}
-            className={cx(styles.groupHeader, attention && styles.attentionGroupHeader)}
             type="button"
+            className={cx(
+              styles.groupHeader,
+              attention && styles.attentionGroupHeader,
+              subGroup && styles.subGroupHeader,
+            )}
             onClick={() => setCollapsed((current) => !current)}
           >
             <ChevronDownIcon
@@ -589,37 +721,90 @@ const WorkQueryStatusGroup = memo<{
         </div>
         {collapsed ? null : (
           <Flexbox>
-            {hierarchyRows.map((row) => (
-              <WorkQueryTaskRow
-                bulkSelected={bulkSelectedIds?.has(row.task.id)}
-                bulkSelectionActive={bulkSelectionActive}
-                depth={row.depth}
-                followed={isFollowed?.(row.task.id)}
-                groupBy={groupBy}
-                key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
-                muted={row.isParentContext}
-                peekOnSelect={peekOnSelect}
-                rowExtras={rowExtras}
-                selected={selectedTaskId !== undefined && row.task.identifier === selectedTaskId}
-                task={row.task}
-                onBulkSelectTask={onBulkSelectTask}
-                onMoved={onMoved}
-                onOpenTask={onOpenTask}
-                onSelectTask={onSelectTask}
-                onToggleFollow={onToggleFollow}
-              />
-            ))}
-            {/* A failed tail page swaps the button for an inline retry —
-                the error is scoped to this group, not the whole list. */}
-            {loadMoreError ? (
-              <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
-            ) : hasMore && onLoadMore && loadMoreLabel ? (
-              <Flexbox horizontal justify={'center'}>
-                <Button size="small" onClick={() => void onLoadMore()}>
-                  {loadMoreLabel}
-                </Button>
+            {subSections && subSections.length > 0 ? (
+              /* Linear's nested sub-headers: the second level groups the
+                 section's rows under its own collapsible headers. Sub-groups
+                 never nest further, and the primary group keeps its create
+                 `+` and load-more footer. */
+              <Flexbox gap={4}>
+                {subSections.map((section) => (
+                  <WorkQueryStatusGroup
+                    subGroup
+                    allTasks={allTasks}
+                    bulkSelectedIds={bulkSelectedIds}
+                    bulkSelectionActive={bulkSelectionActive}
+                    columnKey={section.key}
+                    groupBy={groupBy}
+                    hiddenProperties={hiddenProperties}
+                    icon={section.icon}
+                    isFollowed={isFollowed}
+                    key={section.key}
+                    label={section.title}
+                    milestoneFor={milestoneFor}
+                    nested={nested}
+                    peekOnSelect={peekOnSelect}
+                    rowExtras={rowExtras}
+                    selectedTaskId={selectedTaskId}
+                    tasks={section.tasks}
+                    total={section.tasks.length}
+                    onBulkSelectTask={onBulkSelectTask}
+                    onMoved={onMoved}
+                    onOpenTask={onOpenTask}
+                    onSelectTask={onSelectTask}
+                    onToggleFollow={onToggleFollow}
+                  />
+                ))}
+                {/* A failed tail page swaps the button for an inline retry —
+                    the error is scoped to this group, not the whole list. */}
+                {loadMoreError ? (
+                  <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
+                ) : hasMore && onLoadMore && loadMoreLabel ? (
+                  <Flexbox horizontal justify={'center'}>
+                    <Button size="small" onClick={() => void onLoadMore()}>
+                      {loadMoreLabel}
+                    </Button>
+                  </Flexbox>
+                ) : null}
               </Flexbox>
-            ) : null}
+            ) : (
+              <>
+                {hierarchyRows.map((row) => (
+                  <WorkQueryTaskRow
+                    bulkSelected={bulkSelectedIds?.has(row.task.id)}
+                    bulkSelectionActive={bulkSelectionActive}
+                    depth={row.depth}
+                    followed={isFollowed?.(row.task.id)}
+                    groupBy={groupBy}
+                    hiddenProperties={hiddenProperties}
+                    key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
+                    milestoneFor={milestoneFor}
+                    muted={row.isParentContext}
+                    peekOnSelect={peekOnSelect}
+                    rowExtras={rowExtras}
+                    task={row.task}
+                    selected={
+                      selectedTaskId !== undefined && row.task.identifier === selectedTaskId
+                    }
+                    onBulkSelectTask={onBulkSelectTask}
+                    onMoved={onMoved}
+                    onOpenTask={onOpenTask}
+                    onSelectTask={onSelectTask}
+                    onToggleFollow={onToggleFollow}
+                  />
+                ))}
+                {/* A failed tail page swaps the button for an inline retry —
+                    the error is scoped to this group, not the whole list. */}
+                {loadMoreError ? (
+                  <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
+                ) : hasMore && onLoadMore && loadMoreLabel ? (
+                  <Flexbox horizontal justify={'center'}>
+                    <Button size="small" onClick={() => void onLoadMore()}>
+                      {loadMoreLabel}
+                    </Button>
+                  </Flexbox>
+                ) : null}
+              </>
+            )}
           </Flexbox>
         )}
       </Flexbox>
@@ -683,6 +868,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     flatSections,
     groupBy,
     groups,
+    hiddenRowProperties,
     hideEmptyColumns,
     isFollowed,
     layout = 'list',
@@ -691,6 +877,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     loadMoreLabel,
     loadMoreError,
     loadMoreGroupErrors,
+    milestoneFor,
     movable,
     onBulkSelectTask,
     onCreateInFlatSection,
@@ -707,6 +894,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     rowExtras,
     selectedTaskId,
     sortMode,
+    subSectionsFor,
     tasks,
     total,
   }) => {
@@ -728,6 +916,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const bulkSelectionActive = Boolean(bulkSelectedIds?.size);
     const rowProps = {
       bulkSelectionActive,
+      hiddenProperties: hiddenRowProperties,
+      milestoneFor,
       onBulkSelectTask,
       onMoved,
       onOpenTask,
@@ -834,6 +1024,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   label={section.title}
                   nested={flatNested}
                   selectedTaskId={selectedTaskId}
+                  subSections={subSectionsFor?.(section.tasks)}
                   tasks={section.tasks}
                   total={section.tasks.length}
                   onCreateInGroup={onCreateInFlatSection}
@@ -882,6 +1073,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 loadMoreLabel={loadMoreLabel}
                 nested={listGroupBy === 'attention' && flatNested !== false}
                 selectedTaskId={selectedTaskId}
+                subSections={subSectionsFor?.(group.tasks)}
                 tasks={group.tasks}
                 total={group.total}
                 attention={

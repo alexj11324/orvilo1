@@ -482,6 +482,14 @@ const inboxShowSnoozed =
   (s: GlobalState): boolean | undefined =>
     s.status.inboxShowSnoozed?.[scopeKey];
 
+/**
+ * Per (user, workspace) My issues display options, keyed by the same scope
+ * key as `inboxPriorityMode` (`userId:workspaceId`), then by tab. The page
+ * normalizes the payload against its per-tab defaults.
+ */
+const myWorkViewOptions = (scopeKey: string) => (s: GlobalState) =>
+  s.status.myWorkViewOptions?.[scopeKey];
+
 export const systemStatusSelectors = {
   agentBuilderPanelWidth,
   agentListExpandedGroupKeys,
@@ -514,6 +522,7 @@ export const systemStatusSelectors = {
   leftPanelWidth,
   mobileShowPortal,
   mobileShowTopic,
+  myWorkViewOptions,
   pageAgentPanelWidth,
   pagePageSize,
   portalWidth,

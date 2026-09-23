@@ -1,4 +1,5 @@
 import type { MyWorkMode, WorkQuerySort } from '@orvilo/types';
+import { WORK_QUERY_STATUS_COLUMNS } from '@orvilo/types';
 
 import { isMyWorkSaveableMode } from './myWorkSaveAs';
 import type { WorkQueryResultTask } from './workQueryPaging';
@@ -25,9 +26,58 @@ export type MyWorkListGrouping =
   | 'status'
   | 'workflowCategory';
 export type MyWorkBoardGrouping = 'status' | 'workflowCategory';
+/**
+ * Second-level list grouping — the row fields Linear's "Sub-grouping" menu
+ * offers on My issues. Always bucketed client-side over the loaded rows, so
+ * it composes with any primary grouping (`none` disables it).
+ */
+export type MyWorkSubGrouping = 'assignee' | 'none' | 'priority' | 'project' | 'status';
 export type MyWorkOrdering =
   'createdAsc' | 'createdDesc' | 'default' | 'updatedAsc' | 'updatedDesc';
 export type MyWorkCompletedWindow = 'all' | 'none' | 'pastDay';
+
+/**
+ * Per-row property visibility — Linear's display-options panel lists ID,
+ * status, assignee, priority, project, due date, milestone, labels, links,
+ * time in status, created, updated and pull requests. The task row model
+ * only backs the entries below (`updated` covers the trailing date chip;
+ * `workflowBadge` is the Orvilo-native state badge); the rest stay omitted
+ * rather than rendered as dead toggles.
+ */
+export type MyWorkRowProperty =
+  | 'assignee'
+  | 'labels'
+  | 'milestone'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'updated'
+  | 'workflowBadge';
+
+/** Panel order follows Linear's display-properties list. */
+export const MY_WORK_ROW_PROPERTIES: readonly MyWorkRowProperty[] = [
+  'status',
+  'assignee',
+  'priority',
+  'project',
+  'milestone',
+  'labels',
+  'updated',
+  'workflowBadge',
+];
+
+export type MyWorkRowProperties = Record<MyWorkRowProperty, boolean>;
+
+export const MY_WORK_DEFAULT_ROW_PROPERTIES: MyWorkRowProperties = {
+  assignee: true,
+  labels: true,
+  milestone: true,
+  priority: true,
+  project: true,
+  status: true,
+  updated: true,
+  workflowBadge: true,
+};
 
 export interface MyWorkDisplay {
   /** Column dimension when the board layout is active. */
@@ -46,8 +96,15 @@ export interface MyWorkDisplay {
    * (client-side within groups), the server sort elsewhere.
    */
   ordering: MyWorkOrdering;
+  /** Row-chip visibility toggles (Linear's "Display properties" list). */
+  properties: MyWorkRowProperties;
   showSubIssues: boolean;
   showTriage: boolean;
+  /**
+   * Optional second-level grouping inside each primary group — Linear's
+   * "Sub-grouping". `none` renders the flat group body as before.
+   */
+  subGrouping: MyWorkSubGrouping;
 }
 
 /** Linear's per-tab list grouping (BEHAVIORS.md): Assigned=focus, Activity=my activity, rest flat. */
@@ -66,9 +123,94 @@ export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   // lists them flat.
   nestedSubIssues: mode !== 'created',
   ordering: 'default',
+  properties: { ...MY_WORK_DEFAULT_ROW_PROPERTIES },
   showSubIssues: true,
   showTriage: true,
+  subGrouping: 'none',
 });
+
+const MY_WORK_BOARD_GROUPINGS: readonly MyWorkBoardGrouping[] = ['status', 'workflowCategory'];
+const MY_WORK_COMPLETED_WINDOWS: readonly MyWorkCompletedWindow[] = ['all', 'none', 'pastDay'];
+const MY_WORK_ORDERINGS: readonly MyWorkOrdering[] = [
+  'createdAsc',
+  'createdDesc',
+  'default',
+  'updatedAsc',
+  'updatedDesc',
+];
+export const MY_WORK_SUB_GROUPING_OPTIONS: readonly MyWorkSubGrouping[] = [
+  'none',
+  'status',
+  'priority',
+  'assignee',
+  'project',
+];
+
+/**
+ * What a persisted payload may carry — `properties` rests as a loose
+ * `Record<string, boolean>` in `SystemStatus` (the store cannot import this
+ * file's key union), so the accepted shape is wider than `MyWorkDisplay` and
+ * the normalizer picks only the known keys.
+ */
+export type MyWorkDisplayPersisted = Omit<Partial<MyWorkDisplay>, 'properties'> & {
+  properties?: Record<string, boolean> | null;
+};
+
+/**
+ * Merge a persisted display payload over the tab's defaults. Unknown enum
+ * values fall back to the Linear default for the tab; property keys outside
+ * `MY_WORK_ROW_PROPERTIES` are dropped so stale toggles never leak into the
+ * UI. Groupings the tab does not offer normalize away rather than render a
+ * section the menu cannot express.
+ */
+export const normalizeMyWorkDisplay = (
+  mode: MyWorkMode,
+  raw?: MyWorkDisplayPersisted | null,
+): MyWorkDisplay => {
+  const defaults = defaultMyWorkDisplay(mode);
+  const source = raw ?? {};
+  const offered = myWorkListGroupingOptions(mode);
+  const grouping =
+    source.grouping && (offered as readonly string[]).includes(source.grouping)
+      ? source.grouping
+      : defaults.grouping;
+  const boardGrouping = MY_WORK_BOARD_GROUPINGS.includes(
+    source.boardGrouping as MyWorkBoardGrouping,
+  )
+    ? (source.boardGrouping as MyWorkBoardGrouping)
+    : defaults.boardGrouping;
+  const completed = MY_WORK_COMPLETED_WINDOWS.includes(source.completed as MyWorkCompletedWindow)
+    ? (source.completed as MyWorkCompletedWindow)
+    : defaults.completed;
+  const ordering = MY_WORK_ORDERINGS.includes(source.ordering as MyWorkOrdering)
+    ? (source.ordering as MyWorkOrdering)
+    : defaults.ordering;
+  const subGrouping = MY_WORK_SUB_GROUPING_OPTIONS.includes(source.subGrouping as MyWorkSubGrouping)
+    ? (source.subGrouping as MyWorkSubGrouping)
+    : defaults.subGrouping;
+  const properties = { ...defaults.properties };
+  if (source.properties && typeof source.properties === 'object') {
+    for (const key of MY_WORK_ROW_PROPERTIES) {
+      const value = source.properties[key];
+      if (typeof value === 'boolean') properties[key] = value;
+    }
+  }
+  return {
+    boardGrouping,
+    completed,
+    grouping,
+    nestedSubIssues:
+      typeof source.nestedSubIssues === 'boolean'
+        ? source.nestedSubIssues
+        : defaults.nestedSubIssues,
+    ordering,
+    properties,
+    showSubIssues:
+      typeof source.showSubIssues === 'boolean' ? source.showSubIssues : defaults.showSubIssues,
+    showTriage: typeof source.showTriage === 'boolean' ? source.showTriage : defaults.showTriage,
+    subGrouping,
+  };
+};
 
 /**
  * Grouping choices offered per tab — the tab's Linear default comes first,
@@ -95,6 +237,14 @@ export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[
 };
 
 export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = ['workflowCategory', 'status'];
+
+/**
+ * Sub-grouping choices for the display-options menu. The option matching the
+ * active primary grouping is dropped — a second level on the same dimension
+ * would produce single-row groups.
+ */
+export const myWorkSubGroupingOptions = (grouping: MyWorkListGrouping): MyWorkSubGrouping[] =>
+  MY_WORK_SUB_GROUPING_OPTIONS.filter((option) => option === 'none' || option !== grouping);
 
 /**
  * Non-default orderings need the generic work-query endpoint (the `myWork`
@@ -351,6 +501,16 @@ export const workQueryFieldSections = <T>(
  */
 export const myWorkPriorityGroupRank = (key: string | null): number =>
   key === null ? Number.MAX_SAFE_INTEGER : taskImportanceRank(Number(key));
+
+/**
+ * Status sub-group order — the shared kanban column order (`backlog` first,
+ * `canceled` last); unknown statuses sort just before the null bucket.
+ */
+export const myWorkStatusGroupRank = (key: string | null): number => {
+  if (key === null) return Number.MAX_SAFE_INTEGER;
+  const index = (WORK_QUERY_STATUS_COLUMNS as readonly string[]).indexOf(key);
+  return index === -1 ? Number.MAX_SAFE_INTEGER - 1 : index;
+};
 
 /** `taskDetail.priority.*` (chat ns) label key per Orvilo priority value. */
 export const MY_WORK_PRIORITY_LABEL_KEYS: Record<number, string> = {

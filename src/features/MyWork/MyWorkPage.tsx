@@ -13,6 +13,7 @@ import {
 } from '@lobehub/ui/base-ui';
 import { type MyWorkMode, type TaskStatus, type WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router';
@@ -22,15 +23,21 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import {
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
+} from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
+import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
 import { builderToFilter, stableStringify } from '@/features/SavedViews/workQueryBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
+import { inboxPriorityScopeKey } from '@/features/WorkInbox/inboxPriority';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -38,9 +45,12 @@ import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { usePermission } from '@/hooks/usePermission';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
+import { useCacheScope } from '@/libs/swr/useCacheScope';
 import { lambdaClient } from '@/libs/trpc/client';
 import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -50,15 +60,19 @@ import type { BulkSelectGesture } from './bulkSelection';
 import MyWorkControls from './MyWorkControls';
 import {
   activityDayTitle,
-  defaultMyWorkDisplay,
   filterMyWorkTaskRows,
+  isMyWorkClientGrouping,
   MY_WORK_PRIORITY_LABEL_KEYS,
+  MY_WORK_ROW_PROPERTIES,
   type MyWorkDisplay,
   myWorkDisplayFiltersRows,
   myWorkListGroupingOptions,
   myWorkOrderingOptions,
   myWorkPriorityGroupRank,
+  type MyWorkRowProperty,
   myWorkServerGroupBy,
+  myWorkStatusGroupRank,
+  normalizeMyWorkDisplay,
   sortTasksByImportance,
   workQueryActivitySections,
   workQueryFieldSections,
@@ -172,6 +186,18 @@ const resolveLayout = (mode: MyWorkMode, value: string | null): WorkQueryLayout 
   return value === 'board' ? 'board' : 'list';
 };
 
+/**
+ * Hydrates one project's detail into the `projectDetails` cache so a row's
+ * `projectMilestoneId` can resolve to the `◆ name · date` badge. Rendered
+ * once per referenced project — hooks cannot loop, so each id gets a child.
+ */
+const MilestoneCatalogProject = memo<{ id: string }>(({ id }) => {
+  useProjectStore((s) => s.useFetchProjectDetail)(id);
+  return null;
+});
+
+MilestoneCatalogProject.displayName = 'MilestoneCatalogProject';
+
 const MyWorkPage = memo(() => {
   const { t, i18n } = useTranslation(['common', 'chat']);
   const workspaceId = useActiveWorkspaceId();
@@ -191,19 +217,26 @@ const MyWorkPage = memo(() => {
 
   /* ----------------------- display options + filters ---------------------- */
 
-  // Per-tab display state, kept for the session — Linear persists these per
-  // tab server-side; the work-query API exposes no preference store.
-  const [displayByMode, setDisplayByMode] = useState<Partial<Record<MyWorkMode, MyWorkDisplay>>>(
-    {},
+  // Per-tab display state persisted in SystemStatus — Linear keeps these per
+  // tab server-side; the work-query API exposes no preference store, so the
+  // local store stands in under the same `userId:workspaceId` scope key the
+  // inbox prefs use.
+  const viewScopeKey = inboxPriorityScopeKey({ userId: currentUserId, workspaceId });
+  const persistedViews = useGlobalStore(systemStatusSelectors.myWorkViewOptions(viewScopeKey));
+  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+  const display = useMemo(
+    () => normalizeMyWorkDisplay(mode, persistedViews?.[mode]),
+    [mode, persistedViews],
   );
-  const display = displayByMode[mode] ?? defaultMyWorkDisplay(mode);
   const setDisplay = useCallback(
-    (patch: Partial<MyWorkDisplay>) =>
-      setDisplayByMode((current) => ({
-        ...current,
-        [mode]: { ...(current[mode] ?? defaultMyWorkDisplay(mode)), ...patch },
-      })),
-    [mode],
+    (patch: Partial<MyWorkDisplay>) => {
+      updateSystemStatus({
+        myWorkViewOptions: {
+          [viewScopeKey]: { [mode]: normalizeMyWorkDisplay(mode, { ...display, ...patch }) },
+        },
+      });
+    },
+    [display, mode, updateSystemStatus, viewScopeKey],
   );
 
   // Filter-builder rows, also per tab. Only the saveable modes can actually
@@ -604,12 +637,52 @@ const MyWorkPage = memo(() => {
     }
     return map;
   }, [projects]);
+  const projectFilterOptions = useMemo(
+    () => projects.map((project) => ({ id: project.id, name: project.name ?? project.id })),
+    [projects],
+  );
+
+  // The milestone badge resolves through the cached project details — the
+  // catalog knows only the milestones of projects whose detail was fetched;
+  // an unknown link renders no chip rather than a raw id.
+  const cacheScope = useCacheScope();
+  const projectDetails = useProjectStore((s) => s.projectDetails[cacheScope]);
+  const milestoneById = useMemo(() => {
+    const map = new Map<string, TaskMilestoneRef>();
+    for (const detail of Object.values(projectDetails ?? {})) {
+      for (const milestone of detail.milestones ?? []) {
+        if (!map.has(milestone.id)) map.set(milestone.id, milestone);
+      }
+    }
+    return map;
+  }, [projectDetails]);
+  const milestoneFor = useCallback(
+    (task: WorkQueryResultTask) =>
+      display.properties.milestone && task.projectMilestoneId
+        ? milestoneById.get(task.projectMilestoneId)
+        : undefined,
+    [display.properties.milestone, milestoneById],
+  );
+  // The catalog only knows milestones of projects whose detail was fetched —
+  // hydrate the projects the rendered rows actually reference, and only while
+  // the badge is enabled.
+  const milestoneProjectIds = useMemo(() => {
+    if (!display.properties.milestone) return [];
+    const ids = new Set<string>();
+    const collect = (task: WorkQueryResultTask) => {
+      if (task.projectMilestoneId && task.projectId) ids.add(task.projectId);
+    };
+    for (const task of displayTasks) collect(task);
+    for (const group of displayGroups) for (const task of group.tasks) collect(task);
+    return [...ids].sort();
+  }, [display.properties.milestone, displayGroups, displayTasks]);
 
   // Assignee group headers need member display names — the row model carries
   // `assigneeUserId` only. The roster fetch stays dormant until the grouping
-  // is actually picked.
+  // is actually picked (primary or sub-grouping).
   const { members } = useWorkspaceMembersQuery({
-    enabled: layout === 'list' && display.grouping === 'assignee',
+    enabled:
+      layout === 'list' && (display.grouping === 'assignee' || display.subGrouping === 'assignee'),
   });
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -623,77 +696,135 @@ const MyWorkPage = memo(() => {
     return map;
   }, [members]);
 
+  // One bucketer shared by the primary field groupings and the sub-grouping
+  // menu — the work-query enum covers none of these dimensions, so they all
+  // bucket client-side over the loaded rows with the same labels/icons.
+  const fieldSections = useCallback(
+    (
+      field: 'activityDate' | 'assignee' | 'priority' | 'project' | 'status',
+      rows: WorkQueryResultTask[],
+    ): { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[] => {
+      if (field === 'activityDate') {
+        const labels = {
+          today: t('time.today'),
+          unknown: t('myWork.unknownDate'),
+          yesterday: t('time.yesterday'),
+        };
+        return workQueryActivitySections(rows).map((section) => ({
+          ...section,
+          title: activityDayTitle(section.key, { labels, locale: i18n.language }),
+        }));
+      }
+      if (field === 'priority') {
+        return workQueryFieldSections(rows, {
+          // null and 0 are the same "No priority" bucket — matching
+          // `taskImportanceRank`, which ranks them identically.
+          keyOf: (task) => task.priority ?? 0,
+          rankOf: myWorkPriorityGroupRank,
+          titleOf: (key) =>
+            t(
+              `chat:${
+                MY_WORK_PRIORITY_LABEL_KEYS[Number(key ?? 0)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0]
+              }` as never,
+            ),
+        }).map((section) => ({
+          ...section,
+          icon: (
+            <PriorityIcon priority={section.key === 'none' ? 0 : Number(section.key)} size={14} />
+          ),
+        }));
+      }
+      if (field === 'project') {
+        return workQueryFieldSections(rows, {
+          keyOf: (task) => task.projectId,
+          // A projectId that resolves to no known name keeps its id as the
+          // honest group label (stale link / unreadable project) instead of
+          // folding into "No project" — the row does carry a project.
+          titleOf: (key) =>
+            key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
+        }).map((section) => ({
+          ...section,
+          icon: (
+            <Icon
+              color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
+              icon={PROJECT_ENTITY_ICON}
+              size={14}
+            />
+          ),
+        }));
+      }
+      if (field === 'assignee') {
+        return workQueryFieldSections(rows, {
+          keyOf: (task) => task.assigneeUserId,
+          titleOf: (key) =>
+            key === null ? t('chat:taskList.unassigned') : (memberNameById.get(key) ?? key),
+        }).map((section) => ({
+          ...section,
+          icon: (
+            <AssigneeUserAvatar size={18} userId={section.key === 'none' ? null : section.key} />
+          ),
+        }));
+      }
+      // `status` — the kanban's `st:` visual family so sub-headers match the
+      // primary status grouping's column marks.
+      return workQueryFieldSections(rows, {
+        keyOf: (task) => task.status,
+        rankOf: myWorkStatusGroupRank,
+        titleOf: (key) => {
+          const i18nKey =
+            key === null ? undefined : (COLUMN_I18N_KEYS[`st:${key}`] ?? COLUMN_I18N_KEYS[key]);
+          return i18nKey ? t(`chat:${i18nKey}` as never) : t('myWork.noStatus');
+        },
+      }).map((section) => ({
+        ...section,
+        icon: (() => {
+          const visual =
+            COLUMN_STATUS_VISUAL[`st:${section.key}`] ?? COLUMN_STATUS_VISUAL[section.key];
+          return visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : undefined;
+        })(),
+      }));
+    },
+    [i18n.language, memberNameById, projectNameById, t],
+  );
+
   // Client-side list groupings — the work-query enum has no activity-date,
   // priority, project or assignee dimension, so the page fetches the flat
   // feed (`myWorkServerGroupBy` → 'none') and buckets the loaded page here.
   // Arrival order inside a section is the feed's own ordering; Load-more
   // keeps paging the flat list at the bottom.
   const flatSections = useMemo(() => {
-    if (layout !== 'list') return undefined;
-    if (display.grouping === 'activityDate') {
-      const labels = {
-        today: t('time.today'),
-        unknown: t('myWork.unknownDate'),
-        yesterday: t('time.yesterday'),
-      };
-      return workQueryActivitySections(displayTasks).map((section) => ({
-        ...section,
-        title: activityDayTitle(section.key, { labels, locale: i18n.language }),
-      }));
-    }
-    if (display.grouping === 'priority') {
-      return workQueryFieldSections(displayTasks, {
-        // null and 0 are the same "No priority" bucket — matching
-        // `taskImportanceRank`, which ranks them identically.
-        keyOf: (task) => task.priority ?? 0,
-        rankOf: myWorkPriorityGroupRank,
-        titleOf: (key) =>
-          t(
-            `chat:${
-              MY_WORK_PRIORITY_LABEL_KEYS[Number(key ?? 0)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0]
-            }` as never,
-          ),
-      }).map((section) => ({
-        ...section,
-        icon: (
-          <PriorityIcon priority={section.key === 'none' ? 0 : Number(section.key)} size={14} />
-        ),
-      }));
-    }
-    if (display.grouping === 'project') {
-      return workQueryFieldSections(displayTasks, {
-        keyOf: (task) => task.projectId,
-        // A projectId that resolves to no known name keeps its id as the
-        // honest group label (stale link / unreadable project) instead of
-        // folding into "No project" — the row does carry a project.
-        titleOf: (key) =>
-          key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
-      }).map((section) => ({
-        ...section,
-        icon: (
-          <Icon
-            color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
-            icon={PROJECT_ENTITY_ICON}
-            size={14}
-          />
-        ),
-      }));
-    }
-    if (display.grouping === 'assignee') {
-      return workQueryFieldSections(displayTasks, {
-        keyOf: (task) => task.assigneeUserId,
-        titleOf: (key) =>
-          key === null ? t('chat:taskList.unassigned') : (memberNameById.get(key) ?? key),
-      }).map((section) => ({
-        ...section,
-        icon: <AssigneeUserAvatar size={18} userId={section.key === 'none' ? null : section.key} />,
-      }));
-    }
-    return undefined;
-  }, [display.grouping, displayTasks, i18n.language, layout, memberNameById, projectNameById, t]);
+    if (layout !== 'list' || !isMyWorkClientGrouping(display.grouping)) return undefined;
+    return fieldSections(display.grouping, displayTasks);
+  }, [display.grouping, displayTasks, fieldSections, layout]);
 
+  // Sub-grouping nests a second level inside each primary section — Linear's
+  // two-level headers. `none`, a board layout, a flat primary grouping, or a
+  // sub-dimension equal to the primary all keep the flat body.
+  const subSectionsFor = useCallback(
+    (sectionTasks: WorkQueryResultTask[]) => {
+      const sub = display.subGrouping;
+      if (layout !== 'list' || sub === 'none' || sub === display.grouping) return undefined;
+      const sections = fieldSections(sub, sectionTasks);
+      return sections.length > 0 ? sections : undefined;
+    },
+    [display.grouping, display.subGrouping, fieldSections, layout],
+  );
+
+  // Display-property toggles — the set of row chips hidden in place. Project
+  // and milestone drop out upstream (`rowExtras`/`milestoneFor`).
+  const hiddenRowProperties = useMemo(() => {
+    const hidden = new Set<MyWorkRowProperty>();
+    for (const property of MY_WORK_ROW_PROPERTIES) {
+      if (!display.properties[property]) hidden.add(property);
+    }
+    return hidden.size > 0 ? hidden : undefined;
+  }, [display.properties]);
+
+  // The project chip is a display property — the toggle drops it entirely
+  // rather than hiding in place (the chip is caller-supplied chrome).
   const rowExtras = useCallback(
     (task: WorkQueryResultTask) => {
+      if (!display.properties.project) return null;
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
       if (!name) return null;
       return (
@@ -704,7 +835,7 @@ const MyWorkPage = memo(() => {
         </Flexbox>
       );
     },
-    [projectNameById],
+    [display.properties.project, projectNameById],
   );
 
   /* -------------------------------- actions ------------------------------- */
@@ -856,6 +987,9 @@ const MyWorkPage = memo(() => {
         {error ? (
           <AsyncError error={error} variant={'inline'} onRetry={() => void refresh()} />
         ) : null}
+        {milestoneProjectIds.map((id) => (
+          <MilestoneCatalogProject id={id} key={id} />
+        ))}
         <WorkQueryResults
           bulkSelectedIds={bulkEnabled ? bulkSelectedIds : undefined}
           emptyLabel={t('myWork.empty')}
@@ -863,6 +997,7 @@ const MyWorkPage = memo(() => {
           flatSections={flatSections}
           groupBy={data?.data.groupBy}
           groups={displayGroups}
+          hiddenRowProperties={hiddenRowProperties}
           isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
           layout={layout}
           loadMoreError={loadMoreError}
@@ -870,9 +1005,11 @@ const MyWorkPage = memo(() => {
           loadMoreLabel={t('myWork.loadMore')}
           loading={isLoading}
           loadingLabel={t('myWork.loading')}
+          milestoneFor={milestoneFor}
           peekOnSelect={peekOnSelect}
           rowExtras={rowExtras}
           selectedTaskId={selected?.identifier}
+          subSectionsFor={subSectionsFor}
           tasks={displayTasks}
           total={data?.data.total}
           createContext={
@@ -932,6 +1069,8 @@ const MyWorkPage = memo(() => {
                 mode={mode}
                 noProject={noProject}
                 orderingOptions={myWorkOrderingOptions(mode)}
+                projects={projectFilterOptions}
+                teamOptions={joinedTeamOptions}
                 onBuilderChange={setBuilder}
                 onDelegatedChange={(checked) => writeParams({ delegated: checked })}
                 onDisplayChange={setDisplay}

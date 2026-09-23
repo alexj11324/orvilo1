@@ -143,6 +143,34 @@ export interface TaskListViewOptionsState {
     'assignee' | 'automationMode' | 'member' | 'milestone' | 'none' | 'priority' | 'status';
 }
 
+/**
+ * The persisted My issues display options for one tab — Linear's "Display
+ * options" panel (layout grouping / sub-grouping / ordering / completed
+ * window / row-property visibility / sub-issue + triage switches). Mirrors
+ * `MyWorkDisplay` in features/MyWork/myWorkDisplay.ts, which can't be
+ * imported here (store files stay feature-free); keep the unions in
+ * lockstep. `properties` keys are the `MyWorkRowProperty` ids.
+ */
+export interface MyWorkViewOptionsState {
+  boardGrouping?: 'status' | 'workflowCategory';
+  completed?: 'all' | 'none' | 'pastDay';
+  grouping?:
+    | 'activityDate'
+    | 'assignee'
+    | 'attention'
+    | 'none'
+    | 'priority'
+    | 'project'
+    | 'status'
+    | 'workflowCategory';
+  nestedSubIssues?: boolean;
+  ordering?: 'createdAsc' | 'createdDesc' | 'default' | 'updatedAsc' | 'updatedDesc';
+  properties?: Record<string, boolean>;
+  showSubIssues?: boolean;
+  showTriage?: boolean;
+  subGrouping?: 'assignee' | 'none' | 'priority' | 'project' | 'status';
+}
+
 export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['agent', 'workspace', 'favorites', 'teams'];
 
 export interface SystemStatus {
@@ -278,6 +306,14 @@ export interface SystemStatus {
   leftPanelWidth: number;
   mobileShowPortal?: boolean;
   mobileShowTopic?: boolean;
+  /**
+   * Per (user, workspace) My issues display options, keyed by the same
+   * `userId:workspaceId` scope key as `inboxPriorityMode`, then by tab
+   * (assigned/created/subscribed/activity). Linear persists these per tab
+   * server-side; the work-query API has no preference store, so local
+   * persistence stands in and a workspace switch never bleeds prefs.
+   */
+  myWorkViewOptions?: Record<string, Partial<Record<string, MyWorkViewOptionsState>>>;
   noWideScreen?: boolean;
   pageAgentPanelWidth?: number;
   /**
@@ -737,6 +773,14 @@ export const createInitialSystemStatus = (): SystemStatus => {
     inboxAgentExamplesDismissed:
       typeof persistedStatus.inboxAgentExamplesDismissed === 'boolean'
         ? persistedStatus.inboxAgentExamplesDismissed
+        : undefined,
+    // The My issues display options decide which sections and row chips the
+    // first paint draws — restore them with the boot shell like the inbox prefs.
+    myWorkViewOptions:
+      persistedStatus.myWorkViewOptions &&
+      typeof persistedStatus.myWorkViewOptions === 'object' &&
+      !Array.isArray(persistedStatus.myWorkViewOptions)
+        ? persistedStatus.myWorkViewOptions
         : undefined,
     leftPanelWidth:
       typeof persistedStatus.leftPanelWidth === 'number'

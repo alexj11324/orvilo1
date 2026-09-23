@@ -12,9 +12,11 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
 import dayjs from 'dayjs';
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   BoxIcon,
   CircleCheckIcon,
   CircleDashedIcon,
@@ -26,7 +28,8 @@ import {
   SearchXIcon,
   TrashIcon,
 } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
@@ -42,10 +45,29 @@ import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
+
+import {
+  DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS,
+  filterClosedProjects,
+  groupProjectList,
+  nextSortFromHeader,
+  normalizeProjectListDisplayOptions,
+  type ProjectListColumn,
+  type ProjectListDisplayOptions,
+  projectListGridTemplate,
+  type ProjectListSortableOrdering,
+  sortProjectList,
+  visibleProjectListColumns,
+} from './displayOptions';
+import DisplayOptionsPopover from './DisplayOptionsPopover';
+import ProjectMilestoneChip from './MilestoneChip';
+import ProjectBoard from './ProjectBoard';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   actions: css`
@@ -53,7 +75,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     z-index: 1;
 
     flex: none;
+
     opacity: 0;
+
     transition: opacity ${cssVar.motionDurationFast};
 
     @media (hover: none) {
@@ -69,6 +93,23 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     color: ${cssVar.colorTextTertiary};
     white-space: nowrap;
   `,
+  columns: css`
+    display: grid;
+    gap: 12px;
+    align-items: center;
+  `,
+  groupHeader: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    padding-block: 8px;
+    padding-inline: 12px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    font-size: 12px;
+    color: ${cssVar.colorTextSecondary};
+  `,
   headerRow: css`
     padding-block: 4px;
     padding-inline: 12px;
@@ -78,19 +119,17 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-weight: 450;
     color: ${cssVar.colorTextTertiary};
   `,
-  columns: css`
-    display: grid;
-    grid-template-columns: minmax(200px, 1fr) 96px 64px 84px 96px 48px 84px 24px;
-    gap: 12px;
-    align-items: center;
-
-    min-width: 760px;
+  identifier: css`
+    flex: none;
+    font-family: ${cssVar.fontFamilyCode};
+    font-size: 11px;
+    color: ${cssVar.colorTextQuaternary};
   `,
   link: css`
     position: absolute;
     inset: 0;
-    color: inherit;
     border-radius: inherit;
+    color: inherit;
   `,
   leadEmpty: css`
     opacity: 0;
@@ -165,7 +204,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     min-width: 0;
   `,
   owner: css`
+    display: flex;
     flex: none;
+    align-items: center;
     min-width: 0;
   `,
   row: css`
@@ -192,6 +233,22 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       opacity: 1;
     }
   `,
+  progressFill: css`
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: ${cssVar.colorTextSecondary};
+  `,
+  progressTrack: css`
+    overflow: hidden;
+    flex: 1;
+
+    min-width: 20px;
+    height: 3px;
+    border-radius: 2px;
+
+    background: ${cssVar.colorFillSecondary};
+  `,
   screenReaderOnly: css`
     position: absolute;
 
@@ -205,6 +262,30 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     white-space: nowrap;
 
     clip-path: inset(50%);
+  `,
+  sortHeader: css`
+    cursor: pointer;
+
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+
+    padding: 0;
+    border: 0;
+
+    font: inherit;
+    color: inherit;
+    text-align: start;
+
+    background: transparent;
+
+    &:hover,
+    &:focus-visible {
+      color: ${cssVar.colorText};
+    }
+  `,
+  sortHeaderActive: css`
+    color: ${cssVar.colorText};
   `,
 }));
 
@@ -394,116 +475,246 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
 
 ProjectLeadCell.displayName = 'ProjectLeadCell';
 
-const ProjectRow = memo<{ members: MembersQuery; project: ProjectListItem }>(
-  ({ members, project }) => {
-    const { t } = useTranslation(['project', 'common']);
-    const [deleting, setDeleting] = useState(false);
-    const deleteProject = useProjectStore((s) => s.deleteProject);
-    const currentUserId = useUserStore(userProfileSelectors.userId);
-    const canDelete = currentUserId === project.userId;
-    const priority = resolvePriorityLevel(project.priority);
-    const status = resolveProjectStatus(project.status);
-    const statusVisual = PROJECT_STATUS_VISUALS[status];
+// `lll` needs the localizedFormat plugin, which src/initialize.ts does not
+// register — spell the same shape out in core tokens instead.
+const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => (
+  <Text
+    className={styles.cell}
+    fontSize={12}
+    title={value ? dayjs(value).format('MMM D, YYYY h:mm A') : undefined}
+  >
+    {value ? dayjs(value).format('MMM D') : '—'}
+  </Text>
+));
 
-    const handleDelete = async () => {
-      setDeleting(true);
-      try {
-        await deleteProject(project.id);
-        toast.success(t('list.deleteSuccess', { name: project.name }));
-      } catch (error) {
-        console.error('Failed to delete project', error);
-        toast.error(t('list.deleteError'));
-        setDeleting(false);
-      }
-    };
+DateCell.displayName = 'DateCell';
 
-    const menuItems: DropdownItem[] = [
-      {
-        danger: true,
-        icon: <Icon icon={TrashIcon} />,
-        key: 'delete',
-        label: t('list.deleteAction'),
-        onClick: () => {
-          confirmModal({
-            cancelText: t('cancel', { ns: 'common' }),
-            content: t('list.deleteConfirmDescription', { name: project.name }),
-            okButtonProps: { danger: true },
-            okText: t('delete', { ns: 'common' }),
-            onOk: () => void handleDelete(),
-            title: t('list.deleteConfirmTitle'),
-          });
-        },
+interface ProjectRowProps {
+  columns: ProjectListColumn[];
+  members: MembersQuery;
+  project: ProjectListItem;
+  properties: ProjectListDisplayOptions['properties'];
+}
+
+const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, properties }) => {
+  const { t } = useTranslation(['project', 'common']);
+  const [deleting, setDeleting] = useState(false);
+  const deleteProject = useProjectStore((s) => s.deleteProject);
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const canDelete = currentUserId === project.userId;
+  const priority = resolvePriorityLevel(project.priority);
+  const status = resolveProjectStatus(project.status);
+  const statusVisual = PROJECT_STATUS_VISUALS[status];
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteProject(project.id);
+      toast.success(t('list.deleteSuccess', { name: project.name }));
+    } catch (error) {
+      console.error('Failed to delete project', error);
+      toast.error(t('list.deleteError'));
+      setDeleting(false);
+    }
+  };
+
+  const menuItems: DropdownItem[] = [
+    {
+      danger: true,
+      icon: <Icon icon={TrashIcon} />,
+      key: 'delete',
+      label: t('list.deleteAction'),
+      onClick: () => {
+        confirmModal({
+          cancelText: t('cancel', { ns: 'common' }),
+          content: t('list.deleteConfirmDescription', { name: project.name }),
+          okButtonProps: { danger: true },
+          okText: t('delete', { ns: 'common' }),
+          onOk: () => void handleDelete(),
+          title: t('list.deleteConfirmTitle'),
+        });
       },
-    ];
+    },
+  ];
 
-    const row = (
-      <Flexbox horizontal align={'center'} className={`${styles.row} ${styles.columns}`} gap={0}>
-        <WorkspaceLink
-          aria-label={project.name}
-          className={styles.link}
-          to={`/project/${project.slug ?? project.id}`}
-        />
-        <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
-          {project.avatar && project.avatar !== '📦' ? (
-            <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
-          ) : (
-            <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={16} />
-          )}
-          <Text ellipsis fontSize={13} weight={500}>
-            {project.name}
-          </Text>
-        </Flexbox>
-        <ProjectHealthCell health={project.health} />
-        <span className={styles.cell} title={t(PROJECT_PRIORITY_LABEL_KEY[priority])}>
-          <PriorityIcon
-            aria-label={t(PROJECT_PRIORITY_LABEL_KEY[priority])}
-            priority={priority}
-            role="img"
-            size={16}
-          />
-        </span>
-        <ProjectLeadCell members={members} project={project} />
-        <Text
-          className={styles.cell}
-          fontSize={12}
-          title={project.targetDate ? dayjs(project.targetDate).format('YYYY-MM-DD') : undefined}
-        >
-          {project.targetDate ? dayjs(project.targetDate).format('MMM D') : '—'}
-        </Text>
-        <Text className={styles.cell} fontSize={12}>
-          {typeof project.taskCount === 'number' ? project.taskCount : '—'}
-        </Text>
-        <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
-          <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
-          {status === 'active' ? (
-            <ProjectActiveStatusIcon color={statusVisual.color} />
-          ) : (
-            <Icon aria-hidden color={statusVisual.color} icon={statusVisual.icon} size={14} />
-          )}
-          <Text fontSize={12}>
-            {project.progressPercent == null ? '—' : `${project.progressPercent}%`}
-          </Text>
-        </Flexbox>
-        {canDelete && (
-          <span className={`${styles.actions} project-row-actions`}>
-            <DropdownMenu items={menuItems} placement={'bottomRight'}>
-              <ActionIcon
-                aria-label={t('list.moreActions')}
-                icon={MoreHorizontalIcon}
-                loading={deleting}
-                size={'small'}
-              />
-            </DropdownMenu>
+  const cellFor = (column: ProjectListColumn): ReactNode => {
+    switch (column.key) {
+      case 'health': {
+        return <ProjectHealthCell health={project.health} />;
+      }
+      case 'priority': {
+        return (
+          <span className={styles.cell} title={t(PROJECT_PRIORITY_LABEL_KEY[priority])}>
+            <PriorityIcon
+              aria-label={t(PROJECT_PRIORITY_LABEL_KEY[priority])}
+              priority={priority}
+              role="img"
+              size={16}
+            />
           </span>
-        )}
-      </Flexbox>
-    );
+        );
+      }
+      case 'lead': {
+        return <ProjectLeadCell members={members} project={project} />;
+      }
+      case 'summary': {
+        return (
+          <Text ellipsis className={styles.cell} fontSize={12} title={project.summary ?? undefined}>
+            {project.summary || '—'}
+          </Text>
+        );
+      }
+      case 'startDate': {
+        return <DateCell value={project.startDate} />;
+      }
+      case 'targetDate': {
+        return <DateCell value={project.targetDate} />;
+      }
+      case 'issues': {
+        return (
+          <Text className={styles.cell} fontSize={12}>
+            {typeof project.taskCount === 'number' ? project.taskCount : '—'}
+          </Text>
+        );
+      }
+      case 'created': {
+        return <DateCell value={project.createdAt} />;
+      }
+      case 'updated': {
+        return <DateCell value={project.updatedAt} />;
+      }
+      case 'completed': {
+        return <DateCell value={project.completedAt} />;
+      }
+      case 'status': {
+        // Reference §5: status icon + percentage + a thin progress bar.
+        const percent =
+          typeof project.progressPercent === 'number'
+            ? Math.min(100, Math.max(0, project.progressPercent))
+            : null;
+        return (
+          <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
+            <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
+            {status === 'active' ? (
+              <ProjectActiveStatusIcon color={statusVisual.color} />
+            ) : (
+              <Icon aria-hidden color={statusVisual.color} icon={statusVisual.icon} size={14} />
+            )}
+            <Text fontSize={12}>{percent == null ? '—' : `${percent}%`}</Text>
+            {percent == null ? null : (
+              <span className={styles.progressTrack}>
+                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+              </span>
+            )}
+          </Flexbox>
+        );
+      }
+    }
+  };
 
-    return canDelete ? <ContextMenuTrigger items={menuItems}>{row}</ContextMenuTrigger> : row;
-  },
-);
+  const row = (
+    <Flexbox
+      horizontal
+      align={'center'}
+      className={`${styles.row} ${styles.columns}`}
+      gap={0}
+      style={projectListGridTemplate(columns)}
+    >
+      <WorkspaceLink
+        aria-label={project.name}
+        className={styles.link}
+        to={`/project/${project.slug ?? project.id}`}
+      />
+      <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+        {project.avatar && project.avatar !== '📦' ? (
+          <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
+        ) : (
+          <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={16} />
+        )}
+        {properties.id ? (
+          <Text className={styles.identifier} fontSize={11}>
+            {project.identifier}
+          </Text>
+        ) : null}
+        <Text ellipsis fontSize={13} weight={500}>
+          {project.name}
+        </Text>
+        {properties.milestones ? <ProjectMilestoneChip projectId={project.id} /> : null}
+      </Flexbox>
+      {columns.map((column) => (
+        <span className={styles.owner} key={column.key}>
+          {cellFor(column)}
+        </span>
+      ))}
+      {canDelete && (
+        <span className={`${styles.actions} project-row-actions`}>
+          <DropdownMenu items={menuItems} placement={'bottomRight'}>
+            <ActionIcon
+              aria-label={t('list.moreActions')}
+              icon={MoreHorizontalIcon}
+              loading={deleting}
+              size={'small'}
+            />
+          </DropdownMenu>
+        </span>
+      )}
+    </Flexbox>
+  );
+
+  return canDelete ? <ContextMenuTrigger items={menuItems}>{row}</ContextMenuTrigger> : row;
+});
 
 ProjectRow.displayName = 'ProjectRow';
+
+const COLUMN_HEADER_KEYS: Record<ProjectListColumn['key'], string> = {
+  completed: 'list.columnCompleted',
+  created: 'list.columnCreated',
+  health: 'list.columnHealth',
+  issues: 'list.columnIssues',
+  lead: 'list.columnLead',
+  priority: 'list.columnPriority',
+  startDate: 'list.columnStart',
+  status: 'list.columnStatus',
+  summary: 'list.display.property.summary',
+  targetDate: 'list.columnTarget',
+  updated: 'list.columnUpdated',
+};
+
+/**
+ * Sortable column header — the reference's Name/Health/Priority/Target
+ * date/Status headers are buttons that set the ordering (and flip its
+ * direction on a repeat click).
+ */
+const SortableHeader = memo<{
+  label: string;
+  onSort: (field: ProjectListSortableOrdering) => void;
+  orderBy: ProjectListDisplayOptions['orderBy'];
+  orderDirection: 'asc' | 'desc';
+  sortBy?: ProjectListSortableOrdering;
+}>(({ label, onSort, orderBy, orderDirection, sortBy }) => {
+  if (!sortBy) {
+    return (
+      <Text fontSize={12} type={'secondary'}>
+        {label}
+      </Text>
+    );
+  }
+  const active = orderBy === sortBy;
+  return (
+    <button
+      className={cx(styles.sortHeader, active && styles.sortHeaderActive)}
+      type="button"
+      onClick={() => onSort(sortBy)}
+    >
+      {label}
+      {active ? (
+        <Icon aria-hidden icon={orderDirection === 'asc' ? ArrowUpIcon : ArrowDownIcon} size={12} />
+      ) : null}
+    </button>
+  );
+});
+
+SortableHeader.displayName = 'SortableHeader';
 
 const ProjectListPage = memo(() => {
   const { t } = useTranslation('project');
@@ -530,18 +741,114 @@ const ProjectListPage = memo(() => {
     [membersData, membersError, membersLoading, revalidateMembers],
   );
 
-  const filteredProjects = useMemo(() => {
+  // Display options persist in SystemStatus (personal scope) — the minimal
+  // chain for a built-in page with no saved_views row. See displayOptions.ts.
+  const rawOptions = useGlobalStore(systemStatusSelectors.projectListViewOptions);
+  const options = useMemo(() => normalizeProjectListDisplayOptions(rawOptions), [rawOptions]);
+  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+  const updateOptions = useCallback(
+    (patch: Partial<ProjectListDisplayOptions>) =>
+      updateSystemStatus(
+        { projectListViewOptions: { ...options, ...patch } },
+        'updateProjectListViewOptions',
+      ),
+    [options, updateSystemStatus],
+  );
+  const resetOptions = useCallback(
+    () =>
+      updateSystemStatus(
+        { projectListViewOptions: DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS },
+        'resetProjectListViewOptions',
+      ),
+    [updateSystemStatus],
+  );
+
+  const memberName = useCallback(
+    (userId: string) => {
+      const member = membersData?.find((item) => item.userId === userId);
+      return member?.user?.fullName || member?.user?.username || userId;
+    },
+    [membersData],
+  );
+  const memberAvatar = useCallback(
+    (userId: string) =>
+      membersData?.find((item) => item.userId === userId)?.user?.avatar ?? undefined,
+    [membersData],
+  );
+
+  const columns = useMemo(
+    () => visibleProjectListColumns(options.properties),
+    [options.properties],
+  );
+  const gridStyle = useMemo(() => projectListGridTemplate(columns), [columns]);
+
+  const visibleProjects = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase();
-    return normalizedKeyword
+    const searched = normalizedKeyword
       ? projects.filter((project) =>
           [project.name, project.identifier, project.description]
             .filter(Boolean)
             .some((value) => value!.toLocaleLowerCase().includes(normalizedKeyword)),
         )
       : projects;
-  }, [keyword, projects]);
+    const open = filterClosedProjects(searched, options.showClosed);
+    return sortProjectList(open, options.orderBy, options.orderDirection);
+  }, [keyword, options.orderBy, options.orderDirection, options.showClosed, projects]);
+
+  // Board layout always groups by status (the reference's project board is a
+  // status kanban); the list layout honors the Grouping option.
+  const groups = useMemo(
+    () =>
+      groupProjectList(
+        visibleProjects,
+        options.layout === 'board' ? 'status' : options.grouping,
+        memberName,
+      ),
+    [memberName, options.grouping, options.layout, visibleProjects],
+  );
+
+  const handleHeaderSort = useCallback(
+    (field: ProjectListSortableOrdering) => updateOptions(nextSortFromHeader(options, field)),
+    [options, updateOptions],
+  );
 
   if (!enabled) return <ProjectDisabled />;
+
+  const groupHeader = (groupKey: string): ReactNode => {
+    if (groupKey === 'all') return null;
+    if (groupKey.startsWith('status:')) {
+      const status = resolveProjectStatus(groupKey.slice(7));
+      const visual = PROJECT_STATUS_VISUALS[status];
+      return (
+        <>
+          <Icon color={visual.color} icon={visual.icon} size={14} />
+          <Text fontSize={12} weight={500}>
+            {t(`status.${status}`)}
+          </Text>
+        </>
+      );
+    }
+    const userId = groupKey.slice(5);
+    if (userId === 'none') {
+      return (
+        <>
+          <NoLeadIcon />
+          <Text fontSize={12} type="secondary" weight={500}>
+            {t('properties.noLead')}
+          </Text>
+        </>
+      );
+    }
+    const name = memberName(userId);
+    return (
+      <>
+        <Avatar avatar={memberAvatar(userId)} name={name} shape="circle" size={16} />
+        <Text fontSize={12} weight={500}>
+          {name}
+        </Text>
+      </>
+    );
+  };
 
   return (
     <WorkSurface>
@@ -561,7 +868,16 @@ const ProjectListPage = memo(() => {
       />
       <WorkSurfaceCollection
         toolbar={
-          <WorkSurfaceToolbar>
+          <WorkSurfaceToolbar
+            asideLabel={t('list.display.options')}
+            aside={
+              <DisplayOptionsPopover
+                options={options}
+                onChange={updateOptions}
+                onReset={resetOptions}
+              />
+            }
+          >
             <SearchBar
               allowClear
               placeholder={t('list.searchPlaceholder')}
@@ -576,49 +892,70 @@ const ProjectListPage = memo(() => {
           <AsyncError error={error} onRetry={() => mutate()} />
         ) : isLoading && projects.length === 0 ? (
           <SkeletonList rows={8} />
-        ) : filteredProjects.length === 0 ? (
+        ) : visibleProjects.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty
               description={keyword.trim() ? t('list.searchEmpty') : t('list.emptyDescription')}
               icon={keyword.trim() ? SearchXIcon : FolderClosedIcon}
             />
           </Center>
+        ) : options.layout === 'board' ? (
+          <ProjectBoard
+            groups={groups}
+            leadAvatar={memberAvatar}
+            leadName={memberName}
+            properties={options.properties}
+          />
         ) : (
-          <Flexbox gap={0}>
+          <Flexbox gap={0} style={{ minWidth: 'max-content' }}>
             <Flexbox
               horizontal
               align={'center'}
               className={`${styles.headerRow} ${styles.columns}`}
               gap={0}
+              style={gridStyle}
             >
               <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
-                <Text fontSize={12} type={'secondary'}>
-                  {t('list.columnName', { defaultValue: 'Name' })}
-                </Text>
+                <SortableHeader
+                  label={t('list.columnName', { defaultValue: 'Name' })}
+                  orderBy={options.orderBy}
+                  orderDirection={options.orderDirection}
+                  sortBy="name"
+                  onSort={handleHeaderSort}
+                />
               </Flexbox>
-              <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnHealth', { defaultValue: 'Health' })}
-              </Text>
-              <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnPriority', { defaultValue: 'Priority' })}
-              </Text>
-              <span className={styles.owner}>
-                <Text fontSize={12} type={'secondary'}>
-                  {t('list.columnLead', { defaultValue: 'Lead' })}
-                </Text>
-              </span>
-              <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnTarget', { defaultValue: 'Target date' })}
-              </Text>
-              <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnIssues', { defaultValue: 'Issues' })}
-              </Text>
-              <Text className={styles.cell} fontSize={12} type={'secondary'}>
-                {t('list.columnStatus', { defaultValue: 'Status' })}
-              </Text>
+              {columns.map((column) => (
+                <span className={styles.owner} key={column.key}>
+                  <SortableHeader
+                    label={t(COLUMN_HEADER_KEYS[column.key])}
+                    orderBy={options.orderBy}
+                    orderDirection={options.orderDirection}
+                    sortBy={column.sortBy}
+                    onSort={handleHeaderSort}
+                  />
+                </span>
+              ))}
             </Flexbox>
-            {filteredProjects.map((project) => (
-              <ProjectRow key={project.id} members={members} project={project} />
+            {groups.map((group) => (
+              <Flexbox gap={0} key={group.key}>
+                {group.key !== 'all' ? (
+                  <div className={styles.groupHeader}>
+                    {groupHeader(group.key)}
+                    <Text fontSize={12} type="secondary">
+                      {group.items.length}
+                    </Text>
+                  </div>
+                ) : null}
+                {group.items.map((project) => (
+                  <ProjectRow
+                    columns={columns}
+                    key={project.id}
+                    members={members}
+                    project={project}
+                    properties={options.properties}
+                  />
+                ))}
+              </Flexbox>
             ))}
           </Flexbox>
         )}

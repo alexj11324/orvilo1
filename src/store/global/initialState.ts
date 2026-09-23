@@ -120,6 +120,29 @@ export enum ProfileTabs {
 
 export type TaskViewMode = 'kanban' | 'list';
 
+/**
+ * The persisted task-list display config — one shape shared by the live
+ * `taskListViewOptions` and the `taskListViewDefaults` baseline "Set default"
+ * writes. The unions mirror `TaskGroupBy`/`TaskOrderBy` in
+ * `AgentTasks/AgentTaskList/listViewOptions` (which can't be imported here —
+ * it pulls in i18next and feature code); keep them in lockstep.
+ * `automationMode` is part of the union because normalization accepts it, but
+ * writers clamp it out before persisting (the scheduled surface groups on it
+ * ephemerally instead).
+ */
+export interface TaskListViewOptionsState {
+  groupBy: 'assignee' | 'automationMode' | 'member' | 'milestone' | 'none' | 'priority' | 'status';
+  hideCompleted: boolean;
+  nestedSubTasks: boolean;
+  orderBy: 'assignee' | 'createdAt' | 'manual' | 'priority' | 'status' | 'title' | 'updatedAt';
+  orderCompletedByRecency: boolean;
+  orderDirection: 'asc' | 'desc';
+  showMilestone: boolean;
+  showSubTasks: boolean;
+  subGroupBy:
+    'assignee' | 'automationMode' | 'member' | 'milestone' | 'none' | 'priority' | 'status';
+}
+
 export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['agent', 'workspace', 'favorites', 'teams'];
 
 export interface SystemStatus {
@@ -385,20 +408,19 @@ export interface SystemStatus {
    */
   taskKanbanHiddenPanelCollapsed?: boolean;
   /**
+   * The display-options baseline the task list's "Set default" snapshots and
+   * "Reset" restores. Kept separate from `taskListViewOptions` — that field
+   * holds the live (already persisted) view config, so a Reset needs its own
+   * slot to return to. `undefined` = the user never saved one; Reset then
+   * falls back to the built-in defaults.
+   */
+  taskListViewDefaults?: TaskListViewOptionsState;
+  /**
    * Display mode for the tasks page. Persisted so a manually selected board or
    * list view survives navigation and page reloads.
    */
   taskListViewMode?: TaskViewMode;
-  taskListViewOptions?: {
-    groupBy: 'assignee' | 'member' | 'none' | 'priority' | 'status';
-    hideCompleted: boolean;
-    nestedSubTasks: boolean;
-    orderBy: 'assignee' | 'createdAt' | 'priority' | 'status' | 'title' | 'updatedAt';
-    orderCompletedByRecency: boolean;
-    orderDirection: 'asc' | 'desc';
-    showSubTasks: boolean;
-    subGroupBy: 'assignee' | 'member' | 'none' | 'priority' | 'status';
-  };
+  taskListViewOptions?: TaskListViewOptionsState;
   /**
    * Height of the chat bottom terminal panel. Persisted so resizing survives remounts.
    */
@@ -545,6 +567,10 @@ export const INITIAL_STATUS = {
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
+    // The badge only materializes on rows carrying a milestone, so the
+    // property starts on — the same posture the reference's display options
+    // ship with.
+    showMilestone: true,
     showSubTasks: true,
     subGroupBy: 'none',
   },

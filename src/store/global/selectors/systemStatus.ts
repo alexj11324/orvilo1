@@ -109,6 +109,8 @@ const favoritePageSize = (s: GlobalState): number => s.status.favoritePageSize |
 const recentPageSize = (s: GlobalState): number => s.status.recentPageSize || 5;
 
 const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
+const taskListViewDefaults = (s: GlobalState) => s.status.taskListViewDefaults;
+
 const taskListViewOptions = (s: GlobalState) =>
   s.status.taskListViewOptions || {
     groupBy: 'status',
@@ -117,6 +119,7 @@ const taskListViewOptions = (s: GlobalState) =>
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
+    showMilestone: true,
     showSubTasks: true,
     subGroupBy: 'none',
   };
@@ -423,6 +426,7 @@ const filePanelWidth = (s: GlobalState) => s.status.filePanelWidth;
 const groupAgentBuilderPanelWidth = (s: GlobalState) => s.status.groupAgentBuilderPanelWidth || 360;
 const agentListViewMode = (s: GlobalState) => s.status.agentListViewMode || 'list';
 const agentListViewOptions = (s: GlobalState) => s.status.agentListViewOptions;
+const projectListViewOptions = (s: GlobalState) => s.status.projectListViewOptions;
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
@@ -506,11 +510,13 @@ export const systemStatusSelectors = {
   pagePageSize,
   portalWidth,
   portalWidths,
+  projectListViewOptions,
   privateAgentPageSize,
   recentPageSize,
   taskCreateInlineCollapsed,
   taskKanbanHiddenColumns,
   taskKanbanHiddenPanelCollapsed,
+  taskListViewDefaults,
   taskListViewMode,
   taskListViewOptions,
   sidebarCollapsedKeys,

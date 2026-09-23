@@ -816,6 +816,98 @@ describe('NotificationModel (integration)', () => {
     });
   });
 
+  describe('snoozed visibility (hide-until-wake)', () => {
+    const inOneHour = () => new Date(Date.now() + 60 * 60 * 1000);
+
+    it('hides a snoozed card from list and every default feed until wake', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(baseNotification({ title: 'Visible' }));
+      const snoozed = await model.create(baseNotification({ title: 'Snoozed' }));
+
+      await model.snooze(snoozed!.id, inOneHour(), snoozed!.activityVersion);
+
+      expect((await model.list()).map((row) => row.title)).toEqual(['Visible']);
+      expect((await model.listFeed()).map((row) => row.title)).toEqual(['Visible']);
+      expect((await model.listFeed({ filter: 'all' })).map((row) => row.title)).toEqual([
+        'Visible',
+      ]);
+      expect((await model.listFeed({ filter: 'unread' })).map((row) => row.title)).toEqual([
+        'Visible',
+      ]);
+      expect((await model.listFeed({ kind: 'update' })).map((row) => row.title)).toEqual([
+        'Visible',
+      ]);
+
+      // Wake time passing re-lists the card — no write required.
+      await serverDB
+        .update(notifications)
+        .set({ snoozedUntil: new Date(Date.now() - 1000) })
+        .where(eq(notifications.id, snoozed!.id));
+
+      expect((await model.list()).map((row) => row.title)).toContain('Snoozed');
+      expect((await model.listFeed()).map((row) => row.title)).toContain('Snoozed');
+    });
+
+    it('opts back in via includeSnoozed or the dedicated snoozed filter', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      await model.create(baseNotification({ title: 'Visible' }));
+      const snoozed = await model.create(baseNotification({ title: 'Snoozed' }));
+      await model.snooze(snoozed!.id, inOneHour(), snoozed!.activityVersion);
+
+      expect((await model.list({ includeSnoozed: true })).map((row) => row.title).sort()).toEqual([
+        'Snoozed',
+        'Visible',
+      ]);
+      expect(
+        (await model.listFeed({ includeSnoozed: true })).map((row) => row.title).sort(),
+      ).toEqual(['Snoozed', 'Visible']);
+
+      // The snoozed chip stays snoozed-only — visible cards do not leak in.
+      expect((await model.listFeed({ filter: 'snoozed' })).map((row) => row.title)).toEqual([
+        'Snoozed',
+      ]);
+    });
+
+    it('keeps an archived snoozed card in the archived view only', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const row = await model.create(baseNotification({ title: 'Snoozed then archived' }));
+      await model.snooze(row!.id, inOneHour(), row!.activityVersion);
+      await model.archive(row!.id);
+
+      expect((await model.listFeed({ filter: 'archived' })).map((r) => r.title)).toEqual([
+        'Snoozed then archived',
+      ]);
+      expect((await model.listFeed({ filter: 'snoozed' })).map((r) => r.title)).toEqual([]);
+      expect((await model.listFeed({ includeSnoozed: true })).map((r) => r.title)).toEqual([]);
+    });
+
+    it('does not mark-read or archive hidden snoozed cards in bulk', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const visible = await model.create(baseNotification({ title: 'Visible' }));
+      const snoozed = await model.create(baseNotification({ title: 'Snoozed' }));
+      await model.snooze(snoozed!.id, inOneHour(), snoozed!.activityVersion);
+
+      await model.markAllAsRead();
+      await model.archiveAll();
+
+      // Bulk organize replays the visible feed query — a card hidden from the
+      // inbox keeps its read/archive state until it wakes.
+      const [persistedSnoozed] = await serverDB
+        .select()
+        .from(notifications)
+        .where(eq(notifications.id, snoozed!.id));
+      expect(persistedSnoozed.isRead).toBe(false);
+      expect(persistedSnoozed.isArchived).toBe(false);
+
+      const [persistedVisible] = await serverDB
+        .select()
+        .from(notifications)
+        .where(eq(notifications.id, visible!.id));
+      expect(persistedVisible.isRead).toBe(true);
+      expect(persistedVisible.isArchived).toBe(true);
+    });
+  });
+
   describe('findFeedRowById', () => {
     it('resolves a card that is not on the loaded pages', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });

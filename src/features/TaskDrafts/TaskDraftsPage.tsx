@@ -10,11 +10,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import NavHeader from '@/features/NavHeader';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 
+import { draftCardTitle } from './draftCardTitle';
 import DraftContentPreview from './DraftContentPreview';
 import { draftEditPath } from './draftEditPath';
 
@@ -106,11 +108,32 @@ const styles = createStaticStyles(({ css }) => ({
       margin: 0;
     }
   `,
+  issueChip: css`
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+
+    min-width: 0;
+    padding-block: 1px;
+    padding-inline: 6px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 4px;
+
+    white-space: nowrap;
+  `,
+  issueChipIdentifier: css`
+    flex: none;
+    font-family: ${cssVar.fontFamilyCode};
+  `,
+  issueChipName: css`
+    overflow: hidden;
+    text-overflow: ellipsis;
+  `,
   preview: css`
     overflow: hidden;
 
-    height: 82px;
-    margin-block-start: 16px;
+    height: 81px;
+    margin-block-start: 12px;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 6px;
   `,
@@ -125,6 +148,10 @@ const styles = createStaticStyles(({ css }) => ({
 
     font-size: 12px;
     color: ${cssVar.colorTextSecondary};
+    white-space: nowrap;
+  `,
+  previewLabelText: css`
+    flex: none;
   `,
   previewBody: css`
     overflow: hidden;
@@ -141,6 +168,10 @@ const styles = createStaticStyles(({ css }) => ({
     font-weight: 500;
   `,
 }));
+
+// The page renders its own NavHeader, so the in-page skeleton is body-only;
+// the route-level meta keeps the headered variant for chunk loads.
+const DraftsSkeleton = createSurfaceSkeleton('list', false);
 
 const TaskDraftsPage = () => {
   const { t } = useTranslation('common');
@@ -208,7 +239,7 @@ const TaskDraftsPage = () => {
       {error ? (
         <AsyncError error={error} variant="page" onRetry={refresh} />
       ) : isLoading ? (
-        <Text style={{ padding: 18 }}>{t('drafts.loading')}</Text>
+        <DraftsSkeleton />
       ) : drafts.length === 0 ? (
         <Flexbox align="center" flex={1} gap={8} justify="center">
           <FilePenLineIcon size={28} />
@@ -218,53 +249,64 @@ const TaskDraftsPage = () => {
         <div style={{ overflowY: 'auto' }}>
           <div className={styles.sectionTitle}>{t('drafts.comments')}</div>
           <div className={styles.cardGrid}>
-            {drafts.map((draft) => (
-              <div className={styles.card} key={draft.id}>
-                <ActionIcon
-                  aria-label={t('drafts.discard')}
-                  className={styles.discard}
-                  disabled={!!deleting}
-                  icon={Trash2Icon}
-                  onClick={() =>
-                    confirmModal({
-                      content: t('drafts.confirmDiscard.content'),
-                      okButtonProps: { danger: true },
-                      okText: t('drafts.discard'),
-                      onOk: () => discard(draft.taskId),
-                      title: t('drafts.confirmDiscard.title'),
-                    })
-                  }
-                />
-                <WorkspaceLink
-                  aria-label={`${t('drafts.edit')}: ${draft.taskName || draft.taskIdentifier}`}
-                  className={styles.cardLink}
-                  to={draftEditPath(draft)}
-                />
-                <div className={styles.cardContent}>
-                  <div className={styles.cardHeading}>
-                    <div className={styles.cardTitle}>{draft.taskName || draft.taskIdentifier}</div>
-                    <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
-                      {dayjs(draft.updatedAt).fromNow()}
-                    </Text>
-                  </div>
-                  <div className={styles.preview}>
-                    <div className={styles.previewLabel}>
-                      <MessageCircleIcon size={16} />
-                      {t('drafts.commentingOnIssue')}
+            {drafts.map((draft) => {
+              const title = draftCardTitle(draft, t('drafts.attachment'));
+              return (
+                <div className={styles.card} key={draft.id}>
+                  <ActionIcon
+                    aria-label={t('drafts.discard')}
+                    className={styles.discard}
+                    disabled={!!deleting}
+                    icon={Trash2Icon}
+                    onClick={() =>
+                      confirmModal({
+                        content: t('drafts.confirmDiscard.content'),
+                        okButtonProps: { danger: true },
+                        okText: t('drafts.discard'),
+                        onOk: () => discard(draft.taskId),
+                        title: t('drafts.confirmDiscard.title'),
+                      })
+                    }
+                  />
+                  <WorkspaceLink
+                    aria-label={`${t('drafts.edit')}: ${title}`}
+                    className={styles.cardLink}
+                    to={draftEditPath(draft)}
+                  />
+                  <div className={styles.cardContent}>
+                    <div className={styles.cardHeading}>
+                      <div className={styles.cardTitle}>{title}</div>
+                      <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
+                        {dayjs(draft.updatedAt).fromNow()}
+                      </Text>
                     </div>
-                    <div aria-hidden inert className={styles.previewBody}>
-                      <div className={styles.excerpt}>
-                        <DraftContentPreview
-                          attachmentLabel={t('drafts.attachment')}
-                          content={draft.content}
-                          editorData={draft.editorData}
-                        />
+                    <div className={styles.preview}>
+                      <div className={styles.previewLabel}>
+                        <MessageCircleIcon size={16} style={{ flex: 'none' }} />
+                        <span className={styles.previewLabelText}>
+                          {t('drafts.commentingOnIssue')}
+                        </span>
+                        <span className={styles.issueChip}>
+                          <span className={styles.issueChipIdentifier}>{draft.taskIdentifier}</span>
+                          {draft.taskName ? (
+                            <span className={styles.issueChipName}>{draft.taskName}</span>
+                          ) : null}
+                        </span>
+                      </div>
+                      <div aria-hidden inert className={styles.previewBody}>
+                        <div className={styles.excerpt}>
+                          <DraftContentPreview
+                            attachmentLabel={t('drafts.attachment')}
+                            content={draft.content}
+                            editorData={draft.editorData}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

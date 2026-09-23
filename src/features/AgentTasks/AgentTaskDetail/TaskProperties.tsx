@@ -75,64 +75,14 @@ const TaskProperties = memo(() => {
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
   return (
-    <div className={styles.properties}>
-      <TaskStatusTag status={status} taskIdentifier={taskId}>
-        <Block
-          clickable
-          horizontal
-          align="center"
-          className={styles.propertyItem}
-          gap={8}
-          variant={'borderless'}
-        >
-          <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
-          <Text weight={500}>{t(`taskDetail.${statusMeta.labelKey}` as never)}</Text>
-        </Block>
-      </TaskStatusTag>
-
-      {status && workflowStateId && (
-        <Block
-          horizontal
-          align="center"
-          className={styles.propertyItem}
-          gap={8}
-          variant={'borderless'}
-        >
-          <TaskWorkflowBadge
-            executionStatus={status}
-            workflowCategory={workflowCategory}
-            workflowStateId={workflowStateId}
-          />
-        </Block>
-      )}
-
-      {/* The human layer: whether the delivery is accepted. Read-only here —
-          the decision itself is made on the acceptance page this links to.
-          Recurring tasks have no delivery acceptance, so no state to show. */}
-      {!automationMode && <TaskAcceptanceStateRow />}
-
-      <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
-        <Block
-          clickable
-          horizontal
-          align="center"
-          className={styles.propertyItem}
-          gap={8}
-          variant={'borderless'}
-        >
-          <TaskPriorityTag disableDropdown priority={priority} size={16} taskIdentifier={taskId} />
-          <Text weight={500}>{t(`taskDetail.${priorityMeta.labelKey}` as never)}</Text>
-        </Block>
-      </TaskPriorityTag>
-
-      {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
-        <AssigneeMemberSelector
-          currentUserId={assigneeUserId}
-          disabled={status === 'running'}
-          taskCreatorId={createdByUserId}
-          taskIdentifier={taskId}
-          taskVisibility={visibility}
-        >
+    // Linear's rail order: Status → Priority → Assignee, then the Orvilo-only
+    // cells (reviewer, workflow, acceptance, schedule). The section heading is
+    // part of the rail's labeled groups; the container query hides it in the
+    // narrow pill layout where groups collapse into one row of pills.
+    <div className={styles.railSection}>
+      <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
+      <div className={styles.properties}>
+        <TaskStatusTag status={status} taskIdentifier={taskId}>
           <Block
             clickable
             horizontal
@@ -141,100 +91,162 @@ const TaskProperties = memo(() => {
             gap={8}
             variant={'borderless'}
           >
-            {assigneeUserId ? (
-              <>
-                <AssigneeUserAvatar size={16} userId={assigneeUserId} />
-                <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-                  {memberMeta?.title}
-                </Text>
-              </>
-            ) : (
-              <>
-                <UnassignedAssigneeIcon kind={'human'} size={16} />
-                <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
-                  {t('taskDetail.assignee')}
-                </Text>
-              </>
-            )}
+            <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
+            <Text weight={500}>{t(`taskDetail.${statusMeta.labelKey}` as never)}</Text>
           </Block>
-        </AssigneeMemberSelector>
-      )}
+        </TaskStatusTag>
 
-      {/* Review-phase owner: visible once the task has someone accountable for
-          review (auto-stamped on the paused transition) or while it sits in
-          'paused', where the picker can re-point the review. */}
-      {(status === 'paused' || reviewerUserId) &&
-        shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
+        <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
+          <Block
+            clickable
+            horizontal
+            align="center"
+            className={styles.propertyItem}
+            gap={8}
+            variant={'borderless'}
+          >
+            <TaskPriorityTag
+              disableDropdown
+              priority={priority}
+              size={16}
+              taskIdentifier={taskId}
+            />
+            <Text weight={500}>{t(`taskDetail.${priorityMeta.labelKey}` as never)}</Text>
+          </Block>
+        </TaskPriorityTag>
+
+        {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
           <AssigneeMemberSelector
-            currentUserId={reviewerUserId}
+            currentUserId={assigneeUserId}
             disabled={status === 'running'}
             taskCreatorId={createdByUserId}
             taskIdentifier={taskId}
             taskVisibility={visibility}
-            onChange={(userId, member) =>
-              void updateTask(
-                taskId,
-                { reviewerUserId: userId },
-                {
-                  optimisticReviewer: member
-                    ? {
-                        avatar: member.user?.avatar ?? null,
-                        id: member.userId,
-                        name: member.user?.fullName ?? null,
-                        type: 'user',
-                      }
-                    : undefined,
-                },
-              )
-            }
           >
-            <Tooltip title={t('taskDetail.reviewer')}>
-              <Block
-                clickable
-                horizontal
-                align="center"
-                className={styles.propertyItem}
-                gap={8}
-                variant={'borderless'}
-              >
-                {reviewerUserId ? (
-                  <>
-                    <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                    <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-                      {reviewerMeta?.title}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <UnassignedAssigneeIcon kind={'human'} size={16} />
-                    <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
-                      {t('taskDetail.reviewer')}
-                    </Text>
-                  </>
-                )}
-              </Block>
-            </Tooltip>
+            <Block
+              clickable
+              horizontal
+              align="center"
+              className={styles.propertyItem}
+              gap={8}
+              variant={'borderless'}
+            >
+              {assigneeUserId ? (
+                <>
+                  <AssigneeUserAvatar size={16} userId={assigneeUserId} />
+                  <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                    {memberMeta?.title}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <UnassignedAssigneeIcon kind={'human'} size={16} />
+                  <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                    {t('taskDetail.assignee')}
+                  </Text>
+                </>
+              )}
+            </Block>
           </AssigneeMemberSelector>
         )}
 
-      <TaskScheduleConfig>
-        <Block
-          clickable
-          horizontal
-          align="center"
-          className={styles.propertyItem}
-          gap={8}
-          variant={'borderless'}
-        >
-          <TaskTriggerTag
-            automationMode={automationMode}
-            heartbeatInterval={heartbeatInterval}
-            mode="inline"
-            schedulePattern={schedulePattern}
-            scheduleTimezone={scheduleTimezone}
-          />
-        </Block>
-      </TaskScheduleConfig>
+        {/* Review-phase owner: visible once the task has someone accountable for
+          review (auto-stamped on the paused transition) or while it sits in
+          'paused', where the picker can re-point the review. */}
+        {(status === 'paused' || reviewerUserId) &&
+          shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
+            <AssigneeMemberSelector
+              currentUserId={reviewerUserId}
+              disabled={status === 'running'}
+              taskCreatorId={createdByUserId}
+              taskIdentifier={taskId}
+              taskVisibility={visibility}
+              onChange={(userId, member) =>
+                void updateTask(
+                  taskId,
+                  { reviewerUserId: userId },
+                  {
+                    optimisticReviewer: member
+                      ? {
+                          avatar: member.user?.avatar ?? null,
+                          id: member.userId,
+                          name: member.user?.fullName ?? null,
+                          type: 'user',
+                        }
+                      : undefined,
+                  },
+                )
+              }
+            >
+              <Tooltip title={t('taskDetail.reviewer')}>
+                <Block
+                  clickable
+                  horizontal
+                  align="center"
+                  className={styles.propertyItem}
+                  gap={8}
+                  variant={'borderless'}
+                >
+                  {reviewerUserId ? (
+                    <>
+                      <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                        {reviewerMeta?.title}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <UnassignedAssigneeIcon kind={'human'} size={16} />
+                      <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                        {t('taskDetail.reviewer')}
+                      </Text>
+                    </>
+                  )}
+                </Block>
+              </Tooltip>
+            </AssigneeMemberSelector>
+          )}
+
+        {status && workflowStateId && (
+          <Block
+            horizontal
+            align="center"
+            className={styles.propertyItem}
+            gap={8}
+            variant={'borderless'}
+          >
+            <TaskWorkflowBadge
+              executionStatus={status}
+              workflowCategory={workflowCategory}
+              workflowStateId={workflowStateId}
+            />
+          </Block>
+        )}
+
+        {/* The human layer: whether the delivery is accepted. Read-only here —
+            the decision itself is made on the acceptance page this links to.
+            Recurring tasks have no delivery acceptance, so no state to show. */}
+        {!automationMode && <TaskAcceptanceStateRow />}
+
+        <TaskScheduleConfig>
+          <Block
+            clickable
+            horizontal
+            align="center"
+            className={styles.propertyItem}
+            gap={8}
+            variant={'borderless'}
+          >
+            <TaskTriggerTag
+              automationMode={automationMode}
+              heartbeatInterval={heartbeatInterval}
+              mode="inline"
+              schedulePattern={schedulePattern}
+              scheduleTimezone={scheduleTimezone}
+            />
+          </Block>
+        </TaskScheduleConfig>
+      </div>
     </div>
   );
 });

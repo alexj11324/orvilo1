@@ -61,7 +61,7 @@ describe('TaskPrerequisites', () => {
     await waitFor(() => expect((input as HTMLInputElement).value).toBe(''));
   });
 
-  it('shows blocking state until both prerequisites complete, ignoring relates edges', () => {
+  it('shows blocking state until both prerequisites complete; relates rows render but do not block', () => {
     setTask([
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
       { dependsOn: 'T-2', status: 'backlog', type: 'blocks' },
@@ -69,20 +69,27 @@ describe('TaskPrerequisites', () => {
     ]);
     const view = render(<TaskPrerequisites />);
     expect(screen.getByRole('status').textContent).toBe(key('blocked'));
-    expect(screen.queryByText('T-3')).toBeNull();
+    // The Related rail lists every edge — a relates row is a link, not a
+    // blocker, so it renders but never counts toward the blocked hint.
+    expect(screen.getByText('T-3')).toBeTruthy();
     setTask([
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
       { dependsOn: 'T-2', status: 'completed', type: 'blocks' },
+      { dependsOn: 'T-3', status: 'failed', type: 'relates' },
     ]);
     view.rerender(<TaskPrerequisites />);
     expect(screen.getByRole('status').textContent).toBe(key('ready'));
+    expect(screen.getByText('T-3')).toBeTruthy();
   });
 
   it('keeps unavailable prerequisites blocking but removable by their raw id', async () => {
     setTask([{ dependsOn: 'task_hidden', id: 'task_hidden', status: null, type: 'blocks' }]);
     render(<TaskPrerequisites />);
     expect(screen.getByRole('status').textContent).toBe(key('blocked'));
-    expect(screen.getByText(key('unavailable')).closest('button')?.disabled).toBe(true);
+    // The row composes `identifier · unavailable` — match the composed text,
+    // then walk up to the (disabled) navigation button.
+    const unavailableText = screen.getByText(new RegExp(key('unavailable')));
+    expect(unavailableText.closest('button')?.disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: key('remove') }));
     await waitFor(() => expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_hidden'));
   });

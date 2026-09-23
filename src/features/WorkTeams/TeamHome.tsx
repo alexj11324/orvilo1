@@ -212,12 +212,8 @@ const TeamHome = ({ teamData, teamId, triageCapable, workspaceSlug }: TeamHomePr
               {teamMembers.map((member) => {
                 const name = member.user?.fullName || member.user?.username || member.user?.email;
                 return (
-                  <span className={styles.member} key={member.userId} title={name}>
-                    <Avatar
-                      avatar={member.user?.avatar ?? undefined}
-                      name={name ?? undefined}
-                      size={26}
-                    />
+                  <span className={styles.member} key={member.userId} title={name ?? undefined}>
+                    <Avatar avatar={member.user?.avatar} name={name ?? undefined} size={26} />
                   </span>
                 );
               })}

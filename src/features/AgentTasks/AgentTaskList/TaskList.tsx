@@ -16,6 +16,7 @@ import type { Components } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { isInteractiveRowClick } from '@/features/MyWork/myWorkDisplay';
 import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
@@ -61,10 +62,21 @@ interface TaskListProps {
    * that dimension, and badges stay off.
    */
   milestones?: readonly TaskMilestoneRef[];
+  /** Double-click escape to the full task page while peek mode is armed. */
+  onOpenTask?: (task: TaskListItem) => void;
   onRetry?: () => void;
+  /**
+   * Peek mode (the issues surface's "Open details"): with `peekOnSelect`,
+   * plain row clicks select the row for the side pane instead of navigating —
+   * the row's own click is stopped in the capture phase.
+   */
+  onSelectTask?: (task: TaskListItem) => void;
   onShowHiddenCompleted?: () => void;
   options: TaskListViewOptions;
+  peekOnSelect?: boolean;
   routeScope?: TaskItemRouteScope;
+  /** Identifier of the peek-selected row — paints the selected background. */
+  selectedIdentifier?: string;
 }
 
 const HIDDEN_COMPLETED_STATUS_SET = new Set<string>(HIDDEN_WHEN_COMPLETED_STATUSES);
@@ -157,10 +169,14 @@ const TaskList = memo<TaskListProps>((props) => {
     isLoading,
     items,
     milestones,
+    onOpenTask,
     onRetry,
+    onSelectTask,
     onShowHiddenCompleted,
     options,
+    peekOnSelect,
     routeScope,
+    selectedIdentifier,
   } = props;
   const { t } = useTranslation('chat');
   const storeTasks = useTaskStore(taskListSelectors.taskList);
@@ -274,6 +290,8 @@ const TaskList = memo<TaskListProps>((props) => {
   // page layout intact instead of nesting a second scroller.
   const { ref: anchorRef, scrollParent } = useClosestScrollParent();
 
+  const peekArmed = Boolean(peekOnSelect && onSelectTask);
+
   const renderItem = useCallback(
     (_index: number, item: TaskListVirtualItem) => {
       if (item.kind !== 'row') return <TaskGroupHeader item={item} onToggle={toggleCollapsed} />;
@@ -284,16 +302,55 @@ const TaskList = memo<TaskListProps>((props) => {
         options.showMilestone && item.row.task.projectMilestoneId
           ? milestoneById?.get(item.row.task.projectMilestoneId)
           : undefined;
+      const selected = peekArmed && item.row.task.identifier === selectedIdentifier;
       return (
         // Matches the 2px row gap the former Block wrapper gave the list.
-        <div style={{ paddingBlock: 1, paddingInline: 2 }}>
+        <div
+          aria-current={selected ? 'true' : undefined}
+          style={{
+            borderRadius: 6,
+            paddingBlock: 1,
+            paddingInline: 2,
+            ...(selected ? { background: cssVar.colorFillTertiary } : undefined),
+          }}
+          onClickCapture={
+            // Peek mode intercepts plain clicks in the capture phase — before
+            // the row's own navigate — while interactive children (menus,
+            // popovers, links) keep theirs.
+            peekArmed
+              ? (event) => {
+                  if (isInteractiveRowClick(event.target)) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSelectTask?.(item.row.task);
+                }
+              : undefined
+          }
+          onDoubleClick={
+            peekArmed && onOpenTask
+              ? (event) => {
+                  if (isInteractiveRowClick(event.target)) return;
+                  onOpenTask(item.row.task);
+                }
+              : undefined
+          }
+        >
           <TaskRowIndent depth={item.row.depth} muted={item.row.isParentContext}>
             <AgentTaskItem milestone={milestone} routeScope={routeScope} task={item.row.task} />
           </TaskRowIndent>
         </div>
       );
     },
-    [milestoneById, options.showMilestone, routeScope, toggleCollapsed],
+    [
+      milestoneById,
+      onOpenTask,
+      onSelectTask,
+      options.showMilestone,
+      peekArmed,
+      routeScope,
+      selectedIdentifier,
+      toggleCollapsed,
+    ],
   );
 
   const skeleton = (

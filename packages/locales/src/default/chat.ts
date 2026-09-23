@@ -2295,6 +2295,7 @@ export default {
   'taskList.detail.openFullPage': 'Open full page',
   'taskList.details.close': 'Close details',
   'taskList.details.open': 'Open details',
+  'taskList.details.selectIssue': 'Select an issue to see its details',
   'taskList.unassigned': 'Unassigned',
   'taskList.unassignedAgentHint': 'Orvilo AI will run this task when no agent is selected',
   'taskList.assignTo': 'Assign to',

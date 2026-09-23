@@ -1898,6 +1898,7 @@
   "taskList.detail.openFullPage": "Open full page",
   "taskList.details.close": "Close details",
   "taskList.details.open": "Open details",
+  "taskList.details.selectIssue": "Select an issue to see its details",
   "taskList.empty": "No tasks yet",
   "taskList.filter.add": "Add filter",
   "taskList.filter.advanced": "Advanced filter",

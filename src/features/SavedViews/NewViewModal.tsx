@@ -2,7 +2,7 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { Button, Modal, Text, toast } from '@lobehub/ui/base-ui';
-import type { WorkQuery, WorkQueryEntityType } from '@orvilo/types';
+import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +13,7 @@ import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
 import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
-import { builderToFilter } from './workQueryBuilder';
+import { builderToFilter, filterToBuilder } from './workQueryBuilder';
 
 interface NewViewModalProps {
   defaultEntityType?: WorkQueryEntityType;
@@ -24,6 +24,12 @@ interface NewViewModalProps {
   defaultTeamId?: string;
   onClose: () => void;
   open: boolean;
+  /**
+   * Pre-populates the filter builder — the surface's applied filters (and
+   * scope) arrive as editable rows so the saved view reproduces what the list
+   * was showing. Non-renderable nodes survive as preserved slots.
+   */
+  seedFilter?: WorkQueryFilter;
 }
 
 const draftQuery = (state: ViewEditorState): WorkQuery => ({
@@ -42,26 +48,30 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
  * explicit save (cancel leaves no draft behind).
  */
 const NewViewModal = memo<NewViewModalProps>((props) => {
-  const { defaultEntityType = 'task', defaultTeamId, onClose, open } = props;
+  const { defaultEntityType = 'task', defaultTeamId, onClose, open, seedFilter } = props;
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
-  const [state, setState] = useState<ViewEditorState>({
-    builder: { any: [], rows: [], slots: [] },
+  const seedBuilder = useCallback(
+    () => filterToBuilder(defaultEntityType, seedFilter),
+    [defaultEntityType, seedFilter],
+  );
+  const [state, setState] = useState<ViewEditorState>(() => ({
+    builder: seedBuilder(),
     entityType: defaultEntityType,
     groupBy: 'none',
     layout: 'list',
     name: '',
     teamId: defaultTeamId ?? null,
     visibility: defaultTeamId ? 'team' : 'private',
-  });
+  }));
   const [preview, setPreview] = useState<{ titles: string[]; total: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setState({
-        builder: { any: [], rows: [], slots: [] },
+        builder: seedBuilder(),
         entityType: defaultEntityType,
         groupBy: 'none',
         layout: 'list',
@@ -71,7 +81,7 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
       });
       setPreview(null);
     }
-  }, [defaultEntityType, defaultTeamId, open]);
+  }, [defaultEntityType, defaultTeamId, open, seedBuilder]);
 
   const query = useMemo(() => draftQuery(state), [state]);
 

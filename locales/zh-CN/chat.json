@@ -1897,6 +1897,7 @@
   "taskList.detail.openFullPage": "打开完整页面",
   "taskList.details.close": "关闭详情",
   "taskList.details.open": "打开详情",
+  "taskList.details.selectIssue": "选择一条议题查看详情",
   "taskList.empty": "暂无任务",
   "taskList.filter.add": "添加筛选",
   "taskList.filter.advanced": "高级筛选",

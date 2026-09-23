@@ -98,6 +98,7 @@ export const buildSavedViewCsv = (
 
 interface EvaluatePage {
   groups?: { hasMore: boolean; key: string; tasks: SavedViewCsvRow[] }[];
+  needsRepair?: boolean;
   projectGroups?: { hasMore: boolean; key: string; projects: SavedViewCsvRow[] }[];
   projects?: SavedViewCsvRow[];
   queryHash: string;
@@ -118,6 +119,7 @@ export const fetchAllSavedViewRows = async (viewId: string): Promise<SavedViewCs
 
   const first = await workAttentionService.savedViewEvaluate({ id: viewId, limit: PAGE_SIZE });
   const evaluation = first.data.evaluation as EvaluatePage;
+  if (evaluation.needsRepair) throw new Error('view definition needs repair');
   const queryHash = evaluation.queryHash;
   push(evaluation.tasks);
   push(evaluation.projects);

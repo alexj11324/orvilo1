@@ -757,6 +757,7 @@
   "savedViews.values.priority.1": "紧急",
   "savedViews.values.priority.2": "高",
   "savedViews.values.priority.3": "中",
+  "savedViews.values.priority.4": "低",
   "savedViews.versionConflict": "这个视图已被别人改过，请刷新后再保存。",
   "savedViews.viewControls": "视图控件",
   "savedViews.viewDetails": "视图详情",

@@ -75,8 +75,9 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
         key: 'edit',
         label: t('savedViews.editView'),
         onClick: () => {
-          // Edit always starts from the persisted definition.
-          onReloadDraft();
+          // Edit starts from the persisted definition — but a dirty inline
+          // draft is the user's unsaved work; keep it instead of discarding.
+          if (!dirty) onReloadDraft();
           setEditing(true);
         },
       });

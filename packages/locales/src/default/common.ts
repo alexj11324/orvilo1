@@ -924,6 +924,7 @@ export default {
   'savedViews.values.priority.1': 'Urgent',
   'savedViews.values.priority.2': 'High',
   'savedViews.values.priority.3': 'Medium',
+  'savedViews.values.priority.4': 'Low',
   'savedViews.versionConflict': 'This view changed. Refresh and save again.',
   'savedViews.visibility': 'Sharing',
   'savedViews.visibilityPrivate': 'Only me',

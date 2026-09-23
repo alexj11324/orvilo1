@@ -90,6 +90,7 @@
   "inbox.filterUnread": "Show unread only",
   "inbox.goToSettings": "Go to settings",
   "inbox.inputPlaceholder": "Reply to the agent",
+  "inbox.itemUnavailable": "This notification is unavailable or no longer exists.",
   "inbox.loadFailed": "The inbox could not be loaded.",
   "inbox.loadMore": "Load more",
   "inbox.loadedCount_one": "{{count}} loaded notification",

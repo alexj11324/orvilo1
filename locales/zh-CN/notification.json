@@ -90,6 +90,7 @@
   "inbox.filterUnread": "仅显示未读",
   "inbox.goToSettings": "前往设置",
   "inbox.inputPlaceholder": "回复给 Agent",
+  "inbox.itemUnavailable": "该通知不可用或已不存在。",
   "inbox.loadFailed": "收件箱加载失败。",
   "inbox.loadMore": "加载更多",
   "inbox.loadedCount_one": "已加载 {{count}} 条通知",

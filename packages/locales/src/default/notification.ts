@@ -97,6 +97,7 @@ export default {
   'inbox.displayShowSnoozed': 'Show snoozed',
   'inbox.goToSettings': 'Go to settings',
   'inbox.inputPlaceholder': 'Reply to the agent',
+  'inbox.itemUnavailable': 'This notification is unavailable or no longer exists.',
   'inbox.loading': 'Loading inbox…',
   'inbox.loadFailed': 'The inbox could not be loaded.',
   'inbox.loadMore': 'Load more',

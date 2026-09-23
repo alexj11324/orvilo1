@@ -72,6 +72,7 @@ import {
   planInboxDecisionOperation,
   settleInboxDecisionOperation,
 } from './inboxDecisionOps';
+import { inboxDeepLinkTerminal, resolveInboxDeepLink } from './inboxDeepLink';
 import { inboxDraftKeyForCard, useInboxDraft } from './inboxDrafts';
 import { inboxFeedScopeKey, mergeInboxFeedPages, useInboxFeedPager } from './inboxFeedPager';
 import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedState';
@@ -280,6 +281,9 @@ const WorkInboxPage = memo(() => {
     null,
   );
   const readReceiptAttemptRef = useRef<InboxReadReceiptAttempt | null>(null);
+  // Toast dedupe for dead deep links — StrictMode re-runs effects, and a param
+  // clear must never double-report.
+  const deadLinkToastRef = useRef<string | null>(null);
 
   const writeInboxParams = useCallback(
     (patch: { detail?: string | null; filter?: string; item?: string | null; tab?: string }) => {
@@ -394,10 +398,28 @@ const WorkInboxPage = memo(() => {
     () => cards.find((card) => card.notificationId === selectedId) ?? null,
     [cards, selectedId],
   );
-  const { data: fetchedCard, isLoading: fetchingCard } = useClientDataSWR(
+  const {
+    data: fetchedCard,
+    error: fetchCardError,
+    isValidating: validatingCard,
+    mutate: retryFetchCard,
+  } = useClientDataSWR(
     selectedId && !listed ? inboxKeys.feedCard(workspaceId, selectedId) : null,
     () => notificationService.feedCard(selectedId as string),
+    {
+      // A terminal id (malformed, gone, unreadable) can never resolve — skip
+      // the default backoff so the dead link drops on the first settle instead
+      // of after ~30s of pointless retries.
+      shouldRetryOnError: (err: Error) => !inboxDeepLinkTerminal(err),
+    },
   );
+  const deepLink = resolveInboxDeepLink({
+    error: fetchCardError,
+    fetched: fetchedCard,
+    listed: Boolean(listed),
+    selectedId,
+    validating: validatingCard,
+  });
   const readReceiptRetention = resolveInboxReadReceiptRetention(
     readReceiptRetentionRef.current,
     selectedId,
@@ -459,18 +481,22 @@ const WorkInboxPage = memo(() => {
   }, [feedScope, selectedId]);
 
   useEffect(() => {
-    // Clear a dead selection only once the list AND the by-id lookup both
-    // settled — a deep link into a not-yet-loaded page must not be dropped.
-    if (
-      selectedId &&
-      !isLoading &&
-      !fetchingCard &&
-      (!selected || (!listed && fetchedCard === null))
-    ) {
-      readReceiptRetentionRef.current = null;
-      writeInboxParams({ detail: null, item: null });
+    if (!selectedId) {
+      deadLinkToastRef.current = null;
+      return;
     }
-  }, [fetchedCard, fetchingCard, isLoading, listed, selected, selectedId, writeInboxParams]);
+    // A `?item=` the by-id lookup proved terminal — the row is gone or the id
+    // can never resolve — falls back to the plain list: drop the dead params
+    // and say why, once per id. Transient failures keep the params; the
+    // detail pane's retry owns them.
+    if (deepLink !== 'dead') return;
+    readReceiptRetentionRef.current = null;
+    writeInboxParams({ detail: null, item: null });
+    if (deadLinkToastRef.current !== selectedId) {
+      deadLinkToastRef.current = selectedId;
+      toast.error(t('inbox.itemUnavailable'));
+    }
+  }, [deepLink, selectedId, t, writeInboxParams]);
 
   useEffect(() => {
     if (
@@ -578,13 +604,20 @@ const WorkInboxPage = memo(() => {
           }));
         } else {
           pager.removeCard(card.notificationId);
+          // Same contract as archive/decide: a card that left this view
+          // releases the selection instead of leaving the detail pane on a
+          // row the list no longer holds.
+          if (card.notificationId === selectedId) {
+            readReceiptRetentionRef.current = null;
+            writeInboxParams({ detail: null, item: null });
+          }
         }
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [filter, organizeFailed, pager, refresh, showSnoozed],
+    [filter, organizeFailed, pager, refresh, selectedId, showSnoozed, writeInboxParams],
   );
 
   const markCardUnread = useCallback(
@@ -1257,6 +1290,36 @@ const WorkInboxPage = memo(() => {
         </Flexbox>
       </div>
     )
+  ) : deepLink === 'failed' ? (
+    // The id stays in the URL — it may still resolve — so the pane owns an
+    // honest failure with retry instead of silently dropping the selection.
+    <div className={styles.detail}>
+      {surface === 'detail' ? (
+        <Flexbox horizontal>
+          <Button
+            icon={ChevronLeftIcon}
+            size={'small'}
+            onClick={() => writeInboxParams({ detail: null, item: null })}
+          >
+            {tCommon('back')}
+          </Button>
+        </Flexbox>
+      ) : null}
+      <Center flex={1} padding={24}>
+        <AsyncError
+          error={fetchCardError}
+          retrying={validatingCard}
+          variant={'block'}
+          onRetry={() => void retryFetchCard()}
+        />
+      </Center>
+    </div>
+  ) : deepLink === 'loading' ? (
+    // Deep link still resolving — a skeleton reads truer than "Select an
+    // item", and it keeps the pane from flashing a wrong empty state.
+    <div className={styles.detail}>
+      <SkeletonList padding={8} rows={6} />
+    </div>
   ) : null;
 
   const detailPlaceholder = (
@@ -1299,13 +1362,24 @@ const WorkInboxPage = memo(() => {
       <div className={styles.stage}>
         <WorkSurfaceSplit
           detail={surface === 'split' ? (detailPane ?? detailPlaceholder) : undefined}
-          detailLabel={selected ? titleFor(selected) : t('inbox.selectItem')}
           list={listPane}
           listLabel={tCommon('tab.inbox')}
           listWidth={400}
+          detailLabel={
+            selected
+              ? titleFor(selected)
+              : deepLink === 'failed'
+                ? t('inbox.loadFailed')
+                : deepLink === 'loading'
+                  ? t('inbox.loading')
+                  : t('inbox.selectItem')
+          }
         />
-        {surface === 'detail' && detailPane && selected ? (
-          <div aria-label={titleFor(selected)} className={styles.detailOverlay}>
+        {surface === 'detail' && detailPane ? (
+          <div
+            aria-label={selected ? titleFor(selected) : t('inbox.selectItem')}
+            className={styles.detailOverlay}
+          >
             {detailPane}
           </div>
         ) : null}

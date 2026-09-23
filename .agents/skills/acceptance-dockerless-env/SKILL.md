@@ -22,6 +22,16 @@ export PATH="$HOME/.bun/bin:$PATH"
 npm i -g agent-browser # if absent — check `agent-browser --version`
 ```
 
+## Fast path: `dev-up.sh`
+
+For a worktree that already has a `.env`, `.agents/acceptance/scripts/dev-up.sh` is the
+one-command bring-up — it ensures Postgres/Redis are up, runs `bun run db:migrate`,
+reuses a live dev server (detected via `.next/dev/lock`) or spawns `bun run dev` under
+`nohup` (log at `.records/env/dev-server.log`), and prints the Next + Vite URLs.
+Subcommands: `status`, `stop`, `restart`, `logs`. Prefer this over hand-running
+`bun run dev` — the orchestrator aborts when an instance is already up, and the
+half-started vite it spawns dies with it.
+
 ## Env overrides the scripts honor
 
 `init-dev-env.sh apply_env` accepts env overrides instead of `.env`:
@@ -78,7 +88,7 @@ To inspect a **logged-in** third-party reference app (e.g. `linear.app`) when th
 
 ```bash
 SRC="$HOME/Library/Application Support/BraveSoftware/Brave-Browser"
-DST=/tmp/linear-ref-brave   # any temp dir; use a per-task name
+DST=/tmp/linear-ref-brave # any temp dir; use a per-task name
 
 # 1) Which profile holds the login? (reads host_key only, never cookie values;
 #    immutable=1 reads Cookies while the real Brave is running)

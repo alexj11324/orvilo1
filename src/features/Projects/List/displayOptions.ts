@@ -23,12 +23,17 @@ export const PROJECT_LIST_GROUPINGS = ['none', 'status', 'lead'] as const;
 export type ProjectListGrouping = (typeof PROJECT_LIST_GROUPINGS)[number];
 
 /**
- * Ordering fields. `manual` keeps the server's natural order (the list
- * arrives `updatedAt desc`) — real drag ordering needs a persisted order
- * field the schema does not have. `health`/`name`/`targetDate` mirror the
- * reference's sortable headers; keeping them in the dropdown too means the
- * select always shows the active ordering instead of going blank when a
- * header sort sets a field the reference menu does not list.
+ * Every value `orderBy` can hold. `manual` keeps the server's natural order
+ * (the list arrives `updatedAt desc`) — real drag ordering needs a persisted
+ * order field the schema does not have.
+ *
+ * The Display options dropdown itself lists only the reference's documented
+ * set (linear.app/docs/display-options: Manual/Status/Priority/Updated
+ * time/Created time) — see `PROJECT_LIST_MENU_ORDERINGS`. `name`, `health`
+ * and `targetDate` are *not* in that dropdown on the reference: they are
+ * reachable through the sortable column headers instead (Name/Health/Target
+ * date). They stay valid `orderBy` values so a header sort persists and the
+ * select can still label the active ordering.
  */
 export const PROJECT_LIST_ORDERINGS = [
   'manual',
@@ -41,6 +46,25 @@ export const PROJECT_LIST_ORDERINGS = [
   'updatedAt',
 ] as const;
 export type ProjectListOrdering = (typeof PROJECT_LIST_ORDERINGS)[number];
+
+/** Orderings the Display options dropdown lists — the reference's documented five. */
+export const PROJECT_LIST_MENU_ORDERINGS = [
+  'manual',
+  'status',
+  'priority',
+  'updatedAt',
+  'createdAt',
+] as const satisfies readonly ProjectListOrdering[];
+
+/**
+ * Orderings reachable only through a sortable column header — the reference
+ * sorts by them without listing them in the Ordering dropdown.
+ */
+export const PROJECT_LIST_HEADER_ONLY_ORDERINGS = [
+  'name',
+  'health',
+  'targetDate',
+] as const satisfies readonly ProjectListOrdering[];
 
 /** Orderings a column-header button can activate (reference: Name/Health/Priority/Target date/Status). */
 export type ProjectListSortableOrdering = Exclude<ProjectListOrdering, 'manual'>;

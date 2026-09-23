@@ -427,6 +427,7 @@ const groupAgentBuilderPanelWidth = (s: GlobalState) => s.status.groupAgentBuild
 const agentListViewMode = (s: GlobalState) => s.status.agentListViewMode || 'list';
 const agentListViewOptions = (s: GlobalState) => s.status.agentListViewOptions;
 const projectListViewOptions = (s: GlobalState) => s.status.projectListViewOptions;
+const teamProjectsViewOptions = (s: GlobalState) => s.status.teamProjectsViewOptions;
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
@@ -519,6 +520,7 @@ export const systemStatusSelectors = {
   taskListViewDefaults,
   taskListViewMode,
   taskListViewOptions,
+  teamProjectsViewOptions,
   sidebarCollapsedKeys,
   sidebarExpandedKeys,
   agentSidebarSections,

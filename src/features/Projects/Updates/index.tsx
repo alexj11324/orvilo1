@@ -5,11 +5,12 @@ import { Button, DropdownMenu, Tabs, Tag, Text, toast } from '@lobehub/ui/base-u
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { CircleCheckIcon, CircleDotIcon, OctagonAlertIcon } from 'lucide-react';
+import { CircleDotIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
 
@@ -106,15 +107,6 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
 }));
-
-export const PROJECT_UPDATE_HEALTH_META: Record<
-  ProjectHealth,
-  { color: 'colorError' | 'colorSuccess' | 'colorWarning'; icon: typeof CircleDotIcon }
-> = {
-  atRisk: { color: 'colorWarning', icon: OctagonAlertIcon },
-  offTrack: { color: 'colorError', icon: CircleCheckIcon },
-  onTrack: { color: 'colorSuccess', icon: CircleDotIcon },
-};
 
 const PROJECT_UPDATE_HEALTH_ORDER: ProjectHealth[] = ['onTrack', 'atRisk', 'offTrack'];
 
@@ -234,13 +226,13 @@ export const ProjectUpdateComposer = memo<{
             items={PROJECT_UPDATE_HEALTH_ORDER.map((state) => ({
               key: state,
               label: t(`overview.health.${state}`),
-              icon: <Icon icon={PROJECT_UPDATE_HEALTH_META[state].icon} size={12} />,
+              icon: <ProjectHealthIcon health={state} size={12} />,
               onClick: () => setHealth(state),
             }))}
           >
             <Button
               className={styles.modeTab}
-              icon={<Icon icon={PROJECT_UPDATE_HEALTH_META[health].icon} size={12} />}
+              icon={<ProjectHealthIcon health={health} size={12} />}
               size={'small'}
             >
               {t(`overview.health.${health}`, { defaultValue: health })}
@@ -277,9 +269,7 @@ ProjectUpdateComposer.displayName = 'ProjectUpdateComposer';
 
 export const ProjectUpdateRow = memo<{ update: ProjectUpdate }>(({ update }) => {
   const { t } = useTranslation('project');
-  const meta = update.health
-    ? (PROJECT_UPDATE_HEALTH_META[update.health] ?? PROJECT_UPDATE_HEALTH_META.onTrack)
-    : null;
+  const meta = update.health ? PROJECT_HEALTH_META[update.health] : null;
   return (
     <Flexbox horizontal align={'flex-start'} className={styles.updateRow} gap={10}>
       <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
@@ -290,8 +280,8 @@ export const ProjectUpdateRow = memo<{ update: ProjectUpdate }>(({ update }) => 
           </Text>
           {meta && update.health && (
             <Tag
-              color={meta.color}
-              icon={<Icon icon={meta.icon} size={12} />}
+              color={meta.tag}
+              icon={<ProjectHealthIcon health={update.health} size={12} />}
               shape={'round'}
               size={'small'}
             >

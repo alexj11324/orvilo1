@@ -28,7 +28,8 @@ import {
   isDataBackedProjectListProperty,
   PROJECT_LIST_CLOSED_WINDOWS,
   PROJECT_LIST_GROUPINGS,
-  PROJECT_LIST_ORDERINGS,
+  PROJECT_LIST_HEADER_ONLY_ORDERINGS,
+  PROJECT_LIST_MENU_ORDERINGS,
   PROJECT_LIST_PROPERTIES,
   type ProjectListClosedWindow,
   type ProjectListDisplayOptions,
@@ -208,13 +209,35 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
           </OptionRow>
           <OptionRow label={t('list.display.ordering')}>
             <Select
+              // The reference dropdown lists only the documented five; a
+              // sortable header can still set a header-only ordering (name →
+              // the reference's "A–Z"/"Z–A", health/targetDate → the field
+              // label), which `labelRender` keeps legible instead of blanking.
               size="small"
               style={{ flex: 1, minWidth: 0 }}
               value={options.orderBy}
-              options={PROJECT_LIST_ORDERINGS.map((value) => ({
-                label: t(`list.display.ordering.${value}`),
-                value,
-              }))}
+              labelRender={(option) =>
+                option.value === 'name'
+                  ? options.orderDirection === 'desc'
+                    ? 'Z–A'
+                    : 'A–Z'
+                  : t(`list.display.ordering.${option.value}`)
+              }
+              options={[
+                ...PROJECT_LIST_MENU_ORDERINGS.map((value) => ({
+                  label: t(`list.display.ordering.${value}`),
+                  value,
+                })),
+                // Header-only orderings stay resolvable so an active header
+                // sort labels the trigger — but they render hidden+disabled:
+                // the reference menu does not offer them as dropdown picks.
+                ...PROJECT_LIST_HEADER_ONLY_ORDERINGS.map((value) => ({
+                  disabled: true,
+                  label: t(`list.display.ordering.${value}`),
+                  style: { display: 'none' },
+                  value,
+                })),
+              ]}
               onChange={(value) =>
                 onChange({
                   orderBy: value as ProjectListDisplayOptions['orderBy'],

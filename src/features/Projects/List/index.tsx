@@ -12,18 +12,14 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
   BoxIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleDotIcon,
   FolderClosedIcon,
   MoreHorizontalIcon,
-  OctagonAlertIcon,
   PlusIcon,
   SearchXIcon,
   TrashIcon,
@@ -40,6 +36,8 @@ import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
+import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
+import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
@@ -104,6 +102,31 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-size: 12px;
     color: ${cssVar.colorTextTertiary};
     white-space: nowrap;
+  `,
+  /**
+   * The health cell is its own navigation target (the latest-update surface /
+   * write-update flow), so it floats above the row's stretched link like the
+   * lead trigger does.
+   */
+  healthCell: css`
+    cursor: pointer;
+
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    align-self: stretch;
+
+    width: 100%;
+
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: ${cssVar.colorText};
+    }
   `,
   columns: css`
     display: grid;
@@ -308,12 +331,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
  */
 export const projectListStyles = styles;
 
-export const PROJECT_HEALTH_META = {
-  atRisk: { icon: OctagonAlertIcon, key: 'list.health.atRisk' },
-  offTrack: { icon: CircleCheckIcon, key: 'list.health.offTrack' },
-  onTrack: { icon: CircleDotIcon, key: 'list.health.onTrack' },
-} as const;
-
 const PROJECT_PRIORITY_LABEL_KEY = {
   0: 'create.priority.noPriority',
   1: 'create.priority.urgent',
@@ -322,29 +339,32 @@ const PROJECT_PRIORITY_LABEL_KEY = {
   4: 'create.priority.low',
 } as const;
 
-const ProjectHealthCell = memo<{ health?: ProjectHealth | null }>(({ health }) => {
+/**
+ * Reference §health: the cell is the latest-update affordance — a filled
+ * health dot + label when a project update exists, the dashed circle +
+ * "No updates" hint when none does. The row payload carries only the
+ * denormalized `project.health` (no update body/date), so instead of faking
+ * an excerpt the whole cell navigates to the project's update surface;
+ * with no update it lands in write-update mode ("Click to write update.").
+ */
+const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
   const { t } = useTranslation('project');
-  const theme = useTheme();
-  if (!health || !(health in PROJECT_HEALTH_META)) {
-    return (
-      <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
-        <Icon icon={CircleDashedIcon} size={14} />
-        <Text fontSize={12}>{t('list.health.noUpdates')}</Text>
-      </Flexbox>
-    );
-  }
-  const meta = PROJECT_HEALTH_META[health];
-  const color =
-    health === 'onTrack'
-      ? theme.colorSuccess
-      : health === 'atRisk'
-        ? theme.colorWarning
-        : theme.colorError;
+  const health: null | ProjectHealth =
+    project.health && project.health in PROJECT_HEALTH_META ? project.health : null;
   return (
-    <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
-      <Icon color={color} icon={meta.icon} size={14} />
-      <Text fontSize={12}>{t(meta.key, { defaultValue: health })}</Text>
-    </Flexbox>
+    <WorkspaceLink
+      className={cx(styles.cell, styles.healthCell)}
+      state={health ? undefined : { projectUpdate: true }}
+      title={health ? undefined : t('list.health.noUpdatesHint')}
+      to={getProjectActivityPath(project.slug ?? project.id)}
+    >
+      <ProjectHealthIcon health={health} size={14} />
+      <Text fontSize={12}>
+        {health
+          ? t(PROJECT_HEALTH_META[health].key, { defaultValue: health })
+          : t('list.health.noUpdates')}
+      </Text>
+    </WorkspaceLink>
   );
 });
 
@@ -559,7 +579,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
   const cellFor = (column: ProjectListColumn): ReactNode => {
     switch (column.key) {
       case 'health': {
-        return <ProjectHealthCell health={project.health} />;
+        return <ProjectHealthCell project={project} />;
       }
       case 'priority': {
         return (

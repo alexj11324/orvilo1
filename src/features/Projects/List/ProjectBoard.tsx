@@ -3,21 +3,16 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import {
-  BoxIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleDotIcon,
-  OctagonAlertIcon,
-} from 'lucide-react';
+import { BoxIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
+import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectListItem } from '@/store/project';
 
@@ -194,32 +189,12 @@ const PROJECT_PRIORITY_KEY = {
   4: 'low',
 } as const;
 
-const BOARD_HEALTH_META: Record<ProjectHealth, { icon: typeof CircleDotIcon; key: string }> = {
-  atRisk: { icon: OctagonAlertIcon, key: 'list.health.atRisk' },
-  offTrack: { icon: CircleCheckIcon, key: 'list.health.offTrack' },
-  onTrack: { icon: CircleDotIcon, key: 'list.health.onTrack' },
-};
-
 const ProjectHealthDot = memo<{ health: string }>(({ health }) => {
   const { t } = useTranslation('project');
-  const theme = useTheme();
-  const meta = BOARD_HEALTH_META[health as ProjectHealth];
-  if (!meta) {
-    return (
-      <Tooltip title={t('list.health.noUpdates')}>
-        <Icon icon={CircleDashedIcon} size={12} />
-      </Tooltip>
-    );
-  }
-  const color =
-    health === 'onTrack'
-      ? theme.colorSuccess
-      : health === 'atRisk'
-        ? theme.colorWarning
-        : theme.colorError;
+  const valid = health in PROJECT_HEALTH_META ? (health as ProjectHealth) : null;
   return (
-    <Tooltip title={t(meta.key)}>
-      <Icon color={color} icon={meta.icon} size={12} />
+    <Tooltip title={valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates')}>
+      <ProjectHealthIcon health={valid} size={12} />
     </Tooltip>
   );
 });

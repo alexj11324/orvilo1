@@ -15,6 +15,8 @@ import {
   normalizeProjectListDisplayOptions,
   pickNextMilestone,
   PROJECT_LIST_GROUPINGS,
+  PROJECT_LIST_HEADER_ONLY_ORDERINGS,
+  PROJECT_LIST_MENU_ORDERINGS,
   PROJECT_LIST_ORDERINGS,
   PROJECT_LIST_PROPERTIES,
   sortProjectList,
@@ -177,6 +179,55 @@ describe('sortProjectList', () => {
     expect(sorted[1]).toBe('beta');
     expect(sorted[2]).toBe('alpha');
   });
+
+  it('orders health worst-first with no-update last', () => {
+    const healthRows = [
+      { health: 'onTrack', name: 'c' },
+      { health: null, name: 'a' },
+      { health: 'offTrack', name: 'b' },
+      { health: 'atRisk', name: 'd' },
+    ];
+    expect(sortProjectList(healthRows, 'health', 'asc').map((row) => row.name)).toEqual([
+      'b', // offTrack
+      'd', // atRisk
+      'c', // onTrack
+      'a', // no update
+    ]);
+  });
+});
+
+describe('ordering menu vs sortable headers', () => {
+  it('limits the dropdown to the reference documented five', () => {
+    // linear.app/docs/display-options: Manual/Status/Priority/Updated time/
+    // Created time — name/health/targetDate are header-sort-only on the
+    // reference, so they must not appear as dropdown options.
+    expect(PROJECT_LIST_MENU_ORDERINGS).toEqual([
+      'manual',
+      'status',
+      'priority',
+      'updatedAt',
+      'createdAt',
+    ]);
+  });
+
+  it('keeps header-only orderings off the menu but still valid orderBy values', () => {
+    expect(PROJECT_LIST_HEADER_ONLY_ORDERINGS).toEqual(['name', 'health', 'targetDate']);
+    for (const ordering of PROJECT_LIST_HEADER_ONLY_ORDERINGS) {
+      expect(PROJECT_LIST_ORDERINGS, ordering).toContain(ordering);
+      expect(PROJECT_LIST_MENU_ORDERINGS, ordering).not.toContain(ordering);
+    }
+  });
+
+  it('still sorts and persists health after leaving the dropdown', () => {
+    // Health remains a sortable column header even though the Ordering
+    // dropdown no longer lists it — a header sort must persist, not normalize
+    // back to manual.
+    expect(nextSortFromHeader({ orderBy: 'manual', orderDirection: 'asc' }, 'health')).toEqual({
+      orderBy: 'health',
+      orderDirection: 'asc',
+    });
+    expect(normalizeProjectListDisplayOptions({ orderBy: 'health' }).orderBy).toBe('health');
+  });
 });
 
 describe('nextSortFromHeader', () => {
@@ -313,6 +364,42 @@ describe('display-property coverage', () => {
     expect(DATA_BACKED_PROJECT_LIST_PROPERTIES).not.toContain('teams');
     expect(DATA_BACKED_PROJECT_LIST_PROPERTIES).not.toContain('members');
     expect(DATA_BACKED_PROJECT_LIST_PROPERTIES).not.toContain('dependencies');
+  });
+});
+
+describe('health and status label semantics', () => {
+  it('keeps the Linear-equivalent lifecycle labels', () => {
+    // Status is a lifecycle/flow state — these labels mirror Linear's; the
+    // Orvilo-only states keep their own labels instead of masquerading.
+    const expected: Record<string, string> = {
+      'status.backlog': 'Backlog',
+      'status.planned': 'Planned',
+      'status.active': 'In Progress',
+      'status.paused': 'Paused',
+      'status.completed': 'Completed',
+      'status.canceled': 'Canceled',
+      'status.reviewing': 'In Review',
+      'status.archived': 'Archived',
+    };
+    for (const [key, value] of Object.entries(expected)) {
+      expect(pick(source as Record<string, string>, key), `source ${key}`).toBe(value);
+      expect(pick(enUS as Record<string, string>, key), `en-US ${key}`).toBe(value);
+      expect(pick(zhCN as Record<string, string>, key), `zh-CN ${key}`).toBeTruthy();
+    }
+  });
+
+  it('reads health as an update state and advertises writing one', () => {
+    expect(pick(source as Record<string, string>, 'list.health.onTrack')).toBe('On track');
+    expect(pick(source as Record<string, string>, 'list.health.atRisk')).toBe('At risk');
+    expect(pick(source as Record<string, string>, 'list.health.offTrack')).toBe('Off track');
+    expect(pick(source as Record<string, string>, 'list.health.noUpdates')).toBe('No updates');
+    expect(pick(source as Record<string, string>, 'list.health.noUpdatesHint')).toBe(
+      'No updates. Click to write update.',
+    );
+    expect(pick(enUS as Record<string, string>, 'list.health.noUpdatesHint')).toBe(
+      'No updates. Click to write update.',
+    );
+    expect(pick(zhCN as Record<string, string>, 'list.health.noUpdatesHint')).toBeTruthy();
   });
 });
 

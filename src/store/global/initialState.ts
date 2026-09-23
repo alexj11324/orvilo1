@@ -422,6 +422,29 @@ export interface SystemStatus {
   taskListViewMode?: TaskViewMode;
   taskListViewOptions?: TaskListViewOptionsState;
   /**
+   * Display options of the team Projects tab — same shape as
+   * `projectListViewOptions`, persisted under its own key so the team
+   * surface's panel never overwrites the workspace list's options.
+   * Absent = built-in defaults (the feature normalizes undefined).
+   */
+  teamProjectsViewOptions?: {
+    grouping?: 'lead' | 'none' | 'status';
+    layout?: 'board' | 'list' | 'timeline';
+    orderBy?:
+      | 'createdAt'
+      | 'health'
+      | 'manual'
+      | 'name'
+      | 'priority'
+      | 'status'
+      | 'targetDate'
+      | 'updatedAt';
+    orderDirection?: 'asc' | 'desc';
+    properties?: Record<string, boolean>;
+    showClosed?: 'all' | 'none' | 'pastMonth' | 'pastWeek' | 'pastYear';
+    timeline?: { showProjectList?: boolean; showWeekNumbers?: boolean };
+  };
+  /**
    * Height of the chat bottom terminal panel. Persisted so resizing survives remounts.
    */
   terminalPanelHeight?: number;

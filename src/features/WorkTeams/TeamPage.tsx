@@ -1,19 +1,9 @@
 'use client';
 
 import { Center, Empty, Flexbox } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  type DropdownItem,
-  DropdownMenu,
-  Segmented,
-  Select,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
+import { Button, Segmented, Select, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryLayout } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { FolderXIcon, ListChecksIcon, MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
+import { FolderXIcon, ListChecksIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -21,38 +11,25 @@ import { useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
-import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
-import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
-import { isTrpcErrorCode } from '@/utils/trpcError';
 
-import MarkDuplicateModal from './MarkDuplicateModal';
 import { otherTeamOptions } from './otherTeamOptions';
-import { reassignMemberOptions } from './reassignMemberOptions';
 import TeamHome from './TeamHome';
 import TeamIdentity from './TeamIdentity';
 import { nextTeamIssueScopeNavigation } from './teamIssueScopeNavigation';
+import TeamProjectsSurface from './TeamProjectsSurface';
 import { teamSurfaceState } from './teamSurfaceState';
-import { teamTriageCreateOptions } from './teamTriageCreate';
-import {
-  TEAM_TRIAGE_OVERFLOW_I18N,
-  type TeamTriageOverflowItem,
-  teamTriageOverflowItems,
-} from './teamTriageOverflow';
 import TeamViewsSurface from './TeamViewsSurface';
 import {
   ALL_TEAM_CYCLES,
@@ -60,174 +37,7 @@ import {
   teamTaskQuery,
   teamTriageQuery,
 } from './teamWorkQuery';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    flex: none;
-  `,
-  identifier: css`
-    flex: none;
-
-    min-width: 64px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-  `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-    text-decoration: none;
-  `,
-  row: css`
-    padding-block: 7px;
-    padding-inline: 4px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    color: inherit;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
-
-type TeamTriageTask = {
-  assigneeAgentId?: string | null;
-  assigneeUserId?: string | null;
-  domainRevision?: number;
-  id: string;
-  identifier?: string | null;
-  instruction?: string | null;
-  name?: string | null;
-  status?: string | null;
-};
-
-const TeamTriageRow = memo<{
-  destinations: Array<{ label: string; value: string }>;
-  members: Array<{ userId: string }>;
-  onAccept: (taskId: string) => void;
-  onDecline: (taskId: string) => void;
-  onPickDuplicate: (taskId: string) => void;
-  onReassign: (taskId: string, assigneeUserId: string) => void;
-  onTransferred: () => void;
-  task: TeamTriageTask;
-}>(
-  ({
-    destinations,
-    members,
-    onAccept,
-    onDecline,
-    onPickDuplicate,
-    onReassign,
-    onTransferred,
-    task,
-  }) => {
-    const { t } = useTranslation('common');
-    const memberOptions = reassignMemberOptions(members, task.assigneeUserId);
-    const overflowItems = teamTriageOverflowItems({
-      destinations,
-      members: memberOptions,
-    });
-
-    const transfer = useCallback(
-      async (teamId: string) => {
-        if (!teamId || task.domainRevision === undefined) return;
-        try {
-          await lambdaClient.team.moveTaskToTeam.mutate({
-            expectedDomainRevision: task.domainRevision,
-            taskId: task.id,
-            teamId,
-          });
-          onTransferred();
-          toast.success(t('teams.transferUpdated'));
-        } catch (error) {
-          toast.error(
-            isTrpcErrorCode(error, 'CONFLICT')
-              ? t('teams.transferConflict')
-              : isTrpcErrorCode(error, 'PRECONDITION_FAILED')
-                ? t('teams.transferLinear')
-                : t('teams.transferFailed'),
-          );
-        }
-      },
-      [onTransferred, t, task.domainRevision, task.id],
-    );
-
-    const runOverflow = useCallback(
-      (kind: TeamTriageOverflowItem['kind'], value: string) => {
-        if (kind === 'duplicate') onPickDuplicate(task.id);
-        else if (kind === 'reassign') onReassign(task.id, value);
-        else void transfer(value);
-      },
-      [onPickDuplicate, onReassign, task.id, transfer],
-    );
-
-    const overflowMenuItems = useMemo<DropdownItem[]>(
-      () =>
-        overflowItems.map((item) =>
-          item.type === 'leaf'
-            ? {
-                key: item.kind,
-                label: t(TEAM_TRIAGE_OVERFLOW_I18N[item.kind]),
-                onClick: () => runOverflow(item.kind, item.value),
-              }
-            : {
-                children: item.options.map((option) => ({
-                  key: `${item.kind}-${option.value}`,
-                  label: option.label,
-                  onClick: () => runOverflow(item.kind, option.value),
-                })),
-                key: item.kind,
-                label: t(TEAM_TRIAGE_OVERFLOW_I18N[item.kind]),
-                type: 'submenu',
-              },
-        ),
-      [overflowItems, runOverflow, t],
-    );
-
-    return (
-      <Flexbox horizontal align="center" className={styles.row} gap={8}>
-        <WorkspaceLink
-          className={styles.link}
-          to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-        >
-          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-          <Flexbox flex={1} style={{ minWidth: 0 }}>
-            <Text ellipsis weight={500}>
-              {task.name ?? task.instruction}
-            </Text>
-          </Flexbox>
-          {task.identifier ? (
-            <Text className={styles.identifier} fontSize={12}>
-              {task.identifier}
-            </Text>
-          ) : null}
-        </WorkspaceLink>
-        <Flexbox horizontal align="center" className={styles.actions} gap={4}>
-          <Button size="small" onClick={() => onAccept(task.id)}>
-            {t('teams.accept')}
-          </Button>
-          <Button size="small" onClick={() => onDecline(task.id)}>
-            {t('teams.decline')}
-          </Button>
-          {overflowMenuItems.length > 0 ? (
-            <DropdownMenu items={overflowMenuItems} placement="bottomRight">
-              <ActionIcon icon={MoreHorizontalIcon} size="small" title={t('teams.moreActions')} />
-            </DropdownMenu>
-          ) : null}
-        </Flexbox>
-      </Flexbox>
-    );
-  },
-);
-
-TeamTriageRow.displayName = 'TeamTriageRow';
+import TeamTriageSurface from './triage/TeamTriageSurface';
 
 const ISSUE_SCOPES: TeamIssueScope[] = ['all', 'active', 'backlog'];
 
@@ -257,7 +67,6 @@ const TeamPage = memo(() => {
   const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
   const [noProject, setNoProject] = useState(false);
   const [layout, setLayout] = useState<WorkQueryLayout>('list');
-  const [duplicateTaskId, setDuplicateTaskId] = useState<string | null>(null);
   const {
     data: teamData,
     error: teamError,
@@ -357,57 +166,11 @@ const TeamPage = memo(() => {
   const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
-  const triageState = teamSurfaceState({
-    error: triageError,
-    isLoading,
-    itemCount: tasks.length,
-  });
   const workState = teamSurfaceState({
     error: teamTasksError,
     isLoading: isTeamTasksLoading,
     itemCount: teamTasks.length + teamGroups.reduce((sum, group) => sum + group.tasks.length, 0),
   });
-
-  const act = useCallback(
-    async (
-      task: TeamTriageTask,
-      action: 'accept' | 'decline' | 'duplicate' | 'reassign',
-      extra?: { assigneeUserId?: string; canonicalTaskId?: string },
-    ) => {
-      if (task.domainRevision === undefined) return;
-      try {
-        await workAttentionService.triage({
-          action,
-          expectedDomainRevision: task.domainRevision,
-          taskId: task.id,
-          teamId: teamId!,
-          ...(extra?.assigneeUserId ? { assigneeUserId: extra.assigneeUserId } : {}),
-          ...(extra?.canonicalTaskId ? { canonicalTaskId: extra.canonicalTaskId } : {}),
-        });
-        await Promise.all([
-          mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-          mutate([
-            'team-tasks',
-            workspaceId,
-            teamId,
-            cycleId,
-            noProject,
-            layout,
-            issueScope,
-            triageCapable,
-          ]),
-        ]);
-        toast.success(t('teams.triageUpdated'));
-      } catch (error) {
-        toast.error(
-          isTrpcErrorCode(error, 'CONFLICT')
-            ? t('teams.transferConflict')
-            : t('teams.triageFailed'),
-        );
-      }
-    },
-    [cycleId, issueScope, layout, noProject, t, teamId, triageCapable, workspaceId],
-  );
 
   const refreshTriage = useCallback(() => {
     setTeamTail([]);
@@ -467,12 +230,6 @@ const TeamPage = memo(() => {
     [t, teamData?.data.cycles],
   );
 
-  const openTriageIssueComposer = () => {
-    if (!teamId) return;
-
-    createTaskModal(teamTriageCreateOptions(teamId, () => void revalidateTriage()));
-  };
-
   // The views tab is a routed surface of its own — a team-scoped directory
   // plus the `?new=1` draft editor — so it returns before the shared team
   // chrome. The team fetch still gates it: the editor header and save-to
@@ -524,6 +281,8 @@ const TeamPage = memo(() => {
       />
     );
   }
+
+  if (teamTab === 'projects' && teamId) return <TeamProjectsSurface teamId={teamId} />;
 
   return (
     <WorkSurface>
@@ -636,39 +395,17 @@ const TeamPage = memo(() => {
                   <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
                 </Center>
               ) : null}
-              {wantsTriage ? (
-                <>
-                  {triageState === 'error' ? (
-                    <AsyncError error={triageError} onRetry={() => revalidateTriage()} />
-                  ) : triageState === 'loading' ? (
-                    <SkeletonList aria-label={t('teams.loading')} rows={4} />
-                  ) : triageState === 'empty' ? (
-                    <Center flex={1} gap={12} padding={48}>
-                      <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
-                      <Button icon={PlusIcon} size={'small'} onClick={openTriageIssueComposer}>
-                        {t('teams.triageCreate')}
-                      </Button>
-                    </Center>
-                  ) : (
-                    <Flexbox gap={2}>
-                      {tasks.map((task) => (
-                        <TeamTriageRow
-                          destinations={destinations}
-                          key={task.id}
-                          members={teamData?.data.members ?? []}
-                          task={task}
-                          onAccept={() => void act(task, 'accept')}
-                          onDecline={() => void act(task, 'decline')}
-                          onPickDuplicate={(id) => setDuplicateTaskId(id)}
-                          onTransferred={refreshTriage}
-                          onReassign={(_id, assigneeUserId) =>
-                            void act(task, 'reassign', { assigneeUserId })
-                          }
-                        />
-                      ))}
-                    </Flexbox>
-                  )}
-                </>
+              {wantsTriage && teamId ? (
+                <TeamTriageSurface
+                  destinations={destinations}
+                  error={triageError}
+                  isLoading={isLoading}
+                  members={teamData?.data.members ?? []}
+                  tasks={tasks}
+                  teamId={teamId}
+                  onChanged={refreshTriage}
+                  onRetry={() => void revalidateTriage()}
+                />
               ) : null}
 
               {teamTab === 'projects' ? (
@@ -729,15 +466,6 @@ const TeamPage = memo(() => {
           )}
         </WorkSurfaceCollection>
       )}
-      <MarkDuplicateModal
-        open={duplicateTaskId !== null}
-        taskId={duplicateTaskId}
-        onClose={() => setDuplicateTaskId(null)}
-        onConfirm={(id, canonicalTaskId) => {
-          const task = tasks.find((row) => row.id === id);
-          if (task) void act(task, 'duplicate', { canonicalTaskId });
-        }}
-      />
     </WorkSurface>
   );
 });

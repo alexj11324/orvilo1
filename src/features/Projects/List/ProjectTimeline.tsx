@@ -3,16 +3,9 @@
 import { Icon, Tooltip } from '@lobehub/ui';
 import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
-import {
-  BoxIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleDotIcon,
-  DiamondIcon,
-  OctagonAlertIcon,
-} from 'lucide-react';
+import { BoxIcon, DiamondIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
+import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -294,33 +288,13 @@ const PROJECT_PRIORITY_KEY = {
   4: 'low',
 } as const;
 
-/** Health glyph for the list-column icon strip — same meta the table cell uses. */
-const TIMELINE_HEALTH_META: Record<ProjectHealth, { icon: typeof CircleDotIcon; key: string }> = {
-  atRisk: { icon: OctagonAlertIcon, key: 'list.health.atRisk' },
-  offTrack: { icon: CircleCheckIcon, key: 'list.health.offTrack' },
-  onTrack: { icon: CircleDotIcon, key: 'list.health.onTrack' },
-};
-
+/** Health glyph for the list-column icon strip — same dot semantics the table cell uses. */
 const TimelineHealthIcon = memo<{ health?: null | string }>(({ health }) => {
   const { t } = useTranslation('project');
-  const theme = useTheme();
-  const meta = health ? TIMELINE_HEALTH_META[health as ProjectHealth] : undefined;
-  if (!meta) {
-    return (
-      <Tooltip title={t('list.health.noUpdates')}>
-        <Icon icon={CircleDashedIcon} size={12} />
-      </Tooltip>
-    );
-  }
-  const color =
-    health === 'onTrack'
-      ? theme.colorSuccess
-      : health === 'atRisk'
-        ? theme.colorWarning
-        : theme.colorError;
+  const valid = health && health in PROJECT_HEALTH_META ? (health as ProjectHealth) : null;
   return (
-    <Tooltip title={t(meta.key)}>
-      <Icon color={color} icon={meta.icon} size={12} />
+    <Tooltip title={valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates')}>
+      <ProjectHealthIcon health={valid} size={12} />
     </Tooltip>
   );
 });

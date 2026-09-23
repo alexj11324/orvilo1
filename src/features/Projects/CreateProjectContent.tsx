@@ -61,6 +61,11 @@ export interface CreateProjectOptions {
   onCreated?: (project: ProjectListItem) => void;
   /** Workspace project labels are injected by the project taxonomy query. */
   projectLabels?: CreateProjectLabelOption[];
+  /**
+   * Team scope when the modal opens from a team surface — the header picker
+   * starts on this team so the new project lands inside it. Still editable.
+   */
+  teamId?: string;
 }
 
 export interface CreateProjectLabelOption {
@@ -308,7 +313,7 @@ const ProjectDatePrecisionTabs = memo<ProjectDatePrecisionTabsProps>(
 ProjectDatePrecisionTabs.displayName = 'ProjectDatePrecisionTabs';
 
 const CreateProjectContent = memo<CreateProjectOptions>(
-  ({ onCreated, projectLabels: suppliedLabels }) => {
+  ({ onCreated, projectLabels: suppliedLabels, teamId }) => {
     const { t } = useTranslation(['project', 'common']);
     const { close } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
@@ -335,6 +340,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       startDatePrecision: 'day',
       status: 'backlog',
       targetDatePrecision: 'day',
+      teamId,
     });
     const createInput = getCreateProjectInput(form);
     const identifierValid = isProjectIdentifierValid(form.identifier);

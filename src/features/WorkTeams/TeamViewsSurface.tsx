@@ -142,7 +142,23 @@ const TeamViewsSurface = ({
 
   const wasCreating = useRef(false);
   useEffect(() => {
-    if (creating && !wasCreating.current) setDraft(newTeamViewDraft(entityType, teamId));
+    if (creating && !wasCreating.current) {
+      setDraft(newTeamViewDraft(entityType, teamId));
+    } else if (creating) {
+      // The URL is the entity source of truth: Back/forward can flip `?entity`
+      // while `?new=1` stays set — mirror it into the draft (keeping the typed
+      // name, resetting builder state exactly like selectEntity does).
+      setDraft((current) =>
+        current.entityType === entityType
+          ? current
+          : {
+              ...current,
+              builder: { any: [], rows: [], slots: [] },
+              entityType,
+              groupBy: entityType === 'task' ? 'status' : 'none',
+            },
+      );
+    }
     wasCreating.current = creating;
   }, [creating, entityType, teamId]);
 
@@ -202,7 +218,8 @@ const TeamViewsSurface = ({
       });
       await mutate(workAttentionKeys.savedViews(workspaceId));
       navigate(`/views/${created.data.id}`);
-    } catch {
+    } catch (error) {
+      console.error('Failed to save team view', error);
       toast.error(t('savedViews.saveAsFailed'));
     } finally {
       setSaving(false);

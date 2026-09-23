@@ -3328,8 +3328,6 @@
   "workspaceSetting.notification.channels": "渠道",
   "workspaceSetting.notification.email": "邮件",
   "workspaceSetting.notification.emailDesc": "通过邮件发送的通知",
-  "workspaceSetting.notification.im": "聊天工具",
-  "workspaceSetting.notification.imDesc": "已连接聊天工具机器人的私信",
   "workspaceSetting.notification.inbox": "应用内收件箱",
   "workspaceSetting.notification.inboxDesc": "Orvilo 收件箱中的通知",
   "workspaceSetting.notification.push": "移动端推送",

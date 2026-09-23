@@ -3718,8 +3718,6 @@ export default {
   'workspaceSetting.notification.emailDesc': 'Notifications delivered by email',
   'workspaceSetting.notification.push': 'Mobile push',
   'workspaceSetting.notification.pushDesc': 'Push notifications on your devices',
-  'workspaceSetting.notification.im': 'Messengers',
-  'workspaceSetting.notification.imDesc': 'Direct messages from linked messenger bots',
 
   'workspaceSetting.tab.labels': 'Labels',
   'workspaceSetting.tab.members': 'Members',

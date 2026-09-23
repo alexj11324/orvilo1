@@ -248,3 +248,24 @@ the drop path unless dev data matters).
   → zero conflict paths; `tail` of `_journal.json` ends at idx 189 with our single tag;
   `git diff origin/canary -- packages/database/migrations/` shows exactly one added .sql +
   one added snapshot + one journal entry.
+
+## 5. Deployment notes (from final review)
+
+- **`tasks` FK lock**: 0189 revalidates `tasks_duplicate_of_task_id_tasks_id_fk`
+  (`DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT ... NOT VALID` + `VALIDATE CONSTRAINT`).
+  `ADD CONSTRAINT` takes `ShareRowExclusive` on `tasks` (brief — `NOT VALID` skips the
+  scan); `VALIDATE` takes only `RowShareLock`. On a large production `tasks` table the
+  validate scan still reads every row — run during a quiet window. This FK came from
+  pre-existing schema drift (declared in schema, never migrated on canary); dropping it
+  from 0189 would leave the drift unresolved.
+- **Stale draft journal rows**: any environment that applied the branch's draft
+  migrations `0188`–`0195` has eight orphan rows in `drizzle.__drizzle_migrations`
+  plus draft-shaped objects (e.g. `project_milestones.kind`). Local dev DB was already
+  remediated (rows deleted; objects kept — the hardened 0189 is idempotent). If
+  staging/long-lived envs applied the drafts, either drop the draft objects and replay,
+  or keep objects + delete the stale rows (SQL in Step E). Fresh environments are
+  unaffected — only the consolidated 0189 exists in the journal now.
+- **`projects.lead_user_id ON DELETE SET NULL`**: intentional — deleting a user clears
+  project lead rather than blocking the delete or cascading the project. Matches
+  Linear's "unassign on member removal" semantics. `tasks.project_milestone_id` uses
+  the same policy for milestone deletion.

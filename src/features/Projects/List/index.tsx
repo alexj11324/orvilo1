@@ -49,6 +49,9 @@ import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   actions: css`
+    position: relative;
+    z-index: 1;
+
     flex: none;
     opacity: 0;
     transition: opacity ${cssVar.motionDurationFast};
@@ -84,8 +87,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     min-width: 760px;
   `,
   link: css`
-    display: contents;
+    position: absolute;
+    inset: 0;
     color: inherit;
+    border-radius: inherit;
   `,
   leadEmpty: css`
     opacity: 0;
@@ -133,6 +138,9 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   leadTrigger: css`
     cursor: pointer;
 
+    position: relative;
+    z-index: 1;
+
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -161,6 +169,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     min-width: 0;
   `,
   row: css`
+    position: relative;
+
     min-height: 48px;
     padding-block: 7px;
     padding-inline: 12px;
@@ -428,49 +438,52 @@ const ProjectRow = memo<{ members: MembersQuery; project: ProjectListItem }>(
 
     const row = (
       <Flexbox horizontal align={'center'} className={`${styles.row} ${styles.columns}`} gap={0}>
-        <WorkspaceLink className={styles.link} to={`/project/${project.slug ?? project.id}`}>
-          <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
-            {project.avatar && project.avatar !== '📦' ? (
-              <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
-            ) : (
-              <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={16} />
-            )}
-            <Text ellipsis fontSize={13} weight={500}>
-              {project.name}
-            </Text>
-          </Flexbox>
-          <ProjectHealthCell health={project.health} />
-          <span className={styles.cell} title={t(PROJECT_PRIORITY_LABEL_KEY[priority])}>
-            <PriorityIcon
-              aria-label={t(PROJECT_PRIORITY_LABEL_KEY[priority])}
-              priority={priority}
-              role="img"
-              size={16}
-            />
-          </span>
-          <ProjectLeadCell members={members} project={project} />
-          <Text
-            className={styles.cell}
-            fontSize={12}
-            title={project.targetDate ? dayjs(project.targetDate).format('YYYY-MM-DD') : undefined}
-          >
-            {project.targetDate ? dayjs(project.targetDate).format('MMM D') : '—'}
+        <WorkspaceLink
+          aria-label={project.name}
+          className={styles.link}
+          to={`/project/${project.slug ?? project.id}`}
+        />
+        <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+          {project.avatar && project.avatar !== '📦' ? (
+            <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
+          ) : (
+            <Icon color={cssVar.colorTextTertiary} icon={BoxIcon} size={16} />
+          )}
+          <Text ellipsis fontSize={13} weight={500}>
+            {project.name}
           </Text>
-          <Text className={styles.cell} fontSize={12}>
-            {typeof project.taskCount === 'number' ? project.taskCount : '—'}
+        </Flexbox>
+        <ProjectHealthCell health={project.health} />
+        <span className={styles.cell} title={t(PROJECT_PRIORITY_LABEL_KEY[priority])}>
+          <PriorityIcon
+            aria-label={t(PROJECT_PRIORITY_LABEL_KEY[priority])}
+            priority={priority}
+            role="img"
+            size={16}
+          />
+        </span>
+        <ProjectLeadCell members={members} project={project} />
+        <Text
+          className={styles.cell}
+          fontSize={12}
+          title={project.targetDate ? dayjs(project.targetDate).format('YYYY-MM-DD') : undefined}
+        >
+          {project.targetDate ? dayjs(project.targetDate).format('MMM D') : '—'}
+        </Text>
+        <Text className={styles.cell} fontSize={12}>
+          {typeof project.taskCount === 'number' ? project.taskCount : '—'}
+        </Text>
+        <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
+          <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
+          {status === 'active' ? (
+            <ProjectActiveStatusIcon color={statusVisual.color} />
+          ) : (
+            <Icon aria-hidden color={statusVisual.color} icon={statusVisual.icon} size={14} />
+          )}
+          <Text fontSize={12}>
+            {project.progressPercent == null ? '—' : `${project.progressPercent}%`}
           </Text>
-          <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
-            <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
-            {status === 'active' ? (
-              <ProjectActiveStatusIcon color={statusVisual.color} />
-            ) : (
-              <Icon aria-hidden color={statusVisual.color} icon={statusVisual.icon} size={14} />
-            )}
-            <Text fontSize={12}>
-              {project.progressPercent == null ? '—' : `${project.progressPercent}%`}
-            </Text>
-          </Flexbox>
-        </WorkspaceLink>
+        </Flexbox>
         {canDelete && (
           <span className={`${styles.actions} project-row-actions`}>
             <DropdownMenu items={menuItems} placement={'bottomRight'}>

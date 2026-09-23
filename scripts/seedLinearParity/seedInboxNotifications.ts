@@ -35,7 +35,7 @@ const assertLocalParityDatabase = (value: string) => {
 
   const database = url.pathname.replace(/^\//, '');
   if (
-    url.protocol !== 'postgresql:' ||
+    (url.protocol !== 'postgresql:' && url.protocol !== 'postgres:') ||
     url.hostname !== LOCAL_PARITY_DATABASE.hostname ||
     url.port !== LOCAL_PARITY_DATABASE.port ||
     database !== LOCAL_PARITY_DATABASE.database

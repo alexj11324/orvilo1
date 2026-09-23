@@ -1154,6 +1154,33 @@ describe('project list indicators', () => {
       }),
     );
   });
+
+  // The row navigates through a stretched overlay link, so the lead picker and
+  // the row actions must NOT live inside that anchor — a <button> nested in an
+  // <a> is invalid HTML and leaks auxclick/middle-click navigation into the
+  // picker. Assert the DOM never nests an interactive element under the link.
+  it('keeps interactive cells out of the row link (stretched-link pattern)', () => {
+    mocks.workspaceMembers = [
+      {
+        deletedAt: null,
+        suspendedAt: null,
+        user: { avatar: 'https://img.test/lead.png', fullName: 'Agent Testing User' },
+        userId: 'user_lead',
+      },
+    ];
+    mocks.projectList = [
+      { ...detail.project, leadUserId: 'user_lead', status: 'active' } as ProjectListItem,
+    ];
+
+    const { container } = render(<ProjectListPage />);
+
+    const rowLink = container.querySelector('a[href*="/project/"]');
+    expect(rowLink).toBeInTheDocument();
+    expect(rowLink!.querySelector('button')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'properties.lead: Agent Testing User' }).closest('a'),
+    ).toBeNull();
+  });
 });
 
 // One muted tone for every section label. The candidate had grown several

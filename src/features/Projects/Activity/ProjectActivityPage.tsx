@@ -2,14 +2,19 @@
 
 import { Center, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
-import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
+import type { TaskActivityLogType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
 import {
+  Archive,
   ArrowRightLeft,
+  BadgeCheck,
   CircleDot,
-  MessageSquareText as MessageSquareTextIcon,
+  CirclePlay,
+  CirclePlus,
+  CircleX,
+  DiamondIcon,
   Timer,
   UserRoundCog,
 } from 'lucide-react';
@@ -18,9 +23,12 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { getProjectOverviewPath } from '@/features/Projects/Layout/navigation';
+import { getMilestoneAnchorId, MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useActivityTime } from '@/hooks/useActivityTime';
@@ -29,10 +37,29 @@ import { projectService } from '@/services/project';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
 import { ProjectUpdateComposer, ProjectUpdateRow, useProjectUpdates } from '../Updates';
+import {
+  type ActivityFeedItem,
+  type ActivityFeedRow,
+  deriveProjectEvents,
+  feedWindowStart,
+  mergeActivityFeed,
+  type ProjectFeedEvent,
+  type ProjectFeedEventType,
+} from './activityFeedItems';
 import { activityFeedCursor, activityFeedRows } from './activityFeedPages';
 import { ProjectCreationActivity } from './ProjectCreationActivity';
 
+/**
+ * Reference geometry (project-activity/SLICE.md, measured on Linear): compact
+ * inline rows — a 16px glyph with no circular backing, 12px/450 text, ~17px
+ * row height, 12px between glyph and text. Long-form comments render as
+ * bordered cards, not inline rows.
+ */
 const styles = createStaticStyles(({ css, cssVar }) => ({
+  avatar: css`
+    flex: none;
+    margin-block-start: 1px;
+  `,
   body: css`
     overflow-y: auto;
     flex: 1;
@@ -41,29 +68,51 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-block: 24px 32px;
     padding-inline: max(24px, calc((100% - 800px) / 2));
   `,
-  mark: css`
+  card: css`
+    margin-block: 8px;
+    padding-block: 2px;
+    padding-inline: 12px;
+    border: 0.5px solid ${cssVar.colorBorder};
+    border-radius: 10px;
+
+    background: ${cssVar.colorBgContainer};
+  `,
+  empty: css`
+    padding-block: 24px;
+    font-size: 12px;
+    color: ${cssVar.colorTextTertiary};
+    text-align: center;
+  `,
+  glyph: css`
     display: flex;
     flex: none;
     align-items: center;
     justify-content: center;
 
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
+    width: 16px;
+    height: 17px;
 
     color: ${cssVar.colorTextTertiary};
+  `,
+  link: css`
+    font-weight: 500;
+    color: ${cssVar.colorText};
+    overflow-wrap: anywhere;
 
-    background: ${cssVar.colorFillQuaternary};
+    &:hover {
+      text-decoration: underline;
+    }
   `,
   row: css`
     display: flex;
-    gap: 8px;
-    align-items: center;
-    padding-block: 8px;
+    gap: 12px;
+    align-items: flex-start;
+    padding-block: 3px;
   `,
   sentence: css`
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 12px;
+    font-weight: 450;
+    line-height: 17px;
     color: ${cssVar.colorTextSecondary};
 
     strong {
@@ -72,7 +121,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
   `,
   taskRef: css`
-    font-size: 12px;
     color: ${cssVar.colorTextTertiary};
     overflow-wrap: anywhere;
 
@@ -83,9 +131,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   time: css`
     flex: none;
-    font-size: 12px;
-    line-height: 20px;
     color: ${cssVar.colorTextTertiary};
+    white-space: nowrap;
   `,
 }));
 
@@ -121,25 +168,15 @@ const TYPE_ICON: Record<TaskActivityLogType, typeof ArrowRightLeft> = {
   status: CircleDot,
 };
 
-type FeedRow = {
-  actor?: { avatar?: string | null; name?: string | null; type: 'agent' | 'user' } | null;
-  createdAt: string;
-  fromTarget?: { name?: string | null } | null;
-  id: string;
-  payload?: {
-    actorKind?: 'agent' | 'system' | 'user';
-    from?: unknown;
-    fromId?: string | null;
-    to?: unknown;
-    toId?: string | null;
-  } | null;
-  target?: { avatar?: string | null; name?: string | null } | null;
-  taskIdentifier: string;
-  taskTitle: string;
-  type: TaskActivityLogType;
+const EVENT_ICON: Record<ProjectFeedEventType, typeof Archive> = {
+  milestone_added: DiamondIcon,
+  project_archived: Archive,
+  project_completed: BadgeCheck,
+  project_started: CirclePlay,
+  review_accepted: BadgeCheck,
+  review_rejected: CircleX,
+  task_created: CirclePlus,
 };
-
-type RowItem = { kind: 'activity'; row: FeedRow } | { kind: 'update'; update: ProjectUpdate };
 
 const RelTime = memo<{ time: string }>(({ time }) => {
   const { text, title } = useActivityTime(time);
@@ -150,7 +187,7 @@ const RelTime = memo<{ time: string }>(({ time }) => {
   );
 });
 
-const RowSentence = ({ row }: { row: FeedRow }) => {
+const RowSentence = ({ row }: { row: ActivityFeedRow }) => {
   const { t } = useTranslation('chat');
   const actor = (
     <strong>{row.actor?.name || t('taskDetail.activities.assignment.systemActor')}</strong>
@@ -266,13 +303,21 @@ const RowSentence = ({ row }: { row: FeedRow }) => {
   }
 };
 
-const ActivityRowItem = memo<{ row: FeedRow }>(({ row }) => {
+const ActivityRowItem = memo<{ row: ActivityFeedRow }>(({ row }) => {
   const RowIcon = TYPE_ICON[row.type] ?? ArrowRightLeft;
   return (
     <div className={styles.row}>
-      <span className={styles.mark}>
-        <Icon icon={RowIcon} size={13} />
+      <span className={styles.glyph}>
+        <Icon icon={RowIcon} size={16} />
       </span>
+      {row.actor ? (
+        <Avatar
+          avatar={row.actor.avatar ?? undefined}
+          className={styles.avatar}
+          name={row.actor.name ?? undefined}
+          size={16}
+        />
+      ) : null}
       <div className={styles.sentence}>
         <RowSentence row={row} />{' '}
         <WorkspaceLink
@@ -290,8 +335,121 @@ const ActivityRowItem = memo<{ row: FeedRow }>(({ row }) => {
 
 ActivityRowItem.displayName = 'ActivityRowItem';
 
-const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] }) => {
+const EventSentence = ({ event, projectRef }: { event: ProjectFeedEvent; projectRef: string }) => {
+  const actor = event.actorName ? <strong>{event.actorName}</strong> : null;
+  switch (event.type) {
+    case 'milestone_added': {
+      const name = <strong>{event.milestoneName ?? '—'}</strong>;
+      const link = event.milestoneId ? (
+        <WorkspaceLink
+          className={styles.link}
+          to={`${getProjectOverviewPath(projectRef)}#${getMilestoneAnchorId(event.milestoneId)}`}
+        >
+          {event.milestoneName ?? '—'}
+        </WorkspaceLink>
+      ) : (
+        name
+      );
+      return (
+        <Trans
+          components={{ name: link }}
+          i18nKey={'activity.event.milestoneAdded'}
+          ns={'project'}
+        />
+      );
+    }
+    case 'task_created': {
+      const task = event.taskIdentifier ? (
+        <WorkspaceLink
+          className={styles.link}
+          to={taskDetailPath(event.taskIdentifier, undefined, event.taskTitle)}
+        >
+          {event.taskIdentifier}
+          {event.taskTitle ? ` · ${event.taskTitle}` : ''}
+        </WorkspaceLink>
+      ) : (
+        <strong>{event.taskTitle ?? '—'}</strong>
+      );
+      return actor ? (
+        <Trans components={{ actor, task }} i18nKey={'activity.event.taskAdded'} ns={'project'} />
+      ) : (
+        <Trans components={{ task }} i18nKey={'activity.event.taskAddedUnknown'} ns={'project'} />
+      );
+    }
+    case 'review_accepted':
+    case 'review_rejected': {
+      const key =
+        event.type === 'review_accepted'
+          ? actor
+            ? 'activity.event.reviewAccepted'
+            : 'activity.event.reviewAcceptedUnknown'
+          : actor
+            ? 'activity.event.reviewRejected'
+            : 'activity.event.reviewRejectedUnknown';
+      return <Trans components={{ actor: actor ?? <span /> }} i18nKey={key} ns={'project'} />;
+    }
+    default: {
+      // project_started | project_completed | project_archived — plain
+      // lifecycle sentences with no actor claim (none is recorded).
+      const key = {
+        project_archived: 'activity.event.archived',
+        project_completed: 'activity.event.completed',
+        project_started: 'activity.event.started',
+      }[event.type];
+      return <Trans i18nKey={key} ns={'project'} />;
+    }
+  }
+};
+
+const EventRowItem = memo<{ event: ProjectFeedEvent; projectRef: string }>(
+  ({ event, projectRef }) => {
+    const EventIcon = EVENT_ICON[event.type];
+    return (
+      <div className={styles.row}>
+        <span className={styles.glyph}>
+          {event.type === 'milestone_added' ? (
+            <Icon {...MILESTONE_ICON_PAINT} icon={EventIcon} size={16} />
+          ) : (
+            <Icon icon={EventIcon} size={16} />
+          )}
+        </span>
+        {event.actorName || event.actorAvatar ? (
+          <Avatar
+            avatar={event.actorAvatar}
+            className={styles.avatar}
+            name={event.actorName}
+            size={16}
+          />
+        ) : null}
+        <div className={styles.sentence}>
+          <EventSentence event={event} projectRef={projectRef} />
+          {' · '}
+          <RelTime time={event.createdAt} />
+        </div>
+      </div>
+    );
+  },
+);
+
+EventRowItem.displayName = 'EventRowItem';
+
+const FeedItem = ({ item, projectRef }: { item: ActivityFeedItem; projectRef: string }) => {
+  if (item.kind === 'update')
+    return (
+      <div className={styles.card}>
+        <ProjectUpdateRow update={item.update} />
+      </div>
+    );
+  if (item.kind === 'event') return <EventRowItem event={item.event} projectRef={projectRef} />;
+  return <ActivityRowItem row={item.row} />;
+};
+
+const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
+  const project = detail.project;
   const projectId = project.id;
+  // Routes address the project by slug when it has one — the same reference
+  // the tabs and side panel build links with.
+  const projectRef = project.slug ?? projectId;
   const { state } = useLocation();
   const defaultMode = isRecord(state) && state.projectUpdate === true ? 'update' : 'comment';
   const { t } = useTranslation('project');
@@ -303,7 +461,7 @@ const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] })
 
   // Older pages append below the first SWR page; keyset cursor keeps the
   // feed stable while new rows land at the top.
-  const [tail, setTail] = useState<FeedRow[]>([]);
+  const [tail, setTail] = useState<ActivityFeedRow[]>([]);
   const [tailCursor, setTailCursor] = useState<string | null | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<Error | undefined>();
@@ -320,7 +478,7 @@ const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] })
     setMoreError(undefined);
     try {
       const next = await projectService.activityFeed(projectId, 50, nextCursor);
-      const items = (next.data?.items ?? []) as FeedRow[];
+      const items = (next.data?.items ?? []) as ActivityFeedRow[];
       setTail((current) => {
         const seen = new Set(current.map((row) => row.id));
         return [...current, ...items.filter((row) => !seen.has(row.id))];
@@ -333,18 +491,19 @@ const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] })
     }
   }, [loadingMore, nextCursor, projectId]);
 
-  const rows = activityFeedRows((data?.data.items ?? []) as FeedRow[], tail);
-  const merged = useMemo<RowItem[]>(
+  const rows = activityFeedRows((data?.data.items ?? []) as ActivityFeedRow[], tail);
+  // Project-level events derive from the detail payload — a bounded set that
+  // joins the stream only inside the window the paginated feed has loaded.
+  const events = useMemo(() => deriveProjectEvents(detail), [detail]);
+  const merged = useMemo(
     () =>
-      [
-        ...rows.map((row) => ({ kind: 'activity' as const, row })),
-        ...(updatesSWR.data ?? []).map((update) => ({ kind: 'update' as const, update })),
-      ].sort((a, b) => {
-        const at = a.kind === 'activity' ? a.row.createdAt : a.update.createdAt;
-        const bt = b.kind === 'activity' ? b.row.createdAt : b.update.createdAt;
-        return bt.localeCompare(at);
+      mergeActivityFeed({
+        events,
+        rows,
+        updates: updatesSWR.data ?? [],
+        windowStart: feedWindowStart(rows, nextCursor),
       }),
-    [rows, updatesSWR.data],
+    [events, rows, updatesSWR.data, nextCursor],
   );
 
   if (isLoading && !data) return <SkeletonList padding={12} rows={8} />;
@@ -367,20 +526,22 @@ const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] })
     <div className={styles.body}>
       {composer}
       {error ? <AsyncError error={error} variant={'inline'} onRetry={() => void mutate()} /> : null}
-      {merged.map((item) =>
-        item.kind === 'update' ? (
-          <div className={styles.row} key={`update-${item.update.id}`}>
-            <span className={styles.mark}>
-              <Icon icon={MessageSquareTextIcon} size={13} />
-            </span>
-            <div className={styles.sentence}>
-              <ProjectUpdateRow update={item.update} />
-            </div>
-          </div>
-        ) : (
-          <ActivityRowItem key={item.row.id} row={item.row} />
-        ),
-      )}
+      {merged.length === 0 && !updatesSWR.isLoading ? (
+        <div className={styles.empty}>{t('activity.empty')}</div>
+      ) : null}
+      {merged.map((item) => (
+        <FeedItem
+          item={item}
+          projectRef={projectRef}
+          key={
+            item.kind === 'activity'
+              ? item.row.id
+              : item.kind === 'update'
+                ? `update-${item.update.id}`
+                : `event-${item.event.id}`
+          }
+        />
+      ))}
       {moreError ? (
         <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />
       ) : null}
@@ -391,11 +552,7 @@ const ProjectActivityFeed = ({ project }: { project: ProjectDetail['project'] })
           </Button>
         </Center>
       ) : null}
-      {!nextCursor && (
-        <div className={styles.row}>
-          <ProjectCreationActivity project={project} />
-        </div>
-      )}
+      {!nextCursor && <ProjectCreationActivity project={project} />}
     </div>
   );
 };
@@ -411,7 +568,7 @@ const ProjectActivityPage = () => {
     return <AsyncError error={error} variant={'page'} onRetry={() => void mutate()} />;
   if (!data) return null;
 
-  return <ProjectActivityFeed key={data.data.project.id} project={data.data.project} />;
+  return <ProjectActivityFeed detail={data.data} key={data.data.project.id} />;
 };
 
 export default ProjectActivityPage;

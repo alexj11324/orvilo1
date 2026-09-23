@@ -1,4 +1,9 @@
-import type { ChatTopicStatus, ProjectStatus, TaskStatus } from '@orvilo/types';
+import type {
+  ChatTopicStatus,
+  ProjectStatus,
+  TaskStatus,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { PROJECT_STATUSES } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
@@ -6,11 +11,14 @@ import {
   Archive,
   Circle,
   CircleCheck,
+  CircleDashed,
   CircleDot,
   CirclePause,
   CircleX,
   Clock,
+  Contrast,
   HandIcon,
+  Inbox,
   PauseCircle,
   StarIcon,
   TriangleAlert,
@@ -59,6 +67,27 @@ const TASK_STATUS_SET = new Set<string>(Object.keys(TASK_STATUS_VISUALS));
 /** Normalize untrusted persisted/API values before rendering a task status. */
 export const resolveTaskStatus = (status: null | string | undefined): TaskStatus =>
   status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
+
+/**
+ * One glyph + color per Linear workflow category — the business-state axis a
+ * task's `workflowCategory` carries, kept deliberately distinct from the
+ * execution axis above (a card can be `status: 'backlog'` while its business
+ * state is `todo`). Marks follow Linear's own grammar: triage is the inbox
+ * tray, backlog the dashed ring, todo the empty ring, in_progress the
+ * half-filled ring (`Contrast` is lucide's half-filled circle), in_review the
+ * violet pending-review clock, done the check ring, canceled the X ring.
+ * `TaskWorkflowBadge`, the `wf:` kanban columns and workflow-category group
+ * headers all read this map, so the same category never draws two marks.
+ */
+export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, ExecutionStatusVisual> = {
+  backlog: { color: cssVar.colorTextQuaternary, icon: CircleDashed },
+  canceled: { color: cssVar.orange, icon: CircleX },
+  done: VISUALS.completed,
+  in_progress: { color: cssVar.colorWarning, icon: Contrast },
+  in_review: TASK_STATUS_VISUALS.paused,
+  todo: { color: cssVar.blue, icon: Circle },
+  triage: { color: cssVar.orange, icon: Inbox },
+};
 
 export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual> = {
   active: VISUALS.running,

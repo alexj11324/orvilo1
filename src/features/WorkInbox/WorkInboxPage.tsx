@@ -20,20 +20,13 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import {
   ArchiveIcon,
-  ArrowLeftRightIcon,
   ArrowUpRightIcon,
-  AtSignIcon,
-  BellIcon,
   CheckIcon,
   ChevronLeftIcon,
-  CircleUserRoundIcon,
   ExternalLinkIcon,
   EyeIcon,
-  GitPullRequestIcon,
   InboxIcon,
-  KeyRoundIcon,
   ListFilterIcon,
-  type LucideIcon,
   MailOpenIcon,
   MoreHorizontalIcon,
   SlidersHorizontalIcon,
@@ -112,6 +105,7 @@ import {
   resolveInboxPriority,
 } from './inboxPriority';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
+import { inboxCardIcon } from './notificationIcons';
 import { INBOX_LIST_HOTKEY_OPTIONS, useInboxListKeyboard } from './useInboxListKeyboard';
 
 // The shared task body — mounted inside the split detail pane, lazily so the
@@ -266,21 +260,6 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorBgLayout};
   `,
 }));
-
-/* Notification-type glyph is the fallback for system events — human and
-   agent senders render their snapshotted avatar instead (feed card actor). */
-const INBOX_TYPE_ICON: Record<string, LucideIcon> = {
-  acp_permission: KeyRoundIcon,
-  mention: AtSignIcon,
-  resource_transfer: ArrowLeftRightIcon,
-  task_assigned: CircleUserRoundIcon,
-  workspace_ownership_transfer: ArrowLeftRightIcon,
-};
-
-const inboxCardIcon = (card: NotificationFeedCard): LucideIcon => {
-  if (card.type.includes('review')) return GitPullRequestIcon;
-  return INBOX_TYPE_ICON[card.type] ?? BellIcon;
-};
 
 const WorkInboxPage = memo(() => {
   const { t } = useTranslation('notification');

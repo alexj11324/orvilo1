@@ -1,13 +1,13 @@
 /** @vitest-environment happy-dom */
 import { Icon } from '@lobehub/ui';
-import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
-import { CircleDashed, CircleDot, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 
 import TaskWorkflowBadge from './TaskWorkflowBadge';
 
@@ -39,11 +39,6 @@ const badgeShape = (category: TaskWorkflowCategory) => {
       workflowStateId={'workflow-state'}
     />,
   );
-  return glyphShape(container);
-};
-
-const executionStatusShape = (status: TaskStatus) => {
-  const { container } = render(<TaskStatusIcon status={status} />);
   return glyphShape(container);
 };
 
@@ -85,32 +80,21 @@ describe('TaskWorkflowBadge', () => {
   });
 
   /**
-   * The defect these pin: this badge used to draw a private glyph per category,
-   * reading the wrong convention. `Loader2` + `colorInfo` is this repo's
-   * *run-in-progress* visual (`RunIntegrationTag`'s `merging`, `RunVerifyTag`'s
-   * `running`), so a task in `in_progress` showed a blue spinner on its card
-   * while the column header above it drew the canonical amber circle dot for
-   * the same task — the same failure shape as the project-status maps that
-   * disagreed on seven of eight statuses.
-   *
-   * The assertion is *equality between the two rendered surfaces*, never a
-   * glyph name: either side moving turns this red without the test having to
-   * know which one is right.
+   * The canonical contract: the badge draws `WORKFLOW_CATEGORY_VISUALS` — the
+   * same map the `wf:` kanban columns and workflow-category group headers
+   * read — so a card can never disagree with the column above it. The
+   * assertion is *equality between the rendered badge and the canonical map
+   * entry*, never a glyph name: moving the map turns this red without the
+   * test having to know which glyph is right.
    */
-  describe('draws the same glyph as the execution-status surfaces', () => {
-    it.each([
-      ['in_progress', 'running'],
-      ['backlog', 'backlog'],
-      ['done', 'completed'],
-      ['canceled', 'canceled'],
-      ['in_review', 'paused'],
-    ] as const)('%s === %s', (category, status) => {
-      // Both sides asserted non-null first: an equality test between two
-      // `null`s passes, so without this the whole block could go green while
-      // rendering nothing.
+  describe('draws the canonical workflow-category glyph', () => {
+    it.each(ALL_CATEGORIES)('%s renders WORKFLOW_CATEGORY_VISUALS', (category) => {
+      const visual = WORKFLOW_CATEGORY_VISUALS[category];
+
+      // Non-null asserted first: an equality test between two `null`s passes,
+      // so without this the whole block could go green while rendering nothing.
       expect(badgeShape(category)).not.toBeNull();
-      expect(executionStatusShape(status)).not.toBeNull();
-      expect(badgeShape(category)).toBe(executionStatusShape(status));
+      expect(badgeShape(category)).toBe(referenceShape(visual.icon, visual.color));
     });
 
     /**
@@ -124,31 +108,6 @@ describe('TaskWorkflowBadge', () => {
 
       expect(loader).not.toBeNull();
       expect(badgeShape('in_progress')).not.toBe(loader);
-    });
-  });
-
-  describe('categories with no canonical counterpart', () => {
-    /**
-     * `todo` and `triage` have none, so these are deliberate **pins**, not
-     * parity checks: they state the two glyphs that are still this file's own,
-     * so changing one has to be a conscious edit. `todo` additionally diverges
-     * from Cordy, which tints it `sky-500` — a literal palette step with no
-     * semantic token here.
-     *
-     * If a ruling later gives either a home in the canonical map, replace its
-     * pin with an equality assertion against that entry.
-     */
-    it('todo is pinned, and recorded as a divergence from Cordy', () => {
-      expect(badgeShape('todo')).toBe(referenceShape(CircleDot, cssVar.colorTextSecondary));
-    });
-
-    it('triage is pinned', () => {
-      expect(badgeShape('triage')).toBe(referenceShape(CircleDashed, cssVar.colorTextTertiary));
-    });
-
-    /** Every category draws something; a silent null is the failure mode above. */
-    it.each(ALL_CATEGORIES)('%s renders a glyph', (category) => {
-      expect(badgeShape(category)).not.toBeNull();
     });
   });
 });

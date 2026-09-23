@@ -4,6 +4,7 @@ import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Checkbox, Text } from '@lobehub/ui/base-ui';
 import type {
   TaskStatus,
+  TaskWorkflowCategory,
   WorkQueryExternalReview,
   WorkQueryGroupBy,
   WorkQueryLayout,
@@ -23,6 +24,7 @@ import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
 import {
   COLUMN_I18N_KEYS,
@@ -514,7 +516,16 @@ const WorkQueryStatusGroup = memo<{
   }) => {
     const { t } = useTranslation('chat');
     const [collapsed, setCollapsed] = useState(false);
-    const visual = COLUMN_STATUS_VISUAL[columnKey];
+    // Group keys are raw dimension members: a `backlog`/`canceled` header in a
+    // workflow-grouped list is a business category (workflow map), while the
+    // same key in a status-grouped list is a run state (`st:` execution
+    // visual). Attention buckets (`urgent`/`blocking`) have no `st:` entry and
+    // fall through to their flat key.
+    const visual =
+      groupBy === 'workflowCategory'
+        ? (WORKFLOW_CATEGORY_VISUALS[columnKey as TaskWorkflowCategory] ??
+          COLUMN_STATUS_VISUAL[columnKey])
+        : (COLUMN_STATUS_VISUAL[`st:${columnKey}`] ?? COLUMN_STATUS_VISUAL[columnKey]);
     const labelKey = COLUMN_I18N_KEYS[columnKey];
     const hierarchyRows = nested
       ? workQueryHierarchyRows(tasks, allTasks)

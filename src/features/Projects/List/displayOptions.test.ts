@@ -47,8 +47,23 @@ describe('normalizeProjectListDisplayOptions', () => {
     expect(options.showClosed).toBe('all');
   });
 
-  it('drops the timeline layout until the surface lands (T6)', () => {
-    expect(normalizeProjectListDisplayOptions({ layout: 'timeline' }).layout).toBe('list');
+  it('persists the timeline layout once the surface exists (T6)', () => {
+    expect(normalizeProjectListDisplayOptions({ layout: 'timeline' }).layout).toBe('timeline');
+  });
+
+  it('defaults timeline toggles to the reference values and honors persisted ones', () => {
+    const defaults = normalizeProjectListDisplayOptions({ layout: 'timeline' });
+    expect(defaults.timeline).toEqual({ showProjectList: true, showWeekNumbers: false });
+    const custom = normalizeProjectListDisplayOptions({
+      timeline: { showProjectList: false, showWeekNumbers: true },
+    });
+    expect(custom.timeline).toEqual({ showProjectList: false, showWeekNumbers: true });
+    // Older snapshots predate the field — partial/junk values fall back per key.
+    const partial = normalizeProjectListDisplayOptions({
+      timeline: { showWeekNumbers: 'yes' as never },
+    });
+    expect(partial.timeline.showWeekNumbers).toBe(false);
+    expect(partial.timeline.showProjectList).toBe(true);
   });
 
   it('forces properties with no list-payload data off — never a dead toggle state', () => {
@@ -307,6 +322,12 @@ describe('i18n coverage', () => {
       'list.display.options',
       'list.display.soon',
       'list.display.timelineSoon',
+      'list.display.timelineOptions',
+      'list.display.showProjectList',
+      'list.display.showWeekNumbers',
+      'list.timeline.today',
+      'list.timeline.yearJump',
+      'list.timeline.setDates',
       'list.display.grouping',
       'list.display.groupingBoardHint',
       'list.display.ordering',

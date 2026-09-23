@@ -103,14 +103,34 @@ const DATA_BACKED_SET: ReadonlySet<string> = new Set(DATA_BACKED_PROJECT_LIST_PR
 export const isDataBackedProjectListProperty = (property: ProjectListProperty) =>
   DATA_BACKED_SET.has(property);
 
+/**
+ * The reference's Timeline-state property subset (NEW-FINDINGS §3): ID,
+ * Milestones, Priority, Status, Health, Lead, Members, Dependencies,
+ * Predictions. `predictions` has no backend data at all (no forecast fields
+ * on the project model), so it is omitted rather than faked — noted in the
+ * task report. The rest keep the same data-backed/disabled split as list mode.
+ */
+export const TIMELINE_PROJECT_LIST_PROPERTIES = [
+  'id',
+  'milestones',
+  'priority',
+  'status',
+  'health',
+  'lead',
+  'members',
+  'dependencies',
+] as const satisfies readonly ProjectListProperty[];
+
 export interface ProjectListDisplayOptions {
   grouping: ProjectListGrouping;
-  layout: Exclude<ProjectListLayout, 'timeline'>;
+  layout: ProjectListLayout;
   orderBy: ProjectListOrdering;
   orderDirection: 'asc' | 'desc';
   /** Per-property visibility; unsupported properties normalize to false. */
   properties: Record<ProjectListProperty, boolean>;
   showClosed: ProjectListClosedWindow;
+  /** Timeline-layout toggles (reference: Show project list on / Show week numbers off). */
+  timeline: { showProjectList: boolean; showWeekNumbers: boolean };
 }
 
 /**
@@ -142,18 +162,20 @@ export const DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS: ProjectListDisplayOptions = {
     updated: false,
   },
   showClosed: 'all',
+  timeline: { showProjectList: true, showWeekNumbers: false },
 };
 
 const toSet = (values: readonly string[]) => new Set<string>(values);
 const GROUPING_SET = toSet(PROJECT_LIST_GROUPINGS);
+const LAYOUT_SET = toSet(PROJECT_LIST_LAYOUTS);
 const ORDERING_SET = toSet(PROJECT_LIST_ORDERINGS);
 const CLOSED_WINDOW_SET = toSet(PROJECT_LIST_CLOSED_WINDOWS);
 
 /**
  * Persisted status is untrusted (localStorage is hand-editable and older
  * builds wrote a different shape). Coerce every field; unknown or absent
- * values fall back to the defaults. `timeline` persists as a layout choice
- * but falls back to `list` until the timeline surface lands (T6).
+ * values fall back to the defaults — including the timeline toggles, which
+ * older persisted snapshots predate.
  */
 export const normalizeProjectListDisplayOptions = (
   raw?: {
@@ -163,6 +185,7 @@ export const normalizeProjectListDisplayOptions = (
     orderDirection?: string;
     properties?: Record<string, boolean>;
     showClosed?: string;
+    timeline?: { showProjectList?: boolean; showWeekNumbers?: boolean };
   } | null,
 ): ProjectListDisplayOptions => {
   const defaults = DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS;
@@ -181,7 +204,10 @@ export const normalizeProjectListDisplayOptions = (
       raw.grouping && GROUPING_SET.has(raw.grouping)
         ? (raw.grouping as ProjectListGrouping)
         : defaults.grouping,
-    layout: raw.layout === 'list' || raw.layout === 'board' ? raw.layout : defaults.layout,
+    layout:
+      raw.layout && LAYOUT_SET.has(raw.layout)
+        ? (raw.layout as ProjectListLayout)
+        : defaults.layout,
     orderBy:
       raw.orderBy && ORDERING_SET.has(raw.orderBy)
         ? (raw.orderBy as ProjectListOrdering)
@@ -192,6 +218,16 @@ export const normalizeProjectListDisplayOptions = (
       raw.showClosed && CLOSED_WINDOW_SET.has(raw.showClosed)
         ? (raw.showClosed as ProjectListClosedWindow)
         : defaults.showClosed,
+    timeline: {
+      showProjectList:
+        typeof raw.timeline?.showProjectList === 'boolean'
+          ? raw.timeline.showProjectList
+          : defaults.timeline.showProjectList,
+      showWeekNumbers:
+        typeof raw.timeline?.showWeekNumbers === 'boolean'
+          ? raw.timeline.showWeekNumbers
+          : defaults.timeline.showWeekNumbers,
+    },
   };
 };
 

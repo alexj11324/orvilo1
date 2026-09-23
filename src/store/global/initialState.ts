@@ -294,10 +294,9 @@ export interface SystemStatus {
   /**
    * Display options of the `/projects` list page (Linear's "Display options"
    * panel: layout / grouping / ordering / closed-projects window / property
-   * visibility). Personal-scope persistence — the reference's "Set default for
-   * everyone" is a workspace write and stays disabled until a workspace
-   * settings path exists. `timeline` is a valid reference layout but falls
-   * back to `list` until the timeline surface lands.
+   * visibility / timeline toggles). Personal-scope persistence — the
+   * reference's "Set default for everyone" is a workspace write and stays
+   * disabled until a workspace settings path exists.
    */
   projectListViewOptions?: {
     grouping?: 'lead' | 'none' | 'status';
@@ -314,6 +313,7 @@ export interface SystemStatus {
     orderDirection?: 'asc' | 'desc';
     properties?: Record<string, boolean>;
     showClosed?: 'all' | 'none' | 'pastMonth' | 'pastWeek' | 'pastYear';
+    timeline?: { showProjectList?: boolean; showWeekNumbers?: boolean };
   };
   readNotificationSlugs?: string[];
   /**
@@ -638,6 +638,7 @@ export const INITIAL_STATUS = {
       updated: false,
     },
     showClosed: 'all' as const,
+    timeline: { showProjectList: true, showWeekNumbers: false },
   },
   readNotificationSlugs: [],
   resourceManagerColumnWidths: DEFAULT_RESOURCE_MANAGER_COLUMN_WIDTHS,

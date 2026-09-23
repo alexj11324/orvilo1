@@ -1,7 +1,15 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, Popover, Segmented, Select, Tooltip } from '@lobehub/ui/base-ui';
+import {
+  ActionIcon,
+  Button,
+  Popover,
+  Segmented,
+  Select,
+  Switch,
+  Tooltip,
+} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   ArrowDownWideNarrowIcon,
@@ -24,6 +32,7 @@ import {
   PROJECT_LIST_PROPERTIES,
   type ProjectListClosedWindow,
   type ProjectListDisplayOptions,
+  TIMELINE_PROJECT_LIST_PROPERTIES,
 } from './displayOptions';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -105,18 +114,19 @@ export interface DisplayOptionsPopoverProps {
 /**
  * The Linear projects Display options panel (ref-projects-display-options.png,
  * NEW-FINDINGS §3): a 3-way layout segmented control, Grouping / Ordering /
- * Show closed projects selects, the 17 Display-property chips, and a
- * Reset / Set default footer.
+ * Show closed projects selects, the Display-property chips, and a
+ * Reset / Set default footer. Timeline layout swaps in the reference's
+ * Timeline options (Show project list / Show week numbers) and its smaller
+ * Display-properties subset.
  *
- * Two honest degradations, both documented in the task report:
- * - Timeline is rendered disabled (marked "soon") — the timeline surface is
- *   a separate task (T6).
- * - "Set default for everyone" stays disabled — it writes a workspace-scope
- *   default on the reference, and this app has no workspace-settings write
- *   path for display options (options persist per user via SystemStatus).
+ * One honest degradation, documented in the task report: "Set default for
+ * everyone" stays disabled — it writes a workspace-scope default on the
+ * reference, and this app has no workspace-settings write path for display
+ * options (options persist per user via SystemStatus).
  */
 const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onReset, options }) => {
   const { t } = useTranslation('project');
+  const timelineLayout = options.layout === 'timeline';
 
   return (
     <Popover
@@ -140,17 +150,38 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                 value: 'board',
               },
               {
-                disabled: true,
                 icon: <Icon icon={ChartGanttIcon} size={14} />,
-                label: `${t('list.display.layout.timeline')} · ${t('list.display.soon')}`,
-                title: t('list.display.timelineSoon'),
+                label: t('list.display.layout.timeline'),
                 value: 'timeline',
               },
             ]}
             onChange={(value) => {
-              if (value === 'list' || value === 'board') onChange({ layout: value });
+              if (value === 'list' || value === 'board' || value === 'timeline')
+                onChange({ layout: value });
             }}
           />
+          {timelineLayout ? (
+            <Flexbox gap={4}>
+              <span className={styles.sectionTitle}>{t('list.display.timelineOptions')}</span>
+              {(
+                [
+                  ['showProjectList', t('list.display.showProjectList')],
+                  ['showWeekNumbers', t('list.display.showWeekNumbers')],
+                ] as const
+              ).map(([key, label]) => (
+                <Flexbox horizontal align="center" justify="space-between" key={key}>
+                  <span className={styles.subTitle}>{label}</span>
+                  <Switch
+                    checked={options.timeline[key]}
+                    size="small"
+                    onChange={(checked) =>
+                      onChange({ timeline: { ...options.timeline, [key]: checked } })
+                    }
+                  />
+                </Flexbox>
+              ))}
+            </Flexbox>
+          ) : null}
           <OptionRow label={t('list.display.grouping')}>
             {/* The board surface is a fixed status kanban; grouping applies
                   to the list layout only, so the control goes inert there. */}
@@ -227,42 +258,48 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
             />
           </OptionRow>
           <Flexbox gap={4}>
-            <span className={styles.sectionTitle}>{t('list.display.listOptions')}</span>
-            <span className={styles.subTitle}>{t('list.display.properties')}</span>
+            <span className={styles.sectionTitle}>
+              {timelineLayout ? t('list.display.properties') : t('list.display.listOptions')}
+            </span>
+            {timelineLayout ? null : (
+              <span className={styles.subTitle}>{t('list.display.properties')}</span>
+            )}
           </Flexbox>
           <Flexbox horizontal gap={6} wrap="wrap">
-            {PROJECT_LIST_PROPERTIES.map((property) => {
-              const supported = isDataBackedProjectListProperty(property);
-              const active = supported && options.properties[property];
-              const chip = (
-                <button
-                  aria-pressed={active}
-                  disabled={!supported}
-                  key={property}
-                  type="button"
-                  className={cx(
-                    styles.chip,
-                    active && styles.chipActive,
-                    !supported && styles.chipDisabled,
-                  )}
-                  onClick={() =>
-                    onChange({
-                      properties: { ...options.properties, [property]: !active },
-                    })
-                  }
-                >
-                  {t(`list.display.property.${property}`)}
-                </button>
-              );
-              return supported ? (
-                chip
-              ) : (
-                <Tooltip key={property} title={t('list.display.propertyUnavailable')}>
-                  {/* Tooltip needs a mouse-event-capable child — disabled buttons swallow them. */}
-                  <span style={{ display: 'inline-flex' }}>{chip}</span>
-                </Tooltip>
-              );
-            })}
+            {(timelineLayout ? TIMELINE_PROJECT_LIST_PROPERTIES : PROJECT_LIST_PROPERTIES).map(
+              (property) => {
+                const supported = isDataBackedProjectListProperty(property);
+                const active = supported && options.properties[property];
+                const chip = (
+                  <button
+                    aria-pressed={active}
+                    disabled={!supported}
+                    key={property}
+                    type="button"
+                    className={cx(
+                      styles.chip,
+                      active && styles.chipActive,
+                      !supported && styles.chipDisabled,
+                    )}
+                    onClick={() =>
+                      onChange({
+                        properties: { ...options.properties, [property]: !active },
+                      })
+                    }
+                  >
+                    {t(`list.display.property.${property}`)}
+                  </button>
+                );
+                return supported ? (
+                  chip
+                ) : (
+                  <Tooltip key={property} title={t('list.display.propertyUnavailable')}>
+                    {/* Tooltip needs a mouse-event-capable child — disabled buttons swallow them. */}
+                    <span style={{ display: 'inline-flex' }}>{chip}</span>
+                  </Tooltip>
+                );
+              },
+            )}
           </Flexbox>
           <Flexbox horizontal align="center" justify="space-between">
             <Button size="small" type="text" onClick={onReset}>

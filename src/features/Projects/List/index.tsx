@@ -31,6 +31,7 @@ import {
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
@@ -42,6 +43,7 @@ import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { NoLeadIcon } from '@/features/Projects/List/NoLeadIcon';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -52,6 +54,7 @@ import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
 
+import AddFilterPopover from './AddFilterPopover';
 import {
   DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS,
   filterClosedProjects,
@@ -66,8 +69,17 @@ import {
   visibleProjectListColumns,
 } from './displayOptions';
 import DisplayOptionsPopover from './DisplayOptionsPopover';
+import ProjectListFilterChips from './FilterChips';
+import {
+  filterProjectList,
+  type ProjectListFilter,
+  readProjectListFilters,
+  removeProjectListFilter,
+  writeProjectListFilters,
+} from './listFilters';
 import ProjectMilestoneChip from './MilestoneChip';
 import ProjectBoard from './ProjectBoard';
+import ProjectTimeline from './ProjectTimeline';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   actions: css`
@@ -289,7 +301,14 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-const PROJECT_HEALTH_META = {
+/**
+ * Grid/row chrome for the projects table. Also imported by the team-scoped
+ * projects tab (WorkTeams/TeamProjectsSurface) so both surfaces render the
+ * reference's identical column geometry — one presentation, not two tables.
+ */
+export const projectListStyles = styles;
+
+export const PROJECT_HEALTH_META = {
   atRisk: { icon: OctagonAlertIcon, key: 'list.health.atRisk' },
   offTrack: { icon: CircleCheckIcon, key: 'list.health.offTrack' },
   onTrack: { icon: CircleDotIcon, key: 'list.health.onTrack' },
@@ -331,7 +350,7 @@ const ProjectHealthCell = memo<{ health?: ProjectHealth | null }>(({ health }) =
 
 ProjectHealthCell.displayName = 'ProjectHealthCell';
 
-type MembersQuery = ReturnType<typeof useWorkspaceMembersQuery>;
+export type MembersQuery = ReturnType<typeof useWorkspaceMembersQuery>;
 
 const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }>(
   ({ members, project }) => {
@@ -496,7 +515,7 @@ interface ProjectRowProps {
   properties: ProjectListDisplayOptions['properties'];
 }
 
-const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, properties }) => {
+export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, properties }) => {
   const { t } = useTranslation(['project', 'common']);
   const [deleting, setDeleting] = useState(false);
   const deleteProject = useProjectStore((s) => s.deleteProject);
@@ -666,7 +685,7 @@ const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, propertie
 
 ProjectRow.displayName = 'ProjectRow';
 
-const COLUMN_HEADER_KEYS: Record<ProjectListColumn['key'], string> = {
+export const COLUMN_HEADER_KEYS: Record<ProjectListColumn['key'], string> = {
   completed: 'list.columnCompleted',
   created: 'list.columnCreated',
   health: 'list.columnHealth',
@@ -685,7 +704,7 @@ const COLUMN_HEADER_KEYS: Record<ProjectListColumn['key'], string> = {
  * date/Status headers are buttons that set the ordering (and flip its
  * direction on a repeat click).
  */
-const SortableHeader = memo<{
+export const SortableHeader = memo<{
   label: string;
   onSort: (field: ProjectListSortableOrdering) => void;
   orderBy: ProjectListDisplayOptions['orderBy'];
@@ -715,6 +734,100 @@ const SortableHeader = memo<{
 });
 
 SortableHeader.displayName = 'SortableHeader';
+
+/**
+ * Column header row for the projects table — shared verbatim with the
+ * team-scoped projects tab (WorkTeams/TeamProjectsSurface) so both surfaces
+ * render the reference's identical grid geometry and sortable headers.
+ */
+export const ProjectListTableHeader = memo<{
+  columns: ProjectListColumn[];
+  onSort: (field: ProjectListSortableOrdering) => void;
+  orderBy: ProjectListDisplayOptions['orderBy'];
+  orderDirection: 'asc' | 'desc';
+}>(({ columns, onSort, orderBy, orderDirection }) => {
+  const { t } = useTranslation('project');
+  return (
+    <Flexbox
+      horizontal
+      align={'center'}
+      className={`${styles.headerRow} ${styles.columns}`}
+      gap={0}
+      style={projectListGridTemplate(columns)}
+    >
+      <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+        <SortableHeader
+          label={t('list.columnName', { defaultValue: 'Name' })}
+          orderBy={orderBy}
+          orderDirection={orderDirection}
+          sortBy="name"
+          onSort={onSort}
+        />
+      </Flexbox>
+      {columns.map((column) => (
+        <span className={styles.owner} key={column.key}>
+          <SortableHeader
+            label={t(COLUMN_HEADER_KEYS[column.key])}
+            orderBy={orderBy}
+            orderDirection={orderDirection}
+            sortBy={column.sortBy}
+            onSort={onSort}
+          />
+        </span>
+      ))}
+    </Flexbox>
+  );
+});
+
+ProjectListTableHeader.displayName = 'ProjectListTableHeader';
+
+/**
+ * Inner content of a project group strip — `status:*` renders the lifecycle
+ * icon + label, `lead:*` the lead avatar + name ("No lead" for the empty
+ * bucket). Shared with the team-scoped projects tab; `all` renders nothing.
+ */
+export const ProjectListGroupHeader = memo<{
+  groupKey: string;
+  leadAvatar: (userId: string) => string | undefined;
+  leadName: (userId: string) => string | undefined;
+}>(({ groupKey, leadAvatar, leadName }) => {
+  const { t } = useTranslation('project');
+  if (groupKey === 'all') return null;
+  if (groupKey.startsWith('status:')) {
+    const status = resolveProjectStatus(groupKey.slice(7));
+    const visual = PROJECT_STATUS_VISUALS[status];
+    return (
+      <>
+        <Icon color={visual.color} icon={visual.icon} size={14} />
+        <Text fontSize={12} weight={500}>
+          {t(`status.${status}`)}
+        </Text>
+      </>
+    );
+  }
+  const userId = groupKey.slice(5);
+  if (userId === 'none') {
+    return (
+      <>
+        <NoLeadIcon />
+        <Text fontSize={12} type="secondary" weight={500}>
+          {t('properties.noLead')}
+        </Text>
+      </>
+    );
+  }
+  const name = leadName(userId);
+  return (
+    <>
+      <Avatar avatar={leadAvatar(userId)} name={name} shape="circle" size={16} />
+      <Text fontSize={12} weight={500}>
+        {name}
+      </Text>
+    </>
+  );
+});
+
+ProjectListGroupHeader.displayName = 'ProjectListGroupHeader';
 
 const ProjectListPage = memo(() => {
   const { t } = useTranslation('project');
@@ -776,12 +889,28 @@ const ProjectListPage = memo(() => {
     [membersData],
   );
 
+  // Applied property filters live in the URL — Linear reflects applied
+  // filters there (shareable filtered lists), and MyWork carries its chips
+  // the same way. They compose with (never replace) the persisted display
+  // options: filters narrow the set, ordering sorts what survives.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = useMemo(() => readProjectListFilters(searchParams), [searchParams]);
+  const updateFilters = useCallback(
+    (next: ProjectListFilter[]) =>
+      setSearchParams(writeProjectListFilters(searchParams, next), { replace: true }),
+    [searchParams, setSearchParams],
+  );
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const [advancedFilterOpen, setAdvancedFilterOpen] = useState(false);
+  const projectName = useCallback(
+    (id: string) => projects.find((project) => project.id === id)?.name ?? id,
+    [projects],
+  );
+
   const columns = useMemo(
     () => visibleProjectListColumns(options.properties),
     [options.properties],
   );
-  const gridStyle = useMemo(() => projectListGridTemplate(columns), [columns]);
-
   const visibleProjects = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase();
     const searched = normalizedKeyword
@@ -791,9 +920,10 @@ const ProjectListPage = memo(() => {
             .some((value) => value!.toLocaleLowerCase().includes(normalizedKeyword)),
         )
       : projects;
-    const open = filterClosedProjects(searched, options.showClosed);
+    const filtered = filterProjectList(searched, filters);
+    const open = filterClosedProjects(filtered, options.showClosed);
     return sortProjectList(open, options.orderBy, options.orderDirection);
-  }, [keyword, options.orderBy, options.orderDirection, options.showClosed, projects]);
+  }, [filters, keyword, options.orderBy, options.orderDirection, options.showClosed, projects]);
 
   // Board layout always groups by status (the reference's project board is a
   // status kanban); the list layout honors the Grouping option.
@@ -814,41 +944,9 @@ const ProjectListPage = memo(() => {
 
   if (!enabled) return <ProjectDisabled />;
 
-  const groupHeader = (groupKey: string): ReactNode => {
-    if (groupKey === 'all') return null;
-    if (groupKey.startsWith('status:')) {
-      const status = resolveProjectStatus(groupKey.slice(7));
-      const visual = PROJECT_STATUS_VISUALS[status];
-      return (
-        <>
-          <Icon color={visual.color} icon={visual.icon} size={14} />
-          <Text fontSize={12} weight={500}>
-            {t(`status.${status}`)}
-          </Text>
-        </>
-      );
-    }
-    const userId = groupKey.slice(5);
-    if (userId === 'none') {
-      return (
-        <>
-          <NoLeadIcon />
-          <Text fontSize={12} type="secondary" weight={500}>
-            {t('properties.noLead')}
-          </Text>
-        </>
-      );
-    }
-    const name = memberName(userId);
-    return (
-      <>
-        <Avatar avatar={memberAvatar(userId)} name={name} shape="circle" size={16} />
-        <Text fontSize={12} weight={500}>
-          {name}
-        </Text>
-      </>
-    );
-  };
+  const groupHeader = (groupKey: string): ReactNode => (
+    <ProjectListGroupHeader groupKey={groupKey} leadAvatar={memberAvatar} leadName={memberName} />
+  );
 
   return (
     <WorkSurface>
@@ -869,13 +967,25 @@ const ProjectListPage = memo(() => {
       <WorkSurfaceCollection
         toolbar={
           <WorkSurfaceToolbar
-            asideLabel={t('list.display.options')}
+            asideLabel={t('list.toolbarControls')}
             aside={
-              <DisplayOptionsPopover
-                options={options}
-                onChange={updateOptions}
-                onReset={resetOptions}
-              />
+              <>
+                <AddFilterPopover
+                  currentUserId={currentUserId}
+                  filters={filters}
+                  members={membersData}
+                  membersError={membersError}
+                  membersLoading={membersLoading}
+                  projects={projects}
+                  onChange={updateFilters}
+                  onOpenAdvanced={() => setAdvancedFilterOpen(true)}
+                />
+                <DisplayOptionsPopover
+                  options={options}
+                  onChange={updateOptions}
+                  onReset={resetOptions}
+                />
+              </>
             }
           >
             <SearchBar
@@ -884,6 +994,13 @@ const ProjectListPage = memo(() => {
               style={{ maxWidth: 280 }}
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
+            />
+            <ProjectListFilterChips
+              filters={filters}
+              memberName={memberName}
+              projectName={projectName}
+              onClearAll={() => updateFilters([])}
+              onRemove={(key) => updateFilters(removeProjectListFilter(filters, key))}
             />
           </WorkSurfaceToolbar>
         }
@@ -895,8 +1012,14 @@ const ProjectListPage = memo(() => {
         ) : visibleProjects.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty
-              description={keyword.trim() ? t('list.searchEmpty') : t('list.emptyDescription')}
-              icon={keyword.trim() ? SearchXIcon : FolderClosedIcon}
+              icon={keyword.trim() || filters.length > 0 ? SearchXIcon : FolderClosedIcon}
+              description={
+                filters.length > 0
+                  ? t('list.filter.noResults')
+                  : keyword.trim()
+                    ? t('list.searchEmpty')
+                    : t('list.emptyDescription')
+              }
             />
           </Center>
         ) : options.layout === 'board' ? (
@@ -906,36 +1029,22 @@ const ProjectListPage = memo(() => {
             leadName={memberName}
             properties={options.properties}
           />
+        ) : options.layout === 'timeline' ? (
+          <ProjectTimeline
+            groupLabel={groupHeader}
+            groups={groups}
+            leadAvatar={memberAvatar}
+            leadName={memberName}
+            options={options}
+          />
         ) : (
           <Flexbox gap={0} style={{ minWidth: 'max-content' }}>
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={`${styles.headerRow} ${styles.columns}`}
-              gap={0}
-              style={gridStyle}
-            >
-              <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
-                <SortableHeader
-                  label={t('list.columnName', { defaultValue: 'Name' })}
-                  orderBy={options.orderBy}
-                  orderDirection={options.orderDirection}
-                  sortBy="name"
-                  onSort={handleHeaderSort}
-                />
-              </Flexbox>
-              {columns.map((column) => (
-                <span className={styles.owner} key={column.key}>
-                  <SortableHeader
-                    label={t(COLUMN_HEADER_KEYS[column.key])}
-                    orderBy={options.orderBy}
-                    orderDirection={options.orderDirection}
-                    sortBy={column.sortBy}
-                    onSort={handleHeaderSort}
-                  />
-                </span>
-              ))}
-            </Flexbox>
+            <ProjectListTableHeader
+              columns={columns}
+              orderBy={options.orderBy}
+              orderDirection={options.orderDirection}
+              onSort={handleHeaderSort}
+            />
             {groups.map((group) => (
               <Flexbox gap={0} key={group.key}>
                 {group.key !== 'all' ? (
@@ -960,6 +1069,14 @@ const ProjectListPage = memo(() => {
           </Flexbox>
         )}
       </WorkSurfaceCollection>
+      {/* "Advanced filter" lands here: the WorkQuery builder (AND/OR groups)
+          exists only for saved views, so the menu entry opens the real
+          project-entity view builder instead of a fake inline clause row. */}
+      <NewViewModal
+        defaultEntityType="project"
+        open={advancedFilterOpen}
+        onClose={() => setAdvancedFilterOpen(false)}
+      />
     </WorkSurface>
   );
 });

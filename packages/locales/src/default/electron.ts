@@ -33,6 +33,7 @@ export default {
   'navigation.pinned': 'Pinned',
   'navigation.profile': 'Agent Profile',
   'navigation.projectActivity': 'Project activity',
+  'navigation.projectMilestones': 'Project milestones',
   'navigation.projectResources': 'Resources',
   'navigation.projects': 'Projects',
   'navigation.provider': 'Provider',

@@ -27,6 +27,7 @@ import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from 
 
 import {
   getProjectActivityPath,
+  getProjectMilestonesPath,
   getProjectOverviewPath,
   getProjectTasksPath,
   projectPathSection,
@@ -119,8 +120,8 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
     [navigate],
   );
 
-  // Linear's project header is exactly Overview | Activity | Issues — goals
-  // and resources live as sections on the Overview body instead of tabs.
+  // Linear's project header is Overview | Activity | Issues | Milestones —
+  // goals and resources live as sections on the Overview body instead of tabs.
   const tabs = useMemo(
     () => [
       {
@@ -137,6 +138,11 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         label: t('sections.issues'),
         path: getProjectTasksPath(projectReference),
         section: 'tasks',
+      },
+      {
+        label: t('sections.milestones'),
+        path: getProjectMilestonesPath(projectReference),
+        section: 'milestones',
       },
     ],
     [projectReference, t],

@@ -37,8 +37,8 @@ export const compareMilestonesForList = (a: MilestoneListItem, b: MilestoneListI
   // `date` is a `YYYY-MM-DD` day column, so lexical order is chronological
   // order — no Date parsing and no timezone drift.
   if (dateA && dateB && dateA !== dateB) return dateA < dateB ? -1 : 1;
-  if (dateA) return -1;
-  if (dateB) return 1;
+  if (dateA && !dateB) return -1;
+  if (dateB && !dateA) return 1;
   const order = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
   if (order !== 0) return order;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;

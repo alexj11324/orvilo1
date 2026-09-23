@@ -9,6 +9,7 @@ import { Outlet } from 'react-router';
 import ChatTerminalPanel from '@/features/ChatTerminal';
 import AgentWorkingSidebar from '@/features/Conversation/WorkingSidebar';
 import OverviewSlot from '@/features/Conversation/WorkingSidebar/OverviewSlot';
+import ChatHistoryUtilityRow from '@/routes/(main)/agent/features/Conversation/ChatHistory/UtilityRow';
 import ChatHeader from '@/routes/(main)/agent/features/Conversation/Header';
 import Portal from '@/routes/(main)/agent/features/Portal';
 
@@ -62,6 +63,9 @@ const ChatLayout = memo(() => {
             </Flexbox>
             <Portal />
             <AgentWorkingSidebar availableWidth={rowSize?.width} />
+            {/* Shared bottom-right `Chat history` control — opens the same
+                history menu as the header title trigger. */}
+            <ChatHistoryUtilityRow />
           </Flexbox>
           <ChatTerminalPanel />
         </Flexbox>

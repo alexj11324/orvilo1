@@ -70,7 +70,7 @@
 
 - Titles, actor snapshots, content, times, actions and navigation come from `NotificationFeedCard`.
 - Unread count comes from `NotificationFeedSummary.unreadBadgeCount`.
-- Linear's onboarding banner and issue/review detail schema are not copied because Orvilo does not model those states as Inbox preferences or notification types.
+- The priority-inbox banner IS implemented (2026-09-23, commit e8d43bf5f): title + `Keep priority inbox ▾` + `Disable`, persisted per user:workspace in `SystemStatus.inboxPriorityMode`. Issue/review detail schema remains uncopied — Orvilo does not model those as notification types.
 
 ## Accessibility
 

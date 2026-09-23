@@ -12,7 +12,9 @@ import {
 
 const DEFAULT_BAR_WITH_TOOLS: MessageActionSlot[] = ['delAndRegenerate', 'copy'];
 const DEFAULT_BAR: MessageActionSlot[] = ['edit', 'copy'];
-const DEFAULT_MENU: MessageActionSlot[] = [
+// Exported so route-level `useActionsBarConfig` overrides can extend the
+// default menu (e.g. inserting `copyAsMarkdown`) instead of duplicating it.
+export const DEFAULT_MENU: MessageActionSlot[] = [
   'edit',
   'copy',
   'copyOperationId',

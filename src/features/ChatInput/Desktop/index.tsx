@@ -58,6 +58,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     background: ${cssVar.colorBgContainer};
   `,
+  controlBarInCard: css`
+    flex: none;
+    padding-block-end: 4px;
+    padding-inline: 4px;
+  `,
   inputFullscreen: css`
     border: none;
     border-radius: 0 !important;
@@ -87,10 +92,24 @@ interface DesktopChatInputProps extends ActionToolbarProps {
    */
   compact?: boolean;
   /**
+   * Render the control bar (or `controlBarSlot`) as the card's last footer row
+   * instead of a sibling below it. The reference composer keeps its controls
+   * inside the card border; surfaces that want a free-floating bar keep the
+   * default off. In `compact` mode the footer is dropped entirely, so the bar
+   * falls back to the sibling position.
+   */
+  controlBarInCard?: boolean;
+  /**
    * Custom node to render in place of the default ControlBar.
    * When provided, used instead of `<ControlBar />` (ignores `showControlBar`).
    */
   controlBarSlot?: ReactNode;
+  /**
+   * Initial editor height in text rows (`InputEditor`'s `defaultRows`).
+   * Surfaces targeting a single-line composer (e.g. the Agent page, whose
+   * reference editor measures 24px) pass 1; omitted keeps the 2-row default.
+   */
+  editorDefaultRows?: number;
   extentHeaderContent?: ReactNode;
   hidden?: boolean;
   initialContent?: string;
@@ -115,7 +134,9 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     showFootnote,
     showControlBar = true,
     compact = false,
+    controlBarInCard = false,
     controlBarSlot,
+    editorDefaultRows,
     inputContainerProps,
     extentHeaderContent,
     actionBarStyle,
@@ -221,6 +242,12 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
       leftSlotContent
     );
 
+    // The control bar's home: a sibling under the card by default, or the
+    // card's last footer row when the surface opts into `controlBarInCard`
+    // (`compact` drops the footer, so the sibling position is kept there).
+    const controlBarNode = controlBarSlot ?? (showControlBar && <ControlBar />);
+    const controlBarInsideCard = controlBarInCard && !compact;
+
     const content = (
       <Flexbox
         className={cx(styles.container, expand && styles.fullscreen)}
@@ -240,22 +267,27 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
           slashMenuRef={slashMenuRef}
           footer={
             compact ? undefined : (
-              <ChatInputActionBar
-                left={loadingLeftSlot ?? leftSlot}
-                style={actionBarStyle ?? { paddingRight: 8 }}
-                right={
-                  loadingRightSlot ??
-                  rightContent ??
-                  (sendAreaPrefix ? (
-                    <Flexbox horizontal align={'center'} gap={6}>
-                      {sendAreaPrefix}
+              <>
+                <ChatInputActionBar
+                  left={loadingLeftSlot ?? leftSlot}
+                  style={actionBarStyle ?? { paddingRight: 8 }}
+                  right={
+                    loadingRightSlot ??
+                    rightContent ??
+                    (sendAreaPrefix ? (
+                      <Flexbox horizontal align={'center'} gap={6}>
+                        {sendAreaPrefix}
+                        <SendArea hideContextWindow={hasControlBar} />
+                      </Flexbox>
+                    ) : (
                       <SendArea hideContextWindow={hasControlBar} />
-                    </Flexbox>
-                  ) : (
-                    <SendArea hideContextWindow={hasControlBar} />
-                  ))
-                }
-              />
+                    ))
+                  }
+                />
+                {controlBarInsideCard && controlBarNode ? (
+                  <div className={styles.controlBarInCard}>{controlBarNode}</div>
+                ) : null}
+              </>
             )
           }
           header={
@@ -272,12 +304,13 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
           className={cx(expand && styles.inputFullscreen, inputContainerProps?.className)}
         >
           <InputEditor
+            defaultRows={editorDefaultRows}
             initialContent={initialContent}
             placeholder={placeholder}
             placeholderVariant={placeholderVariant}
           />
         </ChatInput>
-        {controlBarSlot ?? (showControlBar && <ControlBar />)}
+        {controlBarInsideCard ? null : controlBarNode}
         {showFootnote && !expand && (
           <Center style={{ pointerEvents: 'none', zIndex: 100 }}>
             <Text className={styles.footnote} type={'secondary'}>

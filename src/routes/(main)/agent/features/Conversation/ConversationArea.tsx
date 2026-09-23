@@ -38,6 +38,7 @@ import { useChatStore } from '@/store/chat';
 import { threadSelectors, topicSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
+import ExamplePrompts from './ExamplePrompts';
 import ExposeMainEditor from './ExposeMainEditor';
 import HeterogeneousChatInput from './HeterogeneousChatInput';
 import InboxAgentLanding, { shouldShowInboxAgentLanding } from './InboxAgentLanding';
@@ -163,6 +164,10 @@ const Conversation = memo(() => {
         <InboxAgentLanding>
           <ToolAuthAlert />
           {chatInput}
+          {/* Reference state B: the examples row sits inside the same centered
+              group as the composer, so its appearance lifts the composer
+              (~91px in the reference) instead of needing a fixed offset. */}
+          <ExamplePrompts />
         </InboxAgentLanding>
       ) : (
         <>

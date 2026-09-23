@@ -5,7 +5,12 @@ import type {
   WorkspaceInvitationSummary,
   WorkspaceMemberSummary,
 } from '../Teammates/api/contract';
-import { buildDirectoryRows, filterDirectoryRows } from './directoryRows';
+import {
+  buildDirectoryRows,
+  DIRECTORY_SECTION_ORDER,
+  directorySectionKey,
+  filterDirectoryRows,
+} from './directoryRows';
 
 const member: WorkspaceMemberSummary = {
   joinedAt: '2024-01-02T00:00:00.000Z',
@@ -76,5 +81,32 @@ describe('filterDirectoryRows', () => {
   it('searches email and username for people, not just the display name', () => {
     expect(filterDirectoryRows(rows, 'ada@example.com', 'all')).toHaveLength(1);
     expect(filterDirectoryRows(rows, 'nobody-matches-this', 'all')).toHaveLength(0);
+  });
+});
+
+describe('directorySectionKey', () => {
+  const rows = buildDirectoryRows([member], [agent], [pendingInvitation]);
+
+  it('bands the directory by lifecycle state like the reference', () => {
+    expect(directorySectionKey(rows.find((r) => r.kind === 'person')!)).toBe('active');
+    expect(directorySectionKey(rows.find((r) => r.kind === 'invitation')!)).toBe('invited');
+    expect(directorySectionKey(rows.find((r) => r.kind === 'agent')!)).toBe('agent');
+  });
+
+  it('splits suspended and removed people out of the active band', () => {
+    const suspended = buildDirectoryRows([{ ...member, suspendedAt: '2024-03-01T00:00:00.000Z' }]);
+    const removed = buildDirectoryRows([{ ...member, deletedAt: new Date() }]);
+
+    expect(directorySectionKey(suspended[0])).toBe('suspended');
+    expect(directorySectionKey(removed[0])).toBe('removed');
+  });
+
+  it('orders bands Active → Suspended → Invited → Agents like the reference', () => {
+    expect(DIRECTORY_SECTION_ORDER.slice(0, 4)).toEqual([
+      'active',
+      'suspended',
+      'invited',
+      'agent',
+    ]);
   });
 });

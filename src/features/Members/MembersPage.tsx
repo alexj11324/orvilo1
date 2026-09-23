@@ -3,7 +3,7 @@
 import { Center, Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Button, DropdownMenu, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Crown, MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
+import { MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router';
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
-import LiteTable, { type LiteTableColumn } from '@/components/LiteTable';
+import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
 import NavHeader from '@/features/NavHeader';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -28,10 +28,14 @@ import {
 import { memberStatus } from '../Teammates/api/roleCapabilities';
 import {
   buildDirectoryRows,
+  DIRECTORY_SECTION_ORDER,
   type DirectoryFilter,
   type DirectoryRow,
+  type DirectorySection,
+  directorySectionKey,
   filterDirectoryRows,
 } from './directoryRows';
+import { formatMemberDate } from './memberDate';
 
 const styles = createStaticStyles(({ css }) => ({
   cell: css`
@@ -40,14 +44,38 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
     min-width: 0;
   `,
-  groupLabel: css`
-    padding-block: 12px 4px;
+  directoryTable: css`
+    /* Reference bands each lifecycle group under one shared column header. */
+    tbody tr[data-list-section] td {
+      background: ${cssVar.colorFillQuaternary};
+    }
 
-    font-size: 12px;
-    font-weight: 600;
+    /* Reference reveals row actions on hover; keep them rendered on coarse
+       pointers and whenever the trigger holds keyboard focus. */
+    @media (hover: hover) and (pointer: fine) {
+      tbody tr:not([data-list-section], :hover, :focus-within) td[data-list-slot='actions'] {
+        opacity: 0;
+      }
+    }
+  `,
+  ellipsis: css`
+    overflow: hidden;
+    display: block;
+
+    min-width: 0;
+    max-width: 240px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
+  groupLabel: css`
+    font-size: 13px;
+    font-weight: 500;
+  `,
+  groupCount: css`
+    margin-inline-start: 6px;
+    font-weight: 400;
     color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
   `,
   meta: css`
     overflow: hidden;
@@ -69,15 +97,14 @@ const styles = createStaticStyles(({ css }) => ({
 
 const normalize = (value: string | null | undefined) => (value ?? '').toLowerCase();
 
+// Mirrors the role badge palette on /settings/members so the same role reads
+// the same color on both member surfaces.
 const roleColor: Record<string, string> = {
-  admin: 'geekblue',
-  member: 'default',
+  admin: 'purple',
+  member: 'blue',
   owner: 'gold',
   viewer: 'default',
 };
-
-const formatDate = (value: Date | string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString() : '—';
 
 /**
  * `/members` — the workspace directory. A read surface that lists every
@@ -119,23 +146,31 @@ const MembersPage = memo(() => {
     [groupFilter, needle, rows],
   );
 
-  const groups = useMemo(
-    () =>
-      (
-        [
-          ['person', t('members.groupPeople', { ns: 'common' })],
-          ['agent', t('members.groupAgents', { ns: 'common' })],
-          ['invitation', t('members.groupInvitations', { ns: 'common' })],
-        ] as const
-      )
-        .map(([kind, label]) => ({
-          kind,
-          label,
-          rows: visible.filter((r) => r.kind === kind),
-        }))
-        .filter((group) => group.rows.length > 0),
-    [t, visible],
-  );
+  const sections = useMemo<LiteTableSection<DirectoryRow>[]>(() => {
+    const labels: Record<DirectorySection, string> = {
+      active: t('members.statusActive', { ns: 'common' }),
+      agent: t('members.groupAgents', { ns: 'common' }),
+      invited: t('members.groupInvited', { ns: 'common' }),
+      removed: t('members.statusRemoved', { ns: 'common' }),
+      suspended: t('members.statusSuspended', { ns: 'common' }),
+    };
+    return DIRECTORY_SECTION_ORDER.map((key) => ({
+      items: visible.filter((row) => directorySectionKey(row) === key),
+      key,
+      label: labels[key],
+    }))
+      .filter((section) => section.items.length > 0)
+      .map(({ items, key, label }) => ({
+        header: (
+          <div className={styles.groupLabel}>
+            {label}
+            <span className={styles.groupCount}>{items.length}</span>
+          </div>
+        ),
+        items,
+        key,
+      }));
+  }, [t, visible]);
 
   const settingsPath = workspace
     ? buildWorkspaceAwarePath('/settings/members', workspace.slug)
@@ -147,7 +182,9 @@ const MembersPage = memo(() => {
         key: 'name',
         listSlot: 'title',
         render: (row) => {
-          const { avatar, name, secondary, role } =
+          // Reference secondary line is the username/handle; email moved to
+          // its own column. Invitations keep the inviter credit instead.
+          const { avatar, name, secondary } =
             row.kind === 'person'
               ? {
                   avatar: row.value.user?.avatar,
@@ -156,14 +193,14 @@ const MembersPage = memo(() => {
                     row.value.user?.username ||
                     row.value.user?.email ||
                     undefined,
-                  role: row.value.role,
-                  secondary: row.value.user?.email,
+                  secondary: row.value.user?.fullName
+                    ? row.value.user?.username || undefined
+                    : undefined,
                 }
               : row.kind === 'agent'
                 ? {
                     avatar: row.value.avatar,
                     name: row.value.name,
-                    role: undefined,
                     secondary: row.value.maintainer?.name
                       ? t('members.maintainedBy', {
                           name: row.value.maintainer.name,
@@ -174,7 +211,6 @@ const MembersPage = memo(() => {
                 : {
                     avatar: null,
                     name: row.value.email,
-                    role: row.value.role,
                     secondary: row.value.inviter?.name
                       ? t('members.invitedBy', {
                           name: row.value.inviter.name,
@@ -186,19 +222,7 @@ const MembersPage = memo(() => {
             <div className={styles.cell}>
               <Avatar avatar={avatar} size={28} title={name} />
               <div style={{ minWidth: 0 }}>
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <div className={styles.name}>{name}</div>
-                  {role ? (
-                    <Tag color={roleColor[role]} style={{ flex: 'none' }}>
-                      {role}
-                    </Tag>
-                  ) : null}
-                  {row.kind === 'person' && row.value.role === 'owner' ? (
-                    <Tooltip title={t('members.ownerHint', { ns: 'common' })}>
-                      <Icon icon={Crown} size={14} style={{ color: cssVar.colorWarning }} />
-                    </Tooltip>
-                  ) : null}
-                </Flexbox>
+                <div className={styles.name}>{name}</div>
                 {secondary ? <div className={styles.meta}>{secondary}</div> : null}
               </div>
             </div>
@@ -207,6 +231,28 @@ const MembersPage = memo(() => {
         title: t('members.column.name', { ns: 'common' }),
       },
       {
+        key: 'email',
+        render: (row) => {
+          const email =
+            row.kind === 'person'
+              ? row.value.user?.email
+              : row.kind === 'invitation'
+                ? row.value.email
+                : null;
+          return (
+            <Text fontSize={13} type={'secondary'}>
+              <span className={styles.ellipsis}>{email || '—'}</span>
+            </Text>
+          );
+        },
+        title: t('members.column.email', { ns: 'common' }),
+        width: 220,
+      },
+      {
+        // Reference renders the role badge in the Status column — "Admin",
+        // "Admin (Invited)", "Application" — so role moved out of the name
+        // cell. Suspended/removed/expired keep their own tags; agents read
+        // "Agent" like the reference's "Application" label.
         key: 'status',
         render: (row) => {
           if (row.kind === 'person') {
@@ -217,43 +263,76 @@ const MembersPage = memo(() => {
             if (status === 'removed') {
               return <Tag>{t('members.statusRemoved', { ns: 'common' })}</Tag>;
             }
-            return <Text type={'secondary'}>{t('members.statusActive', { ns: 'common' })}</Text>;
+            return (
+              <Tag color={roleColor[row.value.role]}>
+                {t(`workspaceSetting.members.role.${row.value.role}`, {
+                  defaultValue: row.value.role,
+                  ns: 'setting',
+                })}
+              </Tag>
+            );
           }
           if (row.kind === 'agent') {
             return row.value.status === 'disabled' ? (
               <Tag color="orange">{t('members.statusDisabled', { ns: 'common' })}</Tag>
             ) : (
-              <Text type={'secondary'}>{t('members.statusActive', { ns: 'common' })}</Text>
+              <Text type={'secondary'}>{t('members.agentLabel', { ns: 'common' })}</Text>
             );
           }
-          const expired = row.value.status === 'expired';
+          if (row.value.status === 'expired') {
+            return <Tag color="orange">{t('members.statusExpired', { ns: 'common' })}</Tag>;
+          }
           return (
-            <Tag color={expired ? 'orange' : 'blue'}>
-              {expired
-                ? t('members.statusExpired', { ns: 'common' })
-                : t('members.statusPending', { ns: 'common' })}
+            <Tag color={roleColor[row.value.role]}>
+              {t('members.roleInvited', {
+                ns: 'common',
+                role: t(`workspaceSetting.members.role.${row.value.role}`, {
+                  defaultValue: row.value.role,
+                  ns: 'setting',
+                }),
+              })}
             </Tag>
           );
         },
         title: t('members.column.status', { ns: 'common' }),
-        width: 110,
+        width: 130,
+      },
+      {
+        // The reference column is "Teams"; the teammates contract carries
+        // project memberships instead, so the column is honestly labeled
+        // "Projects" and filled with real counts where the backend provides
+        // them.
+        key: 'projects',
+        render: (row) => {
+          const count =
+            row.kind === 'person'
+              ? row.value.projectCount
+              : row.kind === 'agent'
+                ? row.value.projects?.length
+                : undefined;
+          return (
+            <Text fontSize={13} type={'secondary'}>
+              {count === undefined ? '—' : t('members.projectCount', { count, ns: 'common' })}
+            </Text>
+          );
+        },
+        title: t('members.column.projects', { ns: 'common' }),
+        width: 100,
       },
       {
         key: 'joined',
         render: (row) => (
           <Text fontSize={13} type={'secondary'}>
-            {formatDate(row.kind === 'person' ? row.value.joinedAt : undefined)}
+            {formatMemberDate(
+              row.kind === 'person'
+                ? row.value.joinedAt
+                : row.kind === 'invitation'
+                  ? row.value.createdAt
+                  : undefined,
+            )}
           </Text>
         ),
         title: t('members.column.joined', { ns: 'common' }),
-        width: 120,
-      },
-      {
-        // No member→team join exists in the teammates contract yet; `—` stays
-        // honest instead of borrowing project counts into a teams column.
-        key: 'teams',
-        render: () => <Text type={'secondary'}>—</Text>,
-        title: t('members.column.teams', { ns: 'common' }),
         width: 110,
       },
       {
@@ -400,7 +479,7 @@ const MembersPage = memo(() => {
           </Center>
         ) : loading ? (
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
-        ) : groups.length === 0 ? (
+        ) : sections.length === 0 ? (
           <Center padding={48}>
             <Empty
               description={
@@ -411,14 +490,12 @@ const MembersPage = memo(() => {
             />
           </Center>
         ) : (
-          groups.map((group) => (
-            <section key={group.kind}>
-              <div className={styles.groupLabel}>
-                {group.label} · {group.rows.length}
-              </div>
-              <LiteTable columns={columns} dataSource={group.rows} rowKey={(row) => row.id} />
-            </section>
-          ))
+          <LiteTable
+            className={styles.directoryTable}
+            columns={columns}
+            rowKey={(row) => row.id}
+            sections={sections}
+          />
         )}
       </WorkSurfaceCollection>
     </WorkSurface>

@@ -379,7 +379,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           {time ? (
             <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
               {/* Linear cards stamp the creation date, not the last touch. */}
-              {tChat('taskList.createdAt', { date: time })}
+              {tChat('taskList.createdAt', { date: time, defaultValue: 'Created {{date}}' })}
             </Text>
           ) : null}
           <Flexbox horizontal align={'center'} flex={'none'} gap={4} style={{ marginLeft: 'auto' }}>

@@ -95,7 +95,7 @@ const renderFooter = async ({
   vi.doMock('@/features/Billboard/MenuItems', () => ({
     useBillboardMenuItems: () => billboardItems,
   }));
-  vi.doMock('@/features/NavPanel', () => ({
+  vi.doMock('@/features/NavPanel/useActiveNavKey', () => ({
     useActiveNavKey: () => (homeSidebar ? 'home' : 'discover'),
   }));
   vi.doMock('@/features/User/UserPanel/ThemeButton', () => ({

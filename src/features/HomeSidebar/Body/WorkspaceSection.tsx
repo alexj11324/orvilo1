@@ -15,11 +15,13 @@ import {
   BotIcon,
   EyeOffIcon,
   FolderKanbanIcon,
+  Layers,
   LayoutList,
   LibraryBigIcon,
   MoreHorizontalIcon,
   Settings2,
   SlidersHorizontalIcon,
+  Users,
 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,6 +76,34 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
   const moreMenu = useMemo(
     () =>
       [
+        // Linear's More menu opens with a non-interactive "Showing all items"
+        // group header over Members / Teams / Customize sidebar.
+        {
+          children: [
+            {
+              icon: <Icon icon={Users} />,
+              key: 'members',
+              label: t('navPanel.members'),
+              onClick: () => navigate('/members'),
+            },
+            {
+              icon: <Icon icon={Layers} />,
+              key: 'teams',
+              label: t('tab.teams'),
+              onClick: () => navigate('/teams'),
+            },
+            {
+              icon: <Icon icon={SlidersHorizontalIcon} />,
+              key: 'customizeSidebar',
+              label: t('navPanel.customizeSidebar'),
+              onClick: () => openCustomizeSidebarModal(),
+            },
+          ],
+          key: 'showingAllItems',
+          label: t('navPanel.showingAllItems'),
+          type: 'group' as const,
+        },
+        { type: 'divider' as const },
         {
           icon: <Icon icon={BotIcon} />,
           key: 'agents',
@@ -126,8 +156,10 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
         <Flexbox gap={1} paddingBlock={1}>
           {row('project', FolderKanbanIcon, t('navPanel.projects'), '/projects')}
           {row('views', LayoutList, t('tab.views'), '/views')}
-          {/* Linear renders "More" as a row — it opens the menu holding the
-              retired surfaces (Automations / Resource / workspace settings). */}
+          {/* Linear renders "More" as a row — it opens a menu headed by
+              "Showing all items" (Members / Teams / Customize sidebar),
+              then the retired surfaces (Automations / Resource / workspace
+              settings) behind a divider. */}
           <DropdownMenu items={moreMenu}>
             <div>
               <NavItem icon={MoreHorizontalIcon} title={t('navPanel.more')} />

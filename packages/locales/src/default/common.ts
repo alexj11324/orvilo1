@@ -509,6 +509,7 @@ export default {
   'navPanel.publicAgents': 'Workspace',
   'navPanel.moveUp': 'Move Up',
   'navPanel.show': 'Show',
+  'navPanel.showingAllItems': 'Showing all items',
   'navPanel.visible': 'Visible',
   'navPanel.searchAgent': 'Search Agent...',
   'navPanel.searchFavorites': 'Search Favorites...',

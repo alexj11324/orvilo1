@@ -24,7 +24,6 @@ import {
   ArrowUpRightIcon,
   AtSignIcon,
   BellIcon,
-  CheckCheckIcon,
   CheckIcon,
   ChevronLeftIcon,
   CircleUserRoundIcon,
@@ -41,6 +40,7 @@ import {
   TimerOffIcon,
 } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -82,6 +82,7 @@ import {
 import { inboxDraftKeyForCard, useInboxDraft } from './inboxDrafts';
 import { inboxFeedScopeKey, mergeInboxFeedPages, useInboxFeedPager } from './inboxFeedPager';
 import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedState';
+import InboxHeaderMenu from './InboxHeaderMenu';
 import {
   armInboxReadReceiptSuppression,
   type InboxReadReceiptAttempt,
@@ -111,7 +112,7 @@ import {
   resolveInboxPriority,
 } from './inboxPriority';
 import { inboxSurface, shouldMarkInboxCardRead } from './inboxSurface';
-import { useInboxListKeyboard } from './useInboxListKeyboard';
+import { INBOX_LIST_HOTKEY_OPTIONS, useInboxListKeyboard } from './useInboxListKeyboard';
 
 // The shared task body — mounted inside the split detail pane, lazily so the
 // inbox list does not pay for it until a task-backed card is actually opened.
@@ -789,6 +790,10 @@ const WorkInboxPage = memo(() => {
     }
   }, [filterChip, kind, organizeFailed, refresh]);
 
+  // The header menu advertises ⌥U like the reference — bind it for real so
+  // the hint is never a dead affordance.
+  useHotkeys('alt+u', () => void markAllRead(), INBOX_LIST_HOTKEY_OPTIONS, [markAllRead]);
+
   const archiveAll = useCallback(async () => {
     try {
       const prepared = await notificationService.prepareBulk({
@@ -1271,25 +1276,10 @@ const WorkInboxPage = memo(() => {
           </Text>
         }
         right={
-          <DropdownMenu
-            placement={'bottomRight'}
-            items={[
-              {
-                icon: <Icon icon={CheckCheckIcon} />,
-                key: 'markAllRead',
-                label: t('inbox.markAllRead'),
-                onClick: () => void markAllRead(),
-              },
-              {
-                icon: <Icon icon={ArchiveIcon} />,
-                key: 'archiveAll',
-                label: t('inbox.archiveAll'),
-                onClick: () => void archiveAll(),
-              },
-            ]}
-          >
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} title={t('inbox.moreActions')} />
-          </DropdownMenu>
+          <InboxHeaderMenu
+            onDeleteAll={() => void archiveAll()}
+            onMarkAllRead={() => void markAllRead()}
+          />
         }
       />
       <div className={styles.stage}>

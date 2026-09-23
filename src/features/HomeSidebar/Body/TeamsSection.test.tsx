@@ -50,6 +50,14 @@ vi.mock('@/hooks/useActiveTabKey', () => ({
   useActiveTabKey: () => 'teams',
 }));
 
+vi.mock('@/hooks/useAppOrigin', () => ({
+  useAppOrigin: () => 'https://app.example.com',
+}));
+
+vi.mock('./useWorkFavoriteToggle', () => ({
+  useWorkFavoriteToggle: () => ({ pinned: false, toggle: vi.fn() }),
+}));
+
 vi.mock('@/libs/router/navigation', () => ({
   usePathname: () => '/teams/team-1',
   useSearchParams: () => [new URLSearchParams()],
@@ -109,5 +117,19 @@ describe('TeamsSection', () => {
     expect(team).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(screen.getByRole('link', { name: 'Home' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/teams/team-1');
+  });
+
+  it('shows a team-menu action on each team row', () => {
+    render(
+      <MemoryRouter initialEntries={['/inbox']}>
+        <AccordionRoot value={['teams']}>
+          <TeamsSection itemKey="teams" />
+        </AccordionRoot>
+      </MemoryRouter>,
+    );
+
+    // Linear exposes a ⋯ menu beside every team row — ours offers pin to
+    // favorites and copy link, both backed by real surfaces.
+    expect(screen.getByRole('button', { name: 'teams.menu' })).toBeInTheDocument();
   });
 });

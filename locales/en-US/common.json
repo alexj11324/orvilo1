@@ -466,7 +466,7 @@
   "myWork.pickWorkflowStateDescription": "This column has more than one state. Pick the exact one.",
   "myWork.pickWorkflowStateEmpty": "No workflow states are available in this column.",
   "myWork.reviewsCreated": "Created",
-  "myWork.reviewsForMe": "For me",
+  "myWork.reviewsForMe": "For you",
   "myWork.saveAs": "Save as view",
   "myWork.saveAsFailed": "Could not save this list as a view",
   "myWork.subscribe": "Subscribe",

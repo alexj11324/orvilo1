@@ -654,7 +654,7 @@ export default {
   'myWork.subscribe': 'Subscribe',
   'myWork.subscribeFailed': 'Could not subscribe to this task',
   'myWork.subscribed': 'Subscribed',
-  'myWork.reviewsForMe': 'For me',
+  'myWork.reviewsForMe': 'For you',
   'myWork.reviewsCreated': 'Created',
   'myWork.unsubscribe': 'Unsubscribe',
   'myWork.unsubscribeFailed': 'Could not unsubscribe from this task',

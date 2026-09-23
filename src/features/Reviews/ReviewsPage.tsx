@@ -4,8 +4,8 @@ import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
-import { GitPullRequestIcon, PlugIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
@@ -25,6 +25,11 @@ import { mergeWorkQueryGroups } from '../MyWork/workQueryPaging';
 import WorkQueryResults from '../MyWork/WorkQueryResults';
 import ReviewPullRequestPage from './ReviewPullRequestPage';
 import {
+  REVIEW_QUEUE_GROUP_LABEL_KEYS,
+  reviewQueueGroups,
+  type ReviewQueueItem,
+} from './reviewQueueGroups';
+import {
   reviewsDetailPath,
   reviewsIsNarrow,
   reviewsListPath,
@@ -37,6 +42,14 @@ const resolveTab = (value: string | null): ReviewsTab =>
   value === 'created' ? 'created' : 'for-me';
 
 const styles = createStaticStyles(({ css }) => ({
+  chevron: css`
+    flex: none;
+    color: ${cssVar.colorTextTertiary};
+    transition: transform ${cssVar.motionDurationFast};
+  `,
+  chevronCollapsed: css`
+    transform: rotate(-90deg);
+  `,
   detailEmpty: css`
     height: 100%;
     color: ${cssVar.colorTextTertiary};
@@ -50,6 +63,10 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorBgLayout};
   `,
+  draftIcon: css`
+    flex: none;
+    color: ${cssVar.colorTextTertiary};
+  `,
   meta: css`
     flex: none;
     font-size: 12px;
@@ -60,15 +77,31 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorSuccess};
   `,
   queueHeading: css`
+    cursor: pointer;
+    user-select: none;
+
     position: sticky;
     z-index: 1;
     inset-block-start: 88px;
 
+    display: flex;
+    gap: 6px;
+    align-items: center;
+
+    width: 100%;
     padding-block: 6px;
     padding-inline: 12px;
+    border: none;
     border-radius: ${cssVar.borderRadiusLG};
 
+    color: ${cssVar.colorTextSecondary};
+    text-align: start;
+
     background: ${cssVar.colorFillQuaternary};
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
   `,
   row: css`
     cursor: pointer;
@@ -127,26 +160,10 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-type QueueItem = {
-  additions: number;
-  author: string | null;
-  authorAvatar: string | null;
-  changedFiles: number;
-  deletions: number;
-  id: string;
-  isDraft: boolean;
-  number: number;
-  repository: string;
-  reviewDecision: 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED' | null;
-  title: string;
-  updatedAt: string | null;
-  url: string;
-};
-
 const PullRequestRow = memo<{
   active: boolean;
   detailPath: string;
-  item: QueueItem;
+  item: ReviewQueueItem;
   returnTo: string;
 }>(({ active, detailPath, item, returnTo }) => {
   const { t } = useTranslation('common');
@@ -171,6 +188,14 @@ const PullRequestRow = memo<{
           {item.title}
         </Text>
       </Flexbox>
+      {item.isDraft ? (
+        <Icon
+          className={styles.draftIcon}
+          icon={SquarePenIcon}
+          size={14}
+          title={t('reviews.state.draft')}
+        />
+      ) : null}
       {item.reviewDecision === 'APPROVED' ? (
         <Tag color={'green'}>{t('reviews.decision.approved')}</Tag>
       ) : null}
@@ -187,6 +212,50 @@ const PullRequestRow = memo<{
 });
 
 PullRequestRow.displayName = 'PullRequestRow';
+
+/**
+ * Sticky, collapsible queue group header — the same disclosure pattern as
+ * `WorkQueryStatusGroup` (chevron + aria-expanded), minus the status glyph.
+ * Reference review groups carry no count; `count` exists only for our extra
+ * `In-product approvals` section so its header reports the same aggregate
+ * its inner status groups display per bucket. No memo: children are fresh
+ * JSX each render, so a memo wrapper would never hit.
+ */
+const QueueGroup = ({
+  children,
+  count,
+  label,
+}: {
+  children: ReactNode;
+  count?: number;
+  label: string;
+}) => {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <Flexbox gap={4}>
+      <button
+        aria-expanded={!collapsed}
+        className={styles.queueHeading}
+        type={'button'}
+        onClick={() => setCollapsed((current) => !current)}
+      >
+        <ChevronDownIcon
+          className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
+          size={14}
+        />
+        <Text fontSize={12} weight={500}>
+          {label}
+        </Text>
+        {typeof count === 'number' ? (
+          <Text fontSize={12} type={'secondary'}>
+            {count}
+          </Text>
+        ) : null}
+      </button>
+      {collapsed ? null : children}
+    </Flexbox>
+  );
+};
 
 /**
  * `/reviews` — the real PR review workspace (F02). The GitHub queue is the
@@ -213,9 +282,9 @@ const ReviewsPage = memo(() => {
     { revalidateOnFocus: false },
   );
   const notConnected = isTrpcErrorCode(queue.error, 'PRECONDITION_FAILED');
-  const pullRequests: QueueItem[] = useMemo(() => queue.data?.data.items ?? [], [queue.data]);
+  const pullRequests: ReviewQueueItem[] = useMemo(() => queue.data?.data.items ?? [], [queue.data]);
   const queueTotal = queue.data?.data.total ?? null;
-  const [queueTail, setQueueTail] = useState<QueueItem[]>([]);
+  const [queueTail, setQueueTail] = useState<ReviewQueueItem[]>([]);
   const [queueLoadingMore, setQueueLoadingMore] = useState(false);
   // Cursor for the NEXT page — advanced by every load-more response; falls
   // back to the first page's cursor before any tail has been fetched.
@@ -230,6 +299,11 @@ const ReviewsPage = memo(() => {
     setQueuePaging(null);
   }, [tab, workspaceId]);
   const allPullRequests = useMemo(() => [...pullRequests, ...queueTail], [pullRequests, queueTail]);
+  const queueViewer = queue.data?.data.viewer ?? null;
+  const queueGroups = useMemo(
+    () => reviewQueueGroups(allPullRequests, { tab, viewer: queueViewer }),
+    [allPullRequests, queueViewer, tab],
+  );
   const loadMoreQueue = useCallback(async () => {
     if (!queueEndCursor) return;
     setQueueLoadingMore(true);
@@ -237,7 +311,7 @@ const ReviewsPage = memo(() => {
       const next = await pullRequestService.queue(tab, queueEndCursor);
       setQueueTail((current) => [
         ...current,
-        ...((next?.data?.items as QueueItem[] | undefined) ?? []),
+        ...((next?.data?.items as ReviewQueueItem[] | undefined) ?? []),
       ]);
       setQueuePaging({
         endCursor: next?.data?.endCursor ?? null,
@@ -299,6 +373,12 @@ const ReviewsPage = memo(() => {
   const tasks = data?.data.tasks ?? [];
   const externalReviews = data?.data.externalReviews ?? [];
   const taskReviewError = error;
+  // Aggregate of the whole in-product block (task query total + non-task
+  // external approvals) so the collapsible header matches the per-bucket
+  // counts its inner status groups already show.
+  const inProductCount = data
+    ? (data.data.total ?? tasks.length) + externalReviews.length
+    : undefined;
 
   const listPane = (
     <div className={styles.list}>
@@ -325,66 +405,76 @@ const ReviewsPage = memo(() => {
       </div>
       <div className={styles.listBody}>
         <Flexbox gap={16}>
-          <Flexbox gap={4}>
-            <Text className={styles.queueHeading} fontSize={12} weight={500}>
-              {t(tab === 'created' ? 'reviews.state.open' : 'reviews.pullRequests')}
-            </Text>
-            {queue.isLoading ? (
-              <SkeletonList />
-            ) : notConnected ? (
-              <Center gap={8} padding={24}>
-                <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
-                <Button onClick={() => navigate('/settings/connector')}>
-                  {t('reviews.connectGitHubAction')}
-                </Button>
-              </Center>
-            ) : queue.error ? (
-              <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
-            ) : allPullRequests.length === 0 ? (
-              <Empty description={t('reviews.queueEmpty')} icon={GitPullRequestIcon} />
-            ) : (
-              <Flexbox gap={4}>
-                <Flexbox>
-                  {allPullRequests.map((item) => (
-                    <PullRequestRow
-                      active={selectedId === item.id}
-                      detailPath={reviewsDetailPath(item.id, tab)}
-                      item={item}
-                      key={item.id}
-                      returnTo={listPath}
-                    />
-                  ))}
-                </Flexbox>
-                {/* A partial queue is never presented as complete — the tail
-                    counts stay visible and pages load on demand. */}
-                {queueHasMore || queueTail.length > 0 ? (
-                  <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
-                    <Text fontSize={12} type={'secondary'}>
-                      {t('reviews.loadedCount', {
-                        loaded: allPullRequests.length,
-                        total: queueTotal ?? '…',
-                      })}
-                    </Text>
-                    {queueHasMore ? (
-                      <Button
-                        loading={queueLoadingMore}
-                        size={'small'}
-                        type={'text'}
-                        onClick={() => void loadMoreQueue()}
-                      >
-                        {t('myWork.loadMore')}
-                      </Button>
-                    ) : null}
-                  </Flexbox>
-                ) : null}
+          {queue.isLoading || notConnected || queue.error || allPullRequests.length === 0 ? (
+            /* A single fallback group keeps the header visible — and
+               collapsible — over loading / disconnected / error / empty
+               queue states. */
+            <QueueGroup
+              label={t(tab === 'created' ? 'reviews.state.open' : 'reviews.pullRequests')}
+            >
+              {queue.isLoading ? (
+                <SkeletonList />
+              ) : notConnected ? (
+                <Center gap={8} padding={24}>
+                  <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+                  <Button onClick={() => navigate('/settings/connector')}>
+                    {t('reviews.connectGitHubAction')}
+                  </Button>
+                </Center>
+              ) : queue.error ? (
+                <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
+              ) : (
+                <Empty description={t('reviews.queueEmpty')} icon={GitPullRequestIcon} />
+              )}
+            </QueueGroup>
+          ) : (
+            <Flexbox gap={4}>
+              <Flexbox gap={8}>
+                {queueGroups.map((group) => (
+                  <QueueGroup
+                    key={group.key}
+                    label={String(t(REVIEW_QUEUE_GROUP_LABEL_KEYS[group.key] as never))}
+                  >
+                    <Flexbox>
+                      {group.items.map((item) => (
+                        <PullRequestRow
+                          active={selectedId === item.id}
+                          detailPath={reviewsDetailPath(item.id, tab)}
+                          item={item}
+                          key={item.id}
+                          returnTo={listPath}
+                        />
+                      ))}
+                    </Flexbox>
+                  </QueueGroup>
+                ))}
               </Flexbox>
-            )}
-          </Flexbox>
+              {/* A partial queue is never presented as complete — the tail
+                  counts stay visible and pages load on demand. */}
+              {queueHasMore || queueTail.length > 0 ? (
+                <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
+                  <Text fontSize={12} type={'secondary'}>
+                    {t('reviews.loadedCount', {
+                      loaded: allPullRequests.length,
+                      total: queueTotal ?? '…',
+                    })}
+                  </Text>
+                  {queueHasMore ? (
+                    <Button
+                      loading={queueLoadingMore}
+                      size={'small'}
+                      type={'text'}
+                      onClick={() => void loadMoreQueue()}
+                    >
+                      {t('myWork.loadMore')}
+                    </Button>
+                  ) : null}
+                </Flexbox>
+              ) : null}
+            </Flexbox>
+          )}
 
-          <Flexbox gap={4}>
-            <Text className={styles.queueHeading} fontSize={12} weight={500}>
-              {t('reviews.inProductReviews')}
-            </Text>
+          <QueueGroup count={inProductCount} label={t('reviews.inProductReviews')}>
             {taskReviewError && tasks.length === 0 && externalReviews.length === 0 ? (
               <AsyncError
                 error={taskReviewError}
@@ -406,7 +496,7 @@ const ReviewsPage = memo(() => {
                 onLoadMoreGroup={(key) => void loadMoreGroup(key)}
               />
             )}
-          </Flexbox>
+          </QueueGroup>
         </Flexbox>
       </div>
     </div>
@@ -417,8 +507,11 @@ const ReviewsPage = memo(() => {
   ) : queue.isLoading ? (
     <SkeletonList padding={24} rows={5} />
   ) : notConnected ? (
-    <Center className={styles.detailEmpty} padding={24}>
+    <Center className={styles.detailEmpty} gap={8} padding={24}>
       <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+      <Button onClick={() => navigate('/settings/connector')}>
+        {t('reviews.connectGitHubAction')}
+      </Button>
     </Center>
   ) : queue.error ? (
     <Center className={styles.detailEmpty} padding={24}>

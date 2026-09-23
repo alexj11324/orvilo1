@@ -18,11 +18,22 @@ const LEAF_LABEL_KEYS = ['label', 'name', 'topicTitle', 'actionLabel'] as const;
 const nodeText = (node: unknown): string => {
   if (!isRecord(node)) return '';
   if (typeof node.text === 'string') return node.text;
-  if (Array.isArray(node.children)) return node.children.map(nodeText).join('');
+  // Real leaf nodes serialize only a label — check labels before children so a
+  // leaf with an empty `children` array still resolves.
   for (const key of LEAF_LABEL_KEYS) {
     const label = node[key];
     if (typeof label === 'string') return label;
   }
+  if (Array.isArray(node.children))
+    // Block children (listitem/table rows…) need separators so sibling blocks
+    // don't concatenate into one word; whitespace collapses downstream.
+    return node.children
+      .map((child) => {
+        const text = nodeText(child);
+        const isBlock = isRecord(child) && typeof child.text !== 'string';
+        return isBlock ? ` ${text} ` : text;
+      })
+      .join('');
   return '';
 };
 

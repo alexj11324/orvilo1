@@ -109,6 +109,7 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   issueChip: css`
+    overflow: hidden;
     display: inline-flex;
     gap: 4px;
     align-items: center;

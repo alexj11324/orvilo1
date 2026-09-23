@@ -2,13 +2,24 @@
 
 import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, keyframes } from 'antd-style';
 import { FileText, FolderPlus, Search, X } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConversationStore } from '@/features/Conversation/store';
 import { useGlobalStore } from '@/store/global';
+
+const reveal = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -64,6 +75,13 @@ const styles = createStaticStyles(({ css }) => ({
   icon: css`
     color: ${cssVar.colorTextSecondary};
   `,
+  root: css`
+    animation: ${reveal} 0.45s ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  `,
 }));
 
 const EXAMPLES = [
@@ -88,6 +106,15 @@ const EXAMPLES = [
 ] as const;
 
 /**
+ * How long after mount the examples block reveals. The reference renders a
+ * bare centered composer first and only later lifts it when the examples
+ * arrive (state A → B, observed 11–20s — the reference's data latency, not a
+ * designed wait). A short delay reproduces that progressive reveal — and the
+ * composer's natural lift inside the shared group — without the wait.
+ */
+const REVEAL_DELAY_MS = 1000;
+
+/**
  * The reference's `Get started with some examples` block — three clickable
  * prompt cards under the centered landing composer, dismissible via `Dismiss`.
  *
@@ -100,14 +127,20 @@ const ExamplePrompts = memo(() => {
   const dismissed = useGlobalStore((s) => s.status.inboxAgentExamplesDismissed);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const fillInputMessage = useConversationStore((s) => s.fillInputMessage);
+  const [revealed, setRevealed] = useState(false);
 
-  if (dismissed) return null;
+  useEffect(() => {
+    const timer = setTimeout(() => setRevealed(true), REVEAL_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (dismissed || !revealed) return null;
 
   return (
     // The composer card sits 16px in from the 744px landing group (via
     // WideScreenContainer's paddingInline) — the same inset keeps the
     // examples row flush with the card edges (712px, like the reference).
-    <Flexbox data-testid="inbox-agent-examples" gap={8} paddingInline={16}>
+    <Flexbox className={styles.root} data-testid="inbox-agent-examples" gap={8} paddingInline={16}>
       <Flexbox horizontal align={'center'} justify={'space-between'}>
         <span className={styles.header}>{t('examples.title')}</span>
         <ActionIcon

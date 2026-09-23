@@ -29,7 +29,11 @@ export const copyAsMarkdownAction = defineAction({
 
       const raw =
         ctx.role === 'group' ? (ctx.contentBlock?.content ?? ctx.data.content) : ctx.data.content;
-      const markdown = unescapeMarkdown(cleanSpeakerTag(raw));
+      // `content` is not guaranteed to be a string on every message shape —
+      // the transcript builder guards the same way.
+      const markdown = unescapeMarkdown(cleanSpeakerTag(typeof raw === 'string' ? raw : ''));
+
+      if (!markdown.trim()) return null;
 
       return {
         handleClick: async () => {

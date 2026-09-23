@@ -6,6 +6,7 @@ import isEqual from 'fast-deep-equal';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
+import { shallow } from 'zustand/shallow';
 
 import { useTopicNavigation } from '@/features/AgentSidebar/Topic/hooks/useTopicNavigation';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -24,24 +25,37 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorTextDescription};
     text-align: center;
   `,
+  // Native <button> rows: menu items must be keyboard-focusable and announce
+  // as actions, not clickable divs.
   item: css`
     cursor: pointer;
 
     overflow: hidden;
 
+    width: 100%;
     padding-block: 6px;
     padding-inline: 10px;
+    border: none;
     border-radius: 6px;
 
+    font-family: inherit;
     font-size: 13px;
     color: ${cssVar.colorText};
+    text-align: start;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    background: transparent;
 
     transition: background 0.15s;
 
     &:hover {
       background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: -1px;
     }
   `,
   itemActive: css`
@@ -73,7 +87,10 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
   const { t } = useTranslation(['chat', 'topic']);
   const [keyword, setKeyword] = useState('');
 
-  const [activeAgentId, activeTopicId] = useChatStore((s) => [s.activeAgentId, s.activeTopicId]);
+  const [activeAgentId, activeTopicId] = useChatStore(
+    (s) => [s.activeAgentId, s.activeTopicId],
+    shallow,
+  );
 
   // Keep the menu's rows on the same canonical fetch as the sidebar — the SWR
   // key dedupes against it, so this only covers the sidebar-collapsed case.
@@ -116,16 +133,17 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
           <SkeletonList rows={3} />
         ) : rows && rows.length > 0 ? (
           rows.map((topic) => (
-            <div
+            <button
               className={cx(styles.item, topic.id === activeTopicId && styles.itemActive)}
               key={topic.id}
+              type={'button'}
               onClick={() => {
                 void navigateToTopic(topic.id);
                 onNavigate?.();
               }}
             >
               {topic.title}
-            </div>
+            </button>
           ))
         ) : (
           <div className={styles.empty}>

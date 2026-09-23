@@ -4,7 +4,11 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import InboxAgentLanding, { shouldShowInboxAgentLanding } from './InboxAgentLanding';
+import InboxAgentLanding, {
+  isInboxAgentRouteTarget,
+  shouldShowInboxAgentLanding,
+  shouldShowInboxAgentResolving,
+} from './InboxAgentLanding';
 
 afterEach(cleanup);
 
@@ -58,5 +62,72 @@ describe('shouldShowInboxAgentLanding', () => {
     expect(scrollRegion).toContainElement(content);
     expect(content).toContainElement(lastAuthorizationAction);
     expect(getComputedStyle(scrollRegion).overflow).toBe('hidden auto');
+  });
+});
+
+describe('isInboxAgentRouteTarget', () => {
+  it('matches the unresolved `/agent/inbox` slug route', () => {
+    expect(isInboxAgentRouteTarget({ agentId: 'inbox' })).toBe(true);
+  });
+
+  it('matches a hydrated row whose slug is the inbox builtin', () => {
+    expect(isInboxAgentRouteTarget({ agentId: 'agt_abc', agentSlug: 'inbox' })).toBe(true);
+  });
+
+  it('rejects custom agents and unrelated ids', () => {
+    expect(isInboxAgentRouteTarget({ agentId: 'agt_custom', agentSlug: 'helper' })).toBe(false);
+    expect(isInboxAgentRouteTarget({ agentId: 'agt_custom' })).toBe(false);
+    expect(isInboxAgentRouteTarget({})).toBe(false);
+  });
+});
+
+describe('shouldShowInboxAgentResolving', () => {
+  it('resolves the slug-route window while the builtin map is empty', () => {
+    expect(
+      shouldShowInboxAgentResolving({
+        agentId: 'inbox',
+        inboxAgentConfigInit: false,
+        topicId: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('resolves a direct real-id visit to the hydrated inbox row', () => {
+    expect(
+      shouldShowInboxAgentResolving({
+        agentId: 'agt_inbox',
+        agentSlug: 'inbox',
+        inboxAgentConfigInit: false,
+        topicId: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('stops resolving once the builtin map lands', () => {
+    expect(
+      shouldShowInboxAgentResolving({
+        agentId: 'inbox',
+        inboxAgentConfigInit: true,
+        topicId: null,
+      }),
+    ).toBe(false);
+  });
+
+  it('never resolves with an active topic or a non-inbox target', () => {
+    expect(
+      shouldShowInboxAgentResolving({
+        agentId: 'inbox',
+        inboxAgentConfigInit: false,
+        topicId: 'topic-1',
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowInboxAgentResolving({
+        agentId: 'agt_custom',
+        agentSlug: 'helper',
+        inboxAgentConfigInit: false,
+        topicId: null,
+      }),
+    ).toBe(false);
   });
 });

@@ -50,6 +50,11 @@ describe('copyAsMarkdownAction', () => {
     expect(build({}, 'user')).toBeNull();
   });
 
+  it('is absent when there is no markdown to copy', () => {
+    expect(build({ content: '' })).toBeNull();
+    expect(build({ content: undefined })).toBeNull();
+  });
+
   it('copies assistant content verbatim when no normalization is needed', async () => {
     const action = build({ content: '**Hello** world' });
 

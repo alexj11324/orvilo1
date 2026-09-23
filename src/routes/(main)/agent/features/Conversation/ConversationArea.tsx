@@ -1,8 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import debug from 'debug';
+import { Loader2 } from 'lucide-react';
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +42,11 @@ import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import ExamplePrompts from './ExamplePrompts';
 import ExposeMainEditor from './ExposeMainEditor';
 import HeterogeneousChatInput from './HeterogeneousChatInput';
-import InboxAgentLanding, { shouldShowInboxAgentLanding } from './InboxAgentLanding';
+import InboxAgentLanding, {
+  isInboxAgentRouteTarget,
+  shouldShowInboxAgentLanding,
+  shouldShowInboxAgentResolving,
+} from './InboxAgentLanding';
 import MainChatInput from './MainChatInput';
 import MessageFromUrl from './MainChatInput/MessageFromUrl';
 import ThreadHydration from './ThreadHydration';
@@ -100,11 +105,29 @@ const Conversation = memo(() => {
   // read-only — the parent agent drives their execution, so hide the input.
   const isSubagentThread = useChatStore(threadSelectors.isActiveThreadSubagent);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const inboxAgentConfigInit = useAgentStore(builtinAgentSelectors.isInboxAgentConfigInit);
+  const agentSlug = useAgentStore((s) =>
+    context.agentId ? s.agentMap[context.agentId]?.slug : undefined,
+  );
   const isInboxLanding = shouldShowInboxAgentLanding({
     agentId: context.agentId,
     inboxAgentId,
     topicId: context.topicId,
   });
+  // `/agent/inbox` (and a hydrated inbox row) targets the landing even before
+  // `builtinAgentIdMap` resolves the real id — without this the populated
+  // path renders `AgentHome`'s deprecated welcome card for a few frames.
+  const isInboxRouteTarget = isInboxAgentRouteTarget({
+    agentId: context.agentId,
+    agentSlug,
+  });
+  const isInboxResolving = shouldShowInboxAgentResolving({
+    agentId: context.agentId,
+    agentSlug,
+    inboxAgentConfigInit,
+    topicId: context.topicId,
+  });
+  const showInboxLanding = isInboxLanding || (!context.topicId && isInboxRouteTarget);
 
   // Auto-reconnect to running Gateway operation on topic load
   const runningOperation = useChatStore((s) =>
@@ -160,14 +183,32 @@ const Conversation = memo(() => {
         replaceMessages(messages, { context: ctx, source: meta?.source });
       }}
     >
-      {isInboxLanding ? (
+      {showInboxLanding ? (
         <InboxAgentLanding>
           <ToolAuthAlert />
-          {chatInput}
-          {/* Reference state B: the examples row sits inside the same centered
-              group as the composer, so its appearance lifts the composer
-              (~91px in the reference) instead of needing a fixed offset. */}
-          <ExamplePrompts />
+          {isInboxResolving ? (
+            // Neutral loading while the builtin map resolves the real inbox
+            // id — the composer must not send under the `inbox` slug, and the
+            // populated path would flash the deprecated AgentHome welcome.
+            <Flexbox
+              align={'center'}
+              aria-label={t('loading', { ns: 'common' })}
+              flex={1}
+              justify={'center'}
+              role={'status'}
+            >
+              <Icon spin color={cssVar.colorTextDescription} icon={Loader2} size={20} />
+            </Flexbox>
+          ) : (
+            <>
+              {chatInput}
+              {/* Reference state B: the examples row sits inside the same
+                  centered group as the composer, so its appearance lifts the
+                  composer (~91px in the reference) instead of needing a fixed
+                  offset. */}
+              <ExamplePrompts />
+            </>
+          )}
         </InboxAgentLanding>
       ) : (
         <>

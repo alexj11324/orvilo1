@@ -15,6 +15,7 @@ import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceSplit } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
@@ -307,16 +308,20 @@ const ReviewsPage = memo(() => {
   } | null>(null);
   const queueHasMore = queuePaging?.hasMore ?? queue.data?.data.hasMore ?? false;
   const queueEndCursor = queuePaging?.endCursor ?? queue.data?.data.endCursor ?? null;
+  const queueMore = usePagedLoadMore();
   useEffect(() => {
     setQueueTail([]);
     setQueuePaging(null);
-  }, [tab, workspaceId]);
+    queueMore.resetLoadMoreError();
+  }, [queueMore.resetLoadMoreError, tab, workspaceId]);
   const allPullRequests = useMemo(() => [...pullRequests, ...queueTail], [pullRequests, queueTail]);
   const queueViewer = queue.data?.data.viewer ?? null;
   const queueGroups = useMemo(
     () => reviewQueueGroups(allPullRequests, { tab, viewer: queueViewer }),
     [allPullRequests, queueViewer, tab],
   );
+  // Errors surface through `queueMore` — an inline retry under the footer —
+  // so a failed page never dies as a console-only silent stop.
   const loadMoreQueue = useCallback(async () => {
     if (!queueEndCursor) return;
     setQueueLoadingMore(true);
@@ -330,8 +335,6 @@ const ReviewsPage = memo(() => {
         endCursor: next?.data?.endCursor ?? null,
         hasMore: next?.data?.hasMore ?? false,
       });
-    } catch (loadError) {
-      console.error('[reviews:queueMore]', loadError);
     } finally {
       setQueueLoadingMore(false);
     }
@@ -344,9 +347,11 @@ const ReviewsPage = memo(() => {
   const firstGroups = data?.data.groups ?? [];
   const queryHash = data?.data.queryHash;
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
+  const workMore = usePagedLoadMore();
   useEffect(() => {
     setGroupTail([]);
-  }, [queryHash, tab, workspaceId]);
+    workMore.resetLoadMoreError();
+  }, [queryHash, tab, workMore.resetLoadMoreError, workspaceId]);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
 
   const refresh = useCallback(async () => {
@@ -494,6 +499,13 @@ const ReviewsPage = memo(() => {
               </Flexbox>
               {/* A partial queue is never presented as complete — the tail
                   counts stay visible and pages load on demand. */}
+              {queueMore.loadMoreError ? (
+                <AsyncError
+                  error={queueMore.loadMoreError}
+                  variant={'inline'}
+                  onRetry={queueMore.retryLoadMore}
+                />
+              ) : null}
               {queueHasMore || queueTail.length > 0 ? (
                 <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
                   <Text fontSize={12} type={'secondary'}>
@@ -507,7 +519,7 @@ const ReviewsPage = memo(() => {
                       loading={queueLoadingMore}
                       size={'small'}
                       type={'text'}
-                      onClick={() => void loadMoreQueue()}
+                      onClick={() => queueMore.runLoadMore(loadMoreQueue)}
                     >
                       {t('myWork.loadMore')}
                     </Button>
@@ -536,12 +548,14 @@ const ReviewsPage = memo(() => {
                 groupBy={data?.data.groupBy}
                 groups={groups}
                 layout={'list'}
+                loadMoreError={workMore.loadMoreError}
                 loadMoreLabel={t('myWork.loadMore')}
                 loading={isLoading}
                 loadingLabel={t('myWork.loading')}
                 tasks={tasks}
                 total={data?.data.total}
-                onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+                onLoadMoreGroup={(key) => workMore.runLoadMore(() => loadMoreGroup(key))}
+                onRetryLoadMore={workMore.retryLoadMore}
               />
             )}
           </QueueGroup>

@@ -308,6 +308,15 @@ const ProjectWorkspace = memo(() => {
                   })
                 }
               />
+              {/* A failed updates fetch must not read as a confident "no
+                  updates yet" — inline failure marker with retry. */}
+              {updatesSWR.error ? (
+                <AsyncError
+                  error={updatesSWR.error}
+                  variant={'inline'}
+                  onRetry={() => void updatesSWR.mutate()}
+                />
+              ) : null}
               {projectUpdates.map((update) => (
                 <ProjectUpdateRow key={update.id} update={update} />
               ))}

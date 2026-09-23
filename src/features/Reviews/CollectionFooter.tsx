@@ -4,6 +4,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
+
 const styles = createStaticStyles(({ css }) => ({
   footer: css`
     display: flex;
@@ -23,27 +25,37 @@ const styles = createStaticStyles(({ css }) => ({
  * server response saw a newer head than the loaded snapshot.
  */
 const CollectionFooter = memo<{
+  /** Rejection from the last `onLoadMore` — replaces the row with a retry. */
+  error?: unknown;
   hasMore: boolean;
   loaded: number;
   loading?: boolean;
   stale?: boolean;
   total: number | null;
   onLoadMore?: () => void;
-}>(({ hasMore, loaded, loading, onLoadMore, stale, total }) => {
+  /** Re-issues the failed page request shown by `error`. */
+  onRetry?: () => void;
+}>(({ error, hasMore, loaded, loading, onLoadMore, onRetry, stale, total }) => {
   const { t } = useTranslation('common');
-  if (!hasMore && !stale && (total === null || loaded === total)) return null;
+  if (!error && !hasMore && !stale && (total === null || loaded === total)) return null;
   return (
     <Flexbox className={styles.footer}>
-      <Text fontSize={12} type={'secondary'}>
-        {stale
-          ? t('reviews.staleBanner')
-          : t('reviews.loadedCount', { loaded, total: total ?? '…' })}
-      </Text>
-      {hasMore && !stale ? (
-        <Button loading={loading} size={'small'} type={'text'} onClick={onLoadMore}>
-          {t('myWork.loadMore')}
-        </Button>
-      ) : null}
+      {error ? (
+        <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
+      ) : (
+        <>
+          <Text fontSize={12} type={'secondary'}>
+            {stale
+              ? t('reviews.staleBanner')
+              : t('reviews.loadedCount', { loaded, total: total ?? '…' })}
+          </Text>
+          {hasMore && !stale ? (
+            <Button loading={loading} size={'small'} type={'text'} onClick={onLoadMore}>
+              {t('myWork.loadMore')}
+            </Button>
+          ) : null}
+        </>
+      )}
     </Flexbox>
   );
 });

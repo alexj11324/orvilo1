@@ -24,8 +24,10 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NavHeader from '@/features/NavHeader';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceReview } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys } from '@/libs/swr/keys';
 import { pullRequestService, type ReviewPageCollection } from '@/services/pullRequest';
@@ -218,7 +220,13 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
   // Synchronous generation reset — tails/cursors from the previous snapshot
   // are cleared in the same render that first observes the new identity.
   const [pager, setPager] = useState(() => emptyReviewPager(pagerKey));
-  if (pager.key !== pagerKey) setPager(emptyReviewPager(pagerKey));
+  const filesMore = usePagedLoadMore();
+  const conversationMore = usePagedLoadMore();
+  if (pager.key !== pagerKey) {
+    setPager(emptyReviewPager(pagerKey));
+    filesMore.resetLoadMoreError();
+    conversationMore.resetLoadMoreError();
+  }
   const activePager = pager.key === pagerKey ? pager : emptyReviewPager(pagerKey);
   const pagerKeyRef = useRef(pagerKey);
   pagerKeyRef.current = pagerKey;
@@ -538,15 +546,19 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                 </Flexbox>
               ))}
               <CollectionFooter
+                error={filesMore.loadMoreError}
                 hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
                 loaded={allFiles.length}
                 total={activePager.meta.files?.total ?? pullRequest.files.total}
+                onRetry={filesMore.retryLoadMore}
                 onLoadMore={
                   (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
                     ? () =>
-                        void loadMore(
-                          'files',
-                          (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
+                        filesMore.runLoadMore(() =>
+                          loadMore(
+                            'files',
+                            (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
+                          ),
                         )
                     : undefined
                 }
@@ -560,9 +572,9 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
       >
         <Flexbox gap={16} padding={16}>
           {isLoading ? (
-            <Center padding={32}>
-              <Text type={'secondary'}>{t('myWork.loading')}</Text>
-            </Center>
+            /* Same skeleton treatment the list pane uses for its loading
+               fallback — a bare "Loading…" reads as unstyled next to it. */
+            <SkeletonList padding={8} rows={5} />
           ) : notConnected ? (
             <Center gap={8} padding={24}>
               <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
@@ -648,7 +660,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                     loaded: allChecks.length,
                     total: activePager.meta.checks?.total ?? pullRequest.checks.total,
                   }}
-                  onLoadMore={(cursor) => void loadMore('checks', cursor)}
+                  onLoadMore={(cursor) => loadMore('checks', cursor)}
                 />
               ) : null}
 
@@ -692,15 +704,19 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                     </Flexbox>
                   ))}
                   <CollectionFooter
+                    error={filesMore.loadMoreError}
                     hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
                     loaded={allFiles.length}
                     total={activePager.meta.files?.total ?? pullRequest.files.total}
+                    onRetry={filesMore.retryLoadMore}
                     onLoadMore={
                       (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
                         ? () =>
-                            void loadMore(
-                              'files',
-                              (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
+                            filesMore.runLoadMore(() =>
+                              loadMore(
+                                'files',
+                                (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
+                              ),
                             )
                         : undefined
                     }
@@ -761,6 +777,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                     />
                   ))}
                   <CollectionFooter
+                    error={conversationMore.loadMoreError}
                     loaded={allThreads.length + allReviews.length}
                     hasMore={
                       (activePager.meta.threads?.hasMore ?? pullRequest.threads.hasMore) ||
@@ -770,20 +787,25 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                       (activePager.meta.threads?.total ?? pullRequest.threads.total ?? 0) +
                       (activePager.meta.reviews?.total ?? pullRequest.reviews.total ?? 0)
                     }
+                    onRetry={conversationMore.retryLoadMore}
                     onLoadMore={
                       (activePager.meta.threads?.endCursor ?? pullRequest.threads.endCursor)
                         ? () =>
-                            void loadMore(
-                              'threads',
-                              (activePager.meta.threads?.endCursor ??
-                                pullRequest.threads.endCursor)!,
+                            conversationMore.runLoadMore(() =>
+                              loadMore(
+                                'threads',
+                                (activePager.meta.threads?.endCursor ??
+                                  pullRequest.threads.endCursor)!,
+                              ),
                             )
                         : (activePager.meta.reviews?.endCursor ?? pullRequest.reviews.endCursor)
                           ? () =>
-                              void loadMore(
-                                'reviews',
-                                (activePager.meta.reviews?.endCursor ??
-                                  pullRequest.reviews.endCursor)!,
+                              conversationMore.runLoadMore(() =>
+                                loadMore(
+                                  'reviews',
+                                  (activePager.meta.reviews?.endCursor ??
+                                    pullRequest.reviews.endCursor)!,
+                                ),
                               )
                           : undefined
                     }

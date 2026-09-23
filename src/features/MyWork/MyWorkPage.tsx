@@ -1,8 +1,17 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text, toast } from '@lobehub/ui/base-ui';
-import { type MyWorkMode, type WorkQueryLayout } from '@orvilo/types';
+import {
+  confirmModal,
+  TabsIndicator,
+  TabsList,
+  TabsRoot,
+  TabsTab,
+  Tag,
+  Text,
+  toast,
+} from '@lobehub/ui/base-ui';
+import { type MyWorkMode, type TaskStatus, type WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { FolderIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -16,6 +25,7 @@ import AsyncError from '@/components/AsyncError';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
+import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
@@ -24,14 +34,19 @@ import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
+import { usePermission } from '@/hooks/usePermission';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
+import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import BulkActionsBar from './BulkActionsBar';
+import type { BulkSelectGesture } from './bulkSelection';
 import MyWorkControls from './MyWorkControls';
 import {
   activityDayTitle,
@@ -57,7 +72,9 @@ import {
 import MyWorkIssuePane from './MyWorkIssuePane';
 import { isMyWorkSaveableMode } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
-import { isMyWorkBoardMode } from './workQueryBoard';
+import { useBulkSelection } from './useBulkSelection';
+import { isMyWorkBoardMode, workQueryListGroupBy } from './workQueryBoard';
+import { applyWorkQueryStatusChange } from './workQueryBoardMove';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
@@ -267,11 +284,22 @@ const MyWorkPage = memo(() => {
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [taskTail, setTaskTail] = useState<typeof firstTasks>([]);
   const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
+  const { loadMoreError, resetLoadMoreError, retryLoadMore, runLoadMore } = usePagedLoadMore();
   useEffect(() => {
     setGroupTail([]);
     setTaskTail([]);
     setExtraSubscribed([]);
-  }, [delegated, layout, mode, noProject, queryHash, serverGroupBy, workspaceId]);
+    resetLoadMoreError();
+  }, [
+    delegated,
+    layout,
+    mode,
+    noProject,
+    queryHash,
+    resetLoadMoreError,
+    serverGroupBy,
+    workspaceId,
+  ]);
   const tasks = mergeWorkQueryPage(firstTasks, taskTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   // The generic query endpoint does not return subscription state — the
@@ -381,6 +409,163 @@ const MyWorkPage = memo(() => {
     },
     [navigate],
   );
+
+  /* ---------------------------- bulk selection ---------------------------- */
+
+  const changeTaskStatus = useTaskStatusChange();
+  const { allowed: canBulkEdit } = usePermission('create_content');
+
+  // Rendered-row ids — the selection prunes to this set and bulk actions
+  // resolve their task objects through it, so invisible rows are never
+  // selected on or mutated.
+  const { bulkTaskById, visibleTaskIds } = useMemo(() => {
+    const ids = new Set<string>();
+    const byId = new Map<string, WorkQueryResultTask>();
+    const add = (task: WorkQueryResultTask) => {
+      ids.add(task.id);
+      if (!byId.has(task.id)) byId.set(task.id, task);
+    };
+    displayTasks.forEach(add);
+    displayGroups.forEach((group) => group.tasks.forEach(add));
+    return { bulkTaskById: byId, visibleTaskIds: ids };
+  }, [displayGroups, displayTasks]);
+
+  const {
+    applyGesture: applyBulkGesture,
+    clear: clearBulk,
+    count: bulkCount,
+    selectedIds: bulkSelectedIds,
+  } = useBulkSelection({
+    resetKey: `${mode}:${layout}:${serverGroupBy}:${queryHash ?? ''}`,
+    visibleIds: visibleTaskIds,
+  });
+  // List layout only — the board's cards keep their own drag contract.
+  const bulkEnabled = layout === 'list' && canBulkEdit;
+  const bulkTasks = useMemo(
+    () =>
+      [...bulkSelectedIds]
+        .map((id) => bulkTaskById.get(id))
+        .filter((task): task is WorkQueryResultTask => Boolean(task)),
+    [bulkSelectedIds, bulkTaskById],
+  );
+
+  const handleBulkSelect = useCallback(
+    (task: WorkQueryResultTask, gesture: BulkSelectGesture, orderedRowIds: string[]) => {
+      applyBulkGesture(task.id, gesture, orderedRowIds);
+    },
+    [applyBulkGesture],
+  );
+
+  const [bulkBusy, setBulkBusy] = useState(false);
+  // One mutation per selected task, sequentially: a Linear-linked status move
+  // can surface a per-task workflow-state picker or a subtask-cascade modal —
+  // parallel runs would stack them. Afterwards the feed refetches once and a
+  // single toast reports applied vs failed.
+  const runBulk = useCallback(
+    async (
+      apply: (task: WorkQueryResultTask) => Promise<unknown>,
+      doneKey: 'myWork.bulk.deleted' | 'myWork.bulk.updated',
+    ) => {
+      if (bulkBusy) return;
+      const targets = bulkTasks;
+      if (targets.length === 0) return;
+      setBulkBusy(true);
+      let failed = 0;
+      for (const task of targets) {
+        try {
+          await apply(task);
+        } catch (mutationError) {
+          failed += 1;
+          console.error('[MyWork] bulk action failed for', task.identifier, mutationError);
+        }
+      }
+      setBulkBusy(false);
+      await refresh();
+      if (failed === 0) {
+        toast.success(t(doneKey, { count: targets.length }));
+      } else {
+        toast.error(t('myWork.bulk.failed', { failed, total: targets.length }));
+      }
+    },
+    [bulkBusy, bulkTasks, refresh, t],
+  );
+
+  // Status writes reuse the row path: Linear-linked tasks go through
+  // `moveBoard` (state picker included), unlinked ones through `task.update`.
+  // Attention/flat groupings write `status`, matching the rows' own choice.
+  const bulkStatusGroupBy =
+    workQueryListGroupBy(data?.data.groupBy) === 'workflowCategory' ? 'workflowCategory' : 'status';
+
+  const bulkSetStatus = useCallback(
+    (status: TaskStatus) =>
+      void runBulk(
+        (task) =>
+          applyWorkQueryStatusChange({
+            changeLocal: changeTaskStatus,
+            groupBy: bulkStatusGroupBy,
+            status,
+            task,
+          }),
+        'myWork.bulk.updated',
+      ),
+    [bulkStatusGroupBy, changeTaskStatus, runBulk],
+  );
+
+  const bulkSetPriority = useCallback(
+    (priority: number) =>
+      void runBulk((task) => taskService.update(task.id, { priority }), 'myWork.bulk.updated'),
+    [runBulk],
+  );
+
+  const bulkSetAssignee = useCallback(
+    (userId: string | null) =>
+      void runBulk(
+        (task) => taskService.update(task.id, { assigneeUserId: userId }),
+        'myWork.bulk.updated',
+      ),
+    [runBulk],
+  );
+
+  // The member picker no-ops the option matching `currentUserId`. A shared
+  // assignee shows as current; a mixed selection reports a sentinel so every
+  // option — including Unassigned — stays actionable.
+  const bulkAssigneeCurrentId = useMemo(() => {
+    if (bulkTasks.length === 0) return undefined;
+    const first = bulkTasks[0].assigneeUserId ?? null;
+    return bulkTasks.every((task) => (task.assigneeUserId ?? null) === first)
+      ? first
+      : '__bulk_mixed__';
+  }, [bulkTasks]);
+
+  const bulkDelete = useCallback(() => {
+    const count = bulkTasks.length;
+    if (count === 0) return;
+    confirmModal({
+      cancelText: t('cancel'),
+      content: t('myWork.bulk.deleteConfirmContent', { count }),
+      okButtonProps: { danger: true },
+      okText: t('delete'),
+      title: t('myWork.bulk.deleteConfirmTitle', { count }),
+      onOk: async () => {
+        await runBulk((task) => taskService.delete(task.id), 'myWork.bulk.deleted');
+        clearBulk();
+      },
+    });
+  }, [bulkTasks.length, clearBulk, runBulk, t]);
+
+  const bulkBar =
+    bulkEnabled && bulkCount > 0 ? (
+      <BulkActionsBar
+        assigneeCurrentId={bulkAssigneeCurrentId}
+        busy={bulkBusy}
+        count={bulkCount}
+        onAssignee={bulkSetAssignee}
+        onClear={clearBulk}
+        onDelete={bulkDelete}
+        onSetPriority={bulkSetPriority}
+        onSetStatus={bulkSetStatus}
+      />
+    ) : null;
 
   /* --------------------------- teams + projects ---------------------------- */
 
@@ -664,6 +849,7 @@ const MyWorkPage = memo(() => {
           <AsyncError error={error} variant={'inline'} onRetry={() => void refresh()} />
         ) : null}
         <WorkQueryResults
+          bulkSelectedIds={bulkEnabled ? bulkSelectedIds : undefined}
           emptyLabel={t('myWork.empty')}
           flatNested={display.showSubIssues && display.nestedSubIssues}
           flatSections={flatSections}
@@ -671,6 +857,7 @@ const MyWorkPage = memo(() => {
           groups={displayGroups}
           isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
           layout={layout}
+          loadMoreError={loadMoreError}
           loadMoreLabel={t('myWork.loadMore')}
           loading={isLoading}
           loadingLabel={t('myWork.loading')}
@@ -684,14 +871,21 @@ const MyWorkPage = memo(() => {
               ? { teamOptions: joinedTeamOptions }
               : undefined
           }
+          onBulkSelectTask={bulkEnabled ? handleBulkSelect : undefined}
+          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
-          onLoadMore={groups.length === 0 ? () => void loadMore() : undefined}
-          onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+          onLoadMore={groups.length === 0 ? () => runLoadMore(loadMore) : undefined}
+          onLoadMoreGroup={(key) => runLoadMore(() => loadMoreGroup(key))}
           onMoved={() => void refresh()}
           onOpenTask={openTaskPage}
-          onSelectTask={setSelected}
+          onRetryLoadMore={retryLoadMore}
           onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
+          onSelectTask={(task) => {
+            // A plain click picks one issue for the peek — the multi-select
+            // set is a bulk-action target, so it releases here.
+            setSelected(task);
+            clearBulk();
+          }}
         />
       </>
     );
@@ -758,6 +952,7 @@ const MyWorkPage = memo(() => {
               <div className={styles.resultsBody}>
                 {chipsRow}
                 {results}
+                {bulkBar}
               </div>
             </div>
             <aside aria-label={t('myWork.issueDetails')} className={styles.detailPane}>
@@ -772,6 +967,7 @@ const MyWorkPage = memo(() => {
           <>
             {chipsRow}
             {results}
+            {bulkBar}
           </>
         )}
       </WorkSurfaceCollection>

@@ -38,6 +38,7 @@ import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -325,12 +326,14 @@ const SavedViewPage = memo(() => {
   const [projectGroupTail, setProjectGroupTail] = useState<
     WorkQueryGroupPage<SavedViewProjectRowData>[]
   >([]);
+  const pagedMore = usePagedLoadMore();
   useEffect(() => {
     setTail([]);
     setProjectTail([]);
     setGroupTail([]);
     setProjectGroupTail([]);
-  }, [queryHash, viewId, workspaceId]);
+    pagedMore.resetLoadMoreError();
+  }, [pagedMore.resetLoadMoreError, queryHash, viewId, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
   const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
@@ -815,7 +818,9 @@ const SavedViewPage = memo(() => {
                     <SavedViewProjectBoard
                       groups={projectGroups}
                       loadMoreLabel={t('savedViews.loadMore')}
-                      onLoadMoreGroup={loadMoreProjectGroup}
+                      onLoadMoreGroup={(key) =>
+                        pagedMore.runLoadMore(() => loadMoreProjectGroup(key))
+                      }
                     />
                   ) : projectRows.length === 0 ? (
                     <Center flex={1} padding={48}>
@@ -828,9 +833,16 @@ const SavedViewPage = memo(() => {
                       ))}
                     </Flexbox>
                   )}
+                  {pagedMore.loadMoreError ? (
+                    <AsyncError
+                      error={pagedMore.loadMoreError}
+                      variant={'inline'}
+                      onRetry={pagedMore.retryLoadMore}
+                    />
+                  ) : null}
                   {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
                     <Flexbox horizontal justify="center">
-                      <Button size="small" onClick={() => void loadMore()}>
+                      <Button size="small" onClick={() => pagedMore.runLoadMore(loadMore)}>
                         {t('savedViews.loadMore')}
                       </Button>
                     </Flexbox>
@@ -842,6 +854,7 @@ const SavedViewPage = memo(() => {
                   groupBy={evaluation?.groupBy}
                   groups={groups}
                   layout={resolvedLayout}
+                  loadMoreError={pagedMore.loadMoreError}
                   loadMoreLabel={t('savedViews.loadMore')}
                   loading={isLoading}
                   loadingLabel={t('savedViews.loading')}
@@ -854,9 +867,12 @@ const SavedViewPage = memo(() => {
                       ? { teamOptions: joinedTeamOptions }
                       : undefined
                   }
-                  onLoadMore={resolvedLayout === 'list' ? () => void loadMore() : undefined}
-                  onLoadMoreGroup={(key) => void loadMoreGroup(key)}
+                  onLoadMoreGroup={(key) => pagedMore.runLoadMore(() => loadMoreGroup(key))}
                   onMoved={() => void refreshView()}
+                  onRetryLoadMore={pagedMore.retryLoadMore}
+                  onLoadMore={
+                    resolvedLayout === 'list' ? () => pagedMore.runLoadMore(loadMore) : undefined
+                  }
                 />
               )}
             </Flexbox>

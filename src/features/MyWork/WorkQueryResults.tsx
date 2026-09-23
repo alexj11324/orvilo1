@@ -1,7 +1,7 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Button, Checkbox, Text } from '@lobehub/ui/base-ui';
 import type {
   TaskStatus,
   WorkQueryExternalReview,
@@ -22,6 +22,7 @@ import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
 import {
   COLUMN_I18N_KEYS,
@@ -33,6 +34,11 @@ import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
+import {
+  bulkGestureFromModifiers,
+  bulkOrderedRowIds,
+  type BulkSelectGesture,
+} from './bulkSelection';
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
 import { isInteractiveRowClick } from './myWorkDisplay';
 import {
@@ -140,22 +146,65 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 16px;
   `,
   row: css`
+    position: relative;
+
     min-height: 44px;
     padding-inline-end: 8px;
     border-radius: ${cssVar.borderRadiusLG};
+
     color: inherit;
 
     &:hover .work-query-row-actions,
-    &:focus-within .work-query-row-actions {
+    &:focus-within .work-query-row-actions,
+    &:hover .work-query-bulk-check,
+    &:focus-within .work-query-bulk-check {
       opacity: 1;
     }
   `,
   rowSelected: css`
     background: ${cssVar.colorFillTertiary};
   `,
+  rowBulkSelected: css`
+    background: ${cssVar.colorPrimaryBg};
+  `,
+  /**
+   * Linear's hover checkbox: an overlay at the row's leading edge so rows
+   * keep their geometry whether or not multi-select is armed. Solid chip —
+   * it slides over whatever sits in the row's left padding.
+   */
+  bulkCheck: css`
+    position: absolute;
+    z-index: 1;
+    inset-block-start: 50%;
+    inset-inline-start: 4px;
+    transform: translateY(-50%);
+
+    display: flex;
+    align-items: center;
+
+    border-radius: ${cssVar.borderRadiusSM};
+
+    opacity: 0;
+    background: ${cssVar.colorBgElevated};
+    box-shadow: ${cssVar.boxShadowSecondary};
+
+    transition: opacity ${cssVar.motionDurationFast};
+
+    @media (hover: none) {
+      opacity: 1;
+    }
+  `,
+  bulkCheckActive: css`
+    opacity: 1;
+  `,
 }));
 
 interface WorkQueryResultsProps {
+  /**
+   * Multi-selected task ids — rows paint checked + highlight and reveal
+   * their checkbox without waiting for hover. Absent = no bulk affordance.
+   */
+  bulkSelectedIds?: ReadonlySet<string>;
   /**
    * Where the board's create entry should file a new card. `teamId` files it
    * directly; `teamOptions` makes the create modal ask the one ambiguous
@@ -182,8 +231,24 @@ interface WorkQueryResultsProps {
   layout?: WorkQueryLayout;
   loading: boolean;
   loadingLabel: string;
+  /**
+   * Rejection from a tail-page fetch (`onLoadMore` / `onLoadMoreGroup`) —
+   * rendered inline under the results so the failed page offers a retry
+   * instead of dying as an unhandled rejection.
+   */
+  loadMoreError?: unknown;
   loadMoreLabel: string;
   movable?: boolean;
+  /**
+   * Multi-select row gesture: cmd/ctrl-click `toggle`, shift-click `range`.
+   * The row passes the rendered `data-bulk-row-id` order so ranges follow
+   * what's on screen (collapsed groups never join a range).
+   */
+  onBulkSelectTask?: (
+    task: WorkQueryResultTask,
+    gesture: BulkSelectGesture,
+    orderedRowIds: string[],
+  ) => void;
   /**
    * Hover `+` on caller-computed (`flatSections`) headers. Only supplied when
    * the bucket key is a real create preset (e.g. a project id) — day/priority
@@ -197,6 +262,8 @@ interface WorkQueryResultsProps {
   onMoved?: () => void;
   /** Full-page escape for peek mode — the row's double-click. */
   onOpenTask?: (task: WorkQueryResultTask) => void;
+  /** Re-issues the failed tail-page request shown by `loadMoreError`. */
+  onRetryLoadMore?: () => void;
   /** Row click in peek mode: select the task instead of navigating away. */
   onSelectTask?: (task: WorkQueryResultTask) => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
@@ -220,6 +287,9 @@ const WorkQueryTaskRow = memo(
     followed,
     depth = 0,
     groupBy,
+    bulkSelected,
+    bulkSelectionActive,
+    onBulkSelectTask,
     onMoved,
     onOpenTask,
     onSelectTask,
@@ -233,6 +303,14 @@ const WorkQueryTaskRow = memo(
     followed?: boolean;
     depth?: number;
     groupBy: 'status' | 'workflowCategory';
+    bulkSelected?: boolean;
+    /** Any selection — every row's checkbox stays revealed (Linear). */
+    bulkSelectionActive?: boolean;
+    onBulkSelectTask?: (
+      task: WorkQueryResultTask,
+      gesture: BulkSelectGesture,
+      orderedRowIds: string[],
+    ) => void;
     onMoved?: () => void;
     onOpenTask?: (task: WorkQueryResultTask) => void;
     onSelectTask?: (task: WorkQueryResultTask) => void;
@@ -259,20 +337,35 @@ const WorkQueryTaskRow = memo(
     );
 
     /**
-     * Peek mode: a plain row click selects the issue for the detail pane and
-     * suppresses the row's built-in navigation. The capture phase is the only
-     * point before `AgentTaskItem`'s own click fires — interactive children
-     * (menus, popovers, buttons) are detected and left alone.
+     * Capture-phase row clicks: modifier gestures are multi-select ops and
+     * never navigate; plain clicks keep their peek contract. The capture
+     * phase is the only point before `AgentTaskItem`'s own click fires —
+     * interactive children (menus, popovers, buttons, the bulk checkbox)
+     * are detected and left alone.
      */
     const handleClickCapture = useCallback(
       (event: ReactMouseEvent) => {
-        if (!peekOnSelect || !onSelectTask) return;
         if (isInteractiveRowClick(event.target)) return;
+        const gesture = bulkGestureFromModifiers(event);
+        if (gesture && onBulkSelectTask) {
+          event.preventDefault();
+          event.stopPropagation();
+          // Ranges follow the rendered order — read the rows' DOM order at
+          // click time so collapsed groups never join the slice.
+          const list = (event.currentTarget as HTMLElement).closest('[data-bulk-list]');
+          onBulkSelectTask(
+            task,
+            gesture,
+            gesture === 'range' && list ? bulkOrderedRowIds(list) : [task.id],
+          );
+          return;
+        }
+        if (!peekOnSelect || !onSelectTask) return;
         event.preventDefault();
         event.stopPropagation();
         onSelectTask(task);
       },
-      [onSelectTask, peekOnSelect, task],
+      [onBulkSelectTask, onSelectTask, peekOnSelect, task],
     );
 
     const handleDoubleClick = useCallback(
@@ -293,10 +386,35 @@ const WorkQueryTaskRow = memo(
           horizontal
           align={'center'}
           aria-current={selected ? 'true' : undefined}
-          className={cx(styles.row, selected && styles.rowSelected)}
-          onClickCapture={peekOnSelect && onSelectTask ? handleClickCapture : undefined}
+          aria-selected={bulkSelected ? 'true' : undefined}
+          data-bulk-row-id={onBulkSelectTask ? task.id : undefined}
+          data-bulk-selected={bulkSelected || undefined}
+          className={cx(
+            styles.row,
+            selected && styles.rowSelected,
+            bulkSelected && styles.rowBulkSelected,
+          )}
           onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
+          onClickCapture={
+            (peekOnSelect && onSelectTask) || onBulkSelectTask ? handleClickCapture : undefined
+          }
         >
+          {onBulkSelectTask ? (
+            <span
+              data-row-interactive
+              className={cx(
+                styles.bulkCheck,
+                'work-query-bulk-check',
+                (bulkSelected || bulkSelectionActive) && styles.bulkCheckActive,
+              )}
+            >
+              <Checkbox
+                aria-label={t('myWork.bulk.selectRow')}
+                checked={Boolean(bulkSelected)}
+                onChange={() => onBulkSelectTask(task, 'toggle', [task.id])}
+              />
+            </span>
+          ) : null}
           <Flexbox flex={1} style={{ minWidth: 0 }}>
             <AgentTaskItem
               routeScope={'global'}
@@ -334,6 +452,8 @@ const WorkQueryStatusGroup = memo<{
   groupBy: 'status' | 'workflowCategory';
   attention?: boolean;
   allTasks: WorkQueryResultTask[];
+  bulkSelectedIds?: ReadonlySet<string>;
+  bulkSelectionActive?: boolean;
   createLabel?: string;
   hasMore?: boolean;
   /** Optional header glyph — field-bucket sections (priority icon, avatar). */
@@ -343,6 +463,11 @@ const WorkQueryStatusGroup = memo<{
   label?: string;
   loadMoreLabel?: string;
   nested?: boolean;
+  onBulkSelectTask?: (
+    task: WorkQueryResultTask,
+    gesture: BulkSelectGesture,
+    orderedRowIds: string[],
+  ) => void;
   onCreateInGroup?: (groupKey: string) => void;
   onLoadMore?: () => void;
   onMoved?: () => void;
@@ -359,6 +484,8 @@ const WorkQueryStatusGroup = memo<{
     columnKey,
     attention,
     allTasks,
+    bulkSelectedIds,
+    bulkSelectionActive,
     createLabel,
     groupBy,
     hasMore,
@@ -367,6 +494,7 @@ const WorkQueryStatusGroup = memo<{
     label,
     loadMoreLabel,
     nested,
+    onBulkSelectTask,
     onCreateInGroup,
     onLoadMore,
     onMoved,
@@ -429,6 +557,8 @@ const WorkQueryStatusGroup = memo<{
           <Flexbox>
             {hierarchyRows.map((row) => (
               <WorkQueryTaskRow
+                bulkSelected={bulkSelectedIds?.has(row.task.id)}
+                bulkSelectionActive={bulkSelectionActive}
                 depth={row.depth}
                 followed={isFollowed?.(row.task.id)}
                 groupBy={groupBy}
@@ -438,6 +568,7 @@ const WorkQueryStatusGroup = memo<{
                 rowExtras={rowExtras}
                 selected={selectedTaskId !== undefined && row.task.identifier === selectedTaskId}
                 task={row.task}
+                onBulkSelectTask={onBulkSelectTask}
                 onMoved={onMoved}
                 onOpenTask={onOpenTask}
                 onSelectTask={onSelectTask}
@@ -508,6 +639,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
     externalReviews,
+    bulkSelectedIds,
     createContext,
     flatNested,
     flatSections,
@@ -518,12 +650,15 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     loading,
     loadingLabel,
     loadMoreLabel,
+    loadMoreError,
     movable,
+    onBulkSelectTask,
     onCreateInFlatSection,
     onCreateInGroup,
     onLoadMore,
     onLoadMoreGroup,
     onMoved,
+    onRetryLoadMore,
     onOpenTask,
     onSelectTask,
     onToggleFollow,
@@ -547,7 +682,12 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       ? workQueryHierarchyRows(tasks, tasks)
       : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
 
+    // While any selection exists every row keeps its checkbox revealed —
+    // Linear's signal that multi-select is armed.
+    const bulkSelectionActive = Boolean(bulkSelectedIds?.size);
     const rowProps = {
+      bulkSelectionActive,
+      onBulkSelectTask,
       onMoved,
       onOpenTask,
       onSelectTask,
@@ -606,12 +746,17 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               settled: true,
             }}
           />
+          {loadMoreError ? (
+            <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
+          ) : null}
         </Flexbox>
       );
     }
 
     return (
-      <Flexbox gap={16}>
+      // `data-bulk-list` scopes the rendered-order read shift-range
+      // selection makes at click time.
+      <Flexbox data-bulk-list={onBulkSelectTask ? '' : undefined} gap={16}>
         {reviewBlock}
         {listGroupBy === 'none' ? (
           /* `none` grouping stays a flat list in the query's own sort order —
@@ -632,6 +777,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 <WorkQueryStatusGroup
                   attention
                   allTasks={allTasks}
+                  bulkSelectedIds={bulkSelectedIds}
                   columnKey={section.key}
                   groupBy={'status'}
                   icon={section.icon}
@@ -651,6 +797,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             <Flexbox gap={2}>
               {flatRows.map((row) => (
                 <WorkQueryTaskRow
+                  bulkSelected={bulkSelectedIds?.has(row.task.id)}
                   depth={row.depth}
                   followed={isFollowed?.(row.task.id)}
                   groupBy={'status'}
@@ -675,6 +822,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               // list-wide).
               <WorkQueryStatusGroup
                 allTasks={allTasks}
+                bulkSelectedIds={bulkSelectedIds}
                 columnKey={group.key}
                 groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
                 // Attention buckets aren't a writable status dimension — a
@@ -700,6 +848,11 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             ))}
           </Flexbox>
         )}
+        {/* A failed tail page keeps the loaded rows — the retry sits under
+            the list where the load-more footer lives (flat or grouped). */}
+        {loadMoreError ? (
+          <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
+        ) : null}
         {onLoadMore && !pageGroupPaging && workQueryHasMore(tasks.length, total) ? (
           <Flexbox horizontal justify={'center'}>
             <Button size="small" onClick={() => void onLoadMore()}>

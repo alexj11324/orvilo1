@@ -211,9 +211,13 @@ SavedViewProjectRow.displayName = 'SavedViewProjectRow';
  *  status changes flow through the project surface. */
 const SavedViewProjectBoard = memo<{
   groups: WorkQueryGroupPage<SavedViewProjectRowData>[];
+  /** Per-column tail-page failures keyed by group key — swaps that column's
+   *  load-more button for an inline retry scoped to the failed page. */
+  loadMoreGroupErrors?: Record<string, unknown>;
   loadMoreLabel: string;
   onLoadMoreGroup?: (key: string) => void;
-}>(({ groups, loadMoreLabel, onLoadMoreGroup }) => {
+  onRetryLoadMoreGroup?: (key: string) => void;
+}>(({ groups, loadMoreGroupErrors, loadMoreLabel, onLoadMoreGroup, onRetryLoadMoreGroup }) => {
   const { t } = useTranslation('project');
   return (
     <Flexbox horizontal align="flex-start" gap={12} style={{ overflowX: 'auto' }}>
@@ -234,7 +238,13 @@ const SavedViewProjectBoard = memo<{
               {group.tasks.map((project) => (
                 <SavedViewProjectRow key={project.id} project={project} />
               ))}
-              {group.hasMore && onLoadMoreGroup ? (
+              {loadMoreGroupErrors?.[group.key] ? (
+                <AsyncError
+                  error={loadMoreGroupErrors[group.key]}
+                  variant={'inline'}
+                  onRetry={onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined}
+                />
+              ) : group.hasMore && onLoadMoreGroup ? (
                 <Button size="small" onClick={() => onLoadMoreGroup(group.key)}>
                   {loadMoreLabel}
                 </Button>
@@ -811,9 +821,11 @@ const SavedViewPage = memo(() => {
                   ) : projectBoard ? (
                     <SavedViewProjectBoard
                       groups={projectGroups}
+                      loadMoreGroupErrors={pagedMore.loadMoreGroupErrors}
                       loadMoreLabel={t('savedViews.loadMore')}
+                      onRetryLoadMoreGroup={pagedMore.retryLoadMoreGroup}
                       onLoadMoreGroup={(key) =>
-                        pagedMore.runLoadMore(() => loadMoreProjectGroup(key))
+                        pagedMore.runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
                       }
                     />
                   ) : projectRows.length === 0 ? (
@@ -852,6 +864,7 @@ const SavedViewPage = memo(() => {
                   groups={groups}
                   layout={resolvedLayout}
                   loadMoreError={pagedMore.loadMoreError}
+                  loadMoreGroupErrors={pagedMore.loadMoreGroupErrors}
                   loadMoreLabel={t('savedViews.loadMore')}
                   loading={isLoading}
                   loadingLabel={t('savedViews.loading')}
@@ -864,11 +877,14 @@ const SavedViewPage = memo(() => {
                       ? { teamOptions: joinedTeamOptions }
                       : undefined
                   }
-                  onLoadMoreGroup={(key) => pagedMore.runLoadMore(() => loadMoreGroup(key))}
                   onMoved={() => void refreshView()}
                   onRetryLoadMore={pagedMore.retryLoadMore}
+                  onRetryLoadMoreGroup={pagedMore.retryLoadMoreGroup}
                   onLoadMore={
                     resolvedLayout === 'list' ? () => pagedMore.runLoadMore(loadMore) : undefined
+                  }
+                  onLoadMoreGroup={(key) =>
+                    pagedMore.runLoadMoreGroup(key, () => loadMoreGroup(key))
                   }
                 />
               )}

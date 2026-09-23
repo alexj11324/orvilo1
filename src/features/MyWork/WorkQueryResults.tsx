@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
+import { workQueryKeyForKanbanColumn } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import {
   COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
@@ -244,6 +245,12 @@ interface WorkQueryResultsProps {
    * instead of dying as an unhandled rejection.
    */
   loadMoreError?: unknown;
+  /**
+   * Per-group tail-page failures keyed by work-query group key — the failed
+   * group's own footer (list header row / board column) swaps its load-more
+   * button for an inline retry instead of one surface-level error.
+   */
+  loadMoreGroupErrors?: Record<string, unknown>;
   loadMoreLabel: string;
   movable?: boolean;
   /**
@@ -271,6 +278,8 @@ interface WorkQueryResultsProps {
   onOpenTask?: (task: WorkQueryResultTask) => void;
   /** Re-issues the failed tail-page request shown by `loadMoreError`. */
   onRetryLoadMore?: () => void;
+  /** Re-issues the failed page request for one group key (`loadMoreGroupErrors`). */
+  onRetryLoadMoreGroup?: (key: string) => void;
   /** Row click in peek mode: select the task instead of navigating away. */
   onSelectTask?: (task: WorkQueryResultTask) => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
@@ -468,6 +477,11 @@ const WorkQueryStatusGroup = memo<{
   isFollowed?: (taskId: string) => boolean;
   /** Explicit header text — date buckets etc. that are not status keys. */
   label?: string;
+  /**
+   * Rejection from this group's own tail-page fetch — swaps the load-more
+   * button for an inline retry scoped to this group.
+   */
+  loadMoreError?: unknown;
   loadMoreLabel?: string;
   nested?: boolean;
   onBulkSelectTask?: (
@@ -479,6 +493,8 @@ const WorkQueryStatusGroup = memo<{
   onLoadMore?: () => void;
   onMoved?: () => void;
   onOpenTask?: (task: WorkQueryResultTask) => void;
+  /** Re-issues this group's failed tail-page request (`loadMoreError`). */
+  onRetryLoadMore?: () => void;
   onSelectTask?: (task: WorkQueryResultTask) => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
   peekOnSelect?: boolean;
@@ -499,6 +515,7 @@ const WorkQueryStatusGroup = memo<{
     icon,
     isFollowed,
     label,
+    loadMoreError,
     loadMoreLabel,
     nested,
     onBulkSelectTask,
@@ -506,6 +523,7 @@ const WorkQueryStatusGroup = memo<{
     onLoadMore,
     onMoved,
     onOpenTask,
+    onRetryLoadMore,
     onSelectTask,
     onToggleFollow,
     peekOnSelect,
@@ -591,7 +609,11 @@ const WorkQueryStatusGroup = memo<{
                 onToggleFollow={onToggleFollow}
               />
             ))}
-            {hasMore && onLoadMore && loadMoreLabel ? (
+            {/* A failed tail page swaps the button for an inline retry —
+                the error is scoped to this group, not the whole list. */}
+            {loadMoreError ? (
+              <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
+            ) : hasMore && onLoadMore && loadMoreLabel ? (
               <Flexbox horizontal justify={'center'}>
                 <Button size="small" onClick={() => void onLoadMore()}>
                   {loadMoreLabel}
@@ -668,6 +690,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     loadingLabel,
     loadMoreLabel,
     loadMoreError,
+    loadMoreGroupErrors,
     movable,
     onBulkSelectTask,
     onCreateInFlatSection,
@@ -676,6 +699,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onLoadMoreGroup,
     onMoved,
     onRetryLoadMore,
+    onRetryLoadMoreGroup,
     onOpenTask,
     onSelectTask,
     onToggleFollow,
@@ -752,6 +776,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               hideEmptyColumns,
               movable,
               sortMode,
+              loadMoreGroupError: loadMoreGroupErrors
+                ? (columnKey) => loadMoreGroupErrors[workQueryKeyForKanbanColumn(columnKey)]
+                : undefined,
               onLoadMoreGroup: onLoadMoreGroup
                 ? (columnKey) => {
                     for (const key of workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)) {
@@ -760,6 +787,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   }
                 : undefined,
               onRefresh: onMoved,
+              onRetryLoadMoreGroup: onRetryLoadMoreGroup
+                ? (columnKey) => onRetryLoadMoreGroup(workQueryKeyForKanbanColumn(columnKey))
+                : undefined,
               queryGroupBy: boardGroupBy,
               settled: true,
             }}
@@ -848,6 +878,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 hasMore={pageGroupPaging ? group.hasMore : false}
                 isFollowed={isFollowed}
                 key={group.key}
+                loadMoreError={loadMoreGroupErrors?.[group.key]}
                 loadMoreLabel={loadMoreLabel}
                 nested={listGroupBy === 'attention' && flatNested !== false}
                 selectedTaskId={selectedTaskId}
@@ -860,6 +891,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 onCreateInGroup={onCreateInGroup}
                 onLoadMore={
                   pageGroupPaging && onLoadMoreGroup ? () => onLoadMoreGroup(group.key) : undefined
+                }
+                onRetryLoadMore={
+                  onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
                 }
                 {...rowProps}
               />

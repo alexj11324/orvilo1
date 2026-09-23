@@ -284,7 +284,15 @@ const MyWorkPage = memo(() => {
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [taskTail, setTaskTail] = useState<typeof firstTasks>([]);
   const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
-  const { loadMoreError, resetLoadMoreError, retryLoadMore, runLoadMore } = usePagedLoadMore();
+  const {
+    loadMoreError,
+    loadMoreGroupErrors,
+    resetLoadMoreError,
+    retryLoadMore,
+    retryLoadMoreGroup,
+    runLoadMore,
+    runLoadMoreGroup,
+  } = usePagedLoadMore();
   useEffect(() => {
     setGroupTail([]);
     setTaskTail([]);
@@ -858,6 +866,7 @@ const MyWorkPage = memo(() => {
           isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
           layout={layout}
           loadMoreError={loadMoreError}
+          loadMoreGroupErrors={loadMoreGroupErrors}
           loadMoreLabel={t('myWork.loadMore')}
           loading={isLoading}
           loadingLabel={t('myWork.loading')}
@@ -875,10 +884,11 @@ const MyWorkPage = memo(() => {
           onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
           onLoadMore={groups.length === 0 ? () => runLoadMore(loadMore) : undefined}
-          onLoadMoreGroup={(key) => runLoadMore(() => loadMoreGroup(key))}
+          onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
           onMoved={() => void refresh()}
           onOpenTask={openTaskPage}
           onRetryLoadMore={retryLoadMore}
+          onRetryLoadMoreGroup={retryLoadMoreGroup}
           onToggleFollow={(taskId, followed) => void toggleFollow(taskId, followed)}
           onSelectTask={(task) => {
             // A plain click picks one issue for the peek — the multi-select

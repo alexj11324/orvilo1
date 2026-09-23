@@ -54,6 +54,7 @@ import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { useSearchParams } from '@/libs/router/navigation';
 import { useClientDataSWR } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -206,9 +207,11 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
   // through the same `afterId`/`queryHash` protocol the team issues list uses.
   const [tail, setTail] = useState<(typeof firstPage)[number][]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
+  const { loadMoreError, resetLoadMoreError, retryLoadMore, runLoadMore } = usePagedLoadMore();
   useEffect(() => {
     setTail([]);
-  }, [queryHash, teamId, workspaceId]);
+    resetLoadMoreError();
+  }, [queryHash, resetLoadMoreError, teamId, workspaceId]);
   const teamRows = useMemo(() => mergeWorkQueryPage(firstPage, tail), [firstPage, tail]);
   const hasMore = workQueryHasMore(teamRows.length, total);
   const loadMore = useCallback(async () => {
@@ -604,9 +607,18 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                     ))}
                   </Flexbox>
                 )}
+                {/* A failed tail page keeps the loaded rows — the retry
+                    re-issues exactly the request that failed. */}
+                {loadMoreError ? (
+                  <AsyncError error={loadMoreError} variant={'inline'} onRetry={retryLoadMore} />
+                ) : null}
                 {hasMore ? (
                   <Center className={styles.loadMore}>
-                    <Button loading={loadingMore} size="small" onClick={() => void loadMore()}>
+                    <Button
+                      loading={loadingMore}
+                      size="small"
+                      onClick={() => runLoadMore(loadMore)}
+                    >
                       {t('myWork.loadMore', { ns: 'common' })}
                     </Button>
                   </Center>

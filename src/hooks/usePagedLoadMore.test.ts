@@ -73,4 +73,50 @@ describe('usePagedLoadMore', () => {
     act(() => result.current.retryLoadMore());
     expect(result.current.loadMoreError).toBeUndefined();
   });
+
+  it('scopes a rejected group attempt to its own key', async () => {
+    const { result } = renderHook(() => usePagedLoadMore());
+    const failure = new Error('group page failed');
+
+    await act(async () => result.current.runLoadMoreGroup('done', () => Promise.reject(failure)));
+    await act(async () => result.current.runLoadMoreGroup('backlog', () => Promise.resolve()));
+
+    await waitFor(() => expect(result.current.loadMoreGroupErrors.done).toBe(failure));
+    expect(result.current.loadMoreGroupErrors.backlog).toBeUndefined();
+    expect(result.current.loadMoreError).toBeUndefined();
+  });
+
+  it('retries only the group that failed', async () => {
+    const { result } = renderHook(() => usePagedLoadMore());
+    const failed = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error('nope'))
+      .mockResolvedValue(undefined);
+    const other = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+
+    await act(async () => result.current.runLoadMoreGroup('done', failed));
+    await waitFor(() => expect(result.current.loadMoreGroupErrors.done).toBeDefined());
+    await act(async () => result.current.runLoadMoreGroup('backlog', other));
+
+    await act(async () => result.current.retryLoadMoreGroup('done'));
+    await waitFor(() => expect(result.current.loadMoreGroupErrors.done).toBeUndefined());
+    expect(failed).toHaveBeenCalledTimes(2);
+    expect(other).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears group slots on resetLoadMoreError', async () => {
+    const { result } = renderHook(() => usePagedLoadMore());
+
+    await act(async () =>
+      result.current.runLoadMoreGroup('done', () => Promise.reject(new Error('stale'))),
+    );
+    await waitFor(() => expect(result.current.loadMoreGroupErrors.done).toBeDefined());
+
+    act(() => result.current.resetLoadMoreError());
+    expect(result.current.loadMoreGroupErrors).toEqual({});
+
+    // Nothing recorded → retry is a no-op, not a stale re-fetch.
+    act(() => result.current.retryLoadMoreGroup('done'));
+    expect(result.current.loadMoreGroupErrors).toEqual({});
+  });
 });

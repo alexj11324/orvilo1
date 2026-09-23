@@ -19,6 +19,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import AsyncError from '@/components/AsyncError';
 import {
   applyWorkQueryStatusChange,
   commitWorkQueryBoardMove,
@@ -154,10 +155,18 @@ export interface KanbanExternalGroups {
    */
   hideEmptyColumns?: boolean;
   isLoading?: boolean;
+  /**
+   * Tail-page rejection for one column (work-query group key resolved by the
+   * caller) — the failed column's footer swaps its load-more button for an
+   * inline retry instead of lifting the error to the whole board.
+   */
+  loadMoreGroupError?: (columnKey: string) => unknown;
   /** Whether cards may be dragged (default true, still gated by permission). */
   movable?: boolean;
   onLoadMoreGroup?: (columnKey: string) => void;
   onRefresh?: () => Promise<unknown> | void;
+  /** Re-issues the failed page request shown by `loadMoreGroupError`. */
+  onRetryLoadMoreGroup?: (columnKey: string) => void;
   /**
    * Work-query grouping the supplied `groups` were fetched with. Selects
    * both the column set (`wf:` / `st:`) and the `moveBoard` `targetKey`.
@@ -861,6 +870,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
             canEditTask &&
             col.droppable &&
             (!activeTask || canDropTaskIntoKanbanColumn(activeTask, groupBy, col));
+          // A failed column page keeps its cards — the retry lives in that
+          // column's footer where the load-more button would sit.
+          const columnLoadError = external?.loadMoreGroupError?.(col.key);
           return (
             <KanbanColumn
               columnKey={col.key}
@@ -872,7 +884,17 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               tasks={columnTasks}
               total={group?.total ?? 0}
               footer={
-                group?.hasMore && (!external || external.onLoadMoreGroup) ? (
+                columnLoadError ? (
+                  <AsyncError
+                    error={columnLoadError}
+                    variant={'inline'}
+                    onRetry={
+                      external?.onRetryLoadMoreGroup
+                        ? () => external.onRetryLoadMoreGroup?.(col.key)
+                        : undefined
+                    }
+                  />
+                ) : group?.hasMore && (!external || external.onLoadMoreGroup) ? (
                   <button
                     data-no-board-pan
                     className={styles.loadMore}

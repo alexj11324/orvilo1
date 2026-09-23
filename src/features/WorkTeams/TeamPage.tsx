@@ -19,6 +19,7 @@ import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -162,10 +163,29 @@ const TeamPage = memo(() => {
       : undefined;
   const [teamTail, setTeamTail] = useState<typeof firstTeamTasks>([]);
   const [teamGroupTail, setTeamGroupTail] = useState<typeof firstTeamGroups>([]);
+  const {
+    loadMoreError,
+    loadMoreGroupErrors,
+    resetLoadMoreError,
+    retryLoadMore,
+    retryLoadMoreGroup,
+    runLoadMore,
+    runLoadMoreGroup,
+  } = usePagedLoadMore();
   useEffect(() => {
     setTeamTail([]);
     setTeamGroupTail([]);
-  }, [cycleId, issueScope, layout, noProject, teamId, teamQueryHash, workspaceId]);
+    resetLoadMoreError();
+  }, [
+    cycleId,
+    issueScope,
+    layout,
+    noProject,
+    resetLoadMoreError,
+    teamId,
+    teamQueryHash,
+    workspaceId,
+  ]);
   const teamTasks = mergeWorkQueryPage(firstTeamTasks, teamTail);
   const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
@@ -447,6 +467,8 @@ const TeamPage = memo(() => {
                     emptyLabel={t('teams.workEmpty')}
                     groups={teamGroups}
                     layout={layout}
+                    loadMoreError={loadMoreError}
+                    loadMoreGroupErrors={loadMoreGroupErrors}
                     loadMoreLabel={t('myWork.loadMore')}
                     loading={workState === 'loading'}
                     loadingLabel={t('teams.loading')}
@@ -462,9 +484,11 @@ const TeamPage = memo(() => {
                         ? teamTasksData.data.total
                         : undefined
                     }
-                    onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
-                    onLoadMoreGroup={(key) => void loadMoreTeamGroup(key)}
                     onMoved={refreshTriage}
+                    onRetryLoadMore={retryLoadMore}
+                    onRetryLoadMoreGroup={retryLoadMoreGroup}
+                    onLoadMore={layout === 'list' ? () => runLoadMore(loadMoreTeam) : undefined}
+                    onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreTeamGroup(key))}
                   />
                 )
               ) : null}

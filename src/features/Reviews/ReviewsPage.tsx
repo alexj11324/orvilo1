@@ -549,13 +549,15 @@ const ReviewsPage = memo(() => {
                 groups={groups}
                 layout={'list'}
                 loadMoreError={workMore.loadMoreError}
+                loadMoreGroupErrors={workMore.loadMoreGroupErrors}
                 loadMoreLabel={t('myWork.loadMore')}
                 loading={isLoading}
                 loadingLabel={t('myWork.loading')}
                 tasks={tasks}
                 total={data?.data.total}
-                onLoadMoreGroup={(key) => workMore.runLoadMore(() => loadMoreGroup(key))}
                 onRetryLoadMore={workMore.retryLoadMore}
+                onRetryLoadMoreGroup={workMore.retryLoadMoreGroup}
+                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
               />
             )}
           </QueueGroup>

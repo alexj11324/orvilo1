@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
+import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
 import NavHeader from '@/features/NavHeader';
@@ -474,8 +475,17 @@ const MembersPage = memo(() => {
             <Empty description={t('workspaceSetting.members.noWorkspace', { ns: 'setting' })} />
           </Center>
         ) : loadError ? (
+          /* The directory joins three queries — retry revalidates all of them,
+             matching every other surface's AsyncError+retry contract. */
           <Center padding={48}>
-            <Empty description={t('workspaceSetting.members.loadFailed', { ns: 'setting' })} />
+            <AsyncError
+              error={loadError}
+              onRetry={() => {
+                void membersQuery.mutate();
+                void agentsQuery.mutate();
+                void invitationsQuery.mutate();
+              }}
+            />
           </Center>
         ) : loading ? (
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />

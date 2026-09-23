@@ -265,7 +265,7 @@ const MyWorkPage = memo(() => {
     setGroupTail([]);
     setTaskTail([]);
     setExtraSubscribed([]);
-  }, [layout, mode, noProject, queryHash, serverGroupBy, workspaceId]);
+  }, [delegated, layout, mode, noProject, queryHash, serverGroupBy, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, taskTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
   // The generic query endpoint does not return subscription state — the
@@ -397,7 +397,8 @@ const MyWorkPage = memo(() => {
   // Cross-team create asks the one ambiguous choice — same pattern the saved
   // view board uses.
   const { data: teamsData } = useSWR(
-    workspaceId && currentUserId ? ['mywork-joined-teams', currentUserId, workspaceId] : null,
+    // Neutral key shared with SavedViewPage — same fetcher, one cache entry.
+    workspaceId && currentUserId ? ['work-joined-teams', currentUserId, workspaceId] : null,
     () => lambdaClient.team.teams.query(),
     { revalidateOnFocus: false },
   );
@@ -626,6 +627,7 @@ const MyWorkPage = memo(() => {
                 canSaveAs={canSaveAs}
                 delegated={delegated}
                 detailsDisabled={boardActive}
+                detailsExpanded={detailVisible}
                 detailsOpen={detailsOpen}
                 display={display}
                 filterSupported={filterSupported}

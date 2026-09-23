@@ -293,7 +293,8 @@ const SavedViewPage = memo(() => {
   // A cross-team view can't guess which team a new card belongs to — pass the
   // caller's joined teams so the board's create entry asks exactly that.
   const { data: teamsData } = useSWR(
-    workspaceId && currentUserId ? ['savedview-joined-teams', currentUserId, workspaceId] : null,
+    // Neutral key shared with MyWorkPage — same fetcher, one cache entry.
+    workspaceId && currentUserId ? ['work-joined-teams', currentUserId, workspaceId] : null,
     () => lambdaClient.team.teams.query(),
     { revalidateOnFocus: false },
   );

@@ -268,6 +268,16 @@ const WorkQueryTaskRow = memo(
       [onSelectTask, peekOnSelect, task],
     );
 
+    const handleDoubleClick = useCallback(
+      (event: ReactMouseEvent) => {
+        // Double-click is the full-page escape — but not on interactive
+        // chrome (menus, subtask tag, links) that owns its own gesture.
+        if (isInteractiveRowClick(event.target)) return;
+        onOpenTask?.(task);
+      },
+      [onOpenTask, task],
+    );
+
     // The same rich row /tasks renders — identifier, status glyph, title,
     // chips, assignee, date — instead of a second, thinner task row.
     return (
@@ -278,7 +288,7 @@ const WorkQueryTaskRow = memo(
           aria-current={selected ? 'true' : undefined}
           className={cx(styles.row, selected && styles.rowSelected)}
           onClickCapture={peekOnSelect && onSelectTask ? handleClickCapture : undefined}
-          onDoubleClick={peekOnSelect && onOpenTask ? () => onOpenTask(task) : undefined}
+          onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
         >
           <Flexbox flex={1} style={{ minWidth: 0 }}>
             <AgentTaskItem
@@ -603,7 +613,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             <Flexbox gap={8}>
               {flatSections.map((section) => (
                 /* Date buckets borrow the banner header (`attention`) — the
-                   filled status pill would be wrong chrome for a day label. */
+                   filled status pill would be wrong chrome for a day label.
+                   No `+` here: the key is a day, not a status, and the create
+                   modal has no day-scoped contract to honour. */
                 <WorkQueryStatusGroup
                   attention
                   allTasks={allTasks}
@@ -616,7 +628,6 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   selectedTaskId={selectedTaskId}
                   tasks={section.tasks}
                   total={section.tasks.length}
-                  onCreateInGroup={onCreateInGroup}
                   {...rowProps}
                 />
               ))}

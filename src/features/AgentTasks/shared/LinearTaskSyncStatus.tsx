@@ -149,8 +149,11 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
 
   const tag = (
     <Tag
-      icon={<Icon color={meta.color} icon={meta.icon} size={12} />}
+      data-row-interactive={issueUrl ? true : undefined}
       size={'small'}
+      // Clickable external link — mark it so peek-mode row click capture
+      // (My issues) lets it through instead of selecting the row.
+      icon={<Icon color={meta.color} icon={meta.icon} size={12} />}
       style={{ cursor: issueUrl ? 'pointer' : undefined, flexShrink: 0 }}
       onClick={
         issueUrl

@@ -62,6 +62,11 @@ interface MyWorkControlsProps {
   canSaveAs: boolean;
   delegated: boolean;
   detailsDisabled?: boolean;
+  /**
+   * Resolved pane visibility — `aria-expanded` must report the pane, not the
+   * armed toggle: with nothing selected, expanded stays false.
+   */
+  detailsExpanded: boolean;
   detailsOpen: boolean;
   display: MyWorkDisplay;
   /** Advanced builder is only expressible on the saveable modes. */
@@ -94,6 +99,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
     canBoard,
     canSaveAs,
     detailsDisabled,
+    detailsExpanded,
     detailsOpen,
     display,
     delegated,
@@ -297,7 +303,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
           />
         </Popover>
         <ActionIcon
-          aria-expanded={detailsOpen}
+          aria-expanded={detailsExpanded}
           aria-label={t(detailsOpen ? 'myWork.closeDetails' : 'myWork.openDetails')}
           disabled={detailsDisabled}
           icon={detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon}

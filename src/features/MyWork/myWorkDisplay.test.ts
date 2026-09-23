@@ -211,6 +211,17 @@ describe('isInteractiveRowClick', () => {
     expect(isInteractiveRowClick(trigger)).toBe(true);
   });
 
+  it('honours the data-row-interactive marker on clickable chrome', () => {
+    // Bare clickable chips (subtask progress, sync status) carry the marker so
+    // peek-mode click capture lets them through.
+    const chip = document.createElement('div');
+    chip.setAttribute('data-row-interactive', 'true');
+    const inner = document.createElement('span');
+    chip.append(inner);
+    expect(isInteractiveRowClick(chip)).toBe(true);
+    expect(isInteractiveRowClick(inner)).toBe(true);
+  });
+
   it('ignores plain row chrome', () => {
     const div = document.createElement('div');
     expect(isInteractiveRowClick(div)).toBe(false);

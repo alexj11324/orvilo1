@@ -214,6 +214,7 @@ export type WorkQueryField =
   | 'cycleId'
   | 'delegatedByUserId'
   | 'id'
+  | 'labelId'
   | 'ownerUserId'
   | 'priority'
   | 'projectId'
@@ -294,7 +295,7 @@ export interface WorkQuery {
  * builder may offer per entity. Server compile keeps its own allow-list; a
  * field absent here must still round-trip untouched (preserved, not dropped).
  */
-export type WorkQueryValueKind = 'cycle' | 'enum' | 'project' | 'team' | 'user';
+export type WorkQueryValueKind = 'cycle' | 'enum' | 'label' | 'project' | 'team' | 'user';
 
 export interface WorkQueryFieldSpec {
   /**
@@ -405,6 +406,11 @@ export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
     field: 'triageStatus',
     ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'enum',
+  },
+  {
+    field: 'labelId',
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
+    valueKind: 'label',
   },
 ];
 

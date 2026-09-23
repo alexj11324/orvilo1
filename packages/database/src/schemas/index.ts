@@ -59,6 +59,7 @@ export * from './session';
 export * from './task';
 export * from './taskCommentDraft';
 export * from './taskInput';
+export * from './taskLabel';
 export * from './taskWorkspace';
 export * from './team';
 export * from './topic';

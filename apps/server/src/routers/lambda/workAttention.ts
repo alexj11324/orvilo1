@@ -58,6 +58,7 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
     'cycleId',
     'delegatedByUserId',
     'id',
+    'labelId',
     'ownerUserId',
     'priority',
     'projectId',

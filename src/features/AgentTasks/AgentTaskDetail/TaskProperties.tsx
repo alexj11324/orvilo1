@@ -1,16 +1,19 @@
-import { Block, Tooltip } from '@lobehub/ui';
+import { Block, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { TaskPriority, TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { TagIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskStatusTag from '../features/TaskStatusTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
@@ -56,6 +59,7 @@ const TaskProperties = memo(() => {
   const workflowCategory = useTaskStore(taskDetailSelectors.activeTaskWorkflowCategory);
   const workflowStateId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateId);
   const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
+  const labels = useTaskStore(taskDetailSelectors.activeTaskLabels);
   const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
   const reviewerUserId = useTaskStore(taskDetailSelectors.activeTaskReviewerUserId);
   const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
@@ -206,6 +210,32 @@ const TaskProperties = memo(() => {
               </Tooltip>
             </AssigneeMemberSelector>
           )}
+
+        {/* Linear's issue labels — the rail row is the picker trigger and the
+            chips themselves; empty state reads as the property name. */}
+        <TaskLabelSelector
+          assignedLabels={labels}
+          disabled={status === 'running'}
+          taskIdentifier={taskId}
+        >
+          <Block
+            clickable
+            horizontal
+            align="center"
+            className={styles.propertyItem}
+            gap={8}
+            variant={'borderless'}
+          >
+            <Icon color={cssVar.colorTextDescription} icon={TagIcon} size={16} />
+            {labels.length > 0 ? (
+              <LabelChips labels={labels} max={3} />
+            ) : (
+              <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                {t('taskDetail.labels.title')}
+              </Text>
+            )}
+          </Block>
+        </TaskLabelSelector>
 
         {status && workflowStateId && (
           <Block

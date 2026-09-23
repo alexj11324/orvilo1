@@ -3,6 +3,7 @@ import type {
   TaskDetailActivityAuthor,
   TaskDetailData,
   TaskDetailSubtask,
+  TaskLabelSummary,
   TaskMoveScope,
   TaskStatus,
   TaskWorkflowCategory,
@@ -11,8 +12,9 @@ import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { taskKeys } from '@/libs/swr/keys';
+import { isTaskListKey, isWorkQueryTaskRowsKey, taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
+import { taskLabelService } from '@/services/taskLabel';
 import { workService } from '@/services/work';
 import type { StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
@@ -596,6 +598,60 @@ export class TaskDetailSliceActionImpl {
       reviewerUserId !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
+    }
+  };
+
+  /**
+   * Apply or remove one label on a task. The chip flips optimistically; the
+   * server answers with the task's authoritative label set, so a concurrent
+   * editor's toggle is merged rather than clobbered. `label` carries the
+   * picked option's display metadata (name/color) so the optimistic chip can
+   * render before the registry round-trips.
+   */
+  toggleTaskLabel = async (
+    taskId: string,
+    labelId: string,
+    assigned: boolean,
+    label?: TaskLabelSummary,
+  ): Promise<void> => {
+    const current = this.#get().taskDetailMap[taskId];
+    const currentLabels = current?.labels ?? [];
+    const optimistic = assigned
+      ? currentLabels.some((item) => item.id === labelId) || !label
+        ? currentLabels
+        : [...currentLabels, label]
+      : currentLabels.filter((item) => item.id !== labelId);
+
+    if (current) {
+      this.internal_dispatchTaskDetail({
+        id: taskId,
+        type: 'updateTaskDetail',
+        value: { labels: optimistic },
+      });
+    }
+
+    try {
+      const labels = assigned
+        ? await taskLabelService.assignLabel(taskId, labelId)
+        : await taskLabelService.unassignLabel(taskId, labelId);
+      this.internal_dispatchTaskDetail({
+        id: taskId,
+        type: 'updateTaskDetail',
+        value: { labels },
+      });
+      // Row chips on My Issues / saved views / team issues read the
+      // WorkQuery and task:list caches, not the detail map — a label change
+      // must invalidate all of them.
+      await Promise.all([mutate(isWorkQueryTaskRowsKey), mutate(isTaskListKey)]).catch(() => {});
+    } catch (error) {
+      if (current) {
+        this.internal_dispatchTaskDetail({
+          id: taskId,
+          type: 'updateTaskDetail',
+          value: { labels: currentLabels },
+        });
+      }
+      throw error;
     }
   };
 

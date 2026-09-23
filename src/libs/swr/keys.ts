@@ -508,6 +508,20 @@ export const taskKeys = {
   sidebarGroups: def('task:sidebarGroups', (agentId: string) => ['task:sidebarGroups', agentId]),
 };
 
+// ---- task labels ----------------------------------------------------------
+export const taskLabelKeys = {
+  /**
+   * Task label registry (workspace-shared, or personal). Keyed by workspace:
+   * the registries are disjoint per scope, so a shared key would serve the
+   * previous workspace's labels across a switch.
+   */
+  list: def('taskLabel:list', (isLogin: boolean, workspaceId: string | null | undefined) => [
+    'taskLabel:list',
+    isLogin,
+    workspaceId ?? null,
+  ]),
+};
+
 // ---- project ------------------------------------------------------------
 export const projectKeys = {
   links: def('project:links', (scope: string, projectId: string) => [
@@ -981,6 +995,20 @@ export const workAttentionKeys = {
   ]),
 };
 
+/**
+ * Prefix matcher for every cached list whose task rows carry hydrated labels:
+ * My Issues pages, saved-view evaluations, the reviews queue and team issues
+ * all read `task.labels` through the work-query path, so a label toggle must
+ * revalidate each root — not just `myWork`. `task:list` rows are matched by
+ * {@link isTaskListKey} and invalidated alongside.
+ */
+export const isWorkQueryTaskRowsKey = (key: unknown): boolean =>
+  Array.isArray(key) &&
+  (key[0] === 'workAttention:myWork' ||
+    key[0] === 'workAttention:savedView' ||
+    key[0] === 'workAttention:reviews' ||
+    key[0] === 'team-tasks');
+
 // ---- pull request reviews (/reviews GitHub surface) -----------------------
 export const pullRequestKeys = {
   detail: def('pullRequest:detail', (workspaceId: string | null, id: string) => [
@@ -1278,6 +1306,7 @@ export const swrKeys = {
   share: shareKeys,
   stats: statsKeys,
   task: taskKeys,
+  taskLabel: taskLabelKeys,
   taskTemplate: taskTemplateKeys,
   thread: threadKeys,
   tool: toolKeys,

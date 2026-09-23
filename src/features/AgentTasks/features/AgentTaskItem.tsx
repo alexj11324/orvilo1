@@ -9,6 +9,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import LabelChips from '@/features/Labels/LabelChips';
 import {
   getProjectMilestoneIssuesPath,
   type TaskMilestoneRef,
@@ -204,6 +205,15 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         </Text>
       )}
       {scheduledBadge}
+      {/* Linear draws issue labels inline after the title. The wrapper's
+          data attribute is the display-properties toggle's hide hook
+          (`rowHideLabels`) — the chips themselves never render a toggled-off
+          row. */}
+      {task.labels?.length ? (
+        <Flexbox data-task-labels flex={'none'} style={{ minWidth: 0 }}>
+          <LabelChips labels={task.labels} max={2} />
+        </Flexbox>
+      ) : null}
       <TaskSubtaskProgressTag
         currentIdentifier={task.identifier}
         progress={task.subtaskProgress}

@@ -19,6 +19,7 @@ import { BriefModel } from '@/database/models/brief';
 import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -77,6 +78,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
       teamModel: new TeamModel(ctx.serverDB, ctx.userId, wsId ?? ''),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
+      taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
       taskService: new TaskService(ctx.serverDB, ctx.userId, wsId),
       taskTopicModel: new TaskTopicModel(ctx.serverDB, ctx.userId, wsId),
       topicModel: new TopicModel(ctx.serverDB, ctx.userId, wsId),
@@ -1348,11 +1350,13 @@ export const taskRouter = router({
       const assigneeUserIds = [
         ...new Set(result.tasks.map((t) => t.assigneeUserId).filter((id): id is string => !!id)),
       ];
-      const [agents, users] = await Promise.all([
+      const [agents, users, labelsByTask] = await Promise.all([
         assigneeIds.length > 0 ? ctx.agentModel.getAgentAvatarsByIds(assigneeIds) : [],
         assigneeUserIds.length > 0
           ? UserModel.getDisplayInfoByIds(ctx.serverDB, assigneeUserIds)
           : [],
+        // Row chips: one batched join, never a query per row.
+        ctx.taskLabelModel.listForTasks(result.tasks.map((task) => task.id)),
       ]);
       const agentMap = new Map(agents.map((a) => [a.id, a]));
       const userMap = new Map(users.map((u) => [u.id, u]));
@@ -1383,7 +1387,11 @@ export const taskRouter = router({
             });
           }
         }
-        return { ...task, participants };
+        return {
+          ...task,
+          labels: (labelsByTask.get(task.id) ?? []).map(toTaskLabelSummary),
+          participants,
+        };
       });
 
       return { data, success: true, total: result.total };

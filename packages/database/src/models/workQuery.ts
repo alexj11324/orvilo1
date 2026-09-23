@@ -1,5 +1,6 @@
 import type {
   MyWorkMode,
+  TaskLabelSummary,
   WorkQuery,
   WorkQueryCountResult,
   WorkQueryEntityType,
@@ -49,6 +50,7 @@ import { executionGrants } from '../schemas/executionGrant';
 import { notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
 import { taskDependencies, tasks } from '../schemas/task';
+import { taskLabelBindings } from '../schemas/taskLabel';
 import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -57,6 +59,7 @@ import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
+import { TaskLabelModel, toTaskLabelSummary } from './taskLabel';
 import { TeamModel } from './team';
 
 export class WorkQueryError extends Error {
@@ -75,6 +78,7 @@ const TASK_FIELDS = new Set<WorkQueryField>([
   'cycleId',
   'delegatedByUserId',
   'id',
+  'labelId',
   'priority',
   'projectId',
   'reviewerUserId',
@@ -358,6 +362,54 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
     );
   }
 
+  if (predicate.field === 'labelId') {
+    // Labels are many-to-many: match through an EXISTS on the join table so a
+    // multi-labeled task is returned once, never duplicated per binding. The
+    // join table alone is sufficient — binding rows are scope-stamped at write
+    // and a foreign-scope label id simply matches nothing.
+    const resolved = resolveValue(predicate.value, ctx.currentUserId);
+    const anyBinding = sql`exists (select 1 from ${taskLabelBindings} where ${taskLabelBindings.taskId} = ${tasks.id})`;
+    const bindingWith = (match: SQL) =>
+      sql`exists (select 1 from ${taskLabelBindings} where ${taskLabelBindings.taskId} = ${tasks.id} and ${match})`;
+    switch (predicate.op) {
+      case 'isNull': {
+        return sql`not ${anyBinding}`;
+      }
+      case 'isNotNull': {
+        return anyBinding;
+      }
+      case 'eq': {
+        if (typeof resolved !== 'string') {
+          throw new WorkQueryError('INVALID_QUERY', 'labelId eq requires a label id');
+        }
+        return bindingWith(sql`${taskLabelBindings.labelId} = ${resolved}`);
+      }
+      case 'neq': {
+        if (typeof resolved !== 'string') {
+          throw new WorkQueryError('INVALID_QUERY', 'labelId neq requires a label id');
+        }
+        return sql`not ${bindingWith(sql`${taskLabelBindings.labelId} = ${resolved}`)}`;
+      }
+      case 'in': {
+        const values = assertInValues(resolved, 'in').filter(
+          (item): item is string => typeof item === 'string',
+        );
+        return values.length ? bindingWith(inArray(taskLabelBindings.labelId, values)) : FALSE_SQL;
+      }
+      case 'notIn': {
+        const values = assertInValues(resolved, 'notIn').filter(
+          (item): item is string => typeof item === 'string',
+        );
+        return values.length
+          ? sql`not ${bindingWith(inArray(taskLabelBindings.labelId, values))}`
+          : TRUE_SQL;
+      }
+      default: {
+        throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(predicate.op)}`);
+      }
+    }
+  }
+
   const op: WorkQueryOp = predicate.op;
   const resolved = resolveValue(predicate.value, ctx.currentUserId);
   return compileColumnPredicate(taskColumn(predicate.field), op, resolved);
@@ -635,7 +687,14 @@ const DEFAULT_TASK_SORT: WorkQuerySort[] = [
 
 const normalizeTaskSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] => {
   const next = sort?.length ? [...sort] : [...DEFAULT_TASK_SORT];
-  if (next.some((item) => item.field === 'delegatedByUserId' || item.field === 'reviewerUserId')) {
+  if (
+    next.some(
+      (item) =>
+        item.field === 'delegatedByUserId' ||
+        item.field === 'labelId' ||
+        item.field === 'reviewerUserId',
+    )
+  ) {
     throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
   }
   if (next.at(-1)?.field !== 'id') {
@@ -663,6 +722,7 @@ const sortValue = (
   if (field === 'cycleId') return row.cycleRefId;
   if (
     field === 'delegatedByUserId' ||
+    field === 'labelId' ||
     field === 'ownerUserId' ||
     field === 'reviewerUserId' ||
     field === 'visibility'
@@ -801,6 +861,22 @@ export class WorkQueryModel {
     return new Set(rows.map((row) => row.id));
   };
 
+  /**
+   * Batch-hydrate label chips for a page of task rows — one `IN` query through
+   * the label registry, grouped by task. Keeping it off the main SELECT means
+   * a multi-labeled task is never duplicated per binding.
+   */
+  private taskLabelsByTaskIds = async (
+    taskIds: string[],
+  ): Promise<Map<string, TaskLabelSummary[]>> => {
+    const byTask = await new TaskLabelModel(this.db, this.userId, this.workspaceId).listForTasks(
+      taskIds,
+    );
+    return new Map(
+      [...byTask.entries()].map(([taskId, labels]) => [taskId, labels.map(toTaskLabelSummary)]),
+    );
+  };
+
   private compileCtx = (
     entityType: WorkQueryEntityType,
     readableTeamIds: ReadonlySet<string>,
@@ -934,12 +1010,14 @@ export class WorkQueryModel {
       .orderBy(...orderBy)
       .limit(limit);
 
+    const labelsByTask = await this.taskLabelsByTaskIds(rows.map((row) => row.id));
+
     return {
       groupBy: 'none' as const,
       groups: undefined,
       layout: 'list' as const,
       queryHash,
-      tasks: rows,
+      tasks: rows.map((row) => ({ ...row, labels: labelsByTask.get(row.id) ?? [] })),
       total: Number(countRow?.count ?? 0),
     };
   };
@@ -1059,12 +1137,20 @@ export class WorkQueryModel {
       }),
     );
 
+    const labelsByTask = await this.taskLabelsByTaskIds(
+      groups.flatMap((group) => group.tasks.map((task) => task.id)),
+    );
+    const groupsWithLabels = groups.map((group) => ({
+      ...group,
+      tasks: group.tasks.map((row) => ({ ...row, labels: labelsByTask.get(row.id) ?? [] })),
+    }));
+
     return {
       groupBy: params.groupBy,
-      groups,
+      groups: groupsWithLabels,
       layout: params.layout,
       queryHash: params.queryHash,
-      tasks: groups.flatMap((group) => group.tasks),
+      tasks: groupsWithLabels.flatMap((group) => group.tasks),
       total,
     };
   };

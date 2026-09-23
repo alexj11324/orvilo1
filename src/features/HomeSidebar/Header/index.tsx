@@ -1,6 +1,7 @@
 'use client';
 
 import { ActionIcon } from '@lobehub/ui/base-ui';
+import { HotkeyEnum } from '@orvilo/const/hotkeys';
 import { SearchIcon, SquarePenIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import SideBarHeaderLayout from '@/features/NavPanel/SideBarHeaderLayout';
 import { useGlobalStore } from '@/store/global';
+import { useUserStore } from '@/store/user';
+import { settingsSelectors } from '@/store/user/selectors';
 
 import User from './components/User';
 
@@ -19,6 +22,10 @@ const roundActionStyle = { borderRadius: 9999 } as const;
 const HeaderActions = memo(() => {
   const { t } = useTranslation('common');
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
+  const commandPaletteHotkey = useUserStore(
+    settingsSelectors.getHotkeyById(HotkeyEnum.CommandPalette),
+  );
+  const createTaskHotkey = useUserStore(settingsSelectors.getHotkeyById(HotkeyEnum.CreateTask));
 
   return (
     <>
@@ -27,6 +34,7 @@ const HeaderActions = memo(() => {
         size={'small'}
         style={roundActionStyle}
         title={t('tab.search')}
+        tooltipProps={{ hotkey: commandPaletteHotkey }}
         onClick={() => toggleCommandMenu(true)}
       />
       <ActionIcon
@@ -34,6 +42,7 @@ const HeaderActions = memo(() => {
         size={'small'}
         style={roundActionStyle}
         title={t('navPanel.newTask')}
+        tooltipProps={{ hotkey: createTaskHotkey }}
         onClick={() => createTaskModal()}
       />
     </>

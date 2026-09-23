@@ -9,14 +9,16 @@ import type {
   WorkQueryLayout,
   WorkQuerySortMode,
 } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   BellOffIcon,
   BellPlusIcon,
   ChevronDownIcon,
   GitPullRequestIcon,
   ListTodoIcon,
+  PlusIcon,
 } from 'lucide-react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +34,7 @@ import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatu
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
+import { isInteractiveRowClick } from './myWorkDisplay';
 import {
   workQueryBoardGroups,
   workQueryListGroupBy,
@@ -86,36 +89,55 @@ const styles = createStaticStyles(({ css }) => ({
   chevronCollapsed: css`
     transform: rotate(-90deg);
   `,
-  groupHeader: css`
-    cursor: pointer;
-    user-select: none;
-
+  /**
+   * The header is a row wrapper (background + hover reveal for the create
+   * `+`) around a real `<button>` — nesting an ActionIcon inside the toggle
+   * button would be invalid HTML and would swallow its click.
+   */
+  groupHeaderRow: css`
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
 
-    min-height: 32px;
-    padding-block: 4px;
-    padding-inline: 12px;
-    border: none;
+    padding-inline-end: 4px;
     border-radius: ${cssVar.borderRadiusSM};
 
     color: ${cssVar.colorTextSecondary};
 
     background: ${cssVar.colorFillQuaternary};
 
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
+    &:hover .work-query-group-actions,
+    &:focus-within .work-query-group-actions {
+      opacity: 1;
     }
+  `,
+  attentionGroupHeaderRow: css`
+    padding-inline-end: 8px;
+    border-radius: 0;
+    background: transparent;
+  `,
+  groupHeader: css`
+    cursor: pointer;
+    user-select: none;
+
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    align-items: center;
+
+    min-width: 0;
+    min-height: 32px;
+    padding-block: 4px;
+    padding-inline: 12px;
+    border: none;
+
+    color: inherit;
+    text-align: start;
+
+    background: transparent;
   `,
   attentionGroupHeader: css`
     padding-inline: 16px;
-    border-radius: 0;
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
   `,
   row: css`
     min-height: 44px;
@@ -128,6 +150,9 @@ const styles = createStaticStyles(({ css }) => ({
       opacity: 1;
     }
   `,
+  rowSelected: css`
+    background: ${cssVar.colorFillTertiary};
+  `,
 }));
 
 interface WorkQueryResultsProps {
@@ -139,6 +164,17 @@ interface WorkQueryResultsProps {
   createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
+  /**
+   * Flat lists nest children under parents already in the set — Linear's
+   * "nested sub-issues: Show matching" for Created/Subscribed/Activity.
+   */
+  flatNested?: boolean;
+  /**
+   * Sections rendered in place of the flat list when the effective grouping
+   * is `none` — My issues uses it for the client-side activity-date buckets
+   * the work-query groupBy enum cannot express.
+   */
+  flatSections?: { key: string; tasks: WorkQueryResultTask[]; title: string }[];
   groupBy?: WorkQueryGroupBy;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
   isFollowed?: (taskId: string) => boolean;
@@ -147,10 +183,25 @@ interface WorkQueryResultsProps {
   loadingLabel: string;
   loadMoreLabel: string;
   movable?: boolean;
+  /** Group-header hover `+` — the handler owns the actual create flow. */
+  onCreateInGroup?: (groupKey: string) => void;
   onLoadMore?: () => void;
   onLoadMoreGroup?: (key: string) => void;
   onMoved?: () => void;
+  /** Full-page escape for peek mode — the row's double-click. */
+  onOpenTask?: (task: WorkQueryResultTask) => void;
+  /** Row click in peek mode: select the task instead of navigating away. */
+  onSelectTask?: (task: WorkQueryResultTask) => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
+  /**
+   * Non-interactive row clicks call `onSelectTask` and suppress the row's
+   * built-in navigation — the details-peek contract. Off by default.
+   */
+  peekOnSelect?: boolean;
+  /** Trailing row chips (e.g. the project tag) — rendered before the actions. */
+  rowExtras?: (task: WorkQueryResultTask) => ReactNode;
+  /** Identifier of the peek-selected row — paints the selected background. */
+  selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
   tasks: WorkQueryResultTask[];
@@ -163,7 +214,12 @@ const WorkQueryTaskRow = memo(
     depth = 0,
     groupBy,
     onMoved,
+    onOpenTask,
+    onSelectTask,
     onToggleFollow,
+    peekOnSelect,
+    rowExtras,
+    selected,
     task,
     muted,
   }: {
@@ -171,7 +227,12 @@ const WorkQueryTaskRow = memo(
     depth?: number;
     groupBy: 'status' | 'workflowCategory';
     onMoved?: () => void;
+    onOpenTask?: (task: WorkQueryResultTask) => void;
+    onSelectTask?: (task: WorkQueryResultTask) => void;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
+    peekOnSelect?: boolean;
+    rowExtras?: (task: WorkQueryResultTask) => ReactNode;
+    selected?: boolean;
     task: WorkQueryResultTask;
     muted?: boolean;
   }) => {
@@ -189,11 +250,36 @@ const WorkQueryTaskRow = memo(
       },
       [changeTaskStatus, groupBy, onMoved, task],
     );
+
+    /**
+     * Peek mode: a plain row click selects the issue for the detail pane and
+     * suppresses the row's built-in navigation. The capture phase is the only
+     * point before `AgentTaskItem`'s own click fires — interactive children
+     * (menus, popovers, buttons) are detected and left alone.
+     */
+    const handleClickCapture = useCallback(
+      (event: ReactMouseEvent) => {
+        if (!peekOnSelect || !onSelectTask) return;
+        if (isInteractiveRowClick(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onSelectTask(task);
+      },
+      [onSelectTask, peekOnSelect, task],
+    );
+
     // The same rich row /tasks renders — identifier, status glyph, title,
     // chips, assignee, date — instead of a second, thinner task row.
     return (
       <TaskRowIndent depth={depth} muted={muted}>
-        <Flexbox horizontal align={'center'} className={styles.row}>
+        <Flexbox
+          horizontal
+          align={'center'}
+          aria-current={selected ? 'true' : undefined}
+          className={cx(styles.row, selected && styles.rowSelected)}
+          onClickCapture={peekOnSelect && onSelectTask ? handleClickCapture : undefined}
+          onDoubleClick={peekOnSelect && onOpenTask ? () => onOpenTask(task) : undefined}
+        >
           <Flexbox flex={1} style={{ minWidth: 0 }}>
             <AgentTaskItem
               routeScope={'global'}
@@ -201,6 +287,7 @@ const WorkQueryTaskRow = memo(
               onStatusChange={handleStatusChange}
             />
           </Flexbox>
+          {rowExtras?.(task)}
           {onToggleFollow ? (
             <span className={`${styles.actions} work-query-row-actions`}>
               <ActionIcon
@@ -230,13 +317,22 @@ const WorkQueryStatusGroup = memo<{
   groupBy: 'status' | 'workflowCategory';
   attention?: boolean;
   allTasks: WorkQueryResultTask[];
+  createLabel?: string;
   hasMore?: boolean;
   isFollowed?: (taskId: string) => boolean;
+  /** Explicit header text — date buckets etc. that are not status keys. */
+  label?: string;
   loadMoreLabel?: string;
   nested?: boolean;
+  onCreateInGroup?: (groupKey: string) => void;
   onLoadMore?: () => void;
   onMoved?: () => void;
+  onOpenTask?: (task: WorkQueryResultTask) => void;
+  onSelectTask?: (task: WorkQueryResultTask) => void;
   onToggleFollow?: (taskId: string, followed: boolean) => void;
+  peekOnSelect?: boolean;
+  rowExtras?: (task: WorkQueryResultTask) => ReactNode;
+  selectedTaskId?: string;
   tasks: WorkQueryResultTask[];
   total?: number;
 }>(
@@ -244,14 +340,22 @@ const WorkQueryStatusGroup = memo<{
     columnKey,
     attention,
     allTasks,
+    createLabel,
     groupBy,
     hasMore,
     isFollowed,
+    label,
     loadMoreLabel,
     nested,
+    onCreateInGroup,
     onLoadMore,
     onMoved,
+    onOpenTask,
+    onSelectTask,
     onToggleFollow,
+    peekOnSelect,
+    rowExtras,
+    selectedTaskId,
     tasks,
     total,
   }) => {
@@ -265,24 +369,41 @@ const WorkQueryStatusGroup = memo<{
 
     return (
       <Flexbox>
-        <button
-          aria-expanded={!collapsed}
-          className={`${styles.groupHeader} ${attention ? styles.attentionGroupHeader : ''}`}
-          type="button"
-          onClick={() => setCollapsed((current) => !current)}
-        >
-          <ChevronDownIcon
-            className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
-            size={14}
-          />
-          {visual && !attention ? <Icon color={visual.color} icon={visual.icon} size={14} /> : null}
-          <Text fontSize={attention ? 13 : 12} weight={500}>
-            {labelKey ? t(labelKey as never) : columnKey}
-          </Text>
-          <Text fontSize={attention ? 13 : 12} type={'secondary'}>
-            {total ?? tasks.length}
-          </Text>
-        </button>
+        <div className={cx(styles.groupHeaderRow, attention && styles.attentionGroupHeaderRow)}>
+          <button
+            aria-expanded={!collapsed}
+            className={cx(styles.groupHeader, attention && styles.attentionGroupHeader)}
+            type="button"
+            onClick={() => setCollapsed((current) => !current)}
+          >
+            <ChevronDownIcon
+              className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
+              size={14}
+            />
+            {visual && !attention && !label ? (
+              <Icon color={visual.color} icon={visual.icon} size={14} />
+            ) : null}
+            <Text ellipsis fontSize={attention ? 13 : 12} weight={500}>
+              {label ?? (labelKey ? t(labelKey as never) : columnKey)}
+            </Text>
+            <Text fontSize={attention ? 13 : 12} type={'secondary'}>
+              {total ?? tasks.length}
+            </Text>
+          </button>
+          {onCreateInGroup ? (
+            <span className={`${styles.actions} work-query-group-actions`}>
+              <ActionIcon
+                icon={PlusIcon}
+                size={'small'}
+                title={createLabel ?? t('taskList.kanban.addTask')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onCreateInGroup(columnKey);
+                }}
+              />
+            </span>
+          ) : null}
+        </div>
         {collapsed ? null : (
           <Flexbox>
             {hierarchyRows.map((row) => (
@@ -292,8 +413,13 @@ const WorkQueryStatusGroup = memo<{
                 groupBy={groupBy}
                 key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
                 muted={row.isParentContext}
+                peekOnSelect={peekOnSelect}
+                rowExtras={rowExtras}
+                selected={selectedTaskId !== undefined && row.task.identifier === selectedTaskId}
                 task={row.task}
                 onMoved={onMoved}
+                onOpenTask={onOpenTask}
+                onSelectTask={onSelectTask}
                 onToggleFollow={onToggleFollow}
               />
             ))}
@@ -362,6 +488,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     emptyLabel,
     externalReviews,
     createContext,
+    flatNested,
+    flatSections,
     groupBy,
     groups,
     isFollowed,
@@ -370,10 +498,16 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     loadingLabel,
     loadMoreLabel,
     movable,
+    onCreateInGroup,
     onLoadMore,
     onLoadMoreGroup,
     onMoved,
+    onOpenTask,
+    onSelectTask,
     onToggleFollow,
+    peekOnSelect,
+    rowExtras,
+    selectedTaskId,
     sortMode,
     tasks,
     total,
@@ -385,6 +519,22 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
+    // Flat lists nest children under in-list parents only when the caller opts
+    // in — Linear's "nested sub-issues: Show matching" vs "Hide" per tab.
+    const flatRows = flatNested
+      ? workQueryHierarchyRows(tasks, tasks)
+      : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
+
+    const rowProps = {
+      onMoved,
+      onOpenTask,
+      onSelectTask,
+      onToggleFollow,
+      peekOnSelect,
+      rowExtras,
+    };
+    const rowSelected = (task: WorkQueryResultTask) =>
+      selectedTaskId !== undefined && task.identifier === selectedTaskId;
 
     const reviewBlock = externalReviews ? (
       <Flexbox gap={8}>
@@ -443,21 +593,46 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
         {reviewBlock}
         {listGroupBy === 'none' ? (
           /* `none` grouping stays a flat list in the query's own sort order —
-             no status headers are re-imposed. */
+             no status headers are re-imposed. `flatSections` overlays caller-
+             computed groupings (activity day buckets) without re-bucketing. */
           tasks.length === 0 ? (
             <Center flex={1} padding={48}>
               <Empty description={emptyLabel} icon={ListTodoIcon} />
             </Center>
+          ) : flatSections && flatSections.length > 0 ? (
+            <Flexbox gap={8}>
+              {flatSections.map((section) => (
+                /* Date buckets borrow the banner header (`attention`) — the
+                   filled status pill would be wrong chrome for a day label. */
+                <WorkQueryStatusGroup
+                  attention
+                  allTasks={allTasks}
+                  columnKey={section.key}
+                  groupBy={'status'}
+                  isFollowed={isFollowed}
+                  key={section.key}
+                  label={section.title}
+                  nested={flatNested}
+                  selectedTaskId={selectedTaskId}
+                  tasks={section.tasks}
+                  total={section.tasks.length}
+                  onCreateInGroup={onCreateInGroup}
+                  {...rowProps}
+                />
+              ))}
+            </Flexbox>
           ) : (
             <Flexbox gap={2}>
-              {tasks.map((task) => (
+              {flatRows.map((row) => (
                 <WorkQueryTaskRow
-                  followed={isFollowed?.(task.id)}
+                  depth={row.depth}
+                  followed={isFollowed?.(row.task.id)}
                   groupBy={'status'}
-                  key={task.id}
-                  task={task}
-                  onMoved={onMoved}
-                  onToggleFollow={onToggleFollow}
+                  key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
+                  muted={row.isParentContext}
+                  selected={rowSelected(row.task)}
+                  task={row.task}
+                  {...rowProps}
                 />
               ))}
             </Flexbox>
@@ -469,6 +644,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
         ) : (
           <Flexbox gap={8}>
             {listSections.map((group) => (
+              // `nested` honours the caller's sub-issues toggle — `flatNested`
+              // === false disables attention nesting too (Linear's option is
+              // list-wide).
               <WorkQueryStatusGroup
                 allTasks={allTasks}
                 columnKey={group.key}
@@ -479,18 +657,19 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 isFollowed={isFollowed}
                 key={group.key}
                 loadMoreLabel={loadMoreLabel}
-                nested={listGroupBy === 'attention'}
+                nested={listGroupBy === 'attention' && flatNested !== false}
+                selectedTaskId={selectedTaskId}
                 tasks={group.tasks}
                 total={group.total}
                 attention={
                   listGroupBy === 'attention' &&
                   (group.key === 'urgent' || group.key === 'blocking')
                 }
-                onMoved={onMoved}
-                onToggleFollow={onToggleFollow}
+                onCreateInGroup={onCreateInGroup}
                 onLoadMore={
                   pageGroupPaging && onLoadMoreGroup ? () => onLoadMoreGroup(group.key) : undefined
                 }
+                {...rowProps}
               />
             ))}
           </Flexbox>

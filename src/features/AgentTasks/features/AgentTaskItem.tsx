@@ -75,6 +75,12 @@ export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
   /**
+   * Leading padding in px (default 12). A list that puts a selection gutter
+   * before the row trims it so the gutter and the row never overlap while the
+   * priority mark keeps Linear's x.
+   */
+  insetStart?: number;
+  /**
    * The resolved milestone this row links, supplied by the list when the
    * "Milestones" display property is on and the scope's catalog names the
    * link. `undefined` renders no badge — rows never invent one from a raw id.
@@ -112,6 +118,7 @@ const toTaskStatus = (status: string): TaskStatus =>
 
 const AgentTaskItem = memo<TaskItemProps>((props) => {
   const {
+    insetStart = 12,
     milestone,
     onStatusChange,
     showParent,
@@ -385,7 +392,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         gap={4}
         justify={'center'}
         paddingBlock={4}
-        paddingInline={12}
+        paddingInline={`${insetStart}px 12px`}
         variant={'borderless'}
         onClick={handleClick}
       >

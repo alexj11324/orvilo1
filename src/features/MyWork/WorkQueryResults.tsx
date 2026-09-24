@@ -62,6 +62,9 @@ import {
 
 export type { WorkQueryResultTask } from './workQueryPaging';
 
+/** Row inset after the 33px selection gutter — puts the priority mark at 42px. */
+const BULK_ROW_INSET = 9;
+
 const styles = createStaticStyles(({ css }) => ({
   actions: css`
     flex: none;
@@ -189,22 +192,25 @@ const styles = createStaticStyles(({ css }) => ({
    * keep their geometry whether or not multi-select is armed. Solid chip —
    * it slides over whatever sits in the row's left padding.
    */
-  bulkCheck: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 50%;
-    inset-inline-start: 4px;
-    transform: translateY(-50%);
-
+  /**
+   * Linear's selection gutter, measured: the 14px checkbox starts 19px in and
+   * the priority mark 42px in. The gutter holds the whole checkbox (33px) and
+   * the row trims its own inset to 9px (`BULK_ROW_INSET`), so the two never
+   * overlap — a click on the checkbox's edge must not open the issue.
+   */
+  bulkGutter: css`
     display: flex;
+    flex: none;
     align-items: center;
 
-    border-radius: ${cssVar.borderRadiusSM};
-
+    box-sizing: border-box;
+    inline-size: 33px;
+    padding-inline-start: 19px;
+  `,
+  bulkCheck: css`
+    display: flex;
+    align-items: center;
     opacity: 0;
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-
     transition: opacity ${cssVar.motionDurationFast};
 
     @media (hover: none) {
@@ -513,29 +519,32 @@ const WorkQueryTaskRow = memo(
 
     // The same rich row /tasks renders — identifier, status glyph, title,
     // chips, assignee, date — instead of a second, thinner task row.
+    // Linear keeps the selection checkbox in a fixed left gutter, outside the
+    // nesting indent: every row's checkbox shares one x, and it never sits on
+    // top of the priority mark.
     return (
-      <TaskRowIndent depth={depth} muted={muted}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          aria-current={selected ? 'true' : undefined}
-          aria-selected={bulkSelected ? 'true' : undefined}
-          data-bulk-row-id={onBulkSelectTask ? task.id : undefined}
-          data-bulk-selected={bulkSelected || undefined}
-          className={cx(
-            styles.row,
-            selected && styles.rowSelected,
-            bulkSelected && styles.rowBulkSelected,
-            ...rowPropertyClassNames(hiddenProperties),
-          )}
-          onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
-          onClickCapture={
-            (peekOnSelect && onSelectTask) || onBulkSelectTask ? handleClickCapture : undefined
-          }
-        >
-          {onBulkSelectTask ? (
+      <Flexbox
+        horizontal
+        align={'center'}
+        aria-current={selected ? 'true' : undefined}
+        aria-selected={bulkSelected ? 'true' : undefined}
+        data-bulk-row-id={onBulkSelectTask ? task.id : undefined}
+        data-bulk-selected={bulkSelected || undefined}
+        className={cx(
+          styles.row,
+          selected && styles.rowSelected,
+          bulkSelected && styles.rowBulkSelected,
+          ...rowPropertyClassNames(hiddenProperties),
+        )}
+        onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
+        onClickCapture={
+          (peekOnSelect && onSelectTask) || onBulkSelectTask ? handleClickCapture : undefined
+        }
+      >
+        {onBulkSelectTask ? (
+          <span data-row-interactive className={styles.bulkGutter}>
             <span
-              data-row-interactive
+              data-row-control={'select'}
               className={cx(
                 styles.bulkCheck,
                 'work-query-bulk-check',
@@ -545,12 +554,16 @@ const WorkQueryTaskRow = memo(
               <Checkbox
                 aria-label={t('myWork.bulk.selectRow')}
                 checked={Boolean(bulkSelected)}
+                size={14}
                 onChange={() => onBulkSelectTask(task, 'toggle', [task.id])}
               />
             </span>
-          ) : null}
-          <Flexbox flex={1} style={{ minWidth: 0 }}>
+          </span>
+        ) : null}
+        <Flexbox flex={1} style={{ minWidth: 0 }}>
+          <TaskRowIndent depth={depth} muted={muted}>
             <AgentTaskItem
+              insetStart={onBulkSelectTask ? BULK_ROW_INSET : undefined}
               milestone={milestoneFor?.(task)}
               routeScope={'global'}
               showParent={depth === 0}
@@ -558,19 +571,19 @@ const WorkQueryTaskRow = memo(
               trailingChips={rowExtras?.(task)}
               onStatusChange={handleStatusChange}
             />
-          </Flexbox>
-          {onToggleFollow ? (
-            <span className={`${styles.actions} work-query-row-actions`}>
-              <ActionIcon
-                icon={followed ? BellOffIcon : BellPlusIcon}
-                size={'small'}
-                title={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
-                onClick={() => onToggleFollow(task.id, Boolean(followed))}
-              />
-            </span>
-          ) : null}
+          </TaskRowIndent>
         </Flexbox>
-      </TaskRowIndent>
+        {onToggleFollow ? (
+          <span className={`${styles.actions} work-query-row-actions`}>
+            <ActionIcon
+              icon={followed ? BellOffIcon : BellPlusIcon}
+              size={'small'}
+              title={followed ? t('myWork.unsubscribe') : t('myWork.subscribe')}
+              onClick={() => onToggleFollow(task.id, Boolean(followed))}
+            />
+          </span>
+        ) : null}
+      </Flexbox>
     );
   },
 );

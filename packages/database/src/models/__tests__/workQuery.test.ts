@@ -252,6 +252,7 @@ describe('WorkQueryModel', () => {
     expect(ids).not.toContain(silent.id);
     expect(ids).not.toContain(foreign.id);
     // Each row echoes the clock it was ordered by, as a Date, for day buckets.
+    if (result.groupBy !== 'none') throw new Error('Expected an ungrouped activity result');
     expect(result.tasks.map((row) => row.activityAt)).toEqual([
       new Date('2026-09-10T00:00:00Z'),
       new Date('2026-09-01T00:00:00Z'),

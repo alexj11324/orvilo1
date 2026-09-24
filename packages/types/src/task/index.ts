@@ -909,6 +909,12 @@ export interface TaskItem {
 
 export type TaskListItem = TaskItem & {
   /**
+   * Work-query activity mode only: the latest notification episode on the
+   * task — the clock the feed is ordered by, so its day buckets and the row's
+   * date use it instead of updatedAt. `null` outside activity mode.
+   */
+  activityAt?: Date | string | null;
+  /**
    * Label chips hydrated by the list/work-query reads (`task.list`,
    * `workAttention.*`). Optional — endpoints that never join labels leave it
    * undefined rather than promising an empty set.

@@ -10,6 +10,7 @@ import AgentTaskItem from './AgentTaskItem';
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
   fetchTaskDetail: vi.fn(),
+  formatTaskItemDate: vi.fn((_time?: unknown) => 'today'),
   navigate: vi.fn(),
   taskDetailMap: {} as Record<string, unknown>,
 }));
@@ -66,7 +67,7 @@ vi.mock('../shared/useUserDisplayMeta', () => ({
 }));
 
 vi.mock('./formatTaskItemDate', () => ({
-  formatTaskItemDate: () => 'today',
+  formatTaskItemDate: (time?: unknown) => mocks.formatTaskItemDate(time),
 }));
 
 vi.mock('./TaskPriorityTag', () => ({
@@ -334,5 +335,16 @@ describe('AgentTaskItem', () => {
       screen.getByText('Hourly trend update').compareDocumentPosition(parent) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('dates an activity-feed row by its activity, not its last update', () => {
+    const activityAt = new Date('2026-09-24T08:00:00.000Z');
+    render(<AgentTaskItem routeScope={'global'} task={{ ...createTask('agent-1'), activityAt }} />);
+    expect(mocks.formatTaskItemDate).toHaveBeenLastCalledWith(activityAt);
+
+    cleanup();
+    const plain = createTask('agent-1');
+    render(<AgentTaskItem routeScope={'global'} task={plain} />);
+    expect(mocks.formatTaskItemDate).toHaveBeenLastCalledWith(plain.updatedAt);
   });
 });

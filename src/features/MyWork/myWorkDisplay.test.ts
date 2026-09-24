@@ -231,6 +231,20 @@ describe('workQueryActivitySections', () => {
     expect(sections[0].total).toBe(2);
   });
 
+  it('buckets by the activity clock the feed is ordered by, not updatedAt', () => {
+    const today = new Date();
+    const lastWeek = new Date(startOfDay(today).getTime() - 6 * 86_400_000);
+    // Feed order is activity-desc; updatedAt disagrees with it on purpose.
+    const a = task({ activityAt: today, id: 'a', updatedAt: lastWeek });
+    const b = task({ activityAt: today, id: 'b', updatedAt: today });
+    const c = task({ activityAt: lastWeek, id: 'c', updatedAt: today });
+    const sections = workQueryActivitySections([a, b, c]);
+    expect(sections.map((section) => section.tasks.map((row) => row.id))).toEqual([
+      ['a', 'b'],
+      ['c'],
+    ]);
+  });
+
   it('labels today, yesterday and unknown rows', () => {
     const labels = { today: 'Today', unknown: 'Unknown date', yesterday: 'Yesterday' };
     const now = new Date(2026, 8, 23, 15);

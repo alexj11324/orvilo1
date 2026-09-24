@@ -251,6 +251,11 @@ describe('WorkQueryModel', () => {
     expect(ids).toEqual([recent.id, stale.id]);
     expect(ids).not.toContain(silent.id);
     expect(ids).not.toContain(foreign.id);
+    // Each row echoes the clock it was ordered by, as a Date, for day buckets.
+    expect(result.tasks.map((row) => row.activityAt)).toEqual([
+      new Date('2026-09-10T00:00:00Z'),
+      new Date('2026-09-01T00:00:00Z'),
+    ]);
 
     // Keyset pagination follows the same activity ordering.
     const second = await model.queryTasks({

@@ -32,6 +32,7 @@ import {
   asc,
   desc,
   eq,
+  getTableColumns,
   gt,
   inArray,
   isNotNull,
@@ -1044,8 +1045,16 @@ export class WorkQueryModel {
       .from(tasks)
       .where(and(...conditions));
 
+    // Activity rows carry the timestamp they are ordered by, so the client's
+    // day buckets use the same clock as the order (not the row's updatedAt).
     const rows = await this.db
-      .select()
+      .select({
+        ...getTableColumns(tasks),
+        // mapWith: a raw SQL timestamp arrives as a driver string otherwise.
+        activityAt: activityOrdered
+          ? sql<Date | null>`${activityExpr}`.mapWith(tasks.updatedAt)
+          : sql<Date | null>`null`,
+      })
       .from(tasks)
       .where(and(...listConditions))
       .orderBy(...orderBy)

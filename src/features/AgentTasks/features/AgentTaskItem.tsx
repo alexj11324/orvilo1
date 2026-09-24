@@ -133,7 +133,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
 
-  const time = formatTaskItemDate(task.updatedAt || task.createdAt, {
+  // An activity feed dates each row by the activity it is listed for.
+  const time = formatTaskItemDate(task.activityAt || task.updatedAt || task.createdAt, {
     formatOtherYear: t('time.formatOtherYear'),
     formatThisYear: t('time.formatThisYear'),
     locale: i18n.language,

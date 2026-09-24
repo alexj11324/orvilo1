@@ -414,12 +414,15 @@ export const activityDayTitle = (
 
 /**
  * Bucket a flat activity-ordered list into day sections. Rows arrive ordered
- * by real activity (the server's `taskActivityAt`); bucketing preserves that
- * arrival order — the first row of a day opens its section.
+ * by real activity (the server's `taskActivityAt`, echoed as `activityAt`);
+ * bucketing by that same clock keeps each day contiguous and preserves the
+ * arrival order — the first row of a day opens its section. `updatedAt` is
+ * only the fallback for rows read outside activity mode.
  */
 export const workQueryActivitySections = <T extends WorkQueryResultTask>(
   tasks: readonly T[],
-  activityAtOf: (task: T) => Date | number | string | null | undefined = (task) => task.updatedAt,
+  activityAtOf: (task: T) => Date | number | string | null | undefined = (task) =>
+    task.activityAt ?? task.updatedAt,
 ): MyWorkDaySection<T>[] => {
   const buckets = new Map<string, T[]>();
   for (const task of tasks) {

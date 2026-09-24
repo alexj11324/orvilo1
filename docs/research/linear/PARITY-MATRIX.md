@@ -129,6 +129,25 @@
 | CI                                                                                                                                                                   | 所有新测试均为「写了待 CI 跑」（本机禁跑 `bun run check`/vitest/tsc）                                                                                                                                                                                                                                                                                                                                                                    |
 | 残留 locale / 产品项                                                                                                                                                 | `1514ae00b` 已收编并行任务 locale 增量；views 空目录疑为 fixture 空（非 bug，待造数据复核）                                                                                                                                                                                                                                                                                                                                              |
 
+## J. 语义横切审计（semantics owner，2026-09-24）
+
+> 权威矩阵：`docs/research/linear/semantics/TERM-BEHAVIOR-MATRIX.md`（8 列全量：
+> Linear 术语 / 官方文档语义 + URL / 参考端实测 / Orvilo 术语 file:line / Orvilo 实行为 /verdict/
+> 行为级 required fix /owning surface）。本节只登记**会影响上面各面验收口径**的语义分歧；
+> 逐条证据与修复要求以语义矩阵为准。共享浏览器公约：`semantics/CDP-ETIQUETTE.md`。
+> 基线 `b29324431`；Orvilo 证据为源码级（source-only，候选端未起实例）。
+
+| 面                               | 语义分歧（行为级）                                                                                                                                                                   | 对验收口径的影响                                              | 状态          |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ------------- |
+| views / shared                   | **“Status” 同名两义**：过滤 / 分组的 `status`=agent 执行态（running/paused/failed…），Linear 的 Status 实是 `workflowCategory`（UI 叫 “Workflow state”，且粒度 = category 非 state） | 凡验收「按 Status 筛选 / 分组」必须先澄清字段语义，否则假通过 | ⚠️ 已记录待修 |
+| triage                           | Accept/Decline/Duplicate 只写 `triageStatus`，不落工作流态（文档：accept→默认 status、decline→Canceled、duplicate→保留态）；Snooze 诚实禁用                                          | triage 行的「动作后去向」与 Linear 不同；验收不能只验行消失   | ⚠️ 已记录待修 |
+| issue-detail                     | Task Delete = 硬删（无 30 天回收站）；sub-issue 不继承 team/priority/project 且禁跨项目；labels 无 team scope/label group；estimate/due date/issue archive 全缺                      | 详情页属性区缺行是「功能缺失」非渲染 bug                      | ⚠️/⛔ 已记录  |
+| my-issues                        | Subscribed tab 只含手动订阅（无 create/assign/mention/comment 自动订阅写路径）                                                                                                       | tab 内容口径比 Linear 窄，验收数据不可直接对拍                | ⚠️ 已记录待修 |
+| inbox                            | “Add filter” 是五选一 chip 非条件构建器；“Delete all” 实为 archive（已诚实注明）；snooze hide-until-wake **已对齐**（纠正前审计）                                                    | inbox 筛选能力≠Linear；snooze 不再是缺口                      | ⚠️/✅ 混合    |
+| views                            | groupBy 仅 4 值；无日期过滤字段；无 completed 时间窗；内置视图集口径不同（`all/blocked/in-progress/projects/review`）                                                                | 视图「字段全量」验收会失败 —— 是能力缺口不是 UI 缺漏          | ⚠️/⛔ 已记录  |
+| projects-list                    | `PROJECT_STATUS_VALUES` 过滤枚举漏 `planned`；`active`↔Linear `Started`（🔀）；多出 `reviewing`/`archived`（➕）                                                                     | 过滤选 Planned 恒空                                           | ⚠️ 已记录待修 |
+| cycles / project-detail / shared | cycles 仅占位模型（无调度 / 滚动）；initiative 整体缺失；SLA/auto-close/auto-archive 缺失                                                                                            | 对应整面功能缺失裁决项                                        | ⛔ 已记录     |
+
 ## I. 工作规则（本会话约定）
 
 - `:9222`/`:9666` 各单 tab；浏览器采集串行；本地禁跑 `bun run test`/tsgo（typecheck 走 CI 或所属包 `pnpm type-check`）。

@@ -557,7 +557,7 @@ describe('TaskService', () => {
           priority: 'high',
           status: 'in_progress',
           workflowCategory: 'in_review',
-          workflowStateId: 'linear-state-review',
+          workflowStateRefId: 'local-state-review',
         },
       ];
 
@@ -596,7 +596,7 @@ describe('TaskService', () => {
         priority: 'high',
         status: 'in_progress',
         workflowCategory: 'in_review',
-        workflowStateId: 'linear-state-review',
+        workflowStateRefId: 'local-state-review',
       });
     });
 

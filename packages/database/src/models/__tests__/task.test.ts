@@ -12,6 +12,7 @@ import {
   tasks,
   teamMembers,
   teams,
+  teamWorkflowStates,
   topics,
   users,
   workspaceMembers,
@@ -860,6 +861,46 @@ describe('TaskModel', () => {
       expect(rawPaused.tasks.map(({ id }) => id).sort()).toEqual(
         [legacyPaused.id, linkedDone.id].sort(),
       );
+    });
+
+    it('groups a local workflow state without a remote state ID by business workflow', async () => {
+      const workspaceId = 'local-workflow-group-ws';
+      const teamId = 'local-workflow-group-team';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Local workflow group',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(teams).values({
+        id: teamId,
+        key: 'LWG',
+        name: 'Local workflow team',
+        workspaceId,
+      });
+      const [state] = await serverDB
+        .insert(teamWorkflowStates)
+        .values({ category: 'done', name: 'Done locally', teamId, workspaceId })
+        .returning();
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const task = await model.create({ instruction: 'Local delivery pending', teamId });
+      await model.updateStatus(task.id, 'paused');
+      await model.update(task.id, {
+        workflowCategory: 'done',
+        workflowStateRefId: state.id,
+      });
+
+      const groups = await model.groupList({
+        groups: [
+          { key: 'needsInput', statuses: ['paused'], workflowCategories: ['in_review'] },
+          { key: 'done', statuses: ['completed'], workflowCategories: ['done'] },
+        ],
+      });
+
+      expect(groups.find(({ key }) => key === 'done')?.tasks.map(({ id }) => id)).toEqual([
+        task.id,
+      ]);
+      expect(groups.find(({ key }) => key === 'needsInput')?.total).toBe(0);
     });
 
     it('should support per-group pagination', async () => {

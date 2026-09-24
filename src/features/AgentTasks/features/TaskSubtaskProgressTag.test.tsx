@@ -46,7 +46,7 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
 }));
 
 vi.mock('./TaskStatusIcon', () => ({
-  default: () => <span>status</span>,
+  default: ({ status }: { status: string }) => <span data-testid="execution-status">{status}</span>,
 }));
 
 describe('TaskSubtaskProgressTag', () => {
@@ -75,7 +75,18 @@ describe('TaskSubtaskProgressTag', () => {
     fireEvent.click(screen.getByTestId('subtask-T-2'));
 
     expect(onSubtaskClick).toHaveBeenCalledWith('T-2', 'agt_child', 'Child task');
-    expect(screen.getByTestId('subtask-T-2')).toHaveTextContent('status');
+    expect(screen.getByTestId('subtask-T-2')).toHaveTextContent('backlog');
+  });
+
+  it('keeps a scheduled execution icon in the subtask picker', () => {
+    render(
+      <TaskSubtaskProgressTag
+        subtasks={[{ identifier: 'T-3', status: 'scheduled' }]}
+        onSubtaskClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('subtask-T-3')).toHaveTextContent('scheduled');
   });
 
   it('renders a lightweight progress summary without a subtask tree', () => {
@@ -84,7 +95,7 @@ describe('TaskSubtaskProgressTag', () => {
     expect(screen.getByText('2/3')).toBeInTheDocument();
   });
 
-  it('uses the board glyph for provider state without changing execution progress', () => {
+  it('uses the board glyph for local workflow state without changing execution progress', () => {
     render(
       <TaskSubtaskProgressTag
         subtasks={[
@@ -93,7 +104,7 @@ describe('TaskSubtaskProgressTag', () => {
             name: 'Child task',
             status: 'completed',
             workflowCategory: 'in_progress',
-            workflowStateId: 'linear-state-progress',
+            workflowStateRefId: 'local-state-progress',
           },
         ]}
         onSubtaskClick={vi.fn()}

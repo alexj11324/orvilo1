@@ -14,21 +14,23 @@ interface TaskWorkflowBadgeProps {
   executionStatus: string;
   workflowCategory?: TaskWorkflowCategory;
   workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
 }
 
 /**
  * The workflow state as a bare status glyph — what a task row or board card
  * draws in its one status slot (Linear shows a single status mark per row).
- * `undefined` when the task carries no provider workflow state, so the caller
- * falls back to the execution-status glyph.
+ * `undefined` when the task carries no concrete workflow state, so the caller
+ * falls back to the execution-status glyph for legacy personal tasks.
  */
 export const useTaskWorkflowGlyph = ({
   executionStatus,
   workflowCategory,
+  workflowStateRefId,
   workflowStateId,
 }: TaskWorkflowBadgeProps): (StatusVisual & { label: ReactNode }) | undefined => {
   const { t } = useTranslation('chat');
-  if (!workflowStateId || !workflowCategory) return undefined;
+  if ((!workflowStateRefId && !workflowStateId) || !workflowCategory) return undefined;
 
   const categoryLabel = t(`taskDetail.workflow.category.${workflowCategory}` as never);
   const deliveryPending = workflowCategory === 'done' && executionStatus !== 'completed';
@@ -41,7 +43,7 @@ export const useTaskWorkflowGlyph = ({
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
         </Text>
         <Text fontSize={12} style={{ fontFamily: cssVar.fontFamilyCode }} type={'secondary'}>
-          {workflowStateId}
+          {workflowStateRefId ?? workflowStateId}
         </Text>
         {deliveryPending && (
           <Text fontSize={12} type={'warning'}>
@@ -54,7 +56,7 @@ export const useTaskWorkflowGlyph = ({
 };
 
 /**
- * Provider business state as a labelled pill — for property panels, where the
+ * Business state as a labelled pill — for property panels, where the
  * state is a field value rather than a row's status mark.
  */
 const TaskWorkflowBadge = memo<TaskWorkflowBadgeProps>((props) => {

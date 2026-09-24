@@ -60,12 +60,24 @@ const ALL_CATEGORIES: TaskWorkflowCategory[] = [
 ];
 
 describe('TaskWorkflowBadge', () => {
-  it('does not invent a business state for a local-only task', () => {
+  it('does not invent a business state without a state identity', () => {
     const { container } = render(
       <TaskWorkflowBadge executionStatus={'running'} workflowCategory={'in_progress'} />,
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('draws the business state for a local workflow without a remote ID', () => {
+    const { container } = render(
+      <TaskWorkflowBadge
+        executionStatus={'backlog'}
+        workflowCategory={'in_progress'}
+        workflowStateRefId={'local-state-progress'}
+      />,
+    );
+
+    expect(container.querySelector('[data-workflow-icon="in_progress"]')).toBeInTheDocument();
   });
 
   it('keeps external Done separate from an unverified delivery', () => {

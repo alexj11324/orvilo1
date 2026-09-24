@@ -164,6 +164,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       executionStatus: task.status,
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,
+      workflowStateRefId: task.workflowStateRefId,
     });
     const hasName = Boolean(task.name?.trim());
     const time = formatTaskItemDate(task.createdAt, {

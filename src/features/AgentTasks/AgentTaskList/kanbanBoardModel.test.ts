@@ -227,6 +227,20 @@ describe('kanbanBoardModel', () => {
       expect(taskMatchesKanbanColumn(linkedDone, 'status', 'needsInput')).toBe(false);
     });
 
+    it('places local workflow tasks in their business column without offering a dead drop', () => {
+      const localDone = task('local', null, null, {
+        status: 'paused',
+        workflowCategory: 'done',
+        workflowStateId: null,
+        workflowStateRefId: 'local-state-done',
+      });
+      const running = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'running')!;
+
+      expect(taskKanbanColumnKey(localDone, 'status')).toBe('done');
+      expect(canDropTaskIntoKanbanColumn(localDone, 'status', running)).toBe(false);
+      expect(getKanbanTaskPatch('status', running, localDone)).toBeUndefined();
+    });
+
     it('keeps execution-only running closed while linked tasks can target mapped workflow states', () => {
       const running = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'running')!;
       const needsInput = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'needsInput')!;

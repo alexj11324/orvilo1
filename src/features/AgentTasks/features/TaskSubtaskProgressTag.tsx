@@ -1,31 +1,20 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
 import { DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
-import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
+import type { TaskDetailSubtask, TaskStatus, TaskSubtaskProgress } from '@orvilo/types';
 import { Progress } from 'antd';
 import { cssVar } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { TASK_STATUS_VISUALS, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import IssueRowChip from '@/components/IssueRowChip';
 
 import TaskStatusIcon from './TaskStatusIcon';
 
-type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
-
-const TASK_STATUS_SET = new Set([
-  'backlog',
-  'canceled',
-  'completed',
-  'failed',
-  'paused',
-  'running',
-]);
-
-const toTaskStatus = (status: string): TaskStatus =>
-  TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
+const toTaskStatus = (status: string): TaskStatus | undefined =>
+  Object.hasOwn(TASK_STATUS_VISUALS, status) ? (status as TaskStatus) : undefined;
 
 interface FlattenedSubtask {
   depth: number;
@@ -134,7 +123,8 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
       const isActive = subtask.task.identifier === currentIdentifier;
       const itemStatus = toTaskStatus(subtask.task.status);
       const workflowVisual =
-        subtask.task.workflowStateId && subtask.task.workflowCategory
+        (subtask.task.workflowStateRefId || subtask.task.workflowStateId) &&
+        subtask.task.workflowCategory
           ? WORKFLOW_CATEGORY_VISUALS[subtask.task.workflowCategory]
           : undefined;
 
@@ -145,9 +135,9 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
             {subtask.depth > 0 && <div style={{ flex: 'none', width: subtask.depth * 16 }} />}
             {workflowVisual ? (
               <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
-            ) : (
+            ) : itemStatus ? (
               <TaskStatusIcon size={16} status={itemStatus} />
-            )}
+            ) : null}
             <Text ellipsis weight={isActive ? 'bold' : undefined}>
               {subtask.task.name || subtask.task.identifier}
             </Text>

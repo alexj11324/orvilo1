@@ -152,6 +152,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     executionStatus: task.status,
     workflowCategory: task.workflowCategory,
     workflowStateId: task.workflowStateId,
+    workflowStateRefId: task.workflowStateRefId,
   });
 
   const handleClick = useCallback(() => {

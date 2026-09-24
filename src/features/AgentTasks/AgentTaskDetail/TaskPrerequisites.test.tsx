@@ -94,14 +94,14 @@ describe('TaskPrerequisites', () => {
     expect(screen.getByText('T-3')).toBeTruthy();
   });
 
-  it('uses the board workflow glyph for a linked issue with a provider state', () => {
+  it('uses the board workflow glyph for a related issue with a local state', () => {
     setTask([
       {
         dependsOn: 'T-1',
         status: 'completed',
         type: 'relates',
         workflowCategory: 'in_progress',
-        workflowStateId: 'linear-state-progress',
+        workflowStateRefId: 'local-state-progress',
       },
     ]);
     render(<TaskPrerequisites />);

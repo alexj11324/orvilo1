@@ -115,7 +115,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
       {orderedDeps.map((dep, index) => {
         const unavailable = !dep.status;
         const workflowVisual =
-          dep.workflowStateId && dep.workflowCategory
+          (dep.workflowStateRefId || dep.workflowStateId) && dep.workflowCategory
             ? WORKFLOW_CATEGORY_VISUALS[dep.workflowCategory]
             : undefined;
         return (

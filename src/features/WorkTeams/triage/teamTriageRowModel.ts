@@ -25,6 +25,7 @@ export interface TeamTriageTask {
   status?: string | null;
   workflowCategory?: TaskWorkflowCategory;
   workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
 }
 
 /**

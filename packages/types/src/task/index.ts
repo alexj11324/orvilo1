@@ -1046,6 +1046,7 @@ export interface TaskDetailSubtask {
   /** Provider business state, independent from execution progress. */
   workflowCategory?: TaskWorkflowCategory;
   workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
 }
 
 export interface TaskDetailWorkspaceNode {
@@ -1242,6 +1243,7 @@ export interface TaskDetailData {
     /** Provider business state shown with the same glyph as issue board rows. */
     workflowCategory?: TaskWorkflowCategory;
     workflowStateId?: string | null;
+    workflowStateRefId?: string | null;
   }>;
   description?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */

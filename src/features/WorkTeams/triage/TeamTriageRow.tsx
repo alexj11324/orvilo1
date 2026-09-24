@@ -125,6 +125,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       executionStatus: task.status ?? '',
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,
+      workflowStateRefId: task.workflowStateRefId,
     });
     const overflowItems = teamTriageOverflowItems({
       destinations,

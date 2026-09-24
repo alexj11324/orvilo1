@@ -47,7 +47,7 @@ const props = {
 };
 
 describe('TeamTriageRow status icon', () => {
-  it('uses the board workflow glyph for a linked in-progress task', () => {
+  it('uses the board workflow glyph for a local in-progress task', () => {
     render(
       <TeamTriageRow
         {...props}
@@ -56,7 +56,7 @@ describe('TeamTriageRow status icon', () => {
           name: 'Linked issue',
           status: 'backlog',
           workflowCategory: 'in_progress',
-          workflowStateId: 'linear-state-progress',
+          workflowStateRefId: 'local-state-progress',
         }}
       />,
     );

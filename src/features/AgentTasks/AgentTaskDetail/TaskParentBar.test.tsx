@@ -39,7 +39,7 @@ vi.mock('@/store/task', () => ({
 }));
 
 vi.mock('../features/TaskStatusIcon', () => ({
-  default: () => <span>status</span>,
+  default: ({ status }: { status: string }) => <span data-testid="execution-status">{status}</span>,
 }));
 
 vi.mock('../features/TaskSubtaskProgressTag', () => ({
@@ -139,7 +139,40 @@ describe('TaskParentBar', () => {
     await waitFor(() =>
       expect(container.querySelector('[data-workflow-icon="in_progress"]')).toBeInTheDocument(),
     );
-    expect(screen.queryByText('status')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('execution-status')).not.toBeInTheDocument();
+  });
+
+  it('shows a local parent workflow glyph without a remote state ID', async () => {
+    mocks.getDetail.mockResolvedValue({
+      data: {
+        agentId: 'agt_parent',
+        identifier: 'T-parent',
+        status: 'backlog',
+        subtasks: [],
+        workflowCategory: 'in_progress',
+        workflowStateRefId: 'local-state-progress',
+      },
+    });
+
+    const { container } = render(<TaskParentBar />);
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-workflow-icon="in_progress"]')).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId('execution-status')).not.toBeInTheDocument();
+  });
+
+  it('does not show Backlog while the parent is loading, then shows Scheduled', async () => {
+    let resolveDetail!: (result: unknown) => void;
+    mocks.getDetail.mockReturnValue(new Promise((resolve) => (resolveDetail = resolve)));
+
+    render(<TaskParentBar />);
+
+    expect(screen.queryByTestId('execution-status')).not.toBeInTheDocument();
+    resolveDetail({ data: { identifier: 'T-parent', status: 'scheduled', subtasks: [] } });
+    await waitFor(() =>
+      expect(screen.getByTestId('execution-status')).toHaveTextContent('scheduled'),
+    );
   });
 
   it("opens parent subtasks inside the clicked subtask's owning agent route", async () => {

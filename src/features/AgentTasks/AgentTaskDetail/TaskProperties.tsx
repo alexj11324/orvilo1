@@ -58,6 +58,7 @@ const TaskProperties = memo(() => {
   const status = useTaskStore(taskDetailSelectors.activeTaskStatus) as TaskStatus | undefined;
   const workflowCategory = useTaskStore(taskDetailSelectors.activeTaskWorkflowCategory);
   const workflowStateId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateId);
+  const workflowStateRefId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateRefId);
   const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
   const labels = useTaskStore(taskDetailSelectors.activeTaskLabels);
   const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
@@ -85,7 +86,7 @@ const TaskProperties = memo(() => {
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
-        {status && workflowCategory && workflowStateId && (
+        {status && workflowCategory && (workflowStateRefId || workflowStateId) && (
           <Block
             horizontal
             align="center"
@@ -97,6 +98,7 @@ const TaskProperties = memo(() => {
               executionStatus={status}
               workflowCategory={workflowCategory}
               workflowStateId={workflowStateId}
+              workflowStateRefId={workflowStateRefId}
             />
           </Block>
         )}
@@ -112,7 +114,9 @@ const TaskProperties = memo(() => {
           >
             <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
             <Text weight={500}>
-              {workflowStateId && workflowCategory ? `${t('taskDetail.executionStatus')}: ` : ''}
+              {(workflowStateRefId || workflowStateId) && workflowCategory
+                ? `${t('taskDetail.executionStatus')}: `
+                : ''}
               {t(`taskDetail.${statusMeta.labelKey}` as never)}
             </Text>
           </Block>

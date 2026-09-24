@@ -1620,14 +1620,18 @@ export class TaskModel {
         const linkedWorkflowCondition =
           group.workflowCategories.length > 0
             ? and(
-                isNotNull(tasks.workflowStateId),
+                or(isNotNull(tasks.workflowStateRefId), isNotNull(tasks.workflowStateId)),
                 inArray(tasks.workflowCategory, group.workflowCategories),
               )
             : undefined;
         const legacyStatusCondition =
           group.statuses.length > 0
             ? group.workflowCategories.length > 0
-              ? and(isNull(tasks.workflowStateId), inArray(tasks.status, group.statuses))
+              ? and(
+                  isNull(tasks.workflowStateRefId),
+                  isNull(tasks.workflowStateId),
+                  inArray(tasks.status, group.statuses),
+                )
               : inArray(tasks.status, group.statuses)
             : undefined;
         const membership = or(linkedWorkflowCondition, legacyStatusCondition);
@@ -1920,11 +1924,15 @@ export class TaskModel {
       conditions.push(
         or(
           and(
-            isNotNull(tasks.workflowStateId),
+            or(isNotNull(tasks.workflowStateRefId), isNotNull(tasks.workflowStateId)),
             inArray(tasks.workflowCategory, scope.workflowCategories),
           ),
           scope.statuses?.length
-            ? and(isNull(tasks.workflowStateId), inArray(tasks.status, scope.statuses))
+            ? and(
+                isNull(tasks.workflowStateRefId),
+                isNull(tasks.workflowStateId),
+                inArray(tasks.status, scope.statuses),
+              )
             : undefined,
         ) as SQL,
       );

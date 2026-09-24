@@ -408,6 +408,10 @@ export const getKanbanTaskPatch = (
   column: KanbanColumnDefinition,
   task?: TaskListItem,
 ): Partial<TaskListItem> | undefined => {
+  // Local states are readable on the board, but the current status mutation
+  // still requires a provider issue link. A3 will route these through the
+  // shared workflow transition command.
+  if (groupBy === 'status' && task?.workflowStateRefId && !task.workflowStateId) return undefined;
   if (groupBy === 'assignee' && column.groupMeta?.groupBy === 'assignee') {
     return { assigneeAgentId: column.groupMeta.assigneeId ?? null };
   }
@@ -432,6 +436,7 @@ export const canDropTaskIntoKanbanColumn = (
 ): boolean => {
   if (!column.droppable) return false;
   if (groupBy === 'status') {
+    if (task.workflowStateRefId && !task.workflowStateId) return false;
     return task.workflowStateId
       ? Boolean(column.targetWorkflowCategory)
       : Boolean(column.targetStatus);
@@ -511,7 +516,7 @@ export const KANBAN_WORKFLOW_COLUMN_KEY: Record<TaskWorkflowCategory, string> = 
  */
 export const taskKanbanColumnKey = (task: TaskListItem, groupBy: TaskKanbanGroupBy): string => {
   if (groupBy === 'status') {
-    if (task.workflowStateId) {
+    if (task.workflowStateRefId || task.workflowStateId) {
       return KANBAN_WORKFLOW_COLUMN_KEY[task.workflowCategory] ?? 'backlog';
     }
     return KANBAN_STATUS_COLUMN_KEY[task.status as TaskStatus] ?? 'backlog';

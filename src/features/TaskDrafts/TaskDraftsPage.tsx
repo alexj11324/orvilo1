@@ -2,7 +2,7 @@
 
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { FilePenLineIcon, MessageCircleIcon, SquarePenIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -15,6 +15,7 @@ import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
+import { formatInboxAge } from '@/features/WorkInbox/inboxAge';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -37,19 +38,26 @@ const styles = createStaticStyles(({ css }) => ({
   card: css`
     position: relative;
 
+    overflow: hidden;
     display: block;
 
-    min-height: 139px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
+    /* Linear: a fixed 140px card whose preview box runs off the bottom edge. */
+    height: 140px;
+    border: 0.5px solid ${cssVar.colorBorder};
+    border-radius: 10px;
 
     color: ${cssVar.colorText};
     text-decoration: none;
 
-    background: ${cssVar.colorBgContainer};
+    background: ${cssVar.colorFillQuaternary};
 
     &:hover {
       background: ${cssVar.colorFillTertiary};
+    }
+
+    &:hover .draft-discard,
+    &:focus-within .draft-discard {
+      opacity: 1;
     }
   `,
   cardButton: css`
@@ -91,14 +99,17 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   cardContent: css`
-    padding-block: 12px;
+    padding-block: 12px 0;
     padding-inline: 16px;
   `,
   cardHeading: css`
     display: flex;
     gap: 8px;
     align-items: center;
-    padding-inline-end: 24px;
+
+    /* Clears the hover discard button (36px, inset 11px) so a long title
+       ellipsizes before it instead of running underneath. */
+    padding-inline-end: 36px;
   `,
   cardGrid: css`
     display: grid;
@@ -114,7 +125,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   cardTitle: css`
     overflow: hidden;
-    flex: 1;
+    flex: 0 1 auto;
 
     min-width: 0;
 
@@ -128,6 +139,14 @@ const styles = createStaticStyles(({ css }) => ({
     z-index: 2;
     inset-block-start: 11px;
     inset-inline-end: 11px;
+
+    opacity: 0;
+
+    transition: opacity ${cssVar.motionDurationFast};
+
+    @media (hover: none) {
+      opacity: 1;
+    }
   `,
   excerpt: css`
     overflow: hidden;
@@ -169,10 +188,11 @@ const styles = createStaticStyles(({ css }) => ({
   preview: css`
     overflow: hidden;
 
-    height: 81px;
-    margin-block-start: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
+    height: 90px;
+    margin-block-start: 16px;
+    border: 0.5px solid ${cssVar.colorBorder};
+    border-block-end: none;
+    border-radius: 10px 10px 0 0;
   `,
   previewLabel: css`
     display: flex;
@@ -184,7 +204,8 @@ const styles = createStaticStyles(({ css }) => ({
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
 
     font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
+    font-weight: 450;
+    color: ${cssVar.colorTextDescription};
     white-space: nowrap;
   `,
   previewLabelText: css`
@@ -201,8 +222,10 @@ const styles = createStaticStyles(({ css }) => ({
   sectionTitle: css`
     padding-block: 16px 0;
     padding-inline: 18px;
+
     font-size: 13px;
     font-weight: 500;
+    color: ${cssVar.colorTextDescription};
   `,
 }));
 
@@ -211,7 +234,7 @@ const styles = createStaticStyles(({ css }) => ({
 const DraftsSkeleton = createSurfaceSkeleton('list', false);
 
 const TaskDraftsPage = () => {
-  const { t } = useTranslation('common');
+  const { i18n, t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const currentUserId = useUserStore(userProfileSelectors.userId);
@@ -332,7 +355,7 @@ const TaskDraftsPage = () => {
                     <div className={styles.card} key={draft.id}>
                       <ActionIcon
                         aria-label={t('drafts.discard')}
-                        className={styles.discard}
+                        className={cx(styles.discard, 'draft-discard')}
                         disabled={!!deleting}
                         icon={Trash2Icon}
                         onClick={() =>
@@ -359,7 +382,7 @@ const TaskDraftsPage = () => {
                             title={dayjs(draft.updatedAt).toString()}
                             type="secondary"
                           >
-                            {dayjs(draft.updatedAt).fromNow()}
+                            {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
                           </Text>
                         </div>
                         <div className={styles.preview}>
@@ -394,7 +417,7 @@ const TaskDraftsPage = () => {
                     <div className={styles.card} key={draft.id}>
                       <ActionIcon
                         aria-label={t('drafts.discard')}
-                        className={styles.discard}
+                        className={cx(styles.discard, 'draft-discard')}
                         disabled={!!deleting}
                         icon={Trash2Icon}
                         onClick={() =>
@@ -416,7 +439,7 @@ const TaskDraftsPage = () => {
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
                           <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
-                            {dayjs(draft.updatedAt).fromNow()}
+                            {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
                           </Text>
                         </div>
                         <div className={styles.preview}>

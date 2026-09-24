@@ -150,6 +150,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const hasName = Boolean(task.name?.trim());
   const workflowGlyph = useTaskWorkflowGlyph({
     executionStatus: task.status,
+    teamId: task.teamId,
     workflowCategory: task.workflowCategory,
     workflowStateId: task.workflowStateId,
     workflowStateRefId: task.workflowStateRefId,

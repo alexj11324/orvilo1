@@ -68,6 +68,7 @@ export const fixtureWorkflowState = (
   overrides: Partial<TeamWorkflowStateItem> = {},
 ): TeamWorkflowStateItem => ({
   category: 'backlog',
+  color: null,
   id: 'state-fixture-0001',
   name: 'Backlog',
   position: 0,

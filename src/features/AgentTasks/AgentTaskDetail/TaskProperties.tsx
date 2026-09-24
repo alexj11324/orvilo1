@@ -59,6 +59,7 @@ const TaskProperties = memo(() => {
   const workflowCategory = useTaskStore(taskDetailSelectors.activeTaskWorkflowCategory);
   const workflowStateId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateId);
   const workflowStateRefId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateRefId);
+  const teamId = useTaskStore(taskDetailSelectors.activeTaskTeamId);
   const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
   const labels = useTaskStore(taskDetailSelectors.activeTaskLabels);
   const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
@@ -96,6 +97,7 @@ const TaskProperties = memo(() => {
           >
             <TaskWorkflowBadge
               executionStatus={status}
+              teamId={teamId}
               workflowCategory={workflowCategory}
               workflowStateId={workflowStateId}
               workflowStateRefId={workflowStateRefId}

@@ -23,6 +23,7 @@ export interface TeamTriageTask {
   name?: string | null;
   priority?: number | null;
   status?: string | null;
+  teamId?: string | null;
   workflowCategory?: TaskWorkflowCategory;
   workflowStateId?: string | null;
   workflowStateRefId?: string | null;

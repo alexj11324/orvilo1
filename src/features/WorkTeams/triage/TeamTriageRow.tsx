@@ -123,6 +123,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
     const { t, i18n } = useTranslation('common');
     const workflowGlyph = useTaskWorkflowGlyph({
       executionStatus: task.status ?? '',
+      teamId: task.teamId,
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,
       workflowStateRefId: task.workflowStateRefId,

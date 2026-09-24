@@ -42,6 +42,14 @@ vi.mock('../features/TaskStatusIcon', () => ({
   default: ({ status }: { status: string }) => <span data-testid="execution-status">{status}</span>,
 }));
 
+vi.mock('../shared/useTeamWorkflowCatalog', () => ({
+  useTeamWorkflowCatalog: () => ({
+    states: [
+      { category: 'in_progress', id: 'local-state-progress', name: 'Building', teamId: 'team-1' },
+    ],
+  }),
+}));
+
 vi.mock('../features/TaskSubtaskProgressTag', () => ({
   default: ({
     onSubtaskClick,
@@ -149,6 +157,7 @@ describe('TaskParentBar', () => {
         identifier: 'T-parent',
         status: 'backlog',
         subtasks: [],
+        teamId: 'team-1',
         workflowCategory: 'in_progress',
         workflowStateRefId: 'local-state-progress',
       },

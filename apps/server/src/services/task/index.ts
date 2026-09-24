@@ -1463,6 +1463,7 @@ export class TaskService {
             ? { schedule: { pattern: s.schedulePattern, timezone: s.scheduleTimezone } }
             : {}),
           status: s.status,
+          teamId: s.teamId,
           updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : undefined,
           ...(s.workflowCategory ? { workflowCategory: s.workflowCategory } : {}),
           ...(s.workflowStateId ? { workflowStateId: s.workflowStateId } : {}),
@@ -1486,6 +1487,7 @@ export class TaskService {
             identifier: t.identifier,
             name: t.name,
             status: t.status,
+            teamId: t.teamId,
             workflowCategory: t.workflowCategory,
             workflowStateId: t.workflowStateId,
             workflowStateRefId: t.workflowStateRefId,
@@ -1737,6 +1739,7 @@ export class TaskService {
           ...(info ? { id: d.dependsOnId } : {}),
           name: info?.name,
           status: info?.status ?? null,
+          ...(info?.teamId ? { teamId: info.teamId } : {}),
           type: d.type,
           ...(info?.workflowCategory ? { workflowCategory: info.workflowCategory } : {}),
           ...(info?.workflowStateId ? { workflowStateId: info.workflowStateId } : {}),

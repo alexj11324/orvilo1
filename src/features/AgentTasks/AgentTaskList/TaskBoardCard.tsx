@@ -162,6 +162,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
     // One status mark per card: the workflow state when the task has one.
     const workflowGlyph = useTaskWorkflowGlyph({
       executionStatus: task.status,
+      teamId: task.teamId,
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,
       workflowStateRefId: task.workflowStateRefId,

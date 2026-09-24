@@ -1,14 +1,24 @@
 /** @vitest-environment happy-dom */
 import { Icon } from '@lobehub/ui';
-import type { TaskWorkflowCategory } from '@orvilo/types';
+import type { TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { cssVar } from 'antd-style';
 import { Loader2 } from 'lucide-react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 
 import TaskWorkflowBadge from './TaskWorkflowBadge';
+
+const catalog = vi.hoisted(() => ({
+  error: undefined as Error | undefined,
+  isLoading: false,
+  states: undefined as TeamWorkflowStateItem[] | undefined,
+}));
+
+vi.mock('./useTeamWorkflowCatalog', () => ({
+  useTeamWorkflowCatalog: () => catalog,
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -20,6 +30,11 @@ vi.mock('react-i18next', () => ({
 }));
 
 afterEach(cleanup);
+beforeEach(() => {
+  catalog.error = undefined;
+  catalog.isLoading = false;
+  catalog.states = undefined;
+});
 
 /**
  * Glyph geometry only — the `<svg>`'s own width/height/style differ by surface
@@ -69,15 +84,141 @@ describe('TaskWorkflowBadge', () => {
   });
 
   it('draws the business state for a local workflow without a remote ID', () => {
+    catalog.states = [
+      {
+        category: 'in_progress',
+        color: '#e45678',
+        id: 'local-state-progress',
+        name: 'Building',
+        position: 2,
+        remoteStateId: null,
+        teamId: 'team-1',
+        workspaceId: 'ws-1',
+      },
+    ];
     const { container } = render(
       <TaskWorkflowBadge
         executionStatus={'backlog'}
+        teamId={'team-1'}
         workflowCategory={'in_progress'}
         workflowStateRefId={'local-state-progress'}
       />,
     );
 
     expect(container.querySelector('[data-workflow-icon="in_progress"]')).toBeInTheDocument();
+    expect(screen.getByText('Building')).toBeVisible();
+    expect(container.querySelector('circle[stroke="#e45678"]')).toBeInTheDocument();
+  });
+
+  it('resolves a legacy remote ID to its concrete team state', () => {
+    catalog.states = [
+      {
+        category: 'in_review',
+        color: '#8b63d9',
+        id: 'local-review-state',
+        name: 'Ready for QA',
+        position: 3,
+        remoteStateId: 'linear-state-review',
+        teamId: 'team-1',
+        workspaceId: 'ws-1',
+      },
+    ];
+    const { container } = render(
+      <TaskWorkflowBadge
+        executionStatus={'running'}
+        teamId={'team-1'}
+        workflowCategory={'in_review'}
+        workflowStateId={'linear-state-review'}
+      />,
+    );
+
+    expect(screen.getByText('Ready for QA')).toBeVisible();
+    expect(container.querySelector('circle[stroke="#8b63d9"]')).toBeInTheDocument();
+  });
+
+  it('does not present a deleted local state as its old category', () => {
+    catalog.states = [];
+    const { container } = render(
+      <TaskWorkflowBadge
+        executionStatus={'backlog'}
+        teamId={'team-1'}
+        workflowCategory={'done'}
+        workflowStateRefId={'deleted-state'}
+      />,
+    );
+
+    expect(screen.getByText('taskDetail.workflow.unknownState')).toBeVisible();
+    expect(container.querySelector('[data-workflow-icon="done"]')).not.toBeInTheDocument();
+  });
+
+  it('shows a pending state lookup without claiming the old category', () => {
+    catalog.isLoading = true;
+    const { container } = render(
+      <TaskWorkflowBadge
+        executionStatus={'backlog'}
+        teamId={'team-1'}
+        workflowCategory={'done'}
+        workflowStateRefId={'local-state-done'}
+      />,
+    );
+
+    expect(screen.getByText('taskDetail.workflow.loadingState')).toBeVisible();
+    expect(container.querySelector('[data-workflow-icon="done"]')).not.toBeInTheDocument();
+  });
+
+  it('keeps a resolved state during background catalog failure', () => {
+    catalog.states = [
+      {
+        category: 'in_progress',
+        color: '#e45678',
+        id: 'local-state-progress',
+        name: 'Building',
+        position: 2,
+        remoteStateId: null,
+        teamId: 'team-1',
+        workspaceId: 'ws-1',
+      },
+    ];
+    catalog.error = new Error('Background refresh failed');
+    render(
+      <TaskWorkflowBadge
+        executionStatus={'backlog'}
+        teamId={'team-1'}
+        workflowCategory={'in_progress'}
+        workflowStateRefId={'local-state-progress'}
+      />,
+    );
+
+    expect(screen.getByText('Building')).toBeVisible();
+  });
+
+  it('hides cached private state metadata after team access is denied', () => {
+    catalog.states = [
+      {
+        category: 'in_progress',
+        color: '#e45678',
+        id: 'local-state-progress',
+        name: 'Private Building',
+        position: 2,
+        remoteStateId: null,
+        teamId: 'team-1',
+        workspaceId: 'ws-1',
+      },
+    ];
+    catalog.error = Object.assign(new Error('Team not found'), {
+      data: { code: 'NOT_FOUND', httpStatus: 404 },
+    });
+    render(
+      <TaskWorkflowBadge
+        executionStatus={'backlog'}
+        teamId={'team-1'}
+        workflowCategory={'in_progress'}
+        workflowStateRefId={'local-state-progress'}
+      />,
+    );
+
+    expect(screen.getByText('taskDetail.workflow.unknownState')).toBeVisible();
+    expect(screen.queryByText('Private Building')).not.toBeInTheDocument();
   });
 
   it('keeps external Done separate from an unverified delivery', () => {

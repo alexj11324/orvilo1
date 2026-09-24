@@ -6,7 +6,6 @@ import { CircleDashed, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
@@ -14,6 +13,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { TaskWorkflowIcon } from '../shared/TaskWorkflowBadge';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 
 const TASK_STATUS_SET = new Set<string>([
@@ -114,10 +114,6 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
       )}
       {orderedDeps.map((dep, index) => {
         const unavailable = !dep.status;
-        const workflowVisual =
-          (dep.workflowStateRefId || dep.workflowStateId) && dep.workflowCategory
-            ? WORKFLOW_CATEGORY_VISUALS[dep.workflowCategory]
-            : undefined;
         return (
           <Flexbox
             horizontal
@@ -134,10 +130,15 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
               icon={
                 unavailable ? (
                   <Icon icon={CircleDashed} size={16} style={{ color: 'inherit' }} />
-                ) : workflowVisual ? (
-                  <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
                 ) : (
-                  <TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />
+                  <TaskWorkflowIcon
+                    executionStatus={dep.status ?? ''}
+                    fallback={<TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />}
+                    teamId={dep.teamId}
+                    workflowCategory={dep.workflowCategory}
+                    workflowStateId={dep.workflowStateId}
+                    workflowStateRefId={dep.workflowStateRefId}
+                  />
                 )
               }
               onClick={() => navigate(taskDetailPath(dep.dependsOn, undefined, dep.name))}

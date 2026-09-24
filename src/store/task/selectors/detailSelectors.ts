@@ -24,6 +24,7 @@ const activeTaskWorkflowCategory = (s: TaskStoreState) => activeTaskDetail(s)?.w
 
 const activeTaskWorkflowStateId = (s: TaskStoreState) => activeTaskDetail(s)?.workflowStateId;
 const activeTaskWorkflowStateRefId = (s: TaskStoreState) => activeTaskDetail(s)?.workflowStateRefId;
+const activeTaskTeamId = (s: TaskStoreState) => activeTaskDetail(s)?.teamId;
 
 const activeTaskPriority = (s: TaskStoreState) => activeTaskDetail(s)?.priority ?? 0;
 
@@ -185,6 +186,7 @@ export const taskDetailSelectors = {
   activeTaskWorkflowCategory,
   activeTaskWorkflowStateId,
   activeTaskWorkflowStateRefId,
+  activeTaskTeamId,
   activeTopicDrawerTopicId,
   canCancelActiveTask,
   canPauseActiveTask,

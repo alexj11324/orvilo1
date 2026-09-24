@@ -7,6 +7,14 @@ import type { TaskStore } from '@/store/task';
 
 import TaskPrerequisites from './TaskPrerequisites';
 
+vi.mock('../shared/useTeamWorkflowCatalog', () => ({
+  useTeamWorkflowCatalog: () => ({
+    states: [
+      { category: 'in_progress', id: 'local-state-progress', name: 'Building', teamId: 'team-1' },
+    ],
+  }),
+}));
+
 const mocks = vi.hoisted(() => ({
   addDependency: vi.fn(),
   allowed: true,
@@ -99,6 +107,7 @@ describe('TaskPrerequisites', () => {
       {
         dependsOn: 'T-1',
         status: 'completed',
+        teamId: 'team-1',
         type: 'relates',
         workflowCategory: 'in_progress',
         workflowStateRefId: 'local-state-progress',

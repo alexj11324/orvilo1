@@ -1765,8 +1765,10 @@ export default {
   'taskDetail.workflow.category.todo': 'Todo',
   'taskDetail.workflow.category.triage': 'Triage',
   'taskDetail.workflow.deliveryPendingHelp':
-    'Linear is Done, but Orvilo delivery verification has not completed.',
-  'taskDetail.workflow.doneDeliveryPending': 'Business complete · Delivery pending verification',
+    'This issue is Done, but Orvilo delivery verification has not completed.',
+  'taskDetail.workflow.doneDeliveryPending': '{{state}} · Delivery pending verification',
+  'taskDetail.workflow.loadingState': 'Loading status…',
+  'taskDetail.workflow.unknownState': 'Status unavailable',
   'taskDetail.topicSource': 'From {{identifier}}',
   'taskDetail.updateFailed': 'Failed to update task',
   'taskDetail.publishToWorkspace.menuLabel': 'Publish to Workspace',

@@ -1,4 +1,4 @@
-import { Flexbox, Icon } from '@lobehub/ui';
+import { Flexbox } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
 import { DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskStatus, TaskSubtaskProgress } from '@orvilo/types';
@@ -8,9 +8,10 @@ import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { TASK_STATUS_VISUALS, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import IssueRowChip from '@/components/IssueRowChip';
 
+import { TaskWorkflowIcon } from '../shared/TaskWorkflowBadge';
 import TaskStatusIcon from './TaskStatusIcon';
 
 const toTaskStatus = (status: string): TaskStatus | undefined =>
@@ -122,22 +123,19 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
     const navigationItems = flattenedSubtasks.map((subtask) => {
       const isActive = subtask.task.identifier === currentIdentifier;
       const itemStatus = toTaskStatus(subtask.task.status);
-      const workflowVisual =
-        (subtask.task.workflowStateRefId || subtask.task.workflowStateId) &&
-        subtask.task.workflowCategory
-          ? WORKFLOW_CATEGORY_VISUALS[subtask.task.workflowCategory]
-          : undefined;
-
       return {
         key: subtask.task.identifier,
         label: (
           <Flexbox horizontal align="center" gap={8}>
             {subtask.depth > 0 && <div style={{ flex: 'none', width: subtask.depth * 16 }} />}
-            {workflowVisual ? (
-              <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
-            ) : itemStatus ? (
-              <TaskStatusIcon size={16} status={itemStatus} />
-            ) : null}
+            <TaskWorkflowIcon
+              executionStatus={subtask.task.status}
+              fallback={itemStatus ? <TaskStatusIcon size={16} status={itemStatus} /> : null}
+              teamId={subtask.task.teamId}
+              workflowCategory={subtask.task.workflowCategory}
+              workflowStateId={subtask.task.workflowStateId}
+              workflowStateRefId={subtask.task.workflowStateRefId}
+            />
             <Text ellipsis weight={isActive ? 'bold' : undefined}>
               {subtask.task.name || subtask.task.identifier}
             </Text>

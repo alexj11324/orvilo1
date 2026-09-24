@@ -7,6 +7,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
 
+vi.mock('../shared/useTeamWorkflowCatalog', () => ({
+  useTeamWorkflowCatalog: () => ({
+    states: [
+      { category: 'in_progress', id: 'local-state-progress', name: 'Building', teamId: 'team-1' },
+    ],
+  }),
+}));
+
 const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
@@ -103,6 +111,7 @@ describe('TaskSubtaskProgressTag', () => {
             identifier: 'T-2',
             name: 'Child task',
             status: 'completed',
+            teamId: 'team-1',
             workflowCategory: 'in_progress',
             workflowStateRefId: 'local-state-progress',
           },

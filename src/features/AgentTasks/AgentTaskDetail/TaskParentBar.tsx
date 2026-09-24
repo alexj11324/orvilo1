@@ -38,9 +38,11 @@ const TaskParentBar = memo(() => {
     category?: TaskWorkflowCategory;
     stateId?: string | null;
     stateRefId?: string | null;
+    teamId?: string | null;
   }>({});
   const workflowGlyph = useTaskWorkflowGlyph({
     executionStatus: parentStatus ?? '',
+    teamId: parentWorkflow.teamId,
     workflowCategory: parentWorkflow.category,
     workflowStateId: parentWorkflow.stateId,
     workflowStateRefId: parentWorkflow.stateRefId,
@@ -65,6 +67,7 @@ const TaskParentBar = memo(() => {
           category: detail.workflowCategory,
           stateId: detail.workflowStateId,
           stateRefId: detail.workflowStateRefId,
+          teamId: detail.teamId,
         });
         setParentSubtasks(detail.subtasks ?? []);
       })

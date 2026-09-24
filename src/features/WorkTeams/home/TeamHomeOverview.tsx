@@ -12,7 +12,9 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { resolveTaskStatus } from '@/components/ExecutionStatus';
+import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
+import { TaskWorkflowIcon } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -349,18 +351,21 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
               <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
               <div className={styles.recentList}>
                 {recentTasks.map((task) => {
-                  const statusVisual = WORKFLOW_CATEGORY_VISUALS[task.workflowCategory];
                   return (
                     <WorkspaceLink
                       className={styles.recentLink}
                       key={task.id}
                       to={teamTaskDetailPath(task)}
                     >
-                      <Icon
-                        color={statusVisual.color}
-                        icon={statusVisual.icon}
-                        size={16}
-                        title={t(`savedViews.values.workflowCategory.${task.workflowCategory}`)}
+                      <TaskWorkflowIcon
+                        executionStatus={task.status}
+                        teamId={task.teamId}
+                        workflowCategory={task.workflowCategory}
+                        workflowStateId={task.workflowStateId}
+                        workflowStateRefId={task.workflowStateRefId}
+                        fallback={
+                          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
+                        }
                       />
                       <Flexbox flex={1} style={{ minWidth: 0 }}>
                         <Text ellipsis weight={500}>

@@ -9,6 +9,14 @@ import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 
 import TeamTriageRow from './TeamTriageRow';
 
+vi.mock('@/features/AgentTasks/shared/useTeamWorkflowCatalog', () => ({
+  useTeamWorkflowCatalog: () => ({
+    states: [
+      { category: 'in_progress', id: 'local-state-progress', name: 'Building', teamId: 'team-1' },
+    ],
+  }),
+}));
+
 const renderedIcons = vi.hoisted(() => [] as unknown[]);
 
 vi.mock('react-i18next', () => ({
@@ -55,6 +63,7 @@ describe('TeamTriageRow status icon', () => {
           id: 'task-1',
           name: 'Linked issue',
           status: 'backlog',
+          teamId: 'team-1',
           workflowCategory: 'in_progress',
           workflowStateRefId: 'local-state-progress',
         }}

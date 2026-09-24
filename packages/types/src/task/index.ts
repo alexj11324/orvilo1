@@ -1041,6 +1041,7 @@ export interface TaskDetailSubtask {
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   status: string;
+  teamId?: string | null;
   updatedAt?: string;
   visibility?: 'private' | 'public';
   /** Provider business state, independent from execution progress. */
@@ -1239,6 +1240,7 @@ export interface TaskDetailData {
     name?: string | null;
     /** Null/omitted means unavailable, never implicitly completed. */
     status?: string | null;
+    teamId?: string | null;
     type: string;
     /** Provider business state shown with the same glyph as issue board rows. */
     workflowCategory?: TaskWorkflowCategory;

@@ -138,6 +138,8 @@ export interface TeamMemberItem {
  */
 export interface TeamWorkflowStateItem {
   category: TaskWorkflowCategory;
+  /** State-specific color, independent from its broader category. */
+  color: string | null;
   id: string;
   name: string;
   position: number | null;

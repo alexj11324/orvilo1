@@ -18,6 +18,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import Breadcrumb from '../shared/Breadcrumb';
 import IssueContent from './IssueContent';
+import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
@@ -111,11 +112,9 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
           },
         }}
       />
-      {/* Detail is prose — instruction, deliverables, activity — so it mounts
-          the document frame: a centered reading column at a fixed max width,
-          invariant under the chat wide-screen toggle. `IssueContent` is the
-          same body the inbox split pane mounts. */}
-      <WorkSurfaceDocument>
+      {/* The routed issue uses the page geometry; the split pane and Portal
+          still mount IssueContent with their own container widths. */}
+      <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
         <IssueContent detail={detail} taskId={taskId} />
       </WorkSurfaceDocument>
       <TopicChatDrawer />

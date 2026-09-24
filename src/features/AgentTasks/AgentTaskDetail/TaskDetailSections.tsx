@@ -32,7 +32,7 @@ const TaskDetailSections = memo(() => {
   return (
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
       <div className={styles.root}>
-        <div className={styles.header}>
+        <div data-task-detail-header className={styles.header}>
           <Flexbox className={styles.main} gap={12}>
             {/* Reference order: the title owns the top line, then the
                 "Sub-issue of" parent bar, then the run/assignee controls. */}
@@ -43,7 +43,7 @@ const TaskDetailSections = memo(() => {
               <TaskDetailAssignee />
             </Flexbox>
           </Flexbox>
-          <div className={styles.side}>
+          <div data-task-detail-side className={styles.side}>
             {/* Rail, top to bottom, matching the reference: round quick
                 actions, then the labeled Properties / Project / Related
                 groups. */}

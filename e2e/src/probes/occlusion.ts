@@ -50,7 +50,23 @@ export const classifyOcclusion = (samples: OcclusionSample[]): OccludedControl[]
 // Injected as source text (not a function) — the tsx transform wraps named
 // inner functions in a `__name` helper that does not exist in the page.
 // Also usable verbatim from `.agents/acceptance/scripts/cdp-inspect.cjs`.
-export const occlusionSampleScript = (rootSelector: string, controlSelector: string) => `(() => {
+export const occlusionSampleScript = (
+  rootSelector: string,
+  controlSelector: string,
+  /** Hits on these count as clear — chrome meant to straddle an edge (resize handles). */
+  ignoreHitSelector?: string,
+) => `(() => {
+  const ignore = ${JSON.stringify(ignoreHitSelector ?? '')};
+  // Hidden until hover (an ancestor at opacity 0) or untargetable: nothing
+  // for a user to aim at, so nothing to occlude. Hover first to probe it.
+  const hiddenOrInert = (el) => {
+    if (getComputedStyle(el).pointerEvents === 'none') return true;
+    for (let node = el; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (Number(style.opacity) === 0 || style.visibility === 'hidden') return true;
+    }
+    return false;
+  };
   const describe = (el) => {
     if (!el) return 'nothing';
     const cls = typeof el.className === 'string' ? el.className.trim().split(/\\s+/).slice(0, 2).join('.') : '';
@@ -61,8 +77,7 @@ export const occlusionSampleScript = (rootSelector: string, controlSelector: str
   for (const root of document.querySelectorAll(${JSON.stringify(rootSelector)})) {
     for (const control of root.querySelectorAll(${JSON.stringify(controlSelector)})) {
       const rect = control.getBoundingClientRect();
-      const style = getComputedStyle(control);
-      if (rect.width < 4 || rect.height < 4 || style.visibility === 'hidden' || Number(style.opacity) === 0) continue;
+      if (rect.width < 4 || rect.height < 4 || hiddenOrInert(control)) continue;
       if (rect.bottom <= 0 || rect.top >= innerHeight || rect.right <= 0 || rect.left >= innerWidth) continue;
       const inset = Math.min(3, rect.width / 4, rect.height / 4);
       const points = [
@@ -73,7 +88,7 @@ export const occlusionSampleScript = (rootSelector: string, controlSelector: str
         [rect.right - inset, rect.bottom - inset],
       ].map(([x, y]) => {
         const hit = document.elementFromPoint(x, y);
-        return { hit: describe(hit), inside: !!hit && (control.contains(hit) || hit.contains(control)) };
+        return { hit: describe(hit), inside: !!hit && (control.contains(hit) || hit.contains(control) || (!!ignore && !!hit.closest(ignore))) };
       });
       out.push({ control: describe(control) + ' "' + (control.textContent || '').trim().slice(0, 24) + '"', points });
     }

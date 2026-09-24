@@ -39,32 +39,23 @@ import {
 import { savedViewTitle } from './savedViewTitle';
 
 const styles = createStaticStyles(({ css }) => ({
-  createRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 0;
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
   directoryTable: css`
-    /* Reference rows are ~60px tall. */
+    /* Linear: a bare 12/450 column header, 60px rows, and group bars that
+       sit on the panel as rounded fills. */
+    thead th {
+      font-size: 12px;
+      font-weight: 450;
+      color: ${cssVar.colorTextDescription};
+      background: transparent;
+    }
+
     tbody tr:not([data-list-section]) td {
       padding-block: 20px;
+    }
+
+    tbody tr[data-list-section] td {
+      padding-block: 4px;
+      padding-inline: 8px;
     }
   `,
   displayPopover: css`
@@ -101,11 +92,32 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorText};
     background: ${cssVar.colorFillSecondary};
   `,
-  groupLabel: css`
-    padding-block: 12px 4px;
-    font-size: 12px;
+  groupBar: css`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    height: 36px;
+    padding-inline: 16px 8px;
+    border-radius: 8px;
+
+    font-size: 13px;
     font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
+    color: ${cssVar.colorText};
+
+    background: ${cssVar.colorFillQuaternary};
+  `,
+  groupDesc: css`
+    color: ${cssVar.colorTextDescription};
+  `,
+  groupTitle: css`
+    overflow: hidden;
+    flex: 1;
+
+    min-width: 0;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
   `,
   nameCell: css`
     display: flex;
@@ -116,7 +128,7 @@ const styles = createStaticStyles(({ css }) => ({
   name: css`
     overflow: hidden;
 
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -236,24 +248,30 @@ const SavedViewsPage = memo(() => {
       });
     const personal = sort(filteredViews.filter((view) => savedViewSectionKey(view) === 'personal'));
     const shared = sort(filteredViews.filter((view) => savedViewSectionKey(view) === 'shared'));
+    const createLabel = t(
+      entityType === 'project'
+        ? 'savedViews.createPrivateProjectView'
+        : 'savedViews.createPrivateIssueView',
+    );
     return [
       {
-        // The personal section always renders — its footer is the directory's
-        // group-edge create entry, which stays reachable even when the user
-        // only has shared views.
-        footer: (
-          <button className={styles.createRow} type="button" onClick={() => setCreating(true)}>
-            <Icon icon={PlusIcon} size={14} />
-            {t(
-              entityType === 'project'
-                ? 'savedViews.createPrivateProjectView'
-                : 'savedViews.createPrivateIssueView',
-            )}
-          </button>
-        ),
+        // The personal section always renders — its bar carries the
+        // directory's create entry (Linear's trailing "+"), which stays
+        // reachable even when the user only has shared views.
         header: (
-          <div className={styles.groupLabel}>
-            {t('savedViews.sectionPersonal')} · {t('savedViews.sectionPersonalDesc')}
+          <div className={styles.groupBar}>
+            <Avatar avatar={currentUserAvatar || undefined} name={currentUserName} size={16} />
+            <span className={styles.groupTitle}>
+              {t('savedViews.sectionPersonal')}{' '}
+              <span className={styles.groupDesc}>· {t('savedViews.sectionPersonalDesc')}</span>
+            </span>
+            <ActionIcon
+              aria-label={createLabel}
+              icon={PlusIcon}
+              size={'small'}
+              title={createLabel}
+              onClick={() => setCreating(true)}
+            />
           </div>
         ),
         items: personal,
@@ -263,8 +281,11 @@ const SavedViewsPage = memo(() => {
         ? [
             {
               header: (
-                <div className={styles.groupLabel}>
-                  {t('savedViews.sectionShared')} · {t('savedViews.sectionSharedDesc')}
+                <div className={styles.groupBar}>
+                  <span className={styles.groupTitle}>
+                    {t('savedViews.sectionShared')}{' '}
+                    <span className={styles.groupDesc}>· {t('savedViews.sectionSharedDesc')}</span>
+                  </span>
                 </div>
               ),
               items: shared,
@@ -273,7 +294,7 @@ const SavedViewsPage = memo(() => {
           ]
         : []),
     ];
-  }, [entityType, filteredViews, ownerInfo, prefs, t]);
+  }, [currentUserAvatar, currentUserName, entityType, filteredViews, ownerInfo, prefs, t]);
 
   const columns = useMemo<LiteTableColumn<SavedViewItem>[]>(() => {
     const list: LiteTableColumn<SavedViewItem>[] = [

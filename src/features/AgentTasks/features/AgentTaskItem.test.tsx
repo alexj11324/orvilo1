@@ -77,6 +77,12 @@ vi.mock('./TaskStatusTag', () => ({
   default: () => <span>status</span>,
 }));
 
+vi.mock('../shared/TaskWorkflowBadge', () => ({
+  default: ({ workflowCategory }: { workflowCategory?: string }) => (
+    <span data-task-workflow-state={workflowCategory} data-testid="workflow-badge" />
+  ),
+}));
+
 vi.mock('./TaskSubtaskProgressTag', () => ({
   default: ({
     onRequestSubtasks,
@@ -243,5 +249,44 @@ describe('AgentTaskItem', () => {
     fireEvent.click(screen.getByTestId('subtask-progress'));
 
     await waitFor(() => expect(mocks.fetchTaskDetail).toHaveBeenCalledWith('T-22'));
+  });
+
+  it('keeps the inline priority selector and workflow chip on shared scopes', () => {
+    render(
+      <AgentTaskItem
+        task={{
+          ...createTask('agt_owner'),
+          workflowCategory: 'in_review',
+          workflowStateId: 'in-review',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('priority')).toBeInTheDocument();
+    expect(screen.getByTestId('workflow-badge')).toBeInTheDocument();
+  });
+
+  it('leads project-issue rows with the status icon before the identifier', () => {
+    render(
+      <AgentTaskItem
+        linearIssueRow
+        task={{
+          ...createTask('agt_owner'),
+          workflowCategory: 'in_review',
+          workflowStateId: 'in-review',
+        }}
+      />,
+    );
+
+    // The redundant workflow chip and inline priority selector stay off the
+    // project-issues row; the status selector keeps its spot before the id.
+    expect(screen.queryByTestId('workflow-badge')).not.toBeInTheDocument();
+    expect(screen.queryByText('priority')).not.toBeInTheDocument();
+
+    const statusIcon = screen.getByText('status');
+    const identifier = screen.getByText('T-22');
+    expect(
+      statusIcon.compareDocumentPosition(identifier) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

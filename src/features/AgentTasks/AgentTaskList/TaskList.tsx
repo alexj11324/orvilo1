@@ -56,6 +56,12 @@ interface TaskListProps {
   /** Optional list source for alternate task collections such as scheduled tasks. */
   items?: TaskListItem[];
   /**
+   * Linear-parity issue rows for the project issues surface — rows lead with
+   * the status icon and drop the inline priority selector / workflow chip.
+   * Off everywhere else so shared lists keep their current chrome.
+   */
+  linearIssueRows?: boolean;
+  /**
    * The scope's milestone catalog — resolves `projectMilestoneId` into a label
    * for milestone grouping and the row badge. Absent on scopes that have no
    * catalog; milestone grouping still buckets by id there, but nothing offers
@@ -168,6 +174,7 @@ const TaskList = memo<TaskListProps>((props) => {
     error,
     isLoading,
     items,
+    linearIssueRows,
     milestones,
     onOpenTask,
     onRetry,
@@ -336,12 +343,18 @@ const TaskList = memo<TaskListProps>((props) => {
           }
         >
           <TaskRowIndent depth={item.row.depth} muted={item.row.isParentContext}>
-            <AgentTaskItem milestone={milestone} routeScope={routeScope} task={item.row.task} />
+            <AgentTaskItem
+              linearIssueRow={linearIssueRows}
+              milestone={milestone}
+              routeScope={routeScope}
+              task={item.row.task}
+            />
           </TaskRowIndent>
         </div>
       );
     },
     [
+      linearIssueRows,
       milestoneById,
       onOpenTask,
       onSelectTask,

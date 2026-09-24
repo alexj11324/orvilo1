@@ -40,6 +40,12 @@ export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
   /**
+   * Project-issues parity row: leads with the status icon like Linear's
+   * issue list — drops the inline priority selector and the workflow text
+   * chip (both stay editable through the row context menu and task detail).
+   */
+  linearIssueRow?: boolean;
+  /**
    * The resolved milestone this row links, supplied by the list when the
    * "Milestones" display property is on and the scope's catalog names the
    * link. `undefined` renders no badge — rows never invent one from a raw id.
@@ -64,7 +70,7 @@ const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
 const AgentTaskItem = memo<TaskItemProps>((props) => {
-  const { milestone, onStatusChange, task, routeScope = 'agent' } = props;
+  const { linearIssueRow, milestone, onStatusChange, task, routeScope = 'agent' } = props;
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -176,7 +182,9 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
 
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-      <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+      {!linearIssueRow && (
+        <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+      )}
       <span
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
@@ -184,11 +192,13 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         <TaskStatusTag status={status} taskIdentifier={task.identifier} onChange={onStatusChange} />
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
-      <TaskWorkflowBadge
-        executionStatus={task.status}
-        workflowCategory={task.workflowCategory}
-        workflowStateId={task.workflowStateId}
-      />
+      {!linearIssueRow && (
+        <TaskWorkflowBadge
+          executionStatus={task.status}
+          workflowCategory={task.workflowCategory}
+          workflowStateId={task.workflowStateId}
+        />
+      )}
       {privacyBadge}
       {hasName ? (
         <>

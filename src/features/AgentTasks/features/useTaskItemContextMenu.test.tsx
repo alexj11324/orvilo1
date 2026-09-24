@@ -122,9 +122,11 @@ describe('useTaskItemContextMenu', () => {
       ),
     );
 
-    const copyLinkItem = result.current.items.find(
-      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'copyLink',
-    );
+    // Linear nests the clipboard actions under one `Copy` submenu.
+    const copyMenu = result.current.items.find(
+      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'copy',
+    ) as { children: { key: string }[] };
+    const copyLinkItem = copyMenu.children.find((item) => item.key === 'copyLink');
 
     await (copyLinkItem as { onClick: (info: unknown) => Promise<void> }).onClick({
       domEvent: { stopPropagation: vi.fn() },

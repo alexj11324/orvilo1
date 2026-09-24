@@ -4,10 +4,11 @@ import { type DropdownItem, DropdownMenu, Flexbox, Icon, type MenuInfo } from '@
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { BarChart3Icon, CircleDashedIcon, Trash2Icon, UserRoundIcon, XIcon } from 'lucide-react';
+import { BarChart3Icon, Trash2Icon, UserRoundIcon, XIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import AssigneeMemberSelector from '@/features/AgentTasks/features/AssigneeMemberSelector';
 import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
@@ -135,7 +136,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
           {t('myWork.bulk.selected', { count })}
         </Text>
         <DropdownMenu items={statusItems}>
-          <Button disabled={busy} icon={CircleDashedIcon} size={'small'}>
+          <Button disabled={busy} icon={STATUS_PROPERTY_ICON} size={'small'}>
             {t('myWork.bulk.status')}
           </Button>
         </DropdownMenu>

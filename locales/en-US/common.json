@@ -553,7 +553,6 @@
   "myWork.properties.project": "Project",
   "myWork.properties.status": "Status",
   "myWork.properties.updated": "Updated",
-  "myWork.properties.workflowBadge": "Workflow state",
   "myWork.reviewsCreated": "Created",
   "myWork.reviewsForMe": "For you",
   "myWork.saveAs": "Save as view",

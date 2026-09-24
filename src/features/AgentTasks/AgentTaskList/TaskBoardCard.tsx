@@ -30,7 +30,7 @@ import { useTaskItemContextMenu } from '../features/useTaskItemContextMenu';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
+import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   /* Cordy keeps the empty-assign affordance hidden until the card is hovered —
@@ -159,6 +159,12 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       : undefined;
 
     const status = toTaskStatus(task.status);
+    // One status mark per card: the workflow state when the task has one.
+    const workflowGlyph = useTaskWorkflowGlyph({
+      executionStatus: task.status,
+      workflowCategory: task.workflowCategory,
+      workflowStateId: task.workflowStateId,
+    });
     const hasName = Boolean(task.name?.trim());
     const time = formatTaskItemDate(task.createdAt, {
       formatOtherYear: t('time.formatOtherYear'),
@@ -307,7 +313,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             data-collab-id-alt={`task:${task.identifier}:status`}
             style={{ flex: 'none', marginTop: 2 }}
           >
-            <TaskStatusIcon size={14} status={status} />
+            {workflowGlyph ? (
+              <Tooltip title={workflowGlyph.label}>
+                <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={14} />
+              </Tooltip>
+            ) : (
+              <TaskStatusIcon size={14} status={status} />
+            )}
           </span>
           <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
         </Flexbox>
@@ -329,11 +341,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         >
           <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           <LinearTaskSyncStatus taskId={task.id} />
-          <TaskWorkflowBadge
-            executionStatus={task.status}
-            workflowCategory={task.workflowCategory}
-            workflowStateId={task.workflowStateId}
-          />
           {projectName ? (
             <Tag
               icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />}

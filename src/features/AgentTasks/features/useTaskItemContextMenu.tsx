@@ -3,7 +3,6 @@ import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import {
   BarChart3Icon,
-  CircleDashedIcon,
   CopyIcon,
   LinkIcon,
   MessageSquareTextIcon,
@@ -15,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
@@ -194,7 +194,7 @@ export const useTaskContextMenuActions = (
         {
           children: statusChildren,
           disabled: !canEditTask,
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <Icon icon={STATUS_PROPERTY_ICON} />,
           key: 'status',
           label: t('taskList.contextMenu.status'),
           onTitleMouseEnter: () => {

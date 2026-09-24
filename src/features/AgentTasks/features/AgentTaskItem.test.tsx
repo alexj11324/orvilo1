@@ -74,7 +74,11 @@ vi.mock('./TaskPriorityTag', () => ({
 }));
 
 vi.mock('./TaskStatusTag', () => ({
-  default: () => <span>status</span>,
+  default: ({ glyph }: { glyph?: { icon?: { displayName?: string } } }) => (
+    <span data-glyph={glyph?.icon?.displayName ?? 'execution'} data-testid="status-mark">
+      status
+    </span>
+  ),
 }));
 
 vi.mock('./TaskSubtaskProgressTag', () => ({
@@ -243,5 +247,55 @@ describe('AgentTaskItem', () => {
     fireEvent.click(screen.getByTestId('subtask-progress'));
 
     await waitFor(() => expect(mocks.fetchTaskDetail).toHaveBeenCalledWith('T-22'));
+  });
+
+  describe('status mark', () => {
+    const workflowTask = () => ({
+      ...createTask('agent-1'),
+      workflowCategory: 'todo',
+      workflowStateId: 'wf-todo',
+    });
+
+    it('draws the workflow state as the only status mark, after the identifier', () => {
+      const { container } = render(<AgentTaskItem routeScope={'global'} task={workflowTask()} />);
+
+      const marks = screen.getAllByTestId('status-mark');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveAttribute('data-glyph', 'WorkflowIcon(todo)');
+      // No second labelled workflow pill beside the mark.
+      expect(container.querySelector('[data-task-workflow-state]')).toBeNull();
+      // Linear's order: identifier, then status, then title.
+      const identifier = screen.getByText('T-22');
+      expect(
+        identifier.compareDocumentPosition(marks[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        marks[0].compareDocumentPosition(screen.getByText('Hourly trend update')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('falls back to the execution glyph when the task has no workflow state', () => {
+      render(<AgentTaskItem routeScope={'global'} task={createTask('agent-1')} />);
+
+      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'execution');
+    });
+  });
+
+  it('places caller chips before the assignee and the date, as Linear orders them', () => {
+    const { container } = render(
+      <AgentTaskItem
+        routeScope={'global'}
+        task={createTask('agent-1')}
+        trailingChips={<span data-testid="project-chip">Apollo</span>}
+      />,
+    );
+
+    const chip = screen.getByTestId('project-chip');
+    const assignee = container.querySelector('[data-collab-id$=":assignee"]')!;
+    const date = screen.getByText('today');
+    expect(assignee).not.toBeNull();
+    expect(chip.compareDocumentPosition(assignee) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(assignee.compareDocumentPosition(date) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

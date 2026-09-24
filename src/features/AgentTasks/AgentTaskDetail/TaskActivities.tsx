@@ -8,10 +8,10 @@ import type {
 } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeftRight,
   BotMessageSquare,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- topic activity kind, not a status mark
   CircleDot,
   CirclePlus,
   MessageCircle,
@@ -23,6 +23,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -174,7 +175,7 @@ const RowMark = ({
   icon,
 }: {
   author?: TaskDetailActivityAuthor | null;
-  icon: LucideIcon;
+  icon: StatusVisual['icon'];
 }) =>
   author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
@@ -251,9 +252,9 @@ interface TaskActivitiesProps {
   variant?: 'activity' | 'result';
 }
 
-const PROPERTY_ICON: Record<'automation' | 'status', LucideIcon> = {
+const PROPERTY_ICON: Record<'automation' | 'status', StatusVisual['icon']> = {
   automation: Timer,
-  status: CircleDot,
+  status: STATUS_PROPERTY_ICON,
 };
 
 const PriorityMark = ({ level }: { level: number | null }) => {

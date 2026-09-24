@@ -758,7 +758,6 @@ export default {
   'myWork.properties.project': 'Project',
   'myWork.properties.status': 'Status',
   'myWork.properties.updated': 'Updated',
-  'myWork.properties.workflowBadge': 'Workflow state',
   'myWork.subGrouping': 'Sub-grouping',
   'members.title': 'Members',
   'members.searchPlaceholder': 'Search by name or email',

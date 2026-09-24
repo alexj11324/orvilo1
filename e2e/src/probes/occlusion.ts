@@ -86,7 +86,11 @@ export const occlusionSampleScript = (
         [rect.right - inset, rect.top + inset],
         [rect.left + inset, rect.bottom - inset],
         [rect.right - inset, rect.bottom - inset],
-      ].map(([x, y]) => {
+      ]
+        // A point past the window edge hits nothing — a control half-scrolled
+        // out of view (a board column past the fold) is clipped, not covered.
+        .filter(([x, y]) => x >= 0 && y >= 0 && x < innerWidth && y < innerHeight)
+        .map(([x, y]) => {
         const hit = document.elementFromPoint(x, y);
         return { hit: describe(hit), inside: !!hit && (control.contains(hit) || hit.contains(control) || (!!ignore && !!hit.closest(ignore))) };
       });

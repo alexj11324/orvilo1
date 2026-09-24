@@ -1304,12 +1304,29 @@ export class LinearSyncWorker {
     if (!mapping) throw new Error('Linear external relation mapping no longer exists');
     const relation = payload.relation;
     if (!relation) throw new Error('Linear relation outbox has no relation payload');
-    const sourceLink = await this.model.findIssueLinkByTaskId(relation.sourceTaskId);
-    if (!sourceLink) throw new Error('Linear relation source issue link no longer exists');
-    const targetLink = relation.targetTaskId
-      ? await this.model.findIssueLinkByTaskId(relation.targetTaskId)
-      : null;
-    if (relation.kind !== 'parent' && !targetLink) {
+    if (payload.action !== 'remove' && payload.action !== 'upsert') {
+      throw new Error('Unknown Linear relation outbox action');
+    }
+    const removing = payload.action === 'remove';
+    // A remote relation delete is identified by the durable mapping, so a
+    // peer that lost its issue link must not strand the removal. Authorize the
+    // write through the mapping/outbox link selected by the local mutation.
+    let sourceLink;
+    if (removing) {
+      const removalLinkId = mapping.issueLinkId;
+      if (!removalLinkId || !row.linkId || removalLinkId !== row.linkId) {
+        throw new Error('Linear relation removal anchor does not match its outbox link');
+      }
+      sourceLink = await this.model.findIssueLinkById(removalLinkId);
+    } else {
+      sourceLink = await this.model.findIssueLinkByTaskId(relation.sourceTaskId);
+    }
+    if (!sourceLink) throw new Error('Linear relation anchor issue link no longer exists');
+    const targetLink =
+      !removing && relation.targetTaskId
+        ? await this.model.findIssueLinkByTaskId(relation.targetTaskId)
+        : null;
+    if (!removing && relation.kind !== 'parent' && !targetLink) {
       throw new Error('Linear relation target issue link is not available');
     }
     const sourceScope = await this.ensureOutboundIssueScope(row, sourceLink, provider);

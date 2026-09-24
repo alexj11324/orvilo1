@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import {
+  linearExternalRelations,
   linearInstallations,
   linearSyncOutbox,
   taskDependencies,
@@ -283,6 +284,13 @@ describe('task prerequisite invariants', () => {
       }),
       taskId: target.id,
     });
+    expect(await db.select().from(linearExternalRelations)).toEqual([
+      expect.objectContaining({
+        issueLinkId: targetLink.id,
+        localSourceTaskId: source.id,
+        localTargetTaskId: target.id,
+      }),
+    ]);
   });
 
   it('reblocks on reopen or trash and does not erase a blocker through deletion', async () => {

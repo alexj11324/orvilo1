@@ -97,6 +97,7 @@
   "inbox.loadedCount_other": "已加载 {{count}} 条通知",
   "inbox.loading": "正在加载收件箱…",
   "inbox.markAllRead": "全部标为已读",
+  "inbox.markRead": "标为已读",
   "inbox.markUnread": "标为未读",
   "inbox.moreActions": "更多操作",
   "inbox.noActions": "暂无可执行的操作",

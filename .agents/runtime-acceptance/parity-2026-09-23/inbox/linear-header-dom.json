@@ -1,0 +1,167 @@
+{
+  "header": [
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Menu",
+      "title": "",
+      "href": "",
+      "x": 253,
+      "y": 17,
+      "w": 28
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Notification actions",
+      "title": "",
+      "href": "",
+      "x": 305,
+      "y": 17,
+      "w": 28
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Show unreads only",
+      "title": "",
+      "href": "",
+      "x": 540,
+      "y": 17,
+      "w": 28
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Add filter",
+      "title": "",
+      "href": "",
+      "x": 574,
+      "y": 17,
+      "w": 28
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Display options",
+      "title": "",
+      "href": "",
+      "x": 608,
+      "y": 17,
+      "w": 28
+    },
+    {
+      "tag": "A",
+      "text": "Priority|26",
+      "aria": "",
+      "title": "",
+      "href": "/bdiverifier/inbox/priority",
+      "x": 253,
+      "y": 61,
+      "w": 86
+    },
+    {
+      "tag": "A",
+      "text": "Other|1",
+      "aria": "",
+      "title": "",
+      "href": "/bdiverifier/inbox/other",
+      "x": 345,
+      "y": 61,
+      "w": 68
+    }
+  ],
+  "rows": [],
+  "tabrow": [
+    {
+      "tag": "DIV",
+      "text": "My issues",
+      "aria": "",
+      "title": "",
+      "href": "",
+      "x": 12,
+      "y": 89,
+      "w": 220
+    },
+    {
+      "tag": "A",
+      "text": "My issues",
+      "aria": "",
+      "title": "",
+      "href": "/bdiverifier/my-issues/assigned",
+      "x": 12,
+      "y": 89,
+      "w": 220
+    },
+    {
+      "tag": "DIV",
+      "text": "Reviews|1|7",
+      "aria": "",
+      "title": "",
+      "href": "",
+      "x": 12,
+      "y": 118,
+      "w": 220
+    },
+    {
+      "tag": "A",
+      "text": "Reviews|1|7",
+      "aria": "",
+      "title": "",
+      "href": "/bdiverifier/reviews",
+      "x": 12,
+      "y": 118,
+      "w": 220
+    },
+    {
+      "tag": "DIV",
+      "text": "Agent",
+      "aria": "",
+      "title": "",
+      "href": "",
+      "x": 12,
+      "y": 147,
+      "w": 220
+    },
+    {
+      "tag": "A",
+      "text": "Agent",
+      "aria": "",
+      "title": "",
+      "href": "/bdiverifier/agent",
+      "x": 12,
+      "y": 147,
+      "w": 220
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Keep priority inbox",
+      "aria": "",
+      "title": "",
+      "href": "",
+      "x": 336,
+      "y": 149,
+      "w": 124
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "aria": "Choose what to include in priority",
+      "title": "",
+      "href": "",
+      "x": 461,
+      "y": 149,
+      "w": 24
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Disable",
+      "aria": "",
+      "title": "",
+      "href": "",
+      "x": 494,
+      "y": 149,
+      "w": 60
+    }
+  ]
+}

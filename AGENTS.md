@@ -56,7 +56,7 @@ Open this URL to develop locally against the production backend (orvilo.aspectly
 
 ### Git Workflow
 
-- **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md)
+- **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md); deploy targets: [docs/environments.md](./docs/environments.md)
 - New branches should be created from `canary`; PRs should target `canary`
 - Use rebase for `git pull`
 - Commit messages: prefix with gitmoji

@@ -12,8 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -91,11 +90,11 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   navLink: css`
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
 
     width: fit-content;
-    min-height: 28px;
+    height: 28px;
     padding-block: 5px;
     padding-inline: 6px;
     border-radius: ${cssVar.borderRadius};
@@ -191,7 +190,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   railTitle: css`
     padding-inline: 12px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: ${cssVar.colorTextSecondary};
 
@@ -315,7 +314,9 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             {destinations.map(({ key, to }) => (
               <WorkspaceLink className={styles.navLink} key={key} to={to}>
                 <Icon icon={destinationIcons[key]} size={16} />
-                <Text fontSize={14}>{t(destinationLabels[key])}</Text>
+                <Text fontSize={13} weight={500}>
+                  {t(destinationLabels[key])}
+                </Text>
               </WorkspaceLink>
             ))}
           </nav>
@@ -347,31 +348,39 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             <section aria-label={t('teams.recentIssues')} className={styles.section}>
               <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
               <div className={styles.recentList}>
-                {recentTasks.map((task) => (
-                  <WorkspaceLink
-                    className={styles.recentLink}
-                    key={task.id}
-                    to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-                  >
-                    <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-                    <Flexbox flex={1} style={{ minWidth: 0 }}>
-                      <Text ellipsis weight={500}>
-                        {task.name ?? task.instruction}
-                      </Text>
-                    </Flexbox>
-                    {task.identifier ? (
-                      <Text className={styles.recentIdentifier}>{task.identifier}</Text>
-                    ) : null}
-                    {task.updatedAt ? (
-                      <Text
-                        className={styles.recentMeta}
-                        title={dayjs(task.updatedAt).format('YYYY-MM-DD HH:mm')}
-                      >
-                        {dayjs(task.updatedAt).fromNow()}
-                      </Text>
-                    ) : null}
-                  </WorkspaceLink>
-                ))}
+                {recentTasks.map((task) => {
+                  const statusVisual = WORKFLOW_CATEGORY_VISUALS[task.workflowCategory];
+                  return (
+                    <WorkspaceLink
+                      className={styles.recentLink}
+                      key={task.id}
+                      to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+                    >
+                      <Icon
+                        color={statusVisual.color}
+                        icon={statusVisual.icon}
+                        size={16}
+                        title={t(`savedViews.values.workflowCategory.${task.workflowCategory}`)}
+                      />
+                      <Flexbox flex={1} style={{ minWidth: 0 }}>
+                        <Text ellipsis weight={500}>
+                          {task.name ?? task.instruction}
+                        </Text>
+                      </Flexbox>
+                      {task.identifier ? (
+                        <Text className={styles.recentIdentifier}>{task.identifier}</Text>
+                      ) : null}
+                      {task.updatedAt ? (
+                        <Text
+                          className={styles.recentMeta}
+                          title={dayjs(task.updatedAt).format('YYYY-MM-DD HH:mm')}
+                        >
+                          {dayjs(task.updatedAt).fromNow()}
+                        </Text>
+                      ) : null}
+                    </WorkspaceLink>
+                  );
+                })}
               </div>
             </section>
           ) : null}

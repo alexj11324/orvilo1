@@ -10,10 +10,10 @@ bug inside this page's scope.
 
 | Surface | State | Evidence |
 | --- | --- | --- |
-| `/bdiverifier/team/ORV/cycles` | **Reachable.** Title `orvilo › Cycles`, body renders empty state `This team has no cycles.` Not a 404 — the route exists even with the feature off. Only interactive controls on the page: `Menu` button + `Add to favorites` switch. | `linear-team-cycles-url.png`, `linear-cycles-page-full.png` |
-| Sidebar `Try▾` → `Cycles` row | **Still NOT a nav link** (matches `PAGE-INVENTORY.md`). Renders as `<div tabindex="0" data-menu-open="false">` whose accessible name is **`Enable cycles for team…`** — an enablement affordance (opens a menu/dialog), not navigation. No `href`. | `linear-sidebar-cycles-hover.png`, DOM dump in audit log |
-| Sidebar `Try▾` → `Initiatives` row | IS an `<a>`, but points at **`/bdiverifier/settings/initiatives`** — the *settings* page, not a product surface. | same DOM dump |
-| Team settings `/bdiverifier/settings/teams/ORV` | `Cycles — Focus your team over short, time-boxed windows — **Off**`. Cycles are **disabled** for team ORV; that is why the cycles page is an empty state and the sidebar row offers to enable them. | `linear-team-settings.png` |
+| `/bdiverifier/team/ORV/cycles` | **Reachable.** Title `orvilo › Cycles`, body renders empty state `This team has no cycles.` Not a 404 — the route exists even with the feature off. Only interactive controls on the page: `Menu` button + `Add to favorites` switch. | `linear-cycles-page.png` |
+| Sidebar `Try▾` → `Cycles` row | **Still NOT a nav link** (matches `PAGE-INVENTORY.md`). Renders as `<div tabindex="0" data-menu-open="false">` whose accessible name is **`Enable cycles for team…`** — an enablement affordance (opens a menu/dialog), not navigation. No `href`. | `linear-sidebar-try-cycles.png` |
+| Sidebar `Try▾` → `Initiatives` row | IS an `<a>`, but points at **`/bdiverifier/settings/initiatives`** — the *settings* page, not a product surface. | `linear-sidebar-try-cycles.png` |
+| Team settings `/bdiverifier/settings/teams/ORV` | `Cycles — Focus your team over short, time-boxed windows — **Off**`. Cycles are **disabled** for team ORV; that is why the cycles page is an empty state and the sidebar row offers to enable them. | `linear-team-settings-cycles-off.png` |
 
 ## Ground truth — Orvilo (`localhost:3010`, workspace `agent-testing`)
 

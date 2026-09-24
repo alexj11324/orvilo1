@@ -1,6 +1,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Input, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- unreadable-dependency placeholder, not a status
 import { CircleDashed, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

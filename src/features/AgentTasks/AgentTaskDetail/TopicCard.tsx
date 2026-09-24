@@ -12,6 +12,7 @@ import { cssVar } from 'antd-style';
 import {
   ChevronDown,
   ChevronRight,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- authorless activity avatar placeholder
   CircleDot,
   CircleStop,
   Copy,

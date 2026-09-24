@@ -232,8 +232,8 @@ const styles = createStaticStyles(({ css }) => ({
   /**
    * Display-property toggles hide their chip inside the shared task row.
    * `AgentTaskItem` owns the chip DOM, so hiding rides on its stable collab
-   * hooks (`data-collab-id` slots) and the workflow badge's data attribute
-   * rather than forking the component. The trailing date is the trailing
+   * hooks (`data-collab-id` slots) and data attributes rather than forking
+   * the component. The trailing date is the trailing
    * flex's last child when it renders; the `:not` guard keeps the assignee
    * slot alive if the date ever comes back empty.
    */
@@ -262,11 +262,6 @@ const styles = createStaticStyles(({ css }) => ({
       display: none;
     }
   `,
-  rowHideWorkflowBadge: css`
-    & [data-task-workflow-state] {
-      display: none;
-    }
-  `,
 }));
 
 /** Property → row modifier class, in one place so a hidden chip is one lookup. */
@@ -280,7 +275,6 @@ const ROW_PROPERTY_HIDE_CLASS: Record<MyWorkRowProperty, string | undefined> = {
   project: undefined,
   status: styles.rowHideStatus,
   updated: styles.rowHideUpdated,
-  workflowBadge: styles.rowHideWorkflowBadge,
 };
 
 const rowPropertyClassNames = (hidden?: ReadonlySet<MyWorkRowProperty>): string[] => {
@@ -559,10 +553,10 @@ const WorkQueryTaskRow = memo(
               milestone={milestoneFor?.(task)}
               routeScope={'global'}
               task={{ ...task, participants: task.participants ?? [] }}
+              trailingChips={rowExtras?.(task)}
               onStatusChange={handleStatusChange}
             />
           </Flexbox>
-          {rowExtras?.(task)}
           {onToggleFollow ? (
             <span className={`${styles.actions} work-query-row-actions`}>
               <ActionIcon
@@ -600,6 +594,12 @@ const WorkQueryStatusGroup = memo<{
   /** Optional header glyph — field-bucket sections (priority icon, avatar). */
   icon?: ReactNode;
   isFollowed?: (taskId: string) => boolean;
+  /**
+   * Which axis the group key names, when it differs from `groupBy` (the axis a
+   * row's status change writes). Attention tail buckets are workflow states
+   * while their rows still edit the run status.
+   */
+  keyAxis?: 'status' | 'workflowCategory';
   /** Explicit header text — date buckets etc. that are not status keys. */
   label?: string;
   /**
@@ -648,6 +648,7 @@ const WorkQueryStatusGroup = memo<{
     hiddenProperties,
     icon,
     isFollowed,
+    keyAxis,
     label,
     loadMoreError,
     loadMoreLabel,
@@ -677,7 +678,7 @@ const WorkQueryStatusGroup = memo<{
     // visual). Attention buckets (`urgent`/`blocking`) have no `st:` entry and
     // fall through to their flat key.
     const visual =
-      groupBy === 'workflowCategory'
+      (keyAxis ?? groupBy) === 'workflowCategory'
         ? (WORKFLOW_CATEGORY_VISUALS[columnKey as TaskWorkflowCategory] ??
           COLUMN_STATUS_VISUAL[columnKey])
         : (COLUMN_STATUS_VISUAL[`st:${columnKey}`] ?? COLUMN_STATUS_VISUAL[columnKey]);
@@ -1080,10 +1081,12 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                 columnKey={group.key}
                 groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
                 // Attention buckets aren't a writable status dimension — a
-                // status change inside them still writes `status`.
+                // status change inside them still writes `status` — but the
+                // tail keys are workflow states and take that axis's marks.
                 hasMore={pageGroupPaging ? group.hasMore : false}
                 isFollowed={isFollowed}
                 key={group.key}
+                keyAxis={listGroupBy === 'attention' ? 'workflowCategory' : undefined}
                 loadMoreError={loadMoreGroupErrors?.[group.key]}
                 loadMoreLabel={loadMoreLabel}
                 nested={listGroupBy === 'attention' && flatNested !== false}

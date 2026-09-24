@@ -1,8 +1,10 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import IssueRowChip from '@/components/IssueRowChip';
 
 import LabelChip from './LabelChip';
 import { type LabelLike, partitionLabelChips } from './labelColor';
@@ -11,26 +13,10 @@ const styles = createStaticStyles(({ css }) => ({
   group: css`
     display: inline-flex;
     flex: none;
-    gap: 4px;
+    gap: 3px;
     align-items: center;
 
     min-width: 0;
-  `,
-  overflow: css`
-    cursor: default;
-
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-
-    padding-block: 1px;
-    padding-inline: 5px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-    white-space: nowrap;
   `,
 }));
 
@@ -68,13 +54,12 @@ const LabelChips = memo<LabelChipsProps>(({ className, labels, max = 2 }) => {
         />
       ))}
       {overflow.length > 0 && (
-        <span
+        <IssueRowChip
           aria-label={t('labels.overflow', { count: overflow.length })}
-          className={styles.overflow}
           title={overflowNames}
         >
           +{overflow.length}
-        </span>
+        </IssueRowChip>
       )}
     </span>
   );

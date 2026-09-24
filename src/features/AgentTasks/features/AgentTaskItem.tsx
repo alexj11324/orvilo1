@@ -1,7 +1,7 @@
 import { Block, ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
@@ -9,6 +9,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import IssueRowChip from '@/components/IssueRowChip';
 import LabelChips from '@/features/Labels/LabelChips';
 import {
   getProjectMilestoneIssuesPath,
@@ -19,6 +20,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
+import { ISSUE_ID_WIDTH_VAR } from '../shared/issueIdColumn';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
@@ -35,6 +37,28 @@ import TaskTriggerTag from './TaskTriggerTag';
 import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
+
+// Linear's issue-row type ramp: 13px identifier (450) and title (500) on a
+// 44px row. The identifier column's width comes from the list
+// (`issueIdColumnStyle`), so every status mark lines up.
+const styles = createStaticStyles(({ css }) => ({
+  identifier: css`
+    flex: none;
+
+    min-width: var(${ISSUE_ID_WIDTH_VAR}, auto);
+
+    font-size: 13px;
+    font-weight: 450;
+    font-variant-numeric: tabular-nums;
+  `,
+  row: css`
+    min-height: 44px;
+  `,
+  title: css`
+    min-width: 0;
+    font-size: 13px;
+  `,
+}));
 
 export type TaskItemRouteScope = 'agent' | 'global';
 
@@ -136,46 +160,22 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
 
   const scheduledBadge =
     status === 'scheduled' ? (
-      <Block
-        horizontal
-        align={'center'}
-        flex={'none'}
-        height={20}
-        paddingInline={8}
-        style={{ borderRadius: 24 }}
-        variant={'outlined'}
-      >
-        <Text fontSize={12} type={'secondary'}>
-          {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-        </Text>
-      </Block>
+      <IssueRowChip>
+        {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
+      </IssueRowChip>
     ) : null;
 
   // Linear's issue-row milestone marker: `◆ name · Sep 30`, drawn with the
   // shared brand-indigo paint so it matches the overview/rail milestones.
   const milestoneBadge = milestone ? (
-    <Block
-      horizontal
-      align={'center'}
-      flex={'none'}
-      gap={4}
-      height={20}
-      paddingInline={6}
-      style={{ borderRadius: 4, cursor: task.projectId ? 'pointer' : undefined }}
+    <IssueRowChip
+      icon={<MilestoneIcon size={10} />}
+      suffix={milestone.date ? dayjs(milestone.date).format('MMM D') : undefined}
       title={milestone.name}
-      variant={'outlined'}
-      onClick={handleMilestoneClick}
+      onClick={task.projectId ? handleMilestoneClick : undefined}
     >
-      <MilestoneIcon size={10} />
-      <Text ellipsis fontSize={12} style={{ maxWidth: 140 }} type={'secondary'}>
-        {milestone.name}
-      </Text>
-      {milestone.date ? (
-        <Text fontSize={12} style={{ whiteSpace: 'nowrap' }} type={'secondary'}>
-          {dayjs(milestone.date).format('MMM D')}
-        </Text>
-      ) : null}
-    </Block>
+      {milestone.name}
+    </IssueRowChip>
   ) : null;
 
   const isPrivate = task.visibility === 'private';
@@ -193,7 +193,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
       {hasName ? (
-        <Text style={{ flex: 'none' }} type={'secondary'}>
+        <Text className={styles.identifier} type={'secondary'}>
           {task.identifier}
         </Text>
       ) : null}
@@ -212,19 +212,10 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
       {privacyBadge}
-      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+      <Text ellipsis className={styles.title} weight={500}>
         {hasName ? task.name : task.identifier}
       </Text>
       {scheduledBadge}
-      {/* Linear draws issue labels inline after the title. The wrapper's
-          data attribute is the display-properties toggle's hide hook
-          (`rowHideLabels`) — the chips themselves never render a toggled-off
-          row. */}
-      {task.labels?.length ? (
-        <Flexbox data-task-labels flex={'none'} style={{ minWidth: 0 }}>
-          <LabelChips labels={task.labels} max={2} />
-        </Flexbox>
-      ) : null}
       <TaskSubtaskProgressTag
         currentIdentifier={task.identifier}
         progress={task.subtaskProgress}
@@ -335,7 +326,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     <Text
       align={'right'}
       fontSize={12}
-      style={{ whiteSpace: 'nowrap', width: 48 }}
+      style={{ fontWeight: 450, whiteSpace: 'nowrap', width: 48 }}
       type={'secondary'}
     >
       {time}
@@ -346,11 +337,13 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
       <Block
         clickable
+        className={styles.row}
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
         gap={4}
-        paddingBlock={8}
+        justify={'center'}
+        paddingBlock={4}
         paddingInline={12}
         variant={'borderless'}
         onClick={handleClick}
@@ -358,8 +351,18 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
           {titleRow}
           <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
-            {milestoneBadge}
-            {trailingChips}
+            {/* Linear's right cluster: labels, then milestone and project. The
+                wrapper's data attribute is the display-properties toggle's hide
+                hook (`rowHideLabels`). */}
+            <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+              {task.labels?.length ? (
+                <Flexbox data-task-labels flex={'none'} style={{ minWidth: 0 }}>
+                  <LabelChips labels={task.labels} max={2} />
+                </Flexbox>
+              ) : null}
+              {milestoneBadge}
+              {trailingChips}
+            </Flexbox>
             {openRunNode}
             {scheduleNode}
             {assigneeNode}

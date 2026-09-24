@@ -22,6 +22,7 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
+import IssueRowChip from '@/components/IssueRowChip';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import {
   COLUMN_I18N_KEYS,
@@ -834,11 +835,7 @@ const MyWorkPage = memo(() => {
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
       if (!name) return null;
       return (
-        <Flexbox flex="none">
-          <Tag icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />} size="small" variant="outlined">
-            {name}
-          </Tag>
-        </Flexbox>
+        <IssueRowChip icon={<Icon icon={PROJECT_ENTITY_ICON} size={14} />}>{name}</IssueRowChip>
       );
     },
     [display.properties.project, projectNameById],

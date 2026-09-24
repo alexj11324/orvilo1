@@ -35,6 +35,7 @@ import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskL
 import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
+import { issueIdColumnStyle } from '@/features/AgentTasks/shared/issueIdColumn';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
@@ -1010,7 +1011,11 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     return (
       // `data-bulk-list` scopes the rendered-order read shift-range
       // selection makes at click time.
-      <Flexbox data-bulk-list={onBulkSelectTask ? '' : undefined} gap={16}>
+      <Flexbox
+        data-bulk-list={onBulkSelectTask ? '' : undefined}
+        gap={16}
+        style={issueIdColumnStyle(allTasks.map((task) => task.identifier))}
+      >
         {reviewBlock}
         {listGroupBy === 'none' ? (
           /* `none` grouping stays a flat list in the query's own sort order —

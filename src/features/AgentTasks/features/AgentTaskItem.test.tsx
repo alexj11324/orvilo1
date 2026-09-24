@@ -298,4 +298,24 @@ describe('AgentTaskItem', () => {
     expect(chip.compareDocumentPosition(assignee) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(assignee.compareDocumentPosition(date) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it('draws labels in the right cluster, after the title and before caller chips', () => {
+    render(
+      <AgentTaskItem
+        routeScope={'global'}
+        task={{ ...createTask('agent-1'), labels: [{ id: 'l1', name: 'Feature' }] }}
+        trailingChips={<span data-testid="project-chip">Apollo</span>}
+      />,
+    );
+
+    const label = screen.getByText('Feature');
+    const title = screen.getByText('Hourly trend update');
+    expect(title.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      label.compareDocumentPosition(screen.getByTestId('project-chip')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Not in the title row: Linear keeps the title row to id, status, title.
+    expect(title.parentElement!.contains(label)).toBe(false);
+  });
 });

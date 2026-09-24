@@ -1,36 +1,17 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
+
+import IssueRowChip from '@/components/IssueRowChip';
 
 import { resolveLabelColor } from './labelColor';
 
 const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    display: inline-flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    max-width: 160px;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
   dot: css`
-    flex: none;
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-  `,
-  name: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
   `,
 }));
 
@@ -46,20 +27,25 @@ export interface LabelChipProps {
 }
 
 /**
- * Linear's label chip: a small bordered pill holding a coloured dot and the
- * label name. Presentational only — data binding lives in `LabelChips` /
+ * Linear's label chip: the shared issue-row pill holding a coloured dot and
+ * the label name. Presentational only — data binding lives in `LabelChips` /
  * `ProjectLabelChips`, so the same chip can render issue labels once a
  * task-label model exists.
  */
 const LabelChip = memo<LabelChipProps>(({ className, color, name }) => (
-  <span className={className ? `${styles.chip} ${className}` : styles.chip} title={name}>
-    <span
-      aria-hidden
-      className={styles.dot}
-      style={{ background: resolveLabelColor(name, color) }}
-    />
-    <span className={styles.name}>{name}</span>
-  </span>
+  <IssueRowChip
+    className={className}
+    title={name}
+    icon={
+      <span
+        aria-hidden
+        className={styles.dot}
+        style={{ background: resolveLabelColor(name, color) }}
+      />
+    }
+  >
+    {name}
+  </IssueRowChip>
 ));
 
 LabelChip.displayName = 'LabelChip';

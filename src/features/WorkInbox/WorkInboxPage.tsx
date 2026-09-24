@@ -134,10 +134,10 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 12px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
-  /* Linear-style onboarding region: sits inside the list column between the
-     control row and the first notification row. */
-  // Linear's priority-inbox banner, measured: a centred 12px/500 prompt over
-  // two plain buttons in a 12px-radius card, 16/16/18 padding, 8px margin.
+  /* Linear's priority-inbox banner, inside the list column between the
+     control row and the first notification row. Measured: a centred 12px/500
+     prompt over two plain buttons in a 12px-radius card, 16/16/18 padding,
+     8px margin. */
   banner: css`
     display: flex;
     flex: none;

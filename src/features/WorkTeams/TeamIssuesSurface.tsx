@@ -1,10 +1,10 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { PlusIcon, UsersIcon } from 'lucide-react';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -50,6 +50,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 
+import { AddViewIcon } from './AddViewIcon';
 import TeamIdentity from './TeamIdentity';
 import TeamIssuesControls from './TeamIssuesControls';
 import { nextTeamIssueScopeNavigation } from './teamIssueScopeNavigation';
@@ -121,6 +122,37 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   separator: css`
     color: ${cssVar.colorTextQuaternary};
+  `,
+  scopeTab: css`
+    cursor: pointer;
+
+    height: 28px;
+    padding-inline: 10px;
+    border: 0;
+    border-radius: 9999px;
+
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar.colorTextSecondary};
+
+    background: ${cssVar.colorFillTertiary};
+
+    &:hover {
+      color: ${cssVar.colorText};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 2px;
+    }
+  `,
+  scopeTabActive: css`
+    color: ${cssVar.colorText};
+    background: ${cssVar.colorFillSecondary};
+  `,
+  issuesToolbar: css`
+    padding-block: 7px 1px;
+    padding-inline: 8px;
   `,
 }));
 
@@ -604,6 +636,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ? teamTasksData.data.total
               : undefined
           }
+          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
           onLoadMore={teamGroups.length === 0 ? () => runLoadMore(loadMore) : undefined}
           onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
@@ -612,7 +645,6 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           onRetryLoadMore={retryLoadMore}
           onRetryLoadMoreGroup={retryLoadMoreGroup}
           onSelectTask={(task) => setSelected(task)}
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
         />
       </>
     );
@@ -654,6 +686,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           toolbar={
             <WorkSurfaceToolbar
               asideLabel={t('savedViews.viewOptions')}
+              className={styles.issuesToolbar}
               aside={
                 <TeamIssuesControls
                   activeFilterCount={activeFilterCount}
@@ -681,30 +714,28 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
                 />
               }
             >
-              <Segmented
-                size="small"
-                value={issueScope}
-                options={ISSUE_SCOPES.map((scope) => ({
-                  // Linear labels the unfiltered scope "All issues".
-                  label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
-                  value: scope,
-                }))}
-                onChange={(value) =>
-                  setSearchParams(
-                    ...nextTeamIssueScopeNavigation(searchParams, value as TeamIssueScope),
-                  )
-                }
-              />
-              {/* "Add new view" opens the shared view builder scoped to this
-                  team — same contract as the Projects tab's button. */}
-              <Button
-                icon={PlusIcon}
-                size="small"
-                type="text"
+              <Flexbox horizontal align="center" gap={4}>
+                {ISSUE_SCOPES.map((scope) => (
+                  <button
+                    aria-current={issueScope === scope ? 'page' : undefined}
+                    className={cx(styles.scopeTab, issueScope === scope && styles.scopeTabActive)}
+                    key={scope}
+                    type="button"
+                    onClick={() =>
+                      setSearchParams(...nextTeamIssueScopeNavigation(searchParams, scope))
+                    }
+                  >
+                    {scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`)}
+                  </button>
+                ))}
+              </Flexbox>
+              <ActionIcon
+                aria-label={t('savedViews.addNewView')}
+                icon={<AddViewIcon />}
+                size={{ blockSize: 28, borderRadius: 14, size: 14 }}
+                title={t('savedViews.addNewView')}
                 onClick={() => setViewBuilderOpen(true)}
-              >
-                {t('savedViews.newView')}
-              </Button>
+              />
             </WorkSurfaceToolbar>
           }
         >

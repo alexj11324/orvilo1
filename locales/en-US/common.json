@@ -694,6 +694,7 @@
   "run": "Run",
   "save": "Save",
   "saveAgentConfigFail": "Failed to save agent settings. Your change was not applied.",
+  "savedViews.addNewView": "Add new view",
   "savedViews.assignedDefaultName": "Assigned to me",
   "savedViews.builtinName.all": "All tasks",
   "savedViews.builtinName.blocked": "Blocked",

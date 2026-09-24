@@ -14,3 +14,9 @@ Runtime: Electron dev build, CDP port 9233, dark appearance, en-US, DPR 2.
 | 900 × 900  | The rail moves inline without overlap; PMI-4 keeps the same workflow mark.                                                                                                                                   | [Screenshot](./electron-900.png)  |
 
 The Linear Team Home reference at 1440 × 900 uses 13px / 500 labels and 36px link-row spacing. Its current fixture has no Recent issues section, so the PMI-4 check uses the populated Orvilo fixture. A real click through to Team Issues confirmed that the board's In progress column renders the same `data-workflow-icon="in_progress"` mark. These screenshots cover the two requested changes, not full Team Home parity.
+
+## Detail navigation follow-up
+
+Source commit: `b973b1617`. In Electron, a hit-tested click on PMI-4's Recent issues row reached `/ws-useragenttes/task/PMI-4/blocking-verify-downstream-acceptance`; the issue title rendered and the page had no “Failed to load” message. Before the fix, the same row linked to `/task/taskparitymine0004/...` and the detail page failed to load. [Opened detail screenshot](./issue-link-open-1440.png).
+
+This verifies navigation only. The issue detail page's layout and behavior still need full reference parity acceptance.

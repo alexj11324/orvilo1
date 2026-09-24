@@ -2859,6 +2859,23 @@ export class TaskModel {
       and ${this.ownershipSql('dependency_owner')}
   )`;
 
+  // Ordinary relations are symmetric: either readable endpoint may inspect
+  // and remove the edge, while the unreadable peer stays redacted by the task
+  // detail projection. Blocking dependencies remain authorized only through
+  // their dependent task.
+  private issueRelationOwnership = () =>
+    or(
+      this.depsOwnership(),
+      and(
+        eq(taskDependencies.type, 'relates'),
+        sql`exists (
+          select 1 from tasks relation_target
+          where relation_target.id = ${taskDependencies.dependsOnId}
+            and ${this.ownershipSql('relation_target')}
+        )`,
+      ),
+    )!;
+
   /** Only used by the demotion cascade in {@link updateVisibility} — regular
    *  taskTopics reads/writes live in `TaskTopicModel`. */
   private topicsOwnership = () =>
@@ -3017,7 +3034,8 @@ export class TaskModel {
         model.removeDependency(taskId, dependsOnId, mutation, type),
       );
     }
-    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
+    const currentTask = await this.findById(taskId);
+    if (!currentTask) throw new TaskDependencyError('Task not found.');
     const deleted = await this.db
       .delete(taskDependencies)
       .where(
@@ -3038,7 +3056,7 @@ export class TaskModel {
                 eq(taskDependencies.dependsOnId, dependsOnId),
               ),
           type ? eq(taskDependencies.type, type) : undefined,
-          this.depsOwnership(),
+          type === 'relates' ? this.issueRelationOwnership() : this.depsOwnership(),
         ),
       )
       .returning({
@@ -3048,10 +3066,11 @@ export class TaskModel {
       });
     if (deleted.length === 0) return;
 
+    const syncModel = this.workspaceId ? new LinearSyncModel(this.db, this.workspaceId) : null;
     const syncSourceId =
-      type === 'relates' && this.workspaceId
+      type === 'relates'
         ? (
-            await new LinearSyncModel(this.db, this.workspaceId).findExternalRelationByLocalKey(
+            await syncModel?.findExternalRelationByLocalKey(
               relationKey('relates', taskId, dependsOnId),
             )
           )?.localSourceTaskId
@@ -3063,6 +3082,34 @@ export class TaskModel {
           taskId)
         : taskId;
     const relationTargetId = relationSourceId === taskId ? dependsOnId : taskId;
+    let eventTaskId = relationSourceId;
+    if (type === 'relates') {
+      const sourceTask =
+        relationSourceId === taskId ? currentTask : await this.findById(relationSourceId);
+      const targetTask =
+        relationTargetId === taskId ? currentTask : await this.findById(relationTargetId);
+      if (
+        syncModel &&
+        !mutation.suppressDomainEvent &&
+        !mutation.suppressLinearOutbox &&
+        mutation.source !== 'linear'
+      ) {
+        const [sourceLink, targetLink] = await Promise.all([
+          syncModel.findIssueLinkByTaskId(relationSourceId),
+          syncModel.findIssueLinkByTaskId(relationTargetId),
+        ]);
+        eventTaskId =
+          sourceLink && sourceTask
+            ? relationSourceId
+            : targetLink && targetTask
+              ? relationTargetId
+              : sourceTask
+                ? relationSourceId
+                : taskId;
+      } else if (!sourceTask) {
+        eventTaskId = taskId;
+      }
+    }
 
     const [updated] = await this.db
       .update(tasks)
@@ -3071,17 +3118,17 @@ export class TaskModel {
         requirementRevision: sql`${tasks.requirementRevision} + 1`,
         updatedAt: new Date(),
       })
-      .where(and(eq(tasks.id, relationSourceId), this.ownership()))
+      .where(and(eq(tasks.id, eventTaskId), this.ownership()))
       .returning();
     if (!updated) throw new TaskDependencyError('Task not found.');
-    if (this.workspaceId && !mutation.suppressDomainEvent) {
-      await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
+    if (syncModel && !mutation.suppressDomainEvent) {
+      await syncModel.recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
         eventId: mutation.eventId,
         eventType: 'task.dependency.changed',
         idempotencyKey:
           mutation.idempotencyKey ??
-          `task:${updated.id}:revision:${updated.domainRevision}:dependency:remove:${relationTargetId}`,
+          `task:${updated.id}:revision:${updated.domainRevision}:dependency:remove:${relationSourceId}:${relationTargetId}`,
         source: mutation.source ?? 'system',
         outboxPayload: {
           action: 'remove',
@@ -3117,7 +3164,7 @@ export class TaskModel {
     const [relation] = await this.db
       .select()
       .from(taskDependencies)
-      .where(and(eq(taskDependencies.id, relationId), this.depsOwnership()))
+      .where(and(eq(taskDependencies.id, relationId), this.issueRelationOwnership()))
       .limit(1);
     if (
       !relation ||
@@ -3155,13 +3202,10 @@ export class TaskModel {
           and(
             eq(taskDependencies.dependsOnId, taskId),
             eq(taskDependencies.type, 'relates'),
-            this.depsOwnership(),
+            this.issueRelationOwnership(),
           ),
         ),
     ]);
-    const readable = new Set(
-      (await this.findByIds(incoming.map((row) => row.taskId))).map((row) => row.id),
-    );
     const relatedIds = new Set(
       outgoing.filter((row) => row.type === 'relates').map((row) => row.dependsOnId),
     );
@@ -3169,7 +3213,7 @@ export class TaskModel {
       ...outgoing,
       ...incoming
         .filter((row) => {
-          if (!readable.has(row.taskId) || relatedIds.has(row.taskId)) return false;
+          if (relatedIds.has(row.taskId)) return false;
           relatedIds.add(row.taskId);
           return true;
         })

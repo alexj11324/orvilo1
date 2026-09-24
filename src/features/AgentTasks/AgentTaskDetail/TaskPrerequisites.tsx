@@ -51,6 +51,22 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
     ],
     [dependencies],
   );
+  const removalTotals = new Map<string, number>();
+  for (const dep of orderedDeps) {
+    const key = `${dep.type}:${dep.dependsOn}`;
+    removalTotals.set(key, (removalTotals.get(key) ?? 0) + 1);
+  }
+  const removalSeen = new Map<string, number>();
+  const removalIdentifiers = orderedDeps.map((dep) => {
+    const key = `${dep.type}:${dep.dependsOn}`;
+    if (removalTotals.get(key) === 1) return dep.dependsOn;
+    const position = (removalSeen.get(key) ?? 0) + 1;
+    removalSeen.set(key, position);
+    return t('taskDetail.prerequisites.relationPosition', {
+      identifier: dep.dependsOn,
+      position,
+    });
+  });
   const prerequisites = dependencies.filter((dep) => dep.type === 'blocks');
   const blocked = prerequisites.some((dep) => dep.status !== 'completed');
 
@@ -96,7 +112,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           )}
         </Text>
       )}
-      {orderedDeps.map((dep) => {
+      {orderedDeps.map((dep, index) => {
         const unavailable = !dep.status;
         const workflowVisual =
           dep.workflowStateId && dep.workflowCategory
@@ -151,7 +167,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
                   dep.type === 'blocks'
                     ? 'taskDetail.prerequisites.removeBlocker'
                     : 'taskDetail.prerequisites.removeRelated',
-                  { identifier: dep.dependsOn },
+                  { identifier: removalIdentifiers[index] },
                 )}
                 onClick={() =>
                   change(() =>

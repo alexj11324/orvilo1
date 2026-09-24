@@ -3,7 +3,17 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDependencies, taskDomainEvents, tasks, users, workspaces } from '../../schemas';
+import {
+  linearInstallations,
+  linearSyncOutbox,
+  taskDependencies,
+  taskDomainEvents,
+  tasks,
+  users,
+  workspaces,
+} from '../../schemas';
+import { LinearSyncModel } from '../linearSync';
+import { ProjectModel } from '../project';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
 
@@ -213,6 +223,68 @@ describe('task prerequisite invariants', () => {
     expect(events.map((event) => event.taskId)).toEqual([a.id, a.id]);
   });
 
+  it('queues reverse-side relation removal through the linked target when the source is unlinked', async () => {
+    const workspaceId = 'related-sync-target-workspace';
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Related sync target',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    const installationId = '00000000-0000-4000-8000-000000000031';
+    await db.insert(linearInstallations).values({
+      id: installationId,
+      installedByUserId: userId,
+      organizationId: 'linear-related-org',
+      workspaceId,
+    });
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'REL',
+      name: 'Related sync',
+    });
+    const sync = new LinearSyncModel(db, workspaceId);
+    const binding = await sync.upsertBinding({
+      defaultTeamId: 'linear-related-team',
+      installationId,
+      linearProjectId: 'linear-related-project',
+      projectId: project.id,
+      settings: { readEnabled: true, writeEnabled: true },
+    });
+    const scoped = new TaskModel(db, userId, workspaceId);
+    const source = await scoped.create({ instruction: 'Unlinked source', projectId: project.id });
+    const target = await scoped.create({ instruction: 'Linked target', projectId: project.id });
+    const targetLink = await sync.createIssueLink({
+      bindingId: binding.id,
+      installationId,
+      linearIdentifier: 'LIN-2',
+      linearIssueId: 'linear-related-target',
+      organizationId: 'linear-related-org',
+      taskId: target.id,
+    });
+    await scoped.addDependency(source.id, target.id, 'relates', {
+      source: 'user',
+      suppressLinearOutbox: true,
+    });
+    await db.delete(linearSyncOutbox);
+
+    await scoped.removeDependency(target.id, source.id, { source: 'user' }, 'relates');
+
+    const rows = await db.select().from(linearSyncOutbox);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      linkId: targetLink.id,
+      operation: expect.stringContaining('linear-relation:remove:'),
+      payload: expect.objectContaining({
+        action: 'remove',
+        relation: expect.objectContaining({
+          sourceTaskId: source.id,
+          targetTaskId: target.id,
+        }),
+      }),
+      taskId: target.id,
+    });
+  });
+
   it('reblocks on reopen or trash and does not erase a blocker through deletion', async () => {
     const a = await create('A');
     const b = await create('B');
@@ -308,6 +380,29 @@ describe('task prerequisite invariants', () => {
     const [relation] = await member.getIssueRelations(current.id);
     await member.removeDependencyByRelationId(current.id, relation.id);
     expect(await owner.getDependencies(current.id)).toEqual([]);
+  });
+
+  it('keeps an incoming related placeholder removable when its source becomes private', async () => {
+    const workspaceId = 'related-private-source-workspace';
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Related reverse visibility',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    const owner = new TaskModel(db, userId, workspaceId);
+    const member = new TaskModel(db, otherUserId, workspaceId);
+    const source = await owner.create({ instruction: 'Later private source' });
+    const current = await member.create({ instruction: 'Visible issue' });
+    await owner.addDependency(source.id, current.id, 'relates');
+    await owner.updateVisibility(source.id, 'private');
+    expect(await member.findById(source.id)).toBeNull();
+    expect(await member.getIssueRelations(current.id)).toMatchObject([
+      { dependsOnId: source.id, type: 'relates' },
+    ]);
+    const [relation] = await member.getIssueRelations(current.id);
+    await member.removeDependencyByRelationId(current.id, relation.id);
+    expect(await owner.getDependencies(source.id)).toEqual([]);
   });
 });
 

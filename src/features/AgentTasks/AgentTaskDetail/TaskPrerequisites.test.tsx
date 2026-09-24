@@ -17,7 +17,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { identifier?: string; position?: number }) =>
+      [key, options?.identifier, options?.position]
+        .filter((value) => value !== undefined)
+        .join(':'),
+  }),
 }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
@@ -42,6 +47,8 @@ const setTask = (dependencies: TaskDetailData['dependencies'] = [], id = 'T-4') 
   } as unknown as TaskStore;
 };
 const key = (suffix: string) => `taskDetail.prerequisites.${suffix}`;
+const removeLabel = (suffix: 'removeBlocker' | 'removeRelated', identifier: string) =>
+  `${key(suffix)}:${identifier}`;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -111,7 +118,11 @@ describe('TaskPrerequisites', () => {
     // then walk up to the (disabled) navigation button.
     const unavailableText = screen.getByText(new RegExp(key('unavailable')));
     expect(unavailableText.closest('button')?.disabled).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: key('removeBlocker') }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: removeLabel('removeBlocker', 'task_hidden'),
+      }),
+    );
     await waitFor(() =>
       expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_hidden', 'blocks'),
     );
@@ -120,7 +131,7 @@ describe('TaskPrerequisites', () => {
   it('removes a regular relation without requesting deletion of a blocker', async () => {
     setTask([{ dependsOn: 'T-2', id: 'task_related', status: 'backlog', type: 'relates' }]);
     render(<TaskPrerequisites />);
-    fireEvent.click(screen.getByRole('button', { name: key('removeRelated') }));
+    fireEvent.click(screen.getByRole('button', { name: removeLabel('removeRelated', 'T-2') }));
     await waitFor(() =>
       expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_related', 'relates'),
     );
@@ -132,8 +143,8 @@ describe('TaskPrerequisites', () => {
       { dependsOn: 'T-1', relationId: 'edge-related', status: 'backlog', type: 'relates' },
     ]);
     render(<TaskPrerequisites />);
-    expect(screen.getByRole('button', { name: key('removeBlocker') })).toBeTruthy();
-    expect(screen.getByRole('button', { name: key('removeRelated') })).toBeTruthy();
+    expect(screen.getByRole('button', { name: removeLabel('removeBlocker', 'T-1') })).toBeTruthy();
+    expect(screen.getByRole('button', { name: removeLabel('removeRelated', 'T-1') })).toBeTruthy();
   });
 
   it('unlinks an unreadable related issue using only the opaque relation id', async () => {
@@ -142,9 +153,37 @@ describe('TaskPrerequisites', () => {
       { dependsOn: 'Unavailable related issue', relationId, status: null, type: 'relates' },
     ]);
     render(<TaskPrerequisites />);
-    fireEvent.click(screen.getByRole('button', { name: key('removeRelated') }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: removeLabel('removeRelated', 'Unavailable related issue'),
+      }),
+    );
     await waitFor(() => expect(mocks.removeIssueRelation).toHaveBeenCalledWith('T-4', relationId));
     expect(mocks.removeDependency).not.toHaveBeenCalled();
+  });
+
+  it('gives duplicate unavailable related removals distinct accessible names', () => {
+    setTask([
+      {
+        dependsOn: 'Unavailable related issue',
+        relationId: 'edge-hidden-1',
+        status: null,
+        type: 'relates',
+      },
+      {
+        dependsOn: 'Unavailable related issue',
+        relationId: 'edge-hidden-2',
+        status: null,
+        type: 'relates',
+      },
+    ]);
+    render(<TaskPrerequisites />);
+
+    const buttons = screen.getAllByRole('button', { name: new RegExp(key('removeRelated')) });
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      `${key('removeRelated')}:${key('relationPosition')}:Unavailable related issue:1`,
+      `${key('removeRelated')}:${key('relationPosition')}:Unavailable related issue:2`,
+    ]);
   });
 
   it('renders localized mutation errors without dropping the input', async () => {
@@ -176,7 +215,7 @@ describe('TaskPrerequisites', () => {
     setTask([{ dependsOn: 'T-1', status: 'backlog', type: 'blocks' }]);
     render(<TaskPrerequisites />);
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.queryByRole('button', { name: key('removeBlocker') })).toBeNull();
+    expect(screen.queryByRole('button', { name: removeLabel('removeBlocker', 'T-1') })).toBeNull();
     expect(screen.getByText('Read only')).toBeTruthy();
   });
 

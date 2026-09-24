@@ -1499,6 +1499,7 @@ export default {
   'taskDetail.prerequisites.related': 'Related',
   'taskDetail.prerequisites.removeBlocker': 'Remove blocking dependency on {{identifier}}',
   'taskDetail.prerequisites.removeRelated': 'Remove relationship with {{identifier}}',
+  'taskDetail.prerequisites.relationPosition': '{{identifier}}, item {{position}}',
   'taskDetail.prerequisites.cycle': 'This dependency would create a cycle.',
   'taskDetail.prerequisites.self': 'A task cannot depend on itself.',
   'taskDetail.prerequisites.project': 'Related issues must belong to the same project.',

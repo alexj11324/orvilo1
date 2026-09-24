@@ -1747,6 +1747,7 @@
   "taskDetail.prerequisites.ready": "All prerequisites completed.",
   "taskDetail.prerequisites.related": "Related",
   "taskDetail.prerequisites.relationConflict": "A blocking relationship already exists. Remove it before adding a regular relation.",
+  "taskDetail.prerequisites.relationPosition": "{{identifier}}, item {{position}}",
   "taskDetail.prerequisites.removeBlocker": "Remove blocking dependency on {{identifier}}",
   "taskDetail.prerequisites.removeRelated": "Remove relationship with {{identifier}}",
   "taskDetail.prerequisites.self": "A task cannot depend on itself.",

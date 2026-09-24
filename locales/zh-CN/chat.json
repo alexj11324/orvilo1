@@ -1746,6 +1746,7 @@
   "taskDetail.prerequisites.ready": "前置任务已全部完成。",
   "taskDetail.prerequisites.related": "关联",
   "taskDetail.prerequisites.relationConflict": "该事项已有阻塞关系。请先移除阻塞关系，再添加普通关联。",
+  "taskDetail.prerequisites.relationPosition": "{{identifier}}，第 {{position}} 项",
   "taskDetail.prerequisites.removeBlocker": "移除 {{identifier}} 的阻塞依赖",
   "taskDetail.prerequisites.removeRelated": "移除与 {{identifier}} 的关联",
   "taskDetail.prerequisites.self": "任务不能依赖自身。",

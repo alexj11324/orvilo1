@@ -55,26 +55,26 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     position: relative;
 
     padding-block: 8px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
+    padding-inline: 12px;
+    border-radius: 8px;
 
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowTertiary};
+    /* Linear: no stroke — a 0.5px hairline ring plus a soft drop shadow. */
+    background: ${cssVar.colorFillQuaternary};
+    box-shadow:
+      0 0 0 0.5px ${cssVar.colorBorder},
+      0 1px 2px rgb(0 0 0 / 30%);
 
-    transition:
-      border-color 0.2s,
-      background 0.2s;
+    transition: background 0.2s;
 
     &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillQuaternary};
+      background: ${cssVar.colorFillTertiary};
     }
   `,
   cardOverlay: css`
     /* DragOverlay twin: no hover affordance, shadow reads as "lifted". */
+    background: ${cssVar.colorBgElevated};
+
     &:hover {
-      border-color: ${cssVar.colorBorderSecondary};
       background: ${cssVar.colorBgElevated};
     }
   `,
@@ -297,7 +297,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
           assigned executor top-right). */}
         <Flexbox horizontal align={'center'} gap={8} style={{ minHeight: 24 }}>
-          <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} type={'secondary'}>
+          <Text
+            ellipsis
+            fontSize={12}
+            style={{ flex: 1, minWidth: 0 }}
+            type={'secondary'}
+            weight={450}
+          >
             {task.identifier}
           </Text>
           {privacyBadge}

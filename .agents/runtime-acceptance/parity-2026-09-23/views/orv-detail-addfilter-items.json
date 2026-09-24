@@ -1,0 +1,239 @@
+[
+  {
+    "sel": "[role=dialog]",
+    "x": 671,
+    "y": 91,
+    "w": 444,
+    "h": 215,
+    "text": "Filters\nWorkflow state\nis any of\nTodo\nIn progress\nIn review\nAdd filter\nCancel\nSave",
+    "rows": [
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "Workflow state",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 710,
+        "y": 138,
+        "w": 140,
+        "h": 24
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "is any of",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 858,
+        "y": 138,
+        "w": 128,
+        "h": 24
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "Todo\nIn progress\nIn review",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 994,
+        "y": 115,
+        "w": 140,
+        "h": 70
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "M18 6 6 18",
+        "x": 1142,
+        "y": 138,
+        "w": 16,
+        "h": 24
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Add filter",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "M5 12h14",
+        "x": 710,
+        "y": 193,
+        "w": 91,
+        "h": 24
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Cancel",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 980,
+        "y": 258,
+        "w": 58,
+        "h": 24
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Save",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 1045,
+        "y": 258,
+        "w": 46,
+        "h": 24
+      }
+    ]
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 49,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 78,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 107,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 136,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 165,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 4,
+    "y": 192,
+    "w": 236,
+    "h": 28,
+    "text": "",
+    "rows": [
+      {
+        "role": null,
+        "tag": "div",
+        "text": "",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 44,
+        "y": 206,
+        "w": 192,
+        "h": 0
+      }
+    ]
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 4,
+    "y": 307,
+    "w": 236,
+    "h": 28,
+    "text": "More",
+    "rows": [
+      {
+        "role": null,
+        "tag": "div",
+        "text": "More",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 44,
+        "y": 310,
+        "w": 192,
+        "h": 21
+      }
+    ]
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 208,
+    "y": 348,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 200,
+    "y": 533,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 200,
+    "y": 720,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 8,
+    "y": 864,
+    "w": 29,
+    "h": 29,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 1159,
+    "y": 19,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  }
+]

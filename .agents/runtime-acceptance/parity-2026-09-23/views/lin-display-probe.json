@@ -1,0 +1,24 @@
+[
+  {
+    "tag": "DIV",
+    "role": null,
+    "cls": "sx-10l6tqk sx-13vifvy sx-1ey2m1c sx-u96u03 sx-1so62im sx-78zum5 sx-dt5ytf sx-87m",
+    "x": 0,
+    "y": 0,
+    "w": 244,
+    "h": 901,
+    "z": "96",
+    "text": "BD\nBDI_Verifier\nInbox\n2\n7\nMy issues\nReviews\n1\n7\nAgent\nDrafts\n2\nWorkspace\nProjects\nViews\nMore\nFavorites\nAll issues\nYour teams\norvilo\nHome\nTriage\nIssues\nProjects\nViews\nTry\nInitiatives\nCycles"
+  },
+  {
+    "tag": "DIV",
+    "role": null,
+    "cls": "sx-ixxii4 sx-67bb7w sx-r3buco sx-lvsv26",
+    "x": 847,
+    "y": 93,
+    "w": 302,
+    "h": 569,
+    "z": "500",
+    "text": "List\nBoard\nGrouping\nStatus\nSub-grouping\nNo grouping\nOrdering\nPriority\nOrder completed by recency\nCompleted issues\nAll\nShow sub-issues\nShow triage issues\nList options\nNested sub-issues\nShow matching\nShow empty groups\nDisplay properties\nID\nStatus\nAssignee\nPriority\nProject\nDue date\nMilestone\nLabels\nLinks\nTime in status\nCreated\nUpdated\nPull requests"
+  }
+]

@@ -1,0 +1,1254 @@
+{
+  "items": [
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "AG\nAgent Testing",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-down",
+        "vb": "0 0 24 24",
+        "d": "m6 9 6 6 6-6",
+        "nPaths": 1
+      },
+      "x": 8,
+      "y": 8,
+      "w": 140,
+      "h": 32
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-panel-left-close lucide-sidebar-close",
+        "vb": "0 0 24 24",
+        "d": "M9 3v18",
+        "nPaths": 3
+      },
+      "x": 158,
+      "y": 10,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-search",
+        "vb": "0 0 24 24",
+        "d": "m21 21-4.34-4.34",
+        "nPaths": 2
+      },
+      "x": 188,
+      "y": 12,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-square-pen lucide-pen-box lucide-edit lucide-p",
+        "vb": "0 0 24 24",
+        "d": "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7",
+        "nPaths": 2
+      },
+      "x": 214,
+      "y": 12,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Inbox",
+      "href": "/agent-testing/inbox",
+      "icon": {
+        "cls": "lucide lucide-inbox",
+        "vb": "0 0 24 24",
+        "d": "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4",
+        "nPaths": 2
+      },
+      "x": 4,
+      "y": 47,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 210,
+      "y": 49,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "My issues",
+      "href": "/agent-testing/my-issues",
+      "icon": {
+        "cls": "lucide lucide-square-user lucide-user-square",
+        "vb": "0 0 24 24",
+        "d": "M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2",
+        "nPaths": 3
+      },
+      "x": 4,
+      "y": 76,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 210,
+      "y": 78,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Reviews",
+      "href": "/agent-testing/reviews",
+      "icon": {
+        "cls": "lucide lucide-git-pull-request",
+        "vb": "0 0 24 24",
+        "d": "M13 6h3a2 2 0 0 1 2 2v7",
+        "nPaths": 4
+      },
+      "x": 4,
+      "y": 105,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 210,
+      "y": 107,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Agent",
+      "href": "/agent-testing/agent/inbox",
+      "icon": {
+        "cls": "lucide lucide-bot",
+        "vb": "0 0 24 24",
+        "d": "M12 8V4H8",
+        "nPaths": 6
+      },
+      "x": 4,
+      "y": 134,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 210,
+      "y": 136,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Drafts",
+      "href": "/agent-testing/drafts",
+      "icon": {
+        "cls": "lucide lucide-file-pen-line lucide-file-signature",
+        "vb": "0 0 24 24",
+        "d": "M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0",
+        "nPaths": 4
+      },
+      "x": 4,
+      "y": 163,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 210,
+      "y": 165,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-plus",
+        "vb": "0 0 24 24",
+        "d": "M5 12h14",
+        "nPaths": 2
+      },
+      "x": 4,
+      "y": 192,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Workspace",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-play",
+        "vb": "0 0 24 24",
+        "d": "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 1",
+        "nPaths": 1
+      },
+      "x": 4,
+      "y": 221,
+      "w": 236,
+      "h": 27
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Projects",
+      "href": "/agent-testing/projects",
+      "icon": {
+        "cls": "lucide lucide-box",
+        "vb": "0 0 24 24",
+        "d": "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l",
+        "nPaths": 3
+      },
+      "x": 4,
+      "y": 249,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Views",
+      "href": "/agent-testing/views",
+      "icon": {
+        "cls": "lucide lucide-layout-list",
+        "vb": "0 0 24 24",
+        "d": "M14 4h7",
+        "nPaths": 6
+      },
+      "x": 4,
+      "y": 278,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "More",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 4,
+      "y": 307,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Favorites",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-play",
+        "vb": "0 0 24 24",
+        "d": "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 1",
+        "nPaths": 1
+      },
+      "x": 4,
+      "y": 346,
+      "w": 204,
+      "h": 27
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 208,
+      "y": 348,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Apollo Platform",
+      "href": "/agent-testing/project/prj_Pfyw7IcIBtsO",
+      "icon": {
+        "cls": "lucide lucide-box",
+        "vb": "0 0 24 24",
+        "d": "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l",
+        "nPaths": 3
+      },
+      "x": 4,
+      "y": 376,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-up",
+        "vb": "0 0 24 24",
+        "d": "m18 15-6-6-6 6",
+        "nPaths": 1
+      },
+      "x": 186,
+      "y": 378,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-down",
+        "vb": "0 0 24 24",
+        "d": "m6 9 6 6 6-6",
+        "nPaths": 1
+      },
+      "x": 212,
+      "y": 378,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-pin-off",
+        "vb": "0 0 24 24",
+        "d": "M12 17v5",
+        "nPaths": 4
+      },
+      "x": 210,
+      "y": 378,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Voyager Launch",
+      "href": "/agent-testing/project/prj_SA445ghqny8B",
+      "icon": {
+        "cls": "lucide lucide-box",
+        "vb": "0 0 24 24",
+        "d": "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l",
+        "nPaths": 3
+      },
+      "x": 4,
+      "y": 405,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-up",
+        "vb": "0 0 24 24",
+        "d": "m18 15-6-6-6 6",
+        "nPaths": 1
+      },
+      "x": 186,
+      "y": 407,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-down",
+        "vb": "0 0 24 24",
+        "d": "m6 9 6 6 6-6",
+        "nPaths": 1
+      },
+      "x": 212,
+      "y": 407,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-pin-off",
+        "vb": "0 0 24 24",
+        "d": "M12 17v5",
+        "nPaths": 4
+      },
+      "x": 210,
+      "y": 407,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Parity: Active board",
+      "href": "/agent-testing/views/svparityvol0001",
+      "icon": {
+        "cls": "lucide lucide-layout-list",
+        "vb": "0 0 24 24",
+        "d": "M14 4h7",
+        "nPaths": 6
+      },
+      "x": 4,
+      "y": 434,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-up",
+        "vb": "0 0 24 24",
+        "d": "m18 15-6-6-6 6",
+        "nPaths": 1
+      },
+      "x": 186,
+      "y": 436,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-down",
+        "vb": "0 0 24 24",
+        "d": "m6 9 6 6 6-6",
+        "nPaths": 1
+      },
+      "x": 212,
+      "y": 436,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-pin-off",
+        "vb": "0 0 24 24",
+        "d": "M12 17v5",
+        "nPaths": 4
+      },
+      "x": 210,
+      "y": 436,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Parity Test Team",
+      "href": "/agent-testing/teams/team_cLY7tmARmiU6",
+      "icon": {
+        "cls": "lucide lucide-users",
+        "vb": "0 0 24 24",
+        "d": "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2",
+        "nPaths": 4
+      },
+      "x": 4,
+      "y": 463,
+      "w": 236,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-up",
+        "vb": "0 0 24 24",
+        "d": "m18 15-6-6-6 6",
+        "nPaths": 1
+      },
+      "x": 186,
+      "y": 465,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-down",
+        "vb": "0 0 24 24",
+        "d": "m6 9 6 6 6-6",
+        "nPaths": 1
+      },
+      "x": 212,
+      "y": 465,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-pin-off",
+        "vb": "0 0 24 24",
+        "d": "M12 17v5",
+        "nPaths": 4
+      },
+      "x": 210,
+      "y": 465,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Your teams",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-play",
+        "vb": "0 0 24 24",
+        "d": "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 1",
+        "nPaths": 1
+      },
+      "x": 4,
+      "y": 501,
+      "w": 204,
+      "h": 27
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-arrow-right",
+        "vb": "0 0 24 24",
+        "d": "M5 12h14",
+        "nPaths": 2
+      },
+      "x": 208,
+      "y": 503,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "S\nParity Shipping",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-right",
+        "vb": "0 0 24 24",
+        "d": "m9 18 6-6-6-6",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 531,
+      "w": 188,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Team menu",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 200,
+      "y": 533,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Home",
+      "href": "/agent-testing/teams/team_KNsVSioFk8hO",
+      "icon": {
+        "cls": "lucide lucide-house lucide-home",
+        "vb": "0 0 24 24",
+        "d": "M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8",
+        "nPaths": 2
+      },
+      "x": 48,
+      "y": 560,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Triage",
+      "href": "/agent-testing/teams/team_KNsVSioFk8hO?tab=triage",
+      "icon": {
+        "cls": "lucide lucide-inbox",
+        "vb": "0 0 24 24",
+        "d": "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4",
+        "nPaths": 2
+      },
+      "x": 48,
+      "y": 589,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Issues",
+      "href": "/agent-testing/teams/team_KNsVSioFk8hO?tab=issues",
+      "icon": {
+        "cls": "lucide lucide-list-checks",
+        "vb": "0 0 24 24",
+        "d": "M13 5h8",
+        "nPaths": 5
+      },
+      "x": 48,
+      "y": 618,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Projects",
+      "href": "/agent-testing/teams/team_KNsVSioFk8hO?tab=projects",
+      "icon": {
+        "cls": "lucide lucide-box",
+        "vb": "0 0 24 24",
+        "d": "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l",
+        "nPaths": 3
+      },
+      "x": 48,
+      "y": 647,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Views",
+      "href": "/agent-testing/teams/team_KNsVSioFk8hO?tab=views",
+      "icon": {
+        "cls": "lucide lucide-layers lucide-layers-3",
+        "vb": "0 0 24 24",
+        "d": "M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 ",
+        "nPaths": 3
+      },
+      "x": 48,
+      "y": 676,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "P\nParity Test Team",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevron-right",
+        "vb": "0 0 24 24",
+        "d": "m9 18 6-6-6-6",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 718,
+      "w": 188,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Team menu",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-ellipsis lucide-more-horizontal",
+        "vb": "0 0 24 24",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 200,
+      "y": 720,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Home",
+      "href": "/agent-testing/teams/team_cLY7tmARmiU6",
+      "icon": {
+        "cls": "lucide lucide-house lucide-home",
+        "vb": "0 0 24 24",
+        "d": "M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8",
+        "nPaths": 2
+      },
+      "x": 48,
+      "y": 747,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Triage",
+      "href": "/agent-testing/teams/team_cLY7tmARmiU6?tab=triage",
+      "icon": {
+        "cls": "lucide lucide-inbox",
+        "vb": "0 0 24 24",
+        "d": "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4",
+        "nPaths": 2
+      },
+      "x": 48,
+      "y": 776,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Issues",
+      "href": "/agent-testing/teams/team_cLY7tmARmiU6?tab=issues",
+      "icon": {
+        "cls": "lucide lucide-list-checks",
+        "vb": "0 0 24 24",
+        "d": "M13 5h8",
+        "nPaths": 5
+      },
+      "x": 48,
+      "y": 805,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Projects",
+      "href": "/agent-testing/teams/team_cLY7tmARmiU6?tab=projects",
+      "icon": {
+        "cls": "lucide lucide-box",
+        "vb": "0 0 24 24",
+        "d": "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l",
+        "nPaths": 3
+      },
+      "x": 48,
+      "y": 834,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Views",
+      "href": "/agent-testing/teams/team_cLY7tmARmiU6?tab=views",
+      "icon": {
+        "cls": "lucide lucide-layers lucide-layers-3",
+        "vb": "0 0 24 24",
+        "d": "M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 ",
+        "nPaths": 3
+      },
+      "x": 48,
+      "y": 863,
+      "w": 192,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Help Center",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-circle-question-mark lucide-help-circle lucide",
+        "vb": "0 0 24 24",
+        "d": "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3",
+        "nPaths": 3
+      },
+      "x": 8,
+      "y": 864,
+      "w": 29,
+      "h": 29
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-panel-right-open",
+        "vb": "0 0 24 24",
+        "d": "M15 3v18",
+        "nPaths": 3
+      },
+      "x": 177,
+      "y": 864,
+      "w": 29,
+      "h": 29
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "AG",
+      "href": null,
+      "icon": null,
+      "x": 208,
+      "y": 865,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "New view",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-plus",
+        "vb": "0 0 24 24",
+        "d": "M5 12h14",
+        "nPaths": 2
+      },
+      "x": 1088,
+      "y": 19,
+      "w": 95,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Issues",
+      "href": "/agent-testing/views",
+      "icon": null,
+      "x": 261,
+      "y": 65,
+      "w": 57,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Projects",
+      "href": "/agent-testing/views?entity=project",
+      "icon": null,
+      "x": 324,
+      "y": 65,
+      "w": 67,
+      "h": 28
+    },
+    {
+      "tag": "input",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": null,
+      "x": 961,
+      "y": 68,
+      "w": 154,
+      "h": 22
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "",
+        "vb": "64 64 896 896",
+        "d": "M512 64c247.4 0 448 200.6 448 448S759.4 960 512 960 64 759.4 64 512 264.6 64 512",
+        "nPaths": 1
+      },
+      "x": 1119,
+      "y": 73,
+      "w": 12,
+      "h": 12
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Display options",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-settings-2",
+        "vb": "0 0 24 24",
+        "d": "M14 17H5",
+        "nPaths": 4
+      },
+      "x": 1151,
+      "y": 67,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Create private project view…",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-plus",
+        "vb": "0 0 24 24",
+        "d": "M5 12h14",
+        "nPaths": 2
+      },
+      "x": 285,
+      "y": 216,
+      "w": 866,
+      "h": 40
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Parity: Project portfolio",
+      "href": "/agent-testing/views/svparityvol0003",
+      "icon": null,
+      "x": 311,
+      "y": 336,
+      "w": 152,
+      "h": 22
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-plus",
+        "vb": "0 0 24 24",
+        "d": "M5 12h14",
+        "nPaths": 2
+      },
+      "x": 1098,
+      "y": 30,
+      "w": 27,
+      "h": 27
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-clock-3",
+        "vb": "0 0 24 24",
+        "d": "M12 6v6h4",
+        "nPaths": 2
+      },
+      "x": 1127,
+      "y": 30,
+      "w": 27,
+      "h": 27
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-panel-right-close",
+        "vb": "0 0 24 24",
+        "d": "M15 3v18",
+        "nPaths": 3
+      },
+      "x": 1156,
+      "y": 30,
+      "w": 27,
+      "h": 27
+    },
+    {
+      "tag": "div",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": null,
+      "x": 812,
+      "y": 781,
+      "w": 351,
+      "h": 54
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-chevrons-up-down acss-185s3ho",
+        "vb": "0 0 24 24",
+        "d": "m7 15 5 5 5-5",
+        "nPaths": 2
+      },
+      "x": 804,
+      "y": 839,
+      "w": 50,
+      "h": 27
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "lucide lucide-globe",
+        "vb": "0 0 24 24",
+        "d": "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20",
+        "nPaths": 3
+      },
+      "x": 856,
+      "y": 839,
+      "w": 27,
+      "h": 27
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "anticon acss-19br5qq",
+        "vb": "0 0 14 14",
+        "d": "M.743 3.773c-.818-.555-.422-1.834.567-1.828l11.496.074a1 1 0 01.837 1.538l-6.189",
+        "nPaths": 1
+      },
+      "x": 1143,
+      "y": 839,
+      "w": 27,
+      "h": 27
+    }
+  ],
+  "title": "Orvilo",
+  "url": "http://localhost:3010/agent-testing/views?entity=project"
+}

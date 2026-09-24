@@ -1,0 +1,1138 @@
+{
+  "items": [
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "BDI_Verifier Workspace Menu",
+      "title": null,
+      "text": "BD\nBDI_Verifier",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1xc5",
+        "vb": "0 0 13 9",
+        "d": "M10.1611 0.314094L5.99463 4.48054L1.82819 0.314094C1.4094 -0.104698 0.732886 -0.",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 16,
+      "w": 121,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Search workspace",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M7 2C9.76142 2 12 4.23858 12 7C12 8.11012 11.6375 9.13519 11.0254 9.96484L13.780",
+        "nPaths": 1
+      },
+      "x": 172,
+      "y": 16,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Create new issue",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M7.25 1C7.66414 1 7.99988 1.33589 8 1.75C8 2.16421 7.66421 2.5 7.25 2.5H4.75C3.5",
+        "nPaths": 2
+      },
+      "x": 204,
+      "y": 16,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "Inbox\n2\n7",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M11.0069 1.00879C12.0235 1.09224 12.8967 1.78967 13.1944 2.78027L14.8907 8.42871",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 60,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Inbox\n2\n7",
+      "href": "/bdiverifier/inbox",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M11.0069 1.00879C12.0235 1.09224 12.8967 1.78967 13.1944 2.78027L14.8907 8.42871",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 60,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "My issues",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M14.2458 10C14.6255 10 14.9393 10.2822 14.9889 10.6482L14.9958 10.75V12.2475C14.",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 89,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "My issues",
+      "href": "/bdiverifier/my-issues/assigned",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M14.2458 10C14.6255 10 14.9393 10.2822 14.9889 10.6482L14.9958 10.75V12.2475C14.",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 89,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "Reviews\n1\n7",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M12.5 10C13.8807 10 15 11.1193 15 12.5C15 13.8807 13.8807 15 12.5 15C11.1193 15 ",
+        "nPaths": 4
+      },
+      "x": 12,
+      "y": 118,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Reviews\n1\n7",
+      "href": "/bdiverifier/reviews",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M12.5 10C13.8807 10 15 11.1193 15 12.5C15 13.8807 13.8807 15 12.5 15C11.1193 15 ",
+        "nPaths": 4
+      },
+      "x": 12,
+      "y": 118,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "Agent",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M4.07132 3.8283C4.04394 3.81721 4.01406 3.81379 3.98488 3.8184C3.95566 3.82301 3",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 147,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Agent",
+      "href": "/bdiverifier/agent",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M4.07132 3.8283C4.04394 3.81721 4.01406 3.81379 3.98488 3.8184C3.95566 3.82301 3",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 147,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "Drafts\n2",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M13.4326 7.26855C13.7913 6.91034 14.3729 6.91004 14.7314 7.26855C15.09 7.62707 1",
+        "nPaths": 4
+      },
+      "x": 12,
+      "y": 176,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Drafts\n2",
+      "href": "/bdiverifier/drafts",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M13.4326 7.26855C13.7913 6.91034 14.3729 6.91004 14.7314 7.26855C15.09 7.62707 1",
+        "nPaths": 4
+      },
+      "x": 12,
+      "y": 176,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Workspace",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1so",
+        "vb": "0 0 16 16",
+        "d": "M7.00194 10.6239C6.66861 10.8183 6.25 10.5779 6.25 10.192V5.80802C6.25 5.42212 6",
+        "nPaths": 1
+      },
+      "x": 17,
+      "y": 221,
+      "w": 215,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "Projects",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-6jxa94 sx-t7dq",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 0
+      },
+      "x": 12,
+      "y": 251,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Projects",
+      "href": "/bdiverifier/projects/all",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-6jxa94 sx-t7dq",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 0
+      },
+      "x": 12,
+      "y": 251,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "Views",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M6.93213 2.21398C7.66484 1.90793 8.49512 1.93032 9.21389 2.28028L14.28 4.74739C1",
+        "nPaths": 2
+      },
+      "x": 12,
+      "y": 280,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Views",
+      "href": "/bdiverifier/views/issues",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M6.93213 2.21398C7.66484 1.90793 8.49512 1.93032 9.21389 2.28028L14.28 4.74739C1",
+        "nPaths": 2
+      },
+      "x": 12,
+      "y": 280,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": "Show more links",
+      "title": null,
+      "text": "More",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M3 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 ",
+        "nPaths": 1
+      },
+      "x": 12,
+      "y": 310,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Favorites",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1so",
+        "vb": "0 0 16 16",
+        "d": "M7.00194 10.6239C6.66861 10.8183 6.25 10.5779 6.25 10.192V5.80802C6.25 5.42212 6",
+        "nPaths": 1
+      },
+      "x": 17,
+      "y": 355,
+      "w": 189,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Create new folder for favorites",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M11.3982 8.00685L11.5 8C11.8797 8 12.1935 8.28215 12.2432 8.64823L12.25 8.75L12.",
+        "nPaths": 1
+      },
+      "x": 206,
+      "y": 357,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Your teams",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1so",
+        "vb": "0 0 16 16",
+        "d": "M7.00194 10.6239C6.66861 10.8183 6.25 10.5779 6.25 10.192V5.80802C6.25 5.42212 6",
+        "nPaths": 1
+      },
+      "x": 17,
+      "y": 433,
+      "w": 189,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Join a team",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M8.75 4C8.75 3.58579 8.41421 3.25 8 3.25C7.58579 3.25 7.25 3.58579 7.25 4V7.25H4",
+        "nPaths": 1
+      },
+      "x": 206,
+      "y": 435,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "li",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "orvilo\nHome\nTriage\nIssues\nProjects\nViews",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu color-",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 0
+      },
+      "x": 12,
+      "y": 463,
+      "w": 220,
+      "h": 174
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "orvilo",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu color-",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 0
+      },
+      "x": 12,
+      "y": 463,
+      "w": 218,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Team menu",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M3 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 ",
+        "nPaths": 1
+      },
+      "x": 206,
+      "y": 465,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Try",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1so",
+        "vb": "0 0 16 16",
+        "d": "M7.00194 10.6239C6.66861 10.8183 6.25 10.5779 6.25 10.192V5.80802C6.25 5.42212 6",
+        "nPaths": 1
+      },
+      "x": 17,
+      "y": 654,
+      "w": 215,
+      "h": 28
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "Initiatives",
+      "href": "/bdiverifier/settings/initiatives",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-6jxa",
+        "vb": "0 0 16 16",
+        "d": "M7.4145 8.3381C7.68162 7.8873 8.31838 7.8873 8.5855 8.3381L11.896 13.925C12.2589",
+        "nPaths": 2
+      },
+      "x": 12,
+      "y": 684,
+      "w": 220,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M2.96967 2.96967C3.26256 2.67678 3.73744 2.67678 4.03033 2.96967L8 6.939L11.9697",
+        "nPaths": 1
+      },
+      "x": 214,
+      "y": 693,
+      "w": 10,
+      "h": 10
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M2.96967 2.96967C3.26256 2.67678 3.73744 2.67678 4.03033 2.96967L8 6.939L11.9697",
+        "nPaths": 1
+      },
+      "x": 214,
+      "y": 723,
+      "w": 10,
+      "h": 10
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Open Help menu",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu ",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 0
+      },
+      "x": 10,
+      "y": 867,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Menu",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M4.25 2C2.45508 2 1 3.45508 1 5.25V10.75C1 12.5449 2.45508 14 4.25 14H11.75C13.5",
+        "nPaths": 2
+      },
+      "x": 253,
+      "y": 17,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": "switch",
+      "aria": "Remove from favorites",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M14.9441 6.05256C14.8798 5.88159 14.7646 5.73411 14.6136 5.6298C14.4626 5.52549 ",
+        "nPaths": 1
+      },
+      "x": 352,
+      "y": 17,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Issue view options",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M3 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 ",
+        "nPaths": 1
+      },
+      "x": 384,
+      "y": 17,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Add filter",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M14.25 3a.75.75 0 0 1 0 1.5H1.75a.75.75 0 0 1 0-1.5h12.5ZM4 8a.75.75 0 0 1 .75-.",
+        "nPaths": 1
+      },
+      "x": 1087,
+      "y": 61,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Display options",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M7 2.5C8.11933 2.5 9.06613 3.23584 9.38477 4.25H14.75C15.1642 4.25 15.5 4.58579 ",
+        "nPaths": 2
+      },
+      "x": 1121,
+      "y": 61,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Open view details",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M4.25 2C2.45508 2 1 3.45508 1 5.25V10.75C1 12.5449 2.45508 14 4.25 14H11.75C13.5",
+        "nPaths": 2
+      },
+      "x": 1155,
+      "y": 61,
+      "w": 28,
+      "h": 28
+    },
+    {
+      "tag": "div",
+      "role": "button",
+      "aria": "Collapse group",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1so6",
+        "vb": "0 0 16 16",
+        "d": "M7.00194 10.6239C6.66861 10.8183 6.25 10.5779 6.25 10.192V5.80802C6.25 5.42212 6",
+        "nPaths": 1
+      },
+      "x": 261,
+      "y": 104,
+      "w": 20,
+      "h": 20
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "62",
+      "href": null,
+      "icon": null,
+      "x": 378,
+      "y": 102,
+      "w": 17,
+      "h": 24
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Create new issue",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M8.75 4C8.75 3.58579 8.41421 3.25 8 3.25C7.58579 3.25 7.25 3.58579 7.25 4V7.25H4",
+        "nPaths": 1
+      },
+      "x": 1151,
+      "y": 102,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-24\nIn Progress\nPhase 5 — SC00–SC08 整改工作包（第三轮终审的定向修复，进行中）\n14/15\nBug\nclaude code\nACP Har",
+      "href": "/bdiverifier/issue/ORV-24/phase-5-sc00-sc08-整改工作包第三轮终审的定向修复进行中",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1g40",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 245,
+      "y": 134,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "input",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": null,
+      "x": 265,
+      "y": 150,
+      "w": 12,
+      "h": 12
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-97\nIn Review\n[SC08] 固定组合验收：真实环境端到端（BLOCKED）\n1\nclaude code\nACP Harness 退役 + CAID 工程化\nAJ",
+      "href": "/bdiverifier/issue/ORV-97/sc08-固定组合验收真实环境端到端blocked",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 178,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-23\nIn Review\nPhase 4 — 第三轮审查整改 SB01–SB13\n0/13\nBug\nclaude code\nACP Harness 退役 + CAID 工程",
+      "href": "/bdiverifier/issue/ORV-23/phase-4-第三轮审查整改-sb01-sb13",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1g40",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 245,
+      "y": 222,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "input",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": null,
+      "x": 265,
+      "y": 238,
+      "w": 12,
+      "h": 12
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-81\nIn Review\n[SB13] 新 journal 正确；已应用旧历史需条件处理\n1\nBug\nclaude code\nACP Harness 退役 + CAID 工",
+      "href": "/bdiverifier/issue/ORV-81/sb13-新-journal-正确已应用旧历史需条件处理",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 266,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-80\nIn Review\n[SB12] typecheckDiff envelope 有效，证据校验剩 P1\n1\nBug\nclaude code\nACP Harness 退",
+      "href": "/bdiverifier/issue/ORV-80/sb12-typecheckdiff-envelope-有效证据校验剩-p1",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 310,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-79\nIn Review\n[SB10] 取消/timeout 窄根因已修，intentKey 不是启动去重\n1\nBug\nclaude code\nACP Harness 退役",
+      "href": "/bdiverifier/issue/ORV-79/sb10-取消timeout-窄根因已修intentkey-不是启动去重",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 354,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-78\nIn Review\n[SB11] honest trace / 显式 slug 严格拒绝\n1\nBug\nclaude code\n#173\nACP Harness 退役 ",
+      "href": "/bdiverifier/issue/ORV-78/sb11-honest-trace-显式-slug-严格拒绝",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 398,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-77\nIn Review\n[SB08] repair 冻结了，但公开的重新规划路径缺失\n1\nBug\nclaude code\nACP Harness 退役 + CAID 工程",
+      "href": "/bdiverifier/issue/ORV-77/sb08-repair-冻结了但公开的重新规划路径缺失",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 442,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-76\nIn Review\n[SB09] 共享 gate 已生效，internal 豁免仍需当前结算权\n1\nBug\nclaude code\nACP Harness 退役 + ",
+      "href": "/bdiverifier/issue/ORV-76/sb09-共享-gate-已生效internal-豁免仍需当前结算权",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 486,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-75\nIn Review\n[SB07] 唯一 deadline 正确，但投影错误不能阻止 timeout\n1\nBug\nclaude code\nACP Harness 退役 ",
+      "href": "/bdiverifier/issue/ORV-75/sb07-唯一-deadline-正确但投影错误不能阻止-timeout",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 530,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-74\nIn Review\n[SB04] 网络结果三态修复（merge intent 释放）\n1\nBug\nclaude code\n#180\nACP Harness 退役 + ",
+      "href": "/bdiverifier/issue/ORV-74/sb04-网络结果三态修复merge-intent-释放",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 574,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-73\nIn Review\n[SB06] inbox 已接线，但调用身份与断尾恢复错误\n1\nBug\nclaude code\nACP Harness 退役 + CAID 工程化",
+      "href": "/bdiverifier/issue/ORV-73/sb06-inbox-已接线但调用身份与断尾恢复错误",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 618,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-72\nIn Review\n[SB03] 拒绝旧窗口，却仍广播成功处理\n1\nBug\nclaude code\nACP Harness 退役 + CAID 工程化\nAJ\nSep ",
+      "href": "/bdiverifier/issue/ORV-72/sb03-拒绝旧窗口却仍广播成功处理",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 662,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-71\nIn Review\n[SB01] 宿主没有真的验证 claimToken（worktree 认领）\n1\nBug\nclaude code\nACP Harness 退役 ",
+      "href": "/bdiverifier/issue/ORV-71/sb01-宿主没有真的验证-claimtokenworktree-认领",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 706,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-70\nIn Review\n[SB05] atomic rename 不是 fence CAS（push-fence 高水位倒退）\n1\nBug\nclaude code\nACP",
+      "href": "/bdiverifier/issue/ORV-70/sb05-atomic-rename-不是-fence-caspush-fence-高水位倒退",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 750,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-69\nIn Review\n[SB02] 审批 receipt 跨 scope 消费 / CAS 双授权（原两项 P0）\n1\nBug\nclaude code\n2 PRs\nAC",
+      "href": "/bdiverifier/issue/ORV-69/sb02-审批-receipt-跨-scope-消费-cas-双授权原两项-p0",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 794,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-22\nIn Review\nPhase 3 — 第二轮审查整改 SA01–SA09\n0/9\nBug\nclaude code\nACP Harness 退役 + CAID 工程化",
+      "href": "/bdiverifier/issue/ORV-22/phase-3-第二轮审查整改-sa01-sa09",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1g40",
+        "vb": "0 0 16 16",
+        "d": "",
+        "nPaths": 3
+      },
+      "x": 245,
+      "y": 838,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "input",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": null,
+      "x": 265,
+      "y": 854,
+      "w": 12,
+      "h": 12
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-67\nIn Review\n[SA07] quota 身份撤销与信任键收紧\n1\nBug\nclaude code\nACP Harness 退役 + CAID 工程化\nAJ\nSe",
+      "href": "/bdiverifier/issue/ORV-67/sa07-quota-身份撤销与信任键收紧",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 882,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "a",
+      "role": null,
+      "aria": null,
+      "title": null,
+      "text": "ORV-66\nIn Review\n[SA08] typecheckDiff 最长前缀归一化\n1\nBug\nclaude code\nACP Harness 退役 + CAID 工程化\n",
+      "href": "/bdiverifier/issue/ORV-66/sa08-typecheckdiff-最长前缀归一化",
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-19zyb68 sx-1khkorv sx-m5nenu sx-1fs",
+        "vb": "0 0 10 9",
+        "d": "M0 0h1v1c0 2.5 2.212 3.546 2.212 3.546L9.737 8.06c.568.306.094 1.186-.474.88l-6.",
+        "nPaths": 1
+      },
+      "x": 245,
+      "y": 926,
+      "w": 946,
+      "h": 44
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Agent",
+      "title": null,
+      "text": "Agent",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M4.07132 3.8283C4.04394 3.81721 4.01406 3.81379 3.98488 3.8184C3.95566 3.82301 3",
+        "nPaths": 1
+      },
+      "x": 1082,
+      "y": 869,
+      "w": 78,
+      "h": 28
+    },
+    {
+      "tag": "button",
+      "role": null,
+      "aria": "Chat history",
+      "title": null,
+      "text": "",
+      "href": null,
+      "icon": {
+        "cls": "sx-1fwcy2r sx-13jp3wb sx-13wgh6h sx-31pjnn sx-m5nenu sx-1fwc",
+        "vb": "0 0 16 16",
+        "d": "M2.64849 9.64645L4.44209 7.85355C4.7572 7.53857 4.53403 7 4.0884 7H3.04846C3.412",
+        "nPaths": 2
+      },
+      "x": 1162,
+      "y": 869,
+      "w": 28,
+      "h": 28
+    }
+  ],
+  "title": "All issues",
+  "url": "https://linear.app/bdiverifier/view/all-issues-3320169ce6ab"
+}

@@ -1,0 +1,150 @@
+[
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 210,
+    "y": 49,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 210,
+    "y": 78,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 210,
+    "y": 107,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 210,
+    "y": 136,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 210,
+    "y": 165,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "button",
+    "w": 236,
+    "h": 28,
+    "x": 4,
+    "y": 192,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "button",
+    "w": 236,
+    "h": 28,
+    "x": 4,
+    "y": 307,
+    "text": "More",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 208,
+    "y": 348,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-1nlc6jl",
+    "w": 29,
+    "h": 29,
+    "x": 8,
+    "y": 864,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "lobe-dropdown-menu-trigger acss-17zzxcx",
+    "w": 24,
+    "h": 24,
+    "x": 1159,
+    "y": 19,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "menu",
+    "w": 220,
+    "h": 209,
+    "x": 963,
+    "y": 49,
+    "text": "Edit view\nDuplicate view\nMove to\nCopy link\nExport as CSV\nDelete view",
+    "rows": [
+      {
+        "role": "menuitem",
+        "tag": "div",
+        "text": "Edit view",
+        "icon": "lucide lucide-square-pen lucide-pen-box lucide-edi",
+        "x": 967,
+        "y": 53
+      },
+      {
+        "role": "menuitem",
+        "tag": "div",
+        "text": "Duplicate view",
+        "icon": "lucide lucide-copy",
+        "x": 967,
+        "y": 85
+      },
+      {
+        "role": "menuitem",
+        "tag": "div",
+        "text": "Move to",
+        "icon": "lucide lucide-folder-input",
+        "x": 967,
+        "y": 117
+      },
+      {
+        "role": "menuitem",
+        "tag": "div",
+        "text": "Copy link",
+        "icon": "lucide lucide-link-2",
+        "x": 967,
+        "y": 149
+      },
+      {
+        "role": "menuitem",
+        "tag": "div",
+        "text": "Export as CSV",
+        "icon": "lucide lucide-download",
+        "x": 967,
+        "y": 181
+      },
+      {
+        "role": "menuitem",
+        "tag": "div",
+        "text": "Delete view",
+        "icon": null,
+        "x": 967,
+        "y": 222
+      }
+    ]
+  }
+]

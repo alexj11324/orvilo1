@@ -1,0 +1,256 @@
+[
+  {
+    "sel": "[role=dialog]",
+    "x": 0,
+    "y": 0,
+    "w": 1200,
+    "h": 901,
+    "text": "New view\nEntity\nTasks\nView name\nFilters\nAdd filter\nNo filters — matches all readable items\nDisplay\nList\nNo grouping\nDefault order\nSharing\nOnly me\nPreview updates as you edit\nCancel\nCreate view",
+    "rows": [
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Close",
+        "aria": "Close",
+        "checked": null,
+        "kbd": false,
+        "icon": "M18 6 6 18",
+        "x": 876,
+        "y": 202,
+        "w": 32,
+        "h": 32
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "Tasks",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 367,
+        "y": 250,
+        "w": 537,
+        "h": 24
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Add filter",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "M5 12h14",
+        "x": 376,
+        "y": 325,
+        "w": 91,
+        "h": 24
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "List",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 296,
+        "y": 416,
+        "w": 608,
+        "h": 24
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "No grouping",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 296,
+        "y": 448,
+        "w": 608,
+        "h": 24
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "Default order",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 296,
+        "y": 480,
+        "w": 608,
+        "h": 24
+      },
+      {
+        "role": "combobox",
+        "tag": "button",
+        "text": "Only me",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": "m6 9 6 6 6-6",
+        "x": 296,
+        "y": 544,
+        "w": 608,
+        "h": 24
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Cancel",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 721,
+        "y": 663,
+        "w": 73,
+        "h": 32
+      },
+      {
+        "role": null,
+        "tag": "button",
+        "text": "Create view",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 801,
+        "y": 663,
+        "w": 103,
+        "h": 32
+      }
+    ]
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 49,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 78,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 107,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 136,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 210,
+    "y": 165,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 4,
+    "y": 192,
+    "w": 236,
+    "h": 28,
+    "text": "",
+    "rows": [
+      {
+        "role": null,
+        "tag": "div",
+        "text": "",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 44,
+        "y": 206,
+        "w": 192,
+        "h": 0
+      }
+    ]
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 4,
+    "y": 307,
+    "w": 236,
+    "h": 28,
+    "text": "More",
+    "rows": [
+      {
+        "role": null,
+        "tag": "div",
+        "text": "More",
+        "aria": null,
+        "checked": null,
+        "kbd": false,
+        "icon": null,
+        "x": 44,
+        "y": 310,
+        "w": 192,
+        "h": 21
+      }
+    ]
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 208,
+    "y": 348,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 200,
+    "y": 533,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 200,
+    "y": 720,
+    "w": 24,
+    "h": 24,
+    "text": "",
+    "rows": []
+  },
+  {
+    "sel": "[class*=dropdown]",
+    "x": 8,
+    "y": 864,
+    "w": 29,
+    "h": 29,
+    "text": "",
+    "rows": []
+  }
+]

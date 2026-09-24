@@ -1,0 +1,126 @@
+[
+  {
+    "sel": "[role=dialog]",
+    "x": 970,
+    "y": 139,
+    "w": 200,
+    "h": 166,
+    "text": "Showing all items\nEdit…\nCopy link\nExport issues as CSV…\nDelete",
+    "rows": [
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Edit…",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "M10.1805 3.34195L4.14166 9.416C5.32948 9.77021 6.2",
+        "x": 971,
+        "y": 146,
+        "w": 198,
+        "h": 32
+      },
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Copy link",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "M9.30558 10.206C9.57224 10.4726 9.59447 10.8912 9.",
+        "x": 971,
+        "y": 178,
+        "w": 198,
+        "h": 32
+      },
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Export issues as CSV…",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "M7 2a1 1 0 0 1 2 0v5h2.5c.444 0 .668.568.353.9l-3.",
+        "x": 971,
+        "y": 222,
+        "w": 198,
+        "h": 32
+      },
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Delete",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "m2 3 1.652 9.911A2.5 2.5 0 0 0 6.118 15h3.764a2.5 ",
+        "x": 971,
+        "y": 266,
+        "w": 198,
+        "h": 32
+      }
+    ]
+  },
+  {
+    "sel": "[role=listbox]",
+    "x": 971,
+    "y": 140,
+    "w": 198,
+    "h": 164,
+    "text": "Edit…\nCopy link\nExport issues as CSV…\nDelete",
+    "rows": [
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Edit…",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "M10.1805 3.34195L4.14166 9.416C5.32948 9.77021 6.2",
+        "x": 971,
+        "y": 146,
+        "w": 198,
+        "h": 32
+      },
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Copy link",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "M9.30558 10.206C9.57224 10.4726 9.59447 10.8912 9.",
+        "x": 971,
+        "y": 178,
+        "w": 198,
+        "h": 32
+      },
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Export issues as CSV…",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "M7 2a1 1 0 0 1 2 0v5h2.5c.444 0 .668.568.353.9l-3.",
+        "x": 971,
+        "y": 222,
+        "w": 198,
+        "h": 32
+      },
+      {
+        "role": "option",
+        "tag": "li",
+        "text": "Delete",
+        "aria": null,
+        "checked": "false",
+        "kbd": false,
+        "icon": "m2 3 1.652 9.911A2.5 2.5 0 0 0 6.118 15h3.764a2.5 ",
+        "x": 971,
+        "y": 266,
+        "w": 198,
+        "h": 32
+      }
+    ]
+  }
+]

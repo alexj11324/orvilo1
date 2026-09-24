@@ -54,6 +54,15 @@ Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-ho
 
 Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
+### Browser CDP for Linear parity
+
+Use Brave with a copy of the currently used Brave profile when comparing Orvilo with Linear. Keep the original Brave process and profile untouched; a fresh Chrome profile does not carry the reference session.
+
+- Find the active profile under `~/Library/Application Support/BraveSoftware/Brave-Browser` (check `profile.last_used` in `Local State`). Copy the user-data directory to a private temporary directory outside the repository with mode `700`. Exclude `Singleton*` locks, `Crashpad/`, and `BrowserMetrics*`; never commit or upload the copy, which contains session data.
+- Start a separate Brave instance with `--user-data-dir=<copy> --profile-directory=<active-profile> --remote-debugging-address=127.0.0.1 --remote-debugging-port=<port> --no-first-run`. Do not restart the original Brave instance or point CDP at its live profile.
+- Verify the copied instance by reading `http://127.0.0.1:<port>/json/version` and `/json/list`, then navigate to the Linear workspace and confirm it is authenticated. Cookies in the copy alone do not prove login. Give agents the loopback endpoint only after these checks pass.
+- Run the Orvilo candidate against the intended local revision and populated fixture. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity.
+
 ### Git Workflow
 
 - **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md); deploy targets: [docs/environments.md](./docs/environments.md)

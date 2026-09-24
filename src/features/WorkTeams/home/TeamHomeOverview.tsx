@@ -13,7 +13,6 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -22,6 +21,7 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
+import { teamTaskDetailPath } from '../teamTaskDetailPath';
 import type { TeamHomeMember } from './teamHomeMembersModel';
 import { TEAM_HOME_RECENT_LIMIT, teamRecentIssuesQuery } from './teamHomeSection';
 
@@ -354,7 +354,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                     <WorkspaceLink
                       className={styles.recentLink}
                       key={task.id}
-                      to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+                      to={teamTaskDetailPath(task)}
                     >
                       <Icon
                         color={statusVisual.color}

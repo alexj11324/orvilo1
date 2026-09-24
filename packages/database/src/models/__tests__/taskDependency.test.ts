@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDependencies, tasks, users, workspaces } from '../../schemas';
+import { taskDependencies, taskDomainEvents, tasks, users, workspaces } from '../../schemas';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
 
@@ -130,6 +130,89 @@ describe('task prerequisite invariants', () => {
     expect(await model.getDependencies(b.id)).toHaveLength(1);
   });
 
+  it('keeps a newly added related issue from blocking an unfinished task', async () => {
+    const upstream = await create('Related issue');
+    const task = await create('Current issue');
+    await model.addDependency(task.id, upstream.id, 'relates');
+    expect(await model.getDependencies(task.id)).toMatchObject([
+      { dependsOnId: upstream.id, type: 'relates' },
+    ]);
+    await expect(model.areAllDependenciesCompleted(task.id)).resolves.toBe(true);
+    await expect(model.reserveRun(task.id, 'related-run')).resolves.toBe(true);
+  });
+
+  it('refuses to turn an existing blocker into a related issue', async () => {
+    const upstream = await create('Unfinished prerequisite');
+    const task = await create('Blocked issue');
+    await model.addDependency(task.id, upstream.id, 'blocks');
+    await expect(model.addDependency(task.id, upstream.id, 'relates')).rejects.toThrow(
+      'blocking relationship',
+    );
+    expect(await model.getDependencies(task.id)).toMatchObject([
+      { dependsOnId: upstream.id, type: 'blocks' },
+    ]);
+    await expect(model.areAllDependenciesCompleted(task.id)).resolves.toBe(false);
+    await expect(model.reserveRun(task.id, 'blocked-run')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+  });
+
+  it('shows one ordinary relation from both issues and removes it from either side', async () => {
+    const a = await create('A');
+    const b = await create('B');
+    const unrelated = await create('Unrelated');
+    await model.addDependency(a.id, b.id, 'relates');
+    const [edge] = await model.getIssueRelations(a.id);
+    await expect(model.removeDependencyByRelationId(unrelated.id, edge.id)).rejects.toThrow(
+      'Relation not found',
+    );
+    expect(await model.getIssueRelations(a.id)).toMatchObject([
+      { dependsOnId: b.id, type: 'relates' },
+    ]);
+    expect(await model.getIssueRelations(b.id)).toMatchObject([
+      { dependsOnId: a.id, type: 'relates' },
+    ]);
+    await model.addDependency(b.id, a.id, 'relates');
+    expect(
+      (await model.getDependencies(a.id)).filter((dep) => dep.type === 'relates').length +
+        (await model.getDependencies(b.id)).filter((dep) => dep.type === 'relates').length,
+    ).toBe(1);
+    await model.removeDependency(b.id, a.id, {}, 'relates');
+    expect(await model.getIssueRelations(a.id)).toEqual([]);
+    expect(await model.getIssueRelations(b.id)).toEqual([]);
+  });
+
+  it('removes an ordinary relation without deleting a reverse blocking dependency', async () => {
+    const a = await create('A');
+    const b = await create('B');
+    await model.addDependency(a.id, b.id, 'relates');
+    await model.addDependency(b.id, a.id, 'blocks');
+    await model.removeDependency(b.id, a.id, {}, 'relates');
+    expect(await model.getDependencies(b.id)).toMatchObject([
+      { dependsOnId: a.id, type: 'blocks' },
+    ]);
+    await expect(model.areAllDependenciesCompleted(b.id)).resolves.toBe(false);
+  });
+
+  it('anchors reverse-side removal to the relation source for sync events', async () => {
+    const workspaceId = 'related-sync-source-workspace';
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Related sync source',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    const scoped = new TaskModel(db, userId, workspaceId);
+    const a = await scoped.create({ instruction: 'A' });
+    const b = await scoped.create({ instruction: 'B' });
+    await scoped.addDependency(a.id, b.id, 'relates', { source: 'user' });
+    await scoped.removeDependency(b.id, a.id, { source: 'user' }, 'relates');
+    const events = (await db.select().from(taskDomainEvents)).filter(
+      (event) => event.type === 'task.dependency.changed',
+    );
+    expect(events.map((event) => event.taskId)).toEqual([a.id, a.id]);
+  });
+
   it('reblocks on reopen or trash and does not erase a blocker through deletion', async () => {
     const a = await create('A');
     const b = await create('B');
@@ -201,6 +284,30 @@ describe('task prerequisite invariants', () => {
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
     await member.removeDependency(dependent.id, upstream.id);
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
+  });
+
+  it('keeps an outgoing related placeholder when its target becomes private', async () => {
+    const workspaceId = 'related-private-target-workspace';
+    await db.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Related visibility',
+      slug: workspaceId,
+      primaryOwnerId: userId,
+    });
+    const owner = new TaskModel(db, userId, workspaceId);
+    const member = new TaskModel(db, otherUserId, workspaceId);
+    const current = await owner.create({ instruction: 'Visible issue' });
+    const target = await owner.create({ instruction: 'Later private issue' });
+    await owner.addDependency(current.id, target.id, 'relates');
+    await owner.updateVisibility(target.id, 'private');
+    expect(await member.findById(target.id)).toBeNull();
+    expect(await member.getIssueRelations(current.id)).toMatchObject([
+      { dependsOnId: target.id, type: 'relates' },
+    ]);
+    expect(await member.getIssueRelations(target.id)).toEqual([]);
+    const [relation] = await member.getIssueRelations(current.id);
+    await member.removeDependencyByRelationId(current.id, relation.id);
+    expect(await owner.getDependencies(current.id)).toEqual([]);
   });
 });
 

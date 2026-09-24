@@ -293,8 +293,11 @@ class TaskService {
     type: 'blocks' | 'relates' = 'blocks',
   ) => lambdaClient.task.addDependency.mutate({ dependsOnId, taskId, type });
 
-  removeDependency = async (taskId: string, dependsOnId: string) =>
-    lambdaClient.task.removeDependency.mutate({ dependsOnId, taskId });
+  removeDependency = async (taskId: string, dependsOnId: string, type?: 'blocks' | 'relates') =>
+    lambdaClient.task.removeDependency.mutate({ dependsOnId, taskId, type });
+
+  removeIssueRelation = async (taskId: string, relationId: string) =>
+    lambdaClient.task.removeDependency.mutate({ relationId, taskId });
 
   reorderSubtasks = async (id: string, order: string[]) =>
     lambdaClient.task.reorderSubtasks.mutate({ id, order });

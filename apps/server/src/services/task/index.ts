@@ -1320,7 +1320,7 @@ export class TaskService {
       taskLabels,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
-      this.taskModel.getDependencies(task.id),
+      this.taskModel.getIssueRelations(task.id),
       this.taskTopicModel.findWithHandoff(task.id, TASK_DETAIL_DIRECT_TOPIC_LIMIT).catch(() => []),
       this.taskModel.getComments(task.id).catch(() => []),
       this.taskModel.getActivities(task.id, TASK_DETAIL_ACTIVITY_LIMIT).catch(() => []),
@@ -1728,7 +1728,10 @@ export class TaskService {
       dependencies: dependencies.map((d) => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
-          dependsOn: info?.identifier ?? 'Unavailable prerequisite',
+          dependsOn:
+            info?.identifier ??
+            (d.type === 'relates' ? 'Unavailable related issue' : 'Unavailable prerequisite'),
+          ...(d.id ? { relationId: d.id } : {}),
           ...(info ? { id: d.dependsOnId } : {}),
           name: info?.name,
           status: info?.status ?? null,

@@ -2903,6 +2903,26 @@ export class TaskModel {
       (dep) => dep.dependsOnId === dependsOnId,
     );
     if (existing?.type === type) return;
+    if (existing?.type === 'blocks' && type === 'relates') {
+      throw new TaskDependencyError('A blocking relationship already exists for this issue pair.');
+    }
+    if (type === 'relates') {
+      // An ordinary relation is symmetric even though the legacy table stores
+      // directed rows. Reuse either existing orientation instead of creating a
+      // second row with the same Linear relation key.
+      const [reverse] = await this.db
+        .select({ type: taskDependencies.type })
+        .from(taskDependencies)
+        .where(
+          and(
+            eq(taskDependencies.taskId, dependsOnId),
+            eq(taskDependencies.dependsOnId, taskId),
+            this.depsOwnership(),
+          ),
+        )
+        .limit(1);
+      if (reverse?.type === 'relates') return;
+    }
     if (type === 'blocks') {
       // UNION (not UNION ALL) terminates even on a corrupt legacy graph. The
       // graph walk is scope-wide, including hidden intermediate nodes, but its
@@ -2990,10 +3010,11 @@ export class TaskModel {
     taskId: string,
     dependsOnId: string,
     mutation: TaskMutationContext = {},
+    type?: 'blocks' | 'relates',
   ): Promise<void> {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
-        model.removeDependency(taskId, dependsOnId, mutation),
+        model.removeDependency(taskId, dependsOnId, mutation, type),
       );
     }
     if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
@@ -3001,13 +3022,47 @@ export class TaskModel {
       .delete(taskDependencies)
       .where(
         and(
-          eq(taskDependencies.taskId, taskId),
-          eq(taskDependencies.dependsOnId, dependsOnId),
+          type === 'relates'
+            ? or(
+                and(
+                  eq(taskDependencies.taskId, taskId),
+                  eq(taskDependencies.dependsOnId, dependsOnId),
+                ),
+                and(
+                  eq(taskDependencies.taskId, dependsOnId),
+                  eq(taskDependencies.dependsOnId, taskId),
+                ),
+              )
+            : and(
+                eq(taskDependencies.taskId, taskId),
+                eq(taskDependencies.dependsOnId, dependsOnId),
+              ),
+          type ? eq(taskDependencies.type, type) : undefined,
           this.depsOwnership(),
         ),
       )
-      .returning({ taskId: taskDependencies.taskId, type: taskDependencies.type });
+      .returning({
+        dependsOnId: taskDependencies.dependsOnId,
+        taskId: taskDependencies.taskId,
+        type: taskDependencies.type,
+      });
     if (deleted.length === 0) return;
+
+    const syncSourceId =
+      type === 'relates' && this.workspaceId
+        ? (
+            await new LinearSyncModel(this.db, this.workspaceId).findExternalRelationByLocalKey(
+              relationKey('relates', taskId, dependsOnId),
+            )
+          )?.localSourceTaskId
+        : null;
+    const relationSourceId =
+      type === 'relates'
+        ? (deleted.find((row) => row.taskId === syncSourceId)?.taskId ??
+          deleted[0]?.taskId ??
+          taskId)
+        : taskId;
+    const relationTargetId = relationSourceId === taskId ? dependsOnId : taskId;
 
     const [updated] = await this.db
       .update(tasks)
@@ -3016,7 +3071,7 @@ export class TaskModel {
         requirementRevision: sql`${tasks.requirementRevision} + 1`,
         updatedAt: new Date(),
       })
-      .where(and(eq(tasks.id, taskId), this.ownership()))
+      .where(and(eq(tasks.id, relationSourceId), this.ownership()))
       .returning();
     if (!updated) throw new TaskDependencyError('Task not found.');
     if (this.workspaceId && !mutation.suppressDomainEvent) {
@@ -3026,7 +3081,7 @@ export class TaskModel {
         eventType: 'task.dependency.changed',
         idempotencyKey:
           mutation.idempotencyKey ??
-          `task:${updated.id}:revision:${updated.domainRevision}:dependency:remove:${dependsOnId}`,
+          `task:${updated.id}:revision:${updated.domainRevision}:dependency:remove:${relationTargetId}`,
         source: mutation.source ?? 'system',
         outboxPayload: {
           action: 'remove',
@@ -3035,10 +3090,10 @@ export class TaskModel {
             kind: deleted[0]?.type === 'relates' ? 'relates' : 'blocks',
             localRelationKey:
               deleted[0]?.type === 'relates'
-                ? relationKey('relates', taskId, dependsOnId)
+                ? relationKey('relates', relationSourceId, relationTargetId)
                 : relationKey('blocks', dependsOnId, taskId),
-            sourceTaskId: deleted[0]?.type === 'relates' ? taskId : dependsOnId,
-            targetTaskId: deleted[0]?.type === 'relates' ? dependsOnId : taskId,
+            sourceTaskId: deleted[0]?.type === 'relates' ? relationSourceId : dependsOnId,
+            targetTaskId: deleted[0]?.type === 'relates' ? relationTargetId : taskId,
           },
         } satisfies LinearExternalRelationOutboxPayload,
         suppressLinearOutbox: mutation.suppressLinearOutbox,
@@ -3047,12 +3102,79 @@ export class TaskModel {
     }
   }
 
+  /** Remove one visible relation by its opaque row ID, including its reverse view. */
+  async removeDependencyByRelationId(
+    taskId: string,
+    relationId: string,
+    mutation: TaskMutationContext = {},
+  ): Promise<void> {
+    if (!this.dependencyLockHeld) {
+      return this.withDependencyLock((model) =>
+        model.removeDependencyByRelationId(taskId, relationId, mutation),
+      );
+    }
+    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
+    const [relation] = await this.db
+      .select()
+      .from(taskDependencies)
+      .where(and(eq(taskDependencies.id, relationId), this.depsOwnership()))
+      .limit(1);
+    if (
+      !relation ||
+      (relation.taskId !== taskId &&
+        !(relation.type === 'relates' && relation.dependsOnId === taskId))
+    ) {
+      throw new TaskDependencyError('Relation not found.');
+    }
+    const peerId = relation.taskId === taskId ? relation.dependsOnId : relation.taskId;
+    await this.removeDependency(
+      taskId,
+      peerId,
+      mutation,
+      relation.type === 'relates' ? 'relates' : 'blocks',
+    );
+  }
+
   async getDependencies(taskId: string) {
     if (!(await this.findById(taskId))) return [];
     return this.db
       .select()
       .from(taskDependencies)
       .where(and(eq(taskDependencies.taskId, taskId), this.depsOwnership()));
+  }
+
+  /** The issue rail adds symmetric ordinary relations to outgoing blockers. */
+  async getIssueRelations(taskId: string) {
+    if (!(await this.findById(taskId))) return [];
+    const [outgoing, incoming] = await Promise.all([
+      this.getDependencies(taskId),
+      this.db
+        .select()
+        .from(taskDependencies)
+        .where(
+          and(
+            eq(taskDependencies.dependsOnId, taskId),
+            eq(taskDependencies.type, 'relates'),
+            this.depsOwnership(),
+          ),
+        ),
+    ]);
+    const readable = new Set(
+      (await this.findByIds(incoming.map((row) => row.taskId))).map((row) => row.id),
+    );
+    const relatedIds = new Set(
+      outgoing.filter((row) => row.type === 'relates').map((row) => row.dependsOnId),
+    );
+    return [
+      ...outgoing,
+      ...incoming
+        .filter((row) => {
+          if (!readable.has(row.taskId) || relatedIds.has(row.taskId)) return false;
+          relatedIds.add(row.taskId);
+          return true;
+        })
+        .map((row) => ({ ...row, dependsOnId: row.taskId, taskId })),
+    ];
   }
 
   async getDependenciesByTaskIds(taskIds: string[]) {

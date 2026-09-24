@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   allowed: true,
   navigate: vi.fn(),
   removeDependency: vi.fn(),
+  removeIssueRelation: vi.fn(),
   state: {} as TaskStore,
 }));
 
@@ -36,6 +37,7 @@ const setTask = (dependencies: TaskDetailData['dependencies'] = [], id = 'T-4') 
     activeTaskId: id,
     addDependency: mocks.addDependency,
     removeDependency: mocks.removeDependency,
+    removeIssueRelation: mocks.removeIssueRelation,
     taskDetailMap: { [id]: { dependencies, identifier: id, status: 'backlog' } },
   } as unknown as TaskStore;
 };
@@ -46,18 +48,19 @@ beforeEach(() => {
   mocks.allowed = true;
   mocks.addDependency.mockResolvedValue(undefined);
   mocks.removeDependency.mockResolvedValue(undefined);
+  mocks.removeIssueRelation.mockResolvedValue(undefined);
   setTask();
 });
 afterEach(cleanup);
 
 describe('TaskPrerequisites', () => {
-  it('submits a trimmed prerequisite identifier and resets the editor', async () => {
+  it('submits a trimmed related issue identifier without creating a blocker', async () => {
     render(<TaskPrerequisites />);
     expect(screen.getByRole('status').textContent).toBe(key('empty'));
     const input = screen.getByRole('textbox', { name: key('input') });
     fireEvent.change(input, { target: { value: '  T-1  ' } });
     fireEvent.submit(input.closest('form')!);
-    await waitFor(() => expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-1', 'blocks'));
+    await waitFor(() => expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-1', 'relates'));
     await waitFor(() => expect((input as HTMLInputElement).value).toBe(''));
   });
 
@@ -72,6 +75,8 @@ describe('TaskPrerequisites', () => {
     // The Related rail lists every edge — a relates row is a link, not a
     // blocker, so it renders but never counts toward the blocked hint.
     expect(screen.getByText('T-3')).toBeTruthy();
+    expect(screen.getAllByText(key('blockedBy'))).toHaveLength(2);
+    expect(screen.getByText(key('related'))).toBeTruthy();
     setTask([
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
       { dependsOn: 'T-2', status: 'completed', type: 'blocks' },
@@ -106,8 +111,40 @@ describe('TaskPrerequisites', () => {
     // then walk up to the (disabled) navigation button.
     const unavailableText = screen.getByText(new RegExp(key('unavailable')));
     expect(unavailableText.closest('button')?.disabled).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: key('remove') }));
-    await waitFor(() => expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_hidden'));
+    fireEvent.click(screen.getByRole('button', { name: key('removeBlocker') }));
+    await waitFor(() =>
+      expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_hidden', 'blocks'),
+    );
+  });
+
+  it('removes a regular relation without requesting deletion of a blocker', async () => {
+    setTask([{ dependsOn: 'T-2', id: 'task_related', status: 'backlog', type: 'relates' }]);
+    render(<TaskPrerequisites />);
+    fireEvent.click(screen.getByRole('button', { name: key('removeRelated') }));
+    await waitFor(() =>
+      expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_related', 'relates'),
+    );
+  });
+
+  it('names blocking and ordinary removal separately for the same issue', () => {
+    setTask([
+      { dependsOn: 'T-1', relationId: 'edge-block', status: 'backlog', type: 'blocks' },
+      { dependsOn: 'T-1', relationId: 'edge-related', status: 'backlog', type: 'relates' },
+    ]);
+    render(<TaskPrerequisites />);
+    expect(screen.getByRole('button', { name: key('removeBlocker') })).toBeTruthy();
+    expect(screen.getByRole('button', { name: key('removeRelated') })).toBeTruthy();
+  });
+
+  it('unlinks an unreadable related issue using only the opaque relation id', async () => {
+    const relationId = '5e3d328d-6c4a-46af-88b7-a492268839e1';
+    setTask([
+      { dependsOn: 'Unavailable related issue', relationId, status: null, type: 'relates' },
+    ]);
+    render(<TaskPrerequisites />);
+    fireEvent.click(screen.getByRole('button', { name: key('removeRelated') }));
+    await waitFor(() => expect(mocks.removeIssueRelation).toHaveBeenCalledWith('T-4', relationId));
+    expect(mocks.removeDependency).not.toHaveBeenCalled();
   });
 
   it('renders localized mutation errors without dropping the input', async () => {
@@ -120,12 +157,26 @@ describe('TaskPrerequisites', () => {
     expect((input as HTMLInputElement).value).toBe('T-1');
   });
 
+  it('explains an existing blocking relation without clearing the proposed link', async () => {
+    mocks.addDependency.mockRejectedValue(
+      new Error('A blocking relationship already exists for this issue pair.'),
+    );
+    render(<TaskPrerequisites />);
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'T-1' } });
+    fireEvent.submit(input.closest('form')!);
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(key('relationConflict')),
+    );
+    expect((input as HTMLInputElement).value).toBe('T-1');
+  });
+
   it('does not offer mutations to read-only users', () => {
     mocks.allowed = false;
     setTask([{ dependsOn: 'T-1', status: 'backlog', type: 'blocks' }]);
     render(<TaskPrerequisites />);
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.queryByRole('button', { name: key('remove') })).toBeNull();
+    expect(screen.queryByRole('button', { name: key('removeBlocker') })).toBeNull();
     expect(screen.getByText('Read only')).toBeTruthy();
   });
 

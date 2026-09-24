@@ -1533,17 +1533,46 @@ export const taskRouter = router({
     }),
 
   removeDependency: taskProcedureWrite
-    .input(z.object({ dependsOnId: z.string(), taskId: z.string() }))
+    .input(
+      z
+        .object({
+          dependsOnId: z.string().optional(),
+          relationId: z.uuid().optional(),
+          taskId: z.string(),
+          type: z.enum(['blocks', 'relates']).optional(),
+        })
+        .refine((input) => Boolean(input.dependsOnId) !== Boolean(input.relationId), {
+          message: 'Provide either a relation ID or a task ID.',
+        }),
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
-        // A known raw edge target may have become private/trashed. Authorize
-        // the dependent, not the upstream, so its owner can remove that blocker.
-        const depId = input.dependsOnId.startsWith('task_')
-          ? input.dependsOnId
-          : (await resolveOrThrow(model, input.dependsOnId)).id;
-        await model.removeDependency(task.id, depId, { source: 'user' });
+        if (input.relationId) {
+          await model.removeDependencyByRelationId(task.id, input.relationId, { source: 'user' });
+          return { message: 'Dependency removed', success: true };
+        }
+        if (!input.dependsOnId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Task ID is required' });
+        }
+        // Legacy task IDs do not all begin with task_. Resolve both an ID and
+        // an issue identifier; an inaccessible target may still be unlinked
+        // through a relation owned by this readable task.
+        const matches = await model.resolveMany([input.dependsOnId]);
+        const depId =
+          (matches.find((row) => row.id === input.dependsOnId) ?? matches[0])?.id ??
+          input.dependsOnId;
+        if (
+          matches.length === 0 &&
+          !(await model.getIssueRelations(task.id)).some(
+            (relation) =>
+              relation.dependsOnId === depId && (!input.type || relation.type === input.type),
+          )
+        ) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Relation not found' });
+        }
+        await model.removeDependency(task.id, depId, { source: 'user' }, input.type);
         return { message: 'Dependency removed', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;

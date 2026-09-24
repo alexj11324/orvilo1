@@ -270,12 +270,14 @@ const MyWorkPage = memo(() => {
             mode,
             noProject,
             ordering: display.ordering,
+            showTriage: display.showTriage,
           })
         : null,
     [
       builderFilter,
       delegated,
       display.ordering,
+      display.showTriage,
       hasCustomFilters,
       layout,
       mode,
@@ -297,20 +299,31 @@ const MyWorkPage = memo(() => {
       layout,
       noProject,
       delegated,
+      display.showTriage,
       serverGroupBy,
       composedQuery ? stableStringify(composedQuery) : '',
     ],
-    [workspaceId, mode, layout, noProject, delegated, serverGroupBy, composedQuery],
+    [
+      workspaceId,
+      mode,
+      layout,
+      noProject,
+      delegated,
+      display.showTriage,
+      serverGroupBy,
+      composedQuery,
+    ],
   );
   const { data, error, isLoading } = useClientDataSWR(swrKey, () =>
     composedQuery
-      ? workAttentionService.query({ query: composedQuery })
+      ? workAttentionService.query({ query: composedQuery, showTriage: display.showTriage })
       : workAttentionService.myWork({
           delegated,
           groupBy: serverGroupBy,
           layout,
           mode,
           noProject,
+          showTriage: display.showTriage,
         }),
   );
   const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(data?.data);
@@ -335,6 +348,7 @@ const MyWorkPage = memo(() => {
     resetLoadMoreError();
   }, [
     delegated,
+    display.showTriage,
     layout,
     mode,
     noProject,
@@ -368,6 +382,7 @@ const MyWorkPage = memo(() => {
             groupKey: input.groupKey,
             query: composedQuery,
             queryHash,
+            showTriage: display.showTriage,
           })
         : workAttentionService.myWork({
             afterId: input.afterId,
@@ -378,8 +393,18 @@ const MyWorkPage = memo(() => {
             mode,
             noProject,
             queryHash,
+            showTriage: display.showTriage,
           }),
-    [composedQuery, delegated, layout, mode, noProject, queryHash, serverGroupBy],
+    [
+      composedQuery,
+      delegated,
+      display.showTriage,
+      layout,
+      mode,
+      noProject,
+      queryHash,
+      serverGroupBy,
+    ],
   );
 
   const loadMoreGroup = useCallback(
@@ -904,6 +929,7 @@ const MyWorkPage = memo(() => {
       mode,
       noProject,
       ordering: display.ordering,
+      showTriage: display.showTriage,
     });
     if (!query) return;
     try {
@@ -924,6 +950,7 @@ const MyWorkPage = memo(() => {
     canBoard,
     delegated,
     display.ordering,
+    display.showTriage,
     layout,
     mode,
     navigate,

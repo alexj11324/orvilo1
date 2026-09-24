@@ -2,6 +2,7 @@ import {
   ACTION_SOURCE_KINDS,
   applyDelegatedFilter,
   applyNoProjectFilter,
+  applyTriageViewDefault,
   type MyWorkMode,
   type TaskStatus,
   type TaskWorkflowCategory,
@@ -36,7 +37,7 @@ import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TeamModel } from '@/database/models/team';
-import { resolveWorkflowMove } from '@/database/models/workflowMove';
+import { resolveTriageOutcome, resolveWorkflowMove } from '@/database/models/workflowMove';
 import {
   applyWorkQueryLayout,
   myWorkQueryForMode,
@@ -319,16 +320,26 @@ export const workAttentionRouter = router({
         mode: z.enum(['activity', 'assigned', 'created', 'delegated', 'review', 'subscribed']),
         noProject: z.boolean().optional(),
         queryHash: z.string().min(1).optional(),
+        /**
+         * "Show triage issues" display option. Linear excludes triage-queue
+         * issues from views by default, so absent/false hides `untriaged`
+         * rows; the exclusion is NULL-inclusive so personal and legacy rows
+         * (NULL `triageStatus`) are never dropped.
+         */
+        showTriage: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       try {
         const query = applyNoProjectFilter(
           applyDelegatedFilter(
-            applyWorkQueryLayout(
-              myWorkQueryForMode(input.mode as MyWorkMode),
-              input.layout,
-              input.groupBy,
+            applyTriageViewDefault(
+              applyWorkQueryLayout(
+                myWorkQueryForMode(input.mode as MyWorkMode),
+                input.layout,
+                input.groupBy,
+              ),
+              input.showTriage,
             ),
             Boolean(input.delegated),
           ),
@@ -417,6 +428,12 @@ export const workAttentionRouter = router({
         limit: z.number().min(1).max(100).default(50),
         query: workQuerySchema,
         queryHash: z.string().min(1).optional(),
+        /**
+         * "Show triage issues" display option — callers carrying one (My
+         * Issues' composed feed) pass it through so the view default honors
+         * the toggle instead of re-excluding what the user opted into.
+         */
+        showTriage: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -434,7 +451,9 @@ export const workAttentionRouter = router({
           afterId: input.afterId,
           groupKey: input.groupKey,
           limit: input.limit,
-          query: input.query,
+          // Linear: triage-queue issues are excluded from every view unless
+          // the view opts in — a triage predicate in the query is that opt-in.
+          query: applyTriageViewDefault(input.query, input.showTriage),
           queryHash: input.queryHash,
         });
         return { data: result, success: true };
@@ -457,7 +476,9 @@ export const workAttentionRouter = router({
             success: true,
           };
         }
-        const result = await ctx.workQueryModel.countTasks({ query: input.query });
+        const result = await ctx.workQueryModel.countTasks({
+          query: applyTriageViewDefault(input.query),
+        });
         return { data: result, success: true };
       } catch (error) {
         return mapQueryError(error);
@@ -475,7 +496,7 @@ export const workAttentionRouter = router({
       try {
         const result = await ctx.workQueryModel.facetTasks({
           field: input.field,
-          query: input.query,
+          query: applyTriageViewDefault(input.query),
         });
         return { data: result, success: true };
       } catch (error) {
@@ -885,11 +906,21 @@ export const workAttentionRouter = router({
             : input.action === 'duplicate'
               ? 'duplicate'
               : 'accepted';
+      // Linear semantics: decline and mark-as-duplicate update the issue to a
+      // Canceled status type; accept moves it out of the triage lane. Without
+      // the implied workflow move a declined issue resurfaced in the team
+      // issues list as ordinary open work.
+      const outcomePatch = resolveTriageOutcome({
+        action: input.action,
+        states: await ctx.teamModel.listWorkflowStates(input.teamId),
+        workflowCategory: task.workflowCategory,
+      });
       try {
         const updated = await ctx.taskModel.update(
           input.taskId,
           {
             triageStatus,
+            ...outcomePatch,
             ...(input.action === 'duplicate' && input.canonicalTaskId
               ? { duplicateOfTaskId: input.canonicalTaskId }
               : {}),

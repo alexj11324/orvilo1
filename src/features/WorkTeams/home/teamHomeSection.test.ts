@@ -1,3 +1,4 @@
+import { TRIAGE_EXCLUSION_FILTER } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -72,10 +73,6 @@ describe('teamRecentIssuesQuery', () => {
 
   it('excludes untriaged rows for triage-capable teams', () => {
     const query = teamRecentIssuesQuery('team-42', true);
-    expect(query.filter?.all).toContainEqual({
-      field: 'triageStatus',
-      op: 'neq',
-      value: 'untriaged',
-    });
+    expect(query.filter?.all).toContainEqual(TRIAGE_EXCLUSION_FILTER);
   });
 });

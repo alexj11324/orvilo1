@@ -8,7 +8,12 @@ import type {
   WorkQueryLayout,
   WorkQueryPredicate,
 } from '@orvilo/types';
-import { builtinSavedViewKey, isBuiltinSavedViewId, notificationScopeKey } from '@orvilo/types';
+import {
+  applyTriageViewDefault,
+  builtinSavedViewKey,
+  isBuiltinSavedViewId,
+  notificationScopeKey,
+} from '@orvilo/types';
 import { and, desc, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
 
 import { teamCycles, teamMembers, teams } from '../schemas/team';
@@ -409,7 +414,11 @@ export class SavedViewModel {
     view: SavedViewItem,
     params: { afterId?: string; groupKey?: string; limit?: number; queryHash?: string } = {},
   ): Promise<SavedViewEvaluation> => {
-    const query = applyWorkQueryLayout(view.queryAst, view.layout, view.queryAst.groupBy);
+    // Linear's view contract applies to stored views too: triage-queue rows
+    // stay out unless the saved query itself includes a triage predicate.
+    const query = applyTriageViewDefault(
+      applyWorkQueryLayout(view.queryAst, view.layout, view.queryAst.groupBy),
+    );
     const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
     try {
       validateWorkQuery(query);

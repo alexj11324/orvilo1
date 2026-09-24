@@ -90,3 +90,53 @@ export const resolveWorkflowCreatePreset = (params: {
 
   return patch;
 };
+
+export type TriageAction = 'accept' | 'decline' | 'duplicate' | 'reassign';
+
+export type TriageOutcomePatch = {
+  workflowCategory?: TaskWorkflowCategory;
+  workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
+};
+
+/**
+ * The workflow move a triage action implies (Linear triage semantics):
+ *
+ * - `decline` and `duplicate` update the issue to a *Canceled* status type —
+ *   without this the row just sheds `untriaged` and resurfaces in the team
+ *   issues list as ordinary work, which reads as accepted.
+ * - `accept`/`reassign` only need a move when the card still sits in the
+ *   `triage` lane (created via the Triage column or a triage-mapped imported
+ *   state): accepting moves it to the team's default status, and backlog is
+ *   the honest default category here — there is no per-team default-status
+ *   setting to honor.
+ *
+ * An unambiguous category match stamps the workflow-state ref too, exactly
+ * like {@link resolveWorkflowMove} on a board drop; ambiguous or unconfigured
+ * categories land the bare category and never guess a state.
+ */
+export const resolveTriageOutcome = (params: {
+  action: TriageAction;
+  states: WorkflowMoveState[];
+  workflowCategory?: TaskWorkflowCategory | null;
+}): TriageOutcomePatch => {
+  const target: TaskWorkflowCategory | undefined =
+    params.action === 'decline' || params.action === 'duplicate'
+      ? 'canceled'
+      : params.workflowCategory === 'triage'
+        ? 'backlog'
+        : undefined;
+  if (!target) return {};
+
+  const resolved = resolveWorkflowMove({ category: target, states: params.states });
+  if (resolved.type === 'exact') {
+    return {
+      workflowCategory: resolved.workflowCategory,
+      workflowStateId: resolved.workflowStateId,
+      workflowStateRefId: resolved.workflowStateRefId,
+    };
+  }
+  // 'category' and 'required' both land the bare category — the canceled or
+  // backlog grouping is what carries the semantic, not which state inside it.
+  return { workflowCategory: target };
+};

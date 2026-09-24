@@ -125,6 +125,9 @@ export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   ordering: 'default',
   properties: { ...MY_WORK_DEFAULT_ROW_PROPERTIES },
   showSubIssues: true,
+  // Linear's My Issues Assigned tab surfaces triage issues assigned to you in
+  // their own focus-order section, so the default stays visible; the display
+  // option is the opt-out. (Team view defaults differ — those hide them.)
   showTriage: true,
   subGrouping: 'none',
 });
@@ -362,7 +365,11 @@ export const filterMyWorkTaskRows = <T extends WorkQueryResultTask>(
     (task) =>
       !isCompletedWindowHidden(task, display.completed, now) &&
       (display.showSubIssues || !task.parentTaskId) &&
-      (display.showTriage || task.workflowCategory !== 'triage'),
+      // "Show triage issues" covers both triage axes: queue membership
+      // (`triageStatus === 'untriaged'`, already excluded server-side) and
+      // cards sitting in a triage-category workflow lane.
+      (display.showTriage ||
+        (task.triageStatus !== 'untriaged' && task.workflowCategory !== 'triage')),
   );
 };
 

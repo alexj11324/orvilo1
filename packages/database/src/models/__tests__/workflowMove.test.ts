@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  resolveTriageOutcome,
   resolveWorkflowCreatePreset,
   resolveWorkflowMove,
   type WorkflowMoveState,
@@ -120,5 +121,81 @@ describe('resolveWorkflowCreatePreset', () => {
     });
     expect(resolveWorkflowCreatePreset({ states: [] })).toEqual({});
     expect(resolveWorkflowCreatePreset({ states: [], teamId: 'team-1' })).toEqual({});
+  });
+});
+
+describe('resolveTriageOutcome', () => {
+  it('moves declined issues to the canceled category like Linear', () => {
+    // Linear: "Declining will update the issue to a Canceled status type" —
+    // without the category move the row resurfaced as ordinary open work.
+    expect(
+      resolveTriageOutcome({
+        action: 'decline',
+        states: [state('cancel-1', 'canceled', 'remote-cancel')],
+        workflowCategory: 'backlog',
+      }),
+    ).toEqual({
+      workflowCategory: 'canceled',
+      workflowStateId: 'remote-cancel',
+      workflowStateRefId: 'cancel-1',
+    });
+  });
+
+  it('moves duplicates to canceled too — Linear cancels the merged copy', () => {
+    expect(
+      resolveTriageOutcome({
+        action: 'duplicate',
+        states: [state('cancel-1', 'canceled')],
+        workflowCategory: 'triage',
+      }),
+    ).toEqual({
+      workflowCategory: 'canceled',
+      workflowStateId: 'cancel-1',
+      workflowStateRefId: 'cancel-1',
+    });
+  });
+
+  it('lands the bare canceled category when no state or several could match', () => {
+    expect(
+      resolveTriageOutcome({ action: 'decline', states: [], workflowCategory: 'backlog' }),
+    ).toEqual({ workflowCategory: 'canceled' });
+    expect(
+      resolveTriageOutcome({
+        action: 'decline',
+        states: [state('cancel-1', 'canceled'), state('cancel-2', 'canceled')],
+        workflowCategory: 'backlog',
+      }),
+    ).toEqual({ workflowCategory: 'canceled' });
+  });
+
+  it('moves an accepted issue out of the triage lane, and only then', () => {
+    // A card created inside the Triage column keeps category 'triage' — accept
+    // must not leave it parked there (Linear moves to the default status).
+    expect(
+      resolveTriageOutcome({
+        action: 'accept',
+        states: [state('backlog-1', 'backlog')],
+        workflowCategory: 'triage',
+      }),
+    ).toEqual({
+      workflowCategory: 'backlog',
+      workflowStateId: 'backlog-1',
+      workflowStateRefId: 'backlog-1',
+    });
+    // Already-laned work keeps its category on accept/reassign.
+    expect(
+      resolveTriageOutcome({
+        action: 'accept',
+        states: [state('backlog-1', 'backlog')],
+        workflowCategory: 'backlog',
+      }),
+    ).toEqual({});
+    expect(
+      resolveTriageOutcome({
+        action: 'reassign',
+        states: [state('backlog-1', 'backlog')],
+        workflowCategory: 'todo',
+      }),
+    ).toEqual({});
   });
 });

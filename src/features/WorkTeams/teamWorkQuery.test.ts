@@ -1,3 +1,4 @@
+import { TRIAGE_EXCLUSION_FILTER } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import { ALL_TEAM_CYCLES, teamTaskQuery, teamTriageQuery } from './teamWorkQuery';
@@ -61,12 +62,14 @@ describe('teamWorkQuery', () => {
 
   it('keeps untriaged issues out of team scopes only while triage is enabled', () => {
     // Triage-capable teams park new issues in `untriaged`; they must not leak
-    // into All/Active/Backlog lists or the `wf:backlog` board column.
+    // into All/Active/Backlog lists or the `wf:backlog` board column. The
+    // exclusion is NULL-inclusive so legacy rows (NULL triage_status) stay
+    // visible — a bare `neq` would drop them too.
     for (const scope of ['all', 'active', 'backlog'] as const) {
       for (const layout of ['list', 'board'] as const) {
         expect(
           teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, layout, scope, true).filter?.all,
-        ).toContainEqual({ field: 'triageStatus', op: 'neq', value: 'untriaged' });
+        ).toContainEqual(TRIAGE_EXCLUSION_FILTER);
       }
     }
     // Non-triage teams never produce untriaged rows — no predicate is added.

@@ -1,4 +1,4 @@
-import type { WorkQuery } from '@orvilo/types';
+import { TRIAGE_EXCLUSION_FILTER, type WorkQuery } from '@orvilo/types';
 
 /**
  * Team Home sub-tab contract (`?tab=home&section=…`).
@@ -64,9 +64,9 @@ export const teamRecentIssuesQuery = (teamId: string, triageCapable: boolean): W
   filter: {
     all: [
       { field: 'teamId', op: 'eq', value: teamId },
-      ...(triageCapable
-        ? [{ field: 'triageStatus' as const, op: 'neq' as const, value: 'untriaged' }]
-        : []),
+      // NULL-inclusive like the Issues tab: legacy rows keep NULL
+      // `triage_status` and a bare `neq` would hide them.
+      ...(triageCapable ? [TRIAGE_EXCLUSION_FILTER] : []),
     ],
   },
   layout: 'list',

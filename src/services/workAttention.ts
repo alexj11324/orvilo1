@@ -37,6 +37,7 @@ class WorkAttentionService {
     mode: MyWorkMode;
     noProject?: boolean;
     queryHash?: string;
+    showTriage?: boolean;
   }) => lambdaClient.workAttention.myWork.query(input);
 
   reviews = (input: {
@@ -61,6 +62,7 @@ class WorkAttentionService {
     limit?: number;
     query: WorkQuery;
     queryHash?: string;
+    showTriage?: boolean;
   }) => lambdaClient.workAttention.query.query(input);
 
   savedViewCreate = (

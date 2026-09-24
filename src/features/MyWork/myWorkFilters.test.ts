@@ -1,4 +1,4 @@
-import { WORK_QUERY_TASK_FIELD_SPECS } from '@orvilo/types';
+import { TRIAGE_EXCLUSION_FILTER, WORK_QUERY_TASK_FIELD_SPECS } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import type { BuilderState, FilterRow } from '@/features/SavedViews/workQueryBuilder';
@@ -32,6 +32,7 @@ describe('myWorkComposedQuery', () => {
           mode,
           noProject: false,
           ordering: 'default',
+          showTriage: true,
         }),
       ).toBeNull();
     }
@@ -46,11 +47,39 @@ describe('myWorkComposedQuery', () => {
       mode: 'assigned',
       noProject: false,
       ordering: 'default',
+      showTriage: true,
     });
     expect(query).not.toBeNull();
     expect(query?.filter?.all).toEqual([
       { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
       { field: 'priority', op: 'eq', value: 1 },
+    ]);
+  });
+
+  it('excludes triage-queue rows unless the display option opts in', () => {
+    const hidden = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'none',
+      layout: 'list',
+      mode: 'assigned',
+      noProject: false,
+      ordering: 'default',
+      showTriage: false,
+    });
+    // NULL-inclusive: personal/legacy rows keep NULL triageStatus and must
+    // not be filtered out along with untriaged ones.
+    expect(hidden?.filter?.all).toContainEqual(TRIAGE_EXCLUSION_FILTER);
+    const shown = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'none',
+      layout: 'list',
+      mode: 'assigned',
+      noProject: false,
+      ordering: 'default',
+      showTriage: true,
+    });
+    expect(shown?.filter?.all).toEqual([
+      { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
     ]);
   });
 
@@ -62,6 +91,7 @@ describe('myWorkComposedQuery', () => {
       mode: 'assigned',
       noProject: false,
       ordering: 'createdAsc',
+      showTriage: true,
     });
     expect(query?.groupBy).toBe('attention');
     expect(query?.sort).toEqual([
@@ -78,6 +108,7 @@ describe('myWorkComposedQuery', () => {
       mode: 'created',
       noProject: false,
       ordering: 'default',
+      showTriage: true,
     });
     expect(query?.sort).toEqual([
       { direction: 'desc', field: 'createdAt' },

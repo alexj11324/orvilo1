@@ -7,7 +7,7 @@ import type {
   WorkQueryOp,
   WorkQueryValue,
 } from '@orvilo/types';
-import { applyDelegatedFilter, applyNoProjectFilter } from '@orvilo/types';
+import { applyDelegatedFilter, applyNoProjectFilter, applyTriageViewDefault } from '@orvilo/types';
 
 import type { BuilderState, FilterRow } from '@/features/SavedViews/workQueryBuilder';
 import { builderToFilter } from '@/features/SavedViews/workQueryBuilder';
@@ -54,6 +54,8 @@ export interface MyWorkComposedQueryInput {
   mode: MyWorkMode;
   noProject: boolean;
   ordering: MyWorkOrdering;
+  /** "Show triage issues" display option — false keeps untriaged rows out. */
+  showTriage: boolean;
 }
 
 /**
@@ -71,6 +73,7 @@ export const myWorkComposedQuery = ({
   mode,
   noProject,
   ordering,
+  showTriage,
 }: MyWorkComposedQueryInput): WorkQuery | null => {
   if (!isMyWorkSaveableMode(mode)) return null;
   const base = myWorkSaveAsQuery(mode, layout);
@@ -81,7 +84,12 @@ export const myWorkComposedQuery = ({
     layout,
     ...(ordering === 'default' ? {} : { sort: MY_WORK_ORDERING_SORTS[ordering] }),
   };
-  return applyNoProjectFilter(applyDelegatedFilter(query, delegated), noProject);
+  return applyNoProjectFilter(
+    // The display option governs the default only — an authored triage
+    // predicate in `query.filter` still opts the composed view in.
+    applyDelegatedFilter(applyTriageViewDefault(query, showTriage), delegated),
+    noProject,
+  );
 };
 
 /* --------------- filter directory (Linear's "Add filter" menu) --------------- */

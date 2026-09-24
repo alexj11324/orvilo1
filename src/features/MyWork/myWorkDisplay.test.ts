@@ -203,8 +203,9 @@ describe('filterMyWorkTaskRows', () => {
   it('drops triage rows when showTriage is off', () => {
     const display = { ...defaultMyWorkDisplay('created'), showTriage: false };
     const triage = task({ workflowCategory: 'triage' });
+    const queued = task({ triageStatus: 'untriaged', workflowCategory: 'backlog' });
     const normal = task({ workflowCategory: 'backlog' });
-    expect(filterMyWorkTaskRows([triage, normal], display)).toEqual([normal]);
+    expect(filterMyWorkTaskRows([triage, queued, normal], display)).toEqual([normal]);
   });
 
   it('reports whether any display filter can drop rows', () => {

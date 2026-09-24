@@ -505,6 +505,122 @@ export const applyNoProjectFilter = (query: WorkQuery, enabled: boolean): WorkQu
   };
 };
 
+/**
+ * "Issue is not parked in triage" as a nested filter node. `triageStatus` is
+ * NULL on personal tasks, legacy rows and never-triaged teams — and SQL
+ * `triage_status <> 'untriaged'` rejects NULL, so a bare `neq` would silently
+ * drop every untriaged-by-design row from the list. The exclusion must be
+ * NULL-inclusive: `triageStatus IS NULL OR triageStatus <> 'untriaged'`.
+ */
+export const TRIAGE_EXCLUSION_FILTER: WorkQueryFilter = {
+  any: [
+    { field: 'triageStatus', op: 'isNull' },
+    { field: 'triageStatus', op: 'neq', value: 'untriaged' },
+  ],
+};
+
+const isTriageExclusionNode = (node: WorkQueryFilter | WorkQueryPredicate): boolean => {
+  if ('field' in node) return false;
+  const any = node.any ?? [];
+  return (
+    (node.all?.length ?? 0) === 0 &&
+    any.length === 2 &&
+    any.some(
+      (child) => 'field' in child && child.field === 'triageStatus' && child.op === 'isNull',
+    ) &&
+    any.some(
+      (child) =>
+        'field' in child &&
+        child.field === 'triageStatus' &&
+        child.op === 'neq' &&
+        child.value === 'untriaged',
+    )
+  );
+};
+
+/**
+ * Linear excludes triage-queue issues from views unless the display option
+ * "Show triage issues" is on — `showTriage` here is that option. ANDs the
+ * NULL-inclusive exclusion when off, strips exactly this node when on, so
+ * toggling is idempotent and never disturbs user-authored predicates.
+ */
+export const applyShowTriageFilter = (query: WorkQuery, showTriage: boolean): WorkQuery => {
+  const any = query.filter?.any;
+  const all = (query.filter?.all ?? []).filter((node) => !isTriageExclusionNode(node));
+  if (!showTriage) all.push(TRIAGE_EXCLUSION_FILTER);
+  if (all.length === 0 && (!any || any.length === 0)) {
+    if (!query.filter) return query;
+    const { filter: _omit, ...rest } = query;
+    return rest;
+  }
+  return {
+    ...query,
+    filter: {
+      ...(any && any.length > 0 ? { any } : {}),
+      ...(all.length > 0 ? { all } : {}),
+    },
+  };
+};
+
+const predicateAdmitsValue = (
+  node: WorkQueryPredicate,
+  field: WorkQueryField,
+  value: string,
+): boolean => {
+  if (node.field !== field) return false;
+  if (node.op === 'eq') return node.value === value;
+  if (node.op === 'in') return Array.isArray(node.value) && node.value.includes(value);
+  // `isNotNull` admits every stored status including the queue member; the
+  // negated ops (`neq`/`notIn`) and `isNull` never positively include it.
+  return field === 'triageStatus' && node.op === 'isNotNull';
+};
+
+/**
+ * Whether a work query positively includes triage-queue issues — Linear's
+ * escape hatch for its triage exclusion ("to include them in a custom view,
+ * add a status filter where Triage is included"). Covers Orvilo's two triage
+ * axes: queue membership (`triageStatus` admitting `untriaged`) and the
+ * triage board lane (`workflowCategory` admitting `triage`). Negative
+ * predicates (`neq`/`notIn`/`isNull`) never count — excluding triage is not
+ * an opt-in to see it.
+ */
+export const workQueryIncludesTriage = (filter: WorkQueryFilter | undefined): boolean => {
+  if (!filter) return false;
+  for (const node of [...(filter.all ?? []), ...(filter.any ?? [])]) {
+    if ('field' in node) {
+      if (
+        predicateAdmitsValue(node, 'triageStatus', 'untriaged') ||
+        predicateAdmitsValue(node, 'workflowCategory', 'triage')
+      ) {
+        return true;
+      }
+      continue;
+    }
+    if (workQueryIncludesTriage(node)) return true;
+  }
+  return false;
+};
+
+/**
+ * Linear's view contract for triage-queue rows: excluded from every view by
+ * default ("triage is considered to be outside the normal workflow") and
+ * included only when the view says so — via the surface's "Show triage
+ * issues" display option (`showTriage`) or via an explicit triage predicate
+ * in the query itself, which wins either way.
+ *
+ * `showTriage` semantics: `true` opts the listing in (and lifts a stored
+ * exclusion node), `undefined` is the bare default (exclude unless the query
+ * includes triage), `false` still yields to an explicit triage filter — the
+ * display option governs the default, never an authored include.
+ *
+ * Non-task queries (projects) pass through untouched: `triageStatus` is not
+ * a project field and would fail compilation.
+ */
+export const applyTriageViewDefault = (query: WorkQuery, showTriage?: boolean): WorkQuery =>
+  query.entityType === 'task'
+    ? applyShowTriageFilter(query, showTriage === true || workQueryIncludesTriage(query.filter))
+    : query;
+
 export const WORK_QUERY_FACET_FIELDS = [
   'projectId',
   'status',

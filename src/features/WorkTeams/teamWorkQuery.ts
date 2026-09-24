@@ -1,5 +1,6 @@
 import {
   applyNoProjectFilter,
+  TRIAGE_EXCLUSION_FILTER,
   type WorkQuery,
   type WorkQueryFilter,
   type WorkQueryGroupBy,
@@ -20,7 +21,7 @@ export const teamCyclePredicate = (
 
 const withTeamScope = (
   teamId: string,
-  extra: WorkQueryPredicate[],
+  extra: (WorkQueryFilter | WorkQueryPredicate)[],
   cycleId?: string | null,
   noProject = false,
 ): WorkQuery => {
@@ -84,13 +85,13 @@ export const teamTaskQuery = (
   const category = teamScopePredicate(scope);
   // Triaging teams park new issues in `untriaged` until the triage action
   // resolves them — they must not leak into All/Backlog scopes or the
-  // `wf:backlog` board column while pending. Non-triage teams never produce
-  // untriaged rows, so the predicate stays off there.
-  const extra: WorkQueryPredicate[] = [
+  // `wf:backlog` board column while pending. The exclusion stays NULL-
+  // inclusive (`triageStatus IS NULL OR <> 'untriaged'`): `triage_status` is
+  // NULL on legacy rows, which a bare `neq` would wrongly hide. Non-triage
+  // teams never produce untriaged rows, so the predicate stays off there.
+  const extra: (WorkQueryFilter | WorkQueryPredicate)[] = [
     ...(category ? [category] : []),
-    ...(triageCapable
-      ? [{ field: 'triageStatus' as const, op: 'neq' as const, value: 'untriaged' }]
-      : []),
+    ...(triageCapable ? [TRIAGE_EXCLUSION_FILTER] : []),
   ];
   const query = withTeamScope(teamId, extra, cycleId, noProject);
   const filtered = options?.filter

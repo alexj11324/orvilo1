@@ -115,7 +115,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       (level: number) =>
         t(`taskDetail.${PRIORITY_META[level].labelKey}` as never, {
           defaultValue: PRIORITY_META[level].label,
-        }),
+        }) as string,
       [t],
     );
     const filteredLevels = useMemo(() => {

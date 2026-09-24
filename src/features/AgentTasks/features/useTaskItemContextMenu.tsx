@@ -252,7 +252,7 @@ export const useTaskContextMenuActions = (
               },
               sfSymbol: 'doc.on.doc',
             },
-          ] satisfies ContextMenuItem[],
+          ] satisfies NativeContextMenuItem[],
           icon: <Icon icon={CopyIcon} />,
           key: 'copy',
           label: t('taskList.contextMenu.copy', { defaultValue: 'Copy' }),

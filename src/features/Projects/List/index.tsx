@@ -147,7 +147,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   headerRow: css`
     padding-block: 4px;
     padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
 
     font-size: 12px;
     font-weight: 450;
@@ -237,6 +236,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     flex: 1;
     min-width: 0;
   `,
+  numeric: css`
+    justify-content: flex-end;
+    padding-inline-end: 8px;
+    font-variant-numeric: tabular-nums;
+  `,
   owner: css`
     display: flex;
     flex: none;
@@ -249,7 +253,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     min-height: 48px;
     padding-block: 7px;
     padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
 
     color: inherit;
 
@@ -266,22 +269,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     &:focus-within .project-lead-empty {
       opacity: 1;
     }
-  `,
-  progressFill: css`
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorTextSecondary};
-  `,
-  progressTrack: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 20px;
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
   `,
   screenReaderOnly: css`
     position: absolute;
@@ -358,13 +345,11 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
       to={getProjectActivityPath(project.slug ?? project.id)}
     >
       <ProjectHealthIcon health={health} size={14} />
-      {/* Linear renders the no-update state as the dashed circle alone —
-          the label appears only once a real update set the health. */}
-      {health ? (
-        <Text fontSize={12}>{t(PROJECT_HEALTH_META[health].key, { defaultValue: health })}</Text>
-      ) : (
-        <span className={styles.screenReaderOnly}>{t('list.health.noUpdates')}</span>
-      )}
+      <Text fontSize={12} type={health ? undefined : 'secondary'} weight={health ? undefined : 500}>
+        {health
+          ? t(PROJECT_HEALTH_META[health].key, { defaultValue: health })
+          : t('list.health.noUpdates')}
+      </Text>
     </WorkspaceLink>
   );
 });
@@ -611,7 +596,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
       }
       case 'issues': {
         return (
-          <Text className={styles.cell} fontSize={12}>
+          <Text className={styles.cell} color={cssVar.colorText} fontSize={12} weight={450}>
             {typeof project.taskCount === 'number' ? project.taskCount : '—'}
           </Text>
         );
@@ -626,7 +611,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
         return <DateCell value={project.completedAt} />;
       }
       case 'status': {
-        // Reference §5: status icon + percentage + a thin progress bar.
+        // Linear: status icon + percentage; no progress bar.
         const percent =
           typeof project.progressPercent === 'number'
             ? Math.min(100, Math.max(0, project.progressPercent))
@@ -636,11 +621,6 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
             <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
             <ProjectStatusIcon percent={percent ?? 0} size={14} status={status} />
             <Text fontSize={12}>{percent == null ? '—' : `${percent}%`}</Text>
-            {percent == null ? null : (
-              <span aria-hidden className={styles.progressTrack}>
-                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
-              </span>
-            )}
           </Flexbox>
         );
       }
@@ -677,7 +657,10 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
         {properties.milestones ? <ProjectMilestoneChip projectId={project.id} /> : null}
       </Flexbox>
       {columns.map((column) => (
-        <span className={styles.owner} key={column.key}>
+        <span
+          className={cx(styles.owner, column.key === 'issues' && styles.numeric)}
+          key={column.key}
+        >
           {cellFor(column)}
         </span>
       ))}
@@ -781,7 +764,10 @@ export const ProjectListTableHeader = memo<{
         />
       </Flexbox>
       {columns.map((column) => (
-        <span className={styles.owner} key={column.key}>
+        <span
+          className={cx(styles.owner, column.key === 'issues' && styles.numeric)}
+          key={column.key}
+        >
           <SortableHeader
             label={t(COLUMN_HEADER_KEYS[column.key])}
             orderBy={orderBy}

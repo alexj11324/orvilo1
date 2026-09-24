@@ -482,6 +482,7 @@
   "myWork.activity": "活动",
   "myWork.addFilter": "添加筛选",
   "myWork.assigned": "已分配",
+  "myWork.bulk.actions": "操作",
   "myWork.bulk.assignee": "负责人",
   "myWork.bulk.clear": "清除选择",
   "myWork.bulk.deleteConfirmContent_one": "这个问题将被永久删除。",

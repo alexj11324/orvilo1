@@ -674,6 +674,7 @@ export default {
   'myWork.activity': 'Activity',
   'myWork.addFilter': 'Add filter',
   'myWork.assigned': 'Assigned',
+  'myWork.bulk.actions': 'Actions',
   'myWork.bulk.assignee': 'Assignee',
   'myWork.bulk.clear': 'Clear selection',
   'myWork.bulk.deleted_one': 'Deleted {{count}} issue',

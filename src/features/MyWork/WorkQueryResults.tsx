@@ -103,8 +103,18 @@ const styles = createStaticStyles(({ css }) => ({
    * The header is a row wrapper (background + hover reveal for the create
    * `+`) around a real `<button>` — nesting an ActionIcon inside the toggle
    * button would be invalid HTML and would swallow its click.
+   *
+   * It pins to the top of the collection scrollport like Linear's group
+   * dividers (`position: sticky; top: -1px; z-index: 2`), so the section the
+   * rows belong to stays visible while scrolling. The translucent fill is
+   * composited over the surface base — sticky chrome must be opaque or the
+   * rows passing underneath would ghost through it.
    */
   groupHeaderRow: css`
+    position: sticky;
+    z-index: 2;
+    inset-block-start: 0;
+
     display: flex;
     gap: 4px;
     align-items: center;
@@ -114,7 +124,9 @@ const styles = createStaticStyles(({ css }) => ({
 
     color: ${cssVar.colorTextSecondary};
 
-    background: ${cssVar.colorFillQuaternary};
+    background:
+      linear-gradient(0deg, ${cssVar.colorFillQuaternary}, ${cssVar.colorFillQuaternary}),
+      ${cssVar.colorBgLayout};
 
     &:hover .work-query-group-actions,
     &:focus-within .work-query-group-actions {
@@ -124,7 +136,7 @@ const styles = createStaticStyles(({ css }) => ({
   attentionGroupHeaderRow: css`
     padding-inline-end: 8px;
     border-radius: 0;
-    background: transparent;
+    background: ${cssVar.colorBgLayout};
   `,
   groupHeader: css`
     cursor: pointer;
@@ -136,7 +148,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     min-width: 0;
-    min-height: 32px;
+    min-height: 36px;
     padding-block: 4px;
     padding-inline: 12px;
     border: none;
@@ -204,8 +216,11 @@ const styles = createStaticStyles(({ css }) => ({
   /**
    * Second-level group header (Linear's Sub-grouping) — transparent chrome,
    * indented under its primary group instead of repeating the filled pill.
+   * It does not pin: the primary header already holds the sticky line, and a
+   * second pinned row at the same offset would slide over it.
    */
   subGroupHeaderRow: css`
+    position: static;
     padding-inline-end: 8px;
     border-radius: 0;
     background: transparent;

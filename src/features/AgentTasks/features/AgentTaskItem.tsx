@@ -177,6 +177,14 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+      {/* Linear's row grid orders identifier before status
+          ([priority][identifier][status][title]); a nameless task has no
+          separate title, so its identifier still renders as the row text. */}
+      {hasName ? (
+        <Text style={{ flex: 'none' }} type={'secondary'}>
+          {task.identifier}
+        </Text>
+      ) : null}
       <span
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
@@ -190,20 +198,9 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         workflowStateId={task.workflowStateId}
       />
       {privacyBadge}
-      {hasName ? (
-        <>
-          <Text style={{ flex: 'none' }} type={'secondary'}>
-            {task.identifier}
-          </Text>
-          <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-            {task.name}
-          </Text>
-        </>
-      ) : (
-        <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-          {task.identifier}
-        </Text>
-      )}
+      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+        {hasName ? task.name : task.identifier}
+      </Text>
       {scheduledBadge}
       {/* Linear draws issue labels inline after the title. The wrapper's
           data attribute is the display-properties toggle's hide hook

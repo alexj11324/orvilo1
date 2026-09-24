@@ -6,6 +6,7 @@ import { CircleDashed, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
@@ -98,6 +99,10 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
       </Text>
       {orderedDeps.map((dep) => {
         const unavailable = !dep.status;
+        const workflowVisual =
+          dep.workflowStateId && dep.workflowCategory
+            ? WORKFLOW_CATEGORY_VISUALS[dep.workflowCategory]
+            : undefined;
         return (
           <Flexbox horizontal align={'center'} gap={2} key={dep.id ?? dep.dependsOn}>
             <Button
@@ -109,6 +114,8 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
               icon={
                 unavailable ? (
                   <Icon icon={CircleDashed} size={16} style={{ color: 'inherit' }} />
+                ) : workflowVisual ? (
+                  <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
                 ) : (
                   <TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />
                 )

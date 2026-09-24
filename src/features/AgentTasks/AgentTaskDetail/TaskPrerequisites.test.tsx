@@ -82,6 +82,22 @@ describe('TaskPrerequisites', () => {
     expect(screen.getByText('T-3')).toBeTruthy();
   });
 
+  it('uses the board workflow glyph for a linked issue with a provider state', () => {
+    setTask([
+      {
+        dependsOn: 'T-1',
+        status: 'completed',
+        type: 'relates',
+        workflowCategory: 'in_progress',
+        workflowStateId: 'linear-state-progress',
+      },
+    ]);
+    render(<TaskPrerequisites />);
+
+    const linkedIssue = screen.getByText('T-1').closest('button');
+    expect(linkedIssue?.querySelector('svg')).toHaveAttribute('data-workflow-icon', 'in_progress');
+  });
+
   it('keeps unavailable prerequisites blocking but removable by their raw id', async () => {
     setTask([{ dependsOn: 'task_hidden', id: 'task_hidden', status: null, type: 'blocks' }]);
     render(<TaskPrerequisites />);

@@ -1464,6 +1464,8 @@ export class TaskService {
             : {}),
           status: s.status,
           updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : undefined,
+          ...(s.workflowCategory ? { workflowCategory: s.workflowCategory } : {}),
+          ...(s.workflowStateId ? { workflowStateId: s.workflowStateId } : {}),
         };
       });
     };
@@ -1483,6 +1485,8 @@ export class TaskService {
             identifier: t.identifier,
             name: t.name,
             status: t.status,
+            workflowCategory: t.workflowCategory,
+            workflowStateId: t.workflowStateId,
           },
         ]),
     );
@@ -1729,6 +1733,8 @@ export class TaskService {
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,
+          ...(info?.workflowCategory ? { workflowCategory: info.workflowCategory } : {}),
+          ...(info?.workflowStateId ? { workflowStateId: info.workflowStateId } : {}),
         };
       }),
       description: task.description,

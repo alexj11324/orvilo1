@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -19,6 +19,7 @@ import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
+import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { lambdaClient } from '@/libs/trpc/client';
 import { isTrpcErrorCode } from '@/utils/trpcError';
@@ -120,6 +121,11 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
     task,
   }) => {
     const { t, i18n } = useTranslation('common');
+    const workflowGlyph = useTaskWorkflowGlyph({
+      executionStatus: task.status ?? '',
+      workflowCategory: task.workflowCategory,
+      workflowStateId: task.workflowStateId,
+    });
     const overflowItems = teamTriageOverflowItems({
       destinations,
       members: memberOptions,
@@ -192,7 +198,13 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       <Flexbox horizontal align="center" className={styles.row} gap={8}>
         <WorkspaceLink className={styles.link} to={teamTaskDetailPath(task)}>
           <PriorityIcon priority={task.priority} size={16} />
-          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
+          {workflowGlyph ? (
+            <Tooltip title={workflowGlyph.label}>
+              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
+            </Tooltip>
+          ) : (
+            <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
+          )}
           {task.identifier ? <Text className={styles.identifier}>{task.identifier}</Text> : null}
           <Text ellipsis style={{ minWidth: 0 }} weight={500}>
             {task.name ?? task.instruction}

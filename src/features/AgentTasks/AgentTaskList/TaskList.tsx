@@ -56,9 +56,9 @@ interface TaskListProps {
   /** Optional list source for alternate task collections such as scheduled tasks. */
   items?: TaskListItem[];
   /**
-   * Linear-parity issue rows for the project issues surface — rows lead with
-   * the status icon and drop the inline priority selector / workflow chip.
-   * Off everywhere else so shared lists keep their current chrome.
+   * Linear-parity issue rows for the project issues surface — rows lead
+   * `[priority][ID][status][title]` and drop the workflow chip. Off
+   * everywhere else so shared lists keep their current chrome.
    */
   linearIssueRows?: boolean;
   /**

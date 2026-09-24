@@ -1,9 +1,12 @@
 /**
  * @vitest-environment happy-dom
  */
+import { Icon } from '@lobehub/ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 
 import AgentTaskItem from './AgentTaskItem';
 
@@ -266,8 +269,8 @@ describe('AgentTaskItem', () => {
     expect(screen.getByTestId('workflow-badge')).toBeInTheDocument();
   });
 
-  it('leads project-issue rows with the status icon before the identifier', () => {
-    render(
+  it('uses the board workflow glyph in project rows when execution status differs', () => {
+    const { container } = render(
       <AgentTaskItem
         linearIssueRow
         task={{
@@ -278,15 +281,43 @@ describe('AgentTaskItem', () => {
       />,
     );
 
-    // The redundant workflow chip and inline priority selector stay off the
-    // project-issues row; the status selector keeps its spot before the id.
+    // The linked task is execution-scheduled but workflow-in-review. Its
+    // project row shows the canonical workflow glyph, without an execution
+    // status selector that would open the wrong status menu.
     expect(screen.queryByTestId('workflow-badge')).not.toBeInTheDocument();
-    expect(screen.queryByText('priority')).not.toBeInTheDocument();
+    expect(screen.queryByText('status')).not.toBeInTheDocument();
 
-    const statusIcon = screen.getByText('status');
+    const priority = screen.getByText('priority');
     const identifier = screen.getByText('T-22');
+    const statusIcon = container.querySelector('[data-task-workflow-icon="in_review"]');
+    const title = screen.getByText('Hourly trend update');
+    expect(statusIcon).toBeInTheDocument();
+    const { container: canonical } = render(
+      <Icon icon={WORKFLOW_CATEGORY_VISUALS.in_review.icon} size={16} />,
+    );
+    expect(statusIcon?.querySelector('svg')?.innerHTML).toBe(
+      canonical.querySelector('svg')?.innerHTML,
+    );
+    expect(statusIcon?.querySelector('svg')).toHaveAttribute(
+      'stroke',
+      WORKFLOW_CATEGORY_VISUALS.in_review.color,
+    );
+
     expect(
-      statusIcon.compareDocumentPosition(identifier) & Node.DOCUMENT_POSITION_FOLLOWING,
+      priority.compareDocumentPosition(identifier) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(
+      identifier.compareDocumentPosition(statusIcon!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      statusIcon!.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps the execution status icon for project rows without linked workflow state', () => {
+    const { container } = render(<AgentTaskItem linearIssueRow task={createTask('agt_owner')} />);
+
+    expect(screen.getByText('status')).toBeInTheDocument();
+    expect(container.querySelector('[data-task-workflow-icon]')).not.toBeInTheDocument();
   });
 });

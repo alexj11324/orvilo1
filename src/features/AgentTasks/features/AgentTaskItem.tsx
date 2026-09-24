@@ -9,6 +9,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import LabelChips from '@/features/Labels/LabelChips';
 import {
   getProjectMilestoneIssuesPath,
@@ -40,9 +41,13 @@ export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
   /**
-   * Project-issues parity row: leads with the status icon like Linear's
-   * issue list — drops the inline priority selector and the workflow text
-   * chip (both stay editable through the row context menu and task detail).
+   * Project-issues parity row: Linear's issue list leads with the priority
+   * icon, then the identifier, then the status icon —
+   * `[priority][ID][status][title]` — and drops the workflow text chip. Linked
+   * workflow state gets the canonical display-only glyph; tasks without a
+   * linked state keep the execution-status selector. Measured
+   * against the live reference 2026-09-24 on the project issues and my-issues
+   * surfaces: priority svg @x=287, ID @311, status icon @380, title @403.
    */
   linearIssueRow?: boolean;
   /**
@@ -92,6 +97,10 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   });
   const status = toTaskStatus(task.status);
   const hasName = Boolean(task.name?.trim());
+  const workflowGlyph =
+    linearIssueRow && task.workflowStateId && task.workflowCategory
+      ? WORKFLOW_CATEGORY_VISUALS[task.workflowCategory]
+      : null;
 
   const handleClick = useCallback(() => {
     navigate(
@@ -180,16 +189,42 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     </Tooltip>
   ) : null;
 
+  // The leading cells differ by surface. Linear's issue row is fixed as
+  // `[priority][ID][status][title]` (audit-2026-09-24.md — measured on the
+  // live reference); the shared/task scopes keep their original chrome of
+  // `[priority][status][workflow chip][ID][title]`.
+  const identifierNode = (
+    <Text style={{ flex: 'none' }} type={'secondary'}>
+      {task.identifier}
+    </Text>
+  );
+  const titleTextNode = (
+    <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+      {hasName ? task.name : task.identifier}
+    </Text>
+  );
+
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-      {!linearIssueRow && (
-        <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
-      )}
+      <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+      {linearIssueRow && hasName && identifierNode}
       <span
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
       >
-        <TaskStatusTag status={status} taskIdentifier={task.identifier} onChange={onStatusChange} />
+        {workflowGlyph ? (
+          <Tooltip title={tChat(`taskDetail.workflow.category.${task.workflowCategory}` as never)}>
+            <span data-task-workflow-icon={task.workflowCategory}>
+              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
+            </span>
+          </Tooltip>
+        ) : (
+          <TaskStatusTag
+            status={status}
+            taskIdentifier={task.identifier}
+            onChange={onStatusChange}
+          />
+        )}
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
       {!linearIssueRow && (
@@ -200,19 +235,16 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         />
       )}
       {privacyBadge}
-      {hasName ? (
+      {/* Linear rows render the identifier ahead of the status icon (above);
+          shared rows keep it beside the title. A nameless task falls back to
+          the identifier as its title text either way. */}
+      {hasName && !linearIssueRow ? (
         <>
-          <Text style={{ flex: 'none' }} type={'secondary'}>
-            {task.identifier}
-          </Text>
-          <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-            {task.name}
-          </Text>
+          {identifierNode}
+          {titleTextNode}
         </>
       ) : (
-        <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-          {task.identifier}
-        </Text>
+        titleTextNode
       )}
       {scheduledBadge}
       {/* Linear draws issue labels inline after the title. The wrapper's
@@ -349,7 +381,9 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
         gap={4}
-        paddingBlock={8}
+        // Linear's issue rows sit on a 44px pitch (measured): the list wrapper
+        // adds 2px, so this block needs 42 — 22px content + 10px block padding.
+        paddingBlock={linearIssueRow ? 10 : 8}
         paddingInline={12}
         variant={'borderless'}
         onClick={handleClick}

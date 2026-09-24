@@ -140,6 +140,46 @@ describe('WorkQueryModel', () => {
     expect(mineResult.queryHash).toBe(otherResult.queryHash);
   });
 
+  it('hydrates the parent breadcrumb only for parents the reader can see', async () => {
+    const parent = await createTask(userId, { name: 'Handoff parent' });
+    const hidden = await createTask(otherUserId, { name: 'Secret parent', visibility: 'private' });
+    const child = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Visible child',
+      parentTaskId: parent.id,
+    });
+    const orphaned = await createTask(otherUserId, {
+      assigneeUserId: userId,
+      name: 'Child of a private parent',
+      parentTaskId: hidden.id,
+      visibility: 'public',
+    });
+    const root = await createTask(userId, { assigneeUserId: userId, name: 'Root' });
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const rowsOf = (result: Awaited<ReturnType<typeof model.queryTasks>>) =>
+      new Map(
+        [...(result.tasks ?? []), ...(result.groups ?? []).flatMap((group) => group.tasks)].map(
+          (row) => [row.id, row],
+        ),
+      );
+
+    // Both read paths hydrate: the flat list and the server-grouped list.
+    const assigned = myWorkQueryForMode('assigned');
+    for (const query of [
+      applyWorkQueryLayout(assigned, 'list', 'none'),
+      applyWorkQueryLayout(assigned, 'list'),
+    ]) {
+      const rows = rowsOf(await model.queryTasks({ query }));
+      expect(rows.get(child.id)?.parent).toEqual({
+        identifier: parent.identifier,
+        name: 'Handoff parent',
+      });
+      expect(rows.get(orphaned.id)?.parent).toBeNull();
+      expect(rows.get(root.id)?.parent).toBeNull();
+    }
+  });
+
   it('treats delegated work as an explicit grant, not agent ownership', async () => {
     await serverDB.insert(agents).values({ id: 'agt_shared', slug: 'shared', userId });
     const someoneElses = await createTask(otherUserId, {

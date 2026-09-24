@@ -914,6 +914,12 @@ export type TaskListItem = TaskItem & {
    * undefined rather than promising an empty set.
    */
   labels?: TaskLabelSummary[];
+  /**
+   * The parent issue's identifier and title, hydrated by work-query reads so
+   * a flat list can show Linear's `› Parent title` breadcrumb. `null` when
+   * the parent is missing or unreadable; undefined on endpoints that skip it.
+   */
+  parent?: { identifier: string; name: string | null } | null;
   participants: TaskParticipant[];
 };
 

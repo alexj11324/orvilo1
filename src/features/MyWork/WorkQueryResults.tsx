@@ -553,6 +553,7 @@ const WorkQueryTaskRow = memo(
             <AgentTaskItem
               milestone={milestoneFor?.(task)}
               routeScope={'global'}
+              showParent={depth === 0}
               task={{ ...task, participants: task.participants ?? [] }}
               trailingChips={rowExtras?.(task)}
               onStatusChange={handleStatusChange}

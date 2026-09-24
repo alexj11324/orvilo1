@@ -318,4 +318,21 @@ describe('AgentTaskItem', () => {
     // Not in the title row: Linear keeps the title row to id, status, title.
     expect(title.parentElement!.contains(label)).toBe(false);
   });
+
+  it('draws the parent breadcrumb only when the list asks for it', () => {
+    const task = {
+      ...createTask('agent-1'),
+      parent: { identifier: 'ORV-117', name: 'Handoff parent' },
+    };
+    const { rerender } = render(<AgentTaskItem routeScope={'global'} task={task} />);
+    expect(screen.queryByText('Handoff parent')).toBeNull();
+
+    rerender(<AgentTaskItem showParent routeScope={'global'} task={task} />);
+    const parent = screen.getByText('Handoff parent');
+    expect(screen.getByText('›')).toBeInTheDocument();
+    expect(
+      screen.getByText('Hourly trend update').compareDocumentPosition(parent) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });

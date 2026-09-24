@@ -51,6 +51,17 @@ const styles = createStaticStyles(({ css }) => ({
     font-weight: 450;
     font-variant-numeric: tabular-nums;
   `,
+  parent: css`
+    min-width: 68px;
+    max-width: 240px;
+    font-size: 13px;
+  `,
+  parentSeparator: css`
+    flex: none;
+    width: 17px;
+    font-size: 13px;
+    text-align: center;
+  `,
   row: css`
     min-height: 44px;
   `,
@@ -71,6 +82,12 @@ interface TaskItemProps {
   milestone?: TaskMilestoneRef;
   onStatusChange?: (status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
+  /**
+   * Draw Linear's `› Parent title` breadcrumb after the title. Lists set it
+   * on rows that are not already nested under their parent — indentation
+   * says the same thing there.
+   */
+  showParent?: boolean;
   task: TaskListItem;
   /**
    * Caller-owned chips (e.g. the project) placed in the trailing cluster
@@ -94,7 +111,14 @@ const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
 const AgentTaskItem = memo<TaskItemProps>((props) => {
-  const { milestone, onStatusChange, task, trailingChips, routeScope = 'agent' } = props;
+  const {
+    milestone,
+    onStatusChange,
+    showParent,
+    task,
+    trailingChips,
+    routeScope = 'agent',
+  } = props;
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -215,6 +239,22 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       <Text ellipsis className={styles.title} weight={500}>
         {hasName ? task.name : task.identifier}
       </Text>
+      {showParent && task.parent ? (
+        <>
+          <Text aria-hidden className={styles.parentSeparator} type={'secondary'}>
+            ›
+          </Text>
+          <Text
+            ellipsis
+            className={styles.parent}
+            title={`${task.parent.identifier} ${task.parent.name ?? ''}`.trim()}
+            type={'secondary'}
+            weight={500}
+          >
+            {task.parent.name || task.parent.identifier}
+          </Text>
+        </>
+      ) : null}
       {scheduledBadge}
       <TaskSubtaskProgressTag
         currentIdentifier={task.identifier}

@@ -35,7 +35,8 @@ and start normally (`bun run dev`).
 | `stop-dev`                        | Stop the dev server started by `dev`                                                                   |
 | `clean` / `clean-s3` / `clean-db` | Teardown (`clean` keeps DB/Redis/S3 data)                                                              |
 
-The script writes its resolved env to `.records/env/e2e-dev.env` (generated):
+The script writes its resolved env to `.records/env/agent-testing-dev.env`
+(generated):
 `APP_URL`/`PORT` 3010, `VITE_DEV_PORT`/`SPA_PORT` 9876, Postgres
 `localhost:5432` db `orvilo`, Redis `:6379`, mock LLM `:3406`, mock gateway
 `:3407`, and local S3 mock credentials. When 3010/9876 are taken the server and

@@ -80,10 +80,12 @@ const styles = createStaticStyles(({ css }) => ({
 
     min-width: 64px;
 
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextTertiary};
+    font-weight: 450;
+    color: ${cssVar.colorTextDescription};
     text-align: end;
   `,
+  /* A PR row shares the issue row's 12px inset, so its glyph sits in the
+     priority column and its title on the issue titles' line. */
   link: css`
     display: flex;
     flex: 1;
@@ -91,9 +93,13 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     min-width: 0;
+    padding-inline: 12px;
 
     color: inherit;
     text-decoration: none;
+  `,
+  reviewBlockTitle: css`
+    padding-inline: 12px;
   `,
   chevron: css`
     flex: none;
@@ -130,7 +136,7 @@ const styles = createStaticStyles(({ css }) => ({
 
     background:
       linear-gradient(0deg, ${cssVar.colorFillQuaternary}, ${cssVar.colorFillQuaternary}),
-      ${cssVar.colorBgLayout};
+      ${cssVar.colorBgContainer};
 
     &:hover .work-query-group-actions,
     &:focus-within .work-query-group-actions {
@@ -140,7 +146,7 @@ const styles = createStaticStyles(({ css }) => ({
   attentionGroupHeaderRow: css`
     padding-inline-end: 8px;
     border-radius: 0;
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
   `,
   groupHeader: css`
     cursor: pointer;
@@ -850,9 +856,10 @@ const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ 
   const identifier = externalReviewIdentifier(href);
   const body = (
     <>
-      <Icon color={cssVar.colorTextSecondary} icon={GitPullRequestIcon} size={16} />
+      {/* Every queued review is an open PR — Linear draws open PRs green. */}
+      <Icon color={cssVar.colorSuccess} icon={GitPullRequestIcon} size={14} />
       <Flexbox flex={1} style={{ minWidth: 0 }}>
-        <Text ellipsis weight={500}>
+        <Text ellipsis fontSize={13} weight={500}>
           {review.title}
         </Text>
       </Flexbox>
@@ -962,7 +969,9 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
 
     const reviewBlock = externalReviews ? (
       <Flexbox gap={8}>
-        <Text weight={500}>{t('myWork.externalReviews')}</Text>
+        <Text className={styles.reviewBlockTitle} fontSize={12} type={'secondary'} weight={500}>
+          {t('myWork.externalReviews')}
+        </Text>
         {externalReviews.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty description={t('myWork.externalReviewsEmpty')} icon={GitPullRequestIcon} />

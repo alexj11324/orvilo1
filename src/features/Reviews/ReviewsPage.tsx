@@ -63,7 +63,7 @@ const styles = createStaticStyles(({ css }) => ({
 
     overflow: hidden;
 
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
   `,
   draftIcon: css`
     flex: none;
@@ -152,7 +152,7 @@ const styles = createStaticStyles(({ css }) => ({
     position: sticky;
     z-index: 2;
     inset-block-start: 0;
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
   `,
   tabs: css`
     flex: none;
@@ -555,9 +555,9 @@ const ReviewsPage = memo(() => {
                 loadingLabel={t('myWork.loading')}
                 tasks={tasks}
                 total={data?.data.total}
+                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
                 onRetryLoadMore={workMore.retryLoadMore}
                 onRetryLoadMoreGroup={workMore.retryLoadMoreGroup}
-                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
               />
             )}
           </QueueGroup>

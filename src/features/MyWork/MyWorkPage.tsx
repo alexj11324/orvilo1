@@ -123,7 +123,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block-end: 12px;
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
 
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
 
     @container work-surface (max-width: 900px) {
       position: absolute;

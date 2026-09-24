@@ -209,7 +209,7 @@ const styles = createStaticStyles(({ css }) => ({
 
     color: ${cssVar.colorText};
 
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
   `,
   typeGlyph: css`
     display: flex;
@@ -281,7 +281,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 16px 8px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
 
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
   `,
   paneMeta: css`
     color: ${cssVar.colorTextTertiary};
@@ -299,7 +299,7 @@ const styles = createStaticStyles(({ css }) => ({
 
     overflow-y: auto;
 
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
   `,
 }));
 

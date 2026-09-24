@@ -60,7 +60,7 @@ import BulkActionsBar from './BulkActionsBar';
 import type { BulkSelectGesture } from './bulkSelection';
 import MyWorkControls from './MyWorkControls';
 import {
-  activityDayTitle,
+  activityBucketTitle,
   filterMyWorkTaskRows,
   isMyWorkClientGrouping,
   MY_WORK_PRIORITY_LABEL_KEYS,
@@ -719,7 +719,7 @@ const MyWorkPage = memo(() => {
         };
         return workQueryActivitySections(rows).map((section) => ({
           ...section,
-          title: activityDayTitle(section.key, { labels, locale: i18n.language }),
+          title: activityBucketTitle(section.key, { labels, locale: i18n.language }),
         }));
       }
       if (field === 'priority') {

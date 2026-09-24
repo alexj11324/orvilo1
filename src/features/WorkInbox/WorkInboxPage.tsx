@@ -16,7 +16,7 @@ import {
   toast,
 } from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import {
   ArchiveIcon,
@@ -57,6 +57,7 @@ import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
+import { formatInboxAge } from './inboxAge';
 import { inboxCardTitleKey } from './inboxCardCopy';
 import {
   inboxActionIdentity,
@@ -135,13 +136,22 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   /* Linear-style onboarding region: sits inside the list column between the
      control row and the first notification row. */
+  // Linear's priority-inbox banner, measured: a centred 12px/500 prompt over
+  // two plain buttons in a 12px-radius card, 16/16/18 padding, 8px margin.
   banner: css`
+    display: flex;
     flex: none;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
 
-    margin: 12px;
-    padding: 12px;
+    margin: 8px;
+    padding-block: 16px 18px;
+    padding-inline: 16px;
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
+    border-radius: 12px;
+
+    text-align: center;
 
     background: ${cssVar.colorFillQuaternary};
   `,
@@ -176,14 +186,39 @@ const styles = createStaticStyles(({ css }) => ({
       box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
     }
   `,
+  avatarSlot: css`
+    position: relative;
+    flex: none;
+    width: 32px;
+    height: 32px;
+  `,
+  // Linear's notification-type badge: a 14px disc cut from the page
+  // background, hanging off the avatar's bottom-right corner.
+  typeBadge: css`
+    position: absolute;
+    inset-block-start: 19px;
+    inset-inline-start: 21px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+
+    color: ${cssVar.colorText};
+
+    background: ${cssVar.colorBgLayout};
+  `,
   typeGlyph: css`
     display: flex;
     flex: none;
     align-items: center;
     justify-content: center;
 
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
 
     color: ${cssVar.colorTextSecondary};
@@ -199,16 +234,22 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorPrimary};
   `,
+  // Read rows fade to the description colour as a whole — Linear's read state.
+  readText: css`
+    color: ${cssVar.colorTextDescription} !important;
+  `,
   snippet: css`
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
 
+    font-weight: 450;
     color: ${cssVar.colorTextSecondary};
   `,
   time: css`
     flex: none;
+    font-weight: 450;
     color: ${cssVar.colorTextTertiary};
     white-space: nowrap;
   `,
@@ -263,7 +304,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const WorkInboxPage = memo(() => {
-  const { t } = useTranslation('notification');
+  const { i18n, t } = useTranslation('notification');
   const { t: tCommon } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const userId = useUserStore(userProfileSelectors.userId);
@@ -965,11 +1006,11 @@ const WorkInboxPage = memo(() => {
       </Flexbox>
       {bannerVisible ? (
         <div className={styles.banner}>
-          <Text fontSize={13} weight={500}>
+          <Text fontSize={12} weight={500}>
             {t('inbox.priorityBanner.title')}
           </Text>
-          <Flexbox horizontal align={'center'} gap={8} style={{ marginTop: 10 }}>
-            <SplitButton size={'small'} type={'primary'}>
+          <Flexbox horizontal align={'center'} gap={8}>
+            <SplitButton size={'small'}>
               <SplitButton.Main onClick={() => setPriorityMode('priority')}>
                 {t('inbox.priorityBanner.keep')}
               </SplitButton.Main>
@@ -1038,12 +1079,17 @@ const WorkInboxPage = memo(() => {
             >
               <Flexbox horizontal align={'center'} gap={10}>
                 {card.actor || card.agent ? (
-                  <Avatar
-                    avatar={card.actor?.avatar ?? card.agent?.avatar}
-                    background={card.agent?.backgroundColor}
-                    name={card.actor?.name ?? card.agent?.name}
-                    size={28}
-                  />
+                  <span className={styles.avatarSlot}>
+                    <Avatar
+                      avatar={card.actor?.avatar ?? card.agent?.avatar}
+                      background={card.agent?.backgroundColor}
+                      name={card.actor?.name ?? card.agent?.name}
+                      size={32}
+                    />
+                    <span aria-hidden data-inbox-type-badge className={styles.typeBadge}>
+                      <Icon icon={inboxCardIcon(card)} size={10} />
+                    </span>
+                  </span>
                 ) : (
                   <span className={styles.typeGlyph}>
                     <Icon icon={inboxCardIcon(card)} size={14} />
@@ -1052,16 +1098,28 @@ const WorkInboxPage = memo(() => {
                 <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
                   <Flexbox horizontal align={'center'} gap={6}>
                     {card.read ? null : <span className={styles.unreadDot} />}
-                    <Text ellipsis fontSize={13} weight={500}>
+                    <Text
+                      ellipsis
+                      className={card.read ? styles.readText : undefined}
+                      fontSize={13}
+                      weight={500}
+                    >
                       {titleFor(card)}
                     </Text>
                   </Flexbox>
                   <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                    <Text className={styles.snippet} fontSize={12}>
+                    <Text
+                      className={cx(styles.snippet, card.read && styles.readText)}
+                      fontSize={12}
+                    >
                       {card.content}
                     </Text>
-                    <Text className={styles.time} fontSize={12}>
-                      {dayjs(card.lastActivityAt).fromNow()}
+                    <Text
+                      className={cx(styles.time, card.read && styles.readText)}
+                      fontSize={12}
+                      title={dayjs(card.lastActivityAt).format('LLL')}
+                    >
+                      {formatInboxAge(card.lastActivityAt, { locale: i18n.language })}
                     </Text>
                   </Flexbox>
                 </Flexbox>

@@ -214,9 +214,9 @@ describe('workspace settings useCategory', () => {
     }
   });
 
-  // The audit-log viewer ships with the business overlay; on builds without it
-  // the Admin group must not offer a page that renders nothing.
-  it('hides Audit logs when business features are off', () => {
+  // The audit-log surface was deleted — no page, route or nav entry. The nav
+  // must never offer it again on any build.
+  it('never lists Audit logs', () => {
     const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
     const adminGroup = result.current.find(
       (group) => group.key === WorkspaceSettingsGroupKey.Admin,
@@ -225,7 +225,7 @@ describe('workspace settings useCategory', () => {
     expect(adminGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Storage]);
 
     const businessItemKeys = getItemKeys(businessWrapper);
-    expect(businessItemKeys).toContain(WorkspaceSettingsTabs.AuditLog);
+    expect(businessItemKeys).not.toContain(WorkspaceSettingsTabs.AuditLog);
   });
 
   // Admin-or-higher reads the billing numbers; the pages keep the

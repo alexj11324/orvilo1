@@ -19,7 +19,6 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
-  ScrollText,
   TagIcon,
   Users,
 } from 'lucide-react';
@@ -228,14 +227,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Database,
               key: WorkspaceSettingsTabs.Storage,
               label: t('tab.storage'),
-            },
-            // The audit-log viewer ships only with the business overlay — its
-            // route slot stays registered, but the nav must not offer an empty
-            // stub where the flag is off.
-            enableBusinessFeatures && {
-              icon: ScrollText,
-              key: WorkspaceSettingsTabs.AuditLog,
-              label: t('workspaceSetting.tab.auditLog'),
             },
           ].filter(Boolean) as WorkspaceSettingCategoryItem[],
           key: WorkspaceSettingsGroupKey.Admin,

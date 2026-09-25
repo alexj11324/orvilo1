@@ -862,6 +862,7 @@ export default {
   'reviews.viewSplit': 'Split',
   'reviews.viewUnified': 'Unified',
   'reviews.writeForbidden': 'You do not have permission to review this pull request',
+  'savedViews.addNewView': 'Add new view',
   'savedViews.assignedDefaultName': 'Assigned to me',
   'savedViews.builtinName.all': 'All issues',
   'savedViews.builtinName.blocked': 'Blocked',

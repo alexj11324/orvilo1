@@ -695,6 +695,7 @@
   "run": "运行",
   "save": "保存",
   "saveAgentConfigFail": "助手设置保存失败,变更未生效",
+  "savedViews.addNewView": "添加新视图",
   "savedViews.assignedDefaultName": "分配给我",
   "savedViews.builtinName.all": "全部问题",
   "savedViews.builtinName.blocked": "阻塞",

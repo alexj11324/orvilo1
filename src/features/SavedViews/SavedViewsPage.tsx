@@ -1,11 +1,11 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
+import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
+import { ListTodoIcon, PlusIcon, Settings2Icon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -39,32 +39,28 @@ import {
 import { savedViewTitle } from './savedViewTitle';
 
 const styles = createStaticStyles(({ css }) => ({
-  createRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 0;
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
   directoryTable: css`
-    /* Reference rows are ~60px tall. */
+    width: calc(100% + 32px);
+    margin-block-start: -12px;
+    margin-inline: -16px;
+
+    thead th {
+      padding-block: 2px;
+      background: transparent;
+    }
+
+    table tr th:first-child,
+    table tr td:first-child {
+      padding-inline-start: 18px;
+    }
+
+    tbody tr[data-list-section] td {
+      padding-block: 3px;
+      padding-inline: 8px;
+    }
+
     tbody tr:not([data-list-section]) td {
-      padding-block: 20px;
+      padding-block: 15px;
     }
   `,
   displayPopover: css`
@@ -102,10 +98,28 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorFillSecondary};
   `,
   groupLabel: css`
-    padding-block: 12px 4px;
-    font-size: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    min-height: 36px;
+    padding-inline: 8px;
+    border-radius: 8px;
+
+    font-size: 13px;
     font-weight: 500;
     color: ${cssVar.colorTextSecondary};
+
+    background: ${cssVar.colorFillTertiary};
+  `,
+  groupCreate: css`
+    margin-inline-start: auto;
+  `,
+  groupDescription: css`
+    color: ${cssVar.colorTextSecondary};
+  `,
+  groupTitle: css`
+    color: ${cssVar.colorText};
   `,
   nameCell: css`
     display: flex;
@@ -158,8 +172,7 @@ const DIRECTORY_DOC_URL = '/docs/usage/getting-started/work';
  * visibility sections (`Personal views · Only visible to you` first), matching
  * the reference column model Name/Owner plus opt-in Created/Updated property
  * columns behind Display options. Virtual built-ins never appear here (R2) —
- * they only resolve by id for deep links and favorites. The search box is a
- * deliberate Orvilo extra the spec keeps.
+ * they only resolve by id for deep links and favorites.
  */
 const SavedViewsPage = memo(() => {
   const { t } = useTranslation('common');
@@ -171,7 +184,6 @@ const SavedViewsPage = memo(() => {
   const currentUserName = useUserStore(userProfileSelectors.displayUserName);
   const currentUserAvatar = useUserStore(userProfileSelectors.userAvatar);
   const { members } = useWorkspaceMembersQuery();
-  const [keyword, setKeyword] = useState('');
   const [creating, setCreating] = useState(false);
   const [prefs, setPrefs] = useState<SavedViewDirectoryPrefs>(() =>
     readSavedViewDirectoryPrefs(workspaceId, entityType),
@@ -223,10 +235,10 @@ const SavedViewsPage = memo(() => {
   );
 
   const filteredViews = useMemo(() => {
-    return filterSavedViewsByEntity(views, entityType, keyword, (view) =>
+    return filterSavedViewsByEntity(views, entityType, '', (view) =>
       savedViewTitle(view.id, view.name, t),
     );
-  }, [entityType, keyword, t, views]);
+  }, [entityType, t, views]);
 
   const sections = useMemo<LiteTableSection<SavedViewItem>[]>(() => {
     const sort = (list: SavedViewItem[]) =>
@@ -238,22 +250,28 @@ const SavedViewsPage = memo(() => {
     const shared = sort(filteredViews.filter((view) => savedViewSectionKey(view) === 'shared'));
     return [
       {
-        // The personal section always renders — its footer is the directory's
-        // group-edge create entry, which stays reachable even when the user
-        // only has shared views.
-        footer: (
-          <button className={styles.createRow} type="button" onClick={() => setCreating(true)}>
-            <Icon icon={PlusIcon} size={14} />
-            {t(
-              entityType === 'project'
-                ? 'savedViews.createPrivateProjectView'
-                : 'savedViews.createPrivateIssueView',
-            )}
-          </button>
-        ),
+        // The reference places create at the right edge of the group heading.
         header: (
           <div className={styles.groupLabel}>
-            {t('savedViews.sectionPersonal')} · {t('savedViews.sectionPersonalDesc')}
+            <Avatar avatar={currentUserAvatar || undefined} name={currentUserName} size={20} />
+            <span className={styles.groupTitle}>
+              {t('savedViews.sectionPersonal')}
+              <span className={styles.groupDescription}>
+                {' · '}
+                {t('savedViews.sectionPersonalDesc')}
+              </span>
+            </span>
+            <ActionIcon
+              className={styles.groupCreate}
+              icon={PlusIcon}
+              size="small"
+              aria-label={t(
+                entityType === 'project'
+                  ? 'savedViews.createPrivateProjectView'
+                  : 'savedViews.createPrivateIssueView',
+              )}
+              onClick={() => setCreating(true)}
+            />
           </div>
         ),
         items: personal,
@@ -264,7 +282,13 @@ const SavedViewsPage = memo(() => {
             {
               header: (
                 <div className={styles.groupLabel}>
-                  {t('savedViews.sectionShared')} · {t('savedViews.sectionSharedDesc')}
+                  <span className={styles.groupTitle}>
+                    {t('savedViews.sectionShared')}
+                    <span className={styles.groupDescription}>
+                      {' · '}
+                      {t('savedViews.sectionSharedDesc')}
+                    </span>
+                  </span>
                 </div>
               ),
               items: shared,
@@ -273,7 +297,7 @@ const SavedViewsPage = memo(() => {
           ]
         : []),
     ];
-  }, [entityType, filteredViews, ownerInfo, prefs, t]);
+  }, [currentUserAvatar, currentUserName, entityType, filteredViews, ownerInfo, prefs, t]);
 
   const columns = useMemo<LiteTableColumn<SavedViewItem>[]>(() => {
     const list: LiteTableColumn<SavedViewItem>[] = [
@@ -314,7 +338,7 @@ const SavedViewsPage = memo(() => {
           );
         },
         title: t('savedViews.column.owner'),
-        width: 200,
+        width: 153,
       });
     }
     if (prefs.showCreated) {
@@ -420,7 +444,7 @@ const SavedViewsPage = memo(() => {
           <Button
             icon={<Icon icon={PlusIcon} size={16} />}
             size={'small'}
-            type="primary"
+            type="text"
             onClick={() => setCreating(true)}
           >
             {t('savedViews.newView')}
@@ -446,14 +470,7 @@ const SavedViewsPage = memo(() => {
                 {t('savedViews.entityProject')}
               </WorkspaceLink>
             </Flexbox>
-            <SearchBar
-              allowClear
-              placeholder={t('savedViews.searchPlaceholder')}
-              style={{ marginInlineStart: 'auto', maxWidth: 280 }}
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-            />
-            {displayOptions}
+            <div style={{ marginInlineStart: 'auto' }}>{displayOptions}</div>
           </WorkSurfaceToolbar>
         }
       >
@@ -462,47 +479,41 @@ const SavedViewsPage = memo(() => {
         ) : isLoading && views.length === 0 ? (
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : filteredViews.length === 0 ? (
-          keyword.trim() ? (
-            <Center flex={1} padding={48}>
-              <Empty description={t('savedViews.searchEmpty')} icon={SearchXIcon} />
-            </Center>
-          ) : (
-            /* Reference empty state: left-aligned block, 340px wide,
+          /* Reference empty state: left-aligned block, 340px wide,
                horizontally centered. The ⌥V shortcut line is intentionally
                absent — Orvilo has no such hotkey (honest UI over copied
                chrome). */
-            <Center flex={1} padding={48}>
-              <div className={styles.emptyBlock}>
-                <Icon color={cssVar.colorTextTertiary} icon={ListTodoIcon} size={56} />
-                <Text fontSize={15} weight={600}>
-                  {t('tab.views')}
-                </Text>
-                <Text fontSize={13} type="secondary">
-                  {t(
-                    entityType === 'project'
-                      ? 'teams.viewDirectoryDescriptionProjects'
-                      : 'teams.viewDirectoryDescriptionIssues',
-                  )}
-                </Text>
-                <Flexbox horizontal gap={8}>
-                  <Button
-                    icon={<Icon icon={PlusIcon} size={14} />}
-                    size="small"
-                    type="primary"
-                    onClick={() => setCreating(true)}
-                  >
-                    {t('teams.viewCreateNew')}
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => window.open(DIRECTORY_DOC_URL, '_blank', 'noopener,noreferrer')}
-                  >
-                    {t('teams.viewDocumentation')}
-                  </Button>
-                </Flexbox>
-              </div>
-            </Center>
-          )
+          <Center flex={1} padding={48}>
+            <div className={styles.emptyBlock}>
+              <Icon color={cssVar.colorTextTertiary} icon={ListTodoIcon} size={56} />
+              <Text fontSize={15} weight={600}>
+                {t('tab.views')}
+              </Text>
+              <Text fontSize={13} type="secondary">
+                {t(
+                  entityType === 'project'
+                    ? 'teams.viewDirectoryDescriptionProjects'
+                    : 'teams.viewDirectoryDescriptionIssues',
+                )}
+              </Text>
+              <Flexbox horizontal gap={8}>
+                <Button
+                  icon={<Icon icon={PlusIcon} size={14} />}
+                  size="small"
+                  type="primary"
+                  onClick={() => setCreating(true)}
+                >
+                  {t('teams.viewCreateNew')}
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => window.open(DIRECTORY_DOC_URL, '_blank', 'noopener,noreferrer')}
+                >
+                  {t('teams.viewDocumentation')}
+                </Button>
+              </Flexbox>
+            </div>
+          </Center>
         ) : (
           <LiteTable
             className={styles.directoryTable}

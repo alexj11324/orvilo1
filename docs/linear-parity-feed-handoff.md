@@ -41,6 +41,20 @@ Devin Review posted 4 findings + 2 flags; all addressed:
    base-ui → both now on `@lobehub/ui/base-ui` Popover.
 7. Flag: verification evidence was pending → see "Still open" below.
 
+Independent light review (session `7a5a4ed6e090439ab52c0a896eb17101`, reviewed
+f4fd99d3) added one blocking finding, fixed in 38a0b459:
+
+8. `setSubscriber` manage-others never checked the task's workspace —
+   caller-scoped `findById` also returns personal/private tasks, so a caller
+   could stamp subscriptions the target can't read and pollute `workQuery`'s
+   subscribed filter. Now FORBIDDEN unless `task.workspaceId === ctx.workspaceId`.
+
+Nits it raised, also fixed in 38a0b459: shared `actionLinkStyles` for the three
+feed buttons, `EMPTY_REACTIONS` constant on the selector (no per-render array),
+`handleSelect` delegates to `handleToggleChip`, bell icon follows subscribe
+state, and "Change subscribers" hides when the workspace roster is empty
+(personal mode would 403 anyway).
+
 ## Still open for the next agent
 
 - **Visual verification on Electron** (the user requires Electron, not the
@@ -68,9 +82,13 @@ Devin Review posted 4 findings + 2 flags; all addressed:
   workspace `bdiverifier`, e.g. ORV-24), and attach the comparison to #257
   with the commit SHA.
 
-- **Reply + resolve the 4 Devin Review threads** on #257 with what was fixed
-  (thread ids are on the comments; `git_comment_on_pr` with
-  `resolve_thread_id`).
+- **Endpoint test coverage** (review nit left open): `workAttention.subscribers` /
+  `setSubscriber` branches (FORBIDDEN without workspace task, NOT\_FOUND for
+  non-member target, self-toggle, manage-others) have no tests yet — precedents
+  in `apps/server/src/routers/lambda/__tests__/workAttention.*.test.ts`.
+
+- **Avatar stack "+N" overflow** (review nit left open): the stack caps at 5
+  with no overflow count.
 
 - **CI**: watch `git_pr_checks` for #257; the dedup race is fixed (#256) so
   failures now are real.

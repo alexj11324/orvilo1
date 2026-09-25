@@ -363,6 +363,23 @@ describe('project store cache scope', () => {
     expect(details['project-labels'].labels).toEqual([]);
   });
 
+  it('revalidates slug-keyed detail views after a milestone write', async () => {
+    const project = { id: 'project-1', slug: 'launch' } as ProjectListItem;
+    const detail = { project } as unknown as ProjectDetail;
+    vi.spyOn(projectService, 'createMilestone').mockResolvedValue({
+      data: { id: 'milestone-1', name: 'M1' },
+      success: true,
+    } as Awaited<ReturnType<typeof projectService.createMilestone>>);
+    useProjectStore.setState({
+      projectDetails: { 'user-1:personal': { launch: detail } },
+    });
+
+    await useProjectStore.getState().createMilestone('project-1', { name: 'M1' });
+
+    expect(mutate).toHaveBeenCalledWith(['project/detail', 'user-1:personal', 'project-1']);
+    expect(mutate).toHaveBeenCalledWith(['project/detail', 'user-1:personal', 'launch']);
+  });
+
   it('updates the cached project after an orchestration policy save', async () => {
     const project = {
       coordinatorAgentId: 'agent-before',

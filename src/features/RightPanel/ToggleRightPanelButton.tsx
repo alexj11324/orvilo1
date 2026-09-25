@@ -64,13 +64,15 @@ const ToggleRightPanelButton = memo<ToggleRightPanelButtonProps>(
     if (expandProp === undefined && !isStatusInit) return null;
 
     if (hideWhenExpanded && expand) return null;
+    const label = title || t('toggleRightPanel.title', { ns: 'hotkey' });
     return (
       <ActionIcon
         active={showActive ? expand : undefined}
+        aria-label={typeof label === 'string' ? label : undefined}
         icon={icon || (expand ? PanelRightClose : PanelRightOpen)}
         id={id ?? undefined}
         size={size || DESKTOP_HEADER_ICON_SMALL_SIZE}
-        title={title || t('toggleRightPanel.title', { ns: 'hotkey' })}
+        title={label}
         tooltipProps={{
           hotkey,
           placement: 'bottom',

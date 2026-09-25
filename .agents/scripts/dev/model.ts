@@ -108,3 +108,19 @@ export const compareMigrations = (
     ? { kind: 'pending', pending }
     : { applied: applied.count, kind: 'in-sync' };
 };
+
+export type EnvSource = { reason: 'matching-database' | 'backend-owner'; source: string };
+
+/**
+ * Choose where a worktree copies its gitignored env files from: a sibling whose
+ * database is in sync with this code's migrations, else the checkout serving
+ * the backend, else nothing (the caller must fail rather than guess).
+ */
+export const pickEnvSource = (
+  siblings: { root: string; state: { kind: string } }[],
+  backendRoot: string | null,
+): EnvSource | null => {
+  const matching = siblings.find((s) => s.state.kind === 'in-sync');
+  if (matching) return { reason: 'matching-database', source: matching.root };
+  return backendRoot ? { reason: 'backend-owner', source: backendRoot } : null;
+};

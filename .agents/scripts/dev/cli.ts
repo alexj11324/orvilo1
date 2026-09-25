@@ -28,7 +28,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { closeTarget, evaluate, openWindow, reloadRendererPages } from './cdp';
-import { databaseNameOf, rendererPortFor } from './model';
+import { databaseNameOf, pickEnvSource, rendererPortFor } from './model';
 import {
   codeIdentity,
   cwdOf,
@@ -151,27 +151,27 @@ const LOCAL_ENV_FILES = ['.env', '.env.local'];
  */
 const ensureLocalEnv = (root: string) => {
   if (LOCAL_ENV_FILES.every((file) => existsSync(path.join(root, file)))) return;
-  const siblings = worktreeRoots(root).filter(
-    (candidate) => candidate !== root && existsSync(path.join(candidate, '.env')),
-  );
-  const matching = siblings.find(
-    (candidate) => migrationState(root, candidate).state.kind === 'in-sync',
-  );
   const backend = listenerOn(BACKEND_PORT);
   const backendCwd = backend ? cwdOf(backend.pid) : null;
-  const source = matching ?? (backendCwd ? gitInfo(backendCwd)?.root : undefined);
-  if (!source) {
+  const picked = pickEnvSource(
+    worktreeRoots(root)
+      .filter((candidate) => candidate !== root && existsSync(path.join(candidate, '.env')))
+      .map((candidate) => ({ root: candidate, state: migrationState(root, candidate).state })),
+    backendCwd ? (gitInfo(backendCwd)?.root ?? null) : null,
+  );
+  if (!picked) {
     fail(
-      `no sibling worktree has a database in sync with ${path.basename(root)}'s migrations — create ${root}/.env by hand`,
+      `no sibling worktree has a database in sync with ${path.basename(root)}'s migrations and no backend is running — create ${root}/.env by hand`,
     );
   }
+  const { reason, source } = picked!;
   for (const file of LOCAL_ENV_FILES) {
     const target = path.join(root, file);
-    const from = path.join(source!, file);
+    const from = path.join(source, file);
     if (existsSync(target) || !existsSync(from)) continue;
     copyFileSync(from, target);
     log(
-      `copied ${file} from ${source}${matching ? ' (database matches this code)' : ' (backend owner)'}`,
+      `copied ${file} from ${source} (${reason === 'matching-database' ? 'database matches this code' : 'backend owner'})`,
     );
   }
   const database = readEnvValue(root, 'DATABASE_URL');

@@ -6,6 +6,7 @@ import {
   parseCdpPort,
   parseLsofListeners,
   parseProcessEnv,
+  pickEnvSource,
   readDotenvValue,
   rendererPortFor,
 } from './model';
@@ -108,5 +109,33 @@ describe('compareMigrations', () => {
       dbLatest: 300,
       kind: 'db-ahead',
     });
+  });
+});
+
+describe('pickEnvSource', () => {
+  const inSync = { applied: 190, kind: 'in-sync' } as const;
+  const pending = { kind: 'pending', pending: ['0190_x'] } as const;
+
+  it('prefers a sibling whose database matches the code', () => {
+    expect(
+      pickEnvSource(
+        [
+          { root: '/wt/old', state: pending },
+          { root: '/wt/parity', state: inSync },
+        ],
+        '/wt/backend',
+      ),
+    ).toEqual({ reason: 'matching-database', source: '/wt/parity' });
+  });
+
+  it('falls back to the backend owner when no database matches', () => {
+    expect(pickEnvSource([{ root: '/wt/old', state: pending }], '/wt/backend')).toEqual({
+      reason: 'backend-owner',
+      source: '/wt/backend',
+    });
+  });
+
+  it('returns null when nothing matches and no backend runs', () => {
+    expect(pickEnvSource([{ root: '/wt/old', state: pending }], null)).toBeNull();
   });
 });

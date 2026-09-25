@@ -4,6 +4,7 @@ import { cssVar } from 'antd-style';
 import { CalendarClock, HeartPulse } from 'lucide-react';
 import { memo } from 'react';
 
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 
@@ -57,6 +58,10 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
   }
 
   if (group.groupBy === 'status') {
+    if (group.workflowCategory) {
+      const visual = WORKFLOW_CATEGORY_VISUALS[group.workflowCategory];
+      return <Icon color={visual.color} icon={visual.icon} size={16} />;
+    }
     return <TaskStatusIcon size={16} status={group.status ?? 'backlog'} />;
   }
 

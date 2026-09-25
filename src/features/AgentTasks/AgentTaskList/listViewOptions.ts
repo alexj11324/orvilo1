@@ -1,5 +1,5 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { t } from 'i18next';
 
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
@@ -63,6 +63,8 @@ export interface TaskGroupMeta {
   milestoneOrder?: number;
   priority?: number;
   status?: 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running' | 'scheduled';
+  /** A linked issue groups under its provider workflow state, like the board. */
+  workflowCategory?: TaskWorkflowCategory;
 }
 
 export const DEFAULT_TASK_LIST_VIEW_OPTIONS: TaskListViewOptions = {
@@ -170,6 +172,16 @@ const STATUS_GROUP_RANK_MAP: Record<NonNullable<TaskGroupMeta['status']>, number
   scheduled: 3,
   backlog: 4,
   completed: 5,
+  canceled: 6,
+};
+
+const WORKFLOW_GROUP_RANK_MAP: Record<TaskWorkflowCategory, number> = {
+  triage: 0,
+  backlog: 1,
+  todo: 2,
+  in_progress: 3,
+  in_review: 4,
+  done: 5,
   canceled: 6,
 };
 
@@ -393,6 +405,14 @@ export const getTaskGroupMeta = (
       return getTaskPriorityGroupMeta(getPriorityValue(task));
     }
     case 'status': {
+      if (task.workflowStateId && task.workflowCategory) {
+        return {
+          groupBy: 'status',
+          key: `workflow:${task.workflowCategory}`,
+          label: t(`taskDetail.workflow.category.${task.workflowCategory}`, { ns: 'chat' }),
+          workflowCategory: task.workflowCategory,
+        };
+      }
       const groupedStatus = getTaskStatusGroup(task);
       const labelKeyMap: Record<NonNullable<TaskGroupMeta['status']>, string> = {
         backlog: 'taskDetail.status.backlog',
@@ -438,6 +458,7 @@ const getGroupRank = (group: TaskGroupMeta, groupBy: TaskGroupBy): number => {
       return PRIORITY_RANK_MAP[group.priority] ?? Number.MAX_SAFE_INTEGER;
     }
     case 'status': {
+      if (group.workflowCategory) return WORKFLOW_GROUP_RANK_MAP[group.workflowCategory];
       if (!group.status) return Number.MAX_SAFE_INTEGER;
       return STATUS_GROUP_RANK_MAP[group.status] ?? Number.MAX_SAFE_INTEGER;
     }

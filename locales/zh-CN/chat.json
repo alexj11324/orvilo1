@@ -1668,6 +1668,7 @@
   "taskDetail.deleteConfirm.content": "此操作不可撤销。",
   "taskDetail.deleteConfirm.ok": "删除",
   "taskDetail.deleteConfirm.title": "确认删除此任务？",
+  "taskDetail.executionStatus": "执行",
   "taskDetail.goalTimeline.hover.cost": "成本",
   "taskDetail.goalTimeline.hover.duration": "时长",
   "taskDetail.goalTimeline.hover.status": "状态",

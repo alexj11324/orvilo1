@@ -552,6 +552,8 @@ describe('TaskService', () => {
           parentTaskId: 'task_001',
           priority: 'high',
           status: 'in_progress',
+          workflowCategory: 'in_review',
+          workflowStateId: 'linear-state-review',
         },
       ];
 
@@ -589,6 +591,8 @@ describe('TaskService', () => {
         name: 'Sub 2',
         priority: 'high',
         status: 'in_progress',
+        workflowCategory: 'in_review',
+        workflowStateId: 'linear-state-review',
       });
     });
 
@@ -762,7 +766,14 @@ describe('TaskService', () => {
 
       const dependencies = [{ dependsOnId: 'task_002', taskId: 'task_003', type: 'blocks' }];
       const depTasks = [
-        { id: 'task_002', identifier: 'TASK-2', name: 'Task 2', status: 'completed' },
+        {
+          id: 'task_002',
+          identifier: 'TASK-2',
+          name: 'Task 2',
+          status: 'completed',
+          workflowCategory: 'in_progress',
+          workflowStateId: 'linear-state-progress',
+        },
       ];
 
       mockTaskModel.resolve.mockResolvedValue(task);
@@ -786,6 +797,8 @@ describe('TaskService', () => {
           name: 'Task 2',
           status: 'completed',
           type: 'blocks',
+          workflowCategory: 'in_progress',
+          workflowStateId: 'linear-state-progress',
         },
       ]);
     });

@@ -1,4 +1,8 @@
-import type { TaskCreationSubjectSnapshot, TeamTriageAction } from '@orvilo/types';
+import type {
+  TaskCreationSubjectSnapshot,
+  TaskWorkflowCategory,
+  TeamTriageAction,
+} from '@orvilo/types';
 import dayjs from 'dayjs';
 
 /**
@@ -19,6 +23,8 @@ export interface TeamTriageTask {
   name?: string | null;
   priority?: number | null;
   status?: string | null;
+  workflowCategory?: TaskWorkflowCategory;
+  workflowStateId?: string | null;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
 import { DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
@@ -8,6 +8,7 @@ import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import IssueRowChip from '@/components/IssueRowChip';
 
 import TaskStatusIcon from './TaskStatusIcon';
@@ -132,13 +133,21 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
     const navigationItems = flattenedSubtasks.map((subtask) => {
       const isActive = subtask.task.identifier === currentIdentifier;
       const itemStatus = toTaskStatus(subtask.task.status);
+      const workflowVisual =
+        subtask.task.workflowStateId && subtask.task.workflowCategory
+          ? WORKFLOW_CATEGORY_VISUALS[subtask.task.workflowCategory]
+          : undefined;
 
       return {
         key: subtask.task.identifier,
         label: (
           <Flexbox horizontal align="center" gap={8}>
             {subtask.depth > 0 && <div style={{ flex: 'none', width: subtask.depth * 16 }} />}
-            <TaskStatusIcon size={16} status={itemStatus} />
+            {workflowVisual ? (
+              <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
+            ) : (
+              <TaskStatusIcon size={16} status={itemStatus} />
+            )}
             <Text ellipsis weight={isActive ? 'bold' : undefined}>
               {subtask.task.name || subtask.task.identifier}
             </Text>

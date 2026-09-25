@@ -79,13 +79,28 @@ const TaskProperties = memo(() => {
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
   return (
-    // Linear's rail order: Status → Priority → Assignee, then the Orvilo-only
-    // cells (reviewer, workflow, acceptance, schedule). The section heading is
-    // part of the rail's labeled groups; the container query hides it in the
-    // narrow pill layout where groups collapse into one row of pills.
+    // A linked issue leads with its business workflow state. The separate
+    // execution state stays available and is named so Backlog cannot appear
+    // to contradict an In Progress workflow state.
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
+        {status && workflowCategory && workflowStateId && (
+          <Block
+            horizontal
+            align="center"
+            className={styles.propertyItem}
+            gap={8}
+            variant={'borderless'}
+          >
+            <TaskWorkflowBadge
+              executionStatus={status}
+              workflowCategory={workflowCategory}
+              workflowStateId={workflowStateId}
+            />
+          </Block>
+        )}
+
         <TaskStatusTag status={status} taskIdentifier={taskId}>
           <Block
             clickable
@@ -96,7 +111,10 @@ const TaskProperties = memo(() => {
             variant={'borderless'}
           >
             <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
-            <Text weight={500}>{t(`taskDetail.${statusMeta.labelKey}` as never)}</Text>
+            <Text weight={500}>
+              {workflowStateId && workflowCategory ? `${t('taskDetail.executionStatus')}: ` : ''}
+              {t(`taskDetail.${statusMeta.labelKey}` as never)}
+            </Text>
           </Block>
         </TaskStatusTag>
 
@@ -236,22 +254,6 @@ const TaskProperties = memo(() => {
             )}
           </Block>
         </TaskLabelSelector>
-
-        {status && workflowStateId && (
-          <Block
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
-          >
-            <TaskWorkflowBadge
-              executionStatus={status}
-              workflowCategory={workflowCategory}
-              workflowStateId={workflowStateId}
-            />
-          </Block>
-        )}
 
         {/* The human layer: whether the delivery is accepted. Read-only here —
             the decision itself is made on the acceptance page this links to.

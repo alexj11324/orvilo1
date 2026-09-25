@@ -121,6 +121,27 @@ describe('TaskParentBar', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/task/T-parent/parent-task');
   });
 
+  it('shows the linked parent workflow glyph instead of its execution glyph', async () => {
+    mocks.getDetail.mockResolvedValue({
+      data: {
+        agentId: 'agt_parent',
+        identifier: 'T-parent',
+        instruction: 'Parent instruction',
+        status: 'backlog',
+        subtasks: [],
+        workflowCategory: 'in_progress',
+        workflowStateId: 'linear-in-progress',
+      },
+    });
+
+    const { container } = render(<TaskParentBar />);
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-workflow-icon="in_progress"]')).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('status')).not.toBeInTheDocument();
+  });
+
   it("opens parent subtasks inside the clicked subtask's owning agent route", async () => {
     mocks.getDetail.mockResolvedValue({
       data: {

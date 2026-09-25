@@ -9,6 +9,7 @@ import NavHeader from '@/features/NavHeader';
 import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
+import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import { taskDetailLayoutStyles as layout } from './taskDetailLayoutStyles';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -109,7 +110,7 @@ const TaskDetailSkeleton = memo<RouteSkeletonProps>(({ chrome = 'page' }) =>
   ) : (
     <WorkSurface>
       <NavHeader />
-      <WorkSurfaceDocument>
+      <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
         <TaskDetailBodySkeleton />
       </WorkSurfaceDocument>
     </WorkSurface>

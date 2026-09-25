@@ -115,6 +115,40 @@ describe('automation mode grouping', () => {
   });
 });
 
+describe('issue status grouping', () => {
+  it('groups linked issues by the workflow state shown on their board cards', () => {
+    const todo = task('todo', {
+      status: 'backlog',
+      workflowCategory: 'todo',
+      workflowStateId: 'state-todo',
+    });
+    const inProgress = task('in-progress', {
+      status: 'backlog',
+      workflowCategory: 'in_progress',
+      workflowStateId: 'state-progress',
+    });
+
+    expect(
+      groupTaskItems([todo, inProgress], 'status').map(([group, items]) => [
+        group.key,
+        group.workflowCategory,
+        items.map((item) => item.id),
+      ]),
+    ).toEqual([
+      ['workflow:todo', 'todo', ['todo']],
+      ['workflow:in_progress', 'in_progress', ['in-progress']],
+    ]);
+  });
+
+  it('keeps execution grouping for tasks without a linked workflow state', () => {
+    const local = task('local', { status: 'running' });
+    expect(groupTaskItems([local], 'status')[0][0]).toMatchObject({
+      key: 'status:running',
+      status: 'running',
+    });
+  });
+});
+
 describe('milestone grouping', () => {
   // The catalog arrives unordered; `sortOrder` is the project's own ordering.
   const milestoneById = taskMilestoneById([

@@ -1656,6 +1656,7 @@ export default {
   'taskDetail.priority.normal': 'Medium',
   'taskDetail.priority.urgent': 'Urgent',
   'taskDetail.properties': 'Properties',
+  'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
   'taskDetail.related': 'Related',
   'taskDetail.copyBranch': 'Copy branch name',

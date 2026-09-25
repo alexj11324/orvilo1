@@ -1,6 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import type { TaskDetailData, TaskDetailSubtask } from '@orvilo/types';
+import type { TaskDetailData, TaskDetailSubtask, TaskWorkflowCategory } from '@orvilo/types';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +12,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 
 const TASK_STATUS_SET = new Set([
   'backlog',
@@ -38,12 +39,22 @@ const TaskParentBar = memo(() => {
   >();
   const [parentSubtasks, setParentSubtasks] = useState<TaskDetailSubtask[]>([]);
   const [parentStatus, setParentStatus] = useState<TaskStatus>('backlog');
+  const [parentWorkflow, setParentWorkflow] = useState<{
+    category?: TaskWorkflowCategory;
+    stateId?: string | null;
+  }>({});
+  const workflowGlyph = useTaskWorkflowGlyph({
+    executionStatus: parentStatus,
+    workflowCategory: parentWorkflow.category,
+    workflowStateId: parentWorkflow.stateId,
+  });
 
   useEffect(() => {
     let isActive = true;
     setFetchedParentAgent(undefined);
     setParentSubtasks([]);
     setParentStatus('backlog');
+    setParentWorkflow({});
     if (!parent?.identifier) return;
 
     taskService
@@ -53,6 +64,7 @@ const TaskParentBar = memo(() => {
         const detail = res.data as TaskDetailData;
         setFetchedParentAgent({ agentId: detail.agentId, identifier: parent.identifier });
         setParentStatus(toTaskStatus(detail.status));
+        setParentWorkflow({ category: detail.workflowCategory, stateId: detail.workflowStateId });
         setParentSubtasks(detail.subtasks ?? []);
       })
       .catch((err) => {
@@ -80,10 +92,18 @@ const TaskParentBar = memo(() => {
         {t('taskDetail.subIssueOf')}
       </Text>
       <Button
-        icon={<TaskStatusIcon size={16} status={parentStatus} />}
         size={'small'}
         style={{ maxWidth: '100%', minWidth: 0 }}
         type={'text'}
+        icon={
+          workflowGlyph ? (
+            <Tooltip title={workflowGlyph.label}>
+              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
+            </Tooltip>
+          ) : (
+            <TaskStatusIcon size={16} status={parentStatus} />
+          )
+        }
         onClick={() =>
           navigate(taskDetailPath(parent.identifier, parentAgentId ?? undefined, parent.name))
         }

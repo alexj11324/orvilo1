@@ -15,7 +15,10 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 `AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
 
+- **Linear UI parity**: For page-by-page implementation or audit against the live Linear product, read the `linear-ui-parity` skill. It owns two-way comparison, comparable runtime evidence, and the independent final page review.
+
 - **React and TSX**: Before editing components, component state, render boundaries, or memoization, read the `react` skill. It owns component selection, styling, state locality, and render-performance rules.
+
 - **Heavy domain features**: When splitting a fat Viewer/Page into reusable pieces (page vs portal vs share vs micro-app), read the `compose-atoms` skill. Split on mountable capabilities, not visual sections, and do not hide unused work behind `readOnly` / `mode` flags.
 
 ## Code Ownership

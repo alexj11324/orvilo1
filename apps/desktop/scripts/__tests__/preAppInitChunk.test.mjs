@@ -171,7 +171,8 @@ describe('pre-app-init source', () => {
   it('imports or requires only node builtins and electron', async () => {
     const source = await readFile(realPreAppInit, 'utf8');
     const specifiers = [
-      ...source.matchAll(/^\s*import\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/gm),
+      ...source.matchAll(/\bfrom\s*['"]([^'"]+)['"]/g),
+      ...source.matchAll(/^\s*import\s*['"]([^'"]+)['"]/gm),
       ...source.matchAll(/\b(?:require|import)\(\s*['"]([^'"]+)['"]\s*\)/g),
     ].map((match) => match[1]);
 

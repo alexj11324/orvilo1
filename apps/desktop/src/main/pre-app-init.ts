@@ -1,3 +1,5 @@
+// Named import on purpose: a default import pulls Rolldown's interop runtime into this chunk.
+// eslint-disable-next-line unicorn/import-style
 import { join } from 'node:path';
 
 import { app } from 'electron';

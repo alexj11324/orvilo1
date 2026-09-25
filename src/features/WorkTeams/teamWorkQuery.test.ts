@@ -29,7 +29,9 @@ describe('teamWorkQuery', () => {
       layout: 'board',
     });
     expect(teamTaskQuery('team-1').layout).toBe('list');
-    expect(teamTaskQuery('team-1').groupBy).toBe('status');
+    // The list groups by the same workflow states as the board, so group
+    // headers draw the same glyph as the row status marks beneath them.
+    expect(teamTaskQuery('team-1').groupBy).toBe('workflowCategory');
   });
 
   it('adds a cycleId eq predicate for an existing cycle', () => {

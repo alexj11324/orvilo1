@@ -61,8 +61,11 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
     return () => clearTimeout(timer);
   }, [needle, open, taskId]);
 
-  const displayValue = (option: { label?: ReactNode; value: string }) =>
-    typeof option.label === 'string' ? option.label : option.value;
+  // Items here are always `options` entries — base-ui types them `unknown`.
+  const displayValue = (item: unknown) => {
+    const option = item as { label?: ReactNode; value: string };
+    return typeof option.label === 'string' ? option.label : option.value;
+  };
 
   const confirm = () => {
     if (taskId && selected) onConfirm(taskId, selected);
@@ -93,7 +96,7 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
           // Server-side search: the built-in filter matches typed text against
           // `itemToStringValue` and would drop every fetched option.
           filteredItems={options}
-          itemToStringValue={(item) => displayValue(item)}
+          itemToStringValue={displayValue}
           options={options}
           placeholder={t('teams.markDuplicatePlaceholder')}
           style={{ width: '100%' }}

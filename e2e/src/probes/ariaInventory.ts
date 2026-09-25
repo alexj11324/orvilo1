@@ -61,13 +61,23 @@ const parseScalar = (value: string) => {
 /**
  * One entry per `- role "name" [attrs]` line. Property lines (`- /url: …`,
  * `- /placeholder: …`) and block-scalar continuations carry no role and are
- * skipped. Regex names (`/pattern/`) are kept as written.
+ * skipped. Regex names (`/pattern/`) are kept as written; `diffAriaInventory`
+ * matches them against the other side's names.
  */
 export const parseAriaInventory = (yaml: string): AriaNode[] => {
   const nodes: AriaNode[] = [];
+  // Indent of an open `key: |` block scalar; its deeper lines are text, even
+  // one that happens to start with "- ".
+  let blockIndent = -1;
   for (const line of yaml.split('\n')) {
+    const indent = /^ */.exec(line)![0].length;
+    if (blockIndent >= 0) {
+      if (!line.trim() || indent > blockIndent) continue;
+      blockIndent = -1;
+    }
     const match = /^( *)- (.*)$/.exec(line);
     if (!match) continue;
+    if (/:\s*[|>][+-]?\s*$/.test(match[2])) blockIndent = indent;
     const depth = Math.floor(match[1].length / 2);
     const { key, rest: afterQuotedKey } = splitKey(match[2].trimEnd());
     const content = key + afterQuotedKey;
@@ -120,22 +130,38 @@ export interface AriaDiff {
   missing: AriaNode[];
 }
 
-export const normalizeAriaName = (name: string, aliases: Record<string, string> = {}) => {
-  const normalized = name.toLowerCase().replaceAll(/\s+/g, ' ').trim();
-  const aliasTable = new Map(
-    Object.entries(aliases).map(([from, to]) => [
-      normalizeAriaName(from),
-      to.toLowerCase().replaceAll(/\s+/g, ' ').trim(),
-    ]),
-  );
-  return aliasTable.get(normalized) ?? normalized;
+const collapse = (name: string): string => name.toLowerCase().replaceAll(/\s+/g, ' ').trim();
+
+export const normalizeAriaName = (name: string, aliases: Record<string, string> = {}): string => {
+  const normalized = collapse(name);
+  for (const [from, to] of Object.entries(aliases)) {
+    if (collapse(from) === normalized) return collapse(to);
+  }
+  return normalized;
+};
+
+const REGEX_NAME = /^\/(.*)\/([a-z]*)$/s;
+
+/** A `/pattern/flags` name from the snapshot, compiled case-insensitively. */
+export const ariaNamePattern = (name: string): RegExp | undefined => {
+  const match = REGEX_NAME.exec(name);
+  if (!match) return undefined;
+  try {
+    // `g`/`y` would make `test` stateful across pairings.
+    const flags = [...new Set(`${match[2]}i`)].filter((flag) => flag !== 'g' && flag !== 'y');
+    return new RegExp(match[1], flags.join(''));
+  } catch {
+    return undefined;
+  }
 };
 
 /**
  * Pair entries by role and normalized name, as a multiset: two "Remove"
- * buttons in the reference need two in the candidate. Depth is ignored —
- * the two apps nest their wrappers differently, and a control that moved one
- * level is still present.
+ * buttons in the reference need two in the candidate. Exact names pair first;
+ * a regex name (`/Issue \d+/`) then pairs with any still-unpaired entry of
+ * the same role whose name it matches. Depth is ignored — the two apps nest
+ * their wrappers differently, and a control that moved one level is still
+ * present.
  */
 export const diffAriaInventory = (
   reference: AriaNode[],
@@ -143,36 +169,33 @@ export const diffAriaInventory = (
   { aliases = {}, ignoreRoles = [] }: AriaDiffOptions = {},
 ): AriaDiff => {
   const ignored = new Set(ignoreRoles);
-  const keyOf = (node: AriaNode) => `${node.role}\u0000${normalizeAriaName(node.name, aliases)}`;
-  const available = new Map<string, number>();
-  for (const node of candidate) {
-    if (ignored.has(node.role)) continue;
-    available.set(keyOf(node), (available.get(keyOf(node)) ?? 0) + 1);
-  }
+  const refs = reference.filter((node) => !ignored.has(node.role));
+  const cands = candidate.filter((node) => !ignored.has(node.role));
+  const nameOf = (node: AriaNode) => normalizeAriaName(node.name, aliases);
+  const refPaired = refs.map(() => false);
+  const candPaired = cands.map(() => false);
 
-  const missing: AriaNode[] = [];
-  const matched = new Map<string, number>();
-  for (const node of reference) {
-    if (ignored.has(node.role)) continue;
-    const key = keyOf(node);
-    const left = available.get(key) ?? 0;
-    if (left > 0) {
-      available.set(key, left - 1);
-      matched.set(key, (matched.get(key) ?? 0) + 1);
-    } else {
-      missing.push(node);
-    }
-  }
+  const pair = (matches: (ref: AriaNode, cand: AriaNode) => boolean) => {
+    refs.forEach((ref, i) => {
+      if (refPaired[i]) return;
+      const j = cands.findIndex(
+        (cand, index) => !candPaired[index] && cand.role === ref.role && matches(ref, cand),
+      );
+      if (j === -1) return;
+      refPaired[i] = true;
+      candPaired[j] = true;
+    });
+  };
+  const patternMatches = (pattern: AriaNode, text: AriaNode) =>
+    ariaNamePattern(pattern.name)?.test(nameOf(text)) ?? false;
 
-  const extra: AriaNode[] = [];
-  for (const node of candidate) {
-    if (ignored.has(node.role)) continue;
-    const key = keyOf(node);
-    const consumed = matched.get(key) ?? 0;
-    if (consumed > 0) matched.set(key, consumed - 1);
-    else extra.push(node);
-  }
-  return { extra, missing };
+  pair((ref, cand) => nameOf(ref) === nameOf(cand));
+  pair((ref, cand) => patternMatches(ref, cand) || patternMatches(cand, ref));
+
+  return {
+    extra: cands.filter((_, index) => !candPaired[index]),
+    missing: refs.filter((_, index) => !refPaired[index]),
+  };
 };
 
 export const formatAriaDiff = ({ extra, missing }: AriaDiff): string => {

@@ -34,11 +34,13 @@ export interface HorizontalBox {
 }
 
 export interface RowSample {
+  /** Bottom edge of the row slot; with `top`, tells a vertical stack from a wrapped line. */
+  bottom: number;
   /**
    * The row as drawn: the outer box, descended through single-child wrappers
-   * that do not start a new line (an inline or `display: contents` span, or a
-   * trigger `div` exactly as tall as its only child). This is the box whose
-   * edge a user sees.
+   * (a `display: contents` span, an inline span wrapping one block, or a
+   * trigger `div` exactly as tall as its only child). An inline text child is
+   * content and stops the descent. This is the box whose edge a user sees.
    */
   box: HorizontalBox;
   /** Left edge of the leftmost visible text or icon inside the row, if any. */
@@ -46,6 +48,7 @@ export interface RowSample {
   /** The container's own child — the slot the row occupies. */
   outer: HorizontalBox;
   selector: string;
+  top: number;
 }
 
 export interface RowScopeSample {
@@ -102,6 +105,18 @@ const consensus = (
   return best;
 };
 
+/**
+ * Rows form a vertical stack when no two of them share a line. A wrapped pill
+ * row (the rail folded under a narrow title) is a line of chips, not a stack,
+ * and its members legitimately differ in left edge and width.
+ */
+export const isVerticalStack = (rows: Pick<RowSample, 'bottom' | 'top'>[], tolerance = 1) => {
+  const sorted = [...rows].sort((a, b) => a.top - b.top);
+  return sorted.every(
+    (row, index) => index === 0 || row.top >= sorted[index - 1].bottom - tolerance,
+  );
+};
+
 export interface SiblingEdgeOptions {
   /** Pixels a row may deviate from the consensus. Default 1. */
   tolerance?: number;
@@ -110,12 +125,13 @@ export interface SiblingEdgeOptions {
 /**
  * Rows stacked in one container share a left edge and a width. A row that
  * deviates is reported with its offset from the consensus of its siblings.
+ * Only a vertical stack is judged; rows sharing a line are out of scope.
  */
 export const checkSiblingEdges = (
   scope: RowScopeSample,
   { tolerance = 1 }: SiblingEdgeOptions = {},
 ): LayoutViolation[] => {
-  if (scope.rows.length < 2) return [];
+  if (scope.rows.length < 2 || !isVerticalStack(scope.rows, tolerance)) return [];
   const lefts = scope.rows.map((row) => row.box.left);
   const widths = scope.rows.map((row) => row.box.width);
   const nearContainerLeft = (a: number, b: number) =>
@@ -249,7 +265,9 @@ export const checkTypeScale = (samples: TextSample[], allowed?: string[]): TypeS
 
 // ─── date-format ─────────────────────────────────────────────────────────────
 
-const ISO_DATE = /\b\d{4}-\d{2}-\d{2}\b/g;
+// Digit-bounded rather than word-bounded: `2026-09-25T10:00:00Z` must match,
+// and `\b` sees no boundary between the day and the `T`.
+const ISO_DATE = /(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)/g;
 
 /** Raw ISO dates in visible text: the UI should show a localized date. */
 export const checkDateFormat = (samples: TextSample[]): LayoutViolation[] =>
@@ -269,6 +287,11 @@ export const checkDateFormat = (samples: TextSample[]): LayoutViolation[] =>
 // ─── hover-glyph ─────────────────────────────────────────────────────────────
 
 export interface GlyphState {
+  /**
+   * Stable identity of the svg across the hover: tagged on the element before
+   * the pointer arrives, so a glyph inserted on hover cannot shift the pairing.
+   */
+  key: string;
   /** Opacity after multiplying every ancestor's, up to the document. */
   opacity: number;
   visible: boolean;
@@ -282,21 +305,29 @@ export interface HoverGlyphSample {
 
 /**
  * Hover must not take a glyph away: an icon that fades out (or unmounts) when
- * the pointer arrives reads as the control changing its mind.
+ * the pointer arrives reads as the control changing its mind. The verdict is
+ * the count of visible svgs — a glyph swapped for another (chevron → close) is
+ * not a loss; the detail names the glyphs that went away.
  */
 export const checkHoverGlyphs = (samples: HoverGlyphSample[]): LayoutViolation[] =>
   samples.flatMap((sample) => {
     const visibleBefore = sample.before.filter((glyph) => glyph.visible).length;
     const visibleAfter = sample.after.filter((glyph) => glyph.visible).length;
-    const faded = sample.before.flatMap((glyph, index) =>
-      glyph.visible && sample.after[index] && !sample.after[index].visible ? [index] : [],
-    );
-    if (visibleAfter >= visibleBefore && faded.length === 0) return [];
+    if (visibleAfter >= visibleBefore) return [];
+    const afterByKey = new Map(sample.after.map((glyph) => [glyph.key, glyph]));
+    const lost = sample.before.flatMap((glyph) => {
+      if (!glyph.visible) return [];
+      const after = afterByKey.get(glyph.key);
+      if (!after) return [`#${glyph.key} unmounted`];
+      if (!after.visible)
+        return [`#${glyph.key} opacity ${round(glyph.opacity)} → ${round(after.opacity)}`];
+      return [];
+    });
     return [
       {
         detail:
           `visible svg ${visibleBefore} → ${visibleAfter} on hover` +
-          (faded.length > 0 ? `; hidden: #${faded.join(', #')}` : ''),
+          (lost.length > 0 ? `; ${lost.join(', ')}` : ''),
         rule: 'hover-glyph' as const,
         selector: sample.selector,
         severity: 'error' as const,
@@ -400,15 +431,24 @@ const PAGE_HELPERS = `
 export const layoutSampleScript = (scopeSelector: string, ignoreTextSelector?: string) => `(() => {
   ${PAGE_HELPERS}
   const ignore = ${JSON.stringify(ignoreTextSelector ?? '')};
+  // Descend through single-child wrappers to the box the user sees. An inline
+  // child is content (a label), not a wrapper — unless it only wraps one block
+  // (block-in-inline), in which case that block is the drawn box.
   const drawnBox = (el) => {
     let current = el;
     for (;;) {
       if (hasOwnText(current)) return current;
       const kids = layoutChildren(current);
       if (kids.length !== 1) return current;
-      const child = kids[0];
+      let child = kids[0];
+      if (isTransparentBox(child)) {
+        if (hasOwnText(child)) return current;
+        const inner = layoutChildren(child);
+        if (inner.length !== 1 || isTransparentBox(inner[0])) return current;
+        child = inner[0];
+      }
       const tall = child.getBoundingClientRect().height >= current.getBoundingClientRect().height - 1;
-      if (!(isTransparentBox(current) || isTransparentBox(child) || tall)) return current;
+      if (!(isTransparentBox(current) || tall)) return current;
       current = child;
     }
   };
@@ -442,10 +482,12 @@ export const layoutSampleScript = (scopeSelector: string, ignoreTextSelector?: s
       if (outerRect.width < 1 || outerRect.height < 1 || !shown(child)) continue;
       const drawn = drawnBox(child).getBoundingClientRect();
       rows.push({
+        bottom: outerRect.bottom,
         box: { left: drawn.left, width: drawn.width },
         contentLeft: contentLeft(child),
         outer: { left: outerRect.left, width: outerRect.width },
         selector: describe(child),
+        top: outerRect.top,
       });
     }
     rowScopes.push({ container: { left: rect.left + padLeft, width: rect.width - padLeft - padRight }, rows, scope: describe(scope) });
@@ -503,11 +545,15 @@ export const runLayoutRules = async (
 // ─── hover-glyph (interactive) ───────────────────────────────────────────────
 
 const PROBE_ATTR = 'data-layout-probe-hover';
+const GLYPH_ATTR = 'data-layout-probe-glyph';
 
-const glyphStateScript = (id: string) => `(() => {
+// `tag` numbers the svgs present before the hover; the after-read leaves new
+// svgs untagged and reports them under a fresh key.
+const glyphStateScript = (id: string, tag: boolean) => `(() => {
   const el = document.querySelector('[${PROBE_ATTR}="${id}"]');
   if (!el) return [];
-  return [...el.querySelectorAll('svg')].map((svg) => {
+  return [...el.querySelectorAll('svg')].map((svg, index) => {
+    if (${tag}) svg.setAttribute('${GLYPH_ATTR}', String(index));
     let opacity = 1;
     let hidden = false;
     for (let node = svg; node; node = node.parentElement) {
@@ -516,35 +562,46 @@ const glyphStateScript = (id: string) => `(() => {
       if (style.display === 'none' || style.visibility === 'hidden') hidden = true;
     }
     const rect = svg.getBoundingClientRect();
-    return { opacity, visible: !hidden && opacity > 0.01 && rect.width > 0 && rect.height > 0 };
+    const key = svg.getAttribute('${GLYPH_ATTR}') ?? 'new-' + index;
+    return { key, opacity, visible: !hidden && opacity > 0.01 && rect.width > 0 && rect.height > 0 };
   });
 })()`;
 
 /**
  * Hover each element `target` matches and compare its svg glyphs before and
  * after. `settleMs` covers opacity transitions (the pointer lands, the glyph
- * fades over ~200ms).
+ * fades over ~200ms). The pointer is parked at `restPoint` between targets —
+ * pick a spot that hovers nothing interactive.
  */
 export const probeHoverGlyphs = async (
   page: Page,
   target: Locator,
-  { settleMs = 400 }: { settleMs?: number } = {},
+  {
+    restPoint = { x: 0, y: 0 },
+    settleMs = 400,
+  }: { restPoint?: { x: number; y: number }; settleMs?: number } = {},
 ): Promise<{ checked: string[]; violations: LayoutViolation[] }> => {
   const samples: HoverGlyphSample[] = [];
   const elements = await target.all();
   for (const [index, element] of elements.entries()) {
     const id = `glyph-${index}`;
     await element.evaluate((el, [attr, value]) => el.setAttribute(attr, value), [PROBE_ATTR, id]);
-    await page.mouse.move(0, 0);
+    await page.mouse.move(restPoint.x, restPoint.y);
     await page.waitForTimeout(settleMs);
-    const before = (await page.evaluate(glyphStateScript(id))) as GlyphState[];
+    const before = (await page.evaluate(glyphStateScript(id, true))) as GlyphState[];
     await element.hover();
     await page.waitForTimeout(settleMs);
-    const after = (await page.evaluate(glyphStateScript(id))) as GlyphState[];
+    const after = (await page.evaluate(glyphStateScript(id, false))) as GlyphState[];
     const selector = (await page.evaluate(
       `(() => { ${PAGE_HELPERS} return describe(document.querySelector('[${PROBE_ATTR}="${id}"]')); })()`,
     )) as string;
-    await element.evaluate((el, attr) => el.removeAttribute(attr), PROBE_ATTR);
+    await element.evaluate(
+      (el, [probe, glyph]) => {
+        el.removeAttribute(probe);
+        for (const svg of el.querySelectorAll(`[${glyph}]`)) svg.removeAttribute(glyph);
+      },
+      [PROBE_ATTR, GLYPH_ATTR],
+    );
     samples.push({ after, before, selector });
   }
   return {

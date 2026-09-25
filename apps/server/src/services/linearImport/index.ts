@@ -15,6 +15,8 @@ export const LINEAR_IMPORT_CATEGORIES = [
   'canceled',
 ] as const satisfies readonly TaskWorkflowCategory[];
 
+const allowedImportCategories = new Set<TaskWorkflowCategory>(LINEAR_IMPORT_CATEGORIES);
+
 export type StateMapping = { linearStateId: string; workflowCategory: TaskWorkflowCategory };
 
 export const suggestCategory = (type: string | null): TaskWorkflowCategory => {
@@ -125,7 +127,7 @@ export class LinearImportService {
     ) {
       throw new Error('Every Linear team state must have exactly one mapping');
     }
-    if (mappings.some((mapping) => !LINEAR_IMPORT_CATEGORIES.includes(mapping.workflowCategory))) {
+    if (mappings.some((mapping) => !allowedImportCategories.has(mapping.workflowCategory))) {
       throw new Error('Unsupported workflow category');
     }
   }

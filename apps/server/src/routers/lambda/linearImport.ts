@@ -36,13 +36,11 @@ const mapError = (error: unknown): never => {
 export const linearImportRouter = router({
   destinations: procedure
     .input(
-      z
-        .object({
-          search: z.string().max(100).optional(),
-          offset: z.number().int().min(0).default(0),
-          limit: z.number().int().min(1).max(50).default(30),
-        })
-        .default({}),
+      z.object({
+        search: z.string().max(100).optional(),
+        offset: z.number().int().min(0).default(0),
+        limit: z.number().int().min(1).max(50).default(30),
+      }),
     )
     .query(async ({ ctx, input }) => {
       try {

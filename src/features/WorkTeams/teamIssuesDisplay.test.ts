@@ -61,6 +61,15 @@ describe('teamIssuesDisplay URL state', () => {
     expect(malformed.display).toEqual(DEFAULT_TEAM_ISSUES_DISPLAY);
   });
 
+  it('groups a clean list URL by workflow state, like the board', () => {
+    // Linear groups the issue list by the same workflow states as its board;
+    // grouping by run status put rows under headers whose glyph differed from
+    // the row's own status mark (a started issue under "Todo").
+    const { display } = readTeamIssuesUrlState(new URLSearchParams('tab=issues&layout=list'));
+    expect(teamIssuesServerGroupBy(display, 'list')).toBe('workflowCategory');
+    expect(teamIssuesServerGroupBy(display, 'board')).toBe('workflowCategory');
+  });
+
   it('resolves a shared grouping param against the active layout', () => {
     // 'status' is valid on both surfaces — one param serves both.
     const shared = readTeamIssuesUrlState(new URLSearchParams('grouping=status'));

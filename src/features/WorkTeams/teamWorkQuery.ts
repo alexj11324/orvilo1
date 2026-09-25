@@ -102,7 +102,7 @@ export const teamTaskQuery = (
   if (layout !== 'board') {
     return {
       ...filtered,
-      groupBy: options?.groupBy ?? 'status',
+      groupBy: options?.groupBy ?? 'workflowCategory',
       layout: 'list',
       sort: options?.sort,
     };

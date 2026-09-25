@@ -25,6 +25,13 @@ live in Electron against the Linear reference workspace.
   matching the reference instead of `fromNow()`'s "24 minutes ago".
 - **List footer**: `N unread notifications` renders at the bottom of the
   list column when the feed has no more pages.
+- **Row quick actions** (`inboxCardActionFlags` in `inboxOrganize.ts`):
+  hovering a row surfaces Linear's three affordances over the timestamp —
+  envelope (mark read / mark unread), clock (snooze preset menu), tray
+  (archive). Mark-read/unread is implicit from the card's `read` state;
+  snooze and archive require the action in `availableActions`. The same
+  flags pin the detail pane's header actions (star, mail, snooze, tray,
+  ⋯ more), so one gate keeps both surfaces identical.
 
 ## Drafts (`/drafts`)
 

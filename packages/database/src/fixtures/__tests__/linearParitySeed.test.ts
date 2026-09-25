@@ -111,12 +111,7 @@ describe('linear parity seed', () => {
       query: applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list', 'attention'),
     });
     const populatedGroups = assigned.groups!.filter((group) => group.total > 0);
-    expect(populatedGroups.map(({ key }) => key)).toEqual([
-      'urgent',
-      'blocking',
-      'backlog',
-      'completed',
-    ]);
+    expect(populatedGroups.map(({ key }) => key)).toEqual(['urgent', 'blocking', 'todo', 'done']);
     expect(
       populatedGroups
         .find(({ key }) => key === 'urgent')

@@ -1448,7 +1448,9 @@ export class TaskService {
           createdByUserId: s.createdByUserId ?? undefined,
           visibility: s.visibility,
           children: buildSubtaskTree(s.id),
+          domainRevision: s.domainRevision,
           ...(s.heartbeatInterval != null ? { heartbeat: { interval: s.heartbeatInterval } } : {}),
+          id: s.id,
           identifier: s.identifier,
           name: s.name,
           priority: s.priority,
@@ -1465,6 +1467,7 @@ export class TaskService {
             ? { schedule: { pattern: s.schedulePattern, timezone: s.scheduleTimezone } }
             : {}),
           status: s.status,
+          teamId: s.teamId,
           updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : undefined,
         };
       });
@@ -1727,6 +1730,7 @@ export class TaskService {
       config: taskConfig,
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       createdByUserId: task.createdByUserId,
+      domainRevision: task.domainRevision,
       dependencies: dependencies.map((d) => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
@@ -1779,6 +1783,7 @@ export class TaskService {
       reviewerUserId: task.reviewerUserId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: task.status,
+      teamId: task.teamId,
       userId: task.assigneeUserId,
       verify: acceptance
         ? { ...acceptance.config, requirement: acceptance.requirement }

@@ -82,11 +82,11 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const updateTask = useTaskStore((s) => s.updateTask);
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
-  const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } = useTaskItemContextMenu(
-    task,
-    routeScope,
-    onStatusChange,
-  );
+  const {
+    duplicateModal,
+    items: contextMenuItems,
+    onContextMenu: handleContextMenuOpen,
+  } = useTaskItemContextMenu(task, routeScope, onStatusChange);
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
 
@@ -222,6 +222,11 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           <TaskStatusTag
             status={status}
             taskIdentifier={task.identifier}
+            triageTarget={
+              task.teamId
+                ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+                : undefined
+            }
             onChange={onStatusChange}
           />
         )}
@@ -374,32 +379,35 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   ) : null;
 
   return (
-    <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-      <Block
-        clickable
-        data-collab-id={`task:${task.id}`}
-        data-collab-id-alt={`task:${task.identifier}`}
-        data-collab-private={isPrivate || undefined}
-        gap={4}
-        // Linear's issue rows sit on a 44px pitch (measured): the list wrapper
-        // adds 2px, so this block needs 42 — 22px content + 10px block padding.
-        paddingBlock={linearIssueRow ? 10 : 8}
-        paddingInline={12}
-        variant={'borderless'}
-        onClick={handleClick}
-      >
-        <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
-          {titleRow}
-          <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
-            {milestoneBadge}
-            {openRunNode}
-            {scheduleNode}
-            {assigneeNode}
-            {timeNode}
+    <>
+      {duplicateModal}
+      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
+        <Block
+          clickable
+          data-collab-id={`task:${task.id}`}
+          data-collab-id-alt={`task:${task.identifier}`}
+          data-collab-private={isPrivate || undefined}
+          gap={4}
+          // Linear's issue rows sit on a 44px pitch (measured): the list wrapper
+          // adds 2px, so this block needs 42 — 22px content + 10px block padding.
+          paddingBlock={linearIssueRow ? 10 : 8}
+          paddingInline={12}
+          variant={'borderless'}
+          onClick={handleClick}
+        >
+          <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+            {titleRow}
+            <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+              {milestoneBadge}
+              {openRunNode}
+              {scheduleNode}
+              {assigneeNode}
+              {timeNode}
+            </Flexbox>
           </Flexbox>
-        </Flexbox>
-      </Block>
-    </ContextMenuTrigger>
+        </Block>
+      </ContextMenuTrigger>
+    </>
   );
 });
 

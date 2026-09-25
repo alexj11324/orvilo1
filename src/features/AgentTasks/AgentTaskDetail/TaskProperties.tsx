@@ -67,6 +67,9 @@ const TaskProperties = memo(() => {
   const assigneeAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
   const reviewerUserId = useTaskStore(taskDetailSelectors.activeTaskReviewerUserId);
   const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
+  const databaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+  const teamId = useTaskStore(taskDetailSelectors.activeTaskTeamId);
+  const domainRevision = useTaskStore(taskDetailSelectors.activeTaskDomainRevision);
   const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
   const heartbeatInterval = useTaskStore(taskDetailSelectors.activeTaskPeriodicInterval);
   const automationMode = useTaskStore(taskDetailSelectors.activeTaskAutomationMode);
@@ -94,7 +97,15 @@ const TaskProperties = memo(() => {
           {t('taskDetail.properties')}
         </span>
         <div className={styles.properties}>
-          <TaskStatusTag status={status} taskIdentifier={taskId}>
+          <TaskStatusTag
+            status={status}
+            taskIdentifier={taskId}
+            triageTarget={
+              databaseId && teamId && domainRevision
+                ? { domainRevision, id: databaseId, teamId }
+                : undefined
+            }
+          >
             <Block
               clickable
               horizontal

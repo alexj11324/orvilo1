@@ -110,11 +110,11 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       const onKeyDown = (event: KeyboardEvent) => {
         const num = Number.parseInt(event.key, 10);
         if (Number.isNaN(num)) return;
-        const idx = num - 1;
-        if (idx < 0 || idx >= PRIORITY_LEVELS.length) return;
+        // Priority digits are the level values themselves (0 = No priority).
+        if (!PRIORITY_LEVELS.includes(num as (typeof PRIORITY_LEVELS)[number])) return;
         event.preventDefault();
         event.stopPropagation();
-        void handlePriorityChangeRef.current(PRIORITY_LEVELS[idx]);
+        void handlePriorityChangeRef.current(num);
         setOpen(false);
       };
       document.addEventListener('keydown', onKeyDown, true);
@@ -123,12 +123,12 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
 
     const menuItems = useMemo<DropdownItem[]>(
       () =>
-        Object.entries(PRIORITY_META).map(([key, value], index) => {
+        Object.entries(PRIORITY_META).map(([key, value]) => {
           const level = Number(key);
           const IconRender = value.icon;
           const isCurrent = level === currentLevel;
           return {
-            extra: renderMenuExtra(String(index + 1), isCurrent),
+            extra: renderMenuExtra(String(level), isCurrent),
             icon: <IconRender color={getPriorityIconColor(level)} size={16} />,
             key,
             label: t(`taskDetail.${value.labelKey}` as never, { defaultValue: value.label }),

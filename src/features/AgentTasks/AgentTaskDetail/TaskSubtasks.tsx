@@ -84,7 +84,16 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TaskStatusTag size={14} status={status} taskIdentifier={task.identifier}>
+        <TaskStatusTag
+          size={14}
+          status={status}
+          taskIdentifier={task.identifier}
+          triageTarget={
+            task.id && task.teamId && task.domainRevision
+              ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+              : undefined
+          }
+        >
           {hasRunningTopic ? <TopicStatusIcon size={14} status="running" /> : undefined}
         </TaskStatusTag>
       </span>

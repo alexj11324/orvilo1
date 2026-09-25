@@ -1020,7 +1020,11 @@ export interface TaskDetailSubtask {
   children?: TaskDetailSubtask[];
   /** Creator of the subtask; with `visibility`, gates who it can be assigned to. */
   createdByUserId?: string;
+  /** Optimistic-concurrency token for guarded domain writes (e.g. triage actions). */
+  domainRevision?: number;
   heartbeat?: { interval?: number | null };
+  /** Internal database id; required by mutation-backed menu actions. */
+  id?: string;
   identifier: string;
   name?: string | null;
   priority?: number | null;
@@ -1029,6 +1033,8 @@ export interface TaskDetailSubtask {
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   status: string;
+  /** Owning team (shared mode); null for personal tasks and legacy rows. */
+  teamId?: string | null;
   updatedAt?: string;
   visibility?: 'private' | 'public';
 }
@@ -1235,6 +1241,8 @@ export interface TaskDetailData {
     type: string;
   }>;
   description?: string | null;
+  /** Optimistic-concurrency token for guarded domain writes (e.g. triage actions). */
+  domainRevision?: number;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;

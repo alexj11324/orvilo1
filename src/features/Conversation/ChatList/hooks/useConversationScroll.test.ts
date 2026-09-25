@@ -86,6 +86,18 @@ describe('useConversationScroll — helpers', () => {
     ).toEqual({ cancelPin: true, shrinkSpacer: true });
   });
 
+  it('cancels the pin on a user scroll-up even before the spacer mounts, without shrinking', () => {
+    expect(
+      getConversationSpacerScrollEffect({
+        delta: -24,
+        hasPrevOffset: true,
+        hasUserIntent: true,
+        isAIGenerating: false,
+        isMounted: false,
+      }),
+    ).toEqual({ cancelPin: true, shrinkSpacer: false });
+  });
+
   it('does nothing when there is no previous offset to diff against', () => {
     expect(
       getConversationSpacerScrollEffect({
@@ -660,6 +672,37 @@ describe('useConversationScroll — pin behavior', () => {
       await vi.advanceTimersByTimeAsync(500);
     });
     expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it('does not pull the viewport back when the user scrolled up before the spacer mounted', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: false,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    // User wheels up before the first spacer measure (still a pending rAF).
+    act(() => {
+      result.current.onScrollOffset(200, true);
+      result.current.onScrollOffset(100, true);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(scrollToBottom).not.toHaveBeenCalled();
   });
 
   it('keeps the pin when the reply finished before the spacer mounted and auto-scroll is off', async () => {

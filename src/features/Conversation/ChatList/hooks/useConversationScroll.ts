@@ -75,11 +75,14 @@ export const getConversationSpacerScrollEffect = ({
   isAIGenerating,
   isMounted,
 }: ConversationSpacerScrollEffectOptions) => {
-  const cancelPin = isMounted && hasPrevOffset && hasUserIntent && delta < 0;
+  // A user scroll-up releases the pin even before the spacer first mounts:
+  // otherwise a reply that finishes before that mount would treat the still
+  // armed pin as consent to settle at the bottom, overriding the user.
+  const cancelPin = hasPrevOffset && hasUserIntent && delta < 0;
 
   return {
     cancelPin,
-    shrinkSpacer: cancelPin && !isAIGenerating,
+    shrinkSpacer: cancelPin && isMounted && !isAIGenerating,
   };
 };
 

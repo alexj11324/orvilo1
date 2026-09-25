@@ -116,6 +116,25 @@ const relationRow = (attempts = 1) => ({
   taskId: 'task-1',
 });
 
+const relationRemovalRow = () => ({
+  ...relationRow(),
+  linkId: 'link-task-linked',
+  operation: 'linear-relation:remove:relates:task-linked:task-unlinked',
+  payload: {
+    action: 'remove',
+    kind: 'relation',
+    mappingId: 'mapping-relation-1',
+    relation: {
+      kind: 'relates',
+      localRelationKey: 'relates:task-linked:task-unlinked',
+      sourceTaskId: 'task-unlinked',
+      targetTaskId: 'task-linked',
+    },
+    remoteRelationId: '550e8400-e29b-41d4-a716-446655440002',
+  },
+  taskId: 'task-linked',
+});
+
 describe('LinearSyncWorker external create recovery', () => {
   it('reuses a preallocated comment UUID after a lost create response', async () => {
     configureScope();
@@ -240,5 +259,60 @@ describe('LinearSyncWorker external create recovery', () => {
       new LinearSyncWorker({} as never, 'workspace-1').processOutbox(provider as never),
     ).resolves.toEqual({ failed: 0, sent: 0 });
     expect(provider.createComment).not.toHaveBeenCalled();
+  });
+
+  it('settles a related removal through its durable anchor after a peer loses its link', async () => {
+    configureScope();
+    mocks.claimOutbox.mockReset().mockResolvedValueOnce([relationRemovalRow()]);
+    mocks.findExternalRelationById.mockReset().mockResolvedValue({
+      id: 'mapping-relation-1',
+      issueLinkId: 'link-task-linked',
+      linearRelationId: '550e8400-e29b-41d4-a716-446655440002',
+    });
+    mocks.findIssueLinkByTaskId.mockReset().mockImplementation(async (taskId: string) =>
+      taskId === 'task-linked'
+        ? {
+            bindingId: 'binding-1',
+            id: 'link-task-linked',
+            installationId: 'installation-1',
+            linearIssueId: 'issue-task-linked',
+            organizationId: 'org-1',
+            taskId,
+          }
+        : null,
+    );
+    mocks.findIssueLinkById.mockReset().mockResolvedValue({
+      bindingId: 'binding-1',
+      id: 'link-task-linked',
+      installationId: 'installation-1',
+      linearIssueId: 'issue-task-linked',
+      organizationId: 'org-1',
+      taskId: 'task-linked',
+    });
+    mocks.hasCurrentOutboxLease.mockReset().mockResolvedValue(true);
+    mocks.settleExternalRelationOutbox.mockReset().mockResolvedValue({
+      mapping: {},
+      outbox: {},
+    });
+    mocks.updateOutbox.mockReset().mockResolvedValue({ id: 'outbox-relation-1' });
+    const provider = {
+      deleteRelation: vi.fn().mockResolvedValue(undefined),
+      getIssue: vi.fn().mockResolvedValue(remoteIssue('issue-task-linked')),
+    };
+
+    await expect(
+      new LinearSyncWorker({} as never, 'workspace-1').processOutbox(provider as never),
+    ).resolves.toEqual({ failed: 0, sent: 1 });
+    expect(mocks.findIssueLinkById).toHaveBeenCalledWith('link-task-linked');
+    expect(mocks.findIssueLinkByTaskId).not.toHaveBeenCalled();
+    expect(provider.deleteRelation).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002');
+    expect(mocks.settleExternalRelationOutbox).toHaveBeenCalledWith(
+      'outbox-relation-1',
+      expect.objectContaining({ fence: 1 }),
+      expect.objectContaining({
+        mappingId: 'mapping-relation-1',
+        tombstone: expect.objectContaining({ kind: 'deleted' }),
+      }),
+    );
   });
 });
